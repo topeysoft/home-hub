@@ -25,8 +25,11 @@ DEFAULT_ACTIONS = {
     RoomState.movie:   [("light", "on", {"brightness_pct": 15}), ("media", "on", {})],
     RoomState.guests:  [("light", "on", {"brightness_pct": 80})],
 }
+# How long a room stays as a person set it before rules may move it again, in seconds. asleep and away
+# carry no hold: they are meant to be released by a rule (morning, someone came home). `_hold` in scenes.json.
+DEFAULT_HOLD = {"occupied": 7200, "movie": 14400, "guests": 43200, "asleep": 0, "away": 0, "empty": 900}
 RULES_PATH = Path(__file__).resolve().parent.parent / "scenes.json"
-_rules = {"mtime": None, "actions": DEFAULT_ACTIONS}
+_rules = {"mtime": None, "actions": DEFAULT_ACTIONS, "hold": DEFAULT_HOLD}
 
 
 def rules() -> dict:
@@ -37,13 +40,19 @@ def rules() -> dict:
             raw = json.loads(RULES_PATH.read_text())
             actions = {RoomState(k): [(c, a, d or {}) for c, a, d in v] for k, v in raw.items() if not k.startswith("_")}
             for st in RoomState: actions.setdefault(st, [])
-            _rules.update(mtime=mtime, actions=actions)
+            hold = {**DEFAULT_HOLD, **{k: float(v) for k, v in (raw.get("_hold") or {}).items() if k in RoomState.__members__}}
+            _rules.update(mtime=mtime, actions=actions, hold=hold)
             log.info("scenes loaded from %s", RULES_PATH.name)
     except FileNotFoundError:
-        _rules.update(mtime=None, actions=DEFAULT_ACTIONS)
+        _rules.update(mtime=None, actions=DEFAULT_ACTIONS, hold=DEFAULT_HOLD)
     except Exception as e:
         log.warning("scenes.json is not usable (%s); keeping the previous rules", e)
     return _rules["actions"]
+
+
+def holds() -> dict:
+    """Seconds a hand-set state holds rules off the room, per state."""
+    rules(); return _rules["hold"]
 
 
 def rules_as_data() -> dict:

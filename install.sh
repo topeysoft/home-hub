@@ -50,10 +50,13 @@ if [ ! -f .env ]; then
     echo "ZWAVE_SESSION_SECRET=$(head -c 32 /dev/urandom | base64 | tr -d '/+=' )"
   } > .env
 fi
-# radios: only start what is plugged in
+# radios: only start what is plugged in.
+# The Nortek/GoControl HUSBZB-1 ("HubZ Smart Home Controller") is two radios on one plug: -if00 is its Z-Wave
+# 500-series port, which works as is; -if01 is an old EM3581 Zigbee chip whose stock firmware Zigbee2MQTT
+# cannot drive, so it is left alone and Zigbee waits for a ZBT-1 or similar.
 PROFILES=""
-ZB="$(ls /dev/serial/by-id/ 2>/dev/null | grep -i -E 'skyconnect|zbt-1|zbdongle|sonoff|cc2652|zigbee|efr32|nabu' | head -1 || true)"
-ZW="$(ls /dev/serial/by-id/ 2>/dev/null | grep -i -E 'zooz|z-wave|zwave|aeotec|800' | head -1 || true)"
+ZB="$(ls /dev/serial/by-id/ 2>/dev/null | grep -i -E 'skyconnect|zbt-1|zbdongle|sonoff|cc2652|zigbee|efr32|nabu' | grep -v -i hubz | head -1 || true)"
+ZW="$(ls /dev/serial/by-id/ 2>/dev/null | grep -i -E 'zooz|z-wave|zwave|aeotec|800|hubz.*if00' | head -1 || true)"
 if [ -n "$ZB" ]; then grep -q '^ZIGBEE_SERIAL=' .env || echo "ZIGBEE_SERIAL=/dev/serial/by-id/$ZB" >> .env; PROFILES="zigbee"; fi
 if [ -n "$ZW" ]; then grep -q '^ZWAVE_SERIAL=' .env || echo "ZWAVE_SERIAL=/dev/serial/by-id/$ZW" >> .env; PROFILES="${PROFILES:+$PROFILES,}zwave"; fi
 sed -i '/^COMPOSE_PROFILES=/d' .env; echo "COMPOSE_PROFILES=${PROFILES:-none}" >> .env

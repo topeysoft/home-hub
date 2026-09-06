@@ -1,5 +1,7 @@
-import asyncio, json, logging, urllib.parse, urllib.request
+import asyncio, json, logging, time, urllib.parse, urllib.request
 from contextlib import asynccontextmanager
+from datetime import datetime
+from zoneinfo import ZoneInfo
 from pathlib import Path
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
@@ -8,8 +10,9 @@ from . import ha_setup
 from .ha_adapter import HAAdapter, AuthError
 from .model import Home
 from .events import EventLog
-from .intents import RoomState, SERVICE, plan, rules_as_data
+from .intents import RoomState, SERVICE, plan, rules_as_data, holds
 from .onboarding import Onboarding
+from .rules import Engine
 from .settings import Settings, DATA, env_file
 
 log = logging.getLogger("hub")
@@ -34,7 +37,10 @@ class Hub:
         self.location = self.settings.get("location")   # {"name", "lat", "lon"}: chosen in the panel, else HA's config, else HOME_LAT/HOME_LON in .env
         self.weather = None
         self.temp_unit = "°F"
+        self.tz = datetime.now().astimezone().tzinfo   # the home's zone, from HA's config once connected
         self.add = Onboarding(self)
+        self.engine = Engine(self)                     # rules: signals in, room intents out
+        self._tick_task = None
         self._wake = asyncio.Event()
         self._rebuild_task = None
         self._loop_task = None
@@ -102,6 +108,9 @@ class Hub:
     async def _connected(self):
         cfg = await self.ha.send("get_config")
         self.temp_unit = (cfg.get("unit_system") or {}).get("temperature", "°F")
+        if cfg.get("time_zone"):
+            try: self.tz = ZoneInfo(cfg["time_zone"])
+            except Exception: log.warning("unknown time zone %r; using the host's", cfg["time_zone"])
         lat, lon = cfg.get("latitude") or 0, cfg.get("longitude") or 0
         if self.settings.get("location"): self.location = self.settings.get("location")
         elif lat and lon: self.location = {"name": cfg.get("location_name") or "Home", "lat": lat, "lon": lon}
@@ -109,6 +118,7 @@ class Hub:
         else: log.info("no home location yet: the panel will ask for one")
         snap = await self.ha.snapshot()
         self.home.build(*snap)
+        self.engine.load(force=True); self.engine.seed()
         self._pick_weather(snap[3])
         self.ha.on_event(self._on_event)
         self._set("ready")
@@ -197,6 +207,7 @@ class Hub:
         await asyncio.sleep(1.0)
         snap = await self.ha.snapshot()
         self.home.build(*snap)
+        self.engine.load(force=True); self.engine.seed()
         had = self.weather and self.weather["id"]
         self._pick_weather(snap[3])
         if (self.weather and self.weather["id"]) != had: self._broadcast(json.dumps({"type": "ambient", "ambient": self.ambient()}))
@@ -222,6 +233,56 @@ class Hub:
         if old != dev.state or old_attrs != dev.attrs:
             self.log.add("state", dev.id, old, dev.state, source="device", detail=dev.attrs)
         self._broadcast(json.dumps({"type": "device", "device": dev.__dict__}))
+        self.engine.on_state(dev, old)
+
+    # ---- intents: the one path that changes a room, for taps and rules alike ----
+    async def _run_plan(self, room, state: RoomState):
+        """Run a room's plan, skipping devices that refuse. A scene does as much as it can."""
+        done, failed = 0, []
+        for domain, service, eid, data in plan(room, state):
+            try:
+                await self.ha.call(domain, service, eid, **data); done += 1
+            except Exception as e:
+                failed.append(eid); log.warning("%s %s failed: %s", eid, service, e)
+        return done, failed
+
+    def hold_for(self, state: RoomState) -> float | None:
+        secs = holds().get(state.value, 0)
+        return time.time() + secs if secs else None
+
+    def _mark(self, room, state: RoomState, source, detail):
+        if not room.devices: return
+        room.intent = state.value
+        room.set_by = f"rule:{detail['rule']}" if source == "rule" else source
+        room.hold_until = self.hold_for(state) if source == "user" else None
+        self._broadcast(json.dumps({"type": "intent", "room": room.id, "intent": room.intent, "set_by": room.set_by, "hold_until": room.hold_until}))
+
+    async def set_intent(self, room, state: RoomState, source="user", detail=None, depth=0):
+        """Move one room into a state. A tap holds the room against rules; a rule records why it fired."""
+        done, failed = await self._run_plan(room, state)
+        old = room.intent
+        self._mark(room, state, source, detail or {})
+        self.log.add("intent", room.id, old, state.value, source=source, detail={**(detail or {}), "calls": done, "failed": failed})
+        self.engine.on_intent(room.id, state, depth)
+        return done, failed
+
+    async def set_home_intent(self, state: RoomState, source="user", detail=None, depth=0):
+        """The same intent in every room at once: good night, everything off."""
+        done, failed = 0, []
+        for room in self.home.rooms.values():
+            n, f = await self._run_plan(room, state); done += n; failed += f
+            self._mark(room, state, source, detail or {})
+        old, self.home.intent = self.home.intent, state.value
+        self.log.add("intent", "home", old, state.value, source=source, detail={**(detail or {}), "calls": done, "failed": failed})
+        self.engine.on_intent("home", state, depth)
+        return done, failed
+
+    def hold(self, room, state: RoomState = RoomState.occupied):
+        """Someone touched a device in this room by hand: rules leave it alone for a while."""
+        until = self.hold_for(state)
+        if until and (room.hold_until or 0) < until:
+            room.hold_until = until
+            self._broadcast(json.dumps({"type": "intent", "room": room.id, "intent": room.intent, "set_by": room.set_by, "hold_until": room.hold_until}))
 
     async def _push(self, ws, msg):
         try: await ws.send_text(msg)
@@ -234,8 +295,9 @@ hub = Hub()
 @asynccontextmanager
 async def lifespan(app):
     hub._loop_task = asyncio.create_task(hub.run())
+    hub._tick_task = asyncio.create_task(hub.engine.run())
     yield
-    hub._loop_task.cancel()
+    hub._loop_task.cancel(); hub._tick_task.cancel()
     if hub.ha: await hub.ha.close()
 
 
@@ -495,19 +557,8 @@ async def device_action(device_id: str, action: str, data: dict | None = None):
     domain, service = SERVICE[key]
     await hub.ha.call(domain, service, dev.id, **(data or {}))
     hub.log.add("action", dev.id, None, action, source="user", detail=data)
+    if dev.capability != "camera" and dev.room_id in hub.home.rooms: hub.hold(hub.home.rooms[dev.room_id])
     return {"ok": True}
-
-
-async def _apply(room, state: RoomState):
-    """Run a room's plan, skipping devices that refuse. A scene does as much as it can."""
-    done, failed = 0, []
-    for domain, service, eid, data in plan(room, state):
-        try:
-            await hub.ha.call(domain, service, eid, **data); done += 1
-        except Exception as e:
-            failed.append(eid); log.warning("%s %s failed: %s", eid, service, e)
-    if room.devices: room.intent = state.value
-    return done, failed
 
 
 @app.post("/rooms/{room_id}/intent/{state}")
@@ -515,20 +566,52 @@ async def room_intent(room_id: str, state: RoomState):
     hub.ready()
     room = hub.home.rooms.get(room_id)
     if not room: raise HTTPException(404, "unknown room")
-    done, failed = await _apply(room, state)
-    hub.log.add("intent", room.id, None, state.value, source="user", detail={"calls": done, "failed": failed})
+    done, failed = await hub.set_intent(room, state, source="user")
     return {"ok": True, "calls": done, "failed": failed}
 
 
 @app.post("/home/intent/{state}")
 async def home_intent(state: RoomState):
-    """The same intent in every room at once: good night, everything off."""
     hub.ready()
-    done, failed = 0, []
-    for room in hub.home.rooms.values():
-        n, f = await _apply(room, state); done += n; failed += f
-    hub.log.add("intent", "home", None, state.value, source="user", detail={"calls": done, "failed": failed})
+    done, failed = await hub.set_home_intent(state, source="user")
     return {"ok": True, "calls": done, "failed": failed}
+
+
+@app.get("/rooms/{room_id}/why")
+def room_why(room_id: str, limit: int = 5):
+    """The last few times this room was set, held or shadowed, with each rule's reasons. The assistant explains from this."""
+    if room_id != "home" and room_id not in hub.home.rooms: raise HTTPException(404, "unknown room")
+    return hub.log.recent(limit, subject=room_id, kinds=("intent", "held", "shadowed", "failed"))
+
+
+# ---------- rules ----------
+@app.get("/rules")
+def get_rules(): return hub.engine.as_data()
+
+
+@app.put("/rules")
+def put_rules(raw: dict):
+    """Replace rules.json. Refused, with reasons, unless every rule can run; the old file keeps running meanwhile."""
+    try: hub.engine.save(raw)
+    except ValueError as e: raise HTTPException(422, str(e))
+    return hub.engine.as_data()
+
+
+@app.post("/rules/{rule_id}/enable")
+def enable_rule(rule_id: str, body: dict):
+    raw = hub.engine.as_data()
+    row = next((r for r in raw.get("rules", []) if isinstance(r, dict) and r.get("id") == rule_id), None)
+    if not row: raise HTTPException(404, "unknown rule")
+    row["enabled"] = bool(body.get("enabled", True))
+    hub.engine.save({k: v for k, v in raw.items() if k not in ("valid", "errors")})
+    return {"ok": True, "enabled": row["enabled"]}
+
+
+@app.get("/rules/{rule_id}/dry-run")
+def dry_run(rule_id: str):
+    out = hub.engine.dry_run(rule_id)
+    if not out: raise HTTPException(404, "unknown rule")
+    return out
 
 
 @app.websocket("/stream")

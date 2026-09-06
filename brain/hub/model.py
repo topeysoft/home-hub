@@ -36,13 +36,17 @@ class Room:
     id: str
     name: str
     devices: list = field(default_factory=list)
-    intent: str = "unknown"   # see intents.RoomState
+    intent: str = "unknown"          # see intents.RoomState
+    set_by: str | None = None        # "user", or "rule:<id>": who last set the intent
+    hold_until: float | None = None  # rules leave the room alone until then (a hand on the panel set it)
+    motion_at: float | None = None   # last motion from any motion device here; idle rules count from it
 
 
 class Home:
     def __init__(self):
         self.rooms: dict[str, Room] = {}
         self.devices: dict[str, Device] = {}
+        self.intent: str = "unknown"     # the last home-wide intent (bedtime, everything off)
 
     @staticmethod
     def _keep_attrs(cap, a):
@@ -53,8 +57,12 @@ class Home:
         return {k: a[k] for k in keys if k in a}
 
     def build(self, areas, ha_devices, entities, states):
+        was = self.rooms
         self.rooms = {a["area_id"]: Room(a["area_id"], a["name"]) for a in areas}
         self.rooms["unassigned"] = Room("unassigned", "New devices")   # things that have not been put in a room yet
+        for rid, r in self.rooms.items():           # a rebuild must not forget what rooms were told or when they last moved
+            if rid in was:
+                r.intent, r.set_by, r.hold_until, r.motion_at = was[rid].intent, was[rid].set_by, was[rid].hold_until, was[rid].motion_at
         dev_area = {d["id"]: d.get("area_id") for d in ha_devices}
         reg = {e["entity_id"]: e for e in entities}
         st = {s["entity_id"]: s for s in states}

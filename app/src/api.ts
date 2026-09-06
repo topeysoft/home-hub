@@ -1,5 +1,6 @@
 export type Device = { id: string; name: string; room_id: string; capability: string; state: string; attrs: Record<string, any> }
-export type Room = { id: string; name: string; devices: Device[]; intent: string }
+export type Room = { id: string; name: string; devices: Device[]; intent: string; set_by?: string | null; hold_until?: number | null; motion_at?: number | null }
+export type Intent = { room: string; intent: string; set_by: string | null; hold_until: number | null }
 export type Home = { name?: string | null; rooms: Room[] }
 export type Driver = 'down' | 'fresh' | 'needs-login' | 'connecting' | 'ready'
 export type Status = { driver: Driver; reason: string; setup_done: boolean; owner: string | null; home: string | null; location: boolean; rooms: number; devices: number }
@@ -87,7 +88,7 @@ export async function setHomeIntent(state: string) {
 export const imageUrl = (id: string) => `/devices/${encodeURIComponent(id)}/image?t=${Date.now()}`
 
 /** Live updates from the brain. Reconnects with backoff; reports link state. */
-export function connect(on: { device: (d: Device) => void; home: (h: Home) => void; ambient: (a: Ambient) => void; status: (s: Status) => void; link: (up: boolean) => void }) {
+export function connect(on: { device: (d: Device) => void; home: (h: Home) => void; ambient: (a: Ambient) => void; status: (s: Status) => void; intent: (i: Intent) => void; link: (up: boolean) => void }) {
   let delay = 1000, ws: WebSocket | null = null, closed = false
   const open = () => {
     const proto = location.protocol === 'https:' ? 'wss' : 'ws'
@@ -99,6 +100,7 @@ export function connect(on: { device: (d: Device) => void; home: (h: Home) => vo
       else if (m.type === 'home') on.home(m.home)
       else if (m.type === 'ambient') on.ambient(m.ambient)
       else if (m.type === 'status') on.status(m.status)
+      else if (m.type === 'intent') on.intent(m)
     }
     ws.onclose = () => { on.link(false); if (!closed) setTimeout(open, delay = Math.min(delay * 2, 15000)) }
     ws.onerror = () => ws?.close()

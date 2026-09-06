@@ -38,6 +38,7 @@ to copy and no Home Assistant UI to visit.
   Serves `app/dist`. `brain/Dockerfile` packages it with the panel built in.
 - `app/` — Vue PWA for the wall kiosk and phone (`npm run build` → served by the brain).
 - `docs/inventory.md` — Phase 1 device inventory. `tools/discover.py` seeds it from a Mac.
+- `docs/phase4-intelligence.md` — Phase 4 design: rules as data, the evaluator, holds, presence, the assistant's contract.
 - `tools/ha_bootstrap.py` — the old manual bootstrap; the brain's setup screen does this now.
 
 ## Developing on the Mac (until the Pi arrives)
@@ -87,7 +88,7 @@ the whole mesh, with failover.
 
 - Pi 5 8 GB + NVMe HAT + SSD (hub host)
 - Home Assistant Connect ZBT-1 (Zigbee + Thread border router)
-- Zooz ZST39 (Z-Wave 800)
+- Zooz ZST39 (Z-Wave 800). Optional while the Nortek HUSBZB-1 on hand covers Z-Wave: it is 500-series, fine for the GE/Jasco switches, no Long Range.
 - ratgdo32 (garage door, Security+ 2.0 only)
 
 ## Rules that do not change

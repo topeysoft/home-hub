@@ -1,0 +1,25 @@
+{
+  "_comment": "Rules as data: when <trigger> [if <conditions>] then <outcome>. File order is priority within a room. Edit and save: the brain reloads on the next use. Vocabulary in docs/phase4-intelligence.md.",
+  "rules": [
+    {
+      "id": "backyard-evening",
+      "name": "Backyard light on when someone is out there after dark",
+      "room": "backyard",
+      "when": {"motion": "on"},
+      "if": [["sun", "below", 0], ["intent", "not", "asleep"]],
+      "then": {"intent": "occupied"},
+      "enabled": true,
+      "by": "user"
+    },
+    {
+      "id": "backyard-idle",
+      "name": "Backyard off after ten minutes of nothing",
+      "room": "backyard",
+      "when": {"idle": 600},
+      "then": {"intent": "empty"},
+      "enabled": true,
+      "by": "user"
+    }
+  ],
+  "drafts": []
+}

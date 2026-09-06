@@ -1,5 +1,5 @@
 import { reactive } from 'vue'
-import { getHome, getEvents, getAmbient, getScenes, getStatus, getDiscovered, connect, act, setIntent, setHomeIntent, type Room, type Device, type Home, type Event, type Ambient, type Rules, type Status, type Found } from './api'
+import { getHome, getEvents, getAmbient, getScenes, getStatus, getDiscovered, connect, act, setIntent, setHomeIntent, type Room, type Device, type Home, type Event, type Ambient, type Rules, type Status, type Found, type Intent } from './api'
 import { sunPosition, sunGuess, moonPhase } from './sun'
 
 export const store = reactive({
@@ -234,6 +234,11 @@ function foundSoon() { clearTimeout(foundTimer); foundTimer = window.setTimeout(
 
 /* ---------- lifecycle ---------- */
 function applyHome(h: Home) { store.rooms = h.rooms; store.homeName = h.name || ''; store.loaded = true; store.error = ''; foundSoon(); if (store.homeName) document.title = store.homeName }
+/** A room was set to a state by a rule or by another screen: keep the chip honest without a reload. */
+function applyIntent(i: Intent) {
+  const r = store.rooms.find(r => r.id === i.room)
+  if (r) { r.intent = i.intent; r.set_by = i.set_by; r.hold_until = i.hold_until; eventsSoon() }
+}
 function applyDevice(d: Device) {
   for (const r of store.rooms) {
     const i = r.devices.findIndex(x => x.id === d.id)
@@ -251,7 +256,7 @@ export async function start() {
   await load()
   updateSky(); clearInterval(skyTimer); skyTimer = window.setInterval(updateSky, 30000)
   clearInterval(foundPoll); foundPoll = window.setInterval(refreshFound, 60000)
-  stop = connect({ device: applyDevice, home: applyHome, ambient: a => { store.ambient = a; updateSky() }, status: s => {
+  stop = connect({ device: applyDevice, home: applyHome, intent: applyIntent, ambient: a => { store.ambient = a; updateSky() }, status: s => {
     const was = store.status?.driver
     store.status = s
     if (s.driver === 'ready' && was !== 'ready') { load() }   // the engine just came up: read the house

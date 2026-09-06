@@ -12,6 +12,10 @@ curl localhost:8300/home
 curl -X POST localhost:8300/devices/media_player.nadine_s_room_roku_tv/off
 curl -X POST localhost:8300/rooms/<room_id>/intent/asleep
 curl -X POST localhost:8300/home/intent/away          # the same intent in every room; a device that refuses is skipped
+curl localhost:8300/rules                             # the rules and whether the file is usable
+curl localhost:8300/rules/backyard-evening/dry-run    # what a rule would do this instant, every condition with its value
+curl localhost:8300/rooms/backyard/why                # the last few times the room was set, held or shadowed, and by what
+.venv/bin/python -m unittest tests.test_rules -v      # the rules engine, sun math and validation
 ```
 
 Docker: `docker build -f brain/Dockerfile -t home-hub/brain .` from the repo root builds the panel
@@ -41,6 +45,11 @@ endpoints just nudge it along.
   the integration's own English labels (`/flows`).
 - `hub/model.py` — home → rooms → devices → one capability each. Small vocabulary on purpose.
   Devices without a room sit in "New devices"; `/devices/{id}/move` and `/rename` place and name them.
-- `hub/intents.py` — room states and the deterministic plan for each. The plans live in `scenes.json`.
+- `hub/intents.py` — room states and the deterministic plan for each. The plans live in `scenes.json`,
+  with `_hold`: how long a state set by hand keeps rules off the room.
+- `hub/rules.py` — signals in, room intents out. `rules.json` holds the rules (`when … if … then …`);
+  the Engine fires them on state changes and a one-second tick, through the same path as a tap, and
+  logs every firing with `source=rule` and the reasons. `hub/sun.py` is the sun math it uses.
+  Design and vocabulary: `../docs/phase4-intelligence.md`.
 - `hub/events.py` — append-only SQLite log; the assistant explains from it.
 - `hub/settings.py` — `settings.json`: engine login, names, location, setup flag. Gitignored.

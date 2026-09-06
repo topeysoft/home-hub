@@ -16,10 +16,17 @@ class EventLog:
                             (time.time(), kind, subject, old, new, source, json.dumps(detail) if detail else None))
             self.db.commit()
 
-    def recent(self, limit=100, subject=None):
+    def recent(self, limit=100, subject=None, kinds=None):
         q = "SELECT ts,kind,subject,old,new,source,detail FROM events"
-        args = ()
-        if subject: q += " WHERE subject=?"; args = (subject,)
+        where, args = [], ()
+        if subject: where.append("subject=?"); args += (subject,)
+        if kinds: where.append(f"kind IN ({','.join('?' * len(kinds))})"); args += tuple(kinds)
+        if where: q += " WHERE " + " AND ".join(where)
         q += " ORDER BY ts DESC LIMIT ?"
         rows = self.db.execute(q, args + (limit,)).fetchall()
         return [dict(zip(("ts", "kind", "subject", "old", "new", "source", "detail"), r)) for r in rows]
+
+    def last_by_subject(self, kind, new) -> dict:
+        """subject -> the last time it was logged reaching `new`. Rooms rebuild motion_at from this after a restart."""
+        rows = self.db.execute("SELECT subject, MAX(ts) FROM events WHERE kind=? AND new=? GROUP BY subject", (kind, new)).fetchall()
+        return dict(rows)

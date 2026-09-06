@@ -1,6 +1,7 @@
 {
-  "_comment": "Room scenes as data. Each entry is [capability, action, data]; a scene runs its list against every matching device in the room. Edit and save: the brain reloads on the next use.",
-  "occupied": [],
+  "_comment": "Room scenes as data. Each entry is [capability, action, data]; a scene runs its list against every matching device in the room. Edit and save: the brain reloads on the next use. _hold: seconds a state set by hand keeps rules off the room.",
+  "_hold":    {"occupied": 7200, "movie": 14400, "guests": 43200, "asleep": 0, "away": 0, "empty": 900},
+  "occupied": [["light", "on", {}]],
   "empty":    [["light", "off", {}], ["media", "pause", {}]],
   "asleep":   [["light", "off", {}], ["media", "off", {}], ["lock", "lock", {}]],
   "away":     [["light", "off", {}], ["media", "off", {}], ["lock", "lock", {}], ["switch", "off", {}]],
