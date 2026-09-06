@@ -27,6 +27,8 @@ class Device:
     capability: str
     state: str
     attrs: dict = field(default_factory=dict)
+    hw: str | None = None          # the physical thing this belongs to (the driver's device id), for moving rooms
+    own_room: bool = False         # room set on this entry itself rather than inherited from the hardware
 
 
 @dataclass
@@ -52,7 +54,7 @@ class Home:
 
     def build(self, areas, ha_devices, entities, states):
         self.rooms = {a["area_id"]: Room(a["area_id"], a["name"]) for a in areas}
-        self.rooms["unassigned"] = Room("unassigned", "Unassigned")
+        self.rooms["unassigned"] = Room("unassigned", "New devices")   # things that have not been put in a room yet
         dev_area = {d["id"]: d.get("area_id") for d in ha_devices}
         reg = {e["entity_id"]: e for e in entities}
         st = {s["entity_id"]: s for s in states}
@@ -73,7 +75,7 @@ class Home:
             if cap == "camera":
                 for suffix in (" Live view", " Live View", " Camera"):
                     if name.endswith(suffix): name = name[: -len(suffix)]
-            d = Device(eid, name, room, cap, s["state"], self._keep_attrs(cap, s["attributes"]))
+            d = Device(eid, name, room, cap, s["state"], self._keep_attrs(cap, s["attributes"]), e.get("device_id"), bool(e.get("area_id")))
             self.devices[eid] = d
             self.rooms[room].devices.append(d)
         return self
@@ -83,6 +85,7 @@ class Home:
         if not d or not new_state: return None
         d.state = new_state["state"]
         d.attrs = self._keep_attrs(d.capability, new_state["attributes"])
+        d.name = new_state["attributes"].get("friendly_name", d.name)   # a rename shows up here first
         return d
 
     def to_dict(self):

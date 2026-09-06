@@ -42,6 +42,10 @@ onUnmounted(() => { clearInterval(t1); clearInterval(t2) })
       <SceneBar :room="null" />
     </header>
 
+    <button class="nudge" v-if="store.found.length" @click="store.sheet = 'add'">
+      <span class="nudge-icon"><Icon name="sparkle" :size="20" /></span>
+      <span class="nudge-text"><span class="nudge-title">{{ store.found.length === 1 ? `Found ${store.found[0].title}` : `Found ${store.found.length} new things nearby` }}</span><span class="nudge-sub">{{ store.found.length === 1 ? 'Tap to add it to the house.' : store.found.slice(0, 3).map(f => f.title).join(', ') + (store.found.length > 3 ? '…' : '') }}</span></span>
+    </button>
     <button class="nudge" v-if="store.ambientLoaded && !store.ambient.location" @click="store.sheet = 'location'">
       <span class="nudge-icon"><Icon name="pin" :size="20" /></span>
       <span class="nudge-text"><span class="nudge-title">Where is home?</span><span class="nudge-sub">Set a location once and the sky, sunrise and weather will follow it.</span></span>

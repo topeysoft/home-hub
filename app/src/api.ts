@@ -1,6 +1,13 @@
 export type Device = { id: string; name: string; room_id: string; capability: string; state: string; attrs: Record<string, any> }
 export type Room = { id: string; name: string; devices: Device[]; intent: string }
-export type Home = { rooms: Room[] }
+export type Home = { name?: string | null; rooms: Room[] }
+export type Driver = 'down' | 'fresh' | 'needs-login' | 'connecting' | 'ready'
+export type Status = { driver: Driver; reason: string; setup_done: boolean; owner: string | null; home: string | null; location: boolean; rooms: number; devices: number }
+export type Found = { flow_id: string; handler: string; kind: string; title: string; source: string }
+export type CatalogItem = { domain: string; name: string; local: boolean }
+export type Field = { name: string; kind: 'text' | 'password' | 'number' | 'boolean' | 'select'; label: string; hint: string; required: boolean; default: any; options?: { value: any; label: string }[] }
+export type Step = { flow_id: string; handler: string; kind: string; type: 'form' | 'menu' | 'abort' | 'create_entry' | 'progress' | 'external'; step_id: string; title: string; description: string; last_step: boolean | null;
+  errors?: Record<string, string>; fields?: Field[]; options?: { id: string; label: string }[]; reason?: string; entry_title?: string; progress?: string; url?: string }
 export type Weather = { id: string; condition: string; temperature: number | null; unit: string; humidity: number | null; wind_speed: number | null; wind_unit: string | null }
 export type Place = { name: string; lat: number; lon: number; tz?: string | null }
 export type Ambient = { location: Place | null; weather: Weather | null }
@@ -12,6 +19,33 @@ async function fail(r: Response): Promise<never> {
   try { detail = (await r.json()).detail ?? detail } catch {}
   throw new Error(detail)
 }
+
+async function post<T = any>(url: string, body?: unknown): Promise<T> {
+  const r = await fetch(url, { method: 'POST', headers: json, body: body === undefined ? undefined : JSON.stringify(body) }); if (!r.ok) await fail(r); return r.json()
+}
+export async function getStatus(): Promise<Status> {
+  const r = await fetch('/setup/status'); if (!r.ok) await fail(r); return r.json()
+}
+export const setupOwner = (name: string, home: string) => post<Status>('/setup/owner', { name, home })
+export const setupLogin = (username: string, password: string) => post<Status>('/setup/login', { username, password })
+export const setupHome = (name: string) => post<Status>('/setup/home', { name })
+export const setupDone = () => post<Status>('/setup/done')
+export const addRoom = (name: string) => post<{ id: string; name: string }>('/rooms', { name })
+export const renameRoom = (id: string, name: string) => post(`/rooms/${encodeURIComponent(id)}/rename`, { name })
+export const moveDevice = (id: string, room_id: string | null) => post(`/devices/${encodeURIComponent(id)}/move`, { room_id })
+export const renameDevice = (id: string, name: string) => post(`/devices/${encodeURIComponent(id)}/rename`, { name })
+export async function getDiscovered(): Promise<Found[]> {
+  const r = await fetch('/discovered'); if (!r.ok) await fail(r); return r.json()
+}
+export async function getCatalog(): Promise<CatalogItem[]> {
+  const r = await fetch('/catalog'); if (!r.ok) await fail(r); return r.json()
+}
+export const startFlow = (handler: string) => post<Step>('/flows', { handler })
+export const submitFlow = (id: string, data: Record<string, unknown>) => post<Step>(`/flows/${encodeURIComponent(id)}`, data)
+export async function getFlow(id: string): Promise<Step> {
+  const r = await fetch(`/flows/${encodeURIComponent(id)}`); if (!r.ok) await fail(r); return r.json()
+}
+export async function cancelFlow(id: string) { await fetch(`/flows/${encodeURIComponent(id)}`, { method: 'DELETE' }) }
 
 export async function getHome(): Promise<Home> {
   const r = await fetch('/home'); if (!r.ok) await fail(r); return r.json()
@@ -53,7 +87,7 @@ export async function setHomeIntent(state: string) {
 export const imageUrl = (id: string) => `/devices/${encodeURIComponent(id)}/image?t=${Date.now()}`
 
 /** Live updates from the brain. Reconnects with backoff; reports link state. */
-export function connect(on: { device: (d: Device) => void; home: (h: Home) => void; ambient: (a: Ambient) => void; link: (up: boolean) => void }) {
+export function connect(on: { device: (d: Device) => void; home: (h: Home) => void; ambient: (a: Ambient) => void; status: (s: Status) => void; link: (up: boolean) => void }) {
   let delay = 1000, ws: WebSocket | null = null, closed = false
   const open = () => {
     const proto = location.protocol === 'https:' ? 'wss' : 'ws'
@@ -64,6 +98,7 @@ export function connect(on: { device: (d: Device) => void; home: (h: Home) => vo
       if (m.type === 'device') on.device(m.device)
       else if (m.type === 'home') on.home(m.home)
       else if (m.type === 'ambient') on.ambient(m.ambient)
+      else if (m.type === 'status') on.status(m.status)
     }
     ws.onclose = () => { on.link(false); if (!closed) setTimeout(open, delay = Math.min(delay * 2, 15000)) }
     ws.onerror = () => ws?.close()

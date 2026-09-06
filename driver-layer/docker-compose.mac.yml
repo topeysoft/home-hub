@@ -34,7 +34,9 @@ services:
     restart: unless-stopped
     ports:
       - "8443:8443"
+      - "8088:8088"
     environment:
+      - HUB_HTTP=http://localhost:8088, http://${HUB_IP:-192.168.86.59}:8088
       - HUB_HOSTS=https://localhost:8443, https://${HUB_IP:-192.168.86.59}:8443
       - BRAIN_UPSTREAM=host.docker.internal:8300
     extra_hosts:

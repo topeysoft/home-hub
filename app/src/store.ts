@@ -1,5 +1,5 @@
 import { reactive } from 'vue'
-import { getHome, getEvents, getAmbient, getScenes, connect, act, setIntent, setHomeIntent, type Room, type Device, type Home, type Event, type Ambient, type Rules } from './api'
+import { getHome, getEvents, getAmbient, getScenes, getStatus, getDiscovered, connect, act, setIntent, setHomeIntent, type Room, type Device, type Home, type Event, type Ambient, type Rules, type Status, type Found } from './api'
 import { sunPosition, sunGuess, moonPhase } from './sun'
 
 export const store = reactive({
@@ -11,7 +11,10 @@ export const store = reactive({
   ambient: { location: null, weather: null } as Ambient,
   ambientLoaded: false,
   rules: {} as Rules,                        // scene rules from the brain, to tell whether a room still matches its scene
-  sheet: (new URLSearchParams(location.search).get('sheet') === 'location' ? 'location' : null) as null | 'location',   // the one soft settings sheet the panel has; ?sheet=location previews it
+  sheet: (['location', 'add'].includes(new URLSearchParams(location.search).get('sheet') ?? '') ? new URLSearchParams(location.search).get('sheet') : null) as null | 'location' | 'add',   // the two soft sheets the panel has; ?sheet=location previews one
+  status: null as Status | null,            // where the hub is in its life: engine down, fresh, ready; and whether setup finished
+  homeName: '' as string,
+  found: [] as Found[],                      // things noticed on the network that are not set up yet
   sky: { elevation: -20, azimuth: 0, phase: 0, hour: 0, condition: 'clear-night', guessed: true },   // what the sky draws
 })
 
@@ -96,7 +99,7 @@ export function whatsOn(): Device[] {
 export function houseLine(): string {
   if (!store.loaded) return store.error || 'Finding the house…'
   const on = whatsOn()
-  if (!on.length) return 'The house is quiet.'
+  if (!on.length) return `${store.homeName || 'The house'} is quiet.`
   const rooms = new Set(on.map(d => d.room_id))
   if (rooms.size === 1) return `Something is on in the ${roomOf(on[0])?.name ?? 'house'}.`
   return `Something is on in ${rooms.size} rooms.`
@@ -216,8 +219,21 @@ export async function refreshEvents() {
 }
 function eventsSoon() { clearTimeout(eventsTimer); eventsTimer = window.setTimeout(refreshEvents, 1500) }
 
+/* ---------- setup and things found nearby ---------- */
+/** True while the panel should show the setup flow instead of the house. */
+export const needsSetup = () => !store.status || store.status.driver !== 'ready' || !store.status.setup_done
+export async function refreshStatus() {
+  try { store.status = await getStatus() } catch { if (!store.status) store.error = 'The hub is not answering.' }
+}
+let foundTimer: number | undefined
+export async function refreshFound() {
+  if (store.status?.driver !== 'ready') return
+  try { store.found = await getDiscovered() } catch {}
+}
+function foundSoon() { clearTimeout(foundTimer); foundTimer = window.setTimeout(refreshFound, 2500) }
+
 /* ---------- lifecycle ---------- */
-function applyHome(h: Home) { store.rooms = h.rooms; store.loaded = true; store.error = '' }
+function applyHome(h: Home) { store.rooms = h.rooms; store.homeName = h.name || ''; store.loaded = true; store.error = ''; foundSoon(); if (store.homeName) document.title = store.homeName }
 function applyDevice(d: Device) {
   for (const r of store.rooms) {
     const i = r.devices.findIndex(x => x.id === d.id)
@@ -226,17 +242,24 @@ function applyDevice(d: Device) {
 }
 let stop: (() => void) | undefined, lostTimer: number | undefined, skyTimer: number | undefined
 export async function load() {
+  await refreshStatus()
   try { applyHome(await getHome()) } catch { store.error = 'The hub is not answering.' }
   loadAmbient(); loadRules()
 }
+let foundPoll: number | undefined
 export async function start() {
   await load()
   updateSky(); clearInterval(skyTimer); skyTimer = window.setInterval(updateSky, 30000)
-  stop = connect({ device: applyDevice, home: applyHome, ambient: a => { store.ambient = a; updateSky() }, link: v => {
+  clearInterval(foundPoll); foundPoll = window.setInterval(refreshFound, 60000)
+  stop = connect({ device: applyDevice, home: applyHome, ambient: a => { store.ambient = a; updateSky() }, status: s => {
+    const was = store.status?.driver
+    store.status = s
+    if (s.driver === 'ready' && was !== 'ready') { load() }   // the engine just came up: read the house
+  }, link: v => {
     store.linkUp = v
     clearTimeout(lostTimer)
     if (v) { store.linkLost = false; if (!store.loaded) load() }
     else lostTimer = window.setTimeout(() => (store.linkLost = true), 4000)   // a blink on startup is not worth a banner
   } })
 }
-export function halt() { stop?.(); clearInterval(skyTimer) }
+export function halt() { stop?.(); clearInterval(skyTimer); clearInterval(foundPoll) }

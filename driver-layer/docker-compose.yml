@@ -1,6 +1,6 @@
-# Driver layer: rented components, each isolated in its own container.
-# Runs on the hub host (Pi 5 + NVMe or a mini PC), not on the Mac.
-# Copy .env.example to .env and set the serial paths for your radio sticks.
+# The whole hub on the hub host (Pi 5 + NVMe or a mini PC): the rented driver layer, each part in
+# its own container, plus the brain and the front door. `install.sh` writes .env and starts this.
+# Radios are profiles: COMPOSE_PROFILES=zigbee,zwave in .env turns them on when a stick is present.
 
 services:
   mosquitto:
@@ -18,6 +18,7 @@ services:
     image: koenkk/zigbee2mqtt:latest
     container_name: zigbee2mqtt
     restart: unless-stopped
+    profiles: [zigbee]
     depends_on: [mosquitto]
     ports:
       - "8080:8080"          # Zigbee2MQTT admin UI (Advanced door)
@@ -33,6 +34,7 @@ services:
     image: zwavejs/zwave-js-ui:latest
     container_name: zwave-js-ui
     restart: unless-stopped
+    profiles: [zwave]
     tty: true
     stop_signal: SIGINT
     ports:
@@ -64,7 +66,7 @@ services:
     restart: unless-stopped
     network_mode: host      # discovery (mDNS, SSDP, Cast, HomeKit) needs the real LAN
     privileged: false
-    depends_on: [mosquitto, zwave-js-ui]
+    depends_on: [mosquitto]
     volumes:
       - ./homeassistant:/config
       - /etc/localtime:/etc/localtime:ro
@@ -74,13 +76,29 @@ services:
     # UI on http://<host>:8123 — the Advanced door only.
     # The brain talks to ws://<host>:8123/api/websocket with a long-lived token.
 
+  brain:
+    # The product: the semantic home, scenes, the event log, and the panel it serves on :8300.
+    build:
+      context: ..
+      dockerfile: brain/Dockerfile
+    image: home-hub/brain
+    container_name: brain
+    restart: unless-stopped
+    network_mode: host      # talks to HA on localhost:8123; the panel is on :8300
+    depends_on: [homeassistant]
+    volumes:
+      - ./brain-data:/data  # settings.json (names, location, the engine login) and events.db
+    environment:
+      - TZ=${TZ}
+
   caddy:
-    # HTTPS in front of the brain on :443. Host networking so the certificate can name the hub's LAN address.
+    # The front door: http://hub.local on :80 with no setup at all, https alongside for those who install the root certificate.
     image: caddy:2
     container_name: caddy
     restart: unless-stopped
     network_mode: host
     environment:
+      - HUB_HTTP=http://${HUB_HOST:-hub.local}, http://${HUB_IP:-localhost}, http://localhost
       - HUB_HOSTS=https://${HUB_HOST:-hub.local}, https://${HUB_IP:-localhost}
       - BRAIN_UPSTREAM=localhost:8300
     volumes:

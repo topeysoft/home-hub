@@ -6,3 +6,4 @@ mosquitto/data/
 mosquitto/log/
 zigbee2mqtt/*
 !zigbee2mqtt/configuration.yaml
+brain-data/

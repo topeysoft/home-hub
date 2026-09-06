@@ -1,6 +1,7 @@
 """The only module that knows Home Assistant exists.
 
 Talks to HA over its websocket API. Everything above this file speaks in the semantic model.
+One adapter per connection: when the link drops, the hub makes a new one.
 """
 import asyncio, itertools, json, logging
 import websockets
@@ -8,23 +9,30 @@ import websockets
 log = logging.getLogger(__name__)
 
 
+class AuthError(RuntimeError):
+    pass
+
+
 class HAAdapter:
     def __init__(self, url: str, token: str):
-        self.ws_url = url.replace("http", "ws", 1).rstrip("/") + "/api/websocket"
+        self.url = url.rstrip("/")
+        self.ws_url = self.url.replace("http", "ws", 1) + "/api/websocket"
         self.token = token
         self._ws = None
         self._ids = itertools.count(1)
         self._pending: dict[int, asyncio.Future] = {}
         self._listeners = []
         self._reader: asyncio.Task | None = None
+        self._closed = asyncio.Event()
 
     async def connect(self):
-        self._ws = await websockets.connect(self.ws_url, max_size=2**25)
+        self._ws = await websockets.connect(self.ws_url, max_size=2**25, open_timeout=10)
         assert json.loads(await self._ws.recv())["type"] == "auth_required"
         await self._ws.send(json.dumps({"type": "auth", "access_token": self.token}))
         r = json.loads(await self._ws.recv())
         if r["type"] != "auth_ok":
-            raise RuntimeError(f"HA auth failed: {r}")
+            await self._ws.close()
+            raise AuthError(r.get("message") or "HA refused the token")
         self._reader = asyncio.create_task(self._read())
         for ev in ("state_changed", "entity_registry_updated", "device_registry_updated", "area_registry_updated"):
             await self.send("subscribe_events", event_type=ev)
@@ -33,26 +41,39 @@ class HAAdapter:
     async def close(self):
         if self._reader: self._reader.cancel()
         if self._ws: await self._ws.close()
+        self._closed.set()
+
+    async def wait_closed(self):
+        await self._closed.wait()
 
     async def _read(self):
-        async for raw in self._ws:
-            m = json.loads(raw)
-            if m["type"] == "result":
-                fut = self._pending.pop(m["id"], None)
-                if fut and not fut.done(): fut.set_result(m)
-            elif m["type"] == "event":
-                for cb in self._listeners:
-                    try: cb(m["event"])
-                    except Exception: log.exception("listener failed")
+        try:
+            async for raw in self._ws:
+                m = json.loads(raw)
+                if m["type"] == "result":
+                    fut = self._pending.pop(m["id"], None)
+                    if fut and not fut.done(): fut.set_result(m)
+                elif m["type"] == "event":
+                    for cb in self._listeners:
+                        try: cb(m["event"])
+                        except Exception: log.exception("listener failed")
+        except Exception as e:
+            log.warning("link to HA dropped: %s", e)
+        finally:
+            for fut in self._pending.values():
+                if not fut.done(): fut.set_exception(ConnectionError("link to HA closed"))
+            self._pending.clear()
+            self._closed.set()
 
     async def send(self, type_: str, **kw):
+        if self._ws is None or self._closed.is_set(): raise ConnectionError("not connected to HA")
         i = next(self._ids)
         fut = asyncio.get_running_loop().create_future()
         self._pending[i] = fut
         await self._ws.send(json.dumps({"id": i, "type": type_, **kw}))
         m = await fut
         if not m.get("success"):
-            raise RuntimeError(f"{type_}: {m.get('error')}")
+            raise RuntimeError(f"{type_}: {(m.get('error') or {}).get('message') or m.get('error')}")
         return m.get("result")
 
     def on_event(self, cb): self._listeners.append(cb)

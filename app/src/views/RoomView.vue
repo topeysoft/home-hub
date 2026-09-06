@@ -8,6 +8,7 @@ import LightTile from '../tiles/LightTile.vue'
 import MediaTile from '../tiles/MediaTile.vue'
 import CameraTile from '../tiles/CameraTile.vue'
 import PlainTile from '../tiles/PlainTile.vue'
+import SortView from '../SortView.vue'
 
 const props = defineProps<{ room: Room }>()
 defineEmits<{ back: [] }>()
@@ -18,7 +19,8 @@ const tile = (c: string) => c === 'light' ? LightTile : c === 'media' ? MediaTil
 </script>
 
 <template>
-  <section class="room">
+  <SortView v-if="room.id === 'unassigned'" :room="room" @back="$emit('back')" />
+  <section class="room" v-else>
     <header class="stage-head room-head">
       <button class="back" @click="$emit('back')" aria-label="Back to home"><Icon name="back" :size="22" /></button>
       <div>

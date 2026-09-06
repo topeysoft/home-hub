@@ -1,59 +1,142 @@
-import asyncio, json, logging, os, urllib.parse, urllib.request
+import asyncio, json, logging, urllib.parse, urllib.request
 from contextlib import asynccontextmanager
 from pathlib import Path
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import Response
-from .ha_adapter import HAAdapter
+from . import ha_setup
+from .ha_adapter import HAAdapter, AuthError
 from .model import Home
 from .events import EventLog
 from .intents import RoomState, SERVICE, plan, rules_as_data
+from .onboarding import Onboarding
+from .settings import Settings, DATA, env_file
 
 log = logging.getLogger("hub")
-ROOT = Path(__file__).resolve().parent.parent
-
-
-def load_env():
-    env = {}
-    for p in (ROOT.parent / "driver-layer" / ".env",):
-        if p.exists():
-            for line in p.read_text().splitlines():
-                if "=" in line and not line.startswith("#"):
-                    k, v = line.split("=", 1); env[k.strip()] = v.strip()
-    env.update({k: v for k, v in os.environ.items() if k.startswith(("HA_", "HOME_"))})
-    return env
+DEFAULT_HA = "http://localhost:8123"
 
 
 class Hub:
-    def __init__(self):
-        env = load_env()
-        self.ha = HAAdapter(env["HA_URL"], env["HA_TOKEN"])
-        self.home = Home()
-        self.log = EventLog(ROOT / "events.db")
-        self.streams: set[WebSocket] = set()
-        self.location = None      # {"name", "lat", "lon"}: chosen in the panel, else HA's config, else HOME_LAT/HOME_LON in .env
-        self.weather = None       # the first weather entity HA has, in the app's shape
-        self.temp_unit = "°F"
-        self.settings_path = ROOT / "settings.json"
-        self.settings = json.loads(self.settings_path.read_text()) if self.settings_path.exists() else {}
+    """Keeps the house model alive whatever the driver layer is doing.
 
-    async def start(self):
-        await self.ha.connect()
+    driver: "down" (HA not answering) → "fresh" (HA has no owner yet) → "needs-login" (HA is set up
+    but we hold no token) → "connecting" → "ready". Setup endpoints move it along; the loop keeps
+    retrying on its own, and the panel is told every time it changes.
+    """
+    def __init__(self):
+        self.settings = Settings()
+        self.env = env_file()
+        self.ha: HAAdapter | None = None
+        self.home = Home()
+        self.log = EventLog(DATA / "events.db")
+        self.streams: set[WebSocket] = set()
+        self.driver, self.reason = "down", ""
+        self.location = self.settings.get("location")   # {"name", "lat", "lon"}: chosen in the panel, else HA's config, else HOME_LAT/HOME_LON in .env
+        self.weather = None
+        self.temp_unit = "°F"
+        self.add = Onboarding(self)
+        self._wake = asyncio.Event()
+        self._rebuild_task = None
+        self._loop_task = None
+
+    # ---- where HA is and how to get in ----
+    @property
+    def ha_url(self) -> str:
+        return (self.settings.get("ha") or {}).get("url") or self.env.get("HA_URL") or DEFAULT_HA
+
+    @property
+    def ha_token(self) -> str | None:
+        return (self.settings.get("ha") or {}).get("token") or self.env.get("HA_TOKEN")
+
+    def status(self) -> dict:
+        return {"driver": self.driver, "reason": self.reason, "setup_done": bool(self.settings.get("setup_done")),
+                "owner": (self.settings.get("owner") or {}).get("name"), "home": self.settings.get("home_name"),
+                "location": bool(self.location), "rooms": sum(1 for r in self.home.rooms.values() if r.id != "unassigned"),
+                "devices": len(self.home.devices)}
+
+    def _set(self, driver, reason=""):
+        if (driver, reason) == (self.driver, self.reason): return
+        self.driver, self.reason = driver, reason
+        log.info("driver %s %s", driver, reason)
+        self._broadcast(json.dumps({"type": "status", "status": self.status()}))
+
+    def wake(self):
+        self._wake.set()
+
+    async def _nap(self, seconds):
+        try: await asyncio.wait_for(self._wake.wait(), seconds)
+        except asyncio.TimeoutError: pass
+        self._wake.clear()
+
+    # ---- the lifecycle loop ----
+    async def run(self):
+        while True:
+            try:
+                try: state = await asyncio.to_thread(ha_setup.driver_state, self.ha_url)
+                except Exception as e:
+                    self._set("down", "The hub's engine is not answering yet."); await self._nap(3); continue
+                if state == "fresh":
+                    self._set("fresh"); await self._nap(10); continue
+                if not self.ha_token:
+                    self._set("needs-login", "The engine was set up separately."); await self._nap(10); continue
+                self._set("connecting")
+                ha = HAAdapter(self.ha_url, self.ha_token)
+                try: await ha.connect()
+                except AuthError as e:
+                    self._set("needs-login", "The saved key no longer works."); await self._nap(10); continue
+                except Exception as e:
+                    self._set("down", f"{e}"); await self._nap(3); continue
+                self.ha = ha
+                try:
+                    await self._connected()
+                except Exception:
+                    log.exception("could not read the house"); await ha.close(); await self._nap(3); continue
+                await ha.wait_closed()
+                self._set("connecting", "Reconnecting to the engine.")
+                await self._nap(1)
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                log.exception("lifecycle loop"); await self._nap(3)
+
+    async def _connected(self):
         cfg = await self.ha.send("get_config")
         self.temp_unit = (cfg.get("unit_system") or {}).get("temperature", "°F")
         lat, lon = cfg.get("latitude") or 0, cfg.get("longitude") or 0
-        env = load_env()
-        if self.settings.get("location"): self.location = self.settings["location"]
+        if self.settings.get("location"): self.location = self.settings.get("location")
         elif lat and lon: self.location = {"name": cfg.get("location_name") or "Home", "lat": lat, "lon": lon}
-        elif env.get("HOME_LAT") and env.get("HOME_LON"): self.location = {"name": "Home", "lat": float(env["HOME_LAT"]), "lon": float(env["HOME_LON"])}
-        else: log.warning("no home location yet: the panel will ask for one")
+        elif self.env.get("HOME_LAT") and self.env.get("HOME_LON"): self.location = {"name": "Home", "lat": float(self.env["HOME_LAT"]), "lon": float(self.env["HOME_LON"])}
+        else: log.info("no home location yet: the panel will ask for one")
         snap = await self.ha.snapshot()
         self.home.build(*snap)
         self._pick_weather(snap[3])
         self.ha.on_event(self._on_event)
-        self._rebuild_task = None
+        self._set("ready")
+        self._broadcast(json.dumps({"type": "home", "home": self.home_dict()}))
+        self._broadcast(json.dumps({"type": "ambient", "ambient": self.ambient()}))
         log.info("home: %d rooms, %d devices, weather=%s", len(self.home.rooms), len(self.home.devices), self.weather and self.weather["id"])
 
+    def ready(self):
+        if self.driver != "ready": raise HTTPException(503, "The hub is still starting.")
+
+    def home_dict(self):
+        return {"name": self.settings.get("home_name"), **self.home.to_dict()}
+
+    # ---- setup, driven by the panel ----
+    async def create_owner(self, name: str, home: str):
+        if self.driver == "fresh":
+            acct = await ha_setup.onboard(self.ha_url, name)
+            self.settings.set(ha={"url": self.ha_url, **acct})
+            self.log.add("home", "setup", None, "owner created", source="user")
+        self.settings.set(owner={"name": name}, home_name=home)
+        self.wake()
+
+    async def sign_in(self, username: str, password: str):
+        acct = await ha_setup.sign_in(self.ha_url, username, password)
+        self.settings.set(ha={"url": self.ha_url, **acct})
+        self.wake()
+
+    # ---- weather and the sky ----
     def _pick_weather(self, states):
         """Prefer the plain 'home' forecast over hourly/daily variants; any weather entity beats none."""
         ws = [s for s in states if s["entity_id"].startswith("weather.")]
@@ -72,24 +155,23 @@ class Hub:
     async def set_location(self, place):
         """Remember the home's location, tell HA (fixes sun.sun), and set up Met.no weather if there is none yet."""
         self.location = {"name": place["name"], "lat": place["lat"], "lon": place["lon"]}
-        self.settings["location"] = self.location
-        self.settings_path.write_text(json.dumps(self.settings, indent=1))
+        self.settings.set(location=self.location)
         core = {"latitude": place["lat"], "longitude": place["lon"], "location_name": place["name"]}
         if place.get("tz"): core["time_zone"] = place["tz"]
-        try: await self.ha.send("config/core/update", **core)
-        except Exception as e: log.warning("HA would not take the location: %s", e)
         weather = None
-        if not self.weather:
-            weather = await asyncio.to_thread(self._setup_met, place)
+        if self.driver == "ready":
+            try: await self.ha.send("config/core/update", **core)
+            except Exception as e: log.warning("HA would not take the location: %s", e)
+            if not self.weather:
+                weather = await asyncio.to_thread(self._setup_met, place)
         self._broadcast(json.dumps({"type": "ambient", "ambient": self.ambient()}))
         return weather
 
     def _setup_met(self, place):
         """Create the Met.no config entry through HA's REST config-flow API. Free, no key, local forecast."""
-        env = load_env()
         def post(path, data):
-            r = urllib.request.Request(f"{env['HA_URL']}{path}", data=json.dumps(data).encode(), method="POST",
-                                       headers={"Authorization": f"Bearer {env['HA_TOKEN']}", "Content-Type": "application/json"})
+            r = urllib.request.Request(f"{self.ha_url}{path}", data=json.dumps(data).encode(), method="POST",
+                                       headers={"Authorization": f"Bearer {self.ha_token}", "Content-Type": "application/json"})
             with urllib.request.urlopen(r, timeout=30) as resp: return json.loads(resp.read())
         try:
             r = post("/api/config/config_entries/flow", {"handler": "met"})
@@ -100,6 +182,7 @@ class Hub:
         except Exception as e:
             log.warning("met.no setup failed: %s", e); return None
 
+    # ---- live updates ----
     def _broadcast(self, msg):
         for ws in list(self.streams): asyncio.create_task(self._push(ws, msg))
 
@@ -119,8 +202,7 @@ class Hub:
         if (self.weather and self.weather["id"]) != had: self._broadcast(json.dumps({"type": "ambient", "ambient": self.ambient()}))
         self.log.add("home", "registry", None, "rebuilt", source="system",
                      detail={"rooms": len(self.home.rooms), "devices": len(self.home.devices)})
-        msg = json.dumps({"type": "home", "home": self.home.to_dict()})
-        for ws in list(self.streams): asyncio.create_task(self._push(ws, msg))
+        self._broadcast(json.dumps({"type": "home", "home": self.home_dict()}))
         log.info("home rebuilt: %d rooms, %d devices", len(self.home.rooms), len(self.home.devices))
 
     def _on_state(self, ev):
@@ -139,9 +221,7 @@ class Hub:
         # Cameras and media players re-announce the same state constantly; only real changes go in the log.
         if old != dev.state or old_attrs != dev.attrs:
             self.log.add("state", dev.id, old, dev.state, source="device", detail=dev.attrs)
-        msg = json.dumps({"type": "device", "device": dev.__dict__})
-        for ws in list(self.streams):
-            asyncio.create_task(self._push(ws, msg))
+        self._broadcast(json.dumps({"type": "device", "device": dev.__dict__}))
 
     async def _push(self, ws, msg):
         try: await ws.send_text(msg)
@@ -153,16 +233,57 @@ hub = Hub()
 
 @asynccontextmanager
 async def lifespan(app):
-    await hub.start()
+    hub._loop_task = asyncio.create_task(hub.run())
     yield
-    await hub.ha.close()
+    hub._loop_task.cancel()
+    if hub.ha: await hub.ha.close()
 
 
 app = FastAPI(title="home-hub brain", lifespan=lifespan)
 
 
+# ---------- setup ----------
+@app.get("/setup/status")
+def setup_status(): return hub.status()
+
+
+@app.post("/setup/owner")
+async def setup_owner(body: dict):
+    name, home = (body.get("name") or "").strip(), (body.get("home") or "").strip()
+    if not name: raise HTTPException(400, "A name is needed.")
+    if hub.driver not in ("fresh", "ready", "connecting", "needs-login"): raise HTTPException(503, "The hub's engine is not ready yet.")
+    try: await hub.create_owner(name, home or "Home")
+    except ha_setup.SetupError as e: raise HTTPException(502, str(e))
+    return hub.status()
+
+
+@app.post("/setup/login")
+async def setup_login(body: dict):
+    u, p = (body.get("username") or "").strip(), body.get("password") or ""
+    if not u or not p: raise HTTPException(400, "Both the name and the password are needed.")
+    try: await hub.sign_in(u, p)
+    except ha_setup.SetupError as e: raise HTTPException(401, str(e))
+    return hub.status()
+
+
+@app.post("/setup/home")
+def setup_home(body: dict):
+    hub.settings.set(home_name=(body.get("name") or "").strip() or "Home")
+    hub._broadcast(json.dumps({"type": "home", "home": hub.home_dict()}))
+    return hub.status()
+
+
+@app.post("/setup/done")
+def setup_done():
+    hub.settings.set(setup_done=True)
+    hub.log.add("home", "setup", None, "finished", source="user")
+    hub._broadcast(json.dumps({"type": "status", "status": hub.status()}))
+    return hub.status()
+
+
+# ---------- the house ----------
 @app.get("/home")
-def get_home(): return hub.home.to_dict()
+def get_home(): return hub.home_dict()
 
 
 @app.get("/scenes")
@@ -177,6 +298,113 @@ def get_ambient():
     return hub.ambient()
 
 
+@app.post("/rooms")
+async def add_room(body: dict):
+    hub.ready()
+    name = (body.get("name") or "").strip()
+    if not name: raise HTTPException(400, "A room needs a name.")
+    for r in hub.home.rooms.values():
+        if r.name.lower() == name.lower(): return {"id": r.id, "name": r.name}
+    try: a = await hub.ha.send("config/area_registry/create", name=name)
+    except Exception as e: raise HTTPException(502, f"could not add the room: {e}")
+    hub.log.add("home", "room", None, name, source="user")
+    return {"id": a["area_id"], "name": a["name"]}
+
+
+@app.post("/rooms/{room_id}/rename")
+async def rename_room(room_id: str, body: dict):
+    hub.ready()
+    if room_id == "unassigned" or room_id not in hub.home.rooms: raise HTTPException(404, "unknown room")
+    name = (body.get("name") or "").strip()
+    if not name: raise HTTPException(400, "A room needs a name.")
+    try: await hub.ha.send("config/area_registry/update", area_id=room_id, name=name)
+    except Exception as e: raise HTTPException(502, f"could not rename the room: {e}")
+    return {"ok": True}
+
+
+@app.delete("/rooms/{room_id}")
+async def remove_room(room_id: str):
+    hub.ready()
+    if room_id == "unassigned" or room_id not in hub.home.rooms: raise HTTPException(404, "unknown room")
+    try: await hub.ha.send("config/area_registry/delete", area_id=room_id)
+    except Exception as e: raise HTTPException(502, f"could not remove the room: {e}")
+    return {"ok": True}
+
+
+@app.post("/devices/{device_id}/move")
+async def move_device(device_id: str, body: dict):
+    """Put a device in a room. Moves the physical thing when there is one, so its other parts follow."""
+    hub.ready()
+    dev = hub.home.devices.get(device_id)
+    if not dev: raise HTTPException(404, "unknown device")
+    room = body.get("room_id") or None
+    if room == "unassigned": room = None
+    if room and room not in hub.home.rooms: raise HTTPException(404, "unknown room")
+    try:
+        if dev.hw: await hub.ha.send("config/device_registry/update", device_id=dev.hw, area_id=room)
+        if dev.own_room or not dev.hw: await hub.ha.send("config/entity_registry/update", entity_id=dev.id, area_id=None if dev.hw else room)
+    except Exception as e: raise HTTPException(502, f"could not move it: {e}")
+    hub.log.add("home", dev.id, dev.room_id, room or "unassigned", source="user", detail={"moved": True})
+    return {"ok": True}
+
+
+@app.post("/devices/{device_id}/rename")
+async def rename_device(device_id: str, body: dict):
+    hub.ready()
+    dev = hub.home.devices.get(device_id)
+    if not dev: raise HTTPException(404, "unknown device")
+    name = (body.get("name") or "").strip()
+    if not name: raise HTTPException(400, "A name is needed.")
+    try: await hub.ha.send("config/entity_registry/update", entity_id=dev.id, name=name)
+    except Exception as e: raise HTTPException(502, f"could not rename it: {e}")
+    return {"ok": True}
+
+
+# ---------- adding things ----------
+@app.get("/discovered")
+async def discovered():
+    if hub.driver != "ready": return []
+    return await hub.add.discovered()
+
+
+@app.get("/catalog")
+async def catalog():
+    hub.ready()
+    return await hub.add.catalog()
+
+
+@app.post("/flows")
+async def start_flow(body: dict):
+    hub.ready()
+    handler = body.get("handler")
+    if not handler: raise HTTPException(400, "what to add is needed")
+    try: return await hub.add.start(handler)
+    except Exception as e: raise HTTPException(502, str(e))
+
+
+@app.get("/flows/{flow_id}")
+async def get_flow(flow_id: str):
+    hub.ready()
+    try: return await hub.add.step(flow_id)
+    except Exception as e: raise HTTPException(502, str(e))
+
+
+@app.post("/flows/{flow_id}")
+async def submit_flow(flow_id: str, body: dict | None = None):
+    hub.ready()
+    try: r = await hub.add.submit(flow_id, body or {})
+    except Exception as e: raise HTTPException(502, str(e))
+    if r.get("type") == "create_entry": hub.log.add("home", "device", None, r.get("entry_title") or r["kind"], source="user", detail={"added": r["handler"]})
+    return r
+
+
+@app.delete("/flows/{flow_id}")
+async def cancel_flow(flow_id: str):
+    await hub.add.cancel(flow_id)
+    return {"ok": True}
+
+
+# ---------- location ----------
 def _get_json(url, headers=None):
     r = urllib.request.Request(url, headers={"User-Agent": "home-hub/0.1", **(headers or {})})
     with urllib.request.urlopen(r, timeout=12) as resp: return json.loads(resp.read())
@@ -229,6 +457,7 @@ async def geo_reverse(lat: float, lon: float):
     return {"name": name, "lat": lat, "lon": lon}
 
 
+# ---------- events, images, actions ----------
 @app.get("/events")
 def get_events(limit: int = 100, subject: str | None = None): return hub.log.recent(limit, subject)
 
@@ -236,17 +465,18 @@ def get_events(limit: int = 100, subject: str | None = None): return hub.log.rec
 @app.get("/devices/{device_id}/image")
 async def device_image(device_id: str):
     """Latest still from a camera. The app polls this; the brain never stores frames."""
+    hub.ready()
     dev = hub.home.devices.get(device_id)
     if not dev: raise HTTPException(404, "unknown device")
     if dev.capability == "camera": path = f"/api/camera_proxy/{dev.id}"
     elif dev.capability == "media" and dev.attrs.get("entity_picture"): path = dev.attrs["entity_picture"]
     else: raise HTTPException(404, "no image for this device")
-    env = load_env()
+    url, token = hub.ha.url, hub.ha.token
     def fetch():
         # Artwork can be an absolute URL (Cast apps hand out their own); HA-relative paths need the token.
-        url = path if path.startswith("http") else f"{env['HA_URL']}{path}"
-        headers = {} if path.startswith("http") else {"Authorization": f"Bearer {env['HA_TOKEN']}"}
-        r = urllib.request.Request(url, headers=headers)
+        full = path if path.startswith("http") else f"{url}{path}"
+        headers = {} if path.startswith("http") else {"Authorization": f"Bearer {token}"}
+        r = urllib.request.Request(full, headers=headers)
         with urllib.request.urlopen(r, timeout=15) as resp: return resp.read(), resp.headers.get("Content-Type", "image/jpeg")
     try:
         data, ctype = await asyncio.to_thread(fetch)
@@ -257,6 +487,7 @@ async def device_image(device_id: str):
 
 @app.post("/devices/{device_id}/{action}")
 async def device_action(device_id: str, action: str, data: dict | None = None):
+    hub.ready()
     dev = hub.home.devices.get(device_id)
     if not dev: raise HTTPException(404, "unknown device")
     key = (dev.capability.split(".")[0], action)
@@ -281,6 +512,7 @@ async def _apply(room, state: RoomState):
 
 @app.post("/rooms/{room_id}/intent/{state}")
 async def room_intent(room_id: str, state: RoomState):
+    hub.ready()
     room = hub.home.rooms.get(room_id)
     if not room: raise HTTPException(404, "unknown room")
     done, failed = await _apply(room, state)
@@ -291,6 +523,7 @@ async def room_intent(room_id: str, state: RoomState):
 @app.post("/home/intent/{state}")
 async def home_intent(state: RoomState):
     """The same intent in every room at once: good night, everything off."""
+    hub.ready()
     done, failed = 0, []
     for room in hub.home.rooms.values():
         n, f = await _apply(room, state); done += n; failed += f
@@ -302,12 +535,13 @@ async def home_intent(state: RoomState):
 async def stream(ws: WebSocket):
     await ws.accept(); hub.streams.add(ws)
     try:
+        await ws.send_text(json.dumps({"type": "status", "status": hub.status()}))
         while True: await ws.receive_text()
     except WebSocketDisconnect:
         hub.streams.discard(ws)
 
 
 # The wall panel / phone app, built with `npm run build` in ../app. Mounted last so API routes win.
-DIST = ROOT.parent / "app" / "dist"
+DIST = Path(__file__).resolve().parent.parent.parent / "app" / "dist"
 if DIST.exists():
     app.mount("/", StaticFiles(directory=DIST, html=True), name="app")

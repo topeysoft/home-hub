@@ -3,49 +3,72 @@
 A smart home hub built on the principle **own the experience and the intelligence, rent the drivers**.
 Plan of record: https://claude.ai/code/artifact/cc81890a-a928-4c6f-a65d-7844fe67fbcb
 
-## Layout
+## For the person receiving one
 
-- `docs/inventory.md` — Phase 1 device inventory. `inventory.draft.md` and `discovery.json` are generated.
-- `tools/discover.py` — mDNS + SSDP scan of the LAN from a Mac. Seeds the inventory.
-- `driver-layer/` — Phase 2. Docker Compose for the rented layer: Home Assistant Core (headless),
-  Mosquitto, Zigbee2MQTT, Z-Wave JS UI, python-matter-server. Runs on the hub host.
-- `brain/` — Phase 3. Python/FastAPI service on :8300: semantic home model, room-state intent
-  engine, event log, websocket stream. Talks only to HA's websocket. Serves `app/dist`.
-- `app/` — Phase 3. Vue PWA for the wall kiosk and phone (`npm run build` → served by the brain).
+1. Plug the hub into power and the router (or its Wi‑Fi). Wait two minutes.
+2. On a phone or tablet on the same Wi‑Fi, open **http://hub.local**.
+3. Answer the questions on the screen: your name, where home is, which rooms, what to add.
 
-## Temporary driver layer on the Mac (until the Pi arrives)
+That is the whole setup. Devices already on the Wi‑Fi (TVs, speakers, bridges) are noticed on
+their own and offered under *Found nearby*; anything else is added by brand from the same screen.
+Things that don't know their room wait under *New devices* until you place them. Nothing on the
+panel ever mentions Home Assistant, entities, or YAML.
 
-Running now: `driver-layer/docker-compose.mac.yml` (Home Assistant + Mosquitto, no radios, no host
-networking so devices are added by IP). Owner login and the brain's long-lived token are in
-`driver-layer/.env` (gitignored). HA UI: http://localhost:8123 or http://192.168.86.59:8123 on the LAN.
-Bootstrap was `python3 tools/ha_bootstrap.py --cast <ips>`; rerun on the Pi with a fresh config dir.
-HACS is installed manually from its release zip into `homeassistant/custom_components/hacs`.
-
-HA still has no home location (0°,0°, which is why `sun.sun` is wrong) and no weather. The panel
-asks for the location once on its Home screen and, on save, writes it into HA and adds the Met.no
-integration itself. Until then it assumes sunrise 6:45 and sunset 19:45, or reads
-`HOME_LAT`/`HOME_LON` from `driver-layer/.env`.
-
-### HTTPS for the panel
-
-`caddy` in both compose files fronts the brain with TLS from its own local certificate authority:
-`https://<mac>:8443/` today, `https://hub.local/` on the Pi. Browsers need a secure origin for
-device location, web push and a clean Add to Home Screen. One-time step per tablet or phone: send it
-`driver-layer/caddy/data/caddy/pki/authorities/local/root.crt`, install it, and on iOS also switch on
-full trust for it under Settings → General → About → Certificate Trust Settings.
-
-## Phase 2 quick start (on the hub host)
+## For the person building one
 
 ```sh
-sudo apt install -y docker.io docker-compose-plugin
-cp driver-layer/.env.example driver-layer/.env   # set ZIGBEE_SERIAL, ZWAVE_SERIAL from ls -l /dev/serial/by-id/
-cd driver-layer && docker compose up -d
+# on a fresh Raspberry Pi OS / Debian box with the radio sticks plugged in
+sudo ./install.sh
 ```
 
-Then: HA at `http://<host>:8123` (create the owner account, add a long-lived token for the brain),
-Zigbee2MQTT at `:8080`, Z-Wave JS UI at `:8091` (set the websocket server on, and add the
+`install.sh` installs Docker, names the machine `hub` (so it answers at `hub.local`), finds any
+Zigbee or Z‑Wave stick, writes `driver-layer/.env`, and starts everything with Docker Compose. The
+brain creates its own login to the driver layer during the on-screen setup, so there is no token
+to copy and no Home Assistant UI to visit.
+
+## Layout
+
+- `install.sh` — the one-command install for the hub host.
+- `driver-layer/` — Docker Compose for the whole hub: Home Assistant Core (headless), Mosquitto,
+  Zigbee2MQTT and Z‑Wave JS UI (profiles, on only when a stick is found), python-matter-server,
+  the brain, and Caddy as the front door (`http://hub.local`, plus `https://` for those who install
+  the root certificate).
+- `brain/` — Python/FastAPI service on :8300: semantic home model, room-state intent engine, event
+  log, websocket stream, first-run setup, device discovery. Talks only to HA's websocket and REST.
+  Serves `app/dist`. `brain/Dockerfile` packages it with the panel built in.
+- `app/` — Vue PWA for the wall kiosk and phone (`npm run build` → served by the brain).
+- `docs/inventory.md` — Phase 1 device inventory. `tools/discover.py` seeds it from a Mac.
+- `tools/ha_bootstrap.py` — the old manual bootstrap; the brain's setup screen does this now.
+
+## Developing on the Mac (until the Pi arrives)
+
+`driver-layer/docker-compose.mac.yml` runs Home Assistant, Mosquitto and Caddy in Docker with no
+radios and no host networking (Docker Desktop on macOS cannot do mDNS discovery, so devices are
+added by IP or by brand). The brain runs from its venv (`cd brain && .venv/bin/python main.py`) and
+finds HA at `http://localhost:8123`. Panel: `http://localhost:8300/` (or `:8088` through Caddy).
+
+The brain keeps what it learns in `brain/settings.json` (gitignored): the engine login it created,
+the owner's and home's names, the location, whether setup finished. Delete the file to run setup
+again. `driver-layer/.env` can still carry `HA_URL`/`HA_TOKEN` as a developer override.
+
+Preview any panel state from the address bar: `?setup=1&page=rooms` (a setup screen), `?rest=1`
+(the resting clock), `?sheet=add` (the add-a-device sheet), `?at=19:30`, `?wx=rainy`.
+
+### HTTPS
+
+Caddy fronts the brain on plain `http://hub.local` with nothing to install, and on `https://` from
+its own local certificate authority. Browsers need a secure origin for device location, web push and
+a clean Add to Home Screen; for that, install
+`driver-layer/caddy/data/caddy/pki/authorities/local/root.crt` on the tablet or phone once (iOS
+also wants full trust on under Settings → General → About → Certificate Trust Settings). Everything
+else works over plain http.
+
+## Radios and the Advanced door
+
+Zigbee2MQTT admin is on `:8080`, Z‑Wave JS UI on `:8091` (set its websocket server on and add the
 `zwave_js` integration in HA pointing at `ws://<host>:3000`), Matter via the `matter` integration
-pointing at `ws://<host>:5580/ws`.
+at `ws://<host>:5580/ws`. Home Assistant itself is on `:8123`: the Advanced door, linked from the
+bottom of the location and add sheets, never the product.
 
 ### Brilliant
 
@@ -60,21 +83,6 @@ the whole mesh, with failover.
 3. HACS → custom repository `joyfulhouse/brilliant-mqtt` → install → add the integration with each panel's IP and root password.
 4. Add the `mqtt` integration in HA pointing at `mosquitto:1883` if not already done.
 
-### Ring Alarm and its Z-Wave devices
-
-Home Assistant's `ring` integration only sees cameras, doorbells and chimes. The alarm base station and
-the Z-Wave devices paired to it (locks, switches, plugs, contact and motion sensors) come through the
-community `ring-mqtt` bridge instead, one container in both compose files. It uses Ring's cloud, so
-those devices stop answering when the internet is down; move switches, plugs and the lock to the Zooz
-stick when it arrives and leave the alarm's sensors in Ring.
-
-1. `docker compose -f docker-compose.mac.yml up -d ring-mqtt` (the Pi: `docker compose up -d ring-mqtt`).
-2. Open http://<host>:55123 once and sign in to Ring, including the 2FA code. The token lives in
-   `driver-layer/ring-mqtt/` (gitignored). Devices appear in HA through MQTT discovery within a minute.
-3. Give each new device a room in HA (Settings → Devices) and it shows up on the panel on its own.
-
-Phase 2 is done when every row in `docs/inventory.md` marked *keep* is visible over the HA websocket.
-
 ## Hardware to order
 
 - Pi 5 8 GB + NVMe HAT + SSD (hub host)
@@ -85,5 +93,6 @@ Phase 2 is done when every row in `docs/inventory.md` marked *keep* is visible o
 ## Rules that do not change
 
 - Works with the internet down.
-- HA is touched only through its websocket API; its UI is the Advanced door, never the product.
+- HA is touched only through its APIs; its UI is the Advanced door, never the product.
 - The assistant model writes and explains rules. It never executes one.
+- Setup is a conversation on the screen, never a file to edit.

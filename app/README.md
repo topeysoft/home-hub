@@ -10,9 +10,18 @@ npm run dev      # Vite on :5173, proxies /home /devices /rooms /events /stream 
 npm run build    # writes dist/, which the brain serves at http://<host>:8300/
 ```
 
-Kiosk: open http://<hub>:8300/ full-screen on the wall tablet (Add to Home Screen on iOS/Android).
+Kiosk: open http://hub.local/ full-screen on the wall tablet (Add to Home Screen on iOS/Android).
 `?room=<id>` opens straight into a room. After three minutes without a touch the panel rests on a
 clock over the sky; a touch brings it back to Home.
+
+## First run
+
+Until the brain says setup is done, the panel shows `src/Setup.vue` instead of the house: welcome,
+your name and the home's name (which creates the engine login behind the scenes), where home is,
+which rooms, what to add, done. Every step after the names can be skipped. `?setup=1&page=rooms`
+previews any screen. The same pieces live on after setup: `src/AddPanel.vue` (found nearby, add by
+brand, and the short form each one needs) sits in the *Add a device* sheet, and `src/SortView.vue`
+is the *New devices* room where unplaced things get a name and a room.
 
 ## The sky
 
@@ -36,6 +45,8 @@ and the sheet with `?sheet=location`.
   English "Recently" list built from the brain's event log.
 - `src/views/HomeView.vue`, `src/views/RoomView.vue` — the two screens.
 - `src/SceneBar.vue` — scene buttons; each shows its effect for the room it is in.
+- `src/Setup.vue`, `src/AddPanel.vue`, `src/SortView.vue`, `src/LocationPicker.vue` — first run and
+  the few things a person is ever asked: names, place, rooms, devices.
 - `src/tiles/` — one tile per capability. The light tile is the dimmer (tap toggles, drag dims).
   Media shows artwork, transport and volume. Cameras open full screen in `src/Viewer.vue`.
 - `src/Sky.vue`, `src/sun.ts` — the sky canvas and the solar maths behind it.

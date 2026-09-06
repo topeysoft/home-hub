@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { store, start, halt, load, visibleRooms, activity, roomActive, houseLine, weatherLine } from './store'
+import { store, start, halt, load, visibleRooms, activity, roomActive, houseLine, weatherLine, needsSetup } from './store'
+import Setup from './Setup.vue'
+import AddSheet from './AddSheet.vue'
 import Sky from './Sky.vue'
 import HomeView from './views/HomeView.vue'
 import RoomView from './views/RoomView.vue'
@@ -14,6 +16,8 @@ function safeGet(k: string) { try { return localStorage.getItem(k) } catch { ret
 function open(id: string | null) { selected.value = id; try { id ? localStorage.setItem('room', id) : localStorage.removeItem('room') } catch {} }
 
 const rooms = computed(visibleRooms)
+const previewSetup = new URLSearchParams(location.search).get('setup') === '1'   // ?setup=1 previews first run
+const setup = computed(() => !!store.status && (previewSetup || needsSetup()))
 const room = computed(() => rooms.value.find(r => r.id === selected.value) ?? null)
 
 const hour = computed(() => now.value.getHours())
@@ -34,7 +38,7 @@ function touched() {
   lastTouch = Date.now()
   if (idle.value) { idle.value = false; open(null) }
 }
-function checkIdle() { if (!idle.value && kiosk.matches && !store.viewer && !store.sheet && Date.now() - lastTouch > IDLE_AFTER) idle.value = true }
+function checkIdle() { if (!idle.value && kiosk.matches && !store.viewer && !store.sheet && !setup.value && Date.now() - lastTouch > IDLE_AFTER) idle.value = true }
 
 let tick: number | undefined, idler: number | undefined
 onMounted(() => {
@@ -52,10 +56,11 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="shell" :data-ambient="ambient" :class="{ resting: idle }">
+  <div class="shell" :data-ambient="ambient" :class="{ resting: idle, 'in-setup': setup }">
     <Sky />
     <div class="sky-veil"></div>
-    <aside class="rail">
+    <Setup v-if="setup" />
+    <aside class="rail" v-if="!setup">
       <div class="rail-clock">
         <div class="rail-time">{{ clock }}</div>
         <div class="rail-day">{{ day }}</div>
@@ -66,10 +71,14 @@ onUnmounted(() => {
           <Icon name="home" :size="20" /><span>Home</span>
         </button>
         <div class="rail-label">Rooms</div>
-        <button v-for="r in rooms" :key="r.id" class="rail-item" :class="{ active: room?.id === r.id }" @click="open(r.id)">
+        <button v-for="r in rooms" :key="r.id" class="rail-item" :class="{ active: room?.id === r.id, attention: r.id === 'unassigned' }" @click="open(r.id)">
           <span class="dot" :class="{ on: roomActive(r) }"></span>
           <span class="rail-name">{{ r.name }}</span>
-          <span class="rail-sub">{{ activity(r) }}</span>
+          <span class="rail-sub">{{ r.id === 'unassigned' ? (r.devices.length === 1 ? '1 to place' : `${r.devices.length} to place`) : activity(r) }}</span>
+        </button>
+        <button class="rail-item rail-add" @click="store.sheet = 'add'">
+          <Icon name="plus" :size="16" /><span class="rail-name">Add a device</span>
+          <span class="rail-sub" v-if="store.found.length">{{ store.found.length }} found nearby</span>
         </button>
       </nav>
       <div class="rail-foot">
@@ -77,13 +86,18 @@ onUnmounted(() => {
       </div>
     </aside>
 
-    <main class="stage">
+    <main class="stage" v-if="!setup">
       <Transition name="banner">
         <div class="banner" v-if="store.loaded && store.linkLost"><Icon name="refresh" :size="16" /> Reconnecting to the hub. What you see may be a little behind.</div>
       </Transition>
 
-      <div class="offline" v-if="!store.loaded">
-        <template v-if="store.error">
+      <div class="offline" v-if="!store.loaded || store.status?.driver !== 'ready'">
+        <template v-if="store.loaded && store.status && store.status.driver !== 'ready'">
+          <span class="offline-icon pulse"><Icon name="home" :size="28" /></span>
+          <h1 class="display">{{ store.status.driver === 'down' ? 'The engine is starting' : 'Reconnecting' }}</h1>
+          <p>{{ store.status.reason || 'The house will be back in a moment. Nothing needs doing.' }}</p>
+        </template>
+        <template v-else-if="store.error">
           <span class="offline-icon"><Icon name="home" :size="28" /></span>
           <h1 class="display">Can't reach the hub</h1>
           <p>Make sure the hub is powered on and this screen is on the same network. It will reconnect on its own.</p>
@@ -102,6 +116,7 @@ onUnmounted(() => {
 
     <Viewer />
     <Transition name="sheet"><LocationSheet v-if="store.sheet === 'location'" /></Transition>
+    <Transition name="sheet"><AddSheet v-if="store.sheet === 'add'" /></Transition>
 
     <Transition name="toast">
       <div class="toast" :class="store.toast.kind" v-if="store.toast" :key="store.toast.id" role="status">{{ store.toast.text }}</div>
