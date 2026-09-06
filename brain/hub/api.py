@@ -768,9 +768,11 @@ async def home_intent(state: RoomState):
 
 @app.get("/rooms/{room_id}/why")
 def room_why(room_id: str, limit: int = 5):
-    """The last few times this room was set, held or shadowed, with each rule's reasons. The assistant explains from this."""
+    """The last few times this room was set, held or shadowed, with each rule's reasons. The assistant explains from this.
+    House-wide taps (Bedtime, Everything off) are logged once under `home`, so a room's story includes them."""
     if room_id != "home" and room_id not in hub.home.rooms: raise HTTPException(404, "unknown room")
-    return hub.log.recent(limit, subject=room_id, kinds=("intent", "held", "shadowed", "failed"))
+    subjects = "home" if room_id == "home" else (room_id, "home")
+    return hub.log.recent(limit, subject=subjects, kinds=("intent", "held", "shadowed", "failed"))
 
 
 # ---------- rules ----------

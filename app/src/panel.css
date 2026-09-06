@@ -310,7 +310,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--lamp); outl
 .nudge-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .nudge-title { font-size: 16px; font-weight: 500; }
 .nudge-sub { font-size: 13.5px; color: var(--ink-2); }
-.home-foot { margin-top: 10px; padding-top: 18px; border-top: 1px solid var(--edge); }
+.home-foot { display: flex; flex-wrap: wrap; gap: 8px 24px; margin-top: 10px; padding-top: 18px; border-top: 1px solid var(--edge); }
 .home-place { display: inline-flex; align-items: center; gap: 7px; font-size: 13.5px; color: var(--muted); }
 .home-place svg { color: var(--lamp); }
 .home-change { margin-left: 8px; color: var(--ink-2); text-decoration: underline; text-underline-offset: 3px; }
@@ -523,3 +523,30 @@ select.input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://ww
 .radio-btn .found-icon { background: var(--surface-hi); color: var(--ink-2); }
 .pair-live { display: flex; align-items: center; gap: 10px; }
 .pair-last { color: var(--muted); }
+
+/* ---------- why a room is like this, and the routines behind it ---------- */
+.why-line { display: inline-flex; align-items: center; gap: 8px; margin: -12px 0 26px; padding: 8px 14px 8px 12px; border-radius: 999px; background: var(--surface-hi); border: 1px solid var(--edge); color: var(--ink-2); font-size: 13.5px; transition: background .18s var(--ease); }
+.why-line svg { color: var(--lamp); }
+.why-line:active { background: var(--surface-press); }
+.why-ask { margin-left: 4px; color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+.why { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.why li { display: grid; grid-template-columns: auto 1fr auto; align-items: start; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--edge); }
+.why li:last-child { border-bottom: 0; }
+.why-icon { width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; background: var(--surface-hi); color: var(--ink-2); margin-top: 1px; }
+.why-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.why-main { font-size: 15.5px; font-weight: 500; line-height: 1.3; }
+.why-sub { font-size: 13.5px; color: var(--ink-2); line-height: 1.35; }
+.why-when { padding-top: 3px; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.routines-head { margin: 6px 0 10px; }
+.routines { list-style: none; margin: 0 0 18px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.routines li { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 16px; background: var(--surface); border: 1px solid var(--edge); }
+.routine-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.routine-name { font-size: 15.5px; font-weight: 500; line-height: 1.3; }
+.routine-sub { font-size: 13px; color: var(--muted); line-height: 1.35; }
+.routines li.off .routine-name { color: var(--ink-2); }
+.switch { position: relative; flex-shrink: 0; width: 50px; height: 30px; border-radius: 999px; background: var(--surface-hi); border: 1px solid var(--edge-hi); transition: background .2s var(--ease), border-color .2s var(--ease); }
+.switch .knob { position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: var(--ink-2); transition: transform .2s var(--ease), background .2s var(--ease); }
+.switch.on { background: var(--lamp); border-color: transparent; }
+.switch.on .knob { transform: translateX(20px); background: var(--lamp-ink); }
+.switch.busy { opacity: .6; }
+.routine-errors { margin: 6px 0 0; padding-left: 18px; font-size: 13px; color: var(--ink-2); font-family: ui-monospace, Menlo, monospace; }

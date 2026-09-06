@@ -17,9 +17,12 @@ class EventLog:
             self.db.commit()
 
     def recent(self, limit=100, subject=None, kinds=None):
+        """Newest first. `subject` is one id or a tuple of them; `kinds` a tuple of event kinds."""
         q = "SELECT ts,kind,subject,old,new,source,detail FROM events"
         where, args = [], ()
-        if subject: where.append("subject=?"); args += (subject,)
+        if isinstance(subject, (tuple, list, set)):
+            subject = tuple(subject); where.append(f"subject IN ({','.join('?' * len(subject))})"); args += subject
+        elif subject: where.append("subject=?"); args += (subject,)
         if kinds: where.append(f"kind IN ({','.join('?' * len(kinds))})"); args += tuple(kinds)
         if where: q += " WHERE " + " AND ".join(where)
         q += " ORDER BY ts DESC LIMIT ?"

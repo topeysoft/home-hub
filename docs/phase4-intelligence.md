@@ -4,9 +4,12 @@ Design for the part of the plan that says *presence, light level and time drive 
 the assistant: onboarding, natural-language authoring, explanations.* Done when a guest uses the
 house for a weekend without instructions.
 
-Status, September 2026: milestone 1 and the holds from milestone 2 are built (`brain/hub/rules.py`,
-`brain/rules.json`, the `/rules` and `/rooms/{id}/why` routes, the `intent` stream message). Presence,
-the panel's *why* view and the routines sheet, and the assistant are still proposals.
+Status, 6 September 2026: milestones 1, 2 and 4 are built. The brain side is `brain/hub/rules.py`,
+`brain/rules.json`, holds, the `/rules` and `/rooms/{id}/why` routes and the `intent` stream message.
+The panel side is the *set by* line on a room (`app/src/views/RoomView.vue`), the why sheet
+(`app/src/WhySheet.vue`) and the routines sheet (`app/src/RoutinesSheet.vue`, on and off only), with
+the wording in `app/src/why.ts`. Presence (milestone 3) and the assistant (milestone 5) are still
+proposals; `presence` is in the vocabulary but never fires.
 
 ## What we have
 

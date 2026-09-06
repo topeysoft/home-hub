@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { activity, cap } from '../store'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { activity, cap, openWhy } from '../store'
+import { setByLine } from '../why'
 import type { Room } from '../api'
 import Icon from '../Icon.vue'
 import SceneBar from '../SceneBar.vue'
@@ -18,6 +19,13 @@ const editing = ref(false)
 const order = ['media', 'light', 'cover', 'lock', 'fan', 'switch', 'vacuum', 'climate', 'camera', 'motion', 'contact', 'sensor']
 const devices = computed(() => [...props.room.devices].sort((a, b) => order.indexOf(cap(a)) - order.indexOf(cap(b))))
 const tile = (c: string) => c === 'light' ? LightTile : c === 'media' ? MediaTile : c === 'camera' ? CameraTile : c === 'climate' ? ClimateTile : PlainTile
+
+/* Who set this room, and how long a hand keeps routines away. Ticks so "1 h 20 min left" stays true. */
+const now = ref(Date.now())
+const setBy = computed(() => setByLine(props.room, now.value))
+let tick: number | undefined
+onMounted(() => { tick = window.setInterval(() => (now.value = Date.now()), 30000) })
+onUnmounted(() => clearInterval(tick))
 </script>
 
 <template>
@@ -34,6 +42,9 @@ const tile = (c: string) => c === 'light' ? LightTile : c === 'media' ? MediaTil
     </header>
 
     <SceneBar :room="room" />
+    <button class="why-line" v-if="setBy" @click="openWhy(room.id)" title="Why is this room like this?">
+      <Icon :name="setBy.icon" :size="15" /><span>{{ setBy.text }}</span><span class="why-ask">Why?</span>
+    </button>
 
     <div class="tiles" v-if="devices.length">
       <component v-for="d in devices" :key="d.id" :is="tile(cap(d))" :device="d" />

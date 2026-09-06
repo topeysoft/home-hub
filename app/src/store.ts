@@ -1,5 +1,5 @@
 import { reactive } from 'vue'
-import { getHome, getEvents, getAmbient, getScenes, getStatus, getDiscovered, connect, act, setIntent, setHomeIntent, type Room, type Device, type Home, type Event, type Ambient, type Rules, type Status, type Found, type Intent } from './api'
+import { getHome, getEvents, getAmbient, getScenes, getStatus, getDiscovered, getRoutines, connect, act, setIntent, setHomeIntent, type Room, type Device, type Home, type Event, type Ambient, type Rules, type Status, type Found, type Intent, type Routine } from './api'
 import { sunPosition, sunGuess, moonPhase } from './sun'
 
 export const store = reactive({
@@ -11,7 +11,10 @@ export const store = reactive({
   ambient: { location: null, weather: null } as Ambient,
   ambientLoaded: false,
   rules: {} as Rules,                        // scene rules from the brain, to tell whether a room still matches its scene
-  sheet: (['location', 'add', 'code'].includes(new URLSearchParams(location.search).get('sheet') ?? '') ? new URLSearchParams(location.search).get('sheet') : null) as null | 'location' | 'add' | 'code',   // the few soft sheets the panel has; ?sheet=location previews one
+  sheet: (['location', 'add', 'code', 'why', 'routines'].includes(new URLSearchParams(location.search).get('sheet') ?? '') ? new URLSearchParams(location.search).get('sheet') : null) as null | 'location' | 'add' | 'code' | 'why' | 'routines',   // the few soft sheets the panel has; ?sheet=location previews one
+  whyRoom: new URLSearchParams(location.search).get('room') as string | null,   // the room the why sheet is about; ?sheet=why&room=kitchen previews it
+  routines: [] as Routine[],                 // the brain's rules, for the routines sheet and to name a rule on a room
+  routineErrors: [] as string[],             // rules the brain could not read, in its own words
   previewSetup: new URLSearchParams(location.search).get('setup') === '1',   // ?setup=1 previews first run; cleared by Open Home
   status: null as Status | null,            // where the hub is in its life: engine down, fresh, ready; and whether setup finished
   homeName: '' as string,
@@ -181,7 +184,7 @@ export async function perform(d: Device, action: string, data?: Record<string, u
 }
 
 /* ---------- recent activity, told plainly ---------- */
-const LABELS: Record<string, string> = { movie: 'Movie', guests: 'Guests', asleep: 'Sleep', empty: 'All off', away: 'Everything off', occupied: 'Here' }
+export const LABELS: Record<string, string> = { movie: 'Movie', guests: 'Guests', asleep: 'Sleep', empty: 'All off', away: 'Everything off', occupied: 'Here' }
 export function describe(ev: Event): { text: string; icon: string } | null {
   if (ev.kind === 'intent') {
     if (ev.subject === 'home') return { text: ev.new === 'asleep' ? 'Bedtime' : LABELS[ev.new ?? ''] ?? ev.new ?? '', icon: ev.new === 'asleep' ? 'moon' : 'leave' }
@@ -221,6 +224,13 @@ export async function refreshEvents() {
 }
 function eventsSoon() { clearTimeout(eventsTimer); eventsTimer = window.setTimeout(refreshEvents, 1500) }
 
+/* ---------- routines: what the house does on its own, and why a room is the way it is ---------- */
+export async function loadRoutines() {
+  try { const f = await getRoutines(); store.routines = f.rules ?? []; store.routineErrors = f.errors ?? [] } catch {}
+}
+export const routineById = (id: string) => store.routines.find(r => r.id === id)
+export function openWhy(roomId: string) { store.whyRoom = roomId; store.sheet = 'why' }
+
 /* ---------- setup and things found nearby ---------- */
 /** True while the panel should show the setup flow instead of the house. */
 export const needsSetup = () => !store.status || !store.status.setup_done   // once finished, an engine hiccup shows the calm offline note, not the welcome
@@ -251,7 +261,7 @@ let stop: (() => void) | undefined, lostTimer: number | undefined, skyTimer: num
 export async function load() {
   await refreshStatus()
   try { applyHome(await getHome()) } catch { store.error = 'The hub is not answering.' }
-  loadAmbient(); loadRules()
+  loadAmbient(); loadRules(); loadRoutines()
 }
 let foundPoll: number | undefined
 export async function start() {

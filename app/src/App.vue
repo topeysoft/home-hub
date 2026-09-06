@@ -11,6 +11,8 @@ import HomeView from './views/HomeView.vue'
 import RoomView from './views/RoomView.vue'
 import Viewer from './Viewer.vue'
 import LocationSheet from './LocationSheet.vue'
+import WhySheet from './WhySheet.vue'
+import RoutinesSheet from './RoutinesSheet.vue'
 import Icon from './Icon.vue'
 
 const now = ref(new Date())
@@ -120,6 +122,8 @@ onUnmounted(() => {
     <Transition name="sheet"><LocationSheet v-if="store.sheet === 'location'" /></Transition>
     <Transition name="sheet"><AddSheet v-if="store.sheet === 'add'" /></Transition>
     <Transition name="sheet"><CodeSheet v-if="store.sheet === 'code'" /></Transition>
+    <Transition name="sheet"><WhySheet v-if="store.sheet === 'why'" /></Transition>
+    <Transition name="sheet"><RoutinesSheet v-if="store.sheet === 'routines'" /></Transition>
     <Transition name="sheet"><CodePrompt v-if="lock.prompt" /></Transition>
 
     <Transition name="toast">

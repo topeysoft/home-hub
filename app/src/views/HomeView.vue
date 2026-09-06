@@ -16,6 +16,11 @@ const cameras = computed(() => props.rooms.flatMap(r => r.devices.filter(d => ca
 const kinds = (r: Room) => [...new Set(r.devices.map(cap))].filter(k => k !== 'sensor').slice(0, 4)
 const iconFor = (d: any) => cap(d) === 'media' && /\b(tv|television|roku)\b/i.test(d.name) ? 'tv' : cap(d)
 
+const routinesLine = computed(() => {
+  const n = store.routines.length, off = store.routines.filter(r => r.enabled === false).length
+  return `${n === 1 ? '1 routine' : `${n} routines`}${off ? `, ${off} off` : ''}`
+})
+
 const now = ref(Date.now())
 const recent = computed(() => {
   const out: { key: number; text: string; icon: string; when: string }[] = []
@@ -96,8 +101,9 @@ onUnmounted(() => { clearInterval(t1); clearInterval(t2) })
         </li>
       </ul>
     </div>
-    <footer class="home-foot" v-if="store.ambient.location">
-      <button class="home-place" @click="store.sheet = 'location'"><Icon name="pin" :size="14" /> {{ store.ambient.location.name }}<span class="home-change">Change</span></button>
+    <footer class="home-foot" v-if="store.ambient.location || store.routines.length">
+      <button class="home-place" v-if="store.ambient.location" @click="store.sheet = 'location'"><Icon name="pin" :size="14" /> {{ store.ambient.location.name }}<span class="home-change">Change</span></button>
+      <button class="home-place" v-if="store.routines.length" @click="store.sheet = 'routines'"><Icon name="sparkle" :size="14" /> {{ routinesLine }}<span class="home-change">See</span></button>
     </footer>
   </section>
 </template>

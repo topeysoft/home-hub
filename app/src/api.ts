@@ -90,6 +90,17 @@ export async function getScenes(): Promise<Rules> {
 export async function getEvents(limit = 40): Promise<Event[]> {
   const r = await request(`/events?limit=${limit}`); if (!r.ok) await fail(r); return r.json()
 }
+/** The last few times a room was set, held or shadowed, each with the rule's reasons. */
+export async function getWhy(roomId: string, limit = 6): Promise<Event[]> {
+  const r = await request(`/rooms/${encodeURIComponent(roomId)}/why?limit=${limit}`); if (!r.ok) await fail(r); return r.json()
+}
+/* Routines: the brain's rules.json, read whole and switched on or off one at a time. The panel never edits one here. */
+export type Routine = { id: string; name: string; room: string; when: Record<string, any>; if?: any[][]; then: Record<string, any>; enabled?: boolean; by?: string }
+export type RoutineFile = { rules: Routine[]; drafts?: unknown[]; valid: boolean; errors: string[] }
+export async function getRoutines(): Promise<RoutineFile> {
+  const r = await request('/rules'); if (!r.ok) await fail(r); return r.json()
+}
+export const enableRoutine = (id: string, enabled: boolean) => post<{ ok: boolean; enabled: boolean }>(`/rules/${encodeURIComponent(id)}/enable`, { enabled })
 export async function act(id: string, action: string, data?: Record<string, unknown>) {
   const r = await request(`/devices/${encodeURIComponent(id)}/${action}`, { method: 'POST', headers: json, body: data ? JSON.stringify(data) : undefined })
   if (!r.ok) await fail(r)
