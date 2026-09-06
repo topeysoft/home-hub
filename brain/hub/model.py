@@ -45,7 +45,7 @@ class Home:
     @staticmethod
     def _keep_attrs(cap, a):
         keys = {"light": ("brightness", "color_temp_kelvin", "rgb_color", "supported_color_modes"),
-                "media": ("volume_level", "media_title", "app_name", "source"),
+                "media": ("volume_level", "media_title", "media_artist", "app_name", "source", "entity_picture"),
                 "cover": ("current_position",), "climate": ("temperature", "current_temperature", "hvac_modes"),
                 "fan": ("percentage",)}.get(cap.split(".")[0], ())
         return {k: a[k] for k in keys if k in a}

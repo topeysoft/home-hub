@@ -95,15 +95,21 @@ def get_events(limit: int = 100, subject: str | None = None): return hub.log.rec
 async def device_image(device_id: str):
     """Latest still from a camera. The app polls this; the brain never stores frames."""
     dev = hub.home.devices.get(device_id)
-    if not dev or dev.capability != "camera": raise HTTPException(404, "not a camera")
+    if not dev: raise HTTPException(404, "unknown device")
+    if dev.capability == "camera": path = f"/api/camera_proxy/{dev.id}"
+    elif dev.capability == "media" and dev.attrs.get("entity_picture"): path = dev.attrs["entity_picture"]
+    else: raise HTTPException(404, "no image for this device")
     env = load_env()
     def fetch():
-        r = urllib.request.Request(f"{env['HA_URL']}/api/camera_proxy/{dev.id}", headers={"Authorization": f"Bearer {env['HA_TOKEN']}"})
+        # Artwork can be an absolute URL (Cast apps hand out their own); HA-relative paths need the token.
+        url = path if path.startswith("http") else f"{env['HA_URL']}{path}"
+        headers = {} if path.startswith("http") else {"Authorization": f"Bearer {env['HA_TOKEN']}"}
+        r = urllib.request.Request(url, headers=headers)
         with urllib.request.urlopen(r, timeout=15) as resp: return resp.read(), resp.headers.get("Content-Type", "image/jpeg")
     try:
         data, ctype = await asyncio.to_thread(fetch)
     except Exception as e:
-        raise HTTPException(502, f"camera unavailable: {e}")
+        raise HTTPException(502, f"image unavailable: {e}")
     return Response(content=data, media_type=ctype, headers={"Cache-Control": "no-store"})
 
 

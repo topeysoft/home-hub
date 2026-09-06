@@ -27,6 +27,8 @@ SERVICE = {
     ("switch", "on"): ("switch", "turn_on"), ("switch", "off"): ("switch", "turn_off"),
     ("media", "on"): ("media_player", "turn_on"), ("media", "off"): ("media_player", "turn_off"),
     ("media", "pause"): ("media_player", "media_pause"), ("media", "play"): ("media_player", "media_play"),
+    ("media", "next"): ("media_player", "media_next_track"), ("media", "previous"): ("media_player", "media_previous_track"),
+    ("media", "volume"): ("media_player", "volume_set"),
     ("fan", "on"): ("fan", "turn_on"), ("fan", "off"): ("fan", "turn_off"),
     ("cover", "open"): ("cover", "open_cover"), ("cover", "close"): ("cover", "close_cover"),
     ("lock", "lock"): ("lock", "lock"), ("lock", "unlock"): ("lock", "unlock"),

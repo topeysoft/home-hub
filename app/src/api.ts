@@ -15,6 +15,7 @@ export async function setIntent(roomId: string, state: string) {
   const r = await fetch(`/rooms/${encodeURIComponent(roomId)}/intent/${state}`, { method: 'POST' })
   if (!r.ok) throw new Error((await r.json()).detail ?? r.statusText)
 }
+export const imageUrl = (id: string) => `/devices/${encodeURIComponent(id)}/image?t=${Date.now()}`
 
 /** Live updates from the brain. Reconnects with backoff; reports link state. */
 export function connect(on: { device: (d: Device) => void; home: (h: Home) => void; link: (up: boolean) => void }) {
