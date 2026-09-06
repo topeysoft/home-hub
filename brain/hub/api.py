@@ -1,8 +1,9 @@
-import asyncio, json, logging, os
+import asyncio, json, logging, os, urllib.request
 from contextlib import asynccontextmanager
 from pathlib import Path
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import Response
 from .ha_adapter import HAAdapter
 from .model import Home
 from .events import EventLog
@@ -88,6 +89,22 @@ def get_home(): return hub.home.to_dict()
 
 @app.get("/events")
 def get_events(limit: int = 100, subject: str | None = None): return hub.log.recent(limit, subject)
+
+
+@app.get("/devices/{device_id}/image")
+async def device_image(device_id: str):
+    """Latest still from a camera. The app polls this; the brain never stores frames."""
+    dev = hub.home.devices.get(device_id)
+    if not dev or dev.capability != "camera": raise HTTPException(404, "not a camera")
+    env = load_env()
+    def fetch():
+        r = urllib.request.Request(f"{env['HA_URL']}/api/camera_proxy/{dev.id}", headers={"Authorization": f"Bearer {env['HA_TOKEN']}"})
+        with urllib.request.urlopen(r, timeout=15) as resp: return resp.read(), resp.headers.get("Content-Type", "image/jpeg")
+    try:
+        data, ctype = await asyncio.to_thread(fetch)
+    except Exception as e:
+        raise HTTPException(502, f"camera unavailable: {e}")
+    return Response(content=data, media_type=ctype, headers={"Cache-Control": "no-store"})
 
 
 @app.post("/devices/{device_id}/{action}")

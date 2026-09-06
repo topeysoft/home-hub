@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { act, type Device } from './api'
 
 const props = defineProps<{ device: Device }>()
@@ -31,11 +31,17 @@ function primary() {
   if (cap.value === 'lock') return run(d.state === 'locked' ? 'unlock' : 'lock')
 }
 const passive = computed(() => ['sensor', 'motion', 'contact', 'camera'].includes(cap.value))
+const imgSrc = ref('')
+let timer: number | undefined
+function refreshImage() { if (cap.value === 'camera' && !unavailable.value) imgSrc.value = `/devices/${encodeURIComponent(props.device.id)}/image?t=${Date.now()}` }
+onMounted(() => { refreshImage(); timer = window.setInterval(refreshImage, 15000) })
+onUnmounted(() => clearInterval(timer))
 const brightness = computed(() => Math.round((props.device.attrs.brightness ?? 0) / 2.55))
 </script>
 
 <template>
   <div class="tile" :class="[cap, { active, passive, unavailable }]">
+    <img v-if="cap === 'camera' && imgSrc" class="still" :src="imgSrc" alt="" @error="imgSrc = ''" />
     <button class="tile-main" :disabled="passive || unavailable" @click="primary">
       <span class="cap">{{ cap }}</span>
       <span class="name">{{ device.name }}</span>

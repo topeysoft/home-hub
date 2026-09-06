@@ -23,10 +23,17 @@ function applyDevice(d: Device) {
   }
 }
 
-const INTENTS = [
-  { id: 'occupied', label: 'Here' }, { id: 'movie', label: 'Movie' },
-  { id: 'asleep', label: 'Sleep' }, { id: 'empty', label: 'Empty' },
+const ALL_INTENTS = [
+  { id: 'occupied', label: 'Here', needs: ['light', 'media', 'switch', 'fan'] },
+  { id: 'movie', label: 'Movie', needs: ['media'] },
+  { id: 'asleep', label: 'Sleep', needs: ['light', 'media'] },
+  { id: 'empty', label: 'Empty', needs: ['light', 'media', 'switch', 'fan'] },
 ]
+// Only offer intents the room can act on: a room of cameras has nothing to put to sleep.
+const intents = computed(() => {
+  const caps = new Set((room.value?.devices ?? []).map(d => d.capability.split('.')[0]))
+  return ALL_INTENTS.filter(i => i.needs.some(c => caps.has(c)))
+})
 async function intent(id: string) {
   if (!room.value) return
   try { await setIntent(room.value.id, id); room.value.intent = id; error.value = '' }
@@ -68,8 +75,8 @@ const summary = computed(() => {
         <h1>{{ room.name }}</h1>
         <span class="summary">{{ summary }}</span>
       </div>
-      <div class="intents">
-        <button v-for="i in INTENTS" :key="i.id" class="intent" :class="{ active: room.intent === i.id }" @click="intent(i.id)">{{ i.label }}</button>
+      <div class="intents" v-if="intents.length">
+        <button v-for="i in intents" :key="i.id" class="intent" :class="{ active: room.intent === i.id }" @click="intent(i.id)">{{ i.label }}</button>
       </div>
       <p v-if="error" class="error">{{ error }}</p>
       <div class="grid" v-if="room.devices.length">
