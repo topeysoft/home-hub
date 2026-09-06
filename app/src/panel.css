@@ -46,7 +46,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--lamp); outl
 .shell.resting .rail, .shell.resting .stage { opacity: 0; transition: opacity .9s var(--ease); }
 .rail, .stage { transition: opacity .5s var(--ease); }
 /* glass: a tone of its own, the sky softened behind it */
-.room-card, .tile, .scene, .pill, .back, .banner, .offline-icon, .recent-icon, .button.ghost { backdrop-filter: var(--frost); -webkit-backdrop-filter: var(--frost); }
+.room-card, .tile, .scene, .back, .banner, .offline-icon, .recent-icon, .button.ghost { backdrop-filter: var(--frost); -webkit-backdrop-filter: var(--frost); }
 .rail { background: rgba(12, 13, 16, .38); backdrop-filter: blur(24px) saturate(1.2); -webkit-backdrop-filter: blur(24px) saturate(1.2); }
 .shell::after { content: ""; position: absolute; inset: 0; pointer-events: none; z-index: -1; opacity: .5;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .035 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
@@ -78,6 +78,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--lamp); outl
 
 /* ---------- stage ---------- */
 .stage { overflow-y: auto; padding: 34px 40px 48px; min-width: 0; }
+.home, .room { max-width: 1360px; }   /* on a 1080p wall the cards stop stretching */
 .stage-head { margin-bottom: 26px; }
 .stage-head h1 { margin: 0; font-size: 56px; line-height: 1.02; }
 .lede { margin: 10px 0 0; color: var(--ink-2); font-size: 18px; max-width: 60ch; }
@@ -105,7 +106,8 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--lamp); outl
 .room-card.empty .room-card-name { font-size: 26px; }
 .room-card.empty .room-card-activity { font-size: 13.5px; }
 .room-card-top { display: flex; justify-content: space-between; align-items: center; min-height: 20px; }
-.room-kinds { display: inline-flex; gap: 8px; color: var(--muted); }
+.room-temp { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; font-size: 13.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.room-temp svg { color: var(--muted); }
 .room-card-name { font-size: 34px; line-height: 1.05; margin-top: auto; }
 .room-card-activity { color: var(--ink-2); font-size: 14.5px; margin-top: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .room-card.active .room-card-activity { color: var(--lamp); }
@@ -154,7 +156,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--lamp); outl
 
 /* light: the tile is the dimmer */
 .tile.light { cursor: pointer; }
-.tile.light .fill { position: absolute; inset: 0; width: 0; background: linear-gradient(90deg, rgba(233,184,114,.34), rgba(233,184,114,.16)); transition: width .25s var(--ease); }
+.tile.light .fill { position: absolute; inset: 0; width: 0; background: linear-gradient(90deg, rgba(233,184,114,.26), rgba(233,184,114,.12) calc(100% - 32px), rgba(233,184,114,0)); transition: width .25s var(--ease); }
 .tile.light.on { border-color: rgba(233,184,114,.30); }
 .tile.light.dimmable.on::after { content: ""; position: absolute; left: 18px; right: 18px; bottom: 12px; height: 3px; border-radius: 3px; background: var(--edge-hi); z-index: 1; }
 .tile.light.dimmable.on .fill::after { content: ""; position: absolute; left: 18px; bottom: 12px; height: 3px; width: calc(100% - 36px); border-radius: 3px; background: var(--lamp); }
@@ -221,13 +223,6 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--lamp); outl
 .block { margin-bottom: 30px; }
 .label { margin: 0 0 12px; font-size: 11.5px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
 
-.pills { display: flex; flex-wrap: wrap; gap: 8px; }
-.pill { display: inline-flex; align-items: center; gap: 8px; padding: 9px 14px 9px 11px; border-radius: 999px; background: linear-gradient(rgba(233,184,114,.12), rgba(233,184,114,.12)), var(--surface); border: 1px solid rgba(233,184,114,.32); color: var(--ink);
-  transition: background .18s var(--ease), transform .15s var(--ease); }
-.pill svg { color: var(--lamp); }
-.pill-name { font-size: 14.5px; font-weight: 500; }
-.pill-sub { font-size: 13px; color: var(--muted); }
-.pill:active { transform: scale(.97); background: linear-gradient(rgba(233,184,114,.22), rgba(233,184,114,.22)), var(--surface); }
 
 .camera-row { display: flex; gap: 12px; overflow-x: auto; margin: 0 -40px; padding: 2px 40px 6px; scroll-snap-type: x proximity; }
 .tile.camera.compact { flex: 0 0 280px; width: 280px; scroll-snap-align: start; }
@@ -300,7 +295,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--lamp); outl
   .home-head { flex-direction: column; gap: 14px; }
   .home-head .scenes { width: 100%; }
   .home-head .scene { flex: 1 1 calc(50% - 5px); min-width: 0; }
-  .scenes:not(.house) .scene { flex: 1 1 auto; }
+  .scenes:not(.house) .scene { flex: 1 1 calc(50% - 5px); }
   .scene { padding: 8px 14px 8px 8px; min-height: 54px; border-radius: 16px; }
   .scene-icon { width: 36px; height: 36px; }
   .camera-row { margin: 0 -16px; padding: 2px 16px 6px; }
@@ -313,13 +308,18 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--lamp); outl
 }
 
 /* ---------- the location sheet, and the nudge that opens it ---------- */
-.nudge { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 14px; width: 100%; max-width: 640px; margin: -6px 0 26px; padding: 14px 18px; border-radius: 18px;
+.nudge { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 12px; width: 100%; max-width: 760px; margin: -6px 0 22px; padding: 9px 16px 9px 10px; border-radius: 999px;
   background: linear-gradient(rgba(233,184,114,.10), rgba(233,184,114,.10)), var(--surface); border: 1px solid rgba(233,184,114,.30); backdrop-filter: var(--frost); -webkit-backdrop-filter: var(--frost); }
 .nudge:active { transform: scale(.99); }
-.nudge-icon { width: 40px; height: 40px; border-radius: 13px; display: grid; place-items: center; background: var(--lamp); color: var(--lamp-ink); }
-.nudge-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.nudge-title { font-size: 16px; font-weight: 500; }
-.nudge-sub { font-size: 13.5px; color: var(--ink-2); }
+.nudge-icon { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; background: var(--lamp); color: var(--lamp-ink); }
+.nudge-text { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.nudge-title { font-size: 15px; font-weight: 500; white-space: nowrap; }
+.nudge-sub { font-size: 13.5px; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 860px) {
+  .nudge { border-radius: 18px; padding: 12px 16px 12px 12px; }
+  .nudge-text { flex-direction: column; gap: 2px; }
+  .nudge-sub { white-space: normal; }
+}
 .home-foot { display: flex; flex-wrap: wrap; gap: 8px 24px; margin-top: 10px; padding-top: 18px; border-top: 1px solid var(--edge); }
 .home-place { display: inline-flex; align-items: center; gap: 7px; font-size: 13.5px; color: var(--muted); }
 .home-place svg { color: var(--lamp); }
@@ -485,7 +485,11 @@ select.input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://ww
 .clim-row.fan.running .clim-fan-label { color: var(--ink); }
 .clim-fan-label .spin { animation: spin 2.4s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
-@media (max-width: 860px) { .clim-big { font-size: 54px; } .clim-btn { width: 46px; height: 46px; } }
+@media (max-width: 860px) {
+  .clim-big { font-size: 54px; } .clim-btn { width: 46px; height: 46px; }
+  .clim-row.fan, .clim-row.sense { flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; margin: 0 -18px; padding: 8px 18px 0; scrollbar-width: none; }
+  .clim-row.fan .clim-chip, .clim-row.sense .clim-chip, .clim-fan-label { flex: 0 0 auto; white-space: nowrap; }
+}
 
 /* what runs behind the panel: radios, Matter, Ring */
 .drivers { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { store, activity, roomActive, cap, houseLine, whatsOn, shortName, roomOf, describe, ago, refreshEvents } from '../store'
+import { store, activity, roomActive, cap, houseLine, describe, ago, refreshEvents } from '../store'
 import type { Room } from '../api'
 import Icon from '../Icon.vue'
 import SceneBar from '../SceneBar.vue'
@@ -11,10 +11,12 @@ defineEmits<{ open: [id: string] }>()
 
 const greeting = computed(() => props.hour < 5 ? 'Good night' : props.hour < 12 ? 'Good morning' : props.hour < 17 ? 'Good afternoon' : props.hour < 21 ? 'Good evening' : 'Good night')
 const line = computed(houseLine)
-const on = computed(whatsOn)
 const cameras = computed(() => props.rooms.flatMap(r => r.devices.filter(d => cap(d) === 'camera')))
-const kinds = (r: Room) => [...new Set(r.devices.map(cap))].filter(k => k !== 'sensor').slice(0, 4)
-const iconFor = (d: any) => cap(d) === 'media' && /\b(tv|television|roku)\b/i.test(d.name) ? 'tv' : cap(d)
+/* the one number worth a glance on a room card: its temperature, when a sensor in the room reads one */
+function temp(r: Room): string {
+  const d = r.devices.find(d => d.capability === 'sensor.temperature' && Number.isFinite(Number(d.state)))
+  return d ? `${Math.round(Number(d.state))}°` : ''
+}
 
 const routinesLine = computed(() => {
   const n = store.routines.length, off = store.routines.filter(r => r.enabled === false).length
@@ -60,23 +62,12 @@ onUnmounted(() => { clearInterval(t1); clearInterval(t2) })
       <span class="nudge-text"><span class="nudge-title">Where is home?</span><span class="nudge-sub">Set a location once and the sky, sunrise and weather will follow it.</span></span>
     </button>
 
-    <div class="block" v-if="on.length">
-      <h2 class="label">On right now</h2>
-      <div class="pills">
-        <button v-for="d in on" :key="d.id" class="pill" @click="$emit('open', d.room_id)">
-          <Icon :name="iconFor(d)" :size="16" />
-          <span class="pill-name">{{ shortName(d, roomOf(d)) }}</span>
-          <span class="pill-sub">{{ roomOf(d)?.name }}</span>
-        </button>
-      </div>
-    </div>
-
     <div class="block">
       <h2 class="label">Rooms</h2>
       <div class="room-grid">
         <button v-for="r in rooms" :key="r.id" class="room-card" :class="{ active: roomActive(r), empty: !r.devices.length }" @click="$emit('open', r.id)">
           <div class="room-card-top">
-            <span class="room-kinds"><Icon v-for="k in kinds(r)" :key="k" :name="k" :size="16" /></span>
+            <span class="room-temp" v-if="temp(r)"><Icon name="sensor" :size="14" />{{ temp(r) }}</span>
           </div>
           <div class="room-card-name display">{{ r.name }}</div>
           <div class="room-card-activity">{{ activity(r) }}</div>
