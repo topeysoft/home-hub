@@ -46,7 +46,10 @@ and the sheet with `?sheet=location`.
 - `src/views/HomeView.vue`, `src/views/RoomView.vue` — the two screens.
 - `src/SceneBar.vue` — scene buttons; each shows its effect for the room it is in.
 - `src/Setup.vue`, `src/AddPanel.vue`, `src/SortView.vue`, `src/LocationPicker.vue` — first run and
-  the few things a person is ever asked: names, place, rooms, devices.
+  the few things a person is ever asked: names, code, place, rooms, devices.
+- `src/code.ts`, `src/CodePrompt.vue`, `src/CodeSheet.vue` — the code on the settings. Every request
+  goes through `request()`, which attaches the code kept for this tab and, when the hub answers 401
+  `code`, asks for it and retries. Controls never ask; changes do. `?sheet=code` previews the sheet.
 - `src/tiles/` — one tile per capability. The light tile is the dimmer (tap toggles, drag dims).
   Media shows artwork, transport and volume. Cameras open full screen in `src/Viewer.vue`.
 - `src/Sky.vue`, `src/sun.ts` — the sky canvas and the solar maths behind it.

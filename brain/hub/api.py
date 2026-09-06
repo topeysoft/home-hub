@@ -5,7 +5,8 @@ from zoneinfo import ZoneInfo
 from pathlib import Path
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import Response
+from fastapi.responses import Response, JSONResponse
+from fastapi import Request
 from . import ha_setup
 from .ha_adapter import HAAdapter, AuthError
 from .model import Home
@@ -16,6 +17,7 @@ from .provision import Provision
 from .comfort import Comfort
 from .rules import Engine
 from .settings import Settings, DATA, env_file
+from .lock import Lock, needs_code
 
 log = logging.getLogger("hub")
 DEFAULT_HA = "http://localhost:8123"
@@ -48,6 +50,7 @@ class Hub:
         self.temp_unit = "°F"
         self.tz = datetime.now().astimezone().tzinfo   # the home's zone, from HA's config once connected
         self.add = Onboarding(self)
+        self.lock = Lock(self.settings)
         self.engine = Engine(self)                     # rules: signals in, room intents out
         self._timers: dict[str, asyncio.Task] = {}     # things the brain will do later for a device (switch a fan off)
         self.comfort = Comfort(self)                   # a thermostat sensing its room from another sensor
@@ -72,7 +75,8 @@ class Hub:
         return {"driver": self.driver, "reason": self.reason, "setup_done": bool(self.settings.get("setup_done")),
                 "owner": (self.settings.get("owner") or {}).get("name"), "home": self.settings.get("home_name"),
                 "location": bool(self.location), "rooms": sum(1 for r in self.home.rooms.values() if r.id != "unassigned"),
-                "devices": len(self.home.devices), "drivers": self.provision.summary(), "problems": self.provision.problems}
+                "devices": len(self.home.devices), "drivers": self.provision.summary(), "problems": self.provision.problems,
+                "locked": self.lock.locked}
 
     def _set(self, driver, reason=""):
         if (driver, reason) == (self.driver, self.reason): return
@@ -377,6 +381,18 @@ async def lifespan(app):
 app = FastAPI(title="home-hub brain", lifespan=lifespan)
 
 
+@app.middleware("http")
+async def settings_lock(request: Request, call_next):
+    """Changing the house needs the code once there is one; driving it never does."""
+    if hub.lock.locked and needs_code(request.method, request.url.path):
+        who = request.client.host if request.client else ""
+        wait = hub.lock.waiting(who)
+        if wait > 0: return JSONResponse({"detail": f"Too many tries. Wait {int(wait) + 1} seconds."}, status_code=429)
+        if not hub.lock.check(request.headers.get("x-hub-code"), who):
+            return JSONResponse({"detail": "code"}, status_code=401)
+    return await call_next(request)
+
+
 # ---------- setup ----------
 @app.get("/setup/status")
 def setup_status(): return hub.status()
@@ -423,6 +439,23 @@ async def setup_retry(entry_id: str):
     try: await hub.provision.retry(entry_id)
     except Exception as e: raise HTTPException(502, str(e))
     return hub.status()
+
+
+@app.post("/setup/pin")
+def setup_pin(body: dict):
+    """Set, change or (with an empty pin) remove the code. Changing one needs the old one, like any setting."""
+    try: hub.lock.set(str(body.get("pin") or "").strip())
+    except ValueError as e: raise HTTPException(400, str(e))
+    hub.log.add("home", "setup", None, "code set" if hub.lock.locked else "code removed", source="user")
+    hub._broadcast(json.dumps({"type": "status", "status": hub.status()}))
+    return hub.status()
+
+
+@app.get("/setup/advanced")
+def setup_advanced():
+    """The engine's own sign-in, for the Advanced door. Behind the code."""
+    ha = hub.settings.get("ha") or {}
+    return {"url": hub.ha_url, "username": ha.get("username") or hub.env.get("HA_USER"), "password": ha.get("password") or hub.env.get("HA_PASSWORD")}
 
 
 @app.post("/setup/done")

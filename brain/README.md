@@ -37,6 +37,11 @@ endpoints just nudge it along.
 - On an engine someone set up by hand, `POST /setup/login {username, password}` signs in and
   mints the token the same way.
 - `POST /setup/done` marks the walkthrough finished. Delete `settings.json` to run it again.
+- `POST /setup/pin {pin}` sets, changes or (empty) removes the code on the settings. With a code set,
+  every request that changes the house (adding, renaming, moving, rooms, location, rules, `/setup/*`,
+  and `GET /setup/advanced`, the engine's own sign-in) needs an `X-Hub-Code` header; the panel asks
+  once per tab. Driving the house never does. Five wrong codes from one address wait a minute.
+  `hub/lock.py` decides which paths count and keeps only a salted hash.
 
 ## Files
 

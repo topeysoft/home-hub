@@ -138,3 +138,4 @@ the whole mesh, with failover.
 - HA is touched only through its APIs; its UI is the Advanced door, never the product.
 - The assistant model writes and explains rules. It never executes one.
 - Setup is a conversation on the screen, never a file to edit.
+- Controlling the house never needs a code. Changing it does, once one is set.

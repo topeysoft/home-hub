@@ -2,6 +2,7 @@
 import { onMounted, onUnmounted } from 'vue'
 import { store } from './store'
 import Icon from './Icon.vue'
+import AdvancedLink from './AdvancedLink.vue'
 import AddPanel from './AddPanel.vue'
 import Drivers from './Drivers.vue'
 
@@ -9,7 +10,6 @@ function close() { store.sheet = null }
 function key(e: KeyboardEvent) { if (e.key === 'Escape') close() }
 onMounted(() => window.addEventListener('keydown', key))
 onUnmounted(() => window.removeEventListener('keydown', key))
-const advanced = `${location.protocol}//${location.hostname}:8123/config/integrations`
 </script>
 
 <template>
@@ -23,7 +23,7 @@ const advanced = `${location.protocol}//${location.hostname}:8123/config/integra
         <h3 class="label">Behind the scenes</h3>
         <Drivers />
       </div>
-      <p class="sheet-foot">Advanced: <a :href="advanced" target="_blank" rel="noopener">open Home Assistant</a> for anything this page cannot add.</p>
+      <AdvancedLink path="/config/integrations" text="for anything this page cannot add." />
     </div>
   </div>
 </template>

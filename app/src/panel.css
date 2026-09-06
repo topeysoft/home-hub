@@ -506,3 +506,12 @@ select.input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://ww
   .sort-row { grid-template-columns: auto minmax(0, 1fr); }
   .sort-row .sort-room, .sort-row .button { grid-column: 2; }
 }
+
+/* ---------- the code on the settings ---------- */
+.code-input { font-variant-numeric: tabular-nums; letter-spacing: .3em; font-size: 24px; max-width: 260px; }
+.sheet.code { width: min(100%, 440px); }
+.code-back { z-index: 60; }
+.linkish { color: var(--ink-2); text-decoration: underline; text-underline-offset: 3px; font-size: inherit; }
+.linkish:disabled { opacity: .5; }
+.advanced-login { display: block; margin-top: 6px; color: var(--ink-2); user-select: text; -webkit-user-select: text; }
+.advanced-login b { color: var(--ink); font-weight: 500; font-family: ui-monospace, Menlo, monospace; font-size: .95em; }

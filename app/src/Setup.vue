@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { setupOwner, setupLogin, setupDone, addRoom } from './api'
+import { setupOwner, setupLogin, setupDone, addRoom, setPin } from './api'
+import { remember } from './code'
 import { store, load } from './store'
 import Icon from './Icon.vue'
 import LocationPicker from './LocationPicker.vue'
@@ -9,8 +10,8 @@ import Drivers from './Drivers.vue'
 
 /* First run. One question per screen, in this order: who you are, where home is, which rooms,
    what to add. Every step after the first can be skipped and finished later from Home. */
-type Page = 'welcome' | 'login' | 'owner' | 'starting' | 'location' | 'rooms' | 'devices' | 'done'
-const PAGES: Page[] = ['welcome', 'login', 'owner', 'starting', 'location', 'rooms', 'devices', 'done']
+type Page = 'welcome' | 'login' | 'owner' | 'starting' | 'code' | 'location' | 'rooms' | 'devices' | 'done'
+const PAGES: Page[] = ['welcome', 'login', 'owner', 'starting', 'code', 'location', 'rooms', 'devices', 'done']
 const preview = new URLSearchParams(location.search).get('page') as Page | null   // ?setup=1&page=rooms previews one screen
 const page = ref<Page>(preview && PAGES.includes(preview) ? preview : 'welcome')
 const status = computed(() => store.status)
@@ -25,11 +26,12 @@ function next(after: Page) {
   if (after === 'welcome') {
     if (driver.value === 'fresh') return (page.value = 'owner')
     if (driver.value === 'needs-login') return (page.value = 'login')
-    return (page.value = s?.owner ? 'location' : 'owner')
+    return (page.value = s?.owner ? (s.locked ? 'location' : 'code') : 'owner')
   }
   if (after === 'login') return (page.value = 'owner')
-  if (after === 'owner') return (page.value = driver.value === 'ready' ? 'location' : 'starting')
-  if (after === 'starting') return (page.value = s?.owner ? 'location' : 'owner')
+  if (after === 'owner') return (page.value = driver.value === 'ready' ? 'code' : 'starting')
+  if (after === 'starting') return (page.value = s?.owner ? 'code' : 'owner')
+  if (after === 'code') return (page.value = 'location')
   if (after === 'location') return (page.value = 'rooms')
   if (after === 'rooms') return (page.value = 'devices')
   if (after === 'devices') return (page.value = 'done')
@@ -80,7 +82,18 @@ async function finish() {
 }
 const phoneUrl = computed(() => location.hostname.endsWith('.local') || /^\d+\.\d+\.\d+\.\d+$/.test(location.hostname) ? `${location.protocol}//${location.host}` : 'http://hub.local')
 const firstName = computed(() => (status.value?.owner || name.value || '').split(' ')[0])
-const idx = computed(() => ['owner', 'location', 'rooms', 'devices'].indexOf(page.value))
+const idx = computed(() => ['code', 'location', 'rooms', 'devices'].indexOf(page.value))
+
+/* the code on the settings */
+const pin = ref(''), again = ref('')
+async function saveCode() {
+  error.value = ''
+  if (!/^\d{4,8}$/.test(pin.value)) { error.value = 'A code is 4 to 8 digits.'; return }
+  if (pin.value !== again.value) { error.value = 'The two do not match.'; return }
+  busy.value = true
+  try { store.status = await setPin(pin.value); remember(pin.value); next('code') } catch (e: any) { error.value = e.message }
+  busy.value = false
+}
 </script>
 
 <template>
@@ -124,6 +137,20 @@ const idx = computed(() => ['owner', 'location', 'rooms', 'devices'].indexOf(pag
         <span class="setup-mark pulse"><Icon name="home" :size="30" /></span>
         <h1 class="display">Building your home…</h1>
         <p class="setup-lede">{{ status?.reason || 'Just a moment.' }}</p>
+      </section>
+
+      <!-- the code -->
+      <section class="setup-page" v-else-if="page === 'code'" key="code">
+        <p class="setup-step">Step {{ idx + 1 }} of 4</p>
+        <h1 class="display">A code for changes.</h1>
+        <p class="setup-lede">Anyone in the house can turn things on and off from the wall. Adding devices, renaming rooms and the settings behind them will ask for this. Four to eight digits.</p>
+        <label class="field"><span class="field-label">Code</span><input class="input code-input" v-model="pin" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off" @keydown.enter="saveCode" /></label>
+        <label class="field"><span class="field-label">Once more</span><input class="input code-input" v-model="again" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off" @keydown.enter="saveCode" /></label>
+        <p class="error" v-if="error">{{ error }}</p>
+        <div class="setup-actions">
+          <button class="button big" :class="{ busy }" @click="saveCode">Continue</button>
+          <button class="button ghost" @click="next('code')">No code for now</button>
+        </div>
       </section>
 
       <!-- where -->

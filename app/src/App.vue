@@ -3,6 +3,9 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { store, start, halt, load, visibleRooms, activity, roomActive, houseLine, weatherLine, needsSetup } from './store'
 import Setup from './Setup.vue'
 import AddSheet from './AddSheet.vue'
+import CodeSheet from './CodeSheet.vue'
+import CodePrompt from './CodePrompt.vue'
+import { lock } from './code'
 import Sky from './Sky.vue'
 import HomeView from './views/HomeView.vue'
 import RoomView from './views/RoomView.vue'
@@ -116,6 +119,8 @@ onUnmounted(() => {
     <Viewer />
     <Transition name="sheet"><LocationSheet v-if="store.sheet === 'location'" /></Transition>
     <Transition name="sheet"><AddSheet v-if="store.sheet === 'add'" /></Transition>
+    <Transition name="sheet"><CodeSheet v-if="store.sheet === 'code'" /></Transition>
+    <Transition name="sheet"><CodePrompt v-if="lock.prompt" /></Transition>
 
     <Transition name="toast">
       <div class="toast" :class="store.toast.kind" v-if="store.toast" :key="store.toast.id" role="status">{{ store.toast.text }}</div>
