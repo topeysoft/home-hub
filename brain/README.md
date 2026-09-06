@@ -48,6 +48,11 @@ endpoints just nudge it along.
   their config flows, and reports each part in `drivers` on `/setup/status` for the panel.
   `POST /setup/drivers` looks now instead of at the next half-minute. `HUB_DRIVER_HOST` in `.env`
   is where HA reaches the other containers (`localhost` with host networking, a container name on the Mac).
+- `hub/comfort.py` — a thermostat sensing its room from another sensor (`POST /devices/{id}/sense`).
+  The number on the card becomes what that room should reach; the brain keeps the thermostat's
+  setpoint offset by the difference between the two readings, one correction every 90 s at most,
+  in heat or cool only, logged with `source=comfort`. Kept in `settings.json` under `comfort`.
+  Nest's own remote sensors never reach HA, so this is how the house does what the Nest app does.
 - `hub/onboarding.py` — finding and adding devices: what HA discovered (`/discovered`), the
   catalog, config flows as plain forms, and accounts that need a key of their own: when HA wants
   application credentials (Nest, Google, Tesla, SmartThings…), `/flows` returns a `credentials` step

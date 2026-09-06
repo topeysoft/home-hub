@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import type { Device } from '../api'
-import { setFan } from '../api'
-import { perform, shortName, roomOf, store, isDead, notify } from '../store'
+import { setFan, setSense } from '../api'
+import { perform, shortName, roomOf, store, isDead, notify, cap } from '../store'
 import Icon from '../Icon.vue'
 
 /* A thermostat, laid out like the dial on the wall: the number you set large in the middle with a
@@ -22,9 +22,32 @@ const fmt = (t: number | null | undefined) => t == null ? '–' : String(step.va
 const ACTION: Record<string, string> = { heating: 'Heating', cooling: 'Cooling', idle: 'Holding', fan: 'Fan running', drying: 'Drying', preheating: 'Warming up', defrosting: 'Defrosting' }
 const MODES: Record<string, string> = { heat: 'Heat', cool: 'Cool', heat_cool: 'Auto', auto: 'Auto', off: 'Off', fan_only: 'Fan', dry: 'Dry' }
 const modes = computed(() => ((a.value.hvac_modes ?? []) as string[]).filter(m => m in MODES))
+/* sensing from another room: the big number is what that room should reach; the hub moves the thermostat */
+const sensing = computed(() => !!a.value.sense_from && !range.value)
+const shown = computed(() => sensing.value ? a.value.wanted : a.value.temperature)
+const sensors = computed(() => {
+  const own = props.device.hw
+  const out: { id: string; label: string }[] = []
+  for (const r of store.rooms) for (const d of r.devices) {
+    if (cap(d) !== 'sensor' || !d.capability.endsWith('.temperature') || (own && d.hw === own) || isDead(d)) continue
+    const same = r.devices.filter(x => x.capability === 'sensor.temperature').length > 1
+    out.push({ id: d.id, label: r.id === 'unassigned' ? d.name : same ? `${r.name} · ${shortName(d, r)}` : r.name })
+  }
+  return out
+})
+const senseBusy = ref(false)
+async function sense(id: string | null) {
+  if (senseBusy.value || (id ?? null) === (a.value.sense_from ?? null)) return
+  senseBusy.value = true
+  try { await setSense(props.device.id, id); notify(id ? `Sensing from ${sensors.value.find(s => s.id === id)?.label ?? 'the sensor'}.` : 'Back to the thermostat\'s own sensor.') }
+  catch (e: any) { notify(`Couldn't change the sensor: ${e.message}`, 'error') }
+  senseBusy.value = false
+}
 const doing = computed(() => {
   if (dead.value) return 'Not responding'
-  const parts = [`Currently ${fmt(a.value.current_temperature)}${unit.value}`]
+  const parts = sensing.value
+    ? [`${a.value.sense_name} ${fmt(a.value.sense_temp)}${unit.value}`, `thermostat ${fmt(a.value.current_temperature)}${unit.value}, set to ${fmt(a.value.temperature)}${unit.value}`]
+    : [`Currently ${fmt(a.value.current_temperature)}${unit.value}`]
   if (!off.value) parts.push(ACTION[a.value.hvac_action] ?? MODES[mode.value] ?? mode.value)
   if (a.value.preset_mode === 'eco') parts.push('Eco')
   if (a.value.current_humidity != null) parts.push(`${Math.round(a.value.current_humidity)}% humidity`)
@@ -37,6 +60,9 @@ function nudge(dir: 1 | -1) {
   if (range.value) {
     const lo = clamp(a.value.target_temp_low + s), hi = clamp(a.value.target_temp_high + s)
     perform(props.device, 'set', { target_temp_low: lo, target_temp_high: hi }, { attrs: { target_temp_low: lo, target_temp_high: hi } })
+  } else if (sensing.value) {
+    const t = clamp((a.value.wanted ?? a.value.sense_temp ?? 20) + s)
+    perform(props.device, 'set', { temperature: t }, { attrs: { wanted: t } })
   } else {
     const t = clamp((a.value.temperature ?? a.value.current_temperature ?? 20) + s)
     perform(props.device, 'set', { temperature: t }, { attrs: { temperature: t } })
@@ -77,7 +103,7 @@ async function fan(minutes: number) {
         <div class="clim-center">
           <span class="clim-big" v-if="off || dead">{{ fmt(a.current_temperature) }}<span class="clim-unit">{{ unit }}</span></span>
           <span class="clim-big" v-else-if="range">{{ fmt(a.target_temp_low) }}<span class="clim-dash">–</span>{{ fmt(a.target_temp_high) }}<span class="clim-unit">{{ unit }}</span></span>
-          <span class="clim-big" v-else>{{ fmt(a.temperature) }}<span class="clim-unit">{{ unit }}</span></span>
+          <span class="clim-big" v-else>{{ fmt(shown) }}<span class="clim-unit">{{ unit }}</span></span>
           <span class="clim-doing">{{ off && !dead ? `Off · ${doing}` : doing }}</span>
         </div>
         <button class="clim-btn" :disabled="off || dead" @click="nudge(1)" aria-label="Raise the target"><Icon name="plus" :size="20" /></button>
@@ -86,6 +112,13 @@ async function fan(minutes: number) {
       <div class="clim-rows" v-if="!dead">
         <div class="clim-row" v-if="modes.length > 1">
           <button v-for="m in modes" :key="m" class="clim-chip" :class="{ on: m === mode }" @click="setMode(m)">{{ MODES[m] }}</button>
+        </div>
+        <div class="clim-row sense" v-if="sensors.length">
+          <span class="clim-fan-label"><Icon name="sensor" :size="18" />{{ range ? 'Auto uses the thermostat\'s own sensor' : 'Sensing from' }}</span>
+          <template v-if="!range">
+            <button class="clim-chip" :class="{ on: !a.sense_from }" :disabled="senseBusy" @click="sense(null)">Thermostat</button>
+            <button v-for="s in sensors" :key="s.id" class="clim-chip" :class="{ on: a.sense_from === s.id }" :disabled="senseBusy" @click="sense(s.id)">{{ s.label }}</button>
+          </template>
         </div>
         <div class="clim-row fan" v-if="hasFan" :class="{ running: fanOn }">
           <span class="clim-fan-label"><Icon name="fan" :size="20" :class="{ spin: fanOn }" />{{ fanText }}</span>

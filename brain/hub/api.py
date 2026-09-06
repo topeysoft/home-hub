@@ -13,6 +13,7 @@ from .events import EventLog
 from .intents import RoomState, SERVICE, plan, rules_as_data, holds
 from .onboarding import Onboarding
 from .provision import Provision
+from .comfort import Comfort
 from .rules import Engine
 from .settings import Settings, DATA, env_file
 
@@ -49,6 +50,8 @@ class Hub:
         self.add = Onboarding(self)
         self.engine = Engine(self)                     # rules: signals in, room intents out
         self._timers: dict[str, asyncio.Task] = {}     # things the brain will do later for a device (switch a fan off)
+        self.comfort = Comfort(self)                   # a thermostat sensing its room from another sensor
+        self._comfort_task = None
         self.provision = Provision(self)               # connects the radios, Matter and MQTT to HA itself
         self._tick_task = self._drivers_task = None
         self._wake = asyncio.Event()
@@ -130,6 +133,7 @@ class Hub:
         snap = await self.ha.snapshot()
         self.home.build(*snap)
         self.engine.load(force=True); self.engine.seed()
+        self.comfort.load()
         self._pick_weather(snap[3])
         self.ha.on_event(self._on_event)
         self._set("ready")
@@ -234,6 +238,7 @@ class Hub:
         snap = await self.ha.snapshot()
         self.home.build(*snap)
         self.engine.load(force=True); self.engine.seed()
+        self.comfort.load()
         had = self.weather and self.weather["id"]
         self._pick_weather(snap[3])
         if (self.weather and self.weather["id"]) != had: self._broadcast(json.dumps({"type": "ambient", "ambient": self.ambient()}))
@@ -260,6 +265,15 @@ class Hub:
             self.log.add("state", dev.id, old, dev.state, source="device", detail=dev.attrs)
         self._broadcast(json.dumps({"type": "device", "device": dev.__dict__}))
         self.engine.on_state(dev, old)
+        if dev.capability in ("climate", "sensor.temperature"): asyncio.create_task(self.comfort.on_state(dev))
+
+    async def _comfort_loop(self):
+        while True:
+            await asyncio.sleep(120)
+            try:
+                if self.driver == "ready": await self.comfort.tick()
+            except Exception:
+                log.exception("comfort tick")
 
     # ---- intents: the one path that changes a room, for taps and rules alike ----
     async def _run_plan(self, room, state: RoomState):
@@ -354,8 +368,9 @@ async def lifespan(app):
     hub._loop_task = asyncio.create_task(hub.run())
     hub._tick_task = asyncio.create_task(hub.engine.run())
     hub._drivers_task = asyncio.create_task(hub.provision.run())
+    hub._comfort_task = asyncio.create_task(hub._comfort_loop())
     yield
-    for t in (hub._loop_task, hub._tick_task, hub._drivers_task): t.cancel()
+    for t in (hub._loop_task, hub._tick_task, hub._drivers_task, hub._comfort_task): t.cancel()
     if hub.ha: await hub.ha.close()
 
 
@@ -647,11 +662,26 @@ async def device_fan(device_id: str, body: dict | None = None):
     return {"ok": True, "fan_until": dev.attrs.get("fan_until")}
 
 
+@app.post("/devices/{device_id}/sense")
+async def device_sense(device_id: str, body: dict | None = None):
+    """Sense a thermostat's room from another temperature sensor: {"sensor": "<id>"}; null goes back to its own."""
+    hub.ready()
+    dev = hub.home.devices.get(device_id)
+    if not dev or dev.capability != "climate": raise HTTPException(404, "unknown thermostat")
+    try: await hub.comfort.set_sensor(dev, (body or {}).get("sensor") or None)
+    except ValueError as e: raise HTTPException(400, str(e))
+    return {"ok": True, **hub.comfort.describe(dev.id)}
+
+
 @app.post("/devices/{device_id}/{action}")
 async def device_action(device_id: str, action: str, data: dict | None = None):
     hub.ready()
     dev = hub.home.devices.get(device_id)
     if not dev: raise HTTPException(404, "unknown device")
+    if action == "set" and dev.capability == "climate" and hub.comfort.sensing(dev.id) and (data or {}).get("temperature") is not None:
+        await hub.comfort.want(dev, float(data["temperature"]))     # while sensing from elsewhere, the number is what the other room should reach
+        if dev.room_id in hub.home.rooms: hub.hold(hub.home.rooms[dev.room_id])
+        return {"ok": True}
     key = (dev.capability.split(".")[0], action)
     if key not in SERVICE: raise HTTPException(400, f"{dev.capability} cannot {action}")
     domain, service = SERVICE[key]

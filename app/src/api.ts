@@ -1,4 +1,4 @@
-export type Device = { id: string; name: string; room_id: string; capability: string; state: string; attrs: Record<string, any> }
+export type Device = { id: string; name: string; room_id: string; capability: string; state: string; attrs: Record<string, any>; hw?: string | null; own_room?: boolean }
 export type Room = { id: string; name: string; devices: Device[]; intent: string; set_by?: string | null; hold_until?: number | null; motion_at?: number | null }
 export type Intent = { room: string; intent: string; set_by: string | null; hold_until: number | null }
 export type Home = { name?: string | null; temp_unit?: string; rooms: Room[] }
@@ -41,6 +41,7 @@ export const renameRoom = (id: string, name: string) => post(`/rooms/${encodeURI
 export const moveDevice = (id: string, room_id: string | null) => post(`/devices/${encodeURIComponent(id)}/move`, { room_id })
 export const renameDevice = (id: string, name: string) => post(`/devices/${encodeURIComponent(id)}/rename`, { name })
 export const setFan = (id: string, minutes: number) => post<{ ok: boolean; fan_until: number | null }>(`/devices/${encodeURIComponent(id)}/fan`, { minutes })
+export const setSense = (id: string, sensor: string | null) => post(`/devices/${encodeURIComponent(id)}/sense`, { sensor })
 export async function getDiscovered(): Promise<Found[]> {
   const r = await fetch('/discovered'); if (!r.ok) await fail(r); return r.json()
 }

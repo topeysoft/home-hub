@@ -65,7 +65,7 @@ class Home:
                 "cover": ("current_position",),
                 "climate": ("temperature", "current_temperature", "hvac_modes", "hvac_action", "target_temp_low", "target_temp_high",
                             "min_temp", "max_temp", "current_humidity", "preset_mode", "preset_modes", "fan_mode", "fan_modes"),
-                "fan": ("percentage",)}.get(cap.split(".")[0], ())
+                "fan": ("percentage",), "sensor": ("unit_of_measurement",)}.get(cap.split(".")[0], ())
         return {k: a[k] for k in keys if k in a}
 
     def build(self, areas, ha_devices, entities, states):

@@ -470,7 +470,7 @@ select.input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://ww
 .clim-chip.on { background: var(--ink); color: var(--bg); border-color: transparent; }
 .clim-chip:disabled { opacity: .5; }
 .clim-chip.stop { background: var(--ink); color: var(--bg); border-color: transparent; }
-.clim-row.fan { align-items: center; padding-top: 8px; border-top: 1px solid var(--edge); }
+.clim-row.fan, .clim-row.sense { align-items: center; padding-top: 8px; border-top: 1px solid var(--edge); }
 .clim-fan-label { display: inline-flex; align-items: center; gap: 8px; margin-right: 6px; font-size: 14px; color: var(--muted); }
 .clim-row.fan.running .clim-fan-label { color: var(--ink); }
 .clim-fan-label .spin { animation: spin 2.4s linear infinite; }
