@@ -60,6 +60,19 @@ the whole mesh, with failover.
 3. HACS → custom repository `joyfulhouse/brilliant-mqtt` → install → add the integration with each panel's IP and root password.
 4. Add the `mqtt` integration in HA pointing at `mosquitto:1883` if not already done.
 
+### Ring Alarm and its Z-Wave devices
+
+Home Assistant's `ring` integration only sees cameras, doorbells and chimes. The alarm base station and
+the Z-Wave devices paired to it (locks, switches, plugs, contact and motion sensors) come through the
+community `ring-mqtt` bridge instead, one container in both compose files. It uses Ring's cloud, so
+those devices stop answering when the internet is down; move switches, plugs and the lock to the Zooz
+stick when it arrives and leave the alarm's sensors in Ring.
+
+1. `docker compose -f docker-compose.mac.yml up -d ring-mqtt` (the Pi: `docker compose up -d ring-mqtt`).
+2. Open http://<host>:55123 once and sign in to Ring, including the 2FA code. The token lives in
+   `driver-layer/ring-mqtt/` (gitignored). Devices appear in HA through MQTT discovery within a minute.
+3. Give each new device a room in HA (Settings → Devices) and it shows up on the panel on its own.
+
 Phase 2 is done when every row in `docs/inventory.md` marked *keep* is visible over the HA websocket.
 
 ## Hardware to order
