@@ -26,3 +26,19 @@ services:
       - ./homeassistant:/config
     environment:
       - TZ=${TZ:-America/New_York}
+
+  caddy:
+    # HTTPS in front of the brain: https://<this mac>:8443. See caddy/Caddyfile for the trust step.
+    image: caddy:2
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - "8443:8443"
+    environment:
+      - HUB_HOSTS=https://localhost:8443, https://${HUB_IP:-192.168.86.59}:8443
+      - BRAIN_UPSTREAM=host.docker.internal:8300
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./caddy/data:/data

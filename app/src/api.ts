@@ -31,6 +31,10 @@ export async function placeName(lat: number, lon: number): Promise<Place> {
 export async function saveLocation(p: Place): Promise<{ ok: boolean; weather: string | null }> {
   const r = await fetch('/location', { method: 'POST', headers: json, body: JSON.stringify(p) }); if (!r.ok) await fail(r); return r.json()
 }
+export type Rules = Record<string, [string, string, Record<string, unknown>][]>
+export async function getScenes(): Promise<Rules> {
+  const r = await fetch('/scenes'); if (!r.ok) await fail(r); return r.json()
+}
 export async function getEvents(limit = 40): Promise<Event[]> {
   const r = await fetch(`/events?limit=${limit}`); if (!r.ok) await fail(r); return r.json()
 }

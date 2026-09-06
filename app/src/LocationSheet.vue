@@ -53,6 +53,7 @@ function key(e: KeyboardEvent) { if (e.key === 'Escape') close() }
 onMounted(() => window.addEventListener('keydown', key))
 onUnmounted(() => window.removeEventListener('keydown', key))
 const coords = (p: Place) => `${p.lat.toFixed(3)}, ${p.lon.toFixed(3)}`
+const advanced = `${location.protocol}//${location.hostname}:8123/`   // Home Assistant's own UI, for anyone who wants the raw system
 </script>
 
 <template>
@@ -81,6 +82,8 @@ const coords = (p: Place) => `${p.lat.toFixed(3)}, ${p.lon.toFixed(3)}`
         <span class="chosen-text"><span class="r-name">{{ pick.name }}</span><span class="r-sub">{{ coords(pick) }}</span></span>
         <button class="button" :class="{ busy: busy === 'save' }" @click="save">{{ store.ambient.location ? 'Save' : 'Use this' }}</button>
       </div>
+
+      <p class="sheet-foot">Advanced: <a :href="advanced" target="_blank" rel="noopener">open Home Assistant</a> for the raw system behind this panel.</p>
     </div>
   </div>
 </template>

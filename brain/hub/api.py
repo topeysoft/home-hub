@@ -7,7 +7,7 @@ from fastapi.responses import Response
 from .ha_adapter import HAAdapter
 from .model import Home
 from .events import EventLog
-from .intents import RoomState, SERVICE, plan
+from .intents import RoomState, SERVICE, plan, rules_as_data
 
 log = logging.getLogger("hub")
 ROOT = Path(__file__).resolve().parent.parent
@@ -163,6 +163,12 @@ app = FastAPI(title="home-hub brain", lifespan=lifespan)
 
 @app.get("/home")
 def get_home(): return hub.home.to_dict()
+
+
+@app.get("/scenes")
+def get_scenes():
+    """Scene rules as data: the app uses them to tell whether a room still matches the scene it was set to."""
+    return rules_as_data()
 
 
 @app.get("/ambient")

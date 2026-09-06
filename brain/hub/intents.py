@@ -1,5 +1,9 @@
 """Room intents: the product's unit of control. Deterministic; the assistant may author these, never run them."""
+import json, logging
 from enum import Enum
+from pathlib import Path
+
+log = logging.getLogger("hub.scenes")
 
 
 class RoomState(str, Enum):
@@ -11,8 +15,9 @@ class RoomState(str, Enum):
     guests = "guests"
 
 
-# intent -> list of (capability, action, data). First cut; rules will become data, not code.
-INTENT_ACTIONS = {
+# intent -> list of (capability, action, data). Lives in ../scenes.json so it can be edited, and later authored
+# by the assistant, without touching code. These defaults only apply if that file is missing or broken.
+DEFAULT_ACTIONS = {
     RoomState.occupied: [],
     RoomState.empty:   [("light", "off", {}), ("media", "pause", {})],
     RoomState.asleep:  [("light", "off", {}), ("media", "off", {}), ("lock", "lock", {})],
@@ -20,6 +25,30 @@ INTENT_ACTIONS = {
     RoomState.movie:   [("light", "on", {"brightness_pct": 15}), ("media", "on", {})],
     RoomState.guests:  [("light", "on", {"brightness_pct": 80})],
 }
+RULES_PATH = Path(__file__).resolve().parent.parent / "scenes.json"
+_rules = {"mtime": None, "actions": DEFAULT_ACTIONS}
+
+
+def rules() -> dict:
+    """The current scene table, re-read whenever scenes.json changes."""
+    try:
+        mtime = RULES_PATH.stat().st_mtime
+        if mtime != _rules["mtime"]:
+            raw = json.loads(RULES_PATH.read_text())
+            actions = {RoomState(k): [(c, a, d or {}) for c, a, d in v] for k, v in raw.items() if not k.startswith("_")}
+            for st in RoomState: actions.setdefault(st, [])
+            _rules.update(mtime=mtime, actions=actions)
+            log.info("scenes loaded from %s", RULES_PATH.name)
+    except FileNotFoundError:
+        _rules.update(mtime=None, actions=DEFAULT_ACTIONS)
+    except Exception as e:
+        log.warning("scenes.json is not usable (%s); keeping the previous rules", e)
+    return _rules["actions"]
+
+
+def rules_as_data() -> dict:
+    return {st.value: [[c, a, d] for c, a, d in acts] for st, acts in rules().items()}
+
 
 # capability action -> HA (domain, service). The only HA-shaped table outside the adapter.
 SERVICE = {
@@ -38,7 +67,7 @@ SERVICE = {
 def plan(room, state: RoomState):
     """Return the concrete calls needed to move a room into `state`."""
     calls = []
-    for cap, action, data in INTENT_ACTIONS[state]:
+    for cap, action, data in rules()[state]:
         for d in room.devices:
             if d.capability == cap and (cap, action) in SERVICE:
                 domain, service = SERVICE[(cap, action)]

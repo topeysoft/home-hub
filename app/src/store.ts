@@ -1,5 +1,5 @@
 import { reactive } from 'vue'
-import { getHome, getEvents, getAmbient, connect, act, setIntent, setHomeIntent, type Room, type Device, type Home, type Event, type Ambient } from './api'
+import { getHome, getEvents, getAmbient, getScenes, connect, act, setIntent, setHomeIntent, type Room, type Device, type Home, type Event, type Ambient, type Rules } from './api'
 import { sunPosition, sunGuess, moonPhase } from './sun'
 
 export const store = reactive({
@@ -10,6 +10,7 @@ export const store = reactive({
   events: [] as Event[],
   ambient: { location: null, weather: null } as Ambient,
   ambientLoaded: false,
+  rules: {} as Rules,                        // scene rules from the brain, to tell whether a room still matches its scene
   sheet: (new URLSearchParams(location.search).get('sheet') === 'location' ? 'location' : null) as null | 'location',   // the one soft settings sheet the panel has; ?sheet=location previews it
   sky: { elevation: -20, azimuth: 0, phase: 0, hour: 0, condition: 'clear-night', guessed: true },   // what the sky draws
 })
@@ -37,6 +38,7 @@ export function weatherLine(): string {
   const t = w?.temperature != null ? `${Math.round(w.temperature)}${(w.unit || '°').replace(/[^°]/g, '') || '°'}` : ''
   return [t, label].filter(Boolean).join(' · ')
 }
+async function loadRules() { try { store.rules = await getScenes() } catch {} }
 async function loadAmbient() {
   try { store.ambient = await getAmbient(); store.ambientLoaded = true } catch {}
   updateSky()
@@ -123,6 +125,26 @@ export function scenesFor(room: Room | null): Scene[] {
   const caps = capsOf(room.devices)
   return SCENES.filter(s => s.needs.some(c => caps.has(c)))
 }
+/* a scene 'holds' while every device it touches is still where the scene left it */
+const EXPECT: Record<string, string[]> = { on: ['on', 'playing', 'paused', 'idle', 'buffering'], off: ['off', 'standby'], pause: ['paused', 'off', 'idle', 'standby'],
+  play: ['playing'], lock: ['locked'], unlock: ['unlocked'], open: ['open', 'opening'], close: ['closed', 'closing'] }
+export function sceneHolds(room: Room, id: string): boolean {
+  const acts = store.rules[id]
+  if (!acts || !acts.length) return false
+  let touched = 0
+  for (const [c, a] of acts) {
+    const want = EXPECT[a]; if (!want) continue
+    for (const d of room.devices) {
+      if (cap(d) !== c || isDead(d)) continue
+      touched++
+      if (!want.includes(d.state)) return false
+    }
+  }
+  return touched > 0
+}
+export function currentScene(room: Room): string | null {
+  return room.intent && sceneHolds(room, room.intent) ? room.intent : null
+}
 export async function runScene(room: Room | null, scene: Scene): Promise<boolean> {
   try {
     if (room) { await setIntent(room.id, scene.id); room.intent = scene.id; notify(`${room.name} · ${scene.label}`) }
@@ -205,7 +227,7 @@ function applyDevice(d: Device) {
 let stop: (() => void) | undefined, lostTimer: number | undefined, skyTimer: number | undefined
 export async function load() {
   try { applyHome(await getHome()) } catch { store.error = 'The hub is not answering.' }
-  loadAmbient()
+  loadAmbient(); loadRules()
 }
 export async function start() {
   await load()

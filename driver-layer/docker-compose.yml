@@ -73,3 +73,16 @@ services:
       - TZ=${TZ}
     # UI on http://<host>:8123 — the Advanced door only.
     # The brain talks to ws://<host>:8123/api/websocket with a long-lived token.
+
+  caddy:
+    # HTTPS in front of the brain on :443. Host networking so the certificate can name the hub's LAN address.
+    image: caddy:2
+    container_name: caddy
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - HUB_HOSTS=https://${HUB_HOST:-hub.local}, https://${HUB_IP:-localhost}
+      - BRAIN_UPSTREAM=localhost:8300
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./caddy/data:/data

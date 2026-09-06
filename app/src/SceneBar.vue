@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import type { Room } from './api'
-import { capsOf, runScene, scenesFor, store, type Scene } from './store'
+import { capsOf, currentScene, runScene, scenesFor, store, type Scene } from './store'
 import Icon from './Icon.vue'
 
 const props = defineProps<{ room: Room | null }>()
 const scenes = computed(() => scenesFor(props.room))
 const caps = computed(() => capsOf(props.room ? props.room.devices : store.rooms.flatMap(r => r.devices)))
-const current = computed(() => props.room ? props.room.intent : null)
+const current = computed(() => props.room ? currentScene(props.room) : null)   // highlighted only while the room still matches it
 const busy = ref(''), done = ref('')
 async function choose(s: Scene) {
   if (busy.value) return

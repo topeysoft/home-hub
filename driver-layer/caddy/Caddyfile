@@ -1,0 +1,14 @@
+# HTTPS for the panel. Caddy runs its own little certificate authority (`tls internal`); install its
+# root certificate once on each tablet or phone and the panel becomes a secure origin, which is what
+# browsers require for device location, web push and a clean Add-to-Home-Screen.
+#   root certificate: caddy/data/caddy/pki/authorities/local/root.crt
+{
+	local_certs
+	auto_https disable_redirects
+}
+
+{$HUB_HOSTS:https://localhost:8443} {
+	tls internal
+	encode gzip
+	reverse_proxy {$BRAIN_UPSTREAM:localhost:8300}
+}

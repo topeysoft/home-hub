@@ -351,3 +351,8 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--lamp); outl
   .chosen { grid-template-columns: auto 1fr; }
   .chosen .button { grid-column: 1 / -1; justify-content: center; }
 }
+
+.sheet-foot { margin: 22px 2px 0; font-size: 13px; color: var(--muted); }
+.sheet-foot a { color: var(--ink-2); text-decoration: underline; text-underline-offset: 3px; }
+.tile.arming { border-color: rgba(233,184,114,.5); }
+.tile.arming .tile-state { color: var(--lamp); }

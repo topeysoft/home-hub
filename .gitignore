@@ -6,3 +6,4 @@ brain/events.db
 __pycache__/
 *.pyc
 brain/settings.json
+driver-layer/caddy/data/

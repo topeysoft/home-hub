@@ -26,6 +26,14 @@ asks for the location once on its Home screen and, on save, writes it into HA an
 integration itself. Until then it assumes sunrise 6:45 and sunset 19:45, or reads
 `HOME_LAT`/`HOME_LON` from `driver-layer/.env`.
 
+### HTTPS for the panel
+
+`caddy` in both compose files fronts the brain with TLS from its own local certificate authority:
+`https://<mac>:8443/` today, `https://hub.local/` on the Pi. Browsers need a secure origin for
+device location, web push and a clean Add to Home Screen. One-time step per tablet or phone: send it
+`driver-layer/caddy/data/caddy/pki/authorities/local/root.crt`, install it, and on iOS also switch on
+full trust for it under Settings → General → About → Certificate Trust Settings.
+
 ## Phase 2 quick start (on the hub host)
 
 ```sh
