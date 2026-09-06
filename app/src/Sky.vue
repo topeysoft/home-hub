@@ -8,6 +8,10 @@
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { store } from './store'
 
+/* quiet: the interface is up, so the sun and moon stay softer and the moon keeps to the open sky above the stage,
+   clear of the rail and the headline; at rest and during setup they have the whole screen */
+const props = defineProps<{ quiet?: boolean }>()
+
 type RGB = [number, number, number]
 const canvas = ref<HTMLCanvasElement | null>(null)
 
@@ -121,17 +125,19 @@ function draw(t: number, dt: number) {
     halo.addColorStop(0, rgb(col, .55 * dim)); halo.addColorStop(.25, rgb(col, .18 * dim)); halo.addColorStop(1, rgb(col, 0))
     ctx.fillStyle = halo; ctx.fillRect(0, 0, W, H)
     if (el > -2) {
+      const dd = dim * (props.quiet ? .6 : 1)
       const disc = ctx.createRadialGradient(sx, sy, 0, sx, sy, m * .05)
-      disc.addColorStop(0, rgb([255, 250, 236], dim)); disc.addColorStop(.6, rgb(col, .9 * dim)); disc.addColorStop(1, rgb(col, 0))
+      disc.addColorStop(0, rgb([255, 250, 236], dd)); disc.addColorStop(.6, rgb(col, .9 * dd)); disc.addColorStop(1, rgb(col, 0))
       ctx.fillStyle = disc; ctx.beginPath(); ctx.arc(sx, sy, m * .05, 0, 6.29); ctx.fill()
     }
   }
 
   /* moon */
-  const moonA = clamp((-el - 1) / 7) * (1 - wx.clouds * .6)
+  const moonA = clamp((-el - 1) / 7) * (1 - wx.clouds * .6) * (props.quiet ? .6 : 1)
   if (moonA > 0) {
     const f = clamp((((hour + 24 - 19) % 24)) / 11)             // its slow arc across the night
-    const mx = W * lerp(.12, .88, f), my = horizon - Math.sin(Math.PI * f) * (horizon - m * .12) - m * .02
+    const q = props.quiet && W > H                              // a wide, awake panel has a rail on the left and a headline at the top
+    const mx = W * lerp(q ? .32 : .12, q ? .9 : .88, f), my = horizon - Math.sin(Math.PI * f) * (horizon - m * (q ? .3 : .12)) - m * .02
     const r = m * .028
     const glow = ctx.createRadialGradient(mx, my, r * .5, mx, my, r * 7)
     glow.addColorStop(0, rgb([214, 222, 240], .22 * moonA * (1 + .08 * Math.sin(t * .35)))); glow.addColorStop(1, rgb([214, 222, 240], 0))

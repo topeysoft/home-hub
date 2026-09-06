@@ -10,6 +10,7 @@ from datetime import datetime, timedelta, time as dtime
 from pathlib import Path
 from . import sun
 from .intents import RoomState, SERVICE
+from .presence import word as presence_word
 
 log = logging.getLogger("hub.rules")
 RULES_PATH = Path(__file__).resolve().parent.parent / "rules.json"
@@ -19,7 +20,6 @@ OUTCOMES = ("intent", "device", "notify")
 SUBJECTS = ("sun", "time", "weekday", "intent", "home", "presence", "light", "device")
 OPS = ("is", "not", "below", "above", "between", "in")
 WEEKDAYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
-NOT_YET = ("presence",)   # in the vocabulary, arrives in milestone 3; a rule may name it but it never fires
 
 
 def _hhmm(s):
@@ -84,7 +84,10 @@ def validate(raw, rooms: set) -> tuple[list, list]:
             if kind == "idle" and not (isinstance(when[kind], (int, float)) and when[kind] > 0): raise ValueError("idle is seconds, above 0")
             if kind == "time": _hhmm(when[kind])
             if kind == "sun" and when[kind] not in ("rise", "set"): raise ValueError("sun must be rise or set")
-            if kind == "presence" and when[kind] not in ("somebody", "nobody"): raise ValueError("presence must be somebody or nobody")
+            if kind == "presence":
+                if when[kind] not in ("somebody", "nobody"): raise ValueError("presence must be somebody or nobody")
+                wait = when.get("for", 0)
+                if not (isinstance(wait, (int, float)) and wait >= 0): raise ValueError('"for" is seconds, 0 or more')
             if kind == "intent": RoomState(when[kind])
             if kind == "device" and not (isinstance(when[kind], str) and when.get("state") is not None):
                 raise ValueError("a device trigger needs a device id and a state")
@@ -110,6 +113,7 @@ class Engine:
         self.raw, self.rules, self.errors, self._mtime = {"rules": []}, [], [], None
         self._last_tick = None      # when the tick last ran, so time and sun triggers fire exactly once
         self._idle_done = {}        # (rule id, room id) -> the motion_at an idle rule already fired for
+        self._presence_done = {}    # rule id -> the presence `since` a waiting presence rule already fired for
         self._sun_cache = {}        # (date, lat, lon) -> (sunrise, sunset)
 
     # ---- the file ----
@@ -179,7 +183,7 @@ class Engine:
         if subject == "weekday": return WEEKDAYS[now.weekday()]
         if subject == "intent": return room.intent if room else None
         if subject == "home": return self.hub.home.intent
-        if subject == "presence": return None
+        if subject == "presence": return presence_word(self.hub.presence.somebody)
         if subject == "light":
             vals = [float(d.state) for d in (room.devices if room else []) if d.capability == "sensor.illuminance" and _num(d.state)]
             return round(sum(vals) / len(vals), 1) if vals else None
@@ -258,6 +262,14 @@ class Engine:
         self._run((r for r in self._active("device") if r["when"]["device"] == dev.id and str(r["when"]["state"]) == dev.state),
                   {"device": dev.id, "state": dev.state})
 
+    def on_presence(self):
+        """Who is home changed. Presence rules with no wait fire now; those with `for` arm, and the tick decides."""
+        p = self.hub.presence
+        if p.somebody is None: return
+        now = presence_word(p.somebody)
+        self._run((r for r in self._active("presence") if not r["when"].get("for") and r["when"]["presence"] == now),
+                  {"presence": now})
+
     def on_intent(self, subject, state: RoomState, depth=0):
         """A room, or the home, was set to a state. Rules waiting on that run once; they cannot chain."""
         if depth >= 1: return
@@ -312,6 +324,15 @@ class Engine:
             if ts - room.motion_at >= r["when"]["idle"] and self._idle_done.get(key) != room.motion_at:
                 self._idle_done[key] = room.motion_at
                 self._run([r], {"idle": r["when"]["idle"], "since": room.motion_at})
+        p = self.hub.presence
+        if p.somebody is not None and p.since:
+            now_word = presence_word(p.somebody)
+            for r in self._active("presence"):
+                wait = r["when"].get("for") or 0
+                if not wait or r["when"]["presence"] != now_word: continue
+                if ts - p.since >= wait and self._presence_done.get(r["id"]) != p.since:
+                    self._presence_done[r["id"]] = p.since
+                    self._run([r], {"presence": now_word, "for": wait, "since": p.since})
 
     def dry_run(self, rule_id):
         """What a rule would do, with every condition's current value. `would` is off, not yet, wait (a condition
@@ -335,9 +356,12 @@ class Engine:
                 t = rise if when["sun"] == "rise" else set_
                 if t and t + timedelta(seconds=when.get("offset", 0)) > now:
                     nxt = (t + timedelta(seconds=when.get("offset", 0))).timestamp(); break
-        timer = any(k in when for k in ("idle", "time", "sun"))
+        elif "presence" in when and when.get("for"):
+            p = self.hub.presence
+            nxt = p.since + when["for"] if p.since and presence_word(p.somebody) == when["presence"] else None
+        timer = any(k in when for k in ("idle", "time", "sun")) or ("presence" in when and bool(when.get("for")))
         if not r.get("enabled", True): would = "off"
-        elif any(k in NOT_YET for k in when): would = "not yet"
+        elif "presence" in when and self.hub.presence.somebody is None: would = "wait"   # the house cannot tell who is home yet
         elif not all(c[-1] for c in checked): would = "wait"
         elif held: would = "held"
         elif timer: would = "armed" if nxt else "wait"   # conditions hold; it fires at `next`, or never without motion

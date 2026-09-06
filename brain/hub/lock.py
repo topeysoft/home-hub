@@ -22,6 +22,8 @@ def needs_code(method: str, path: str) -> bool:
     if path.startswith(("/flows", "/credentials")): return True
     if path == "/location" and m == "POST": return True
     if path.startswith("/rules") and m in ("PUT", "POST", "DELETE"): return True
+    if path.startswith("/drafts/") and m in ("POST", "DELETE"): return True   # approving or discarding a suggestion; asking for one stays open
+    if path == "/assistant/key": return True
     if path.startswith("/pair") and m != "GET": return True
     return False
 

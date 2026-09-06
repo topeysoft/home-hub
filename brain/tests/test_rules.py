@@ -5,6 +5,7 @@ from zoneinfo import ZoneInfo
 from hub import rules, sun
 from hub.intents import RoomState
 from hub.model import Home, Room, Device
+from hub.presence import Presence
 
 TZ = ZoneInfo("America/Chicago")
 LOC = {"name": "Home", "lat": 41.88, "lon": -87.63}
@@ -13,8 +14,11 @@ LOC = {"name": "Home", "lat": 41.88, "lon": -87.63}
 class FakeLog:
     def __init__(self): self.rows = []
     def add(self, kind, subject, old=None, new=None, source="device", detail=None):
-        self.rows.append({"kind": kind, "subject": subject, "old": old, "new": new, "source": source, "detail": detail})
+        self.rows.append({"ts": time.time(), "kind": kind, "subject": subject, "old": old, "new": new, "source": source, "detail": detail})
     def last_by_subject(self, kind, new): return {}
+    def recent(self, limit=100, subject=None, kinds=None):
+        rows = [r for r in reversed(self.rows) if (not subject or r["subject"] == subject) and (not kinds or r["kind"] in kinds)]
+        return rows[:limit]
     def of(self, kind): return [r for r in self.rows if r["kind"] == kind]
 
 
@@ -27,6 +31,7 @@ class FakeHub:
         self.light = Device("light.hall", "Hall light", "hall", "light", "off")
         self.home.rooms["hall"].devices += [self.motion, self.light]
         self.home.devices = {d.id: d for d in self.home.rooms["hall"].devices}
+        self.presence = Presence(self)
         self.engine = rules.Engine(self)
     def _broadcast(self, msg): self.sent.append(msg)
     async def set_intent(self, room, state, source="user", detail=None, depth=0):

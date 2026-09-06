@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import type { Device } from '../api'
 import { cap, isActive, isDead, perform, shortName, roomOf, store } from '../store'
+import { readingLabel } from '../readings'
 import Icon from '../Icon.vue'
 
 const props = defineProps<{ device: Device }>()
@@ -15,13 +16,7 @@ const name = computed(() => shortName(props.device, roomOf(props.device)))
 const label = computed(() => {
   const d = props.device, k = kind.value
   if (dead.value) return 'Not responding'
-  if (k === 'sensor') {
-    const cls = d.capability.split('.')[1]
-    const unit = cls === 'temperature' ? '°' : cls === 'humidity' ? '%' : cls === 'illuminance' ? ' lx' : ''
-    return `${Math.round(Number(d.state))}${unit}`
-  }
-  if (k === 'motion') return d.state === 'on' ? 'Motion' : 'Clear'
-  if (k === 'contact') return d.state === 'on' ? 'Open' : 'Closed'
+  if (passive.value) return readingLabel(d)
   if (k === 'lock') return arming.value ? 'Tap again to unlock' : d.state === 'locked' ? 'Locked' : d.state === 'unlocked' ? 'Unlocked' : d.state
   if (k === 'cover') return d.attrs.current_position != null && d.state === 'open' ? `${d.attrs.current_position}% open` : d.state === 'open' ? 'Open' : 'Closed'
   if (k === 'fan') return d.state === 'on' ? (d.attrs.percentage ? `${d.attrs.percentage}%` : 'On') : 'Off'

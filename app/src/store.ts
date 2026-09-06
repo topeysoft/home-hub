@@ -1,5 +1,5 @@
 import { reactive } from 'vue'
-import { getHome, getEvents, getAmbient, getScenes, getStatus, getDiscovered, getRoutines, connect, act, setIntent, setHomeIntent, type Room, type Device, type Home, type Event, type Ambient, type Rules, type Status, type Found, type Intent, type Routine } from './api'
+import { getHome, getEvents, getAmbient, getScenes, getStatus, getDiscovered, getRoutines, getAssistant, connect, act, setIntent, setHomeIntent, type Room, type Device, type Home, type Event, type Ambient, type Rules, type Status, type Found, type Intent, type Routine, type Assistant } from './api'
 import { sunPosition, sunGuess, moonPhase } from './sun'
 
 export const store = reactive({
@@ -15,6 +15,8 @@ export const store = reactive({
   whyRoom: new URLSearchParams(location.search).get('room') as string | null,   // the room the why sheet is about; ?sheet=why&room=kitchen previews it
   routines: [] as Routine[],                 // the brain's rules, for the routines sheet and to name a rule on a room
   routineErrors: [] as string[],             // rules the brain could not read, in its own words
+  drafts: [] as Routine[],                   // routines the assistant wrote that wait for a person's OK
+  assistant: null as Assistant | null,       // whether the hub can talk to the model at all
   previewSetup: new URLSearchParams(location.search).get('setup') === '1',   // ?setup=1 previews first run; cleared by Open Home
   status: null as Status | null,            // where the hub is in its life: engine down, fresh, ready; and whether setup finished
   homeName: '' as string,
@@ -92,6 +94,7 @@ export function activity(r: Room): string {
   if (r.devices.some(d => cap(d) === 'motion' && d.state === 'on')) parts.push('Motion')
   if (r.devices.some(d => cap(d) === 'camera' && d.state === 'recording')) parts.push('Recording')
   if (parts.length) return parts.join(' · ')
+  if (r.id === 'unassigned') return r.devices.length === 1 ? '1 to place' : `${r.devices.length} to place`
   if (!r.devices.length) return 'Nothing here yet'
   if (r.devices.every(d => cap(d) === 'camera')) return r.devices.length === 1 ? '1 camera' : `${r.devices.length} cameras`
   return 'Quiet'
@@ -184,7 +187,7 @@ export async function perform(d: Device, action: string, data?: Record<string, u
 }
 
 /* ---------- recent activity, told plainly ---------- */
-export const LABELS: Record<string, string> = { movie: 'Movie', guests: 'Guests', asleep: 'Sleep', empty: 'All off', away: 'Everything off', occupied: 'Here' }
+export const LABELS: Record<string, string> = { movie: 'Movie', guests: 'Guests', asleep: 'Sleep', empty: 'All off', away: 'Everything off', occupied: 'In use' }
 export function describe(ev: Event): { text: string; icon: string } | null {
   if (ev.kind === 'intent') {
     if (ev.subject === 'home') return { text: ev.new === 'asleep' ? 'Bedtime' : LABELS[ev.new ?? ''] ?? ev.new ?? '', icon: ev.new === 'asleep' ? 'moon' : 'leave' }
@@ -205,11 +208,17 @@ export function describe(ev: Event): { text: string; icon: string } | null {
     return null
   }
   if (k === 'camera') return s === 'recording' ? { text: `${n} started recording`, icon: k } : null
-  if (k === 'motion') return s === 'on' ? { text: `Motion at ${n}`, icon: k } : null
+  if (k === 'motion') return s === 'on' ? { text: motionText(d), icon: k } : null
   if (k === 'contact') return s === 'on' ? { text: `${n} opened`, icon: k } : s === 'off' ? { text: `${n} closed`, icon: k } : null
   if (k === 'lock') return s === 'locked' || s === 'unlocked' ? { text: `${n} ${s}`, icon: k } : null
   if (k === 'cover') return s === 'open' || s === 'closed' ? { text: `${n} ${s === 'open' ? 'opened' : 'closed'}`, icon: k } : null
   return null
+}
+/** "Motion in the Kitchen" when the sensor is just called Motion; the sensor's own name when it has one. */
+function motionText(d: Device): string {
+  const r = roomOf(d)
+  const rest = r && norm(d.name).startsWith(norm(r.name) + ' ') ? d.name.slice(r.name.length + 1) : d.name
+  return r && /^((motion|sensor|detector)\s*)+$/i.test(rest.trim()) ? `Motion in the ${r.name}` : `Motion at ${d.name}`
 }
 export function ago(ts: number, now = Date.now()): string {
   const s = Math.max(0, (now - ts * 1000) / 1000)
@@ -226,7 +235,10 @@ function eventsSoon() { clearTimeout(eventsTimer); eventsTimer = window.setTimeo
 
 /* ---------- routines: what the house does on its own, and why a room is the way it is ---------- */
 export async function loadRoutines() {
-  try { const f = await getRoutines(); store.routines = f.rules ?? []; store.routineErrors = f.errors ?? [] } catch {}
+  try { const f = await getRoutines(); store.routines = f.rules ?? []; store.routineErrors = f.errors ?? []; store.drafts = f.drafts ?? [] } catch {}
+}
+export async function loadAssistant() {
+  try { store.assistant = await getAssistant() } catch {}
 }
 export const routineById = (id: string) => store.routines.find(r => r.id === id)
 export function openWhy(roomId: string) { store.whyRoom = roomId; store.sheet = 'why' }
@@ -261,14 +273,14 @@ let stop: (() => void) | undefined, lostTimer: number | undefined, skyTimer: num
 export async function load() {
   await refreshStatus()
   try { applyHome(await getHome()) } catch { store.error = 'The hub is not answering.' }
-  loadAmbient(); loadRules(); loadRoutines()
+  loadAmbient(); loadRules(); loadRoutines(); loadAssistant()
 }
 let foundPoll: number | undefined
 export async function start() {
   await load()
   updateSky(); clearInterval(skyTimer); skyTimer = window.setInterval(updateSky, 30000)
   clearInterval(foundPoll); foundPoll = window.setInterval(refreshFound, 60000)
-  stop = connect({ device: applyDevice, home: applyHome, intent: applyIntent, ambient: a => { store.ambient = a; updateSky() }, status: s => {
+  stop = connect({ device: applyDevice, home: applyHome, intent: applyIntent, drafts: d => { store.drafts = d; eventsSoon() }, ambient: a => { store.ambient = a; updateSky() }, status: s => {
     const was = store.status?.driver
     store.status = s
     if (s.driver === 'ready' && was !== 'ready') { load() }   // the engine just came up: read the house

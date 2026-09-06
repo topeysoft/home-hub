@@ -75,6 +75,9 @@ container before the Pi's first start so the two do not fight over Ring's token.
   log, websocket stream, first-run setup, device discovery. Talks only to HA's websocket and REST.
   Serves `app/dist`. `brain/Dockerfile` packages it with the panel built in.
 - `app/` — Vue PWA for the wall kiosk and phone (`npm run build` → served by the brain).
+- The assistant (routines asked for in plain words, and "why did that happen?") needs a key for the model. Paste it into
+  the panel's Routines sheet, or put `ANTHROPIC_API_KEY=` in `driver-layer/.env`. Without one the house runs exactly the same;
+  only the asking is missing. The assistant writes drafts a person approves and explains from the log; it cannot touch a device.
 - `docs/inventory.md` — Phase 1 device inventory. `tools/discover.py` seeds it from a Mac.
 - `docs/phase4-intelligence.md` — Phase 4 design: rules as data, the evaluator, holds, presence, the assistant's contract.
 - `tools/ha_bootstrap.py` — the old manual bootstrap; the brain's setup screen does this now.

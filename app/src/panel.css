@@ -58,7 +58,8 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--lamp); outl
 .rail-day { color: var(--muted); font-size: 14px; margin-top: 8px; letter-spacing: .01em; }
 .rail-weather { display: inline-flex; align-items: center; gap: 7px; margin-top: 8px; font-size: 14px; color: var(--ink-2); }
 .rail-weather svg { color: var(--lamp); }
-.rail-nav { flex: 1; min-width: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; margin: 0 -8px; padding: 0 8px; }
+.rail-nav { flex: 1; min-width: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; margin: 0 -8px; padding: 0 8px 36px;
+  mask-image: linear-gradient(#000 calc(100% - 40px), transparent); -webkit-mask-image: linear-gradient(#000 calc(100% - 40px), transparent); }
 .rail-label { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin: 22px 0 8px 12px; }
 .rail-item { display: grid; grid-template-columns: 16px 1fr; column-gap: 10px; align-items: center; padding: 10px 12px; border-radius: var(--r-sm); color: var(--ink-2);
   transition: background .18s var(--ease), color .18s var(--ease); }
@@ -127,7 +128,16 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--lamp); outl
 .scenes.house .scene { padding-right: 20px; }
 
 /* ---------- tiles ---------- */
-.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; min-width: 0; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); grid-auto-rows: minmax(150px, auto); grid-auto-flow: dense; gap: 14px; min-width: 0; }   /* dense: a small tile fills the gap a wide one leaves */
+/* readings: what the room's sensors say, one line, no tiles to tap */
+.readings { display: flex; flex-wrap: wrap; gap: 8px; margin: -8px 0 22px; }
+.reading { display: inline-flex; align-items: center; gap: 8px; padding: 9px 14px 9px 11px; border-radius: 999px; background: var(--surface); border: 1px solid var(--edge); color: var(--ink-2); font-size: 14px;
+  backdrop-filter: var(--frost); -webkit-backdrop-filter: var(--frost); }
+.reading svg { color: var(--muted); }
+.reading-value { color: var(--ink); font-weight: 500; font-variant-numeric: tabular-nums; }
+.reading.on { background: linear-gradient(rgba(233,184,114,.12), rgba(233,184,114,.12)), var(--surface); border-color: rgba(233,184,114,.32); }
+.reading.on svg { color: var(--lamp); }
+.reading.dead { opacity: .55; }
 .tile { min-width: 0; }
 .tile { position: relative; border-radius: var(--r-lg); background: var(--surface); border: 1px solid var(--edge); overflow: hidden; min-height: 150px;
   transition: background .25s var(--ease), border-color .25s var(--ease), transform .15s var(--ease); touch-action: pan-y; }
@@ -189,7 +199,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--lamp); outl
   .rail-clock { margin: 0; flex: 0 0 auto; }
   .rail-time { font-size: 30px; }
   .rail-day { display: none; }
-  .rail-nav { flex-direction: row; overflow-x: auto; gap: 6px; margin: 0; padding: 0; }
+  .rail-nav { flex-direction: row; overflow-x: auto; gap: 6px; margin: 0; padding: 0; mask-image: none; -webkit-mask-image: none; }
   .rail-label, .rail-foot, .rail-sub, .dot { display: none; }
   .rail-item { grid-template-columns: auto; padding: 9px 14px; white-space: nowrap; background: var(--surface); border: 1px solid var(--edge); }
   .rail-item svg { display: none; }
@@ -445,7 +455,7 @@ select.input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://ww
 .copy-text { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* a thermostat: the number you set in the middle, like the dial on the wall */
-.tile.climate { --tint: 233, 184, 114; min-height: 0; }
+.tile.climate { --tint: 233, 184, 114; min-height: 0; grid-row: span 2; }   /* two rows tall, so its neighbours keep their size */
 .tile.climate.cool { --tint: 122, 176, 232; }
 .tile.climate.heat { --tint: 233, 150, 90; }
 .tile.climate.heat_cool, .tile.climate.auto { --tint: 160, 200, 170; }
@@ -544,9 +554,17 @@ select.input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://ww
 .routine-name { font-size: 15.5px; font-weight: 500; line-height: 1.3; }
 .routine-sub { font-size: 13px; color: var(--muted); line-height: 1.35; }
 .routines li.off .routine-name { color: var(--ink-2); }
-.switch { position: relative; flex-shrink: 0; width: 50px; height: 30px; border-radius: 999px; background: var(--surface-hi); border: 1px solid var(--edge-hi); transition: background .2s var(--ease), border-color .2s var(--ease); }
-.switch .knob { position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: var(--ink-2); transition: transform .2s var(--ease), background .2s var(--ease); }
-.switch.on { background: var(--lamp); border-color: transparent; }
-.switch.on .knob { transform: translateX(20px); background: var(--lamp-ink); }
-.switch.busy { opacity: .6; }
+.toggle { position: relative; flex-shrink: 0; width: 50px; height: 30px; border-radius: 999px; background: var(--surface-hi); border: 1px solid var(--edge-hi); transition: background .2s var(--ease), border-color .2s var(--ease); }
+.toggle .knob { position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: var(--ink-2); transition: transform .2s var(--ease), background .2s var(--ease); }
+.toggle.on { background: var(--lamp); border-color: transparent; }
+.toggle.on .knob { transform: translateX(20px); background: var(--lamp-ink); }
+.toggle.busy { opacity: .6; }
 .routine-errors { margin: 6px 0 0; padding-left: 18px; font-size: 13px; color: var(--ink-2); font-family: ui-monospace, Menlo, monospace; }
+.ask { margin: 0 0 20px; }
+.ask-why { margin-top: 20px; }
+.drafts { list-style: none; margin: 0 0 18px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.drafts li { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 16px; background: linear-gradient(rgba(233,184,114,.10), rgba(233,184,114,.10)), var(--surface); border: 1px solid rgba(233,184,114,.30); }
+.draft-said { margin-top: 2px; font-size: 13px; color: var(--ink-2); font-style: italic; }
+.draft-actions { display: flex; flex-direction: column; gap: 8px; }
+.draft-actions .button { margin: 0; justify-content: center; }
+.why-answer { margin: 12px 0 0; padding: 14px 16px; border-radius: 16px; background: linear-gradient(rgba(233,184,114,.10), rgba(233,184,114,.10)), var(--surface); border: 1px solid rgba(233,184,114,.30); font-size: 15px; line-height: 1.45; }

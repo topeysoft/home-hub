@@ -61,7 +61,7 @@ onUnmounted(() => {
 
 <template>
   <div class="shell" :data-ambient="ambient" :class="{ resting: idle, 'in-setup': setup }">
-    <Sky />
+    <Sky :quiet="!idle && !setup" />
     <div class="sky-veil"></div>
     <Setup v-if="setup" />
     <aside class="rail" v-if="!setup">
@@ -78,7 +78,7 @@ onUnmounted(() => {
         <button v-for="r in rooms" :key="r.id" class="rail-item" :class="{ active: room?.id === r.id, attention: r.id === 'unassigned' }" @click="open(r.id)">
           <span class="dot" :class="{ on: roomActive(r) }"></span>
           <span class="rail-name">{{ r.name }}</span>
-          <span class="rail-sub">{{ r.id === 'unassigned' ? (r.devices.length === 1 ? '1 to place' : `${r.devices.length} to place`) : activity(r) }}</span>
+          <span class="rail-sub">{{ activity(r) }}</span>
         </button>
         <button class="rail-item rail-add" @click="store.sheet = 'add'">
           <Icon name="plus" :size="16" /><span class="rail-name">Add a device</span>

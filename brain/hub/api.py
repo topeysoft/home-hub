@@ -16,6 +16,8 @@ from .onboarding import Onboarding
 from .provision import Provision
 from .comfort import Comfort
 from .rules import Engine
+from .presence import Presence, WATCHED, word as presence_word
+from .assistant import Assistant, AssistantError
 from .settings import Settings, DATA, env_file
 from .lock import Lock, needs_code
 from .pairing import Pairing
@@ -54,6 +56,8 @@ class Hub:
         self.lock = Lock(self.settings)
         self.pair = Pairing(self)
         self.engine = Engine(self)                     # rules: signals in, room intents out
+        self.presence = Presence(self)                 # who is home, from HA's persons and the alarm's mode
+        self.assistant = Assistant(self)               # writes drafts and explains from the log; never runs anything
         self._timers: dict[str, asyncio.Task] = {}     # things the brain will do later for a device (switch a fan off)
         self.comfort = Comfort(self)                   # a thermostat sensing its room from another sensor
         self._comfort_task = None
@@ -138,6 +142,7 @@ class Hub:
         else: log.info("no home location yet: the panel will ask for one")
         snap = await self.ha.snapshot()
         self.home.build(*snap)
+        self.presence.load(snap[3]); self.presence.seed(self.log)
         self.engine.load(force=True); self.engine.seed()
         self.comfort.load()
         self._pick_weather(snap[3])
@@ -243,6 +248,7 @@ class Hub:
         await asyncio.sleep(1.0)
         snap = await self.ha.snapshot()
         self.home.build(*snap)
+        self.presence.load(snap[3])
         self.engine.load(force=True); self.engine.seed()
         self.comfort.load()
         had = self.weather and self.weather["id"]
@@ -259,6 +265,13 @@ class Hub:
             if not self.weather or self.weather["id"] == d["entity_id"]:
                 self.weather = self._weather_of(d["new_state"])
                 self._broadcast(json.dumps({"type": "ambient", "ambient": self.ambient()}))
+            return
+        if d["entity_id"].startswith(WATCHED):
+            was = self.presence.somebody
+            if self.presence.on_state(d["entity_id"], d.get("new_state")):
+                self.log.add("presence", "home", presence_word(was), presence_word(self.presence.somebody), source="device", detail=self.presence.as_dict())
+                self._broadcast(json.dumps({"type": "presence", "presence": self.presence.as_dict()}))
+                self.engine.on_presence()
             return
         old_state = d.get("old_state") or {}
         before = self.home.devices.get(d["entity_id"])
@@ -773,6 +786,58 @@ def room_why(room_id: str, limit: int = 5):
     if room_id != "home" and room_id not in hub.home.rooms: raise HTTPException(404, "unknown room")
     subjects = "home" if room_id == "home" else (room_id, "home")
     return hub.log.recent(limit, subject=subjects, kinds=("intent", "held", "shadowed", "failed"))
+
+
+# ---------- the assistant: writes and explains, never runs ----------
+@app.get("/assistant")
+def assistant_status(): return hub.assistant.status()
+
+
+@app.post("/assistant/key")
+async def assistant_key(body: dict):
+    """{"key": "..."}: remember the key after one call proves it; an empty key forgets it."""
+    try: return await hub.assistant.set_key(body.get("key", ""))
+    except ValueError as e: raise HTTPException(400, str(e))
+
+
+@app.get("/drafts")
+def drafts(): return hub.assistant.drafts()
+
+
+@app.post("/drafts")
+async def make_draft(body: dict):
+    """{"text": "when I leave, everything off"} -> a draft rule, waiting for approval. Nothing runs."""
+    hub.ready()
+    try: return await hub.assistant.draft(body.get("text", ""))
+    except AssistantError as e: raise HTTPException(e.status, str(e))
+
+
+@app.post("/drafts/{rule_id}/approve")
+def approve_draft(rule_id: str):
+    try: return hub.assistant.approve(rule_id)
+    except AssistantError as e: raise HTTPException(e.status, str(e))
+    except ValueError as e: raise HTTPException(422, str(e))
+
+
+@app.delete("/drafts/{rule_id}")
+def discard_draft(rule_id: str):
+    try: hub.assistant.discard(rule_id)
+    except AssistantError as e: raise HTTPException(e.status, str(e))
+    return {"ok": True}
+
+
+@app.post("/rooms/{room_id}/explain")
+async def explain_room(room_id: str, body: dict | None = None):
+    """{"question": "why did the light come on?"} -> prose from the log. The facts are the log's; the words are the model's."""
+    hub.ready()
+    try: return await hub.assistant.explain(room_id, (body or {}).get("question"))
+    except AssistantError as e: raise HTTPException(e.status, str(e))
+
+
+@app.get("/presence")
+def presence():
+    """Who is home: {"somebody": true | false | null, "since", "source": "people" | "alarm" | null, "people": [...], "alarm"}."""
+    return hub.presence.as_dict()
 
 
 # ---------- rules ----------

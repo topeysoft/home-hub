@@ -92,6 +92,7 @@ services:
       - ./brain-data:/data  # settings.json (names, location, the engine login) and events.db
     environment:
       - TZ=${TZ}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}   # the assistant's key, if it is not pasted into the panel instead
 
   caddy:
     # The front door: http://hub.local on :80 with no setup at all, https alongside for those who install the root certificate.

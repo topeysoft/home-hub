@@ -19,6 +19,15 @@
       "then": {"intent": "empty"},
       "enabled": true,
       "by": "user"
+    },
+    {
+      "id": "everyone-out",
+      "name": "Everything off once the last person has been gone five minutes",
+      "room": "home",
+      "when": {"presence": "nobody", "for": 300},
+      "then": {"intent": "away"},
+      "enabled": true,
+      "by": "user"
     }
   ],
   "drafts": []

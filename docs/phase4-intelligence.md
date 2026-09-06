@@ -4,12 +4,17 @@ Design for the part of the plan that says *presence, light level and time drive 
 the assistant: onboarding, natural-language authoring, explanations.* Done when a guest uses the
 house for a weekend without instructions.
 
-Status, 6 September 2026: milestones 1, 2 and 4 are built. The brain side is `brain/hub/rules.py`,
-`brain/rules.json`, holds, the `/rules` and `/rooms/{id}/why` routes and the `intent` stream message.
-The panel side is the *set by* line on a room (`app/src/views/RoomView.vue`), the why sheet
-(`app/src/WhySheet.vue`) and the routines sheet (`app/src/RoutinesSheet.vue`, on and off only), with
-the wording in `app/src/why.ts`. Presence (milestone 3) and the assistant (milestone 5) are still
-proposals; `presence` is in the vocabulary but never fires.
+Status, 6 September 2026: milestones 1 to 4 are built. The brain side is `brain/hub/rules.py`,
+`brain/rules.json`, holds, presence (`brain/hub/presence.py`, the `presence` trigger and condition, the
+`/presence` route and `presence` stream message), the `/rules` and `/rooms/{id}/why` routes and the
+`intent` stream message. The panel side is the *set by* line on a room (`app/src/views/RoomView.vue`),
+the why sheet (`app/src/WhySheet.vue`) and the routines sheet (`app/src/RoutinesSheet.vue`, on and off
+only), with the wording in `app/src/why.ts`. The assistant (milestone 5) authors and explains:
+`brain/hub/assistant.py` turns a sentence into a draft under `drafts` (structured output, validated by the
+same `validate` the file goes through, one retry with the errors), the routines sheet shows drafts with
+Approve and Discard, and the why sheet takes a question answered from the log. Suggesting from patterns
+is not built. The key comes from the panel (`/assistant/key`, behind the settings code) or
+`ANTHROPIC_API_KEY` on the hub. The panel does not yet show who is home.
 
 ## What we have
 
@@ -253,7 +258,7 @@ token for HA.
 |---|---|---|
 | Motion, per Brilliant panel | Brilliant Control panels | `binary_sensor` via brilliant-mqtt |
 | Contact and motion, Ring Alarm | Ring Alarm sensors | `binary_sensor` via ring-mqtt |
-| Home / away | Ring Alarm mode, HA persons | `alarm_control_panel`, `person` |
+| Home / away | Ring Alarm mode, HA persons | `alarm_control_panel`, `person`. People decide when there are any; armed-away overrides a lagging phone; arming and pending keep the last answer |
 | Sun, time | the brain's own clock and location | computed |
 | Illuminance | nothing yet | |
 

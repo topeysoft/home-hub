@@ -95,12 +95,24 @@ export async function getWhy(roomId: string, limit = 6): Promise<Event[]> {
   const r = await request(`/rooms/${encodeURIComponent(roomId)}/why?limit=${limit}`); if (!r.ok) await fail(r); return r.json()
 }
 /* Routines: the brain's rules.json, read whole and switched on or off one at a time. The panel never edits one here. */
-export type Routine = { id: string; name: string; room: string; when: Record<string, any>; if?: any[][]; then: Record<string, any>; enabled?: boolean; by?: string }
-export type RoutineFile = { rules: Routine[]; drafts?: unknown[]; valid: boolean; errors: string[] }
+export type Routine = { id: string; name: string; room: string; when: Record<string, any>; if?: any[][]; then: Record<string, any>; enabled?: boolean; by?: string; said?: string; created?: number }
+export type RoutineFile = { rules: Routine[]; drafts?: Routine[]; valid: boolean; errors: string[] }
 export async function getRoutines(): Promise<RoutineFile> {
   const r = await request('/rules'); if (!r.ok) await fail(r); return r.json()
 }
 export const enableRoutine = (id: string, enabled: boolean) => post<{ ok: boolean; enabled: boolean }>(`/rules/${encodeURIComponent(id)}/enable`, { enabled })
+/* The assistant: it writes drafts and explains from the log. It has no call that changes a device. */
+export type Assistant = { available: boolean; configured: boolean; source: 'panel' | 'env' | null; model: string }
+export async function getAssistant(): Promise<Assistant> {
+  const r = await request('/assistant'); if (!r.ok) await fail(r); return r.json()
+}
+export const setAssistantKey = (key: string) => post<Assistant>('/assistant/key', { key })
+export const draftRoutine = (text: string) => post<Routine>('/drafts', { text })
+export const approveDraft = (id: string) => post<Routine>(`/drafts/${encodeURIComponent(id)}/approve`)
+export async function discardDraft(id: string) {
+  const r = await request(`/drafts/${encodeURIComponent(id)}`, { method: 'DELETE' }); if (!r.ok) await fail(r)
+}
+export const explainRoom = (roomId: string, question: string) => post<{ question: string; answer: string }>(`/rooms/${encodeURIComponent(roomId)}/explain`, { question })
 export async function act(id: string, action: string, data?: Record<string, unknown>) {
   const r = await request(`/devices/${encodeURIComponent(id)}/${action}`, { method: 'POST', headers: json, body: data ? JSON.stringify(data) : undefined })
   if (!r.ok) await fail(r)
@@ -116,7 +128,7 @@ export async function setHomeIntent(state: string) {
 export const imageUrl = (id: string) => `/devices/${encodeURIComponent(id)}/image?t=${Date.now()}`
 
 /** Live updates from the brain. Reconnects with backoff; reports link state. */
-export function connect(on: { device: (d: Device) => void; home: (h: Home) => void; ambient: (a: Ambient) => void; status: (s: Status) => void; intent: (i: Intent) => void; link: (up: boolean) => void }) {
+export function connect(on: { device: (d: Device) => void; home: (h: Home) => void; ambient: (a: Ambient) => void; status: (s: Status) => void; intent: (i: Intent) => void; drafts: (d: Routine[]) => void; link: (up: boolean) => void }) {
   let delay = 1000, ws: WebSocket | null = null, closed = false
   const open = () => {
     const proto = location.protocol === 'https:' ? 'wss' : 'ws'
@@ -129,6 +141,7 @@ export function connect(on: { device: (d: Device) => void; home: (h: Home) => vo
       else if (m.type === 'ambient') on.ambient(m.ambient)
       else if (m.type === 'status') on.status(m.status)
       else if (m.type === 'intent') on.intent(m)
+      else if (m.type === 'drafts') on.drafts(m.drafts)
     }
     ws.onclose = () => { on.link(false); if (!closed) setTimeout(open, delay = Math.min(delay * 2, 15000)) }
     ws.onerror = () => ws?.close()

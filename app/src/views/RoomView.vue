@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { activity, cap, openWhy } from '../store'
+import { activity, cap, openWhy, isDead } from '../store'
 import { setByLine } from '../why'
+import { readingLabel, readingName, isReading, readingOn } from '../readings'
 import type { Room } from '../api'
 import Icon from '../Icon.vue'
 import SceneBar from '../SceneBar.vue'
@@ -17,7 +18,9 @@ defineEmits<{ back: [] }>()
 const editing = ref(false)
 
 const order = ['media', 'light', 'cover', 'lock', 'fan', 'switch', 'vacuum', 'climate', 'camera', 'motion', 'contact', 'sensor']
-const devices = computed(() => [...props.room.devices].sort((a, b) => order.indexOf(cap(a)) - order.indexOf(cap(b))))
+const sorted = computed(() => [...props.room.devices].sort((a, b) => order.indexOf(cap(a)) - order.indexOf(cap(b))))
+const readings = computed(() => sorted.value.filter(isReading))      // sensors say something; they are read, not tapped
+const devices = computed(() => sorted.value.filter(d => !isReading(d)))
 const tile = (c: string) => c === 'light' ? LightTile : c === 'media' ? MediaTile : c === 'camera' ? CameraTile : c === 'climate' ? ClimateTile : PlainTile
 
 /* Who set this room, and how long a hand keeps routines away. Ticks so "1 h 20 min left" stays true. */
@@ -46,10 +49,15 @@ onUnmounted(() => clearInterval(tick))
       <Icon :name="setBy.icon" :size="15" /><span>{{ setBy.text }}</span><span class="why-ask">Why?</span>
     </button>
 
+    <div class="readings" v-if="readings.length" aria-label="Readings">
+      <span v-for="d in readings" :key="d.id" class="reading" :class="{ on: readingOn(d), dead: isDead(d) }">
+        <Icon :name="cap(d)" :size="15" /><span class="reading-name" v-if="readingName(d, room)">{{ readingName(d, room) }}</span><span class="reading-value">{{ readingLabel(d) }}</span>
+      </span>
+    </div>
     <div class="tiles" v-if="devices.length">
       <component v-for="d in devices" :key="d.id" :is="tile(cap(d))" :device="d" />
     </div>
-    <div v-else class="empty-room">
+    <div v-else-if="!readings.length" class="empty-room">
       <p class="empty">Nothing in this room yet.</p>
       <p class="empty-sub">Devices you add to the {{ room.name }} will show up here on their own.</p>
     </div>

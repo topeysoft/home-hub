@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { store, notify } from './store'
-import { getWhy, type Event } from './api'
+import { getWhy, explainRoom, type Event } from './api'
 import { explain, whenText } from './why'
 import Icon from './Icon.vue'
 
@@ -18,6 +18,16 @@ async function look() {
   loading.value = false
 }
 watch(() => store.events, look)   // a fresh event just landed: the list should already know
+
+/* a question in plain words, answered from the same log by the assistant */
+const question = ref(''), asking = ref(false), answer = ref('')
+async function ask() {
+  if (!store.whyRoom || asking.value) return
+  asking.value = true
+  try { answer.value = (await explainRoom(store.whyRoom, question.value.trim())).answer }
+  catch (e: any) { notify(e.message, 'error') }
+  asking.value = false
+}
 onMounted(() => { window.addEventListener('keydown', key); look() })
 onUnmounted(() => window.removeEventListener('keydown', key))
 </script>
@@ -37,7 +47,13 @@ onUnmounted(() => window.removeEventListener('keydown', key))
           <span class="why-when">{{ r.when }}</span>
         </li>
       </ul>
-      <p class="sheet-foot" v-if="store.routines.length">Routines decide these on their own. <button class="linkish" @click="store.sheet = 'routines'">See them all</button></p>
+      <form class="search ask-why" v-if="store.assistant?.configured" @submit.prevent="ask">
+        <Icon name="sparkle" :size="18" />
+        <input v-model="question" :disabled="asking" placeholder="Ask, like “why did the light come on?”" aria-label="Ask about this room" />
+        <button class="button small" type="submit" :class="{ busy: asking }">{{ asking ? 'Thinking…' : 'Ask' }}</button>
+      </form>
+      <p class="why-answer" v-if="answer">{{ answer }}</p>
+      <p class="sheet-foot" v-if="store.routines.length || store.assistant?.configured">Routines decide these on their own. <button class="linkish" @click="store.sheet = 'routines'">See them all</button></p>
     </div>
   </div>
 </template>
