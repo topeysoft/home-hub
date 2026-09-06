@@ -26,9 +26,10 @@ services:
       - ./zigbee2mqtt:/app/data
       - /run/udev:/run/udev:ro
     devices:
-      - "${ZIGBEE_SERIAL}:/dev/zigbee"
+      - "${ZIGBEE_SERIAL:-/dev/null}:/dev/zigbee"     # a network coordinator maps /dev/null and sets the port below
     environment:
       - TZ=${TZ}
+      - ZIGBEE2MQTT_CONFIG_SERIAL_PORT=${ZIGBEE_PORT:-/dev/zigbee}
 
   zwave-js-ui:
     image: zwavejs/zwave-js-ui:latest
@@ -43,7 +44,7 @@ services:
     volumes:
       - ./zwave-js-ui:/usr/src/app/store
     devices:
-      - "${ZWAVE_SERIAL}:/dev/zwave"
+      - "${ZWAVE_SERIAL:-/dev/null}:/dev/zwave"       # a network dongle maps /dev/null; radios.sh puts its tcp:// address in settings.json
     environment:
       - TZ=${TZ}
       - SESSION_SECRET=${ZWAVE_SESSION_SECRET}
@@ -78,10 +79,11 @@ services:
 
   brain:
     # The product: the semantic home, scenes, the event log, and the panel it serves on :8300.
+    # CI publishes this image for amd64 and arm64; `build` is the fallback when the pull fails.
+    image: ${HUB_BRAIN_IMAGE:-ghcr.io/topeysoft/home-hub-brain:latest}
     build:
       context: ..
       dockerfile: brain/Dockerfile
-    image: home-hub/brain
     container_name: brain
     restart: unless-stopped
     network_mode: host      # talks to HA on localhost:8123; the panel is on :8300

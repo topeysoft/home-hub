@@ -13,21 +13,54 @@ That is the whole setup. Devices already on the Wi‑Fi (TVs, speakers, bridges)
 their own and offered under *Found nearby*; anything else is added by brand from the same screen.
 Things that live behind an account (Nest, Ring, Tesla) sign in from that screen too. A few, Google's
 Nest first among them, make every home bring its own key; the screen walks through getting one, with
-the exact address to paste and a copy button, and the maker's own steps follow one at a time.
+the exact address to paste and a copy button, and the maker's own steps follow one at a time. The key
+file Google hands out can be dropped or pasted straight onto that screen instead of copying its parts.
 Things that don't know their room wait under *New devices* until you place them. Nothing on the
 panel ever mentions Home Assistant, entities, or YAML.
 
 ## For the person building one
 
+Any Linux box with systemd is a hub host: a Raspberry Pi 5, an Intel NUC, a mini PC, a VM under
+Proxmox, running Debian, Ubuntu, Raspberry Pi OS or Fedora. One line:
+
 ```sh
-# on a fresh Raspberry Pi OS / Debian box with the radio sticks plugged in
-sudo ./install.sh
+curl -fsSL https://raw.githubusercontent.com/topeysoft/home-hub/main/install.sh | sudo bash
 ```
 
-`install.sh` installs Docker, names the machine `hub` (so it answers at `hub.local`), finds any
-Zigbee or Z‑Wave stick, writes `driver-layer/.env`, and starts everything with Docker Compose. The
-brain creates its own login to the driver layer during the on-screen setup, so there is no token
-to copy and no Home Assistant UI to visit.
+`install.sh` installs Docker, names the machine `hub` (so it answers at `hub.local`), writes
+`driver-layer/.env`, pulls the brain image (CI publishes it for amd64 and arm64; it is built locally
+only if the pull fails), and starts everything with Docker Compose. Radio sticks can be plugged in
+before or after: `driver-layer/radios.sh` finds them, and a udev rule reruns it whenever one is
+plugged in or pulled. Radios on the network (an Ethernet Zigbee coordinator, a PoE Z-Wave dongle)
+go in `.env` as `ZIGBEE_NET` / `ZWAVE_NET` and the host needs no USB at all. The brain creates its
+own login to the driver layer during the on-screen setup and adds MQTT, Z-Wave and Matter to it by
+itself, so there is no token to copy and no Home Assistant UI to visit.
+
+A flashed image rather than an install runs `driver-layer/host/firstboot.sh` once through
+`home-hub-firstboot.service`: everything Pi-specific (bootloader, PCIe for an NVMe base, copying
+itself from SD to an empty NVMe) happens there, then the install script. The Pi image that ships
+with that unit enabled is the next piece of work; until then the steps below get a Pi to the same place.
+
+macOS is for developing, not for running the house: Docker Desktop cannot hand USB sticks to
+containers, cannot pass multicast (so no mDNS discovery), and needs someone logged in. See
+*Developing on the Mac* below.
+
+### Getting a Pi 5 to that point
+
+1. In Raspberry Pi Imager pick Raspberry Pi OS Lite (64-bit). In its settings set the hostname to
+   `hub`, your user and SSH key, the timezone, and Wi‑Fi only as a fallback; Ethernet is what a hub wants.
+2. Flash the NVMe SSD directly if you have a USB enclosure, otherwise the SD card. A third-party NVMe
+   base needs `dtparam=pciex1` in `config.txt` on the boot partition; the official M.2 HAT+ does not.
+3. Boot with no SD card inserted to boot from NVMe. If it does not, boot the SD card once, run
+   `sudo rpi-eeprom-update -a`, set NVMe first under Advanced Options → Boot Order in `raspi-config`,
+   and clone the card to the SSD with `rpi-clone`.
+4. `sudo apt update && sudo apt full-upgrade -y && sudo rpi-eeprom-update -a && sudo reboot`, then
+   the one line above.
+
+Sticks go in the USB 2 ports on a short extension cable; USB 3 and the NVMe are noisy neighbours for
+Zigbee in particular. Moving from a Mac that ran the stack: copy `driver-layer/ring-mqtt/` across
+first to skip Ring's sign-in, do not copy `driver-layer/homeassistant/`, and stop the Mac's ring-mqtt
+container before the Pi's first start so the two do not fight over Ring's token.
 
 ## Layout
 

@@ -1,31 +1,42 @@
 #!/usr/bin/env bash
-# One-line install on a fresh Raspberry Pi OS / Debian box:
-#   curl -fsSL https://raw.githubusercontent.com/<you>/home-hub/main/install.sh | sudo bash
+# One-line install on any fresh Linux box: a Raspberry Pi 5, an Intel NUC, a VM, anything running
+# Debian, Ubuntu, Raspberry Pi OS or Fedora with systemd:
+#   curl -fsSL https://raw.githubusercontent.com/topeysoft/home-hub/main/install.sh | sudo bash
 # or, from a checkout:  sudo ./install.sh
 #
 # Installs Docker, names the machine "hub" so it answers at http://hub.local, finds any Zigbee or
-# Z-Wave stick, and starts everything. Safe to run again: it only fills in what is missing.
+# Z-Wave stick now and whenever one is plugged in later, pulls the brain image (built for amd64 and
+# arm64 by CI; built here only if the pull fails), and starts everything. Safe to run again: it only
+# fills in what is missing. Nothing in here is specific to a Pi; that lives in host/firstboot.sh.
 set -euo pipefail
 
-REPO="${HOME_HUB_REPO:-https://github.com/temi/home-hub.git}"
+REPO="${HOME_HUB_REPO:-https://github.com/topeysoft/home-hub.git}"
 DIR="${HOME_HUB_DIR:-/opt/home-hub}"
 HOSTNAME_WANTED="${HOME_HUB_HOSTNAME:-hub}"
 
 say() { printf '\n\033[1m%s\033[0m\n' "$*"; }
 [ "$(id -u)" -eq 0 ] || { echo "Run me with sudo."; exit 1; }
+if command -v apt-get >/dev/null 2>&1; then
+  pkg() { DEBIAN_FRONTEND=noninteractive apt-get install -y "$@" >/dev/null; }; AVAHI=avahi-daemon
+elif command -v dnf >/dev/null 2>&1; then
+  pkg() { dnf install -y "$@" >/dev/null; }; AVAHI=avahi
+else
+  echo "This needs apt or dnf (Debian, Ubuntu, Raspberry Pi OS, Fedora)."; exit 1
+fi
+command -v systemctl >/dev/null 2>&1 || { echo "This needs systemd."; exit 1; }
 
 say "1/5  Docker"
 if ! command -v docker >/dev/null 2>&1; then
   curl -fsSL https://get.docker.com | sh
 fi
-docker compose version >/dev/null 2>&1 || apt-get install -y docker-compose-plugin
+docker compose version >/dev/null 2>&1 || pkg docker-compose-plugin
 systemctl enable --now docker >/dev/null 2>&1 || true
 
 say "2/5  The code"
 if [ -f "$(dirname "$0")/driver-layer/docker-compose.yml" ] && [ "$(cd "$(dirname "$0")" && pwd)" != "$DIR" ]; then
   mkdir -p "$DIR"; cp -R "$(cd "$(dirname "$0")" && pwd)/." "$DIR/"
 elif [ ! -d "$DIR/.git" ]; then
-  apt-get install -y git >/dev/null; git clone --depth 1 "$REPO" "$DIR"
+  command -v git >/dev/null 2>&1 || pkg git; git clone --depth 1 "$REPO" "$DIR"
 else
   git -C "$DIR" pull --ff-only || true
 fi
@@ -36,7 +47,7 @@ if [ "$(hostname)" != "$HOSTNAME_WANTED" ]; then
   hostnamectl set-hostname "$HOSTNAME_WANTED" 2>/dev/null || echo "$HOSTNAME_WANTED" > /etc/hostname
   sed -i "s/127\.0\.1\.1.*/127.0.1.1\t$HOSTNAME_WANTED/" /etc/hosts 2>/dev/null || true
 fi
-apt-get install -y avahi-daemon >/dev/null 2>&1 || true   # mDNS, so hub.local resolves on phones and tablets
+pkg "$AVAHI" 2>/dev/null || true   # mDNS, so hub.local resolves on phones and tablets
 systemctl enable --now avahi-daemon >/dev/null 2>&1 || true
 
 say "4/5  Settings"
@@ -61,8 +72,11 @@ RULES
 udevadm control --reload 2>/dev/null || true
 
 say "5/5  Starting the house"
-docker compose pull -q 2>/dev/null || true
-docker compose build -q brain
+docker compose pull -q --ignore-buildable 2>/dev/null || true
+if ! docker compose pull -q brain 2>/dev/null; then
+  echo "  no published brain image for this machine (or no internet); building it here, which takes a few minutes"
+  docker compose build -q brain
+fi
 docker compose up -d --remove-orphans
 
 IP="$(hostname -I 2>/dev/null | awk '{print $1}')"

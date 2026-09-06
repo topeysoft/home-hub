@@ -1,0 +1,17 @@
+# First boot of a flashed hub. Enabled in the image; harmless anywhere else. Waits for the network,
+# runs firstboot.sh once, and is inert afterwards (the script leaves /var/lib/home-hub/firstboot.done).
+#   sudo cp driver-layer/host/home-hub-firstboot.service /etc/systemd/system/ && sudo systemctl enable home-hub-firstboot
+[Unit]
+Description=Home Hub first boot
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=!/var/lib/home-hub/firstboot.done
+
+[Service]
+Type=oneshot
+ExecStart=/opt/home-hub/driver-layer/host/firstboot.sh
+StandardOutput=journal+console
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target

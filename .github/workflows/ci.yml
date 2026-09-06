@@ -1,0 +1,37 @@
+# Every push and pull request: the brain's tests, the panel's type-check and build, and a syntax
+# pass over the shell that runs on the hub host.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  brain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install -r brain/requirements.txt
+      - run: cd brain && python -m unittest discover -s tests -t . -v
+
+  panel:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: cd app && npm ci --no-audit --no-fund && npm run build
+
+  shell:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash -n install.sh driver-layer/radios.sh driver-layer/host/firstboot.sh
+      - run: sudo apt-get install -y shellcheck >/dev/null && shellcheck -S warning install.sh driver-layer/radios.sh driver-layer/host/firstboot.sh
