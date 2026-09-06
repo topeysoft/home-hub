@@ -33,12 +33,19 @@ docker compose version >/dev/null 2>&1 || pkg docker-compose-plugin
 systemctl enable --now docker >/dev/null 2>&1 || true
 
 say "2/5  The code"
-if [ -f "$(dirname "$0")/driver-layer/docker-compose.yml" ] && [ "$(cd "$(dirname "$0")" && pwd)" != "$DIR" ]; then
-  mkdir -p "$DIR"; cp -R "$(cd "$(dirname "$0")" && pwd)/." "$DIR/"
-elif [ ! -d "$DIR/.git" ]; then
-  command -v git >/dev/null 2>&1 || pkg git; git clone --depth 1 "$REPO" "$DIR"
+# $DIR is a deployment, not a place anyone edits: it always ends up exactly at origin/main.
+HERE="$(cd "$(dirname "$0")" && pwd)"
+if [ -d "$DIR/.git" ]; then
+  command -v git >/dev/null 2>&1 || pkg git
+  if git -C "$DIR" fetch -q origin main 2>/dev/null; then
+    git -C "$DIR" reset -q --hard origin/main && git -C "$DIR" clean -qfd -e driver-layer/ && echo "  at $(git -C "$DIR" log -1 --format='%h %s' | cut -c1-72)"
+  else
+    echo "  could not reach $REPO; keeping the code that is here"
+  fi
+elif [ -f "$HERE/driver-layer/docker-compose.yml" ] && [ "$HERE" != "$DIR" ]; then
+  mkdir -p "$DIR"; cp -R "$HERE/." "$DIR/"     # a first install from a copied checkout, without internet
 else
-  git -C "$DIR" pull --ff-only || true
+  command -v git >/dev/null 2>&1 || pkg git; git clone --depth 1 "$REPO" "$DIR"
 fi
 cd "$DIR/driver-layer"
 
@@ -73,8 +80,13 @@ udevadm control --reload 2>/dev/null || true
 
 say "5/5  Starting the house"
 docker compose pull -q --ignore-buildable 2>/dev/null || true
-if ! docker compose pull -q brain 2>/dev/null; then
-  echo "  no published brain image for this machine (or no internet); building it here, which takes a few minutes"
+if PULL="$(docker compose pull -q brain 2>&1)"; then
+  echo "  brain image: $(docker image inspect ghcr.io/topeysoft/home-hub-brain:latest --format '{{index .RepoDigests 0}}' 2>/dev/null | cut -d@ -f2 | cut -c1-19)"
+else
+  case "$PULL" in
+    *denied*|*unauthorized*|*401*|*403*) echo "  the published brain image is not public (GitHub package visibility); building it here from the code above, which takes a few minutes" ;;
+    *) echo "  could not pull the brain image (no internet?); building it here from the code above, which takes a few minutes" ;;
+  esac
   docker compose build -q brain
 fi
 docker compose up -d --remove-orphans
