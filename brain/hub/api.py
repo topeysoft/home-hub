@@ -18,6 +18,13 @@ from .settings import Settings, DATA, env_file
 
 log = logging.getLogger("hub")
 DEFAULT_HA = "http://localhost:8123"
+US_ZONES = ("America/New_York", "America/Chicago", "America/Denver", "America/Phoenix", "America/Los_Angeles", "America/Anchorage",
+            "America/Juneau", "America/Sitka", "America/Nome", "America/Adak", "America/Boise", "America/Detroit", "America/Menominee",
+            "America/Indiana/", "America/Kentucky/", "America/North_Dakota/", "Pacific/Honolulu", "US/")
+
+
+def unit_system_for(tz: str) -> str:
+    return "us_customary" if tz.startswith(US_ZONES) else "metric"
 
 
 class Hub:
@@ -41,6 +48,7 @@ class Hub:
         self.tz = datetime.now().astimezone().tzinfo   # the home's zone, from HA's config once connected
         self.add = Onboarding(self)
         self.engine = Engine(self)                     # rules: signals in, room intents out
+        self._timers: dict[str, asyncio.Task] = {}     # things the brain will do later for a device (switch a fan off)
         self.provision = Provision(self)               # connects the radios, Matter and MQTT to HA itself
         self._tick_task = self._drivers_task = None
         self._wake = asyncio.Event()
@@ -134,7 +142,7 @@ class Hub:
         if self.driver != "ready": raise HTTPException(503, "The hub is still starting.")
 
     def home_dict(self):
-        return {"name": self.settings.get("home_name"), **self.home.to_dict()}
+        return {"name": self.settings.get("home_name"), "temp_unit": self.temp_unit, **self.home.to_dict()}
 
     # ---- setup, driven by the panel ----
     async def create_owner(self, name: str, home: str):
@@ -171,10 +179,19 @@ class Hub:
         self.location = {"name": place["name"], "lat": place["lat"], "lon": place["lon"]}
         self.settings.set(location=self.location)
         core = {"latitude": place["lat"], "longitude": place["lon"], "location_name": place["name"]}
-        if place.get("tz"): core["time_zone"] = place["tz"]
+        if place.get("tz"):
+            core["time_zone"] = place["tz"]
+            core["unit_system"] = unit_system_for(place["tz"])   # a house in the US reads in °F; everyone else in °C
         weather = None
         if self.driver == "ready":
-            try: await self.ha.send("config/core/update", **core)
+            try:
+                await self.ha.send("config/core/update", **core)
+                cfg = await self.ha.send("get_config")
+                unit = (cfg.get("unit_system") or {}).get("temperature", self.temp_unit)
+                if unit != self.temp_unit:
+                    self.temp_unit = unit
+                    if self._rebuild_task: self._rebuild_task.cancel()
+                    self._rebuild_task = asyncio.create_task(self._rebuild())   # thermostats now report in the new unit
             except Exception as e: log.warning("HA would not take the location: %s", e)
             if not self.weather:
                 weather = await asyncio.to_thread(self._setup_met, place)
@@ -285,6 +302,36 @@ class Hub:
         self.log.add("intent", "home", old, state.value, source=source, detail={**(detail or {}), "calls": done, "failed": failed})
         self.engine.on_intent("home", state, depth)
         return done, failed
+
+    # ---- the fan on a thermostat, for a while ----
+    async def fan(self, dev, minutes: int):
+        """Run a thermostat's fan for `minutes`, then switch it off; 0 switches it off now. HA only knows on and off,
+        and its "on" means hours, so the timer lives here. A restart forgets it, and the fan then runs HA's length."""
+        if t := self._timers.pop(dev.id, None): t.cancel()
+        if minutes <= 0:
+            await self.ha.call("climate", "set_fan_mode", dev.id, fan_mode="off")
+            self.home.extras.pop(dev.id, None)
+            self.log.add("action", dev.id, None, "fan off", source="user")
+        else:
+            await self.ha.call("climate", "set_fan_mode", dev.id, fan_mode="on")
+            self.home.extras[dev.id] = {"fan_until": time.time() + minutes * 60}
+            self._timers[dev.id] = asyncio.create_task(self._fan_off_later(dev.id, minutes * 60))
+            self.log.add("action", dev.id, None, f"fan {minutes} min", source="user", detail={"minutes": minutes})
+        dev.attrs = {**{k: v for k, v in dev.attrs.items() if k != "fan_until"}, "fan_mode": "on" if minutes > 0 else "off", **self.home.extras.get(dev.id, {})}
+        self._broadcast(json.dumps({"type": "device", "device": dev.__dict__}))
+
+    async def _fan_off_later(self, eid: str, seconds: int):
+        await asyncio.sleep(seconds)
+        self._timers.pop(eid, None); self.home.extras.pop(eid, None)
+        dev = self.home.devices.get(eid)
+        try:
+            await self.ha.call("climate", "set_fan_mode", eid, fan_mode="off")
+            self.log.add("action", eid, None, "fan off", source="timer")
+        except Exception as e:
+            log.warning("could not switch the fan off on %s: %s", eid, e)
+        if dev:
+            dev.attrs = {k: v for k, v in dev.attrs.items() if k != "fan_until"}
+            self._broadcast(json.dumps({"type": "device", "device": dev.__dict__}))
 
     def hold(self, room, state: RoomState = RoomState.occupied):
         """Someone touched a device in this room by hand: rules leave it alone for a while."""
@@ -584,6 +631,20 @@ async def device_image(device_id: str):
     except Exception as e:
         raise HTTPException(502, f"image unavailable: {e}")
     return Response(content=data, media_type=ctype, headers={"Cache-Control": "no-store"})
+
+
+@app.post("/devices/{device_id}/fan")
+async def device_fan(device_id: str, body: dict | None = None):
+    """A thermostat's fan for a while: {"minutes": 30}; 0 stops it."""
+    hub.ready()
+    dev = hub.home.devices.get(device_id)
+    if not dev: raise HTTPException(404, "unknown device")
+    if dev.capability != "climate" or "on" not in (dev.attrs.get("fan_modes") or []): raise HTTPException(400, "this thermostat has no fan control")
+    try: minutes = max(0, min(720, int((body or {}).get("minutes") or 0)))
+    except (TypeError, ValueError): raise HTTPException(400, "minutes must be a number")
+    await hub.fan(dev, minutes)
+    if dev.room_id in hub.home.rooms: hub.hold(hub.home.rooms[dev.room_id])
+    return {"ok": True, "fan_until": dev.attrs.get("fan_until")}
 
 
 @app.post("/devices/{device_id}/{action}")

@@ -73,6 +73,13 @@ class AddTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(add.cancelled, ["f1"])
 
 
+class UnitTests(unittest.TestCase):
+    def test_us_zones_read_in_fahrenheit(self):
+        from hub.api import unit_system_for
+        self.assertEqual([unit_system_for(z) for z in ("America/Chicago", "America/Indiana/Indianapolis", "Pacific/Honolulu", "Europe/London", "America/Toronto")],
+                         ["us_customary", "us_customary", "us_customary", "metric", "metric"])
+
+
 class FillTests(unittest.TestCase):
     def test_sections_and_required_fields_get_quiet_answers(self):
         fields = [{"name": "broker", "kind": "text", "required": True, "default": None},

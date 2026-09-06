@@ -8,6 +8,7 @@ import LightTile from '../tiles/LightTile.vue'
 import MediaTile from '../tiles/MediaTile.vue'
 import CameraTile from '../tiles/CameraTile.vue'
 import PlainTile from '../tiles/PlainTile.vue'
+import ClimateTile from '../tiles/ClimateTile.vue'
 import SortView from '../SortView.vue'
 
 const props = defineProps<{ room: Room }>()
@@ -16,7 +17,7 @@ const editing = ref(false)
 
 const order = ['media', 'light', 'cover', 'lock', 'fan', 'switch', 'vacuum', 'climate', 'camera', 'motion', 'contact', 'sensor']
 const devices = computed(() => [...props.room.devices].sort((a, b) => order.indexOf(cap(a)) - order.indexOf(cap(b))))
-const tile = (c: string) => c === 'light' ? LightTile : c === 'media' ? MediaTile : c === 'camera' ? CameraTile : PlainTile
+const tile = (c: string) => c === 'light' ? LightTile : c === 'media' ? MediaTile : c === 'camera' ? CameraTile : c === 'climate' ? ClimateTile : PlainTile
 </script>
 
 <template>

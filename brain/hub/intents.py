@@ -70,6 +70,9 @@ SERVICE = {
     ("fan", "on"): ("fan", "turn_on"), ("fan", "off"): ("fan", "turn_off"),
     ("cover", "open"): ("cover", "open_cover"), ("cover", "close"): ("cover", "close_cover"),
     ("lock", "lock"): ("lock", "lock"), ("lock", "unlock"): ("lock", "unlock"),
+    ("climate", "set"): ("climate", "set_temperature"), ("climate", "mode"): ("climate", "set_hvac_mode"),
+    ("climate", "preset"): ("climate", "set_preset_mode"), ("climate", "fan"): ("climate", "set_fan_mode"),
+    ("climate", "on"): ("climate", "turn_on"), ("climate", "off"): ("climate", "turn_off"),
 }
 
 

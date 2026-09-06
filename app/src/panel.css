@@ -444,6 +444,39 @@ select.input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://ww
 .copy-label { font-size: 12px; color: var(--muted); white-space: nowrap; }
 .copy-text { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+/* a thermostat: the number you set in the middle, like the dial on the wall */
+.tile.climate { --tint: 233, 184, 114; min-height: 0; }
+.tile.climate.cool { --tint: 122, 176, 232; }
+.tile.climate.heat { --tint: 233, 150, 90; }
+.tile.climate.heat_cool, .tile.climate.auto { --tint: 160, 200, 170; }
+.tile.climate.on { border-color: rgba(var(--tint), .38); background: radial-gradient(ellipse 70% 60% at 50% 42%, rgba(var(--tint), .16), rgba(var(--tint), 0) 70%), var(--surface); }
+.tile.climate.on .tile-icon { background: rgba(var(--tint), .9); color: #0f1216; }
+.tile.climate .tile-body { padding: 16px 18px 14px; gap: 0; }
+.clim-head { display: flex; align-items: center; gap: 12px; }
+.clim-head .tile-icon { margin: 0; width: 34px; height: 34px; border-radius: 11px; }
+.clim-dial { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; margin: 14px 0 6px; }
+.clim-center { display: flex; flex-direction: column; align-items: center; text-align: center; min-width: 0; }
+.clim-big { font-family: var(--serif); font-size: 64px; line-height: .95; letter-spacing: -0.02em; color: var(--ink); font-variant-numeric: tabular-nums; }
+.clim-unit { font-size: .38em; margin-left: 3px; color: var(--muted); vertical-align: .55em; letter-spacing: 0; }
+.clim-dash { margin: 0 .08em; color: var(--muted); font-size: .7em; vertical-align: .12em; }
+.clim-doing { margin-top: 8px; font-size: 13.5px; color: var(--muted); }
+.tile.climate.on .clim-doing { color: var(--ink-2); }
+.clim-btn { width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-hi); border: 1px solid var(--edge); color: var(--ink); transition: transform .12s var(--ease), background .18s; }
+.clim-btn:active { transform: scale(.92); background: rgba(var(--tint), .35); }
+.clim-btn:disabled { opacity: .3; }
+.clim-rows { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.clim-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.clim-chip { padding: 7px 14px; border-radius: 999px; background: var(--surface-hi); border: 1px solid var(--edge); color: var(--ink-2); font-size: 13.5px; transition: background .18s, color .18s; }
+.clim-chip.on { background: var(--ink); color: var(--bg); border-color: transparent; }
+.clim-chip:disabled { opacity: .5; }
+.clim-chip.stop { background: var(--ink); color: var(--bg); border-color: transparent; }
+.clim-row.fan { align-items: center; padding-top: 8px; border-top: 1px solid var(--edge); }
+.clim-fan-label { display: inline-flex; align-items: center; gap: 8px; margin-right: 6px; font-size: 14px; color: var(--muted); }
+.clim-row.fan.running .clim-fan-label { color: var(--ink); }
+.clim-fan-label .spin { animation: spin 2.4s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (max-width: 860px) { .clim-big { font-size: 54px; } .clim-btn { width: 46px; height: 46px; } }
+
 /* what runs behind the panel: radios, Matter, Ring */
 .drivers { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .drivers li { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 14px; background: var(--surface); border: 1px solid var(--edge); }

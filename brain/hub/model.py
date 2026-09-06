@@ -3,6 +3,7 @@
 The vocabulary is deliberately small. Anything HA exposes that does not fit is invisible to the
 product (it is still reachable through the Advanced door).
 """
+import time
 from dataclasses import dataclass, field, asdict
 
 CAP_BY_DOMAIN = {"light": "light", "switch": "switch", "media_player": "media", "cover": "cover",
@@ -47,12 +48,23 @@ class Home:
         self.rooms: dict[str, Room] = {}
         self.devices: dict[str, Device] = {}
         self.intent: str = "unknown"     # the last home-wide intent (bedtime, everything off)
+        self.extras: dict[str, dict] = {}  # what the brain knows about a device that HA does not (a fan timer's end); shown with its attrs
+
+    def attrs_for(self, eid, cap, a):
+        """HA's attributes plus what the brain knows. While the brain runs a fan timer the fan is on whatever the
+        thermostat has got round to reporting (Nest tells HA about its fan timer late)."""
+        extra = self.extras.get(eid, {})
+        out = {**self._keep_attrs(cap, a), **extra}
+        if extra.get("fan_until", 0) > time.time(): out["fan_mode"] = "on"
+        return out
 
     @staticmethod
     def _keep_attrs(cap, a):
         keys = {"light": ("brightness", "color_temp_kelvin", "rgb_color", "supported_color_modes"),
                 "media": ("volume_level", "media_title", "media_artist", "app_name", "source", "entity_picture"),
-                "cover": ("current_position",), "climate": ("temperature", "current_temperature", "hvac_modes"),
+                "cover": ("current_position",),
+                "climate": ("temperature", "current_temperature", "hvac_modes", "hvac_action", "target_temp_low", "target_temp_high",
+                            "min_temp", "max_temp", "current_humidity", "preset_mode", "preset_modes", "fan_mode", "fan_modes"),
                 "fan": ("percentage",)}.get(cap.split(".")[0], ())
         return {k: a[k] for k in keys if k in a}
 
@@ -83,7 +95,7 @@ class Home:
             if cap == "camera":
                 for suffix in (" Live view", " Live View", " Camera"):
                     if name.endswith(suffix): name = name[: -len(suffix)]
-            d = Device(eid, name, room, cap, s["state"], self._keep_attrs(cap, s["attributes"]), e.get("device_id"), bool(e.get("area_id")))
+            d = Device(eid, name, room, cap, s["state"], self.attrs_for(eid, cap, s["attributes"]), e.get("device_id"), bool(e.get("area_id")))
             self.devices[eid] = d
             self.rooms[room].devices.append(d)
         return self
@@ -92,7 +104,7 @@ class Home:
         d = self.devices.get(entity_id)
         if not d or not new_state: return None
         d.state = new_state["state"]
-        d.attrs = self._keep_attrs(d.capability, new_state["attributes"])
+        d.attrs = self.attrs_for(entity_id, d.capability, new_state["attributes"])
         d.name = new_state["attributes"].get("friendly_name", d.name)   # a rename shows up here first
         return d
 

@@ -15,6 +15,7 @@ export const store = reactive({
   previewSetup: new URLSearchParams(location.search).get('setup') === '1',   // ?setup=1 previews first run; cleared by Open Home
   status: null as Status | null,            // where the hub is in its life: engine down, fresh, ready; and whether setup finished
   homeName: '' as string,
+  tempUnit: '' as string,                   // the house's temperature unit, from the home's location (°F in the US)
   found: [] as Found[],                      // things noticed on the network that are not set up yet
   sky: { elevation: -20, azimuth: 0, phase: 0, hour: 0, condition: 'clear-night', guessed: true },   // what the sky draws
 })
@@ -234,7 +235,7 @@ export async function refreshFound() {
 function foundSoon() { clearTimeout(foundTimer); foundTimer = window.setTimeout(refreshFound, 2500) }
 
 /* ---------- lifecycle ---------- */
-function applyHome(h: Home) { store.rooms = h.rooms; store.homeName = h.name || ''; store.loaded = true; store.error = ''; foundSoon(); if (store.homeName) document.title = store.homeName }
+function applyHome(h: Home) { store.rooms = h.rooms; store.homeName = h.name || ''; store.tempUnit = h.temp_unit || ''; store.loaded = true; store.error = ''; foundSoon(); if (store.homeName) document.title = store.homeName }
 /** A room was set to a state by a rule or by another screen: keep the chip honest without a reload. */
 function applyIntent(i: Intent) {
   const r = store.rooms.find(r => r.id === i.room)

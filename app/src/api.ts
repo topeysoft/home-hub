@@ -1,7 +1,7 @@
 export type Device = { id: string; name: string; room_id: string; capability: string; state: string; attrs: Record<string, any> }
 export type Room = { id: string; name: string; devices: Device[]; intent: string; set_by?: string | null; hold_until?: number | null; motion_at?: number | null }
 export type Intent = { room: string; intent: string; set_by: string | null; hold_until: number | null }
-export type Home = { name?: string | null; rooms: Room[] }
+export type Home = { name?: string | null; temp_unit?: string; rooms: Room[] }
 export type Driver = 'down' | 'fresh' | 'needs-login' | 'connecting' | 'ready'
 export type Part = { id: string; name: string; state: 'unknown' | 'off' | 'adding' | 'ready' | 'failed' | 'sign-in' | 'waiting'; text: string; port: number }
 export type Status = { driver: Driver; reason: string; setup_done: boolean; owner: string | null; home: string | null; location: boolean; rooms: number; devices: number; drivers: Part[]; problems?: Problem[] }
@@ -40,6 +40,7 @@ export const addRoom = (name: string) => post<{ id: string; name: string }>('/ro
 export const renameRoom = (id: string, name: string) => post(`/rooms/${encodeURIComponent(id)}/rename`, { name })
 export const moveDevice = (id: string, room_id: string | null) => post(`/devices/${encodeURIComponent(id)}/move`, { room_id })
 export const renameDevice = (id: string, name: string) => post(`/devices/${encodeURIComponent(id)}/rename`, { name })
+export const setFan = (id: string, minutes: number) => post<{ ok: boolean; fan_until: number | null }>(`/devices/${encodeURIComponent(id)}/fan`, { minutes })
 export async function getDiscovered(): Promise<Found[]> {
   const r = await fetch('/discovered'); if (!r.ok) await fail(r); return r.json()
 }
