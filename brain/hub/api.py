@@ -57,10 +57,15 @@ class Hub:
 
     def _on_state(self, ev):
         d = ev["data"]
+        old_state = d.get("old_state") or {}
+        before = self.home.devices.get(d["entity_id"])
+        old_attrs = self.home._keep_attrs(before.capability, old_state.get("attributes", {})) if before else None
         dev = self.home.apply_state(d["entity_id"], d.get("new_state"))
         if not dev: return
-        old = (d.get("old_state") or {}).get("state")
-        self.log.add("state", dev.id, old, dev.state, source="device", detail=dev.attrs)
+        old = old_state.get("state")
+        # Cameras and media players re-announce the same state constantly; only real changes go in the log.
+        if old != dev.state or old_attrs != dev.attrs:
+            self.log.add("state", dev.id, old, dev.state, source="device", detail=dev.attrs)
         msg = json.dumps({"type": "device", "device": dev.__dict__})
         for ws in list(self.streams):
             asyncio.create_task(self._push(ws, msg))
@@ -125,16 +130,35 @@ async def device_action(device_id: str, action: str, data: dict | None = None):
     return {"ok": True}
 
 
+async def _apply(room, state: RoomState):
+    """Run a room's plan, skipping devices that refuse. A scene does as much as it can."""
+    done, failed = 0, []
+    for domain, service, eid, data in plan(room, state):
+        try:
+            await hub.ha.call(domain, service, eid, **data); done += 1
+        except Exception as e:
+            failed.append(eid); log.warning("%s %s failed: %s", eid, service, e)
+    if room.devices: room.intent = state.value
+    return done, failed
+
+
 @app.post("/rooms/{room_id}/intent/{state}")
 async def room_intent(room_id: str, state: RoomState):
     room = hub.home.rooms.get(room_id)
     if not room: raise HTTPException(404, "unknown room")
-    calls = plan(room, state)
-    for domain, service, eid, data in calls:
-        await hub.ha.call(domain, service, eid, **data)
-    room.intent = state.value
-    hub.log.add("intent", room.id, None, state.value, source="user", detail={"calls": len(calls)})
-    return {"ok": True, "calls": len(calls)}
+    done, failed = await _apply(room, state)
+    hub.log.add("intent", room.id, None, state.value, source="user", detail={"calls": done, "failed": failed})
+    return {"ok": True, "calls": done, "failed": failed}
+
+
+@app.post("/home/intent/{state}")
+async def home_intent(state: RoomState):
+    """The same intent in every room at once: good night, everything off."""
+    done, failed = 0, []
+    for room in hub.home.rooms.values():
+        n, f = await _apply(room, state); done += n; failed += f
+    hub.log.add("intent", "home", None, state.value, source="user", detail={"calls": done, "failed": failed})
+    return {"ok": True, "calls": done, "failed": failed}
 
 
 @app.websocket("/stream")

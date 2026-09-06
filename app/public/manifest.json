@@ -1,2 +1,6 @@
-{ "name": "Home", "short_name": "Home", "start_url": "/", "display": "standalone",
-  "background_color": "#0f1216", "theme_color": "#0f1216", "icons": [] }
+{ "name": "Home", "short_name": "Home", "start_url": "/", "display": "standalone", "orientation": "any",
+  "background_color": "#0c0d10", "theme_color": "#0c0d10",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" },
+    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+  ] }

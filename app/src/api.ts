@@ -1,19 +1,32 @@
 export type Device = { id: string; name: string; room_id: string; capability: string; state: string; attrs: Record<string, any> }
 export type Room = { id: string; name: string; devices: Device[]; intent: string }
 export type Home = { rooms: Room[] }
+export type Event = { ts: number; kind: string; subject: string; old: string | null; new: string | null; source: string; detail: string | null }
 
 const json = { 'Content-Type': 'application/json' }
+async function fail(r: Response): Promise<never> {
+  let detail = r.statusText
+  try { detail = (await r.json()).detail ?? detail } catch {}
+  throw new Error(detail)
+}
 
 export async function getHome(): Promise<Home> {
-  const r = await fetch('/home'); if (!r.ok) throw new Error(`home ${r.status}`); return r.json()
+  const r = await fetch('/home'); if (!r.ok) await fail(r); return r.json()
+}
+export async function getEvents(limit = 40): Promise<Event[]> {
+  const r = await fetch(`/events?limit=${limit}`); if (!r.ok) await fail(r); return r.json()
 }
 export async function act(id: string, action: string, data?: Record<string, unknown>) {
   const r = await fetch(`/devices/${encodeURIComponent(id)}/${action}`, { method: 'POST', headers: json, body: data ? JSON.stringify(data) : undefined })
-  if (!r.ok) throw new Error((await r.json()).detail ?? r.statusText)
+  if (!r.ok) await fail(r)
 }
 export async function setIntent(roomId: string, state: string) {
   const r = await fetch(`/rooms/${encodeURIComponent(roomId)}/intent/${state}`, { method: 'POST' })
-  if (!r.ok) throw new Error((await r.json()).detail ?? r.statusText)
+  if (!r.ok) await fail(r)
+}
+export async function setHomeIntent(state: string) {
+  const r = await fetch(`/home/intent/${state}`, { method: 'POST' })
+  if (!r.ok) await fail(r)
 }
 export const imageUrl = (id: string) => `/devices/${encodeURIComponent(id)}/image?t=${Date.now()}`
 

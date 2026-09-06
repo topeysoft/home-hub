@@ -9,6 +9,7 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 curl localhost:8300/home
 curl -X POST localhost:8300/devices/media_player.nadine_s_room_roku_tv/off
 curl -X POST localhost:8300/rooms/<room_id>/intent/asleep
+curl -X POST localhost:8300/home/intent/away          # the same intent in every room; a device that refuses is skipped
 ```
 
 - `hub/ha_adapter.py` — the only file that knows Home Assistant exists.
