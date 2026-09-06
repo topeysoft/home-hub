@@ -1,0 +1,75 @@
+# Driver layer: rented components, each isolated in its own container.
+# Runs on the hub host (Pi 5 + NVMe or a mini PC), not on the Mac.
+# Copy .env.example to .env and set the serial paths for your radio sticks.
+
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: mosquitto
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+
+  zigbee2mqtt:
+    image: koenkk/zigbee2mqtt:latest
+    container_name: zigbee2mqtt
+    restart: unless-stopped
+    depends_on: [mosquitto]
+    ports:
+      - "8080:8080"          # Zigbee2MQTT admin UI (Advanced door)
+    volumes:
+      - ./zigbee2mqtt:/app/data
+      - /run/udev:/run/udev:ro
+    devices:
+      - "${ZIGBEE_SERIAL}:/dev/zigbee"
+    environment:
+      - TZ=${TZ}
+
+  zwave-js-ui:
+    image: zwavejs/zwave-js-ui:latest
+    container_name: zwave-js-ui
+    restart: unless-stopped
+    tty: true
+    stop_signal: SIGINT
+    ports:
+      - "8091:8091"          # Z-Wave JS UI admin (Advanced door)
+      - "3000:3000"          # websocket server consumed by Home Assistant
+    volumes:
+      - ./zwave-js-ui:/usr/src/app/store
+    devices:
+      - "${ZWAVE_SERIAL}:/dev/zwave"
+    environment:
+      - TZ=${TZ}
+      - SESSION_SECRET=${ZWAVE_SESSION_SECRET}
+
+  matter-server:
+    image: ghcr.io/home-assistant-libs/python-matter-server:stable
+    container_name: matter-server
+    restart: unless-stopped
+    network_mode: host      # Matter commissioning needs mDNS and IPv6 on the LAN
+    security_opt:
+      - apparmor=unconfined
+    volumes:
+      - ./matter-server:/data
+      - /run/dbus:/run/dbus:ro
+    # websocket on ws://<host>:5580/ws
+
+  homeassistant:
+    image: ghcr.io/home-assistant/home-assistant:stable
+    container_name: homeassistant
+    restart: unless-stopped
+    network_mode: host      # discovery (mDNS, SSDP, Cast, HomeKit) needs the real LAN
+    privileged: false
+    depends_on: [mosquitto, zwave-js-ui]
+    volumes:
+      - ./homeassistant:/config
+      - /etc/localtime:/etc/localtime:ro
+      - /run/dbus:/run/dbus:ro
+    environment:
+      - TZ=${TZ}
+    # UI on http://<host>:8123 — the Advanced door only.
+    # The brain talks to ws://<host>:8123/api/websocket with a long-lived token.

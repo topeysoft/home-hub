@@ -1,0 +1,17 @@
+# Zigbee2MQTT bootstrap config. Edit channel before the first pairing; changing it later re-pairs everything.
+homeassistant: true
+permit_join: false
+mqtt:
+  base_topic: zigbee2mqtt
+  server: mqtt://mosquitto:1883
+serial:
+  port: /dev/zigbee
+  adapter: ember        # SkyConnect / ZBT-1 / ZBDongle-E (EFR32). Use "zstack" for a CC2652 stick.
+advanced:
+  channel: 20           # stay away from Wi-Fi channels 1/6/11 overlap; 15, 20, 25 are safe picks
+  network_key: GENERATE
+  pan_id: GENERATE
+  ext_pan_id: GENERATE
+  last_seen: ISO_8601
+frontend:
+  port: 8080

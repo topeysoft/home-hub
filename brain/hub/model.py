@@ -1,0 +1,89 @@
+"""Semantic model: home → rooms → devices → one capability each.
+
+The vocabulary is deliberately small. Anything HA exposes that does not fit is invisible to the
+product (it is still reachable through the Advanced door).
+"""
+from dataclasses import dataclass, field, asdict
+
+CAP_BY_DOMAIN = {"light": "light", "switch": "switch", "media_player": "media", "cover": "cover",
+                 "climate": "climate", "lock": "lock", "fan": "fan", "camera": "camera", "vacuum": "vacuum"}
+MOTION_CLASSES = {"motion", "occupancy", "presence"}
+SENSOR_CLASSES = {"temperature", "humidity", "illuminance"}   # power/energy belong to an energy view, not room tiles
+
+
+def capability_for(domain: str, device_class: str | None) -> str | None:
+    if domain in CAP_BY_DOMAIN: return CAP_BY_DOMAIN[domain]
+    if domain == "binary_sensor" and device_class in MOTION_CLASSES: return "motion"
+    if domain == "binary_sensor" and device_class in ("door", "window", "opening"): return "contact"
+    if domain == "sensor" and device_class in SENSOR_CLASSES: return f"sensor.{device_class}"
+    return None
+
+
+@dataclass
+class Device:
+    id: str                 # stable product id = HA entity_id for now
+    name: str
+    room_id: str
+    capability: str
+    state: str
+    attrs: dict = field(default_factory=dict)
+
+
+@dataclass
+class Room:
+    id: str
+    name: str
+    devices: list = field(default_factory=list)
+    intent: str = "unknown"   # see intents.RoomState
+
+
+class Home:
+    def __init__(self):
+        self.rooms: dict[str, Room] = {}
+        self.devices: dict[str, Device] = {}
+
+    @staticmethod
+    def _keep_attrs(cap, a):
+        keys = {"light": ("brightness", "color_temp_kelvin", "rgb_color", "supported_color_modes"),
+                "media": ("volume_level", "media_title", "app_name", "source"),
+                "cover": ("current_position",), "climate": ("temperature", "current_temperature", "hvac_modes"),
+                "fan": ("percentage",)}.get(cap.split(".")[0], ())
+        return {k: a[k] for k in keys if k in a}
+
+    def build(self, areas, ha_devices, entities, states):
+        self.rooms = {a["area_id"]: Room(a["area_id"], a["name"]) for a in areas}
+        self.rooms["unassigned"] = Room("unassigned", "Unassigned")
+        dev_area = {d["id"]: d.get("area_id") for d in ha_devices}
+        reg = {e["entity_id"]: e for e in entities}
+        st = {s["entity_id"]: s for s in states}
+        camera_devices = {e["device_id"] for e in entities if e["entity_id"].startswith("camera.") and e.get("device_id")}
+        self.devices = {}
+        for eid, s in st.items():
+            e = reg.get(eid, {})
+            if e.get("disabled_by") or e.get("hidden_by") or e.get("entity_category"):
+                continue      # diagnostics and config entities are not product surface
+            domain = eid.split(".")[0]
+            if domain == "switch" and e.get("device_id") in camera_devices:
+                continue      # a switch on a camera is a setting (motion detection, siren arm), not a room control
+            cap = capability_for(domain, s["attributes"].get("device_class") or e.get("original_device_class"))
+            if not cap: continue
+            room = e.get("area_id") or dev_area.get(e.get("device_id")) or "unassigned"
+            if room not in self.rooms: room = "unassigned"
+            name = s["attributes"].get("friendly_name", eid)
+            if cap == "camera":
+                for suffix in (" Live view", " Live View", " Camera"):
+                    if name.endswith(suffix): name = name[: -len(suffix)]
+            d = Device(eid, name, room, cap, s["state"], self._keep_attrs(cap, s["attributes"]))
+            self.devices[eid] = d
+            self.rooms[room].devices.append(d)
+        return self
+
+    def apply_state(self, entity_id, new_state) -> Device | None:
+        d = self.devices.get(entity_id)
+        if not d or not new_state: return None
+        d.state = new_state["state"]
+        d.attrs = self._keep_attrs(d.capability, new_state["attributes"])
+        return d
+
+    def to_dict(self):
+        return {"rooms": [asdict(r) for r in self.rooms.values() if r.devices or r.id != "unassigned"]}

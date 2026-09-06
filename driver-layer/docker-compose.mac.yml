@@ -1,0 +1,28 @@
+# Temporary driver layer on the Mac while the Pi ships. No radios, no host networking
+# (Docker Desktop on macOS cannot do mDNS discovery). Devices are added by IP.
+# The ./homeassistant config dir moves to the Pi unchanged.
+#   docker compose -f docker-compose.mac.yml up -d
+
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: mosquitto
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+
+  homeassistant:
+    image: ghcr.io/home-assistant/home-assistant:stable
+    container_name: homeassistant
+    restart: unless-stopped
+    depends_on: [mosquitto]
+    ports:
+      - "8123:8123"
+    volumes:
+      - ./homeassistant:/config
+    environment:
+      - TZ=${TZ:-America/New_York}

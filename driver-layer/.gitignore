@@ -1,0 +1,8 @@
+.env
+homeassistant/
+zwave-js-ui/
+matter-server/
+mosquitto/data/
+mosquitto/log/
+zigbee2mqtt/*
+!zigbee2mqtt/configuration.yaml
