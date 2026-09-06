@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
-import { getCatalog, startFlow, getFlow, submitFlow, cancelFlow, type CatalogItem, type Step, type Found } from './api'
+import { getCatalog, startFlow, getFlow, submitFlow, cancelFlow, setCredentials, type CatalogItem, type Step, type Found } from './api'
 import { store, notify, refreshFound } from './store'
 import Icon from './Icon.vue'
+import { parseKeyFile, keyFileWarning } from './keyfile'
 
 /* Adding things to the house. Lists what was noticed on the network, offers a search for anything
    else, and walks through the short form each one needs. Used on the setup screen and in a sheet. */
@@ -10,15 +11,16 @@ const emit = defineEmits<{ added: [title: string] }>()
 const step = ref<Step | null>(null)
 const values = reactive<Record<string, any>>({})
 const busy = ref(false), q = ref(''), catalog = ref<CatalogItem[] | null>(null), error = ref('')
+const warn = ref(''), hints = ref<Record<string, string>>({}), fileName = ref('')
 const matches = computed(() => {
   const s = q.value.trim().toLowerCase()
   if (!s || !catalog.value) return []
-  return catalog.value.filter(c => c.name.toLowerCase().includes(s) || c.domain.includes(s)).slice(0, 8)
+  return catalog.value.filter(c => c.name.toLowerCase().includes(s) || c.domain.includes(s) || (c.brand ?? '').toLowerCase().includes(s)).slice(0, 8)
 })
 async function loadCatalog() { if (!catalog.value) try { catalog.value = await getCatalog() } catch {} }
 
 function show(s: Step) {
-  step.value = s; error.value = ''
+  step.value = s; error.value = ''; warn.value = ''; fileName.value = ''
   for (const k of Object.keys(values)) delete values[k]
   for (const f of s.fields ?? []) values[f.name] = f.default ?? (f.kind === 'boolean' ? false : '')
   if (s.type === 'progress') pollSoon()
@@ -35,6 +37,14 @@ async function begin(c: CatalogItem) {
 }
 async function submit(data?: Record<string, unknown>) {
   if (!step.value || busy.value) return
+  if (step.value.type === 'credentials') {
+    if (!values.client_id?.trim() || !values.client_secret?.trim()) { error.value = 'Both boxes are needed.'; return }
+    busy.value = true
+    const h = hints.value; hints.value = {}
+    try { show(await setCredentials(step.value.handler, values.client_id.trim(), values.client_secret.trim(), h)) } catch (e: any) { error.value = e.message; hints.value = h }
+    busy.value = false; return
+  }
+  if (!step.value.flow_id) return
   busy.value = true
   const body = data ?? Object.fromEntries((step.value.fields ?? []).filter(f => values[f.name] !== '' || f.required).map(f => [f.name, f.kind === 'number' ? Number(values[f.name]) : values[f.name]]))
   try {
@@ -45,13 +55,34 @@ async function submit(data?: Record<string, unknown>) {
   busy.value = false
 }
 let poll: number | undefined
-function pollSoon() { clearTimeout(poll); poll = window.setTimeout(async () => { if (step.value?.type === 'progress') try { show(await getFlow(step.value.flow_id)) } catch {} }, 2000) }
+function pollSoon() { clearTimeout(poll); poll = window.setTimeout(async () => { if (step.value?.type === 'progress' && step.value.flow_id) try { show(await getFlow(step.value.flow_id)) } catch {} }, 2000) }
 async function back(cancel = true) {
   clearTimeout(poll)
-  if (cancel && step.value && (step.value.type === 'form' || step.value.type === 'menu' || step.value.type === 'external')) cancelFlow(step.value.flow_id)
+  if (cancel && step.value?.flow_id && (step.value.type === 'form' || step.value.type === 'menu' || step.value.type === 'external')) cancelFlow(step.value.flow_id)
   step.value = null; refreshFound()
 }
 const heading = computed(() => step.value?.title || (step.value?.type === 'create_entry' ? 'Added' : `Add ${step.value?.kind ?? ''}`))
+const haUrl = `http://${location.hostname}:8123`
+
+/* The key file a maker's console hands out: choose it, drop it, or paste its text into either box. Read here,
+   never sent anywhere; only the two fields go to the hub, plus the project ID for a later step. */
+function absorb(text: string, name = ''): boolean {
+  const k = parseKeyFile(text)
+  if (!k) return false
+  values.client_id = k.client_id; values.client_secret = k.client_secret
+  hints.value = k.project_id ? { cloud_project_id: k.project_id } : {}
+  warn.value = keyFileWarning(k, step.value?.redirect_url) ?? ''
+  fileName.value = name || 'pasted key'; error.value = ''
+  return true
+}
+async function fromFile(f: File | undefined | null) {
+  if (!f) return
+  if (!absorb(await f.text(), f.name)) error.value = `${f.name} doesn't look like a key file.`
+}
+const picked = (e: Event) => { const i = e.target as HTMLInputElement; fromFile(i.files?.[0]); i.value = '' }
+const dropped = (e: DragEvent) => fromFile(e.dataTransfer?.files?.[0])
+function pasted(e: ClipboardEvent) { const t = e.clipboardData?.getData('text') ?? ''; if (t.trim().startsWith('{') && absorb(t)) e.preventDefault() }
+async function copy(text: string) { try { await navigator.clipboard.writeText(text); notify('Copied.') } catch { notify(text) } }
 watch(() => store.status?.driver, d => { if (d === 'ready') refreshFound() })
 onMounted(refreshFound)
 onUnmounted(() => clearTimeout(poll))
@@ -77,7 +108,7 @@ onUnmounted(() => clearTimeout(poll))
         <h3 class="label">Add something else</h3>
         <label class="search">
           <Icon name="search" :size="18" />
-          <input v-model="q" @focus="loadCatalog" @input="loadCatalog" type="search" placeholder="Search by brand: Hue, Roku, Ring, Sonos…" autocomplete="off" spellcheck="false" />
+          <input v-model="q" @focus="loadCatalog" @input="loadCatalog" type="search" placeholder="Search by brand: Hue, Nest, Roku, Ring, Sonos…" autocomplete="off" spellcheck="false" />
         </label>
         <ul class="results" v-if="matches.length">
           <li v-for="c in matches" :key="c.domain"><button :disabled="busy" @click="begin(c)"><span class="r-name">{{ c.name }}</span><span class="r-sub">{{ c.local ? 'Works without the internet' : 'Needs its account' }}</span></button></li>
@@ -88,9 +119,29 @@ onUnmounted(() => clearTimeout(poll))
 
     <div class="flow" v-else>
       <h3 class="flow-title display">{{ heading }}</h3>
-      <p class="flow-desc" v-if="step.description">{{ step.description }}</p>
+      <div class="flow-desc" v-if="step.description" v-html="step.description"></div>
 
-      <template v-if="step.type === 'form'">
+      <template v-if="step.type === 'credentials'">
+        <p class="error" v-if="error">{{ error }}</p>
+        <div class="copy-row" v-if="step.redirect_url"><span class="copy-label">Redirect address</span><code class="copy-text">{{ step.redirect_url }}</code><button class="button small ghost" @click="copy(step.redirect_url!)">Copy</button></div>
+        <label class="drop" :class="{ has: fileName }" @dragover.prevent @drop.prevent="dropped">
+          <input type="file" accept=".json,application/json" hidden @change="picked" />
+          <Icon :name="fileName ? 'check' : 'plus'" :size="18" />
+          <span v-if="fileName">Filled in from <b>{{ fileName }}</b>. Check the boxes and continue.</span>
+          <span v-else>Downloaded the key file? <b>Choose it</b>, drop it here, or paste its text into either box.</span>
+        </label>
+        <p class="field-hint warn" v-if="warn">{{ warn }}</p>
+        <label class="field" v-for="f in step.fields" :key="f.name">
+          <span class="field-label">{{ f.label }}</span>
+          <input class="input" :type="f.kind === 'password' ? 'password' : 'text'" v-model="values[f.name]" autocomplete="off" autocapitalize="off" spellcheck="false" @paste="pasted" @keydown.enter="submit()" />
+        </label>
+        <div class="flow-actions">
+          <button class="button ghost" @click="back(false)">Not now</button>
+          <button class="button" :class="{ busy }" @click="submit()">Continue</button>
+        </div>
+      </template>
+
+      <template v-else-if="step.type === 'form'">
         <p class="error" v-if="step.errors?.base || error">{{ step.errors?.base || error }}</p>
         <label class="field" v-for="f in step.fields" :key="f.name">
           <span class="field-label">{{ f.label }}<span v-if="!f.required" class="field-opt"> optional</span></span>
@@ -119,11 +170,11 @@ onUnmounted(() => clearTimeout(poll))
       </template>
 
       <template v-else-if="step.type === 'external'">
-        <p class="flow-desc">This one finishes in the maker's own page. Come back here when it says it is done.</p>
+        <p class="flow-desc">This one finishes on the maker's own page: sign in there and allow it. If a page asks for your Home Assistant address, it is <b>{{ haUrl }}</b>. Come back here when it says it is done.</p>
         <div class="flow-actions">
           <button class="button ghost" @click="back()">Cancel</button>
           <a class="button" :href="step.url" target="_blank" rel="noopener">Open it</a>
-          <button class="button ghost" @click="getFlow(step.flow_id).then(show)">I've done that</button>
+          <button class="button ghost" @click="step.flow_id && getFlow(step.flow_id).then(show)">I've done that</button>
         </div>
       </template>
 

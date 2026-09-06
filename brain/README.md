@@ -40,7 +40,16 @@ endpoints just nudge it along.
 - `hub/api.py` — the Hub lifecycle and every route.
 - `hub/ha_adapter.py` — the only file that speaks HA's websocket. One adapter per connection.
 - `hub/ha_setup.py` — HA's onboarding and auth endpoints, used once.
+- `hub/provision.py` — the driver layer finishes itself: probes MQTT, Z-Wave JS UI, Zigbee2MQTT,
+  Matter and ring-mqtt at their compose addresses, adds the missing integrations to HA by walking
+  their config flows, and reports each part in `drivers` on `/setup/status` for the panel.
+  `POST /setup/drivers` looks now instead of at the next half-minute. `HUB_DRIVER_HOST` in `.env`
+  is where HA reaches the other containers (`localhost` with host networking, a container name on the Mac).
 - `hub/onboarding.py` — finding and adding devices: what HA discovered (`/discovered`), the
+  catalog, config flows as plain forms, and accounts that need a key of their own: when HA wants
+  application credentials (Nest, Google, Tesla, SmartThings…), `/flows` returns a `credentials` step
+  with a guide in the house's words; `POST /credentials` keeps the key in HA and starts the flow.
+  Step descriptions arrive as small HTML (bold, links, numbered steps) from HA's own text.
   catalog of things addable by brand (`/catalog`), and config flows rewritten as plain forms with
   the integration's own English labels (`/flows`).
 - `hub/model.py` — home → rooms → devices → one capability each. Small vocabulary on purpose.

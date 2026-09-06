@@ -12,6 +12,7 @@ from .model import Home
 from .events import EventLog
 from .intents import RoomState, SERVICE, plan, rules_as_data, holds
 from .onboarding import Onboarding
+from .provision import Provision
 from .rules import Engine
 from .settings import Settings, DATA, env_file
 
@@ -40,7 +41,8 @@ class Hub:
         self.tz = datetime.now().astimezone().tzinfo   # the home's zone, from HA's config once connected
         self.add = Onboarding(self)
         self.engine = Engine(self)                     # rules: signals in, room intents out
-        self._tick_task = None
+        self.provision = Provision(self)               # connects the radios, Matter and MQTT to HA itself
+        self._tick_task = self._drivers_task = None
         self._wake = asyncio.Event()
         self._rebuild_task = None
         self._loop_task = None
@@ -58,7 +60,7 @@ class Hub:
         return {"driver": self.driver, "reason": self.reason, "setup_done": bool(self.settings.get("setup_done")),
                 "owner": (self.settings.get("owner") or {}).get("name"), "home": self.settings.get("home_name"),
                 "location": bool(self.location), "rooms": sum(1 for r in self.home.rooms.values() if r.id != "unassigned"),
-                "devices": len(self.home.devices)}
+                "devices": len(self.home.devices), "drivers": self.provision.summary()}
 
     def _set(self, driver, reason=""):
         if (driver, reason) == (self.driver, self.reason): return
@@ -122,6 +124,7 @@ class Hub:
         self._pick_weather(snap[3])
         self.ha.on_event(self._on_event)
         self._set("ready")
+        asyncio.create_task(self.provision.refresh())   # look at the driver layer now, not at the next half-minute
         self._broadcast(json.dumps({"type": "home", "home": self.home_dict()}))
         self._broadcast(json.dumps({"type": "ambient", "ambient": self.ambient()}))
         log.info("home: %d rooms, %d devices, weather=%s", len(self.home.rooms), len(self.home.devices), self.weather and self.weather["id"])
@@ -296,8 +299,9 @@ hub = Hub()
 async def lifespan(app):
     hub._loop_task = asyncio.create_task(hub.run())
     hub._tick_task = asyncio.create_task(hub.engine.run())
+    hub._drivers_task = asyncio.create_task(hub.provision.run())
     yield
-    hub._loop_task.cancel(); hub._tick_task.cancel()
+    for t in (hub._loop_task, hub._tick_task, hub._drivers_task): t.cancel()
     if hub.ha: await hub.ha.close()
 
 
@@ -332,6 +336,14 @@ async def setup_login(body: dict):
 def setup_home(body: dict):
     hub.settings.set(home_name=(body.get("name") or "").strip() or "Home")
     hub._broadcast(json.dumps({"type": "home", "home": hub.home_dict()}))
+    return hub.status()
+
+
+@app.post("/setup/drivers")
+async def setup_drivers():
+    """Look at the driver layer now rather than at the next half-minute: the panel asks after a stick was plugged in."""
+    hub.ready()
+    await hub.provision.refresh()
     return hub.status()
 
 
@@ -458,6 +470,17 @@ async def submit_flow(flow_id: str, body: dict | None = None):
     except Exception as e: raise HTTPException(502, str(e))
     if r.get("type") == "create_entry": hub.log.add("home", "device", None, r.get("entry_title") or r["kind"], source="user", detail={"added": r["handler"]})
     return r
+
+
+@app.post("/credentials")
+async def set_credentials(body: dict):
+    """The key an account-based integration needs (OAuth client ID and secret); then its flow begins."""
+    hub.ready()
+    h, cid, sec = body.get("handler"), (body.get("client_id") or "").strip(), (body.get("client_secret") or "").strip()
+    if not (h and cid and sec): raise HTTPException(400, "The client ID and the client secret are both needed.")
+    hints = body.get("hints") if isinstance(body.get("hints"), dict) else None
+    try: return await hub.add.set_credentials(h, cid, sec, hints)
+    except Exception as e: raise HTTPException(502, str(e))
 
 
 @app.delete("/flows/{flow_id}")

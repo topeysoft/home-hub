@@ -50,17 +50,15 @@ if [ ! -f .env ]; then
     echo "ZWAVE_SESSION_SECRET=$(head -c 32 /dev/urandom | base64 | tr -d '/+=' )"
   } > .env
 fi
-# radios: only start what is plugged in.
-# The Nortek/GoControl HUSBZB-1 ("HubZ Smart Home Controller") is two radios on one plug: -if00 is its Z-Wave
-# 500-series port, which works as is; -if01 is an old EM3581 Zigbee chip whose stock firmware Zigbee2MQTT
-# cannot drive, so it is left alone and Zigbee waits for a ZBT-1 or similar.
-PROFILES=""
-ZB="$(ls /dev/serial/by-id/ 2>/dev/null | grep -i -E 'skyconnect|zbt-1|zbdongle|sonoff|cc2652|zigbee|efr32|nabu' | grep -v -i hubz | head -1 || true)"
-ZW="$(ls /dev/serial/by-id/ 2>/dev/null | grep -i -E 'zooz|z-wave|zwave|aeotec|800|hubz.*if00' | head -1 || true)"
-if [ -n "$ZB" ]; then grep -q '^ZIGBEE_SERIAL=' .env || echo "ZIGBEE_SERIAL=/dev/serial/by-id/$ZB" >> .env; PROFILES="zigbee"; fi
-if [ -n "$ZW" ]; then grep -q '^ZWAVE_SERIAL=' .env || echo "ZWAVE_SERIAL=/dev/serial/by-id/$ZW" >> .env; PROFILES="${PROFILES:+$PROFILES,}zwave"; fi
-sed -i '/^COMPOSE_PROFILES=/d' .env; echo "COMPOSE_PROFILES=${PROFILES:-none}" >> .env
-echo "  Zigbee stick: ${ZB:-none found}"; echo "  Z-Wave stick: ${ZW:-none found}"
+# radios: only start what is plugged in, now and whenever a stick is plugged in or pulled later
+chmod +x radios.sh
+./radios.sh detect
+cat > /etc/udev/rules.d/90-home-hub-radios.rules <<RULES
+# home-hub: a USB serial device came or went; start or stop the matching radio container
+ACTION=="add", SUBSYSTEM=="tty", SUBSYSTEMS=="usb", RUN+="/usr/bin/systemd-run --no-block --collect $DIR/driver-layer/radios.sh"
+ACTION=="remove", SUBSYSTEM=="tty", KERNEL=="ttyUSB*|ttyACM*", RUN+="/usr/bin/systemd-run --no-block --collect $DIR/driver-layer/radios.sh"
+RULES
+udevadm control --reload 2>/dev/null || true
 
 say "5/5  Starting the house"
 docker compose pull -q 2>/dev/null || true

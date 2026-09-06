@@ -5,6 +5,7 @@ import { store, load } from './store'
 import Icon from './Icon.vue'
 import LocationPicker from './LocationPicker.vue'
 import AddPanel from './AddPanel.vue'
+import Drivers from './Drivers.vue'
 
 /* First run. One question per screen, in this order: who you are, where home is, which rooms,
    what to add. Every step after the first can be skipped and finished later from Home. */
@@ -151,6 +152,10 @@ const idx = computed(() => ['owner', 'location', 'rooms', 'devices'].indexOf(pag
         <h1 class="display">What's in the house?</h1>
         <p class="setup-lede">Things already on your Wi‑Fi show up here on their own. Add what you like now; the rest can wait.</p>
         <AddPanel />
+        <div class="add-block">
+          <h3 class="label">Behind the scenes</h3>
+          <Drivers />
+        </div>
         <div class="setup-actions"><button class="button big" @click="next('devices')">{{ status?.devices ? 'Continue' : 'Skip for now' }}</button></div>
       </section>
 

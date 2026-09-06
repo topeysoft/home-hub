@@ -3,6 +3,7 @@ import { onMounted, onUnmounted } from 'vue'
 import { store } from './store'
 import Icon from './Icon.vue'
 import AddPanel from './AddPanel.vue'
+import Drivers from './Drivers.vue'
 
 function close() { store.sheet = null }
 function key(e: KeyboardEvent) { if (e.key === 'Escape') close() }
@@ -18,6 +19,10 @@ const advanced = `${location.protocol}//${location.hostname}:8123/config/integra
       <h2 class="display">Add to the house</h2>
       <p class="sheet-lede">Plug the new thing in and put it on the Wi‑Fi with its own app if it needs that. Then it turns up here.</p>
       <AddPanel />
+      <div class="add-block">
+        <h3 class="label">Behind the scenes</h3>
+        <Drivers />
+      </div>
       <p class="sheet-foot">Advanced: <a :href="advanced" target="_blank" rel="noopener">open Home Assistant</a> for anything this page cannot add.</p>
     </div>
   </div>

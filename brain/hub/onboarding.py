@@ -4,9 +4,38 @@ Home Assistant discovers things on the network and offers "config flows" for the
 This module lists what was found, starts flows for things the user asks for, and turns each step
 of a flow into a plain form the panel can draw, with the integration's own English labels.
 """
-import asyncio, json, logging, re, urllib.error, urllib.request
+import asyncio, html, json, logging, os, re, urllib.error, urllib.request
 
 log = logging.getLogger("hub.add")
+
+# Accounts that make every home bring its own key (OAuth "application credentials"): what to do, in
+# the house's words. HA supplies the URLs as placeholders; {redirect_url} is the one to paste into the
+# maker's site, {ha_url} is what to type if a page asks for the Home Assistant address.
+GUIDES = {
+    "nest": """Google asks each home to bring its own key. It takes about ten minutes, and Google charges a one-time US $5 for Nest access.
+
+1. Open the [Google Cloud credentials page]({oauth_creds_url}) and, if asked, create a project.
+1. On the [consent screen]({oauth_consent_url}) choose **External**, add your own Google account as a test user, and save.
+1. Back on the credentials page choose **Create credentials**, then **OAuth client ID**, type **Web application**, and add this redirect: **{redirect_url}**
+1. Copy the client ID and client secret into the boxes below.
+
+The next screens walk through the Nest side, one step at a time. If a page asks for your Home Assistant address, it is **{ha_url}**.""",
+    "google": """Google asks each home to bring its own key. It takes a few minutes and costs nothing.
+
+1. Open the [Google Cloud credentials page]({oauth_creds_url}) and, if asked, create a project.
+1. On the [consent screen]({oauth_consent_url}) choose **External**, add your own Google account as a test user, and save.
+1. Back on the credentials page choose **Create credentials**, then **OAuth client ID**, type **Web application**, and add this redirect: **{redirect_url}**
+1. Copy the client ID and client secret into the boxes below.
+
+If a page asks for your Home Assistant address, it is **{ha_url}**.""",
+}
+GENERIC_GUIDE = """{kind} asks each home to bring its own key, made on its developer site ([how]({more_info_url})).
+
+1. Create an app there.
+1. Set its redirect address to **{redirect_url}**
+1. Copy the client ID and client secret into the boxes below.
+
+If a page asks for your Home Assistant address, it is **{ha_url}**."""
 
 # integration kinds that are devices or hubs for devices, not helpers, not virtual aliases, not internals
 KINDS = {"hub", "device", "service"}
@@ -21,6 +50,8 @@ class Onboarding:
         self._names: dict[str, str] = {}
         self._catalog: list[dict] | None = None
         self._strings: dict[str, dict] = {}
+        self._creds_cfg: dict | None = None
+        self._hints: dict[str, dict] = {}     # handler -> {field: value} learned earlier (a key file's project ID) to prefill later steps
 
     # ---- plumbing ----
     def _rest(self, method, path, data=None):
@@ -72,18 +103,54 @@ class Onboarding:
         """Everything that can be added by hand, for the search box."""
         if self._catalog is None:
             r = await self.hub.ha.send("integration/descriptions")
-            core = (r.get("core") or {}).get("integration") or {}
-            items = []
-            for domain, d in core.items():
-                if not d.get("config_flow") or d.get("integration_type") not in KINDS or domain in HIDE: continue
-                items.append({"domain": domain, "name": d.get("name") or domain, "local": (d.get("iot_class") or "").startswith("local")})
-            items.sort(key=lambda x: x["name"].lower())
-            self._catalog = items
+            self._catalog = catalog_from(((r.get("core") or {}).get("integration") or {}))
         return self._catalog
+
+    # ---- accounts that need a key of their own ----
+    async def _creds_config(self) -> dict:
+        if self._creds_cfg is None:
+            try: self._creds_cfg = await self.hub.ha.send("application_credentials/config") or {}
+            except Exception as e: log.warning("no application credentials support: %s", e); self._creds_cfg = {}
+        return self._creds_cfg
+
+    async def needs_credentials(self, handler: str) -> dict | None:
+        """The step to show before this integration can start, or None when it can start now."""
+        cfg = await self._creds_config()
+        if handler not in (cfg.get("domains") or []): return None
+        try: existing = await self.hub.ha.send("application_credentials/list")
+        except Exception: existing = []
+        if any(c.get("domain") == handler for c in existing): return None
+        return await self.credentials_step(handler)
+
+    async def credentials_step(self, handler: str) -> dict:
+        cfg = await self._creds_config()
+        ph = dict(((cfg.get("integrations") or {}).get(handler) or {}).get("description_placeholders") or {})
+        kind = await self.name_of(handler)
+        ph.setdefault("redirect_url", "https://my.home-assistant.io/redirect/oauth")
+        ph.setdefault("more_info_url", f"https://www.home-assistant.io/integrations/{handler}/")
+        ph.update(kind=kind, ha_url=f"http://{self.hub.env.get('HUB_HOST') or os.environ.get('HUB_HOST') or 'hub.local'}:8123")
+        guide = GUIDES.get(handler) or GUIDES.get(handler.split("_")[0]) or GENERIC_GUIDE
+        return {"flow_id": None, "handler": handler, "kind": kind, "type": "credentials", "step_id": "credentials",
+                "title": f"{kind} needs a key of its own", "description": _md(guide, ph), "last_step": None,
+                "redirect_url": ph["redirect_url"], "fields": [
+                    {"name": "client_id", "kind": "text", "label": "Client ID", "hint": "", "required": True, "default": None},
+                    {"name": "client_secret", "kind": "password", "label": "Client secret", "hint": "", "required": True, "default": None}]}
+
+    async def set_credentials(self, handler: str, client_id: str, client_secret: str, hints: dict | None = None) -> dict:
+        """Keep the key in HA, then start the integration's flow as if nothing had been in the way. `hints` are
+        answers the key file already held (Google's carries the Cloud project ID) for fields that come later."""
+        await self.hub.ha.send("application_credentials/create", domain=handler, client_id=client_id, client_secret=client_secret, name="home-hub")
+        self.hub.log.add("home", "credentials", None, handler, source="user")
+        if hints: self._hints[handler] = {k: v for k, v in hints.items() if isinstance(v, str) and v.strip()}
+        return await self.start(handler)
 
     # ---- running a flow ----
     async def start(self, handler: str) -> dict:
+        need = await self.needs_credentials(handler)
+        if need: return need
         step = await asyncio.to_thread(self._rest, "POST", "/api/config/config_entries/flow", {"handler": handler, "show_advanced_options": False})
+        if step.get("type") == "abort" and step.get("reason") == "missing_credentials":
+            return await self.credentials_step(handler)
         return await self.describe(step)
 
     async def step(self, flow_id: str) -> dict:
@@ -103,12 +170,14 @@ class Onboarding:
         ph = step.get("description_placeholders") or {}
         key = f"component.{h}.config"
         out = {"flow_id": step.get("flow_id"), "handler": h, "kind": await self.name_of(h), "type": step.get("type"), "step_id": sid,
-               "title": _fill(S.get(f"{key}.step.{sid}.title", ""), ph), "description": _fill(S.get(f"{key}.step.{sid}.description", ""), ph),
+               "title": _fill(S.get(f"{key}.step.{sid}.title", ""), ph), "description": _md(S.get(f"{key}.step.{sid}.description", ""), ph),
                "last_step": step.get("last_step")}
         if step.get("type") == "form":
             errs = step.get("errors") or {}
             out["errors"] = {k: _fill(S.get(f"{key}.error.{v}", v), ph) for k, v in errs.items()}
             out["fields"] = [_field(f, S, key, sid, ph) for f in (step.get("data_schema") or [])]
+            for f in out["fields"]:
+                if f["name"] in self._hints.get(h, {}) and f["default"] in (None, ""): f["default"] = self._hints[h][f["name"]]
         elif step.get("type") == "menu":
             out["options"] = [{"id": o, "label": _fill(S.get(f"{key}.step.{sid}.menu_options.{o}", o.replace("_", " ").title()), ph)} for o in (step.get("menu_options") or [])]
         elif step.get("type") == "abort":
@@ -122,10 +191,49 @@ class Onboarding:
         return out
 
 
+def catalog_from(core: dict) -> list[dict]:
+    """HA groups some makers as brands (Google holds Nest, Cast, Calendar…; Philips holds Hue). Flatten them
+    so every addable thing is one row, and keep the brand so a search for it finds them."""
+    items = []
+    def take(domain, d, brand=None):
+        if not d.get("config_flow") or d.get("integration_type") not in KINDS or domain in HIDE: return
+        items.append({"domain": domain, "name": d.get("name") or domain.replace("_", " ").title(), "brand": brand,
+                      "local": (d.get("iot_class") or "").startswith("local")})
+    for domain, d in core.items():
+        kids = d.get("integrations")
+        if isinstance(kids, dict):
+            for sub, k in kids.items(): take(sub, k, brand=d.get("name") or domain)
+        else:
+            take(domain, d)
+    items.sort(key=lambda x: x["name"].lower())
+    return items
+
+
 def _fill(s: str, ph: dict) -> str:
     if not s: return s
     s = re.sub(r"\{(\w+)\}", lambda m: str(ph.get(m.group(1), m.group(0))), s)
     return re.sub(r"\s+", " ", re.sub(r"<[^>]+>", "", s)).strip()
+
+
+def _md(s: str, ph: dict) -> str:
+    """HA writes its step descriptions in a little markdown: bold, links, numbered steps. Turn that into the
+    small HTML the panel shows, with placeholders filled and everything else escaped."""
+    if not s: return ""
+    s = re.sub(r"\{(\w+)\}", lambda m: str(ph.get(m.group(1), m.group(0))), s)
+    s = html.escape(re.sub(r"<[^>]+>", "", s), quote=False)
+    s = re.sub(r"\[([^\]]+)\]\((https?://[^)\s]+)\)", r'<a href="\2" target="_blank" rel="noopener">\1</a>', s)
+    s = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", s)
+    out, items = [], []
+    def flush():
+        if items: out.append("<ol>" + "".join(f"<li>{i}</li>" for i in items) + "</ol>"); items.clear()
+    for line in s.split("\n"):
+        line = line.strip()
+        m = re.match(r"^(?:\d+\.|-|\*)\s+(.*)", line)
+        if m: items.append(m.group(1)); continue
+        flush()
+        if line: out.append(f"<p>{line}</p>")
+    flush()
+    return "".join(out)
 
 
 def _field(f: dict, S: dict, key: str, sid: str, ph: dict) -> dict:

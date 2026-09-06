@@ -11,6 +11,9 @@ Plan of record: https://claude.ai/code/artifact/cc81890a-a928-4c6f-a65d-7844fe67
 
 That is the whole setup. Devices already on the Wi‑Fi (TVs, speakers, bridges) are noticed on
 their own and offered under *Found nearby*; anything else is added by brand from the same screen.
+Things that live behind an account (Nest, Ring, Tesla) sign in from that screen too. A few, Google's
+Nest first among them, make every home bring its own key; the screen walks through getting one, with
+the exact address to paste and a copy button, and the maker's own steps follow one at a time.
 Things that don't know their room wait under *New devices* until you place them. Nothing on the
 panel ever mentions Home Assistant, entities, or YAML.
 
@@ -28,7 +31,8 @@ to copy and no Home Assistant UI to visit.
 
 ## Layout
 
-- `install.sh` — the one-command install for the hub host.
+- `install.sh` — the one-command install for the hub host. `driver-layer/radios.sh` finds the Zigbee and
+  Z-Wave sticks and starts their containers; a udev rule runs it again whenever a stick is plugged in or pulled.
 - `driver-layer/` — Docker Compose for the whole hub: Home Assistant Core (headless), Mosquitto,
   Zigbee2MQTT and Z‑Wave JS UI (profiles, on only when a stick is found), python-matter-server,
   the brain, and Caddy as the front door (`http://hub.local`, plus `https://` for those who install
@@ -66,10 +70,14 @@ else works over plain http.
 
 ## Radios and the Advanced door
 
-Zigbee2MQTT admin is on `:8080`, Z‑Wave JS UI on `:8091` (set its websocket server on and add the
-`zwave_js` integration in HA pointing at `ws://<host>:3000`), Matter via the `matter` integration
-at `ws://<host>:5580/ws`. Home Assistant itself is on `:8123`: the Advanced door, linked from the
-bottom of the location and add sheets, never the product.
+Nothing here needs a visit. The brain watches the driver layer and adds each part to Home Assistant
+itself when it answers: MQTT, the Z-Wave radio (Z-Wave JS UI's settings, including its network
+keys, are written once by `radios.sh`), and Matter. The panel's *Behind the scenes* list shows each
+part's state; Ring is the one that needs a person, once, to sign in. Plugging a stick in later
+starts its container and connects it the same way.
+
+For the curious: Zigbee2MQTT admin is on `:8080`, Z‑Wave JS UI on `:8091`, and Home Assistant on
+`:8123`, the Advanced door, linked from the bottom of the location and add sheets, never the product.
 
 ### Brilliant
 

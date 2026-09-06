@@ -5,10 +5,12 @@ import { store, cap, notify } from './store'
 import Icon from './Icon.vue'
 
 /* The "New devices" room: everything that has not been put in a room yet, each with a name to
-   check and a room to pick. Once placed, a device leaves this list on its own. */
-const props = defineProps<{ room: Room }>()
+   check and a room to pick. Once placed, a device leaves this list on its own. The same rows
+   edit any other room (`editing`): rename a thing, or move it somewhere else. */
+const props = defineProps<{ room: Room; editing?: boolean }>()
 defineEmits<{ back: [] }>()
 const rooms = computed(() => store.rooms.filter(r => r.id !== 'unassigned'))
+const here = computed(() => props.editing ? props.room.id : '')
 const names = ref<Record<string, string>>({})
 const busy = ref<Record<string, string>>({})
 const adding = ref<string | null>(null), newRoom = ref('')
@@ -43,10 +45,10 @@ async function createAndMove(d: Device) {
 <template>
   <section class="room">
     <header class="stage-head room-head">
-      <button class="back" @click="$emit('back')" aria-label="Back to home"><Icon name="back" :size="22" /></button>
+      <button class="back" @click="$emit('back')" :aria-label="editing ? 'Done' : 'Back to home'"><Icon :name="editing ? 'check' : 'back'" :size="22" /></button>
       <div>
-        <h1 class="display">New devices</h1>
-        <p class="lede">Check each name and say which room it lives in. It moves there on its own.</p>
+        <h1 class="display">{{ editing ? room.name : 'New devices' }}</h1>
+        <p class="lede">{{ editing ? 'Rename anything, or move it to another room. Tap the tick when you are done.' : 'Check each name and say which room it lives in. It moves there on its own.' }}</p>
       </div>
     </header>
 
@@ -58,7 +60,7 @@ async function createAndMove(d: Device) {
           <input class="sort-name" v-model="newRoom" placeholder="Name the room" autofocus @keydown.enter="createAndMove(d)" @keydown.escape="adding = null" />
           <button class="button small" @click="createAndMove(d)">Add</button>
         </template>
-        <select v-else class="sort-room" :value="''" @change="move(d, ($event.target as HTMLSelectElement).value)" aria-label="Room">
+        <select v-else class="sort-room" :value="here" @change="move(d, ($event.target as HTMLSelectElement).value)" aria-label="Room">
           <option value="" disabled>Which room?</option>
           <option v-for="r in rooms" :key="r.id" :value="r.id">{{ r.name }}</option>
           <option value="__new">A new room…</option>
@@ -66,8 +68,8 @@ async function createAndMove(d: Device) {
       </li>
     </ul>
     <div v-else class="empty-room">
-      <p class="empty">Everything has a room.</p>
-      <p class="empty-sub">Anything you add later that does not know where it lives will wait here.</p>
+      <p class="empty">{{ editing ? 'Nothing left in this room.' : 'Everything has a room.' }}</p>
+      <p class="empty-sub">{{ editing ? 'Everything moved elsewhere. Tap the tick to go back.' : 'Anything you add later that does not know where it lives will wait here.' }}</p>
     </div>
   </section>
 </template>

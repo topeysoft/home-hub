@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { activity, cap } from '../store'
 import type { Room } from '../api'
 import Icon from '../Icon.vue'
@@ -12,6 +12,7 @@ import SortView from '../SortView.vue'
 
 const props = defineProps<{ room: Room }>()
 defineEmits<{ back: [] }>()
+const editing = ref(false)
 
 const order = ['media', 'light', 'cover', 'lock', 'fan', 'switch', 'vacuum', 'climate', 'camera', 'motion', 'contact', 'sensor']
 const devices = computed(() => [...props.room.devices].sort((a, b) => order.indexOf(cap(a)) - order.indexOf(cap(b))))
@@ -20,6 +21,7 @@ const tile = (c: string) => c === 'light' ? LightTile : c === 'media' ? MediaTil
 
 <template>
   <SortView v-if="room.id === 'unassigned'" :room="room" @back="$emit('back')" />
+  <SortView v-else-if="editing" :room="room" editing @back="editing = false" />
   <section class="room" v-else>
     <header class="stage-head room-head">
       <button class="back" @click="$emit('back')" aria-label="Back to home"><Icon name="back" :size="22" /></button>
@@ -27,6 +29,7 @@ const tile = (c: string) => c === 'light' ? LightTile : c === 'media' ? MediaTil
         <h1 class="display">{{ room.name }}</h1>
         <p class="lede">{{ activity(room) }}</p>
       </div>
+      <button class="back room-edit" @click="editing = true" aria-label="Edit this room" title="Rename or move things"><Icon name="edit" :size="20" /></button>
     </header>
 
     <SceneBar :room="room" />
