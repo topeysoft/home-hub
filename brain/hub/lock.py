@@ -22,6 +22,7 @@ def needs_code(method: str, path: str) -> bool:
     if path.startswith(("/flows", "/credentials")): return True
     if path == "/location" and m == "POST": return True
     if path.startswith("/rules") and m in ("PUT", "POST", "DELETE"): return True
+    if path.startswith("/pair") and m != "GET": return True
     return False
 
 

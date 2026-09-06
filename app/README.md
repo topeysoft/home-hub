@@ -47,6 +47,9 @@ and the sheet with `?sheet=location`.
 - `src/SceneBar.vue` — scene buttons; each shows its effect for the room it is in.
 - `src/Setup.vue`, `src/AddPanel.vue`, `src/SortView.vue`, `src/LocationPicker.vue` — first run and
   the few things a person is ever asked: names, code, place, rooms, devices.
+- `src/PairPanel.vue` — the door for a Zigbee, Z‑Wave or Matter device, offered on the Add sheet for
+  each radio that is up: what to press, a live line while the hub listens, the S2 code when a lock
+  asks, and what joined.
 - `src/code.ts`, `src/CodePrompt.vue`, `src/CodeSheet.vue` — the code on the settings. Every request
   goes through `request()`, which attaches the code kept for this tab and, when the hub answers 401
   `code`, asks for it and retries. Controls never ask; changes do. `?sheet=code` previews the sheet.

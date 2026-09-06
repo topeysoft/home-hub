@@ -39,6 +39,11 @@ export async function getAdvanced(): Promise<{ url: string; username: string | n
   const r = await request('/setup/advanced'); if (!r.ok) await fail(r); return r.json()
 }
 export const checkDrivers = () => post<Status>('/setup/drivers')
+export type Pair = { state: 'idle' | 'working' | 'listening' | 'found' | 'pin' | 'done' | 'failed' | 'closed'; kind?: string; text?: string; needs?: string | null; seconds_left?: number | null; device?: { id: any; name: string | null } | null }
+export const startPair = (kind: string, code?: string) => post<Pair>('/pair', { kind, code })
+export const pairPin = (pin: string) => post<Pair>('/pair/pin', { pin })
+export async function getPair(): Promise<Pair> { const r = await request('/pair'); if (!r.ok) await fail(r); return r.json() }
+export async function stopPair(): Promise<Pair> { const r = await request('/pair', { method: 'DELETE' }); if (!r.ok) await fail(r); return r.json() }
 export const retryEntry = (entry_id: string) => post<Status>(`/setup/retry/${encodeURIComponent(entry_id)}`)
 export const setCredentials = (handler: string, client_id: string, client_secret: string, hints?: Record<string, string>) => post<Step>('/credentials', { handler, client_id, client_secret, hints })
 export const addRoom = (name: string) => post<{ id: string; name: string }>('/rooms', { name })

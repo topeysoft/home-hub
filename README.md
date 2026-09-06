@@ -15,6 +15,7 @@ Things that live behind an account (Nest, Ring, Tesla) sign in from that screen 
 Nest first among them, make every home bring its own key; the screen walks through getting one, with
 the exact address to paste and a copy button, and the maker's own steps follow one at a time. The key
 file Google hands out can be dropped or pasted straight onto that screen instead of copying its parts.
+Zigbee, Z‑Wave and Matter devices pair from the same screen: the hub opens its door and says what to press.
 Things that don't know their room wait under *New devices* until you place them. Nothing on the
 panel ever mentions Home Assistant, entities, or YAML.
 

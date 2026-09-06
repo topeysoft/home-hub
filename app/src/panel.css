@@ -515,3 +515,11 @@ select.input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://ww
 .linkish:disabled { opacity: .5; }
 .advanced-login { display: block; margin-top: 6px; color: var(--ink-2); user-select: text; -webkit-user-select: text; }
 .advanced-login b { color: var(--ink); font-weight: 500; font-family: ui-monospace, Menlo, monospace; font-size: .95em; }
+
+/* ---------- pairing over the radios ---------- */
+.radios { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+.radio-btn { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px; background: var(--surface); border: 1px solid var(--edge); text-align: left; }
+.radio-btn:active { background: var(--surface-press); }
+.radio-btn .found-icon { background: var(--surface-hi); color: var(--ink-2); }
+.pair-live { display: flex; align-items: center; gap: 10px; }
+.pair-last { color: var(--muted); }

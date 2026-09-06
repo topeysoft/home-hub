@@ -58,6 +58,11 @@ endpoints just nudge it along.
   setpoint offset by the difference between the two readings, one correction every 90 s at most,
   in heat or cool only, logged with `source=comfort`. Kept in `settings.json` under `comfort`.
   Nest's own remote sensors never reach HA, so this is how the house does what the Nest app does.
+- `hub/pairing.py` — pairing over the hub's own radios, one session at a time (`/pair`): Zigbee opens
+  Zigbee2MQTT's join window over MQTT and listens to its bridge events; Z-Wave runs Z-Wave JS
+  inclusion, grants the security classes a device asks for and asks the person for an S2 PIN when
+  one is needed; Matter commissions with the code printed on the device. The adapter's `subscribe()`
+  carries these streams. Whatever joins lands in New devices.
 - `hub/onboarding.py` — finding and adding devices: what HA discovered (`/discovered`), the
   catalog, config flows as plain forms, and accounts that need a key of their own: when HA wants
   application credentials (Nest, Google, Tesla, SmartThings…), `/flows` returns a `credentials` step

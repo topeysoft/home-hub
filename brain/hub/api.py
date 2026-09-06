@@ -18,6 +18,7 @@ from .comfort import Comfort
 from .rules import Engine
 from .settings import Settings, DATA, env_file
 from .lock import Lock, needs_code
+from .pairing import Pairing
 
 log = logging.getLogger("hub")
 DEFAULT_HA = "http://localhost:8123"
@@ -51,6 +52,7 @@ class Hub:
         self.tz = datetime.now().astimezone().tzinfo   # the home's zone, from HA's config once connected
         self.add = Onboarding(self)
         self.lock = Lock(self.settings)
+        self.pair = Pairing(self)
         self.engine = Engine(self)                     # rules: signals in, room intents out
         self._timers: dict[str, asyncio.Task] = {}     # things the brain will do later for a device (switch a fan off)
         self.comfort = Comfort(self)                   # a thermostat sensing its room from another sensor
@@ -598,6 +600,30 @@ async def set_credentials(body: dict):
 async def cancel_flow(flow_id: str):
     await hub.add.cancel(flow_id)
     return {"ok": True}
+
+
+# ---------- pairing radio devices ----------
+@app.get("/pair")
+def pair_status(): return hub.pair.status()
+
+
+@app.post("/pair")
+async def pair_start(body: dict):
+    hub.ready()
+    try: return await hub.pair.start(body.get("kind") or "", body.get("code"))
+    except ValueError as e: raise HTTPException(400, str(e))
+
+
+@app.post("/pair/pin")
+async def pair_pin(body: dict):
+    hub.ready()
+    try: return await hub.pair.pin(str(body.get("pin") or "").strip())
+    except ValueError as e: raise HTTPException(400, str(e))
+    except Exception as e: raise HTTPException(502, f"The radio did not take the code: {e}")
+
+
+@app.delete("/pair")
+async def pair_stop(): return await hub.pair.stop()
 
 
 # ---------- location ----------

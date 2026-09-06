@@ -3,11 +3,16 @@ import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { getCatalog, startFlow, getFlow, submitFlow, cancelFlow, setCredentials, type CatalogItem, type Step, type Found, type Field } from './api'
 import { store, notify, refreshFound } from './store'
 import Icon from './Icon.vue'
+import PairPanel from './PairPanel.vue'
 import { parseKeyFile, keyFileWarning } from './keyfile'
 
 /* Adding things to the house. Lists what was noticed on the network, offers a search for anything
    else, and walks through the short form each one needs. Used on the setup screen and in a sheet. */
 const emit = defineEmits<{ added: [title: string] }>()
+/* radios that are up: each gets a door of its own */
+const RADIO = { zigbee: { label: 'Zigbee device', sub: 'Bulbs, sensors, plugs, remotes' }, zwave: { label: 'Z‑Wave device', sub: 'Switches, locks, sensors' }, matter: { label: 'Matter device', sub: 'With a QR code on it' } } as const
+const radios = computed(() => (store.status?.drivers ?? []).filter(p => p.state === 'ready' && p.id in RADIO).map(p => ({ id: p.id as keyof typeof RADIO, ...RADIO[p.id as keyof typeof RADIO] })))
+const pairKind = ref<keyof typeof RADIO | null>(null)
 const step = ref<Step | null>(null)
 const values = reactive<Record<string, any>>({})
 const busy = ref(false), q = ref(''), catalog = ref<CatalogItem[] | null>(null), error = ref('')
@@ -116,7 +121,8 @@ onUnmounted(() => clearTimeout(poll))
 
 <template>
   <div class="add">
-    <template v-if="!step">
+    <PairPanel v-if="pairKind" :kind="pairKind" @close="pairKind = null; refreshFound()" />
+    <template v-else-if="!step">
       <div class="add-block" v-if="store.found.length">
         <h3 class="label">Found nearby</h3>
         <ul class="found">
@@ -129,6 +135,16 @@ onUnmounted(() => clearTimeout(poll))
       </div>
       <p class="add-empty" v-else-if="store.status?.driver === 'ready'">Nothing new has been noticed on the network yet. Things you plug in tend to appear here within a minute.</p>
       <p class="add-empty" v-else>Looking around…</p>
+
+      <div class="add-block" v-if="radios.length">
+        <h3 class="label">Over the hub's radios</h3>
+        <div class="radios">
+          <button v-for="r in radios" :key="r.id" class="radio-btn" @click="pairKind = r.id">
+            <span class="found-icon"><Icon name="plus" :size="18" /></span>
+            <span class="found-text"><span class="found-title">{{ r.label }}</span><span class="found-kind">{{ r.sub }}</span></span>
+          </button>
+        </div>
+      </div>
 
       <div class="add-block">
         <h3 class="label">Add something else</h3>
