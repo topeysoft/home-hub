@@ -1,5 +1,5 @@
 /* A stand-in for the brain, for looking at the panel without a hub: serves ../dist and enough JSON for a lived-in
-   house of eight rooms. `npm run mock`, then open http://localhost:8399/ (every ?at= ?wx= ?room= ?sheet= ?setup=
+   house of eight rooms. `npm run mock`, then open http://localhost:8399/ (every ?at= ?wx= ?month= ?room= ?sheet= ?setup=
    preview works), or `BRAIN=http://localhost:8399 npm run dev` for hot reload against it.
    Knobs: PORT, WX=rainy (a condition), FOUND=0 (nothing new nearby), ENGINE=down (the engine-starting screen),
    LOCKED=1 (a code is set), FRESH=1 (first run). Nothing here talks to a real device; every POST says ok. */

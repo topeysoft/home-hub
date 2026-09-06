@@ -2,7 +2,8 @@
 /**
  * The sky behind the panel. One canvas, a few hundred cheap draws a frame: a gradient that follows the
  * sun's elevation, sun or moon with its phase, stars, drifting clouds, rain, snow, fog, the odd flash
- * of lightning, and a dark landscape the interface sits on. Weather comes from the house; the sun from
+ * of lightning, and a landscape the interface sits on: rolling ground in the colours of the season, lit by the sun,
+ * grey under cloud, white under snow, and a dark silhouette at night. Weather comes from the house; the sun from
  * the clock. Everything is deterministic from `store.sky`, so it looks the same on every screen.
  */
 import { onMounted, onUnmounted, ref, watch } from 'vue'
@@ -67,6 +68,11 @@ function makeCloud(x = rnd()): Cloud {
 }
 const drops: Drop[] = Array.from({ length: 160 }, () => ({ x: rnd(), y: rnd(), l: .02 + rnd() * .03, v: .9 + rnd() * .6 }))
 const flakes = Array.from({ length: 110 }, () => ({ x: rnd(), y: rnd(), r: 1 + rnd() * 1.8, v: .05 + rnd() * .06, p: rnd() * 6.28 }))
+/* a treeline on the middle ridge: a few stands of round and pointed trees, placed once */
+const trees = Array.from({ length: 34 }, (_, i) => {
+  const stand = [.08, .3, .58, .86][i % 4]
+  return { x: stand + (rnd() - .5) * .16, h: .014 + rnd() * .016, w: .55 + rnd() * .35, pine: rnd() < .35 }
+})
 let flash = 0, nextFlash = 6
 let meteor: { x: number; y: number; vx: number; vy: number; life: number } | null = null
 
@@ -83,7 +89,7 @@ function resize() {
 
 function draw(t: number, dt: number) {
   if (!ctx || !W || !H) return
-  const { elevation: el, azimuth: az, phase, hour, condition } = store.sky
+  const { elevation: el, azimuth: az, phase, hour, month, condition } = store.sky
   const wx = wxOf(condition)
   const [top, mid, hor] = palette(el, wx)
   const horizon = H * .8, m = Math.min(W, H)
@@ -116,8 +122,9 @@ function draw(t: number, dt: number) {
   }
 
   /* sun */
+  const sx = W * lerp(.06, .94, clamp((az - 70) / 220))
   if (el > -9) {
-    const sx = W * lerp(.06, .94, clamp((az - 70) / 220)), sy = horizon - (clamp(el, -9, 75) / 75) * (horizon - m * .1)
+    const sy = horizon - (clamp(el, -9, 75) / 75) * (horizon - m * .1)
     const low = clamp(1 - el / 25)
     const col: RGB = mix([255, 236, 200], [255, 160, 84], low)
     const dim = (1 - wx.clouds * .75 - wx.fog * .5) * (1 + .06 * Math.sin(t * .45))   // a slow breath in the glow
@@ -219,15 +226,83 @@ function draw(t: number, dt: number) {
   }
 
   /* land */
-  hills(horizon - H * .012, [16, 18, 24], .08, .3)
-  hills(horizon + H * .008, [9, 10, 13], .045, 1.9)
-  ctx.fillStyle = rgb([9, 10, 13]); ctx.fillRect(0, horizon + H * .05, W, H)
+  land(el, sx, month, wx, hor)
 }
-function hills(base: number, col: RGB, amp: number, k: number) {
+
+/* ---------- the ground ---------- */
+const ridgeY = (x: number, base: number, amp: number, k: number, ph: number) =>
+  base - (Math.sin(x / W * 6.3 * k + 1.7 + ph) * .55 + Math.sin(x / W * 15 * k + ph * 2) * .3 + Math.sin(x / W * 31 * k + ph) * .15) * amp * H
+function ridge(base: number, amp: number, k: number, ph: number) {
   if (!ctx) return
-  ctx.fillStyle = rgb(col); ctx.beginPath(); ctx.moveTo(0, H)
-  for (let x = 0; x <= W; x += 16) ctx.lineTo(x, base - (Math.sin(x / W * 6.3 * k + 1.7) * .6 + Math.sin(x / W * 15 * k) * .4) * amp * H)
-  ctx.lineTo(W, H); ctx.closePath(); ctx.fill()
+  ctx.beginPath(); ctx.moveTo(0, H)
+  for (let x = 0; x <= W + 8; x += 8) ctx.lineTo(x, ridgeY(x, base, amp, k, ph))
+  ctx.lineTo(W, H); ctx.closePath()
+}
+/* what the ground is made of, before the light gets to it */
+const GROUND: [number, RGB][] = [                              // keyframes by seasonal month (0.5 is mid-January)
+  [.5, [150, 138, 106]],                                       // midwinter: dun, dead grass
+  [2.5, [136, 146, 88]],                                       // the first green of March
+  [4, [126, 176, 78]],                                         // spring: fresh and bright
+  [6.5, [108, 156, 72]],                                       // high summer: deep green
+  [8.5, [122, 150, 74]],                                       // late summer: still green, a little dry
+  [10, [182, 140, 70]],                                        // autumn: ochre
+  [11.5, [154, 136, 100]],                                     // the year closing down
+]
+function groundColour(month: number, wx: Wx): RGB {
+  const m = ((month - .5) % 12 + 12) % 12 + .5                 // wrap so mid-January sits at .5 and December runs into it
+  let i = 0; while (i < GROUND.length - 2 && m > GROUND[i + 1][0]) i++
+  const [m0, a] = GROUND[i], [m1, b] = GROUND[i + 1]
+  let c = m > GROUND[GROUND.length - 1][0] ? mix(GROUND[GROUND.length - 1][1], GROUND[0][1], (m - 11.5)) : mix(a, b, clamp((m - m0) / (m1 - m0)))
+  c = mix(c, [232, 236, 242], clamp(wx.snow * 1.3))            // snow cover
+  c = mix(c, [118, 122, 118], wx.clouds * .3)                  // overcast leaches the colour out
+  c = mix(c, [56, 62, 62], wx.rain * .35)                      // wet ground is dark
+  return c
+}
+function land(el: number, sx: number, month: number, wx: Wx, hor: RGB) {
+  if (!ctx) return
+  const horizon = H * .8
+  const day = clamp((el + 6) / 18)                             // how much daylight reaches the ground
+  const night: RGB = [9, 10, 13]
+  const warm = clamp(1 - el / 22) * clamp((el + 4) / 6)        // low sun gilds the land
+  let base = groundColour(month, wx)
+  base = mix(base, [255, 168, 88], warm * .22)
+  base = mix(night, base, day)
+  const flat = 1 - wx.clouds * .8 - wx.fog * .9                // cloud flattens the light; no lit side, no shadow side
+  const hazeCol = mix(hor, [150, 156, 164], wx.fog * .6)
+  /* three ridges, far to near: the far ones fade into the sky, the near one is the truest colour */
+  const ridges: [number, number, number, number, number, number][] = [
+    /* base offset, amplitude, frequency, phase, atmospheric fade, brightness */
+    [-.032, .05, .45, .8, .55 * (.35 + day * .65), .92],
+    [-.012, .034, 1.05, 0, .26 * (.3 + day * .7), .96],
+    [.016, .024, 2.1, 2.4, .06, 1],
+  ]
+  ridges.forEach(([off, amp, k, ph, fade, bright], n) => {
+    const col = mix(base.map(v => v * bright) as RGB, hazeCol, fade)
+    const top = horizon + off * H - amp * H
+    const g = ctx!.createLinearGradient(0, top, 0, Math.min(H, top + H * .3))
+    g.addColorStop(0, rgb(col)); g.addColorStop(1, rgb(mix(col, night, .3 - .2 * day)))   // by day the meadow stays light all the way down
+    ridge(horizon + off * H, amp, k, ph)
+    ctx!.fillStyle = g; ctx!.fill()
+    if (day > 0 && flat > 0) {
+      /* the side facing the sun catches it, the other side falls into shade */
+      const l = ctx!.createLinearGradient(0, 0, W, 0), a = day * flat * (n === 0 ? .5 : 1)
+      const lit = rgb([255, 244, 214], .12 * a), shade = rgb([10, 16, 30], .09 * a)
+      l.addColorStop(0, sx < W * .5 ? lit : shade); l.addColorStop(clamp(sx / W, .05, .95), lit); l.addColorStop(1, sx < W * .5 ? shade : lit)
+      ctx!.fillStyle = l; ctx!.fill()
+    }
+    if (n === 1) {
+      /* the treeline sits on the middle ridge, a shade darker than the ground it grows from */
+      const tc = mix(mix(base.map(v => v * .55) as RGB, hazeCol, fade * .6), [24, 40, 30], day * .3 * (1 - wx.snow))
+      ctx!.fillStyle = rgb(mix(tc, [226, 232, 240], wx.snow * .3))
+      for (const t of trees) {
+        const x = t.x * W, y = ridgeY(x, horizon + off * H, amp, k, ph) + H * .003, h = t.h * H * Math.min(1, W / H / 1.3), w = h * t.w
+        ctx!.beginPath()
+        if (t.pine) { ctx!.moveTo(x - w * .5, y); ctx!.lineTo(x, y - h); ctx!.lineTo(x + w * .5, y) }
+        else { ctx!.moveTo(x - w * .5, y); ctx!.arc(x, y - h * .55, w * .5, Math.PI, 0); ctx!.lineTo(x + w * .5, y) }
+        ctx!.closePath(); ctx!.fill()
+      }
+    }
+  })
 }
 
 function frame(ts: number) {

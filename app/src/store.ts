@@ -22,13 +22,14 @@ export const store = reactive({
   homeName: '' as string,
   tempUnit: '' as string,                   // the house's temperature unit, from the home's location (°F in the US)
   found: [] as Found[],                      // things noticed on the network that are not set up yet
-  sky: { elevation: -20, azimuth: 0, phase: 0, hour: 0, condition: 'clear-night', guessed: true },   // what the sky draws
+  sky: { elevation: -20, azimuth: 0, phase: 0, hour: 0, month: 6, condition: 'clear-night', guessed: true },   // what the sky draws; month is seasonal (0 midwinter → 6 midsummer, either hemisphere)
 })
 
 /* ---------- the sky: sun from the clock and the location, weather from the house ---------- */
 const params = new URLSearchParams(location.search)
 const previewAt = params.get('at')          // ?at=18:30 previews an hour of the day
 const previewWx = params.get('wx')          // ?wx=rainy previews a condition
+const previewMonth = params.get('month')    // ?month=1 previews a season (1 January … 12 December, northern)
 export const WEATHER_LABEL: Record<string, string> = {
   sunny: 'Clear', 'clear-night': 'Clear', partlycloudy: 'Partly cloudy', cloudy: 'Cloudy', fog: 'Fog', rainy: 'Rain', pouring: 'Heavy rain',
   hail: 'Hail', lightning: 'Storm', 'lightning-rainy': 'Thunderstorm', snowy: 'Snow', 'snowy-rainy': 'Sleet', windy: 'Windy', 'windy-variant': 'Windy', exceptional: 'Unusual weather',
@@ -39,7 +40,8 @@ export function updateSky() {
   const loc = store.ambient.location
   const sun = loc ? sunPosition(now, loc.lat, loc.lon) : sunGuess(now)
   const condition = previewWx ?? store.ambient.weather?.condition ?? (sun.elevation < -6 ? 'clear-night' : 'sunny')
-  store.sky = { ...sun, phase: moonPhase(now), hour: now.getHours() + now.getMinutes() / 60, condition, guessed: !loc }
+  const month = previewMonth ? Number(previewMonth) - .5 : (now.getMonth() + now.getDate() / 31 + (loc && loc.lat < 0 ? 6 : 0)) % 12   // south of the equator the seasons swap
+  store.sky = { ...sun, phase: moonPhase(now), hour: now.getHours() + now.getMinutes() / 60, month, condition, guessed: !loc }
 }
 export function weatherLine(): string {
   const w = store.ambient.weather
