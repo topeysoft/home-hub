@@ -1,6 +1,8 @@
 export type Device = { id: string; name: string; room_id: string; capability: string; state: string; attrs: Record<string, any> }
 export type Room = { id: string; name: string; devices: Device[]; intent: string }
 export type Home = { rooms: Room[] }
+export type Weather = { id: string; condition: string; temperature: number | null; unit: string; humidity: number | null; wind_speed: number | null; wind_unit: string | null }
+export type Ambient = { location: { lat: number; lon: number } | null; weather: Weather | null }
 export type Event = { ts: number; kind: string; subject: string; old: string | null; new: string | null; source: string; detail: string | null }
 
 const json = { 'Content-Type': 'application/json' }
@@ -12,6 +14,9 @@ async function fail(r: Response): Promise<never> {
 
 export async function getHome(): Promise<Home> {
   const r = await fetch('/home'); if (!r.ok) await fail(r); return r.json()
+}
+export async function getAmbient(): Promise<Ambient> {
+  const r = await fetch('/ambient'); if (!r.ok) await fail(r); return r.json()
 }
 export async function getEvents(limit = 40): Promise<Event[]> {
   const r = await fetch(`/events?limit=${limit}`); if (!r.ok) await fail(r); return r.json()
@@ -31,7 +36,7 @@ export async function setHomeIntent(state: string) {
 export const imageUrl = (id: string) => `/devices/${encodeURIComponent(id)}/image?t=${Date.now()}`
 
 /** Live updates from the brain. Reconnects with backoff; reports link state. */
-export function connect(on: { device: (d: Device) => void; home: (h: Home) => void; link: (up: boolean) => void }) {
+export function connect(on: { device: (d: Device) => void; home: (h: Home) => void; ambient: (a: Ambient) => void; link: (up: boolean) => void }) {
   let delay = 1000, ws: WebSocket | null = null, closed = false
   const open = () => {
     const proto = location.protocol === 'https:' ? 'wss' : 'ws'
@@ -41,6 +46,7 @@ export function connect(on: { device: (d: Device) => void; home: (h: Home) => vo
       const m = JSON.parse(e.data)
       if (m.type === 'device') on.device(m.device)
       else if (m.type === 'home') on.home(m.home)
+      else if (m.type === 'ambient') on.ambient(m.ambient)
     }
     ws.onclose = () => { on.link(false); if (!closed) setTimeout(open, delay = Math.min(delay * 2, 15000)) }
     ws.onerror = () => ws?.close()

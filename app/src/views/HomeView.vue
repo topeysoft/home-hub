@@ -9,7 +9,7 @@ import CameraTile from '../tiles/CameraTile.vue'
 const props = defineProps<{ rooms: Room[]; hour: number }>()
 defineEmits<{ open: [id: string] }>()
 
-const greeting = computed(() => props.hour < 5 ? 'Good evening' : props.hour < 12 ? 'Good morning' : props.hour < 17 ? 'Good afternoon' : 'Good evening')   // 'Good night' is the scene, not the greeting
+const greeting = computed(() => props.hour < 5 ? 'Good night' : props.hour < 12 ? 'Good morning' : props.hour < 17 ? 'Good afternoon' : props.hour < 21 ? 'Good evening' : 'Good night')
 const line = computed(houseLine)
 const on = computed(whatsOn)
 const cameras = computed(() => props.rooms.flatMap(r => r.devices.filter(d => cap(d) === 'camera')))

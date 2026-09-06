@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { store, start, halt, load, visibleRooms, activity, roomActive, houseLine } from './store'
+import { store, start, halt, load, visibleRooms, activity, roomActive, houseLine, weatherLine } from './store'
+import Sky from './Sky.vue'
 import HomeView from './views/HomeView.vue'
 import RoomView from './views/RoomView.vue'
 import Viewer from './Viewer.vue'
@@ -15,13 +16,17 @@ const rooms = computed(visibleRooms)
 const room = computed(() => rooms.value.find(r => r.id === selected.value) ?? null)
 
 const hour = computed(() => now.value.getHours())
-const ambient = computed(() => hour.value < 5 ? 'night' : hour.value < 10 ? 'dawn' : hour.value < 17 ? 'day' : hour.value < 21 ? 'dusk' : 'night')
+const ambient = computed(() => store.sky.elevation < -8 ? 'night' : store.sky.elevation < 6 ? (store.sky.azimuth < 180 ? 'dawn' : 'dusk') : 'day')
+const weather = computed(weatherLine)
+const WX_ICON: Record<string, string> = { sunny: 'sun', 'clear-night': 'moon', partlycloudy: 'cloud', cloudy: 'cloud', fog: 'fog', rainy: 'rain', pouring: 'rain', hail: 'rain', lightning: 'bolt', 'lightning-rainy': 'bolt', snowy: 'snow', 'snowy-rainy': 'snow', windy: 'wind', 'windy-variant': 'wind', exceptional: 'cloud' }
+const wxIcon = computed(() => WX_ICON[store.sky.condition] ?? 'cloud')
+
 const clock = computed(() => now.value.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }))
 const day = computed(() => now.value.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' }))
 
 /* The wall panel rests after a few minutes: a clock, the date, one line about the house. A touch brings it back to Home. */
 const IDLE_AFTER = 3 * 60 * 1000
-const idle = ref(false)
+const idle = ref(new URLSearchParams(location.search).get('rest') === '1')   // ?rest=1 previews the resting screen
 let lastTouch = Date.now()
 const kiosk = window.matchMedia('(min-width: 861px)')
 function touched() {
@@ -46,11 +51,14 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="shell" :data-ambient="ambient">
+  <div class="shell" :data-ambient="ambient" :class="{ resting: idle }">
+    <Sky />
+    <div class="sky-veil"></div>
     <aside class="rail">
       <div class="rail-clock">
         <div class="rail-time">{{ clock }}</div>
         <div class="rail-day">{{ day }}</div>
+        <div class="rail-weather" v-if="weather"><Icon :name="wxIcon" :size="16" /><span>{{ weather }}</span></div>
       </div>
       <nav class="rail-nav">
         <button class="rail-item" :class="{ active: !room }" @click="open(null)">
@@ -101,6 +109,7 @@ onUnmounted(() => {
       <div class="idle" v-if="idle" aria-label="Tap to wake">
         <div class="idle-time display">{{ clock }}</div>
         <div class="idle-day">{{ day }}</div>
+        <div class="idle-weather" v-if="weather"><Icon :name="wxIcon" :size="22" /><span>{{ weather }}</span></div>
         <div class="idle-line">{{ houseLine() }}</div>
       </div>
     </Transition>

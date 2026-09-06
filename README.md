@@ -21,6 +21,11 @@ networking so devices are added by IP). Owner login and the brain's long-lived t
 Bootstrap was `python3 tools/ha_bootstrap.py --cast <ips>`; rerun on the Pi with a fresh config dir.
 HACS is installed manually from its release zip into `homeassistant/custom_components/hacs`.
 
+Still to do in HA for the panel's sky: set the home location (Settings → System → General; it is
+0°,0° today, which is why `sun.sun` is wrong) and add the Met.no integration for weather. Until the
+location is set the panel assumes sunrise 6:45 and sunset 19:45, or reads `HOME_LAT`/`HOME_LON`
+from `driver-layer/.env`.
+
 ## Phase 2 quick start (on the hub host)
 
 ```sh

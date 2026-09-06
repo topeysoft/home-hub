@@ -1,5 +1,6 @@
 import { reactive } from 'vue'
-import { getHome, getEvents, connect, act, setIntent, setHomeIntent, type Room, type Device, type Home, type Event } from './api'
+import { getHome, getEvents, getAmbient, connect, act, setIntent, setHomeIntent, type Room, type Device, type Home, type Event, type Ambient } from './api'
+import { sunPosition, sunGuess, moonPhase } from './sun'
 
 export const store = reactive({
   rooms: [] as Room[], linkUp: false, linkLost: false, error: '', loaded: false,   // linkLost: down long enough to be worth mentioning
@@ -7,7 +8,37 @@ export const store = reactive({
   pending: {} as Record<string, true>,     // devices waiting for the house to confirm a change
   viewer: null as Device | null,            // camera shown full screen
   events: [] as Event[],
+  ambient: { location: null, weather: null } as Ambient,
+  sky: { elevation: -20, azimuth: 0, phase: 0, hour: 0, condition: 'clear-night', guessed: true },   // what the sky draws
 })
+
+/* ---------- the sky: sun from the clock and the location, weather from the house ---------- */
+const params = new URLSearchParams(location.search)
+const previewAt = params.get('at')          // ?at=18:30 previews an hour of the day
+const previewWx = params.get('wx')          // ?wx=rainy previews a condition
+export const WEATHER_LABEL: Record<string, string> = {
+  sunny: 'Clear', 'clear-night': 'Clear', partlycloudy: 'Partly cloudy', cloudy: 'Cloudy', fog: 'Fog', rainy: 'Rain', pouring: 'Heavy rain',
+  hail: 'Hail', lightning: 'Storm', 'lightning-rainy': 'Thunderstorm', snowy: 'Snow', 'snowy-rainy': 'Sleet', windy: 'Windy', 'windy-variant': 'Windy', exceptional: 'Unusual weather',
+}
+export function updateSky() {
+  const now = new Date()
+  if (previewAt) { const [h, m] = previewAt.split(':').map(Number); now.setHours(h || 0, m || 0, 0, 0) }
+  const loc = store.ambient.location
+  const sun = loc ? sunPosition(now, loc.lat, loc.lon) : sunGuess(now)
+  const condition = previewWx ?? store.ambient.weather?.condition ?? (sun.elevation < -6 ? 'clear-night' : 'sunny')
+  store.sky = { ...sun, phase: moonPhase(now), hour: now.getHours() + now.getMinutes() / 60, condition, guessed: !loc }
+}
+export function weatherLine(): string {
+  const w = store.ambient.weather
+  if (!w && !previewWx) return ''
+  const label = WEATHER_LABEL[previewWx ?? w?.condition ?? ''] ?? ''
+  const t = w?.temperature != null ? `${Math.round(w.temperature)}${(w.unit || '°').replace(/[^°]/g, '') || '°'}` : ''
+  return [t, label].filter(Boolean).join(' · ')
+}
+async function loadAmbient() {
+  try { store.ambient = await getAmbient() } catch {}
+  updateSky()
+}
 
 const ACTIVE = new Set(['on', 'playing', 'open', 'unlocked', 'cleaning', 'streaming', 'recording'])
 export const isActive = (d: Device) => ACTIVE.has(d.state)
@@ -80,7 +111,7 @@ export const SCENES: Scene[] = [
   { id: 'empty', label: 'All off', icon: 'power', needs: ['light', 'media', 'switch', 'fan'], hint: c => cap1(join([c.has('light') ? 'lights off' : '', c.has('media') ? 'media paused' : ''].filter(Boolean))) },
 ]
 export const HOUSE_SCENES: Scene[] = [
-  { id: 'asleep', label: 'Good night', icon: 'moon', needs: [], hint: c => `${cap1(offList(c) || 'everything')} off in every room${c.has('lock') ? ', doors locked' : ''}` },
+  { id: 'asleep', label: 'Bedtime', icon: 'moon', needs: [], hint: c => `${cap1(offList(c) || 'everything')} off in every room${c.has('lock') ? ', doors locked' : ''}` },
   { id: 'away', label: 'Everything off', icon: 'leave', needs: [], hint: c => `${cap1(offList(c, true) || 'everything')} off${c.has('lock') ? ', doors locked' : ''}` },
 ]
 const cap1 = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
@@ -93,7 +124,7 @@ export function scenesFor(room: Room | null): Scene[] {
 export async function runScene(room: Room | null, scene: Scene): Promise<boolean> {
   try {
     if (room) { await setIntent(room.id, scene.id); room.intent = scene.id; notify(`${room.name} · ${scene.label}`) }
-    else { await setHomeIntent(scene.id); for (const r of store.rooms) if (r.devices.length) r.intent = scene.id; notify(scene.label === 'Good night' ? 'Good night. The house is off.' : 'Everything is off.') }
+    else { await setHomeIntent(scene.id); for (const r of store.rooms) if (r.devices.length) r.intent = scene.id; notify(scene.id === 'asleep' ? 'Good night. The house is off.' : 'Everything is off.') }
     return true
   } catch (e: any) { notify(`That didn't work: ${e.message}`, 'error'); return false }
 }
@@ -124,7 +155,7 @@ export async function perform(d: Device, action: string, data?: Record<string, u
 const LABELS: Record<string, string> = { movie: 'Movie', guests: 'Guests', asleep: 'Sleep', empty: 'All off', away: 'Everything off', occupied: 'Here' }
 export function describe(ev: Event): { text: string; icon: string } | null {
   if (ev.kind === 'intent') {
-    if (ev.subject === 'home') return { text: ev.new === 'asleep' ? 'Good night' : LABELS[ev.new ?? ''] ?? ev.new ?? '', icon: ev.new === 'asleep' ? 'moon' : 'leave' }
+    if (ev.subject === 'home') return { text: ev.new === 'asleep' ? 'Bedtime' : LABELS[ev.new ?? ''] ?? ev.new ?? '', icon: ev.new === 'asleep' ? 'moon' : 'leave' }
     const r = store.rooms.find(r => r.id === ev.subject)
     return r ? { text: `${r.name} set to ${LABELS[ev.new ?? ''] ?? ev.new}`, icon: 'sparkle' } : null
   }
@@ -169,17 +200,19 @@ function applyDevice(d: Device) {
     if (i >= 0) { r.devices[i] = d; delete store.pending[d.id]; if (store.viewer?.id === d.id) store.viewer = d; eventsSoon(); return }
   }
 }
-let stop: (() => void) | undefined, lostTimer: number | undefined
+let stop: (() => void) | undefined, lostTimer: number | undefined, skyTimer: number | undefined
 export async function load() {
   try { applyHome(await getHome()) } catch { store.error = 'The hub is not answering.' }
+  loadAmbient()
 }
 export async function start() {
   await load()
-  stop = connect({ device: applyDevice, home: applyHome, link: v => {
+  updateSky(); clearInterval(skyTimer); skyTimer = window.setInterval(updateSky, 30000)
+  stop = connect({ device: applyDevice, home: applyHome, ambient: a => { store.ambient = a; updateSky() }, link: v => {
     store.linkUp = v
     clearTimeout(lostTimer)
     if (v) { store.linkLost = false; if (!store.loaded) load() }
     else lostTimer = window.setTimeout(() => (store.linkLost = true), 4000)   // a blink on startup is not worth a banner
   } })
 }
-export function halt() { stop?.() }
+export function halt() { stop?.(); clearInterval(skyTimer) }

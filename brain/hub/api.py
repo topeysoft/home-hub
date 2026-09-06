@@ -20,7 +20,7 @@ def load_env():
             for line in p.read_text().splitlines():
                 if "=" in line and not line.startswith("#"):
                     k, v = line.split("=", 1); env[k.strip()] = v.strip()
-    env.update({k: v for k, v in os.environ.items() if k.startswith("HA_")})
+    env.update({k: v for k, v in os.environ.items() if k.startswith(("HA_", "HOME_"))})
     return env
 
 
@@ -31,13 +31,43 @@ class Hub:
         self.home = Home()
         self.log = EventLog(ROOT / "events.db")
         self.streams: set[WebSocket] = set()
+        self.location = None      # {"lat", "lon"} from HA's config, else HOME_LAT/HOME_LON in .env
+        self.weather = None       # the first weather entity HA has, in the app's shape
+        self.temp_unit = "°F"
 
     async def start(self):
         await self.ha.connect()
-        self.home.build(*await self.ha.snapshot())
+        cfg = await self.ha.send("get_config")
+        self.temp_unit = (cfg.get("unit_system") or {}).get("temperature", "°F")
+        lat, lon = cfg.get("latitude") or 0, cfg.get("longitude") or 0
+        env = load_env()
+        if lat and lon: self.location = {"lat": lat, "lon": lon}
+        elif env.get("HOME_LAT") and env.get("HOME_LON"): self.location = {"lat": float(env["HOME_LAT"]), "lon": float(env["HOME_LON"])}
+        else: log.warning("no home location: set it in HA (Settings → System → General) or HOME_LAT/HOME_LON in driver-layer/.env")
+        snap = await self.ha.snapshot()
+        self.home.build(*snap)
+        self._pick_weather(snap[3])
         self.ha.on_event(self._on_event)
         self._rebuild_task = None
-        log.info("home: %d rooms, %d devices", len(self.home.rooms), len(self.home.devices))
+        log.info("home: %d rooms, %d devices, weather=%s", len(self.home.rooms), len(self.home.devices), self.weather and self.weather["id"])
+
+    def _pick_weather(self, states):
+        """Prefer the plain 'home' forecast over hourly/daily variants; any weather entity beats none."""
+        ws = [s for s in states if s["entity_id"].startswith("weather.")]
+        ws.sort(key=lambda s: ("hourly" in s["entity_id"] or "daily" in s["entity_id"], s["entity_id"]))
+        self.weather = self._weather_of(ws[0]) if ws else None
+
+    def _weather_of(self, s):
+        a = s["attributes"]
+        return {"id": s["entity_id"], "condition": s["state"], "temperature": a.get("temperature"),
+                "unit": a.get("temperature_unit", self.temp_unit), "humidity": a.get("humidity"),
+                "wind_speed": a.get("wind_speed"), "wind_unit": a.get("wind_speed_unit")}
+
+    def ambient(self):
+        return {"location": self.location, "weather": self.weather}
+
+    def _broadcast(self, msg):
+        for ws in list(self.streams): asyncio.create_task(self._push(ws, msg))
 
     def _on_event(self, ev):
         if ev["event_type"] == "state_changed":
@@ -48,7 +78,9 @@ class Hub:
 
     async def _rebuild(self):
         await asyncio.sleep(1.0)
-        self.home.build(*await self.ha.snapshot())
+        snap = await self.ha.snapshot()
+        self.home.build(*snap)
+        self._pick_weather(snap[3])
         self.log.add("home", "registry", None, "rebuilt", source="system",
                      detail={"rooms": len(self.home.rooms), "devices": len(self.home.devices)})
         msg = json.dumps({"type": "home", "home": self.home.to_dict()})
@@ -57,6 +89,11 @@ class Hub:
 
     def _on_state(self, ev):
         d = ev["data"]
+        if d["entity_id"].startswith("weather.") and d.get("new_state"):
+            if not self.weather or self.weather["id"] == d["entity_id"]:
+                self.weather = self._weather_of(d["new_state"])
+                self._broadcast(json.dumps({"type": "ambient", "ambient": self.ambient()}))
+            return
         old_state = d.get("old_state") or {}
         before = self.home.devices.get(d["entity_id"])
         old_attrs = self.home._keep_attrs(before.capability, old_state.get("attributes", {})) if before else None
@@ -90,6 +127,12 @@ app = FastAPI(title="home-hub brain", lifespan=lifespan)
 
 @app.get("/home")
 def get_home(): return hub.home.to_dict()
+
+
+@app.get("/ambient")
+def get_ambient():
+    """What the sky should look like: the home's location (the app computes the sun) and the current weather."""
+    return hub.ambient()
 
 
 @app.get("/events")
