@@ -3,20 +3,26 @@
 The vocabulary is deliberately small. Anything HA exposes that does not fit is invisible to the
 product (it is still reachable through the Advanced door).
 """
-import time
+import re, time
 from dataclasses import dataclass, field, asdict
 
 CAP_BY_DOMAIN = {"light": "light", "switch": "switch", "media_player": "media", "cover": "cover",
                  "climate": "climate", "lock": "lock", "fan": "fan", "camera": "camera", "vacuum": "vacuum"}
 MOTION_CLASSES = {"motion", "occupancy", "presence"}
 SENSOR_CLASSES = {"temperature", "humidity", "illuminance"}   # power/energy belong to an energy view, not room tiles
+# A temperature inside a fridge or an oven is an appliance reading, not the room's. Those stay invisible
+# until there is an appliances view; a room's tiles and a thermostat's sensor picker never see them.
+APPLIANCE = re.compile(r"\b(fridge|refrigerator|freezer|oven|range|cavity|cooktop|stove|hob|dishwasher|washer|dryer|water heater|"
+                       r"boiler|grill|smoker|sous ?vide|setpoint|probe|kettle|coffee|wine|humidor|aquarium|pool|spa|hot tub)\b", re.I)
 
 
-def capability_for(domain: str, device_class: str | None) -> str | None:
+def capability_for(domain: str, device_class: str | None, words: str = "") -> str | None:
+    """`words` is everything that names the entity and the device it belongs to; it decides sensor versus appliance."""
     if domain in CAP_BY_DOMAIN: return CAP_BY_DOMAIN[domain]
     if domain == "binary_sensor" and device_class in MOTION_CLASSES: return "motion"
     if domain == "binary_sensor" and device_class in ("door", "window", "opening"): return "contact"
-    if domain == "sensor" and device_class in SENSOR_CLASSES: return f"sensor.{device_class}"
+    if domain == "sensor" and device_class in SENSOR_CLASSES:
+        return None if APPLIANCE.search(words or "") else f"sensor.{device_class}"
     return None
 
 
@@ -76,6 +82,7 @@ class Home:
             if rid in was:
                 r.intent, r.set_by, r.hold_until, r.motion_at = was[rid].intent, was[rid].set_by, was[rid].hold_until, was[rid].motion_at
         dev_area = {d["id"]: d.get("area_id") for d in ha_devices}
+        dev_words = {d["id"]: " ".join(str(d.get(k) or "") for k in ("name_by_user", "name", "model", "manufacturer")) for d in ha_devices}
         reg = {e["entity_id"]: e for e in entities}
         st = {s["entity_id"]: s for s in states}
         camera_devices = {e["device_id"] for e in entities if e["entity_id"].startswith("camera.") and e.get("device_id")}
@@ -87,7 +94,8 @@ class Home:
             domain = eid.split(".")[0]
             if domain == "switch" and e.get("device_id") in camera_devices:
                 continue      # a switch on a camera is a setting (motion detection, siren arm), not a room control
-            cap = capability_for(domain, s["attributes"].get("device_class") or e.get("original_device_class"))
+            words = " ".join([eid, str(s["attributes"].get("friendly_name") or ""), str(e.get("original_name") or ""), dev_words.get(e.get("device_id") or "", "")])
+            cap = capability_for(domain, s["attributes"].get("device_class") or e.get("original_device_class"), words)
             if not cap: continue
             room = e.get("area_id") or dev_area.get(e.get("device_id")) or "unassigned"
             if room not in self.rooms: room = "unassigned"

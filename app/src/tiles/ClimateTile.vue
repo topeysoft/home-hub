@@ -25,13 +25,20 @@ const modes = computed(() => ((a.value.hvac_modes ?? []) as string[]).filter(m =
 /* sensing from another room: the big number is what that room should reach; the hub moves the thermostat */
 const sensing = computed(() => !!a.value.sense_from && !range.value)
 const shown = computed(() => sensing.value ? a.value.wanted : a.value.temperature)
+/* a room sensor reads like a room: unplaced sensors, and readings no room has (a freezer, an oven), stay out */
+const inHouseUnit = (v: number, from?: string) => !from ? v : from.includes('F') === unit.value.includes('F') ? v : unit.value.includes('F') ? v * 9 / 5 + 32 : (v - 32) * 5 / 9
+function plausible(d: Device) {
+  const v = inHouseUnit(Number(d.state), d.attrs.unit_of_measurement)
+  if (!Number.isFinite(v)) return false
+  return unit.value.includes('F') ? v >= 45 && v <= 95 : v >= 7 && v <= 35
+}
 const sensors = computed(() => {
   const own = props.device.hw
   const out: { id: string; label: string }[] = []
   for (const r of store.rooms) for (const d of r.devices) {
-    if (cap(d) !== 'sensor' || !d.capability.endsWith('.temperature') || (own && d.hw === own) || isDead(d)) continue
+    if (r.id === 'unassigned' || cap(d) !== 'sensor' || !d.capability.endsWith('.temperature') || (own && d.hw === own) || isDead(d) || !plausible(d)) continue
     const same = r.devices.filter(x => x.capability === 'sensor.temperature').length > 1
-    out.push({ id: d.id, label: r.id === 'unassigned' ? d.name : same ? `${r.name} · ${shortName(d, r)}` : r.name })
+    out.push({ id: d.id, label: same ? `${r.name} · ${shortName(d, r)}` : r.name })
   }
   return out
 })
