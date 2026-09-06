@@ -287,6 +287,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--lamp); outl
 .idle-weather { display: inline-flex; align-items: center; gap: 10px; margin-top: 18px; font-size: 22px; color: var(--ink); }
 .idle-weather svg { color: var(--lamp); }
 .idle-line { margin-top: 14px; font-size: 16px; color: var(--ink-2); }
+.idle-next { margin-top: 6px; font-size: 15px; color: var(--ink-2); opacity: .8; }
 .idle-enter-active { transition: opacity 1.6s ease; }
 .idle-leave-active { transition: opacity .3s ease; }
 .idle-enter-from, .idle-leave-to { opacity: 0; }
@@ -411,7 +412,8 @@ select.input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://ww
 /* rooms as chips */
 .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
 .chip-btn { display: inline-flex; align-items: center; gap: 7px; padding: 10px 16px; border-radius: 999px; background: var(--surface); border: 1px solid var(--edge); color: var(--ink-2); font-size: 15px; transition: background .18s var(--ease), color .18s var(--ease), border-color .18s var(--ease); backdrop-filter: var(--frost); -webkit-backdrop-filter: var(--frost); }
-.chip-btn.on { background: var(--ink); color: var(--bg); border-color: transparent; }
+.chip-btn.on { background: var(--ink); color: var(--bg); border-color: transparent; font-weight: 500; }
+.chip-btn.on svg { color: var(--lamp-deep); }
 .chip-btn.fixed { opacity: .7; cursor: default; }
 .chip-btn:active:not(.fixed) { transform: scale(.97); }
 

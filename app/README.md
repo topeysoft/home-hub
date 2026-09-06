@@ -10,6 +10,16 @@ npm run dev      # Vite on :5173, proxies /home /devices /rooms /events /stream 
 npm run build    # writes dist/, which the brain serves at http://<host>:8300/
 ```
 
+## Looking at it without a hub
+
+`mock/brain.mjs` is a stand-in brain with a lived-in house of eight rooms: lights at half, a film on the TV, a
+thermostat cooling, three cameras, two things found nearby, four routines. `npm run mock` serves the built panel
+on http://localhost:8399/ with every preview parameter working; `BRAIN=http://localhost:8399 npm run dev` runs
+the dev server against it instead of the real brain. `WX=rainy`, `FOUND=0`, `ENGINE=down`, `LOCKED=1` and
+`FRESH=1` change what it says. `npm run shots` (after `npx playwright install chromium`, once) photographs every
+screen at kiosk, wall, tablet and phone sizes into `mock/shots/`, which is the quickest way to see a layout
+change everywhere it lands.
+
 Kiosk: open http://hub.local/ full-screen on the wall tablet (Add to Home Screen on iOS/Android).
 `?room=<id>` opens straight into a room. After three minutes without a touch the panel rests on a
 clock over the sky; a touch brings it back to Home.

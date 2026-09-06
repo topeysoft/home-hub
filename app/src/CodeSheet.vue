@@ -4,6 +4,7 @@ import { setPin } from './api'
 import { store, notify } from './store'
 import { remember } from './code'
 import Icon from './Icon.vue'
+import AdvancedLink from './AdvancedLink.vue'
 
 /* Set, change or remove the code on the settings. Changing one asks for the old one first, like any setting. */
 const pin = ref(''), again = ref(''), busy = ref(false), error = ref('')
@@ -42,6 +43,7 @@ onUnmounted(() => window.removeEventListener('keydown', key))
         <button class="button" :class="{ busy }" @click="save()">{{ has() ? 'Change it' : 'Lock' }}</button>
         <button class="button ghost" v-if="has()" :class="{ busy }" @click="save(true)">Remove the code</button>
       </div>
+      <AdvancedLink />
     </div>
   </div>
 </template>

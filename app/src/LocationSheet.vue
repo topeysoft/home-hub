@@ -2,7 +2,6 @@
 import { onMounted, onUnmounted } from 'vue'
 import { store } from './store'
 import Icon from './Icon.vue'
-import AdvancedLink from './AdvancedLink.vue'
 import LocationPicker from './LocationPicker.vue'
 
 function close() { store.sheet = null }
@@ -18,7 +17,6 @@ onUnmounted(() => window.removeEventListener('keydown', key))
       <h2 class="display">Where is home?</h2>
       <p class="sheet-lede">The sky, sunrise and weather follow this. It stays on the hub and is never shared.</p>
       <LocationPicker @saved="close" />
-      <AdvancedLink />
     </div>
   </div>
 </template>

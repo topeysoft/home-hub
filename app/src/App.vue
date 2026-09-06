@@ -14,6 +14,7 @@ import LocationSheet from './LocationSheet.vue'
 import WhySheet from './WhySheet.vue'
 import RoutinesSheet from './RoutinesSheet.vue'
 import Icon from './Icon.vue'
+import { upcomingLine } from './upcoming'
 
 const now = ref(new Date())
 const selected = ref<string | null>(new URLSearchParams(location.search).get('room') ?? safeGet('room'))   // ?room=kitchen deep-links a kiosk
@@ -33,6 +34,7 @@ const wxIcon = computed(() => WX_ICON[store.sky.condition] ?? 'cloud')
 const previewAt = new URLSearchParams(location.search).get('at')   // ?at=19:30 previews an hour; the clock follows the sky so a preview agrees with itself
 const shown = computed(() => { if (!previewAt) return now.value; const d = new Date(now.value); const [h, m] = previewAt.split(':').map(Number); d.setHours(h || 0, m || 0, 0, 0); return d })
 const clock = computed(() => shown.value.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }))
+const nextLine = computed(() => idle.value ? upcomingLine(shown.value) : '')   // only worked out while the panel rests
 const day = computed(() => shown.value.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' }))
 
 /* The wall panel rests after a few minutes: a clock, the date, one line about the house. A touch brings it back to Home. */
@@ -138,6 +140,7 @@ onUnmounted(() => {
         <div class="idle-day">{{ day }}</div>
         <div class="idle-weather" v-if="weather"><Icon :name="wxIcon" :size="22" /><span>{{ weather }}</span></div>
         <div class="idle-line">{{ houseLine() }}</div>
+        <div class="idle-next" v-if="nextLine">{{ nextLine }}</div>
       </div>
     </Transition>
   </div>
