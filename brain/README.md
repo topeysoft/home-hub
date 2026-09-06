@@ -16,4 +16,6 @@ curl -X POST localhost:8300/home/intent/away          # the same intent in every
 - `hub/model.py` — home → rooms → devices → one capability each. Small vocabulary on purpose.
 - `hub/intents.py` — room states and the deterministic plan for each. Rules will move to data.
 - `hub/events.py` — append-only SQLite log; the assistant explains from it.
-- `hub/api.py` — REST + websocket for the app.
+- `hub/api.py` — REST + websocket for the app. Also `/ambient` (location + weather for the sky), `/location`
+  (saves the home's place, syncs it to HA, sets up Met.no) and `/geo/*` (search, auto-locate, reverse).
+- `settings.json` — the few things the panel is allowed to set, today just the location. Gitignored.

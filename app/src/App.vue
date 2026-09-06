@@ -5,6 +5,7 @@ import Sky from './Sky.vue'
 import HomeView from './views/HomeView.vue'
 import RoomView from './views/RoomView.vue'
 import Viewer from './Viewer.vue'
+import LocationSheet from './LocationSheet.vue'
 import Icon from './Icon.vue'
 
 const now = ref(new Date())
@@ -33,7 +34,7 @@ function touched() {
   lastTouch = Date.now()
   if (idle.value) { idle.value = false; open(null) }
 }
-function checkIdle() { if (!idle.value && kiosk.matches && !store.viewer && Date.now() - lastTouch > IDLE_AFTER) idle.value = true }
+function checkIdle() { if (!idle.value && kiosk.matches && !store.viewer && !store.sheet && Date.now() - lastTouch > IDLE_AFTER) idle.value = true }
 
 let tick: number | undefined, idler: number | undefined
 onMounted(() => {
@@ -100,6 +101,7 @@ onUnmounted(() => {
     </main>
 
     <Viewer />
+    <Transition name="sheet"><LocationSheet v-if="store.sheet === 'location'" /></Transition>
 
     <Transition name="toast">
       <div class="toast" :class="store.toast.kind" v-if="store.toast" :key="store.toast.id" role="status">{{ store.toast.text }}</div>

@@ -9,6 +9,8 @@ export const store = reactive({
   viewer: null as Device | null,            // camera shown full screen
   events: [] as Event[],
   ambient: { location: null, weather: null } as Ambient,
+  ambientLoaded: false,
+  sheet: (new URLSearchParams(location.search).get('sheet') === 'location' ? 'location' : null) as null | 'location',   // the one soft settings sheet the panel has; ?sheet=location previews it
   sky: { elevation: -20, azimuth: 0, phase: 0, hour: 0, condition: 'clear-night', guessed: true },   // what the sky draws
 })
 
@@ -36,7 +38,7 @@ export function weatherLine(): string {
   return [t, label].filter(Boolean).join(' · ')
 }
 async function loadAmbient() {
-  try { store.ambient = await getAmbient() } catch {}
+  try { store.ambient = await getAmbient(); store.ambientLoaded = true } catch {}
   updateSky()
 }
 

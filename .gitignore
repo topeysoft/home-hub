@@ -5,3 +5,4 @@ brain/events.db
 .DS_Store
 __pycache__/
 *.pyc
+brain/settings.json

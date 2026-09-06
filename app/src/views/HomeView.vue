@@ -42,6 +42,11 @@ onUnmounted(() => { clearInterval(t1); clearInterval(t2) })
       <SceneBar :room="null" />
     </header>
 
+    <button class="nudge" v-if="store.ambientLoaded && !store.ambient.location" @click="store.sheet = 'location'">
+      <span class="nudge-icon"><Icon name="pin" :size="20" /></span>
+      <span class="nudge-text"><span class="nudge-title">Where is home?</span><span class="nudge-sub">Set a location once and the sky, sunrise and weather will follow it.</span></span>
+    </button>
+
     <div class="block" v-if="on.length">
       <h2 class="label">On right now</h2>
       <div class="pills">
@@ -83,5 +88,8 @@ onUnmounted(() => { clearInterval(t1); clearInterval(t2) })
         </li>
       </ul>
     </div>
+    <footer class="home-foot" v-if="store.ambient.location">
+      <button class="home-place" @click="store.sheet = 'location'"><Icon name="pin" :size="14" /> {{ store.ambient.location.name }}<span class="home-change">Change</span></button>
+    </footer>
   </section>
 </template>

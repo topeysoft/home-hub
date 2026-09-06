@@ -64,6 +64,7 @@ function makeCloud(x = rnd()): Cloud {
 const drops: Drop[] = Array.from({ length: 160 }, () => ({ x: rnd(), y: rnd(), l: .02 + rnd() * .03, v: .9 + rnd() * .6 }))
 const flakes = Array.from({ length: 110 }, () => ({ x: rnd(), y: rnd(), r: 1 + rnd() * 1.8, v: .05 + rnd() * .06, p: rnd() * 6.28 }))
 let flash = 0, nextFlash = 6
+let meteor: { x: number; y: number; vx: number; vy: number; life: number } | null = null
 
 let ctx: CanvasRenderingContext2D | null = null, W = 0, H = 0, raf = 0, last = 0, ro: ResizeObserver | undefined
 const reduced = window.matchMedia('(prefers-reduced-motion: reduce)')
@@ -97,6 +98,17 @@ function draw(t: number, dt: number) {
       ctx.fillRect(s.x * W, s.y * H, s.r, s.r)
     }
     ctx.globalAlpha = 1
+    /* now and then, on a clear night, a meteor */
+    if (!meteor && starA > .6 && Math.random() < dt / 45) meteor = { x: .2 + Math.random() * .6, y: .05 + Math.random() * .3, vx: .5 + Math.random() * .3, vy: .18 + Math.random() * .12, life: 1 }
+    if (meteor) {
+      const m2 = meteor, len = .06
+      const gm = ctx.createLinearGradient((m2.x - m2.vx * len) * W, (m2.y - m2.vy * len) * H, m2.x * W, m2.y * H)
+      gm.addColorStop(0, 'rgba(255,255,255,0)'); gm.addColorStop(1, `rgba(255,255,255,${.85 * m2.life * starA})`)
+      ctx.strokeStyle = gm; ctx.lineWidth = 1.2; ctx.beginPath()
+      ctx.moveTo((m2.x - m2.vx * len) * W, (m2.y - m2.vy * len) * H); ctx.lineTo(m2.x * W, m2.y * H); ctx.stroke()
+      m2.x += m2.vx * dt; m2.y += m2.vy * dt; m2.life -= dt * 1.6
+      if (m2.life <= 0) meteor = null
+    }
   }
 
   /* sun */
@@ -104,7 +116,7 @@ function draw(t: number, dt: number) {
     const sx = W * lerp(.06, .94, clamp((az - 70) / 220)), sy = horizon - (clamp(el, -9, 75) / 75) * (horizon - m * .1)
     const low = clamp(1 - el / 25)
     const col: RGB = mix([255, 236, 200], [255, 160, 84], low)
-    const dim = 1 - wx.clouds * .75 - wx.fog * .5
+    const dim = (1 - wx.clouds * .75 - wx.fog * .5) * (1 + .06 * Math.sin(t * .45))   // a slow breath in the glow
     const halo = ctx.createRadialGradient(sx, sy, 0, sx, sy, m * (.45 + low * .25))
     halo.addColorStop(0, rgb(col, .55 * dim)); halo.addColorStop(.25, rgb(col, .18 * dim)); halo.addColorStop(1, rgb(col, 0))
     ctx.fillStyle = halo; ctx.fillRect(0, 0, W, H)
@@ -122,7 +134,7 @@ function draw(t: number, dt: number) {
     const mx = W * lerp(.12, .88, f), my = horizon - Math.sin(Math.PI * f) * (horizon - m * .12) - m * .02
     const r = m * .028
     const glow = ctx.createRadialGradient(mx, my, r * .5, mx, my, r * 7)
-    glow.addColorStop(0, rgb([214, 222, 240], .22 * moonA)); glow.addColorStop(1, rgb([214, 222, 240], 0))
+    glow.addColorStop(0, rgb([214, 222, 240], .22 * moonA * (1 + .08 * Math.sin(t * .35)))); glow.addColorStop(1, rgb([214, 222, 240], 0))
     ctx.fillStyle = glow; ctx.fillRect(0, 0, W, H)
     ctx.save(); ctx.globalAlpha = moonA
     ctx.beginPath(); ctx.arc(mx, my, r, 0, 6.29); ctx.clip()                 // the shadow only ever falls on the moon itself
@@ -133,7 +145,8 @@ function draw(t: number, dt: number) {
   }
 
   /* clouds */
-  const want = Math.round(wx.clouds * 9)
+  const want = Math.max(2, Math.round(wx.clouds * 9))
+  const wisp = clamp(wx.clouds * 2.5, .3, 1)                  // clear skies get a couple of faint wisps
   while (clouds.length < want) clouds.push(makeCloud())
   while (clouds.length > want) clouds.pop()
   if (clouds.length) {
@@ -145,10 +158,21 @@ function draw(t: number, dt: number) {
       for (const p of c.puffs) {
         const px = cx + p.dx * S, py = cy + p.dy * S, pr = p.r * S
         const cg = ctx.createRadialGradient(px, py, 0, px, py, pr)
-        cg.addColorStop(0, rgb(body, .5)); cg.addColorStop(.6, rgb(body, .3)); cg.addColorStop(1, rgb(body, 0))
+        cg.addColorStop(0, rgb(body, .5 * wisp)); cg.addColorStop(.6, rgb(body, .3 * wisp)); cg.addColorStop(1, rgb(body, 0))
         ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(px, py, pr, 0, 6.29); ctx.fill()
       }
     }
+  }
+
+  /* haze: two thin bands sliding along the horizon, so the scene is never quite still */
+  const hazeCol = mix(hor, [255, 255, 255], .18)
+  for (let i = 0; i < 2; i++) {
+    const base = horizon - H * (.16 - i * .06), amp = H * (.022 + i * .01), sp = .07 + i * .05
+    const hg = ctx.createLinearGradient(0, base - amp - H * .06, 0, horizon)
+    hg.addColorStop(0, rgb(hazeCol, 0)); hg.addColorStop(1, rgb(hazeCol, .09 - i * .03))
+    ctx.fillStyle = hg; ctx.beginPath(); ctx.moveTo(0, horizon)
+    for (let x = 0; x <= W; x += 20) ctx.lineTo(x, base - Math.sin(x / W * 5.5 + t * sp + i * 2) * amp - Math.sin(x / W * 13 - t * sp * .6) * amp * .4)
+    ctx.lineTo(W, horizon); ctx.closePath(); ctx.fill()
   }
 
   /* fog */

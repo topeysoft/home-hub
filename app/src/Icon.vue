@@ -36,6 +36,9 @@ const PATHS: Record<string, string> = {
   fog: 'M4 10h16M4 14h16M6 18h12M8 6h8',
   bolt: 'M13 3L5.5 13.5H11l-1 7.5L18.5 10.5H13z',
   wind: 'M3.5 9h11a2.5 2.5 0 1 0-2.5-2.5M3.5 13h15a2.5 2.5 0 1 1-2.5 2.5M3.5 17h8a2 2 0 1 1-2 2',
+  pin: 'M12 21s-6.5-6.2-6.5-11a6.5 6.5 0 0 1 13 0c0 4.8-6.5 11-6.5 11zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z',
+  search: 'M10.5 17.5a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM15.5 15.5l5 5',
+  target: 'M12 19a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M12 13.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z',
 }
 const FILLED = new Set(['play', 'pause', 'next', 'prev'])
 defineProps<{ name: string; size?: number }>()

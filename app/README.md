@@ -18,12 +18,16 @@ clock over the sky; a touch brings it back to Home.
 
 Behind everything is a live sky: the sun and moon where they really are, stars, clouds, rain, snow,
 fog and lightning, with a landscape the interface sits on. The sun is computed in the app from the
-clock and the home's location (`/ambient` from the brain: Home Assistant's location, or
-`HOME_LAT`/`HOME_LON` in `driver-layer/.env`); without a location it assumes a plausible day.
-Weather comes from the first `weather.*` entity in Home Assistant, so add the free Met.no
-integration once the location is set and it appears on its own. Preview any moment with
-`?at=19:30`, any condition with `?wx=rainy` (Home Assistant's condition names), and the resting
-screen with `?rest=1`.
+clock and the home's location. Until a location is known the Home screen carries one soft
+"Where is home?" card; it opens a sheet that can use the device's own location (only on https or
+localhost, where browsers allow it), find the hub's rough position from its internet address, or
+search for a town by name, and it also accepts typed coordinates. Saving sends the location to the
+brain, which remembers it in `brain/settings.json`, writes it into Home Assistant (so `sun.sun`
+becomes correct) and sets up the free Met.no integration if no weather entity exists yet. The
+footer of Home shows the current place with a Change link. `HOME_LAT`/`HOME_LON` in
+`driver-layer/.env` still work as a headless fallback. Preview any moment with `?at=19:30`, any
+condition with `?wx=rainy` (Home Assistant's condition names), the resting screen with `?rest=1`
+and the sheet with `?sheet=location`.
 
 ## How it is put together
 

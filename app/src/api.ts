@@ -2,7 +2,8 @@ export type Device = { id: string; name: string; room_id: string; capability: st
 export type Room = { id: string; name: string; devices: Device[]; intent: string }
 export type Home = { rooms: Room[] }
 export type Weather = { id: string; condition: string; temperature: number | null; unit: string; humidity: number | null; wind_speed: number | null; wind_unit: string | null }
-export type Ambient = { location: { lat: number; lon: number } | null; weather: Weather | null }
+export type Place = { name: string; lat: number; lon: number; tz?: string | null }
+export type Ambient = { location: Place | null; weather: Weather | null }
 export type Event = { ts: number; kind: string; subject: string; old: string | null; new: string | null; source: string; detail: string | null }
 
 const json = { 'Content-Type': 'application/json' }
@@ -17,6 +18,18 @@ export async function getHome(): Promise<Home> {
 }
 export async function getAmbient(): Promise<Ambient> {
   const r = await fetch('/ambient'); if (!r.ok) await fail(r); return r.json()
+}
+export async function searchPlaces(q: string): Promise<Place[]> {
+  const r = await fetch(`/geo/search?q=${encodeURIComponent(q)}`); if (!r.ok) await fail(r); return r.json()
+}
+export async function autoLocate(): Promise<Place> {
+  const r = await fetch('/geo/auto'); if (!r.ok) await fail(r); return r.json()
+}
+export async function placeName(lat: number, lon: number): Promise<Place> {
+  const r = await fetch(`/geo/reverse?lat=${lat}&lon=${lon}`); if (!r.ok) await fail(r); return r.json()
+}
+export async function saveLocation(p: Place): Promise<{ ok: boolean; weather: string | null }> {
+  const r = await fetch('/location', { method: 'POST', headers: json, body: JSON.stringify(p) }); if (!r.ok) await fail(r); return r.json()
 }
 export async function getEvents(limit = 40): Promise<Event[]> {
   const r = await fetch(`/events?limit=${limit}`); if (!r.ok) await fail(r); return r.json()
