@@ -52,6 +52,16 @@ class CatalogTests(unittest.TestCase):
         self.assertIsNone(rows[2]["brand"])
 
 
+class FieldTests(unittest.TestCase):
+    def test_expandable_becomes_a_section_with_nested_fields(self):
+        f = onboarding._field({"type": "expandable", "name": "other_settings", "required": True, "expanded": False,
+                               "schema": [{"name": "set_client_cert", "required": True, "selector": {"boolean": {}}},
+                                          {"name": "transport", "required": True, "default": "tcp", "selector": {"select": {"options": [{"value": "tcp", "label": "TCP"}]}}}]},
+                              {"component.mqtt.config.step.broker.sections.other_settings.name": "Advanced options"}, "component.mqtt.config", "broker", {})
+        self.assertEqual((f["kind"], f["label"], f["required"], f["expanded"]), ("section", "Advanced options", True, False))
+        self.assertEqual([(g["name"], g["kind"]) for g in f["fields"]], [("set_client_cert", "boolean"), ("transport", "select")])
+
+
 class CredentialsTests(unittest.IsolatedAsyncioTestCase):
     async def test_nest_asks_for_a_key_first(self):
         ha = FakeHA(); add = onboarding.Onboarding(FakeHub(ha))

@@ -12,6 +12,7 @@ export const store = reactive({
   ambientLoaded: false,
   rules: {} as Rules,                        // scene rules from the brain, to tell whether a room still matches its scene
   sheet: (['location', 'add'].includes(new URLSearchParams(location.search).get('sheet') ?? '') ? new URLSearchParams(location.search).get('sheet') : null) as null | 'location' | 'add',   // the two soft sheets the panel has; ?sheet=location previews one
+  previewSetup: new URLSearchParams(location.search).get('setup') === '1',   // ?setup=1 previews first run; cleared by Open Home
   status: null as Status | null,            // where the hub is in its life: engine down, fresh, ready; and whether setup finished
   homeName: '' as string,
   found: [] as Found[],                      // things noticed on the network that are not set up yet
@@ -221,7 +222,7 @@ function eventsSoon() { clearTimeout(eventsTimer); eventsTimer = window.setTimeo
 
 /* ---------- setup and things found nearby ---------- */
 /** True while the panel should show the setup flow instead of the house. */
-export const needsSetup = () => !store.status || store.status.driver !== 'ready' || !store.status.setup_done
+export const needsSetup = () => !store.status || !store.status.setup_done   // once finished, an engine hiccup shows the calm offline note, not the welcome
 export async function refreshStatus() {
   try { store.status = await getStatus() } catch { if (!store.status) store.error = 'The hub is not answering.' }
 }

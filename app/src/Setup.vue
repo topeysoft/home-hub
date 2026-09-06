@@ -69,8 +69,13 @@ async function saveRooms() {
 }
 
 async function finish() {
-  busy.value = true
-  try { store.status = await setupDone(); await load() } catch {}
+  busy.value = true; error.value = ''
+  try {
+    store.status = await setupDone()
+    if (location.search) history.replaceState(null, '', location.pathname)   // drop ?setup=1&page=… so the house shows
+    store.previewSetup = false
+    await load()
+  } catch (e: any) { error.value = `Couldn't finish: ${e.message}` }
   busy.value = false
 }
 const phoneUrl = computed(() => location.hostname.endsWith('.local') || /^\d+\.\d+\.\d+\.\d+$/.test(location.hostname) ? `${location.protocol}//${location.host}` : 'http://hub.local')
@@ -169,6 +174,7 @@ const idx = computed(() => ['owner', 'location', 'rooms', 'devices'].indexOf(pag
           <li><span class="tip-icon"><Icon name="sparkle" :size="18" /></span><span>New things you plug in appear under <b>Found nearby</b> on the Home screen.</span></li>
           <li><span class="tip-icon"><Icon name="home" :size="18" /></span><span>Devices that don't know their room wait under <b>New devices</b> until you place them.</span></li>
         </ul>
+        <p class="error" v-if="error">{{ error }}</p>
         <div class="setup-actions"><button class="button big" :class="{ busy }" @click="finish">Open Home</button></div>
       </section>
     </Transition>

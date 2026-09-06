@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
-import { getCatalog, startFlow, getFlow, submitFlow, cancelFlow, setCredentials, type CatalogItem, type Step, type Found } from './api'
+import { getCatalog, startFlow, getFlow, submitFlow, cancelFlow, setCredentials, type CatalogItem, type Step, type Found, type Field } from './api'
 import { store, notify, refreshFound } from './store'
 import Icon from './Icon.vue'
 import { parseKeyFile, keyFileWarning } from './keyfile'
@@ -19,11 +19,21 @@ const matches = computed(() => {
 })
 async function loadCatalog() { if (!catalog.value) try { catalog.value = await getCatalog() } catch {} }
 
+const blank = (f: Field) => f.default ?? (f.kind === 'boolean' ? false : '')
 function show(s: Step) {
   step.value = s; error.value = ''; warn.value = ''; fileName.value = ''
   for (const k of Object.keys(values)) delete values[k]
-  for (const f of s.fields ?? []) values[f.name] = f.default ?? (f.kind === 'boolean' ? false : '')
+  for (const f of s.fields ?? []) values[f.name] = f.kind === 'section' ? Object.fromEntries((f.fields ?? []).map(g => [g.name, blank(g)])) : blank(f)
   if (s.type === 'progress') pollSoon()
+}
+/* what goes back to the house: filled-in fields, numbers as numbers, a section as its own object */
+function answers(fields: Field[], vals: Record<string, any>): Record<string, unknown> {
+  return Object.fromEntries(fields.flatMap(f => {
+    if (f.kind === 'section') return [[f.name, answers(f.fields ?? [], vals[f.name] ?? {})]]
+    const v = vals[f.name]
+    if (v === '' && !f.required) return []
+    return [[f.name, f.kind === 'number' ? Number(v) : v]]
+  }))
 }
 async function open(f: Found) {
   busy.value = true
@@ -46,7 +56,7 @@ async function submit(data?: Record<string, unknown>) {
   }
   if (!step.value.flow_id) return
   busy.value = true
-  const body = data ?? Object.fromEntries((step.value.fields ?? []).filter(f => values[f.name] !== '' || f.required).map(f => [f.name, f.kind === 'number' ? Number(values[f.name]) : values[f.name]]))
+  const body = data ?? answers(step.value.fields ?? [], values)
   try {
     const s = await submitFlow(step.value.flow_id, body)
     show(s)
@@ -56,6 +66,22 @@ async function submit(data?: Record<string, unknown>) {
 }
 let poll: number | undefined
 function pollSoon() { clearTimeout(poll); poll = window.setTimeout(async () => { if (step.value?.type === 'progress' && step.value.flow_id) try { show(await getFlow(step.value.flow_id)) } catch {} }, 2000) }
+/* After "could not reach it": the house looks again for the same thing. A discovery that was used up comes back
+   once the device announces itself again, which can take a minute after it is switched on. */
+const retryNote = ref('')
+async function retry() {
+  if (!step.value || busy.value) return
+  const { handler, flow_id } = step.value
+  const title = (store.found.find(f => f.flow_id === flow_id)?.title ?? '').toLowerCase()
+  busy.value = true; retryNote.value = ''
+  try {
+    await refreshFound()
+    const again = store.found.find(f => f.handler === handler && (!title || f.title.toLowerCase() === title)) ?? store.found.find(f => f.handler === handler)
+    if (again) { show(await getFlow(again.flow_id)); await submit({}) }
+    else retryNote.value = 'The hub has not seen it again yet. Give it a minute after switching it on, then look under Found nearby.'
+  } catch (e: any) { retryNote.value = e.message }
+  busy.value = false
+}
 async function back(cancel = true) {
   clearTimeout(poll)
   if (cancel && step.value?.flow_id && (step.value.type === 'form' || step.value.type === 'menu' || step.value.type === 'external')) cancelFlow(step.value.flow_id)
@@ -143,14 +169,26 @@ onUnmounted(() => clearTimeout(poll))
 
       <template v-else-if="step.type === 'form'">
         <p class="error" v-if="step.errors?.base || error">{{ step.errors?.base || error }}</p>
-        <label class="field" v-for="f in step.fields" :key="f.name">
-          <span class="field-label">{{ f.label }}<span v-if="!f.required" class="field-opt"> optional</span></span>
-          <select v-if="f.kind === 'select'" v-model="values[f.name]" class="input"><option v-for="o in f.options" :key="String(o.value)" :value="o.value">{{ o.label }}</option></select>
-          <span v-else-if="f.kind === 'boolean'" class="check"><input type="checkbox" v-model="values[f.name]" /><span>{{ f.hint || 'Yes' }}</span></span>
-          <input v-else class="input" :type="f.kind === 'password' ? 'password' : f.kind === 'number' ? 'number' : 'text'" v-model="values[f.name]" :placeholder="f.hint" autocomplete="off" autocapitalize="off" spellcheck="false" @keydown.enter="submit()" />
-          <span class="field-hint" v-if="f.hint && f.kind !== 'boolean'">{{ f.hint }}</span>
-          <span class="field-err" v-if="step.errors?.[f.name]">{{ step.errors[f.name] }}</span>
-        </label>
+        <template v-for="f in step.fields" :key="f.name">
+          <details class="section" v-if="f.kind === 'section'" :open="f.expanded">
+            <summary>{{ f.label }}</summary>
+            <p class="field-hint" v-if="f.hint">{{ f.hint }}</p>
+            <label class="field" v-for="g in f.fields" :key="g.name">
+              <span class="field-label">{{ g.label }}<span v-if="!g.required" class="field-opt"> optional</span></span>
+              <select v-if="g.kind === 'select'" v-model="values[f.name][g.name]" class="input"><option v-for="o in g.options" :key="String(o.value)" :value="o.value">{{ o.label }}</option></select>
+              <span v-else-if="g.kind === 'boolean'" class="check"><input type="checkbox" v-model="values[f.name][g.name]" /><span>{{ g.hint || 'Yes' }}</span></span>
+              <input v-else class="input" :type="g.kind === 'password' ? 'password' : g.kind === 'number' ? 'number' : 'text'" v-model="values[f.name][g.name]" :placeholder="g.hint" autocomplete="off" autocapitalize="off" spellcheck="false" />
+            </label>
+          </details>
+          <label class="field" v-else>
+            <span class="field-label">{{ f.label }}<span v-if="!f.required" class="field-opt"> optional</span></span>
+            <select v-if="f.kind === 'select'" v-model="values[f.name]" class="input"><option v-for="o in f.options" :key="String(o.value)" :value="o.value">{{ o.label }}</option></select>
+            <span v-else-if="f.kind === 'boolean'" class="check"><input type="checkbox" v-model="values[f.name]" /><span>{{ f.hint || 'Yes' }}</span></span>
+            <input v-else class="input" :type="f.kind === 'password' ? 'password' : f.kind === 'number' ? 'number' : 'text'" v-model="values[f.name]" :placeholder="f.hint" autocomplete="off" autocapitalize="off" spellcheck="false" @keydown.enter="submit()" />
+            <span class="field-hint" v-if="f.hint && f.kind !== 'boolean'">{{ f.hint }}</span>
+            <span class="field-err" v-if="step.errors?.[f.name]">{{ step.errors[f.name] }}</span>
+          </label>
+        </template>
         <div class="flow-actions">
           <button class="button ghost" @click="back()">Cancel</button>
           <button class="button" :class="{ busy }" @click="submit()">{{ step.fields?.length ? 'Continue' : 'Yes, add it' }}</button>
@@ -179,12 +217,16 @@ onUnmounted(() => clearTimeout(poll))
       </template>
 
       <template v-else-if="step.type === 'abort'">
-        <p class="flow-desc">{{ step.reason }}</p>
-        <div class="flow-actions"><button class="button" @click="back(false)">OK</button></div>
+        <p class="flow-desc">{{ step.reason }}<template v-if="step.hint"> {{ step.hint }}</template></p>
+        <p class="sheet-status" v-if="retryNote">{{ retryNote }}</p>
+        <div class="flow-actions">
+          <button class="button" v-if="step.retry" :class="{ busy }" @click="retry">Try again</button>
+          <button class="button" :class="{ ghost: step.retry }" @click="back(false)">{{ step.retry ? 'Not now' : 'OK' }}</button>
+        </div>
       </template>
 
       <template v-else-if="step.type === 'create_entry'">
-        <p class="flow-done"><span class="done-icon"><Icon name="check" :size="20" /></span>{{ step.entry_title || step.kind }} is part of the house now. It will show up in a room shortly; anything without a room lands under New devices.</p>
+        <p class="flow-done"><span class="done-icon"><Icon name="check" :size="20" /></span>{{ step.entry_title || step.kind }} is part of the house now. It will show up in a room shortly; anything without a room lands under New devices. If it cannot connect, it appears under Behind the scenes with the reason.</p>
         <div class="flow-actions"><button class="button" @click="back(false)">Done</button></div>
       </template>
     </div>

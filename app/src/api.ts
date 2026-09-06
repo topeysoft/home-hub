@@ -4,12 +4,13 @@ export type Intent = { room: string; intent: string; set_by: string | null; hold
 export type Home = { name?: string | null; rooms: Room[] }
 export type Driver = 'down' | 'fresh' | 'needs-login' | 'connecting' | 'ready'
 export type Part = { id: string; name: string; state: 'unknown' | 'off' | 'adding' | 'ready' | 'failed' | 'sign-in' | 'waiting'; text: string; port: number }
-export type Status = { driver: Driver; reason: string; setup_done: boolean; owner: string | null; home: string | null; location: boolean; rooms: number; devices: number; drivers: Part[] }
+export type Status = { driver: Driver; reason: string; setup_done: boolean; owner: string | null; home: string | null; location: boolean; rooms: number; devices: number; drivers: Part[]; problems?: Problem[] }
 export type Found = { flow_id: string; handler: string; kind: string; title: string; source: string }
 export type CatalogItem = { domain: string; name: string; brand?: string | null; local: boolean }
-export type Field = { name: string; kind: 'text' | 'password' | 'number' | 'boolean' | 'select'; label: string; hint: string; required: boolean; default: any; options?: { value: any; label: string }[] }
+export type Field = { name: string; kind: 'text' | 'password' | 'number' | 'boolean' | 'select' | 'section'; label: string; hint: string; required: boolean; default: any; options?: { value: any; label: string }[]; fields?: Field[]; expanded?: boolean }
+export type Problem = { entry_id: string; domain: string; title: string; state: string; reason: string }
 export type Step = { flow_id: string | null; handler: string; kind: string; type: 'form' | 'menu' | 'abort' | 'create_entry' | 'progress' | 'external' | 'credentials'; step_id: string; title: string; description: string; last_step: boolean | null;
-  errors?: Record<string, string>; fields?: Field[]; options?: { id: string; label: string }[]; reason?: string; entry_title?: string; progress?: string; url?: string; redirect_url?: string }
+  errors?: Record<string, string>; fields?: Field[]; options?: { id: string; label: string }[]; reason?: string; hint?: string; retry?: boolean; entry_title?: string; progress?: string; url?: string; redirect_url?: string }
 export type Weather = { id: string; condition: string; temperature: number | null; unit: string; humidity: number | null; wind_speed: number | null; wind_unit: string | null }
 export type Place = { name: string; lat: number; lon: number; tz?: string | null }
 export type Ambient = { location: Place | null; weather: Weather | null }
@@ -33,6 +34,7 @@ export const setupLogin = (username: string, password: string) => post<Status>('
 export const setupHome = (name: string) => post<Status>('/setup/home', { name })
 export const setupDone = () => post<Status>('/setup/done')
 export const checkDrivers = () => post<Status>('/setup/drivers')
+export const retryEntry = (entry_id: string) => post<Status>(`/setup/retry/${encodeURIComponent(entry_id)}`)
 export const setCredentials = (handler: string, client_id: string, client_secret: string, hints?: Record<string, string>) => post<Step>('/credentials', { handler, client_id, client_secret, hints })
 export const addRoom = (name: string) => post<{ id: string; name: string }>('/rooms', { name })
 export const renameRoom = (id: string, name: string) => post(`/rooms/${encodeURIComponent(id)}/rename`, { name })

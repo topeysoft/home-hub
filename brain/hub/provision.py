@@ -14,7 +14,7 @@ RETRY_AFTER = 300     # seconds before a part that failed to connect is tried ag
 # {host} is where HA reaches the other containers: localhost with host networking (the Pi), a
 # container name on a bridge network (the Mac). HUB_DRIVER_HOST in .env overrides it.
 PARTS = [
-    ("mqtt",   "Messages",     1883,  "mqtt",     {"broker": "{host}", "port": 1883}),
+    ("mqtt",   "Messages",     1883,  "mqtt",     {"broker": "{host}", "port": 1883, "other_settings": {"set_client_cert": False, "set_ca_cert": "off"}}),   # HA 2026.9 requires other_settings
     ("zwave",  "Z-Wave radio", 3000,  "zwave_js", {"url": "ws://{host}:3000"}),
     ("zigbee", "Zigbee radio", 8080,  None,       {}),
     ("matter", "Matter",       5580,  "matter",   {"url": "ws://{host}:5580/ws"}),
@@ -29,6 +29,22 @@ WORDS = {
     ("ring", "sign-in"): "Sign in once to bring in the alarm, cameras and sensors.",
     ("ring", "ready"): "Signed in",
 }
+
+
+def fill(fields: list, answers: dict) -> dict:
+    """Answers for a form: ours where we have them, the integration's defaults otherwise, and for the rest of the
+    required fields the quietest choice (off, the first option). A section nests its own answers under its name."""
+    data = {}
+    for f in fields:
+        n = f["name"]
+        if f.get("kind") == "section":
+            data[n] = fill(f.get("fields") or [], answers.get(n) if isinstance(answers.get(n), dict) else {})
+        elif n in answers: data[n] = answers[n]
+        elif f.get("default") is not None: data[n] = f["default"]
+        elif f.get("required"):
+            if f.get("kind") == "boolean": data[n] = False
+            elif f.get("kind") == "select" and f.get("options"): data[n] = f["options"][0]["value"]
+    return data
 
 
 async def probe(host: str, port: int, timeout: float = 1.5) -> bool:
@@ -49,6 +65,7 @@ class Provision:
         self.probe_host = hub.env.get("HUB_PROBE_HOST") or os.environ.get("HUB_PROBE_HOST") or "localhost"
         self.parts = {pid: {"id": pid, "name": name, "state": "unknown", "text": "Looking…", "port": port} for pid, name, port, _, _ in PARTS}
         self._failed_at: dict[str, float] = {}
+        self.problems: list[dict] = []     # integrations HA has but could not set up, with HA's reason
 
     def summary(self) -> list[dict]:
         return list(self.parts.values())
@@ -71,7 +88,12 @@ class Provision:
     async def refresh(self):
         """Look at every part once: probe, add what is missing in HA, and tell the panel if anything changed."""
         changed = False
-        entries = await self._configured()
+        rows = await self._entries()
+        entries = {e["domain"] for e in rows}
+        problems = [{"entry_id": e["entry_id"], "domain": e["domain"], "title": e.get("title") or e["domain"], "state": e["state"], "reason": e.get("reason") or ""}
+                    for e in rows if e.get("state") in ("setup_error", "setup_retry", "migration_error", "failed_unload")]
+        if problems != self.problems:
+            self.problems = problems; changed = True
         for pid, name, port, domain, answers in PARTS:
             if not await probe(self.probe_host, port):
                 changed |= self._set(pid, "off"); continue
@@ -99,10 +121,16 @@ class Provision:
     def _tell(self):
         self.hub._broadcast(json.dumps({"type": "status", "status": self.hub.status()}))
 
-    async def _configured(self) -> set:
-        try: return {e["domain"] for e in await self.hub.ha.send("config_entries/get")}
+    async def _entries(self) -> list:
+        try: return list(await self.hub.ha.send("config_entries/get"))
         except Exception as e:
-            log.warning("could not list HA's integrations: %s", e); return set()
+            log.warning("could not list HA's integrations: %s", e); return []
+
+    async def retry(self, entry_id: str):
+        """Ask HA to set an integration up again, after the person fixed what it complained about."""
+        await asyncio.to_thread(self.hub.add._rest, "POST", f"/api/config/config_entries/entry/{entry_id}/reload")   # REST only; no websocket command for this
+        await asyncio.sleep(3)
+        await self.refresh()
 
     async def _ring_seen(self) -> bool:
         """Ring's things arrive over MQTT once someone has signed in; their devices say Ring made them."""
@@ -129,11 +157,7 @@ class Provision:
                     step = await add.submit(step["flow_id"], {"next_step_id": pick}); continue
                 if t == "form":
                     if step.get("errors"): raise RuntimeError("; ".join(step["errors"].values()))
-                    data = {}
-                    for f in step.get("fields") or []:
-                        if f["name"] in answers: data[f["name"]] = answers[f["name"]]
-                        elif f.get("default") is not None: data[f["name"]] = f["default"]
-                    step = await add.submit(step["flow_id"], data); continue
+                    step = await add.submit(step["flow_id"], fill(step.get("fields") or [], answers)); continue
                 if t == "progress":
                     await asyncio.sleep(2); step = await add.step(step["flow_id"]); continue
                 raise RuntimeError(f"unexpected step {t!r}")

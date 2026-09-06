@@ -13,13 +13,16 @@ class FakeAdd:
     async def submit(self, flow_id, data):
         self.submitted.append(data); return self.script.pop(0)
     async def cancel(self, flow_id): self.cancelled.append(flow_id)
+    def _rest(self, method, path, data=None): self.rested.append((method, path)); return {}
+    rested: list = []
 
 
 class FakeHA:
-    def __init__(self, entries=(), devices=()):
-        self.entries, self.devices = list(entries), list(devices)
+    def __init__(self, entries=(), devices=(), broken=()):
+        self.entries, self.devices, self.broken, self.reloaded = list(entries), list(devices), list(broken), []
     async def send(self, type_, **kw):
-        if type_ == "config_entries/get": return [{"domain": d} for d in self.entries]
+        if type_ == "config_entries/get":
+            return [{"domain": d, "entry_id": f"e-{d}", "title": d.title(), "state": "loaded"} for d in self.entries] + list(self.broken)
         if type_ == "config/device_registry/list": return self.devices
         raise AssertionError(type_)
 
@@ -37,6 +40,9 @@ class FakeHub:
 
 
 def form(fields, **kw): return {"type": "form", "flow_id": "f1", "step_id": "manual", "fields": [{"name": n, "default": d} for n, d in fields], **kw}
+
+
+async def _nosleep(*a): pass
 
 
 class AddTests(unittest.IsolatedAsyncioTestCase):
@@ -65,6 +71,20 @@ class AddTests(unittest.IsolatedAsyncioTestCase):
             await provision.Provision(FakeHub(add)).add("mqtt", {"broker": "x"})
         self.assertIn("Cannot connect", str(cm.exception))
         self.assertEqual(add.cancelled, ["f1"])
+
+
+class FillTests(unittest.TestCase):
+    def test_sections_and_required_fields_get_quiet_answers(self):
+        fields = [{"name": "broker", "kind": "text", "required": True, "default": None},
+                  {"name": "port", "kind": "number", "required": True, "default": 1883},
+                  {"name": "username", "kind": "text", "required": False, "default": None},
+                  {"name": "other_settings", "kind": "section", "required": True, "default": None, "fields": [
+                      {"name": "client_id", "kind": "text", "required": False, "default": None},
+                      {"name": "set_client_cert", "kind": "boolean", "required": True, "default": None},
+                      {"name": "set_ca_cert", "kind": "select", "required": True, "default": None, "options": [{"value": "off", "label": "Off"}, {"value": "auto", "label": "Auto"}]},
+                      {"name": "transport", "kind": "select", "required": True, "default": "tcp", "options": [{"value": "tcp", "label": "TCP"}]}]}]
+        self.assertEqual(provision.fill(fields, {"broker": "localhost", "port": 1883}),
+                         {"broker": "localhost", "port": 1883, "other_settings": {"set_client_cert": False, "set_ca_cert": "off", "transport": "tcp"}})
 
 
 class RefreshTests(unittest.IsolatedAsyncioTestCase):
@@ -102,6 +122,19 @@ class RefreshTests(unittest.IsolatedAsyncioTestCase):
         with patch.object(provision, "probe", fake_probe):
             await p.refresh()
         self.assertEqual(p.parts["ring"]["state"], "ready")
+
+    async def test_integrations_ha_could_not_set_up_are_problems(self):
+        async def fake_probe(host, port, timeout=1.5): return False
+        nest = {"domain": "nest", "entry_id": "e-nest", "title": "home-hub", "state": "setup_retry", "reason": "Error communicating with the Device Access API"}
+        add = FakeAdd([]); add.rested = []
+        hub = FakeHub(add, FakeHA(entries=["mqtt"], broken=[nest])); hub.provision = p = provision.Provision(hub)
+        with patch.object(provision, "probe", fake_probe):
+            await p.refresh()
+            self.assertEqual(p.problems, [{"entry_id": "e-nest", "domain": "nest", "title": "home-hub", "state": "setup_retry", "reason": "Error communicating with the Device Access API"}])
+            hub.ha.broken = []
+            with patch.object(provision.asyncio, "sleep", _nosleep):
+                await p.retry("e-nest")
+        self.assertEqual((add.rested, p.problems), ([("POST", "/api/config/config_entries/entry/e-nest/reload")], []))
 
     async def test_driver_host_comes_from_env(self):
         hub = FakeHub(); hub.env = {"HUB_DRIVER_HOST": "mosquitto"}

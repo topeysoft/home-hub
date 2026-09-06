@@ -46,6 +46,7 @@ class Hub:
         self._wake = asyncio.Event()
         self._rebuild_task = None
         self._loop_task = None
+        self._loop: asyncio.AbstractEventLoop | None = None   # the server's loop, for broadcasts from worker threads
 
     # ---- where HA is and how to get in ----
     @property
@@ -60,7 +61,7 @@ class Hub:
         return {"driver": self.driver, "reason": self.reason, "setup_done": bool(self.settings.get("setup_done")),
                 "owner": (self.settings.get("owner") or {}).get("name"), "home": self.settings.get("home_name"),
                 "location": bool(self.location), "rooms": sum(1 for r in self.home.rooms.values() if r.id != "unassigned"),
-                "devices": len(self.home.devices), "drivers": self.provision.summary()}
+                "devices": len(self.home.devices), "drivers": self.provision.summary(), "problems": self.provision.problems}
 
     def _set(self, driver, reason=""):
         if (driver, reason) == (self.driver, self.reason): return
@@ -197,7 +198,12 @@ class Hub:
 
     # ---- live updates ----
     def _broadcast(self, msg):
-        for ws in list(self.streams): asyncio.create_task(self._push(ws, msg))
+        """Push to every open panel. Safe from a worker thread too: a plain `def` route runs off the loop."""
+        async def fan_out():
+            for ws in list(self.streams): asyncio.create_task(self._push(ws, msg))
+        try: asyncio.get_running_loop(); asyncio.create_task(fan_out())
+        except RuntimeError:
+            if self._loop: asyncio.run_coroutine_threadsafe(fan_out(), self._loop)
 
     def _on_event(self, ev):
         if ev["event_type"] == "state_changed":
@@ -297,6 +303,7 @@ hub = Hub()
 
 @asynccontextmanager
 async def lifespan(app):
+    hub._loop = asyncio.get_running_loop()
     hub._loop_task = asyncio.create_task(hub.run())
     hub._tick_task = asyncio.create_task(hub.engine.run())
     hub._drivers_task = asyncio.create_task(hub.provision.run())
@@ -333,7 +340,7 @@ async def setup_login(body: dict):
 
 
 @app.post("/setup/home")
-def setup_home(body: dict):
+async def setup_home(body: dict):
     hub.settings.set(home_name=(body.get("name") or "").strip() or "Home")
     hub._broadcast(json.dumps({"type": "home", "home": hub.home_dict()}))
     return hub.status()
@@ -347,8 +354,17 @@ async def setup_drivers():
     return hub.status()
 
 
+@app.post("/setup/retry/{entry_id}")
+async def setup_retry(entry_id: str):
+    """Try an integration HA could not set up again (after the person fixed what it complained about)."""
+    hub.ready()
+    try: await hub.provision.retry(entry_id)
+    except Exception as e: raise HTTPException(502, str(e))
+    return hub.status()
+
+
 @app.post("/setup/done")
-def setup_done():
+async def setup_done():
     hub.settings.set(setup_done=True)
     hub.log.add("home", "setup", None, "finished", source="user")
     hub._broadcast(json.dumps({"type": "status", "status": hub.status()}))

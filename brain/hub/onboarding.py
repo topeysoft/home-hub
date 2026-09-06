@@ -15,9 +15,10 @@ GUIDES = {
     "nest": """Google asks each home to bring its own key. It takes about ten minutes, and Google charges a one-time US $5 for Nest access.
 
 1. Open the [Google Cloud credentials page]({oauth_creds_url}) and, if asked, create a project.
+1. In that project, enable two APIs: [Smart Device Management](https://console.cloud.google.com/apis/library/smartdevicemanagement.googleapis.com) and [Cloud Pub/Sub](https://console.cloud.google.com/apis/library/pubsub.googleapis.com). Without the first, Nest will say it is added and then never connect.
 1. On the [consent screen]({oauth_consent_url}) choose **External**, add your own Google account as a test user, and save.
 1. Back on the credentials page choose **Create credentials**, then **OAuth client ID**, type **Web application**, and add this redirect: **{redirect_url}**
-1. Copy the client ID and client secret into the boxes below.
+1. Copy the client ID and client secret into the boxes below, or drop the key file Google offers.
 
 The next screens walk through the Nest side, one step at a time. If a page asks for your Home Assistant address, it is **{ha_url}**.""",
     "google": """Google asks each home to bring its own key. It takes a few minutes and costs nothing.
@@ -181,7 +182,9 @@ class Onboarding:
         elif step.get("type") == "menu":
             out["options"] = [{"id": o, "label": _fill(S.get(f"{key}.step.{sid}.menu_options.{o}", o.replace("_", " ").title()), ph)} for o in (step.get("menu_options") or [])]
         elif step.get("type") == "abort":
-            out["reason"] = _fill(S.get(f"{key}.abort.{step.get('reason')}", (step.get("reason") or "stopped").replace("_", " ")), ph)
+            r = step.get("reason") or "stopped"
+            out["reason"] = _fill(S.get(f"{key}.abort.{r}", r.replace("_", " ")), ph)
+            out["hint"], out["retry"] = _abort_hint(h, r, ph.get("name") or await self.name_of(h))
         elif step.get("type") == "create_entry":
             out["entry_title"] = step.get("title")
         elif step.get("type") == "progress":
@@ -207,6 +210,27 @@ def catalog_from(core: dict) -> list[dict]:
             take(domain, d)
     items.sort(key=lambda x: x["name"].lower())
     return items
+
+
+# What to do about an abort, in the house's words. None means the reason speaks for itself.
+UNREACHABLE = {"cannot_connect", "no_devices_found", "not_found", "timeout", "unreachable", "discovery_error"}
+STANDBY_NOTE = {
+    "androidtv_remote": "Android TVs switch their Wi‑Fi off in standby unless the TV's own settings allow it (look for Network standby, Remote start, or Wake on network). Turn the TV fully on, then try again.",
+    "cast": "Turn it on, or make sure it is not in a deep sleep, then try again.",
+    "roku": "Turn the Roku on with its remote, then try again.",
+    "samsungtv": "Turn the TV on with its remote, then try again. The first time, the TV asks on screen whether to allow the hub.",
+    "webostv": "Turn the TV on with its remote, then try again. The first time, the TV asks on screen whether to allow the hub.",
+}
+
+
+def _abort_hint(handler: str, reason: str, name: str) -> tuple[str, bool]:
+    if reason in UNREACHABLE:
+        return (STANDBY_NOTE.get(handler) or f"The hub could not reach {name}. Make sure it is switched on (not only on standby) and on the same Wi‑Fi as the hub, then try again."), True
+    if reason in ("already_configured", "already_in_progress", "single_instance_allowed", "all_configured"):
+        return "It is already part of the house.", False
+    if reason in ("unknown", "unknown_error"):
+        return "Something went wrong on the way in. Try again in a moment.", True
+    return "", False
 
 
 def _fill(s: str, ph: dict) -> str:
@@ -241,6 +265,11 @@ def _field(f: dict, S: dict, key: str, sid: str, ph: dict) -> dict:
     sel = f.get("selector") or {}
     kind, options = "text", None
     t = f.get("type")
+    if t == "expandable":     # a collapsed group of more fields ("Advanced settings"); its answers nest under its name
+        lbl = S.get(f"{key}.step.{sid}.sections.{name}.name") or name.replace("_", " ").capitalize()
+        return {"name": name, "kind": "section", "label": _fill(lbl, ph), "hint": _fill(S.get(f"{key}.step.{sid}.sections.{name}.description", ""), ph),
+                "required": bool(f.get("required")), "default": None, "expanded": bool(f.get("expanded")),
+                "fields": [_field(g, S, key, sid, ph) for g in (f.get("schema") or [])]}
     if "select" in sel:
         kind = "select"
         options = [{"value": o["value"], "label": _fill(S.get(f"{key}.selector.{name}.options.{o['value']}", o.get("label", str(o["value"]))), ph)}

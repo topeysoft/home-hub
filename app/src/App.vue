@@ -16,8 +16,7 @@ function safeGet(k: string) { try { return localStorage.getItem(k) } catch { ret
 function open(id: string | null) { selected.value = id; try { id ? localStorage.setItem('room', id) : localStorage.removeItem('room') } catch {} }
 
 const rooms = computed(visibleRooms)
-const previewSetup = new URLSearchParams(location.search).get('setup') === '1'   // ?setup=1 previews first run
-const setup = computed(() => !!store.status && (previewSetup || needsSetup()))
+const setup = computed(() => !!store.status && (store.previewSetup || needsSetup()))
 const room = computed(() => rooms.value.find(r => r.id === selected.value) ?? null)
 
 const hour = computed(() => now.value.getHours())
