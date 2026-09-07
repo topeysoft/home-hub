@@ -34,7 +34,7 @@ jobs:
           locale: en_US.UTF-8
           keyboard-layout: English (US)
           keyboard-keymap: us
-          timezone: UTC
+          timezone: America/Chicago   # only until first boot: install.sh reads the Pi's own zone; must be an Area/City name for the action
           compression: xz
           compression-level: 6
           pi-gen-version: arm64
