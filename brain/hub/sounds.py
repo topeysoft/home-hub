@@ -213,7 +213,7 @@ class Sounds:
         self.sessions[dev.id] = {"sound": sid, "url": url, "title": title, "until": until, "started": time.time()}
         if minutes: self._timers[dev.id] = asyncio.create_task(self._stop_later(dev.id, minutes * 60))
         self._mark(dev)
-        self.hub.log.add("action", dev.id, None, f"sound {sid}" + (f" {minutes} min" if minutes else ""), source=source, detail={"sound": sid, "minutes": minutes})
+        self.hub.log.add("action", dev.id, None, f"sound {sid}" + (f" {minutes} min" if minutes else ""), source=source, detail={"sound": sid, "minutes": minutes, "url": url})
         return self.describe(dev.id)
 
     async def _cast(self, dev, url, title, suffix):

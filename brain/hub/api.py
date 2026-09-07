@@ -1001,9 +1001,12 @@ async def stream(ws: WebSocket):
         hub.streams.discard(ws)
 
 
+# Speakers fetch sounds from here (byte ranges served). Mounted before the panel's catch-all below, which would
+# otherwise answer every /sounds/... path with its own 404 and the speaker would sit at idle with the title showing.
+SOUNDS_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/sounds", StaticFiles(directory=SOUNDS_DIR), name="sounds")
+
 # The wall panel / phone app, built with `npm run build` in ../app. Mounted last so API routes win.
 DIST = Path(__file__).resolve().parent.parent.parent / "app" / "dist"
 if DIST.exists():
     app.mount("/", StaticFiles(directory=DIST, html=True), name="app")
-SOUNDS_DIR.mkdir(parents=True, exist_ok=True)
-app.mount("/sounds", StaticFiles(directory=SOUNDS_DIR), name="sounds")   # speakers fetch from here; byte ranges served
