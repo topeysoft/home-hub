@@ -13,7 +13,9 @@ permissions:
 
 jobs:
   image:
-    runs-on: ubuntu-latest
+    # A native arm64 runner (free for public repositories): pi-gen builds the 64-bit image without emulation, several
+    # times faster, and sidesteps the binfmt trouble that stops Trixie builds on x86 runners (usimd/pi-gen-action#179).
+    runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v4
       - name: Which code the image carries
@@ -24,16 +26,11 @@ jobs:
           cat driver-layer/host/pi-image/stage-hub/00-home-hub/files/home-hub.conf
       - name: Room on the runner
         # The action's own "increase-runner-disk-size" purges packages with apt and fails on today's runner image
-        # (exit 100). Deleting the big toolchains nobody needs here frees the same ~30 GB without apt.
+        # (exit 100). Deleting the big toolchains nobody needs here frees space without apt; missing paths are fine.
         run: |
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /usr/share/swift /usr/local/share/boost /opt/hostedtoolcache/CodeQL /usr/local/lib/node_modules
           sudo docker image prune -af >/dev/null 2>&1 || true
           df -h /
-      - uses: docker/setup-qemu-action@v3
-        # Registers QEMU for arm64 in the kernel's binfmt table with the fix-binary flag, so the emulator is found from
-        # inside pi-gen's container. Without it pi-gen stops at "arm64: not supported on this machine/kernel".
-        with:
-          platforms: arm64
       - uses: usimd/pi-gen-action@v1
         id: build
         with:
