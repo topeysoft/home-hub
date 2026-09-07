@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { store, notify, loadRoutines, loadAssistant, visibleRooms } from './store'
-import { enableRoutine, draftRoutine, approveDraft, discardDraft, setAssistantKey, type Routine } from './api'
+import { enableRoutine, draftRoutine, approveDraft, discardDraft, setAssistantKey, setEntry, type Routine } from './api'
 import { routineWords } from './why'
 import Icon from './Icon.vue'
 
@@ -16,7 +16,20 @@ const groups = computed(() => {
   return [...by.keys()].sort((a, b) => rank(a) - rank(b))
     .map(id => ({ id, name: roomName(id), rules: by.get(id)! }))
 })
-const roomName = (id: string) => id === 'home' ? 'Whole house' : store.rooms.find(r => r.id === id)?.name ?? id
+const roomName = (id: string) => id === 'home' ? 'Whole house' : id === 'entry' ? 'Where you come in' : store.rooms.find(r => r.id === id)?.name ?? id
+const hasEntryRules = computed(() => store.routines.some(r => r.room === 'entry'))
+
+/* where you come in: the rooms an "entry" routine runs in */
+const pickable = computed(() => visibleRooms().filter(r => r.id !== 'unassigned'))
+const saving = ref(false)
+async function toggleEntry(id: string) {
+  if (saving.value) return
+  const was = store.entry
+  store.entry = was.includes(id) ? was.filter(x => x !== id) : [...was, id]
+  saving.value = true
+  try { store.entry = (await setEntry(store.entry)).entry } catch (e: any) { store.entry = was; notify(e.message, 'error') }
+  saving.value = false
+}
 const on = (r: Routine) => r.enabled !== false
 
 async function flip(r: Routine) {
@@ -104,6 +117,7 @@ onUnmounted(() => window.removeEventListener('keydown', keydown))
               <span class="routine-name">{{ d.name }}</span>
               <span class="routine-sub">{{ roomName(d.room) }} · {{ routineWords(d) }}</span>
               <span class="draft-said" v-if="d.said">You said: “{{ d.said }}”</span>
+              <span class="draft-said" v-else-if="d.why">Noticed: {{ d.why }}</span>
             </span>
             <span class="draft-actions">
               <button class="button small" :class="{ busy: busy === d.id }" @click="approve(d)">Approve</button>
@@ -113,8 +127,18 @@ onUnmounted(() => window.removeEventListener('keydown', keydown))
         </ul>
       </template>
 
+      <template v-if="hasEntryRules || store.entry.length">
+        <h3 class="label routines-head">Where you come in</h3>
+        <p class="sheet-status entry-hint">Tap the rooms you come home through. Routines for coming home run in those.</p>
+        <div class="chips">
+          <button v-for="r in pickable" :key="r.id" class="chip-btn" :class="{ on: store.entry.includes(r.id) }" :aria-pressed="store.entry.includes(r.id)" @click="toggleEntry(r.id)">
+            <Icon v-if="store.entry.includes(r.id)" name="check" :size="15" />{{ r.name }}
+          </button>
+        </div>
+      </template>
+
       <template v-for="g in groups" :key="g.id">
-        <h3 class="label routines-head">{{ g.name }}</h3>
+        <h3 class="label routines-head">{{ g.name }}<span class="routines-note" v-if="g.id === 'entry' && !store.entry.length"> · pick the rooms above first</span></h3>
         <ul class="routines">
           <li v-for="r in g.rules" :key="r.id" :class="{ off: !on(r) }">
             <span class="routine-text"><span class="routine-name">{{ r.name }}</span><span class="routine-sub">{{ routineWords(r) }}</span></span>
@@ -128,8 +152,8 @@ onUnmounted(() => window.removeEventListener('keydown', keydown))
         <p class="sheet-status">Some routines on the hub have a mistake in them and are skipped until it is fixed:</p>
         <ul class="routine-errors"><li v-for="e in store.routineErrors" :key="e">{{ e }}</li></ul>
       </div>
-      <p class="sheet-foot" v-if="store.assistant?.configured">A routine you ask for waits above until you approve it. Nothing runs without your OK.</p>
-      <p class="sheet-foot" v-else>For now, new routines are added on the hub itself. Connect the assistant to ask for one in plain words.</p>
+      <p class="sheet-foot" v-if="store.assistant?.configured">A routine you ask for waits above until you approve it, and so does one the hub notices you doing by hand. Nothing runs without your OK.</p>
+      <p class="sheet-foot" v-else>When the hub notices you choosing the same scene at the same time most days, it suggests a routine here. Connect the assistant to ask for one in plain words too.</p>
     </div>
   </div>
 </template>

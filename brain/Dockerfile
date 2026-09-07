@@ -14,7 +14,9 @@ COPY brain/requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 COPY brain/ ./
 COPY --from=panel /app/dist /srv/app/dist
-ENV HUB_DATA=/data HUB_PORT=8300 PYTHONUNBUFFERED=1
+ARG HUB_VERSION=dev
+ARG HUB_COMMIT=
+ENV HUB_DATA=/data HUB_PORT=8300 PYTHONUNBUFFERED=1 HUB_VERSION=$HUB_VERSION HUB_COMMIT=$HUB_COMMIT
 VOLUME /data
 EXPOSE 8300
 CMD ["python", "main.py"]

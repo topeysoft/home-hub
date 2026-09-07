@@ -144,7 +144,7 @@ function draw(t: number, dt: number) {
   if (moonA > 0) {
     const f = clamp((((hour + 24 - 19) % 24)) / 11)             // its slow arc across the night
     const q = props.quiet && W > H                              // a wide, awake panel has a rail on the left and a headline at the top
-    const mx = W * lerp(q ? .32 : .12, q ? .9 : .88, f), my = horizon - Math.sin(Math.PI * f) * (horizon - m * (q ? .3 : .12)) - m * .02
+    const mx = W * lerp(q ? .32 : .12, q ? .9 : .88, f), my = horizon - Math.sin(Math.PI * f) * (q ? m * .22 : horizon - m * .12) - m * .02
     const r = m * .028
     const glow = ctx.createRadialGradient(mx, my, r * .5, mx, my, r * 7)
     glow.addColorStop(0, rgb([214, 222, 240], .22 * moonA * (1 + .08 * Math.sin(t * .35)))); glow.addColorStop(1, rgb([214, 222, 240], 0))

@@ -42,5 +42,8 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            HUB_VERSION=${{ github.ref_type == 'tag' && github.ref_name || format('main-{0}', github.sha) }}
+            HUB_COMMIT=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

@@ -33,5 +33,5 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: bash -n install.sh driver-layer/radios.sh driver-layer/host/firstboot.sh
-      - run: sudo apt-get install -y shellcheck >/dev/null && shellcheck -S warning install.sh driver-layer/radios.sh driver-layer/host/firstboot.sh
+      - run: bash -n install.sh driver-layer/radios.sh driver-layer/host/firstboot.sh driver-layer/host/update.sh driver-layer/host/restore.sh driver-layer/host/pi-image/stage-hub/prerun.sh driver-layer/host/pi-image/stage-hub/00-home-hub/*.sh
+      - run: sudo apt-get install -y shellcheck >/dev/null && shellcheck -S warning -e SC2154 install.sh driver-layer/radios.sh driver-layer/host/firstboot.sh driver-layer/host/update.sh driver-layer/host/restore.sh driver-layer/host/pi-image/stage-hub/prerun.sh driver-layer/host/pi-image/stage-hub/00-home-hub/*.sh

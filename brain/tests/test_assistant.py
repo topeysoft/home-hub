@@ -107,6 +107,40 @@ class AssistantTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(AssistantError): a.approve("den-idle")
         self.assertEqual([r["new"] for r in self.hub.log.of("draft")], ["proposed", "proposed", "approved", "discarded"])
 
+    def tap(self, room, state, day, hour, minute):
+        from datetime import datetime
+        from tests.test_rules import TZ
+        ts = datetime(2026, 9, day, hour, minute, tzinfo=TZ).timestamp()
+        self.hub.log.add("intent", room, None, state, source="user"); self.hub.log.rows[-1]["ts"] = ts
+
+    def test_a_habit_becomes_a_draft_once_and_a_dismissed_one_stays_dismissed(self):
+        from datetime import datetime
+        from tests.test_rules import TZ
+        for day, minute in [(1, 2), (2, 9), (3, 0), (5, 12)]: self.tap("hall", "movie", day, 20, minute)     # four evenings, 8:00 to 8:12
+        for day in (1, 2): self.tap("den", "empty", day, 7, 30)                                            # only twice: not a habit
+        now = datetime(2026, 9, 6, 12, 0, tzinfo=TZ).timestamp()
+        a = Assistant(self.hub)
+        self.assertEqual([(h[0], h[1], h[2], h[3]) for h in a.habits(now)], [("hall", "movie", "20:09", 4)])
+        added = a.suggest(now)
+        self.assertEqual(len(added), 1)
+        d = added[0]
+        self.assertEqual((d["room"], d["when"], d["then"], d["by"]), ("hall", {"time": "20:09"}, {"intent": "movie"}, "assistant"))
+        self.assertIn("4 of the last 14 days", d["why"]); self.assertNotIn("said", d)
+        self.assertEqual(a.suggest(now), [])                                  # already a draft: not again
+        a.discard(d["id"])
+        self.assertEqual(a.suggest(now), [])                                  # turned down: stays down
+        self.assertIn("hall:movie:20", self.hub.settings.get("dismissed"))
+        self.assertEqual([r["id"] for r in self.hub.engine.rules], ["hall-evening"])   # nothing ever ran
+
+    def test_a_habit_already_covered_by_a_rule_is_not_suggested(self):
+        from datetime import datetime
+        from tests.test_rules import TZ
+        raw = json.loads(rules.RULES_PATH.read_text())
+        raw["rules"].append({"id": "movie-time", "name": "Movie at eight", "room": "hall", "when": {"time": "20:15"}, "then": {"intent": "movie"}})
+        rules.RULES_PATH.write_text(json.dumps(raw)); self.hub.engine.load(force=True)
+        for day in (1, 2, 3, 4): self.tap("hall", "movie", day, 20, 5)
+        self.assertEqual(Assistant(self.hub).suggest(datetime(2026, 9, 6, tzinfo=TZ).timestamp()), [])
+
     async def test_explain_reads_the_log_and_returns_prose(self):
         self.hub.log.add("intent", "hall", "unknown", "occupied", source="rule", detail={"rule": "hall-evening", "trigger": {"motion": "on"}})
         self.hub.log.add("state", "light.hall", "off", "on")

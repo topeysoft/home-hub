@@ -1,0 +1,11 @@
+# Watches for the file the brain writes when someone restores a backup from the panel.
+# install.sh copies this (with its own directory in place of /opt/home-hub) and enables it.
+[Unit]
+Description=Home Hub: watch for a restore request from the panel
+
+[Path]
+PathExists=/opt/home-hub/driver-layer/brain-data/restore.request
+Unit=home-hub-restore.service
+
+[Install]
+WantedBy=multi-user.target

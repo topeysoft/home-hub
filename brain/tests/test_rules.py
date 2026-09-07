@@ -24,7 +24,7 @@ class FakeLog:
 
 class FakeHub:
     def __init__(self):
-        self.tz, self.location, self.driver = TZ, LOC, "ready"
+        self.tz, self.location, self.driver, self.entry = TZ, LOC, "ready", []
         self.home, self.log, self.sent = Home(), FakeLog(), []
         self.home.rooms = {"hall": Room("hall", "Hallway"), "den": Room("den", "Den")}
         self.motion = Device("binary_sensor.hall_motion", "Hall motion", "hall", "motion", "off")

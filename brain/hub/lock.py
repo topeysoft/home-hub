@@ -20,10 +20,13 @@ def needs_code(method: str, path: str) -> bool:
     if path.startswith("/rooms/") and (m == "DELETE" or path.endswith("/rename")): return True
     if path.startswith("/devices/") and path.endswith(("/move", "/rename")): return True
     if path.startswith(("/flows", "/credentials")): return True
-    if path == "/location" and m == "POST": return True
+    if path in ("/location", "/home/entry") and m == "POST": return True
     if path.startswith("/rules") and m in ("PUT", "POST", "DELETE"): return True
+    if path == "/drafts/suggest": return False                                   # looking for habits changes nothing
     if path.startswith("/drafts/") and m in ("POST", "DELETE"): return True   # approving or discarding a suggestion; asking for one stays open
     if path == "/assistant/key": return True
+    if path == "/update" and m == "POST": return True
+    if path == "/backup" or (path == "/restore" and m == "POST"): return True   # the archive carries the house's keys
     if path.startswith("/pair") and m != "GET": return True
     return False
 

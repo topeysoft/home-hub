@@ -1,0 +1,12 @@
+# Runs update.sh once per request from the panel. Started by home-hub-update.path; never on its own.
+[Unit]
+Description=Home Hub: apply an update the panel asked for
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+Environment=HOME_HUB_DIR=/opt/home-hub
+ExecStart=/opt/home-hub/driver-layer/host/update.sh
+StandardOutput=journal
+TimeoutStartSec=0

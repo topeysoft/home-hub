@@ -5,15 +5,18 @@ turns state changes and the clock into firings, and every firing goes through th
 panel uses, logged with source="rule" and enough detail to say why. Deterministic on purpose: the
 assistant may draft a rule, a person approves it, this code runs it. Design: docs/phase4-intelligence.md.
 """
-import asyncio, json, logging, os, time
+import asyncio, json, logging, os, shutil, time
 from datetime import datetime, timedelta, time as dtime
 from pathlib import Path
 from . import sun
 from .intents import RoomState, SERVICE
 from .presence import word as presence_word
+from .settings import DATA
 
 log = logging.getLogger("hub.rules")
-RULES_PATH = Path(__file__).resolve().parent.parent / "rules.json"
+SEED = Path(__file__).resolve().parent.parent / "rules.json"   # the repo's copy: a new hub starts from it
+RULES_PATH = DATA / "rules.json"                                # the hub's own, in the data volume; panel switches and drafts live here
+ENTRY = "entry"   # a rule's room may be "entry": every room the family comes in through, chosen on the panel
 
 TRIGGERS = ("motion", "contact", "device", "idle", "time", "sun", "presence", "intent")
 OUTCOMES = ("intent", "device", "notify")
@@ -71,7 +74,7 @@ def validate(raw, rooms: set) -> tuple[list, list]:
             if not rid or not isinstance(rid, str): raise ValueError("needs an id")
             if rid in seen: raise ValueError("duplicate id")
             room = r.get("room")
-            if room != "home" and room not in rooms: raise ValueError(f"unknown room {room!r}")
+            if room not in ("home", ENTRY) and room not in rooms: raise ValueError(f"unknown room {room!r}")
             when = r.get("when")
             if not isinstance(when, dict): raise ValueError('needs a "when"')
             kinds = [k for k in when if k in TRIGGERS]
@@ -119,6 +122,9 @@ class Engine:
     # ---- the file ----
     def load(self, force=False):
         """Re-read rules.json when it changed. A file that will not parse keeps the previous rules running."""
+        if not RULES_PATH.exists() and SEED.exists() and SEED.resolve() != RULES_PATH.resolve():
+            try: RULES_PATH.parent.mkdir(parents=True, exist_ok=True); shutil.copy(SEED, RULES_PATH); log.info("rules seeded from %s", SEED)
+            except OSError as e: log.warning("could not seed rules.json: %s", e)
         try:
             mtime = RULES_PATH.stat().st_mtime
         except FileNotFoundError:
@@ -153,13 +159,19 @@ class Engine:
         self.load()
         return next((r for r in self.rules if r["id"] == rule_id), None)
 
+    def _concrete(self, r):
+        """A rule for "entry" is one rule per room the family comes in through; with none chosen, it is nothing."""
+        if r["room"] != ENTRY: return [r]
+        return [{**r, "room": rid} for rid in self.hub.entry if rid in self.hub.home.rooms]
+
     def _active(self, kind=None, room_id=None):
         self.load()
         for r in self.rules:
             if not r.get("enabled", True): continue
             if kind and kind not in r["when"]: continue
-            if room_id and r["room"] != room_id: continue
-            yield r
+            for rr in self._concrete(r):
+                if room_id and rr["room"] != room_id: continue
+                yield rr
 
     # ---- signals ----
     def now(self) -> datetime:
@@ -341,6 +353,11 @@ class Engine:
         r = self.get(rule_id)
         if not r: return None
         now, ts = self.now(), time.time()
+        if r["room"] == ENTRY:
+            rooms = self._concrete(r)
+            if not rooms: return {"rule": r, "would": "wait", "next": None, "checked": [], "time": now.strftime("%H:%M"),
+                                  "sun": self.value("sun", None, None, now), "room": None, "note": "no entry rooms chosen yet"}
+            r = rooms[0]                                 # the first entry room stands for them all here
         target = self.hub.home.rooms.get(r["room"])
         checked = [self.check(c, target, now) for c in r.get("if") or []]
         held = bool(target and target.hold_until and target.hold_until > ts and "intent" in r["then"])

@@ -4,7 +4,7 @@ import { store, LABELS, deviceById, routineById, cap } from './store'
 
 const cap1 = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 const label = (s: string | null | undefined, home = false) => home && s === 'asleep' ? 'Bedtime' : LABELS[s ?? ''] ?? (s && s !== 'unknown' ? cap1(s) : 'Set')
-export const placeName = (id: string) => id === 'home' ? 'the whole house' : `the ${store.rooms.find(r => r.id === id)?.name ?? id}`
+export const placeName = (id: string) => id === 'home' ? 'the whole house' : id === 'entry' ? 'where you come in' : `the ${store.rooms.find(r => r.id === id)?.name ?? id}`
 const devName = (id: string | undefined) => (id && deviceById(id)?.name) || 'something'
 
 /* ---------- time, said plainly ---------- */
@@ -73,7 +73,7 @@ export function condWords(c: any[]): string {
 }
 function outcomeWords(r: Routine): string {
   const th = r.then
-  if ('intent' in th) return r.room === 'home' ? `Sets the whole house to ${label(th.intent, true)}.` : `Sets the room to ${label(th.intent)}.`
+  if ('intent' in th) return r.room === 'home' ? `Sets the whole house to ${label(th.intent, true)}.` : r.room === 'entry' ? `Sets those rooms to ${label(th.intent)}.` : `Sets the room to ${label(th.intent)}.`
   if ('device' in th) return `${cap1(devName(th.device))}: ${th.action}.`
   if ('notify' in th) return `Sends a note: “${th.notify}”.`
   return ''

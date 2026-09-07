@@ -1,5 +1,5 @@
 import { reactive } from 'vue'
-import { getHome, getEvents, getAmbient, getScenes, getStatus, getDiscovered, getRoutines, getAssistant, connect, act, setIntent, setHomeIntent, type Room, type Device, type Home, type Event, type Ambient, type Rules, type Status, type Found, type Intent, type Routine, type Assistant } from './api'
+import { getHome, getEvents, getAmbient, getScenes, getStatus, getDiscovered, getRoutines, getAssistant, getPresence, getHealth, connect, act, setIntent, setHomeIntent, type Room, type Device, type Home, type Event, type Ambient, type Rules, type Status, type Found, type Intent, type Routine, type Assistant, type Presence, type Note } from './api'
 import { sunPosition, sunGuess, moonPhase } from './sun'
 
 export const store = reactive({
@@ -11,12 +11,17 @@ export const store = reactive({
   ambient: { location: null, weather: null } as Ambient,
   ambientLoaded: false,
   rules: {} as Rules,                        // scene rules from the brain, to tell whether a room still matches its scene
-  sheet: (['location', 'add', 'code', 'why', 'routines'].includes(new URLSearchParams(location.search).get('sheet') ?? '') ? new URLSearchParams(location.search).get('sheet') : null) as null | 'location' | 'add' | 'code' | 'why' | 'routines',   // the few soft sheets the panel has; ?sheet=location previews one
+  sheet: (['location', 'add', 'code', 'why', 'routines', 'hub'].includes(new URLSearchParams(location.search).get('sheet') ?? '') ? new URLSearchParams(location.search).get('sheet') : null) as null | 'location' | 'add' | 'code' | 'why' | 'routines' | 'hub',   // the few soft sheets the panel has; ?sheet=location previews one
   whyRoom: new URLSearchParams(location.search).get('room') as string | null,   // the room the why sheet is about; ?sheet=why&room=kitchen previews it
   routines: [] as Routine[],                 // the brain's rules, for the routines sheet and to name a rule on a room
   routineErrors: [] as string[],             // rules the brain could not read, in its own words
   drafts: [] as Routine[],                   // routines the assistant wrote that wait for a person's OK
+  entry: [] as string[],                     // the rooms people come in through; routines for "entry" run there
   assistant: null as Assistant | null,       // whether the hub can talk to the model at all
+  presence: null as Presence | null,         // who is home, from the brain; null until it has said
+  notes: [] as Note[],                       // what needs a look, in the brain's words
+  updating: false,                           // this screen asked for an update; cleared when a new build answers
+  restoring: false,                          // this screen sent a backup back; cleared when the hub returns
   previewSetup: new URLSearchParams(location.search).get('setup') === '1',   // ?setup=1 previews first run; cleared by Open Home
   status: null as Status | null,            // where the hub is in its life: engine down, fresh, ready; and whether setup finished
   homeName: '' as string,
@@ -93,6 +98,10 @@ export function activity(r: Room): string {
   const open = r.devices.filter(d => cap(d) === 'cover' && d.state === 'open').length
   if (open) parts.push(open === 1 ? 'Blind open' : `${open} blinds open`)
   if (r.devices.some(d => cap(d) === 'lock' && d.state === 'unlocked')) parts.push('Unlocked')
+  const plugs = r.devices.filter(d => cap(d) === 'switch' && d.state === 'on')
+  if (plugs.length === 1) parts.push(`${shortName(plugs[0], r)} on`); else if (plugs.length) parts.push(`${plugs.length} plugs on`)
+  for (const d of r.devices.filter(d => cap(d) === 'fan' && d.state === 'on')) parts.push(`${shortName(d, r)} on`)
+  for (const d of r.devices.filter(d => cap(d) === 'vacuum' && d.state === 'cleaning')) parts.push(`${shortName(d, r)} cleaning`)
   if (r.devices.some(d => cap(d) === 'motion' && d.state === 'on')) parts.push('Motion')
   if (r.devices.some(d => cap(d) === 'camera' && d.state === 'recording')) parts.push('Recording')
   if (parts.length) return parts.join(' · ')
@@ -108,11 +117,20 @@ export function whatsOn(): Device[] {
 }
 export function houseLine(): string {
   if (!store.loaded) return store.error || 'Finding the house…'
-  const on = whatsOn()
-  if (!on.length) return `${store.homeName || 'The house'} is quiet.`
+  const on = whatsOn(), out = store.presence?.somebody === false
   const rooms = new Set(on.map(d => d.room_id))
-  if (rooms.size === 1) return `Something is on in the ${roomOf(on[0])?.name ?? 'house'}.`
-  return `Something is on in ${rooms.size} rooms.`
+  const what = !on.length ? '' : rooms.size === 1 ? `something is on in the ${roomOf(on[0])?.name ?? 'house'}` : `something is on in ${rooms.size} rooms`
+  if (out) return what ? `Nobody's home, but ${what}.` : `Nobody's home${sinceText()}. ${store.homeName || 'The house'} is quiet.`
+  if (!what) return `${store.homeName || 'The house'} is quiet.`
+  return what.charAt(0).toUpperCase() + what.slice(1) + '.'
+}
+/** " since 5:10 pm", or " since yesterday", or nothing when the brain has no time for it. */
+function sinceText(): string {
+  const s = store.presence?.since; if (!s) return ''
+  const d = new Date(s * 1000), today = new Date(); today.setHours(0, 0, 0, 0)
+  if (d.getTime() >= today.getTime()) return ` since ${d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
+  if (d.getTime() >= today.getTime() - 86400000) return ' since yesterday'
+  return ` since ${d.toLocaleDateString([], { weekday: 'long' })}`
 }
 
 /* ---------- scenes: every button says what it will do ---------- */
@@ -191,6 +209,7 @@ export async function perform(d: Device, action: string, data?: Record<string, u
 /* ---------- recent activity, told plainly ---------- */
 export const LABELS: Record<string, string> = { movie: 'Movie', guests: 'Guests', asleep: 'Sleep', empty: 'All off', away: 'Everything off', occupied: 'In use' }
 export function describe(ev: Event): { text: string; icon: string } | null {
+  if (ev.kind === 'presence') return ev.new === 'nobody' ? { text: 'Everyone is out', icon: 'leave' } : ev.new === 'somebody' ? { text: 'Someone is home', icon: 'home' } : null
   if (ev.kind === 'intent') {
     if (ev.subject === 'home') return { text: ev.new === 'asleep' ? 'Bedtime' : LABELS[ev.new ?? ''] ?? ev.new ?? '', icon: ev.new === 'asleep' ? 'moon' : 'leave' }
     const r = store.rooms.find(r => r.id === ev.subject)
@@ -242,6 +261,13 @@ export async function loadRoutines() {
 export async function loadAssistant() {
   try { store.assistant = await getAssistant() } catch {}
 }
+export async function loadPresence() {
+  try { store.presence = await getPresence() } catch {}
+}
+export async function loadHealth() {
+  if (store.status?.driver !== 'ready') return
+  try { store.notes = (await getHealth()).notes } catch {}
+}
 export const routineById = (id: string) => store.routines.find(r => r.id === id)
 export function openWhy(roomId: string) { store.whyRoom = roomId; store.sheet = 'why' }
 
@@ -259,7 +285,7 @@ export async function refreshFound() {
 function foundSoon() { clearTimeout(foundTimer); foundTimer = window.setTimeout(refreshFound, 2500) }
 
 /* ---------- lifecycle ---------- */
-function applyHome(h: Home) { store.rooms = h.rooms; store.homeName = h.name || ''; store.tempUnit = h.temp_unit || ''; store.loaded = true; store.error = ''; foundSoon(); if (store.homeName) document.title = store.homeName }
+function applyHome(h: Home) { store.rooms = h.rooms; store.entry = h.entry ?? []; store.homeName = h.name || ''; store.tempUnit = h.temp_unit || ''; store.loaded = true; store.error = ''; foundSoon(); if (store.homeName) document.title = store.homeName }
 /** A room was set to a state by a rule or by another screen: keep the chip honest without a reload. */
 function applyIntent(i: Intent) {
   const r = store.rooms.find(r => r.id === i.room)
@@ -275,21 +301,22 @@ let stop: (() => void) | undefined, lostTimer: number | undefined, skyTimer: num
 export async function load() {
   await refreshStatus()
   try { applyHome(await getHome()) } catch { store.error = 'The hub is not answering.' }
-  loadAmbient(); loadRules(); loadRoutines(); loadAssistant()
+  loadAmbient(); loadRules(); loadRoutines(); loadAssistant(); loadPresence(); loadHealth()
 }
 let foundPoll: number | undefined
 export async function start() {
   await load()
   updateSky(); clearInterval(skyTimer); skyTimer = window.setInterval(updateSky, 30000)
   clearInterval(foundPoll); foundPoll = window.setInterval(refreshFound, 60000)
-  stop = connect({ device: applyDevice, home: applyHome, intent: applyIntent, drafts: d => { store.drafts = d; eventsSoon() }, ambient: a => { store.ambient = a; updateSky() }, status: s => {
-    const was = store.status?.driver
+  stop = connect({ device: applyDevice, home: applyHome, intent: applyIntent, drafts: d => { store.drafts = d; eventsSoon() }, presence: p => { store.presence = p; eventsSoon() }, ambient: a => { store.ambient = a; updateSky() }, status: s => {
+    const was = store.status?.driver, version = store.status?.version
     store.status = s
+    if (store.updating && version && s.version && s.version !== version) { store.updating = false; notify(`Updated to ${s.version}.`) }
     if (s.driver === 'ready' && was !== 'ready') { load() }   // the engine just came up: read the house
   }, link: v => {
     store.linkUp = v
     clearTimeout(lostTimer)
-    if (v) { store.linkLost = false; if (!store.loaded) load() }
+    if (v) { store.linkLost = false; if (store.restoring && store.linkLost === false && store.loaded) { store.restoring = false; notify('Restored. Welcome back.'); load() } else if (!store.loaded) load() }
     else lostTimer = window.setTimeout(() => (store.linkLost = true), 4000)   // a blink on startup is not worth a banner
   } })
 }

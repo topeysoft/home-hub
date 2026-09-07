@@ -12,9 +12,12 @@ the why sheet (`app/src/WhySheet.vue`) and the routines sheet (`app/src/Routines
 only), with the wording in `app/src/why.ts`. The assistant (milestone 5) authors and explains:
 `brain/hub/assistant.py` turns a sentence into a draft under `drafts` (structured output, validated by the
 same `validate` the file goes through, one retry with the errors), the routines sheet shows drafts with
-Approve and Discard, and the why sheet takes a question answered from the log. Suggesting from patterns
-is not built. The key comes from the panel (`/assistant/key`, behind the settings code) or
-`ANTHROPIC_API_KEY` on the hub. The panel does not yet show who is home.
+Approve and Discard, and the why sheet takes a question answered from the log. Suggesting is built without a model:
+once a day the brain looks for the same scene chosen by hand in the same half hour on four of the last
+fourteen days and writes a `time` draft with a *noticed* line; a discarded habit is remembered and not
+offered again. The key comes from the panel (`/assistant/key`, behind the settings code) or
+`ANTHROPIC_API_KEY` on the hub. The home screen's house line says when nobody is home and since when, and Recently
+shows people leaving and returning. Entry rooms are chosen on the routines sheet.
 
 ## What we have
 
@@ -60,7 +63,11 @@ motion_at:   1788659400.0 | null   # last motion from any motion device in the r
 
 ## Rules as data
 
-`brain/rules.json`, next to `scenes.json`, re-read on change the same way.
+`brain/rules.json`, next to `scenes.json`, re-read on change the same way. On a hub both live in the data
+volume (`HUB_DATA`, next to `settings.json` and the event log), seeded from the repo copies the first time,
+so panel switches, drafts and hold lengths survive an image update. A rule's `room` may also be `entry`:
+every room the family comes in through, chosen on the panel (`POST /home/entry`); such a rule runs once
+per entry room and does nothing while none are chosen.
 
 ```json
 {

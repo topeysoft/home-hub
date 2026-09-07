@@ -1,0 +1,57 @@
+# The flash-and-go image: Raspberry Pi OS Lite (64-bit) with the hub already on it. Built with pi-gen
+# on every version tag (and by hand from the Actions tab), attached to the GitHub release as a .img.xz
+# with its checksum. See driver-layer/host/pi-image/README.md.
+name: pi image
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Which code the image carries
+        run: |
+          mkdir -p driver-layer/host/pi-image/stage-hub/00-home-hub/files
+          printf 'HOME_HUB_REF=%s\nHOME_HUB_REPO=https://github.com/%s.git\n' "${GITHUB_REF_NAME}" "${GITHUB_REPOSITORY}" \
+            > driver-layer/host/pi-image/stage-hub/00-home-hub/files/home-hub.conf
+          cat driver-layer/host/pi-image/stage-hub/00-home-hub/files/home-hub.conf
+      - uses: usimd/pi-gen-action@v1
+        id: build
+        with:
+          image-name: home-hub-${{ github.ref_name }}
+          stage-list: stage0 stage1 stage2 ./driver-layer/host/pi-image/stage-hub
+          hostname: hub
+          username: hub
+          enable-ssh: 0
+          disable-first-boot-user-rename: 1
+          locale: en_US.UTF-8
+          keyboard-layout: English (US)
+          keyboard-keymap: us
+          timezone: UTC
+          compression: xz
+          compression-level: 6
+          pi-gen-version: arm64
+          release: trixie
+          increase-runner-disk-size: true
+      - name: Checksum
+        run: |
+          IMG="${{ steps.build.outputs.image-path }}"
+          (cd "$(dirname "$IMG")" && sha256sum "$(basename "$IMG")" | tee "$(basename "$IMG").sha256")
+          ls -lh "$(dirname "$IMG")"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: home-hub-image
+          path: ${{ steps.build.outputs.image-path }}*
+          retention-days: 14
+      - uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/v')
+        with:
+          files: ${{ steps.build.outputs.image-path }}*
+          generate_release_notes: true

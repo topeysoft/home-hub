@@ -1,11 +1,12 @@
-import asyncio, json, logging, time, urllib.parse, urllib.request
+import asyncio, json, logging, shutil, time, urllib.parse, urllib.request
 from contextlib import asynccontextmanager
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from pathlib import Path
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import Response, JSONResponse, StreamingResponse
+from fastapi.responses import Response, JSONResponse, FileResponse, StreamingResponse
+from starlette.background import BackgroundTask
 from fastapi import Request
 from . import ha_setup
 from .ha_adapter import HAAdapter, AuthError
@@ -18,6 +19,9 @@ from .comfort import Comfort
 from .rules import Engine
 from .presence import Presence, WATCHED, word as presence_word
 from .assistant import Assistant, AssistantError
+from .updates import Updates
+from .health import Health
+from .backup import Backup
 from .settings import Settings, DATA, env_file
 from .lock import Lock, needs_code
 from .pairing import Pairing
@@ -50,6 +54,7 @@ class Hub:
         self.streams: set[WebSocket] = set()
         self.driver, self.reason = "down", ""
         self.location = self.settings.get("location")   # {"name", "lat", "lon"}: chosen in the panel, else HA's config, else HOME_LAT/HOME_LON in .env
+        self.entry: list = list(self.settings.get("entry") or [])   # room ids the family comes in through; rules for "entry" run there
         self.weather = None
         self.temp_unit = "°F"
         self.tz = datetime.now().astimezone().tzinfo   # the home's zone, from HA's config once connected
@@ -59,6 +64,9 @@ class Hub:
         self.engine = Engine(self)                     # rules: signals in, room intents out
         self.presence = Presence(self)                 # who is home, from HA's persons and the alarm's mode
         self.assistant = Assistant(self)               # writes drafts and explains from the log; never runs anything
+        self.updates = Updates(self)                   # which build this is, whether a newer one exists, and the panel's ask
+        self.health = Health(self)                     # what needs a look, as sentences
+        self.backup = Backup(self)                     # the house as one file, and back
         self._timers: dict[str, asyncio.Task] = {}     # things the brain will do later for a device (switch a fan off)
         self.comfort = Comfort(self)                   # a thermostat sensing its room from another sensor
         self._comfort_task = None
@@ -83,7 +91,7 @@ class Hub:
                 "owner": (self.settings.get("owner") or {}).get("name"), "home": self.settings.get("home_name"),
                 "location": bool(self.location), "rooms": sum(1 for r in self.home.rooms.values() if r.id != "unassigned"),
                 "devices": len(self.home.devices), "drivers": self.provision.summary(), "problems": self.provision.problems,
-                "locked": self.lock.locked}
+                "locked": self.lock.locked, "version": self.updates.version, "update": self.updates.summary()}
 
     def _set(self, driver, reason=""):
         if (driver, reason) == (self.driver, self.reason): return
@@ -158,7 +166,15 @@ class Hub:
         if self.driver != "ready": raise HTTPException(503, "The hub is still starting.")
 
     def home_dict(self):
-        return {"name": self.settings.get("home_name"), "temp_unit": self.temp_unit, **self.home.to_dict()}
+        return {"name": self.settings.get("home_name"), "temp_unit": self.temp_unit, "entry": self.entry, **self.home.to_dict()}
+
+    def set_entry(self, rooms):
+        """Which rooms people come in through. Unknown ids are dropped rather than refused: a room may be renamed later."""
+        self.entry = [r for r in dict.fromkeys(rooms or []) if isinstance(r, str) and r in self.home.rooms and r != "unassigned"]
+        self.settings.set(entry=self.entry)
+        self.log.add("home", "entry", None, ",".join(self.entry), source="user")
+        self._broadcast(json.dumps({"type": "home", "home": self.home_dict()}))
+        return self.entry
 
     # ---- setup, driven by the panel ----
     async def create_owner(self, name: str, home: str):
@@ -389,8 +405,10 @@ async def lifespan(app):
     hub._tick_task = asyncio.create_task(hub.engine.run())
     hub._drivers_task = asyncio.create_task(hub.provision.run())
     hub._comfort_task = asyncio.create_task(hub._comfort_loop())
+    hub._update_task = asyncio.create_task(hub.updates.run())
+    hub._suggest_task = asyncio.create_task(hub.assistant.run())
     yield
-    for t in (hub._loop_task, hub._tick_task, hub._drivers_task, hub._comfort_task): t.cancel()
+    for t in (hub._loop_task, hub._tick_task, hub._drivers_task, hub._comfort_task, hub._update_task, hub._suggest_task): t.cancel()
     if hub.ha: await hub.ha.close()
 
 
@@ -804,6 +822,13 @@ async def room_intent(room_id: str, state: RoomState):
     return {"ok": True, "calls": done, "failed": failed}
 
 
+@app.post("/home/entry")
+def home_entry(body: dict):
+    """{"rooms": ["living_room", "garage"]}: where the family comes in. Routines written for "entry" run in these."""
+    hub.ready()
+    return {"entry": hub.set_entry(body.get("rooms"))}
+
+
 @app.post("/home/intent/{state}")
 async def home_intent(state: RoomState):
     hub.ready()
@@ -818,6 +843,43 @@ def room_why(room_id: str, limit: int = 5):
     if room_id != "home" and room_id not in hub.home.rooms: raise HTTPException(404, "unknown room")
     subjects = "home" if room_id == "home" else (room_id, "home")
     return hub.log.recent(limit, subject=subjects, kinds=("intent", "held", "shadowed", "failed"))
+
+
+# ---------- health ----------
+@app.get("/health")
+def health():
+    """What needs a look, in plain words: [{"kind", "text", "since", "subject"}]. Empty is good news."""
+    return {"notes": hub.health.notes() if hub.driver == "ready" else []}
+
+
+# ---------- backup and restore ----------
+@app.get("/backup")
+def backup():
+    """The house as one .tar.gz. Behind the settings code: it holds the engine's key and the code's hash."""
+    path = hub.backup.make()
+    return FileResponse(path, media_type="application/gzip", filename=path.name, background=BackgroundTask(shutil.rmtree, path.parent, True))
+
+
+@app.post("/restore")
+async def restore(request: Request):
+    """The archive as the request body. Parked for the host, which stops the house, unpacks and starts it again."""
+    try: return hub.backup.receive(await request.body())
+    except ValueError as e: raise HTTPException(400, str(e))
+
+
+# ---------- updates ----------
+@app.get("/update")
+def update_status(): return hub.updates.summary()
+
+
+@app.post("/update/check")
+async def update_check(): return await hub.updates.check()
+
+
+@app.post("/update")
+def update_request():
+    """Install the update: the host does it, the panel watches. Behind the settings code."""
+    return hub.updates.request()
 
 
 # ---------- the assistant: writes and explains, never runs ----------
@@ -842,6 +904,13 @@ async def make_draft(body: dict):
     hub.ready()
     try: return await hub.assistant.draft(body.get("text", ""))
     except AssistantError as e: raise HTTPException(e.status, str(e))
+
+
+@app.post("/drafts/suggest")
+def suggest_drafts():
+    """Look for habits now instead of waiting for the daily pass. Adds drafts at most; runs nothing."""
+    hub.ready()
+    return {"added": hub.assistant.suggest()}
 
 
 @app.post("/drafts/{rule_id}/approve")

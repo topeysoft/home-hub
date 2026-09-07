@@ -2,10 +2,12 @@ import { request } from './code'
 export type Device = { id: string; name: string; room_id: string; capability: string; state: string; attrs: Record<string, any>; hw?: string | null; own_room?: boolean }
 export type Room = { id: string; name: string; devices: Device[]; intent: string; set_by?: string | null; hold_until?: number | null; motion_at?: number | null }
 export type Intent = { room: string; intent: string; set_by: string | null; hold_until: number | null }
-export type Home = { name?: string | null; temp_unit?: string; rooms: Room[] }
+export type Home = { name?: string | null; temp_unit?: string; entry?: string[]; rooms: Room[] }   // entry: the rooms people come in through
 export type Driver = 'down' | 'fresh' | 'needs-login' | 'connecting' | 'ready'
 export type Part = { id: string; name: string; state: 'unknown' | 'off' | 'adding' | 'ready' | 'failed' | 'sign-in' | 'waiting'; text: string; port: number }
-export type Status = { driver: Driver; reason: string; setup_done: boolean; locked?: boolean; owner: string | null; home: string | null; location: boolean; rooms: number; devices: number; drivers: Part[]; problems?: Problem[] }
+export type Update = { version: string; commit: string; latest: { sha: string; when: string; title: string } | null; available: boolean | null; checked: number | null; requested: boolean; state: { state: 'running' | 'done' | 'failed'; started?: number; finished?: number; commit?: string } | null; error: string | null }
+export type Status = { driver: Driver; reason: string; setup_done: boolean; locked?: boolean; owner: string | null; home: string | null; location: boolean; rooms: number; devices: number; drivers: Part[]; problems?: Problem[]; version?: string; update?: Update }
+export type Note = { kind: 'offline' | 'storage' | 'driver' | 'update'; text: string; since: number | null; subject: string | null }
 export type Found = { flow_id: string; handler: string; kind: string; title: string; source: string }
 export type CatalogItem = { domain: string; name: string; brand?: string | null; local: boolean }
 export type Field = { name: string; kind: 'text' | 'password' | 'number' | 'boolean' | 'select' | 'section'; label: string; hint: string; required: boolean; default: any; options?: { value: any; label: string }[]; fields?: Field[]; expanded?: boolean }
@@ -16,6 +18,11 @@ export type Weather = { id: string; condition: string; temperature: number | nul
 export type Place = { name: string; lat: number; lon: number; tz?: string | null }
 export type Ambient = { location: Place | null; weather: Weather | null }
 export type Event = { ts: number; kind: string; subject: string; old: string | null; new: string | null; source: string; detail: string | null }
+/* Who is home, as the brain sees it: null while it cannot tell (no people, no alarm). */
+export type Presence = { somebody: boolean | null; since: number | null; source: 'people' | 'alarm' | null; people: { name: string; home: boolean | null }[]; alarm: string | null }
+export async function getPresence(): Promise<Presence> {
+  const r = await request('/presence'); if (!r.ok) await fail(r); return r.json()
+}
 
 const json = { 'Content-Type': 'application/json' }
 async function fail(r: Response): Promise<never> {
@@ -95,11 +102,27 @@ export async function getWhy(roomId: string, limit = 6): Promise<Event[]> {
   const r = await request(`/rooms/${encodeURIComponent(roomId)}/why?limit=${limit}`); if (!r.ok) await fail(r); return r.json()
 }
 /* Routines: the brain's rules.json, read whole and switched on or off one at a time. The panel never edits one here. */
-export type Routine = { id: string; name: string; room: string; when: Record<string, any>; if?: any[][]; then: Record<string, any>; enabled?: boolean; by?: string; said?: string; created?: number }
+export type Routine = { id: string; name: string; room: string; when: Record<string, any>; if?: any[][]; then: Record<string, any>; enabled?: boolean; by?: string; said?: string; why?: string; noticed?: string; created?: number }
 export type RoutineFile = { rules: Routine[]; drafts?: Routine[]; valid: boolean; errors: string[] }
 export async function getRoutines(): Promise<RoutineFile> {
   const r = await request('/rules'); if (!r.ok) await fail(r); return r.json()
 }
+export const requestUpdate = () => post<Update>('/update')
+/** The house as one file, fetched with the code and handed to the browser as a download. */
+export async function downloadBackup(): Promise<void> {
+  const r = await request('/backup'); if (!r.ok) await fail(r)
+  const name = /filename\*?=(?:UTF-8'')?"?([^";]+)/.exec(r.headers.get('content-disposition') ?? '')?.[1] ?? 'home-hub-backup.tar.gz'
+  const url = URL.createObjectURL(await r.blob())
+  const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove()
+  window.setTimeout(() => URL.revokeObjectURL(url), 60000)
+}
+export async function restoreBackup(file: File): Promise<{ ok: boolean; manifest: { home?: string; owner?: string; made?: number; version?: string } }> {
+  const r = await request('/restore', { method: 'POST', headers: { 'Content-Type': 'application/gzip' }, body: file }); if (!r.ok) await fail(r); return r.json()
+}
+export async function getHealth(): Promise<{ notes: Note[] }> {
+  const r = await request('/health'); if (!r.ok) await fail(r); return r.json()
+}
+export const setEntry = (rooms: string[]) => post<{ entry: string[] }>('/home/entry', { rooms })
 export const enableRoutine = (id: string, enabled: boolean) => post<{ ok: boolean; enabled: boolean }>(`/rules/${encodeURIComponent(id)}/enable`, { enabled })
 /* The assistant: it writes drafts and explains from the log. It has no call that changes a device. */
 export type Assistant = { available: boolean; configured: boolean; source: 'panel' | 'env' | null; model: string }
@@ -128,7 +151,7 @@ export async function setHomeIntent(state: string) {
 export const imageUrl = (id: string) => `/devices/${encodeURIComponent(id)}/image?t=${Date.now()}`
 
 /** Live updates from the brain. Reconnects with backoff; reports link state. */
-export function connect(on: { device: (d: Device) => void; home: (h: Home) => void; ambient: (a: Ambient) => void; status: (s: Status) => void; intent: (i: Intent) => void; drafts: (d: Routine[]) => void; link: (up: boolean) => void }) {
+export function connect(on: { device: (d: Device) => void; home: (h: Home) => void; ambient: (a: Ambient) => void; status: (s: Status) => void; intent: (i: Intent) => void; drafts: (d: Routine[]) => void; presence: (p: Presence) => void; link: (up: boolean) => void }) {
   let delay = 1000, ws: WebSocket | null = null, closed = false
   const open = () => {
     const proto = location.protocol === 'https:' ? 'wss' : 'ws'
@@ -142,6 +165,7 @@ export function connect(on: { device: (d: Device) => void; home: (h: Home) => vo
       else if (m.type === 'status') on.status(m.status)
       else if (m.type === 'intent') on.intent(m)
       else if (m.type === 'drafts') on.drafts(m.drafts)
+      else if (m.type === 'presence') on.presence(m.presence)
     }
     ws.onclose = () => { on.link(false); if (!closed) setTimeout(open, delay = Math.min(delay * 2, 15000)) }
     ws.onerror = () => ws?.close()

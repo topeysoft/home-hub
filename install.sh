@@ -77,6 +77,13 @@ ACTION=="add", SUBSYSTEM=="tty", SUBSYSTEMS=="usb", RUN+="/usr/bin/systemd-run -
 ACTION=="remove", SUBSYSTEM=="tty", KERNEL=="ttyUSB*|ttyACM*", RUN+="/usr/bin/systemd-run --no-block --collect $DIR/driver-layer/radios.sh"
 RULES
 udevadm control --reload 2>/dev/null || true
+# updates and restores: the panel writes brain-data/update.request or restore.request; these units see it and act
+chmod +x host/update.sh host/restore.sh
+for u in home-hub-update.service home-hub-update.path home-hub-restore.service home-hub-restore.path; do
+  sed "s#/opt/home-hub#$DIR#g" "host/$u" > "/etc/systemd/system/$u"
+done
+systemctl daemon-reload 2>/dev/null || true
+systemctl enable --now home-hub-update.path home-hub-restore.path >/dev/null 2>&1 || true
 
 say "5/5  Starting the house"
 docker compose pull -q --ignore-buildable 2>/dev/null || true

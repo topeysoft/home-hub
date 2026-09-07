@@ -89,9 +89,11 @@ services:
     network_mode: host      # talks to HA on localhost:8123; the panel is on :8300
     depends_on: [homeassistant]
     volumes:
-      - ./brain-data:/data  # settings.json (names, location, the engine login) and events.db
+      - ./brain-data:/data  # settings.json (names, location, the engine login), events.db, rules.json, scenes.json
+      - .:/driver:ro        # read-only view of the driver layer, for backups
     environment:
       - TZ=${TZ}
+      - HUB_DRIVER=/driver
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}   # the assistant's key, if it is not pasted into the panel instead
 
   caddy:

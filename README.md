@@ -39,8 +39,10 @@ itself, so there is no token to copy and no Home Assistant UI to visit.
 
 A flashed image rather than an install runs `driver-layer/host/firstboot.sh` once through
 `home-hub-firstboot.service`: everything Pi-specific (bootloader, PCIe for an NVMe base, copying
-itself from SD to an empty NVMe) happens there, then the install script. The Pi image that ships
-with that unit enabled is the next piece of work; until then the steps below get a Pi to the same place.
+itself from SD to an empty NVMe) happens there, then the install script. That image is built by CI on
+every version tag and attached to the release as `home-hub-<tag>-hub.img.xz`: flash it with Raspberry
+Pi Imager (*Use custom*), insert, power, wait, open `http://hub.local`. See `driver-layer/host/pi-image/`.
+The steps below get a Pi to the same place by hand.
 
 macOS is for developing, not for running the house: Docker Desktop cannot hand USB sticks to
 containers, cannot pass multicast (so no mDNS discovery), and needs someone logged in. See
@@ -75,6 +77,16 @@ container before the Pi's first start so the two do not fight over Ring's token.
   log, websocket stream, first-run setup, device discovery. Talks only to HA's websocket and REST.
   Serves `app/dist`. `brain/Dockerfile` packages it with the panel built in.
 - `app/` — Vue PWA for the wall kiosk and phone (`npm run build` → served by the brain).
+- Updates: the brain knows which build it is and checks GitHub's main a few times a day. When it has moved on, Home
+  shows *An update is ready*; one tap (behind the settings code) writes `brain-data/update.request`, a systemd path
+  unit on the host runs `install.sh` again, and the panel comes back on the new build. `driver-layer/host/update.sh`.
+- Health: Home has a quiet *Needs a look* list when something is off: a device offline since Tuesday, storage nearly
+  full, a driver that wants signing in, an update that did not finish. `GET /health`; the words come from the brain.
+- Backup and restore: *This hub* on Home hands you one `.tar.gz` with the brain's settings and event log, the engine's
+  config, the radios' keys, Ring's sign-in and the front door's certificate authority (not the engine's history
+  database or any logs). It carries the house's keys, so it sits behind the settings code. Restoring, here or on a
+  new hub's welcome screen, parks the file for `driver-layer/host/restore.sh`, which stops the house, unpacks, and
+  starts it again with this hub's own address kept.
 - The assistant (routines asked for in plain words, and "why did that happen?") needs a key for the model. Paste it into
   the panel's Routines sheet, or put `ANTHROPIC_API_KEY=` in `driver-layer/.env`. Without one the house runs exactly the same;
   only the asking is missing. The assistant writes drafts a person approves and explains from the log; it cannot touch a device.

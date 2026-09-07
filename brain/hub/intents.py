@@ -1,7 +1,8 @@
 """Room intents: the product's unit of control. Deterministic; the assistant may author these, never run them."""
-import json, logging
+import json, logging, shutil
 from enum import Enum
 from pathlib import Path
+from .settings import DATA
 
 log = logging.getLogger("hub.scenes")
 
@@ -28,13 +29,16 @@ DEFAULT_ACTIONS = {
 # How long a room stays as a person set it before rules may move it again, in seconds. asleep and away
 # carry no hold: they are meant to be released by a rule (morning, someone came home). `_hold` in scenes.json.
 DEFAULT_HOLD = {"occupied": 7200, "movie": 14400, "guests": 43200, "asleep": 0, "away": 0, "empty": 900}
-RULES_PATH = Path(__file__).resolve().parent.parent / "scenes.json"
+SEED = Path(__file__).resolve().parent.parent / "scenes.json"   # the repo's copy seeds a new hub's data directory
+RULES_PATH = DATA / "scenes.json"
 _rules = {"mtime": None, "actions": DEFAULT_ACTIONS, "hold": DEFAULT_HOLD}
 
 
 def rules() -> dict:
     """The current scene table, re-read whenever scenes.json changes."""
     try:
+        if not RULES_PATH.exists() and SEED.exists() and SEED.resolve() != RULES_PATH.resolve():
+            RULES_PATH.parent.mkdir(parents=True, exist_ok=True); shutil.copy(SEED, RULES_PATH)
         mtime = RULES_PATH.stat().st_mtime
         if mtime != _rules["mtime"]:
             raw = json.loads(RULES_PATH.read_text())

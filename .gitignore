@@ -7,5 +7,6 @@ __pycache__/
 *.pyc
 brain/settings.json
 driver-layer/caddy/data/
+driver-layer/host/pi-image/stage-hub/00-home-hub/files/
 driver-layer/ring-mqtt/*
 !driver-layer/ring-mqtt/config.json

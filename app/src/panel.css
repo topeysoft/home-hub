@@ -96,10 +96,10 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--lamp); outl
 
 /* ---------- home: room cards ---------- */
 .room-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; min-width: 0; }
-.room-card { position: relative; min-width: 0; min-height: 168px; padding: 18px 20px; border-radius: var(--r-lg); background: var(--surface); border: 1px solid var(--edge);
+.room-card { position: relative; min-width: 0; min-height: 168px; padding: 18px 20px; border-radius: var(--r-lg); background: rgba(26, 28, 34, .82); border: 1px solid var(--edge);   /* denser than a tile: the glow must read the same over any sky */
   display: flex; flex-direction: column; overflow: hidden; transition: transform .18s var(--ease), background .25s var(--ease), border-color .25s var(--ease); }
 .room-card::before { content: ""; position: absolute; inset: -40% -20% auto auto; width: 70%; aspect-ratio: 1; border-radius: 50%; background: var(--lamp-glow); filter: blur(40px); opacity: 0; transition: opacity .5s var(--ease); }
-.room-card.active { border-color: rgba(233,184,114,.34); }
+.room-card.active { border-color: rgba(233,184,114,.6); }
 .room-card.active::before { opacity: 1; }
 .room-card:active { transform: scale(.985); background: var(--surface-press); }
 .room-card.empty { color: var(--ink-2); min-height: 108px; opacity: .75; }
@@ -578,3 +578,20 @@ select.input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://ww
 .draft-actions { display: flex; flex-direction: column; gap: 8px; }
 .draft-actions .button { margin: 0; justify-content: center; }
 .why-answer { margin: 12px 0 0; padding: 14px 16px; border-radius: 16px; background: linear-gradient(rgba(233,184,114,.10), rgba(233,184,114,.10)), var(--surface); border: 1px solid rgba(233,184,114,.30); font-size: 15px; line-height: 1.45; }
+.entry-hint { margin: -4px 0 12px; }
+.routines-note { text-transform: none; letter-spacing: 0; color: var(--lamp); }
+.nudge.quiet { cursor: default; }
+.nudge.quiet .nudge-icon { background: var(--surface-hi); color: var(--ink-2); }
+.notes .recent-text { white-space: normal; }
+.notes .button { margin: 0; }
+.hub-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.hub-rows li { display: grid; grid-template-columns: 90px 1fr auto; align-items: center; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--edge); }
+.hub-rows li:last-child { border-bottom: 0; }
+.hub-k { font-size: 11.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.hub-v { font-size: 14.5px; line-height: 1.4; }
+.hub-sub { color: var(--muted); font-size: 13px; }
+.hub-rows .button { margin: 0; white-space: nowrap; }
+.restore { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.restore .button { margin: 0; cursor: pointer; }
+.restore .field-hint { max-width: 40ch; }
+@media (max-width: 640px) { .hub-rows li { grid-template-columns: 1fr; gap: 8px; } }

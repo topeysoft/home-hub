@@ -8,14 +8,14 @@ class NeedsCode(unittest.TestCase):
     def test_driving_the_house_is_open(self):
         for m, p in [("POST", "/devices/light.kitchen/on"), ("POST", "/rooms/kitchen/intent/asleep"), ("POST", "/home/intent/away"),
                      ("GET", "/home"), ("GET", "/setup/status"), ("GET", "/events"), ("GET", "/rooms/kitchen/why"), ("GET", "/discovered"), ("GET", "/pair"),
-                     ("POST", "/drafts"), ("GET", "/drafts"), ("GET", "/assistant"), ("POST", "/rooms/kitchen/explain")]:
+                     ("POST", "/drafts"), ("GET", "/drafts"), ("GET", "/assistant"), ("POST", "/rooms/kitchen/explain"), ("GET", "/update"), ("POST", "/update/check"), ("POST", "/drafts/suggest")]:
             self.assertFalse(needs_code(m, p), p)
 
     def test_changing_the_house_is_locked(self):
         for m, p in [("POST", "/setup/pin"), ("POST", "/setup/done"), ("GET", "/setup/advanced"), ("POST", "/rooms"), ("DELETE", "/rooms/kitchen"),
                      ("POST", "/rooms/kitchen/rename"), ("POST", "/devices/light.kitchen/move"), ("POST", "/devices/light.kitchen/rename"),
-                     ("POST", "/flows"), ("GET", "/flows/abc"), ("POST", "/credentials"), ("POST", "/location"), ("PUT", "/rules"), ("POST", "/pair"), ("DELETE", "/pair"),
-                     ("POST", "/drafts/hall-late/approve"), ("DELETE", "/drafts/hall-late"), ("POST", "/assistant/key")]:
+                     ("POST", "/flows"), ("GET", "/flows/abc"), ("POST", "/credentials"), ("POST", "/location"), ("POST", "/home/entry"), ("PUT", "/rules"), ("POST", "/pair"), ("DELETE", "/pair"),
+                     ("POST", "/drafts/hall-late/approve"), ("DELETE", "/drafts/hall-late"), ("POST", "/assistant/key"), ("POST", "/update"), ("GET", "/backup"), ("POST", "/restore")]:
             self.assertTrue(needs_code(m, p), p)
 
 

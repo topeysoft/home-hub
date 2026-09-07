@@ -6,10 +6,14 @@ drafts. Explaining answers "why did the hallway light come on" from the event lo
 log's detail into prose and adds nothing the log does not say. The brain is the only thing that talks
 to the model, and the model never sees a token for the driver layer. Design: docs/phase4-intelligence.md.
 """
-import json, logging, os, re, time
+import asyncio, json, logging, os, re, time
+from collections import defaultdict
 from datetime import datetime
 from . import rules as rules_mod
 from .presence import word as presence_word
+
+LABEL = {"occupied": "Here", "empty": "All off", "asleep": "Sleep", "away": "Everything off", "movie": "Movie", "guests": "Guests"}
+LOOKBACK_DAYS, MIN_DAYS, BIN_MINUTES = 14, 4, 30   # a habit: the same tap in the same half hour on four of the last fourteen days
 
 try:
     import anthropic
@@ -28,7 +32,8 @@ class AssistantError(Exception):
 
 VOCABULARY = """A rule is one JSON object: {"id", "name", "room", "when", "if", "then"}.
 - "name": one plain sentence a person would say about it, no jargon. "id": short kebab-case.
-- "room": a room id from the house, or "home" for the whole house.
+- "room": a room id from the house, "home" for the whole house, or "entry" for every room the family comes in through
+  (they choose those on the panel; a rule for "entry" runs in each of them).
 - "when", exactly one trigger:
   {"motion": "on"}                                  any motion sensor in the room (room rules only)
   {"contact": "open"} or {"contact": "closed"}      a door or window sensor in the room (room rules only)
@@ -151,7 +156,8 @@ class Assistant:
         devs = [f"  {d.id} | {d.name} | {d.capability} | in {d.room_id} | now {d.state}" for d in home.devices.values() if d.room_id != "unassigned"]
         ids = [r.get("id") for r in self.hub.engine.raw.get("rules", []) if isinstance(r, dict)]
         now = datetime.now(self.hub.tz)
-        return "\n".join(["Rooms (id: name):", *rooms, "Devices (id | name | kind | room | state):", *devs,
+        entry = ", ".join(self.hub.entry) or "none chosen yet"
+        return "\n".join(["Rooms (id: name):", *rooms, f"Entry rooms (the ones \"entry\" stands for): {entry}", "Devices (id | name | kind | room | state):", *devs,
                           f"Existing rule ids: {', '.join(i for i in ids if i) or 'none'}",
                           f"Now: {now.strftime('%A %H:%M')}. Who is home: {presence_word(p.somebody) or 'unknown'}."])
 
@@ -213,11 +219,72 @@ class Assistant:
 
     def discard(self, rid: str) -> None:
         raw = self._raw()
-        if not any(d.get("id") == rid for d in raw["drafts"]): raise AssistantError("That suggestion is gone.", 404)
-        raw["drafts"] = [d for d in raw["drafts"] if d.get("id") != rid]
+        d = next((d for d in raw["drafts"] if d.get("id") == rid), None)
+        if not d: raise AssistantError("That suggestion is gone.", 404)
+        raw["drafts"] = [x for x in raw["drafts"] if x is not d]
         self.hub.engine.save(raw)
+        if d.get("noticed"):                          # a habit they turned down stays turned down
+            seen = list(self.hub.settings.get("dismissed") or [])
+            if d["noticed"] not in seen: self.hub.settings.set(dismissed=(seen + [d["noticed"]])[-50:])
         self.hub.log.add("draft", rid, "proposed", "discarded", source="user")
         self._announce()
+
+    # ---- suggesting: habits the log shows, offered as drafts, never run ----
+    def habits(self, now=None) -> list:
+        """The same scene chosen by hand in the same half hour on enough different days: [(room, state, "HH:MM", days)]."""
+        now = now or time.time()
+        since = now - LOOKBACK_DAYS * 86400
+        seen = defaultdict(lambda: defaultdict(list))                 # (room, state, bin) -> day -> [minute of day]
+        for e in self.hub.log.recent(5000, kinds=("intent",)):
+            if e["source"] != "user" or e["ts"] < since or not e["new"]: continue
+            d = datetime.fromtimestamp(e["ts"], self.hub.tz)
+            minute = d.hour * 60 + d.minute
+            seen[(e["subject"], e["new"], minute // BIN_MINUTES)][d.date()].append(minute)
+        out = []
+        for (room, state, _), days in seen.items():
+            if len(days) < MIN_DAYS: continue
+            mins = sorted(m for ms in days.values() for m in ms)
+            mid = mins[len(mins) // 2]
+            out.append((room, state, f"{mid // 60:02d}:{mid % 60:02d}", len(days)))
+        return sorted(out, key=lambda h: -h[3])
+
+    def _covered(self, room, state, hhmm) -> bool:
+        """Already a rule or draft for that room, state and time (give or take the bin)?"""
+        want = int(hhmm[:2]) * 60 + int(hhmm[3:])
+        for r in self.hub.engine.raw.get("rules", []) + self.drafts():
+            if not isinstance(r, dict) or r.get("room") != room or (r.get("then") or {}).get("intent") != state: continue
+            t = (r.get("when") or {}).get("time")
+            if t and abs(int(t[:2]) * 60 + int(t[3:]) - want) <= BIN_MINUTES: return True
+        return False
+
+    def suggest(self, now=None) -> list:
+        """Turn each new habit into a draft. Returns what it added. Deterministic: no model in here."""
+        added, dismissed = [], set(self.hub.settings.get("dismissed") or [])
+        for room, state, hhmm, days in self.habits(now):
+            key = f"{room}:{state}:{hhmm[:2]}"
+            if key in dismissed or self._covered(room, state, hhmm): continue
+            if room != "home" and room not in self.hub.home.rooms: continue
+            place = "the whole house" if room == "home" else f"the {self.hub.home.rooms[room].name}"
+            word = "Bedtime" if (room == "home" and state == "asleep") else LABEL.get(state, state)
+            clock = datetime.strptime(hhmm, "%H:%M").strftime("%-I:%M %p").lower()
+            rule = self.adopt({"id": f"{room}-{hhmm.replace(':', '')}-{state}", "name": f"{word} for {place} at {clock}, like most evenings" if int(hhmm[:2]) >= 17 else f"{word} for {place} at {clock} every day",
+                               "room": room, "when": {"time": hhmm}, "then": {"intent": state}}, "")
+            rule["noticed"] = key
+            rule["why"] = f"You chose {word} for {place} around {clock} on {days} of the last {LOOKBACK_DAYS} days."
+            rule.pop("said", None)
+            _, errors = rules_mod.validate({"rules": [rule]}, set(self.hub.home.rooms))
+            if errors: continue
+            added.append(self.keep(rule))
+        return added
+
+    async def run(self):
+        """Once a day, look for habits. Cheap, local, and only ever adds drafts."""
+        await asyncio.sleep(300)
+        while True:
+            try:
+                if self.hub.driver == "ready": self.suggest()
+            except Exception: log.exception("suggest")
+            await asyncio.sleep(86400)
 
     def _announce(self):
         self.hub._broadcast(json.dumps({"type": "drafts", "drafts": self.drafts()}))

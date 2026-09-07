@@ -7,6 +7,7 @@ import Icon from './Icon.vue'
 import LocationPicker from './LocationPicker.vue'
 import AddPanel from './AddPanel.vue'
 import Drivers from './Drivers.vue'
+import Restore from './Restore.vue'
 
 /* First run. One question per screen, in this order: who you are, where home is, which rooms,
    what to add. Every step after the first can be skipped and finished later from Home. */
@@ -17,7 +18,7 @@ const page = ref<Page>(preview && PAGES.includes(preview) ? preview : 'welcome')
 const status = computed(() => store.status)
 const driver = computed(() => status.value?.driver ?? 'down')
 const engineReady = computed(() => ['fresh', 'needs-login', 'connecting', 'ready'].includes(driver.value))
-const busy = ref(false), error = ref('')
+const busy = ref(false), error = ref(''), fromBackup = ref(false)
 const name = ref(''), home = ref(''), username = ref(''), password = ref('')
 const advanced = `${location.protocol}//${location.hostname}:8123/`
 
@@ -107,8 +108,11 @@ async function saveCode() {
         <div class="setup-actions">
           <button class="button big" :disabled="!engineReady" @click="next('welcome')">Get started</button>
         </div>
-        <p class="setup-status" v-if="!engineReady"><span class="pulse-dot"></span> Getting things ready. The first start takes a minute or two.</p>
+        <p class="setup-status" v-if="store.restoring"><span class="pulse-dot"></span> Restoring. The hub restarts and this screen comes back as your house.</p>
+        <p class="setup-status" v-else-if="!engineReady"><span class="pulse-dot"></span> Getting things ready. The first start takes a minute or two.</p>
         <p class="setup-status" v-else-if="driver === 'needs-login'">The engine behind this hub was set up separately. You will sign in to it next.</p>
+        <p class="setup-foot">Moving from another hub? <button class="linkish" @click="fromBackup = !fromBackup">Bring its backup over</button></p>
+        <Restore v-if="fromBackup" />
       </section>
 
       <!-- sign in to an engine someone already set up -->

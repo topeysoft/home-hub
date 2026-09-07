@@ -13,6 +13,7 @@ import Viewer from './Viewer.vue'
 import LocationSheet from './LocationSheet.vue'
 import WhySheet from './WhySheet.vue'
 import RoutinesSheet from './RoutinesSheet.vue'
+import HubSheet from './HubSheet.vue'
 import Icon from './Icon.vue'
 import { upcomingLine } from './upcoming'
 
@@ -102,8 +103,8 @@ onUnmounted(() => {
       <div class="offline" v-if="!store.loaded || store.status?.driver !== 'ready'">
         <template v-if="store.loaded && store.status && store.status.driver !== 'ready'">
           <span class="offline-icon pulse"><Icon name="home" :size="28" /></span>
-          <h1 class="display">{{ store.status.driver === 'down' ? 'The engine is starting' : 'Reconnecting' }}</h1>
-          <p>{{ store.status.reason || 'The house will be back in a moment. Nothing needs doing.' }}</p>
+          <h1 class="display">{{ store.restoring ? 'Restoring your house' : store.updating ? 'Updating the hub' : store.status.driver === 'down' ? 'The engine is starting' : 'Reconnecting' }}</h1>
+          <p>{{ store.restoring || store.updating ? 'A few minutes. The lights and switches keep working; this screen comes back on its own.' : store.status.reason || 'The house will be back in a moment. Nothing needs doing.' }}</p>
         </template>
         <template v-else-if="store.error">
           <span class="offline-icon"><Icon name="home" :size="28" /></span>
@@ -128,6 +129,7 @@ onUnmounted(() => {
     <Transition name="sheet"><CodeSheet v-if="store.sheet === 'code'" /></Transition>
     <Transition name="sheet"><WhySheet v-if="store.sheet === 'why'" /></Transition>
     <Transition name="sheet"><RoutinesSheet v-if="store.sheet === 'routines'" /></Transition>
+    <Transition name="sheet"><HubSheet v-if="store.sheet === 'hub'" /></Transition>
     <Transition name="sheet"><CodePrompt v-if="lock.prompt" /></Transition>
 
     <Transition name="toast">
