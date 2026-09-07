@@ -68,7 +68,8 @@ and the sheet with `?sheet=location`.
 - `src/Viewer.vue`, `src/live.ts` — one camera, full screen. A still comes up at once; behind it the
   viewer tries WebRTC (signalling over `/devices/{id}/webrtc`, video straight from HA's go2rtc), then
   motion JPEG (`/devices/{id}/stream`), and settles for refreshing stills if neither can be had. The
-  chip says Live only while a picture is moving. Tiles stay stills, so a strip of cameras costs nothing.
+  chip says Live only while a picture is moving; a speaker button turns the sound on when WebRTC brings
+  some. Tiles stay stills, so a strip of cameras costs nothing.
 - `src/Sky.vue`, `src/sun.ts` — the sky canvas and the solar maths behind it.
 - `src/panel.css` — the whole look: tokens, the veil over the sky, layouts down to phone width.
 

@@ -4,7 +4,7 @@
 export type Live = { stop(): void }
 const WAIT = 12000   // ms before an attempt that has shown nothing is given up on
 
-export function webrtc(id: string, video: HTMLVideoElement, on: { playing(): void; failed(why: string): void }): Live {
+export function webrtc(id: string, video: HTMLVideoElement, on: { playing(): void; failed(why: string): void; audio?(): void }): Live {
   const proto = location.protocol === 'https:' ? 'wss' : 'ws'
   const ws = new WebSocket(`${proto}://${location.host}/devices/${encodeURIComponent(id)}/webrtc`)
   const stream = new MediaStream()
@@ -21,7 +21,7 @@ export function webrtc(id: string, video: HTMLVideoElement, on: { playing(): voi
         pc = new RTCPeerConnection({ iceServers: m.configuration?.iceServers ?? [] })
         pc.addTransceiver('video', { direction: 'recvonly' })
         pc.addTransceiver('audio', { direction: 'recvonly' })
-        pc.ontrack = (ev) => { stream.addTrack(ev.track); if (!video.srcObject) video.srcObject = stream }
+        pc.ontrack = (ev) => { stream.addTrack(ev.track); if (!video.srcObject) video.srcObject = stream; if (ev.track.kind === 'audio') on.audio?.() }
         pc.onicecandidate = (ev) => { if (ev.candidate && ws.readyState === 1) ws.send(JSON.stringify({ type: 'candidate', candidate: ev.candidate.toJSON() })) }
         pc.onconnectionstatechange = () => { if (pc && (pc.connectionState === 'failed' || pc.connectionState === 'closed')) fail(pc.connectionState) }
         const offer = await pc.createOffer()

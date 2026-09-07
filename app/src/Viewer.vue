@@ -7,11 +7,12 @@ import Icon from './Icon.vue'
 
 /* Full screen for one camera. A still comes up at once; behind it the viewer tries WebRTC, then motion
    JPEG. Whichever plays covers the still and the chip says Live; if neither can, the still keeps
-   refreshing and the chip says how old it is. Nothing here says Live unless a picture is moving. */
+   refreshing and the chip says how old it is. Nothing here says Live unless a picture is moving.
+   Sound comes with WebRTC and starts muted, as browsers insist; a speaker button turns it on. */
 const dev = computed(() => store.viewer)
 const video = ref<HTMLVideoElement>(), moving = ref<HTMLImageElement>()
 const src = ref(''), stamp = ref(0), now = ref(Date.now()), loading = ref(true)
-const playing = ref(false), trying = ref(false)
+const playing = ref(false), trying = ref(false), audio = ref(false), sound = ref(false)
 let live: Live | null = null
 
 function refresh() { if (dev.value && !playing.value) src.value = imageUrl(dev.value.id) }
@@ -28,7 +29,9 @@ const place = computed(() => roomOf(dev.value!)?.name ?? '')
 function close() { store.viewer = null }
 function key(e: KeyboardEvent) { if (e.key === 'Escape') close() }
 
-function drop() { live?.stop(); live = null; playing.value = false; trying.value = false }
+function drop() { live?.stop(); live = null; playing.value = false; trying.value = false; audio.value = false; hush() }
+function hush() { sound.value = false; if (video.value) video.value.muted = true }
+function toggleSound() { if (!video.value) return; sound.value = !sound.value; video.value.muted = !sound.value }
 async function start() {
   drop()
   if (!dev.value || dead.value) return
@@ -38,7 +41,8 @@ async function start() {
   trying.value = true
   const on = (next: () => void) => ({
     playing: () => { if (store.viewer?.id === id) { playing.value = true; trying.value = false } },
-    failed: () => { if (store.viewer?.id === id) { playing.value = false; trying.value = true; next() } },   // a picture that stops falls to the next way
+    failed: () => { if (store.viewer?.id === id) { playing.value = false; trying.value = true; audio.value = false; hush(); next() } },   // a picture that stops falls to the next way
+    audio: () => { if (store.viewer?.id === id) audio.value = true },
   })
   const stills = () => { live = null; trying.value = false; refresh() }
   const second = () => { live = mjpeg(id, moving.value!, on(stills)) }
@@ -68,7 +72,10 @@ watch(dead, (d) => { if (d) drop(); else start() })
           <div class="viewer-name">{{ dev.name }}</div>
           <div class="viewer-sub">{{ place }}<span v-if="place"> · </span>{{ label }}</div>
         </div>
-        <button class="round" @click="close" aria-label="Close"><Icon name="close" :size="22" /></button>
+        <div class="viewer-actions">
+          <button v-if="playing && audio" class="round" :class="{ on: sound }" @click="toggleSound" :aria-label="sound ? 'Mute' : 'Sound on'" :aria-pressed="sound"><Icon :name="sound ? 'volume' : 'mute'" :size="22" /></button>
+          <button class="round" @click="close" aria-label="Close"><Icon name="close" :size="22" /></button>
+        </div>
       </header>
       <span class="chip viewer-live" :class="{ live: playing }">{{ label }}</span>
     </div>

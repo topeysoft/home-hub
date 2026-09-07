@@ -281,6 +281,8 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--lamp); outl
 .viewer-name { font-size: 26px; font-weight: 500; letter-spacing: -0.015em; line-height: 1.1; color: #fff; text-shadow: 0 1px 8px rgba(0,0,0,.5); }
 .viewer-sub { color: rgba(255,255,255,.75); font-size: 14px; margin-top: 6px; text-shadow: 0 1px 6px rgba(0,0,0,.5); }
 .viewer-live { position: absolute; right: 24px; bottom: 22px; }
+.viewer-actions { display: flex; gap: 10px; }
+.viewer-actions .round.on { background: #fff; color: #111; }
 
 /* ---------- the panel at rest ---------- */
 .idle { position: absolute; inset: 0; z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; cursor: pointer; text-shadow: 0 2px 24px rgba(0,0,0,.55); }
