@@ -160,7 +160,7 @@ onUnmounted(() => clearTimeout(poll))
     </template>
 
     <div class="flow" v-else>
-      <h3 class="flow-title display">{{ heading }}</h3>
+      <h3 class="flow-title">{{ heading }}</h3>
       <div class="flow-desc" v-if="step.description" v-html="step.description"></div>
 
       <template v-if="step.type === 'credentials'">

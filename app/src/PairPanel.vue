@@ -32,7 +32,7 @@ onUnmounted(() => clearTimeout(poll))
 
 <template>
   <div class="flow pair">
-    <h3 class="flow-title display">Add a {{ NAMES[kind] }} device</h3>
+    <h3 class="flow-title">Add a {{ NAMES[kind] }} device</h3>
 
     <template v-if="!live && pair.state !== 'done'">
       <p class="flow-desc" v-if="kind === 'zigbee'">Zigbee things (bulbs, sensors, plugs, remotes) join when the hub opens its door. Have the device nearby and its instructions to hand; most pair by holding a button or switching them off and on a few times.</p>

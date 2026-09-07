@@ -33,7 +33,7 @@ watch(dev, () => { src.value = ''; stamp.value = 0; loading.value = true; refres
       <div class="viewer-veil"></div>
       <header class="viewer-head">
         <div>
-          <div class="viewer-name display">{{ dev.name }}</div>
+          <div class="viewer-name">{{ dev.name }}</div>
           <div class="viewer-sub">{{ place }}<span v-if="place"> · </span>{{ label }}</div>
         </div>
         <button class="round" @click="close" aria-label="Close"><Icon name="close" :size="22" /></button>

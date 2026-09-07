@@ -69,7 +69,7 @@ onUnmounted(() => { clearInterval(t1); clearInterval(t2) })
           <div class="room-card-top">
             <span class="room-temp" v-if="temp(r)"><Icon name="sensor" :size="14" />{{ temp(r) }}</span>
           </div>
-          <div class="room-card-name display">{{ r.name }}</div>
+          <div class="room-card-name">{{ r.name }}</div>
           <div class="room-card-activity">{{ activity(r) }}</div>
         </button>
       </div>
