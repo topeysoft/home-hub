@@ -29,6 +29,11 @@ jobs:
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /usr/share/swift /usr/local/share/boost /opt/hostedtoolcache/CodeQL /usr/local/lib/node_modules
           sudo docker image prune -af >/dev/null 2>&1 || true
           df -h /
+      - uses: docker/setup-qemu-action@v3
+        # Registers QEMU for arm64 in the kernel's binfmt table with the fix-binary flag, so the emulator is found from
+        # inside pi-gen's container. Without it pi-gen stops at "arm64: not supported on this machine/kernel".
+        with:
+          platforms: arm64
       - uses: usimd/pi-gen-action@v1
         id: build
         with:
