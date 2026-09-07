@@ -55,12 +55,14 @@ class Home:
         self.devices: dict[str, Device] = {}
         self.intent: str = "unknown"     # the last home-wide intent (bedtime, everything off)
         self.extras: dict[str, dict] = {}  # what the brain knows about a device that HA does not (a fan timer's end); shown with its attrs
+        self.lamps: dict[str, str] = {}    # camera id -> the light built into the same unit (Ring floodlight and spotlight cams)
 
     def attrs_for(self, eid, cap, a):
         """HA's attributes plus what the brain knows. While the brain runs a fan timer the fan is on whatever the
         thermostat has got round to reporting (Nest tells HA about its fan timer late)."""
         extra = self.extras.get(eid, {})
         out = {**self._keep_attrs(cap, a), **extra}
+        if cap == "camera" and eid in self.lamps: out["light"] = self.lamps[eid]
         if extra.get("fan_until", 0) > time.time(): out["fan_mode"] = "on"
         return out
 
@@ -106,6 +108,13 @@ class Home:
             d = Device(eid, name, room, cap, s["state"], self.attrs_for(eid, cap, s["attributes"]), e.get("device_id"), bool(e.get("area_id")))
             self.devices[eid] = d
             self.rooms[room].devices.append(d)
+        # A camera with a lamp built in: the viewer offers the lamp beside the picture, the way Ring's own app does.
+        # The lamp stays a light of its own as well, so the room and its scenes can use it like any other.
+        lights = {}
+        for d in self.devices.values():
+            if d.capability == "light" and d.hw: lights.setdefault(d.hw, d.id)
+        self.lamps = {d.id: lights[d.hw] for d in self.devices.values() if d.capability == "camera" and d.hw in lights}
+        for cid, lid in self.lamps.items(): self.devices[cid].attrs["light"] = lid
         return self
 
     def apply_state(self, entity_id, new_state) -> Device | None:

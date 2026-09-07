@@ -52,3 +52,28 @@ class ExtrasTests(unittest.TestCase):
         d = home.devices["climate.nest"]                             # the rebuild made a new device object
         home.apply_state("climate.nest", snap()[3][0])
         self.assertNotIn("fan_until", d.attrs)
+
+
+class CameraLampTests(unittest.TestCase):
+    """A Ring floodlight cam is one unit in HA with a camera entity and a light entity."""
+    def snap(self, lamp="off"):
+        areas = [{"area_id": "yard", "name": "Backyard"}]
+        entities = [{"entity_id": "camera.yard", "device_id": "ring1"}, {"entity_id": "light.yard_light", "device_id": "ring1"},
+                    {"entity_id": "camera.door", "device_id": "ring2"}, {"entity_id": "light.porch", "device_id": "hue1"}]
+        devices = [{"id": "ring1", "area_id": "yard"}, {"id": "ring2", "area_id": "yard"}, {"id": "hue1", "area_id": "yard"}]
+        states = [{"entity_id": "camera.yard", "state": "idle", "attributes": {"friendly_name": "Backyard Live view"}},
+                  {"entity_id": "light.yard_light", "state": lamp, "attributes": {"friendly_name": "Backyard Light"}},
+                  {"entity_id": "camera.door", "state": "idle", "attributes": {"friendly_name": "Doorbell"}},
+                  {"entity_id": "light.porch", "state": "on", "attributes": {"friendly_name": "Porch"}}]
+        return areas, devices, entities, states
+
+    def test_the_camera_points_at_its_own_lamp_only(self):
+        home = Home().build(*self.snap())
+        self.assertEqual(home.devices["camera.yard"].attrs.get("light"), "light.yard_light")
+        self.assertNotIn("light", home.devices["camera.door"].attrs, "a camera without a lamp gets none, not the nearest light")
+        self.assertEqual(home.devices["light.yard_light"].capability, "light", "the lamp is still a light of its own in the room")
+
+    def test_the_link_survives_a_state_change(self):
+        home = Home().build(*self.snap())
+        home.apply_state("camera.yard", {"state": "recording", "attributes": {"friendly_name": "Backyard Live view"}})
+        self.assertEqual(home.devices["camera.yard"].attrs.get("light"), "light.yard_light")

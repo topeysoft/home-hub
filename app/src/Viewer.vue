@@ -1,14 +1,15 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { imageUrl } from './api'
-import { store, roomOf } from './store'
+import { store, roomOf, deviceById, perform } from './store'
 import { webrtc, mjpeg, type Live } from './live'
 import Icon from './Icon.vue'
 
 /* Full screen for one camera. A still comes up at once; behind it the viewer tries WebRTC, then motion
    JPEG. Whichever plays covers the still and the chip says Live; if neither can, the still keeps
    refreshing and the chip says how old it is. Nothing here says Live unless a picture is moving.
-   Sound comes with WebRTC and starts muted, as browsers insist; a speaker button turns it on. */
+   Sound comes with WebRTC and starts muted, as browsers insist; a speaker button turns it on. A camera
+   with a lamp built in (Ring's floodlight and spotlight cams) gets a light button beside it. */
 const dev = computed(() => store.viewer)
 const video = ref<HTMLVideoElement>(), moving = ref<HTMLImageElement>()
 const src = ref(''), stamp = ref(0), now = ref(Date.now()), loading = ref(true)
@@ -26,6 +27,10 @@ const label = computed(() => {
   return trying.value ? `Connecting · ${still}` : still
 })
 const place = computed(() => roomOf(dev.value!)?.name ?? '')
+const lamp = computed(() => { const l = dev.value?.attrs?.light ? deviceById(dev.value.attrs.light) : undefined; return l && l.state !== 'unavailable' ? l : undefined })
+const lampOn = computed(() => lamp.value?.state === 'on')
+const lampBusy = computed(() => !!lamp.value && !!store.pending[lamp.value.id])
+function toggleLamp() { if (lamp.value && !lampBusy.value) perform(lamp.value, lampOn.value ? 'off' : 'on', undefined, { state: lampOn.value ? 'off' : 'on' }) }
 function close() { store.viewer = null }
 function key(e: KeyboardEvent) { if (e.key === 'Escape') close() }
 
@@ -73,6 +78,7 @@ watch(dead, (d) => { if (d) drop(); else start() })
           <div class="viewer-sub">{{ place }}<span v-if="place"> · </span>{{ label }}</div>
         </div>
         <div class="viewer-actions">
+          <button v-if="lamp" class="round" :class="{ on: lampOn, busy: lampBusy }" @click="toggleLamp" :aria-label="lampOn ? 'Light off' : 'Light on'" :aria-pressed="lampOn"><Icon name="light" :size="22" /></button>
           <button v-if="playing && audio" class="round" :class="{ on: sound }" @click="toggleSound" :aria-label="sound ? 'Mute' : 'Sound on'" :aria-pressed="sound"><Icon :name="sound ? 'volume' : 'mute'" :size="22" /></button>
           <button class="round" @click="close" aria-label="Close"><Icon name="close" :size="22" /></button>
         </div>

@@ -283,6 +283,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--lamp); outl
 .viewer-live { position: absolute; right: 24px; bottom: 22px; }
 .viewer-actions { display: flex; gap: 10px; }
 .viewer-actions .round.on { background: #fff; color: #111; }
+.viewer-actions .round.busy { opacity: .6; }
 
 /* ---------- the panel at rest ---------- */
 .idle { position: absolute; inset: 0; z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; cursor: pointer; text-shadow: 0 2px 24px rgba(0,0,0,.55); }

@@ -55,7 +55,8 @@ const rooms = [
     dev('g2', 'Garage door', 'garage', 'cover', 'closed', {}),
   ] },
   { id: 'backyard', name: 'Backyard', intent: 'occupied', set_by: null, hold_until: null, devices: [
-    dev('y1', 'Backyard cam', 'backyard', 'camera', 'recording', {}),
+    dev('y1', 'Backyard cam', 'backyard', 'camera', 'recording', { light: 'y1l' }),   // a floodlight cam: the viewer offers its lamp
+    dev('y1l', 'Backyard cam Light', 'backyard', 'light', 'off', {}),
     dev('y2', 'Robot mower', 'backyard', 'vacuum', 'docked', {}),
   ] },
   { id: 'bath', name: 'Bathroom', intent: 'occupied', set_by: null, hold_until: null, devices: [] },
