@@ -111,6 +111,14 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--lamp); outl
 .room-card-name { font-size: 24px; font-weight: 500; line-height: 1.15; letter-spacing: -0.015em; margin-top: auto; }
 .room-card-activity { color: var(--ink-2); font-size: 14.5px; margin-top: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .room-card.active .room-card-activity { color: var(--lamp); }
+@media (min-width: 861px) {   /* the rail already lists every room here, so the grid is a glance, not the way around */
+  .room-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+  .room-card { min-height: 108px; padding: 14px 16px; }
+  .room-card.empty { min-height: 88px; }
+  .room-card-name { font-size: 19px; }
+  .room-card-activity { font-size: 13.5px; margin-top: 4px; }
+  .room-card-top { min-height: 16px; }
+}
 
 /* ---------- scenes: each button says what it does ---------- */
 .scenes { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 26px; }
@@ -219,6 +227,28 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--lamp); outl
 
 /* ---------- section labels, home blocks ---------- */
 .home-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; flex-wrap: wrap; }
+.home-next { display: inline-flex; align-items: center; gap: 7px; margin: 6px 0 0; font-size: 14.5px; color: var(--ink-2); }
+.home-next svg { color: var(--lamp); }
+
+/* everything on across the house, one chip each; a tap quiets it */
+.onnow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.onnow-chip { display: inline-flex; align-items: center; gap: 9px; min-height: 44px; padding: 6px 16px 6px 7px; border-radius: 999px; min-width: 0; max-width: 100%;
+  background: linear-gradient(rgba(233,184,114,.12), rgba(233,184,114,.12)), var(--surface); border: 1px solid rgba(233,184,114,.38); color: var(--ink);
+  transition: background .18s var(--ease), border-color .18s var(--ease), transform .15s var(--ease), opacity .18s var(--ease); backdrop-filter: var(--frost); -webkit-backdrop-filter: var(--frost); }
+.onnow-icon { width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; background: var(--lamp); color: var(--lamp-ink); flex: 0 0 auto; }
+.onnow-text { display: flex; align-items: baseline; gap: 7px; min-width: 0; }
+.onnow-name { font-size: 14.5px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.onnow-place { font-size: 12.5px; color: var(--muted); white-space: nowrap; }
+.onnow-chip:active:not(:disabled) { transform: scale(.97); background: var(--surface-press); }
+.onnow-chip.pending { opacity: .55; }
+.onnow-chip.fixed { cursor: default; }
+.onnow-chip.fixed .onnow-icon { background: var(--surface-hi); color: var(--ink-2); }
+.onnow-more { font-size: 13.5px; color: var(--muted); padding-left: 4px; }
+@media (max-width: 860px) {
+  .onnow-chip { padding-right: 13px; }
+  .onnow-text { flex-direction: column; gap: 0; align-items: flex-start; }
+  .onnow-place { font-size: 11.5px; }
+}
 .home-head .scenes { margin: 6px 0 0; flex: 0 0 auto; }
 .block { margin-bottom: 30px; }
 .label { margin: 0 0 12px; font-size: 11.5px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }

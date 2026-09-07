@@ -26,7 +26,6 @@ const rooms = computed(visibleRooms)
 const setup = computed(() => !!store.status && (store.previewSetup || needsSetup()))
 const room = computed(() => rooms.value.find(r => r.id === selected.value) ?? null)
 
-const hour = computed(() => shown.value.getHours())
 const ambient = computed(() => store.sky.elevation < -8 ? 'night' : store.sky.elevation < 6 ? (store.sky.azimuth < 180 ? 'dawn' : 'dusk') : 'day')
 const weather = computed(weatherLine)
 const WX_ICON: Record<string, string> = { sunny: 'sun', 'clear-night': 'moon', partlycloudy: 'cloud', cloudy: 'cloud', fog: 'fog', rainy: 'rain', pouring: 'rain', hail: 'rain', lightning: 'bolt', 'lightning-rainy': 'bolt', snowy: 'snow', 'snowy-rainy': 'snow', windy: 'wind', 'windy-variant': 'wind', exceptional: 'cloud' }
@@ -119,7 +118,7 @@ onUnmounted(() => {
       </div>
       <Transition v-else name="view" mode="out-in">
         <RoomView v-if="room" :key="room.id" :room="room" @back="open(null)" />
-        <HomeView v-else key="home" :rooms="rooms" :hour="hour" @open="open" />
+        <HomeView v-else key="home" :rooms="rooms" :now="shown" @open="open" />
       </Transition>
     </main>
 

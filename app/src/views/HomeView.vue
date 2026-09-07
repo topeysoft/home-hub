@@ -1,16 +1,21 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { store, activity, roomActive, cap, houseLine, describe, ago, refreshEvents, loadHealth, notify } from '../store'
+import { store, activity, roomActive, cap, houseLine, whatsOn, describe, ago, refreshEvents, loadHealth, notify } from '../store'
 import { requestUpdate, type Room } from '../api'
+import { upcomingLine } from '../upcoming'
 import Icon from '../Icon.vue'
 import SceneBar from '../SceneBar.vue'
+import OnNow from '../OnNow.vue'
 import CameraTile from '../tiles/CameraTile.vue'
 
-const props = defineProps<{ rooms: Room[]; hour: number }>()
+const props = defineProps<{ rooms: Room[]; now: Date }>()   // now: the clock the shell shows, so a preview hour agrees with itself
 defineEmits<{ open: [id: string] }>()
 
-const greeting = computed(() => props.hour < 5 ? 'Good night' : props.hour < 12 ? 'Good morning' : props.hour < 17 ? 'Good afternoon' : props.hour < 21 ? 'Good evening' : 'Good night')
+const hour = computed(() => props.now.getHours())
+const greeting = computed(() => hour.value < 5 ? 'Good night' : hour.value < 12 ? 'Good morning' : hour.value < 17 ? 'Good afternoon' : hour.value < 21 ? 'Good evening' : 'Good night')
 const line = computed(houseLine)
+const next = computed(() => upcomingLine(props.now))   // what the house will do next on its own
+const anyOn = computed(() => whatsOn().length > 0)
 const cameras = computed(() => props.rooms.flatMap(r => r.devices.filter(d => cap(d) === 'camera')))
 /* the one number worth a glance on a room card: its temperature, when a sensor in the room reads one */
 function temp(r: Room): string {
@@ -40,7 +45,7 @@ const recent = computed(() => {
   for (const ev of store.events) {
     const d = describe(ev); if (!d || d.text === last) continue
     last = d.text; out.push({ key: ev.ts, text: d.text, icon: d.icon, when: ago(ev.ts, now.value) })
-    if (out.length >= 6) break
+    if (out.length >= 4) break
   }
   return out
 })
@@ -55,6 +60,7 @@ onUnmounted(() => { clearInterval(t1); clearInterval(t2); clearInterval(t3) })
       <div>
         <h1 class="display">{{ greeting }}</h1>
         <p class="lede">{{ line }}</p>
+        <p class="home-next" v-if="next"><Icon name="sparkle" :size="14" />{{ next }}</p>
       </div>
       <SceneBar :room="null" />
     </header>
@@ -80,6 +86,11 @@ onUnmounted(() => { clearInterval(t1); clearInterval(t2); clearInterval(t3) })
       <span class="nudge-text"><span class="nudge-title">Where is home?</span><span class="nudge-sub">Set a location once and the sky, sunrise and weather will follow it.</span></span>
     </button>
 
+    <div class="block" v-if="anyOn">
+      <h2 class="label">On right now</h2>
+      <OnNow />
+    </div>
+
     <div class="block" v-if="store.notes.length">
       <h2 class="label">Needs a look</h2>
       <ul class="recent notes">
@@ -92,6 +103,13 @@ onUnmounted(() => { clearInterval(t1); clearInterval(t2); clearInterval(t3) })
       </ul>
     </div>
 
+
+    <div class="block" v-if="cameras.length">
+      <h2 class="label">Cameras</h2>
+      <div class="camera-row">
+        <CameraTile v-for="c in cameras" :key="c.id" :device="c" compact />
+      </div>
+    </div>
     <div class="block">
       <h2 class="label">Rooms</h2>
       <div class="room-grid">
@@ -102,13 +120,6 @@ onUnmounted(() => { clearInterval(t1); clearInterval(t2); clearInterval(t3) })
           <div class="room-card-name">{{ r.name }}</div>
           <div class="room-card-activity">{{ activity(r) }}</div>
         </button>
-      </div>
-    </div>
-
-    <div class="block" v-if="cameras.length">
-      <h2 class="label">Cameras</h2>
-      <div class="camera-row">
-        <CameraTile v-for="c in cameras" :key="c.id" :device="c" compact />
       </div>
     </div>
 
