@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { store, notify, loadRoutines, loadAssistant, visibleRooms } from './store'
-import { enableRoutine, draftRoutine, approveDraft, discardDraft, setAssistantKey, setEntry, type Routine } from './api'
+import { enableRoutine, draftRoutine, approveDraft, discardDraft, setAssistantKey, setEntry, act, type Routine, type Proposal } from './api'
 import { routineWords } from './why'
 import Icon from './Icon.vue'
 
@@ -41,18 +41,28 @@ async function flip(r: Routine) {
 }
 
 /* asking for one */
-const text = ref(''), asking = ref(false), note = ref('')
+const text = ref(''), asking = ref(false), note = ref(''), proposal = ref<Proposal | null>(null), doing = ref(false)
 async function ask() {
   const said = text.value.trim()
   if (!said || asking.value) return
-  asking.value = true; note.value = ''
+  asking.value = true; note.value = ''; proposal.value = null
   try {
     const d = await draftRoutine(said)
     text.value = ''
-    if (!store.drafts.some(x => x.id === d.id)) store.drafts = [...store.drafts, d]   // the stream usually beats us to it
-    note.value = 'Here it is. Read it over, then approve it or let it go.'
+    if ('kind' in d && d.kind === 'action') { proposal.value = d; note.value = 'Ready when you are. Nothing happens until you tap.' }
+    else {
+      if (!store.drafts.some(x => x.id === (d as Routine).id)) store.drafts = [...store.drafts, d as Routine]   // the stream usually beats us to it
+      note.value = 'Here it is. Read it over, then approve it or let it go.'
+    }
   } catch (e: any) { note.value = e.message }
   asking.value = false
+}
+async function doIt() {
+  const p = proposal.value; if (!p || doing.value) return
+  doing.value = true
+  try { await act(p.device, p.action, Object.keys(p.data).length ? p.data : undefined); notify(p.name); proposal.value = null; note.value = '' }
+  catch (e: any) { notify(`That didn't work: ${e.message}`, 'error') }
+  doing.value = false
 }
 async function approve(d: Routine) {
   if (busy.value) return
@@ -98,6 +108,19 @@ onUnmounted(() => window.removeEventListener('keydown', keydown))
           <button class="button small" type="submit" :class="{ busy: asking }" :disabled="!text.trim()">{{ asking ? 'Thinking…' : 'Ask' }}</button>
         </form>
         <p class="sheet-status" v-if="note">{{ note }}</p>
+        <ul class="drafts" v-if="proposal">
+          <li>
+            <span class="routine-text">
+              <span class="routine-name">{{ proposal.name }}</span>
+              <span class="routine-sub">{{ proposal.device_name }} · right now, once</span>
+              <span class="draft-said">You said: “{{ proposal.said }}”</span>
+            </span>
+            <span class="draft-actions">
+              <button class="button small" :class="{ busy: doing }" @click="doIt">Do it</button>
+              <button class="button small ghost" @click="proposal = null; note = ''">Not now</button>
+            </span>
+          </li>
+        </ul>
       </div>
       <details class="section" v-else-if="store.assistant?.available">
         <summary>Connect the assistant to ask for routines in plain words</summary>

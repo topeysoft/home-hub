@@ -82,6 +82,15 @@ container before the Pi's first start so the two do not fight over Ring's token.
   unit on the host runs `install.sh` again, and the panel comes back on the new build. `driver-layer/host/update.sh`.
 - Health: Home has a quiet *Needs a look* list when something is off: a device offline since Tuesday, storage nearly
   full, a driver that wants signing in, an update that did not finish. `GET /health`; the words come from the brain.
+- Sounds on a speaker: every speaker tile has White, Pink and Brown noise (the brain makes those itself) plus any audio
+  file in the hub's sounds folder, with a sleep timer. Recordings in the repo's `sounds/` folder ship in the image and are
+  copied into every hub's folder when missing (`tools/add-sound.sh` puts a download there in the right shape, and can push
+  it to a hub over ssh at the same time); a household's own files go straight into `driver-layer/brain-data/sounds/` on
+  the hub (`brain/sounds/` when running the brain on a Mac) and are never overwritten. `rain.mp3` shows up as *Rain*; MP3, WAV, OGG, M4A, FLAC and AAC work,
+  and any length works: the brain prepares each file once (ffmpeg is in the image), crossfading its last three seconds into
+  its first and repeating it to ten minutes, so the join is seamless and the speaker's own restart comes round rarely. The
+  prepared copies live in `sounds/prepared/`; the originals are never touched. The speaker fetches the file from the hub's
+  LAN address; the brain restarts it each time it ends, and a rule can put a sound on too (`"then": {"device": "<speaker>", "action": "sound", "data": {"sound": "rain", "minutes": 60}}`).
 - Backup and restore: *This hub* on Home hands you one `.tar.gz` with the brain's settings and event log, the engine's
   config, the radios' keys, Ring's sign-in and the front door's certificate authority (not the engine's history
   database or any logs). It carries the house's keys, so it sits behind the settings code. Restoring, here or on a

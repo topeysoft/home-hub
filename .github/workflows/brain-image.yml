@@ -7,7 +7,7 @@ on:
   push:
     branches: [main]
     tags: ["v*"]
-    paths: ["brain/**", "app/**", ".github/workflows/brain-image.yml"]
+    paths: ["brain/**", "app/**", "sounds/**", ".github/workflows/brain-image.yml"]
   workflow_dispatch:
 
 permissions:

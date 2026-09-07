@@ -247,10 +247,15 @@ class Engine:
                     await self.hub.set_intent(self.hub.home.rooms[rule["room"]], state, source="rule", detail=why, depth=depth)
             elif "device" in then:
                 d = self.hub.home.devices.get(then["device"])
+                data = then.get("data") or {}
+                if d and then["action"] == "sound":
+                    await self.hub.sounds.play(d, str(data.get("sound", "")), data.get("minutes"), data.get("volume"), source="rule"); return
+                if d and then["action"] == "sound_off":
+                    await self.hub.sounds.stop(d, source="rule"); return
                 key = (d.capability.split(".")[0], then["action"]) if d else None
                 if key not in SERVICE: raise ValueError(f"{then['device']} cannot {then.get('action')}")
                 domain, service = SERVICE[key]
-                await self.hub.ha.call(domain, service, d.id, **(then.get("data") or {}))
+                await self.hub.ha.call(domain, service, d.id, **data)
                 self.hub.log.add("action", d.id, None, then["action"], source="rule", detail=why)
             elif "notify" in then:
                 self.hub.log.add("notify", rule["room"], None, then["notify"], source="rule", detail=why)

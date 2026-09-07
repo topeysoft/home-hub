@@ -22,6 +22,7 @@ from .assistant import Assistant, AssistantError
 from .updates import Updates
 from .health import Health
 from .backup import Backup
+from .sounds import Sounds, DIR as SOUNDS_DIR
 from .settings import Settings, DATA, env_file
 from .lock import Lock, needs_code
 from .pairing import Pairing
@@ -67,6 +68,7 @@ class Hub:
         self.updates = Updates(self)                   # which build this is, whether a newer one exists, and the panel's ask
         self.health = Health(self)                     # what needs a look, as sentences
         self.backup = Backup(self)                     # the house as one file, and back
+        self.sounds = Sounds(self)                     # noise and rain on a speaker, looped here, with a sleep timer
         self._timers: dict[str, asyncio.Task] = {}     # things the brain will do later for a device (switch a fan off)
         self.comfort = Comfort(self)                   # a thermostat sensing its room from another sensor
         self._comfort_task = None
@@ -158,6 +160,7 @@ class Hub:
         self.ha.on_event(self._on_event)
         self._set("ready")
         asyncio.create_task(self.provision.refresh())   # look at the driver layer now, not at the next half-minute
+        asyncio.create_task(self.sounds.ensure())        # the generated noises, once
         self._broadcast(json.dumps({"type": "home", "home": self.home_dict()}))
         self._broadcast(json.dumps({"type": "ambient", "ambient": self.ambient()}))
         log.info("home: %d rooms, %d devices, weather=%s", len(self.home.rooms), len(self.home.devices), self.weather and self.weather["id"])
@@ -301,6 +304,7 @@ class Hub:
             self.log.add("state", dev.id, old, dev.state, source="device", detail=dev.attrs)
         self._broadcast(json.dumps({"type": "device", "device": dev.__dict__}))
         self.engine.on_state(dev, old)
+        self.sounds.on_state(dev, old)
         if dev.capability in ("climate", "sensor.temperature"): asyncio.create_task(self.comfort.on_state(dev))
 
     async def _comfort_loop(self):
@@ -804,6 +808,13 @@ async def device_action(device_id: str, action: str, data: dict | None = None):
         await hub.comfort.want(dev, float(data["temperature"]))     # while sensing from elsewhere, the number is what the other room should reach
         if dev.room_id in hub.home.rooms: hub.hold(hub.home.rooms[dev.room_id])
         return {"ok": True}
+    if action in ("sound", "sound_off"):
+        try:
+            if action == "sound": await hub.sounds.play(dev, str((data or {}).get("sound", "")), (data or {}).get("minutes"), (data or {}).get("volume"))
+            else: await hub.sounds.stop(dev)
+        except ValueError as e: raise HTTPException(400, str(e))
+        if dev.room_id in hub.home.rooms: hub.hold(hub.home.rooms[dev.room_id])
+        return {"ok": True, "playing": hub.sounds.describe(dev.id)}
     key = (dev.capability.split(".")[0], action)
     if key not in SERVICE: raise HTTPException(400, f"{dev.capability} cannot {action}")
     domain, service = SERVICE[key]
@@ -843,6 +854,15 @@ def room_why(room_id: str, limit: int = 5):
     if room_id != "home" and room_id not in hub.home.rooms: raise HTTPException(404, "unknown room")
     subjects = "home" if room_id == "home" else (room_id, "home")
     return hub.log.recent(limit, subject=subjects, kinds=("intent", "held", "shadowed", "failed"))
+
+
+# ---------- sounds ----------
+@app.get("/sounds")
+async def sounds():
+    """What a speaker can play: the generated noises and every file in the sounds folder, plus what is playing now.
+    Asking also starts preparing any new file, so a fresh rain.mp3 is looped and ready by the time someone taps it."""
+    hub.sounds.prepare_soon()
+    return {"sounds": hub.sounds.catalog(), "playing": {k: hub.sounds.describe(k) for k in hub.sounds.sessions}, "folder": str(SOUNDS_DIR)}
 
 
 # ---------- health ----------
@@ -985,3 +1005,5 @@ async def stream(ws: WebSocket):
 DIST = Path(__file__).resolve().parent.parent.parent / "app" / "dist"
 if DIST.exists():
     app.mount("/", StaticFiles(directory=DIST, html=True), name="app")
+SOUNDS_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/sounds", StaticFiles(directory=SOUNDS_DIR), name="sounds")   # speakers fetch from here; byte ranges served

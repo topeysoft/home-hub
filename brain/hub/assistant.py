@@ -55,6 +55,8 @@ VOCABULARY = """A rule is one JSON object: {"id", "name", "room", "when", "if", 
 - "then", exactly one outcome:
   {"intent": "<state>"}                             the normal outcome: the room, or the house, goes to that state
   {"device": "<device id>", "action": "on" | "off" | "lock" | "unlock" | "open" | "close" | "pause" | "play"}
+  {"device": "<speaker id>", "action": "sound", "data": {"sound": "<sound id>", "minutes": <optional>}}   a sound on a speaker
+  {"device": "<speaker id>", "action": "sound_off"}
   {"notify": "<short text>"}
 States and what they do in a room: occupied = lights on; empty = lights off, media paused; asleep = lights and
 media off, doors locked; away = everything off, doors locked; movie = lights low, screen on; guests = lights bright.
@@ -67,11 +69,19 @@ the rooms and devices listed. Never invent ids. Keep the name in the person's ow
 
 {VOCABULARY}
 
-Answer as JSON: {{"ok": true, "reason": "", "rule_json": "<the rule as a JSON string>"}} or
-{{"ok": false, "reason": "<one plain sentence for the person>", "rule_json": ""}}."""
+Some requests are for right now, not a standing rule: "play rain on Nadine's speaker", "turn the theater light off",
+"white noise in the bedroom for an hour". Those are an action, not a rule: one device, one action, optional data
+(a sound needs {{"sound": "<id>", "minutes": <optional>}}; volume takes {{"volume_level": 0.0-1.0}}), and a name saying
+what will happen in plain words. The person confirms it on the panel before anything moves.
 
-DRAFT_SCHEMA = {"type": "object", "properties": {"ok": {"type": "boolean"}, "reason": {"type": "string"}, "rule_json": {"type": "string"}},
-                "required": ["ok", "reason", "rule_json"], "additionalProperties": False}
+Answer as JSON. A rule: {{"ok": true, "kind": "rule", "reason": "", "rule_json": "<the rule as a JSON string>", "action_json": ""}}.
+An action: {{"ok": true, "kind": "action", "reason": "", "rule_json": "", "action_json": "{{\"device\": \"<id>\", \"action\": \"<action>\", \"data\": {{}}, \"name\": \"<what will happen>\"}}"}}.
+Neither: {{"ok": false, "kind": "", "reason": "<one plain sentence for the person>", "rule_json": "", "action_json": ""}}."""
+
+DRAFT_SCHEMA = {"type": "object", "properties": {"ok": {"type": "boolean"}, "kind": {"type": "string", "enum": ["rule", "action", ""]},
+                                                 "reason": {"type": "string"}, "rule_json": {"type": "string"}, "action_json": {"type": "string"}},
+                "required": ["ok", "kind", "reason", "rule_json", "action_json"], "additionalProperties": False}
+ACTIONS = {"on", "off", "play", "pause", "next", "previous", "volume", "lock", "unlock", "open", "close", "set", "mode", "preset", "fan", "sound", "sound_off"}
 
 EXPLAIN_SYSTEM = """You explain what a house did to the people who live in it. You get the house's recent log and a
 question. Answer in two or three short sentences of plain English, using only what the log says; if the log does
@@ -155,9 +165,11 @@ class Assistant:
         rooms = [f"  {r.id}: {r.name}" for r in home.rooms.values() if r.id != "unassigned"]
         devs = [f"  {d.id} | {d.name} | {d.capability} | in {d.room_id} | now {d.state}" for d in home.devices.values() if d.room_id != "unassigned"]
         ids = [r.get("id") for r in self.hub.engine.raw.get("rules", []) if isinstance(r, dict)]
+        sounds = ", ".join(f"{s['id']} ({s['name']})" for s in self.hub.sounds.catalog()) or "none"
         now = datetime.now(self.hub.tz)
         entry = ", ".join(self.hub.entry) or "none chosen yet"
         return "\n".join(["Rooms (id: name):", *rooms, f"Entry rooms (the ones \"entry\" stands for): {entry}", "Devices (id | name | kind | room | state):", *devs,
+                          f"Sounds a speaker (kind media) can play, by id: {sounds}",
                           f"Existing rule ids: {', '.join(i for i in ids if i) or 'none'}",
                           f"Now: {now.strftime('%A %H:%M')}. Who is home: {presence_word(p.somebody) or 'unknown'}."])
 
@@ -172,12 +184,29 @@ class Assistant:
             try: out = json.loads(await self._ask(DRAFT_SYSTEM, ask, DRAFT_SCHEMA, max_tokens=2000))
             except ValueError: errors = ["the answer was not JSON"]; continue
             if not out.get("ok"): raise AssistantError(out.get("reason") or "That can't be one routine yet.", 422)
+            if out.get("kind") == "action": return self.proposal(out.get("action_json"), said)
             try: rule = json.loads(out.get("rule_json") or "")
             except ValueError: errors = ["rule_json was not valid JSON"]; continue
             rule = self.adopt(rule, said)
             _, errors = rules_mod.validate({"rules": [rule]}, set(self.hub.home.rooms))
             if not errors: return self.keep(rule)
         raise AssistantError("The assistant couldn't write that as a routine the house can run: " + "; ".join(errors), 422)
+
+    def proposal(self, action_json, said: str) -> dict:
+        """A one-off action the model proposes. Checked against the house and handed back for a person to confirm; not run, not saved."""
+        try: a = json.loads(action_json or "")
+        except ValueError: raise AssistantError("The assistant's answer was not an action.", 422)
+        if not isinstance(a, dict): raise AssistantError("The assistant's answer was not an action.", 422)
+        dev = self.hub.home.devices.get(str(a.get("device") or ""))
+        if not dev: raise AssistantError("The assistant named something the house does not have.", 422)
+        action = str(a.get("action") or "")
+        if action not in ACTIONS: raise AssistantError(f"The house cannot {action or 'do that'}.", 422)
+        data = a.get("data") if isinstance(a.get("data"), dict) else {}
+        if action == "sound" and not self.hub.sounds.path(str(data.get("sound", ""))): raise AssistantError("There is no such sound on the hub.", 422)
+        name = re.sub(r"\s+", " ", str(a.get("name") or f"{action} {dev.name}")).strip().rstrip(".")
+        out = {"kind": "action", "device": dev.id, "device_name": dev.name, "action": action, "data": data, "name": name, "said": said}
+        self.hub.log.add("proposal", dev.id, None, action, source="assistant", detail=out)
+        return out
 
     def adopt(self, rule, said: str) -> dict:
         """Make the model's rule ours: only the fields that matter, our provenance, an id nothing else has."""
@@ -201,6 +230,7 @@ class Assistant:
         return self._raw()["drafts"]
 
     def keep(self, rule: dict) -> dict:
+        rule = {"kind": "rule", **rule}
         raw = self._raw(); raw["drafts"].append(rule)
         self.hub.engine.save(raw)
         self.hub.log.add("draft", rule["id"], None, "proposed", source="assistant", detail={"said": rule.get("said"), "rule": rule})

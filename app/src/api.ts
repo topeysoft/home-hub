@@ -130,7 +130,13 @@ export async function getAssistant(): Promise<Assistant> {
   const r = await request('/assistant'); if (!r.ok) await fail(r); return r.json()
 }
 export const setAssistantKey = (key: string) => post<Assistant>('/assistant/key', { key })
-export const draftRoutine = (text: string) => post<Routine>('/drafts', { text })
+/** What the assistant hands back for a one-off request: one device, one action, confirmed by a person before it runs. */
+export type Proposal = { kind: 'action'; device: string; device_name: string; action: string; data: Record<string, unknown>; name: string; said: string }
+export const draftRoutine = (text: string) => post<Routine | Proposal>('/drafts', { text })
+export type Sound = { id: string; name: string; ready: boolean }
+export async function getSounds(): Promise<{ sounds: Sound[]; folder: string }> {
+  const r = await request('/sounds'); if (!r.ok) await fail(r); return r.json()
+}
 export const approveDraft = (id: string) => post<Routine>(`/drafts/${encodeURIComponent(id)}/approve`)
 export async function discardDraft(id: string) {
   const r = await request(`/drafts/${encodeURIComponent(id)}`, { method: 'DELETE' }); if (!r.ok) await fail(r)

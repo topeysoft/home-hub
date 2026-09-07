@@ -1,5 +1,5 @@
 import { reactive } from 'vue'
-import { getHome, getEvents, getAmbient, getScenes, getStatus, getDiscovered, getRoutines, getAssistant, getPresence, getHealth, connect, act, setIntent, setHomeIntent, type Room, type Device, type Home, type Event, type Ambient, type Rules, type Status, type Found, type Intent, type Routine, type Assistant, type Presence, type Note } from './api'
+import { getHome, getEvents, getAmbient, getScenes, getStatus, getDiscovered, getRoutines, getAssistant, getPresence, getHealth, getSounds, connect, act, setIntent, setHomeIntent, type Room, type Device, type Home, type Event, type Ambient, type Rules, type Status, type Found, type Intent, type Routine, type Assistant, type Presence, type Note, type Sound } from './api'
 import { sunPosition, sunGuess, moonPhase } from './sun'
 
 export const store = reactive({
@@ -20,6 +20,7 @@ export const store = reactive({
   assistant: null as Assistant | null,       // whether the hub can talk to the model at all
   presence: null as Presence | null,         // who is home, from the brain; null until it has said
   notes: [] as Note[],                       // what needs a look, in the brain's words
+  sounds: [] as Sound[],                     // what a speaker can play: the hub's noises and the files in its sounds folder
   updating: false,                           // this screen asked for an update; cleared when a new build answers
   restoring: false,                          // this screen sent a backup back; cleared when the hub returns
   previewSetup: new URLSearchParams(location.search).get('setup') === '1',   // ?setup=1 previews first run; cleared by Open Home
@@ -264,6 +265,9 @@ export async function loadAssistant() {
 export async function loadPresence() {
   try { store.presence = await getPresence() } catch {}
 }
+export async function loadSounds() {
+  try { store.sounds = (await getSounds()).sounds } catch {}
+}
 export async function loadHealth() {
   if (store.status?.driver !== 'ready') return
   try { store.notes = (await getHealth()).notes } catch {}
@@ -301,7 +305,7 @@ let stop: (() => void) | undefined, lostTimer: number | undefined, skyTimer: num
 export async function load() {
   await refreshStatus()
   try { applyHome(await getHome()) } catch { store.error = 'The hub is not answering.' }
-  loadAmbient(); loadRules(); loadRoutines(); loadAssistant(); loadPresence(); loadHealth()
+  loadAmbient(); loadRules(); loadRoutines(); loadAssistant(); loadPresence(); loadHealth(); loadSounds()
 }
 let foundPoll: number | undefined
 export async function start() {

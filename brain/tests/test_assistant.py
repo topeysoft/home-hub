@@ -22,7 +22,8 @@ class FakeModel:
         self.calls.append(kw); return self.replies.pop(0)
 
 
-def ok(rule): return Reply(json.dumps({"ok": True, "reason": "", "rule_json": json.dumps(rule)}))
+def ok(rule): return Reply(json.dumps({"ok": True, "kind": "rule", "reason": "", "rule_json": json.dumps(rule), "action_json": ""}))
+def act(a): return Reply(json.dumps({"ok": True, "kind": "action", "reason": "", "rule_json": "", "action_json": json.dumps(a)}))
 def no(reason): return Reply(json.dumps({"ok": False, "reason": reason, "rule_json": ""}))
 RULE = {"id": "hall-late", "name": "Hallway light on after dark when someone walks through", "room": "hall",
         "when": {"motion": "on"}, "if": [["sun", "below", 0]], "then": {"intent": "occupied"}}
@@ -34,6 +35,8 @@ class AssistantTests(unittest.IsolatedAsyncioTestCase):
         self._path, rules.RULES_PATH = rules.RULES_PATH, d / "rules.json"     # a real file, so save and load round-trip
         rules.RULES_PATH.write_text(json.dumps({"rules": [{**RULE, "id": "hall-evening"}], "drafts": []}))
         self.hub = FakeHub(); self.hub.settings, self.hub.env = Settings(d / "settings.json"), {}
+        from hub import sounds
+        self.hub.sounds = sounds.Sounds(self.hub)
         self.hub.engine.load(force=True)
 
     def tearDown(self):
@@ -106,6 +109,15 @@ class AssistantTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.file()["drafts"], [])
         with self.assertRaises(AssistantError): a.approve("den-idle")
         self.assertEqual([r["new"] for r in self.hub.log.of("draft")], ["proposed", "proposed", "approved", "discarded"])
+
+    async def test_a_request_for_right_now_comes_back_as_an_action_to_confirm(self):
+        model = FakeModel(act({"device": "light.hall", "action": "off", "data": {}, "name": "Turn the hall light off"}))
+        out = await Assistant(self.hub, client=model).draft("turn the hall light off")
+        self.assertEqual((out["kind"], out["device"], out["action"], out["name"]), ("action", "light.hall", "off", "Turn the hall light off"))
+        self.assertEqual(self.file()["drafts"], [])                                     # nothing saved, nothing run
+        self.assertEqual(self.hub.log.rows[-1]["kind"], "proposal")
+        with self.assertRaises(AssistantError): await Assistant(self.hub, client=FakeModel(act({"device": "light.attic", "action": "off"}))).draft("x")
+        with self.assertRaises(AssistantError): await Assistant(self.hub, client=FakeModel(act({"device": "light.hall", "action": "explode"}))).draft("x")
 
     def tap(self, room, state, day, hour, minute):
         from datetime import datetime

@@ -626,3 +626,7 @@ select.input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://ww
 .restore .button { margin: 0; cursor: pointer; }
 .restore .field-hint { max-width: 40ch; }
 @media (max-width: 640px) { .hub-rows li { grid-template-columns: 1fr; gap: 8px; } }
+.sounds { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding-top: 2px; }
+.snd-for { height: 32px; padding: 0 10px; border-radius: 999px; background: var(--surface-hi); border: 1px solid var(--edge); color: var(--ink-2); font: inherit; font-size: 13px; -webkit-appearance: none; appearance: none; }
+.snd-for:disabled { opacity: .5; }
+.snd-left { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
