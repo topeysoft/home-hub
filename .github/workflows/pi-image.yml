@@ -22,6 +22,13 @@ jobs:
           printf 'HOME_HUB_REF=%s\nHOME_HUB_REPO=https://github.com/%s.git\n' "${GITHUB_REF_NAME}" "${GITHUB_REPOSITORY}" \
             > driver-layer/host/pi-image/stage-hub/00-home-hub/files/home-hub.conf
           cat driver-layer/host/pi-image/stage-hub/00-home-hub/files/home-hub.conf
+      - name: Room on the runner
+        # The action's own "increase-runner-disk-size" purges packages with apt and fails on today's runner image
+        # (exit 100). Deleting the big toolchains nobody needs here frees the same ~30 GB without apt.
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /usr/share/swift /usr/local/share/boost /opt/hostedtoolcache/CodeQL /usr/local/lib/node_modules
+          sudo docker image prune -af >/dev/null 2>&1 || true
+          df -h /
       - uses: usimd/pi-gen-action@v1
         id: build
         with:
@@ -39,7 +46,7 @@ jobs:
           compression-level: 6
           pi-gen-version: arm64
           release: trixie
-          increase-runner-disk-size: true
+          increase-runner-disk-size: false
       - name: Checksum
         run: |
           IMG="${{ steps.build.outputs.image-path }}"
