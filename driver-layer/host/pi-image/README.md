@@ -15,7 +15,8 @@ What the image carries beyond stock Raspberry Pi OS Lite:
 The first boot still needs the internet: it pulls the engine and the brain images. Raspberry Pi Imager's
 own customisation (Wi‑Fi, a user and password, an SSH key, the time zone) works on this image as on any
 Raspberry Pi OS image; nothing here needs it, but it is how you get a shell if you ever want one. The
-image ships with no password and SSH off.
+image ships with no password and SSH off; with a screen and keyboard attached, Raspberry Pi OS's own first-boot
+user setup appears on the console, and headless nothing waits on it.
 
 `stage-hub/` is the pi-gen stage. `00-home-hub/files/home-hub.conf` is written by the workflow just
 before the build and is not committed. To build locally, follow pi-gen's README with

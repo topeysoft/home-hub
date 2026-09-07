@@ -37,7 +37,8 @@ jobs:
           hostname: hub
           username: hub
           enable-ssh: 0
-          disable-first-boot-user-rename: 1
+          # No password baked in, so the first-boot user rename stays on (pi-gen refuses to turn it off without one).
+          # Headless, nothing waits on it: the hub's own first-boot unit runs regardless.
           locale: en_US.UTF-8
           keyboard-layout: English (US)
           keyboard-keymap: us
@@ -47,6 +48,7 @@ jobs:
           pi-gen-version: arm64
           release: trixie
           increase-runner-disk-size: false
+          verbose-output: true
       - name: Checksum
         run: |
           IMG="${{ steps.build.outputs.image-path }}"
