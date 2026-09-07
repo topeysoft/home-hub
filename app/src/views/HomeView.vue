@@ -6,6 +6,8 @@ import { upcomingLine } from '../upcoming'
 import Icon from '../Icon.vue'
 import SceneBar from '../SceneBar.vue'
 import OnNow from '../OnNow.vue'
+import Say from '../Say.vue'
+import PhoneSteps from '../PhoneSteps.vue'
 import CameraTile from '../tiles/CameraTile.vue'
 
 const props = defineProps<{ rooms: Room[]; now: Date }>()   // now: the clock the shell shows, so a preview hour agrees with itself
@@ -32,6 +34,14 @@ async function install() {
   catch (e: any) { notify(e.message, 'error') }
 }
 const noteIcon = (k: string) => k === 'offline' ? 'refresh' : k === 'storage' ? 'home' : k === 'driver' ? 'switch' : 'sparkle'
+
+/* on a phone that is still in a browser tab: offer the home-screen install once, with the steps for this phone */
+const onPhone = matchMedia('(max-width: 860px)').matches
+const standalone = matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true
+function remembered(k: string) { try { return localStorage.getItem(k) } catch { return null } }
+const phoneNudge = ref(onPhone && !standalone && remembered('phone-nudge') !== 'done')
+const phoneSteps = ref(false)
+function dismissPhone() { phoneNudge.value = false; phoneSteps.value = false; try { localStorage.setItem('phone-nudge', 'done') } catch {} }
 
 const routinesLine = computed(() => {
   const n = store.routines.length, off = store.routines.filter(r => r.enabled === false).length
@@ -65,6 +75,8 @@ onUnmounted(() => { clearInterval(t1); clearInterval(t2); clearInterval(t3) })
       <SceneBar :room="null" />
     </header>
 
+    <Say />
+
     <button class="nudge" v-if="updateReady" @click="install">
       <span class="nudge-icon"><Icon name="sparkle" :size="20" /></span>
       <span class="nudge-text"><span class="nudge-title">An update is ready</span><span class="nudge-sub">{{ update?.latest?.title || 'New for the hub.' }} Tap to install; it takes a few minutes and the lights keep working.</span></span>
@@ -85,6 +97,14 @@ onUnmounted(() => { clearInterval(t1); clearInterval(t2); clearInterval(t3) })
       <span class="nudge-icon"><Icon name="pin" :size="20" /></span>
       <span class="nudge-text"><span class="nudge-title">Where is home?</span><span class="nudge-sub">Set a location once and the sky, sunrise and weather will follow it.</span></span>
     </button>
+    <button class="nudge" v-if="phoneNudge && !phoneSteps" @click="phoneSteps = true">
+      <span class="nudge-icon"><Icon name="phone" :size="20" /></span>
+      <span class="nudge-text"><span class="nudge-title">Put the house on your home screen</span><span class="nudge-sub">One tap from your phone's first screen, full screen, no address to type.</span></span>
+    </button>
+    <div class="phone-card" v-if="phoneSteps">
+      <PhoneSteps />
+      <button class="button small ghost" @click="dismissPhone">Done, don't show this again</button>
+    </div>
 
     <div class="block" v-if="anyOn">
       <h2 class="label">On right now</h2>

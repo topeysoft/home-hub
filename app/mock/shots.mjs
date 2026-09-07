@@ -29,6 +29,8 @@ const SCREENS = [
   ['setup-welcome', 'kiosk', '/?setup=1&page=welcome&at=13:00'],
   ['setup-rooms', 'kiosk', '/?setup=1&page=rooms&at=13:00'],
   ['setup-devices', 'kiosk', '/?setup=1&page=devices&at=13:00'],
+  ['setup-done', 'kiosk', '/?setup=1&page=done&at=13:00', [1280, 1000]],
+  ['sheet-hub', 'kiosk', '/?sheet=hub&at=19:40'],
   ['wall-home', 'wall', '/?at=19:40'],
   ['tablet-home', 'tablet', '/?at=19:40'],
   ['phone-home', 'phone', '/?at=19:40', [390, 1400]],

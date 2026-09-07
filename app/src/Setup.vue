@@ -8,6 +8,7 @@ import LocationPicker from './LocationPicker.vue'
 import AddPanel from './AddPanel.vue'
 import Drivers from './Drivers.vue'
 import Restore from './Restore.vue'
+import PhoneSteps from './PhoneSteps.vue'
 
 /* First run. One question per screen, in this order: who you are, where home is, which rooms,
    what to add. Every step after the first can be skipped and finished later from Home. */
@@ -81,7 +82,7 @@ async function finish() {
   } catch (e: any) { error.value = `Couldn't finish: ${e.message}` }
   busy.value = false
 }
-const phoneUrl = computed(() => location.hostname.endsWith('.local') || /^\d+\.\d+\.\d+\.\d+$/.test(location.hostname) ? `${location.protocol}//${location.host}` : 'http://hub.local')
+const firstRoom = computed(() => (store.rooms.find(r => r.id !== 'unassigned' && r.devices.some(d => d.capability === 'light')) ?? store.rooms.find(r => r.id !== 'unassigned'))?.name ?? 'Kitchen')
 const firstName = computed(() => (status.value?.owner || name.value || '').split(' ')[0])
 const idx = computed(() => ['code', 'location', 'rooms', 'devices'].indexOf(page.value))
 
@@ -200,8 +201,9 @@ async function saveCode() {
         <span class="setup-mark done"><Icon name="check" :size="30" /></span>
         <h1 class="display">{{ store.homeName || 'Home' }} is ready{{ firstName ? `, ${firstName}` : '' }}.</h1>
         <p class="setup-lede">Leave this screen on the wall. It rests to a clock after a few minutes and wakes with a touch.</p>
+        <PhoneSteps compact />
         <ul class="tips">
-          <li><span class="tip-icon"><Icon name="tv" :size="18" /></span><span>On a phone, open <b>{{ phoneUrl }}</b> on the home Wi‑Fi and choose <b>Add to Home Screen</b>. It becomes an app.</span></li>
+          <li><span class="tip-icon"><Icon name="sparkle" :size="18" /></span><span>Tell the house what you want in the box at the top of Home: <b>“{{ firstRoom }} lights off”</b>, <b>“is the front door locked?”</b>.</span></li>
           <li><span class="tip-icon"><Icon name="sparkle" :size="18" /></span><span>New things you plug in appear under <b>Found nearby</b> on the Home screen.</span></li>
           <li><span class="tip-icon"><Icon name="home" :size="18" /></span><span>Devices that don't know their room wait under <b>New devices</b> until you place them.</span></li>
         </ul>

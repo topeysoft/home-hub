@@ -56,6 +56,7 @@ class Home:
         self.intent: str = "unknown"     # the last home-wide intent (bedtime, everything off)
         self.extras: dict[str, dict] = {}  # what the brain knows about a device that HA does not (a fan timer's end); shown with its attrs
         self.lamps: dict[str, str] = {}    # camera id -> the light built into the same unit (Ring floodlight and spotlight cams)
+        self.hardware: dict[str, dict] = {}   # driver device id -> {"name", "manufacturer", "model"}: what the maker called the unit, for naming new things
 
     def attrs_for(self, eid, cap, a):
         """HA's attributes plus what the brain knows. While the brain runs a fan timer the fan is on whatever the
@@ -85,6 +86,7 @@ class Home:
                 r.intent, r.set_by, r.hold_until, r.motion_at = was[rid].intent, was[rid].set_by, was[rid].hold_until, was[rid].motion_at
         dev_area = {d["id"]: d.get("area_id") for d in ha_devices}
         dev_words = {d["id"]: " ".join(str(d.get(k) or "") for k in ("name_by_user", "name", "model", "manufacturer")) for d in ha_devices}
+        self.hardware = {d["id"]: {"name": d.get("name_by_user") or d.get("name") or "", "manufacturer": d.get("manufacturer") or "", "model": d.get("model") or ""} for d in ha_devices}
         reg = {e["entity_id"]: e for e in entities}
         st = {s["entity_id"]: s for s in states}
         camera_devices = {e["device_id"] for e in entities if e["entity_id"].startswith("camera.") and e.get("device_id")}

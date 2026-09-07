@@ -16,7 +16,7 @@ services:
       - ./mosquitto/log:/mosquitto/log
 
   homeassistant:
-    image: ghcr.io/home-assistant/home-assistant:stable
+    image: ghcr.io/home-assistant/home-assistant:2026.9.1
     container_name: homeassistant
     restart: unless-stopped
     depends_on: [mosquitto]
@@ -49,7 +49,7 @@ services:
     # Ring Alarm and everything paired to its base station (Z-Wave locks, switches, plugs, contact and
     # motion sensors) via Ring's cloud, published to Mosquitto with HA discovery. First run: open
     # http://<host>:55123, sign in to Ring (with 2FA); the token is kept in ./ring-mqtt after that.
-    image: tsightler/ring-mqtt
+    image: tsightler/ring-mqtt:5.9.3
     container_name: ring-mqtt
     restart: unless-stopped
     depends_on: [mosquitto]

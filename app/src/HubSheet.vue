@@ -5,10 +5,11 @@ import { downloadBackup, requestUpdate } from './api'
 import Icon from './Icon.vue'
 import Restore from './Restore.vue'
 import AdvancedLink from './AdvancedLink.vue'
+import PhoneSteps from './PhoneSteps.vue'
 
 /* This hub: which build it is, whether a newer one exists, a backup to take away and a way to put one back. */
 const update = computed(() => store.status?.update ?? null)
-const busy = ref(false)
+const busy = ref(false), phone = ref(false)
 async function backup() {
   if (busy.value) return
   busy.value = true
@@ -49,6 +50,12 @@ onUnmounted(() => window.removeEventListener('keydown', key))
           <span class="hub-v">Settings, rooms, routines, the engine's setup and the radios' keys, in one file.<span class="hub-sub"> It holds the house's keys: keep it private.</span></span>
           <button class="button small" :class="{ busy }" @click="backup">{{ busy ? 'Packing…' : 'Back up' }}</button>
         </li>
+        <li>
+          <span class="hub-k">Phone</span>
+          <span class="hub-v">The same house on a phone, as an app on its first screen.</span>
+          <button class="button small" @click="phone = !phone">{{ phone ? 'Hide' : 'Show how' }}</button>
+        </li>
+        <li class="hub-wide" v-if="phone"><PhoneSteps /></li>
         <li>
           <span class="hub-k">Restore</span>
           <span class="hub-v">Put a backup back, here or on a new hub. Everything running now is replaced by what is in the file.</span>

@@ -23,6 +23,8 @@ from .updates import Updates
 from .health import Health
 from .backup import Backup
 from .sounds import Sounds, DIR as SOUNDS_DIR
+from .commands import Commands, NotUnderstood
+from .suggest import Suggestions
 from .settings import Settings, DATA, env_file
 from .lock import Lock, needs_code
 from .pairing import Pairing
@@ -37,6 +39,16 @@ US_ZONES = ("America/New_York", "America/Chicago", "America/Denver", "America/Ph
 
 def unit_system_for(tz: str) -> str:
     return "us_customary" if tz.startswith(US_ZONES) else "metric"
+
+
+def qr_svg_bytes(text: str) -> bytes:
+    """A QR code as SVG paths in the panel's colours; the panel puts it on a light card."""
+    import io, qrcode
+    from qrcode.image.svg import SvgPathImage
+    q = qrcode.QRCode(box_size=10, border=2, error_correction=qrcode.constants.ERROR_CORRECT_M, image_factory=SvgPathImage)
+    q.add_data(text); q.make(fit=True)
+    b = io.BytesIO(); q.make_image().save(b)
+    return b.getvalue()
 
 
 class Hub:
@@ -69,6 +81,8 @@ class Hub:
         self.health = Health(self)                     # what needs a look, as sentences
         self.backup = Backup(self)                     # the house as one file, and back
         self.sounds = Sounds(self)                     # noise and rain on a speaker, looped here, with a sleep timer
+        self.commands = Commands(self)                 # plain words into moves, by a fixed grammar first and the assistant after
+        self.suggest = Suggestions(self)               # names and rooms for things not placed yet; proposes, never moves
         self._timers: dict[str, asyncio.Task] = {}     # things the brain will do later for a device (switch a fan off)
         self.comfort = Comfort(self)                   # a thermostat sensing its room from another sensor
         self._comfort_task = None
@@ -386,6 +400,23 @@ class Hub:
         if dev:
             dev.attrs = {k: v for k, v in dev.attrs.items() if k != "fan_until"}
             self._broadcast(json.dumps({"type": "device", "device": dev.__dict__}))
+
+    async def act(self, dev, action: str, data: dict | None = None, source="user", said: str | None = None):
+        """One device, one action: the path a tile's tap, a typed command and a confirmed proposal all take.
+        Raises ValueError when the thing cannot do that; whatever the driver raises comes through as it is."""
+        data = dict(data or {})
+        if action == "set" and dev.capability == "climate" and self.comfort.sensing(dev.id) and data.get("temperature") is not None:
+            await self.comfort.want(dev, float(data["temperature"]))     # while sensing from elsewhere, the number is what the other room should reach
+        elif action in ("sound", "sound_off"):
+            if action == "sound": await self.sounds.play(dev, str(data.get("sound", "")), data.get("minutes"), data.get("volume"), source=source)
+            else: await self.sounds.stop(dev, source=source)
+        else:
+            key = (dev.capability.split(".")[0], action)
+            if key not in SERVICE: raise ValueError(f"{dev.capability} cannot {action}")
+            domain, service = SERVICE[key]
+            await self.ha.call(domain, service, dev.id, **data)
+            self.log.add("action", dev.id, None, action, source=source, detail={**data, **({"said": said} if said else {})} or None)
+        if dev.capability != "camera" and dev.room_id in self.home.rooms: self.hold(self.home.rooms[dev.room_id])
 
     def hold(self, room, state: RoomState = RoomState.occupied):
         """Someone touched a device in this room by hand: rules leave it alone for a while."""
@@ -804,24 +835,45 @@ async def device_action(device_id: str, action: str, data: dict | None = None):
     hub.ready()
     dev = hub.home.devices.get(device_id)
     if not dev: raise HTTPException(404, "unknown device")
-    if action == "set" and dev.capability == "climate" and hub.comfort.sensing(dev.id) and (data or {}).get("temperature") is not None:
-        await hub.comfort.want(dev, float(data["temperature"]))     # while sensing from elsewhere, the number is what the other room should reach
-        if dev.room_id in hub.home.rooms: hub.hold(hub.home.rooms[dev.room_id])
-        return {"ok": True}
-    if action in ("sound", "sound_off"):
-        try:
-            if action == "sound": await hub.sounds.play(dev, str((data or {}).get("sound", "")), (data or {}).get("minutes"), (data or {}).get("volume"))
-            else: await hub.sounds.stop(dev)
-        except ValueError as e: raise HTTPException(400, str(e))
-        if dev.room_id in hub.home.rooms: hub.hold(hub.home.rooms[dev.room_id])
-        return {"ok": True, "playing": hub.sounds.describe(dev.id)}
-    key = (dev.capability.split(".")[0], action)
-    if key not in SERVICE: raise HTTPException(400, f"{dev.capability} cannot {action}")
-    domain, service = SERVICE[key]
-    await hub.ha.call(domain, service, dev.id, **(data or {}))
-    hub.log.add("action", dev.id, None, action, source="user", detail=data)
-    if dev.capability != "camera" and dev.room_id in hub.home.rooms: hub.hold(hub.home.rooms[dev.room_id])
+    try: await hub.act(dev, action, data)
+    except ValueError as e: raise HTTPException(400, str(e))
+    if action in ("sound", "sound_off"): return {"ok": True, "playing": hub.sounds.describe(dev.id)}
     return {"ok": True}
+
+
+@app.post("/say")
+async def say(body: dict):
+    """{"text": "kitchen lights off", "room": "<optional room id the panel is showing>"}. The grammar runs at once, the way a tap
+    does; what it cannot place goes to the assistant, which only proposes. Answers: {"kind": "done" | "answer" | "explain" |
+    "action" | "rule", ...}. Driving the house never needs the code, and neither does asking."""
+    hub.ready()
+    try: return await hub.commands.say(str(body.get("text") or ""), body.get("room"))
+    except NotUnderstood as e: raise HTTPException(422, str(e))
+    except AssistantError as e: raise HTTPException(e.status, str(e))
+
+
+# ---------- placing new things ----------
+@app.get("/suggestions")
+async def suggestions():
+    """A name and a room for each thing under New devices, from the house's own reasoning and then the assistant's.
+    Nothing moves until a person taps Use; that goes through /devices/{id}/move and /rename like any other change."""
+    hub.ready()
+    return await hub.suggest.all()
+
+
+# ---------- the phone ----------
+@app.get("/qr.svg")
+def qr_svg(text: str):
+    """A QR code for the panel's address, so a phone opens the house from the wall or the Done screen."""
+    text = (text or "").strip()
+    if not text.startswith(("http://", "https://")) or len(text) > 200: raise HTTPException(400, "an http address, please")
+    return Response(content=qr_svg_bytes(text), media_type="image/svg+xml", headers={"Cache-Control": "max-age=86400"})
+
+
+@app.get("/phone")
+def phone():
+    """What a phone needs to reach this hub: its address on the Wi‑Fi, for when hub.local does not answer."""
+    return {"ip": Sounds._lan_ip()}
 
 
 @app.post("/rooms/{room_id}/intent/{state}")

@@ -121,6 +121,17 @@ const server = http.createServer((req, res) => {
   if (p === '/setup/drivers') return json(res, status)
   if (p === '/setup/advanced') return json(res, { url: 'http://hub.local:8123/', username: 'hub', password: 'secret' })
   if (/^\/rooms\/[^/]+\/why/.test(p)) return json(res, why)
+  if (p === '/suggestions') return json(res, { items: [
+    { id: 'u1', name: 'Colour lamp', room: 'living', why: 'the same unit as the floor lamp', source: 'assistant' },
+    { id: 'u2', name: 'Plug', room: '', why: 'a plainer name', source: 'house' }], assistant: true })
+  if (p === '/phone') return json(res, { ip: '192.168.1.40' })
+  if (p === '/qr.svg') { res.writeHead(200, { 'Content-Type': 'image/svg+xml' }); return res.end(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 29 29'><rect width='29' height='29' fill='#fff'/><path d='M2 2h7v7H2zM3 3v5h5V3zM4 4h3v3H4zM20 2h7v7h-7zM21 3v5h5V3zM22 4h3v3h-3zM2 20h7v7H2zM3 21v5h5v-5zM4 22h3v3H4zM11 2h2v2h-2zM14 3h2v2h-2zM11 6h3v2h-3zM16 7h2v2h-2zM2 11h2v2H2zM5 12h2v2H5zM8 11h2v3H8zM11 10h2v3h-2zM14 11h3v2h-3zM18 10h2v3h-2zM21 11h2v2h-2zM24 12h3v2h-3zM3 15h3v2H3zM7 16h2v2H7zM11 14h2v3h-2zM14 15h2v3h-2zM17 14h3v2h-3zM21 15h2v3h-2zM24 16h3v2h-3zM11 19h2v2h-2zM14 20h3v2h-3zM18 19h2v3h-2zM21 20h2v2h-2zM24 19h3v3h-3zM11 23h3v2h-3zM15 24h2v3h-2zM18 23h3v2h-3zM22 24h2v2h-2zM25 23h2v4h-2z'/></svg>`) }
+  if (p === '/say' && req.method === 'POST') { let b = ''; req.on('data', c => (b += c)); return req.on('end', () => { let t = ''; try { t = JSON.parse(b).text || '' } catch {}
+    if (/^(is|are|what|who|how)\b/i.test(t)) return json(res, { kind: 'answer', text: 'Front door is locked.', said: t })
+    if (/cosy|cozy|nice/i.test(t)) return json(res, { kind: 'action', device: 'l2', device_name: 'Floor lamp', action: 'on', data: { brightness_pct: 30 }, name: 'Floor lamp on, low', said: t })
+    if (/when|every|whenever/i.test(t)) return json(res, { kind: 'rule', id: 'x', name: t, room: 'living', when: { time: '21:00' }, then: { intent: 'movie' }, said: t })
+    if (t.length < 4) { res.writeHead(422, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify({ detail: 'The house didn\'t catch that. Try "kitchen lights off", "movie in the den" or "is the front door locked?". Connect the assistant under Routines to ask in your own words.' })) }
+    return json(res, { kind: 'done', text: 'Kitchen lights off.', said: t, count: 2 }) }) }
   if (/^\/devices\/[^/]+\/stream/.test(p)) { res.writeHead(502); return res.end() }   // no video here: the viewer settles for stills
   const img = p.match(/^\/devices\/([^/]+)\/image/)
   if (img) { res.writeHead(200, { 'Content-Type': 'image/svg+xml' }); return res.end(PICS[img[1]] ?? pic('#333', '#111')) }

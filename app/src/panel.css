@@ -630,3 +630,42 @@ select.input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://ww
 .snd-for { height: 32px; padding: 0 10px; border-radius: 999px; background: var(--surface-hi); border: 1px solid var(--edge); color: var(--ink-2); font: inherit; font-size: 13px; -webkit-appearance: none; appearance: none; }
 .snd-for:disabled { opacity: .5; }
 .snd-left { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* ---------- the command box: tell the house ---------- */
+.say { margin: -6px 0 26px; max-width: 640px; }
+.say-box { height: 54px; }
+.say-hint, .say-note { margin: 10px 4px 0; font-size: 13.5px; color: var(--muted); }
+.say-note { color: var(--ink-2); }
+.say-answer { display: flex; align-items: flex-start; gap: 8px; margin: 12px 0 0; padding: 12px 16px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--edge); font-size: 15.5px; max-width: 60ch; }
+.say-answer svg { color: var(--lamp); flex: 0 0 auto; margin-top: 3px; }
+.say .drafts { margin: 12px 0 0; }
+@media (max-width: 860px) { .say { margin: 0 0 22px; } }
+
+/* ---------- the phone: a QR code and the steps to the home screen ---------- */
+.phone { display: grid; grid-template-columns: auto 1fr; gap: 18px; align-items: start; padding: 16px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--edge); max-width: 640px; }
+.phone-qr { width: 148px; height: 148px; padding: 8px; border-radius: 14px; background: #fff; display: grid; place-items: center; }
+.phone-qr img { width: 132px; height: 132px; display: block; }
+.phone-url { margin: 0 0 10px; font-size: 14.5px; color: var(--ink-2); line-height: 1.45; }
+.phone-url b { color: var(--ink); font-weight: 500; }
+.phone-os { margin-bottom: 8px; }
+.phone-os-name { display: block; font-size: 11.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.phone-steps { margin: 0; padding-left: 20px; font-size: 14px; color: var(--ink-2); }
+.phone-steps li { margin: 2px 0; }
+.phone-foot { margin: 8px 0 0; font-size: 13px; color: var(--muted); }
+.phone.compact { padding: 14px; margin-bottom: 18px; }
+.phone-card { margin: -10px 0 26px; }
+.phone-card .button { margin-top: 10px; }
+.hub-rows li.hub-wide { grid-template-columns: 1fr; }
+@media (max-width: 860px) { .phone { grid-template-columns: 1fr; } }
+
+/* ---------- placing new things: what the brain proposes ---------- */
+.suggest-bar { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: -8px 0 16px; padding: 12px 16px; border-radius: var(--r-md); background: linear-gradient(135deg, var(--lamp-glow), transparent 60%), var(--surface); border: 1px solid var(--edge); max-width: 760px; }
+.suggest-lede { display: inline-flex; align-items: center; gap: 10px; font-size: 14.5px; color: var(--ink-2); }
+.suggest-lede svg { color: var(--lamp); flex: 0 0 auto; }
+.suggest-bar .button { margin: 0; white-space: nowrap; }
+.sort-row .suggest-line { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: -2px 0 2px 52px; font-size: 13.5px; color: var(--ink-2); }
+.suggest-line svg { color: var(--lamp); flex: 0 0 auto; }
+.suggest-line b { color: var(--ink); font-weight: 500; }
+.suggest-why { color: var(--muted); }
+.suggest-line .button { margin: 0 0 0 auto; }
+@media (max-width: 860px) { .sort-row .suggest-line { margin-left: 0; } }

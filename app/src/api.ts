@@ -179,3 +179,17 @@ export function connect(on: { device: (d: Device) => void; home: (h: Home) => vo
   open()
   return () => { closed = true; ws?.close() }
 }
+/* The command box: one sentence in, one answer out. done and answer already happened (the grammar ran them, the way a tap
+   does); action and rule are the assistant's proposals and have not. Driving the house never needs the code. */
+export type Said = { kind: 'done'; text: string; said: string; count?: number } | { kind: 'answer'; text: string; said: string }
+  | { kind: 'explain'; question: string; answer: string; said: string } | (Proposal & { said: string }) | (Routine & { kind: 'rule'; said: string })
+export const say = (text: string, room?: string | null) => post<Said>('/say', { text, room: room ?? undefined })
+/* Names and rooms for things under New devices: proposed by the house, then the assistant; nothing moves until Use is tapped. */
+export type Suggestion = { id: string; name: string; room: string; why: string; source: 'house' | 'assistant' }
+export async function getSuggestions(): Promise<{ items: Suggestion[]; assistant: boolean }> {
+  const r = await request('/suggestions'); if (!r.ok) await fail(r); return r.json()
+}
+export async function getPhone(): Promise<{ ip: string }> {
+  const r = await request('/phone'); if (!r.ok) await fail(r); return r.json()
+}
+export const qrUrl = (text: string) => `/qr.svg?text=${encodeURIComponent(text)}`
