@@ -6,7 +6,7 @@ import Icon from '../Icon.vue'
 
 const props = defineProps<{ device: Device; compact?: boolean }>()
 const dead = computed(() => props.device.state === 'unavailable')
-const live = computed(() => props.device.state === 'streaming' || props.device.state === 'recording')
+const live = computed(() => props.device.state === 'recording')   // a tile shows stills, so the only honest red chip is Recording
 const src = ref(''), stamp = ref(0), now = ref(Date.now())
 function refresh() { if (!dead.value && !document.hidden) src.value = imageUrl(props.device.id) }
 const age = computed(() => stamp.value ? Math.max(0, Math.round((now.value - stamp.value) / 1000)) : null)
@@ -22,7 +22,7 @@ onUnmounted(() => { clearInterval(t1); clearInterval(t2) })
     <img v-if="src" :src="src" alt="" @load="stamp = Date.now()" @error="src = ''" />
     <div class="camera-veil"></div>
     <div class="camera-top">
-      <span class="chip" :class="{ live }">{{ dead ? 'Offline' : live ? 'Live' : ageLabel || 'Loading' }}</span>
+      <span class="chip" :class="{ live }">{{ dead ? 'Offline' : live ? 'Recording' : ageLabel || 'Loading' }}</span>
     </div>
     <div class="camera-bottom">
       <span class="tile-icon"><Icon name="camera" :size="18" /></span>

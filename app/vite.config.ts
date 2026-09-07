@@ -11,6 +11,7 @@ export default defineConfig({
     host: true,
     proxy: {
       ...Object.fromEntries(api.map(p => [p, brain])),
+      '/devices': { target: brain, ws: true },   // the camera viewer's signalling socket lives under /devices too
       '/stream': { target: brain.replace('http', 'ws'), ws: true },
     },
   },

@@ -5,7 +5,7 @@ from zoneinfo import ZoneInfo
 from pathlib import Path
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import Response, JSONResponse
+from fastapi.responses import Response, JSONResponse, StreamingResponse
 from fastapi import Request
 from . import ha_setup
 from .ha_adapter import HAAdapter, AuthError
@@ -21,6 +21,7 @@ from .assistant import Assistant, AssistantError
 from .settings import Settings, DATA, env_file
 from .lock import Lock, needs_code
 from .pairing import Pairing
+from . import camera
 
 log = logging.getLogger("hub")
 DEFAULT_HA = "http://localhost:8123"
@@ -718,6 +719,37 @@ async def device_image(device_id: str):
     except Exception as e:
         raise HTTPException(502, f"image unavailable: {e}")
     return Response(content=data, media_type=ctype, headers={"Cache-Control": "no-store"})
+
+
+def _camera(device_id: str):
+    hub.ready()
+    dev = hub.home.devices.get(device_id)
+    if not dev or dev.capability != "camera": raise HTTPException(404, "not a camera")
+    return dev
+
+
+@app.get("/devices/{device_id}/stream")
+async def device_stream(device_id: str):
+    """Motion JPEG from a camera, passed through: the viewer's fallback when WebRTC cannot be had."""
+    dev = _camera(device_id)
+    try: ctype, chunks = await asyncio.to_thread(camera.mjpeg, hub.ha.url, hub.ha.token, dev.id)
+    except Exception as e: raise HTTPException(502, f"stream unavailable: {e}")
+    return StreamingResponse(chunks, media_type=ctype, headers={"Cache-Control": "no-store"})
+
+
+@app.websocket("/devices/{device_id}/webrtc")
+async def device_webrtc(ws: WebSocket, device_id: str):
+    """WebRTC signalling for one viewer: see hub/camera.py for the messages."""
+    await ws.accept()
+    dev = hub.home.devices.get(device_id) if hub.driver == "ready" else None
+    if not dev or dev.capability != "camera":
+        await ws.send_text(json.dumps({"type": "error", "code": "unknown", "message": "not a camera"}))
+        await ws.close(); return
+    try: await camera.relay(hub.ha, dev.id, ws)
+    except WebSocketDisconnect: return
+    except Exception as e: log.warning("live view of %s ended: %s", dev.id, e)
+    try: await ws.close()
+    except Exception: pass
 
 
 @app.post("/devices/{device_id}/fan")

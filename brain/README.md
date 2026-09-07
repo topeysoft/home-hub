@@ -54,6 +54,9 @@ endpoints just nudge it along.
   `POST /setup/drivers` looks now instead of at the next half-minute. `HUB_DRIVER_HOST` in `.env`
   is where HA reaches the other containers (`localhost` with host networking, a container name on the Mac).
 - `hub/comfort.py` — a thermostat sensing its room from another sensor (`POST /devices/{id}/sense`).
+- `hub/camera.py` — live video for the viewer: WebRTC signalling relayed to HA over the
+  `/devices/{id}/webrtc` socket (the frames never touch the brain), and HA's motion JPEG passed
+  through at `/devices/{id}/stream` for cameras or browsers that cannot do WebRTC.
   The number on the card becomes what that room should reach; the brain keeps the thermostat's
   setpoint offset by the difference between the two readings, one correction every 90 s at most,
   in heat or cool only, logged with `source=comfort`. Kept in `settings.json` under `comfort`.

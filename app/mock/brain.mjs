@@ -120,6 +120,7 @@ const server = http.createServer((req, res) => {
   if (p === '/setup/drivers') return json(res, status)
   if (p === '/setup/advanced') return json(res, { url: 'http://hub.local:8123/', username: 'hub', password: 'secret' })
   if (/^\/rooms\/[^/]+\/why/.test(p)) return json(res, why)
+  if (/^\/devices\/[^/]+\/stream/.test(p)) { res.writeHead(502); return res.end() }   // no video here: the viewer settles for stills
   const img = p.match(/^\/devices\/([^/]+)\/image/)
   if (img) { res.writeHead(200, { 'Content-Type': 'image/svg+xml' }); return res.end(PICS[img[1]] ?? pic('#333', '#111')) }
   if (req.method === 'POST') return json(res, { ok: true })
@@ -131,6 +132,7 @@ const server = http.createServer((req, res) => {
 })
 // keep the websocket open so the panel shows Connected; nothing is ever sent
 server.on('upgrade', (req, socket) => {
+  if (/\/webrtc$/.test(req.url)) return socket.destroy()   // no WebRTC here either
   const key = req.headers['sec-websocket-key']
   const accept = crypto.createHash('sha1').update(key + '258EAFA5-E914-47DA-95CA-C5AB0DC85B11').digest('base64')
   socket.write('HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ' + accept + '\r\n\r\n')
