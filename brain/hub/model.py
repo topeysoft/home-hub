@@ -5,6 +5,7 @@ product (it is still reachable through the Advanced door).
 """
 import re, time
 from dataclasses import dataclass, field, asdict
+from datetime import datetime
 
 CAP_BY_DOMAIN = {"light": "light", "switch": "switch", "media_player": "media", "cover": "cover",
                  "climate": "climate", "lock": "lock", "fan": "fan", "camera": "camera", "vacuum": "vacuum"}
@@ -14,6 +15,17 @@ SENSOR_CLASSES = {"temperature", "humidity", "illuminance"}   # power/energy bel
 # until there is an appliances view; a room's tiles and a thermostat's sensor picker never see them.
 APPLIANCE = re.compile(r"\b(fridge|refrigerator|freezer|oven|range|cavity|cooktop|stove|hob|dishwasher|washer|dryer|water heater|"
                        r"boiler|grill|smoker|sous ?vide|setpoint|probe|kettle|coffee|wine|humidor|aquarium|pool|spa|hot tub)\b", re.I)
+
+
+def seen_at(s) -> float:
+    """When the driver last heard from an entity. HA's states carry ISO timestamps; if none of them parse,
+    take it as now — an age we cannot read must not make a working sensor look dead."""
+    for key in ("last_reported", "last_updated", "last_changed"):
+        v = s.get(key)
+        if not v: continue
+        try: return datetime.fromisoformat(v).timestamp()
+        except (TypeError, ValueError): continue
+    return time.time()
 
 
 def capability_for(domain: str, device_class: str | None, words: str = "") -> str | None:
@@ -36,6 +48,7 @@ class Device:
     attrs: dict = field(default_factory=dict)
     hw: str | None = None          # the physical thing this belongs to (the driver's device id), for moving rooms
     own_room: bool = False         # room set on this entry itself rather than inherited from the hardware
+    seen: float = field(default_factory=time.time)   # when the driver last heard from it; a stale sensor is not steered by
 
 
 @dataclass
@@ -107,7 +120,7 @@ class Home:
             if cap == "camera":
                 for suffix in (" Live view", " Live View", " Camera"):
                     if name.endswith(suffix): name = name[: -len(suffix)]
-            d = Device(eid, name, room, cap, s["state"], self.attrs_for(eid, cap, s["attributes"]), e.get("device_id"), bool(e.get("area_id")))
+            d = Device(eid, name, room, cap, s["state"], self.attrs_for(eid, cap, s["attributes"]), e.get("device_id"), bool(e.get("area_id")), seen_at(s))
             self.devices[eid] = d
             self.rooms[room].devices.append(d)
         # A camera with a lamp built in: the viewer offers the lamp beside the picture, the way Ring's own app does.
@@ -125,6 +138,7 @@ class Home:
         d.state = new_state["state"]
         d.attrs = self.attrs_for(entity_id, d.capability, new_state["attributes"])
         d.name = new_state["attributes"].get("friendly_name", d.name)   # a rename shows up here first
+        d.seen = seen_at(new_state)
         return d
 
     def to_dict(self):
