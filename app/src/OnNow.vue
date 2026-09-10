@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { Device } from './api'
-import { whatsOn, cap, perform, shortName, roomOf, store } from './store'
+import { whatsOn, cap, perform, shortName, roomOf, store, notify } from './store'
 import Icon from './Icon.vue'
 
 /* Everything that is on across the house, each a chip that turns it off with one tap. The house line says "something is
@@ -26,9 +26,15 @@ function quiet(d: Device): [string, string] | null {
   return null
 }
 const hint = (d: Device) => { const q = quiet(d); return !q ? '' : q[0] === 'close' ? 'Tap to close' : q[0] === 'lock' ? 'Tap to lock' : 'Tap to turn off' }
-function tap(d: Device) {
+/* the chip vanishes once the thing is off, so the toast is the way back: Undo puts it on again. A door stays locked. */
+const UNDO: Record<string, [string, string]> = { off: ['on', 'on'], close: ['open', 'open'] }
+async function tap(d: Device) {
   const q = quiet(d); if (!q || store.pending[d.id]) return
-  perform(d, q[0], undefined, { state: q[1] })
+  const ok = await perform(d, q[0], undefined, { state: q[1] })
+  if (!ok) return
+  const back = UNDO[q[0]], name = shortName(d, roomOf(d))
+  const said = q[0] === 'close' ? `${name} closing` : q[0] === 'lock' ? `${name} locked` : `${name} off`
+  notify(said, 'info', back ? { label: 'Undo', run: () => perform(d, back[0], undefined, { state: back[1] }) } : undefined)
 }
 </script>
 

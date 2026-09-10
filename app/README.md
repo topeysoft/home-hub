@@ -51,7 +51,8 @@ and the sheet with `?sheet=location`.
 ## How it is put together
 
 - `src/store.ts` — the one place that knows the house: rooms, live link, scenes and what each one
-  will do, optimistic actions with a toast when the house refuses, activity lines and the plain-
+  will do, optimistic actions with a toast when the house refuses (and an Undo on it when a chip under *On right now*
+  turns something off), activity lines and the plain-
   English "Recently" list built from the brain's event log.
 - `src/views/HomeView.vue`, `src/views/RoomView.vue` — the two screens.
 - `src/SceneBar.vue` — scene buttons; each shows its effect for the room it is in.

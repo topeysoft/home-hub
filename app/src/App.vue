@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { store, start, halt, load, visibleRooms, activity, roomActive, houseLine, weatherLine, needsSetup } from './store'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { store, start, halt, load, visibleRooms, activity, roomActive, houseLine, weatherLine, needsSetup, dismissToast } from './store'
 import Setup from './Setup.vue'
 import AddSheet from './AddSheet.vue'
 import CodeSheet from './CodeSheet.vue'
@@ -23,6 +23,8 @@ function safeGet(k: string) { try { return localStorage.getItem(k) } catch { ret
 function open(id: string | null) { selected.value = id; try { id ? localStorage.setItem('room', id) : localStorage.removeItem('room') } catch {} }
 
 const rooms = computed(visibleRooms)
+/* the rail keeps the current room in view: on a wall it scrolls the list, on a phone the chip strip */
+watch(selected, () => nextTick(() => document.querySelector('.rail-item.active')?.scrollIntoView({ block: 'nearest', inline: 'nearest' })))
 const setup = computed(() => !!store.status && (store.previewSetup || needsSetup()))
 const room = computed(() => rooms.value.find(r => r.id === selected.value) ?? null)
 
@@ -84,11 +86,13 @@ onUnmounted(() => {
           <span class="rail-name">{{ r.name }}</span>
           <span class="rail-sub">{{ activity(r) }}</span>
         </button>
-        <button class="rail-item rail-add" @click="store.sheet = 'add'">
+      </nav>
+      <div class="rail-tail">
+        <button class="rail-item rail-add" :class="{ attention: store.found.length }" @click="store.sheet = 'add'">
           <Icon name="plus" :size="16" /><span class="rail-name">Add a device</span>
           <span class="rail-sub" v-if="store.found.length">{{ store.found.length }} found nearby</span>
         </button>
-      </nav>
+      </div>
       <div class="rail-foot">
         <span class="link" :class="{ up: store.linkUp }">{{ store.linkUp ? 'Connected' : 'Reconnecting' }}</span>
       </div>
@@ -117,7 +121,7 @@ onUnmounted(() => {
         </template>
       </div>
       <Transition v-else name="view" mode="out-in">
-        <RoomView v-if="room" :key="room.id" :room="room" @back="open(null)" />
+        <RoomView v-if="room" :key="room.id" :room="room" @back="open(null)" @open="open" />
         <HomeView v-else key="home" :rooms="rooms" :now="shown" @open="open" />
       </Transition>
     </main>
@@ -132,7 +136,10 @@ onUnmounted(() => {
     <Transition name="sheet"><CodePrompt v-if="lock.prompt" /></Transition>
 
     <Transition name="toast">
-      <div class="toast" :class="store.toast.kind" v-if="store.toast" :key="store.toast.id" role="status">{{ store.toast.text }}</div>
+      <div class="toast" :class="store.toast.kind" v-if="store.toast" :key="store.toast.id" role="status">
+        <span class="toast-text">{{ store.toast.text }}</span>
+        <button class="toast-act" v-if="store.toast.action" @click="store.toast.action.run(); dismissToast()">{{ store.toast.action.label }}</button>
+      </div>
     </Transition>
 
     <Transition name="idle">

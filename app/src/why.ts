@@ -62,7 +62,7 @@ export function condWords(c: any[]): string {
   const [subject] = c
   if (subject === 'device') { const [, id, op, val] = c.length >= 6 || c.length === 4 ? c : [c[0], c[1], 'is', c[2]]; return `${op === 'not' ? 'unless' : 'while'} ${devName(id)} is ${val}` }
   const [, op, val] = c
-  if (subject === 'sun') return op === 'below' ? (Number(val) <= 0 ? 'after dark' : `with the sun below ${val}°`) : op === 'above' ? (Number(val) >= 0 ? 'in daylight' : `with the sun above ${val}°`) : ''
+  if (subject === 'sun') { const deg = Number.isFinite(Number(val)) ? Number(val) : 0; return op === 'below' ? (deg <= 0 ? 'after dark' : `with the sun below ${deg}°`) : op === 'above' ? (deg >= 0 ? 'in daylight' : `with the sun above ${deg}°`) : '' }
   if (subject === 'time') return op === 'between' ? `between ${clock(val[0])} and ${clock(val[1])}` : op === 'below' ? `before ${clock(val)}` : op === 'above' ? `after ${clock(val)}` : ''
   if (subject === 'weekday') return op === 'in' ? `on ${list((val as string[]).map(d => DAY[d] ?? d))}` : op === 'is' ? `on ${DAY[val] ?? val}` : op === 'not' ? `except ${DAY[val] ?? val}` : ''
   if (subject === 'intent') return op === 'not' ? `unless the room is on ${label(val)}` : `while the room is on ${label(val)}`

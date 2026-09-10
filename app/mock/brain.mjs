@@ -87,7 +87,7 @@ const events = [
 ]
 const rules = { rules: [
   { id: 'evening-lights', name: 'Living room lights on at dusk', room: 'living', when: { sun: 'set', offset: -1200 }, then: { intent: 'movie' }, enabled: true },
-  { id: 'kitchen-motion', name: 'Kitchen lights when someone walks in', room: 'kitchen', when: { motion: true }, if: [['sun', 'below', 'horizon']], then: { intent: 'occupied' }, enabled: true },
+  { id: 'kitchen-motion', name: 'Kitchen lights when someone walks in', room: 'kitchen', when: { motion: true }, if: [['sun', 'below', 0]], then: { intent: 'occupied' }, enabled: true },
   { id: 'bed-off', name: 'Bedroom off after 20 minutes of nothing', room: 'bedroom', when: { idle: 1200 }, then: { intent: 'empty' }, enabled: false },
   { id: 'backyard-evening', name: 'Backyard light on when someone is out there after dark', room: 'backyard', when: { motion: true }, then: { light: 'on' }, enabled: true },
 ], drafts: [], valid: true, errors: [] }

@@ -38,7 +38,7 @@ onUnmounted(() => window.removeEventListener('keydown', key))
       <ul class="hub-rows">
         <li>
           <span class="hub-k">Software</span>
-          <span class="hub-v">{{ store.status?.version || 'unknown' }}<span class="hub-sub" v-if="update?.checked"> · checked {{ when(update.checked) }}</span></span>
+          <span class="hub-v">{{ !store.status?.version || store.status.version === 'dev' ? 'Development build' : store.status.version }}<span class="hub-sub" v-if="update?.checked"> · checked {{ when(update.checked) }}</span></span>
           <button class="button small" v-if="update?.available && !store.updating && !update.requested" @click="install">Install the update</button>
           <span class="hub-sub" v-else-if="store.updating || update?.requested || update?.state?.state === 'running'">Updating…</span>
           <span class="hub-sub" v-else-if="update?.available === false">Up to date</span>
@@ -59,7 +59,7 @@ onUnmounted(() => window.removeEventListener('keydown', key))
         <li>
           <span class="hub-k">Restore</span>
           <span class="hub-v">Put a backup back, here or on a new hub. Everything running now is replaced by what is in the file.</span>
-          <Restore />
+          <Restore small />
         </li>
       </ul>
       <AdvancedLink />

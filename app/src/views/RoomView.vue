@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { activity, cap, openWhy, isDead } from '../store'
+import { store, activity, cap, openWhy, isDead } from '../store'
 import { setByLine } from '../why'
 import { readingLabel, readingName, isReading, readingOn } from '../readings'
 import type { Room } from '../api'
@@ -14,8 +14,10 @@ import ClimateTile from '../tiles/ClimateTile.vue'
 import SortView from '../SortView.vue'
 
 const props = defineProps<{ room: Room }>()
-defineEmits<{ back: [] }>()
+defineEmits<{ back: []; open: [id: string] }>()
 const editing = ref(false)
+/* an empty room is not a dead end: things waiting under New devices can be placed here, or something new added */
+const waiting = computed(() => store.rooms.find(r => r.id === 'unassigned')?.devices.length ?? 0)
 
 const order = ['media', 'light', 'cover', 'lock', 'fan', 'switch', 'vacuum', 'climate', 'camera', 'motion', 'contact', 'sensor']
 const sorted = computed(() => [...props.room.devices].sort((a, b) => order.indexOf(cap(a)) - order.indexOf(cap(b))))
@@ -59,7 +61,12 @@ onUnmounted(() => clearInterval(tick))
     </div>
     <div v-else-if="!readings.length" class="empty-room">
       <p class="empty">Nothing in this room yet.</p>
-      <p class="empty-sub">Devices you add to the {{ room.name }} will show up here on their own.</p>
+      <p class="empty-sub" v-if="waiting">{{ waiting === 1 ? 'One new device is' : `${waiting} new devices are` }} waiting to be placed. One of them may belong here.</p>
+      <p class="empty-sub" v-else>Add something and say it lives in the {{ room.name }}; it shows up here on its own.</p>
+      <div class="empty-actions">
+        <button class="button" v-if="waiting" @click="$emit('open', 'unassigned')"><Icon name="sparkle" :size="16" /> Place new devices</button>
+        <button class="button" :class="{ ghost: waiting }" @click="store.sheet = 'add'"><Icon name="plus" :size="16" /> Add a device</button>
+      </div>
     </div>
   </section>
 </template>

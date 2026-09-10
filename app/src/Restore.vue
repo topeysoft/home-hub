@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+defineProps<{ small?: boolean }>()
 import { restoreBackup } from './api'
 import { store, notify } from './store'
 
@@ -20,7 +21,7 @@ async function pick(e: Event) {
 
 <template>
   <div class="restore">
-    <label class="button ghost" :class="{ busy }">
+    <label class="button ghost" :class="{ busy, small }">
       {{ busy ? 'Sending…' : 'Restore a backup' }}
       <input type="file" accept=".gz,.tgz,application/gzip,application/x-gzip" hidden :disabled="busy || store.restoring" @change="pick" />
     </label>

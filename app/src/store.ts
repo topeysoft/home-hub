@@ -4,7 +4,7 @@ import { sunPosition, sunGuess, moonPhase } from './sun'
 
 export const store = reactive({
   rooms: [] as Room[], linkUp: false, linkLost: false, error: '', loaded: false,   // linkLost: down long enough to be worth mentioning
-  toast: null as null | { id: number; text: string; kind: 'info' | 'error' },
+  toast: null as null | { id: number; text: string; kind: 'info' | 'error'; action?: { label: string; run: () => void } },   // a toast may carry one way back, like Undo
   pending: {} as Record<string, true>,     // devices waiting for the house to confirm a change
   viewer: null as Device | null,            // camera shown full screen
   events: [] as Event[],
@@ -187,11 +187,12 @@ export async function runScene(room: Room | null, scene: Scene): Promise<boolean
 
 /* ---------- actions with instant feedback ---------- */
 let toastId = 0, toastTimer: number | undefined
-export function notify(text: string, kind: 'info' | 'error' = 'info') {
-  store.toast = { id: ++toastId, text, kind }
+export function notify(text: string, kind: 'info' | 'error' = 'info', action?: { label: string; run: () => void }) {
+  store.toast = { id: ++toastId, text, kind, action }
   clearTimeout(toastTimer)
-  toastTimer = window.setTimeout(() => (store.toast = null), kind === 'error' ? 5000 : 2800)
+  toastTimer = window.setTimeout(() => (store.toast = null), kind === 'error' ? 5000 : action ? 6000 : 2800)   // long enough to reach for Undo
 }
+export function dismissToast() { store.toast = null; clearTimeout(toastTimer) }
 /** Apply the expected result right away, ask the house, and step back if it refuses. */
 export async function perform(d: Device, action: string, data?: Record<string, unknown>, guess?: { state?: string; attrs?: Record<string, any> }) {
   const before = { state: d.state, attrs: { ...d.attrs } }

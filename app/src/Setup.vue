@@ -84,6 +84,10 @@ async function finish() {
 }
 const firstRoom = computed(() => (store.rooms.find(r => r.id !== 'unassigned' && r.devices.some(d => d.capability === 'light')) ?? store.rooms.find(r => r.id !== 'unassigned'))?.name ?? 'Kitchen')
 const firstName = computed(() => (status.value?.owner || name.value || '').split(' ')[0])
+const readyLine = computed(() => {   // "Nadine's house is ready." or "Home is ready, Nadine."; never the name twice
+  const h = store.homeName || 'Home', f = firstName.value
+  return f && !h.toLowerCase().includes(f.toLowerCase()) ? `${h} is ready, ${f}.` : `${h} is ready.`
+})
 const idx = computed(() => ['code', 'location', 'rooms', 'devices'].indexOf(page.value))
 
 /* the code on the settings */
@@ -189,17 +193,17 @@ async function saveCode() {
         <h1 class="display">What's in the house?</h1>
         <p class="setup-lede">Things already on your Wi‑Fi show up here on their own. Add what you like now; the rest can wait.</p>
         <AddPanel />
-        <div class="add-block">
+        <div class="setup-actions"><button class="button big" @click="next('devices')">{{ status?.devices ? 'Continue' : 'Skip for now' }}</button></div>
+        <div class="add-block setup-behind">
           <h3 class="label">Behind the scenes</h3>
           <Drivers />
         </div>
-        <div class="setup-actions"><button class="button big" @click="next('devices')">{{ status?.devices ? 'Continue' : 'Skip for now' }}</button></div>
       </section>
 
       <!-- done -->
       <section class="setup-page" v-else-if="page === 'done'" key="done">
         <span class="setup-mark done"><Icon name="check" :size="30" /></span>
-        <h1 class="display">{{ store.homeName || 'Home' }} is ready{{ firstName ? `, ${firstName}` : '' }}.</h1>
+        <h1 class="display">{{ readyLine }}</h1>
         <p class="setup-lede">Leave this screen on the wall. It rests to a clock after a few minutes and wakes with a touch.</p>
         <PhoneSteps compact />
         <ul class="tips">

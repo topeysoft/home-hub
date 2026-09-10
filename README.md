@@ -16,7 +16,11 @@ Nest first among them, make every home bring its own key; the screen walks throu
 the exact address to paste and a copy button, and the maker's own steps follow one at a time. The key
 file Google hands out can be dropped or pasted straight onto that screen instead of copying its parts.
 Zigbee, Z‑Wave and Matter devices pair from the same screen: the hub opens its door and says what to press.
-Things that don't know their room wait under *New devices* until you place them. Nothing on the
+Things that don't know their room wait under *New devices* until you place them; each arrives with a
+suggested name and room and one *Use* button. A box at the top of Home takes plain words: *kitchen lights off*,
+*movie in the den*, *is the front door locked?*. Simple sentences run at once, the way a tap does; anything else
+goes to the assistant, which proposes and waits for your tap. The Done screen and *This hub* show a code a
+phone's camera opens the house from, with the steps to put it on the phone's home screen. Nothing on the
 panel ever mentions Home Assistant, entities, or YAML.
 
 ## For the person building one
@@ -77,6 +81,16 @@ container before the Pi's first start so the two do not fight over Ring's token.
   log, websocket stream, first-run setup, device discovery. Talks only to HA's websocket and REST.
   Serves `app/dist`. `brain/Dockerfile` packages it with the panel built in.
 - `app/` — Vue PWA for the wall kiosk and phone (`npm run build` → served by the brain).
+- The command box: `POST /say` runs `brain/hub/commands.py`, a fixed grammar over the house's own names (rooms and their
+  usual other names, devices, kinds, scenes, sounds) that executes at once and deterministically. What it cannot place
+  goes to the assistant, which only proposes. Every sentence is logged as a `said` event, understood or not, so the
+  grammar grows from what people actually say. The microphone comes later: `docs/voice.md`.
+- New devices: `GET /suggestions` (`brain/hub/suggest.py`) proposes a plain name and a room for each unplaced thing, from
+  the words in its name and its hardware first, then from the assistant for whatever is still unplaced. Nothing moves
+  until *Use*; that goes through the same guarded move and rename routes as doing it by hand.
+- The driver layer is pinned. Every image in `driver-layer/docker-compose.yml` names the release this code was tested
+  against (Home Assistant 2026.9.1, Zigbee2MQTT 2.14.1, Z-Wave JS UI 11.23.0, Matter server 8.1.2, ring-mqtt 5.9.3).
+  Bumping one is a commit, so it rides the hub's own update and a breaking upstream release never reaches a house unread.
 - Updates: the brain knows which build it is and checks GitHub's main a few times a day. When it has moved on, Home
   shows *An update is ready*; one tap (behind the settings code) writes `brain-data/update.request`, a systemd path
   unit on the host runs `install.sh` again, and the panel comes back on the new build. `driver-layer/host/update.sh`.
@@ -120,7 +134,8 @@ Preview any panel state from the address bar: `?setup=1&page=rooms` (a setup scr
 ### HTTPS
 
 Caddy fronts the brain on plain `http://hub.local` with nothing to install, and on `https://` from
-its own local certificate authority. Browsers need a secure origin for device location, web push and
+its own local certificate authority. The QR code and the home-screen steps work over plain http; web push and the
+browser microphone wait on https. Browsers need a secure origin for device location, web push and
 a clean Add to Home Screen; for that, install
 `driver-layer/caddy/data/caddy/pki/authorities/local/root.crt` on the tablet or phone once (iOS
 also wants full trust on under Settings → General → About → Certificate Trust Settings). Everything
