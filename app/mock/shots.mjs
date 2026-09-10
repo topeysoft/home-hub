@@ -31,6 +31,9 @@ const SCREENS = [
   ['setup-devices', 'kiosk', '/?setup=1&page=devices&at=13:00'],
   ['setup-done', 'kiosk', '/?setup=1&page=done&at=13:00', [1280, 1000]],
   ['sheet-hub', 'kiosk', '/?sheet=hub&at=19:40'],
+  ['sheet-hub-phones', 'kiosk', '/?sheet=hub&phones=1&at=19:40', [1280, 1100]],   // needs LOCKED=1 on the mock
+  ['kiosk-ask', 'kiosk', '/?at=19:40'],                                          // needs LOCKED=1 ASK=1 on the mock
+  ['join', 'kiosk', '/?join=1&at=13:00'],
   ['wall-home', 'wall', '/?at=19:40'],
   ['tablet-home', 'tablet', '/?at=19:40'],
   ['phone-home', 'phone', '/?at=19:40', [390, 1400]],
@@ -38,6 +41,8 @@ const SCREENS = [
   ['phone-kitchen', 'phone', '/?room=kitchen&at=19:40', [390, 1100]],
   ['phone-sheet-add', 'phone', '/?sheet=add&at=19:40'],
   ['phone-setup-rooms', 'phone', '/?setup=1&page=rooms&at=13:00'],
+  ['phone-join', 'phone', '/?join=1&at=13:00'],
+  ['phone-ask', 'phone', '/?at=19:40', [390, 900]],                               // needs LOCKED=1 ASK=1 on the mock
 ]
 
 const only = process.env.SHOTS ? new Set(process.env.SHOTS.split(',')) : null

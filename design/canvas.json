@@ -1,0 +1,94 @@
+{
+  "artboards": [
+    {
+      "file": "Main.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Home \u2014 tap the lamp tile",
+      "is_interactive": true
+    },
+    {
+      "file": "Opened.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Opened in place \u2014 still frame"
+    },
+    {
+      "file": "Daylight.dc.html",
+      "x": 0,
+      "y": 1080,
+      "w": 1440,
+      "h": 780,
+      "title": "Keeping step with the sky"
+    },
+    {
+      "file": "Motion.dc.html",
+      "x": 1560,
+      "y": 1080,
+      "w": 1440,
+      "h": 820,
+      "title": "Motion spec"
+    },
+    {
+      "file": "Tiles.dc.html",
+      "x": 0,
+      "y": 2040,
+      "w": 1440,
+      "h": 640,
+      "title": "When there is no artwork"
+    },
+    {
+      "file": "Tones.dc.html",
+      "x": 1560,
+      "y": 2040,
+      "w": 720,
+      "h": 900,
+      "title": "Tone setting",
+      "is_interactive": true
+    }
+  ],
+  "annotations": [
+    {
+      "id": "live",
+      "x": -540,
+      "y": 40,
+      "w": 440,
+      "text": "This one runs. Tap the floor lamp tile in the rail and the open animation plays at the measured timings; the \u2715 closes it.\n\nSky (dusk / night / midday) and Tiles (Warm / Cool / Pastel / Follow the light). It opens on Follow the light \u2014 switch Sky between Midday and Night to see the one thing that tone does that the others don't."
+    },
+    {
+      "id": "tint",
+      "x": 3120,
+      "y": 40,
+      "w": 420,
+      "text": "The still frame, for working on the detail layout without the animation in the way.\n\nThe field goes amber because a warm lamp is what's open. A camera would push it cool."
+    },
+    {
+      "id": "why",
+      "x": -540,
+      "y": 1120,
+      "w": 440,
+      "text": "Why the midday tiles felt off, and what changed.\n\nShort version: the tiles were specified in fixed colour while the field moves across the whole day, so somewhere between dusk and noon a tile stops being lighter than the sky and starts being darker. Now lightness is relative and the crossing can't happen."
+    },
+    {
+      "id": "tone-note",
+      "x": 2400,
+      "y": 2080,
+      "w": 420,
+      "text": "Follow the light is back, doing the thing that's actually distinct: the tiles change hue family, cool and light while the sun is up, lamplit and low once it's down. Every tone tracks the sky's lightness \u2014 this one also changes character.\n\nThe extra-dim switch is a preference now, not the fix: Pastel at night lands at L 0.483 rather than 0.80 on its own."
+    },
+    {
+      "id": "weather-gone",
+      "x": -540,
+      "y": 480,
+      "w": 440,
+      "text": "The weather lozenge is gone from the rail. The sky behind the panel already IS the forecast \u2014 clouds, rain, stars, moon phase \u2014 so a tile that says 'clear' was repeating the whole screen.\n\nThe cloud and the 17\u00b0 moved up beside the greeting, where there was dead space anyway. That bought back 264px of rail: it now holds Tonight's two scenes, and the back door."
+    }
+  ],
+  "launch": {
+    "view": "canvas"
+  }
+}

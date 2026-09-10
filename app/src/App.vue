@@ -2,6 +2,7 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { store, start, halt, load, visibleRooms, activity, roomActive, houseLine, weatherLine, needsSetup, dismissToast } from './store'
 import Setup from './Setup.vue'
+import Join from './Join.vue'
 import AddSheet from './AddSheet.vue'
 import CodeSheet from './CodeSheet.vue'
 import CodePrompt from './CodePrompt.vue'
@@ -48,6 +49,8 @@ function touched() {
   lastTouch = Date.now()
   if (idle.value) { idle.value = false; open(null) }
 }
+watch(() => store.asks.length, (n, o) => { if (n > o) touched() })   // a phone knocking wakes the wall so the card is seen
+async function rejoin() { halt(); await start() }                       // this screen just joined: read the house and reconnect
 function checkIdle() { if (!idle.value && kiosk.matches && !store.viewer && !store.sheet && !setup.value && Date.now() - lastTouch > IDLE_AFTER) idle.value = true }
 
 let tick: number | undefined, idler: number | undefined
@@ -66,11 +69,12 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="shell" :data-ambient="ambient" :class="{ resting: idle, 'in-setup': setup }">
+  <div class="shell" :data-ambient="ambient" :class="{ resting: idle, 'in-setup': setup || lock.unpaired }">
     <Sky :quiet="!idle && !setup" />
     <div class="sky-veil"></div>
-    <Setup v-if="setup" />
-    <aside class="rail" v-if="!setup">
+    <Join v-if="lock.unpaired" @joined="rejoin" />
+    <Setup v-else-if="setup" />
+    <aside class="rail" v-if="!setup && !lock.unpaired">
       <div class="rail-clock">
         <div class="rail-time">{{ clock }}</div>
         <div class="rail-day">{{ day }}</div>
@@ -98,7 +102,7 @@ onUnmounted(() => {
       </div>
     </aside>
 
-    <main class="stage" v-if="!setup">
+    <main class="stage" v-if="!setup && !lock.unpaired">
       <Transition name="banner">
         <div class="banner" v-if="store.loaded && store.linkLost"><Icon name="refresh" :size="16" /> Reconnecting to the hub. What you see may be a little behind.</div>
       </Transition>

@@ -20,7 +20,9 @@ Things that don't know their room wait under *New devices* until you place them;
 suggested name and room and one *Use* button. A box at the top of Home takes plain words: *kitchen lights off*,
 *movie in the den*, *is the front door locked?*. Simple sentences run at once, the way a tap does; anything else
 goes to the assistant, which proposes and waits for your tap. The Done screen and *This hub* show a code a
-phone's camera opens the house from, with the steps to put it on the phone's home screen. Nothing on the
+phone's camera opens the house from, with the steps to put it on the phone's home screen. Once the house has a
+code, only the phones it has let in can run it: a new phone asks from its own screen, someone at the wall taps
+*Allow* for today, the weekend or for good, and every phone is listed under *This hub* with one *Remove*. Nothing on the
 panel ever mentions Home Assistant, entities, or YAML.
 
 ## For the person building one
@@ -88,6 +90,11 @@ container before the Pi's first start so the two do not fight over Ring's token.
 - New devices: `GET /suggestions` (`brain/hub/suggest.py`) proposes a plain name and a room for each unplaced thing, from
   the words in its name and its hardware first, then from the assistant for whatever is still unplaced. Nothing moves
   until *Use*; that goes through the same guarded move and rename routes as doing it by hand.
+- Phones: once a code is set, every request needs a phone cookie (`brain/hub/phones.py`, `phones.json` in the data
+  directory, hashes only). The screen that sets the first code is paired on the spot; a phone types the code
+  (`POST /phones/code`) or asks (`POST /phones/ask`, polling `GET /phones/claim/{id}`) and a paired screen allows it
+  behind the code (`POST /phones/asks/{id}/allow`, for a day, a weekend or to keep). `GET /phones` lists them, `DELETE`
+  removes one at once. Every phone starts home-only; `remote` waits for the relay. The plan: `docs/away.md`.
 - The driver layer is pinned. Every image in `driver-layer/docker-compose.yml` names the release this code was tested
   against (Home Assistant 2026.9.1, Zigbee2MQTT 2.14.1, Z-Wave JS UI 11.23.0, Matter server 8.1.2, ring-mqtt 5.9.3).
   Bumping one is a commit, so it rides the hub's own update and a breaking upstream release never reaches a house unread.
@@ -115,6 +122,8 @@ container before the Pi's first start so the two do not fight over Ring's token.
   only the asking is missing. The assistant writes drafts a person approves and explains from the log; it cannot touch a device.
 - `docs/inventory.md` — Phase 1 device inventory. `tools/discover.py` seeds it from a Mac.
 - `docs/phase4-intelligence.md` — Phase 4 design: rules as data, the evaluator, holds, presence, the assistant's contract.
+- `docs/settings.md` — Settings without a settings page: the four nouns under *This hub* (People, Accounts, Devices, This hub),
+  what still forces a visit to Home Assistant's UI, and the order to close each gap so the Advanced door is never a step.
 - `tools/ha_bootstrap.py` — the old manual bootstrap; the brain's setup screen does this now.
 
 ## Developing on the Mac (until the Pi arrives)
@@ -134,12 +143,13 @@ Preview any panel state from the address bar: `?setup=1&page=rooms` (a setup scr
 ### HTTPS
 
 Caddy fronts the brain on plain `http://hub.local` with nothing to install, and on `https://` from
-its own local certificate authority. The QR code and the home-screen steps work over plain http; web push and the
-browser microphone wait on https. Browsers need a secure origin for device location, web push and
-a clean Add to Home Screen; for that, install
+its own local certificate authority. The QR code, the home-screen steps and joining a phone work over plain http; web
+push and the browser microphone wait on a trusted https origin. On the LAN today that means installing
 `driver-layer/caddy/data/caddy/pki/authorities/local/root.crt` on the tablet or phone once (iOS
-also wants full trust on under Settings → General → About → Certificate Trust Settings). Everything
-else works over plain http.
+also wants full trust on under Settings → General → About → Certificate Trust Settings), which is fine for the wall
+and not something to ask of a phone. The decided way out is a public name per hub with a real certificate, reached
+through a relay the maker runs when the phone is away and directly when it is home: `docs/away.md`. No VPN app, no
+vendor login.
 
 ## Radios and the Advanced door
 
@@ -179,3 +189,4 @@ the whole mesh, with failover.
 - The assistant model writes and explains rules. It never executes one.
 - Setup is a conversation on the screen, never a file to edit.
 - Controlling the house never needs a code. Changing it does, once one is set.
+- Being on the Wi‑Fi gets a phone nothing once there is a code. The owner lets a phone in; only the owner lets it out of the house.

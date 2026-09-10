@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { store, notify } from './store'
-import { downloadBackup, requestUpdate } from './api'
+import { downloadBackup, requestUpdate, removePhone, type Phone } from './api'
 import Icon from './Icon.vue'
 import Restore from './Restore.vue'
 import AdvancedLink from './AdvancedLink.vue'
@@ -9,7 +9,22 @@ import PhoneSteps from './PhoneSteps.vue'
 
 /* This hub: which build it is, whether a newer one exists, a backup to take away and a way to put one back. */
 const update = computed(() => store.status?.update ?? null)
-const busy = ref(false), phone = ref(false)
+const busy = ref(false), phone = ref(false), phones = ref(new URLSearchParams(location.search).get('phones') === '1'), sure = ref(''), removing = ref('')   // ?sheet=hub&phones=1 previews the list
+/* the phones that belong to the house: who, since when, for how long, and one way out each */
+const HOW: Record<string, string> = { code: 'typed the code', wall: 'let in from the wall', setup: 'set up the house' }
+const day = (ts: number) => new Date(ts * 1000).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })
+function phoneLine(p: Phone) {
+  const bits = [`${HOW[p.how] ?? 'joined'} ${day(p.joined)}`]
+  if (p.expires) bits.push(`until ${day(p.expires)}`)
+  return bits.join(' · ')
+}
+async function remove(p: Phone) {
+  if (sure.value !== p.id) { sure.value = p.id; return }         // one tap asks, the second does
+  removing.value = p.id
+  try { await removePhone(p.id); notify(p.me ? 'This phone is out. Join again from the wall.' : `${p.name} is out.`) }
+  catch (e: any) { if (e.message !== 'That needs the code.') notify(e.message, 'error') }
+  sure.value = ''; removing.value = ''
+}
 async function backup() {
   if (busy.value) return
   busy.value = true
@@ -56,6 +71,25 @@ onUnmounted(() => window.removeEventListener('keydown', key))
           <button class="button small" @click="phone = !phone">{{ phone ? 'Hide' : 'Show how' }}</button>
         </li>
         <li class="hub-wide" v-if="phone"><PhoneSteps /></li>
+        <li v-if="store.status?.locked">
+          <span class="hub-k">Phones</span>
+          <span class="hub-v">{{ store.phones.length === 1 ? 'One phone belongs' : `${store.phones.length} phones belong` }} to the house. Each runs it from the Wi‑Fi; none reaches it from outside yet.<span class="hub-sub"> A phone that is removed is out at once.</span></span>
+          <button class="button small" @click="phones = !phones">{{ phones ? 'Hide' : 'See them' }}</button>
+        </li>
+        <li v-else-if="store.status?.setup_done">
+          <span class="hub-k">Phones</span>
+          <span class="hub-v">Without a code, every phone on the Wi‑Fi can run the house.<span class="hub-sub"> Set one and only the phones you let in can.</span></span>
+          <button class="button small" @click="store.sheet = 'code'">Set a code</button>
+        </li>
+        <li class="hub-wide" v-if="phones && store.status?.locked">
+          <ul class="phones">
+            <li v-for="p in store.phones" :key="p.id">
+              <span class="phones-icon"><Icon :name="p.kind === 'wall' ? 'home' : 'phone'" :size="16" /></span>
+              <span class="phones-text"><span class="phones-name">{{ p.name }}<span class="phones-me" v-if="p.me"> · this one</span></span><span class="phones-sub">{{ phoneLine(p) }}</span></span>
+              <button class="button small ghost" :class="{ busy: removing === p.id, warn: sure === p.id }" @click="remove(p)">{{ sure === p.id ? (p.me ? 'Remove this one?' : 'Sure?') : 'Remove' }}</button>
+            </li>
+          </ul>
+        </li>
         <li>
           <span class="hub-k">Restore</span>
           <span class="hub-v">Put a backup back, here or on a new hub. Everything running now is replaced by what is in the file.</span>

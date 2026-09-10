@@ -28,6 +28,7 @@ from .suggest import Suggestions
 from .settings import Settings, DATA, env_file
 from .lock import Lock, needs_code
 from .pairing import Pairing
+from .phones import Phones, COOKIE, open_to_strangers
 from . import camera
 
 log = logging.getLogger("hub")
@@ -74,6 +75,7 @@ class Hub:
         self.add = Onboarding(self)
         self.lock = Lock(self.settings)
         self.pair = Pairing(self)
+        self.phones = Phones(self)                     # which phones belong to the house, once it has a code
         self.engine = Engine(self)                     # rules: signals in, room intents out
         self.presence = Presence(self)                 # who is home, from HA's persons and the alarm's mode
         self.assistant = Assistant(self)               # writes drafts and explains from the log; never runs anything
@@ -452,14 +454,35 @@ app = FastAPI(title="home-hub brain", lifespan=lifespan)
 
 @app.middleware("http")
 async def settings_lock(request: Request, call_next):
-    """Changing the house needs the code once there is one; driving it never does."""
-    if hub.lock.locked and needs_code(request.method, request.url.path):
-        who = request.client.host if request.client else ""
-        wait = hub.lock.waiting(who)
-        if wait > 0: return JSONResponse({"detail": f"Too many tries. Wait {int(wait) + 1} seconds."}, status_code=429)
-        if not hub.lock.check(request.headers.get("x-hub-code"), who):
-            return JSONResponse({"detail": "code"}, status_code=401)
+    """Once the house has a code: only its own phones get in, and changing the house needs the code. Driving it never does."""
+    request.state.phone = None
+    if hub.lock.locked:
+        m, path = request.method, request.url.path
+        if not open_to_strangers(m, path):
+            phone = hub.phones.identify(request.cookies.get(COOKIE))
+            if not phone: return JSONResponse({"detail": "phone"}, status_code=401)
+            request.state.phone = phone
+        if needs_code(m, path):
+            who = request.client.host if request.client else ""
+            wait = hub.lock.waiting(who)
+            if wait > 0: return JSONResponse({"detail": f"Too many tries. Wait {int(wait) + 1} seconds."}, status_code=429)
+            if not hub.lock.check(request.headers.get("x-hub-code"), who):
+                return JSONResponse({"detail": "code"}, status_code=401)
     return await call_next(request)
+
+
+def _with_cookie(body: dict, request: Request, phone: dict, token: str) -> JSONResponse:
+    """The phone's token, in a cookie the page's scripts cannot read. Secure when the front door was https."""
+    r = JSONResponse(body)
+    life = int(phone["expires"] - time.time()) if phone.get("expires") else 10 * 365 * 24 * 3600
+    https = request.headers.get("x-forwarded-proto", request.url.scheme) == "https"
+    r.set_cookie(COOKIE, token, max_age=max(life, 60), httponly=True, samesite="lax", secure=https, path="/")
+    return r
+
+
+def _device_kind(request: Request) -> str:
+    ua = request.headers.get("user-agent", "")
+    return "wall" if "Mobile" not in ua and "iPhone" not in ua and "Android" not in ua else "phone"
 
 
 # ---------- setup ----------
@@ -511,12 +534,17 @@ async def setup_retry(entry_id: str):
 
 
 @app.post("/setup/pin")
-def setup_pin(body: dict):
-    """Set, change or (with an empty pin) remove the code. Changing one needs the old one, like any setting."""
+def setup_pin(body: dict, request: Request):
+    """Set, change or (with an empty pin) remove the code. Changing one needs the old one, like any setting.
+    The screen that sets the first code becomes the house's first paired phone: the door turns on and it is inside."""
+    was = hub.lock.locked
     try: hub.lock.set(str(body.get("pin") or "").strip())
     except ValueError as e: raise HTTPException(400, str(e))
     hub.log.add("home", "setup", None, "code set" if hub.lock.locked else "code removed", source="user")
     hub._broadcast(json.dumps({"type": "status", "status": hub.status()}))
+    if hub.lock.locked and not was and not request.state.phone:
+        phone, token = hub.phones.from_setup(_device_kind(request))
+        return _with_cookie(hub.status(), request, phone, token)
     return hub.status()
 
 
@@ -876,6 +904,70 @@ def phone():
     return {"ip": Sounds._lan_ip()}
 
 
+# ---------- the phones that belong to the house ----------
+@app.get("/phones/me")
+def phones_me(request: Request):
+    """Open to anyone on the Wi‑Fi: is this phone in, and what is the house called. The join screen starts here."""
+    phone = hub.phones.identify(request.cookies.get(COOKIE)) if hub.lock.locked else None
+    return {"locked": hub.lock.locked, "paired": (not hub.lock.locked) or bool(phone), "home": hub.settings.get("home_name") or "Home",
+            "phone": hub.phones._public(phone) if phone else None}
+
+
+@app.get("/phones")
+def phones_list(request: Request): return hub.phones.list(request.state.phone)
+
+
+@app.post("/phones/ask")
+def phones_ask(body: dict, request: Request):
+    """A phone asks to join. Someone at a paired screen answers; the phone polls /phones/claim meanwhile."""
+    if not hub.lock.locked: raise HTTPException(409, "The house has no code, so every phone on the Wi‑Fi is already in.")
+    return hub.phones.ask(str(body.get("name") or ""), _device_kind(request))
+
+
+@app.get("/phones/claim/{ask_id}")
+def phones_claim(ask_id: str, request: Request):
+    state, phone, token = hub.phones.claim(ask_id)
+    if state != "allowed": return {"state": state}
+    return _with_cookie({"state": state, "phone": hub.phones._public(phone)}, request, phone, token)
+
+
+@app.post("/phones/code")
+def phones_code(body: dict, request: Request):
+    """The code, typed on the phone itself: the owner's way in. Wrong codes count against the address like anywhere else."""
+    if not hub.lock.locked: raise HTTPException(409, "The house has no code.")
+    who = request.client.host if request.client else ""
+    wait = hub.lock.waiting(who)
+    if wait > 0: raise HTTPException(429, f"Too many tries. Wait {int(wait) + 1} seconds.")
+    if not hub.lock.check(str(body.get("code") or ""), who): raise HTTPException(401, "That wasn't it.")
+    phone, token = hub.phones.with_code(str(body.get("name") or ""), _device_kind(request))
+    return _with_cookie({"ok": True, "phone": hub.phones._public(phone)}, request, phone, token)
+
+
+@app.post("/phones/asks/{ask_id}/allow")
+def phones_allow(ask_id: str, body: dict | None = None):
+    """Behind the code, from a paired screen: {"span": "day" | "weekend" | "keep"}."""
+    try: return hub.phones.allow(ask_id, (body or {}).get("span") or "keep")
+    except KeyError as e: raise HTTPException(404, str(e.args[0]))
+    except ValueError as e: raise HTTPException(400, str(e))
+
+
+@app.delete("/phones/asks/{ask_id}")
+def phones_deny(ask_id: str):
+    hub.phones.deny(ask_id); return {"ok": True}
+
+
+@app.delete("/phones/{phone_id}")
+def phones_remove(phone_id: str):
+    if not hub.phones.remove(phone_id): raise HTTPException(404, "No such phone.")
+    return {"ok": True}
+
+
+@app.post("/phones/{phone_id}/remote")
+def phones_remote(phone_id: str, body: dict):
+    try: return hub.phones.set_remote(phone_id, bool(body.get("remote")))
+    except KeyError as e: raise HTTPException(404, str(e.args[0]))
+
+
 @app.post("/rooms/{room_id}/intent/{state}")
 async def room_intent(room_id: str, state: RoomState):
     hub.ready()
@@ -1045,6 +1137,8 @@ def dry_run(rule_id: str):
 
 @app.websocket("/stream")
 async def stream(ws: WebSocket):
+    if hub.lock.locked and not hub.phones.identify(ws.cookies.get(COOKIE)):
+        await ws.close(code=4401); return        # not one of the house's phones: the join screen is the way in
     await ws.accept(); hub.streams.add(ws)
     try:
         await ws.send_text(json.dumps({"type": "status", "status": hub.status()}))

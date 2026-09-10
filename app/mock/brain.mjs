@@ -2,7 +2,7 @@
    house of eight rooms. `npm run mock`, then open http://localhost:8399/ (every ?at= ?wx= ?month= ?room= ?sheet= ?setup=
    preview works), or `BRAIN=http://localhost:8399 npm run dev` for hot reload against it.
    Knobs: PORT, WX=rainy (a condition), FOUND=0 (nothing new nearby), ENGINE=down (the engine-starting screen),
-   LOCKED=1 (a code is set), FRESH=1 (first run). Nothing here talks to a real device; every POST says ok. */
+   LOCKED=1 (a code is set), FRESH=1 (first run), ASK=1 (a phone is asking to join; needs LOCKED=1), ?join=1 (the join screen). Nothing here talks to a real device; every POST says ok. */
 import http from 'node:http'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -105,6 +105,12 @@ const PICS = { f2: pic('#3b4a5c', '#1b2230'), g1: pic('#2f2a26', '#14110f'), y1:
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.json': 'application/json', '.woff2': 'font/woff2', '.webmanifest': 'application/manifest+json' }
 const json = (res, body) => { res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(body)) }
 
+const phones = { phones: [
+  { id: 'w', name: 'This wall', kind: 'wall', joined: now - 86400 * 30, expires: null, remote: false, last_seen: now, how: 'setup', me: true },
+  { id: 'p1', name: "Temi's iPhone", kind: 'phone', joined: now - 86400 * 20, expires: null, remote: false, last_seen: now - 3600, how: 'code', me: false },
+  { id: 'p2', name: "Nadine's Android phone", kind: 'phone', joined: now - 3600, expires: now + 86400 * 2, remote: false, last_seen: now - 600, how: 'wall', me: false },
+], asks: process.env.ASK ? [{ id: 'a1', name: "Sam's iPhone", kind: 'phone', asked: now - 30 }] : [] }
+
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://x')
   const p = url.pathname
@@ -125,6 +131,10 @@ const server = http.createServer((req, res) => {
     { id: 'u1', name: 'Colour lamp', room: 'living', why: 'the same unit as the floor lamp', source: 'assistant' },
     { id: 'u2', name: 'Plug', room: '', why: 'a plainer name', source: 'house' }], assistant: true })
   if (p === '/phone') return json(res, { ip: '192.168.1.40' })
+  if (p === '/phones/me') return json(res, { locked: !!process.env.LOCKED, paired: true, home: 'Main Palace', phone: null })
+  if (p === '/phones') return json(res, phones)
+  if (p === '/phones/ask' && req.method === 'POST') return json(res, { id: 'ask1', name: "Sam's iPhone", kind: 'phone', asked: now })
+  if (p.startsWith('/phones/claim/')) return json(res, { state: 'waiting' })
   if (p === '/qr.svg') { res.writeHead(200, { 'Content-Type': 'image/svg+xml' }); return res.end(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 29 29'><rect width='29' height='29' fill='#fff'/><path d='M2 2h7v7H2zM3 3v5h5V3zM4 4h3v3H4zM20 2h7v7h-7zM21 3v5h5V3zM22 4h3v3h-3zM2 20h7v7H2zM3 21v5h5v-5zM4 22h3v3H4zM11 2h2v2h-2zM14 3h2v2h-2zM11 6h3v2h-3zM16 7h2v2h-2zM2 11h2v2H2zM5 12h2v2H5zM8 11h2v3H8zM11 10h2v3h-2zM14 11h3v2h-3zM18 10h2v3h-2zM21 11h2v2h-2zM24 12h3v2h-3zM3 15h3v2H3zM7 16h2v2H7zM11 14h2v3h-2zM14 15h2v3h-2zM17 14h3v2h-3zM21 15h2v3h-2zM24 16h3v2h-3zM11 19h2v2h-2zM14 20h3v2h-3zM18 19h2v3h-2zM21 20h2v2h-2zM24 19h3v3h-3zM11 23h3v2h-3zM15 24h2v3h-2zM18 23h3v2h-3zM22 24h2v2h-2zM25 23h2v4h-2z'/></svg>`) }
   if (p === '/say' && req.method === 'POST') { let b = ''; req.on('data', c => (b += c)); return req.on('end', () => { let t = ''; try { t = JSON.parse(b).text || '' } catch {}
     if (/^(is|are|what|who|how)\b/i.test(t)) return json(res, { kind: 'answer', text: 'Front door is locked.', said: t })

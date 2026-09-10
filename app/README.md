@@ -16,7 +16,7 @@ npm run build    # writes dist/, which the brain serves at http://<host>:8300/
 thermostat cooling, three cameras, two things found nearby, four routines. `npm run mock` serves the built panel
 on http://localhost:8399/ with every preview parameter working; `BRAIN=http://localhost:8399 npm run dev` runs
 the dev server against it instead of the real brain. `WX=rainy`, `FOUND=0`, `ENGINE=down`, `LOCKED=1` and
-`FRESH=1` change what it says. `npm run shots` (after `npx playwright install chromium`, once) photographs every
+`FRESH=1` change what it says; `ASK=1` (with `LOCKED=1`) has a phone asking to join, and `?join=1` previews the join screen. `npm run shots` (after `npx playwright install chromium`, once) photographs every
 screen at kiosk, wall, tablet and phone sizes into `mock/shots/`, which is the quickest way to see a layout
 change everywhere it lands.
 
@@ -64,6 +64,9 @@ and the sheet with `?sheet=location`.
 - `src/code.ts`, `src/CodePrompt.vue`, `src/CodeSheet.vue` — the code on the settings. Every request
   goes through `request()`, which attaches the code kept for this tab and, when the hub answers 401
   `code`, asks for it and retries. Controls never ask; changes do. `?sheet=code` previews the sheet.
+- `src/Join.vue`, `src/Asks.vue` — the phones that belong to the house. When the hub answers 401 `phone`, `request()`
+  raises the join screen: give a name, ask, and wait for a screen that is already in to tap Allow on the card
+  `Asks.vue` shows under the command box; or type the code. `HubSheet.vue` lists the phones (`?sheet=hub&phones=1`).
 - `src/tiles/` — one tile per capability. The light tile is the dimmer (tap toggles, drag dims).
   Media shows artwork, transport and volume. Cameras open full screen in `src/Viewer.vue`.
 - `src/Viewer.vue`, `src/live.ts` — one camera, full screen. A still comes up at once; behind it the

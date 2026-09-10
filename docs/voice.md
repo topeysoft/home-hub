@@ -53,9 +53,9 @@ A microphone button beside the command box. Hold it, speak, let go; the words ap
 exactly as if typed, and the answer shows the same way. Nothing new on the hub.
 
 Speech-to-text comes from the browser (`SpeechRecognition`, on the kiosk tablet and on phones). That API needs a
-**secure context**: `https://`, or a browser told to trust `http://hub.local`. So this shape waits on the https
-decision from *Out of the Box* (plain http for family now; a real name under a domain with issued certificates before a
-customer). For the wall panel, which is a device the hub owner controls, a kiosk browser can be told to treat the hub's
+**secure context**: `https://`, or a browser told to trust `http://hub.local`. So on phones this shape waits on the
+real certificate per hub from `docs/away.md` (a public name per house, reached directly at home and through the maker's
+relay away). For the wall panel, which is a device the hub owner controls, a kiosk browser can be told to treat the hub's
 address as secure without a certificate, so the wall can have push-to-talk before phones do. Where the browser cannot
 recognise speech, the button does not appear; the box still works.
 

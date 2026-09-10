@@ -28,6 +28,7 @@ def needs_code(method: str, path: str) -> bool:
     if path == "/update" and m == "POST": return True
     if path == "/backup" or (path == "/restore" and m == "POST"): return True   # the archive carries the house's keys
     if path.startswith("/pair") and m != "GET": return True
+    if path.startswith("/phones") and m != "GET": return path not in ("/phones/ask", "/phones/code")   # letting a phone in, or out, is a setting; asking is not
     return False
 
 

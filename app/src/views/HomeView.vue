@@ -7,6 +7,7 @@ import Icon from '../Icon.vue'
 import SceneBar from '../SceneBar.vue'
 import OnNow from '../OnNow.vue'
 import Say from '../Say.vue'
+import Asks from '../Asks.vue'
 import PhoneSteps from '../PhoneSteps.vue'
 import CameraTile from '../tiles/CameraTile.vue'
 
@@ -76,6 +77,7 @@ onUnmounted(() => { clearInterval(t1); clearInterval(t2); clearInterval(t3) })
     </header>
 
     <Say />
+    <Asks />
 
     <button class="nudge" v-if="updateReady" @click="install">
       <span class="nudge-icon"><Icon name="sparkle" :size="20" /></span>

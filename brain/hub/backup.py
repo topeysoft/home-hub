@@ -13,7 +13,7 @@ from pathlib import Path
 from .settings import DATA, ROOT
 
 DRIVER = Path(os.environ.get("HUB_DRIVER") or ROOT.parent / "driver-layer")
-DATA_FILES = ("settings.json", "events.db", "rules.json", "scenes.json")
+DATA_FILES = ("settings.json", "events.db", "rules.json", "scenes.json", "phones.json")
 # what to take from the driver layer, and what to leave behind inside each part
 PARTS = [
     (".env", ()),

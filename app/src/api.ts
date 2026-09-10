@@ -157,7 +157,7 @@ export async function setHomeIntent(state: string) {
 export const imageUrl = (id: string) => `/devices/${encodeURIComponent(id)}/image?t=${Date.now()}`
 
 /** Live updates from the brain. Reconnects with backoff; reports link state. */
-export function connect(on: { device: (d: Device) => void; home: (h: Home) => void; ambient: (a: Ambient) => void; status: (s: Status) => void; intent: (i: Intent) => void; drafts: (d: Routine[]) => void; presence: (p: Presence) => void; link: (up: boolean) => void }) {
+export function connect(on: { device: (d: Device) => void; home: (h: Home) => void; ambient: (a: Ambient) => void; status: (s: Status) => void; intent: (i: Intent) => void; drafts: (d: Routine[]) => void; presence: (p: Presence) => void; phones: (p: { phones: Phone[]; asks: Ask[] }) => void; link: (up: boolean) => void }) {
   let delay = 1000, ws: WebSocket | null = null, closed = false
   const open = () => {
     const proto = location.protocol === 'https:' ? 'wss' : 'ws'
@@ -172,6 +172,7 @@ export function connect(on: { device: (d: Device) => void; home: (h: Home) => vo
       else if (m.type === 'intent') on.intent(m)
       else if (m.type === 'drafts') on.drafts(m.drafts)
       else if (m.type === 'presence') on.presence(m.presence)
+      else if (m.type === 'phones') on.phones(m)
     }
     ws.onclose = () => { on.link(false); if (!closed) setTimeout(open, delay = Math.min(delay * 2, 15000)) }
     ws.onerror = () => ws?.close()
@@ -193,3 +194,17 @@ export async function getPhone(): Promise<{ ip: string }> {
   const r = await request('/phone'); if (!r.ok) await fail(r); return r.json()
 }
 export const qrUrl = (text: string) => `/qr.svg?text=${encodeURIComponent(text)}`
+
+/* The phones that belong to the house, once it has a code. A phone gets in by typing the code, or by asking and being
+   allowed from a screen that is already in; the hub keeps a hash and the phone a cookie, so removing one is instant. */
+export type Phone = { id: string; name: string; kind: 'wall' | 'phone' | null; joined: number; expires: number | null; remote: boolean; last_seen: number | null; how: 'code' | 'wall' | 'setup'; me: boolean }
+export type Ask = { id: string; name: string; kind: string | null; asked: number }
+export type Me = { locked: boolean; paired: boolean; home: string; phone: Phone | null }
+export async function getMe(): Promise<Me> { const r = await fetch('/phones/me'); if (!r.ok) await fail(r); return r.json() }
+export async function getPhones(): Promise<{ phones: Phone[]; asks: Ask[] }> { const r = await request('/phones'); if (!r.ok) await fail(r); return r.json() }
+export const askToJoin = (name: string) => post<Ask>('/phones/ask', { name })
+export async function claimJoin(id: string): Promise<{ state: 'waiting' | 'allowed' | 'gone'; phone?: Phone }> { const r = await fetch(`/phones/claim/${encodeURIComponent(id)}`); if (!r.ok) await fail(r); return r.json() }
+export const joinWithCode = (code: string, name: string) => post<{ ok: boolean; phone: Phone }>('/phones/code', { code, name })
+export const allowPhone = (id: string, span: 'day' | 'weekend' | 'keep') => post<Phone>(`/phones/asks/${encodeURIComponent(id)}/allow`, { span })
+export async function denyPhone(id: string) { const r = await request(`/phones/asks/${encodeURIComponent(id)}`, { method: 'DELETE' }); if (!r.ok) await fail(r) }
+export async function removePhone(id: string) { const r = await request(`/phones/${encodeURIComponent(id)}`, { method: 'DELETE' }); if (!r.ok) await fail(r) }

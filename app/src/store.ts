@@ -1,5 +1,6 @@
 import { reactive } from 'vue'
-import { getHome, getEvents, getAmbient, getScenes, getStatus, getDiscovered, getRoutines, getAssistant, getPresence, getHealth, getSounds, connect, act, setIntent, setHomeIntent, type Room, type Device, type Home, type Event, type Ambient, type Rules, type Status, type Found, type Intent, type Routine, type Assistant, type Presence, type Note, type Sound } from './api'
+import { getHome, getEvents, getAmbient, getScenes, getStatus, getDiscovered, getRoutines, getAssistant, getPresence, getHealth, getSounds, connect, act, setIntent, setHomeIntent, type Room, type Device, type Home, type Event, type Ambient, type Rules, type Status, type Found, type Intent, type Routine, type Assistant, type Presence, type Note, type Sound , getPhones, type Phone, type Ask } from './api'
+import { lock } from './code'
 import { sunPosition, sunGuess, moonPhase } from './sun'
 
 export const store = reactive({
@@ -25,6 +26,7 @@ export const store = reactive({
   restoring: false,                          // this screen sent a backup back; cleared when the hub returns
   previewSetup: new URLSearchParams(location.search).get('setup') === '1',   // ?setup=1 previews first run; cleared by Open Home
   status: null as Status | null,            // where the hub is in its life: engine down, fresh, ready; and whether setup finished
+  phones: [] as Phone[], asks: [] as Ask[],  // the phones that belong to the house, and the ones asking to
   homeName: '' as string,
   tempUnit: '' as string,                   // the house's temperature unit, from the home's location (°F in the US)
   found: [] as Found[],                      // things noticed on the network that are not set up yet
@@ -211,6 +213,12 @@ export async function perform(d: Device, action: string, data?: Record<string, u
 /* ---------- recent activity, told plainly ---------- */
 export const LABELS: Record<string, string> = { movie: 'Movie', guests: 'Guests', asleep: 'Sleep', empty: 'All off', away: 'Everything off', occupied: 'In use' }
 export function describe(ev: Event): { text: string; icon: string } | null {
+  if (ev.kind === 'phone') {
+    let d: any = {}; try { d = ev.detail ? JSON.parse(ev.detail) : {} } catch {}
+    const n = d.name || 'A phone'
+    return ev.new === 'joined' ? { text: `${n} joined the house`, icon: 'phone' } : ev.new === 'asked' ? { text: `${n} asked to join`, icon: 'phone' }
+      : ev.new === 'removed' ? { text: `${n} was removed`, icon: 'phone' } : ev.new === 'left' ? { text: `${n}'s stay ended`, icon: 'phone' } : null
+  }
   if (ev.kind === 'presence') return ev.new === 'nobody' ? { text: 'Everyone is out', icon: 'leave' } : ev.new === 'somebody' ? { text: 'Someone is home', icon: 'home' } : null
   if (ev.kind === 'intent') {
     if (ev.subject === 'home') return { text: ev.new === 'asleep' ? 'Bedtime' : LABELS[ev.new ?? ''] ?? ev.new ?? '', icon: ev.new === 'asleep' ? 'moon' : 'leave' }
@@ -280,7 +288,11 @@ export function openWhy(roomId: string) { store.whyRoom = roomId; store.sheet = 
 /** True while the panel should show the setup flow instead of the house. */
 export const needsSetup = () => !store.status || !store.status.setup_done   // once finished, an engine hiccup shows the calm offline note, not the welcome
 export async function refreshStatus() {
-  try { store.status = await getStatus() } catch { if (!store.status) store.error = 'The hub is not answering.' }
+  try { store.status = await getStatus() } catch { if (!store.status && !lock.unpaired) store.error = 'The hub is not answering.' }
+}
+export async function loadPhones() {
+  if (!store.status?.locked) { store.phones = []; store.asks = []; return }
+  try { const p = await getPhones(); store.phones = p.phones; store.asks = p.asks } catch {}
 }
 let foundTimer: number | undefined
 export async function refreshFound() {
@@ -305,15 +317,21 @@ function applyDevice(d: Device) {
 let stop: (() => void) | undefined, lostTimer: number | undefined, skyTimer: number | undefined
 export async function load() {
   await refreshStatus()
+  if (lock.unpaired) return                    // the join screen is up; the house answers once this phone is in
   try { applyHome(await getHome()) } catch { store.error = 'The hub is not answering.' }
-  loadAmbient(); loadRules(); loadRoutines(); loadAssistant(); loadPresence(); loadHealth(); loadSounds()
+  loadAmbient(); loadRules(); loadRoutines(); loadAssistant(); loadPresence(); loadHealth(); loadSounds(); loadPhones()
 }
 let foundPoll: number | undefined
 export async function start() {
   await load()
+  if (lock.unpaired) { updateSky(); return }   // the sky still follows the clock; nothing to stream to until this phone is in, and rejoin() starts again
   updateSky(); clearInterval(skyTimer); skyTimer = window.setInterval(updateSky, 30000)
   clearInterval(foundPoll); foundPoll = window.setInterval(refreshFound, 60000)
-  stop = connect({ device: applyDevice, home: applyHome, intent: applyIntent, drafts: d => { store.drafts = d; eventsSoon() }, presence: p => { store.presence = p; eventsSoon() }, ambient: a => { store.ambient = a; updateSky() }, status: s => {
+  stop = connect({ device: applyDevice, home: applyHome, intent: applyIntent, drafts: d => { store.drafts = d; eventsSoon() }, presence: p => { store.presence = p; eventsSoon() }, phones: p => {
+    const known = new Set(store.phones.map(x => x.id))
+    store.phones = p.phones; store.asks = p.asks; eventsSoon()
+    for (const x of p.phones) if (!known.has(x.id) && !x.me && known.size) notify(`${x.name} joined the house.`)   // told on every screen; the newcomer already knows
+  }, ambient: a => { store.ambient = a; updateSky() }, status: s => {
     const was = store.status?.driver, version = store.status?.version
     store.status = s
     if (store.updating && version && s.version && s.version !== version) { store.updating = false; notify(`Updated to ${s.version}.`) }

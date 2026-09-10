@@ -1,0 +1,93 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap">
+  <style>
+    body { margin: 0; font-family: "Instrument Sans", -apple-system, system-ui, sans-serif; }
+    a { color: #e9b872; } a:hover { color: #b8863e; }
+    .dsp { font-family: "Instrument Serif", Palatino, Georgia, serif; font-weight: 400; letter-spacing: -0.01em; }
+    .cap { font-size: 13px; letter-spacing: .07em; text-transform: uppercase; color: #7f7d77; }
+    .tile { position: relative; width: 236px; height: 190px; border-radius: 22px; overflow: hidden; padding: 16px; display: flex; flex-direction: column; border: 1px solid rgba(255,255,255,.10); background: linear-gradient(155deg, oklch(0.36 0.045 92), oklch(0.30 0.045 98)); }
+    .ico { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: rgba(255,255,255,.14); color: #f1eee8; position: relative; }
+    .nm { margin-top: auto; font-size: 17px; font-weight: 500; position: relative; }
+    .st { margin-top: 3px; font-size: 14.5px; color: #b9b5ad; position: relative; }
+    .why { margin-top: 12px; font-size: 14px; color: #b9b5ad; width: 236px; }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 1440px; height: 640px; overflow: hidden; background: #0c0d10; color: #f1eee8; font-size: 17px; line-height: 1.4; padding: 44px 48px;">
+  <div style="position: absolute; inset: 0; background: linear-gradient(180deg, rgb(10,14,34) 0%, rgb(26,24,52) 58%, rgb(16,16,30) 100%);"></div>
+  <div style="position: relative;">
+
+    <h1 class="dsp" style="margin: 0; font-size: 38px;">When there is no artwork</h1>
+    <p style="margin: 8px 0 0; font-size: 17px; color: #b9b5ad; max-width: 90ch;">The reference is polished because someone modelled one camera and one car. A hub draws whatever a stranger plugged in, so the tile has to look deliberate at every rung &mdash; not just the top one. Shown in Warm; the tone setting moves all four together.</p>
+
+    <div style="display: flex; gap: 20px; margin-top: 30px;">
+
+      <div>
+        <div class="tile" style="padding: 0;">
+          <div style="position: absolute; inset: 0; background: linear-gradient(150deg, #2f3a33, #171d1a 60%, #0e1211);"></div>
+          <svg viewBox="0 0 236 190" style="position: absolute; inset: 0;" width="236" height="190">
+            <rect x="0" y="128" width="236" height="62" fill="#1b211d"/>
+            <path d="M0 128 L74 96 L150 118 L236 84 L236 128 Z" fill="#232b26"/>
+            <rect x="150" y="40" width="52" height="88" fill="#202723"/><rect x="160" y="56" width="13" height="16" fill="#3c4640"/><rect x="180" y="56" width="13" height="16" fill="#3c4640"/>
+            <ellipse cx="60" cy="150" rx="30" ry="9" fill="rgba(233,184,114,.16)"/>
+          </svg>
+          <div style="position: absolute; inset: 0; background: linear-gradient(180deg, rgba(12,13,16,.25), transparent 34%, rgba(12,13,16,.78));"></div>
+          <div style="position: absolute; top: 14px; right: 14px; font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; padding: 5px 9px; border-radius: 999px; background: #74c69d; color: #0b2216; font-weight: 600;">Live</div>
+          <div style="position: absolute; left: 16px; bottom: 14px;"><div style="font-size: 17px; font-weight: 500;">Backyard</div><div style="margin-top: 2px; font-size: 14.5px; color: #b9b5ad;">All quiet</div></div>
+        </div>
+        <div class="why">The device supplies its own picture &mdash; a camera frame, album art. Nothing for us to ship.</div>
+      </div>
+
+      <div>
+        <div class="tile">
+          <svg width="164" height="132" viewBox="0 0 150 120" style="position: absolute; right: -2px; bottom: 2px;">
+            <defs><linearGradient id="c2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fbfbfa"/><stop offset="100%" stop-color="#b9bcc0"/></linearGradient></defs>
+            <rect x="30" y="22" width="86" height="54" rx="27" fill="url(#c2)"/><circle cx="57" cy="49" r="19" fill="#2a2d33"/><circle cx="57" cy="49" r="11" fill="#0f1114"/><circle cx="52" cy="44" r="4" fill="#fff" opacity=".55"/><rect x="66" y="76" width="14" height="22" rx="6" fill="#9ca0a6"/><ellipse cx="73" cy="102" rx="26" ry="8" fill="#8f9399"/>
+          </svg>
+          <div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5h17v10h-17zM12 16.5a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM8.5 8.5l1.5-3h4l1.5 3"/></svg></div>
+          <div class="nm">Side gate</div><div class="st">All quiet</div>
+        </div>
+        <div class="why">A render we ship. Worth drawing only for the handful of things most houses own.</div>
+      </div>
+
+      <div>
+        <div class="tile">
+          <div style="position: absolute; right: 14px; bottom: 14px; padding: 7px 13px; border-radius: 999px; background: rgba(12,13,16,.42); font-size: 13px; letter-spacing: .04em;">Aqara</div>
+          <div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 13.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM7.5 7.5a6.5 6.5 0 0 0 0 9M16.5 7.5a6.5 6.5 0 0 1 0 9M4.5 4.5a10.5 10.5 0 0 0 0 15M19.5 4.5a10.5 10.5 0 0 1 0 15"/></svg></div>
+          <div class="nm">Hall motion</div><div class="st">Still for 40 min</div>
+        </div>
+        <div class="why">Maker known, no render: the brand name, set quietly. No logo to license or get wrong.</div>
+      </div>
+
+      <div>
+        <div class="tile">
+          <svg width="168" height="168" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.13)" stroke-width="1.05" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; right: -30px; bottom: -30px;"><path d="M12 3.5v8.5M6.6 6.6a7.6 7.6 0 1 0 10.8 0"/></svg>
+          <div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v8.5M6.6 6.6a7.6 7.6 0 1 0 10.8 0"/></svg></div>
+          <div class="nm">Desk plug</div><div class="st">Off</div>
+        </div>
+        <div class="why">Nothing known &mdash; the common case. The icon goes oversized and dim, and becomes the art.</div>
+      </div>
+
+      <div style="flex: 1 1 0; padding-left: 16px; max-width: 300px;">
+        <div class="cap">The rule</div>
+        <p style="margin: 10px 0 0; font-size: 15px; color: #b9b5ad;">A tile never shows an empty frame waiting for a picture that will not arrive. Every rung fills the same 236&thinsp;&times;&thinsp;190 with something intentional, so a shelf of no-name plugs looks composed rather than broken.</p>
+        <p style="margin: 14px 0 0; font-size: 15px; color: #b9b5ad;">Rung 4 is what most houses will mostly see. If it does not hold up on its own, the design does not hold up.</p>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+
+<script data-dc-script>
+class Component extends DCLogic {}
+</script>
+</body>
+</html>

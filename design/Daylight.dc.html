@@ -1,0 +1,98 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap">
+  <style>
+    body { margin: 0; font-family: "Instrument Sans", -apple-system, system-ui, sans-serif; }
+    a { color: #e9b872; } a:hover { color: #b8863e; }
+    .dsp { font-family: "Instrument Serif", Palatino, Georgia, serif; font-weight: 400; letter-spacing: -0.01em; }
+    .cap { font-size: 13px; letter-spacing: .07em; text-transform: uppercase; }
+    .sky { position: relative; height: 232px; border-radius: 20px; overflow: hidden; border: 1px solid rgba(255,255,255,.12);
+           background: linear-gradient(180deg, rgb(26,78,136) 0%, rgb(70,148,202) 55%, rgb(170,200,218) 88%); }
+    .veil { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(12,13,16,.22) 0%, rgba(12,13,16,.34) 55%, rgba(12,13,16,.58) 100%); }
+    .rail { position: absolute; inset: 0; display: flex; align-items: center; gap: 12px; padding: 0 18px; }
+    .tl { flex: 0 0 auto; width: 118px; height: 148px; border-radius: 18px; padding: 12px; display: flex; flex-direction: column; }
+    .tn { margin-top: auto; font-size: 14px; font-weight: 500; }
+    .ts { margin-top: 2px; font-size: 12.5px; }
+    th, td { text-align: left; padding: 8px 18px 8px 0; font-size: 14.5px; }
+    th { font-size: 12.5px; letter-spacing: .07em; text-transform: uppercase; color: #7f7d77; font-weight: 400; }
+    td { font-variant-numeric: tabular-nums; border-top: 1px solid rgba(255,255,255,.08); }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 1440px; height: 780px; overflow: hidden; background: #0c0d10; color: #f1eee8; font-size: 17px; line-height: 1.4; padding: 44px 48px;">
+  <div style="position: absolute; inset: 0; background: linear-gradient(180deg, rgb(10,14,34) 0%, rgb(26,24,52) 58%, rgb(16,16,30) 100%);"></div>
+  <div style="position: relative;">
+
+    <h1 class="dsp" style="margin: 0; font-size: 38px;">Keeping step with the sky</h1>
+    <p style="margin: 8px 0 0; font-size: 17px; color: #b9b5ad; max-width: 96ch;">Both panels are the same midday sky. The tiles on the left are specified in fixed colour; the ones on the right are specified <em>relative</em> to the field.</p>
+
+    <div style="display: flex; gap: 28px; margin-top: 28px;">
+
+      <!-- broken -->
+      <div style="flex: 1 1 0;">
+        <div class="cap" style="color: #e08a8a; margin-bottom: 12px;">Fixed colour &mdash; what you spotted</div>
+        <div class="sky">
+          <div class="veil"></div>
+          <div class="rail">
+            <div class="tl" style="background: linear-gradient(155deg, oklch(0.36 0.05 66), oklch(0.30 0.05 72)); border: 1px solid rgba(255,255,255,.10);"><div class="tn" style="color: #f1eee8;">17&deg;</div><div class="ts" style="color: #b9b5ad;">Clear</div></div>
+            <div class="tl" style="background: linear-gradient(155deg, oklch(0.36 0.05 92), oklch(0.30 0.05 98)); border: 1px solid rgba(255,255,255,.10);"><div class="tn" style="color: #f1eee8;">Backyard</div><div class="ts" style="color: #b9b5ad;">All quiet</div></div>
+            <div class="tl" style="background: linear-gradient(155deg, oklch(0.86 0.05 300), oklch(0.80 0.05 306));"><div class="tn" style="color: #1e1b24;">Hallway</div><div class="ts" style="color: rgba(30,27,36,.62);">21&deg;</div></div>
+            <div class="tl" style="background: linear-gradient(155deg, oklch(0.36 0.05 76), oklch(0.30 0.05 82)); border: 1px solid rgba(233,184,114,.34);"><div class="tn" style="color: #f1eee8;">Floor lamp</div><div class="ts" style="color: #e9b872;">On, low</div></div>
+          </div>
+        </div>
+        <p style="margin: 14px 0 0; font-size: 15px; color: #b9b5ad;">The dark tiles have gone <em>darker than the sky behind them</em> &mdash; they read as holes punched in the daylight rather than surfaces sitting on it. The lilac is the odd one out at the same time, bright where its neighbours are dark.</p>
+      </div>
+
+      <!-- fixed -->
+      <div style="flex: 1 1 0;">
+        <div class="cap" style="color: #74c69d; margin-bottom: 12px;">Derived from the sky</div>
+        <div class="sky">
+          <div class="veil"></div>
+          <div class="rail">
+            <div class="tl" style="background: linear-gradient(155deg, oklch(0.682 0.034 66), oklch(0.627 0.034 72));"><div class="tn" style="color: #1e1b24;">17&deg;</div><div class="ts" style="color: rgba(30,27,36,.62);">Clear</div></div>
+            <div class="tl" style="background: linear-gradient(155deg, oklch(0.682 0.034 92), oklch(0.627 0.034 98));"><div class="tn" style="color: #1e1b24;">Backyard</div><div class="ts" style="color: rgba(30,27,36,.62);">All quiet</div></div>
+            <div class="tl" style="background: linear-gradient(155deg, oklch(0.682 0.034 44), oklch(0.627 0.034 50));"><div class="tn" style="color: #1e1b24;">Hallway</div><div class="ts" style="color: rgba(30,27,36,.62);">21&deg;</div></div>
+            <div class="tl" style="background: linear-gradient(155deg, oklch(0.682 0.034 76), oklch(0.627 0.034 82)); border: 1px solid rgba(122,74,16,.34);"><div class="tn" style="color: #1e1b24;">Floor lamp</div><div class="ts" style="color: #7a4a10;">On, low</div></div>
+          </div>
+        </div>
+        <p style="margin: 14px 0 0; font-size: 15px; color: #b9b5ad;">Every tile sits the same amount lighter than the field, so the set stays a set. Warm sand over blue sky &mdash; the pairing daylight is actually good at. Text flips to dark on its own once a tile out-lightens it.</p>
+      </div>
+    </div>
+
+    <!-- the rule -->
+    <div style="display: flex; gap: 60px; margin-top: 34px;">
+      <div style="flex: 0 0 auto;">
+        <div class="cap" style="color: #7f7d77; margin-bottom: 4px;">Lightness holds its distance</div>
+        <table style="border-collapse: collapse;">
+          <tr><th>Hour</th><th>Field</th><th>Fixed</th><th>Derived</th></tr>
+          <tr><td>Night</td><td>0.148</td><td style="color: #b9b5ad;">0.30 &nbsp;<span style="color:#74c69d;">&plus;0.15</span></td><td>0.283 &nbsp;<span style="color:#74c69d;">&plus;0.135</span></td></tr>
+          <tr><td>Dusk</td><td>0.218</td><td style="color: #b9b5ad;">0.30 &nbsp;<span style="color:#74c69d;">&plus;0.08</span></td><td>0.353 &nbsp;<span style="color:#74c69d;">&plus;0.135</span></td></tr>
+          <tr><td>Midday</td><td>0.492</td><td style="color: #b9b5ad;">0.30 &nbsp;<span style="color:#e08a8a;">&minus;0.19</span></td><td>0.627 &nbsp;<span style="color:#74c69d;">&plus;0.135</span></td></tr>
+        </table>
+        <p style="margin: 12px 0 0; font-size: 14px; color: #7f7d77; max-width: 46ch;">Fixed colour crosses over the field somewhere between dusk and noon. That crossing is the whole problem.</p>
+      </div>
+
+      <div style="flex: 1 1 0; max-width: 62ch;">
+        <div class="cap" style="color: #7f7d77; margin-bottom: 8px;">Three rules, and one that stays put</div>
+        <p style="margin: 0 0 10px; font-size: 15px; color: #b9b5ad;"><span style="color: #f1eee8;">Lightness</span> is relative &mdash; a tile is always <span style="font-variant-numeric: tabular-nums;">+0.135</span> above the field (Pastel, <span style="font-variant-numeric: tabular-nums;">+0.335</span>). It can never invert.</p>
+        <p style="margin: 0 0 10px; font-size: 15px; color: #b9b5ad;"><span style="color: #f1eee8;">Chroma</span> falls as the sky gets colourful &mdash; <span style="font-variant-numeric: tabular-nums;">0.050</span> against a near-grey night, <span style="font-variant-numeric: tabular-nums;">0.034</span> against midday blue. Quiet tiles under a loud sky.</p>
+        <p style="margin: 0 0 10px; font-size: 15px; color: #b9b5ad;"><span style="color: #f1eee8;">Hue</span> stays absolute. Warmth is a place on the wheel, not a relationship &mdash; rotating it off the sky turned Warm pink at night.</p>
+        <p style="margin: 0; font-size: 15px; color: #b9b5ad;"><span style="color: #e9b872;">The lamp accent never moves.</span> On means <span style="color: #e9b872;">#e9b872</span> at every hour, in every tone. It is a signal, not decoration &mdash; same for the live green and the danger red.</p>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+
+<script data-dc-script>
+class Component extends DCLogic {}
+</script>
+</body>
+</html>
