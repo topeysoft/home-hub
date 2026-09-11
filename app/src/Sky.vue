@@ -8,52 +8,16 @@
  */
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { store } from './store'
+import { clamp, lerp, mix, palette, rgb, wxOf, type RGB, type Wx } from './sky'
 
 /* quiet: the interface is up, so the sun and moon stay softer and the moon keeps to the open sky above the stage,
    clear of the rail and the headline; at rest and during setup they have the whole screen */
 const props = defineProps<{ quiet?: boolean }>()
 
-type RGB = [number, number, number]
 const canvas = ref<HTMLCanvasElement | null>(null)
 
-/* palette keyframes by sun elevation: [top, middle, horizon] */
-const KEYS: [number, RGB[]][] = [
-  [-18, [[4, 5, 10], [7, 9, 16], [12, 14, 26]]],
-  [-9, [[6, 7, 16], [14, 16, 34], [44, 32, 56]]],
-  [-3, [[10, 14, 34], [38, 34, 74], [158, 84, 60]]],
-  [0, [[14, 24, 52], [56, 62, 106], [220, 134, 74]]],
-  [6, [[18, 40, 80], [54, 98, 142], [222, 170, 108]]],
-  [15, [[22, 60, 108], [58, 124, 174], [184, 184, 172]]],
-  [40, [[26, 78, 136], [70, 148, 202], [170, 200, 218]]],
-  [90, [[26, 78, 136], [70, 148, 202], [170, 200, 218]]],
-]
-type Wx = { clouds: number; rain: number; snow: number; fog: number; lightning: boolean; wind: number }
-const COND: Record<string, Partial<Wx>> = {
-  sunny: { clouds: .06 }, 'clear-night': { clouds: .06 }, partlycloudy: { clouds: .42 }, cloudy: { clouds: .9 },
-  fog: { clouds: .5, fog: 1 }, rainy: { clouds: .9, rain: .6 }, pouring: { clouds: 1, rain: 1 }, hail: { clouds: 1, rain: .8 },
-  lightning: { clouds: 1, lightning: true }, 'lightning-rainy': { clouds: 1, rain: .8, lightning: true },
-  snowy: { clouds: .9, snow: .7 }, 'snowy-rainy': { clouds: 1, snow: .5, rain: .4 }, windy: { clouds: .3, wind: 3 }, 'windy-variant': { clouds: .7, wind: 3 },
-  exceptional: { clouds: .5 },
-}
-const wxOf = (c: string): Wx => ({ clouds: 0, rain: 0, snow: 0, fog: 0, lightning: false, wind: 1, ...COND[c] })
-
-const lerp = (a: number, b: number, t: number) => a + (b - a) * t
-const mix = (a: RGB, b: RGB, t: number): RGB => [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)]
-const rgb = (c: RGB, a = 1) => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`
-const clamp = (v: number, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, v))
-function palette(el: number, wx: Wx): RGB[] {
-  let i = 0; while (i < KEYS.length - 2 && el > KEYS[i + 1][0]) i++
-  const [e0, a] = KEYS[i], [e1, b] = KEYS[i + 1]
-  const t = clamp((el - e0) / (e1 - e0))
-  return a.map((c, k) => {
-    let out = mix(c, b[k], t)
-    out = mix(out, [58, 64, 72], wx.clouds * .55)             // overcast greys the sky
-    out = mix(out, [22, 24, 30], wx.rain * .3)                // rain darkens it
-    out = mix(out, [116, 122, 128], wx.fog * .3)              // fog flattens it
-    return out
-  })
-}
-
+/* the sky's tables live in sky.ts, so tone.ts colours the panel from the very
+   same numbers this canvas paints with — see the note at the top of tone.ts */
 /* scene state, generated once and reused */
 type Cloud = { x: number; y: number; s: number; v: number; puffs: { dx: number; dy: number; r: number }[] }
 type Drop = { x: number; y: number; l: number; v: number }

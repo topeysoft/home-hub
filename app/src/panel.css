@@ -701,3 +701,56 @@ select.input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://ww
 .phones .button.warn { border-color: rgba(224,138,138,.5); color: #f3c9c9; }
 .join .setup-lede b { color: var(--ink); font-weight: 500; }
 .join .setup-foot i { font-style: normal; color: var(--ink-2); }
+
+/* ---------- cards take their colour from the sky ----------
+   tone.ts turns the sun's elevation and the weather into these properties and
+   the shell sets them on .shell, so everything below inherits. Each falls back
+   to the token it replaced, and a screen that never gets them still paints.
+
+   Only surfaces that carry no colour of their own take a tone: a light, a plain
+   device, a room card. Media keeps its artwork and climate keeps --tint (blue
+   cooling, orange heating) because those already mean something — as do the
+   lamp, the live green and the danger red, which is why the lit icon and the
+   lit state below are deliberately left out of the override. */
+.tile.plain, .tile.light { background: var(--card-plain, var(--surface)); border-color: var(--card-edge, var(--edge)); }
+.tile.light { background: var(--card-light, var(--surface)); }
+.room-card { background: var(--card-plain, rgba(26, 28, 34, .82)); border-color: var(--card-edge, var(--edge)); }
+.tile.plain .tile-name, .tile.light .tile-name, .room-card-name { color: var(--card-ink, var(--ink)); }
+.tile.plain .tile-state, .tile.light .tile-state,
+.tile.plain.on .tile-state, .tile.light.on .tile-state,
+.room-card-activity, .room-temp { color: var(--card-ink-2, var(--ink-2)); }
+.tile.plain .tile-state.big, .tile.light .tile-state.big { color: var(--card-ink, var(--ink)); }
+/* an unlit icon belongs to the card; a lit one stays lamplight, so :not(.on) */
+.tile.plain:not(.on) .tile-icon, .tile.light:not(.on) .tile-icon { background: var(--card-hi, var(--surface-hi)); color: var(--card-ink-2, var(--ink-2)); }
+.tile.plain:active, .tile.light:active, .room-card:active { background: var(--card-press, var(--surface-press)); }
+.tile.light.dimmable.on::after { background: var(--card-track, var(--edge-hi)); }
+/* last word: on a pale card the lamp darkens to stay lamplight rather than glare */
+.tile.light.on .tile-state, .room-card.active .room-card-activity { color: var(--card-lamp-ink, var(--lamp)); }
+
+/* ---------- the Rail layout ----------
+   Home as one row you sweep through rather than a column you scroll. Cards keep
+   the tile sizes the Stack layout uses so a light behaves the same in both; only
+   the arrangement changes. See layout.ts. */
+.rail-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 40px; }
+.rail-greet { min-width: 0; }
+.rail-wx { flex: 0 0 auto; display: flex; align-items: center; gap: 14px; }
+.rail-cloud { width: 150px; height: 108px; margin: -20px -6px -16px 0; flex: 0 0 auto; }
+.rail-temp { font-size: 44px; line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.rail-says { margin-top: 5px; font-size: 15px; color: var(--ink-2); }
+.rail-quiet { margin: 6px 2px 26px; }
+/* the row itself: it scrolls sideways, and the last card is meant to be cut by
+   the edge — that overhang is the only thing telling you there is more */
+.bento { display: flex; gap: 14px; align-items: flex-start; margin: 4px 0 26px; padding-bottom: 6px;
+  overflow-x: auto; scroll-snap-type: x proximity; scroll-padding-left: 40px; overscroll-behavior-x: contain; }
+.bento-card { flex: 0 0 auto; width: 268px; scroll-snap-align: start; }
+.bento .tile.camera { width: 340px; aspect-ratio: 16 / 9; }
+.bento .tile.media { width: 380px; }
+.bento .tile.climate { grid-row: auto; }
+@media (max-width: 860px) {
+  /* on a phone a sideways row of wall-sized cards is a worse column, so it stops
+     being a row: the Rail becomes a stack and only the header stays distinct */
+  .rail-head { flex-direction: column; gap: 14px; }
+  .rail-wx { align-self: flex-start; }
+  .bento { flex-wrap: wrap; overflow-x: visible; }
+  .bento-card, .bento .tile.camera, .bento .tile.media { width: 100%; }
+}

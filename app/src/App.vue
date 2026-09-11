@@ -17,6 +17,9 @@ import RoutinesSheet from './RoutinesSheet.vue'
 import HubSheet from './HubSheet.vue'
 import Icon from './Icon.vue'
 import { upcomingLine } from './upcoming'
+import { isTone, toneVars, type ToneName } from './tone'
+import { isLayout, type LayoutName } from './layout'
+import RailView from './views/RailView.vue'
 
 const now = ref(new Date())
 const selected = ref<string | null>(new URLSearchParams(location.search).get('room') ?? safeGet('room'))   // ?room=kitchen deep-links a kiosk
@@ -30,6 +33,16 @@ const setup = computed(() => !!store.status && (store.previewSetup || needsSetup
 const room = computed(() => rooms.value.find(r => r.id === selected.value) ?? null)
 
 const ambient = computed(() => store.sky.elevation < -8 ? 'night' : store.sky.elevation < 6 ? (store.sky.azimuth < 180 ? 'dawn' : 'dusk') : 'day')
+
+/* the cards take their colour from the sky: see the note at the top of tone.ts.
+   ?tone=pastel previews one, the way ?at= and ?wx= preview an hour and a sky. */
+const toneParam = new URLSearchParams(location.search).get('tone')
+const toneName = ref<ToneName>(isTone(toneParam) ? toneParam : (isTone(safeGet('tone')) ? safeGet('tone') as ToneName : 'follow'))
+const tone = computed(() => toneVars(store.sky.elevation, store.sky.condition, toneName.value))
+
+/* how Home is arranged, the house's choice: ?layout=rail previews the other one */
+const layoutParam = new URLSearchParams(location.search).get('layout')
+const layout = ref<LayoutName>(isLayout(layoutParam) ? layoutParam : (isLayout(safeGet('layout')) ? safeGet('layout') as LayoutName : 'stack'))
 const weather = computed(weatherLine)
 const WX_ICON: Record<string, string> = { sunny: 'sun', 'clear-night': 'moon', partlycloudy: 'cloud', cloudy: 'cloud', fog: 'fog', rainy: 'rain', pouring: 'rain', hail: 'rain', lightning: 'bolt', 'lightning-rainy': 'bolt', snowy: 'snow', 'snowy-rainy': 'snow', windy: 'wind', 'windy-variant': 'wind', exceptional: 'cloud' }
 const wxIcon = computed(() => WX_ICON[store.sky.condition] ?? 'cloud')
@@ -69,7 +82,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="shell" :data-ambient="ambient" :class="{ resting: idle, 'in-setup': setup || lock.unpaired }">
+  <div class="shell" :data-ambient="ambient" :style="tone" :class="{ resting: idle, 'in-setup': setup || lock.unpaired }">
     <Sky :quiet="!idle && !setup" />
     <div class="sky-veil"></div>
     <Join v-if="lock.unpaired" @joined="rejoin" />
@@ -126,7 +139,8 @@ onUnmounted(() => {
       </div>
       <Transition v-else name="view" mode="out-in">
         <RoomView v-if="room" :key="room.id" :room="room" @back="open(null)" @open="open" />
-        <HomeView v-else key="home" :rooms="rooms" :now="shown" @open="open" />
+        <RailView v-else-if="layout === 'rail'" key="home-rail" :rooms="rooms" :now="shown" @open="open" />
+        <HomeView v-else key="home-stack" :rooms="rooms" :now="shown" @open="open" />
       </Transition>
     </main>
 

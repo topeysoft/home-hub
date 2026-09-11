@@ -52,12 +52,18 @@ export function updateSky() {
   const month = previewMonth ? Number(previewMonth) - .5 : (now.getMonth() + now.getDate() / 31 + (loc && loc.lat < 0 ? 6 : 0)) % 12   // south of the equator the seasons swap
   store.sky = { ...sun, phase: moonPhase(now), hour: now.getHours() + now.getMinutes() / 60, month, condition, guessed: !loc }
 }
-export function weatherLine(): string {
+/* the two halves separately, for a layout that sets them at different sizes */
+export function weatherParts(): { temp: string; label: string } {
   const w = store.ambient.weather
-  if (!w && !previewWx) return ''
-  const label = WEATHER_LABEL[previewWx ?? w?.condition ?? ''] ?? ''
-  const t = w?.temperature != null ? `${Math.round(w.temperature)}${(w.unit || '°').replace(/[^°]/g, '') || '°'}` : ''
-  return [t, label].filter(Boolean).join(' · ')
+  if (!w && !previewWx) return { temp: '', label: '' }
+  return {
+    temp: w?.temperature != null ? `${Math.round(w.temperature)}${(w.unit || '°').replace(/[^°]/g, '') || '°'}` : '',
+    label: WEATHER_LABEL[previewWx ?? w?.condition ?? ''] ?? '',
+  }
+}
+export function weatherLine(): string {
+  const { temp, label } = weatherParts()
+  return [temp, label].filter(Boolean).join(' · ')
 }
 async function loadRules() { try { store.rules = await getScenes() } catch {} }
 async function loadAmbient() {
