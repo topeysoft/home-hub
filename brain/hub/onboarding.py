@@ -38,6 +38,11 @@ GENERIC_GUIDE = """{kind} asks each home to bring its own key, made on its devel
 
 If a page asks for your Home Assistant address, it is **{ha_url}**."""
 
+# a flow's "source" says who started it. Neither of these is a thing noticed on the network: the first
+# were asked for by a person or read from a file, the second were opened by HA because an account needs one again.
+SIGN_IN = {"reauth", "reconfigure"}
+NOT_DISCOVERY = {None, "user", "import"} | SIGN_IN
+
 # integration kinds that are devices or hubs for devices, not helpers, not virtual aliases, not internals
 KINDS = {"hub", "device", "service"}
 HIDE = {"hassio", "mqtt", "matter", "zwave_js", "zha", "homeassistant_hardware", "homeassistant_sky_connect", "homeassistant_yellow",
@@ -84,21 +89,32 @@ class Onboarding:
         return self._names[handler]
 
     # ---- what is around ----
-    async def discovered(self) -> list[dict]:
-        """Things HA noticed on the network that are not set up yet."""
+    async def _flows(self, wanted) -> list[dict]:
+        """HA's open config flows as rows the panel can draw. `wanted` says which sources count."""
         try: flows = await self.hub.ha.send("config_entries/flow/progress")
         except Exception as e:
-            log.warning("could not list discoveries: %s", e); return []
+            log.warning("could not list flows: %s", e); return []
         out = []
         for f in flows:
             ctx = f.get("context") or {}
-            if ctx.get("source") in (None, "user", "reauth", "reconfigure", "import"): continue
+            if not wanted(ctx.get("source")): continue
             handler = f["handler"]
             strings = await self.strings(handler)
             ph = ctx.get("title_placeholders") or {}
             title = _fill(strings.get(f"component.{handler}.config.flow_title", ""), ph) or ph.get("name") or await self.name_of(handler)
             out.append({"flow_id": f["flow_id"], "handler": handler, "kind": await self.name_of(handler), "title": title, "source": ctx.get("source")})
         return out
+
+    async def discovered(self) -> list[dict]:
+        """Things HA noticed on the network that are not set up yet."""
+        return await self._flows(lambda source: source not in NOT_DISCOVERY)
+
+    async def sign_ins(self) -> list[dict]:
+        """Accounts waiting for a person: the sign-in ran out, or the maker changed what it needs.
+
+        HA opens a flow of its own when a token dies. It is the same conversation the panel already draws
+        for adding the account, minus the parts it still remembers, so it needs no screen of its own."""
+        return await self._flows(lambda source: source in SIGN_IN)
 
     async def catalog(self) -> list[dict]:
         """Everything that can be added by hand, for the search box."""

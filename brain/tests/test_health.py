@@ -9,7 +9,7 @@ from tests.test_rules import FakeHub, TZ
 
 
 class FakeProvision:
-    def __init__(self): self.parts, self.problems = [], []
+    def __init__(self): self.parts, self.problems, self.sign_ins = [], [], []
     def summary(self): return self.parts
 
 
@@ -61,3 +61,41 @@ class HealthTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class DriverNoteTests(unittest.TestCase):
+    """A sentence about a driver is only worth reading if something can be done about it, so each one
+    carries the way to do it: the flow that finishes a sign-in, or the entry to ask again."""
+    def setUp(self):
+        self.hub = FakeHub(); self.hub.provision = FakeProvision()
+        with mock.patch.dict(os.environ, {"HUB_VERSION": "v1", "HUB_COMMIT": "a" * 40}): self.hub.updates = updates.Updates(self.hub)
+        self.h = health.Health(self.hub)
+
+    def test_a_sign_in_says_the_maker_and_carries_its_flow(self):
+        self.hub.provision.sign_ins = [{"flow_id": "f-nest", "handler": "nest", "kind": "Google Nest", "title": "home-hub", "source": "reauth"}]
+        n = self.h.drivers()[0]
+        self.assertEqual(n["text"], "Google Nest needs signing in again: home-hub.")
+        self.assertEqual((n["flow"], n["subject"], n["do"]), ("f-nest", "nest", "Sign in again"))
+        self.assertNotIn("reauth", n["text"])
+
+    def test_one_account_of_its_kind_does_not_repeat_itself(self):
+        self.hub.provision.sign_ins = [{"flow_id": "f1", "handler": "hue", "kind": "Philips Hue", "title": "Philips Hue", "source": "reauth"}]
+        self.assertEqual(self.h.drivers()[0]["text"], "Philips Hue needs signing in again.")
+
+    def test_a_reconfigure_asks_for_a_setting_not_a_sign_in(self):
+        self.hub.provision.sign_ins = [{"flow_id": "f1", "handler": "hue", "kind": "Philips Hue", "title": "Philips Hue", "source": "reconfigure"}]
+        n = self.h.drivers()[0]
+        self.assertEqual((n["text"], n["do"]), ("Philips Hue needs a setting checked.", "Check it"))
+
+    def test_something_that_could_not_start_carries_its_entry_to_try_again(self):
+        self.hub.provision.problems = [{"entry_id": "e-hue", "domain": "hue", "title": "Hue bridge", "state": "setup_error", "reason": "no route"}]
+        n = self.h.drivers()[0]
+        self.assertEqual(n["text"], "Hue bridge could not connect: no route")
+        self.assertEqual(n["retry"], "e-hue")
+
+    def test_a_part_the_hub_runs_itself_has_no_flow_to_offer(self):
+        self.hub.provision.parts = [{"id": "ring", "name": "Ring", "state": "sign-in"}]
+        n = self.h.drivers()[0]
+        self.assertEqual(n["text"], "Ring needs signing in again.")
+        self.assertNotIn("flow", n)
+

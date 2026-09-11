@@ -57,11 +57,21 @@ class Health:
 
     def drivers(self) -> list:
         out = []
+        # accounts waiting for a person. `flow` is the conversation that finishes it, so the panel can offer it here.
+        for w in self.hub.provision.sign_ins:
+            checking = w.get("source") == "reconfigure"
+            what = "needs a setting checked" if checking else "needs signing in again"
+            who = w.get("kind") or w.get("title") or "An account"
+            tail = f": {w['title']}" if w.get("title") and w["title"] != who else ""
+            out.append({"kind": "driver", "subject": w.get("handler"), "since": None, "text": f"{who} {what}{tail}.",
+                        "flow": w["flow_id"], "do": "Check it" if checking else "Sign in again"})
         for p in self.hub.provision.summary():
             if p.get("state") == "sign-in": out.append({"kind": "driver", "subject": p["id"], "since": None, "text": f"{p['name']} needs signing in again."})
             elif p.get("state") == "failed": out.append({"kind": "driver", "subject": p["id"], "since": None, "text": f"{p['name']} is not running: {p.get('text') or 'it stopped'}"})
+        # something HA has but could not start. `retry` is the entry to ask again, once whatever it complained about is fixed.
         for q in self.hub.provision.problems:
-            out.append({"kind": "driver", "subject": q.get("entry_id"), "since": None, "text": f"{q.get('title')} could not connect{': ' + q['reason'] if q.get('reason') else '.'}"})
+            out.append({"kind": "driver", "subject": q.get("entry_id"), "since": None, "retry": q.get("entry_id"), "do": "Try again",
+                        "text": f"{q.get('title')} could not connect{': ' + q['reason'] if q.get('reason') else '.'}"})
         return out
 
     def update(self) -> list:

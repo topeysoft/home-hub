@@ -56,13 +56,28 @@
       </div>
       <!-- the weather, no longer a tile: the sky behind is already the forecast -->
       <div style="flex: 0 0 auto; display: flex; align-items: center; gap: 16px; padding-top: 2px;">
-        <svg width="156" height="112" viewBox="0 0 210 150" style="margin: -22px -6px -18px 0;">
-          <defs><radialGradient id="cl" cx="34%" cy="28%" r="78%"><stop offset="0" stop-color="#ffffff" stop-opacity=".97"/><stop offset="62%" stop-color="#d8dce6" stop-opacity=".92"/><stop offset="100%" stop-color="#9aa3b4" stop-opacity=".82"/></radialGradient></defs>
-          <g fill="url(#cl)"><ellipse cx="72" cy="86" rx="56" ry="40"/><ellipse cx="118" cy="70" rx="48" ry="44"/><ellipse cx="150" cy="94" rx="42" ry="30"/><rect x="60" y="92" width="104" height="34" rx="17"/></g>
+        <svg width="176" height="126" viewBox="0 0 210 150" style="margin: -26px -8px -20px 0;">
+          <defs>
+            <radialGradient id="cl" cx="34%" cy="28%" r="78%">
+              <stop offset="0" stop-color="{{w.c0}}" stop-opacity=".97"/>
+              <stop offset="62%" stop-color="{{w.c1}}" stop-opacity=".93"/>
+              <stop offset="100%" stop-color="{{w.c2}}" stop-opacity=".85"/>
+            </radialGradient>
+          </defs>
+          <circle cx="150" cy="44" r="27" fill="{{w.discFill}}" opacity="{{w.disc}}"/>
+          <circle cx="{{w.moonX}}" cy="38" r="27" fill="{{w.bgSolid}}" opacity="{{w.moonBite}}"/>
+          <path d="{{w.windD}}" stroke="#cfd6e2" stroke-width="3.4" stroke-linecap="round" fill="none" opacity="{{w.wind}}"/>
+          <g transform="{{w.cloudT}}" opacity="{{w.cloud}}" fill="url(#cl)">
+            <ellipse cx="72" cy="86" rx="56" ry="40"/><ellipse cx="118" cy="70" rx="48" ry="44"/><ellipse cx="150" cy="94" rx="42" ry="30"/><rect x="60" y="92" width="104" height="34" rx="17"/>
+          </g>
+          <path d="{{w.boltD}}" fill="#f3d18a" opacity="{{w.bolt}}"/>
+          <path d="{{w.rainD}}" stroke="#9fc3e8" stroke-width="4" stroke-linecap="round" fill="none" opacity="{{w.rain}}"/>
+          <path d="{{w.snowD}}" fill="#e6ecf5" opacity="{{w.snow}}"/>
+          <path d="{{w.fogD}}" stroke="#aab2bd" stroke-width="6" stroke-linecap="round" fill="none" opacity="{{w.fog}}"/>
         </svg>
         <div>
           <div class="dsp" style="font-size: 46px; line-height: 1; letter-spacing: -0.02em;">17<span style="font-size: 22px; vertical-align: top; line-height: 1.5;">&deg;</span></div>
-          <div style="margin-top: 6px; font-size: 15px; color: #b9b5ad;">Clear and cooling</div>
+          <div style="margin-top: 6px; font-size: 15px; color: #b9b5ad;">{{w.says}}</div>
           <div style="margin-top: 2px; font-size: 13.5px; color: #7f7d77;">Sunset 19:41</div>
         </div>
       </div>
@@ -245,7 +260,7 @@
 </div>
 </x-dc>
 
-<script data-dc-script data-props='{"field":{"editor":"enum","options":["Dusk","Night","Midday"],"default":"Midday","section":"Sky"},"tone":{"editor":"enum","options":["Warm","Cool","Pastel","Follow the light"],"default":"Follow the light","section":"Tiles"}}'>
+<script data-dc-script data-props='{"field":{"editor":"enum","options":["Dusk","Night","Midday"],"default":"Midday","section":"Sky"},"tone":{"editor":"enum","options":["Warm","Cool","Pastel","Follow the light"],"default":"Follow the light","section":"Tiles"},"cond":{"editor":"enum","options":["sunny","clear-night","partlycloudy","cloudy","fog","rainy","pouring","hail","lightning","lightning-rainy","snowy","snowy-rainy","windy","windy-variant","exceptional"],"default":"partlycloudy","section":"Weather"}}'>
 /* Tiles are specified RELATIVE to the sky, never in absolute colour:
    a tile is always this much lighter than the field, and this far around
    the hue wheel from it. The relationship holds at every hour, so nothing
@@ -268,25 +283,85 @@ class Component extends DCLogic {
       return { L: L, C: Math.hypot(A, Bb), H: H };
     }
 
-    // --- the field: Sky.vue's elevation keyframes, with the veil over them
-    const FIELDS = {
-      'Dusk':   { sky: 'linear-gradient(180deg, rgb(10,14,34) 0%, rgb(38,34,74) 44%, rgb(158,84,60) 80%, rgb(96,54,44) 100%)',
-                  veil: 'linear-gradient(180deg, rgba(12,13,16,.30) 0%, rgba(12,13,16,.52) 45%, rgba(12,13,16,.80) 100%)',
-                  mid: [38, 34, 74], a: 0.52 },
-      'Night':  { sky: 'linear-gradient(180deg, rgb(4,5,10) 0%, rgb(7,9,16) 55%, rgb(12,14,26) 80%, rgb(9,11,18) 100%)',
-                  veil: 'linear-gradient(180deg, rgba(12,13,16,.20) 0%, rgba(12,13,16,.36) 45%, rgba(12,13,16,.66) 100%)',
-                  mid: [7, 9, 16], a: 0.36 },
-      'Midday': { sky: 'linear-gradient(180deg, rgb(26,78,136) 0%, rgb(70,148,202) 55%, rgb(170,200,218) 80%, rgb(140,168,186) 100%)',
-                  veil: 'linear-gradient(180deg, rgba(12,13,16,.22) 0%, rgba(12,13,16,.34) 45%, rgba(12,13,16,.58) 100%)',
-                  mid: [70, 148, 202], a: 0.34 },
+    // --- the field: Sky.vue's elevation keyframes, weathered then veiled
+    const COND = {
+      sunny: { clouds: .06 }, 'clear-night': { clouds: .06 }, partlycloudy: { clouds: .42 }, cloudy: { clouds: .9 },
+      fog: { clouds: .5, fog: 1 }, rainy: { clouds: .9, rain: .6 }, pouring: { clouds: 1, rain: 1 }, hail: { clouds: 1, rain: .8 },
+      lightning: { clouds: 1, lightning: true }, 'lightning-rainy': { clouds: 1, rain: .8, lightning: true },
+      snowy: { clouds: .9, snow: .7 }, 'snowy-rainy': { clouds: 1, snow: .5, rain: .4 },
+      windy: { clouds: .3, wind: 3 }, 'windy-variant': { clouds: .7, wind: 3 }, exceptional: { clouds: .5 },
     };
-    const f = FIELDS[this.props.field] || FIELDS['Midday'];
-    const veil = [12, 13, 16];
+    const SAYS = {
+      sunny: 'Clear and warm', 'clear-night': 'Clear and cooling', partlycloudy: 'Some cloud', cloudy: 'Overcast',
+      fog: 'Fog', rainy: 'Rain', pouring: 'Heavy rain', hail: 'Hail', lightning: 'Thunder',
+      'lightning-rainy': 'Thunder and rain', snowy: 'Snow', 'snowy-rainy': 'Sleet',
+      windy: 'Windy', 'windy-variant': 'Windy and grey', exceptional: 'Unsettled',
+    };
+    const w0 = Object.assign({ clouds: 0, rain: 0, snow: 0, fog: 0, lightning: false, wind: 1 }, COND[this.props.cond] || COND.sunny);
+
+    const lerp = (a, b, t) => a + (b - a) * t;
+    const mix = (a, b, t) => [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)];
+    const weather = (c) => {            // the three mixes palette() applies
+      let o = mix(c, [58, 64, 72], w0.clouds * 0.55);
+      o = mix(o, [22, 24, 30], w0.rain * 0.3);
+      return mix(o, [116, 122, 128], w0.fog * 0.3);
+    };
+    const css = (c) => 'rgb(' + c.map((v) => Math.round(v)).join(',') + ')';
+
+    const FIELDS = {
+      'Dusk':   { stops: [[10, 14, 34], [38, 34, 74], [158, 84, 60]], at: 44, a: 0.52,
+                  veil: 'linear-gradient(180deg, rgba(12,13,16,.30) 0%, rgba(12,13,16,.52) 45%, rgba(12,13,16,.80) 100%)', day: false },
+      'Night':  { stops: [[4, 5, 10], [7, 9, 16], [12, 14, 26]], at: 55, a: 0.36,
+                  veil: 'linear-gradient(180deg, rgba(12,13,16,.20) 0%, rgba(12,13,16,.36) 45%, rgba(12,13,16,.66) 100%)', day: false },
+      'Midday': { stops: [[26, 78, 136], [70, 148, 202], [170, 200, 218]], at: 55, a: 0.34,
+                  veil: 'linear-gradient(180deg, rgba(12,13,16,.22) 0%, rgba(12,13,16,.34) 45%, rgba(12,13,16,.58) 100%)', day: true },
+    };
+    const fd = FIELDS[this.props.field] || FIELDS['Midday'];
+    const st = fd.stops.map(weather);
+    const f = {
+      day: fd.day, veil: fd.veil,
+      sky: 'linear-gradient(180deg, ' + css(st[0]) + ' 0%, ' + css(st[1]) + ' ' + fd.at + '%, ' +
+           css(st[2]) + ' 84%, ' + css(mix(st[2], [8, 9, 14], 0.35)) + ' 100%)',
+    };
+    const veilRGB = [12, 13, 16];
     const ground = oklch(
-      f.mid[0] * (1 - f.a) + veil[0] * f.a,
-      f.mid[1] * (1 - f.a) + veil[1] * f.a,
-      f.mid[2] * (1 - f.a) + veil[2] * f.a
+      st[1][0] * (1 - fd.a) + veilRGB[0] * fd.a,
+      st[1][1] * (1 - fd.a) + veilRGB[1] * fd.a,
+      st[1][2] * (1 - fd.a) + veilRGB[2] * fd.a
     );
+
+    // --- the same parts the sky reads, drawn beside the greeting --------
+    const hex = (a, b, t) => {
+      const q = (i) => Math.round(lerp(parseInt(a.substr(1 + i * 2, 2), 16), parseInt(b.substr(1 + i * 2, 2), 16), t));
+      return '#' + [q(0), q(1), q(2)].map((v) => v.toString(16).padStart(2, '0')).join('');
+    };
+    const drops = (n, x0, gap) => { let d = ''; for (let i = 0; i < n; i++) d += 'M' + (x0 + i * gap) + ' 118 l-7 22 '; return d; };
+    const flakes = (n, x0, gap) => { let d = ''; for (let i = 0; i < n; i++) { const x = x0 + i * gap, y = 124 + (i % 2) * 12, r = 5;
+      d += 'M' + x + ' ' + y + ' m-' + r + ' 0 a' + r + ' ' + r + ' 0 1 0 ' + (2 * r) + ' 0 a' + r + ' ' + r + ' 0 1 0 -' + (2 * r) + ' 0 '; } return d; };
+    const night = !fd.day;
+    const cover = w0.clouds, dark = Math.min(1, Math.max(0, (cover - 0.35) / 0.65));
+    const scale = 0.66 + cover * 0.34, clear = 1 - Math.min(1, cover / 0.55);
+    const w = {
+      says: SAYS[this.props.cond] || 'Clear',
+      c0: hex('#ffffff', '#c3c9d4', dark), c1: hex('#d8dce6', '#9aa1ad', dark), c2: hex('#9aa3b4', '#6d7480', dark),
+      cloudT: 'translate(' + (105 * (1 - scale)).toFixed(1) + ' ' + (100 * (1 - scale)).toFixed(1) + ') scale(' + scale.toFixed(3) + ')',
+      cloud: cover < 0.1 ? 0.34 : 1,
+      disc: (0.25 + clear * 0.75).toFixed(2),
+      discFill: night ? '#dfe4ee' : '#f6dca8',
+      moonX: night ? 138 : -80,
+      moonBite: night ? 1 : 0,
+      bgSolid: css(st[0]),
+      rainD: w0.rain ? drops(Math.round(2 + w0.rain * 3), 62, 26) : '',
+      rain: w0.rain ? (0.45 + w0.rain * 0.55).toFixed(2) : 0,
+      snowD: w0.snow ? flakes(Math.round(2 + w0.snow * 3), 66, 26) : '',
+      snow: w0.snow ? (0.5 + w0.snow * 0.5).toFixed(2) : 0,
+      fogD: w0.fog ? 'M22 112h58 M96 112h92 M40 132h64 M118 132h54' : '',
+      fog: w0.fog ? (w0.fog * 0.72).toFixed(2) : 0,
+      boltD: w0.lightning ? 'M112 96 L86 132 h20 l-6 26 28-38 h-20 z' : '',
+      bolt: w0.lightning ? 1 : 0,
+      windD: w0.wind > 1.5 ? 'M18 60h58a13 13 0 1 0-13-13 M18 84h84a13 13 0 1 1-13 13' : '',
+      wind: w0.wind > 1.5 ? 0.72 : 0,
+    };
 
     // --- a tone is a relationship to the field, not a fixed palette ----
     // dL: how much lighter than the sky a tile sits -- constant at every hour,
@@ -349,7 +424,7 @@ class Component extends DCLogic {
     }
 
     return {
-      f: f, t: t, m: m,
+      f: f, t: t, m: m, w: w,
       openLamp: () => this.setState({ open: true }),
       closeLamp: () => this.setState({ open: false }),
     };

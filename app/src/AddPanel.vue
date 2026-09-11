@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
-import { getCatalog, startFlow, getFlow, submitFlow, cancelFlow, setCredentials, type CatalogItem, type Step, type Found, type Field } from './api'
-import { store, notify, refreshFound } from './store'
+import { getCatalog, startFlow, getFlow, submitFlow, cancelFlow, setCredentials, type CatalogItem, type Step, type Field } from './api'
+import { store, notify, refreshFound, loadHealth } from './store'
 import Icon from './Icon.vue'
 import PairPanel from './PairPanel.vue'
 import { parseKeyFile, keyFileWarning } from './keyfile'
@@ -9,6 +9,9 @@ import { parseKeyFile, keyFileWarning } from './keyfile'
 /* Adding things to the house. Lists what was noticed on the network, offers a search for anything
    else, and walks through the short form each one needs. Used on the setup screen and in a sheet. */
 const emit = defineEmits<{ added: [title: string] }>()
+/* `resume` is a conversation the house already has open, handed over by whatever offered it (signing an
+   account in again from Home). It is the same flow machinery as adding, so it needs no screen of its own. */
+const props = defineProps<{ resume?: string | null }>()
 /* radios that are up: each gets a door of its own */
 const RADIO = { zigbee: { label: 'Zigbee device', sub: 'Bulbs, sensors, plugs, remotes' }, zwave: { label: 'Z‑Wave device', sub: 'Switches, locks, sensors' }, matter: { label: 'Matter device', sub: 'With a QR code on it' } } as const
 const radios = computed(() => (store.status?.drivers ?? []).filter(p => p.state === 'ready' && p.id in RADIO).map(p => ({ id: p.id as keyof typeof RADIO, ...RADIO[p.id as keyof typeof RADIO] })))
@@ -40,9 +43,9 @@ function answers(fields: Field[], vals: Record<string, any>): Record<string, unk
     return [[f.name, f.kind === 'number' ? Number(v) : v]]
   }))
 }
-async function open(f: Found) {
+async function open(flowId: string) {
   busy.value = true
-  try { show(await getFlow(f.flow_id)) } catch (e: any) { notify(`Couldn't start: ${e.message}`, 'error') }
+  try { show(await getFlow(flowId)) } catch (e: any) { notify(`Couldn't open that: ${e.message}`, 'error') }
   busy.value = false
 }
 async function begin(c: CatalogItem) {
@@ -65,7 +68,10 @@ async function submit(data?: Record<string, unknown>) {
   try {
     const s = await submitFlow(step.value.flow_id, body)
     show(s)
-    if (s.type === 'create_entry') { notify(`Added ${s.entry_title || s.kind}.`); emit('added', s.entry_title || s.kind); refreshFound() }
+    if (s.type === 'create_entry') {
+      notify(props.resume ? `${s.entry_title || s.kind} is signed in again.` : `Added ${s.entry_title || s.kind}.`)
+      emit('added', s.entry_title || s.kind); refreshFound(); loadHealth()   // the line on Home that sent us here has been answered
+    }
   } catch (e: any) { error.value = e.message }
   busy.value = false
 }
@@ -89,10 +95,16 @@ async function retry() {
 }
 async function back(cancel = true) {
   clearTimeout(poll)
-  if (cancel && step.value?.flow_id && (step.value.type === 'form' || step.value.type === 'menu' || step.value.type === 'external')) cancelFlow(step.value.flow_id)
+  /* A handed-over conversation is the house's, not this screen's: walking away leaves it open, so the line on
+     Home still offers it. Only a flow this screen started is cancelled on the way out. */
+  const own = step.value?.flow_id !== props.resume
+  if (cancel && own && step.value?.flow_id && (step.value.type === 'form' || step.value.type === 'menu' || step.value.type === 'external')) cancelFlow(step.value.flow_id)
+  if (props.resume) return void (store.sheet = null)
   step.value = null; refreshFound()
 }
-const heading = computed(() => step.value?.title || (step.value?.type === 'create_entry' ? 'Added' : `Add ${step.value?.kind ?? ''}`))
+const heading = computed(() => step.value?.title
+  || (step.value?.type === 'create_entry' ? (props.resume ? 'Signed in' : 'Added')
+      : `${props.resume ? 'Sign in to' : 'Add'} ${step.value?.kind ?? ''}`))
 const haUrl = `http://${location.hostname}:8123`
 
 /* The key file a maker's console hands out: choose it, drop it, or paste its text into either box. Read here,
@@ -115,13 +127,14 @@ const dropped = (e: DragEvent) => fromFile(e.dataTransfer?.files?.[0])
 function pasted(e: ClipboardEvent) { const t = e.clipboardData?.getData('text') ?? ''; if (t.trim().startsWith('{') && absorb(t)) e.preventDefault() }
 async function copy(text: string) { try { await navigator.clipboard.writeText(text); notify('Copied.') } catch { notify(text) } }
 watch(() => store.status?.driver, d => { if (d === 'ready') refreshFound() })
-onMounted(refreshFound)
+onMounted(() => { refreshFound(); if (props.resume) open(props.resume) })
 onUnmounted(() => clearTimeout(poll))
 </script>
 
 <template>
   <div class="add">
     <PairPanel v-if="pairKind" :kind="pairKind" @close="pairKind = null; refreshFound()" />
+    <p class="add-empty" v-else-if="!step && resume && busy">Opening…</p>
     <template v-else-if="!step">
       <div class="add-block" v-if="store.found.length">
         <h3 class="label">Found nearby</h3>
@@ -129,7 +142,7 @@ onUnmounted(() => clearTimeout(poll))
           <li v-for="f in store.found" :key="f.flow_id">
             <span class="found-icon"><Icon name="sparkle" :size="18" /></span>
             <span class="found-text"><span class="found-title">{{ f.title }}</span><span class="found-kind">{{ f.kind }}</span></span>
-            <button class="button small" :disabled="busy" @click="open(f)">Add</button>
+            <button class="button small" :disabled="busy" @click="open(f.flow_id)">Add</button>
           </li>
         </ul>
       </div>
@@ -242,7 +255,8 @@ onUnmounted(() => clearTimeout(poll))
       </template>
 
       <template v-else-if="step.type === 'create_entry'">
-        <p class="flow-done"><span class="done-icon"><Icon name="check" :size="20" /></span>{{ step.entry_title || step.kind }} is part of the house now. It will show up in a room shortly; anything without a room lands under New devices. If it cannot connect, it appears under Behind the scenes with the reason.</p>
+        <p class="flow-done" v-if="resume"><span class="done-icon"><Icon name="check" :size="20" /></span>{{ step.entry_title || step.kind }} is working again. Its things come back to their rooms over the next minute; nothing else about them changed.</p>
+        <p class="flow-done" v-else><span class="done-icon"><Icon name="check" :size="20" /></span>{{ step.entry_title || step.kind }} is part of the house now. It will show up in a room shortly; anything without a room lands under New devices. If it cannot connect, it appears under Behind the scenes with the reason.</p>
         <div class="flow-actions"><button class="button" @click="back(false)">Done</button></div>
       </template>
     </div>

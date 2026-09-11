@@ -6,8 +6,9 @@ from hub import provision
 
 class FakeAdd:
     """A config flow as HA would run it: a script of steps, and a record of what was submitted."""
-    def __init__(self, script):
-        self.script, self.submitted, self.cancelled = list(script), [], []
+    def __init__(self, script, waiting=()):
+        self.script, self.submitted, self.cancelled, self.waiting = list(script), [], [], list(waiting)
+    async def sign_ins(self): return list(self.waiting)
     async def start(self, handler): return self.script.pop(0)
     async def step(self, flow_id): return self.script.pop(0)
     async def submit(self, flow_id, data):
@@ -34,7 +35,7 @@ class FakeLog:
 
 class FakeHub:
     def __init__(self, add=None, ha=None):
-        self.env, self.driver, self.add, self.ha, self.log, self.sent = {}, "ready", add, ha or FakeHA(), FakeLog(), []
+        self.env, self.driver, self.add, self.ha, self.log, self.sent = {}, "ready", add or FakeAdd([]), ha or FakeHA(), FakeLog(), []
     def _broadcast(self, msg): self.sent.append(msg)
     def status(self): return {"drivers": self.provision.summary()}
 
@@ -142,6 +143,19 @@ class RefreshTests(unittest.IsolatedAsyncioTestCase):
             with patch.object(provision.asyncio, "sleep", _nosleep):
                 await p.retry("e-nest")
         self.assertEqual((add.rested, p.problems), ([("POST", "/api/config/config_entries/entry/e-nest/reload")], []))
+
+    async def test_an_account_waiting_to_be_signed_in_is_kept_and_speaks_for_its_complaint(self):
+        """A dead token makes HA complain about the entry *and* open a flow. Only the flow is worth offering."""
+        async def fake_probe(host, port, timeout=1.5): return False
+        nest = {"domain": "nest", "entry_id": "e-nest", "title": "home-hub", "state": "setup_retry", "reason": "expired"}
+        hue = {"domain": "hue", "entry_id": "e-hue", "title": "Hue bridge", "state": "setup_error", "reason": "no route"}
+        waiting = [{"flow_id": "f-nest", "handler": "nest", "kind": "Google Nest", "title": "home-hub", "source": "reauth"}]
+        add = FakeAdd([], waiting=waiting)
+        hub = FakeHub(add, FakeHA(broken=[nest, hue])); hub.provision = p = provision.Provision(hub)
+        with patch.object(provision, "probe", fake_probe):
+            await p.refresh()
+        self.assertEqual(p.sign_ins, waiting)
+        self.assertEqual([q["domain"] for q in p.problems], ["hue"])    # nest's complaint gave way to its sign-in
 
     async def test_driver_host_comes_from_env(self):
         hub = FakeHub(); hub.env = {"HUB_DRIVER_HOST": "mosquitto"}

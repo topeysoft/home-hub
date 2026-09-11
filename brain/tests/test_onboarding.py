@@ -4,9 +4,10 @@ from hub import onboarding
 
 
 class FakeHA:
-    def __init__(self, domains=("nest",), existing=()):
-        self.domains, self.existing, self.created = list(domains), list(existing), []
+    def __init__(self, domains=("nest",), existing=(), flows=()):
+        self.domains, self.existing, self.created, self.flows = list(domains), list(existing), [], list(flows)
     async def send(self, type_, **kw):
+        if type_ == "config_entries/flow/progress": return self.flows
         if type_ == "application_credentials/config":
             return {"domains": self.domains, "integrations": {"nest": {"description_placeholders": {"oauth_creds_url": "https://c", "oauth_consent_url": "https://s", "redirect_url": "https://my/redirect"}}}}
         if type_ == "application_credentials/list": return [{"domain": d} for d in self.existing]
@@ -101,3 +102,38 @@ class CredentialsTests(unittest.IsolatedAsyncioTestCase):
         step = await add.credentials_step("tesla_fleet")
         self.assertIn("tesla_fleet asks each home", step["description"])
         self.assertIn("home-assistant.io/integrations/tesla_fleet", step["description"])
+
+
+def flow(fid, handler, source, **ctx):
+    return {"flow_id": fid, "handler": handler, "context": {"source": source, **ctx}}
+
+
+class FlowListTests(unittest.IsolatedAsyncioTestCase):
+    """The same list from HA holds two different things: what was noticed on the network, and what is
+    waiting for a person. Each screen asks for its own half; neither ever sees the other's."""
+    FLOWS = [flow("f1", "roku", "ssdp", title_placeholders={"name": "Living room Roku"}),
+             flow("f2", "nest", "reauth", title_placeholders={"name": "home-hub"}),
+             flow("f3", "hue", "reconfigure"),
+             flow("f4", "mqtt", "user"),
+             flow("f5", "yaml_thing", "import"),
+             flow("f6", "odd", None)]
+
+    def setUp(self):
+        self.add = onboarding.Onboarding(FakeHub(FakeHA(flows=self.FLOWS)))
+        self.add._strings = {h: {} for h in ("roku", "nest", "hue", "mqtt", "yaml_thing", "odd")}
+
+    async def test_found_nearby_is_only_what_the_network_offered(self):
+        self.assertEqual([f["flow_id"] for f in await self.add.discovered()], ["f1"])
+
+    async def test_sign_ins_are_only_what_waits_for_a_person(self):
+        rows = await self.add.sign_ins()
+        self.assertEqual([(r["flow_id"], r["source"]) for r in rows], [("f2", "reauth"), ("f3", "reconfigure")])
+        self.assertEqual(rows[0]["kind"], "Google Nest")       # the maker's own name, for the sentence on Home
+        self.assertEqual(rows[0]["title"], "home-hub")         # which one, when a house has two
+
+    async def test_a_hub_that_cannot_answer_offers_nothing_rather_than_failing(self):
+        class Mute:
+            async def send(self, *a, **kw): raise RuntimeError("down")
+        add = onboarding.Onboarding(FakeHub(Mute()))
+        self.assertEqual(await add.sign_ins(), [])
+        self.assertEqual(await add.discovered(), [])

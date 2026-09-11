@@ -34,8 +34,16 @@
       "title": "Motion spec"
     },
     {
-      "file": "Tiles.dc.html",
+      "file": "Weather.dc.html",
       "x": 0,
+      "y": 2040,
+      "w": 1440,
+      "h": 900,
+      "title": "One cloud, every condition"
+    },
+    {
+      "file": "Tiles.dc.html",
+      "x": 1560,
       "y": 2040,
       "w": 1440,
       "h": 640,
@@ -43,7 +51,7 @@
     },
     {
       "file": "Tones.dc.html",
-      "x": 1560,
+      "x": 3120,
       "y": 2040,
       "w": 720,
       "h": 900,
@@ -57,7 +65,7 @@
       "x": -540,
       "y": 40,
       "w": 440,
-      "text": "This one runs. Tap the floor lamp tile in the rail and the open animation plays at the measured timings; the \u2715 closes it.\n\nSky (dusk / night / midday) and Tiles (Warm / Cool / Pastel / Follow the light). It opens on Follow the light \u2014 switch Sky between Midday and Night to see the one thing that tone does that the others don't."
+      "text": "This one runs. Tap the floor lamp tile in the rail and the open animation plays at the measured timings; the \u2715 closes it.\n\nThree chips: Sky (dusk / night / midday), Tiles (four tones) and Weather (all fifteen conditions). Weather drives both the cloud beside the greeting AND the field behind everything \u2014 try Midday against sunny, then pouring."
     },
     {
       "id": "tint",
@@ -85,7 +93,14 @@
       "x": -540,
       "y": 480,
       "w": 440,
-      "text": "The weather lozenge is gone from the rail. The sky behind the panel already IS the forecast \u2014 clouds, rain, stars, moon phase \u2014 so a tile that says 'clear' was repeating the whole screen.\n\nThe cloud and the 17\u00b0 moved up beside the greeting, where there was dead space anyway. That bought back 264px of rail: it now holds Tonight's two scenes, and the back door."
+      "text": "The weather lozenge is gone from the rail \u2014 the sky behind the panel already IS the forecast, so a tile saying 'clear' repeated the whole screen.\n\nThe cloud and the 17\u00b0 moved beside the greeting, where the row was one line of text across 1440px. That bought back 264px: it now holds Tonight's two scenes, and the back door."
+    },
+    {
+      "id": "weather-parts",
+      "x": -540,
+      "y": 2080,
+      "w": 440,
+      "text": "One illustration built from parts, not fifteen drawings. It reads the same {clouds, rain, snow, fog, lightning, wind} that wxOf() already hands the sky, so the picture and the sky cannot disagree \u2014 and a new condition needs no new art.\n\nThe field takes the same three mixes palette() applies, which is why the tiles dim in heavy rain without anything special-casing rain."
     }
   ],
   "launch": {

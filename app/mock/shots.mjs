@@ -43,6 +43,8 @@ const SCREENS = [
   ['phone-setup-rooms', 'phone', '/?setup=1&page=rooms&at=13:00'],
   ['phone-join', 'phone', '/?join=1&at=13:00'],
   ['phone-ask', 'phone', '/?at=19:40', [390, 900]],                               // needs LOCKED=1 ASK=1 on the mock
+  ['kiosk-needs-a-look', 'kiosk', '/?at=19:40', [1280, 1600]],                    // needs NEEDSLOOK=1 on the mock
+  ['sheet-sign-in', 'kiosk', '/?sheet=add&signin=r1&at=19:40'],                   // the sign-in a Needs a look line opens
 ]
 
 const only = process.env.SHOTS ? new Set(process.env.SHOTS.split(',')) : null

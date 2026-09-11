@@ -103,6 +103,9 @@ container before the Pi's first start so the two do not fight over Ring's token.
   unit on the host runs `install.sh` again, and the panel comes back on the new build. `driver-layer/host/update.sh`.
 - Health: Home has a quiet *Needs a look* list when something is off: a device offline since Tuesday, storage nearly
   full, a driver that wants signing in, an update that did not finish. `GET /health`; the words come from the brain.
+  A line that can be acted on carries the way to do it, so none of them sends anyone to Home Assistant: an account whose
+  sign-in ran out gets *Sign in again*, which opens the maker's own short form on the same sheet that adds things
+  (`brain/hub/onboarding.py` tells the two kinds of open flow apart); something that could not start gets *Try again*.
 - Sounds on a speaker: every speaker tile has White, Pink and Brown noise (the brain makes those itself) plus any audio
   file in the hub's sounds folder, with a sleep timer. Recordings in the repo's `sounds/` folder ship in the image and are
   copied into every hub's folder when missing (`tools/add-sound.sh` puts a download there in the right shape, and can push

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { store, activity, roomActive, cap, houseLine, whatsOn, describe, ago, refreshEvents, loadHealth, notify } from '../store'
-import { requestUpdate, type Room } from '../api'
+import { store, activity, roomActive, cap, houseLine, whatsOn, describe, ago, refreshEvents, loadHealth, notify, openFlow } from '../store'
+import { requestUpdate, retryEntry, type Note, type Room } from '../api'
 import { upcomingLine } from '../upcoming'
 import Icon from '../Icon.vue'
 import SceneBar from '../SceneBar.vue'
@@ -35,6 +35,15 @@ async function install() {
   catch (e: any) { notify(e.message, 'error') }
 }
 const noteIcon = (k: string) => k === 'offline' ? 'refresh' : k === 'storage' ? 'home' : k === 'driver' ? 'switch' : 'sparkle'
+/* a line here is only worth reading if something can be done about it, so the ones that can carry the doing */
+const retrying = ref('')
+async function again(n: Note) {
+  if (!n.retry || retrying.value) return
+  retrying.value = n.retry
+  try { store.status = await retryEntry(n.retry); await loadHealth(); notify('Asked it to try again.') }
+  catch (e: any) { notify(e.message, 'error') }
+  retrying.value = ''
+}
 
 /* on a phone that is still in a browser tab: offer the home-screen install once, with the steps for this phone */
 const onPhone = matchMedia('(max-width: 860px)').matches
@@ -119,7 +128,9 @@ onUnmounted(() => { clearInterval(t1); clearInterval(t2); clearInterval(t3) })
         <li v-for="(n, i) in store.notes" :key="i">
           <span class="recent-icon"><Icon :name="noteIcon(n.kind)" :size="16" /></span>
           <span class="recent-text">{{ n.text }}</span>
-          <button v-if="n.kind === 'update'" class="button small" @click="install">Try again</button>
+          <button v-if="n.flow" class="button small" @click="openFlow(n.flow)">{{ n.do || 'Sign in again' }}</button>
+          <button v-else-if="n.retry" class="button small" :class="{ busy: retrying === n.retry }" :disabled="!!retrying" @click="again(n)">{{ n.do || 'Try again' }}</button>
+          <button v-else-if="n.kind === 'update'" class="button small" @click="install">Try again</button>
           <span v-else></span>
         </li>
       </ul>

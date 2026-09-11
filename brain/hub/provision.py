@@ -66,6 +66,7 @@ class Provision:
         self.parts = {pid: {"id": pid, "name": name, "state": "unknown", "text": "Looking…", "port": port} for pid, name, port, _, _ in PARTS}
         self._failed_at: dict[str, float] = {}
         self.problems: list[dict] = []     # integrations HA has but could not set up, with HA's reason
+        self.sign_ins: list[dict] = []     # accounts whose sign-in ran out, each with the flow that finishes it
 
     def summary(self) -> list[dict]:
         return list(self.parts.values())
@@ -90,8 +91,14 @@ class Provision:
         changed = False
         rows = await self._entries()
         entries = {e["domain"] for e in rows}
+        sign_ins = await self.hub.add.sign_ins()
+        if sign_ins != self.sign_ins:
+            self.sign_ins = sign_ins; changed = True
+        # an account whose token died usually stops working *and* gets a sign-in flow; the flow is the one worth
+        # offering, so it stands in for the complaint rather than the house saying the same thing twice.
+        again = {w["handler"] for w in sign_ins}
         problems = [{"entry_id": e["entry_id"], "domain": e["domain"], "title": e.get("title") or e["domain"], "state": e["state"], "reason": e.get("reason") or ""}
-                    for e in rows if e.get("state") in ("setup_error", "setup_retry", "migration_error", "failed_unload")]
+                    for e in rows if e.get("state") in ("setup_error", "setup_retry", "migration_error", "failed_unload") and e["domain"] not in again]
         if problems != self.problems:
             self.problems = problems; changed = True
         for pid, name, port, domain, answers in PARTS:

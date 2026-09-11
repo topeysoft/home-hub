@@ -96,6 +96,16 @@ const why = [
   { ts: now - 7200, kind: 'intent', subject: 'living', old: 'empty', new: 'occupied', source: 'panel', detail: null },
 ]
 const discovered = process.env.FOUND === '0' ? [] : [{ flow_id: 'f1', handler: 'sonos', kind: 'speaker', title: 'Sonos Roam', source: 'zeroconf' }, { flow_id: 'f2', handler: 'cast', kind: 'tv', title: 'Chromecast (Den)', source: 'zeroconf' }]
+// NEEDSLOOK=1 gives Home its quiet list, with the two lines that can be acted on from there.
+const notes = process.env.NEEDSLOOK ? [
+  { kind: 'driver', subject: 'nest', since: null, text: 'Google Nest needs signing in again: home-hub.', flow: 'r1', do: 'Sign in again' },
+  { kind: 'driver', subject: 'e-hue', since: null, retry: 'e-hue', do: 'Try again', text: 'Hue bridge could not connect: no route to host' },
+  { kind: 'offline', subject: 'l4', since: now - 86400 * 2, text: 'Porch light has been offline since Tuesday.' },
+] : []
+// the sign-in conversation behind that first line: HA asks for the password again, nothing else
+const signIn = { type: 'form', flow_id: 'r1', handler: 'nest', kind: 'Google Nest', step_id: 'reauth_confirm',
+  hint: 'Google signed this hub out. Signing in again brings the cameras, doorbell and thermostat back.',
+  fields: [{ name: 'password', label: 'Password', kind: 'password', required: true }] }
 const catalog = [{ domain: 'hue', name: 'Philips Hue', brand: 'Philips', local: true }, { domain: 'nest', name: 'Google Nest', brand: 'Google', local: false }, { domain: 'ring', name: 'Ring', local: false }, { domain: 'tplink', name: 'TP-Link Kasa', local: true }]
 
 // A picture for cameras and album art: a soft gradient, so tiles look occupied.
@@ -121,6 +131,12 @@ const server = http.createServer((req, res) => {
   if (p === '/events') return json(res, events)
   if (p === '/rules') return json(res, rules)
   if (p === '/discovered') return json(res, discovered)
+  if (p === '/health') return json(res, { notes })
+  if (p === '/flows/r1') {
+    if (req.method !== 'POST') return json(res, signIn)
+    const i = notes.findIndex(n => n.flow === 'r1'); if (i >= 0) notes.splice(i, 1)   // answered: the line on Home goes
+    return json(res, { type: 'create_entry', flow_id: 'r1', handler: 'nest', kind: 'Google Nest', entry_title: 'home-hub' })
+  }
   if (p === '/catalog') return json(res, catalog)
   if (p === '/pair') return json(res, { state: 'idle' })
   if (p === '/assistant') return json(res, { available: true, configured: false, source: null, model: 'claude-sonnet-5' })

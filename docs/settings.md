@@ -23,9 +23,8 @@ address `AddPanel.vue` hands a maker's page that asks for it.
 
 Found by reading the brain and the panel, ranked by how soon a household hits it.
 
-1. **Signing in again.** Tokens expire and get revoked; Google and Ring do it within a year. Health already says
-   "*Nest needs signing in again*" (`brain/hub/health.py`), but the panel has nowhere to do it: `brain/hub/onboarding.py`
-   skips every flow whose source is `reauth` or `reconfigure`, so the only fix is Home Assistant's UI.
+1. ~~**Signing in again.**~~ **Done, 10 September 2026.** HA opens a flow of its own when a token dies, and the panel
+   now draws it: each one reaches Home as a *Needs a look* line with the button that finishes it. See *What landed*.
 2. **Removing anything.** No route deletes an account, a bridge or a device. Selling a camera means opening Home Assistant.
 3. **People.** Presence reads Home Assistant's person entities (`brain/hub/presence.py`), and the only way to make a
    person and give them a location is Home Assistant's UI plus its companion app. "Is anyone home?" depends on two
@@ -73,9 +72,9 @@ Who lives here, which phone is theirs, and whether they can change things or onl
 Every service that needed a sign-in, with one of three states and two buttons.
 
 - **States.** *Connected*, *Needs signing in* (the token died), *Not answering* (the service is down or the internet
-  is). Health's "*needs a look*" row for a driver opens straight here.
-- **Sign in again.** Stop skipping `reauth` and `reconfigure` flows; draw them through the same form path the Add
-  sheet already uses. A re-sign-in is the same conversation as the first, minus the key.
+  is). The first two are already known: `provision.py` holds the open sign-ins and the entries that could not start.
+- **Sign in again.** Done, and offered from Home; the sheet gathers the same rows into one place, so an account can be
+  signed in again before the house has noticed anything is wrong.
 - **Remove.** Delete the config entry through Home Assistant's API; the brain forgets the devices it brought, and any
   room tile that pointed at them. Ask once, in words that say what disappears.
 - **Ring inside the panel.** Either the brain drives ring-mqtt's sign-in itself (Ring's token flow is an email,
@@ -110,12 +109,30 @@ As it is, plus the few things that are about the hub and nothing else.
 - **For the curious.** The Advanced door becomes one line at the bottom of this sheet and nowhere else: the engine's
   address and the login the brain made, for someone who wants the raw system. It is never a step.
 
+## What landed
+
+**Signing in again, 10 September 2026.** The first step of the order below, and the shape the Accounts sheet grows into.
+
+- A flow's *source* says who started it. `onboarding.py` reads HA's one list of open flows twice: `discovered()` for
+  what the network offered, `sign_ins()` for what is waiting for a person. Neither screen ever sees the other's.
+- `provision.py` keeps the waiting ones beside its other complaints, refreshed on the same half-minute tick. A dead
+  token usually makes HA complain about the account *and* open a flow; the flow is the one worth offering, so it
+  stands in for the complaint rather than the house saying the same thing twice.
+- `health.py` turns each into a *Needs a look* sentence carrying the way to answer it: the flow for a sign-in, the
+  entry for something that could not start, and the words for its button. The words come from the brain, as every
+  other sentence there does.
+- Home's list draws those buttons. *Sign in again* hands the flow to the sheet that already draws every other one,
+  which then reads as being about that one job: no *Found nearby*, no *Behind the scenes*, no Advanced link. Walking
+  away leaves the flow open, so the line on Home still offers it.
+- Preview it with `?sheet=add&signin=<flow>`; the mock brain has the whole path behind `NEEDSLOOK=1`.
+
+Not covered yet: an account with no flow open (Ring is the one that matters, and it is step four), and removing one.
+
 ## Order
 
 By how soon a non-technical person is stuck, and by what each unlocks.
 
-1. **Sign in again from the panel.** Drop the filter in `onboarding.py`, list open reauth flows, draw them, link from
-   *Needs a look*. Smallest change, largest payoff, and it is the shape of the Accounts sheet.
+1. ~~**Sign in again from the panel.**~~ Done; see *What landed* above.
 2. **Remove an account or device.** One route, one confirmation, the model cleaned up.
 3. **People and presence.** The phone key, the People sheet, Wi-Fi presence with a grace period, presence reading the
    brain's own people. This is the largest item and the one everything else about "who" hangs on.
