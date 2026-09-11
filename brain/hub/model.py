@@ -49,6 +49,7 @@ class Device:
     hw: str | None = None          # the physical thing this belongs to (the driver's device id), for moving rooms
     own_room: bool = False         # room set on this entry itself rather than inherited from the hardware
     seen: float = field(default_factory=time.time)   # when the driver last heard from it; a stale sensor is not steered by
+    maker: str | None = None       # who made the unit, from the driver's device registry; the one thing a tile can say about hardware it has no picture of
 
 
 @dataclass
@@ -121,6 +122,7 @@ class Home:
                 for suffix in (" Live view", " Live View", " Camera"):
                     if name.endswith(suffix): name = name[: -len(suffix)]
             d = Device(eid, name, room, cap, s["state"], self.attrs_for(eid, cap, s["attributes"]), e.get("device_id"), bool(e.get("area_id")), seen_at(s))
+            d.maker = self.hardware.get(e.get("device_id") or "", {}).get("manufacturer") or None
             self.devices[eid] = d
             self.rooms[room].devices.append(d)
         # A camera with a lamp built in: the viewer offers the lamp beside the picture, the way Ring's own app does.

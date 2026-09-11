@@ -13,15 +13,15 @@ const DIST = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'dist
 const PORT = Number(process.env.PORT || 8399)
 const now = Math.floor(Date.now() / 1000)
 
-const dev = (id, name, room_id, capability, state, attrs = {}) => ({ id, name, room_id, capability, state, attrs })
+const dev = (id, name, room_id, capability, state, attrs = {}, maker = null) => ({ id, name, room_id, capability, state, attrs, maker })   // maker: what the registry knows, often nothing
 const rooms = [
   { id: 'living', name: 'Living room', intent: 'movie', set_by: 'rule:evening-lights', hold_until: null, devices: [
-    dev('l1', 'Ceiling light', 'living', 'light', 'on', { brightness: 90, supported_color_modes: ['brightness'] }),
+    dev('l1', 'Ceiling light', 'living', 'light', 'on', { brightness: 90, supported_color_modes: ['brightness'] }, 'Philips Hue'),
     dev('l2', 'Floor lamp', 'living', 'light', 'on', { brightness: 60, supported_color_modes: ['brightness'] }),
     dev('l3', 'Reading lamp', 'living', 'light', 'off', { supported_color_modes: ['onoff'] }),
     dev('m1', 'Living room TV', 'living', 'media', 'playing', { media_title: 'The Bear', media_artist: 'Season 3, Episode 4', app_name: 'Disney+', volume_level: 0.35, entity_picture: '/x.jpg' }),
     dev('s1', 'Sonos', 'living', 'media', 'paused', { media_title: 'Blue in Green', media_artist: 'Miles Davis', volume_level: 0.2 }),
-    dev('c1', 'Blinds', 'living', 'cover', 'open', { current_position: 70 }),
+    dev('c1', 'Blinds', 'living', 'cover', 'open', { current_position: 70 }, 'IKEA'),
     dev('t1', 'Thermostat', 'living', 'climate', 'cool', { current_temperature: 74, temperature: 71, hvac_action: 'cooling', hvac_modes: ['heat', 'cool', 'heat_cool', 'off'], fan_modes: ['on', 'auto'], fan_mode: 'auto', current_humidity: 48 }),
     dev('mo1', 'Motion', 'living', 'motion', 'on', {}),
     dev('te1', 'Temperature', 'living', 'sensor.temperature', '73.4', { unit_of_measurement: '°F' }),

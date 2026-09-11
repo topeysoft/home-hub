@@ -45,7 +45,7 @@ const facts = computed(() => {
   if (kind.value === 'climate' && a.temperature != null) out.push({ k: 'Set to', v: Math.round(a.temperature) + '°' })
   if (a.media_title) out.push({ k: 'Playing', v: String(a.media_title) })
   if (a.percentage != null && kind.value === 'fan') out.push({ k: 'Speed', v: a.percentage + '%' })
-  if (d.hw) out.push({ k: 'Hardware', v: d.hw })
+  if (d.maker) out.push({ k: 'Made by', v: d.maker })   // hw is the registry's opaque id, never worth showing
   return out.slice(0, 3)
 })
 
