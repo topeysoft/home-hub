@@ -185,6 +185,29 @@ the whole mesh, with failover.
 - Zooz ZST39 (Z-Wave 800). Optional while the Nortek HUSBZB-1 on hand covers Z-Wave: it is 500-series, fine for the GE/Jasco switches, no Long Range.
 - ratgdo32 (garage door, Security+ 2.0 only)
 
+## Tests and CI
+
+Every push and pull request runs `.github/workflows/ci.yml`: the brain's tests and linter, the
+panel's types, linter and unit tests, the built panel driven in a real browser, the shell that runs
+on the hub host, and the brain's container image built for both kinds of host (built, not pushed —
+so a Dockerfile that no longer works is caught before it reaches the thing `install.sh` pulls).
+
+```sh
+cd brain && .venv/bin/python -m pytest tests -q     # the hub
+cd app && npm test && npm run e2e                   # the screens, then the screens in a browser
+```
+
+Coverage may go up and may not go down: `.github/coverage-check.py` compares each run against
+`.github/coverage-floor.json` and fails a change that leaves the codebase less covered than it found
+it. There is no target to reach, and the floor is raised by hand in the change that earns it.
+
+Two things are checked that nothing else would notice. `brain/tests/sun-positions.json` holds both
+sun implementations — `brain/hub/sun.py` and `app/src/sun.ts`, the same maths written twice — to one
+table, so the panel's dusk and an after-dark routine cannot drift apart. And `brain/tests/test_shipped.py`
+holds `rules.json` and `scenes.json` to what a house that has just been plugged in can actually run:
+a starter rule may only name `home` or `entry`, because any other room is one only somebody's
+particular house has, and the engine would drop it on every other hub with nothing but a log line.
+
 ## Rules that do not change
 
 - Works with the internet down.

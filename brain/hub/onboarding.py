@@ -120,7 +120,7 @@ class Onboarding:
         """Everything that can be added by hand, for the search box."""
         if self._catalog is None:
             r = await self.hub.ha.send("integration/descriptions")
-            self._catalog = catalog_from(((r.get("core") or {}).get("integration") or {}))
+            self._catalog = catalog_from((r.get("core") or {}).get("integration") or {})
         return self._catalog
 
     # ---- accounts that need a key of their own ----

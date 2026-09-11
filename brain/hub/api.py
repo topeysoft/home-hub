@@ -127,7 +127,7 @@ class Hub:
 
     async def _nap(self, seconds):
         try: await asyncio.wait_for(self._wake.wait(), seconds)
-        except asyncio.TimeoutError: pass
+        except TimeoutError: pass
         self._wake.clear()
 
     # ---- the lifecycle loop ----
@@ -135,7 +135,7 @@ class Hub:
         while True:
             try:
                 try: state = await asyncio.to_thread(ha_setup.driver_state, self.ha_url)
-                except Exception as e:
+                except Exception:
                     self._set("down", "The hub's engine is not answering yet."); await self._nap(3); continue
                 if state == "fresh":
                     self._set("fresh"); await self._nap(10); continue
@@ -144,7 +144,7 @@ class Hub:
                 self._set("connecting")
                 ha = HAAdapter(self.ha_url, self.ha_token)
                 try: await ha.connect()
-                except AuthError as e:
+                except AuthError:
                     self._set("needs-login", "The saved key no longer works."); await self._nap(10); continue
                 except Exception as e:
                     self._set("down", f"{e}"); await self._nap(3); continue

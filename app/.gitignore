@@ -25,3 +25,8 @@ dist-ssr
 
 # screenshots from `npm run shots`
 mock/shots
+
+# test output
+coverage
+playwright-report
+test-results

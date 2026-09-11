@@ -10,6 +10,24 @@ npm run dev      # Vite on :5173, proxies /home /devices /rooms /events /stream 
 npm run build    # writes dist/, which the brain serves at http://<host>:8300/
 ```
 
+## Tests
+
+```sh
+npm test                 # the pure logic: the sun, the words, the colours, the store, the code prompt
+npm run test:watch       # the same, as you type
+npm run lint             # the linter CI runs
+npm run typecheck        # vue-tsc, the same pass `npm run build` makes first
+npm run e2e              # the built panel in a real browser against the mock brain
+```
+
+`npm run e2e` needs the panel built (`npm run build`) and Chromium once (`npx playwright install
+chromium`); it starts `mock/brain.mjs` itself. The specs in `e2e/` assert on behaviour rather than
+on pictures — that a hold opens a device without also switching it, that a rail card is crisp only
+once it is fully in, that the house recedes behind an opened card and comes back exactly as it was,
+and that every screen draws, logs nothing, and never scrolls sideways. `*.touch.spec.ts` runs the
+same gestures with a finger, because a long-press is also the browser's own gesture and a mouse-only
+pass proves less than it looks like.
+
 ## Looking at it without a hub
 
 `mock/brain.mjs` is a stand-in brain with a lived-in house of eight rooms: lights at half, a film on the TV, a

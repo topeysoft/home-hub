@@ -1,5 +1,5 @@
 """Run from brain/: .venv/bin/python -m unittest -v"""
-import asyncio, json, tempfile, unittest
+import json, tempfile, unittest
 from pathlib import Path
 from hub import rules
 from hub.assistant import Assistant, AssistantError

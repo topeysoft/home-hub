@@ -1,0 +1,143 @@
+/* What colour a card is, given what the sky is doing.
+
+   tone.ts states its own law at the top of the file: a card is never given an absolute colour, only
+   a distance from the sky, so the relationship can never invert. Nothing in the type system holds
+   anyone to that. These tests do — they sweep the whole day, every condition and every tone, and
+   check the law still holds at each step. */
+import { describe, expect, it } from 'vitest'
+import { COND, ground, oklch } from '../src/sky'
+import { isTone, TONES, toneVars, type ToneName } from '../src/tone'
+
+const ELEVATIONS = [-40, -18, -9, -3, -0.5, 0, 3, 6, 15, 40, 89]
+const CONDITIONS = Object.keys(COND)
+const NAMES: ToneName[] = ['warm', 'cool', 'pastel', 'follow']
+
+const L = (vars: Record<string, string>) => Number(vars['--card-l'])
+const C = (vars: Record<string, string>) => Number(vars['--card-c'])
+
+describe('the law the file is built on', () => {
+  it('never lets a card fall to or below the sky it sits on, at any hour or weather', () => {
+    for (const name of NAMES) {
+      for (const condition of CONDITIONS) {
+        for (const el of ELEVATIONS) {
+          const field = oklch(ground(el, condition))
+          const card = L(toneVars(el, condition, name))
+          expect(card, `${name} / ${condition} / ${el}°`).toBeGreaterThan(field.L)
+        }
+      }
+    }
+  })
+
+  it('holds roughly the same distance from the sky rather than a fixed colour', () => {
+    // Midnight and midday are a long way apart. A card that tracked nothing would sit at one value
+    // for both; a card that tracks the sky moves with it and keeps its distance.
+    const night = toneVars(-30, 'clear-night', 'warm')
+    const noon = toneVars(45, 'sunny', 'warm')
+    expect(L(noon)).toBeGreaterThan(L(night))
+
+    const gapNight = L(night) - oklch(ground(-30, 'clear-night')).L
+    const gapNoon = L(noon) - oklch(ground(45, 'sunny')).L
+    expect(Math.abs(gapNight - gapNoon)).toBeLessThan(0.02)
+  })
+
+  it('dims the cards through a storm, because the sky they track has dimmed', () => {
+    expect(L(toneVars(20, 'pouring'))).toBeLessThan(L(toneVars(20, 'sunny')))
+  })
+
+  it('lets colour strengthen under a flat grey sky that can carry it', () => {
+    expect(C(toneVars(20, 'cloudy'))).toBeGreaterThan(C(toneVars(20, 'sunny')))
+  })
+})
+
+describe('text that has to stay readable on the card', () => {
+  it('flips the ink to dark once the card is lighter than the ink it was carrying', () => {
+    for (const name of NAMES) {
+      for (const condition of CONDITIONS) {
+        for (const el of ELEVATIONS) {
+          const vars = toneVars(el, condition, name)
+          const dark = vars['--card-ink'] === '#1e1b24'
+          expect(dark, `${name} / ${condition} / ${el}°`).toBe(L(vars) > 0.62)
+        }
+      }
+    }
+  })
+
+  it('moves everything that sits on a card together, never half of it', () => {
+    for (const el of [-30, 45]) {
+      const vars = toneVars(el, 'sunny')
+      const light = L(vars) > 0.62
+      for (const key of ['--card-ink', '--card-ink-2', '--card-edge', '--card-hi', '--card-press', '--card-track', '--card-lamp-ink']) {
+        expect(vars[key], `${key} at ${el}°`).toBeTruthy()
+      }
+      expect(vars['--card-lamp-ink']).toBe(light ? '#7a4a10' : '#e9b872')
+    }
+  })
+})
+
+describe('the tones a house can pick', () => {
+  it('gives every surface a colour, whichever tone is chosen', () => {
+    for (const name of NAMES) {
+      const vars = toneVars(10, 'sunny', name)
+      for (const key of ['--card-light', '--card-lock', '--card-plain', '--tint-light', '--tint-lock']) {
+        expect(vars[key], `${name} ${key}`).toMatch(/^(oklch|linear-gradient)\(/)
+      }
+    }
+  })
+
+  it('keeps a plain card quieter than one that means something', () => {
+    // A room card must not compete with a lamp that is on.
+    const vars = toneVars(10, 'sunny', 'warm')
+    expect(vars['--card-plain']).not.toBe(vars['--card-light'])
+  })
+
+  it('follows the light: open by day, lamplit after sunset', () => {
+    expect(toneVars(30, 'sunny', 'follow')['--card-light']).toBe(toneVars(30, 'sunny', 'pastel')['--card-light'])
+    expect(toneVars(-10, 'clear-night', 'follow')['--card-light']).toBe(toneVars(-10, 'clear-night', 'warm')['--card-light'])
+  })
+
+  it('stays inside a range that is neither black nor white', () => {
+    for (const name of NAMES) {
+      for (const condition of CONDITIONS) {
+        for (const el of ELEVATIONS) {
+          const l = L(toneVars(el, condition, name))
+          expect(l, `${name} / ${condition} / ${el}°`).toBeGreaterThanOrEqual(0.16)
+          expect(l, `${name} / ${condition} / ${el}°`).toBeLessThanOrEqual(0.92)
+        }
+      }
+    }
+  })
+
+  it('never emits something CSS cannot read', () => {
+    for (const [k, v] of Object.entries(toneVars(10, 'sunny'))) {
+      expect(v, k).not.toContain('NaN')
+      expect(v, k).not.toContain('undefined')
+    }
+  })
+})
+
+describe('picking a tone', () => {
+  it('accepts the ones that exist and refuses anything else', () => {
+    for (const t of TONES) expect(isTone(t.id)).toBe(true)
+    for (const bad of ['neon', '', null, undefined, 0, {}]) expect(isTone(bad)).toBe(false)
+  })
+
+  it('names every tone and says what it is for', () => {
+    for (const t of TONES) {
+      expect(t.label.trim()).toBeTruthy()
+      expect(t.hint.trim()).toBeTruthy()
+    }
+    expect(new Set(TONES.map(t => t.id)).size).toBe(TONES.length)
+  })
+
+  it('offers a tone for every one the code can actually make', () => {
+    expect(new Set(TONES.map(t => t.id))).toEqual(new Set(NAMES))
+  })
+})
+
+describe('an unknown weather condition', () => {
+  it('still produces a usable card rather than NaN', () => {
+    const vars = toneVars(10, 'meteor-shower')
+    expect(Number.isFinite(L(vars))).toBe(true)
+    expect(vars['--card-ink']).toBeTruthy()
+  })
+})
