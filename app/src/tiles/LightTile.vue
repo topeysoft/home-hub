@@ -53,6 +53,7 @@ async function up() {
   <div class="tile light" :class="{ on, dead, dimmable, pending }" role="button" :aria-label="`${name}, ${label}`" :aria-pressed="on"
        tabindex="0" @pointerdown="down" @pointermove="move" @pointerup="up" @pointercancel="up" @keydown.enter.space.prevent="perform(device, on ? 'off' : 'on', undefined, { state: on ? 'off' : 'on' })">
     <div class="fill" :style="{ width: pct + '%' }"></div>
+    <span class="tile-art" aria-hidden="true"><Icon name="light" :size="150" /></span>
     <div class="tile-body">
       <span class="tile-icon"><Icon name="light" /></span>
       <span class="tile-name">{{ name }}</span>

@@ -44,6 +44,8 @@ function tap() {
 
 <template>
   <button class="tile plain" :class="[kind, { on, dead, passive, pending, arming }]" :disabled="passive || dead" @click="tap" :aria-pressed="passive ? undefined : on">
+    <!-- no artwork of its own, so the icon, oversized and faint, is the art: a shelf of no-name plugs reads composed rather than empty -->
+    <span class="tile-art" aria-hidden="true"><Icon :name="kind" :size="150" /></span>
     <div class="tile-body">
       <span class="tile-icon"><Icon :name="kind" /></span>
       <span class="tile-name">{{ name }}</span>
