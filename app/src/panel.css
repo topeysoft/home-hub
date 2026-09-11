@@ -863,7 +863,7 @@ select.input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://ww
   .bento-card {
     animation: bento-in linear both, bento-out linear forwards;   /* -out has no backwards fill, so it stays out of the way until the card is actually leaving */
     animation-timeline: view(inline), view(inline);
-    animation-range: entry 0% entry 50%, exit 50% exit 100%;   /* crisp by halfway in; only starts to soften once halfway out */
+    animation-range: entry 0% entry 80%, exit 20% exit 100%;   /* crisp by 80% in; only starts to soften once 20% out */
   }
   @keyframes bento-in  { from { opacity: .35; filter: blur(6px); } to { opacity: 1; filter: blur(0); } }
   @keyframes bento-out { from { opacity: 1; filter: blur(0); } to { opacity: .35; filter: blur(6px); } }
