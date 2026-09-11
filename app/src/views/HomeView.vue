@@ -70,7 +70,7 @@ onUnmounted(() => { clearInterval(t1); clearInterval(t2); clearInterval(t3) })
     <div class="block" v-if="cameras.length">
       <h2 class="label">Cameras</h2>
       <div class="camera-row">
-        <CameraTile v-for="c in cameras" :key="c.id" :device="c" compact />
+        <CameraTile v-for="c in cameras" :key="c.id" :device="c" compact v-hold="() => (store.opened = c)" />
       </div>
     </div>
     <div class="block">

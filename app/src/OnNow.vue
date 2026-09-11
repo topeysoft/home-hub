@@ -41,7 +41,8 @@ async function tap(d: Device) {
 <template>
   <div class="onnow" v-if="on.length" role="group" aria-label="On right now">
     <button v-for="d in shown" :key="d.id" class="onnow-chip" :class="[cap(d), { fixed: !quiet(d), pending: store.pending[d.id] }]"
-            :disabled="!quiet(d)" :title="hint(d)" :aria-label="`${what(d)} in the ${place(d)}. ${hint(d)}`" @click="tap(d)">
+            :disabled="!quiet(d)" :title="hint(d)" :aria-label="`${what(d)} in the ${place(d)}. ${hint(d)}`" @click="tap(d)"
+            v-hold="() => (store.opened = d)">
       <span class="onnow-icon"><Icon :name="cap(d)" :size="16" /></span>
       <span class="onnow-text"><span class="onnow-name">{{ what(d) }}</span><span class="onnow-place">{{ place(d) }}</span></span>
     </button>
