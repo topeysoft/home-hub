@@ -4347,6 +4347,26 @@ select.input {
    the corner the way a render would. It takes the card's ink, so it stays a
    whisper whether the card is dark or pale. Under the body, and never in the
    way of a finger. */
+/* Rung two: a drawing the hub ships, cropped into the corner the icon used to
+   fill. Unlike the icon it is not faded to a watermark -- it IS the picture, so
+   it sits at full strength and scales with the tile rather than taking a fixed
+   size: the same lamp has to hold up on a 190px tile in a room and on a 372px
+   one at the head of the rail. */
+.tile-render {
+  position: absolute;
+  right: -5px;
+  bottom: -4px;
+  width: 74%;
+  aspect-ratio: 150 / 130;
+  z-index: 0;
+  pointer-events: none;
+}
+/* a device that is not answering should look it, the same way its text does */
+.tile.dead .tile-render {
+  opacity: 0.4;
+  filter: grayscale(0.6);
+}
+
 .tile-art {
   position: absolute;
   right: -28px;

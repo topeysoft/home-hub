@@ -3,6 +3,8 @@ import { computed, ref } from 'vue'
 import type { Device } from '../api'
 import { perform, shortName, roomOf, store, isDead } from '../store'
 import Icon from '../Icon.vue'
+import DeviceArt from '../DeviceArt.vue'
+import { lightKind } from '../art'
 
 const props = defineProps<{ device: Device }>()
 const on = computed(() => props.device.state === 'on')
@@ -13,6 +15,9 @@ const live = computed(() => Math.round((props.device.attrs.brightness ?? 0) / 2.
 const preview = ref<number | null>(null)
 const pct = computed(() => preview.value ?? (on.value ? live.value || 100 : 0))
 const name = computed(() => shortName(props.device, roomOf(props.device)))
+/* Which drawing this light gets. A guess off the name for now -- see lightKind's
+   own note; the real answer is a per-device setting nobody has been asked for yet. */
+const kind = computed(() => lightKind(props.device.name || name.value))
 const hintSeen = ref(safe(() => localStorage.getItem('dim-hint') === '1'))
 function safe<T>(f: () => T): T | false { try { return f() } catch { return false } }
 const label = computed(() => {
@@ -53,7 +58,7 @@ async function up() {
   <div class="tile light" :class="{ on, dead, dimmable, pending }" role="button" :aria-label="`${name}, ${label}`" :aria-pressed="on"
        tabindex="0" @pointerdown="down" @pointermove="move" @pointerup="up" @pointercancel="up" @keydown.enter.space.prevent="perform(device, on ? 'off' : 'on', undefined, { state: on ? 'off' : 'on' })">
     <div class="fill" :style="{ width: pct + '%' }"></div>
-    <span class="tile-art" aria-hidden="true"><Icon name="light" :size="150" /></span>
+    <DeviceArt :kind="kind" :state="{ on, brightness: pct / 100 }" />
     <span class="tile-maker" v-if="device.maker">{{ device.maker }}</span>
     <div class="tile-body">
       <span class="tile-icon"><Icon name="light" /></span>

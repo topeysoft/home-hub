@@ -6,6 +6,7 @@ import Join from './Join.vue'
 import CodePrompt from './CodePrompt.vue'
 import { lock } from './code'
 import Sky from './Sky.vue'
+import ArtDefs from './ArtDefs.vue'
 import HomeView from './views/HomeView.vue'
 import RoomView from './views/RoomView.vue'
 import Viewer from './Viewer.vue'
@@ -105,6 +106,7 @@ onUnmounted(() => {
 <template>
   <div class="shell" :data-ambient="ambient" :data-nav="nav" :style="[tone, openTint]" :class="{ resting: idle, 'in-setup': setup || lock.unpaired, 'opened-shell': !!store.opened || panel }">
     <Sky :quiet="!idle && !setup" />
+    <ArtDefs />
     <div class="sky-veil"></div>
     <Join v-if="lock.unpaired" @joined="rejoin" />
     <Setup v-else-if="setup" />
