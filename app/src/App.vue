@@ -78,9 +78,10 @@ const IDLE_AFTER = 3 * 60 * 1000
 const idle = ref(new URLSearchParams(location.search).get('rest') === '1')   // ?rest=1 previews the resting screen
 let lastTouch = Date.now()
 const kiosk = window.matchMedia('(min-width: 861px)')
+const woke = ref(0)   // counted so Home can arrive again on every wake, not only on the first load
 function touched() {
   lastTouch = Date.now()
-  if (idle.value) { idle.value = false; open(null) }
+  if (idle.value) { idle.value = false; open(null); woke.value++ }
 }
 watch(() => store.asks.length, (n, o) => { if (n > o) touched() })   // a phone knocking wakes the wall so the card is seen
 async function rejoin() { halt(); await start() }                       // this screen just joined: read the house and reconnect
@@ -166,7 +167,7 @@ onUnmounted(() => {
         <RoomView v-if="room" :key="room.id" :room="room" @back="open(null)" @open="open" />
         <RoomsView v-else-if="nav === 'top' && tab === 'rooms'" key="rooms" :rooms="rooms" @open="open" />
         <CamerasView v-else-if="nav === 'top' && tab === 'cameras'" key="cameras" :rooms="rooms" />
-        <RailView v-else-if="layout === 'rail'" key="home-rail" :rooms="rooms" :now="shown" :top-nav="nav === 'top'" @open="open" />
+        <RailView v-else-if="layout === 'rail'" key="home-rail" :rooms="rooms" :now="shown" :top-nav="nav === 'top'" :woke="woke" @open="open" />
         <HomeView v-else key="home-stack" :rooms="rooms" :now="shown" :top-nav="nav === 'top'" @open="open" />
       </Transition>
     </main>
@@ -175,7 +176,11 @@ onUnmounted(() => {
 
     <Viewer />
     <Opened v-if="store.opened" />
-    <Transition name="house"><HousePanel v-if="panel" /></Transition>
+    <!-- :duration because what moves is inside: Vue times a transition from the
+         element it is put on, and this one's root never moves, so on the way out
+         it was pulling the panel off the screen before it had slid anywhere.
+         These two numbers are the panel's own slide and the veil's fade. -->
+    <Transition name="house" :duration="{ enter: 420, leave: 320 }"><HousePanel v-if="panel" /></Transition>
     <Transition name="sheet"><WhySheet v-if="store.sheet === 'why'" /></Transition>
     <Transition name="sheet"><CodePrompt v-if="lock.prompt" /></Transition>
 

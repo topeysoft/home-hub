@@ -15,7 +15,7 @@
  * their own; then whatever is left. A row of equal boxes is a spreadsheet, and
  * the difference between that and a room is the one small column.
  */
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { store, cap, houseLine, scenesFor, weatherParts, whatsOn } from '../store'
 import { wxOf } from '../sky'
 import { upcomingLine } from '../upcoming'
@@ -31,8 +31,10 @@ import MediaTile from '../tiles/MediaTile.vue'
 import PlainTile from '../tiles/PlainTile.vue'
 
 /* topNav: the tabs are across the top, so the rooms have a tab of their own and
-   the command box lives in the bar along the bottom -- neither is repeated here */
-const props = defineProps<{ rooms: Room[]; now: Date; topNav?: boolean }>()
+   the command box lives in the bar along the bottom -- neither is repeated here.
+   woke: counts the times the panel has come back from rest, so the rail can
+   arrive again rather than only on the first load. */
+const props = defineProps<{ rooms: Room[]; now: Date; topNav?: boolean; woke?: number }>()
 defineEmits<{ open: [id: string] }>()
 
 const hour = computed(() => props.now.getHours())
@@ -103,6 +105,40 @@ function edges() {
 }
 onMounted(() => { edges(); bento.value?.addEventListener('scroll', edges, { passive: true }); addEventListener('resize', edges) })
 onUnmounted(() => { bento.value?.removeEventListener('scroll', edges); removeEventListener('resize', edges) })
+
+/*
+ * The rail arrives. On the first load, on waking from rest, and on coming back
+ * from a room, the cards come in from off the right edge one after another,
+ * left to right, and settle.
+ *
+ * It is two things in one move: a screen coming to life, and the row saying
+ * which way it goes. They travel the way a swipe would take them, so the
+ * direction they arrive from is the direction there is more in -- a flow the
+ * other way would look just as pretty and point at nothing.
+ *
+ * Done as a transition rather than an animation on purpose: each card already
+ * carries the two scroll-driven animations that soften the row's edges, and a
+ * third would have to be merged into the same animation-* lists. `translate` is
+ * a property neither of them touches. Nothing is left on a card once it is
+ * home, so a held card, a dimmer drag and the edge fade all behave as if this
+ * had never happened.
+ */
+const flow = ref<'' | 'set' | 'go'>('')
+const stillMoves = !matchMedia('(prefers-reduced-motion: reduce)').matches
+let settle: number | undefined
+function arrive() {
+  if (!stillMoves || empty.value) return       // reduced motion: the row is simply there, and never left mid-slide
+  flow.value = 'set'                           // every card a step to the right of where it belongs, no transition
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    if (flow.value !== 'set') return
+    flow.value = 'go'
+    clearTimeout(settle)
+    settle = window.setTimeout(() => (flow.value = ''), 1300)   // past the last card's 56ms x 9 wait plus its 560ms, so none is cut off mid-slide
+  }))
+}
+onMounted(arrive)
+watch(() => props.woke, arrive)
+onUnmounted(() => clearTimeout(settle))
 </script>
 
 <template>
@@ -144,10 +180,11 @@ onUnmounted(() => { bento.value?.removeEventListener('scroll', edges); removeEve
     <!-- the rail sits in the middle of whatever height is left, as drawn; the
          rooms, when they are here at all, wait underneath -->
     <div class="rail-stage">
-      <div class="bento" ref="bento" v-if="!empty" role="group" aria-label="On right now">
-        <template v-for="c in cards" :key="c.key">
-          <component v-if="c.kind === 'device'" :is="tile(c.device!)" class="bento-card" :device="c.device!" v-hold="() => (store.opened = c.device!)" />
-          <div v-else class="bento-card tile scene-card">
+      <!-- --flow-i is the card's place in the row: the entrance leans on it for the stagger -->
+      <div class="bento" ref="bento" v-if="!empty" :class="flow" role="group" aria-label="On right now">
+        <template v-for="(c, i) in cards" :key="c.key">
+          <component v-if="c.kind === 'device'" :is="tile(c.device!)" class="bento-card" :style="{ '--flow-i': i }" :device="c.device!" v-hold="() => (store.opened = c.device!)" />
+          <div v-else class="bento-card tile scene-card" :style="{ '--flow-i': i }">
             <span class="scene-card-when">{{ when }}</span>
             <SceneBar :room="null" />
           </div>

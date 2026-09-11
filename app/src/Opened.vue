@@ -23,7 +23,7 @@ import Icon from './Icon.vue'
 const dev = computed(() => store.opened)
 const kind = computed(() => dev.value ? cap(dev.value) : '')
 const room = computed(() => dev.value ? roomOf(dev.value)?.name ?? '' : '')
-const shown = ref(false)              // flipped after mount so the transitions have a from-state
+const shown = ref(false)              // flipped a frame after mount, so the transitions have a from-state to leave from
 
 /* the one number worth saying in large type: how bright, how warm, or just what it is doing */
 const big = computed(() => {
@@ -70,10 +70,20 @@ async function dim(e: Event) {
   catch (err: any) { notify(err.message, 'error') }
 }
 
-function close() { shown.value = false; setTimeout(() => (store.opened = null), 280) }
+function close() { shown.value = false; setTimeout(() => (store.opened = null), 300) }   // a frame past the .28s slide down, so the last of it is never clipped
 
 function onKey(e: KeyboardEvent) { if (e.key === 'Escape') close() }
-onMounted(() => { requestAnimationFrame(() => (shown.value = true)); window.addEventListener('keydown', onKey) })
+/* Two frames, not one. onMounted runs before the browser has painted anything,
+   and a single requestAnimationFrame still lands inside the frame that paints
+   the panel for the first time -- so `shown` was already on by that first paint
+   and there was nothing to transition from: the panel simply appeared. The
+   second frame is the one that gets painted down at translateY(100%), and the
+   rise begins from there. Closing never had the problem, which is why it was
+   only ever wrong in one direction. */
+onMounted(() => {
+  requestAnimationFrame(() => requestAnimationFrame(() => (shown.value = true)))
+  window.addEventListener('keydown', onKey)
+})
 onUnmounted(() => window.removeEventListener('keydown', onKey))
 </script>
 
