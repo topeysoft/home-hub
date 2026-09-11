@@ -26,8 +26,12 @@ export default defineConfig({
     // Chromium, not the iPad's own WebKit: the touch specs dispatch through CDP, which only Chromium has.
     { name: 'touch', testMatch: /.*\.touch\.spec\.ts/, use: { ...devices['iPad Pro 11'], browserName: 'chromium', hasTouch: true } },
   ],
-  // The mock serves ../dist, so the panel has to be built first; CI does that in the step before.
-  webServer: {
+  /* The mock serves ../dist, so the panel has to be built first; CI does that in the step before.
+     BASE points the whole suite somewhere else — another branch's panel on another port, or a real
+     hub — and when it is set nothing is started here, because something is already running there.
+     Locally, with no BASE, an already-running `npm run mock` is reused: quick, but it is whatever
+     that mock was started to serve, so pass BASE when more than one branch is in play. */
+  webServer: process.env.BASE ? undefined : {
     command: 'node mock/brain.mjs',
     url: 'http://localhost:8399/',
     reuseExistingServer: !process.env.CI,

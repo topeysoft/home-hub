@@ -12,8 +12,10 @@ name: ci
 
 on:
   push:
-    branches: [main]
+    branches: ["**"]          # every branch, not only main: a long-lived one like panel-bento is
+                              # exactly where a regression has time to settle in unnoticed
   pull_request:
+  workflow_call:              # the release workflows run this against a tag before they publish
 
 # A second push to the same branch makes the first one's run pointless; stop it rather than queue behind it.
 concurrency:
