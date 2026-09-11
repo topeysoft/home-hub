@@ -13,6 +13,11 @@ export default defineConfig({
   use: {
     baseURL: process.env.BASE || 'http://localhost:8399',
     trace: 'retain-on-failure',
+    // One clock and one language for every machine. The panel draws the sky from the browser's own
+    // time and writes its times with toLocaleTimeString, so a CI box in UTC would be running a
+    // different test from the one written here. Chicago is where the mock house is.
+    timezoneId: 'America/Chicago',
+    locale: 'en-US',
   },
   /* Two screens, and a spec belongs to one of them: *.touch.spec.ts is the wall panel being used
      with a finger, everything else is a mouse on a 1280x800 wall. */
