@@ -1,15 +1,16 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { store, activity, roomActive, cap, houseLine, whatsOn, describe, ago, refreshEvents, loadHealth } from '../store'
+import { store, cap, houseLine, whatsOn, describe, ago, refreshEvents, loadHealth } from '../store'
 import { type Room } from '../api'
 import { upcomingLine } from '../upcoming'
 import Icon from '../Icon.vue'
 import SceneBar from '../SceneBar.vue'
 import OnNow from '../OnNow.vue'
 import Attention from '../Attention.vue'
+import RoomGrid from '../RoomGrid.vue'
 import CameraTile from '../tiles/CameraTile.vue'
 
-const props = defineProps<{ rooms: Room[]; now: Date }>()   // now: the clock the shell shows, so a preview hour agrees with itself
+const props = defineProps<{ rooms: Room[]; now: Date; topNav?: boolean }>()   // now: the clock the shell shows, so a preview hour agrees with itself; topNav: the command box is in the bar below
 defineEmits<{ open: [id: string] }>()
 
 const hour = computed(() => props.now.getHours())
@@ -18,20 +19,6 @@ const line = computed(houseLine)
 const next = computed(() => upcomingLine(props.now))   // what the house will do next on its own
 const anyOn = computed(() => whatsOn().length > 0)
 const cameras = computed(() => props.rooms.flatMap(r => r.devices.filter(d => cap(d) === 'camera')))
-/* the one number worth a glance on a room card: its temperature, when a sensor in the room reads one */
-function temp(r: Room): string {
-  const d = r.devices.find(d => d.capability === 'sensor.temperature' && Number.isFinite(Number(d.state)))
-  return d ? `${Math.round(Number(d.state))}°` : ''
-}
-
-/* the footer says so too, quietly, for someone who has scrolled past the nudge */
-const update = computed(() => store.status?.update ?? null)
-const updateReady = computed(() => !!update.value?.available && update.value?.state?.state !== 'running' && !update.value?.requested && !store.updating)
-
-const routinesLine = computed(() => {
-  const n = store.routines.length, off = store.routines.filter(r => r.enabled === false).length
-  return `${n === 1 ? '1 routine' : `${n} routines`}${off ? `, ${off} off` : ''}`
-})
 
 const tick = ref(Date.now())   // its own clock, so "3 minutes ago" keeps up; not props.now, which is the hour the shell is showing
 const recent = computed(() => {
@@ -60,7 +47,7 @@ onUnmounted(() => { clearInterval(t1); clearInterval(t2); clearInterval(t3) })
       <SceneBar :room="null" />
     </header>
 
-    <Attention />
+    <Attention :say="!topNav" />
 
     <div class="block" v-if="anyOn">
       <h2 class="label">On right now</h2>
@@ -75,15 +62,7 @@ onUnmounted(() => { clearInterval(t1); clearInterval(t2); clearInterval(t3) })
     </div>
     <div class="block">
       <h2 class="label">Rooms</h2>
-      <div class="room-grid">
-        <button v-for="r in rooms" :key="r.id" class="room-card" :class="{ active: roomActive(r), empty: !r.devices.length, attention: r.id === 'unassigned' }" @click="$emit('open', r.id)">
-          <div class="room-card-top">
-            <span class="room-temp" v-if="temp(r)"><Icon name="sensor" :size="14" />{{ temp(r) }}</span>
-          </div>
-          <div class="room-card-name">{{ r.name }}</div>
-          <div class="room-card-activity">{{ activity(r) }}</div>
-        </button>
-      </div>
+      <RoomGrid :rooms="rooms" @open="$emit('open', $event)" />
     </div>
 
     <div class="block" v-if="recent.length">
@@ -96,11 +75,5 @@ onUnmounted(() => { clearInterval(t1); clearInterval(t2); clearInterval(t3) })
         </li>
       </ul>
     </div>
-    <footer class="home-foot">
-      <button class="home-place" v-if="store.ambient.location" @click="store.sheet = 'location'"><Icon name="pin" :size="14" /> {{ store.ambient.location.name }}<span class="home-change">Change</span></button>
-      <button class="home-place" v-if="store.routines.length" @click="store.sheet = 'routines'"><Icon name="sparkle" :size="14" /> {{ routinesLine }}<span class="home-change">See</span></button>
-      <button class="home-place" @click="store.sheet = 'look'"><Icon name="sun" :size="14" /> How it looks<span class="home-change">Change</span></button>
-      <button class="home-place" @click="store.sheet = 'hub'"><Icon name="home" :size="14" /> This hub{{ store.status?.version && store.status.version !== 'dev' ? ` · ${store.status.version}` : '' }}<span class="home-change">{{ updateReady ? 'Update ready' : 'Open' }}</span></button>
-    </footer>
   </section>
 </template>

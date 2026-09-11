@@ -36,7 +36,7 @@ DEFAULT_HA = "http://localhost:8123"
 # How the panel looks. The keys are the whole vocabulary: anything else a screen
 # sends is dropped, so an old panel cannot teach the house a setting it will not
 # understand. Values are checked in the panel, which owns what they mean.
-LOOK = {"tone": "follow", "layout": "stack"}
+LOOK = {"tone": "follow", "layout": "stack", "nav": "side"}   # nav: where the way around the house lives -- a list down the side, or tabs across the top
 US_ZONES = ("America/New_York", "America/Chicago", "America/Denver", "America/Phoenix", "America/Los_Angeles", "America/Anchorage",
             "America/Juneau", "America/Sitka", "America/Nome", "America/Adak", "America/Boise", "America/Detroit", "America/Menominee",
             "America/Indiana/", "America/Kentucky/", "America/North_Dakota/", "Pacific/Honolulu", "US/")

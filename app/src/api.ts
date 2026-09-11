@@ -1,5 +1,5 @@
 import { request } from './code'
-export type Device = { id: string; name: string; room_id: string; capability: string; state: string; attrs: Record<string, any>; hw?: string | null; own_room?: boolean }
+export type Device = { id: string; name: string; room_id: string; capability: string; state: string; attrs: Record<string, any>; hw?: string | null; own_room?: boolean; maker?: string | null }
 export type Room = { id: string; name: string; devices: Device[]; intent: string; set_by?: string | null; hold_until?: number | null; motion_at?: number | null }
 export type Intent = { room: string; intent: string; set_by: string | null; hold_until: number | null }
 export type Home = { name?: string | null; temp_unit?: string; entry?: string[]; rooms: Room[] }   // entry: the rooms people come in through
@@ -22,7 +22,7 @@ export type Step = { flow_id: string | null; handler: string; kind: string; type
 export type Weather = { id: string; condition: string; temperature: number | null; unit: string; humidity: number | null; wind_speed: number | null; wind_unit: string | null }
 export type Place = { name: string; lat: number; lon: number; tz?: string | null }
 /* look: how the panel looks, decided once by the house rather than per screen */
-export type Look = { tone: string; layout: string }
+export type Look = { tone: string; layout: string; nav?: string }
 export type Ambient = { location: Place | null; weather: Weather | null; look?: Look }
 export type Event = { ts: number; kind: string; subject: string; old: string | null; new: string | null; source: string; detail: string | null }
 /* Who is home, as the brain sees it: null while it cannot tell (no people, no alarm). */

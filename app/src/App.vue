@@ -1,27 +1,27 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { store, start, halt, load, visibleRooms, activity, roomActive, houseLine, weatherLine, needsSetup, dismissToast } from './store'
+import { store, start, halt, load, visibleRooms, activity, roomActive, houseLine, weatherLine, needsSetup, dismissToast, updateReady } from './store'
 import Setup from './Setup.vue'
 import Join from './Join.vue'
-import AddSheet from './AddSheet.vue'
-import CodeSheet from './CodeSheet.vue'
 import CodePrompt from './CodePrompt.vue'
 import { lock } from './code'
 import Sky from './Sky.vue'
 import HomeView from './views/HomeView.vue'
 import RoomView from './views/RoomView.vue'
 import Viewer from './Viewer.vue'
-import LocationSheet from './LocationSheet.vue'
 import WhySheet from './WhySheet.vue'
-import RoutinesSheet from './RoutinesSheet.vue'
-import HubSheet from './HubSheet.vue'
-import LookSheet from './LookSheet.vue'
+import HousePanel from './HousePanel.vue'
+import { isPage } from './pages'
 import Opened from './Opened.vue'
 import Icon from './Icon.vue'
 import { upcomingLine } from './upcoming'
 import { isTone, toneVars, type ToneName } from './tone'
-import { isLayout, type LayoutName } from './layout'
+import { isLayout, isNav, type LayoutName, type NavName } from './layout'
 import RailView from './views/RailView.vue'
+import RoomsView from './views/RoomsView.vue'
+import CamerasView from './views/CamerasView.vue'
+import TopBar from './TopBar.vue'
+import Household from './Household.vue'
 
 const now = ref(new Date())
 const selected = ref<string | null>(new URLSearchParams(location.search).get('room') ?? safeGet('room'))   // ?room=kitchen deep-links a kiosk
@@ -32,6 +32,7 @@ const rooms = computed(visibleRooms)
 /* the rail keeps the current room in view: on a wall it scrolls the list, on a phone the chip strip */
 watch(selected, () => nextTick(() => document.querySelector('.rail-item.active')?.scrollIntoView({ block: 'nearest', inline: 'nearest' })))
 const setup = computed(() => !!store.status && (store.previewSetup || needsSetup()))
+const panel = computed(() => isPage(store.sheet))   // This house is open, on one of its pages
 const room = computed(() => rooms.value.find(r => r.id === selected.value) ?? null)
 
 const ambient = computed(() => store.sky.elevation < -8 ? 'night' : store.sky.elevation < 6 ? (store.sky.azimuth < 180 ? 'dawn' : 'dusk') : 'day')
@@ -45,6 +46,14 @@ const toneParam = params.get('tone'), layoutParam = params.get('layout')
 const toneName = computed<ToneName>(() => isTone(toneParam) ? toneParam : (isTone(store.ambient.look?.tone) ? store.ambient.look!.tone as ToneName : 'follow'))
 const tone = computed(() => toneVars(store.sky.elevation, store.sky.condition, toneName.value))
 const layout = computed<LayoutName>(() => isLayout(layoutParam) ? layoutParam : (isLayout(store.ambient.look?.layout) ? store.ambient.look!.layout as LayoutName : 'stack'))
+
+/* where the way around the house lives -- the side list, or tabs across the
+   top -- is the house's choice too; ?nav=top previews it. The tab is this
+   screen's own, like the room it is in. */
+const navParam = params.get('nav')
+const nav = computed<NavName>(() => isNav(navParam) ? navParam : (isNav(store.ambient.look?.nav) ? store.ambient.look!.nav as NavName : 'side'))
+const tab = ref<'home' | 'rooms' | 'cameras'>('home')
+function go(t: 'home' | 'rooms' | 'cameras') { tab.value = t; open(null) }
 
 /* an opened device lends the room its colour: a warm lamp pushes the field
    amber, a lock or a camera cools it. Falls back to the lamp, which is what a
@@ -69,9 +78,10 @@ const IDLE_AFTER = 3 * 60 * 1000
 const idle = ref(new URLSearchParams(location.search).get('rest') === '1')   // ?rest=1 previews the resting screen
 let lastTouch = Date.now()
 const kiosk = window.matchMedia('(min-width: 861px)')
+const woke = ref(0)   // counted so Home can arrive again on every wake, not only on the first load
 function touched() {
   lastTouch = Date.now()
-  if (idle.value) { idle.value = false; open(null) }
+  if (idle.value) { idle.value = false; open(null); woke.value++ }
 }
 watch(() => store.asks.length, (n, o) => { if (n > o) touched() })   // a phone knocking wakes the wall so the card is seen
 async function rejoin() { halt(); await start() }                       // this screen just joined: read the house and reconnect
@@ -93,12 +103,13 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="shell" :data-ambient="ambient" :style="[tone, openTint]" :class="{ resting: idle, 'in-setup': setup || lock.unpaired, 'opened-shell': !!store.opened }">
+  <div class="shell" :data-ambient="ambient" :data-nav="nav" :style="[tone, openTint]" :class="{ resting: idle, 'in-setup': setup || lock.unpaired, 'opened-shell': !!store.opened || panel }">
     <Sky :quiet="!idle && !setup" />
     <div class="sky-veil"></div>
     <Join v-if="lock.unpaired" @joined="rejoin" />
     <Setup v-else-if="setup" />
-    <aside class="rail" v-if="!setup && !lock.unpaired">
+    <TopBar v-if="!setup && !lock.unpaired && nav === 'top'" :clock="clock" :day="day" :now="shown" :tab="tab" :in-room="!!room" @go="go" />
+    <aside class="rail" v-if="!setup && !lock.unpaired && nav === 'side'">
       <div class="rail-clock">
         <div class="rail-time">{{ clock }}</div>
         <div class="rail-day">{{ day }}</div>
@@ -119,6 +130,10 @@ onUnmounted(() => {
         <button class="rail-item rail-add" :class="{ attention: store.found.length }" @click="store.sheet = 'add'">
           <Icon name="plus" :size="16" /><span class="rail-name">Add a device</span>
           <span class="rail-sub" v-if="store.found.length">{{ store.found.length }} found nearby</span>
+        </button>
+        <button class="rail-item rail-house" :class="{ attention: updateReady() }" @click="store.sheet = 'house'">
+          <Icon name="menu" :size="16" /><span class="rail-name">This house</span>
+          <span class="rail-sub" v-if="updateReady()">An update is ready</span>
         </button>
       </div>
       <div class="rail-foot">
@@ -150,20 +165,23 @@ onUnmounted(() => {
       </div>
       <Transition v-else name="view" mode="out-in">
         <RoomView v-if="room" :key="room.id" :room="room" @back="open(null)" @open="open" />
-        <RailView v-else-if="layout === 'rail'" key="home-rail" :rooms="rooms" :now="shown" @open="open" />
-        <HomeView v-else key="home-stack" :rooms="rooms" :now="shown" @open="open" />
+        <RoomsView v-else-if="nav === 'top' && tab === 'rooms'" key="rooms" :rooms="rooms" @open="open" />
+        <CamerasView v-else-if="nav === 'top' && tab === 'cameras'" key="cameras" :rooms="rooms" />
+        <RailView v-else-if="layout === 'rail'" key="home-rail" :rooms="rooms" :now="shown" :top-nav="nav === 'top'" :woke="woke" @open="open" />
+        <HomeView v-else key="home-stack" :rooms="rooms" :now="shown" :top-nav="nav === 'top'" @open="open" />
       </Transition>
     </main>
 
+    <Household v-if="!setup && !lock.unpaired && nav === 'top'" :room="room?.id ?? null" />
+
     <Viewer />
     <Opened v-if="store.opened" />
-    <Transition name="sheet"><LocationSheet v-if="store.sheet === 'location'" /></Transition>
-    <Transition name="sheet"><AddSheet v-if="store.sheet === 'add'" /></Transition>
-    <Transition name="sheet"><CodeSheet v-if="store.sheet === 'code'" /></Transition>
+    <!-- :duration because what moves is inside: Vue times a transition from the
+         element it is put on, and this one's root never moves, so on the way out
+         it was pulling the panel off the screen before it had slid anywhere.
+         These two numbers are the panel's own slide and the veil's fade. -->
+    <Transition name="house" :duration="{ enter: 420, leave: 320 }"><HousePanel v-if="panel" /></Transition>
     <Transition name="sheet"><WhySheet v-if="store.sheet === 'why'" /></Transition>
-    <Transition name="sheet"><RoutinesSheet v-if="store.sheet === 'routines'" /></Transition>
-    <Transition name="sheet"><HubSheet v-if="store.sheet === 'hub'" /></Transition>
-    <Transition name="sheet"><LookSheet v-if="store.sheet === 'look'" /></Transition>
     <Transition name="sheet"><CodePrompt v-if="lock.prompt" /></Transition>
 
     <Transition name="toast">

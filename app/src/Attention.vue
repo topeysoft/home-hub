@@ -18,6 +18,11 @@ import Say from './Say.vue'
 import Asks from './Asks.vue'
 import PhoneSteps from './PhoneSteps.vue'
 
+/* say: whether the command box is drawn here. With the tabs across the top it
+   lives in the bar along the bottom instead (see App.vue) -- still on Home, still
+   on every layout, just not twice. */
+withDefaults(defineProps<{ say?: boolean }>(), { say: true })
+
 /* an update, offered once it exists and installed with one tap; the host does the work */
 const update = computed(() => store.status?.update ?? null)
 const updateReady = computed(() => !!update.value?.available && update.value?.state?.state !== 'running' && !update.value?.requested && !store.updating)
@@ -53,9 +58,11 @@ defineExpose({ updateReady })
 </script>
 
 <template>
-  <Say />
+  <Say v-if="say" />
   <Asks />
 
+  <!-- one row for the nudges: a column under the side list, a strip of chips under the tabs -->
+  <div class="nudges">
   <button class="nudge" v-if="updateReady" @click="install">
     <span class="nudge-icon"><Icon name="sparkle" :size="20" /></span>
     <span class="nudge-text"><span class="nudge-title">An update is ready</span><span class="nudge-sub">{{ update?.latest?.title || 'New for the hub.' }} Tap to install; it takes a few minutes and the lights keep working.</span></span>
@@ -80,6 +87,7 @@ defineExpose({ updateReady })
     <span class="nudge-icon"><Icon name="phone" :size="20" /></span>
     <span class="nudge-text"><span class="nudge-title">Put the house on your home screen</span><span class="nudge-sub">One tap from your phone's first screen, full screen, no address to type.</span></span>
   </button>
+  </div>
   <div class="phone-card" v-if="phoneSteps">
     <PhoneSteps />
     <button class="button small ghost" @click="dismissPhone">Done, don't show this again</button>

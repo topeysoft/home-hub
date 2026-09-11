@@ -13,7 +13,7 @@ export const store = reactive({
   ambient: { location: null, weather: null } as Ambient,
   ambientLoaded: false,
   rules: {} as Rules,                        // scene rules from the brain, to tell whether a room still matches its scene
-  sheet: (['location', 'add', 'code', 'why', 'routines', 'hub', 'look'].includes(new URLSearchParams(location.search).get('sheet') ?? '') ? new URLSearchParams(location.search).get('sheet') : null) as null | 'location' | 'add' | 'code' | 'why' | 'routines' | 'hub' | 'look',   // the few soft sheets the panel has; ?sheet=location previews one
+  sheet: (['location', 'add', 'code', 'why', 'routines', 'hub', 'look', 'house', 'people'].includes(new URLSearchParams(location.search).get('sheet') ?? '') ? new URLSearchParams(location.search).get('sheet') : null) as null | 'location' | 'add' | 'code' | 'why' | 'routines' | 'hub' | 'look' | 'house' | 'people',   // the few soft sheets the panel has; ?sheet=location previews one
   whyRoom: new URLSearchParams(location.search).get('room') as string | null,   // the room the why sheet is about; ?sheet=why&room=kitchen previews it
   resume: new URLSearchParams(location.search).get('signin') as string | null,   // a conversation already open in the house (signing an account in again); the add sheet picks it up. ?sheet=add&signin=<flow> previews it
   routines: [] as Routine[],                 // the brain's rules, for the routines sheet and to name a rule on a room
@@ -290,6 +290,8 @@ export async function loadHealth() {
   try { store.notes = (await getHealth()).notes } catch {}
 }
 export const routineById = (id: string) => store.routines.find(r => r.id === id)
+/** An update is there to install and nothing is already installing it. */
+export function updateReady(): boolean { const u = store.status?.update; return !!u?.available && u.state?.state !== 'running' && !u.requested && !store.updating }
 export function openWhy(roomId: string) { store.whyRoom = roomId; store.sheet = 'why' }
 /** Pick up a conversation the house already has open, on the sheet that draws every other one. */
 export function openFlow(flowId: string) { store.resume = flowId; store.sheet = 'add' }

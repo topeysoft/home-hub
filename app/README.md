@@ -79,12 +79,12 @@ and the sheet with `?sheet=location`.
 - `src/PairPanel.vue` — the door for a Zigbee, Z‑Wave or Matter device, offered on the Add sheet for
   each radio that is up: what to press, a live line while the hub listens, the S2 code when a lock
   asks, and what joined.
-- `src/code.ts`, `src/CodePrompt.vue`, `src/CodeSheet.vue` — the code on the settings. Every request
+- `src/code.ts`, `src/CodePrompt.vue`, `src/CodePage.vue` — the code on the settings. Every request
   goes through `request()`, which attaches the code kept for this tab and, when the hub answers 401
   `code`, asks for it and retries. Controls never ask; changes do. `?sheet=code` previews the sheet.
 - `src/Join.vue`, `src/Asks.vue` — the phones that belong to the house. When the hub answers 401 `phone`, `request()`
   raises the join screen: give a name, ask, and wait for a screen that is already in to tap Allow on the card
-  `Asks.vue` shows under the command box; or type the code. `HubSheet.vue` lists the phones (`?sheet=hub&phones=1`).
+  `Asks.vue` shows under the command box; or type the code. `PeoplePage.vue` lists the phones (`?sheet=people`). Every settings page is a page of one panel, `HousePanel.vue` (`?sheet=house`): the doors down the left, the page on the right.
 - `src/tiles/` — one tile per capability. The light tile is the dimmer (tap toggles, drag dims).
   Media shows artwork, transport and volume. Cameras open full screen in `src/Viewer.vue`.
 - `src/Viewer.vue`, `src/live.ts` — one camera, full screen. A still comes up at once; behind it the

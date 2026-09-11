@@ -18,13 +18,17 @@ watch(() => lock.prompt, p => { if (p) { code.value = ''; nextTick(() => input.v
 <template>
   <div class="sheet-back code-back" @click.self="done(false)">
     <div class="sheet code" role="dialog" aria-label="The code">
-      <button class="round sheet-close" @click="done(false)" aria-label="Cancel"><Icon name="close" :size="20" /></button>
-      <h2 class="display">What's the code?</h2>
+      <div class="sheet-head">
+        <h2 class="display">What's the code?</h2>
+        <button class="round sheet-close" @click="done(false)" aria-label="Cancel"><Icon name="close" :size="20" /></button>
+      </div>
+      <div class="sheet-body">
       <p class="sheet-lede">{{ lock.prompt?.wrong ? "That wasn't it. Try again." : 'Changing the house needs the code that was set for it.' }}</p>
       <input ref="input" class="input code-input" v-model="code" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" maxlength="8" placeholder="••••" @keydown.enter="submit" />
       <div class="flow-actions">
         <button class="button" :disabled="code.trim().length < 4" @click="submit">Continue</button>
         <button class="button ghost" @click="done(false)">Cancel</button>
+      </div>
       </div>
     </div>
   </div>

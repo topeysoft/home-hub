@@ -13,15 +13,15 @@ const DIST = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'dist
 const PORT = Number(process.env.PORT || 8399)
 const now = Math.floor(Date.now() / 1000)
 
-const dev = (id, name, room_id, capability, state, attrs = {}) => ({ id, name, room_id, capability, state, attrs })
+const dev = (id, name, room_id, capability, state, attrs = {}, maker = null) => ({ id, name, room_id, capability, state, attrs, maker })   // maker: what the registry knows, often nothing
 const rooms = [
   { id: 'living', name: 'Living room', intent: 'movie', set_by: 'rule:evening-lights', hold_until: null, devices: [
-    dev('l1', 'Ceiling light', 'living', 'light', 'on', { brightness: 90, supported_color_modes: ['brightness'] }),
+    dev('l1', 'Ceiling light', 'living', 'light', 'on', { brightness: 90, supported_color_modes: ['brightness'] }, 'Philips Hue'),
     dev('l2', 'Floor lamp', 'living', 'light', 'on', { brightness: 60, supported_color_modes: ['brightness'] }),
     dev('l3', 'Reading lamp', 'living', 'light', 'off', { supported_color_modes: ['onoff'] }),
     dev('m1', 'Living room TV', 'living', 'media', 'playing', { media_title: 'The Bear', media_artist: 'Season 3, Episode 4', app_name: 'Disney+', volume_level: 0.35, entity_picture: '/x.jpg' }),
     dev('s1', 'Sonos', 'living', 'media', 'paused', { media_title: 'Blue in Green', media_artist: 'Miles Davis', volume_level: 0.2 }),
-    dev('c1', 'Blinds', 'living', 'cover', 'open', { current_position: 70 }),
+    dev('c1', 'Blinds', 'living', 'cover', 'open', { current_position: 70 }, 'IKEA'),
     dev('t1', 'Thermostat', 'living', 'climate', 'cool', { current_temperature: 74, temperature: 71, hvac_action: 'cooling', hvac_modes: ['heat', 'cool', 'heat_cool', 'off'], fan_modes: ['on', 'auto'], fan_mode: 'auto', current_humidity: 48 }),
     dev('mo1', 'Motion', 'living', 'motion', 'on', {}),
     dev('te1', 'Temperature', 'living', 'sensor.temperature', '73.4', { unit_of_measurement: '°F' }),
@@ -75,8 +75,12 @@ const status = { driver: process.env.ENGINE === 'down' ? 'down' : 'ready', reaso
     { id: 'matter', name: 'Matter', state: 'ready', text: 'Running', port: 5580 },
     { id: 'ring', name: 'Ring', state: 'sign-in', text: 'Needs a sign-in', port: 55123 },
   ], problems: [] }
+// who the house knows and who is in, for the household strip; PEOPLE=0 is a house with nobody set up
+const presence = process.env.PEOPLE === '0'
+  ? { somebody: null, since: null, source: null, people: [], alarm: null }
+  : { somebody: true, since: Date.now() - 3600e3, source: 'people', people: [{ name: 'Temi', home: true }, { name: 'Sam', home: false }, { name: 'Ade', home: true }], alarm: null }
 const ambient = { location: { name: 'Holts Summit, MO', lat: 38.6355985, lon: -92.1176322 }, weather: { id: 'w', condition: process.env.WX || 'partlycloudy', temperature: 78, unit: '°F', humidity: 48, wind_speed: 6, wind_unit: 'mph' },
-  look: { tone: process.env.TONE || 'follow', layout: process.env.LAYOUT || 'stack' } }   // LAYOUT=rail TONE=pastel start the house somewhere else
+  look: { tone: process.env.TONE || 'follow', layout: process.env.LAYOUT || 'stack', nav: process.env.NAV || 'side' } }   // LAYOUT=rail TONE=pastel NAV=top start the house somewhere else
 const scenes = { movie: [['light', 'off', {}], ['media', 'on', {}]], guests: [['light', 'on', {}]], asleep: [['light', 'off', {}], ['media', 'off', {}], ['lock', 'lock', {}]], empty: [['light', 'off', {}], ['media', 'pause', {}]], away: [['light', 'off', {}], ['media', 'off', {}], ['switch', 'off', {}], ['lock', 'lock', {}]] }
 const events = [
   { ts: now - 40, kind: 'state', subject: 'mo1', old: 'off', new: 'on', source: 'ha', detail: null },
@@ -128,6 +132,7 @@ const server = http.createServer((req, res) => {
   if (p === '/setup/status') return json(res, status)
   if (p === '/home') return json(res, home)
   if (p === '/ambient') return json(res, ambient)
+  if (p === '/presence') return json(res, presence)
   if (p === '/scenes') return json(res, scenes)
   if (p === '/events') return json(res, events)
   if (p === '/rules') return json(res, rules)
@@ -164,7 +169,7 @@ const server = http.createServer((req, res) => {
   if (img) { res.writeHead(200, { 'Content-Type': 'image/svg+xml' }); return res.end(PICS[img[1]] ?? pic('#333', '#111')) }
   if (p === '/look' && req.method === 'POST') { let b = ''; req.on('data', c => (b += c)); return req.on('end', () => {
     let v = {}; try { v = JSON.parse(b) } catch {}
-    for (const k of ['tone', 'layout']) if (v[k]) ambient.look[k] = v[k]   // unknown keys dropped, as the brain does
+    for (const k of ['tone', 'layout', 'nav']) if (v[k]) ambient.look[k] = v[k]   // unknown keys dropped, as the brain does
     json(res, ambient.look)
   }) }
   if (req.method === 'POST') return json(res, { ok: true })
