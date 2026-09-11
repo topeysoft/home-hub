@@ -5,7 +5,16 @@ import { allowPhone, denyPhone, type Ask } from './api'
 import Icon from './Icon.vue'
 
 /* A phone on the Wi‑Fi asked to join. Shown on every screen that is already in; allowing needs the code, and the code
-   prompt appears on its own. Let in for a day, a weekend, or for good; every phone starts home-only. */
+   prompt appears on its own. Let in for a day, a weekend, or for good; every phone starts home-only.
+
+   On its look, checked rendered at midday and at midnight: this card deliberately does NOT take its colour from the
+   sky the way tiles and room cards do. It is the one place a person hands out keys to the house, so it has to look
+   the same at every hour — recognising it instantly, and noticing when something about it is off, is the only
+   defence a person has against answering a prompt they should not. The cost is that at a bright hour it stays dark
+   while everything around it goes pale. It still reads as a deliberate card rather than a hole punched in the
+   daylight, for three reasons, and only the first is an accident of arrangement: the scene bar sits beneath it with
+   the same dark treatment, so the two read as one band; it carries a lit edge; and it holds its own buttons. If a
+   layout ever leaves it alone among pale cards, lift it with elevation — a shadow — and never with hue. */
 const choosing = ref<string | null>(null), busy = ref(false)
 const SPANS = [['day', 'For today'], ['weekend', 'For the weekend'], ['keep', 'Keep']] as const
 async function allow(a: Ask, span: 'day' | 'weekend' | 'keep') {
