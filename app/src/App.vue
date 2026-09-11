@@ -20,8 +20,12 @@ import Opened from './Opened.vue'
 import Icon from './Icon.vue'
 import { upcomingLine } from './upcoming'
 import { isTone, toneVars, type ToneName } from './tone'
-import { isLayout, type LayoutName } from './layout'
+import { isLayout, isNav, type LayoutName, type NavName } from './layout'
 import RailView from './views/RailView.vue'
+import RoomsView from './views/RoomsView.vue'
+import CamerasView from './views/CamerasView.vue'
+import TopBar from './TopBar.vue'
+import Household from './Household.vue'
 
 const now = ref(new Date())
 const selected = ref<string | null>(new URLSearchParams(location.search).get('room') ?? safeGet('room'))   // ?room=kitchen deep-links a kiosk
@@ -45,6 +49,14 @@ const toneParam = params.get('tone'), layoutParam = params.get('layout')
 const toneName = computed<ToneName>(() => isTone(toneParam) ? toneParam : (isTone(store.ambient.look?.tone) ? store.ambient.look!.tone as ToneName : 'follow'))
 const tone = computed(() => toneVars(store.sky.elevation, store.sky.condition, toneName.value))
 const layout = computed<LayoutName>(() => isLayout(layoutParam) ? layoutParam : (isLayout(store.ambient.look?.layout) ? store.ambient.look!.layout as LayoutName : 'stack'))
+
+/* where the way around the house lives -- the side list, or tabs across the
+   top -- is the house's choice too; ?nav=top previews it. The tab is this
+   screen's own, like the room it is in. */
+const navParam = params.get('nav')
+const nav = computed<NavName>(() => isNav(navParam) ? navParam : (isNav(store.ambient.look?.nav) ? store.ambient.look!.nav as NavName : 'side'))
+const tab = ref<'home' | 'rooms' | 'cameras'>('home')
+function go(t: 'home' | 'rooms' | 'cameras') { tab.value = t; open(null) }
 
 /* an opened device lends the room its colour: a warm lamp pushes the field
    amber, a lock or a camera cools it. Falls back to the lamp, which is what a
@@ -93,12 +105,13 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="shell" :data-ambient="ambient" :style="[tone, openTint]" :class="{ resting: idle, 'in-setup': setup || lock.unpaired, 'opened-shell': !!store.opened }">
+  <div class="shell" :data-ambient="ambient" :data-nav="nav" :style="[tone, openTint]" :class="{ resting: idle, 'in-setup': setup || lock.unpaired, 'opened-shell': !!store.opened }">
     <Sky :quiet="!idle && !setup" />
     <div class="sky-veil"></div>
     <Join v-if="lock.unpaired" @joined="rejoin" />
     <Setup v-else-if="setup" />
-    <aside class="rail" v-if="!setup && !lock.unpaired">
+    <TopBar v-if="!setup && !lock.unpaired && nav === 'top'" :clock="clock" :day="day" :now="shown" :tab="tab" :in-room="!!room" @go="go" />
+    <aside class="rail" v-if="!setup && !lock.unpaired && nav === 'side'">
       <div class="rail-clock">
         <div class="rail-time">{{ clock }}</div>
         <div class="rail-day">{{ day }}</div>
@@ -150,10 +163,14 @@ onUnmounted(() => {
       </div>
       <Transition v-else name="view" mode="out-in">
         <RoomView v-if="room" :key="room.id" :room="room" @back="open(null)" @open="open" />
+        <RoomsView v-else-if="nav === 'top' && tab === 'rooms'" key="rooms" :rooms="rooms" @open="open" />
+        <CamerasView v-else-if="nav === 'top' && tab === 'cameras'" key="cameras" :rooms="rooms" />
         <RailView v-else-if="layout === 'rail'" key="home-rail" :rooms="rooms" :now="shown" @open="open" />
         <HomeView v-else key="home-stack" :rooms="rooms" :now="shown" @open="open" />
       </Transition>
     </main>
+
+    <Household v-if="!setup && !lock.unpaired && nav === 'top'" />
 
     <Viewer />
     <Opened v-if="store.opened" />

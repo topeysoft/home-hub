@@ -893,3 +893,71 @@ select.input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://ww
    the dimmer bar and the art at the bottom. No logo to license or get wrong. */
 .tile-maker { position: absolute; top: 16px; right: 16px; z-index: 1; padding: 5px 9px; border-radius: 999px; font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase;
   background: var(--card-hi, var(--surface-hi)); color: var(--card-ink-2, var(--ink-2)); pointer-events: none; }
+
+/* ---------- Top navigation ----------
+   Tabs across the top and the household along the bottom, instead of the list
+   down the side. The shell becomes three rows; the stage keeps its width. See
+   layout.ts for what each way around the house is for. */
+.shell[data-nav="top"] { grid-template-columns: 1fr; grid-template-rows: auto 1fr auto; }
+.topbar { display: flex; align-items: center; gap: 24px; padding: 16px 40px 0; min-width: 0; }
+.topbar-clock { display: flex; align-items: baseline; gap: 12px; flex: 1 1 0; min-width: 0; }
+.topbar-time { font-size: 28px; line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.topbar-day { font-size: 13.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tabs { display: flex; gap: 4px; padding: 4px; border-radius: 999px; background: rgba(26, 28, 34, .55); border: 1px solid var(--edge);
+  backdrop-filter: var(--frost); -webkit-backdrop-filter: var(--frost); flex: 0 0 auto; }
+.tab { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 18px; border-radius: 999px; font-size: 15px; color: var(--ink-2);
+  transition: background .18s var(--ease), color .18s var(--ease); }
+.tab svg { color: var(--muted); }
+.tab.active { background: var(--surface-hi); color: var(--ink); }
+.tab.active svg { color: var(--ink-2); }
+.tab:active { background: var(--surface-press); }
+.topbar-right { display: flex; align-items: center; justify-content: flex-end; gap: 14px; flex: 1 1 0; min-width: 0; }
+.topbar-add { position: relative; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; color: var(--ink-2);
+  background: var(--surface); border: 1px solid var(--edge); backdrop-filter: var(--frost); -webkit-backdrop-filter: var(--frost); }
+.topbar-add.attention::after { content: ""; position: absolute; top: 4px; right: 4px; width: 8px; height: 8px; border-radius: 50%; background: var(--lamp); box-shadow: 0 0 8px 1px var(--lamp-glow); }
+.household { display: flex; align-items: center; gap: 14px; padding: 10px 40px 18px; }
+.household-label { font-size: 14px; color: var(--ink-2); }
+.household-people { display: flex; }
+.person { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; margin-left: -10px; font-size: 12.5px; font-weight: 600; letter-spacing: .02em;
+  background: linear-gradient(140deg, #8a7f6a, #4a4238); color: var(--ink); border: 2px solid var(--bg); transition: opacity .3s var(--ease); }
+.person:first-child { margin-left: 0; }
+.person.out { opacity: .38; }             /* out of the house: still a member, not currently in */
+.person.unknown { opacity: .6; }
+.household-line { font-size: 13.5px; color: var(--muted); margin-left: 4px; }
+.cameras-all { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+/* the drawing of each way around, for the sheet: a bar down the side, or across the top */
+.look-shape.look-nav-side { grid-template-columns: 14px 1fr; }
+.look-shape.look-nav-top { grid-template-rows: 12px 1fr; }
+@media (max-width: 860px) {
+  .topbar { flex-wrap: wrap; gap: 10px; padding: 14px 16px 0; }
+  .topbar-clock { flex: 1 1 auto; }
+  .topbar-right { flex: 0 0 auto; }
+  .tabs { order: 3; width: 100%; overflow-x: auto; }
+  .tab { padding: 0 14px; white-space: nowrap; }
+  .household { padding: 8px 16px 14px; }
+}
+
+/* ---------- the rail, sized as drawn ----------
+   Two rows that flow sideways. A light, a film, a lock take both rows -- 340
+   tall, the height the design was drawn at -- while a camera and a thermostat
+   are small enough to stack, two to a column. Widths are per kind, as drawn.
+   The row height is chosen so a tall card comes to exactly 340. */
+.bento { display: grid; grid-auto-flow: column dense; grid-template-rows: repeat(2, 161px); grid-auto-columns: max-content; gap: 18px; align-items: stretch; }
+.bento .tile { border-radius: 26px; height: 100%; min-height: 0; }
+.bento .tile.light, .bento .tile.media, .bento .tile.plain { grid-row: span 2; }
+.bento .tile.camera, .bento .tile.climate { grid-row: span 1; }
+.bento .tile.media { width: 372px; }
+.bento .tile.light { width: 320px; }
+.bento .tile.plain { width: 268px; }
+.bento .tile.camera, .bento .tile.climate { width: 248px; aspect-ratio: auto; }
+.bento .tile-body { min-height: 0; }
+@media (max-width: 860px) {
+  /* on a phone the bento stops being a row: one column, natural heights */
+  .bento { grid-auto-flow: row; grid-template-rows: none; grid-template-columns: 1fr; grid-auto-columns: auto; }
+  .bento .tile { height: auto; min-height: 150px; }
+  .bento .tile.light, .bento .tile.media, .bento .tile.plain, .bento .tile.camera, .bento .tile.climate { grid-row: auto; width: 100%; }
+  .bento .tile.camera { aspect-ratio: 16 / 9; }
+}
+/* the household is a bar, like the side list was: its own frosted ground and
+   a hairline, so the cards scrolling up behind it read as behind it */
+.household { background: rgba(12, 13, 16, .38); border-top: 1px solid var(--edge); backdrop-filter: blur(24px) saturate(1.2); -webkit-backdrop-filter: blur(24px) saturate(1.2); }

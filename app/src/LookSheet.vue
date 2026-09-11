@@ -11,12 +11,13 @@
 import { computed, ref } from 'vue'
 import { setLook } from './api'
 import { notify, store } from './store'
-import { LAYOUTS } from './layout'
+import { LAYOUTS, NAVS } from './layout'
 import { TONES, toneVars } from './tone'
 import Icon from './Icon.vue'
 
 const layout = computed(() => store.ambient.look?.layout ?? 'stack')
 const tone = computed(() => store.ambient.look?.tone ?? 'follow')
+const nav = computed(() => store.ambient.look?.nav ?? 'side')
 const busy = ref('')
 
 /* each swatch shows the tone as it is right now, under this sky: what you pick
@@ -26,11 +27,12 @@ function swatches(id: string) {
   return [v['--card-light'], v['--card-lock'], v['--card-plain']].filter(Boolean)
 }
 
-async function choose(key: 'tone' | 'layout', value: string) {
-  if (busy.value || (key === 'tone' ? tone.value : layout.value) === value) return
+async function choose(key: 'tone' | 'layout' | 'nav', value: string) {
+  const current = key === 'tone' ? tone.value : key === 'layout' ? layout.value : nav.value
+  if (busy.value || current === value) return
   busy.value = key + value
   const was = { ...(store.ambient.look ?? {}) }
-  store.ambient.look = { tone: tone.value, layout: layout.value, [key]: value }   // the panel answers first; the hub confirms
+  store.ambient.look = { tone: tone.value, layout: layout.value, nav: nav.value, [key]: value }   // the panel answers first; the hub confirms
   try { store.ambient.look = await setLook({ [key]: value }) }
   catch (e: any) { store.ambient.look = was as any; notify(e.message, 'error') }
   busy.value = ''
@@ -53,6 +55,17 @@ async function choose(key: 'tone' | 'layout', value: string) {
           </span>
           <!-- prefixed: a bare "rail" here would also match the navigation rail's own class -->
           <span class="look-shape" :class="'look-' + l.id" aria-hidden="true"><i></i><i></i><i></i></span>
+        </button>
+      </div>
+
+      <h3 class="label">Getting around</h3>
+      <div class="look-rows">
+        <button v-for="n in NAVS" :key="n.id" class="look-row" :class="{ on: nav === n.id, busy: busy === 'nav' + n.id }" @click="choose('nav', n.id)">
+          <span class="look-text">
+            <span class="look-name">{{ n.label }}<span class="look-tick" v-if="nav === n.id"><Icon name="check" :size="11" /></span></span>
+            <span class="look-hint">{{ n.hint }}</span>
+          </span>
+          <span class="look-shape" :class="'look-nav-' + n.id" aria-hidden="true"><i></i><i></i></span>
         </button>
       </div>
 

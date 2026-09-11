@@ -10,12 +10,13 @@
  * layout.ts for why that is not a per-layout decision.
  */
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { store, activity, cap, houseLine, roomActive, weatherParts, whatsOn } from '../store'
+import { store, cap, houseLine, weatherParts, whatsOn } from '../store'
 import { wxOf } from '../sky'
 import { upcomingLine } from '../upcoming'
 import type { Device, Room } from '../api'
 import Icon from '../Icon.vue'
 import Attention from '../Attention.vue'
+import RoomGrid from '../RoomGrid.vue'
 import SceneBar from '../SceneBar.vue'
 import CameraTile from '../tiles/CameraTile.vue'
 import ClimateTile from '../tiles/ClimateTile.vue'
@@ -130,12 +131,7 @@ onUnmounted(() => { bento.value?.removeEventListener('scroll', edges); removeEve
 
     <div class="block">
       <h2 class="label">Rooms</h2>
-      <div class="room-grid">
-        <button v-for="r in rooms" :key="r.id" class="room-card" :class="{ active: roomActive(r), empty: !r.devices.length, attention: r.id === 'unassigned' }" @click="$emit('open', r.id)">
-          <div class="room-card-name">{{ r.name }}</div>
-          <div class="room-card-activity">{{ activity(r) }}</div>
-        </button>
-      </div>
+      <RoomGrid :rooms="rooms" @open="$emit('open', $event)" />
     </div>
   </section>
 </template>

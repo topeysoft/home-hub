@@ -35,14 +35,16 @@ class LookTests(unittest.TestCase):
 
     def test_setting_one_key_leaves_the_other(self):
         self.hub.set_look({"tone": "pastel"})
-        self.assertEqual(self.hub.look, {"tone": "pastel", "layout": "stack"})
+        self.assertEqual(self.hub.look, {"tone": "pastel", "layout": "stack", "nav": "side"})
         self.hub.set_look({"layout": "rail"})
-        self.assertEqual(self.hub.look, {"tone": "pastel", "layout": "rail"})
+        self.assertEqual(self.hub.look, {"tone": "pastel", "layout": "rail", "nav": "side"})
+        self.hub.set_look({"nav": "top"})
+        self.assertEqual(self.hub.look, {"tone": "pastel", "layout": "rail", "nav": "top"})
 
     def test_unknown_keys_are_dropped(self):
         """An older or newer screen cannot teach the house a setting it does not have."""
         self.hub.set_look({"tone": "cool", "wallpaper": "kittens"})
-        self.assertEqual(self.hub.look, {"tone": "cool", "layout": "stack"})
+        self.assertEqual(self.hub.look, {"tone": "cool", "layout": "stack", "nav": "side"})
         self.assertNotIn("wallpaper", self.hub.settings.get("look"))
 
     def test_every_screen_is_told(self):
@@ -53,9 +55,9 @@ class LookTests(unittest.TestCase):
         self.assertEqual(self.hub.sent[0]["ambient"]["look"]["layout"], "rail")
 
     def test_it_survives_a_restart(self):
-        self.hub.set_look({"tone": "warm", "layout": "rail"})
+        self.hub.set_look({"tone": "warm", "layout": "rail", "nav": "top"})
         again = FakeHub(self.path)
-        self.assertEqual(again.look, {"tone": "warm", "layout": "rail"})
+        self.assertEqual(again.look, {"tone": "warm", "layout": "rail", "nav": "top"})
 
 
 if __name__ == "__main__":
