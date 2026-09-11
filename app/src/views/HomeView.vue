@@ -99,6 +99,7 @@ onUnmounted(() => { clearInterval(t1); clearInterval(t2); clearInterval(t3) })
     <footer class="home-foot">
       <button class="home-place" v-if="store.ambient.location" @click="store.sheet = 'location'"><Icon name="pin" :size="14" /> {{ store.ambient.location.name }}<span class="home-change">Change</span></button>
       <button class="home-place" v-if="store.routines.length" @click="store.sheet = 'routines'"><Icon name="sparkle" :size="14" /> {{ routinesLine }}<span class="home-change">See</span></button>
+      <button class="home-place" @click="store.sheet = 'look'"><Icon name="sun" :size="14" /> How it looks<span class="home-change">Change</span></button>
       <button class="home-place" @click="store.sheet = 'hub'"><Icon name="home" :size="14" /> This hub{{ store.status?.version && store.status.version !== 'dev' ? ` · ${store.status.version}` : '' }}<span class="home-change">{{ updateReady ? 'Update ready' : 'Open' }}</span></button>
     </footer>
   </section>

@@ -33,6 +33,10 @@ from . import camera
 
 log = logging.getLogger("hub")
 DEFAULT_HA = "http://localhost:8123"
+# How the panel looks. The keys are the whole vocabulary: anything else a screen
+# sends is dropped, so an old panel cannot teach the house a setting it will not
+# understand. Values are checked in the panel, which owns what they mean.
+LOOK = {"tone": "follow", "layout": "stack"}
 US_ZONES = ("America/New_York", "America/Chicago", "America/Denver", "America/Phoenix", "America/Los_Angeles", "America/Anchorage",
             "America/Juneau", "America/Sitka", "America/Nome", "America/Adak", "America/Boise", "America/Detroit", "America/Menominee",
             "America/Indiana/", "America/Kentucky/", "America/North_Dakota/", "Pacific/Honolulu", "US/")
@@ -69,6 +73,7 @@ class Hub:
         self.driver, self.reason = "down", ""
         self.location = self.settings.get("location")   # {"name", "lat", "lon"}: chosen in the panel, else HA's config, else HOME_LAT/HOME_LON in .env
         self.entry: list = list(self.settings.get("entry") or [])   # room ids the family comes in through; rules for "entry" run there
+        self.look = {**LOOK, **(self.settings.get("look") or {})}   # how the panel looks: one house, one answer, every screen
         self.weather = None
         self.temp_unit = "°F"
         self.tz = datetime.now().astimezone().tzinfo   # the home's zone, from HA's config once connected
@@ -223,7 +228,16 @@ class Hub:
                 "wind_speed": a.get("wind_speed"), "wind_unit": a.get("wind_speed_unit")}
 
     def ambient(self):
-        return {"location": self.location, "weather": self.weather}
+        return {"location": self.location, "weather": self.weather, "look": self.look}
+
+    def set_look(self, look):
+        """How the panel looks, kept by the house rather than by the screen: a
+        tone for the cards and an arrangement for Home. Every screen in the
+        house shows the same one, and a new screen is already right."""
+        self.look = {**self.look, **{k: v for k, v in look.items() if k in LOOK}}
+        self.settings.set(look=self.look)
+        self._broadcast(json.dumps({"type": "ambient", "ambient": self.ambient()}))
+        return self.look
 
     async def set_location(self, place):
         """Remember the home's location, tell HA (fixes sun.sun), and set up Met.no weather if there is none yet."""
@@ -738,6 +752,15 @@ async def set_location(place: dict):
     weather = await hub.set_location(place)
     hub.log.add("home", "location", None, place["name"], source="user", detail={"lat": place["lat"], "lon": place["lon"]})
     return {"ok": True, "weather": weather}
+
+
+@app.post("/look")
+def set_look(look: dict):
+    """The house's own look. Unknown keys are ignored rather than refused, so a
+    screen running an older panel can still save the settings it does know."""
+    if not isinstance(look, dict) or not any(k in LOOK for k in look):
+        raise HTTPException(400, f"nothing to set; expected any of {', '.join(LOOK)}")
+    return hub.set_look(look)
 
 
 @app.get("/geo/search")

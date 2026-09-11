@@ -12,7 +12,7 @@ export const store = reactive({
   ambient: { location: null, weather: null } as Ambient,
   ambientLoaded: false,
   rules: {} as Rules,                        // scene rules from the brain, to tell whether a room still matches its scene
-  sheet: (['location', 'add', 'code', 'why', 'routines', 'hub'].includes(new URLSearchParams(location.search).get('sheet') ?? '') ? new URLSearchParams(location.search).get('sheet') : null) as null | 'location' | 'add' | 'code' | 'why' | 'routines' | 'hub',   // the few soft sheets the panel has; ?sheet=location previews one
+  sheet: (['location', 'add', 'code', 'why', 'routines', 'hub', 'look'].includes(new URLSearchParams(location.search).get('sheet') ?? '') ? new URLSearchParams(location.search).get('sheet') : null) as null | 'location' | 'add' | 'code' | 'why' | 'routines' | 'hub' | 'look',   // the few soft sheets the panel has; ?sheet=location previews one
   whyRoom: new URLSearchParams(location.search).get('room') as string | null,   // the room the why sheet is about; ?sheet=why&room=kitchen previews it
   resume: new URLSearchParams(location.search).get('signin') as string | null,   // a conversation already open in the house (signing an account in again); the add sheet picks it up. ?sheet=add&signin=<flow> previews it
   routines: [] as Routine[],                 // the brain's rules, for the routines sheet and to name a rule on a room

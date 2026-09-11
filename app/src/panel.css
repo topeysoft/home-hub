@@ -763,3 +763,28 @@ select.input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://ww
 .notes .recent-icon { background: var(--card-hi, var(--surface-hi)); color: var(--card-ink-2, var(--ink-2)); }
 .notes .recent-text { color: var(--card-ink, var(--ink)); }
 .notes li { border-bottom-color: var(--card-edge, var(--edge)); }
+
+/* ---------- how the house looks ---------- */
+.sheet.look { width: min(100%, 520px); }
+.sheet.look .label { margin: 18px 2px 8px; }
+.sheet.look .label:first-of-type { margin-top: 4px; }
+.look-rows { display: flex; flex-direction: column; gap: 8px; }
+.look-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 16px; padding: 13px 16px; border-radius: 18px;
+  background: var(--surface-hi); border: 1px solid var(--edge); transition: background .18s var(--ease), border-color .18s var(--ease); }
+.look-row:active { transform: scale(.99); }
+.look-row.on { background: linear-gradient(rgba(233,184,114,.12), rgba(233,184,114,.12)), var(--surface); border-color: rgba(233,184,114,.55); }
+.look-row.busy { opacity: .6; pointer-events: none; }
+.look-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.look-name { display: inline-flex; align-items: center; gap: 8px; font-size: 16.5px; font-weight: 500; }
+.look-tick { display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: var(--lamp); color: var(--lamp-ink); }
+.look-hint { font-size: 13.5px; color: var(--muted); }
+.look-swatch { display: flex; gap: 5px; }
+.look-swatch i { width: 26px; height: 40px; border-radius: 8px; }
+/* a drawing of the arrangement, not a screenshot of it: one row you sweep
+   through, or a column you scroll */
+.look-shape { display: grid; gap: 4px; width: 58px; height: 40px; }
+.look-shape i { border-radius: 4px; background: var(--edge-hi); }
+.look-shape.look-stack { grid-template-rows: repeat(3, 1fr); }
+.look-shape.look-rail { grid-template-columns: repeat(3, 1fr); }
+.look-shape.look-rail i:last-child { opacity: .45; }   /* the one cut by the edge */
+.look-row.on .look-shape i { background: var(--lamp); }

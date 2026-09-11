@@ -75,7 +75,8 @@ const status = { driver: process.env.ENGINE === 'down' ? 'down' : 'ready', reaso
     { id: 'matter', name: 'Matter', state: 'ready', text: 'Running', port: 5580 },
     { id: 'ring', name: 'Ring', state: 'sign-in', text: 'Needs a sign-in', port: 55123 },
   ], problems: [] }
-const ambient = { location: { name: 'Holts Summit, MO', lat: 38.6355985, lon: -92.1176322 }, weather: { id: 'w', condition: process.env.WX || 'partlycloudy', temperature: 78, unit: '°F', humidity: 48, wind_speed: 6, wind_unit: 'mph' } }
+const ambient = { location: { name: 'Holts Summit, MO', lat: 38.6355985, lon: -92.1176322 }, weather: { id: 'w', condition: process.env.WX || 'partlycloudy', temperature: 78, unit: '°F', humidity: 48, wind_speed: 6, wind_unit: 'mph' },
+  look: { tone: process.env.TONE || 'follow', layout: process.env.LAYOUT || 'stack' } }   // LAYOUT=rail TONE=pastel start the house somewhere else
 const scenes = { movie: [['light', 'off', {}], ['media', 'on', {}]], guests: [['light', 'on', {}]], asleep: [['light', 'off', {}], ['media', 'off', {}], ['lock', 'lock', {}]], empty: [['light', 'off', {}], ['media', 'pause', {}]], away: [['light', 'off', {}], ['media', 'off', {}], ['switch', 'off', {}], ['lock', 'lock', {}]] }
 const events = [
   { ts: now - 40, kind: 'state', subject: 'mo1', old: 'off', new: 'on', source: 'ha', detail: null },
@@ -161,6 +162,11 @@ const server = http.createServer((req, res) => {
   if (/^\/devices\/[^/]+\/stream/.test(p)) { res.writeHead(502); return res.end() }   // no video here: the viewer settles for stills
   const img = p.match(/^\/devices\/([^/]+)\/image/)
   if (img) { res.writeHead(200, { 'Content-Type': 'image/svg+xml' }); return res.end(PICS[img[1]] ?? pic('#333', '#111')) }
+  if (p === '/look' && req.method === 'POST') { let b = ''; req.on('data', c => (b += c)); return req.on('end', () => {
+    let v = {}; try { v = JSON.parse(b) } catch {}
+    for (const k of ['tone', 'layout']) if (v[k]) ambient.look[k] = v[k]   // unknown keys dropped, as the brain does
+    json(res, ambient.look)
+  }) }
   if (req.method === 'POST') return json(res, { ok: true })
   let f = path.join(DIST, p === '/' ? 'index.html' : p)
   if (!fs.existsSync(f)) f = path.join(DIST, 'index.html')

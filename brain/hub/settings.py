@@ -1,8 +1,12 @@
 """The hub's own memory: a small JSON file the panel is allowed to fill in during setup.
 
 Lives in the data directory (HUB_DATA, or the brain folder), next to the event log. Holds the
-driver's address and token, the owner's and the home's names, the location, and whether setup
-finished. Never holds anything the app would show as a setting.
+driver's address and token, the owner's and the home's names, the location, how the panel looks,
+and whether setup finished.
+
+What belongs here is anything the HOUSE decides once and every screen then agrees on. What does
+not is per-screen preference: which room a kiosk opens into, whether a phone has been offered the
+home-screen install. Those stay in the browser, because two screens are allowed to differ on them.
 """
 import json, os
 from pathlib import Path

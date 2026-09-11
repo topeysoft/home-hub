@@ -15,6 +15,7 @@ import LocationSheet from './LocationSheet.vue'
 import WhySheet from './WhySheet.vue'
 import RoutinesSheet from './RoutinesSheet.vue'
 import HubSheet from './HubSheet.vue'
+import LookSheet from './LookSheet.vue'
 import Icon from './Icon.vue'
 import { upcomingLine } from './upcoming'
 import { isTone, toneVars, type ToneName } from './tone'
@@ -34,15 +35,15 @@ const room = computed(() => rooms.value.find(r => r.id === selected.value) ?? nu
 
 const ambient = computed(() => store.sky.elevation < -8 ? 'night' : store.sky.elevation < 6 ? (store.sky.azimuth < 180 ? 'dawn' : 'dusk') : 'day')
 
-/* the cards take their colour from the sky: see the note at the top of tone.ts.
-   ?tone=pastel previews one, the way ?at= and ?wx= preview an hour and a sky. */
-const toneParam = new URLSearchParams(location.search).get('tone')
-const toneName = ref<ToneName>(isTone(toneParam) ? toneParam : (isTone(safeGet('tone')) ? safeGet('tone') as ToneName : 'follow'))
+/* How the panel looks is the house's answer, not this screen's: it arrives with
+   the ambient and changes on every panel at once when someone picks another.
+   ?tone= and ?layout= override it for this tab only, the way ?at= and ?wx= do,
+   so previewing a look never changes what the rest of the house is showing. */
+const params = new URLSearchParams(location.search)
+const toneParam = params.get('tone'), layoutParam = params.get('layout')
+const toneName = computed<ToneName>(() => isTone(toneParam) ? toneParam : (isTone(store.ambient.look?.tone) ? store.ambient.look!.tone as ToneName : 'follow'))
 const tone = computed(() => toneVars(store.sky.elevation, store.sky.condition, toneName.value))
-
-/* how Home is arranged, the house's choice: ?layout=rail previews the other one */
-const layoutParam = new URLSearchParams(location.search).get('layout')
-const layout = ref<LayoutName>(isLayout(layoutParam) ? layoutParam : (isLayout(safeGet('layout')) ? safeGet('layout') as LayoutName : 'stack'))
+const layout = computed<LayoutName>(() => isLayout(layoutParam) ? layoutParam : (isLayout(store.ambient.look?.layout) ? store.ambient.look!.layout as LayoutName : 'stack'))
 const weather = computed(weatherLine)
 const WX_ICON: Record<string, string> = { sunny: 'sun', 'clear-night': 'moon', partlycloudy: 'cloud', cloudy: 'cloud', fog: 'fog', rainy: 'rain', pouring: 'rain', hail: 'rain', lightning: 'bolt', 'lightning-rainy': 'bolt', snowy: 'snow', 'snowy-rainy': 'snow', windy: 'wind', 'windy-variant': 'wind', exceptional: 'cloud' }
 const wxIcon = computed(() => WX_ICON[store.sky.condition] ?? 'cloud')
@@ -151,6 +152,7 @@ onUnmounted(() => {
     <Transition name="sheet"><WhySheet v-if="store.sheet === 'why'" /></Transition>
     <Transition name="sheet"><RoutinesSheet v-if="store.sheet === 'routines'" /></Transition>
     <Transition name="sheet"><HubSheet v-if="store.sheet === 'hub'" /></Transition>
+    <Transition name="sheet"><LookSheet v-if="store.sheet === 'look'" /></Transition>
     <Transition name="sheet"><CodePrompt v-if="lock.prompt" /></Transition>
 
     <Transition name="toast">

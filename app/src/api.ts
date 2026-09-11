@@ -19,7 +19,9 @@ export type Step = { flow_id: string | null; handler: string; kind: string; type
   errors?: Record<string, string>; fields?: Field[]; options?: { id: string; label: string }[]; reason?: string; hint?: string; retry?: boolean; entry_title?: string; progress?: string; url?: string; redirect_url?: string }
 export type Weather = { id: string; condition: string; temperature: number | null; unit: string; humidity: number | null; wind_speed: number | null; wind_unit: string | null }
 export type Place = { name: string; lat: number; lon: number; tz?: string | null }
-export type Ambient = { location: Place | null; weather: Weather | null }
+/* look: how the panel looks, decided once by the house rather than per screen */
+export type Look = { tone: string; layout: string }
+export type Ambient = { location: Place | null; weather: Weather | null; look?: Look }
 export type Event = { ts: number; kind: string; subject: string; old: string | null; new: string | null; source: string; detail: string | null }
 /* Who is home, as the brain sees it: null while it cannot tell (no people, no alarm). */
 export type Presence = { somebody: boolean | null; since: number | null; source: 'people' | 'alarm' | null; people: { name: string; home: boolean | null }[]; alarm: string | null }
@@ -77,6 +79,9 @@ export async function cancelFlow(id: string) { await request(`/flows/${encodeURI
 
 export async function getHome(): Promise<Home> {
   const r = await request('/home'); if (!r.ok) await fail(r); return r.json()
+}
+export async function setLook(look: Partial<Look>): Promise<Look> {
+  const r = await request('/look', { method: 'POST', headers: json, body: JSON.stringify(look) }); if (!r.ok) await fail(r); return r.json()
 }
 export async function getAmbient(): Promise<Ambient> {
   const r = await request('/ambient'); if (!r.ok) await fail(r); return r.json()
