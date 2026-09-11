@@ -43,8 +43,8 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--lamp); outl
 .sky-veil { position: absolute; inset: 0; z-index: -2; pointer-events: none; transition: opacity 1.2s var(--ease);
   background: linear-gradient(180deg, rgba(12,13,16,.30) 0%, rgba(12,13,16,.52) 45%, rgba(12,13,16,.80) 100%); }
 .shell.resting .sky-veil { opacity: .25; }
-.shell.resting .rail, .shell.resting .stage { opacity: 0; transition: opacity .9s var(--ease); }
-.rail, .stage { transition: opacity .5s var(--ease); }
+.shell.resting .rail, .shell.resting .stage, .shell.resting .topbar, .shell.resting .bottombar { opacity: 0; transition: opacity .9s var(--ease); }
+.rail, .stage, .topbar, .bottombar { transition: opacity .5s var(--ease); }
 /* glass: a tone of its own, the sky softened behind it */
 .room-card, .tile, .scene, .back, .banner, .offline-icon, .recent-icon, .button.ghost { backdrop-filter: var(--frost); -webkit-backdrop-filter: var(--frost); }
 .rail { background: rgba(12, 13, 16, .38); backdrop-filter: blur(24px) saturate(1.2); -webkit-backdrop-filter: blur(24px) saturate(1.2); }
@@ -358,7 +358,9 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--lamp); outl
 }
 
 /* ---------- the location sheet, and the nudge that opens it ---------- */
-.nudge { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 12px; width: 100%; max-width: 760px; margin: -6px 0 22px; padding: 9px 18px 9px 10px; border-radius: 26px;
+.nudges { display: flex; flex-direction: column; gap: 12px; margin: -6px 0 22px; }
+.nudges:not(:has(> *)) { display: none; }   /* nothing to nudge about: no gap left where the row would be */
+.nudge { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 12px; width: 100%; max-width: 760px; margin: 0; padding: 9px 18px 9px 10px; border-radius: 26px;
   background: linear-gradient(rgba(233,184,114,.10), rgba(233,184,114,.10)), var(--surface); border: 1px solid rgba(233,184,114,.30); backdrop-filter: var(--frost); -webkit-backdrop-filter: var(--frost); }
 .nudge:active { transform: scale(.99); }
 .nudge-icon { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; background: var(--lamp); color: var(--lamp-ink); }
@@ -738,21 +740,31 @@ select.input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://ww
 .rail-temp { font-size: 44px; line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
 .rail-says { margin-top: 5px; font-size: 15px; color: var(--ink-2); }
 .rail-quiet { margin: 6px 2px 26px; }
-/* the row itself: it scrolls sideways, and the last card is meant to be cut by
-   the edge — that overhang is the only thing telling you there is more */
-.bento { display: flex; gap: 14px; align-items: flex-start; margin: 4px 0 26px; padding-bottom: 6px;
-  overflow-x: auto; scroll-snap-type: x proximity; overscroll-behavior-x: contain; }
-.bento-card { flex: 0 0 auto; width: 268px; scroll-snap-align: start; }
-.bento .tile.camera { width: 340px; aspect-ratio: 16 / 9; }
-.bento .tile.media { width: 380px; }
-.bento .tile.climate { grid-row: auto; }
+/* the rail spans the whole stage, whichever way around the house is chosen: it
+   is a row you sweep, and a row stopped short of the edge by a margin reads as
+   finished. The rail itself is sized further down, under "the rail, as drawn". */
+.rail-home { max-width: none; display: flex; flex-direction: column; min-height: 100%; }
+.rail-stage { margin-block: auto; }   /* in the middle of whatever height is left, as drawn */
+.rail-home .home-foot { margin-top: 0; padding-top: 12px; }
+.rail-home .home-place { min-height: 36px; }
+.rail-home .home-foot + .block { margin-top: 26px; }
+/* under the tabs the foot has the bar beneath it for a ground: no hairline of its own, no gap to a section that is not there */
+.rail-home.top-nav .home-foot { border-top: 0; padding-top: 4px; }
+@media (max-height: 860px) {
+  /* a shorter wall: the greeting gives up a little so the rail keeps its cards */
+  .shell[data-nav="top"] .stage-head h1 { font-size: 46px; }
+  .shell[data-nav="top"] .stage-head { margin-bottom: 18px; }
+  .shell[data-nav="top"] .stage { padding-top: 12px; padding-bottom: 8px; }
+  .shell[data-nav="top"] .nudges { margin-bottom: 12px; }
+  .bottombar { padding-top: 8px; padding-bottom: 18px; }
+}
 @media (max-width: 860px) {
   /* on a phone a sideways row of wall-sized cards is a worse column, so it stops
      being a row: the Rail becomes a stack and only the header stays distinct */
   .rail-head { flex-direction: column; gap: 14px; }
   .rail-wx { align-self: flex-start; }
-  .bento { flex-wrap: wrap; overflow-x: visible; }
-  .bento-card, .bento .tile.camera, .bento .tile.media { width: 100%; }
+  .rail-home { min-height: 0; }
+  .rail-stage { margin-block: 0; }
 }
 /* Needs a look is the one list that carries buttons, and without a ground they
    sit as white pills straight on the sky. One surface for the whole list, not
@@ -795,11 +807,11 @@ select.input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://ww
    number here was measured off the reference rather than chosen. The whole
    sequence sits behind the reduced-motion block at the top of this file, which
    turns it into a plain cross-fade. */
-.shell.opened-shell > .rail, .shell.opened-shell > .stage {
+.shell.opened-shell > .rail, .shell.opened-shell > .stage, .shell.opened-shell > .topbar, .shell.opened-shell > .bottombar {
   transform: scale(.955); filter: blur(13px) brightness(.52) saturate(.85); transform-origin: 50% 42%;
   transition: transform .32s var(--ease), filter .32s var(--ease);
 }
-.rail, .stage { transform-origin: 50% 42%; transition: opacity .5s var(--ease), transform .26s var(--ease), filter .26s var(--ease); }
+.rail, .stage, .topbar, .bottombar { transform-origin: 50% 42%; transition: opacity .5s var(--ease), transform .26s var(--ease), filter .26s var(--ease); }
 .opened { position: fixed; inset: 0; z-index: 40; }
 .opened-veil { position: absolute; inset: 0; background: radial-gradient(90% 70% at 62% 78%, var(--open-tint, rgba(233,184,114,.30)), transparent 66%);
   opacity: 0; transition: opacity .42s var(--ease); }
@@ -899,31 +911,53 @@ select.input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://ww
    down the side. The shell becomes three rows; the stage keeps its width. See
    layout.ts for what each way around the house is for. */
 .shell[data-nav="top"] { grid-template-columns: 1fr; grid-template-rows: auto 1fr auto; }
-.topbar { display: flex; align-items: center; gap: 24px; padding: 16px 40px 0; min-width: 0; }
+/* nothing down the side to leave room for: the stage is the whole width, and
+   the greeting, the weather and the rail spread across it as drawn */
+.shell[data-nav="top"] .home, .shell[data-nav="top"] .room { max-width: none; }
+.shell[data-nav="top"] .stage { padding-top: 20px; padding-bottom: 20px; }
+.topbar { display: flex; align-items: center; gap: 24px; min-height: 84px; padding: 0 40px; min-width: 0; }
 .topbar-clock { display: flex; align-items: baseline; gap: 12px; flex: 1 1 0; min-width: 0; }
 .topbar-time { font-size: 28px; line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
 .topbar-day { font-size: 13.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tabs { display: flex; gap: 4px; padding: 4px; border-radius: 999px; background: rgba(26, 28, 34, .55); border: 1px solid var(--edge);
   backdrop-filter: var(--frost); -webkit-backdrop-filter: var(--frost); flex: 0 0 auto; }
-.tab { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 18px; border-radius: 999px; font-size: 15px; color: var(--ink-2);
+.tab { display: inline-flex; align-items: center; gap: 10px; height: 44px; padding: 0 22px; border-radius: 999px; font-size: 15.5px; color: var(--ink-2);
   transition: background .18s var(--ease), color .18s var(--ease); }
 .tab svg { color: var(--muted); }
-.tab.active { background: var(--surface-hi); color: var(--ink); }
+.tab.active { background: rgba(255,255,255,.10); color: var(--ink); font-weight: 500; }
 .tab.active svg { color: var(--ink-2); }
 .tab:active { background: var(--surface-press); }
 .topbar-right { display: flex; align-items: center; justify-content: flex-end; gap: 14px; flex: 1 1 0; min-width: 0; }
 .topbar-add { position: relative; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; color: var(--ink-2);
   background: var(--surface); border: 1px solid var(--edge); backdrop-filter: var(--frost); -webkit-backdrop-filter: var(--frost); }
 .topbar-add.attention::after { content: ""; position: absolute; top: 4px; right: 4px; width: 8px; height: 8px; border-radius: 50%; background: var(--lamp); box-shadow: 0 0 8px 1px var(--lamp-glow); }
-.household { display: flex; align-items: center; gap: 14px; padding: 10px 40px 18px; }
-.household-label { font-size: 14px; color: var(--ink-2); }
+/* the bar along the bottom: the command box on the left, the household on the
+   right, floating over the sky as drawn -- no ground of its own, the way the
+   tab pill has none. What the box says back rises above it rather than pushing
+   the bar about. */
+.bottombar { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 12px 40px 30px; min-width: 0; }
+.bottombar .say { position: relative; flex: 0 1 460px; min-width: 0; margin: 0; }
+.bottombar .say-box { height: 56px; padding: 0 8px 0 10px; border-radius: 999px; background: rgba(26,28,34,.55); border: 1px solid var(--edge); backdrop-filter: var(--frost); -webkit-backdrop-filter: var(--frost); }
+.bottombar .say-box > svg { display: none; }
+.bottombar .say-box::before { content: ""; flex: 0 0 auto; width: 36px; height: 36px; border-radius: 50%;   /* the orb: the house, listening */
+  background: radial-gradient(circle at 32% 28%, #f4e3c4, #e9b872 42%, #8f6ad0 100%); box-shadow: 0 0 18px 2px rgba(233,184,114,.28); }
+.bottombar .say-box .button { margin: 0; }
+.bottombar .say-hint, .bottombar .say-note, .bottombar .say-answer, .bottombar .drafts { position: absolute; left: 0; bottom: calc(100% + 10px); margin: 0; z-index: 5;
+  background: rgba(22,24,30,.94); border: 1px solid var(--edge-hi); box-shadow: 0 14px 40px -12px rgba(0,0,0,.7); }
+.bottombar .say-hint { display: none; }
+.bottombar .say:focus-within .say-hint { display: block; padding: 9px 14px; border-radius: 12px; white-space: nowrap; }
+.bottombar .say-note { padding: 10px 14px; border-radius: 12px; color: var(--ink-2); width: max-content; max-width: min(60ch, 80vw); }
+.bottombar .say-answer { width: max-content; }
+.bottombar .drafts { width: 460px; max-width: 80vw; }
+.household { display: flex; align-items: center; gap: 14px; flex: 0 0 auto; }
+.household-label { font-size: 15px; color: var(--ink-2); }
 .household-people { display: flex; }
 .person { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; margin-left: -10px; font-size: 12.5px; font-weight: 600; letter-spacing: .02em;
   background: linear-gradient(140deg, #8a7f6a, #4a4238); color: var(--ink); border: 2px solid var(--bg); transition: opacity .3s var(--ease); }
 .person:first-child { margin-left: 0; }
 .person.out { opacity: .38; }             /* out of the house: still a member, not currently in */
 .person.unknown { opacity: .6; }
-.household-line { font-size: 13.5px; color: var(--muted); margin-left: 4px; }
+.household-line { font-size: 13.5px; color: var(--muted); margin-right: 6px; }
 .cameras-all { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
 /* the drawing of each way around, for the sheet: a bar down the side, or across the top */
 .look-shape.look-nav-side { grid-template-columns: 14px 1fr; }
@@ -934,30 +968,91 @@ select.input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://ww
   .topbar-right { flex: 0 0 auto; }
   .tabs { order: 3; width: 100%; overflow-x: auto; }
   .tab { padding: 0 14px; white-space: nowrap; }
-  .household { padding: 8px 16px 14px; }
+  .bottombar { flex-wrap: wrap; gap: 10px; padding: 10px 16px calc(14px + env(safe-area-inset-bottom)); }
+  .bottombar .say { flex: 1 1 100%; }
+  .household { margin-left: auto; }
+  .household-line { display: none; }
+  .nudges { gap: 10px; }
 }
 
-/* ---------- the rail, sized as drawn ----------
-   Two rows that flow sideways. A light, a film, a lock take both rows -- 340
-   tall, the height the design was drawn at -- while a camera and a thermostat
-   are small enough to stack, two to a column. Widths are per kind, as drawn.
-   The row height is chosen so a tall card comes to exactly 340. */
-.bento { display: grid; grid-auto-flow: column dense; grid-template-rows: repeat(2, 161px); grid-auto-columns: max-content; gap: 18px; align-items: stretch; }
+/* ---------- the rail, as drawn ----------
+   Two rows that flow sideways, sized as the design was: a light, a film, a
+   lock, the scenes take both rows at 340 tall, while a camera and a thermostat
+   are glance cards small enough to stack, two to a column at 196 each. The
+   column is the taller of the two (410), and the tall cards sit centred on it,
+   which is what stops the row reading as a shelf of equal boxes.
+
+   It scrolls under both edges of the screen: the stage's own padding is given
+   back so the first card lines up with the greeting at rest and the last is cut
+   by the screen, not by a margin. That overhang is the only thing telling you
+   there is more. */
+.bento { --row: clamp(150px, calc((100dvh - 500px) / 2), 196px);   /* 196 on a 900-tall wall, as drawn; smaller rather than scrolling on a shorter screen */
+  display: grid; grid-auto-flow: column dense; grid-template-rows: repeat(2, var(--row)); grid-auto-columns: max-content; gap: 18px; align-items: stretch;
+  margin: 0 -40px; padding: 8px 0 8px 40px; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x proximity; scroll-padding-inline-start: 40px; overscroll-behavior-x: contain; }
+.bento::after { content: ""; width: 22px; grid-row: span 2; }   /* the row's end, 40px in from the edge like its start; a grid ignores trailing padding in a scroller */
+.bento-card { scroll-snap-align: start; }
 .bento .tile { border-radius: 26px; height: 100%; min-height: 0; }
-.bento .tile.light, .bento .tile.media, .bento .tile.plain { grid-row: span 2; }
+.bento .tile.wide { grid-column: auto; }   /* wide is a room-grid idea; here every card has a width of its own */
+.bento .tile.light, .bento .tile.media, .bento .tile.plain, .bento .scene-card { grid-row: span 2; height: calc(var(--row) * 2 - 52px); align-self: center; }   /* 340 at full size */
 .bento .tile.camera, .bento .tile.climate { grid-row: span 1; }
 .bento .tile.media { width: 372px; }
 .bento .tile.light { width: 320px; }
 .bento .tile.plain { width: 268px; }
+.bento .scene-card { width: 300px; }
 .bento .tile.camera, .bento .tile.climate { width: 248px; aspect-ratio: auto; }
 .bento .tile-body { min-height: 0; }
+.bento .tile-maker { top: 18px; right: 18px; }
+
+/* media, as drawn: the artwork is the card. The words and the controls sit at
+   the foot over a gradient; with no picture, the player's own icon, large and
+   faint, is the art. */
+.bento .tile.media { display: flex; flex-direction: column; justify-content: flex-end; gap: 0; padding: 18px; }
+.bento .tile.media::after { content: ""; position: absolute; inset: 0; z-index: 0; background: linear-gradient(180deg, transparent 26%, rgba(12,13,16,.50) 56%, rgba(12,13,16,.88)); }
+.bento .tile.media .media-art { position: absolute; inset: 0; z-index: 0; width: auto; height: auto; border-radius: 0; background: none; }
+.bento .tile.media .media-art:not(.has) svg { position: absolute; right: -24px; top: 22px; width: 170px; height: 170px; opacity: .10; stroke-width: 1.05; }
+.bento .tile.media .media-text, .bento .tile.media .media-controls { position: relative; z-index: 1; }
+.bento .tile.media .media-text { padding-top: 0; }
+.bento .tile.media .media-title { font-size: 21px; white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.bento .tile.media .media-controls { margin-top: 14px; }
+.bento .tile.media .sounds { display: none; }   /* the room has them; the rail is a glance */
+
+/* a thermostat in the rail is a glance: the number, a step either way, and what
+   it is doing on a line of its own. Modes, the fan and the sensor live in the room. */
+.bento .tile.climate .tile-body { padding: 16px 16px 14px; }
+.bento .tile.climate .clim-rows { display: none; }
+.bento .tile.climate .clim-dial { grid-template-columns: auto 1fr auto; grid-template-rows: auto auto; gap: 4px 6px; margin: 14px 0 0; }
+.bento .tile.climate .clim-center { display: contents; }
+.bento .tile.climate .clim-btn { grid-row: 1; width: 44px; height: 44px; }
+.bento .tile.climate .clim-big { grid-column: 2; grid-row: 1; justify-self: center; font-size: 46px; }
+.bento .tile.climate .clim-doing { grid-column: 1 / -1; grid-row: 2; margin-top: 8px; font-size: 12.5px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+
+/* the scenes as one card in the rail rather than a bar above it: the evening's
+   two real actions, in the space the weather lozenge gave back */
+.bento .scene-card { display: flex; flex-direction: column; padding: 20px 18px 18px; background: var(--card-plain, var(--surface)); border-color: var(--card-edge, var(--edge)); color: var(--card-ink, var(--ink)); }
+.scene-card-when { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--card-ink-2, var(--ink-2)); }
+.bento .scene-card .scenes { flex-direction: column; flex-wrap: nowrap; gap: 10px; margin: 16px 0 0; }
+.bento .scene-card .scene { min-height: 74px; padding: 12px 14px 12px 10px; border-radius: 18px; background: var(--card-hi, var(--surface-hi)); border-color: transparent; color: var(--card-ink, var(--ink));
+  backdrop-filter: none; -webkit-backdrop-filter: none; }
+.bento .scene-card .scene-icon { width: 44px; height: 44px; border-radius: 14px; background: var(--card-press, var(--surface-press)); color: var(--card-ink, var(--ink)); }
+.bento .scene-card .scene-label { font-size: 16px; }
+.bento .scene-card .scene-hint { color: var(--card-ink-2, var(--ink-2)); white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.bento .scene-card .scene.active .scene-icon, .bento .scene-card .scene.done .scene-icon { background: var(--lamp); color: var(--lamp-ink); }
+.bento .scene-card .scene.done .scene-icon { background: var(--live); color: #0b2216; }
+
+/* under the tabs the nudges are a strip of chips beside each other, not a
+   column of banners the rail has to wait under */
+.shell[data-nav="top"] .nudges { flex-direction: row; flex-wrap: wrap; gap: 10px; margin: -4px 0 18px; }
+.shell[data-nav="top"] .nudge { width: auto; max-width: 420px; padding: 8px 18px 8px 8px; }
+.shell[data-nav="top"] .nudge-text { flex-direction: column; gap: 1px; }
+.shell[data-nav="top"] .nudge-title { white-space: normal; }
+.shell[data-nav="top"] .nudge-sub { -webkit-line-clamp: 1; font-size: 13px; }
+
 @media (max-width: 860px) {
   /* on a phone the bento stops being a row: one column, natural heights */
-  .bento { grid-auto-flow: row; grid-template-rows: none; grid-template-columns: 1fr; grid-auto-columns: auto; }
+  .bento { grid-auto-flow: row; grid-template-rows: none; grid-template-columns: 1fr; grid-auto-columns: auto; margin: 0; padding: 0; overflow: visible; }
+  .bento::after { display: none; }
   .bento .tile { height: auto; min-height: 150px; }
-  .bento .tile.light, .bento .tile.media, .bento .tile.plain, .bento .tile.camera, .bento .tile.climate { grid-row: auto; width: 100%; }
+  .bento .tile.light, .bento .tile.media, .bento .tile.plain, .bento .tile.camera, .bento .tile.climate, .bento .scene-card { grid-row: auto; width: 100%; height: auto; align-self: auto; }
   .bento .tile.camera { aspect-ratio: 16 / 9; }
+  .bento .tile.media { min-height: 260px; }
 }
-/* the household is a bar, like the side list was: its own frosted ground and
-   a hairline, so the cards scrolling up behind it read as behind it */
-.household { background: rgba(12, 13, 16, .38); border-top: 1px solid var(--edge); backdrop-filter: blur(24px) saturate(1.2); -webkit-backdrop-filter: blur(24px) saturate(1.2); }

@@ -1,6 +1,7 @@
 /* The Top navigation and the rail sized as drawn. Pictures for the look, and
    the rail's card boxes as numbers, because "matches the artboard" is a claim
-   about pixels: a tall card should come to 340, a stacked one to 161. */
+   about pixels: a tall card should come to 340, a stacked one to 196, on a 900-tall wall;
+   a shorter screen scales the rows down rather than scrolling. */
 import { chromium } from 'playwright'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'

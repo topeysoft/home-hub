@@ -1,12 +1,20 @@
 <script setup lang="ts">
 /*
- * The household, along the bottom: who the house knows, and who is in. Real
- * presence from the brain, not decoration -- a person is drawn dim when they
- * are out. Says nothing at all when the house has no people set up, rather
- * than drawing a strip of nobody.
+ * The bar along the bottom, under the Top navigation: the command box on the
+ * left, and the household on the right -- who the house knows, and who is in.
+ * Real presence from the brain, not decoration: a person is drawn dim when they
+ * are out. The household says nothing at all when the house has no people set
+ * up, rather than drawing a strip of nobody; the box is always there, because
+ * telling the house things is what Home is for (layout.ts).
+ *
+ * room: the room the panel is showing, so "lights off" said here means that
+ * room, the same as the box inside a room would.
  */
 import { computed } from 'vue'
 import { store } from './store'
+import Say from './Say.vue'
+
+defineProps<{ room?: string | null }>()
 
 const people = computed(() => store.presence?.people ?? [])
 const initials = (n: string) => n.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]!.toUpperCase()).join('')
@@ -20,11 +28,14 @@ const line = computed(() => {
 </script>
 
 <template>
-  <footer class="household" v-if="people.length" aria-label="Household">
-    <span class="household-label">Family</span>
-    <div class="household-people">
-      <span v-for="p in people" :key="p.name" class="person" :class="{ out: p.home === false, unknown: p.home === null }" :title="p.name">{{ initials(p.name) }}</span>
+  <footer class="bottombar">
+    <Say :room="room" />
+    <div class="household" v-if="people.length" aria-label="Household">
+      <span class="household-line">{{ line }}</span>
+      <span class="household-label">Family</span>
+      <div class="household-people">
+        <span v-for="p in people" :key="p.name" class="person" :class="{ out: p.home === false, unknown: p.home === null }" :title="p.name">{{ initials(p.name) }}</span>
+      </div>
     </div>
-    <span class="household-line">{{ line }}</span>
   </footer>
 </template>

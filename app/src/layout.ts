@@ -30,7 +30,7 @@ export function isLayout(v: unknown): v is LayoutName {
 /*
  * Where the way around the house lives. Side is the list down the left the
  * panel has always had: every room in view, its activity under its name. Top
- * is tabs across the top and the household along the bottom, which gives the
+ * is tabs across the top and, along the bottom, the command box and the household, which gives the
  * whole width to what is on. Both reach every room; they differ in what is
  * always in view and what is a tap away.
  */
@@ -38,7 +38,7 @@ export type NavName = 'side' | 'top'
 
 export const NAVS: { id: NavName; label: string; hint: string }[] = [
   { id: 'side', label: 'Side', hint: 'Every room listed down the left, always in view.' },
-  { id: 'top', label: 'Top', hint: 'Tabs across the top, the household along the bottom. Room for what is on.' },
+  { id: 'top', label: 'Top', hint: 'Tabs across the top, the command box and the household along the bottom. Room for what is on.' },
 ]
 
 export function isNav(v: unknown): v is NavName {

@@ -165,12 +165,12 @@ onUnmounted(() => {
         <RoomView v-if="room" :key="room.id" :room="room" @back="open(null)" @open="open" />
         <RoomsView v-else-if="nav === 'top' && tab === 'rooms'" key="rooms" :rooms="rooms" @open="open" />
         <CamerasView v-else-if="nav === 'top' && tab === 'cameras'" key="cameras" :rooms="rooms" />
-        <RailView v-else-if="layout === 'rail'" key="home-rail" :rooms="rooms" :now="shown" @open="open" />
-        <HomeView v-else key="home-stack" :rooms="rooms" :now="shown" @open="open" />
+        <RailView v-else-if="layout === 'rail'" key="home-rail" :rooms="rooms" :now="shown" :top-nav="nav === 'top'" @open="open" />
+        <HomeView v-else key="home-stack" :rooms="rooms" :now="shown" :top-nav="nav === 'top'" @open="open" />
       </Transition>
     </main>
 
-    <Household v-if="!setup && !lock.unpaired && nav === 'top'" />
+    <Household v-if="!setup && !lock.unpaired && nav === 'top'" :room="room?.id ?? null" />
 
     <Viewer />
     <Opened v-if="store.opened" />

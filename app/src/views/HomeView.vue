@@ -10,7 +10,7 @@ import Attention from '../Attention.vue'
 import RoomGrid from '../RoomGrid.vue'
 import CameraTile from '../tiles/CameraTile.vue'
 
-const props = defineProps<{ rooms: Room[]; now: Date }>()   // now: the clock the shell shows, so a preview hour agrees with itself
+const props = defineProps<{ rooms: Room[]; now: Date; topNav?: boolean }>()   // now: the clock the shell shows, so a preview hour agrees with itself; topNav: the command box is in the bar below
 defineEmits<{ open: [id: string] }>()
 
 const hour = computed(() => props.now.getHours())
@@ -56,7 +56,7 @@ onUnmounted(() => { clearInterval(t1); clearInterval(t2); clearInterval(t3) })
       <SceneBar :room="null" />
     </header>
 
-    <Attention />
+    <Attention :say="!topNav" />
 
     <div class="block" v-if="anyOn">
       <h2 class="label">On right now</h2>

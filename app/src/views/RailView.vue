@@ -8,9 +8,15 @@
  * components, so dimming a light or pausing a film behaves identically — only
  * the arrangement differs. <Attention /> comes first and unchanged: see
  * layout.ts for why that is not a per-layout decision.
+ *
+ * The row is composed, not just listed. As drawn: what is playing first and
+ * tall; then the two glance cards -- a camera and the thermostat -- stacked in
+ * one column; then the lit things; then the evening's two scenes as a card of
+ * their own; then whatever is left. A row of equal boxes is a spreadsheet, and
+ * the difference between that and a room is the one small column.
  */
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { store, cap, houseLine, weatherParts, whatsOn } from '../store'
+import { store, cap, houseLine, scenesFor, weatherParts, whatsOn } from '../store'
 import { wxOf } from '../sky'
 import { upcomingLine } from '../upcoming'
 import type { Device, Room } from '../api'
@@ -24,13 +30,17 @@ import LightTile from '../tiles/LightTile.vue'
 import MediaTile from '../tiles/MediaTile.vue'
 import PlainTile from '../tiles/PlainTile.vue'
 
-const props = defineProps<{ rooms: Room[]; now: Date }>()
+/* topNav: the tabs are across the top, so the rooms have a tab of their own and
+   the command box lives in the bar along the bottom -- neither is repeated here */
+const props = defineProps<{ rooms: Room[]; now: Date; topNav?: boolean }>()
 defineEmits<{ open: [id: string] }>()
 
 const hour = computed(() => props.now.getHours())
 const greeting = computed(() => hour.value < 5 ? 'Good night' : hour.value < 12 ? 'Good morning' : hour.value < 17 ? 'Good afternoon' : hour.value < 21 ? 'Good evening' : 'Good night')
 const line = computed(houseLine)
 const next = computed(() => upcomingLine(props.now))
+/* the scenes card is named for the part of the day it serves, like the greeting */
+const when = computed(() => hour.value < 5 ? 'Tonight' : hour.value < 12 ? 'This morning' : hour.value < 17 ? 'This afternoon' : 'Tonight')
 
 /* the weather, beside the greeting rather than in a card of its own: the sky
    behind the panel is already the forecast, so repeating it in a tile spends the
@@ -50,13 +60,32 @@ const flakes = computed(() => !wx.value.snow ? '' : Array.from({ length: Math.ro
   return `M${x} ${y} m-${r} 0 a${r} ${r} 0 1 0 ${2 * r} 0 a${r} ${r} 0 1 0 -${2 * r} 0`
 }).join(' '))
 
-/* the rail: what is on now, the cameras, and whatever is keeping the house warm.
-   Room by room underneath, for everything that is not asking to be looked at. */
+/* The rail's cards, in the order drawn. A device is a card; the scenes are one
+   card among them ('scenes'), so the grid can place them all the same way. */
+type Card = { key: string; kind: 'device' | 'scenes'; device?: Device }
 const cameras = computed(() => props.rooms.flatMap(r => r.devices.filter(d => cap(d) === 'camera')))
 const climates = computed(() => props.rooms.flatMap(r => r.devices.filter(d => cap(d) === 'climate')))
 const on = computed(() => whatsOn().filter(d => cap(d) !== 'camera' && cap(d) !== 'climate'))
-const carded = computed<Device[]>(() => [...on.value, ...climates.value].slice(0, 10))
-const empty = computed(() => !cameras.value.length && !carded.value.length)
+const scenes = computed(() => scenesFor(null).length > 0)
+const cards = computed<Card[]>(() => {
+  const dev = (d: Device): Card => ({ key: d.id, kind: 'device', device: d })
+  const playing = on.value.find(d => cap(d) === 'media' && d.state === 'playing') ?? on.value.find(d => cap(d) === 'media')
+  const tall = on.value.filter(d => d !== playing).slice(0, 8)
+  /* the glance cards, two to a column: the first column pairs a camera with the
+     thermostat, as drawn, and the rest follow in their own columns at the end */
+  const [cam0, ...cams] = cameras.value, [clim0, ...clims] = climates.value
+  const small = [cam0, clim0, ...cams, ...clims].filter((d): d is Device => !!d)
+  const out: Card[] = []
+  if (playing) out.push(dev(playing))
+  out.push(...small.slice(0, 2).map(dev))
+  out.push(...tall.slice(0, 1).map(dev))
+  if (scenes.value) out.push({ key: 'scenes', kind: 'scenes' })
+  out.push(...tall.slice(1).map(dev))
+  out.push(...small.slice(2).map(dev))
+  return out
+})
+const empty = computed(() => !cards.value.length)
+const tile = (d: Device) => cap(d) === 'light' ? LightTile : cap(d) === 'media' ? MediaTile : cap(d) === 'climate' ? ClimateTile : cap(d) === 'camera' ? CameraTile : PlainTile
 
 const clock = ref(Date.now())
 let t: number | undefined
@@ -77,7 +106,7 @@ onUnmounted(() => { bento.value?.removeEventListener('scroll', edges); removeEve
 </script>
 
 <template>
-  <section class="home rail-home">
+  <section class="home rail-home" :class="{ 'top-nav': topNav }">
     <header class="stage-head rail-head">
       <div class="rail-greet">
         <h1 class="display">{{ greeting }}</h1>
@@ -110,18 +139,22 @@ onUnmounted(() => { bento.value?.removeEventListener('scroll', edges); removeEve
       </div>
     </header>
 
-    <Attention />
+    <Attention :say="!topNav" />
 
-    <SceneBar :room="null" />
-
-    <div class="bento" ref="bento" v-if="!empty" role="group" aria-label="On right now">
-      <component
-        v-for="d in carded" :key="d.id" class="bento-card"
-        :is="cap(d) === 'light' ? LightTile : cap(d) === 'media' ? MediaTile : cap(d) === 'climate' ? ClimateTile : PlainTile"
-        :device="d" v-hold="() => (store.opened = d)" />
-      <CameraTile v-for="c in cameras" :key="c.id" :device="c" class="bento-card" v-hold="() => (store.opened = c)" />
+    <!-- the rail sits in the middle of whatever height is left, as drawn; the
+         footer and the rooms, when they are here at all, wait underneath -->
+    <div class="rail-stage">
+      <div class="bento" ref="bento" v-if="!empty" role="group" aria-label="On right now">
+        <template v-for="c in cards" :key="c.key">
+          <component v-if="c.kind === 'device'" :is="tile(c.device!)" class="bento-card" :device="c.device!" v-hold="() => (store.opened = c.device!)" />
+          <div v-else class="bento-card tile scene-card">
+            <span class="scene-card-when">{{ when }}</span>
+            <SceneBar :room="null" />
+          </div>
+        </template>
+      </div>
+      <p class="empty rail-quiet" v-else>Nothing is on.{{ topNav ? '' : ' The rooms are below.' }}</p>
     </div>
-    <p class="empty rail-quiet" v-else>Nothing is on. The rooms are below.</p>
 
     <footer class="home-foot">
       <button class="home-place" v-if="store.ambient.location" @click="store.sheet = 'location'"><Icon name="pin" :size="14" /> {{ store.ambient.location.name }}<span class="home-change">Change</span></button>
@@ -129,7 +162,7 @@ onUnmounted(() => { bento.value?.removeEventListener('scroll', edges); removeEve
       <button class="home-place" @click="store.sheet = 'hub'"><Icon name="home" :size="14" /> This hub<span class="home-change">Open</span></button>
     </footer>
 
-    <div class="block">
+    <div class="block" v-if="!topNav">
       <h2 class="label">Rooms</h2>
       <RoomGrid :rooms="rooms" @open="$emit('open', $event)" />
     </div>

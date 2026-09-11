@@ -30,8 +30,9 @@ const tabs = computed(() => [
       <span class="topbar-day">{{ day }}</span>
     </div>
     <nav class="tabs" aria-label="Around the house">
+      <!-- as drawn: the house glyph leads, the tabs are words -->
       <button v-for="t in tabs" :key="t.id" class="tab" :class="{ active: tab === t.id && !(inRoom && t.id === 'home') }" @click="emit('go', t.id)">
-        <Icon :name="t.icon" :size="16" /><span>{{ t.label }}</span>
+        <Icon v-if="t.id === 'home'" :name="t.icon" :size="16" /><span>{{ t.label }}</span>
       </button>
     </nav>
     <div class="topbar-right">
