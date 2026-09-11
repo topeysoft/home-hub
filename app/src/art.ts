@@ -41,6 +41,7 @@ export type Materials = {
   darkHi: string; darkLo: string
   shadeHi: string; shadeLo: string
   fabricHi: string; fabricLo: string
+  screenHi: string; screenLo: string
 }
 
 /* the base colour of each surface, before the room gets to it */
@@ -50,6 +51,7 @@ const BASE: Record<keyof Materials, RGB> = {
   darkHi: [58, 61, 68], darkLo: [21, 23, 27],
   shadeHi: [247, 230, 198], shadeLo: [224, 185, 129],
   fabricHi: [122, 116, 104], fabricLo: [78, 74, 66],
+  screenHi: [42, 45, 51], screenLo: [15, 17, 20],
 }
 
 /* How far a surface takes the colour of the room it stands in. Gentle on
@@ -99,6 +101,8 @@ const DARK = 'url(#mDark)'        // dark plastic
 const POOL = 'url(#mPool)'        // light landing on a floor
 const CONE = 'url(#mCone)'        // light on its way down
 const GLASS = 'url(#mGlass)'      // a lit bulb
+const FABRIC = 'url(#mFabric)'    // speaker cloth
+const SCREEN = 'url(#mScreen)'    // a dark panel with a sheen across it
 
 /* ---------- what a drawing is given ---------- */
 
@@ -108,7 +112,16 @@ const GLASS = 'url(#mGlass)'      // a lit bulb
  * keeps this one drawing per device rather than one per state. `brightness` is
  * 0..1; a light that cannot dim is simply 1 when it is on.
  */
-export type ArtState = { on?: boolean; brightness?: number }
+export type ArtState = {
+  on?: boolean
+  brightness?: number     // 0..1; a light that cannot dim is simply 1 when it is on
+  locked?: boolean
+  position?: number       // 0..1, how far open a cover is
+  live?: boolean          // a camera that is watching
+  playing?: boolean
+  cooling?: boolean
+  heating?: boolean
+}
 
 export type Art = {
   marks: Mark[]
@@ -117,8 +130,12 @@ export type Art = {
   glow: number
 }
 
-export type Kind = 'floor-lamp' | 'table-lamp' | 'ceiling' | 'strip' | 'bulb' | 'pendant'
-export const KINDS: Kind[] = ['floor-lamp', 'table-lamp', 'ceiling', 'strip', 'bulb', 'pendant']
+export type Kind =
+  | 'floor-lamp' | 'table-lamp' | 'ceiling' | 'strip' | 'bulb' | 'pendant'
+  | 'camera' | 'doorbell' | 'thermostat' | 'speaker' | 'tv' | 'lock' | 'plug' | 'fan' | 'blind' | 'vacuum'
+export const LIGHT_KINDS: Kind[] = ['floor-lamp', 'table-lamp', 'ceiling', 'strip', 'bulb', 'pendant']
+export const KINDS: Kind[] = [...LIGHT_KINDS,
+  'camera', 'doorbell', 'thermostat', 'speaker', 'tv', 'lock', 'plug', 'fan', 'blind', 'vacuum']
 
 /* How much light is coming out, 0..1. Off is off: no pool, no cone, no glow, no
    exceptions. An "off" tile that still emits was a real bug on the first pass of
@@ -241,10 +258,200 @@ function light(kind: Kind, s: ArtState, m: Materials): Art {
   }
 }
 
+
+/* ---------- everything else in the house ---------- */
+
+/*
+ * None of these emit, with one exception: a smart plug's pilot light, which is
+ * the only way a plug shows it is on at all. Everything else says its state with
+ * shape -- a bolt across or along, slats down or up, a dish that is or is not
+ * sweeping. That is the point of drawing them: a thing that looks different when
+ * it is doing something does not need a word underneath saying so.
+ */
+function thing(kind: Kind, s: ArtState, m: Materials): Art {
+  const none = { glow: 0 }
+
+  if (kind === 'camera') {
+    return {
+      ...none,
+      marks: [
+        ell(74, 116, 30, 8, m.metalLo, { opacity: 0.5 }),
+        rect(30, 30, 88, 55, MATTE, { rx: 27.5 }),
+        circ(58, 58, 20, m.darkHi),
+        circ(58, 58, 11.5, m.darkLo),
+        /* the glint is what stops a lens reading as a hole */
+        circ(53, 53, 4, '#ffffff', { opacity: s.live === false ? 0.28 : 0.55 }),
+        rect(67, 85, 14, 24, PLATE, { rx: 6 }),
+        ell(74, 112, 27, 8, PLATE),
+      ],
+    }
+  }
+
+  if (kind === 'doorbell') {
+    return {
+      ...none,
+      marks: [
+        rect(70, 10, 54, 108, DARK, { rx: 14 }),
+        circ(97, 42, 16, m.darkLo),
+        circ(97, 42, 9, m.darkHi),
+        circ(92, 37, 3.2, '#ffffff', { opacity: 0.5 }),
+        /* the live green is a signal and never takes the room, same as the lamp accent */
+        circ(97, 90, 15, 'none', { stroke: '#74c69d', 'stroke-width': 2, opacity: s.live === false ? 0.2 : 0.55 }),
+        circ(97, 90, 11, MATTE),
+      ],
+    }
+  }
+
+  if (kind === 'thermostat') {
+    /* blue cooling, orange heating: the same two the panel already tints a
+       climate tile with, and neither is allowed to drift with the sky */
+    const arc = s.cooling ? '#7fb4e8' : s.heating ? '#e9a06a' : ''
+    return {
+      ...none,
+      marks: [
+        ell(96, 122, 40, 7, m.metalLo, { opacity: 0.35 }),
+        circ(96, 62, 46, PLATE),
+        circ(96, 62, 39, DARK),
+        circ(96, 62, 39, 'none', { stroke: m.metalMid, 'stroke-width': 1, opacity: 0.3 }),
+        /* the set-point mark. The number itself stays out of the drawing: the
+           tile already says it in type you can read across a room. */
+        pathOf('M96 26v7', 'none', { stroke: '#f1eee8', 'stroke-width': 2, 'stroke-linecap': 'round' }),
+        ...(arc ? [ell(96, 62, 43, 43, 'none', { stroke: arc, 'stroke-width': 3, opacity: 0.8, 'stroke-dasharray': '34 236', transform: 'rotate(140 96 62)' })] : []),
+      ],
+    }
+  }
+
+  if (kind === 'speaker') {
+    return {
+      ...none,
+      marks: [
+        ell(96, 122, 34, 7, m.metalLo, { opacity: 0.4 }),
+        rect(66, 34, 60, 78, FABRIC),
+        pathOf('M78 34v78M96 34v78M114 34v78', 'none', { stroke: m.fabricLo, 'stroke-width': 1, opacity: 0.45 }),
+        ell(96, 112, 30, 9, m.fabricLo),
+        ell(96, 34, 30, 9, PLATE),
+        ell(96, 33, 19, 5.5, m.darkHi, { opacity: 0.75 }),
+        ...(s.playing ? [ell(96, 33, 19, 5.5, 'none', { stroke: LAMP, 'stroke-width': 1.6, opacity: 0.7 })] : []),
+      ],
+    }
+  }
+
+  if (kind === 'tv') {
+    return {
+      ...none,
+      marks: [
+        ell(81, 120, 36, 6, m.metalLo, { opacity: 0.35 }),
+        rect(16, 24, 130, 72, PLATE, { rx: 4 }),
+        rect(19, 27, 124, 66, SCREEN, { rx: 2 }),
+        /* one diagonal sheen: a dark rectangle with nothing across it reads as a
+           hole cut in the tile rather than as glass */
+        pathOf('M19 93L89 27h22L41 93z', '#ffffff', { opacity: s.playing ? 0.07 : 0.04 }),
+        pathOf('M66 96L59 114H103L96 96Z', PLATE),
+        ell(81, 117, 28, 5, m.metalLo),
+      ],
+    }
+  }
+
+  if (kind === 'lock') {
+    /* along the door is shut, across it is open -- the one convention everybody
+       already reads. Halfway between the two, which is where this started, is
+       the only position that means nothing. */
+    const shut = s.locked !== false
+    return {
+      ...none,
+      marks: [
+        ell(96, 66, 34, 34, m.metalLo, { opacity: 0.4 }),
+        circ(94, 64, 34, PLATE),
+        circ(94, 64, 26, 'none', { stroke: m.metalLo, 'stroke-width': 1.4, opacity: 0.55 }),
+        rect(88, 40, 12, 48, METAL, { rx: 6, transform: shut ? 'rotate(0 94 64)' : 'rotate(90 94 64)' }),
+        circ(94, 64, 5, m.darkLo, { opacity: 0.7 }),
+      ],
+    }
+  }
+
+  if (kind === 'plug') {
+    const on = s.on === true
+    return {
+      glow: on ? 0.35 : 0,
+      marks: [
+        rect(36, 14, 108, 112, m.metalLo, { rx: 8, opacity: 0.16 }),
+        rect(54, 30, 76, 80, MATTE, { rx: 18 }),
+        rect(76, 50, 8, 18, m.darkLo, { rx: 4, opacity: 0.8 }),
+        rect(100, 50, 8, 18, m.darkLo, { rx: 4, opacity: 0.8 }),
+        rect(84, 76, 16, 9, m.darkLo, { rx: 4.5, opacity: 0.8 }),
+        /* the pilot light, and the only thing on this drawing that emits */
+        circ(92, 98, 3.4, on ? GLOW : m.metalLo, { opacity: on ? 1 : 0.7 }),
+      ],
+    }
+  }
+
+  if (kind === 'fan') {
+    const spinning = s.on === true
+    /* Four blades, spaced in round space and squashed afterwards, which is the
+       projection of a flat disc tilted toward you. Rotating a symmetric shape
+       about its OWN centre gives two blades for every one -- that is how this
+       first came out with six. */
+    const disc = 'translate(90 46) scale(1 0.46)'
+    const blades = [24, 114, 204, 294].map((a) =>
+      /* 52 and not 56: the far CORNER of a rotated blade, not its tip, is what
+         reaches furthest, and at 56 it cleared the right edge of the box by
+         three pixels. The box check does the trigonometry so nobody has to. */
+      rect(8, -11, 52, 22, PLATE, { rx: 11, transform: `${disc} rotate(${a})` }))
+    return {
+      ...none,
+      marks: [
+        rect(24, 6, 126, 3, m.metalMid, { opacity: 0.18 }),
+        ell(90, 10, 11, 3.5, PLATE),
+        rect(88, 10, 4, 32, METAL),
+        ell(90, 52, 17, 8, m.metalLo),
+        ...blades,
+        { el: 'circle', at: { cx: 0, cy: 0, r: 17, fill: PLATE, transform: disc } },
+        /* the disc it sweeps, and the only thing that says it is turning */
+        ...(spinning ? [ell(90, 46, 58, 26, 'none', { stroke: m.metalMid, 'stroke-width': 2, opacity: 0.2 })] : []),
+      ],
+    }
+  }
+
+  if (kind === 'blind') {
+    /* shut is nine slats down the glass and open is none; the light below them is
+       whatever is left of the window. It is NOT the lamp cone -- a window is not
+       a lamp, and warming it would say the wrong thing at every hour. */
+    const open = Math.max(0, Math.min(1, s.position ?? 0))
+    const n = Math.round((1 - open) * 9)
+    const slats = Array.from({ length: n }, (_, i) => rect(30, 10 + i * 11, 112, 7, PLATE, { rx: 2 }))
+    const bottom = n ? 10 + (n - 1) * 11 + 7 : 6
+    return {
+      ...none,
+      marks: [
+        rect(26, 6, 120, 104, m.darkLo, { rx: 3, opacity: 0.55 }),
+        ...(bottom < 110 ? [rect(32, bottom, 108, 110 - bottom, m.matteLo, { opacity: 0.45 })] : []),
+        ...slats,
+        rect(26, 6, 120, 104, 'none', { rx: 3, stroke: m.metalMid, 'stroke-width': 2, opacity: 0.45 }),
+        rect(22, 110, 128, 5, PLATE, { rx: 1.5 }),
+      ],
+    }
+  }
+
+  /* vacuum */
+  const cleaning = s.on === true
+  return {
+    ...none,
+    marks: [
+      ell(92, 110, 50, 12, m.metalLo, { opacity: 0.34 }),
+      /* thickness the same way as everything else: the same dish, twice, offset */
+      ell(92, 86, 50, 28, m.metalLo),
+      ell(92, 78, 50, 28, MATTE),
+      ell(92, 70, 16, 9, DARK),
+      ell(92, 68, 16, 9, PLATE),
+      ...(cleaning ? [ell(92, 82, 58, 33, 'none', { stroke: m.metalMid, 'stroke-width': 2, opacity: 0.2 })] : []),
+    ],
+  }
+}
+
 /* ---------- the way in ---------- */
 
 export function device(kind: Kind, s: ArtState, m: Materials): Art {
-  return light(kind, s, m)
+  return (LIGHT_KINDS as string[]).includes(kind) ? light(kind, s, m) : thing(kind, s, m)
 }
 
 /*
@@ -256,6 +463,31 @@ export function device(kind: Kind, s: ArtState, m: Materials): Art {
  * every branch is still a light, still lights up, still dims -- but it is a
  * placeholder for a proper per-device setting, not the answer.
  */
+/*
+ * What a device gets drawn as, given what the hub knows about it.
+ *
+ * null is a real answer and the important one: a sensor, a motion detector and a
+ * door contact get no drawing. They are read rather than operated, they have no
+ * agreed shape, and inventing one would put a picture of a thing next to a number
+ * that is the actual point of the tile. They stay on rung four, which is where
+ * the ladder in *When there is no artwork* always said most things would live.
+ */
+export function kindFor(capability: string, name: string): Kind | null {
+  switch (capability) {
+    case 'light': return lightKind(name)
+    case 'lock': return 'lock'
+    case 'switch': return 'plug'
+    case 'fan': return 'fan'
+    case 'cover': return 'blind'
+    case 'vacuum': return 'vacuum'
+    case 'climate': return 'thermostat'
+    /* a doorbell is a camera to the hub, and nothing like one on a wall */
+    case 'camera': return /\b(doorbell|door ?bell|bell)\b/i.test(name) ? 'doorbell' : 'camera'
+    case 'media': return /\b(tv|television|screen|display|roku|chromecast|shield|apple ?tv|projector)\b/i.test(name) ? 'tv' : 'speaker'
+    default: return null
+  }
+}
+
 const BY_NAME: [RegExp, Kind][] = [
   [/\b(strip|under[- ]?cabinet|led|cove|shelf)\b/i, 'strip'],
   [/\b(pendant|hanging)\b/i, 'pendant'],

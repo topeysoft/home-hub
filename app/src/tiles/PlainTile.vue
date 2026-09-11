@@ -4,6 +4,8 @@ import type { Device } from '../api'
 import { cap, isActive, isDead, perform, shortName, roomOf, store } from '../store'
 import { readingLabel } from '../readings'
 import Icon from '../Icon.vue'
+import DeviceArt from '../DeviceArt.vue'
+import { kindFor, type ArtState } from '../art'
 
 const props = defineProps<{ device: Device }>()
 const kind = computed(() => cap(props.device))
@@ -12,6 +14,20 @@ const dead = computed(() => isDead(props.device))
 const pending = computed(() => !!store.pending[props.device.id])
 const passive = computed(() => ['sensor', 'motion', 'contact'].includes(kind.value))
 const name = computed(() => shortName(props.device, roomOf(props.device)))
+
+/* null for the passive ones -- a sensor, a motion detector, a door contact. They
+   keep the oversized faint icon, which is rung four of the ladder and where most
+   of a real house will always sit. */
+const shape = computed(() => kindFor(kind.value, props.device.name || name.value))
+const artState = computed<ArtState>(() => {
+  const d = props.device
+  if (kind.value === 'lock') return { locked: d.state !== 'unlocked' }
+  if (kind.value === 'cover') {
+    const pos = d.attrs.current_position
+    return { position: pos != null ? pos / 100 : d.state === 'open' ? 1 : 0 }
+  }
+  return { on: on.value }
+})
 
 const label = computed(() => {
   const d = props.device, k = kind.value
@@ -45,7 +61,9 @@ function tap() {
 <template>
   <button class="tile plain" :class="[kind, { on, dead, passive, pending, arming }]" :disabled="passive || dead" @click="tap" :aria-pressed="passive ? undefined : on">
     <!-- no artwork of its own, so the icon, oversized and faint, is the art: a shelf of no-name plugs reads composed rather than empty -->
-    <span class="tile-art" aria-hidden="true"><Icon :name="kind" :size="150" /></span>
+    <DeviceArt v-if="shape" :kind="shape" :state="artState" />
+    <!-- rung four: nothing drawn for this one, so the icon goes oversized and faint and becomes the art -->
+    <span class="tile-art" v-else aria-hidden="true"><Icon :name="kind" :size="150" /></span>
     <span class="tile-maker" v-if="device.maker">{{ device.maker }}</span>
     <div class="tile-body">
       <span class="tile-icon"><Icon :name="kind" /></span>

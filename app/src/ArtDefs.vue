@@ -40,6 +40,10 @@ const m = computed(() => materials(store.sky.elevation, store.sky.condition))
       <linearGradient id="mDark" x1="0" y1="0" x2="0.4" y2="1">
         <stop offset="0" :stop-color="m.darkHi" /><stop offset="100%" :stop-color="m.darkLo" />
       </linearGradient>
+      <!-- a dark panel with a sheen across it, so a screen is glass and not a hole -->
+      <linearGradient id="mScreen" x1="0.1" y1="0" x2="0.9" y2="1">
+        <stop offset="0" :stop-color="m.screenHi" /><stop offset="58%" :stop-color="m.screenLo" /><stop offset="100%" :stop-color="m.screenHi" />
+      </linearGradient>
       <linearGradient id="mFabric" x1="0" y1="0" x2="1" y2="0">
         <stop offset="0" :stop-color="m.fabricLo" /><stop offset="42%" :stop-color="m.fabricHi" /><stop offset="100%" :stop-color="m.fabricLo" />
       </linearGradient>
