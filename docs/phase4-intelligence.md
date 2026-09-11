@@ -8,7 +8,7 @@ Status, 6 September 2026: milestones 1 to 4 are built. The brain side is `brain/
 `brain/rules.json`, holds, presence (`brain/hub/presence.py`, the `presence` trigger and condition, the
 `/presence` route and `presence` stream message), the `/rules` and `/rooms/{id}/why` routes and the
 `intent` stream message. The panel side is the *set by* line on a room (`app/src/views/RoomView.vue`),
-the why sheet (`app/src/WhySheet.vue`) and the routines sheet (`app/src/RoutinesSheet.vue`, on and off
+the why sheet (`app/src/WhySheet.vue`) and the routines sheet (`app/src/RoutinesPage.vue`, on and off
 only), with the wording in `app/src/why.ts`. The assistant (milestone 5) authors and explains:
 `brain/hub/assistant.py` turns a sentence into a draft under `drafts` (structured output, validated by the
 same `validate` the file goes through, one retry with the errors), the routines sheet shows drafts with

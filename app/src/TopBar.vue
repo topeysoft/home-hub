@@ -2,10 +2,11 @@
 /*
  * The way around the house, across the top: the clock, three tabs, and the two
  * things the side list used to keep in reach -- adding a device, and whether
- * the hub is connected. Chosen in How the house looks; see layout.ts.
+ * the hub is connected -- plus the one door to everything else, This house.
+ * Chosen in How the house looks; see layout.ts.
  */
 import { computed } from 'vue'
-import { store } from './store'
+import { store, updateReady } from './store'
 import Icon from './Icon.vue'
 
 const props = defineProps<{ clock: string; day: string; now: Date; tab: 'home' | 'rooms' | 'cameras'; inRoom: boolean }>()
@@ -39,6 +40,9 @@ const tabs = computed(() => [
       <span class="link" :class="{ up: store.linkUp }">{{ store.linkUp ? 'Connected' : 'Reconnecting' }}</span>
       <button class="topbar-add" :class="{ attention: store.found.length }" @click="store.sheet = 'add'" :aria-label="store.found.length ? `Add a device, ${store.found.length} found nearby` : 'Add a device'">
         <Icon name="plus" :size="18" />
+      </button>
+      <button class="topbar-add topbar-house" :class="{ attention: updateReady() }" @click="store.sheet = 'house'" :aria-label="updateReady() ? 'This house, an update is ready' : 'This house'">
+        <Icon name="menu" :size="18" />
       </button>
     </div>
   </header>

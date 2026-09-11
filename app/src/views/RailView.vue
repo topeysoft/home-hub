@@ -142,7 +142,7 @@ onUnmounted(() => { bento.value?.removeEventListener('scroll', edges); removeEve
     <Attention :say="!topNav" />
 
     <!-- the rail sits in the middle of whatever height is left, as drawn; the
-         footer and the rooms, when they are here at all, wait underneath -->
+         rooms, when they are here at all, wait underneath -->
     <div class="rail-stage">
       <div class="bento" ref="bento" v-if="!empty" role="group" aria-label="On right now">
         <template v-for="c in cards" :key="c.key">
@@ -155,12 +155,6 @@ onUnmounted(() => { bento.value?.removeEventListener('scroll', edges); removeEve
       </div>
       <p class="empty rail-quiet" v-else>Nothing is on.{{ topNav ? '' : ' The rooms are below.' }}</p>
     </div>
-
-    <footer class="home-foot">
-      <button class="home-place" v-if="store.ambient.location" @click="store.sheet = 'location'"><Icon name="pin" :size="14" /> {{ store.ambient.location.name }}<span class="home-change">Change</span></button>
-      <button class="home-place" @click="store.sheet = 'look'"><Icon name="sun" :size="14" /> How it looks<span class="home-change">Change</span></button>
-      <button class="home-place" @click="store.sheet = 'hub'"><Icon name="home" :size="14" /> This hub<span class="home-change">Open</span></button>
-    </footer>
 
     <div class="block" v-if="!topNav">
       <h2 class="label">Rooms</h2>

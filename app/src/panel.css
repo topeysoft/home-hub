@@ -71,7 +71,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--lamp); outl
 .rail-item:active { background: var(--surface-press); }
 .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--edge-hi); justify-self: center; transition: background .3s, box-shadow .3s; }
 .dot.on { background: var(--lamp); box-shadow: 0 0 10px 2px var(--lamp-glow); }
-.rail-tail { margin: 0 -8px; padding: 6px 8px 0; border-top: 1px solid var(--edge); }
+.rail-tail { display: flex; flex-direction: column; gap: 2px; margin: 0 -8px; padding: 6px 8px 0; border-top: 1px solid var(--edge); }   /* Add a device, and This house */
 .rail-foot { padding-top: 14px; }
 .link { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); display: inline-flex; align-items: center; gap: 8px; }
 .link::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--danger); }
@@ -222,6 +222,10 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--lamp); outl
   .rail-tail .rail-add.attention { border-color: rgba(233,184,114,.5); }
   .rail-tail .rail-add.attention svg { color: var(--lamp); }
   .rail-tail .rail-add .rail-name { display: none; }
+  .rail-tail { flex-direction: row; gap: 6px; }
+  .rail-tail .rail-house { width: 40px; height: 40px; padding: 0; border-radius: 50%; place-items: center; }
+  .rail-tail .rail-house svg { display: block; color: var(--ink-2); }
+  .rail-tail .rail-house .rail-name, .rail-tail .rail-house .rail-sub { display: none; }
   .rail-item.active { background: var(--ink); color: var(--bg); }
   .stage { padding: 22px 16px 40px; }
   .stage-head h1 { font-size: 40px; }
@@ -372,17 +376,16 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--lamp); outl
   .nudge-text { flex-direction: column; gap: 2px; }
   .nudge-sub { -webkit-line-clamp: 3; }
 }
-.home-foot { display: flex; flex-wrap: wrap; gap: 8px 24px; margin-top: 10px; padding-top: 18px; border-top: 1px solid var(--edge); }
-.home-place { display: inline-flex; align-items: center; gap: 7px; min-height: 44px; font-size: 13.5px; color: var(--muted); }
-.home-place svg { color: var(--lamp); }
-.home-change { margin-left: 8px; color: var(--ink-2); text-decoration: underline; text-underline-offset: 3px; }
 
 .sheet-back { position: fixed; inset: 0; z-index: 35; background: rgba(6,7,9,.55); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); display: grid; place-items: center; padding: 24px; }
-.sheet { position: relative; width: min(100%, 560px); max-height: calc(100dvh - 48px); overflow-y: auto; padding: 28px 28px 24px; border-radius: 26px;
+.sheet { position: relative; width: min(100%, 560px); max-height: calc(100dvh - 48px); display: flex; flex-direction: column; overflow: hidden; padding: 0; border-radius: 26px;
   background: rgba(22, 24, 30, .92); border: 1px solid var(--edge-hi); box-shadow: 0 40px 100px -30px rgba(0,0,0,.9); }
-.sheet h2 { margin: 0 44px 8px 0; font-size: 36px; line-height: 1.05; }
-.sheet-lede { margin: 0 0 20px; color: var(--ink-2); font-size: 15px; }
-.sheet-close { position: absolute; top: 18px; right: 18px; }
+/* the title and the close stay put; only what is under them scrolls */
+.sheet-head { display: flex; align-items: flex-start; gap: 14px; padding: 26px 22px 6px 28px; flex: 0 0 auto; }
+.sheet h2 { margin: 0; flex: 1 1 auto; font-size: 36px; line-height: 1.05; }
+.sheet-body { overflow-y: auto; min-height: 0; padding: 4px 28px 24px; }
+.sheet-lede, .page-lede { margin: 0 0 20px; color: var(--ink-2); font-size: 15px; }
+.sheet-close { flex: 0 0 auto; margin-top: -2px; }
 .loc-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
 .loc-actions .button { margin: 0; }
 .button.ghost { background: var(--surface-hi); color: var(--ink); border: 1px solid var(--edge); }
@@ -398,7 +401,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--lamp); outl
 .results button:active { background: var(--surface-press); }
 .r-name { font-size: 15.5px; }
 .r-sub { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.sheet-status { margin: 12px 2px 0; font-size: 13.5px; color: var(--ink-2); }
+.sheet-status, .page-status { margin: 12px 2px 0; font-size: 13.5px; color: var(--ink-2); }
 .chosen { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; margin-top: 20px; padding: 14px 16px; border-radius: 16px;
   background: linear-gradient(rgba(233,184,114,.12), rgba(233,184,114,.12)), var(--surface-hi); border: 1px solid rgba(233,184,114,.35); }
 .chosen > svg { color: var(--lamp); }
@@ -410,14 +413,16 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--lamp); outl
 .sheet-enter-from .sheet { transform: translateY(14px) scale(.985); }
 @media (max-width: 860px) {
   .sheet-back { padding: 0; align-items: end; }
-  .sheet { width: 100%; max-height: 92dvh; border-radius: 24px 24px 0 0; padding: 24px 18px calc(20px + env(safe-area-inset-bottom)); }
+  .sheet { width: 100%; max-height: 92dvh; border-radius: 24px 24px 0 0; }
+  .sheet-head { padding: 22px 14px 4px 18px; }
+  .sheet-body { padding: 4px 18px calc(20px + env(safe-area-inset-bottom)); }
   .sheet h2 { font-size: 30px; }
   .chosen { grid-template-columns: auto 1fr; }
   .chosen .button { grid-column: 1 / -1; justify-content: center; }
 }
 
-.sheet-foot { margin: 22px 2px 0; font-size: 13px; color: var(--muted); }
-.sheet-foot a { color: var(--ink-2); text-decoration: underline; text-underline-offset: 3px; }
+.sheet-foot, .page-foot { margin: 22px 2px 0; font-size: 13px; color: var(--muted); }
+.sheet-foot a, .page-foot a { color: var(--ink-2); text-decoration: underline; text-underline-offset: 3px; }
 .tile.arming { border-color: rgba(233,184,114,.5); }
 .tile.arming .tile-state { color: var(--lamp); }
 
@@ -575,9 +580,67 @@ select.input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://ww
   .sort-row .sort-room, .sort-row .button { grid-column: 2; }
 }
 
+/* ---------- This house: one panel ----------
+   It rises the way an opened device does and the home recedes behind it (the
+   same .opened-shell recede in App.vue). Inside, the doors down the left and
+   the page on the right; only the page scrolls, so the title and the close
+   never leave. See HousePanel.vue. */
+.house { position: fixed; inset: 0; z-index: 40; }
+.house-veil { position: absolute; inset: 0; background: rgba(6,7,9,.42); transition: opacity .42s var(--ease); }
+.house-panel { position: absolute; left: 0; right: 0; bottom: 0; top: clamp(72px, 11vh, 120px); display: grid; grid-template-columns: 320px minmax(0, 1fr); overflow: hidden;
+  border-radius: 34px 34px 0 0; border: 1px solid var(--edge-hi); border-bottom: 0;
+  background: linear-gradient(180deg, rgba(26,28,34,.86), rgba(16,17,21,.96)); backdrop-filter: blur(30px) saturate(1.25); -webkit-backdrop-filter: blur(30px) saturate(1.25);
+  transition: transform .38s var(--ease); }
+.house-enter-active, .house-leave-active { transition: opacity .01s linear .0s; }
+.house-enter-active .house-panel { transition: transform .38s var(--ease); }
+.house-leave-active .house-panel { transition: transform .28s var(--ease); }
+.house-enter-from .house-panel, .house-leave-to .house-panel { transform: translateY(100%); }
+.house-enter-from .house-veil, .house-leave-to .house-veil { opacity: 0; }
+.house-doors { display: flex; flex-direction: column; min-height: 0; padding: 30px 18px 22px 30px; border-right: 1px solid var(--edge); background: rgba(12,13,16,.22); }
+.house-doors-head { display: flex; align-items: center; justify-content: space-between; margin: 0 0 14px 12px; }
+.house-doors-title { font-size: 15px; letter-spacing: .01em; color: var(--ink-2); }
+.house-doors-head .house-close { display: none; }   /* the close lives on the page head; the list's own only on a phone */
+.doors { display: flex; flex-direction: column; gap: 2px; min-height: 0; overflow-y: auto; margin: 0 -8px; padding: 0 8px; }
+.door { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 12px; padding: 9px 12px 9px 10px; border-radius: 14px; text-align: left; color: var(--ink-2);
+  transition: background .18s var(--ease), color .18s var(--ease); }
+.door:active { background: var(--surface-press); }
+.door.on { background: var(--surface-hi); color: var(--ink); }
+.door-icon { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; background: var(--surface-hi); color: var(--ink-2); flex: 0 0 auto; }
+.door.on .door-icon { background: var(--ink); color: var(--bg); }
+.door.attention .door-icon { background: var(--lamp); color: var(--lamp-ink); }
+.door-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.door-name { font-size: 15.5px; font-weight: 500; }
+.door-hint { font-size: 12.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.door.attention .door-hint { color: var(--lamp); }
+.door > .flip { display: none; color: var(--muted); transform: rotate(180deg); }
+.house-foot { margin: auto 0 0 12px; padding-top: 14px; }
+.house-main { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+.house-head { display: flex; align-items: center; gap: 16px; padding: 26px 30px 16px 48px; flex: 0 0 auto; border-bottom: 1px solid var(--edge); }
+.house-head h2 { margin: 0; flex: 1 1 auto; font-size: 40px; line-height: 1.04; }
+.house-back { display: none; }
+.house-page { overflow-y: auto; min-height: 0; padding: 22px 48px 48px; }
+.house-page > .page { max-width: 760px; }
+.page-lede { font-size: 16px; }
+@media (max-width: 860px) {
+  /* the whole screen: the list first, a page in front of it with the way back */
+  .house-panel { top: 0; border-radius: 0; border: 0; grid-template-columns: 1fr; }
+  .house-doors { padding: 18px 16px calc(16px + env(safe-area-inset-bottom)); border-right: 0; }
+  .house-doors-head { margin: 0 0 12px 4px; }
+  .house-doors-title { font-size: 28px; color: var(--ink); }
+  .house-doors-head .house-close { display: grid; }
+  .door > .flip { display: block; }
+  .door { grid-template-columns: auto 1fr auto; padding: 11px 10px; }
+  .house:not(.at-doors) .house-doors, .house.at-doors .house-main { display: none; }
+  .house-back { display: grid; }
+  .house-head { padding: 16px 12px 12px 16px; gap: 10px; }
+  .house-head h2 { font-size: 28px; }
+  .house-page { padding: 16px 16px calc(24px + env(safe-area-inset-bottom)); }
+}
+
 /* ---------- the code on the settings ---------- */
 .code-input { font-variant-numeric: tabular-nums; letter-spacing: .3em; font-size: 24px; max-width: 260px; }
 .sheet.code { width: min(100%, 440px); }
+.page-code .code-input { max-width: 260px; }
 .code-back { z-index: 60; }
 .linkish { color: var(--ink-2); text-decoration: underline; text-underline-offset: 3px; font-size: inherit; }
 .linkish:disabled { opacity: .5; }
@@ -745,11 +808,7 @@ select.input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://ww
    finished. The rail itself is sized further down, under "the rail, as drawn". */
 .rail-home { max-width: none; display: flex; flex-direction: column; min-height: 100%; }
 .rail-stage { margin-block: auto; }   /* in the middle of whatever height is left, as drawn */
-.rail-home .home-foot { margin-top: 0; padding-top: 12px; }
-.rail-home .home-place { min-height: 36px; }
-.rail-home .home-foot + .block { margin-top: 26px; }
-/* under the tabs the foot has the bar beneath it for a ground: no hairline of its own, no gap to a section that is not there */
-.rail-home.top-nav .home-foot { border-top: 0; padding-top: 4px; }
+.rail-home .rail-stage + .block { margin-top: 12px; }
 @media (max-height: 860px) {
   /* a shorter wall: the greeting gives up a little so the rail keeps its cards */
   .shell[data-nav="top"] .stage-head h1 { font-size: 46px; }
@@ -777,9 +836,8 @@ select.input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://ww
 .notes li { border-bottom-color: var(--card-edge, var(--edge)); }
 
 /* ---------- how the house looks ---------- */
-.sheet.look { width: min(100%, 520px); }
-.sheet.look .label { margin: 18px 2px 8px; }
-.sheet.look .label:first-of-type { margin-top: 4px; }
+.page-look .label { margin: 18px 2px 8px; }
+.page-look .label:first-of-type { margin-top: 4px; }
 .look-rows { display: flex; flex-direction: column; gap: 8px; }
 .look-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 16px; padding: 13px 16px; border-radius: 18px;
   background: var(--surface-hi); border: 1px solid var(--edge); transition: background .18s var(--ease), border-color .18s var(--ease); }
@@ -807,7 +865,7 @@ select.input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://ww
    number here was measured off the reference rather than chosen. The whole
    sequence sits behind the reduced-motion block at the top of this file, which
    turns it into a plain cross-fade. */
-.shell.opened-shell > .rail, .shell.opened-shell > .stage, .shell.opened-shell > .topbar, .shell.opened-shell > .bottombar {
+.shell.opened-shell > .rail, .shell.opened-shell > .stage, .shell.opened-shell > .topbar, .shell.opened-shell > .bottombar {   /* an opened device, or This house */
   transform: scale(.955); filter: blur(13px) brightness(.52) saturate(.85); transform-origin: 50% 42%;
   transition: transform .32s var(--ease), filter .32s var(--ease);
 }
@@ -931,6 +989,8 @@ select.input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://ww
 .topbar-add { position: relative; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; color: var(--ink-2);
   background: var(--surface); border: 1px solid var(--edge); backdrop-filter: var(--frost); -webkit-backdrop-filter: var(--frost); }
 .topbar-add.attention::after { content: ""; position: absolute; top: 4px; right: 4px; width: 8px; height: 8px; border-radius: 50%; background: var(--lamp); box-shadow: 0 0 8px 1px var(--lamp-glow); }
+/* the one door to everything that is not a light or a door: This house */
+.rail-house.attention .rail-sub { color: var(--lamp); }
 /* the bar along the bottom: the command box on the left, the household on the
    right, floating over the sky as drawn -- no ground of its own, the way the
    tab pill has none. What the box says back rises above it rather than pushing
@@ -952,11 +1012,34 @@ select.input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://ww
 .household { display: flex; align-items: center; gap: 14px; flex: 0 0 auto; }
 .household-label { font-size: 15px; color: var(--ink-2); }
 .household-people { display: flex; }
-.person { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; margin-left: -10px; font-size: 12.5px; font-weight: 600; letter-spacing: .02em;
-  background: linear-gradient(140deg, #8a7f6a, #4a4238); color: var(--ink); border: 2px solid var(--bg); transition: opacity .3s var(--ease); }
+/* a face: the person's initial on a colour of their own -- the colour itself is
+   set on the element (people.ts). 34 across, 28 between centres, as drawn. The
+   initial sits centred on the whole disc, which leaves it clear of the bite the
+   next face takes out of the right-hand side. */
+.person { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; margin-left: -6px;
+  font-size: 12.5px; font-weight: 600; letter-spacing: .02em; color: var(--ink); transition: opacity .3s var(--ease); }
 .person:first-child { margin-left: 0; }
-.person.out { opacity: .38; }             /* out of the house: still a member, not currently in */
-.person.unknown { opacity: .6; }
+/* Where two faces lap, the one behind is CUT rather than the one in front being
+   ringed: a disc the size of its neighbour plus a 2px hairline is taken out of
+   it, so the line between them is whatever is actually behind the bar. A ring
+   in a fixed near-black instead -- which is what this was -- reads as a dark
+   halo the moment the bar floats over a lit sky, and the faces stop being a
+   stack and become separate pills. Nothing to keep in step with the ground. */
+.household-people .person:not(:last-child) {
+  mask-image: radial-gradient(circle 19px at 45px 50%, #0000 98%, #000 100%);
+  -webkit-mask-image: radial-gradient(circle 19px at 45px 50%, #0000 98%, #000 100%);
+}
+/* out of the house: still a member, gone quiet -- initial and all, the way a
+   muted line of text is quiet. Opacity alone, so the hue is still theirs;
+   draining it with saturate() left a black disc. */
+.person.out { opacity: .5; }
+.person.unknown { opacity: .7; }
+.person.add { background: rgba(255,255,255,.10); color: var(--ink-2); }   /* the last circle, as drawn: one more person */
+.person.add:active { background: var(--surface-press); }
+/* on the People page a face stands alone beside a name: a little smaller, and nothing laps it */
+.people-row .person { width: 32px; height: 32px; margin: 0; }
+.people-state { font-size: 13px; color: var(--muted); white-space: nowrap; }
+.people-state.in { color: var(--live); }
 .household-line { font-size: 13.5px; color: var(--muted); margin-right: 6px; }
 .cameras-all { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
 /* the drawing of each way around, for the sheet: a bar down the side, or across the top */

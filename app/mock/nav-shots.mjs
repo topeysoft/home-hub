@@ -34,4 +34,8 @@ await (await shot('nav-top-rooms', '/?nav=top&at=19:40', KIOSK, async (p) => { a
 await (await shot('nav-top-cameras', '/?nav=top&at=19:40', KIOSK, async (p) => { await p.getByRole('button', { name: /^Cameras$/ }).click(); await p.waitForTimeout(500) })).close()
 await (await shot('nav-top-phone', '/?nav=top&at=19:40', PHONE)).close()
 await (await shot('look-sheet-nav', '/?sheet=look&at=19:40', KIOSK)).close()
+await (await shot('house-panel', '/?nav=top&sheet=house&at=19:40', KIOSK)).close()   // the one door to the settings, as one panel
+await (await shot('house-people', '/?nav=top&sheet=people&at=19:40', KIOSK)).close()
+await (await shot('house-phone', '/?nav=top&sheet=house&at=19:40', PHONE)).close()
+await (await shot('house-phone-page', '/?nav=top&sheet=routines&at=19:40', PHONE)).close()
 await browser.close()

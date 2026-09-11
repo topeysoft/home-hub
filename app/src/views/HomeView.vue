@@ -20,15 +20,6 @@ const next = computed(() => upcomingLine(props.now))   // what the house will do
 const anyOn = computed(() => whatsOn().length > 0)
 const cameras = computed(() => props.rooms.flatMap(r => r.devices.filter(d => cap(d) === 'camera')))
 
-/* the footer says so too, quietly, for someone who has scrolled past the nudge */
-const update = computed(() => store.status?.update ?? null)
-const updateReady = computed(() => !!update.value?.available && update.value?.state?.state !== 'running' && !update.value?.requested && !store.updating)
-
-const routinesLine = computed(() => {
-  const n = store.routines.length, off = store.routines.filter(r => r.enabled === false).length
-  return `${n === 1 ? '1 routine' : `${n} routines`}${off ? `, ${off} off` : ''}`
-})
-
 const now = ref(Date.now())
 const recent = computed(() => {
   const out: { key: number; text: string; icon: string; when: string }[] = []
@@ -84,11 +75,5 @@ onUnmounted(() => { clearInterval(t1); clearInterval(t2); clearInterval(t3) })
         </li>
       </ul>
     </div>
-    <footer class="home-foot">
-      <button class="home-place" v-if="store.ambient.location" @click="store.sheet = 'location'"><Icon name="pin" :size="14" /> {{ store.ambient.location.name }}<span class="home-change">Change</span></button>
-      <button class="home-place" v-if="store.routines.length" @click="store.sheet = 'routines'"><Icon name="sparkle" :size="14" /> {{ routinesLine }}<span class="home-change">See</span></button>
-      <button class="home-place" @click="store.sheet = 'look'"><Icon name="sun" :size="14" /> How it looks<span class="home-change">Change</span></button>
-      <button class="home-place" @click="store.sheet = 'hub'"><Icon name="home" :size="14" /> This hub{{ store.status?.version && store.status.version !== 'dev' ? ` · ${store.status.version}` : '' }}<span class="home-change">{{ updateReady ? 'Update ready' : 'Open' }}</span></button>
-    </footer>
   </section>
 </template>

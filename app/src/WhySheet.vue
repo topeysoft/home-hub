@@ -35,8 +35,11 @@ onUnmounted(() => window.removeEventListener('keydown', key))
 <template>
   <div class="sheet-back" @click.self="close">
     <div class="sheet" role="dialog" aria-label="Why this room is like this">
-      <button class="round sheet-close" @click="close" aria-label="Close"><Icon name="close" :size="20" /></button>
-      <h2 class="display">Why the {{ room?.name ?? 'room' }} is like this</h2>
+      <div class="sheet-head">
+        <h2 class="display">Why the {{ room?.name ?? 'room' }} is like this</h2>
+        <button class="round sheet-close" @click="close" aria-label="Close"><Icon name="close" :size="20" /></button>
+      </div>
+      <div class="sheet-body">
       <p class="sheet-lede">The last few times this room changed, and what changed it.</p>
       <p class="sheet-status" v-if="loading">Looking back…</p>
       <p class="sheet-status" v-else-if="!rows.length">Nothing has set this room yet. Pick a scene, or wait for a routine to notice something.</p>
@@ -54,6 +57,7 @@ onUnmounted(() => window.removeEventListener('keydown', key))
       </form>
       <p class="why-answer" v-if="answer">{{ answer }}</p>
       <p class="sheet-foot" v-if="store.routines.length || store.assistant?.configured">Routines decide these on their own. <button class="linkish" @click="store.sheet = 'routines'">See them all</button></p>
+      </div>
     </div>
   </div>
 </template>
