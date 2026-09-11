@@ -32,7 +32,8 @@ async function move(d: Device, roomId: string) {
   try {
     await moveDevice(d.id, roomId)
     notify(`${d.name} is in the ${roomName(roomId)} now.`)
-    props.room.devices = props.room.devices.filter(x => x.id !== d.id)   // the house will confirm with a rebuild
+    // eslint-disable-next-line vue/no-mutating-props -- the row leaves now and the house confirms with a rebuild; waiting for the round trip would leave it sitting there
+    props.room.devices = props.room.devices.filter(x => x.id !== d.id)
   } catch (e: any) { notify(`Couldn't move it: ${e.message}`, 'error') }
   delete busy.value[d.id]
 }
@@ -58,6 +59,7 @@ async function use(d: Device): Promise<boolean> {
   busy.value[d.id] = 'room'
   try {
     if (s.name && s.name !== d.name) { await renameDevice(d.id, s.name); d.name = s.name; names.value[d.id] = s.name }
+    // eslint-disable-next-line vue/no-mutating-props -- as above: the placed device leaves the list at once
     if (s.room) { await moveDevice(d.id, s.room); props.room.devices = props.room.devices.filter(x => x.id !== d.id); notify(`${s.name} is in the ${roomName(s.room)} now.`) }
     else notify(`Renamed to ${s.name}.`)
     delete suggestions.value[d.id]

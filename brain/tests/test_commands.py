@@ -3,7 +3,6 @@ Run from brain/: .venv/bin/python -m unittest -v"""
 import unittest
 from hub.commands import Commands, NotUnderstood, find_room
 from hub.model import Device, Room
-from hub.intents import RoomState
 from tests.test_rules import FakeHub
 
 

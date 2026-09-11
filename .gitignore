@@ -6,6 +6,13 @@ brain/events.db
 __pycache__/
 *.pyc
 brain/settings.json
+brain/phones.json
+brain/update.json
+brain/restore.json
+brain/coverage.xml
+brain/.coverage
+brain/.pytest_cache/
+brain/.ruff_cache/
 driver-layer/caddy/data/
 driver-layer/host/pi-image/stage-hub/00-home-hub/files/
 driver-layer/ring-mqtt/*

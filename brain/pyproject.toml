@@ -1,0 +1,37 @@
+# Ruff stands in for a formatter here rather than reformatting the codebase: this file is deliberately
+# narrow. It catches what a person cannot see in review — an unused import, a name that does not exist,
+# a mutable default, a bare except that swallows the reason something failed — and leaves the house
+# style alone. The one-line `if x: return y` bodies all over hub/ are intentional and stay.
+[project]
+name = "home-hub-brain"
+version = "0.1.0"
+requires-python = ">=3.13"
+
+[tool.ruff]
+line-length = 180          # the code is written wide on purpose; long lines are not the bug we are hunting
+target-version = "py313"
+exclude = [".venv", "__pycache__"]
+
+[tool.ruff.lint]
+select = [
+  "F",      # pyflakes: undefined names, unused imports, f-strings with no placeholders
+  "E9",     # syntax and indentation errors
+  "B",      # bugbear: mutable defaults, loop-variable capture, except that catches too much
+  "UP",     # constructs that have a clearer form on this Python
+  "S102", "S307", "S608",   # exec, eval, SQL built by string
+]
+ignore = [
+  "E501",   # line length, per above
+  "B008",   # a call in a default argument is how FastAPI declares dependencies
+  "B904",   # `raise ... from err` inside an except: the HTTP errors here are deliberate replacements
+  "UP042",  # RoomState is `(str, Enum)` on purpose: FastAPI reads it as a path enum, and StrEnum changes what str() gives
+  "B905",   # zip() without strict=: the pairs here are a fixed column list against its own row
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["B011"]       # assert False is a fine way to fail a test
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# Keep the output quiet enough that a real warning is visible.
+filterwarnings = ["ignore::DeprecationWarning:starlette.*"]

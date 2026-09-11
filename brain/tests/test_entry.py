@@ -2,7 +2,6 @@
 import asyncio, json, tempfile, unittest
 from pathlib import Path
 from hub import rules
-from hub.model import Device
 from tests.test_rules import FakeHub, use, rule
 
 

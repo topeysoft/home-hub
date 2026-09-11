@@ -106,4 +106,4 @@ class MjpegTest(unittest.TestCase):
         finally: srv.shutdown(); srv.server_close()
 
     def test_refused_stream_raises(self):
-        with self.assertRaises(Exception): camera.mjpeg("http://127.0.0.1:1", "tok", "camera.door")
+        with self.assertRaises(OSError): camera.mjpeg("http://127.0.0.1:1", "tok", "camera.door")

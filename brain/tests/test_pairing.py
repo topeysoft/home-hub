@@ -120,7 +120,7 @@ class MatterTests(unittest.TestCase):
     def test_commissions_with_the_code(self):
         async def go():
             hub = FakeHub(); p = Pairing(hub)
-            s = await p.start("matter", "MT:Y.K9042C00KA0648G00")
+            await p.start("matter", "MT:Y.K9042C00KA0648G00")
             await settle()
             self.assertEqual(p.status()["state"], "done")
             self.assertIn(("matter/commission", {"code": "MT:Y.K9042C00KA0648G00", "network_only": False}), hub.ha.sent)
