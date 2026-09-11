@@ -754,3 +754,12 @@ select.input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://ww
   .bento { flex-wrap: wrap; overflow-x: visible; }
   .bento-card, .bento .tile.camera, .bento .tile.media { width: 100%; }
 }
+/* Needs a look is the one list that carries buttons, and without a ground they
+   sit as white pills straight on the sky. One surface for the whole list, not
+   one per row: three cards would make a quiet section out-shout the ask card
+   above it, which is a single object and the more urgent one. The existing row
+   hairlines go on serving as dividers. Scoped to .notes so Recently stays bare. */
+.notes { background: var(--card-plain, var(--surface)); border: 1px solid var(--card-edge, var(--edge)); border-radius: 20px; padding: 2px 18px; }
+.notes .recent-icon { background: var(--card-hi, var(--surface-hi)); color: var(--card-ink-2, var(--ink-2)); }
+.notes .recent-text { color: var(--card-ink, var(--ink)); }
+.notes li { border-bottom-color: var(--card-edge, var(--edge)); }
