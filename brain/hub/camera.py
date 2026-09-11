@@ -45,7 +45,7 @@ async def relay(ha, entity_id: str, ws):
             elif t == "candidate" and sub is not None and m.get("candidate"):
                 # The browser starts finding routes as soon as it has an offer, often before HA has named the session.
                 try: sid = await asyncio.wait_for(asyncio.shield(session), SESSION_WAIT)
-                except asyncio.TimeoutError: continue
+                except TimeoutError: continue
                 try: await ha.send("camera/webrtc/candidate", entity_id=entity_id, session_id=sid, candidate=m["candidate"])
                 except Exception as e: log.info("candidate for %s refused: %s", entity_id, e)
     finally:

@@ -1,6 +1,11 @@
 # The brain, with the panel built in, as one image for both kinds of hub host: amd64 (a NUC, any
-# Linux box, a VM) and arm64 (Pi 5). Pushed to GitHub's registry on every push to main and every
-# version tag; install.sh pulls it and only builds locally when the pull fails.
+# Linux box, a VM) and arm64 (Pi 5). install.sh pulls it and only builds locally when the pull fails.
+#
+# What each tag means, because a hub chooses between them:
+#   latest, X.Y.Z, X.Y   a release. Only a version tag produces these, and only after ci.yml has
+#                        passed against that commit. This is what a hub in someone's house runs.
+#   main, sha-<sha>      whatever main is at. For a hub being worked on (HUB_CHANNEL=main) and for
+#                        looking at a build before tagging it. Never what a family gets.
 name: brain image
 
 on:
@@ -15,7 +20,16 @@ permissions:
   packages: write
 
 jobs:
+  # Tags bypass branch protection, so a release is verified here before it is published. Pushes to
+  # main skip this: they arrived through a protected branch and were verified on the way in.
+  verify:
+    if: github.ref_type == 'tag'
+    uses: ./.github/workflows/ci.yml
+
   build:
+    needs: verify
+    # `always()` so a push to main, where verify is skipped rather than run, still builds.
+    if: always() && needs.verify.result != 'failure' && needs.verify.result != 'cancelled'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -31,8 +45,10 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository_owner }}/home-hub-brain
           tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
             type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable=${{ github.ref_type == 'tag' }}
+            type=raw,value=main,enable={{is_default_branch}}
             type=sha
       - uses: docker/build-push-action@v6
         with:

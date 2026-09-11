@@ -1,11 +1,29 @@
-# Every push and pull request: the brain's tests, the panel's type-check and build, and a syntax
-# pass over the shell that runs on the hub host.
+# Every push and pull request. Five jobs, and a change has to get past all of them:
+#
+#   brain   the hub's own tests, its linter, and the coverage floor
+#   panel   the screens: types, linter, unit tests, coverage floor, and that it builds
+#   e2e     the built panel driven in a real browser against the mock brain
+#   shell   the scripts that run on the hub host
+#   image   the brain's container, built for both kinds of host but not pushed
+#
+# The image job is here rather than only in brain-image.yml so a Dockerfile that no longer builds is
+# caught on the pull request instead of on main, where it would break the thing install.sh pulls.
 name: ci
 
 on:
   push:
-    branches: [main]
+    branches: ["**"]          # every branch, not only main: a long-lived one like panel-bento is
+                              # exactly where a regression has time to settle in unnoticed
   pull_request:
+  workflow_call:              # the release workflows run this against a tag before they publish
+
+# A second push to the same branch makes the first one's run pointless; stop it rather than queue behind it.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   brain:
@@ -15,8 +33,15 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      - run: pip install -r brain/requirements.txt
-      - run: cd brain && python -m unittest discover -s tests -t . -v
+          cache: pip
+          cache-dependency-path: brain/requirements-dev.txt
+      - run: pip install -r brain/requirements-dev.txt
+      - name: lint
+        run: cd brain && ruff check .
+      - name: tests
+        run: cd brain && python -m pytest tests -q --cov=hub --cov-report=xml --cov-report=term
+      - name: coverage may not go down
+        run: python .github/coverage-check.py brain brain/coverage.xml
 
   panel:
     runs-on: ubuntu-latest
@@ -27,11 +52,64 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: app/package-lock.json
-      - run: cd app && npm ci --no-audit --no-fund && npm run build
+      - run: cd app && npm ci --no-audit --no-fund
+      - name: lint
+        run: cd app && npm run lint
+      - name: types
+        run: cd app && npm run typecheck
+      - name: tests
+        run: cd app && npm run test:coverage
+      - name: coverage may not go down
+        run: python3 .github/coverage-check.py panel app/coverage/coverage-summary.json
+      - name: build
+        run: cd app && npm run build
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: cd app && npm ci --no-audit --no-fund
+      # The mock brain serves ../dist, so the panel has to exist before a browser can be pointed at it.
+      - run: cd app && npm run build
+      - name: browser
+        run: cd app && npx playwright install --with-deps chromium
+      - name: the panel, driven
+        run: cd app && npx playwright test
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: app/playwright-report/
+          retention-days: 7
 
   shell:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: bash -n install.sh tools/add-sound.sh driver-layer/radios.sh driver-layer/host/firstboot.sh driver-layer/host/update.sh driver-layer/host/restore.sh driver-layer/host/pi-image/stage-hub/prerun.sh driver-layer/host/pi-image/stage-hub/00-home-hub/*.sh
-      - run: sudo apt-get install -y shellcheck >/dev/null && shellcheck -S warning -e SC2154 install.sh tools/add-sound.sh driver-layer/radios.sh driver-layer/host/firstboot.sh driver-layer/host/update.sh driver-layer/host/restore.sh driver-layer/host/pi-image/stage-hub/prerun.sh driver-layer/host/pi-image/stage-hub/00-home-hub/*.sh
+      - name: syntax
+        run: bash -n install.sh tools/add-sound.sh driver-layer/radios.sh driver-layer/host/firstboot.sh driver-layer/host/update.sh driver-layer/host/restore.sh driver-layer/host/pi-image/stage-hub/prerun.sh driver-layer/host/pi-image/stage-hub/00-home-hub/*.sh
+      - name: shellcheck
+        run: |
+          sudo apt-get install -y shellcheck >/dev/null
+          shellcheck -S warning -e SC2154 install.sh tools/add-sound.sh driver-layer/radios.sh driver-layer/host/firstboot.sh driver-layer/host/update.sh driver-layer/host/restore.sh driver-layer/host/pi-image/stage-hub/prerun.sh driver-layer/host/pi-image/stage-hub/00-home-hub/*.sh
+
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - name: the brain's image, for both kinds of host
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: brain/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: false                       # brain-image.yml publishes; this only proves it still builds
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

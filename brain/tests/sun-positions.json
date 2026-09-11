@@ -1,0 +1,299 @@
+{
+ "_comment": "Where the sun is, computed by brain/hub/sun.py. app/src/sun.ts is a port of it and must agree to within a thousandth of a degree; app/tests/sun.test.ts reads this same file. Regenerate with brain/tests/make_sun_positions.py only when the maths is deliberately changed.",
+ "rows": [
+  {
+   "place": "Chicago",
+   "lat": 41.88,
+   "lon": -87.63,
+   "utc": "2026-01-15T08:00:00Z",
+   "elevation": -57.315865
+  },
+  {
+   "place": "Chicago",
+   "lat": 41.88,
+   "lon": -87.63,
+   "utc": "2026-03-20T12:00:00Z",
+   "elevation": 0.346527
+  },
+  {
+   "place": "Chicago",
+   "lat": 41.88,
+   "lon": -87.63,
+   "utc": "2026-06-21T05:30:00Z",
+   "elevation": -24.481559
+  },
+  {
+   "place": "Chicago",
+   "lat": 41.88,
+   "lon": -87.63,
+   "utc": "2026-06-21T18:45:00Z",
+   "elevation": 68.546823
+  },
+  {
+   "place": "Chicago",
+   "lat": 41.88,
+   "lon": -87.63,
+   "utc": "2026-09-11T13:20:00Z",
+   "elevation": 20.128278
+  },
+  {
+   "place": "Chicago",
+   "lat": 41.88,
+   "lon": -87.63,
+   "utc": "2026-12-21T23:10:00Z",
+   "elevation": -8.647849
+  },
+  {
+   "place": "Chicago",
+   "lat": 41.88,
+   "lon": -87.63,
+   "utc": "2027-04-02T00:00:00Z",
+   "elevation": 2.115314
+  },
+  {
+   "place": "London",
+   "lat": 51.51,
+   "lon": -0.13,
+   "utc": "2026-01-15T08:00:00Z",
+   "elevation": -0.762511
+  },
+  {
+   "place": "London",
+   "lat": 51.51,
+   "lon": -0.13,
+   "utc": "2026-03-20T12:00:00Z",
+   "elevation": 38.418944
+  },
+  {
+   "place": "London",
+   "lat": 51.51,
+   "lon": -0.13,
+   "utc": "2026-06-21T05:30:00Z",
+   "elevation": 13.362567
+  },
+  {
+   "place": "London",
+   "lat": 51.51,
+   "lon": -0.13,
+   "utc": "2026-06-21T18:45:00Z",
+   "elevation": 11.874636
+  },
+  {
+   "place": "London",
+   "lat": 51.51,
+   "lon": -0.13,
+   "utc": "2026-09-11T13:20:00Z",
+   "elevation": 39.845316
+  },
+  {
+   "place": "London",
+   "lat": 51.51,
+   "lon": -0.13,
+   "utc": "2026-12-21T23:10:00Z",
+   "elevation": -60.392372
+  },
+  {
+   "place": "London",
+   "lat": 51.51,
+   "lon": -0.13,
+   "utc": "2027-04-02T00:00:00Z",
+   "elevation": -33.727677
+  },
+  {
+   "place": "Sydney",
+   "lat": -33.87,
+   "lon": 151.21,
+   "utc": "2026-01-15T08:00:00Z",
+   "elevation": 12.464204
+  },
+  {
+   "place": "Sydney",
+   "lat": -33.87,
+   "lon": 151.21,
+   "utc": "2026-03-20T12:00:00Z",
+   "elevation": -45.548564
+  },
+  {
+   "place": "Sydney",
+   "lat": -33.87,
+   "lon": 151.21,
+   "utc": "2026-06-21T05:30:00Z",
+   "elevation": 13.530915
+  },
+  {
+   "place": "Sydney",
+   "lat": -33.87,
+   "lon": 151.21,
+   "utc": "2026-06-21T18:45:00Z",
+   "elevation": -27.206992
+  },
+  {
+   "place": "Sydney",
+   "lat": -33.87,
+   "lon": 151.21,
+   "utc": "2026-09-11T13:20:00Z",
+   "elevation": -59.638218
+  },
+  {
+   "place": "Sydney",
+   "lat": -33.87,
+   "lon": 151.21,
+   "utc": "2026-12-21T23:10:00Z",
+   "elevation": 52.919232
+  },
+  {
+   "place": "Sydney",
+   "lat": -33.87,
+   "lon": 151.21,
+   "utc": "2027-04-02T00:00:00Z",
+   "elevation": 42.243655
+  },
+  {
+   "place": "Nairobi",
+   "lat": -1.29,
+   "lon": 36.82,
+   "utc": "2026-01-15T08:00:00Z",
+   "elevation": 58.196815
+  },
+  {
+   "place": "Nairobi",
+   "lat": -1.29,
+   "lon": 36.82,
+   "utc": "2026-03-20T12:00:00Z",
+   "elevation": 55.026534
+  },
+  {
+   "place": "Nairobi",
+   "lat": -1.29,
+   "lon": 36.82,
+   "utc": "2026-06-21T05:30:00Z",
+   "elevation": 25.724575
+  },
+  {
+   "place": "Nairobi",
+   "lat": -1.29,
+   "lon": 36.82,
+   "utc": "2026-06-21T18:45:00Z",
+   "elevation": -43.338407
+  },
+  {
+   "place": "Nairobi",
+   "lat": -1.29,
+   "lon": 36.82,
+   "utc": "2026-09-11T13:20:00Z",
+   "elevation": 32.095701
+  },
+  {
+   "place": "Nairobi",
+   "lat": -1.29,
+   "lon": 36.82,
+   "utc": "2026-12-21T23:10:00Z",
+   "elevation": -55.496267
+  },
+  {
+   "place": "Nairobi",
+   "lat": -1.29,
+   "lon": 36.82,
+   "utc": "2027-04-02T00:00:00Z",
+   "elevation": -54.017004
+  },
+  {
+   "place": "Longyearbyen",
+   "lat": 78.22,
+   "lon": 15.65,
+   "utc": "2026-01-15T08:00:00Z",
+   "elevation": -12.808529
+  },
+  {
+   "place": "Longyearbyen",
+   "lat": 78.22,
+   "lon": 15.65,
+   "utc": "2026-03-20T12:00:00Z",
+   "elevation": 11.392685
+  },
+  {
+   "place": "Longyearbyen",
+   "lat": 78.22,
+   "lon": 15.65,
+   "utc": "2026-06-21T05:30:00Z",
+   "elevation": 24.485159
+  },
+  {
+   "place": "Longyearbyen",
+   "lat": 78.22,
+   "lon": 15.65,
+   "utc": "2026-06-21T18:45:00Z",
+   "elevation": 17.815629
+  },
+  {
+   "place": "Longyearbyen",
+   "lat": 78.22,
+   "lon": 15.65,
+   "utc": "2026-09-11T13:20:00Z",
+   "elevation": 13.831741
+  },
+  {
+   "place": "Longyearbyen",
+   "lat": 78.22,
+   "lon": 15.65,
+   "utc": "2026-12-21T23:10:00Z",
+   "elevation": -35.189441
+  },
+  {
+   "place": "Longyearbyen",
+   "lat": 78.22,
+   "lon": 15.65,
+   "utc": "2027-04-02T00:00:00Z",
+   "elevation": -6.640787
+  },
+  {
+   "place": "Quito",
+   "lat": -0.18,
+   "lon": -78.47,
+   "utc": "2026-01-15T08:00:00Z",
+   "elevation": -46.215021
+  },
+  {
+   "place": "Quito",
+   "lat": -0.18,
+   "lon": -78.47,
+   "utc": "2026-03-20T12:00:00Z",
+   "elevation": 9.664468
+  },
+  {
+   "place": "Quito",
+   "lat": -0.18,
+   "lon": -78.47,
+   "utc": "2026-06-21T05:30:00Z",
+   "elevation": -66.485272
+  },
+  {
+   "place": "Quito",
+   "lat": -0.18,
+   "lon": -78.47,
+   "utc": "2026-06-21T18:45:00Z",
+   "elevation": 57.950598
+  },
+  {
+   "place": "Quito",
+   "lat": -0.18,
+   "lon": -78.47,
+   "utc": "2026-09-11T13:20:00Z",
+   "elevation": 32.255333
+  },
+  {
+   "place": "Quito",
+   "lat": -0.18,
+   "lon": -78.47,
+   "utc": "2026-12-21T23:10:00Z",
+   "elevation": 0.570061
+  },
+  {
+   "place": "Quito",
+   "lat": -0.18,
+   "lon": -78.47,
+   "utc": "2027-04-02T00:00:00Z",
+   "elevation": -10.561218
+  }
+ ]
+}

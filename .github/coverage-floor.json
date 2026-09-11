@@ -1,0 +1,5 @@
+{
+  "_comment": "The floor coverage may not fall below. CI fails a change that drops either number and prints the new value when it rises, so the floor is raised deliberately rather than drifting. Raise it by editing this file in the same change that earns it.",
+  "brain": 82,
+  "panel": 39
+}

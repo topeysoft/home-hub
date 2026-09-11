@@ -12,7 +12,13 @@ permissions:
   contents: write
 
 jobs:
+  # A tag is not a branch: branch protection does not apply to one, so nothing otherwise stops a
+  # release being cut from a commit that never passed a test. This is what stops it.
+  verify:
+    uses: ./.github/workflows/ci.yml
+
   image:
+    needs: verify
     # A native arm64 runner (free for public repositories): pi-gen builds the 64-bit image without emulation, several
     # times faster, and sidesteps the binfmt trouble that stops Trixie builds on x86 runners (usimd/pi-gen-action#179).
     runs-on: ubuntu-24.04-arm

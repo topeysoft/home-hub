@@ -20,19 +20,19 @@ const next = computed(() => upcomingLine(props.now))   // what the house will do
 const anyOn = computed(() => whatsOn().length > 0)
 const cameras = computed(() => props.rooms.flatMap(r => r.devices.filter(d => cap(d) === 'camera')))
 
-const now = ref(Date.now())
+const tick = ref(Date.now())   // its own clock, so "3 minutes ago" keeps up; not props.now, which is the hour the shell is showing
 const recent = computed(() => {
   const out: { key: number; text: string; icon: string; when: string }[] = []
   let last = ''
   for (const ev of store.events) {
     const d = describe(ev); if (!d || d.text === last) continue
-    last = d.text; out.push({ key: ev.ts, text: d.text, icon: d.icon, when: ago(ev.ts, now.value) })
+    last = d.text; out.push({ key: ev.ts, text: d.text, icon: d.icon, when: ago(ev.ts, tick.value) })
     if (out.length >= 4) break
   }
   return out
 })
 let t1: number | undefined, t2: number | undefined, t3: number | undefined
-onMounted(() => { refreshEvents(); loadHealth(); t1 = window.setInterval(refreshEvents, 30000); t2 = window.setInterval(() => (now.value = Date.now()), 20000); t3 = window.setInterval(loadHealth, 60000) })
+onMounted(() => { refreshEvents(); loadHealth(); t1 = window.setInterval(refreshEvents, 30000); t2 = window.setInterval(() => (tick.value = Date.now()), 20000); t3 = window.setInterval(loadHealth, 60000) })
 onUnmounted(() => { clearInterval(t1); clearInterval(t2); clearInterval(t3) })
 </script>
 

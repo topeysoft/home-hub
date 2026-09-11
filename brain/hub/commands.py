@@ -321,9 +321,9 @@ class Commands:
         failed = []
         for d in targets:
             try: await self.hub.act(d, action, data, source="user", said=said)
-            except Exception as e: failed.append(d.name)
+            except Exception: failed.append(d.name)
         if failed and len(failed) == len(targets):
-            raise NotUnderstood(f"{failed[0]} didn't respond." if len(failed) == 1 else f"None of them responded.")
+            raise NotUnderstood(f"{failed[0]} didn't respond." if len(failed) == 1 else "None of them responded.")
         if failed: text = f"{text[:-1]}; {', '.join(failed)} didn't respond."
         return {"kind": "done", "text": text, "devices": [d.id for d in targets], "action": action, "count": len(targets) - len(failed)}
 

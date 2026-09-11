@@ -13,10 +13,29 @@ curl -X POST localhost:8300/devices/media_player.nadine_s_room_roku_tv/off
 curl -X POST localhost:8300/rooms/<room_id>/intent/asleep
 curl -X POST localhost:8300/home/intent/away          # the same intent in every room; a device that refuses is skipped
 curl localhost:8300/rules                             # the rules and whether the file is usable
-curl localhost:8300/rules/backyard-evening/dry-run    # what a rule would do this instant, every condition with its value
-curl localhost:8300/rooms/backyard/why                # the last few times the room was set, held or shadowed, and by what
-.venv/bin/python -m unittest tests.test_rules -v      # the rules engine, sun math and validation
+curl localhost:8300/rules/welcome-home/dry-run        # what a rule would do this instant, every condition with its value
+curl localhost:8300/rooms/<room_id>/why               # the last few times the room was set, held or shadowed, and by what
 ```
+
+## Tests
+
+```sh
+.venv/bin/pip install -r requirements-dev.txt
+.venv/bin/python -m pytest tests -q                   # all of them, in about four seconds
+.venv/bin/python -m unittest tests.test_rules -v      # one file, and `python -m unittest` still works on any of them
+.venv/bin/python -m pytest tests -q --cov=hub         # with coverage, which CI holds to a floor
+.venv/bin/ruff check .                                # the linter CI runs
+```
+
+`tests/apptest.py` is the harness for anything that makes a request: it builds a Hub whose settings,
+event log, phones and rules all live in a temp directory, puts it where `hub/api.py`'s module-level
+one sits, and hands the test a `TestClient` and a fake driver layer. A test never touches the
+developer's own house.
+
+`tests/sun-positions.json` is one table of sun positions that both `hub/sun.py` and the panel's
+`app/src/sun.ts` are checked against, because they are the same calculation written twice and
+nothing else would notice them drifting apart. Regenerate it with `tests/make_sun_positions.py`
+only when the maths is meant to change.
 
 Docker: `docker build -f brain/Dockerfile -t home-hub/brain .` from the repo root builds the panel
 in. CI (`.github/workflows/brain-image.yml`) publishes the same image for amd64 and arm64 as

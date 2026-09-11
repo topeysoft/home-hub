@@ -1,7 +1,7 @@
 """Run from brain/: .venv/bin/python -m unittest -v"""
 import asyncio, tempfile, unittest, unittest.mock, wave
 from pathlib import Path
-from hub import sounds, rules
+from hub import sounds
 from hub.model import Device
 from tests.test_rules import FakeHub, use, rule
 

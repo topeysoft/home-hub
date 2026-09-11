@@ -5,7 +5,9 @@ export type Intent = { room: string; intent: string; set_by: string | null; hold
 export type Home = { name?: string | null; temp_unit?: string; entry?: string[]; rooms: Room[] }   // entry: the rooms people come in through
 export type Driver = 'down' | 'fresh' | 'needs-login' | 'connecting' | 'ready'
 export type Part = { id: string; name: string; state: 'unknown' | 'off' | 'adding' | 'ready' | 'failed' | 'sign-in' | 'waiting'; text: string; port: number }
-export type Update = { version: string; commit: string; latest: { sha: string; when: string; title: string } | null; available: boolean | null; checked: number | null; requested: boolean; state: { state: 'running' | 'done' | 'failed'; started?: number; finished?: number; commit?: string } | null; error: string | null }
+/* channel: which code this hub follows — 'release' (version tags, what a house runs) or 'main' (the
+   branch, for a hub being worked on). `available` is null when the hub genuinely cannot tell. */
+export type Update = { version: string; commit: string; channel: 'release' | 'main'; latest: { version: string; sha: string; when: string; title: string } | null; available: boolean | null; checked: number | null; requested: boolean; state: { state: 'running' | 'done' | 'failed'; started?: number; finished?: number; commit?: string } | null; error: string | null }
 export type Status = { driver: Driver; reason: string; setup_done: boolean; locked?: boolean; owner: string | null; home: string | null; location: boolean; rooms: number; devices: number; drivers: Part[]; problems?: Problem[]; version?: string; update?: Update }
 export type Note = { kind: 'offline' | 'storage' | 'driver' | 'update'; text: string; since: number | null; subject: string | null
   flow?: string       // an account waiting to be signed in again: the conversation that finishes it
