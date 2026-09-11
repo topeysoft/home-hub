@@ -10,6 +10,8 @@
     "preview": "vite preview",
     "mock": "node mock/brain.mjs",
     "shots": "node mock/shots.mjs",
+    "art-sheet": "node mock/art-sheet.mjs",
+    "art-sheet:check": "node mock/art-sheet.mjs --check",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",

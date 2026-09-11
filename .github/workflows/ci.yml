@@ -63,6 +63,10 @@ jobs:
         run: python3 .github/coverage-check.py panel app/coverage/coverage-summary.json
       - name: build
         run: cd app && npm run build
+      # the design sheet is generated from src/art.ts; a drawing changed in one
+      # and not the other is exactly the drift the generator exists to stop
+      - name: the device sheet still matches the panel
+        run: cd app && npm run art-sheet:check
 
   e2e:
     runs-on: ubuntu-latest
