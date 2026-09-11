@@ -61,6 +61,18 @@ const clock = ref(Date.now())
 let t: number | undefined
 onMounted(() => { t = window.setInterval(() => (clock.value = Date.now()), 20000) })
 onUnmounted(() => clearInterval(t))
+
+/* the rail's edge fade is CSS where the browser can drive it from scroll; the
+   fallback mask only needs to know when an end has nothing beyond it */
+const bento = ref<HTMLElement | null>(null)
+const scrollDriven = typeof CSS !== 'undefined' && CSS.supports?.('animation-timeline: view()')
+function edges() {
+  const el = bento.value; if (!el || scrollDriven) return
+  el.toggleAttribute('data-at-start', el.scrollLeft <= 1)
+  el.toggleAttribute('data-at-end', el.scrollLeft + el.clientWidth >= el.scrollWidth - 1)
+}
+onMounted(() => { edges(); bento.value?.addEventListener('scroll', edges, { passive: true }); addEventListener('resize', edges) })
+onUnmounted(() => { bento.value?.removeEventListener('scroll', edges); removeEventListener('resize', edges) })
 </script>
 
 <template>
@@ -101,7 +113,7 @@ onUnmounted(() => clearInterval(t))
 
     <SceneBar :room="null" />
 
-    <div class="bento" v-if="!empty" role="group" aria-label="On right now">
+    <div class="bento" ref="bento" v-if="!empty" role="group" aria-label="On right now">
       <component
         v-for="d in carded" :key="d.id" class="bento-card"
         :is="cap(d) === 'light' ? LightTile : cap(d) === 'media' ? MediaTile : cap(d) === 'climate' ? ClimateTile : PlainTile"

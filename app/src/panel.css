@@ -741,7 +741,7 @@ select.input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://ww
 /* the row itself: it scrolls sideways, and the last card is meant to be cut by
    the edge — that overhang is the only thing telling you there is more */
 .bento { display: flex; gap: 14px; align-items: flex-start; margin: 4px 0 26px; padding-bottom: 6px;
-  overflow-x: auto; scroll-snap-type: x proximity; scroll-padding-left: 40px; overscroll-behavior-x: contain; }
+  overflow-x: auto; scroll-snap-type: x proximity; overscroll-behavior-x: contain; }
 .bento-card { flex: 0 0 auto; width: 268px; scroll-snap-align: start; }
 .bento .tile.camera { width: 340px; aspect-ratio: 16 / 9; }
 .bento .tile.media { width: 380px; }
@@ -851,3 +851,29 @@ select.input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://ww
 /* a held card is ours, not the browser's: no callout, no selection, no image drag */
 .tile, .onnow-chip, .bento-card { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
 .tile img { -webkit-user-drag: none; pointer-events: none; }
+
+/* ---------- the rail's edges ----------
+   A card is soft and translucent while it is arriving or leaving, and settles
+   crisp once it is fully inside — the same moment scroll-snap rests it. Two
+   things are deliberate: it never fades to nothing, because the half-cut card at
+   the right edge is the only sign there is more to sweep to; and the blur is
+   capped, because a blur re-rasterises every frame of a swipe and on a Pi that
+   is the difference between a smooth rail and a janky one. */
+@supports (animation-timeline: view()) {
+  .bento-card {
+    animation: bento-in linear both, bento-out linear forwards;   /* -out has no backwards fill, so it stays out of the way until the card is actually leaving */
+    animation-timeline: view(inline), view(inline);
+    animation-range: entry 0% entry 100%, exit 0% exit 100%;
+  }
+  @keyframes bento-in  { from { opacity: .35; filter: blur(6px); } to { opacity: 1; filter: blur(0); } }
+  @keyframes bento-out { from { opacity: 1; filter: blur(0); } to { opacity: .35; filter: blur(6px); } }
+}
+/* without scroll-driven animations: the same fade, no blur, as a mask on the
+   row; each end lifts when there is nothing beyond it, so the first card at
+   rest is never dimmed for a neighbour it does not have */
+@supports not (animation-timeline: view()) {
+  .bento { --edge-l: rgba(0,0,0,.35); --edge-r: rgba(0,0,0,.35);
+    mask-image: linear-gradient(to right, var(--edge-l), #000 11%, #000 89%, var(--edge-r)); -webkit-mask-image: linear-gradient(to right, var(--edge-l), #000 11%, #000 89%, var(--edge-r)); }
+  .bento[data-at-start] { --edge-l: #000; }
+  .bento[data-at-end] { --edge-r: #000; }
+}
