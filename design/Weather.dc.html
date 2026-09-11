@@ -9,10 +9,15 @@
 <helmet>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap">
   <style>
+    *, *::before, *::after { box-sizing: border-box; }
     body { margin: 0; font-family: "Instrument Sans", -apple-system, system-ui, sans-serif; }
     a { color: #e9b872; } a:hover { color: #b8863e; }
     .dsp { font-family: "Instrument Serif", Palatino, Georgia, serif; font-weight: 400; letter-spacing: -0.01em; }
     .cell { display: flex; flex-direction: column; align-items: flex-start; }
+    .pair { display: flex; width: 100%; height: 140px; border-radius: 16px; overflow: hidden; border: 1px solid rgba(255,255,255,.09); }
+    .half { position: relative; flex: 1 1 0; min-width: 0; }
+    .half + .half { border-left: 1px solid rgba(255,255,255,.13); }
+    .art { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }
     .cid { font-size: 14.5px; font-weight: 500; margin-top: 2px; }
     .prm { font-size: 12px; color: #7f7d77; font-variant-numeric: tabular-nums; margin-top: 2px; }
   </style>
@@ -22,34 +27,69 @@
   <div style="position: absolute; inset: 0; background: linear-gradient(180deg, rgb(10,14,34) 0%, rgb(30,26,58) 58%, rgb(16,16,30) 100%);"></div>
   <div style="position: relative;">
 
-    <h1 class="dsp" style="margin: 0; font-size: 38px;">One cloud, every condition</h1>
-    <p style="margin: 8px 0 0; font-size: 17px; color: #b9b5ad; max-width: 100ch;">Not fifteen drawings &mdash; one illustration built from parts, driven by the same <span style="font-variant-numeric: tabular-nums;">{clouds, rain, snow, fog, lightning, wind}</span> that <span style="font-variant-numeric: tabular-nums;">wxOf()</span> already hands the sky. The picture beside the greeting and the sky behind the panel read the same numbers, so they cannot disagree. A new condition needs no new art.</p>
+    <h1 class="dsp" style="margin: 0; font-size: 38px;">One cloud, every condition, both lights</h1>
+    <p style="margin: 8px 0 0; font-size: 17px; color: #b9b5ad; max-width: 100ch;">Not thirty drawings &mdash; one illustration built from parts, driven by the same <span style="font-variant-numeric: tabular-nums;">{clouds, rain, snow, fog, lightning, wind}</span> that <span style="font-variant-numeric: tabular-nums;">wxOf()</span> already hands the sky. Night is not one of those parts, and it is not a condition: the house reports the weather, the sun&rsquo;s elevation says which light it is in. So every condition has to hold up twice. <b style="color:#e4e0d8; font-weight:500;">Day on the left of each pair, night on the right.</b> Only the clear sky carries two names.</p>
+    <p style="margin: 7px 0 0; font-size: 13px; color: #8a877f; max-width: 116ch;">What changes between a pair: the sky itself, by <span style="font-variant-numeric: tabular-nums;">palette()</span>&rsquo;s own rules &mdash; cloud greys it, rain darkens it, fog flattens it, in either light; the disc, a gold sun or a bitten silver moon; the stars a thin enough sky lets through; and the cloud body, lit white by day, only moonlit by night. Nothing else moves. The bolt is the same colour in both, because lightning brings its own light.</p>
 
-    <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 26px 18px; margin-top: 30px;">
+    <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 24px 18px; margin-top: 24px;">
       <sc-for list="{{cells}}" as="c" hint-placeholder-count="15">
         <div class="cell">
-          <div style="position: relative; width: 100%; height: 116px; border-radius: 16px; overflow: hidden; background: {{c.bg}}; border: 1px solid rgba(255,255,255,.09);">
-            <svg viewBox="0 0 210 150" width="176" height="126" style="position: absolute; left: 50%; top: 52%; transform: translate(-50%, -50%);">
-              <defs>
-                <radialGradient id="g{{c.n}}" cx="34%" cy="28%" r="78%">
-                  <stop offset="0" stop-color="{{c.c0}}" stop-opacity=".97"/>
-                  <stop offset="62%" stop-color="{{c.c1}}" stop-opacity=".93"/>
-                  <stop offset="100%" stop-color="{{c.c2}}" stop-opacity=".85"/>
-                </radialGradient>
-              </defs>
-              <circle cx="150" cy="44" r="27" fill="{{c.discFill}}" opacity="{{c.disc}}"/>
-              <circle cx="{{c.moonX}}" cy="38" r="27" fill="{{c.bgSolid}}" opacity="{{c.moonBite}}"/>
-              <path d="{{c.windD}}" stroke="#cfd6e2" stroke-width="3.4" stroke-linecap="round" fill="none" opacity="{{c.wind}}"/>
-              <g transform="{{c.cloudT}}" opacity="{{c.cloud}}" fill="url(#g{{c.n}})">
-                <ellipse cx="72" cy="86" rx="56" ry="40"/><ellipse cx="118" cy="70" rx="48" ry="44"/><ellipse cx="150" cy="94" rx="42" ry="30"/><rect x="60" y="92" width="104" height="34" rx="17"/>
-              </g>
-              <path d="{{c.boltD}}" fill="#f3d18a" opacity="{{c.bolt}}"/>
-              <path d="{{c.rainD}}" stroke="#9fc3e8" stroke-width="4" stroke-linecap="round" fill="none" opacity="{{c.rain}}"/>
-              <path d="{{c.snowD}}" fill="#e6ecf5" opacity="{{c.snow}}"/>
-              <path d="{{c.fogD}}" stroke="#aab2bd" stroke-width="6" stroke-linecap="round" fill="none" opacity="{{c.fog}}"/>
-            </svg>
+          <div class="pair">
+
+            <div class="half" style="background: {{c.dayBg}};">
+              <svg class="art" viewBox="12 6 186 144" width="112" height="87">
+                <defs>
+                  <radialGradient id="g{{c.dayId}}" cx="34%" cy="28%" r="78%">
+                    <stop offset="0" stop-color="{{c.dayC0}}" stop-opacity=".97"/>
+                    <stop offset="62%" stop-color="{{c.dayC1}}" stop-opacity=".93"/>
+                    <stop offset="100%" stop-color="{{c.dayC2}}" stop-opacity=".85"/>
+                  </radialGradient>
+                  <mask id="m{{c.dayId}}" maskUnits="userSpaceOnUse" x="0" y="0" width="210" height="160">
+                    <rect x="0" y="0" width="210" height="160" fill="#fff"/>
+                    <circle cx="{{c.dayMoonX}}" cy="38" r="27" fill="#000"/>
+                  </mask>
+                </defs>
+                <path d="{{c.dayStarD}}" fill="#eef2fb" opacity="{{c.dayStar}}"/>
+                <circle cx="150" cy="44" r="27" fill="{{c.dayDiscFill}}" opacity="{{c.dayDisc}}" mask="url(#m{{c.dayId}})"/>
+                <path d="{{c.dayWindD}}" stroke="{{c.dayWindCol}}" stroke-width="3.4" stroke-linecap="round" fill="none" opacity="{{c.dayWind}}"/>
+                <g transform="{{c.cloudT}}" opacity="{{c.dayCloud}}" fill="url(#g{{c.dayId}})">
+                  <ellipse cx="72" cy="86" rx="56" ry="40"/><ellipse cx="118" cy="70" rx="48" ry="44"/><ellipse cx="150" cy="94" rx="42" ry="30"/><rect x="60" y="92" width="104" height="34" rx="17"/>
+                </g>
+                <path d="{{c.boltD}}" fill="#f3d18a" opacity="{{c.bolt}}"/>
+                <path d="{{c.rainD}}" stroke="{{c.dayRainCol}}" stroke-width="4" stroke-linecap="round" fill="none" opacity="{{c.rain}}"/>
+                <path d="{{c.snowD}}" fill="{{c.daySnowCol}}" opacity="{{c.snow}}"/>
+                <path d="{{c.fogD}}" stroke="{{c.dayFogCol}}" stroke-width="6" stroke-linecap="round" fill="none" opacity="{{c.fog}}"/>
+              </svg>
+            </div>
+
+            <div class="half" style="background: {{c.niteBg}};">
+              <svg class="art" viewBox="12 6 186 144" width="112" height="87">
+                <defs>
+                  <radialGradient id="g{{c.niteId}}" cx="34%" cy="28%" r="78%">
+                    <stop offset="0" stop-color="{{c.niteC0}}" stop-opacity=".97"/>
+                    <stop offset="62%" stop-color="{{c.niteC1}}" stop-opacity=".93"/>
+                    <stop offset="100%" stop-color="{{c.niteC2}}" stop-opacity=".85"/>
+                  </radialGradient>
+                  <mask id="m{{c.niteId}}" maskUnits="userSpaceOnUse" x="0" y="0" width="210" height="160">
+                    <rect x="0" y="0" width="210" height="160" fill="#fff"/>
+                    <circle cx="{{c.niteMoonX}}" cy="38" r="27" fill="#000"/>
+                  </mask>
+                </defs>
+                <path d="{{c.niteStarD}}" fill="#eef2fb" opacity="{{c.niteStar}}"/>
+                <circle cx="150" cy="44" r="27" fill="{{c.niteDiscFill}}" opacity="{{c.niteDisc}}" mask="url(#m{{c.niteId}})"/>
+                <path d="{{c.niteWindD}}" stroke="{{c.niteWindCol}}" stroke-width="3.4" stroke-linecap="round" fill="none" opacity="{{c.niteWind}}"/>
+                <g transform="{{c.cloudT}}" opacity="{{c.niteCloud}}" fill="url(#g{{c.niteId}})">
+                  <ellipse cx="72" cy="86" rx="56" ry="40"/><ellipse cx="118" cy="70" rx="48" ry="44"/><ellipse cx="150" cy="94" rx="42" ry="30"/><rect x="60" y="92" width="104" height="34" rx="17"/>
+                </g>
+                <path d="{{c.boltD}}" fill="#f3d18a" opacity="{{c.bolt}}"/>
+                <path d="{{c.rainD}}" stroke="{{c.niteRainCol}}" stroke-width="4" stroke-linecap="round" fill="none" opacity="{{c.rain}}"/>
+                <path d="{{c.snowD}}" fill="{{c.niteSnowCol}}" opacity="{{c.snow}}"/>
+                <path d="{{c.fogD}}" stroke="{{c.niteFogCol}}" stroke-width="6" stroke-linecap="round" fill="none" opacity="{{c.fog}}"/>
+              </svg>
+            </div>
+
           </div>
-          <div class="cid">{{c.n}}</div>
+          <div class="cid">{{c.nm}}</div>
           <div class="prm">{{c.p}}</div>
         </div>
       </sc-for>
@@ -61,53 +101,101 @@
 <script data-dc-script>
 class Component extends DCLogic {
   renderVals() {
-    // the app's own condition table, verbatim from Sky.vue
+    // the app's own condition table, verbatim from sky.ts -- note there is no `night` in it,
+    // because there is none in the app either: store.ts takes the condition from the house and
+    // Sky.vue / RailView.vue take the light from the sun's elevation. Every row below is a
+    // condition the house can report at three in the afternoon or at three in the morning.
     const COND = {
-      sunny: { clouds: .06 }, 'clear-night': { clouds: .06, night: true }, partlycloudy: { clouds: .42 }, cloudy: { clouds: .9 },
+      sunny: { clouds: .06 }, 'clear-night': { clouds: .06 }, partlycloudy: { clouds: .42 }, cloudy: { clouds: .9 },
       fog: { clouds: .5, fog: 1 }, rainy: { clouds: .9, rain: .6 }, pouring: { clouds: 1, rain: 1 }, hail: { clouds: 1, rain: .8 },
       lightning: { clouds: 1, lightning: true }, 'lightning-rainy': { clouds: 1, rain: .8, lightning: true },
       snowy: { clouds: .9, snow: .7 }, 'snowy-rainy': { clouds: 1, snow: .5, rain: .4 },
       windy: { clouds: .3, wind: 3 }, 'windy-variant': { clouds: .7, wind: 3 }, exceptional: { clouds: .5 },
     };
-    const wxOf = (c) => Object.assign({ clouds: 0, rain: 0, snow: 0, fog: 0, lightning: false, wind: 1, night: false }, COND[c]);
+    const wxOf = (c) => Object.assign({ clouds: 0, rain: 0, snow: 0, fog: 0, lightning: false, wind: 1 }, COND[c]);
 
+    // the only two names that are a light rather than a condition; everything else is drawn twice
+    const PAIRS = [['sunny', 'clear-night', 'sunny · clear-night']].concat(
+      Object.keys(COND).filter((k) => k !== 'sunny' && k !== 'clear-night').map((k) => [k, k, k]));
+
+    const clamp = (v, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, v));
     const lerp = (a, b, t) => a + (b - a) * t;
-    const hex = (a, b, t) => {
-      const p = (i) => Math.round(lerp(parseInt(a.substr(1 + i * 2, 2), 16), parseInt(b.substr(1 + i * 2, 2), 16), t));
-      return '#' + [p(0), p(1), p(2)].map((v) => v.toString(16).padStart(2, '0')).join('');
-    };
-    // a drop, a flake, a fog bar -- each a path string, so no loops run inside the SVG
+    const mix = (a, b, t) => [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)];
+    const rgb = (c) => 'rgb(' + (c[0] | 0) + ',' + (c[1] | 0) + ',' + (c[2] | 0) + ')';
+
+    // a drop, a flake, a fog bar, a star -- each a path string, so no loops run inside the SVG
     const drops = (n, x0, gap) => { let d = ''; for (let i = 0; i < n; i++) { const x = x0 + i * gap; d += 'M' + x + ' 118 l-7 22 '; } return d; };
-    const flakes = (n, x0, gap) => { let d = ''; for (let i = 0; i < n; i++) { const x = x0 + i * gap, y = 124 + (i % 2) * 12, r = 5;
-      d += 'M' + x + ' ' + y + ' m' + (-r) + ' 0 a' + r + ' ' + r + ' 0 1 0 ' + (2 * r) + ' 0 a' + r + ' ' + r + ' 0 1 0 ' + (-2 * r) + ' 0 '; } return d; };
+    const dot = (x, y, r) => 'M' + x + ' ' + y + ' m' + (-r) + ' 0 a' + r + ' ' + r + ' 0 1 0 ' + (2 * r) + ' 0 a' + r + ' ' + r + ' 0 1 0 ' + (-2 * r) + ' 0 ';
+    const flakes = (n, x0, gap) => { let d = ''; for (let i = 0; i < n; i++) d += dot(x0 + i * gap, 124 + (i % 2) * 12, 5); return d; };
     const bars = () => 'M22 112h58 M96 112h92 M40 132h64 M118 132h54';
     const gusts = () => 'M18 60h58a13 13 0 1 0-13-13 M18 84h84a13 13 0 1 1-13 13';
-    const BOLT = 'M112 96 L86 132 h20 l-6 26 28-38 h-20 z';
+    // the bolt sits a little higher than it used to: its tail used to run to y158 and get clipped
+    const BOLT = 'M112 86 L86 122 h20 l-6 24 26-36 h-20 z';
+    // the same handful of stars every time, so two panels of the same weather are the same picture
+    const STARS = [[24, 28, 1.7], [46, 15, 1.2], [70, 34, 1.5], [32, 54, 1.3], [100, 18, 1.9], [176, 16, 1.4],
+                   [194, 46, 1.6], [18, 74, 1.2], [186, 82, 1.5], [148, 10, 1.3], [122, 40, 1.1], [60, 70, 1.4]];
+    const starfield = () => STARS.map((s) => dot(s[0], s[1], s[2])).join('');
+
+    /* one side of a pair: the same weather, under one light or the other */
+    const side = (cond, night, key) => {
+      const w = wxOf(cond);
+      const cover = w.clouds;
+      const dark = clamp((cover - 0.35) / 0.65);
+      const open = 1 - Math.min(1, cover / 0.55);              // how much of the disc still shows
+
+      /* the sky behind it, by palette()'s rules from sky.ts: cloud greys it, rain darkens it,
+         fog flattens it -- day and night alike, which is why an overcast night is not black */
+      const wash = (c) => mix(mix(mix(c, [58, 64, 72], cover * 0.55), [22, 24, 30], w.rain * 0.3), [116, 122, 128], w.fog * 0.3);
+      const top = wash(night ? [10, 12, 26] : [30, 56, 98]);
+      const bot = wash(night ? [6, 7, 14] : [16, 26, 50]);
+
+      /* the cloud body greys as cover thickens; by night the moon is the only thing lighting it */
+      let c0 = mix([255, 255, 255], [195, 201, 212], dark);
+      let c1 = mix([216, 220, 230], [154, 161, 173], dark);
+      let c2 = mix([154, 163, 180], [109, 116, 128], dark);
+      if (night) {
+        const m = [66, 74, 96], t = 0.44 + dark * 0.32;   // a wisp still catches the moon; a deck goes to a dark mass
+        c0 = mix(c0, m, t); c1 = mix(c1, m, t + 0.04); c2 = mix(c2, m, t + 0.08);
+      }
+
+      /* precipitation keeps its shape and loses its light */
+      const dim = (c, t) => (night ? mix(c, t, 0.45) : c);
+      /* stars, exactly where Sky.vue lets them through: thinned by cloud, snuffed by fog */
+      const star = night ? (1 - cover * 0.9) * (1 - w.fog * 0.8) * 0.9 : 0;
+
+      const o = {};
+      o[key + 'Id'] = cond + (night ? '-n' : '-d');
+      o[key + 'Bg'] = 'linear-gradient(165deg, ' + rgb(top) + ', ' + rgb(bot) + ')';
+      o[key + 'C0'] = rgb(c0); o[key + 'C1'] = rgb(c1); o[key + 'C2'] = rgb(c2);
+      /* a trace of cloud on a clear sky, not none -- at night it needs more of itself to read
+         as a wisp rather than as a hole punched in the stars */
+      o[key + 'Cloud'] = cover < 0.1 ? (night ? 0.55 : 0.34) : 1;
+      o[key + 'Disc'] = (0.25 + open * 0.75).toFixed(2);
+      o[key + 'DiscFill'] = night ? '#dfe4ee' : '#f6dca8';
+      o[key + 'MoonX'] = night ? 138 : -400;                   // the bite that makes a moon a moon
+      o[key + 'StarD'] = star > 0.05 ? starfield() : '';
+      o[key + 'Star'] = star > 0.05 ? star.toFixed(2) : 0;
+      o[key + 'RainCol'] = rgb(dim([159, 195, 232], [40, 58, 84]));
+      o[key + 'SnowCol'] = rgb(night ? mix([230, 236, 245], [70, 84, 108], 0.28) : [230, 236, 245]);
+      o[key + 'FogCol'] = rgb(dim([170, 178, 189], [52, 58, 68]));
+      o[key + 'WindCol'] = rgb(dim([207, 214, 226], [60, 68, 84]));
+      o[key + 'WindD'] = w.wind > 1.5 ? gusts() : '';
+      o[key + 'Wind'] = w.wind > 1.5 ? (night ? 0.6 : 0.72) : 0;
+      return o;
+    };
 
     return {
-      cells: Object.keys(COND).map((name) => {
-        const w = wxOf(name);
-        // the cloud greys and swells as cover thickens
+      cells: PAIRS.map((pair) => {
+        const dayName = pair[0], niteName = pair[1], label = pair[2];
+        const w = wxOf(niteName);                              // the numbers are the same on both sides
         const cover = w.clouds;
-        const dark = Math.min(1, Math.max(0, (cover - 0.35) / 0.65));
         const scale = 0.66 + cover * 0.34;
-        const clear = 1 - Math.min(1, cover / 0.55);   // how much of the disc still shows
-        const bg = w.night
-          ? 'linear-gradient(165deg, rgb(10,12,26), rgb(6,7,14))'
-          : 'linear-gradient(165deg, rgb(28,52,92), rgb(16,26,50))';
-        return {
-          n: name,
+        /* everything that does not depend on the light is shared by the pair, which is the point */
+        const shared = {
+          nm: label,
           p: [cover ? 'cl ' + cover : '', w.rain ? 'rn ' + w.rain : '', w.snow ? 'sn ' + w.snow : '',
               w.fog ? 'fg ' + w.fog : '', w.lightning ? 'lt' : '', w.wind > 1 ? 'wd ' + w.wind : ''].filter(Boolean).join('  ') || '—',
-          bg: bg,
-          bgSolid: w.night ? 'rgb(9,11,21)' : 'rgb(23,40,72)',
-          c0: hex('#ffffff', '#c3c9d4', dark), c1: hex('#d8dce6', '#9aa1ad', dark), c2: hex('#9aa3b4', '#6d7480', dark),
           cloudT: 'translate(' + (105 * (1 - scale)).toFixed(1) + ' ' + (100 * (1 - scale)).toFixed(1) + ') scale(' + scale.toFixed(3) + ')',
-          cloud: cover < 0.1 ? 0.34 : 1,             // a trace of cloud on a clear day, not none
-          disc: (0.25 + clear * 0.75).toFixed(2),
-          discFill: w.night ? '#dfe4ee' : '#f6dca8',
-          moonX: w.night ? 138 : -80,                 // the bite that makes a moon a moon
-          moonBite: w.night ? 1 : 0,
           rainD: w.rain ? drops(Math.round(2 + w.rain * 3), 62, 26) : '',
           rain: w.rain ? (0.45 + w.rain * 0.55).toFixed(2) : 0,
           snowD: w.snow ? flakes(Math.round(2 + w.snow * 3), 66, 26) : '',
@@ -116,10 +204,18 @@ class Component extends DCLogic {
           fog: w.fog ? (w.fog * 0.72).toFixed(2) : 0,
           boltD: w.lightning ? BOLT : '',
           bolt: w.lightning ? 1 : 0,
-          windD: w.wind > 1.5 ? gusts() : '',
-          wind: w.wind > 1.5 ? 0.72 : 0,
         };
-      }),
+        return Object.assign(shared, side(dayName, false, 'day'), side(niteName, true, 'nite'));
+      }).concat([
+        /* the fifteenth cell is not a condition. It is the axis the other fourteen are doubled along,
+           and it happens to close the row the doubling left open. */
+        Object.assign({
+          nm: 'the light, not a condition',
+          p: 'sun up · sun down',
+          cloudT: 'translate(0 0) scale(1)',
+          rainD: '', rain: 0, snowD: '', snow: 0, fogD: '', fog: 0, boltD: '', bolt: 0,
+        }, side('__clear', false, 'day'), side('__clear', true, 'nite'), { dayCloud: 0, niteCloud: 0 }),
+      ]),
     };
   }
 }
