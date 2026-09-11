@@ -6,9 +6,21 @@ its scenes and its devices in the product vocabulary. Live over the brain's webs
 
 ```sh
 npm install
-npm run dev      # Vite on :5173, proxies /home /devices /rooms /events /stream to the brain on :8300
+npm run dev:mock # everything, watched: the mock brain and Vite together, hot reload, no hub needed
+npm run dev      # the same against a real hub on :8300
 npm run build    # writes dist/, which the brain serves at http://<host>:8300/
 ```
+
+`npm run dev:mock` is the one to live in. It starts `mock/brain.mjs` and Vite together and stops them
+together, and every change to `src/` is on the screen before you have looked back at it — no build, no
+restart. All the preview knobs still work (`?at=19:40`, `?room=kitchen`, `?sheet=hub`, `WX=rainy`,
+`LOCKED=1`), and `PORT=8405 npm run dev:mock` moves the mock if something already holds :8399.
+
+Which paths go to the brain rather than to Vite lives in `dev-proxy.ts`. It used to be a hand-kept list
+in `vite.config.ts` and it had gone stale — `/health`, `/phones`, `/presence`, `/sounds` and five others
+fell through to Vite, which answered them with `index.html`, so those screens worked everywhere except
+in the dev server. `tests/dev-proxy.test.ts` now holds the list to every path the panel calls, so it
+cannot happen again quietly.
 
 ## Tests
 
@@ -18,6 +30,7 @@ npm run test:watch       # the same, as you type
 npm run lint             # the linter CI runs
 npm run typecheck        # vue-tsc, the same pass `npm run build` makes first
 npm run e2e              # the built panel in a real browser against the mock brain
+npm run e2e:watch        # the same in Playwright's UI: pick a test, watch it run, step through it
 ```
 
 `npm run e2e` needs the panel built (`npm run build`) and Chromium once (`npx playwright install

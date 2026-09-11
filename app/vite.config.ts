@@ -1,18 +1,12 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
+import { proxyFor } from './dev-proxy.js'   // .js, not .ts: node16 resolution wants the emitted name
 
-/* The dev server hands every API path to the brain: the real one on :8300, or `BRAIN=http://localhost:8399 npm run dev`
-   for the mock in mock/brain.mjs. Anything else is the panel itself. */
+/* The dev server hands every path the brain owns to the brain: the real one on :8300, or the mock with
+   `npm run dev:mock`, which starts both. Anything else is the panel itself, served by Vite with hot
+   reload. Which paths those are lives in dev-proxy.ts, and a test holds it to what the panel calls. */
 const brain = process.env.BRAIN || 'http://localhost:8300'
-const api = ['/home', '/devices', '/rooms', '/events', '/setup', '/ambient', '/scenes', '/rules', '/drafts', '/discovered', '/catalog', '/flows', '/credentials', '/pair', '/geo', '/location', '/assistant']
 export default defineConfig({
   plugins: [vue()],
-  server: {
-    host: true,
-    proxy: {
-      ...Object.fromEntries(api.map(p => [p, brain])),
-      '/devices': { target: brain, ws: true },   // the camera viewer's signalling socket lives under /devices too
-      '/stream': { target: brain.replace('http', 'ws'), ws: true },
-    },
-  },
+  server: { host: true, proxy: proxyFor(brain) },
 })
