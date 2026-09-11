@@ -94,6 +94,9 @@ services:
     environment:
       - TZ=${TZ}
       - HUB_DRIVER=/driver
+      # Which code this hub follows, so the panel offers the same thing install.sh would install.
+      # release: the newest version tag. main: the branch, for a hub being worked on. install.sh writes it.
+      - HUB_CHANNEL=${HUB_CHANNEL:-release}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}   # the assistant's key, if it is not pasted into the panel instead
 
   caddy:

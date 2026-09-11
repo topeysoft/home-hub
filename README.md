@@ -187,7 +187,8 @@ the whole mesh, with failover.
 
 ## Tests and CI
 
-Every push and pull request runs `.github/workflows/ci.yml`: the brain's tests and linter, the
+Every push, on **every branch**, and every pull request runs `.github/workflows/ci.yml` — a long-lived
+branch like `panel-bento` is exactly where a regression has time to settle in unnoticed. It runs: the brain's tests and linter, the
 panel's types, linter and unit tests, the built panel driven in a real browser, the shell that runs
 on the hub host, and the brain's container image built for both kinds of host (built, not pushed —
 so a Dockerfile that no longer works is caught before it reaches the thing `install.sh` pulls).
@@ -195,6 +196,14 @@ so a Dockerfile that no longer works is caught before it reaches the thing `inst
 ```sh
 cd brain && .venv/bin/python -m pytest tests -q     # the hub
 cd app && npm test && npm run e2e                   # the screens, then the screens in a browser
+```
+
+`npm run e2e` starts its own mock on :8399, or reuses one already running there. To point it at a
+different panel — another branch's build, or a real hub — set `BASE`, and nothing is started locally:
+
+```sh
+cd .claude/worktrees/panel-bento/app && npm run build && PORT=8401 npm run mock &
+cd app && BASE=http://localhost:8401 npm run e2e
 ```
 
 Coverage may go up and may not go down: `.github/coverage-check.py` compares each run against
@@ -207,6 +216,33 @@ table, so the panel's dusk and an after-dark routine cannot drift apart. And `br
 holds `rules.json` and `scenes.json` to what a house that has just been plugged in can actually run:
 a starter rule may only name `home` or `entry`, because any other room is one only somebody's
 particular house has, and the engine would drop it on every other hub with nothing but a log line.
+
+## Releasing
+
+A version tag is what ships. Nothing else does.
+
+```sh
+git tag v0.2.0 && git push --tags
+```
+
+That runs the full test suite against the tagged commit and, only if it passes, builds two things: the
+brain's container for amd64 and arm64 (tagged `0.2.0`, `0.2` and `latest`), and the flash-and-go Pi
+image, attached to a GitHub release with its checksum. A tag is not a branch, so branch protection
+does not cover one — the test run is what stops a release being cut from a commit that never passed.
+
+Pushes to main publish `main` and `sha-<sha>` images and nothing else. **A merge to main does not
+reach anybody's hub.**
+
+Every hub follows one of two channels, written into `driver-layer/.env` by `install.sh`:
+
+- **`release`** — the default, and what every hub ships as. Follows version tags. The panel offers an
+  update when there is a newer release than the one it is on.
+- **`main`** — the branch, commit by commit, for a hub being worked on:
+  `HOME_HUB_CHANNEL=main sudo ./install.sh`.
+
+Code and container move together: a hub on `v0.2.0` runs the `0.2.0` image, not whatever is newest.
+The panel's *Install the update* tap parks a request file; the host's `update.sh` runs `install.sh`,
+which moves the checkout to the newest tag on its channel, pulls the images and restarts.
 
 ## Rules that do not change
 

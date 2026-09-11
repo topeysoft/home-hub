@@ -13,6 +13,11 @@ set -euo pipefail
 REPO="${HOME_HUB_REPO:-https://github.com/topeysoft/home-hub.git}"
 DIR="${HOME_HUB_DIR:-/opt/home-hub}"
 HOSTNAME_WANTED="${HOME_HUB_HOSTNAME:-hub}"
+# Which code this hub follows. "release" is the newest version tag: nothing reaches a house until
+# somebody tags it. "main" follows the branch commit by commit, which is what a hub being worked on
+# wants — HOME_HUB_CHANNEL=main sudo ./install.sh. The brain is told, so the panel offers the same one.
+CHANNEL="${HOME_HUB_CHANNEL:-release}"
+[ "$CHANNEL" = "main" ] || CHANNEL="release"
 
 say() { printf '\n\033[1m%s\033[0m\n' "$*"; }
 [ "$(id -u)" -eq 0 ] || { echo "Run me with sudo."; exit 1; }
@@ -33,21 +38,45 @@ docker compose version >/dev/null 2>&1 || pkg docker-compose-plugin
 systemctl enable --now docker >/dev/null 2>&1 || true
 
 say "2/5  The code"
-# $DIR is a deployment, not a place anyone edits: it always ends up exactly at origin/main.
+# $DIR is a deployment, not a place anyone edits: it ends up exactly where the channel points.
 HERE="$(cd "$(dirname "$0")" && pwd)"
+VERSION=""
+# The newest version tag, by version order rather than by date, so a fix tagged on an older line
+# does not look newer than the release it came after.
+want_ref() {
+  [ "$CHANNEL" = "main" ] && { echo "origin/main"; return; }
+  git -C "$DIR" tag -l 'v*' --sort=-v:refname | head -1
+}
+go_to_ref() {
+  local ref; ref="$(want_ref)"
+  if [ -z "$ref" ]; then
+    ref="origin/main"; echo "  nothing tagged yet, so: main"
+  fi
+  git -C "$DIR" reset -q --hard "$ref" && git -C "$DIR" clean -qfd -e driver-layer/
+  case "$ref" in v*) VERSION="${ref#v}" ;; esac
+  echo "  $CHANNEL: ${ref} — $(git -C "$DIR" log -1 --format='%h %s' | cut -c1-60)"
+}
 if [ -d "$DIR/.git" ]; then
   command -v git >/dev/null 2>&1 || pkg git
-  if git -C "$DIR" fetch -q origin main 2>/dev/null; then
-    git -C "$DIR" reset -q --hard origin/main && git -C "$DIR" clean -qfd -e driver-layer/ && echo "  at $(git -C "$DIR" log -1 --format='%h %s' | cut -c1-72)"
+  if git -C "$DIR" fetch -q --tags --force origin main 2>/dev/null; then
+    go_to_ref
   else
     echo "  could not reach $REPO; keeping the code that is here"
   fi
 elif [ -f "$HERE/driver-layer/docker-compose.yml" ] && [ "$HERE" != "$DIR" ]; then
   mkdir -p "$DIR"; cp -R "$HERE/." "$DIR/"     # a first install from a copied checkout, without internet
 else
-  command -v git >/dev/null 2>&1 || pkg git; git clone --depth 1 "$REPO" "$DIR"
+  # A full clone rather than --depth 1: the tags are how a release is found, and they are only
+  # a few megabytes here.
+  command -v git >/dev/null 2>&1 || pkg git
+  git clone -q "$REPO" "$DIR" && go_to_ref
 fi
 cd "$DIR/driver-layer"
+# Code and container move together: a hub on v0.2.0 runs the 0.2.0 image, not whatever is newest.
+if [ -n "$VERSION" ]; then export HUB_BRAIN_IMAGE="ghcr.io/topeysoft/home-hub-brain:${VERSION}"
+elif [ "$CHANNEL" = "main" ]; then export HUB_BRAIN_IMAGE="ghcr.io/topeysoft/home-hub-brain:main"
+fi
+export HUB_CHANNEL="$CHANNEL"
 
 say "3/5  A name on the network: $HOSTNAME_WANTED.local"
 if [ "$(hostname)" != "$HOSTNAME_WANTED" ]; then
@@ -68,6 +97,10 @@ if [ ! -f .env ]; then
     echo "ZWAVE_SESSION_SECRET=$(head -c 32 /dev/urandom | base64 | tr -d '/+=' )"
   } > .env
 fi
+# Rewritten every run: the channel is a property of this hub, and re-running with a different one
+# is how it is changed.
+sed -i '/^HUB_CHANNEL=/d' .env 2>/dev/null || true
+echo "HUB_CHANNEL=$CHANNEL" >> .env
 # radios: only start what is plugged in, now and whenever a stick is plugged in or pulled later
 chmod +x radios.sh
 ./radios.sh detect
