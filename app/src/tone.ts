@@ -82,6 +82,11 @@ export function toneVars(elevation: number, condition: string, name: ToneName = 
     // the lamp still has to read as lamplight against a card that may now be pale
     '--card-lamp-ink': light ? '#7a4a10' : '#e9b872',
   }
+  /* what an opened device lends the room: its own hue, at the strength a tint
+     can carry without fighting the sky it sits on */
+  vars['--tint-light'] = `oklch(0.62 ${(C * 2.4).toFixed(3)} ${tone.hues.light} / .34)`
+  vars['--tint-lock'] = `oklch(0.62 ${(C * 2.4).toFixed(3)} ${tone.hues.lock} / .30)`
+
   const card = (hue: number, c = C) =>
     `linear-gradient(155deg, oklch(${(L + 0.055).toFixed(3)} ${c.toFixed(3)} ${hue}), oklch(${L.toFixed(3)} ${c.toFixed(3)} ${hue + 6}))`
 

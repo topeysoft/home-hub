@@ -57,7 +57,7 @@ onUnmounted(() => clearInterval(tick))
       </span>
     </div>
     <div class="tiles" v-if="devices.length">
-      <component v-for="d in devices" :key="d.id" :is="tile(cap(d))" :device="d" />
+      <component v-for="d in devices" :key="d.id" :is="tile(cap(d))" :device="d" v-hold="() => (store.opened = d)" />
     </div>
     <div v-else-if="!readings.length" class="empty-room">
       <p class="empty">Nothing in this room yet.</p>

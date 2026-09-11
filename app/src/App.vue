@@ -16,6 +16,7 @@ import WhySheet from './WhySheet.vue'
 import RoutinesSheet from './RoutinesSheet.vue'
 import HubSheet from './HubSheet.vue'
 import LookSheet from './LookSheet.vue'
+import Opened from './Opened.vue'
 import Icon from './Icon.vue'
 import { upcomingLine } from './upcoming'
 import { isTone, toneVars, type ToneName } from './tone'
@@ -44,6 +45,15 @@ const toneParam = params.get('tone'), layoutParam = params.get('layout')
 const toneName = computed<ToneName>(() => isTone(toneParam) ? toneParam : (isTone(store.ambient.look?.tone) ? store.ambient.look!.tone as ToneName : 'follow'))
 const tone = computed(() => toneVars(store.sky.elevation, store.sky.condition, toneName.value))
 const layout = computed<LayoutName>(() => isLayout(layoutParam) ? layoutParam : (isLayout(store.ambient.look?.layout) ? store.ambient.look!.layout as LayoutName : 'stack'))
+
+/* an opened device lends the room its colour: a warm lamp pushes the field
+   amber, a lock or a camera cools it. Falls back to the lamp, which is what a
+   house at rest is lit by anyway. */
+const openTint = computed(() => {
+  const d = store.opened; if (!d) return {}
+  const warm = ['light', 'media', 'switch', 'fan'].includes(d.capability.split('.')[0])
+  return { '--open-tint': `var(${warm ? '--tint-light' : '--tint-lock'}, rgba(233,184,114,.30))` }
+})
 const weather = computed(weatherLine)
 const WX_ICON: Record<string, string> = { sunny: 'sun', 'clear-night': 'moon', partlycloudy: 'cloud', cloudy: 'cloud', fog: 'fog', rainy: 'rain', pouring: 'rain', hail: 'rain', lightning: 'bolt', 'lightning-rainy': 'bolt', snowy: 'snow', 'snowy-rainy': 'snow', windy: 'wind', 'windy-variant': 'wind', exceptional: 'cloud' }
 const wxIcon = computed(() => WX_ICON[store.sky.condition] ?? 'cloud')
@@ -83,7 +93,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="shell" :data-ambient="ambient" :style="tone" :class="{ resting: idle, 'in-setup': setup || lock.unpaired }">
+  <div class="shell" :data-ambient="ambient" :style="[tone, openTint]" :class="{ resting: idle, 'in-setup': setup || lock.unpaired, 'opened-shell': !!store.opened }">
     <Sky :quiet="!idle && !setup" />
     <div class="sky-veil"></div>
     <Join v-if="lock.unpaired" @joined="rejoin" />
@@ -146,6 +156,7 @@ onUnmounted(() => {
     </main>
 
     <Viewer />
+    <Opened v-if="store.opened" />
     <Transition name="sheet"><LocationSheet v-if="store.sheet === 'location'" /></Transition>
     <Transition name="sheet"><AddSheet v-if="store.sheet === 'add'" /></Transition>
     <Transition name="sheet"><CodeSheet v-if="store.sheet === 'code'" /></Transition>

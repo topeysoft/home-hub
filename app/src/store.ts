@@ -9,6 +9,7 @@ export const store = reactive({
   pending: {} as Record<string, true>,     // devices waiting for the house to confirm a change
   viewer: null as Device | null,            // camera shown full screen
   events: [] as Event[],
+  opened: null as Device | null,   // one device, held open in front of the house
   ambient: { location: null, weather: null } as Ambient,
   ambientLoaded: false,
   rules: {} as Rules,                        // scene rules from the brain, to tell whether a room still matches its scene

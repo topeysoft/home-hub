@@ -105,8 +105,8 @@ onUnmounted(() => clearInterval(t))
       <component
         v-for="d in carded" :key="d.id" class="bento-card"
         :is="cap(d) === 'light' ? LightTile : cap(d) === 'media' ? MediaTile : cap(d) === 'climate' ? ClimateTile : PlainTile"
-        :device="d" />
-      <CameraTile v-for="c in cameras" :key="c.id" :device="c" class="bento-card" />
+        :device="d" v-hold="() => (store.opened = d)" />
+      <CameraTile v-for="c in cameras" :key="c.id" :device="c" class="bento-card" v-hold="() => (store.opened = c)" />
     </div>
     <p class="empty rail-quiet" v-else>Nothing is on. The rooms are below.</p>
 

@@ -788,3 +788,63 @@ select.input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://ww
 .look-shape.look-rail { grid-template-columns: repeat(3, 1fr); }
 .look-shape.look-rail i:last-child { opacity: .45; }   /* the one cut by the edge */
 .look-row.on .look-shape i { background: var(--lamp); }
+
+/* ---------- one device, opened in place ----------
+   The home recedes rather than being covered: scaled back, blurred, dimmed, so
+   the panel reads as something in front of the house and not a new page. Every
+   number here was measured off the reference rather than chosen. The whole
+   sequence sits behind the reduced-motion block at the top of this file, which
+   turns it into a plain cross-fade. */
+.shell.opened-shell > .rail, .shell.opened-shell > .stage {
+  transform: scale(.955); filter: blur(13px) brightness(.52) saturate(.85); transform-origin: 50% 42%;
+  transition: transform .32s var(--ease), filter .32s var(--ease);
+}
+.rail, .stage { transform-origin: 50% 42%; transition: opacity .5s var(--ease), transform .26s var(--ease), filter .26s var(--ease); }
+.opened { position: fixed; inset: 0; z-index: 40; }
+.opened-veil { position: absolute; inset: 0; background: radial-gradient(90% 70% at 62% 78%, var(--open-tint, rgba(233,184,114,.30)), transparent 66%);
+  opacity: 0; transition: opacity .42s var(--ease); }
+.opened.shown .opened-veil { opacity: 1; }
+.opened-panel { position: absolute; left: 0; right: 0; bottom: 0; top: clamp(120px, 22vh, 260px); overflow: hidden;
+  border-radius: 34px 34px 0 0; border: 1px solid var(--edge-hi); border-bottom: 0;
+  background: linear-gradient(180deg, rgba(26,28,34,.80), rgba(16,17,21,.94)); backdrop-filter: blur(30px) saturate(1.25); -webkit-backdrop-filter: blur(30px) saturate(1.25);
+  transform: translateY(100%); transition: transform .28s var(--ease); }
+.opened.shown .opened-panel { transform: translateY(0); transition-duration: .38s; }
+.opened-close { position: absolute; top: 26px; right: 30px; z-index: 2; }
+/* the hero travels further than the panel did, and arrives after it */
+.opened-hero { position: absolute; right: 4%; bottom: -6%; color: var(--open-tint, rgba(233,184,114,.30)); opacity: 0;
+  transform: translateX(180px); transition: transform .24s var(--ease), opacity .24s ease; pointer-events: none; }
+.opened.shown .opened-hero { opacity: .5; transform: translateX(0); transition: transform .52s var(--ease) .08s, opacity .3s ease .08s; }
+.opened-body { position: relative; z-index: 1; padding: 44px 48px; max-width: 640px; }
+.opened-room { font-size: 15px; color: var(--ink-2); }
+.opened-name { margin: 4px 0 0; font-size: clamp(34px, 5vw, 56px); line-height: 1.04; }
+.opened-acts { display: flex; gap: 12px; margin-top: 26px; }
+.opened-acts .ctl { width: 56px; height: 56px; }
+.opened-acts .ctl.primary { background: var(--lamp); color: var(--lamp-ink); }
+.opened-acts .ctl.primary.off { background: var(--surface-hi); color: var(--ink-2); }
+.opened-big { margin-top: 40px; font-size: clamp(44px, 7vw, 76px); line-height: 1; letter-spacing: -0.02em; }
+.opened-facts { display: flex; flex-wrap: wrap; gap: 30px; margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--edge); }
+.opened-fact-v { font-size: 20px; font-weight: 500; }
+.opened-fact-k { margin-top: 2px; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+/* four beats, in the order a person reads them */
+.opened-step { opacity: 0; transform: translateY(12px); transition: opacity .16s var(--ease), transform .16s var(--ease); }
+.opened.shown .opened-step { opacity: 1; transform: translateY(0); transition: opacity .26s var(--ease), transform .26s var(--ease); }
+.opened.shown .s0 { transition-delay: 0ms; }
+.opened.shown .s1 { transition-delay: 60ms; }
+.opened.shown .s2 { transition-delay: 120ms; }
+.opened.shown .s3 { transition-delay: 180ms; }
+/* the card acknowledges the hold before the panel arrives */
+.tile[data-held], .room-card[data-held] { transform: scale(.96); transition: transform .18s var(--ease); }
+@media (max-width: 860px) {
+  .opened-panel { top: clamp(90px, 16vh, 160px); }
+  .opened-body { padding: 30px 24px; }
+  .opened-hero { right: -8%; opacity: .35; }
+}
+/* the dimmer: the one control the tile is too small to carry properly */
+.opened-dim { margin-top: 34px; max-width: 520px; }
+.opened-dim input { -webkit-appearance: none; appearance: none; width: 100%; height: 56px; margin: 0; background: transparent; }
+.opened-dim input::-webkit-slider-runnable-track { height: 56px; border-radius: 28px; border: 1px solid var(--edge); background: linear-gradient(90deg, rgba(233,184,114,.55), var(--lamp) var(--dim, 0%), var(--surface-hi) var(--dim, 0%)); }
+.opened-dim input::-moz-range-track { height: 56px; border-radius: 28px; border: 1px solid var(--edge); background: linear-gradient(90deg, rgba(233,184,114,.55), var(--lamp) var(--dim, 0%), var(--surface-hi) var(--dim, 0%)); }
+.opened-dim input::-webkit-slider-thumb { -webkit-appearance: none; width: 40px; height: 40px; margin-top: 8px; border-radius: 50%; background: var(--ink); box-shadow: 0 2px 10px rgba(0,0,0,.35); }
+.opened-dim input::-moz-range-thumb { width: 40px; height: 40px; border: 0; border-radius: 50%; background: var(--ink); box-shadow: 0 2px 10px rgba(0,0,0,.35); }
+.opened-dim input:disabled { opacity: .45; }
+.opened-dim-hint { margin: 12px 2px 0; font-size: 14.5px; color: var(--ink-2); }
