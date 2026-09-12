@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 import { store, notify, loadRoutines, visibleRooms } from './store'
 import { say, act, type Proposal } from './api'
 import Icon from './Icon.vue'
@@ -11,6 +11,8 @@ import Icon from './Icon.vue'
    so "lights off" inside a room means that room. */
 const props = defineProps<{ room?: string | null }>()
 const text = ref(''), busy = ref(false), note = ref(''), answer = ref(''), proposal = ref<(Proposal & { said: string }) | null>(null), doing = ref(false)
+
+const field = ref<HTMLInputElement | null>(null)
 
 const hint = computed(() => {
   const rooms = visibleRooms().filter(r => r.id !== 'unassigned' && r.devices.length)
@@ -35,6 +37,11 @@ async function go() {
     else if (r.kind === 'rule') { note.value = 'Written up as a routine. It waits for your OK under Routines.'; loadRoutines() }
   } catch (e: any) { note.value = e.message }
   busy.value = false
+  /* and put the cursor back where it was. `busy` disables the input, which drops focus, and nothing
+     was giving it back -- so after every sentence a keyboard was left outside the box and had to
+     find its way in again, which on a wall panel means finding an on-screen one twice. A person
+     who has just told the house something is still talking to it. */
+  await nextTick(); field.value?.focus()
 }
 async function doIt() {
   const p = proposal.value; if (!p || doing.value) return
@@ -49,7 +56,7 @@ async function doIt() {
   <div class="say">
     <form class="search say-box" @submit.prevent="go">
       <Icon name="sparkle" :size="18" />
-      <input v-model="text" :disabled="busy" :placeholder="room ? 'Tell this room…' : 'Tell the house…'" aria-label="Tell the house" enterkeyhint="send" autocomplete="off" autocapitalize="off" spellcheck="false" />
+      <input ref="field" v-model="text" :disabled="busy" :placeholder="room ? 'Tell this room…' : 'Tell the house…'" aria-label="Tell the house" enterkeyhint="send" autocomplete="off" autocapitalize="off" spellcheck="false" />
       <button class="button small" type="submit" :class="{ busy }" :disabled="!text.trim()">{{ busy ? 'Doing…' : 'Go' }}</button>
     </form>
     <p class="say-hint" v-if="!note && !answer && !proposal">{{ hint }}</p>
