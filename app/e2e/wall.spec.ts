@@ -122,3 +122,62 @@ test('the row is proportioned the way the board draws it', async ({ page }) => {
   near(loz.w, 226 / 1440, 'the pane is the wrong width')
   near(loz.h, 372 / 900, 'the pane is the wrong height')
 })
+
+/* The weather recedes with the row. It is not in the rail -- it is not in the house -- so it does
+   not travel; it goes out of focus and the reading goes altogether, because a temperature you have
+   swiped away from is not the thing you are reading any more. Without this the left third stays
+   sharp while everything else moves, and reads as fixed furniture the cards are sliding behind.
+
+   The last assertion is the one that would be easy to lose: the blur goes on the drawing and on the
+   pane, never on the column holding both. A filter there forms a backdrop root and the pane's own
+   frost dies with it -- the same trap as the rail's cards and the pane over the room. */
+test('the weather recedes when the row is swiped away from home, whichever face is on', async ({ page }) => {
+  const look = () => page.evaluate(() => {
+    const g = (sel: string) => {
+      const cs = getComputedStyle(document.querySelector(sel)!)
+      return {
+        blur: Number(cs.filter.match(/blur\(([\d.]+)px\)/)?.[1] ?? 0),
+        opacity: Number(Number(cs.opacity).toFixed(2)),
+        frost: (cs.getPropertyValue('backdrop-filter') || cs.getPropertyValue('-webkit-backdrop-filter') || 'none') !== 'none',
+      }
+    }
+    return { drawing: g('.wall-cloud'), readout: g('.wall-loz'), column: g('.wall-wx') }
+  })
+
+  const swipe = async (to: number) => {
+    await page.evaluate((x) => {
+      const row = document.querySelector('.bento') as HTMLElement
+      row.style.scrollSnapType = 'none'   // a snap would round the scroll to a card edge mid-measurement
+      row.scrollLeft = x ? row.querySelector('.bento-card')!.getBoundingClientRect().width + 18 : 0
+    }, to)
+    await page.waitForTimeout(900)        // the recede is 650ms
+  }
+
+  for (const face of ['paper', 'glass']) {
+    await page.goto(`/?layout=wall&nav=top&face=${face}&at=19:40`, { waitUntil: 'networkidle' })
+    await expect(page.locator('.bento').first()).toBeVisible()
+    await page.waitForTimeout(1500)
+
+    const home = await look()
+    expect(home.drawing.blur, `${face}: the weather is soft before anything has been swiped`).toBe(0)
+    expect(home.readout.opacity, `${face}: the reading is not there to begin with`).toBe(1)
+
+    await swipe(1)
+    const away = await look()
+    // whether it recedes is the layout's; how it recedes is the face's
+    expect(away.drawing.opacity, `${face}: the drawing did not dim`).toBeLessThan(0.9)
+    expect(away.readout.opacity, `${face}: the reading is still being offered for a sky you swiped past`).toBe(0)
+    if (face === 'glass') {
+      expect(away.drawing.blur, 'glass: the drawing stayed sharp while the row moved').toBeGreaterThan(4)
+      expect(away.column.blur, "glass: the blur went on the column, which kills the pane's own frost").toBe(0)
+      expect(away.readout.frost, 'glass: the pane lost its frost as it receded').toBe(true)
+    } else {
+      expect(away.drawing.blur, 'paper: a blur outside the row is a depth paper does not have').toBe(0)
+    }
+
+    await swipe(0)
+    const back = await look()
+    expect(back.drawing.blur, `${face}: the weather never came back into focus`).toBe(0)
+    expect(back.readout.opacity, `${face}: the reading never came back`).toBe(1)
+  }
+})

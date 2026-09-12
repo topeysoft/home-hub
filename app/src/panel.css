@@ -4611,6 +4611,48 @@ select.input {
   opacity: 0;
 }
 
+/* Wall's weather, receding with the row.
+
+   WHETHER it recedes is this layout's business, not the face's, and that is the
+   difference from the Rail above. There the weather is a corner element and a
+   face can reasonably decide whether it has depth. Here it is a third of the
+   screen, and a third of the screen holding perfectly still while everything
+   else moves does not read as background -- it reads as fixed furniture the
+   cards are sliding behind. So both faces recede it, and the reading goes
+   either way, because a temperature you have swiped away from is not the thing
+   you are reading any more.
+
+   HOW it recedes is the face's. Paper dims it. Glass also blurs it, which is
+   its focal plane; paper's softening belongs to the row's own edges and a blur
+   on something outside the row would be paper claiming a depth it does not have
+   anywhere else.
+
+   The blur goes on the drawing and on the pane separately, never on the column
+   holding both: a filter on .wall-wx forms a backdrop root and kills the
+   lozenge's own backdrop-filter, so the pane would go flat exactly as it
+   started to recede. Third time this file has had to say it, after the rail's
+   cards and the pane over the room.
+
+   The board also carries the sky 24px against the cards' 460. That is 5% -- a
+   rounding error on a 1280 screen -- and its own note says the sky does not
+   travel at all. It does not travel here either. */
+.wall-cloud,
+.wall-loz {
+  transition:
+    filter 650ms var(--ease),
+    opacity 650ms var(--ease);
+}
+.wall-home:has(.bento:not([data-at-start])) .wall-cloud {
+  opacity: 0.8;
+}
+.wall-home:has(.bento:not([data-at-start])) .wall-loz {
+  opacity: 0;
+}
+[data-face='glass'] .wall-home:has(.bento:not([data-at-start])) .wall-cloud,
+[data-face='glass'] .wall-home:has(.bento:not([data-at-start])) .wall-loz {
+  filter: blur(5px);
+}
+
 /* without scroll-driven animations: the same fade, no blur, as a mask on the
    row; each end lifts when there is nothing beyond it, so the first card at
    rest is never dimmed for a neighbour it does not have */
