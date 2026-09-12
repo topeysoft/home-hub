@@ -12,6 +12,8 @@
     "shots": "node mock/shots.mjs",
     "art-sheet": "node mock/art-sheet.mjs",
     "art-sheet:check": "node mock/art-sheet.mjs --check",
+    "weather-sheet": "node mock/weather-sheet.mjs",
+    "weather-sheet:check": "node mock/weather-sheet.mjs --check",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",

@@ -81,7 +81,8 @@ export function oklch([r, g, b]: RGB): Oklch {
  * The picture beside the greeting, as numbers. It lives here rather than in RailView.vue for the
  * reason at the top of this file: the canvas behind the panel and the drawing in front of it must
  * agree, and the only way to guarantee that is to have them read the same lines. See
- * design/Weather.dc.html, which is generated from these same rules.
+ * design/Weather.dc.html, which mock/weather-sheet.mjs draws from this file: it is generated, not
+ * kept in step by hand, and CI fails the build if it falls behind.
  *
  * Night is not a condition -- there is none in COND, and Home Assistant does not report one. The
  * house says what the weather is; the sun says which light it is in. So every condition has to
