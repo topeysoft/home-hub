@@ -128,6 +128,37 @@ As it is, plus the few things that are about the hub and nothing else.
 
 Not covered yet: an account with no flow open (Ring is the one that matters, and it is step four), and removing one.
 
+## Where this stands
+
+*Read from the tree on 12 September 2026, so a session picking this up does not have to work it out again. Update the
+date when you change what is below it.*
+
+**Standing on its own feet.** The code (`brain/hub/lock.py`): controlling the house never asks for it, and
+`needs_code()` is the one list of what does — adding, renaming, moving, the location, the rules, the flows, the
+engine's sign-in. Five wrong codes from an address and that address waits the minute out. No code set means nothing is
+locked, which is how a hub starts. Pairing (`brain/hub/phones.py`, `app/src/Join.vue`, `app/src/PeoplePage.vue`) is
+whole: the three ways in, a random token per phone with only its hash kept, day/weekend/keep stays that sweep
+themselves, `open_to_strangers()` as the list of what a phone may reach before it belongs. The phones moved onto the
+People page, next to the people they belong to. Covered by `brain/tests/test_lock.py`, `test_api_lock.py`,
+`test_phones.py`, `test_settings.py`.
+
+**What the order above still has not touched**, checked rather than assumed:
+
+- **Removing anything** (step 2) does not exist. There is no route that deletes a config entry;
+  `provision.py` only reloads one. Selling a camera still means opening Home Assistant.
+- **People** (step 3) is a page, not yet a model. `PeoplePage.vue` draws what `presence.py` reads, and
+  `presence.py` still reads Home Assistant's `person.*` entities and the alarm — so "is anyone home?" still rests on
+  the companion app this product says does not exist. A phone has a name, not an owner: nothing mints a per-person
+  key. **Roles do not exist anywhere in the tree** — *can change things* and *can control* are in this document and
+  nowhere else. Wi-Fi presence is not written; `last_seen` on a phone is touched by that phone making a request, not
+  by the hub watching the network.
+- **The engine's login** (step 5) is still Home Assistant's to reset: `app/src/Setup.vue` line 131 says so out loud.
+- **A device's own settings and Forget** (step 6) are not drawn on the long-press.
+- **The Advanced door** (step 7) is still four doors: `AddPage.vue`, `CodePage.vue`, `HousePanel.vue`, `HubPage.vue`
+  each mount `AdvancedLink.vue`.
+- **`remote` on a phone** is recorded, defaults off, and nothing reads it. It is a promise waiting on the relay;
+  see `docs/away.md` piece 2, which now carries the build for it.
+
 ## Order
 
 By how soon a non-technical person is stuck, and by what each unlocks.

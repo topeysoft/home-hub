@@ -127,6 +127,10 @@ container before the Pi's first start so the two do not fight over Ring's token.
 - `docs/phase4-intelligence.md` — Phase 4 design: rules as data, the evaluator, holds, presence, the assistant's contract.
 - `docs/settings.md` — Settings without a settings page: the four nouns under *This hub* (People, Accounts, Devices, This hub),
   what still forces a visit to Home Assistant's UI, and the order to close each gap so the Advanced door is never a step.
+  Its *Where this stands* section is the dated ground truth for how much of that order has actually been built.
+- `docs/away.md` — Away from home: why no VPN and no cloud tunnel, the three pieces (pairing, a relay the maker runs, a
+  real certificate per hub), what has landed, and the build and open decisions for the two that have not.
+- `docs/voice.md` — The microphone: the shapes considered and what each waits on.
 - `tools/ha_bootstrap.py` — the old manual bootstrap; the brain's setup screen does this now.
 
 ## Developing on the Mac (until the Pi arrives)
