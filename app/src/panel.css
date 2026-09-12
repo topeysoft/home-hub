@@ -2989,7 +2989,7 @@ select.input {
   transition-duration: 0.28s;
 }
 .house-leave-active .house-veil {
-  transition-duration: 0.3s;   /* out with the panel, rather than lingering past it */
+  transition-duration: 0.3s; /* out with the panel, rather than lingering past it */
 }
 .house-enter-from .house-panel,
 .house-leave-to .house-panel {
@@ -3666,7 +3666,7 @@ select.input {
   padding-left: 20px;
   font-size: 14px;
   color: var(--ink-2);
-  list-style: decimal;   /* said plainly: list-style is inherited, and a list this sits inside turns its markers off */
+  list-style: decimal; /* said plainly: list-style is inherited, and a list this sits inside turns its markers off */
 }
 .phone-steps li {
   margin: 2px 0;
@@ -4621,15 +4621,17 @@ select.input {
    dissolved, so there was nothing to watch it dissolve against.
 
    The two edges are the weather's, where a card starts to go, and the ROW's,
-   where it has gone. A card holds its focus all the way to the weather, fades
-   while it is crossing it -- which is the whole reason the sky recedes at the
-   same time, so there is something soft behind the thing going soft -- and is
-   gone by the time it reaches the left of the screen.
+   where it has gone. A card holds its focus all the way to the weather and a
+   quarter of the way across it, fades over the rest of the sky -- which is the
+   whole reason the sky recedes at the same time, so there is something soft
+   behind the thing going soft -- and is gone by the time it reaches the left of
+   the screen.
 
-   Both are already named: --wx-gap is how far past the rest line the weather's
-   edge is, and --wx-end is where that edge falls, which is also how far it is
-   from there to the row's. So the range is those two, and it holds at any width
-   without a number of its own.
+   All three are already named: --wx-gap is how far past the rest line the
+   weather's edge is, --wx-hold is how far into the sky a card carries its focus
+   before it starts to go, and --wx-end is where the weather's edge falls, which
+   is also how far it is from there to the row's. So the range is those, and it
+   holds at any width without a number of its own.
 
    Glass only. Paper's even-handed edge softening belongs to the row's own ends
    and has nothing to do with what is behind it. */
@@ -4637,7 +4639,8 @@ select.input {
   [data-face='glass'] .wall-stage .bento-card {
     animation-range:
       entry 0% entry 100%,
-      exit var(--wx-gap) exit calc(var(--wx-gap) + var(--wx-end));
+      exit calc(var(--wx-gap) + var(--wx-hold))
+      exit calc(var(--wx-gap) + var(--wx-end));
   }
 }
 
@@ -4786,6 +4789,10 @@ select.input {
 .wall-stage {
   --wx-end: clamp(300px, 33.6vw, 520px);
   --wx-gap: 20px;
+  /* how far a card carries its focus INTO the weather before it starts to go.
+     Starting the moment it touched the edge was too eager: a card should be
+     over the sky, not merely arriving at it, before it begins to give up. */
+  --wx-hold: calc(var(--wx-end) / 4);
   position: relative;
   margin-block: auto; /* in the middle of whatever height is left, as the rail is */
   min-width: 0;
@@ -4991,7 +4998,6 @@ select.input {
     height: auto;
   }
 }
-
 
 /* ---------- the rail arrives ----------
    First load, waking from rest, coming back from a room: the cards come in from

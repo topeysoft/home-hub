@@ -26,8 +26,13 @@ async function cards(page: Page, scrollLeft: number): Promise<Card[]> {
   })
 }
 
+/* face=paper as well as layout=rail, and both matter. The numbers below -- .35 opacity, 6px of
+   blur, both ends of the row softening the same amount -- are paper's even-handed edge fade. Glass
+   replaces them with a focal plane, which is a different shape on purpose. Without pinning the
+   face this spec passes or fails on whatever the house in the mock happens to be set to, which is
+   how it started failing against a mock started with FACE=glass. */
 test.beforeEach(async ({ page }) => {
-  await page.goto('/?layout=rail&at=19:40', { waitUntil: 'networkidle' })
+  await page.goto('/?layout=rail&face=paper&at=19:40', { waitUntil: 'networkidle' })
   await expect(page.locator('.bento-card').first()).toBeVisible()
   await page.waitForTimeout(700)
 })

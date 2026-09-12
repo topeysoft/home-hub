@@ -235,7 +235,7 @@ test('a swiped card travels over the weather instead of stopping at it', async (
    tight to the weather's edge, which was the wrong edge -- a card arrived at the sky already
    dissolved, so there was nothing to watch it dissolve against. A card holds its focus all the way
    to the weather, fades while crossing it, and is gone by the time it reaches the row's own edge. */
-test('a card holds its focus to the weather, fades across it, and is gone by the row\'s edge', async ({ page }) => {
+test('a card holds its focus into the weather, fades across it, and is gone by the row\'s edge', async ({ page }) => {
   await page.goto('/?layout=wall&nav=top&face=glass&at=19:40', { waitUntil: 'networkidle' })
   await expect(page.locator('.bento').first()).toBeVisible()
   await page.waitForTimeout(1800)
@@ -258,13 +258,18 @@ test('a card holds its focus to the weather, fades across it, and is gone by the
     return { edge, out }
   })
 
-  // sharp the whole way to the weather: every sample taken while the card is still right of the
-  // weather's edge has to be untouched
-  const beforeTheSky = ramp.out.filter((r) => r.left >= ramp.edge)
-  expect(beforeTheSky.length, 'the card was never sampled before it reached the weather').toBeGreaterThan(2)
-  const softEarly = beforeTheSky.find((r) => r.blur > 0.02)
-  expect(softEarly, `the card was already soft at x ${Math.round(softEarly?.left ?? 0)}, `
-    + `${Math.round((softEarly?.left ?? 0) - ramp.edge)}px short of the weather`).toBeUndefined()
+  /* Sharp to the weather and a quarter of the way across it. Starting the moment a card touched
+     the edge was too eager -- it should be over the sky, not merely arriving at it, before it
+     begins to give up -- so --wx-hold carries its focus --wx-end/4 further in. The samples up to
+     there have to be completely untouched, and it has to have started going by the time it is
+     a third of the way across. */
+  const holding = ramp.out.filter((r) => r.left >= ramp.edge * 0.78)
+  expect(holding.length, 'the card was never sampled while it still had its focus').toBeGreaterThan(8)
+  const softEarly = holding.find((r) => r.blur > 0.02)
+  expect(softEarly, `the card gave up at x ${Math.round(softEarly?.left ?? 0)}, only `
+    + `${Math.round(ramp.edge - (softEarly?.left ?? 0))}px into the weather`).toBeUndefined()
+  const started = ramp.out.find((r) => r.left < ramp.edge * 0.7 && r.blur > 0.02)
+  expect(started, 'the card was still perfectly sharp a third of the way across the sky').toBeTruthy()
 
   // and finished by the row's own edge, having done it somewhere over the sky
   const done = ramp.out.find((r) => r.blur >= 4.98)

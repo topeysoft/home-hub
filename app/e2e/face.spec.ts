@@ -26,7 +26,9 @@ async function frost(page: Page, sel: string) {
    Not any `.tile` -- a camera turns its own frost off on purpose, because it brings a picture and
    is never overpainted. */
 test('a card is frosted in the panel the browser is actually given', async ({ page }) => {
-  await page.goto('/?at=19:40', { waitUntil: 'networkidle' })
+  // layout=stack pinned: a room card only exists on that home, and a spec that reads the house's
+  // own setting is a spec that passes or fails on how someone left the mock
+  await page.goto('/?layout=stack&at=19:40', { waitUntil: 'networkidle' })
   await expect(page.locator('.room-card').first()).toBeVisible()
   expect(await frost(page, '.room-card')).toContain('blur')
 })
