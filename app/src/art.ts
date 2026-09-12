@@ -128,6 +128,13 @@ export type Art = {
   /* how much of its own warm wash the tile should show behind the drawing. A lamp
      lights the room it is in, and the tile is the nearest thing to a room. */
   glow: number
+  /* The device's own face, when a tile is built around it rather than beside it.
+     Only the thermostat has one, and it is why: every other tile has a quiet
+     corner for a drawing to be cropped into, and the climate tile has none --
+     it is controls edge to edge. But it is already a dial, so the dial goes
+     behind the number instead of fighting the chips for a corner. The box is in
+     the same coordinates as the marks. */
+  face?: { x: number; y: number; w: number; h: number }
 }
 
 export type Kind =
@@ -308,6 +315,9 @@ function thing(kind: Kind, s: ArtState, m: Materials): Art {
     const arc = s.cooling ? '#7fb4e8' : s.heating ? '#e9a06a' : ''
     return {
       ...none,
+      /* the bezel and nothing else: circ(96, 62, 46) with a pixel to spare, so a
+         tile can put the dial round its own number and leave the base behind */
+      face: { x: 49, y: 15, w: 94, h: 94 },
       marks: [
         ell(96, 122, 40, 7, m.metalLo, { opacity: 0.35 }),
         circ(96, 62, 46, PLATE),

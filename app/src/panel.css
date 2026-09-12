@@ -4376,6 +4376,32 @@ select.input {
   z-index: 0;
   pointer-events: none;
 }
+
+/* The dial itself, behind the number it is the dial for: a square that holds the
+   reading, so the drawing reserves its own room rather than overlapping the name
+   above it and the chips below. Shrink-to-fit width plus a square ratio means the
+   dial grows with what it has to hold — a range ("20-24") is half again as wide
+   as a single reading and gets a bigger dial, not a number over the bezel. */
+.clim-face {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  padding: 0 26px;
+  /* never wider or taller than the slot it was given: the bento card fixes its
+     own height to the rail's row, so a dial that sized itself purely from the
+     number would push the reading out through the bottom of the card */
+  max-width: 100%;
+  max-height: 100%;
+}
+.face-render {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  pointer-events: none;
+}
 /* A camera tile is full-bleed and much wider than the rest, so 74% of it is a
    doorbell the size of a door. The drawing is a stand-in for a missing frame,
    not the subject of the card: cap it and let the tile stay mostly empty. */
@@ -4929,10 +4955,23 @@ select.input {
   width: 44px;
   height: 44px;
 }
-.bento .tile.climate .clim-big {
+/* The rail card already drops the modes and the fan: it is the summary, and the
+   room tile is the control. The dial goes the same way and for the same reason —
+   this card's height is the rail's row, so a dial round the number could only be
+   bought by shrinking the number, and on a short screen (--row at its 150px
+   floor) it does not fit at all. The reading you can take from a doorway is
+   worth more here than the picture. */
+.bento .tile.climate .clim-face {
   grid-column: 2;
   grid-row: 1;
   justify-self: center;
+  padding: 0;
+  aspect-ratio: auto;
+}
+.bento .tile.climate .face-render {
+  display: none;
+}
+.bento .tile.climate .clim-big {
   font-size: 46px;
 }
 .bento .tile.climate .clim-doing {

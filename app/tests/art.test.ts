@@ -265,3 +265,56 @@ describe('which shape a light is', () => {
     expect(LIGHT_KINDS).toContain(lightKind('something nobody has ever called a light'))
   })
 })
+
+/* The one drawing a tile puts around its own readout rather than into a corner.
+
+   Every other tile has a quiet bottom-right for a drawing to be cropped into. The climate tile is
+   controls edge to edge and has none — but it is already a dial, so ClimateTile.vue crops to
+   art.face and puts the number on the dial's own face. That crop is the risk this covers: the two
+   marks that carry the reading are the set-point tick at the top and the heating/cooling arc, and
+   both sit near the bezel where a box a few units too tight would clip them silently. */
+describe('the thermostat, drawn round its own number', () => {
+  const faceOf = (s: ArtState) => {
+    const art = device('thermostat', s, M)
+    if (!art.face) throw new Error('the thermostat has no face')
+    return { art, f: art.face }
+  }
+
+  it('is the only kind that claims one, so fit="face" is never a blank square', () => {
+    const claim = KINDS.filter((k) => statesFor(k).some((st) => device(k, st.s, M).face))
+    expect(claim).toEqual(['thermostat'])
+  })
+
+  it('crops to a square inside the box the marks are drawn in', () => {
+    const { f } = faceOf({ cooling: true })
+    expect(f.w, 'a face is square').toBe(f.h)
+    expect(f.x).toBeGreaterThanOrEqual(0)
+    expect(f.y).toBeGreaterThanOrEqual(0)
+    expect(f.x + f.w).toBeLessThanOrEqual(BOX.w)
+    expect(f.y + f.h).toBeLessThanOrEqual(BOX.h)
+  })
+
+  /* idle draws no arc at all, which is the point: a thermostat that is holding says so by the
+     ring being plain, and the two that are doing something each get their own colour */
+  for (const st of [{ label: 'cooling', s: { cooling: true } }, { label: 'heating', s: { heating: true } },
+                    { label: 'holding', s: {} }] as { label: string; s: ArtState }[]) {
+    it(`keeps the whole dial inside the crop while ${st.label}`, () => {
+      const { art, f } = faceOf(st.s)
+      const outside = art.marks.filter((m) => {
+        const [x0, y0, x1, y1] = bbox(m)
+        return x1 <= f.x || x0 >= f.x + f.w || y1 <= f.y || y0 >= f.y + f.h
+      })
+      /* exactly one mark is meant to fall outside it: the shadow the dial casts on the wall,
+         which belongs to the corner crop and not to a face seen head on */
+      expect(outside.length, `${st.label}: marks outside the face`).toBe(1)
+      for (const m of art.marks) {
+        if (outside.includes(m)) continue
+        const [x0, y0, x1, y1] = bbox(m)
+        expect(x0, `${st.label} ${m.el} left`).toBeGreaterThanOrEqual(f.x)
+        expect(y0, `${st.label} ${m.el} top`).toBeGreaterThanOrEqual(f.y)
+        expect(x1, `${st.label} ${m.el} right`).toBeLessThanOrEqual(f.x + f.w)
+        expect(y1, `${st.label} ${m.el} bottom`).toBeLessThanOrEqual(f.y + f.h)
+      }
+    })
+  }
+})
