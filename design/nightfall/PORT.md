@@ -15,7 +15,9 @@ exactly where it is, and Nightfall is one more thing a house can be set to.
 All six slices have landed, each as its own commit: `git log --oneline a2cdf1a..HEAD`.
 Glass is a face a house can be set to, its material is derived from the sky, the
 field carries the blooms, the rail has its focal plane, the pane has its measured
-timings, and there is a floor under the whole thing.
+timings, and there is a floor under the whole thing. Since then: Wall, the
+arrangement the board actually draws, and move 7, the command box resting down
+to its orb -- both further down this section.
 
 One measurement is still owed and cannot be taken from here, and it is worth
 being clear that it **does not gate anything.** The host this is built for is a
@@ -107,12 +109,64 @@ screen, and compare with the panel at 1280x800. What is playing sits at 34.7%
 where the board has 35.1%, 23.0% wide against 23.1%; the glance column at 59.1%
 against 59.7%. `e2e/wall.spec.ts` carries those numbers.
 
-Two things about it are known and not done. The nudges have nowhere better to go
+One thing about it is known and not done: the nudges have nowhere better to go
 than above the row, so a house with something to attend to loses 60px off the
-top that the board does not spend -- the board has nothing to attend to. And the
-board's command box is at rest, which is to say it is only its orb; the panel
-always shows the whole box. That is move 7 of the eight and no slice has built
-it.
+top that the board does not spend -- the board has nothing to attend to.
+
+**Move 7 is in, and it was the last one no slice had built.** On the board the
+command box down in the bottom bar is a single orb until it is touched: 460ms of
+width opens it with the words 180ms behind, so the box is already the right size
+by the time there is anything to read in it. Shutting, the delay is gone -- the
+words leave first and the width follows them home, because a box closing on its
+own contents reads as a mistake rather than as a move.
+
+Two things had to land with it. **The box was never made of anything.** Slice 2's
+material reached the cards, the panes and the lozenge and never came down here,
+so under glass the command box was still wearing paper's near-black with paper's
+frost on it, and so were the four things it says back. And the orb is drawn
+rather than tinted -- four blooms behind a blur, turning against each other at
+14s and 19s, which is what separates a thing that is listening from a button
+with a gradient on it. That needs two elements, so the orb stops being a
+`::before`; it is hidden everywhere but the bar, because a box at the top of the
+stage is a field you type in and keeps its sparkle.
+
+What the face does NOT take is the board's 430px open width, 382 at this size.
+That pill has no Go button in it, and taking 78px off the words to reach a number
+would be a face moving a control, which `layout.ts` says it may not. The open
+width stays the layout's 460. Nor is the strand dropped: the orb IS the command
+box, one tap from being typed in, and the input behind it never leaves the tab
+order -- reaching it is what opens the box, so a keyboard never meets a shut one.
+`Say.vue` holds the single fact of whether it is open, because the stylesheet
+must not have to work out for itself whether there is a sentence in flight or an
+answer nobody has read.
+
+The pill lifts as it opens with a background-COLOUR and not a filter, which
+would form a backdrop root and take the box's own frost away at the instant it
+opened. Third time this file has had to say that, after the rail's blur and the
+room behind a pane.
+
+**The reduced-motion guard was right to stop this, and it is the interesting
+part.** `e2e/face.spec.ts` holds the whole face to no `filter` anywhere, and the
+orb's blooms are painted THROUGH one. They are now named as the one static
+filter in the face: a filter only moves something if something is happening to
+it, and under reduced motion the turn -- the whole of the vestibular part -- is
+what has been taken away. Everything else is still held to none. Naming the
+exception in the guard is the honest version; painting the orb without the blur
+to get past it would have changed the material for a reason that has nothing to
+do with motion.
+
+Two things found by measuring rather than by looking. `busy` disables the input
+while a sentence is with the brain, which drops focus, and nothing was giving it
+back -- so after every command a keyboard was left outside the box, which on a
+wall panel means summoning an on-screen one twice to say two things. That is a
+fix on its own account and is its own commit before the move. And the bar sits
+30px off the bottom where the board's 52 scales to 46; the orb lands at 92.8% of
+the screen's height against the board's 91.0%. Left alone on purpose: that
+padding is shared by both faces and all three arrangements, and a face moving it
+is exactly the quiet widening this page keeps warning about.
+
+`npm run cost` is unchanged -- 30 frames against paper's 40, the same numbers as
+before -- so an orb turning for ever costs nothing a swipe can see.
 
 ## The seam
 
@@ -348,13 +402,22 @@ screen, so [`Room.dc.html`](../Room.dc.html) argues it is a ranked grid rather
 than something you sweep — and rail-plus-pane is the spine of this direction.
 Whether it has an answer there is genuinely unknown.
 
-With all six slices in and Wall built, what is left is not really port work any
-more. The Pi number is a half-hour on the right machine whenever someone wants
+With all six slices in, Wall built and move 7 landed, what is left is not really
+port work any more. The Pi number is a half-hour on the right machine whenever someone wants
 it, and it gates nothing. Everything else on this page is a design decision:
 whether the day wants a face of its own, whether the sky should suppress its
 landscape under glass, and whether a room is a rail at all. The face is
 finished, the arrangement it was drawn as exists, and every one of those can be
 answered without touching either.
+
+Move 7 put one more thing under the day question rather than settling it. The
+orb carries colours of its own instead of a distance from the sky, which is the
+one place in the face that does -- deliberately, because a lit object is not a
+surface, and it is the licence the lamp glow and the weather drawing already
+have. What it means is that the orb is an EVENING identity: indigo at noon as
+much as at midnight. The bottom band of the sky is dark enough at every hour
+that it reads, so nothing is broken; but if the day ever gets a face of its own,
+the orb is on the list.
 
 The `data-flat` switch is the one seam left half-used. It is wired to the
 question a browser can answer -- can this host paint a backdrop-filter -- and
@@ -379,6 +442,12 @@ sampled trace put the bar and the pane at the same instant when they are 51ms
 apart. For cost, `npm run cost` -- a scripted rail swipe with the gaps between
 presented frames written down, and the only one of these meant to be run
 somewhere other than here.
+
+For a move shorter than a screenshot, sample it per frame from inside the page:
+move 7's width and its words were read off `getBoundingClientRect` and
+`getComputedStyle` on every `requestAnimationFrame` of the 460ms, and the spec
+asserts their ORDER rather than their durations, which is the same lesson the
+pane's timings taught.
 
 And for composition, the board itself. `nightfall-glass.html` is a published
 canvas, which means it is a DOM: serve the folder, open it in a browser, and
