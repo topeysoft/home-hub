@@ -19,7 +19,7 @@
  * the weather is not a signal. They stay exactly as panel.css declares them.
  */
 
-import { clamp, ground, oklch } from './sky'
+import { clamp, ground, mix, oklch, palette, rgb, wxOf } from './sky'
 
 export type ToneName = 'warm' | 'cool' | 'pastel' | 'follow'
 
@@ -107,4 +107,53 @@ export const TONES: { id: ToneName; label: string; hint: string }[] = [
 
 export function isTone(v: unknown): v is ToneName {
   return v === 'warm' || v === 'cool' || v === 'pastel' || v === 'follow'
+}
+
+/* ---------- glass ----------
+ *
+ * The other face. A pane is not given a colour either: it holds a distance from
+ * the field, the same way a card does, and the same reason applies -- a fixed
+ * white film reads as a lit sheet at night and as nothing at all by lunchtime.
+ *
+ * What is different from a card is the edge. Light comes from above, so the top
+ * of a pane catches it and the foot sits in shadow. Over a dark sky you mostly
+ * see the catch; over a bright one you mostly see the shadow, and the rim has to
+ * swap ends across the day or the pane stops reading as glass somewhere around
+ * mid-morning. `bright` is what carries that, and it also tightens the shadow
+ * under the pane: over a dark field a big soft drop has nothing to fall on.
+ *
+ * Everything here is derived from the same ground() the cards use, so a face and
+ * a tone can never disagree about what hour it is. See design/nightfall.
+ */
+export function glassVars(elevation: number, condition: string): ToneVars {
+  const field = oklch(ground(elevation, condition))
+  const [top] = palette(elevation, wxOf(condition))          // the sky's own top band, weathered
+
+  const gL = clamp(field.L + 0.10, 0.16, 0.9)
+  const bright = clamp((field.L - 0.18) / 0.34)              // 0 at night, 1 at a clear noon
+  const H = field.H.toFixed(0)
+  const at = (lo: number, hi: number) => lo + (hi - lo) * bright
+  const a = (lo: number, hi: number) => at(lo, hi).toFixed(3)
+  const air = (alpha: number) => rgb(mix(top, [4, 4, 10], 0.55), alpha)
+
+  return {
+    '--glass': `linear-gradient(148deg, oklch(${(gL + 0.07).toFixed(3)} 0.014 ${H} / .34),`
+      + ` oklch(${gL.toFixed(3)} 0.012 ${H} / .12) 46%,`
+      + ` oklch(${(gL + 0.03).toFixed(3)} 0.014 ${H} / .24))`,
+    /* one band of light across the pane, never more than one */
+    '--glass-sweep': `linear-gradient(112deg, transparent 26%, rgba(255,255,255,${a(0.15, 0.08)}) 45%,`
+      + ` rgba(255,255,255,.02) 56%, transparent 64%)`,
+    '--glass-rim': `linear-gradient(158deg, rgba(255,255,255,${a(0.74, 0.4)}), rgba(255,255,255,.08) 34%,`
+      + ` rgba(14,14,22,${a(0.02, 0.2)}) 62%, rgba(255,255,255,${a(0.42, 0.26)}))`,
+    '--glass-inner': `inset 0 -46px 56px -48px ${rgb(mix(top, [12, 13, 16], 0.5), 0.9)}`,
+    '--glass-drop': `0 ${Math.round(at(28, 20))}px ${Math.round(at(64, 44))}px -26px ${air(at(0.7, 0.5))},`
+      + ` 0 2px 10px ${air(at(0.3, 0.42))}`,
+    /* what is behind the pane, softened. Saturation comes down as the day does,
+       because a bright sky pushed through a 1.7 saturate goes lurid. */
+    '--glass-sat': at(1.7, 1.15).toFixed(2),
+    '--glass-br': at(1.06, 0.96).toFixed(3),
+    /* the one number that is about the machine rather than the hour: a Pi has a
+       ceiling on how much blur it can paint, and this is where that gets sized. */
+    '--glass-blur': '26px',
+  }
 }

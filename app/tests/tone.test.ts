@@ -6,7 +6,7 @@
    check the law still holds at each step. */
 import { describe, expect, it } from 'vitest'
 import { COND, ground, oklch } from '../src/sky'
-import { isTone, TONES, toneVars, type ToneName } from '../src/tone'
+import { glassVars, isTone, TONES, toneVars, type ToneName } from '../src/tone'
 
 const ELEVATIONS = [-40, -18, -9, -3, -0.5, 0, 3, 6, 15, 40, 89]
 const CONDITIONS = Object.keys(COND)
@@ -139,5 +139,45 @@ describe('an unknown weather condition', () => {
     const vars = toneVars(10, 'meteor-shower')
     expect(Number.isFinite(L(vars))).toBe(true)
     expect(vars['--card-ink']).toBeTruthy()
+  })
+})
+
+/* The other face. Same law, one extra clause: a pane's EDGE has to swap ends across the day, or
+   the pane stops reading as glass somewhere around mid-morning. */
+describe('the pane, at every hour', () => {
+  const alphas = (rim: string) => rim.match(/[\d.]+(?=\))/g)!.map(Number)
+
+  it('never lets a pane fall to or below the sky it sits on', () => {
+    for (const condition of CONDITIONS) {
+      for (const el of ELEVATIONS) {
+        const field = oklch(ground(el, condition))
+        const pane = Number(glassVars(el, condition)['--glass'].match(/oklch\(([\d.]+)/)![1])
+        expect(pane, `${condition} / ${el}°`).toBeGreaterThan(field.L)
+      }
+    }
+  })
+
+  it('moves the edge from a catch on top to a shadow at the foot as the day lightens', () => {
+    const night = alphas(glassVars(-18, 'clear-night')['--glass-rim'])
+    const noon = alphas(glassVars(40, 'sunny')['--glass-rim'])
+    expect(night[0]).toBeGreaterThan(noon[0])       // the catch fades out
+    expect(night[2]).toBeLessThan(noon[2])          // the shadow comes in
+  })
+
+  it('takes the saturation off what is behind it as the sky brightens', () => {
+    expect(Number(glassVars(40, 'sunny')['--glass-sat']))
+      .toBeLessThan(Number(glassVars(-18, 'clear-night')['--glass-sat']))
+  })
+
+  it('gives every property a value, at every hour and weather', () => {
+    for (const condition of CONDITIONS) {
+      for (const el of ELEVATIONS) {
+        const v = glassVars(el, condition)
+        for (const k of ['--glass', '--glass-sweep', '--glass-rim', '--glass-inner', '--glass-drop', '--glass-sat', '--glass-br', '--glass-blur']) {
+          expect(v[k], `${k} / ${condition} / ${el}°`).toBeTruthy()
+          expect(v[k]).not.toContain('NaN')
+        }
+      }
+    }
   })
 })

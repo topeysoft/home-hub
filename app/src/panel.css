@@ -152,6 +152,67 @@ input:focus-visible {
   backdrop-filter: blur(24px) saturate(1.2);
   -webkit-backdrop-filter: blur(24px) saturate(1.2);
 }
+
+/* ---------- glass: what the panel is made of, when a house asks for it ----------
+   Six layers, always in this order: the blur is what the pane is made of, the
+   rim is its edge catching the light, the sweep is that light travelling across
+   it, the inner shade is its thickness, the drop is the air underneath. None of
+   them is a colour -- every one is derived from the sky in tone.ts, which is why
+   a pane at noon is carried by its shadow and a pane at midnight by its catch.
+
+   Three surfaces, and no fourth. A pane is what the house has nothing better to
+   say with; a card that already means something with its colour keeps it and
+   only gains the edge; and anything that brings its own picture -- artwork, a
+   camera frame -- is never overpainted at all. */
+[data-face='glass'] .room-card,
+[data-face='glass'] .tile.plain,
+[data-face='glass'] .scene,
+[data-face='glass'] .back,
+[data-face='glass'] .banner {
+  background-color: transparent;
+  background-image: var(--glass-sweep), var(--glass);
+  border-color: transparent;
+}
+[data-face='glass'] .tile.light {
+  background-image: var(--glass-sweep), var(--card-light, var(--surface));
+  border-color: transparent;
+}
+[data-face='glass'] .room-card,
+[data-face='glass'] .tile,
+[data-face='glass'] .scene,
+[data-face='glass'] .back,
+[data-face='glass'] .banner {
+  position: relative;
+  backdrop-filter: blur(var(--glass-blur, 26px)) saturate(var(--glass-sat, 1.7))
+    brightness(var(--glass-br, 1.06));
+  -webkit-backdrop-filter: blur(var(--glass-blur, 26px)) saturate(var(--glass-sat, 1.7))
+    brightness(var(--glass-br, 1.06));
+  box-shadow: var(--glass-inner), var(--glass-drop);
+}
+/* the rim, drawn as a gradient border with a mask so it follows whatever radius
+   the surface already has. ::before is spoken for on a room card -- that is the
+   lamp glow -- so the edge lives on ::after everywhere, for one rule not two. */
+[data-face='glass'] .room-card::after,
+[data-face='glass'] .tile::after,
+[data-face='glass'] .scene::after,
+[data-face='glass'] .back::after,
+[data-face='glass'] .banner::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.4px;
+  pointer-events: none;
+  background: var(--glass-rim);
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+}
 .shell::after {
   content: '';
   position: absolute;
