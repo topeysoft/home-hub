@@ -16,15 +16,16 @@
  * account without opening Home Assistant. Arrange them differently by all means.
  */
 
-export type LayoutName = 'stack' | 'rail'
+export type LayoutName = 'stack' | 'rail' | 'wall'
 
 export const LAYOUTS: { id: LayoutName; label: string; hint: string }[] = [
   { id: 'stack', label: 'Stack', hint: 'Everything in a column, newest first. Reads well on a phone.' },
   { id: 'rail', label: 'Rail', hint: 'What is on now in one row you sweep through. Made for a wall.' },
+  { id: 'wall', label: 'Wall', hint: 'The weather large on the left, and what is on beside it. Made to be read from across a room.' },
 ]
 
 export function isLayout(v: unknown): v is LayoutName {
-  return v === 'stack' || v === 'rail'
+  return v === 'stack' || v === 'rail' || v === 'wall'
 }
 
 /*

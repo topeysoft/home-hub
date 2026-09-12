@@ -202,7 +202,8 @@ input:focus-visible {
 [data-face='glass'] .tile.plain,
 [data-face='glass'] .scene,
 [data-face='glass'] .back,
-[data-face='glass'] .banner {
+[data-face='glass'] .banner,
+[data-face='glass'] .wall-loz {
   background-color: transparent;
   background-image: var(--glass-sweep), var(--glass);
   border-color: transparent;
@@ -215,7 +216,8 @@ input:focus-visible {
 [data-face='glass'] .tile,
 [data-face='glass'] .scene,
 [data-face='glass'] .back,
-[data-face='glass'] .banner {
+[data-face='glass'] .banner,
+[data-face='glass'] .wall-loz {
   backdrop-filter: blur(var(--glass-blur, 26px)) saturate(var(--glass-sat, 1.7))
     brightness(var(--glass-br, 1.06));
   box-shadow: var(--glass-inner), var(--glass-drop);
@@ -227,7 +229,8 @@ input:focus-visible {
 [data-face='glass'] .room-card,
 [data-face='glass'] .tile,
 [data-face='glass'] .scene,
-[data-face='glass'] .banner {
+[data-face='glass'] .banner,
+[data-face='glass'] .wall-loz {
   position: relative;
 }
 /* the rim, drawn as a gradient border with a mask so it follows whatever radius
@@ -237,7 +240,8 @@ input:focus-visible {
 [data-face='glass'] .tile::after,
 [data-face='glass'] .scene::after,
 [data-face='glass'] .back::after,
-[data-face='glass'] .banner::after {
+[data-face='glass'] .banner::after,
+[data-face='glass'] .wall-loz::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -4632,6 +4636,130 @@ select.input {
   .bento[data-at-end] {
     --edge-r: #000;
   }
+}
+
+/* ---------- Wall: the weather large, and what is on beside it ----------
+   The arrangement from design/nightfall/Main.dc.html, which is a 1440x900 board
+   and scales to this panel's 1280x800 at almost exactly 8/9. What makes it
+   different from the Rail is subtraction: no greeting, no house line, no
+   next-up line, so the row starts 180px down rather than two thirds of the way.
+   The date it gives up is in the top bar already.
+
+   The weather is not a card and must not become one. The sky's own drawing goes
+   straight onto the field, and a single lozenge of glass hangs in front of it --
+   that pane is what gives the left third depth, and a bordered box there would
+   be a tile saying what the whole screen behind it is already saying. */
+.wall-home {
+  max-width: none;
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+.wall-stage {
+  display: flex;
+  align-items: stretch;
+  gap: 20px;
+  margin-block: auto; /* in the middle of whatever height is left, as the rail is */
+  min-width: 0;
+}
+.wall-home .wall-stage + .block {
+  margin-top: 12px;
+}
+/* the left third: 460 of the board's 1440, and it holds its share rather than a
+   fixed width, because the row beside it is what gets the rest */
+.wall-wx {
+  position: relative;
+  flex: 0 0 clamp(280px, 32%, 409px);
+  min-width: 0;
+}
+/* the drawing sits high and left, and is allowed past the stage's padding: it is
+   scenery, not content, and scenery that stops at a margin reads as a picture of
+   scenery */
+.wall-cloud {
+  position: absolute;
+  left: -18px;
+  top: 0;
+  width: 320px;
+  height: 228px;
+  max-width: 100%;
+}
+/* The lozenge. The softest radius on the screen on purpose: everything else in
+   the house is a card, and the weather is the one thing the house does not
+   control, so it is the one shape that is not one. */
+.wall-loz {
+  position: absolute;
+  left: 46%;
+  bottom: 0;
+  width: min(201px, 70%);
+  height: 331px;
+  max-height: 100%;
+  border-radius: 100px;
+  padding: 40px 28px 34px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  overflow: hidden;
+  /* Paper's answer, and it has to be a real surface: --surface over a night sky
+     at this size is a faint outline rather than a pane, and the numbers on it
+     have nothing to sit on. So it takes the house's own plain card colour, the
+     one a room card uses -- under paper the panel is made of cards and a layout
+     does not get to change that. Glass swaps in the pane recipe further up. */
+  background: var(--card-plain, var(--surface));
+  border: 1px solid var(--card-edge, var(--edge));
+  color: var(--card-ink, var(--ink));
+  backdrop-filter: var(--frost);
+}
+.wall-temp {
+  font-size: 84px;
+  font-weight: 300;
+  line-height: 0.92;
+  letter-spacing: -0.045em;
+  font-variant-numeric: tabular-nums;
+}
+.wall-says {
+  margin-top: 16px;
+  font-size: 21px;
+  font-weight: 600;
+  line-height: 1.16;
+  letter-spacing: -0.018em;
+  text-wrap: balance;
+}
+.wall-sub {
+  margin-top: 9px;
+  font-size: 14px;
+  color: var(--card-ink-2, var(--ink-2));
+}
+.wall-sub.dim {
+  margin-top: 3px;
+  opacity: 0.72;
+}
+.wall-quiet {
+  margin: 6px 2px 26px;
+}
+/* The tall cards fill their whole span here. The Rail holds them 52px short and
+   centred, which is right when they sit under a greeting and the row is the
+   shorter half of the screen; on the board they are the full 548 and the glance
+   column beside them adds up to exactly the same, which is what makes the row
+   read as one block rather than as a row of things of different sizes. */
+.wall-stage .bento .tile.light,
+.wall-stage .bento .tile.media,
+.wall-stage .bento .tile.plain,
+.wall-stage .bento .scene-card {
+  height: auto;
+  align-self: stretch;
+}
+/* the row takes everything the weather does not, and bleeds off the right edge
+   only -- its left edge is a real edge here, because something is beside it */
+.wall-stage .bento {
+  flex: 1 1 0;
+  min-width: 0;
+  margin-inline: 0 -40px;
+  padding-inline: 0 0;
+  scroll-padding-inline-start: 0;
+  /* 548 of the board's 900, which is what there is room for once the greeting is
+     gone: two rows and the gap between them, and taller than the Rail's by the
+     whole height of the header it does not have */
+  --row: clamp(168px, calc((100dvh - 332px) / 2), 264px);
 }
 
 /* ---------- the rail arrives ----------
