@@ -223,16 +223,19 @@ test('a swiped card travels over the weather instead of stopping at it', async (
   const away = await state()
   expect(away.cardLeft, 'the card stopped at the weather instead of crossing it')
     .toBeLessThan(away.weatherRight)
-  expect(away.blur, 'the card crossed the weather still sharp').toBeGreaterThan(4)
-  expect(away.opacity, 'the card crossed the weather without dimming').toBeLessThan(0.7)
+  // it is on its way, not finished: the fade runs ACROSS the weather rather than before it
+  expect(away.blur, 'the card crossed the weather still sharp').toBeGreaterThan(2)
+  expect(away.opacity, 'the card crossed the weather without dimming').toBeLessThan(0.85)
 })
 
-/* Where the fade finishes. The exit range is a card's own width, so a card used to run its whole
-   recede over a card's worth of travel -- and because the lag holds it back by 45% of itself while
-   that happens, it came out fully soft with its left edge still 147px clear of the weather, out in
-   the open with nothing behind it to recede INTO. It should be done by the time it reaches the
-   edge, and this finds the exact scroll position where it finishes and asks where the card was. */
-test('a card has finished fading by the time it reaches the weather', async ({ page }) => {
+/* Where a card fades: across the weather, between the two edges that matter.
+
+   This has been wrong twice. The fade first ran over a card's width and finished 147px clear of the
+   weather, with the card out in the open and nothing behind it to recede into; then it was pulled
+   tight to the weather's edge, which was the wrong edge -- a card arrived at the sky already
+   dissolved, so there was nothing to watch it dissolve against. A card holds its focus all the way
+   to the weather, fades while crossing it, and is gone by the time it reaches the row's own edge. */
+test('a card holds its focus to the weather, fades across it, and is gone by the row\'s edge', async ({ page }) => {
   await page.goto('/?layout=wall&nav=top&face=glass&at=19:40', { waitUntil: 'networkidle' })
   await expect(page.locator('.bento').first()).toBeVisible()
   await page.waitForTimeout(1800)
@@ -242,13 +245,12 @@ test('a card has finished fading by the time it reaches the weather', async ({ p
     row.style.scrollSnapType = 'none'
     const card = row.querySelector('.bento-card')!
     const edge = document.querySelector('.wall-wx')!.getBoundingClientRect().right
-    const out: { scroll: number; left: number; blur: number }[] = []
-    for (let s = 0; s <= 340; s += 5) {
+    const out: { left: number; blur: number }[] = []
+    for (let s = 0; s <= 700; s += 5) {
       row.scrollLeft = s
       await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
       const cs = getComputedStyle(card)
       out.push({
-        scroll: s,
         left: card.getBoundingClientRect().x,
         blur: Number(cs.filter.match(/blur\(([\d.]+)px\)/)?.[1] ?? 0),
       })
@@ -256,12 +258,18 @@ test('a card has finished fading by the time it reaches the weather', async ({ p
     return { edge, out }
   })
 
-  expect(ramp.out[0].blur, 'the card is soft before the row has moved at all').toBe(0)
+  // sharp the whole way to the weather: every sample taken while the card is still right of the
+  // weather's edge has to be untouched
+  const beforeTheSky = ramp.out.filter((r) => r.left >= ramp.edge)
+  expect(beforeTheSky.length, 'the card was never sampled before it reached the weather').toBeGreaterThan(2)
+  const softEarly = beforeTheSky.find((r) => r.blur > 0.02)
+  expect(softEarly, `the card was already soft at x ${Math.round(softEarly?.left ?? 0)}, `
+    + `${Math.round((softEarly?.left ?? 0) - ramp.edge)}px short of the weather`).toBeUndefined()
+
+  // and finished by the row's own edge, having done it somewhere over the sky
   const done = ramp.out.find((r) => r.blur >= 4.98)
   expect(done, 'the card never finishes fading at all').toBeTruthy()
-  // it finishes AT the edge: not while it is still out in the open, and not after it has gone past
-  expect(done!.left, `finished ${Math.round(done!.left - ramp.edge)}px clear of the weather`)
-    .toBeLessThan(ramp.edge + 30)
-  expect(done!.left, `finished ${Math.round(ramp.edge - done!.left)}px past the weather`)
-    .toBeGreaterThan(ramp.edge - 60)
+  expect(done!.left, `finished ${Math.round(done!.left)}px from the row's edge, still out over nothing`)
+    .toBeLessThan(ramp.edge * 0.5)
+  expect(done!.left, 'finished off the screen, so none of it was watchable').toBeGreaterThan(-40)
 })

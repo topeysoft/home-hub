@@ -4611,29 +4611,33 @@ select.input {
   opacity: 0;
 }
 
-/* Where the fade finishes, under glass: at the weather's edge, not 147px past it.
+/* Where a card fades, under glass: across the weather, between the two edges
+   that matter.
 
-   The exit range is the card's own width, so a card ran its whole recede over a
-   card's worth of travel -- and because the lag holds it back by 45% of itself
-   while that happens, it came out fully soft and dim with its left edge still
-   147px clear of the weather, out in the open where nothing was behind it to
-   recede INTO. Measured: crisp at x 450, done at x 283, weather ending at 430.
+   Twice wrong before this. First the fade ran over a card's width and finished
+   147px clear of the weather, with the card out in the open and nothing behind
+   it to recede INTO. Then it was pulled tight to the weather's edge, which
+   turned out to be the wrong edge entirely: a card arrived at the sky already
+   dissolved, so there was nothing to watch it dissolve against.
 
-   Finishing it at the edge is one line of arithmetic. A card's visible left edge
-   is its laid-out one plus however much of the lag has been applied, so at the
-   end of the range it sits at (rest line - range + lag). Set that equal to the
-   weather's edge and the range is the gap plus the lag -- and since the lag is
-   45% of the card and a percentage here is 45% of the card too, the same
-   expression fits every card in the row without knowing which one it is.
+   The two edges are the weather's, where a card starts to go, and the ROW's,
+   where it has gone. A card holds its focus all the way to the weather, fades
+   while it is crossing it -- which is the whole reason the sky recedes at the
+   same time, so there is something soft behind the thing going soft -- and is
+   gone by the time it reaches the left of the screen.
 
-   Glass only. Paper has no lag, so the same arithmetic would ask it to fade in
-   20px, which is not a fade, it is a cut. Paper's even-handed edge softening is
-   its own idea and stays the card's width. */
+   Both are already named: --wx-gap is how far past the rest line the weather's
+   edge is, and --wx-end is where that edge falls, which is also how far it is
+   from there to the row's. So the range is those two, and it holds at any width
+   without a number of its own.
+
+   Glass only. Paper's even-handed edge softening belongs to the row's own ends
+   and has nothing to do with what is behind it. */
 @supports (animation-timeline: view()) {
   [data-face='glass'] .wall-stage .bento-card {
     animation-range:
       entry 0% entry 100%,
-      exit 0% exit calc(45% + var(--wx-gap));
+      exit var(--wx-gap) exit calc(var(--wx-gap) + var(--wx-end));
   }
 }
 
