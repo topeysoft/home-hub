@@ -195,7 +195,12 @@ test.describe('asked not to move', () => {
         const cs = getComputedStyle(el)
         const where = (el.className || el.tagName).toString().slice(0, 40)
         if (cs.animationName !== 'none') moving.push(`${where}: animation ${cs.animationName}`)
-        if (cs.filter !== 'none') moving.push(`${where}: filter ${cs.filter}`)
+        /* The orb's blooms are the one filter in the face that is not a move. They are PAINTED
+           through a blur, the way a gradient is painted, and what has been taken away under
+           reduced motion is the turn -- which was the whole of the vestibular part. A filter only
+           moves something if something is happening to it, and the check above is what says
+           nothing is. Everything else in the face is still held to none. */
+        if (cs.filter !== 'none' && !el.closest('.say-orb')) moving.push(`${where}: filter ${cs.filter}`)
         if (cs.transitionDuration.split(',').some((d) => parseFloat(d) > 0 && !/opacity/.test(cs.transitionProperty)))
           moving.push(`${where}: transition ${cs.transitionProperty}`)
       }

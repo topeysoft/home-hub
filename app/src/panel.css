@@ -203,7 +203,8 @@ input:focus-visible {
 [data-face='glass'] .scene,
 [data-face='glass'] .back,
 [data-face='glass'] .banner,
-[data-face='glass'] .wall-loz {
+[data-face='glass'] .wall-loz,
+[data-face='glass'] .bottombar .say-box {
   background-color: transparent;
   background-image: var(--glass-sweep), var(--glass);
   border-color: transparent;
@@ -217,7 +218,8 @@ input:focus-visible {
 [data-face='glass'] .scene,
 [data-face='glass'] .back,
 [data-face='glass'] .banner,
-[data-face='glass'] .wall-loz {
+[data-face='glass'] .wall-loz,
+[data-face='glass'] .bottombar .say-box {
   backdrop-filter: blur(var(--glass-blur, 26px)) saturate(var(--glass-sat, 1.7))
     brightness(var(--glass-br, 1.06));
   box-shadow: var(--glass-inner), var(--glass-drop);
@@ -233,7 +235,8 @@ input:focus-visible {
 [data-face='glass'] .room-card,
 [data-face='glass'] .tile,
 [data-face='glass'] .scene,
-[data-face='glass'] .banner {
+[data-face='glass'] .banner,
+[data-face='glass'] .bottombar .say-box {
   position: relative;
 }
 /* the rim, drawn as a gradient border with a mask so it follows whatever radius
@@ -244,7 +247,8 @@ input:focus-visible {
 [data-face='glass'] .scene::after,
 [data-face='glass'] .back::after,
 [data-face='glass'] .banner::after,
-[data-face='glass'] .wall-loz::after {
+[data-face='glass'] .wall-loz::after,
+[data-face='glass'] .bottombar .say-box::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -277,7 +281,8 @@ input:focus-visible {
 [data-face='glass'][data-flat] .tile.plain,
 [data-face='glass'][data-flat] .scene,
 [data-face='glass'][data-flat] .back,
-[data-face='glass'][data-flat] .banner {
+[data-face='glass'][data-flat] .banner,
+[data-face='glass'][data-flat] .bottombar .say-box {
   background-image: var(--glass-sweep), var(--glass-flat);
 }
 [data-face='glass'][data-flat] .room-card,
@@ -287,7 +292,8 @@ input:focus-visible {
 [data-face='glass'][data-flat] .banner,
 [data-face='glass'][data-flat] .opened-panel,
 [data-face='glass'][data-flat] .house-panel,
-[data-face='glass'][data-flat] .rail {
+[data-face='glass'][data-flat] .rail,
+[data-face='glass'][data-flat] .bottombar .say-box {
   backdrop-filter: none;
 }
 [data-face='glass'][data-flat] .opened-panel,
@@ -5313,12 +5319,19 @@ select.input {
 .bottombar .say-box > svg {
   display: none;
 }
-.bottombar .say-box::before {
-  content: '';
+/* the orb stands in for the sparkle down here, and only down here: a box at the
+   top of the stage is a field you type in, and the orb is what the house looks
+   like when it is waiting to be spoken to */
+.say-orb {
+  display: none;
+}
+.bottombar .say-orb {
+  display: block;
+  position: relative;
   flex: 0 0 auto;
   width: 36px;
   height: 36px;
-  border-radius: 50%; /* the orb: the house, listening */
+  border-radius: 50%;
   background: radial-gradient(
     circle at 32% 28%,
     #f4e3c4,
@@ -5365,6 +5378,139 @@ select.input {
 .bottombar .drafts {
   width: 460px;
   max-width: 80vw;
+}
+
+/* ---------- move 7: the command box, at rest and opened ----------
+   On the board the box at rest is only its orb, and one touch opens it: 460ms
+   of width, with the words 180ms behind it, so the box is already the right
+   size by the time there is anything to read in it. Shutting, there is no delay
+   at all -- the words go first and the width follows them home, because a box
+   closing on its own contents reads as a mistake rather than as a move.
+
+   It is a face's move and not the arrangement's, the same as the rail's focal
+   plane and the pane's rise, so paper keeps the whole box and every rule here
+   is scoped. What a face does NOT get is the width when it is open, or what
+   sits in it: that stays the layout's 460px. The board's own 430 -- 382 at this
+   size -- is drawn around a pill with no Go button in it, and taking 78px off
+   the words to reach the board's number would be a face moving a control, which
+   layout.ts says it may not do.
+
+   The strand is not dropped by this. The orb IS the command box, one tap from
+   being typed in, and the input behind it stays in the tab order the whole
+   time -- focusing it is what opens the box, so a keyboard never meets a shut
+   one. Say.vue holds the single fact of whether it is open, because the
+   stylesheet must not have to work out for itself whether there is a sentence
+   in flight or an answer nobody has read. */
+[data-face='glass'] {
+  --settle: cubic-bezier(0.32, 0.72, 0, 1); /* the board's own: fast out, long glide in */
+}
+[data-face='glass'] .bottombar .say-box {
+  /* the orb and its collar, and the collar has to be even or the resting pill is
+     not a circle: 7 + 42 + 7, where the board has 8 + 48 + 8. The left 7 is 6 of
+     padding plus the 1px edge .search already carries, which the board has not
+     got; the right 8 is left where paper has it, because that is where the Go
+     button sits once the box is open and the face does not get to move it. */
+  width: 56px;
+  gap: 12px;
+  padding: 0 8px 0 6px;
+  overflow: hidden;
+  transition:
+    width 460ms var(--settle),
+    background-color 260ms var(--settle);
+}
+[data-face='glass'] .bottombar .say.open .say-box {
+  width: 100%;
+  /* the board lifts the pill about a fifth as it opens. A background-COLOUR and
+     not a filter: a filter here would form a backdrop root and take the box's
+     own frost away at the instant it opened, which is the trap this file has
+     already walked into twice -- on the rail and on the room behind a pane. */
+  background-color: rgba(255, 255, 255, 0.028);
+}
+/* the words follow the width rather than being stretched by it */
+[data-face='glass'] .bottombar .say-box input,
+[data-face='glass'] .bottombar .say-box .button {
+  opacity: 0;
+  transition: opacity 260ms var(--settle);
+}
+[data-face='glass'] .bottombar .say.open .say-box input,
+[data-face='glass'] .bottombar .say.open .say-box .button {
+  opacity: 1;
+  transition-delay: 180ms;
+}
+/* ---------- the orb ----------
+   Lit from inside rather than painted on: four blooms behind a blur, turning
+   against each other at 14s and 19s, which is what separates a thing that is
+   listening from a button with a gradient on it.
+
+   It is the one place in the face carrying colours of its own instead of a
+   distance from the sky, and that is deliberate: a lit object is not a surface.
+   It is the licence the lamp glow and the weather drawing already have, and the
+   rule in layout.ts is about panes, which have to hold their distance at every
+   hour or the daylight goes. What it does mean is that the orb is an EVENING
+   identity, indigo at noon as much as at midnight -- which is exactly the open
+   question in design/nightfall/PORT.md about whether the day wants a face of
+   its own, and this is one more thing under it rather than an answer to it. */
+[data-face='glass'] .bottombar .say-orb {
+  width: 42px;
+  height: 42px;
+  overflow: hidden;
+  background: #17133d;
+  box-shadow:
+    inset 0 0 0 1.2px rgba(255, 255, 255, 0.34),
+    0 6px 18px -4px rgba(80, 40, 180, 0.6);
+}
+[data-face='glass'] .bottombar .say-orb i {
+  position: absolute;
+  filter: blur(7px); /* the board's 8 at its 48, scaled with the orb */
+}
+[data-face='glass'] .bottombar .say-orb .orb-cool {
+  inset: -34%;
+  animation: orb-turn 14s linear infinite;
+  background:
+    radial-gradient(closest-side at 32% 30%, #8b7bff, transparent 72%),
+    radial-gradient(closest-side at 72% 34%, #57e0d0, transparent 70%);
+}
+[data-face='glass'] .bottombar .say-orb .orb-warm {
+  inset: -30%;
+  opacity: 0.92;
+  animation: orb-turn 19s linear infinite reverse;
+  background:
+    radial-gradient(closest-side at 36% 72%, #ff8fc4, transparent 70%),
+    radial-gradient(closest-side at 74% 74%, #ffc98a, transparent 70%);
+}
+/* the catch on the glass in front of them, which does not turn */
+[data-face='glass'] .bottombar .say-orb::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    closest-side at 32% 24%,
+    rgba(255, 255, 255, 0.62),
+    transparent 56%
+  );
+}
+@keyframes orb-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+/* It turns for as long as the panel is awake, which on a wall is for ever, so it
+   stops when the screen does rather than ticking on behind a faded-out bar. */
+.shell.resting .say-orb i {
+  animation-play-state: paused;
+}
+/* A phone is not a wall: there is one box, it is the way in, and there is no
+   room to spend a tap on opening it. The face keeps its material here and gives
+   up its move. */
+@media (max-width: 860px) {
+  [data-face='glass'] .bottombar .say-box {
+    width: 100%;
+  }
+  [data-face='glass'] .bottombar .say-box input,
+  [data-face='glass'] .bottombar .say-box .button {
+    opacity: 1;
+  }
 }
 .household {
   display: flex;
