@@ -44,3 +44,25 @@ export const NAVS: { id: NavName; label: string; hint: string }[] = [
 export function isNav(v: unknown): v is NavName {
   return v === 'side' || v === 'top'
 }
+
+/*
+ * What the panel is MADE OF, as opposed to what is on it or how it is arranged.
+ * Paper is what the house has always been: cards with a tone, laid on the sky.
+ * Glass is the same house behind frosted panes -- see design/nightfall.
+ *
+ * A face decides material and motion and nothing else. It does not get to move
+ * a card, rename a room or hide a strand: the things Home must always carry are
+ * listed at the top of this file and they are not negotiable per-face either.
+ * Nor does a face get an absolute palette. Like a tone, it is specified as a
+ * distance from the sky, so it holds at every hour -- tone.ts says why.
+ */
+export type FaceName = 'paper' | 'glass'
+
+export const FACES: { id: FaceName; label: string; hint: string }[] = [
+  { id: 'paper', label: 'Paper', hint: 'Cards with a tone, laid flat on the sky. What the house has always looked like.' },
+  { id: 'glass', label: 'Glass', hint: 'The same house behind frosted panes, with the sky moving through them. Wants a screen that can blur.' },
+]
+
+export function isFace(v: unknown): v is FaceName {
+  return v === 'paper' || v === 'glass'
+}

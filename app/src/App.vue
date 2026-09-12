@@ -17,7 +17,7 @@ import Opened from './Opened.vue'
 import Icon from './Icon.vue'
 import { upcomingLine } from './upcoming'
 import { isTone, toneVars, type ToneName } from './tone'
-import { isLayout, isNav, type LayoutName, type NavName } from './layout'
+import { isFace, isLayout, isNav, type FaceName, type LayoutName, type NavName } from './layout'
 import RailView from './views/RailView.vue'
 import RoomsView from './views/RoomsView.vue'
 import CamerasView from './views/CamerasView.vue'
@@ -51,6 +51,11 @@ const layout = computed<LayoutName>(() => isLayout(layoutParam) ? layoutParam : 
 /* where the way around the house lives -- the side list, or tabs across the
    top -- is the house's choice too; ?nav=top previews it. The tab is this
    screen's own, like the room it is in. */
+/* what the panel is made of: paper, or glass. The house's answer like the rest,
+   and ?face=glass previews it for this tab alone. */
+const faceParam = params.get('face')
+const face = computed<FaceName>(() => isFace(faceParam) ? faceParam : (isFace(store.ambient.look?.face) ? store.ambient.look!.face as FaceName : 'paper'))
+
 const navParam = params.get('nav')
 const nav = computed<NavName>(() => isNav(navParam) ? navParam : (isNav(store.ambient.look?.nav) ? store.ambient.look!.nav as NavName : 'side'))
 const tab = ref<'home' | 'rooms' | 'cameras'>('home')
@@ -104,7 +109,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="shell" :data-ambient="ambient" :data-nav="nav" :style="[tone, openTint]" :class="{ resting: idle, 'in-setup': setup || lock.unpaired, 'opened-shell': !!store.opened || panel }">
+  <div class="shell" :data-ambient="ambient" :data-nav="nav" :data-face="face" :style="[tone, openTint]" :class="{ resting: idle, 'in-setup': setup || lock.unpaired, 'opened-shell': !!store.opened || panel }">
     <Sky :quiet="!idle && !setup" />
     <ArtDefs />
     <div class="sky-veil"></div>

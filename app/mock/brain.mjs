@@ -80,7 +80,7 @@ const presence = process.env.PEOPLE === '0'
   ? { somebody: null, since: null, source: null, people: [], alarm: null }
   : { somebody: true, since: Date.now() - 3600e3, source: 'people', people: [{ name: 'Temi', home: true }, { name: 'Sam', home: false }, { name: 'Ade', home: true }], alarm: null }
 const ambient = { location: { name: 'Holts Summit, MO', lat: 38.6355985, lon: -92.1176322 }, weather: { id: 'w', condition: process.env.WX || 'partlycloudy', temperature: 78, unit: '°F', humidity: 48, wind_speed: 6, wind_unit: 'mph' },
-  look: { tone: process.env.TONE || 'follow', layout: process.env.LAYOUT || 'stack', nav: process.env.NAV || 'side' } }   // LAYOUT=rail TONE=pastel NAV=top start the house somewhere else
+  look: { tone: process.env.TONE || 'follow', layout: process.env.LAYOUT || 'stack', nav: process.env.NAV || 'side', face: process.env.FACE || 'paper' } }   // LAYOUT=rail TONE=pastel NAV=top FACE=glass start the house somewhere else
 const scenes = { movie: [['light', 'off', {}], ['media', 'on', {}]], guests: [['light', 'on', {}]], asleep: [['light', 'off', {}], ['media', 'off', {}], ['lock', 'lock', {}]], empty: [['light', 'off', {}], ['media', 'pause', {}]], away: [['light', 'off', {}], ['media', 'off', {}], ['switch', 'off', {}], ['lock', 'lock', {}]] }
 const events = [
   { ts: now - 40, kind: 'state', subject: 'mo1', old: 'off', new: 'on', source: 'ha', detail: null },
@@ -182,7 +182,7 @@ const server = http.createServer((req, res) => {
   if (img) { res.writeHead(200, { 'Content-Type': 'image/svg+xml' }); return res.end(PICS[img[1]] ?? pic('#333', '#111')) }
   if (p === '/look' && req.method === 'POST') { let b = ''; req.on('data', c => (b += c)); return req.on('end', () => {
     let v = {}; try { v = JSON.parse(b) } catch {}
-    for (const k of ['tone', 'layout', 'nav']) if (v[k]) ambient.look[k] = v[k]   // unknown keys dropped, as the brain does
+    for (const k of ['tone', 'layout', 'nav', 'face']) if (v[k]) ambient.look[k] = v[k]   // unknown keys dropped, as the brain does
     json(res, ambient.look)
   }) }
   if (req.method === 'POST') return json(res, { ok: true })

@@ -17,7 +17,7 @@
 import { computed, onMounted, onUnmounted, ref, watch, type Component } from 'vue'
 import { store, updateReady } from './store'
 import { TONES } from './tone'
-import { LAYOUTS, NAVS } from './layout'
+import { FACES, LAYOUTS, NAVS } from './layout'
 import Icon from './Icon.vue'
 import LocationPage from './LocationPage.vue'
 import LookPage from './LookPage.vue'
@@ -48,7 +48,7 @@ const title = computed(() => ({
    are answered from the list without opening anything */
 const look = computed(() => {
   const l = store.ambient.look
-  return [TONES.find(t => t.id === l?.tone)?.label ?? 'Follow the light', LAYOUTS.find(x => x.id === l?.layout)?.label ?? 'Stack', NAVS.find(n => n.id === l?.nav)?.label ?? 'Side'].join(' · ')
+  return [TONES.find(t => t.id === l?.tone)?.label ?? 'Follow the light', LAYOUTS.find(x => x.id === l?.layout)?.label ?? 'Stack', NAVS.find(n => n.id === l?.nav)?.label ?? 'Side', FACES.find(f => f.id === l?.face)?.label ?? 'Paper'].join(' · ')
 })
 const routines = computed(() => {
   const n = store.routines.length, off = store.routines.filter(r => r.enabled === false).length
