@@ -248,7 +248,11 @@ input:focus-visible {
 [data-face='glass'] .back::after,
 [data-face='glass'] .banner::after,
 [data-face='glass'] .wall-loz::after,
-[data-face='glass'] .bottombar .say-box::after {
+[data-face='glass'] .bottombar .say-box::after,
+[data-face='glass'] .bottombar .say-hint::after,
+[data-face='glass'] .bottombar .say-note::after,
+[data-face='glass'] .bottombar .say-answer::after,
+[data-face='glass'] .bottombar .drafts::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -5378,6 +5382,32 @@ select.input {
 .bottombar .drafts {
   width: 460px;
   max-width: 80vw;
+}
+
+/* What the box says back is made of what the box is made of. These four hang over
+   the bar on their own, so they were the last paper literal left inside the face --
+   a near-black sheet with a hard edge, laid over a panel that has none anywhere
+   else. They are already absolutely positioned, so they are their own containing
+   block and must NOT be handed `position: relative`: that is how the pane's close
+   button ended up off the left of the screen and the weather's lozenge at the top
+   of its column. The rim above takes them on those terms, the same as .wall-loz. */
+[data-face='glass'] .bottombar .say-hint,
+[data-face='glass'] .bottombar .say-note,
+[data-face='glass'] .bottombar .say-answer,
+[data-face='glass'] .bottombar .drafts {
+  background-color: transparent;
+  background-image: var(--glass-sweep), var(--glass);
+  border-color: transparent;
+  backdrop-filter: blur(var(--glass-blur, 26px)) saturate(var(--glass-sat, 1.7))
+    brightness(var(--glass-br, 1.06));
+  box-shadow: var(--glass-inner), var(--glass-drop);
+}
+[data-face='glass'][data-flat] .bottombar .say-hint,
+[data-face='glass'][data-flat] .bottombar .say-note,
+[data-face='glass'][data-flat] .bottombar .say-answer,
+[data-face='glass'][data-flat] .bottombar .drafts {
+  background-image: var(--glass-sweep), var(--glass-flat);
+  backdrop-filter: none;
 }
 
 /* ---------- move 7: the command box, at rest and opened ----------
