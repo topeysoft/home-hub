@@ -28,7 +28,7 @@ from .suggest import Suggestions
 from .settings import Settings, DATA, env_file
 from .lock import Lock, needs_code
 from .pairing import Pairing
-from .phones import Phones, COOKIE, open_to_strangers
+from .phones import Phones, COOKIE, open_to_strangers, from_away
 from . import camera
 
 log = logging.getLogger("hub")
@@ -470,6 +470,7 @@ app = FastAPI(title="home-hub brain", lifespan=lifespan)
 async def settings_lock(request: Request, call_next):
     """Once the house has a code: only its own phones get in, and changing the house needs the code. Driving it never does."""
     request.state.phone = None
+    request.state.away = from_away(request.headers)   # off the Wi-Fi, or in through the relay: docs/away.md piece 2
     if hub.lock.locked:
         m, path = request.method, request.url.path
         if not open_to_strangers(m, path):
@@ -933,7 +934,7 @@ def phones_me(request: Request):
     """Open to anyone on the Wi‑Fi: is this phone in, and what is the house called. The join screen starts here."""
     phone = hub.phones.identify(request.cookies.get(COOKIE)) if hub.lock.locked else None
     return {"locked": hub.lock.locked, "paired": (not hub.lock.locked) or bool(phone), "home": hub.settings.get("home_name") or "Home",
-            "phone": hub.phones._public(phone) if phone else None}
+            "phone": hub.phones._public(phone) if phone else None, "away": request.state.away}
 
 
 @app.get("/phones")

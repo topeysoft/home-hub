@@ -9,11 +9,33 @@
 
 {$HUB_HTTP:http://localhost:8080} {
 	encode gzip
-	reverse_proxy {$BRAIN_UPSTREAM:localhost:8300}
+	reverse_proxy {$BRAIN_UPSTREAM:localhost:8300} {
+		header_up -X-Hub-Via
+	}
 }
 
 {$HUB_HOSTS:https://localhost:8443} {
 	tls internal
 	encode gzip
-	reverse_proxy {$BRAIN_UPSTREAM:localhost:8300}
+	reverse_proxy {$BRAIN_UPSTREAM:localhost:8300} {
+		header_up -X-Hub-Via
+	}
+}
+
+# Away from home: the door the tunnel feeds, and nothing else. It is bound to loopback, so nothing on
+# the Wi-Fi can reach it; a request that arrives here came from outside the house whatever Host it
+# claims, which is the whole reason it is a door of its own rather than a share of the two above. The
+# stamp is what the brain reads (hub/phones.py, from_away); the two doors above delete any copy a
+# client brought, so it cannot be forged from either side. The relay never adds it: it does not
+# terminate TLS and could not. Plain http for now because there is nothing on the other end yet --
+# piece 3 makes this the house's public name with a real certificate on it. docs/away.md, piece 2.
+:9443 {
+	# No host on the address on purpose: this door answers whatever Host a request claims, because the
+	# claim is exactly what it must not be trusted on. `bind` is what keeps it off the Wi-Fi -- loopback
+	# on the hub, and on the mac the container binds wide and the published port keeps it local.
+	bind {$HUB_RELAY_BIND:127.0.0.1}
+	encode gzip
+	reverse_proxy {$BRAIN_UPSTREAM:localhost:8300} {
+		header_up X-Hub-Via relay
+	}
 }

@@ -159,6 +159,24 @@ OPEN_PATHS = {"/", "/phones/me", "/phones/ask", "/phones/code", "/qr.svg", "/pho
 OPEN_SUFFIXES = (".js", ".css", ".svg", ".png", ".ico", ".woff2", ".webmanifest", ".json", ".html", ".txt", ".map")
 
 
+# ---- how a request reached the house ----
+VIA, AWAY = "x-hub-via", "relay"
+
+
+def from_away(headers) -> bool:
+    """Did this request come in through the relay, rather than off the Wi-Fi?
+
+    The front door stamps `X-Hub-Via: relay` on the one site the tunnel feeds and deletes any copy a
+    client brought on every other site, so a phone on the Wi-Fi cannot claim to be away and a phone
+    away cannot claim to be home. The relay itself never adds anything: it does not terminate TLS and
+    could not stamp a header if it wanted to. With nothing in front of the brain at all -- a developer
+    on :8300 -- nothing stamps it and every request is at home, which is the right answer there.
+
+    Nothing is refused on the strength of this yet; step 2 in docs/away.md is the gate that reads it.
+    """
+    return (headers.get(VIA) or "").strip().lower() == AWAY
+
+
 def open_to_strangers(method: str, path: str) -> bool:
     """What the panel needs before it is paired: the app itself, the join screen's own routes, and the sounds a speaker fetches."""
     if method.upper() in ("OPTIONS", "HEAD"): return True

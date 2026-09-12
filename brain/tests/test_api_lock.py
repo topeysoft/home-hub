@@ -198,5 +198,28 @@ class WhichSideOfTheDoorTests(unittest.TestCase):
                 self.assertFalse(open_to_strangers("GET", path))
 
 
+class AwayTagTests(ApiTest):
+    """Step 1 of docs/away.md piece 2: the brain knows which door a request came in at, and nothing more.
+
+    The gate that refuses a home-only phone is step 2. Until it lands, an away request is served exactly
+    as a home one, and the tests below say so on purpose: they are what step 2 has to change.
+    """
+
+    def test_off_the_wifi_a_request_is_at_home(self):
+        self.assertFalse(self.client.get("/phones/me").json()["away"])
+
+    def test_in_through_the_relay_the_house_can_tell(self):
+        r = self.client.get("/phones/me", headers={"X-Hub-Via": "relay"})
+        self.assertTrue(r.json()["away"])
+
+    def test_the_tag_is_set_on_a_locked_house_too(self):
+        self.lock_the_house("4821")
+        self.assertTrue(self.client.get("/phones/me", headers={"X-Hub-Via": "relay"}).json()["away"])
+
+    def test_away_changes_nothing_yet(self):
+        """When this test has to change, step 2 is what changed it."""
+        self.assertEqual(self.client.post("/devices/light.kitchen/on", headers={"X-Hub-Via": "relay"}).status_code, 200)
+
+
 if __name__ == "__main__":
     unittest.main()

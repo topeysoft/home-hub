@@ -35,9 +35,11 @@ services:
     ports:
       - "8443:8443"
       - "8088:8088"
+      - "127.0.0.1:9443:9443"   # the away door, reachable from this mac and not from the network
     environment:
       - HUB_HTTP=http://localhost:8088, http://${HUB_IP:-192.168.86.59}:8088
       - HUB_HOSTS=https://localhost:8443, https://${HUB_IP:-192.168.86.59}:8443
+      - HUB_RELAY_BIND=0.0.0.0   # inside the container; the published port above is what keeps it local
       - BRAIN_UPSTREAM=host.docker.internal:8300
     extra_hosts:
       - "host.docker.internal:host-gateway"

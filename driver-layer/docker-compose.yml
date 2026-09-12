@@ -108,6 +108,9 @@ services:
     environment:
       - HUB_HTTP=http://${HUB_HOST:-hub.local}, http://${HUB_IP:-localhost}, http://localhost
       - HUB_HOSTS=https://${HUB_HOST:-hub.local}, https://${HUB_IP:-localhost}
+      # The door the tunnel feeds, once there is a tunnel. On loopback deliberately: the relay's client
+      # runs on this machine, and nothing on the Wi-Fi is meant to reach it. docs/away.md, piece 2.
+      - HUB_RELAY_BIND=127.0.0.1
       - BRAIN_UPSTREAM=localhost:8300
     volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro

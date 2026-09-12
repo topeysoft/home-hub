@@ -87,9 +87,15 @@ frame, not a code.**
 **The listener split, which is the part to get right.** Traffic that arrives through the tunnel must land on a
 listener of its own. If it shared Caddy's ordinary `:443`, a request routed by SNI `nadine.homehub.app` could carry
 `Host: hub.local` after the handshake and fall into the local site block — which is the front door propped open from
-the internet. So `frpc` forwards into a Caddy site bound to loopback (`HUB_RELAY` on `:8443`, unreachable from the
-LAN), and **everything arriving there is away traffic whatever Host it claims**. The brain learns which by the port it
-was served on, not by a header: the relay cannot add a header, and that is exactly the property we want from it.
+the internet. So `frpc` forwards into a Caddy site on `:9443` that `bind`s to loopback and is unreachable from the
+LAN, and **everything arriving there is away traffic whatever Host it claims**.
+
+That last phrase is why the site address carries no host of its own: a door that only answered to the right Host would
+be trusting the one thing about a request that cannot be trusted. Caddy stamps `X-Hub-Via: relay` on that site and
+deletes any copy a client brought on every other, so the tag cannot be forged from either side — a phone on the Wi-Fi
+cannot claim to be away, and a phone away cannot claim to be home. The relay adds nothing: it never terminates TLS, so
+it could not stamp a header if it wanted to. Nothing in front of the brain at all, which is how a developer runs it,
+means every request is at home, and that is the right answer there.
 
 **The gate.** One more rule in the middleware that already holds the code and the phone cookie: a request tagged away
 is refused unless it carries a paired phone whose `remote` is on. Two things follow.
@@ -145,8 +151,13 @@ lose the name until it is back. The LAN is unaffected. *This hub* should say thi
 
 The first two steps need nothing from the maker and can land and be tested on a laptop.
 
-1. **The listener split and the away tag.** A loopback-only Caddy site, and the brain knowing a request came in
-   through it. Testable by hitting the port directly with nothing on the other end.
+1. ~~**The listener split and the away tag.**~~ **Done, 12 September 2026.** `:9443` in `caddy/Caddyfile`, bound to
+   loopback on the hub and published only to the mac in the dev compose file; `from_away()` in `hub/phones.py`;
+   `request.state.away` set in the one middleware that already holds the code and the cookie; `/phones/me` says which
+   door answered, so the app can tell too. Nothing is refused on it yet — `test_away_changes_nothing_yet` in
+   `tests/test_api_lock.py` says so on purpose, and step 2 is what changes it. Checked against a real Caddy: the LAN
+   door strips a forged stamp, and the away door stamps `relay` even when the request claims `Host: hub.local`, which
+   is the bypass the split exists to stop.
 2. **The per-phone switch and the gate.** `remote` finally read, the sentence a home-only phone gets, the log lines.
 3. **The relay on the VPS and `frpc` in the compose file**, one house, name hard-coded. First tap from outside.
 4. **The registration service and the switch in *This hub*.** Names, keys, more than one house.
