@@ -4611,6 +4611,32 @@ select.input {
   opacity: 0;
 }
 
+/* Where the fade finishes, under glass: at the weather's edge, not 147px past it.
+
+   The exit range is the card's own width, so a card ran its whole recede over a
+   card's worth of travel -- and because the lag holds it back by 45% of itself
+   while that happens, it came out fully soft and dim with its left edge still
+   147px clear of the weather, out in the open where nothing was behind it to
+   recede INTO. Measured: crisp at x 450, done at x 283, weather ending at 430.
+
+   Finishing it at the edge is one line of arithmetic. A card's visible left edge
+   is its laid-out one plus however much of the lag has been applied, so at the
+   end of the range it sits at (rest line - range + lag). Set that equal to the
+   weather's edge and the range is the gap plus the lag -- and since the lag is
+   45% of the card and a percentage here is 45% of the card too, the same
+   expression fits every card in the row without knowing which one it is.
+
+   Glass only. Paper has no lag, so the same arithmetic would ask it to fade in
+   20px, which is not a fade, it is a cut. Paper's even-handed edge softening is
+   its own idea and stays the card's width. */
+@supports (animation-timeline: view()) {
+  [data-face='glass'] .wall-stage .bento-card {
+    animation-range:
+      entry 0% entry 100%,
+      exit 0% exit calc(45% + var(--wx-gap));
+  }
+}
+
 /* Wall's weather, receding with the row.
 
    WHETHER it recedes is this layout's business, not the face's, and that is the

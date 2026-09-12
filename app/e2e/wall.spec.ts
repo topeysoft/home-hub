@@ -226,3 +226,42 @@ test('a swiped card travels over the weather instead of stopping at it', async (
   expect(away.blur, 'the card crossed the weather still sharp').toBeGreaterThan(4)
   expect(away.opacity, 'the card crossed the weather without dimming').toBeLessThan(0.7)
 })
+
+/* Where the fade finishes. The exit range is a card's own width, so a card used to run its whole
+   recede over a card's worth of travel -- and because the lag holds it back by 45% of itself while
+   that happens, it came out fully soft with its left edge still 147px clear of the weather, out in
+   the open with nothing behind it to recede INTO. It should be done by the time it reaches the
+   edge, and this finds the exact scroll position where it finishes and asks where the card was. */
+test('a card has finished fading by the time it reaches the weather', async ({ page }) => {
+  await page.goto('/?layout=wall&nav=top&face=glass&at=19:40', { waitUntil: 'networkidle' })
+  await expect(page.locator('.bento').first()).toBeVisible()
+  await page.waitForTimeout(1800)
+
+  const ramp = await page.evaluate(async () => {
+    const row = document.querySelector('.bento') as HTMLElement
+    row.style.scrollSnapType = 'none'
+    const card = row.querySelector('.bento-card')!
+    const edge = document.querySelector('.wall-wx')!.getBoundingClientRect().right
+    const out: { scroll: number; left: number; blur: number }[] = []
+    for (let s = 0; s <= 340; s += 5) {
+      row.scrollLeft = s
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
+      const cs = getComputedStyle(card)
+      out.push({
+        scroll: s,
+        left: card.getBoundingClientRect().x,
+        blur: Number(cs.filter.match(/blur\(([\d.]+)px\)/)?.[1] ?? 0),
+      })
+    }
+    return { edge, out }
+  })
+
+  expect(ramp.out[0].blur, 'the card is soft before the row has moved at all').toBe(0)
+  const done = ramp.out.find((r) => r.blur >= 4.98)
+  expect(done, 'the card never finishes fading at all').toBeTruthy()
+  // it finishes AT the edge: not while it is still out in the open, and not after it has gone past
+  expect(done!.left, `finished ${Math.round(done!.left - ramp.edge)}px clear of the weather`)
+    .toBeLessThan(ramp.edge + 30)
+  expect(done!.left, `finished ${Math.round(ramp.edge - done!.left)}px past the weather`)
+    .toBeGreaterThan(ramp.edge - 60)
+})
