@@ -3344,7 +3344,11 @@ select.input {
   display: flex;
   flex-direction: column;
 }
-.hub-rows li {
+/* Its own rows, not every row inside them. A page here puts whole lists in a
+   row -- the phones, the steps to a home screen -- and as a plain descendant
+   selector this caught their items too: a step landed in the 90px label column
+   and wrapped a word at a time, with a divider ruled under it. */
+.hub-rows > li {
   display: grid;
   grid-template-columns: 90px 1fr auto;
   align-items: center;
@@ -3352,7 +3356,7 @@ select.input {
   padding: 14px 0;
   border-bottom: 1px solid var(--edge);
 }
-.hub-rows li:last-child {
+.hub-rows > li:last-child {
   border-bottom: 0;
 }
 .hub-k {
@@ -3387,7 +3391,7 @@ select.input {
   max-width: 40ch;
 }
 @media (max-width: 640px) {
-  .hub-rows li {
+  .hub-rows > li {
     grid-template-columns: 1fr;
     gap: 8px;
   }
@@ -3516,6 +3520,7 @@ select.input {
   padding-left: 20px;
   font-size: 14px;
   color: var(--ink-2);
+  list-style: decimal;   /* said plainly: list-style is inherited, and a list this sits inside turns its markers off */
 }
 .phone-steps li {
   margin: 2px 0;
@@ -3535,7 +3540,7 @@ select.input {
 .phone-card .button {
   margin-top: 10px;
 }
-.hub-rows li.hub-wide {
+.hub-rows > li.hub-wide {
   grid-template-columns: 1fr;
 }
 @media (max-width: 860px) {
