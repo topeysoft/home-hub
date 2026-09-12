@@ -246,8 +246,30 @@ export function glassVars(elevation: number, condition: string): ToneVars {
        it. The colour is the air from under the pane, so the room is dimmed by
        the pane's own shadow rather than by a grey laid over it. */
     '--glass-scrim': air(scrim),
-    /* the one number that is about the machine rather than the hour: a Pi has a
-       ceiling on how much blur it can paint, and this is where that gets sized. */
+    /* ---- the floor ----
+       The same two surfaces with the lens taken out, for a machine that cannot
+       paint a backdrop-filter. Not a second palette: each stop is the colour
+       its translucent twin composites TO, at full alpha, so the face keeps its
+       drawing -- rim, sweep, shadow, the lot -- and loses only its depth. That
+       is the right thing to lose. The alternative is what an unblurred glass
+       card actually looks like: .34 alpha over the open sky, which is hardly a
+       card at all. */
+    '--glass-flat': `linear-gradient(148deg, oklch(${(gL + 0.07).toFixed(3)} 0.014 ${H}),`
+      + ` oklch(${gL.toFixed(3)} 0.012 ${H}) 46%,`
+      + ` oklch(${(gL + 0.03).toFixed(3)} 0.014 ${H}))`,
+    /* a pane's stops are already written as what they come out at over the room,
+       so the flat one is that arithmetic with nothing left to composite */
+    '--pane-flat': (() => {
+      const L = (i: number) => clamp(roomL + PANE_LIFT[i], 0.06, 0.92).toFixed(3)
+      return `linear-gradient(168deg, oklch(${L(0)} 0.014 ${H}),`
+        + ` oklch(${L(1)} 0.024 ${H}) 44%, oklch(${L(2)} 0.020 ${H}))`
+    })(),
+    /* the two numbers that are about the machine rather than the hour: a host
+       has a ceiling on how much blur it can paint, and this is where that gets
+       sized. Measured at 1280x800 with software rasterisation -- the nearest
+       thing here to a weak GPU -- a 650ms rail swipe holds every frame under
+       paper and drops about a quarter of them under glass. Both faces paint the
+       same 13 frosted surfaces; the whole difference is the radius. */
     '--glass-blur': '26px',
     '--pane-blur': '30px',
   }

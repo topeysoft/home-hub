@@ -217,12 +217,41 @@ describe('the pane, at every hour', () => {
     }
   })
 
+  /* The floor: the same face on a host that cannot paint a backdrop-filter. Not a second palette --
+     each stop is the colour its translucent twin composites to, so the only thing lost is depth. */
+  it('gives the flat face no transparency to fall through', () => {
+    for (const condition of CONDITIONS) {
+      for (const el of ELEVATIONS) {
+        const v = glassVars(el, condition)
+        for (const k of ['--glass-flat', '--pane-flat']) {
+          // an oklch() with a slash in it carries an alpha, and an unblurred card with an alpha is
+          // the thing this exists to avoid: .34 of a colour over the open sky is hardly a card
+          expect(v[k], `${k} / ${condition} / ${el}°`).not.toMatch(/\//)
+          expect(v[k]).toMatch(/^linear-gradient\(/)
+        }
+      }
+    }
+  })
+
+  it('tracks the sky flattened exactly as it does through the lens', () => {
+    const first = (v: string) => Number(v.match(/oklch\(([\d.]+)/)![1])
+    for (const k of [['--glass', '--glass-flat'], ['--pane', '--pane-flat']] as const) {
+      const nightLens = first(glassVars(-18, 'clear-night')[k[0]])
+      const noonLens = first(glassVars(40, 'sunny')[k[0]])
+      const nightFlat = first(glassVars(-18, 'clear-night')[k[1]])
+      const noonFlat = first(glassVars(40, 'sunny')[k[1]])
+      expect(noonLens - nightLens, `${k[0]} does not move across the day`).toBeGreaterThan(0.05)
+      expect(noonFlat - nightFlat, `${k[1]} does not move with it`).toBeGreaterThan(0.05)
+    }
+  })
+
   it('gives every property a value, at every hour and weather', () => {
     for (const condition of CONDITIONS) {
       for (const el of ELEVATIONS) {
         const v = glassVars(el, condition)
         for (const k of ['--glass', '--glass-sweep', '--glass-rim', '--glass-inner', '--glass-drop', '--glass-sat', '--glass-br', '--glass-field', '--glass-scrim', '--glass-blur',
-          '--pane', '--pane-edge', '--pane-ink-2', '--pane-muted', '--pane-blur']) {
+          '--pane', '--pane-edge', '--pane-ink-2', '--pane-muted', '--pane-blur',
+          '--glass-flat', '--pane-flat']) {
           expect(v[k], `${k} / ${condition} / ${el}°`).toBeTruthy()
           expect(v[k]).not.toContain('NaN')
         }

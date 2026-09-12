@@ -58,6 +58,12 @@ const face = computed<FaceName>(() => isFace(faceParam) ? faceParam : (isFace(st
 /* the pane's own properties, derived from the same sky the tone is: a face that
    is not on costs nothing, because there is nothing to bind */
 const glass = computed(() => face.value === 'glass' ? glassVars(store.sky.elevation, store.sky.condition) : {})
+/* Whether this screen can paint a pane at all. Asked once: it cannot change
+   while the panel is open, and a host that cannot blur gets the face flattened
+   rather than taken away -- panel.css says what that means. ?flat=1 previews
+   it, which is the only way anyone will ever see it on a machine that can. */
+const flat = params.get('flat') === '1'
+  || !(CSS.supports('backdrop-filter', 'blur(1px)') || CSS.supports('-webkit-backdrop-filter', 'blur(1px)'))
 
 const navParam = params.get('nav')
 const nav = computed<NavName>(() => isNav(navParam) ? navParam : (isNav(store.ambient.look?.nav) ? store.ambient.look!.nav as NavName : 'side'))
@@ -112,7 +118,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="shell" :data-ambient="ambient" :data-nav="nav" :data-face="face" :style="[tone, glass, openTint]" :class="{ resting: idle, 'in-setup': setup || lock.unpaired, 'opened-shell': !!store.opened || panel }">
+  <div class="shell" :data-ambient="ambient" :data-nav="nav" :data-face="face" :data-flat="face === 'glass' && flat ? '' : null" :style="[tone, glass, openTint]" :class="{ resting: idle, 'in-setup': setup || lock.unpaired, 'opened-shell': !!store.opened || panel }">
     <Sky :quiet="!idle && !setup" />
     <!-- glass lays its blooms on the sky the canvas just painted, under the veil -->
     <div class="sky-bloom" v-if="face === 'glass'"></div>

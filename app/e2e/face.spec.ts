@@ -231,3 +231,49 @@ test.describe('asked not to move', () => {
     expect(travelled.length, `a card travelled: ${travelled[0]?.translate}`).toBe(0)
   })
 })
+
+/* The floor. A host that cannot paint a backdrop-filter gets glass flattened rather than taken
+   away, and ?flat=1 is the only way to see that on a machine that can. The point is that the face
+   survives: the rim, the sweep and the shadow are all still drawn, and the cards stop being
+   translucent -- which they must, because an unblurred glass card is .34 alpha over the open sky
+   and hardly a card at all. */
+test('glass on the floor keeps its drawing and loses only its depth', async ({ page }) => {
+  const look = () => page.evaluate(() => {
+    const of = (sel: string) => {
+      const el = document.querySelector(sel)
+      if (!el) return null
+      const cs = getComputedStyle(el)
+      return {
+        frost: [cs.getPropertyValue('backdrop-filter'), cs.getPropertyValue('-webkit-backdrop-filter')]
+          .find((v) => v && v !== 'none') ?? 'none',
+        fill: cs.backgroundImage,
+        rim: getComputedStyle(el, '::after').backgroundImage,
+        shadow: cs.boxShadow,
+      }
+    }
+    return { card: of('.bento-card .tile.plain, .tile.plain, .room-card'), rail: of('.rail') }
+  })
+
+  // nav=side, because the side rail is furniture rather than a card and takes the floor differently
+  await page.goto('/?face=glass&layout=rail&nav=side&at=19:40', { waitUntil: 'networkidle' })
+  await expect(page.locator('.bento-card').first()).toBeVisible()
+  await page.waitForTimeout(700)
+  const lens = await look()
+  expect(lens.card!.frost, 'glass was not blurring in the first place').toContain('blur')
+
+  await page.goto('/?face=glass&layout=rail&nav=side&at=19:40&flat=1', { waitUntil: 'networkidle' })
+  await expect(page.locator('.bento-card').first()).toBeVisible()
+  await page.waitForTimeout(700)
+  const floor = await look()
+
+  expect(await page.getAttribute('.shell', 'data-flat'), 'the floor never came on').toBe('')
+  expect(floor.card!.frost, 'the floor is still asking for a blur it cannot paint').toBe('none')
+  expect(floor.rail!.frost, 'the rail is still asking for a blur it cannot paint').toBe('none')
+  // the drawing survives: the same rim, and a shadow still under it
+  expect(floor.card!.rim, 'the rim went with the blur').toBe(lens.card!.rim)
+  expect(floor.card!.shadow, 'the shadow went with the blur').toBe(lens.card!.shadow)
+  // and the fill stopped being see-through
+  expect(lens.card!.fill, 'the lens fill was already opaque, so this proves nothing').toMatch(/\//)
+  expect(floor.card!.fill, `the floor left a translucent card: ${floor.card!.fill}`)
+    .not.toMatch(/oklch\([^)]*\//)
+})

@@ -254,6 +254,45 @@ input:focus-visible {
     linear-gradient(#000 0 0);
   mask-composite: exclude;
 }
+/* ---------- the floor: glass without the lens ----------
+   A host that cannot paint a backdrop-filter gets the face anyway, flattened.
+   Every colour here is the one its translucent twin composites to, so the rim,
+   the sweep and the shadow are untouched and only the depth is gone -- which is
+   the right thing to lose, because an unblurred glass card is .34 alpha over
+   the open sky and hardly a card at all.
+
+   `data-flat` and not `@supports`, for two reasons. A feature query cannot be
+   turned on to look at, and this is a state the panel will spend its whole life
+   never being in, so it would never be looked at. And the switch has a second
+   job waiting for it: a host that CAN blur but not fast enough wants exactly
+   this answer, and that is a measurement rather than a feature query. */
+[data-face='glass'][data-flat] .room-card,
+[data-face='glass'][data-flat] .tile.plain,
+[data-face='glass'][data-flat] .scene,
+[data-face='glass'][data-flat] .back,
+[data-face='glass'][data-flat] .banner {
+  background-image: var(--glass-sweep), var(--glass-flat);
+}
+[data-face='glass'][data-flat] .room-card,
+[data-face='glass'][data-flat] .tile,
+[data-face='glass'][data-flat] .scene,
+[data-face='glass'][data-flat] .back,
+[data-face='glass'][data-flat] .banner,
+[data-face='glass'][data-flat] .opened-panel,
+[data-face='glass'][data-flat] .house-panel,
+[data-face='glass'][data-flat] .rail {
+  backdrop-filter: none;
+}
+[data-face='glass'][data-flat] .opened-panel,
+[data-face='glass'][data-flat] .house-panel {
+  background: var(--pane-flat);
+}
+/* the side rail is the panel's own furniture rather than a card, so it takes
+   the sky's deep directly instead of a distance from it */
+[data-face='glass'][data-flat] .rail {
+  background: var(--glass-scrim);
+}
+
 .shell::after {
   content: '';
   position: absolute;
