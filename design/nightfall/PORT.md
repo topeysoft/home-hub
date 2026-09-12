@@ -10,6 +10,35 @@ made of; it does not decide what is on it. Everything the panel already knows �
 the sky, the tone system, the layouts, the device drawings, the signals — stays
 exactly where it is, and Nightfall is one more thing a house can be set to.
 
+## Where this is
+
+Slices 1 to 4 have landed, each as its own commit: `git log --oneline a2cdf1a..HEAD`.
+Glass is a face a house can be set to, its material is derived from the sky, the
+field carries the blooms and the rail has its focal plane. Slices 5 and 6 are
+not started.
+
+Run it: `cd app && npm run build && npm run mock`, then
+`localhost:8399/?face=glass&layout=rail&nav=top`, or pick **Glass** under *This
+house -> How it looks*. `&at=12:30&wx=sunny` is noon, `&face=paper` is the
+before. Every change is scoped under `[data-face='glass']`, so paper is
+untouched and that is the thing to check first if something looks wrong.
+
+**One decision is open, and slice 5 should probably wait on it.** A face was
+defined as what the panel is MADE OF, not what is on it — so the material and
+the motion have landed on the panel's own arrangement, and the screen still
+does not look much like the artboard. It leads with a serif greeting, a next-up
+line and the attention strip, so the row starts two thirds down; the weather is
+a cloud in the header corner rather than a tall lozenge hung off-card; the type
+is Instrument rather than Plus Jakarta; cards are 22px where the artboard is 28.
+Those are arrangement, type and radius, and none of them belong to a face.
+
+Closing that gap means a LAYOUT — a third beside stack and rail, in the shape
+`layout.ts` already describes — not more face. It is a real piece of work and
+nobody has asked for it yet. Slice 5 retimes `Opened.vue`, which a new layout
+would likely reuse rather than replace, so it is not wasted either way; but if
+the arrangement is going to change, it is worth knowing before the pane is
+tuned to the old one.
+
 ## The seam
 
 `toneVars(elevation, condition, tone)` in [`tone.ts`](../../app/src/tone.ts)
@@ -27,13 +56,13 @@ saying who it is for. A face is a fourth table of exactly that shape.
 Each of these is meant to be committed and looked at before the next one
 starts. Nothing below needs the slice after it to be worth having.
 
-**1. `face` exists and does nothing.** `FACES` in `layout.ts` (`paper` — what
+**1. `face` exists and does nothing.** *(landed)*  `FACES` in `layout.ts` (`paper` — what
 the panel is today — and `glass`), an `isFace()` guard, the row in `LookPage`,
 the field on `ambient.look`, and the same round-trip through the brain the
 other three take. Done when picking it changes a `data-face` attribute on the
 shell and nothing else moves.
 
-**2. The material.** `toneVars` gains the glass block when `face === 'glass'`,
+**2. The material.** *(landed)*  `toneVars` gains the glass block when `face === 'glass'`,
 derived from the `ground(el, condition)` it already computes:
 
 | property        | value                                                      |
@@ -52,7 +81,7 @@ of its literals under `[data-face="glass"]`; the existing warm tokens are left
 alone. `tone.test.ts` is where this is held honest — the glass L has to track
 `ground.L` at every hour and the rim has to invert past `bright` .5.
 
-**3. The field.** `Sky.vue` already paints the ramp and the veil. Under `glass`
+**3. The field.** *(landed)*  `Sky.vue` already paints the ramp and the veil. Under `glass`
 it also lays the four blooms on at low alpha — character, not lightness. The
 lightness must stay the sky's own, because `ground()` is what every card is
 measured against and a field painted darker than `ground` makes every distance
@@ -67,7 +96,7 @@ quieter in the app than it is on the canvas. Whether glass wants the landscape
 suppressed, or wants these carried inside the canvas rather than over it, is a
 design call nobody has made.
 
-**4. The rail.** The biggest slice, and the one with the idea in it. `rail`
+**4. The rail.** *(landed)*  The biggest slice, and the one with the idea in it. `rail`
 layout already sweeps; what it does not have is a focal plane. Depth is one
 idea, not three — further back is blurrier, dimmer **and** slower:
 
@@ -100,7 +129,7 @@ The velocity blur is **not** in. It is a second blur on top of one the file
 already warns re-rasterises every frame of a swipe, and adding that cost before
 slice 6 has measured the first one is backwards. It waits for a number.
 
-**5. The pane.** `Opened.vue` already rises; it needs the measured timings.
+**5. The pane.** *(next)*  `Opened.vue` already rises; it needs the measured timings.
 400ms up on `cubic-bezier(.12,.78,.24,1)`, 300ms down on
 `cubic-bezier(.4,0,.6,1)`, the object inside travelling further and still
 settling at 700ms, the bottom bar leaving 60ms *before* the pane starts and
@@ -108,7 +137,7 @@ coming back 180ms after it has gone. The pane stops short of the top bar so the
 row you came from is still there, dimmed, above it — that is what makes it a
 drawer rather than a new screen. The room dims; it does not blur.
 
-**6. Reduced motion, and the floor.** All eight moves collapse to opacity, the
+**6. Reduced motion, and the floor.** *(not started)*  All eight moves collapse to opacity, the
 field stops drifting, the rail jumps. Then the question this whole port exists
 to answer: a Pi 5 at 1280×800, painting `backdrop-filter` on every card with an
 animated `filter` on five of them at once. If it will not hold, the honest
@@ -130,3 +159,18 @@ The other unbuilt thing is a screen that is not a rail. A room fits on the
 screen, so [`Room.dc.html`](../Room.dc.html) argues it is a ranked grid rather
 than something you sweep — and rail-plus-pane is the spine of this direction.
 Whether it has an answer there is genuinely unknown.
+
+## How this work has been going, for whoever picks it up
+
+Small slices, each committed and looked at before the next one starts. The
+panel is checked by driving the real thing at 1280x800 against `mock/brain.mjs`
+and reading computed styles, not by trusting that the CSS says what it means --
+the rail's 56px lag was confirmed by measuring an exiting card at x -294 under
+glass against -350 under paper. `npx vitest run`, `npx playwright test`,
+`npx vue-tsc --noEmit -p tsconfig.app.json` and `npx eslint` all pass; the hold
+gesture spec flakes under load and passes in isolation.
+
+Findings get written down rather than tuned away. The blooms read as a tint
+because the panel's sky is a painted scene and the face was drawn against an
+abstract field -- that is in slice 3 as a question, not fixed by raising an
+alpha until it looked right.
