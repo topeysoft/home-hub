@@ -17,11 +17,13 @@ Glass is a face a house can be set to, its material is derived from the sky, the
 field carries the blooms, the rail has its focal plane, the pane has its measured
 timings, and there is a floor under the whole thing.
 
-One thing is still owed and cannot be paid from here: **the Pi.** `npm run cost`
-is the instrument -- point it at a real hub with `BASE=` and it prints what a
-rail swipe costs in frames, under each face, on that host. Everything else about
-slice 6 is measured; that number is not, and guessing it would be worse than
-saying so.
+One measurement is still owed and cannot be taken from here, and it is worth
+being clear that it **does not gate anything.** The host this is built for is a
+NUC-class box; a Pi is the floor, not the target, and a face that needs more
+than a Pi is not thereby a face that cannot ship. `npm run cost` is the
+instrument -- point it at a real hub with `BASE=` and it prints what a rail
+swipe costs in frames, under each face, on that host. Worth running on whatever
+the panel actually ends up on. Not worth waiting for.
 
 Two things were found under slice 5 rather than written by it, and both are
 their own commits before it:
@@ -50,23 +52,41 @@ house -> How it looks*. `&at=12:30&wx=sunny` is noon, `&face=paper` is the
 before. Every change is scoped under `[data-face='glass']`, so paper is
 untouched and that is the thing to check first if something looks wrong.
 
-**One decision is still open, and slice 5 has now run into it twice.** A face
-was defined as what the panel is MADE OF, not what is on it — so the material
-and the motion have landed on the panel's own arrangement, and the screen still
-does not look much like the artboard. It leads with a serif greeting, a next-up
-line and the attention strip, so the row starts two thirds down; the weather is
-a cloud in the header corner rather than a tall lozenge hung off-card; the type
-is Instrument rather than Plus Jakarta; cards are 22px where the artboard is 28.
-Those are arrangement, type and radius, and none of them belong to a face.
+**The decision that was open is closed: there is a third arrangement now.** A
+face was defined as what the panel is MADE OF, not what is on it, so the
+material and the motion landed on the panel's own arrangement and the screen
+still did not look much like the board. Wall is the arrangement the board draws,
+and a house picks it in *This house -> How it looks* beside Stack and Rail.
 
-Closing that gap means a LAYOUT — a third beside stack and rail, in the shape
-`layout.ts` already describes — not more face. It is a real piece of work and
-nobody has asked for it yet. Slice 5 was worth doing either way, and was: a new
-layout would reuse the pane rather than replace it. But the one line of the
-slice that could not be done is arrangement — *the row you came from is still
-there, dimmed, above the pane* — and the reason is that on this arrangement the
-row is not where the pane stops short of. The pane is right; there is nothing
-above it to leave uncovered.
+What makes it is subtraction. No greeting, no house line, no next-up line,
+because on a panel read from across a room the top of the screen is the most
+valuable space there is and a sentence you have already read spends it. The date
+it gives up was in the top bar anyway. The weather stops being a corner cloud
+and takes the left third: the sky's own drawing straight onto the field with one
+lozenge of glass hung in front of it, which is what gives that third depth where
+a bordered box would be a tile saying what the whole screen behind it is already
+saying. And the row gets the rest of the screen -- 548 tall on the board where
+the Rail can only afford 392.
+
+It is the one arrangement that also brings two constants: 28px corners and Plus
+Jakarta. That is a deliberate widening of the rule in `layout.ts`, written down
+there -- Wall was drawn against those two numbers and in the house's own it is a
+near miss rather than the thing that was drawn. Both stay scoped to
+`[data-layout='wall']`, and the test that matters is the half that checks Rail
+is standing exactly where it was.
+
+The proportions are measured rather than eyeballed, because the board is a DOM:
+render `nightfall-glass.html` at 1440x900, read every box as a share of its own
+screen, and compare with the panel at 1280x800. What is playing sits at 34.7%
+where the board has 35.1%, 23.0% wide against 23.1%; the glance column at 59.1%
+against 59.7%. `e2e/wall.spec.ts` carries those numbers.
+
+Two things about it are known and not done. The nudges have nowhere better to go
+than above the row, so a house with something to attend to loses 60px off the
+top that the board does not spend -- the board has nothing to attend to. And the
+board's command box is at rest, which is to say it is only its orb; the panel
+always shows the whole box. That is move 7 of the eight and no slice has built
+it.
 
 ## The seam
 
@@ -302,13 +322,13 @@ screen, so [`Room.dc.html`](../Room.dc.html) argues it is a ranked grid rather
 than something you sweep — and rail-plus-pane is the spine of this direction.
 Whether it has an answer there is genuinely unknown.
 
-With all six slices in, what is left is not really port work any more. The Pi
-number is a half-hour on the right machine, and `npm run cost` is already
-pointed at it. Everything else on this page is a design decision: whether the
-day wants a face of its own, whether the sky should suppress its landscape under
-glass, whether Home should have a third layout, and whether a room is a rail at
-all. The face itself is finished, and every one of those can be answered without
-touching it.
+With all six slices in and Wall built, what is left is not really port work any
+more. The Pi number is a half-hour on the right machine whenever someone wants
+it, and it gates nothing. Everything else on this page is a design decision:
+whether the day wants a face of its own, whether the sky should suppress its
+landscape under glass, and whether a room is a rail at all. The face is
+finished, the arrangement it was drawn as exists, and every one of those can be
+answered without touching either.
 
 The `data-flat` switch is the one seam left half-used. It is wired to the
 question a browser can answer -- can this host paint a backdrop-filter -- and
@@ -330,9 +350,15 @@ else would have found it. For timing, listen for `transitionstart` and
 `transitionend` rather than sampling frames: a frame runs about 25ms while a
 pane is being painted, which is coarser than the gaps being measured, and a
 sampled trace put the bar and the pane at the same instant when they are 51ms
-apart. And for cost, `npm run cost` -- a scripted rail swipe with the gaps
-between presented frames written down, which is the only one of the three meant
-to be run somewhere other than here. `npx vitest run`, `npx playwright test`,
+apart. For cost, `npm run cost` -- a scripted rail swipe with the gaps between
+presented frames written down, and the only one of these meant to be run
+somewhere other than here.
+
+And for composition, the board itself. `nightfall-glass.html` is a published
+canvas, which means it is a DOM: serve the folder, open it in a browser, and
+read every box out of the artboard frame as a share of its own screen. Comparing
+numbers against numbers found a card a quarter too wide and a pane at the wrong
+end of its column, neither of which had looked wrong in a screenshot. `npx vitest run`, `npx playwright test`,
 `npx vue-tsc --noEmit -p tsconfig.app.json` and `npx eslint` all pass; the hold
 gesture spec flakes under load and passes in isolation.
 
