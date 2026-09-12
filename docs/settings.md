@@ -144,8 +144,9 @@ People page, next to the people they belong to. Covered by `brain/tests/test_loc
 
 **What the order above still has not touched**, checked rather than assumed:
 
-- **Removing anything** (step 2) does not exist. There is no route that deletes a config entry;
-  `provision.py` only reloads one. Selling a camera still means opening Home Assistant.
+- **Removing a device** (step 2) landed on 12 September 2026; see the order below. **Removing an account** did
+  not: there is still no route that deletes a config entry (`provision.py` only reloads one) and nothing that
+  lists the accounts a house has, so a camera that came in with an account still leaves through Home Assistant.
 - **People** (step 3) is a page, not yet a model. `PeoplePage.vue` draws what `presence.py` reads, and
   `presence.py` still reads Home Assistant's `person.*` entities and the alarm — so "is anyone home?" still rests on
   the companion app this product says does not exist. A phone has a name, not an owner: nothing mints a per-person
@@ -164,7 +165,20 @@ People page, next to the people they belong to. Covered by `brain/tests/test_loc
 By how soon a non-technical person is stuck, and by what each unlocks.
 
 1. ~~**Sign in again from the panel.**~~ Done; see *What landed* above.
-2. **Remove an account or device.** One route, one confirmation, the model cleaned up.
+2. **Remove an account or device.** *Half done, 12 September 2026.* **A device can be forgotten:** `DELETE
+   /devices/{id}` takes a thing off whatever brought it (`config/device_registry/remove_config_entry_from_device`
+   for each entry behind it) or out of the entity registry when there is no hardware, and the rebuild every other
+   change goes through carries it out of the model. It sits at the end of the row it belongs to when a room is
+   being edited, next to rename and move, and asks once across the row in words that name what disappears. Behind
+   the code, like every change. `ForgettingTests` in `tests/test_api_house.py`.
+
+   Two things are deliberately left. **An integration is allowed to refuse**, and Home Assistant offers no way to
+   ask in advance, so the house tries and then says *it goes when the account that brought it does* — which is the
+   honest answer and also the argument for the other half. **Removing an account is not built**, because there is
+   nowhere yet to see one: no route lists the config entries a house has, so removal needs the Accounts sheet
+   above rather than a button with no list under it. That is the next piece, and it is the Accounts noun.
+
+   Not offered on *New devices*: a thing forgotten there is only discovered again.
 3. **People and presence.** The phone key, the People sheet, Wi-Fi presence with a grace period, presence reading the
    brain's own people. This is the largest item and the one everything else about "who" hangs on.
 4. **Ring's sign-in inside the panel.** After the Ring decision below.

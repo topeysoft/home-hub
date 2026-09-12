@@ -2,7 +2,7 @@
 
 Run from brain/: .venv/bin/python -m unittest -v
 """
-import unittest
+import json, unittest
 
 from tests.apptest import ApiTest
 
@@ -114,6 +114,60 @@ class RoomEditTests(ApiTest):
 
     def test_moving_a_device_to_a_room_that_is_not_there_is_refused(self):
         self.assertEqual(self.client.post("/devices/light.ceiling/move", json={"room_id": "attic"}).status_code, 404)
+
+
+class ForgettingTests(ApiTest):
+    """Selling a camera, or pulling a bulb out of a lamp for good: the end of a device's life in the house.
+
+    Until this there was no route that removed anything, and the only way was Home Assistant's own UI
+    (docs/settings.md, step 2). What the house cannot do on its own it says plainly rather than in the
+    engine's words.
+    """
+
+    def registry(self, *rows):
+        self.ha.answers["config/device_registry/list"] = list(rows)
+
+    def test_forgetting_a_thing_takes_it_off_whatever_brought_it(self):
+        self.registry({"id": "hw-ceiling", "config_entries": ["entry-hw-ceiling"]})
+        r = self.client.delete("/devices/light.ceiling")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(("config/device_registry/remove_config_entry_from_device",
+                       {"device_id": "hw-ceiling", "config_entry_id": "entry-hw-ceiling"}), self.ha.sent)
+
+    def test_a_thing_more_than_one_account_brought_is_taken_off_each(self):
+        self.registry({"id": "hw-ceiling", "config_entries": ["entry-a", "entry-b"]})
+        self.assertEqual(self.client.delete("/devices/light.ceiling").status_code, 200)
+        off = [kw["config_entry_id"] for ty, kw in self.ha.sent if ty == "config/device_registry/remove_config_entry_from_device"]
+        self.assertEqual(off, ["entry-a", "entry-b"])
+
+    def test_a_thing_that_is_only_an_entry_goes_from_the_entity_registry(self):
+        self.hub.home.devices["light.ceiling"].hw = None          # no hardware behind it: nothing to take it off
+        self.assertEqual(self.client.delete("/devices/light.ceiling").status_code, 200)
+        self.assertIn(("config/entity_registry/remove", {"entity_id": "light.ceiling"}), self.ha.sent)
+
+    def test_what_will_not_go_on_its_own_says_so_in_the_houses_words(self):
+        """HA lets an integration refuse. The person is told what to do about it, not what HA said."""
+        self.registry({"id": "hw-ceiling", "config_entries": ["entry-hw-ceiling"]})
+        self.ha.fail["config/device_registry/remove_config_entry_from_device"] = RuntimeError("Integration does not support device removal")
+        r = self.client.delete("/devices/light.ceiling")
+        self.assertEqual(r.status_code, 502)
+        self.assertIn("Ceiling light", r.json()["detail"])
+        self.assertIn("account that brought it", r.json()["detail"])
+        self.assertNotIn("Integration does not support", r.json()["detail"])
+
+    def test_a_thing_nothing_brought_is_not_quietly_left_alone(self):
+        self.registry({"id": "hw-ceiling", "config_entries": []})
+        self.assertEqual(self.client.delete("/devices/light.ceiling").status_code, 502)
+
+    def test_forgetting_something_that_is_not_there(self):
+        self.assertEqual(self.client.delete("/devices/light.nowhere").status_code, 404)
+
+    def test_it_is_written_down(self):
+        self.registry({"id": "hw-ceiling", "config_entries": ["entry-hw-ceiling"]})
+        self.client.delete("/devices/light.ceiling")
+        row = self.hub.log.recent(1, subject="light.ceiling")[0]
+        self.assertEqual(row["new"], "forgotten")
+        self.assertEqual(json.loads(row["detail"])["name"], "Ceiling light")
 
 
 class EntryTests(ApiTest):

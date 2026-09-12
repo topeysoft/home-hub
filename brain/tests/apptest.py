@@ -29,8 +29,11 @@ def area(area_id, name):
     return {"area_id": area_id, "name": name}
 
 
-def hardware(id, area_id=None, name="", manufacturer="Acme", model="Thing"):
-    return {"id": id, "area_id": area_id, "name": name, "manufacturer": manufacturer, "model": model, "name_by_user": None}
+def hardware(id, area_id=None, name="", manufacturer="Acme", model="Thing", config_entries=None):
+    """`config_entries` is what a real registry row carries and what forgetting a device works through:
+    a thing goes by being taken off whatever brought it."""
+    return {"id": id, "area_id": area_id, "name": name, "manufacturer": manufacturer, "model": model,
+            "name_by_user": None, "config_entries": config_entries if config_entries is not None else [f"entry-{id}"]}
 
 
 def entity(entity_id, device_id=None, area_id=None, **kw):

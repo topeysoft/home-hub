@@ -665,6 +665,41 @@ async def rename_device(device_id: str, body: dict):
     return {"ok": True}
 
 
+@app.delete("/devices/{device_id}")
+async def forget_device(device_id: str):
+    """Forget a device: out of the driver's registry, and out of the house with it.
+
+    A thing with hardware behind it goes by being taken off whatever brought it, which is what removing
+    it from its integration means; a thing that is only an entry goes from the entity registry. Not
+    everything can go one at a time -- what brought a device decides whether it may leave without the
+    account it came with -- and when that is the answer the house says so in its own words rather than
+    passing on the engine's. The account is the bigger hammer and it is a door of its own (docs/settings.md,
+    Accounts).
+
+    The model is not edited here. Forgetting changes the registry, the registry says so, and the rebuild
+    that every other change goes through picks it up -- the same path rename and move take.
+    """
+    hub.ready()
+    dev = hub.home.devices.get(device_id)
+    if not dev: raise HTTPException(404, "unknown device")
+    name = dev.name
+    try:
+        if dev.hw:
+            rows = await hub.ha.send("config/device_registry/list") or []
+            row = next((d for d in rows if d.get("id") == dev.hw), None)
+            entries = list((row or {}).get("config_entries") or [])
+            if not entries: raise RuntimeError("nothing owns it")
+            for entry in entries:
+                await hub.ha.send("config/device_registry/remove_config_entry_from_device", device_id=dev.hw, config_entry_id=entry)
+        else:
+            await hub.ha.send("config/entity_registry/remove", entity_id=dev.id)
+    except Exception as e:
+        log.warning("could not forget %s: %s", device_id, e)
+        raise HTTPException(502, f"{name} cannot be forgotten on its own. It goes when the account that brought it does.")
+    hub.log.add("home", dev.id, dev.room_id, "forgotten", source="user", detail={"name": name})
+    return {"ok": True}
+
+
 # ---------- adding things ----------
 @app.get("/discovered")
 async def discovered():

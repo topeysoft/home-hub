@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { addRoom, moveDevice, renameDevice, getSuggestions, type Device, type Room, type Suggestion } from './api'
+import { addRoom, moveDevice, renameDevice, forgetDevice, getSuggestions, type Device, type Room, type Suggestion } from './api'
 import { store, cap, notify } from './store'
 import Icon from './Icon.vue'
 
@@ -35,6 +35,21 @@ async function move(d: Device, roomId: string) {
     // eslint-disable-next-line vue/no-mutating-props -- the row leaves now and the house confirms with a rebuild; waiting for the round trip would leave it sitting there
     props.room.devices = props.room.devices.filter(x => x.id !== d.id)
   } catch (e: any) { notify(`Couldn't move it: ${e.message}`, 'error') }
+  delete busy.value[d.id]
+}
+/* The end of a thing's life here. One tap asks with the name in it, so what disappears is said before it
+   does; the second does it. Not offered on New devices, where a thing that is forgotten is only rediscovered. */
+const forgetting = ref('')
+async function forget(d: Device) {
+  if (forgetting.value !== d.id) { forgetting.value = d.id; return }
+  busy.value[d.id] = 'forget'
+  try {
+    await forgetDevice(d.id)
+    notify(`${d.name} is forgotten.`)
+    // eslint-disable-next-line vue/no-mutating-props -- as with a move: the row goes now and the rebuild confirms it
+    props.room.devices = props.room.devices.filter(x => x.id !== d.id)
+  } catch (e: any) { notify(e.message, 'error') }
+  forgetting.value = ''
   delete busy.value[d.id]
 }
 async function createAndMove(d: Device) {
@@ -83,7 +98,7 @@ watch(() => props.room.devices.length, (n, was) => { if (n > (was ?? 0)) think()
       <button class="back" @click="$emit('back')" :aria-label="editing ? 'Done' : 'Back to home'"><Icon :name="editing ? 'check' : 'back'" :size="22" /></button>
       <div>
         <h1 class="display">{{ editing ? room.name : 'New devices' }}</h1>
-        <p class="lede">{{ editing ? 'Rename anything, or move it to another room. Tap the tick when you are done.' : 'Check each name and say which room it lives in. It moves there on its own.' }}</p>
+        <p class="lede">{{ editing ? 'Rename anything, move it to another room, or forget it for good. Tap the tick when you are done.' : 'Check each name and say which room it lives in. It moves there on its own.' }}</p>
       </div>
     </header>
 
@@ -105,6 +120,8 @@ watch(() => props.room.devices.length, (n, was) => { if (n > (was ?? 0)) think()
           <option v-for="r in rooms" :key="r.id" :value="r.id">{{ r.name }}</option>
           <option value="__new">A new room…</option>
         </select>
+        <button v-if="editing && adding !== d.id" class="button small ghost sort-forget" :class="{ warn: forgetting === d.id }" @click="forget(d)">{{ forgetting === d.id ? 'Forget?' : 'Forget' }}</button>
+        <p class="sort-forget-ask" v-if="forgetting === d.id"><b>{{ d.name }}</b> goes from the house, and from whatever brought it. Tap again to do it.</p>
         <div class="suggest-line" v-if="!editing && suggestions[d.id]">
           <Icon name="sparkle" :size="14" />
           <span>Looks like <b>{{ suggestions[d.id].name }}</b><template v-if="suggestions[d.id].room"> in the <b>{{ roomName(suggestions[d.id].room) }}</b></template><span class="suggest-why" v-if="suggestions[d.id].why"> · {{ suggestions[d.id].why }}</span></span>

@@ -2906,6 +2906,28 @@ select.input {
   border: 1px solid var(--edge);
   backdrop-filter: var(--frost);
 }
+/* Forgetting sits at the end of the row it belongs to, after the room the thing is in. The row grows a
+   column for it only where it is offered -- editing a room, never New devices, where a forgotten thing
+   would only be discovered again. :has() rather than a class, so the row stays one shape in the markup. */
+.sort-row:has(.sort-forget) {
+  grid-template-columns: auto minmax(0, 1fr) minmax(140px, 200px) auto;
+}
+.sort-forget {
+  white-space: nowrap;
+  min-width: 96px;              /* asking must not resize the row: the rows stay lined up with each other */
+}
+/* What disappears, said before it does, across the row rather than inside the button -- a button that grew
+   to hold the name would pull its own row out of line with every other one. */
+.sort-forget-ask {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.sort-forget-ask b {
+  color: var(--ink);
+  font-weight: 500;
+}
 .sort-row.busy {
   opacity: 0.6;
 }
@@ -2960,7 +2982,8 @@ select.input {
   .setup-lede {
     font-size: 16px;
   }
-  .sort-row {
+  .sort-row,
+  .sort-row:has(.sort-forget) {
     grid-template-columns: auto minmax(0, 1fr);
   }
   .sort-row .sort-room,

@@ -64,6 +64,8 @@ export const addRoom = (name: string) => post<{ id: string; name: string }>('/ro
 export const renameRoom = (id: string, name: string) => post(`/rooms/${encodeURIComponent(id)}/rename`, { name })
 export const moveDevice = (id: string, room_id: string | null) => post(`/devices/${encodeURIComponent(id)}/move`, { room_id })
 export const renameDevice = (id: string, name: string) => post(`/devices/${encodeURIComponent(id)}/rename`, { name })
+/* The end of a thing's life in the house: off whatever brought it, and out of the model with it. */
+export async function forgetDevice(id: string) { const r = await request(`/devices/${encodeURIComponent(id)}`, { method: 'DELETE' }); if (!r.ok) await fail(r) }
 export const setFan = (id: string, minutes: number) => post<{ ok: boolean; fan_until: number | null }>(`/devices/${encodeURIComponent(id)}/fan`, { minutes })
 export const setSense = (id: string, sensor: string | null) => post(`/devices/${encodeURIComponent(id)}/sense`, { sensor })
 export async function getDiscovered(): Promise<Found[]> {

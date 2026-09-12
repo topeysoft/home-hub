@@ -2,7 +2,7 @@
    house of eight rooms. `npm run mock`, then open http://localhost:8399/ (every ?at= ?wx= ?month= ?room= ?sheet= ?setup=
    preview works), or `BRAIN=http://localhost:8399 npm run dev` for hot reload against it.
    Knobs: PORT, WX=rainy (a condition), FOUND=0 (nothing new nearby), ENGINE=down (the engine-starting screen),
-   LOCKED=1 (a code is set), FRESH=1 (first run), ASK=1 (a phone is asking to join; needs LOCKED=1), ?join=1 (the join screen). Nothing here talks to a real device; every POST says ok. */
+   LOCKED=1 (a code is set), FRESH=1 (first run), ASK=1 (a phone is asking to join; needs LOCKED=1), ?join=1 (the join screen). Nothing here talks to a real device; every POST or DELETE says ok. */
 import http from 'node:http'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -185,7 +185,7 @@ const server = http.createServer((req, res) => {
     for (const k of ['tone', 'layout', 'nav', 'face']) if (v[k]) ambient.look[k] = v[k]   // unknown keys dropped, as the brain does
     json(res, ambient.look)
   }) }
-  if (req.method === 'POST') return json(res, { ok: true })
+  if (req.method === 'POST' || req.method === 'DELETE') return json(res, { ok: true })   // forgetting a thing, or a phone leaving, answer like every other change
   let f = path.join(DIST, p === '/' ? 'index.html' : p)
   if (!fs.existsSync(f)) f = path.join(DIST, 'index.html')
   if (!fs.existsSync(f)) { res.writeHead(503, { 'Content-Type': 'text/plain' }); return res.end('No dist/ yet: run `npm run build` first, or use `BRAIN=http://localhost:' + PORT + ' npm run dev`.') }
