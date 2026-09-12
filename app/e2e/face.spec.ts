@@ -43,3 +43,38 @@ test('a pane is frosted too, which is what makes it a pane', async ({ page }) =>
   await expect(page.locator('.house-panel')).toBeVisible()
   expect(await frost(page, '.house-panel')).toContain('blur')
 })
+
+/* A face decides what the panel is made of. It does not get to move a control, and this is what
+   that turns into when it does: `[data-face='glass'] .back` declared `position: relative`, which
+   beats a plain `.opened-close`, so the pane's close button fell back into the flow and landed
+   thirty pixels off the left edge of the screen -- present, focusable, and unreachable by a finger.
+   A panel on a wall has no keyboard, so Escape was not a way out. */
+test('the way out of a pane is in the same place whatever the panel is made of', async ({ page }) => {
+  const where: Record<string, { x: number; y: number }> = {}
+  for (const face of ['paper', 'glass']) {
+    await page.goto(`/?face=${face}&room=living&at=19:40`, { waitUntil: 'networkidle' })
+    await expect(page.locator('.tile.light').first()).toBeVisible()
+    await page.waitForTimeout(400)
+
+    const tile = page.locator('.tile.light').first()
+    const b = (await tile.boundingBox())!
+    await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2)
+    await page.mouse.down()
+    await page.waitForTimeout(470)
+    await page.mouse.up()
+    await expect(page.locator('.opened-panel')).toBeVisible()
+    await page.waitForTimeout(600)
+
+    const close = (await page.locator('.opened-close').boundingBox())!
+    const pane = (await page.locator('.opened-panel').boundingBox())!
+    expect(close.x, `${face}: the close button is off the left of the screen`).toBeGreaterThan(0)
+    expect(close.x + close.width, `${face}: the close button is off the right of the screen`)
+      .toBeLessThanOrEqual(1280)
+    expect(close.x, `${face}: the close button is not inside the pane`).toBeGreaterThan(pane.x)
+    where[face] = { x: Math.round(close.x), y: Math.round(close.y) }
+
+    await page.locator('.opened-close').click()
+    await expect(page.locator('.opened-panel')).toHaveCount(0)
+  }
+  expect(where.glass).toEqual(where.paper)
+})

@@ -216,10 +216,19 @@ input:focus-visible {
 [data-face='glass'] .scene,
 [data-face='glass'] .back,
 [data-face='glass'] .banner {
-  position: relative;
   backdrop-filter: blur(var(--glass-blur, 26px)) saturate(var(--glass-sat, 1.7))
     brightness(var(--glass-br, 1.06));
   box-shadow: var(--glass-inner), var(--glass-drop);
+}
+/* The rim below is absolute, so its surface has to be a containing block. Every
+   surface here gets that except .back, which takes it from its own rule: a face
+   must not be able to move a control, and `[data-face='glass'] .back` beats a
+   plain `.opened-close`. */
+[data-face='glass'] .room-card,
+[data-face='glass'] .tile,
+[data-face='glass'] .scene,
+[data-face='glass'] .banner {
+  position: relative;
 }
 /* the rim, drawn as a gradient border with a mask so it follows whatever radius
    the surface already has. ::before is spoken for on a room card -- that is the
@@ -439,6 +448,14 @@ input:focus-visible {
   background: var(--surface);
   border: 1px solid var(--edge);
   margin-top: 8px;
+  /* here rather than in the glass block, where every other surface gets it: a
+     face must not be able to move a control. `[data-face='glass'] .back` beats
+     a plain `.opened-close` on specificity, so declaring position there sent
+     the pane's close button back into the flow and 30px to the LEFT of the
+     screen edge -- present, focusable, and thirty pixels past where a finger
+     could ever reach it. Declared on the surface itself, the one button that
+     positions itself still wins. */
+  position: relative;
 }
 .back:active {
   background: var(--surface-press);
