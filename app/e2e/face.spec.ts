@@ -284,3 +284,42 @@ test('glass on the floor keeps its drawing and loses only its depth', async ({ p
   expect(floor.card!.fill, `the floor left a translucent card: ${floor.card!.fill}`)
     .not.toMatch(/oklch\([^)]*\//)
 })
+
+/* A face that swaps the surface has to swap the ink with it.
+
+   toneVars flips --card-ink to near-black once a PAPER card passes L .62, which by mid-morning it
+   has. Glass repaints those same surfaces with a translucent pane, whose composite never gets far
+   from the sky's own band -- so the dark ink went on sitting there, all day, on every surface the
+   face touches. Measured on the weather's pane at 12:30: 2.4:1. The opened pane has carried its own
+   ink since it was made of something; this is the half that never reached the cards.
+
+   The second half of the test is the half that matters: paper must still flip. The fix is meant to
+   be the face answering for its own surfaces, not the flip being switched off. */
+test('glass takes the ink with the surface, and leaves paper to flip as it always did', async ({ page }) => {
+  const ink = async (url: string, sel: string) => {
+    await page.goto(url, { waitUntil: 'networkidle' })
+    await expect(page.locator(sel).first()).toBeVisible()
+    await page.waitForTimeout(700)
+    return page.evaluate((s) => {
+      const cv = document.createElement('canvas'); cv.width = cv.height = 1
+      const ctx = cv.getContext('2d', { willReadFrequently: true })!
+      ctx.fillStyle = getComputedStyle(document.querySelector(s)!).color
+      ctx.fillRect(0, 0, 1, 1)
+      const d = ctx.getImageData(0, 0, 1, 1).data
+      return { rgb: [d[0], d[1], d[2]], dark: (d[0] + d[1] + d[2]) / 3 < 128 }
+    }, sel)
+  }
+
+  // the hours that matter are the light ones: this was never wrong after dark
+  for (const at of ['09:00', '12:30', '16:00']) {
+    const onGlass = await ink(`/?layout=wall&nav=top&face=glass&at=${at}&wx=partlycloudy`, '.wall-loz')
+    expect(onGlass.dark, `${at}: the weather's pane is asking for rgb(${onGlass.rgb}) on glass`).toBe(false)
+
+    const inARoom = await ink(`/?room=living&face=glass&at=${at}&wx=partlycloudy`, '.tile.plain .tile-name')
+    expect(inARoom.dark, `${at}: a plain tile is asking for rgb(${inARoom.rgb}) on glass`).toBe(false)
+  }
+
+  // and paper, at the same hour, still does the thing glass is being excused from
+  const onPaper = await ink('/?room=living&face=paper&at=12:30&wx=partlycloudy', '.tile.plain .tile-name')
+  expect(onPaper.dark, `paper stopped flipping its ink: rgb(${onPaper.rgb})`).toBe(true)
+})

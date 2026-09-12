@@ -208,6 +208,20 @@ input:focus-visible {
   background-color: transparent;
   background-image: var(--glass-sweep), var(--glass);
   border-color: transparent;
+  /* And the ink with it. toneVars flips --card-ink dark once a PAPER card passes
+     L .62, which by mid-morning it has -- but these surfaces are not that card
+     any more. A pane is translucent, so what it comes out at never gets far from
+     the sky's own band, and that band tops out at L .49 at noon, where the
+     house's light ink still reads 5.3:1. Left on the card's answer it was 2.4:1
+     of near-black on a dark pane, all day, everywhere the face repaints.
+
+     Redeclared rather than restyled: they are inherited, so everything inside
+     picks them up without knowing it is on glass. Same move as the opened pane,
+     which has carried its own ink since the pane was made of something -- this
+     is the half of it that never reached the cards. */
+  --card-ink: var(--ink);
+  --card-ink-2: var(--ink-2);
+  --card-lamp-ink: var(--lamp);
 }
 [data-face='glass'] .tile.light {
   background-image: var(--glass-sweep), var(--card-light, var(--surface));
