@@ -4602,10 +4602,9 @@ select.input {
    the side they arrive from is the side there is more on.
 
    A transition, not an animation: the cards already carry the two scroll-driven
-   animations above, and `translate` is a property neither of them touches. The
-   reduced-motion block at the top of this file switches transitions off, and
-   RailView does not arm the flow at all in that case, so no card is ever left
-   sitting a step from where it belongs. See RailView.vue. */
+   animations above, and `translate` is a property neither of them touches. See
+   RailView.vue. Under reduced motion the row still arrives, as a fade -- the
+   block further down is where that is said. */
 /* Snapping off while they travel, and this is not a nicety: a translated card
    still offers itself as a snap position, so the row snapped to the first
    card's held-back place and scrolled 72px to meet it -- the cards stood still
@@ -4637,6 +4636,25 @@ select.input {
   .bento.go > .bento-card {
     translate: none;
     transition: none;
+  }
+}
+/* Reduced motion: the row arrives as a fade and nothing else. This is the one
+   thing allowed back through the blanket `transition: none !important` near the
+   top of the file, and it is not a loophole -- opacity is what every move in
+   this face collapses TO. Nothing travels, nothing scales, nothing blurs; the
+   row takes 180ms to be there instead of appearing between two frames, because
+   a fade is not vestibular motion and a pop is only abrupt.
+
+   The translate has to be cancelled rather than left to the dead transition:
+   `translate` is a plain property, not an animation, so .set would put every
+   card 696px right for exactly one painted frame before .go snapped it back. */
+@media (prefers-reduced-motion: reduce) {
+  .bento.set > .bento-card,
+  .bento.go > .bento-card {
+    translate: none !important;
+  }
+  .bento.go {
+    transition: opacity 180ms var(--ease) !important;
   }
 }
 

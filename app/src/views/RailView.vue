@@ -121,10 +121,14 @@ onUnmounted(() => { bento.value?.removeEventListener('scroll', edges); removeEve
  * had never happened.
  */
 const flow = ref<'' | 'set' | 'go'>('')
-const stillMoves = !matchMedia('(prefers-reduced-motion: reduce)').matches
 let settle: number | undefined
 function arrive() {
-  if (!stillMoves || empty.value) return       // reduced motion: the row is simply there, and never left mid-slide
+  if (empty.value) return                      // nothing to arrive, and an empty row must not be left at opacity 0
+  /* Armed under reduced motion too. What arrives is not the same thing: panel.css
+     cancels the travel there and leaves a 180ms fade, which is what the whole
+     face collapses to. Arming it in both cases is what stops the two from
+     drifting apart -- the decision about what a move becomes belongs in one
+     place, and it is the stylesheet. */
   flow.value = 'set'                           // every card a step to the right of where it belongs, no transition
   requestAnimationFrame(() => requestAnimationFrame(() => {
     if (flow.value !== 'set') return

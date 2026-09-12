@@ -174,3 +174,60 @@ test('under glass the house gets out of the way first, and the object lands last
   expect(when('bar:start', 1), 'the bar came back before the pane had gone')
     .toBeGreaterThan(when('pane:start', 1) + 300)
 })
+
+/* What the face does when it is asked not to move. All eight moves collapse to opacity: nothing
+   travels, nothing scales, nothing blurs, and the field stops drifting. Two things are worth
+   holding, and they pull in opposite directions -- that nothing is left moving, and that the row
+   still ARRIVES rather than appearing between two frames. */
+test.describe('asked not to move', () => {
+  test.use({ reducedMotion: 'reduce' })
+
+  test('leaves nothing running under glass, on the screen or in the sky', async ({ page }) => {
+    await page.goto('/?face=glass&layout=rail&nav=top&at=19:40', { waitUntil: 'networkidle' })
+    await expect(page.locator('.bento-card').first()).toBeVisible()
+    await page.waitForTimeout(900)
+
+    const still = await page.evaluate(() => {
+      const moving: string[] = []
+      for (const el of document.querySelectorAll('*')) {
+        const cs = getComputedStyle(el)
+        const where = (el.className || el.tagName).toString().slice(0, 40)
+        if (cs.animationName !== 'none') moving.push(`${where}: animation ${cs.animationName}`)
+        if (cs.filter !== 'none') moving.push(`${where}: filter ${cs.filter}`)
+        if (cs.transitionDuration.split(',').some((d) => parseFloat(d) > 0 && !/opacity/.test(cs.transitionProperty)))
+          moving.push(`${where}: transition ${cs.transitionProperty}`)
+      }
+      return [...new Set(moving)]
+    })
+    expect(still, `still moving: ${still.join(' | ')}`).toEqual([])
+  })
+
+  test('still lets the row arrive, as the fade every move collapses to', async ({ page }) => {
+    const seen: { o: string; translate: string | null }[] = []
+    await page.exposeFunction('__push', (r: { o: string; translate: string | null }) => { seen.push(r) })
+    await page.addInitScript(() => {
+      const tick = () => {
+        const row = document.querySelector('.bento')
+        if (row) {
+          const card = row.querySelector('.bento-card')
+          ;(window as any).__push({
+            o: Number(getComputedStyle(row).opacity).toFixed(2),
+            translate: card ? getComputedStyle(card).translate : null,
+          })
+        }
+        requestAnimationFrame(tick)
+      }
+      requestAnimationFrame(tick)
+    })
+    await page.goto('/?face=glass&layout=rail&nav=top&at=19:40', { waitUntil: 'networkidle' })
+    await page.waitForTimeout(1400)
+
+    // it arrived rather than simply being there
+    expect(seen.some((r) => r.o === '0.00'), 'the row never faded in; it was just suddenly there').toBe(true)
+    expect(seen[seen.length - 1].o, 'the row never finished arriving').toBe('1.00')
+    // and nothing travelled on the way. A card held 696px right for even one painted frame is the
+    // move this was meant to remove, whether or not a transition was carrying it there.
+    const travelled = seen.filter((r) => r.translate && r.translate !== 'none' && !/^0px( 0px)?$/.test(r.translate))
+    expect(travelled.length, `a card travelled: ${travelled[0]?.translate}`).toBe(0)
+  })
+})
