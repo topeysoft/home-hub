@@ -68,6 +68,13 @@ a bordered box would be a tile saying what the whole screen behind it is already
 saying. And the row gets the rest of the screen -- 548 tall on the board where
 the Rail can only afford 392.
 
+The weather recedes with the row, and that one is the layout's call rather than
+the face's. In the Rail the weather is a corner element and a face can decide
+whether it has depth; here it is the biggest thing on the screen, and a third of
+it holding still while everything else moves reads as fixed furniture the cards
+are sliding behind. So both faces dim it and take the reading away; only glass
+adds the blur, because paper's softening belongs to the row's own edges.
+
 It is the one arrangement that also brings two constants: 28px corners and Plus
 Jakarta. That is a deliberate widening of the rule in `layout.ts`, written down
 there -- Wall was drawn against those two numbers and in the house's own it is a
