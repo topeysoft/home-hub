@@ -29,8 +29,11 @@ test('there is no greeting taking the top of the screen', async ({ page }) => {
 
 test('the weather is beside the row, not above it', async ({ page }) => {
   const wx = (await page.locator('.wall-wx').boundingBox())!
-  const row = (await page.locator('.bento').boundingBox())!
-  expect(wx.x + wx.width, 'the weather overlaps the row').toBeLessThanOrEqual(row.x + 1)
+  // the first CARD, not the row: the row spans the whole screen and passes UNDER the weather, which
+  // is what lets a swiped card travel across it. What must be clear of the weather is where the row
+  // comes to rest, not where its scroller begins.
+  const card = (await page.locator('.bento-card').first().boundingBox())!
+  expect(wx.x + wx.width, 'the weather overlaps the row at rest').toBeLessThanOrEqual(card.x + 1)
   // and it is actually large: the board gives it just under a third of the screen
   expect(wx.width).toBeGreaterThan(260)
   expect(wx.height).toBeGreaterThan(380)
@@ -180,4 +183,46 @@ test('the weather recedes when the row is swiped away from home, whichever face 
     expect(back.drawing.blur, `${face}: the weather never came back into focus`).toBe(0)
     expect(back.readout.opacity, `${face}: the reading never came back`).toBe(1)
   }
+})
+
+/* The row passes under the weather rather than stopping at it. On the board the weather is drawn
+   first and the rail after, both unpositioned in z, so the cards paint on top and the rail carries
+   the first one 460px left -- across the weather, which by then has gone soft. Beside it, as a flex
+   sibling, the row could not: a scroller clips at its own box, so a swiped card stopped existing at
+   the weather's edge, which is exactly what it looked like -- something with a fixed background
+   covering them. */
+test('a swiped card travels over the weather instead of stopping at it', async ({ page }) => {
+  const state = () => page.evaluate(() => {
+    const row = document.querySelector('.bento')!
+    const first = row.querySelector('.bento-card')!
+    const r = first.getBoundingClientRect(), cs = getComputedStyle(first)
+    return {
+      cardLeft: r.x,
+      weatherRight: document.querySelector('.wall-wx')!.getBoundingClientRect().right,
+      blur: Number(cs.filter.match(/blur\(([\d.]+)px\)/)?.[1] ?? 0),
+      opacity: Number(Number(cs.opacity).toFixed(2)),
+      shifted: Math.round(new DOMMatrix(cs.transform).m41),
+    }
+  })
+
+  const home = await state()
+  expect(home.cardLeft, 'the first card does not rest clear of the weather').toBeGreaterThan(home.weatherRight)
+  // and it rests completely crisp: scroll-padding insets the scrollport a view() timeline measures
+  // against, and getting that a few pixels wrong leaves the first card part-way into its own exit
+  expect(home.shifted, 'the first card is already sliding at rest').toBe(0)
+  expect(home.blur, 'the first card is already soft at rest').toBe(0)
+  expect(home.opacity, 'the first card is already dim at rest').toBe(1)
+
+  await page.evaluate(() => {
+    const row = document.querySelector('.bento') as HTMLElement
+    row.style.scrollSnapType = 'none'
+    row.scrollLeft = row.querySelector('.bento-card')!.getBoundingClientRect().width + 18
+  })
+  await page.waitForTimeout(400)
+
+  const away = await state()
+  expect(away.cardLeft, 'the card stopped at the weather instead of crossing it')
+    .toBeLessThan(away.weatherRight)
+  expect(away.blur, 'the card crossed the weather still sharp').toBeGreaterThan(4)
+  expect(away.opacity, 'the card crossed the weather without dimming').toBeLessThan(0.7)
 })

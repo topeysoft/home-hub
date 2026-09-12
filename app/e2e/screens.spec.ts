@@ -15,6 +15,8 @@ const SCREENS: [name: string, size: keyof typeof SIZES, url: string][] = [
   ['home, rail', 'kiosk', '/?layout=rail&at=19:40'],
   ['home, wall', 'kiosk', '/?layout=wall&at=19:40'],
   ['home, wall in glass', 'kiosk', '/?layout=wall&face=glass&nav=top&at=19:40'],
+  ['home, wall on a phone', 'phone', '/?layout=wall&nav=top&at=19:40'],
+  ['home, wall on a tablet', 'tablet', '/?layout=wall&nav=top&at=19:40'],
   ['a room', 'kiosk', '/?room=living&at=19:40'],
   ['a room at three columns', 'kiosk', '/?room=living&at=19:40'],
   ['the kitchen', 'kiosk', '/?room=kitchen&at=19:40'],

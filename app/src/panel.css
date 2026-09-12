@@ -4726,10 +4726,37 @@ select.input {
   flex-direction: column;
   min-height: 100%;
 }
+/* The weather is UNDER the row, not beside it, and that is the whole of how the
+   two relate. On the board the weather block is drawn first and the rail after
+   it, both unpositioned in z, so the cards paint on top: the rail carries them
+   460px left and the first one ends up at x 46, straight across the weather.
+   That is what the receding is FOR -- a card slides over a sky that has gone
+   soft and dim, and the depth is the point.
+
+   Beside it, as a flex sibling, the row could not do that. A scroller clips at
+   its own box, so a card swiped left simply stopped existing at the weather's
+   edge, which reads exactly as what it is: something with a fixed background
+   covering them. So the row spans the whole stage and rests its first card
+   clear of the weather with padding instead.
+
+   One number is declared here and used three times, because all three have to
+   agree: where the weather ends, where the row's first card rests, and --
+   through scroll-padding, which insets the scrollport a view() timeline
+   measures against -- where a card starts to recede.
+
+   In vw, and that is not a style choice. A percentage means two different
+   things to the two properties that need it: `padding` resolves it against the
+   containing block and `scroll-padding` against the scrollport, which here are
+   1200 and 1280. The first attempt at this had them 25px apart, which put the
+   first card a twelfth of the way into its own exit while the row was sitting
+   at home -- 11px out of place, slightly dim and slightly soft, at rest. A
+   viewport unit means the same thing to both.
+
+   33.6vw is where the board's weather ends: 484 of 1440. */
 .wall-stage {
-  display: flex;
-  align-items: stretch;
-  gap: 20px;
+  --wx-end: clamp(300px, 33.6vw, 520px);
+  --wx-gap: 20px;
+  position: relative;
   margin-block: auto; /* in the middle of whatever height is left, as the rail is */
   min-width: 0;
 }
@@ -4738,10 +4765,14 @@ select.input {
 }
 /* the left third: 460 of the board's 1440, and it holds its share rather than a
    fixed width, because the row beside it is what gets the rest */
+/* measured from the screen's edge rather than the stage's, which is where the
+   board measures it from and is why the drawing is allowed out past the padding */
 .wall-wx {
-  position: relative;
-  flex: 0 0 clamp(280px, 32%, 409px);
-  min-width: 0;
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: calc(var(--wx-end) - 40px);
 }
 /* the drawing sits high and left, and is allowed past the stage's padding: it is
    scenery, not content, and scenery that stops at a margin reads as a picture of
@@ -4852,16 +4883,85 @@ select.input {
 /* the row takes everything the weather does not, and bleeds off the right edge
    only -- its left edge is a real edge here, because something is beside it */
 .wall-stage .bento {
-  flex: 1 1 0;
+  /* over the weather, the way the board stacks them: the weather places itself
+     and this does not, so it needs saying out loud */
+  position: relative;
+  z-index: 1;
   min-width: 0;
-  margin-inline: 0 -40px;
-  padding-inline: 0 0;
-  scroll-padding-inline-start: 0;
+  margin-inline: -40px;
+  padding-inline: calc(var(--wx-end) + var(--wx-gap)) 0;
+  scroll-padding-inline-start: calc(var(--wx-end) + var(--wx-gap));
   /* 548 of the board's 900, which is what there is room for once the greeting is
      gone: two rows and the gap between them, and taller than the Rail's by the
      whole height of the header it does not have */
   --row: clamp(168px, calc((100dvh - 332px) / 2), 264px);
 }
+
+/* On a phone there is no left third to give away: the screen is already a
+   column, so the weather goes above the row and the row stops being a row --
+   the same thing the Rail does at this width, and for the same reason. A
+   sideways sweep of wall-sized cards on a 390px screen is a worse column.
+
+   Everything the wide layout sets has to be undone by name. The generic phone
+   rule for .bento is a single class and this one is two, so it does not win. */
+@media (max-width: 860px) {
+  .wall-stage {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .wall-wx {
+    position: relative;
+    left: auto;
+    top: auto;
+    bottom: auto;
+    width: 100%;
+    height: 210px;
+    flex: 0 0 auto;
+  }
+  .wall-cloud {
+    left: -10px;
+    width: 210px;
+    height: 150px;
+  }
+  .wall-loz {
+    left: auto;
+    right: 4px;
+    top: 0;
+    bottom: auto;
+    width: 150px;
+    height: 200px;
+    border-radius: 75px;
+    padding: 24px 18px 22px;
+  }
+  .wall-temp {
+    font-size: 50px;
+  }
+  .wall-says {
+    margin-top: 10px;
+    font-size: 16px;
+  }
+  .wall-sub {
+    margin-top: 6px;
+    font-size: 12.5px;
+  }
+  .wall-stage .bento {
+    position: static;
+    margin-inline: 0;
+    padding-inline: 0;
+    scroll-padding-inline-start: 0;
+  }
+  .wall-stage .bento .tile.light,
+  .wall-stage .bento .tile.media,
+  .wall-stage .bento .tile.plain,
+  .wall-stage .bento .scene-card,
+  .wall-stage .bento .tile.camera,
+  .wall-stage .bento .tile.climate {
+    width: 100%;
+    height: auto;
+  }
+}
+
 
 /* ---------- the rail arrives ----------
    First load, waking from rest, coming back from a room: the cards come in from
