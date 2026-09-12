@@ -109,9 +109,55 @@ screen, and compare with the panel at 1280x800. What is playing sits at 34.7%
 where the board has 35.1%, 23.0% wide against 23.1%; the glance column at 59.1%
 against 59.7%. `e2e/wall.spec.ts` carries those numbers.
 
-One thing about it is known and not done: the nudges have nowhere better to go
-than above the row, so a house with something to attend to loses 60px off the
-top that the board does not spend -- the board has nothing to attend to.
+**The band no longer costs the row anything, and three things had to change for
+that.** A house with something to attend to used to hand 35px of the row back,
+which is the worst of both: the row got shorter and the urgent thing was no
+louder for it. Pushing the row down is a weak signal -- from across a room
+nobody notices a hundred pixels of reflow -- and it ties urgency to layout
+damage, so the more urgent the thing, the more broken the arrangement looks.
+
+The panel already knew the ranking and drew it flat. `App.vue` wakes the wall
+when a phone asks to join and for nothing else, and `Asks.vue` carried a comment
+saying that surface must look the same at every hour, because it is the one
+place somebody hands out a key to the house and recognising it instantly is the
+only defence against answering a prompt they should not. Then it sat in a row
+underneath "An update is ready".
+
+So urgency is carried by SURFACE, not by how much space something steals:
+
+| what it is | where it goes | costs the row |
+| ---------- | ------------- | ------------- |
+| someone is waiting -- a phone at the door | a pane that opens itself (`AskPane.vue`) | nothing |
+| something is broken -- what has stopped answering | a chip opening a page of This house (`NotesPage.vue`) | nothing |
+| something is offered -- an update, a found device, the lock | a quiet chip in the band | nothing |
+
+With those two out of the band, nothing left in it is taller than one line of
+house news -- and a band of a known height need not take part in the layout at
+all. It comes out of the flow and hangs in the gap that is already there: the
+stage centres in whatever height is left, which leaves 58px between the top bar
+and the row at 1280x800, and a chip is 57. `--stage-top` is named where it is
+declared, because the band starts at the BAR rather than at the stage's content
+box and the two have to agree. It never grows: one line, no wrapping, one line
+of sub, and a fourth thing to attend to scrolls sideways, because a band that
+can grow is a row that can shrink.
+
+The row lands at a fixed 142 whatever is in the band, which puts the card at 150
+against the board's 160 -- 1.25% of the screen, inside the 1.5% every other
+proportion in `e2e/wall.spec.ts` is held to. Chasing the last ten would mean
+giving up `margin-block: auto`, and with it the thing that keeps this
+arrangement sane on a screen that is not 800 tall.
+
+Two notes on the ask pane, because both are the kind of thing someone will want
+to undo. Its colour does NOT track the sky, which is the only surface in the
+file that does not, and `e2e/ask.spec.ts` is the only test in the suite that
+wants two hours to come out identical -- a surface a person is meant to
+recognise cannot look different at every hour. That would normally be the hole
+punched in the daylight slice 5 closed, except that the room behind a pane is
+already taken down by `--glass-scrim`, so a dark pane is not sitting in a bright
+room, it IS the room being out of the way. And the way out of it is *aside*
+rather than *deny*: the knock stays standing and the chip in the band brings the
+pane back, because a person who wants to look at something else first must not
+have to choose between denying a phone and being stuck.
 
 **Move 7 is in, and it was the last one no slice had built.** On the board the
 command box down in the bottom bar is a single orb until it is touched: 460ms of
@@ -325,13 +371,19 @@ than the gaps involved. Bar at 0, veil at 25, pane at 51, landed at 480, the
 object still going until 760. The test asserts the ORDER, because that is what
 breaks silently and the numbers are load-dependent.
 
-One part of the slice did not land and could not: **the row you came from is not
-still there above the pane.** The pane stops short of the top bar as specified --
-176px at 1280x800 -- but this panel's home leads with a serif greeting, a
-next-up line and the attention strip, so the row does not begin until y 340 and
-the pane covers all of it. On the canvas the row starts at the top and the pane
-takes its lower two thirds. That is the arrangement, not the face, and it is the
-open decision below.
+One part of the slice did not land at the time, and it has since: **the row you
+came from is now still there above the pane.** It was written up here as the
+arrangement's problem rather than the face's, and that was right. The pane
+stopped short of the top BAR -- 176px at 1280x800 -- but home led with a serif
+greeting, a next-up line and the attention strip, so the row did not begin until
+y 340 and the pane covered all of it.
+
+Wall took the first three away and the band above (see *Where this is*) took the
+last one out of the flow, so the row now starts at 142 and a pane can stop short
+of the ROW instead: 25vh where it was 22, which is the board's own 56 of 900 --
+the top of a card and its corner -- at this size. That is the whole difference
+between a drawer and a new screen, and it needed the arrangement to exist before
+the number could mean what it said.
 
 **6. Reduced motion, and the floor.** *(landed, except the Pi)*  All eight moves collapse to
 opacity, the field stops drifting, the rail jumps. Then the question this whole
@@ -402,8 +454,12 @@ screen, so [`Room.dc.html`](../Room.dc.html) argues it is a ranked grid rather
 than something you sweep — and rail-plus-pane is the spine of this direction.
 Whether it has an answer there is genuinely unknown.
 
-With all six slices in, Wall built and move 7 landed, what is left is not really
-port work any more. The Pi number is a half-hour on the right machine whenever someone wants
+With all six slices in, Wall built, move 7 landed and the band out of the flow,
+what is left is not really port work any more. Of the eight moves the canvas
+names, seven are in; the eighth, **move 6, Listening**, has nowhere to live yet
+because there is no voice. It is the orb's own move -- scale 1.18, 320ms in,
+520ms out, one ring, once -- and the orb now exists, so the move is waiting on
+the feature rather than on the port. The Pi number is a half-hour on the right machine whenever someone wants
 it, and it gates nothing. Everything else on this page is a design decision:
 whether the day wants a face of its own, whether the sky should suppress its
 landscape under glass, and whether a room is a rail at all. The face is
