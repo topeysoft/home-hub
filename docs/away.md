@@ -32,6 +32,10 @@ maker runs a small service (a domain, a cheap relay, certificates) and the house
 - **Nothing to install.** The phone's browser and its home-screen icon are the app. Pairing is a scan and a tap.
 - **Every phone is visible and removable.** *People* lists them under the people they belong to; Remove is one tap
   and takes effect at once.
+- **Nothing between a phone and the house terminates TLS.** The relay routes by SNI and carries bytes it cannot read;
+  the house holds the only key. So the record for a house's name is DNS-only and never proxied — Cloudflare's orange
+  cloud would put a cloud back in the path, and it is one checkbox with no visible symptom, which is the worst kind
+  of mistake this design can make.
 
 ## Three pieces, in order
 
@@ -90,7 +94,7 @@ the raw bytes into that house's tunnel. It never decrypts. What it can see is wo
 frame, not a code.**
 
 **The listener split, which is the part to get right.** Traffic that arrives through the tunnel must land on a
-listener of its own. If it shared Caddy's ordinary `:443`, a request routed by SNI `nadine.homehub.app` could carry
+listener of its own. If it shared Caddy's ordinary `:443`, a request routed by SNI `nadine.elyir.app` could carry
 `Host: hub.local` after the handshake and fall into the local site block — which is the front door propped open from
 the internet. So `frpc` forwards into a Caddy site on `:9443` that `bind`s to loopback and is unreachable from the
 LAN, and **everything arriving there is away traffic whatever Host it claims**.
@@ -129,18 +133,49 @@ sends.
 so the relay is never in the path at home. At home with the internet down the name fails and `hub.local` answers. The
 relay being down is the same as being away with no signal: the house itself is untouched.
 
+**The name is `elyir.app`**, bought 12 September 2026, its DNS run from Cloudflare, and a house is a subdomain of
+it: `nadine.elyir.app`. Three things follow from the choice of domain rather than from anything in this design.
+
+- **`.app` is on the HSTS preload list at the top level, with `includeSubDomains`.** Every browser shipping that list
+  refuses plain http to anything under `elyir.app` — and, the part that decides the order below, an HSTS host whose
+  certificate the browser does not trust offers **no click-through**. There is no half-state where the first tap from
+  outside happens over a certificate somebody accepts once. Piece 3 is a prerequisite of step 3, not a step after it.
+- **The record is DNS-only, never proxied.** Cloudflare's orange cloud terminates TLS at Cloudflare, which is the
+  cloud this document ruled out on its first page, and it would quietly undo the pass-through the relay was chosen
+  for. Grey cloud, and a line in the health list if a hub ever finds itself behind one.
+- **No house ever holds a Cloudflare credential.** Cloudflare's API tokens scope to a zone, not to a record, so the
+  narrow per-house credential imagined below cannot be minted: a token letting one hub write its own
+  `_acme-challenge` lets it write every other house's too. Piece 3 is what removes the need for one.
+
+**All of it in Terraform.** The zone, the records, the relay's box and the tokens are infrastructure as code; nothing
+about `elyir.app` is clicked in a console. What the maker runs is then reviewable, reproducible and recoverable from
+the repository, which matters more here than it would elsewhere, because this is the one piece of the product a
+household cannot fix for itself.
+
+**And it is one record.** The relay routes by SNI and the certificate is proved over TLS, so **DNS never has to learn
+a house's name**: a single grey-cloud wildcard `*.elyir.app` pointing at the relay covers every house that will ever
+register, and registering one writes nothing to DNS at all. The registration service hands out names and keys; it does
+not touch the zone. A zone that never changes at runtime is a zone Terraform can own completely.
+
 ### 3. A real certificate per hub
 
-*Not started. Depends on the name from piece 2.*
+*Not started, and no longer a step after the relay: `.app` leaves no click-through, so the first tap from outside
+needs a certificate a phone already trusts. This piece comes before step 3 finishes.*
 
 Because the relay never terminates TLS, **the hub holds the certificate** — for a name that does not resolve to it.
-That rules out the usual challenge and leaves one:
+That was read as ruling out every challenge but DNS-01. It does not.
 
-**ACME over DNS-01.** The registration service mints a credential scoped to one house's `_acme-challenge` record and
-nothing else; the hub answers the challenge and renews on its own. The private key never leaves the house. The
-practical snag is that the stock `caddy:2` image has no DNS provider module compiled in, so either the driver layer
-builds a Caddy that does, or the brain runs its own ACME client and hands Caddy the files. Decide by how much of this
-we want to own.
+**ACME over TLS-ALPN-01.** The validator opens a TLS connection to the name on 443 offering the ALPN protocol
+`acme-tls/1`; the relay routes it by SNI like anything else, and the house answers it on the port it already has. No
+DNS record is written, no credential is minted, no house is trusted with the zone — and **the stock `caddy:2` does
+this out of the box**, so the custom Caddy with a DNS provider compiled in is not needed, which was the snag that made
+this piece expensive. Checked on 12 September 2026 that the relay is blind to ALPN (see *What was verified*). What has
+**not** been checked, because it needs the VPS and the real name, is a live issuance end to end; that is step 5's own
+exit test.
+
+**DNS-01 stays the fallback**, and if it is ever needed the credential belongs to the registration service, not to the
+house: the hub asks the service to publish the TXT, and the service is the only thing holding a Cloudflare token. That
+keeps the rule that no house can touch another house's name.
 
 **A trusted origin at home too.** The app should not drop to an untrusted certificate the moment it is on the sofa, so
 the same certificate covers a name that resolves to the hub's LAN address. Simplest first cut is a record in the
@@ -152,7 +187,9 @@ Screen with no certificate profile to install, ever. The wall panel keeps workin
 any of it.
 
 **The rough edge:** a hub off the internet longer than a renewal window lets its certificate lapse, and phones away
-lose the name until it is back. The LAN is unaffected. *This hub* should say this rather than let it surprise someone.
+lose the name until it is back. With TLS-ALPN-01 the renewal needs the tunnel up, which is the same condition as being
+reachable at all, so nothing new can break — but a hub that has been dark for sixty days comes back needing the relay
+before it can prove its own name. The LAN is unaffected. *This hub* should say this rather than let it surprise someone.
 
 ## The order to build it
 
@@ -179,8 +216,17 @@ The first two steps need nothing from the maker and can land and be tested on a 
    shows a promise it cannot keep, so the switch on *People* lands with step 3 and not before. Nothing is missing
    underneath it.
 3. **The relay on the VPS and `frpc` in the compose file**, one house, name hard-coded. First tap from outside.
+   Two conditions the verification above puts on this step, neither visible from the outside:
+
+   - **The away door needs a certificate, and on `.app` it has to be a real one.** `type = "https"` forwards raw TLS
+     and the house is what terminates it, so a `:9443` speaking plain http — which is what it speaks today — never
+     completes a handshake. An earlier draft of this line said a `tls internal` certificate somebody clicks through
+     would carry the first tap; `elyir.app` being HSTS-preloaded means there is no click-through to offer. So this is
+     not two pieces being coupled: **step 5 lands before step 3's first tap.**
+   - **PROXY protocol at both ends**, or the house cannot tell one away phone from another. See *What was verified*.
 4. **The registration service and the switch in *This hub*.** Names, keys, more than one house.
-5. **The certificate:** DNS-01 on the hub, then the alias that covers home.
+5. **The certificate:** TLS-ALPN-01 on the hub — which is why this now comes before the first tap in step 3 —
+   then the alias that covers home.
 6. **Web push, then the microphone** — both waiting on 5 and neither on each other.
 
 ## What was verified
@@ -198,6 +244,24 @@ The first two steps need nothing from the maker and can land and be tested on a 
 - **And the reason step 1 exists.** The origin saw `Host: nadine.homehub.test:9444` — the client's own Host header,
   carried through untouched after SNI had already chosen the hub. SNI picks the house; the Host header is still
   whatever the request claims. That is exactly the bypass the listener split was built for, confirmed in the small.
+
+*A second run the same day, this time with the pinned `caddy:2` in the chain rather than a stand-in origin, so the
+door under test was the `:9443` site as it is actually written.*
+
+- **The stamp cannot be brought by the client.** An `X-Hub-Via: lan` sent from outside arrived at the brain as
+  `relay`: `header_up X-Hub-Via relay` replaces what a request carries rather than adding to it. The door's own
+  account of where a request came from is the only one that survives.
+- **The address the house sees is `frpc`'s, not the phone's.** Every away request arrives from `127.0.0.1`, because
+  that is where `frpc` is. `request.client.host` is what `hub/lock.py` counts wrong codes against, so as it stands
+  the whole of away would share one bucket: five wrong codes from one phone and every phone away waits the minute
+  out. The fix is `transport.proxyProtocolVersion = "v2"` on the proxy and a `proxy_protocol` listener wrapper on the
+  `:9443` site, and it was checked working through the real Caddy. The two ends are all or nothing — one without the
+  other kills the TLS handshake outright, which is at least a failure that shows itself rather than an address
+  quietly going wrong.
+- **The relay is blind to ALPN.** A handshake offering `acme-tls/1` through the relay arrives at the house and is what
+  the house selects; an ordinary `h2` handshake at the same door still negotiates `h2`; a handshake offering nothing
+  negotiates nothing. The relay's configuration mentions none of them. That is what makes TLS-ALPN-01 possible in
+  piece 3, and it also means the relay cannot tell an ACME validation from a phone opening the house.
 
 ## Open decisions
 
