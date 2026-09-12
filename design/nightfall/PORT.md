@@ -79,6 +79,14 @@ scrollport a view() timeline measures against -- where a card starts to recede.
 vw and not a percentage, because `padding` resolves a percentage against the
 containing block and `scroll-padding` against the scrollport.
 
+A card fades ACROSS the weather rather than before it, between the two edges
+that matter: it holds its focus all the way to the weather's edge, goes soft
+while it is crossing it, and is gone by the time it reaches the row's own edge.
+That is the whole reason the sky recedes at the same time -- there has to be
+something soft behind the thing going soft. It took three goes to land, and the
+first two were measured and correct against the wrong edge, which is worth
+knowing before someone shortens it again.
+
 The weather recedes with the row, and that one is the layout's call rather than
 the face's. In the Rail the weather is a corner element and a face can decide
 whether it has depth; here it is the biggest thing on the screen, and a third of
