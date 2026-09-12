@@ -75,7 +75,7 @@ onUnmounted(() => clearInterval(t))
       <div class="wall-wx" v-if="temp || says">
         <WeatherArt class="wall-cloud" />
         <div class="wall-loz">
-          <div class="wall-temp display" v-if="temp">{{ temp }}</div>
+          <div class="wall-temp" v-if="temp">{{ temp }}</div>
           <div class="wall-says" v-if="says">{{ says }}</div>
           <div class="wall-sub" v-if="sun">{{ sun }}</div>
           <div class="wall-sub dim" v-if="also">{{ also }}</div>

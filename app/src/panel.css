@@ -4638,6 +4638,32 @@ select.input {
   }
 }
 
+/* The two constants Wall brings with it, and the only place either one is
+   declared. layout.ts says why a layout is allowed them at all: this
+   arrangement was drawn against them, and given the house's own it is a near
+   miss rather than the thing that was drawn. Both stay inside this attribute,
+   so Stack and Rail are untouched whichever face is on.
+
+   The radius is a smaller correction than it looked. The board's card is 28px
+   and the house's --r-lg is 22, but bento cards have never used --r-lg -- they
+   were already 26. The gap was two pixels, not six. It is still worth closing,
+   because the whole point of this layout is being the drawing rather than
+   nearly it.
+
+   font-family and not just the token: `body` resolves --sans on itself, above
+   the shell, so a shell that redefined only the token would be inherited past. */
+[data-layout='wall'] {
+  --sans:
+    'Plus Jakarta Sans Variable', 'Plus Jakarta Sans', -apple-system,
+    'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
+  --r-lg: 28px;
+  font-family: var(--sans);
+}
+[data-layout='wall'] .bento .tile,
+[data-layout='wall'] .bento .scene-card {
+  border-radius: 28px;
+}
+
 /* ---------- Wall: the weather large, and what is on beside it ----------
    The arrangement from design/nightfall/Main.dc.html, which is a 1440x900 board
    and scales to this panel's 1280x800 at almost exactly 8/9. What makes it
@@ -4710,8 +4736,11 @@ select.input {
   backdrop-filter: var(--frost);
 }
 .wall-temp {
+  /* the board's numerals are its own typeface at 200, not the house's serif:
+     there is no heading in this arrangement for the serif to be the voice of */
+  font-family: var(--sans);
   font-size: 84px;
-  font-weight: 300;
+  font-weight: 250;
   line-height: 0.92;
   letter-spacing: -0.045em;
   font-variant-numeric: tabular-nums;

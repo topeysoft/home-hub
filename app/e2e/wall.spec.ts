@@ -56,3 +56,32 @@ test('it still carries everything Home must carry', async ({ page }) => {
   await expect(page.locator('.bottombar .say-box'), 'no way to tell the house anything').toHaveCount(1)
   await expect(page.locator('.nudges'), 'nowhere for an update or a found device to be offered').toHaveCount(1)
 })
+
+/* The two constants this layout brings with it. Wall is the only arrangement allowed any, so the
+   half of this that matters is the second half: that Rail is standing exactly where it was. A
+   typeface that leaked would not look like a bug, it would look like a redesign. */
+test('it brings its own type and corners, and leaves the other arrangements where they were', async ({ page }) => {
+  const look = () => page.evaluate(async () => {
+    await document.fonts.ready
+    const card = document.querySelector('.bento .tile')!
+    const asked = getComputedStyle(document.querySelector('.shell')!).fontFamily.split(',')[0].replace(/['"]/g, '')
+    return {
+      asked,
+      // asking for a face the browser does not have is the same as not asking
+      loaded: document.fonts.check(`16px "${asked}"`),
+      radius: getComputedStyle(card).borderRadius,
+    }
+  })
+
+  const wall = await look()
+  expect(wall.asked, 'Wall is not in its own typeface').toBe('Plus Jakarta Sans Variable')
+  expect(wall.loaded, 'the typeface was asked for but never loaded, so this is the fallback').toBe(true)
+  expect(wall.radius).toBe('28px')
+
+  await page.goto('/?layout=rail&nav=top&at=19:40', { waitUntil: 'networkidle' })
+  await expect(page.locator('.bento').first()).toBeVisible()
+  await page.waitForTimeout(800)
+  const rail = await look()
+  expect(rail.asked, "Wall's typeface leaked into the Rail").toBe('Instrument Sans Variable')
+  expect(rail.radius, "Wall's corners leaked into the Rail").toBe('26px')
+})
