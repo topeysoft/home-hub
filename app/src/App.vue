@@ -43,7 +43,9 @@ const panel = computed(() => isPage(store.sheet))   // This house is open, on on
 /* A phone at the door opens its own pane, and stays open until it is answered or put aside. It is
    not `store.opened` -- that is a device -- but it is the same surface and the room recedes behind
    it the same way, so it counts towards the shell's opened state. */
-const asking = computed(() => store.asks.length > 0 && !store.askAside)
+/* A phone that was at the door before this screen went away is not at the door now: the ask pane sits
+   outside the guards below, so it is this computed that has to know the house is not showing. */
+const asking = computed(() => !shut.value && store.asks.length > 0 && !store.askAside)
 const room = computed(() => rooms.value.find(r => r.id === selected.value) ?? null)
 
 const ambient = computed(() => store.sky.elevation < -8 ? 'night' : store.sky.elevation < 6 ? (store.sky.azimuth < 180 ? 'dawn' : 'dusk') : 'day')

@@ -40,8 +40,9 @@ export async function request(url: string, init: RequestInit = {}): Promise<Resp
     let body: any = null
     try { body = await r.clone().json() } catch {}
     if (body && ['remote', 'away', 'at-home'].includes(body.detail)) {
-      lock.away = body.message ?? 'This house is not open from here.'
-      throw new Error(lock.away)
+      const said: string = body.message ?? 'This house is not open from here.'
+      lock.away = said
+      throw new Error(said)
     }
   }
   return r
