@@ -59,10 +59,14 @@ defineExpose({ updateReady })
 
 <template>
   <Say v-if="say" />
-  <Asks />
 
-  <!-- one row for the nudges: a column under the side list, a strip of chips under the tabs -->
+  <!-- One row for the nudges: a column under the side list, a strip of chips under the tabs. A
+       phone at the door is first in it and wears the attention colour, but it is a chip like the
+       rest -- the deciding is a pane that opens itself (AskPane.vue), so nothing in this band is
+       ever taller than one line of house news. That is what lets a layout give the band a fixed
+       height and stop the row moving when something wants you. -->
   <div class="nudges">
+  <Asks />
   <button class="nudge" v-if="updateReady" @click="install">
     <span class="nudge-icon"><Icon name="sparkle" :size="20" /></span>
     <span class="nudge-text"><span class="nudge-title">An update is ready</span><span class="nudge-sub">{{ update?.latest?.title || 'New for the hub.' }} Tap to install; it takes a few minutes and the lights keep working.</span></span>

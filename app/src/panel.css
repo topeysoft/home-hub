@@ -3764,31 +3764,19 @@ select.input {
   }
 }
 
-/* ---------- the phones that belong to the house ---------- */
+/* ---------- a phone at the door ----------
+   The chip left in the band once its pane has been put aside. Every nudge is
+   already amber, because every nudge is the house asking for something, so this
+   one cannot be told apart by hue -- and hue is the wrong instrument anyway:
+   Asks.vue has always said to lift this with elevation and never with colour,
+   so that it is recognised by shape rather than by a tint somebody could
+   imitate. It gets the lit edge and the air under it instead, which is the one
+   thing in the band that looks like an object rather than a notice. */
 .nudge.ask {
-  grid-template-columns: auto 1fr auto;
-  cursor: default;
-}
-.nudge.ask:active {
-  transform: none;
-}
-.ask-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-.ask-actions .button {
-  margin: 0;
-}
-@media (max-width: 860px) {
-  .nudge.ask {
-    grid-template-columns: auto 1fr;
-  }
-  .ask-actions {
-    grid-column: 1 / -1;
-    justify-content: flex-start;
-  }
+  border-color: var(--lamp);
+  box-shadow:
+    0 0 0 1px var(--lamp-glow),
+    0 10px 28px -14px rgba(0, 0, 0, 0.7);
 }
 .phones {
   list-style: none;
@@ -4439,6 +4427,113 @@ select.input {
   .opened-hero {
     right: -8%;
     opacity: 0.35;
+  }
+}
+/* ---------- a phone at the door, as a pane ----------
+   It borrows the whole of the opened pane -- the rise, the fall, the room going
+   quiet behind it, all measured in design/nightfall slice 5 -- and one thing it
+   must not borrow: the colour.
+
+   Every other surface in this file holds a distance from the sky so that it
+   tracks the hour, and tone.ts exists to make that true. This one is fixed, and
+   the reason is not visual. It is the one place a person hands out a key to the
+   house, and recognising it instantly -- noticing when something about it is
+   off -- is the only defence they have against answering a prompt they should
+   not. A surface that looks different at every hour cannot be recognised.
+
+   Which would normally be exactly the hole punched in the daylight that slice 5
+   went to some trouble to close: a fixed near-black at noon. It is not, here,
+   and the difference is the scrim. The room behind a pane is already taken down
+   by --glass-scrim, so a dark pane is not sitting in a bright room; it IS the
+   room being out of the way. The ink comes with it, held at the same ratios the
+   rest of the panes use, so nothing gets harder to read after dark.
+
+   The hero, the steps and their timings are all the pane's own. Nothing below
+   is a second way of doing any of that. */
+.ask-pane .opened-panel {
+  --ink-2: rgba(255, 255, 255, 0.78);
+  --muted: rgba(255, 255, 255, 0.6);
+  background: linear-gradient(
+    168deg,
+    rgba(38, 34, 54, 0.97),
+    rgba(19, 17, 30, 0.99) 54%,
+    rgba(12, 11, 20, 1)
+  );
+  border-color: var(--edge-hi);
+}
+/* The lit edge the card always carried, at the size a pane is. Drawn as a masked
+   border the way the glass rim is, rather than as a gradient fading into the
+   face: an edge is the shape of the thing, and a haze across the top is just a
+   colour. It is the one mark on this pane that is not type or a button, and it
+   has a job -- it is what a person is meant to recognise. */
+.ask-pane .opened-panel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.4px;
+  pointer-events: none;
+  background: linear-gradient(
+    168deg,
+    var(--lamp),
+    rgba(233, 184, 114, 0.16) 26%,
+    transparent 58%
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+}
+/* the hero stays on the pane's own clock -- it arrives with it and leaves with
+   it -- and only its colour is this pane's */
+.ask-pane .opened-hero {
+  color: rgba(233, 184, 114, 0.34);
+}
+.ask-pane.shown .opened-hero {
+  opacity: 0.3;
+}
+.ask-says {
+  max-width: 44ch;
+  margin: 18px 0 0;
+  font-size: 17px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+.ask-says p {
+  margin: 0;
+}
+.ask-acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 28px 0 0;
+}
+.ask-acts .button {
+  margin: 0;
+}
+/* Back sits apart from the three spans, so a tap meant for "For today" never
+   lands on the way out of the question */
+.ask-back {
+  margin-left: auto !important;
+}
+.ask-more {
+  margin: 22px 0 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+@media (max-width: 860px) {
+  .ask-says {
+    font-size: 15.5px;
+  }
+  .ask-acts .button {
+    flex: 1 1 auto;
+  }
+  .ask-back {
+    margin-left: 0 !important;
   }
 }
 /* the dimmer: the one control the tile is too small to carry properly */

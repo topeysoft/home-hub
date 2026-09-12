@@ -12,6 +12,7 @@ import RoomView from './views/RoomView.vue'
 import Viewer from './Viewer.vue'
 import WhySheet from './WhySheet.vue'
 import HousePanel from './HousePanel.vue'
+import AskPane from './AskPane.vue'
 import { isPage } from './pages'
 import Opened from './Opened.vue'
 import Icon from './Icon.vue'
@@ -35,6 +36,10 @@ const rooms = computed(visibleRooms)
 watch(selected, () => nextTick(() => document.querySelector('.rail-item.active')?.scrollIntoView({ block: 'nearest', inline: 'nearest' })))
 const setup = computed(() => !!store.status && (store.previewSetup || needsSetup()))
 const panel = computed(() => isPage(store.sheet))   // This house is open, on one of its pages
+/* A phone at the door opens its own pane, and stays open until it is answered or put aside. It is
+   not `store.opened` -- that is a device -- but it is the same surface and the room recedes behind
+   it the same way, so it counts towards the shell's opened state. */
+const asking = computed(() => store.asks.length > 0 && !store.askAside)
 const room = computed(() => rooms.value.find(r => r.id === selected.value) ?? null)
 
 const ambient = computed(() => store.sky.elevation < -8 ? 'night' : store.sky.elevation < 6 ? (store.sky.azimuth < 180 ? 'dawn' : 'dusk') : 'day')
@@ -99,7 +104,10 @@ function touched() {
   lastTouch = Date.now()
   if (idle.value) { idle.value = false; open(null); woke.value++ }
 }
-watch(() => store.asks.length, (n, o) => { if (n > o) touched() })   // a phone knocking wakes the wall so the card is seen
+/* A phone knocking wakes the wall, and clears anything put aside so the pane comes back up: this is
+   the one event the panel turns the screen on for, and a knock that has been set aside must not
+   silence the next one. */
+watch(() => store.asks.length, (n, o) => { if (n > o) { store.askAside = false; touched() } })
 async function rejoin() { halt(); await start() }                       // this screen just joined: read the house and reconnect
 function checkIdle() { if (!idle.value && kiosk.matches && !store.viewer && !store.sheet && !setup.value && Date.now() - lastTouch > IDLE_AFTER) idle.value = true }
 
@@ -119,7 +127,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="shell" :data-ambient="ambient" :data-nav="nav" :data-face="face" :data-layout="layout" :data-flat="face === 'glass' && flat ? '' : null" :style="[tone, glass, openTint]" :class="{ resting: idle, 'in-setup': setup || lock.unpaired, 'opened-shell': !!store.opened || panel }">
+  <div class="shell" :data-ambient="ambient" :data-nav="nav" :data-face="face" :data-layout="layout" :data-flat="face === 'glass' && flat ? '' : null" :style="[tone, glass, openTint]" :class="{ resting: idle, 'in-setup': setup || lock.unpaired, 'opened-shell': !!store.opened || panel || asking }">
     <Sky :quiet="!idle && !setup" />
     <!-- glass lays its blooms on the sky the canvas just painted, under the veil -->
     <div class="sky-bloom" v-if="face === 'glass'"></div>
@@ -196,6 +204,7 @@ onUnmounted(() => {
 
     <Viewer />
     <Opened v-if="store.opened" />
+    <AskPane v-if="asking" />
     <!-- :duration because what moves is inside: Vue times a transition from the
          element it is put on, and this one's root never moves, so on the way out
          it was pulling the panel off the screen before it had slid anywhere.

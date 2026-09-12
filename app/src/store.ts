@@ -29,6 +29,10 @@ export const store = reactive({
   previewSetup: new URLSearchParams(location.search).get('setup') === '1',   // ?setup=1 previews first run; cleared by Open Home
   status: null as Status | null,            // where the hub is in its life: engine down, fresh, ready; and whether setup finished
   phones: [] as Phone[], asks: [] as Ask[],  // the phones that belong to the house, and the ones asking to
+  /* a knock that has been put aside: the pane is down, the ask still stands, and the chip in the
+     band carries it. A NEW knock clears this (App.vue), because putting one phone aside must not
+     silence the next one. */
+  askAside: false,
   homeName: '' as string,
   tempUnit: '' as string,                   // the house's temperature unit, from the home's location (°F in the US)
   found: [] as Found[],                      // things noticed on the network that are not set up yet
