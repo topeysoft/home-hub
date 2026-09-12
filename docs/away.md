@@ -74,10 +74,15 @@ certificate for a house's name, so it carries bytes it cannot read.
 
 **The tunnel.** The hub dials out on port 443 and multiplexes every stream over that one connection. Outbound 443
 because it is the one port that survives a hotel, an office and a mobile network; UDP and anything WireGuard-shaped
-does not. First cut: `frp` — `frps` on the VPS, `frpc` alongside Caddy in `driver-layer/docker-compose.yml`, one Go
-binary each and no code of ours to maintain. **Verify before committing** that its https proxy really forwards by SNI
-without terminating TLS; if it does not, the fallback is a small relay of our own over one TLS connection, which is
-the same shape with our code inside it.
+does not. It is `frp` — `frps` on the VPS, `frpc` alongside Caddy in `driver-layer/docker-compose.yml`, one Go binary
+each and no code of ours to maintain. **Checked on 12 September 2026, and it does pass TLS through untouched** (see
+*What was verified* below), so the relay of our own is not needed.
+
+The relay's whole configuration is two lines — `bindPort` and `vhostHTTPSPort` — and the hub's proxy is
+`type = "https"` with `customDomains` and a `localPort`. **The trap to know about: `frp` also ships an `https2http`
+plugin, and that one terminates.** The pass-through property is a property of not using a plugin, so anything that
+adds one to this proxy gives the relay the ability to read the house's traffic. Pin the version (`0.71.0` is what was
+tested) and treat the plugin line as the thing not to add.
 
 **The routing.** The relay reads the SNI of each incoming handshake, matches it to a registered house, and forwards
 the raw bytes into that house's tunnel. It never decrypts. What it can see is worth saying in plain words, because
@@ -178,10 +183,24 @@ The first two steps need nothing from the maker and can land and be tested on a 
 5. **The certificate:** DNS-01 on the hub, then the alias that covers home.
 6. **Web push, then the microphone** — both waiting on 5 and neither on each other.
 
+## What was verified
+
+*12 September 2026, by standing the whole shape up in miniature rather than reading about it: a test CA, a leaf for
+`nadine.homehub.test`, an origin holding the only copy of the key, `frps` in one container and `frpc` in another.*
+
+- **The relay does not terminate TLS.** The certificate served to the client through the relay was the origin's own,
+  to the byte — the same SHA-256 fingerprint — and the client verified the chain against the hub's own CA. The origin
+  completed a real TLS handshake. The relay was never given a certificate or a key and had none anywhere in it. Since
+  the session keys come from a private key that exists only on the hub, the relay carries bytes it cannot read.
+- **Routing is by name and nothing else.** A connection offering an unknown SNI, or no SNI at all, gets no certificate
+  and no connection: the hub is not reachable except by the name registered for it. A port scan of the relay finds
+  nothing to talk to.
+- **And the reason step 1 exists.** The origin saw `Host: nadine.homehub.test:9444` — the client's own Host header,
+  carried through untouched after SNI had already chosen the hub. SNI picks the house; the Host header is still
+  whatever the request claims. That is exactly the bypass the listener split was built for, confirmed in the small.
+
 ## Open decisions
 
-- **`frp` or a relay of our own?** Settle it by checking that `frps` passes SNI through without terminating TLS. Ours
-  is maybe two hundred lines and one less dependency to trust with the house's bytes.
 - **What stops a thousand names being registered?** A token per box written at flash time, or open registration with
   rate limits. This is also the question of who pays for the VPS, and it is the one decision here that is about
   selling a box rather than building one.
