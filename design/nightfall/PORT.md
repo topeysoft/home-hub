@@ -84,6 +84,22 @@ forms a backdrop root, which silently kills `backdrop-filter` on everything
 beneath it, and the glass goes flat mid-swipe. Same reason the wake's
 `animation-fill-mode` is `backwards` and not `both`.
 
+Landed, and it needed almost no new machinery: the rail already drives its edges
+from `animation-timeline: view(inline)`, so glass only swaps which keyframes
+those two animations run. Paper softens both ends even-handedly; glass does not,
+because a focal plane is not even-handed. The lag is `transform` rather than
+`translate` because `translate` belongs to the arrival, and those two have
+always deliberately stayed off each other's properties.
+
+The weather recedes without being in the rail to know it should — it stays put,
+blurs, and drops the reading. That is what the row's own `data-at-start` is now
+kept true for on every browser rather than only the ones without scroll-driven
+animations.
+
+The velocity blur is **not** in. It is a second blur on top of one the file
+already warns re-rasterises every frame of a swipe, and adding that cost before
+slice 6 has measured the first one is backwards. It waits for a number.
+
 **5. The pane.** `Opened.vue` already rises; it needs the measured timings.
 400ms up on `cubic-bezier(.12,.78,.24,1)`, 300ms down on
 `cubic-bezier(.4,0,.6,1)`, the object inside travelling further and still

@@ -4360,6 +4360,69 @@ select.input {
     }
   }
 }
+/* ---------- the rail's edges, under glass ----------
+   Paper softens both ends of the row, which is even-handed and right for a row
+   of flat cards. Glass is not even-handed, because a focal plane is not: what
+   you have swiped PAST goes out of focus, and what is still in front of you
+   stays sharp. Depth is one idea and not three -- further back is blurrier,
+   dimmer AND slower, so the leaving card also gives some of the scroll back and
+   the card in focus catches it and slides over the top. Being earlier in the
+   row, it is already underneath.
+
+   The lag is `transform` and not `translate` on purpose. `translate` belongs to
+   the arrival below, and the note there is exactly why these two animations
+   have stayed off each other's properties; the two compose instead of fighting.
+
+   The arriving end keeps a little of paper's dim and none of its blur. The
+   half-cut card at the right edge is still the only sign there is more to sweep
+   to, and blurring what you are sweeping towards would say the opposite of what
+   the focal plane is for. */
+@supports (animation-timeline: view()) {
+  [data-face='glass'] .bento-card {
+    animation-name: bento-in-glass, bento-out-glass;
+  }
+  @keyframes bento-in-glass {
+    from {
+      opacity: 0.72;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes bento-out-glass {
+    from {
+      opacity: 1;
+      filter: blur(0);
+      transform: translateX(0);
+    }
+    to {
+      opacity: 0.6;
+      filter: blur(5px);
+      transform: translateX(56px);
+    }
+  }
+}
+/* The weather is not in the rail, because it is not in the house. It stays
+   where it is and recedes instead -- and the reading goes altogether, because a
+   temperature you have swiped away from is not the thing you are reading any
+   more. :has() rather than a class, so the row's own attribute stays the single
+   source of whether the rail is home. */
+[data-face='glass'] .rail-wx {
+  transition:
+    filter 650ms var(--ease),
+    opacity 650ms var(--ease);
+}
+[data-face='glass'] .rail-home:has(.bento:not([data-at-start])) .rail-wx {
+  filter: blur(5px);
+  opacity: 0.8;
+}
+[data-face='glass'] .rail-wx-text {
+  transition: opacity 650ms var(--ease);
+}
+[data-face='glass'] .rail-home:has(.bento:not([data-at-start])) .rail-wx-text {
+  opacity: 0;
+}
+
 /* without scroll-driven animations: the same fade, no blur, as a mask on the
    row; each end lifts when there is nothing beyond it, so the first card at
    rest is never dimmed for a neighbour it does not have */

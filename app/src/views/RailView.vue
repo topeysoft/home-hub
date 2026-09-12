@@ -88,12 +88,15 @@ let t: number | undefined
 onMounted(() => { t = window.setInterval(() => (clock.value = Date.now()), 20000) })
 onUnmounted(() => clearInterval(t))
 
-/* the rail's edge fade is CSS where the browser can drive it from scroll; the
-   fallback mask only needs to know when an end has nothing beyond it */
+/* The rail's edge fade is CSS where the browser can drive it from scroll. These
+   two attributes are what is left over for CSS that cannot be: the fallback
+   mask, which lifts an end that has nothing beyond it, and -- under glass -- the
+   weather, which has to know the rail has moved off home without being in the
+   rail to find out. Two toggleAttribute calls on a passive listener, so it is
+   cheap enough to keep true on every browser rather than only the old ones. */
 const bento = ref<HTMLElement | null>(null)
-const scrollDriven = typeof CSS !== 'undefined' && CSS.supports?.('animation-timeline: view()')
 function edges() {
-  const el = bento.value; if (!el || scrollDriven) return
+  const el = bento.value; if (!el) return
   el.toggleAttribute('data-at-start', el.scrollLeft <= 1)
   el.toggleAttribute('data-at-end', el.scrollLeft + el.clientWidth >= el.scrollWidth - 1)
 }
