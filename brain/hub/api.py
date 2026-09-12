@@ -28,7 +28,7 @@ from .suggest import Suggestions
 from .settings import Settings, DATA, env_file
 from .lock import Lock, needs_code
 from .pairing import Pairing
-from .phones import Phones, COOKIE, open_to_strangers, from_away
+from .phones import Phones, COOKIE, open_to_strangers, from_away, away_refused, away_refusal
 from . import camera
 
 log = logging.getLogger("hub")
@@ -468,13 +468,21 @@ app = FastAPI(title="home-hub brain", lifespan=lifespan)
 
 @app.middleware("http")
 async def settings_lock(request: Request, call_next):
-    """Once the house has a code: only its own phones get in, and changing the house needs the code. Driving it never does."""
+    """Once the house has a code: only its own phones get in, and changing the house needs the code. Driving it never does.
+
+    From away, on top of all of that: only a phone the house has let out, and never the way in. A house with
+    no code has no phones and so lets nobody in from outside, which is the right answer -- the door to the
+    outside is something a house turns on, not something it starts with.
+    """
     request.state.phone = None
     request.state.away = from_away(request.headers)   # off the Wi-Fi, or in through the relay: docs/away.md piece 2
+    m, path = request.method, request.url.path
+    phone = hub.phones.identify(request.cookies.get(COOKIE)) if hub.lock.locked else None
+    let_out = bool(phone and phone.get("remote"))
+    if request.state.away and away_refused(m, path, let_out):
+        return JSONResponse(away_refusal(phone, let_out), status_code=403)
     if hub.lock.locked:
-        m, path = request.method, request.url.path
         if not open_to_strangers(m, path):
-            phone = hub.phones.identify(request.cookies.get(COOKIE))
             if not phone: return JSONResponse({"detail": "phone"}, status_code=401)
             request.state.phone = phone
         if needs_code(m, path):
@@ -931,8 +939,15 @@ def phone():
 # ---------- the phones that belong to the house ----------
 @app.get("/phones/me")
 def phones_me(request: Request):
-    """Open to anyone on the Wi‑Fi: is this phone in, and what is the house called. The join screen starts here."""
+    """Open to anyone on the Wi‑Fi: is this phone in, and what is the house called. The join screen starts here.
+
+    From away it is the one route that answers before the door does, so the app can load and say why it is
+    not showing the house. To anyone out there who is not a phone this house has let out it gives no name
+    and no way in: from outside, the house presents as locked, which is exactly what it is to them.
+    """
     phone = hub.phones.identify(request.cookies.get(COOKIE)) if hub.lock.locked else None
+    if request.state.away and not (phone and phone.get("remote")):
+        return {"locked": True, "paired": False, "home": "the house", "phone": None, "away": True}   # no name, no way in
     return {"locked": hub.lock.locked, "paired": (not hub.lock.locked) or bool(phone), "home": hub.settings.get("home_name") or "Home",
             "phone": hub.phones._public(phone) if phone else None, "away": request.state.away}
 

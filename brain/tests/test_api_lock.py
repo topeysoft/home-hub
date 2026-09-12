@@ -216,9 +216,94 @@ class AwayTagTests(ApiTest):
         self.lock_the_house("4821")
         self.assertTrue(self.client.get("/phones/me", headers={"X-Hub-Via": "relay"}).json()["away"])
 
-    def test_away_changes_nothing_yet(self):
-        """When this test has to change, step 2 is what changed it."""
-        self.assertEqual(self.client.post("/devices/light.kitchen/on", headers={"X-Hub-Via": "relay"}).status_code, 200)
+
+class AwayGateTests(ApiTest):
+    """Step 2 of docs/away.md piece 2: from outside the house, only a phone the house has let out.
+
+    The rule underneath is that being let into the house and being let out of it are two decisions. A phone
+    that belongs here still does nothing from away until somebody at the wall promotes it.
+    """
+    AWAY = {"X-Hub-Via": "relay"}
+
+    def setUp(self):
+        super().setUp()
+        self.lock_the_house("4821")
+
+    def admit(self, remote=False):
+        phone, token = self.hub.phones.with_code("Temi's phone")
+        if remote: self.hub.phones.set_remote(phone["id"], True)
+        self.client.cookies.set(COOKIE, token)
+        return phone
+
+    # ---- who the door opens for ----
+    def test_a_phone_the_house_has_let_out_drives_it_from_away(self):
+        self.admit(remote=True)
+        self.assertEqual(self.client.post("/devices/light.kitchen/on", headers=self.AWAY).status_code, 200)
+
+    def test_the_same_phone_at_home_only_does_not(self):
+        self.admit()
+        r = self.client.post("/devices/light.kitchen/on", headers=self.AWAY)
+        self.assertEqual(r.status_code, 403)
+        self.assertEqual(r.json()["detail"], "remote")
+        self.assertIn("works at home", r.json()["message"])
+
+    def test_and_the_same_phone_at_home_still_does(self):
+        """The gate is about the door, not the phone: nothing changes on the Wi-Fi."""
+        self.admit()
+        self.assertEqual(self.client.post("/devices/light.kitchen/on").status_code, 200)
+
+    def test_a_stranger_out_there_is_told_nothing_it_could_act_on(self):
+        r = self.client.post("/devices/light.kitchen/on", headers=self.AWAY)
+        self.assertEqual(r.status_code, 403)
+        self.assertEqual(r.json()["detail"], "away")
+
+    # ---- the way in is not out there ----
+    def test_the_join_routes_are_refused_from_away(self):
+        for m, path in [("POST", "/phones/ask"), ("POST", "/phones/code"), ("GET", "/phones/claim/abc")]:
+            with self.subTest(path=path):
+                self.assertEqual(self.client.request(m, path, json={}, headers=self.AWAY).status_code, 403)
+
+    def test_not_even_to_a_phone_the_house_has_let_out(self):
+        """A phone joins the house from inside it, where somebody can see who is asking."""
+        self.admit(remote=True)
+        r = self.client.post("/phones/ask", json={"name": "A phone"}, headers=self.AWAY)
+        self.assertEqual(r.status_code, 403)
+        self.assertEqual(r.json()["detail"], "at-home")
+
+    def test_the_join_routes_still_work_on_the_wifi(self):
+        self.assertEqual(self.client.post("/phones/ask", json={"name": "A phone"}).status_code, 200)
+
+    # ---- what a refused phone can still load ----
+    def test_the_app_itself_loads_so_it_can_say_why(self):
+        for path in ("/index.html", "/assets/index-abc.js", "/phones/me"):
+            with self.subTest(path=path):
+                self.assertNotEqual(self.client.get(path, headers=self.AWAY).status_code, 403)
+
+    def test_from_away_the_house_gives_no_name_to_anyone_it_has_not_let_out(self):
+        self.admit()
+        me = self.client.get("/phones/me", headers=self.AWAY).json()
+        self.assertTrue(me["away"]); self.assertFalse(me["paired"])
+        self.assertEqual(me["home"], "the house")
+        self.assertIsNone(me["phone"])
+
+    def test_a_phone_it_has_let_out_sees_the_house_as_itself(self):
+        phone = self.admit(remote=True)
+        me = self.client.get("/phones/me", headers=self.AWAY).json()
+        self.assertTrue(me["away"]); self.assertTrue(me["paired"])
+        self.assertEqual(me["phone"]["id"], phone["id"])
+
+    # ---- a house with no code has no door to the outside ----
+    def test_a_house_with_no_code_lets_nobody_in_from_away(self):
+        self.hub.lock.set("")                                # back to how a hub starts
+        self.assertFalse(self.hub.lock.locked)
+        self.assertEqual(self.client.post("/devices/light.kitchen/on").status_code, 200)          # the Wi-Fi is open as ever
+        self.assertEqual(self.client.post("/devices/light.kitchen/on", headers=self.AWAY).status_code, 403)
+
+    # ---- letting a phone out is a change to the house ----
+    def test_the_switch_needs_the_code(self):
+        phone = self.admit()
+        for m, path in [("POST", f"/phones/{phone['id']}/remote")]:
+            self.assertTrue(needs_code(m, path))
 
 
 if __name__ == "__main__":

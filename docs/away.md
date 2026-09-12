@@ -106,7 +106,9 @@ is refused unless it carries a paired phone whose `remote` is on. Two things fol
   can let it out.*
 
 **The switch.** *People → Phones*, per phone, behind the code, off by default and forever: being let into the house is
-one decision and being let out of it is another. Every promotion and demotion is a `phone` event in the log like every
+one decision and being let out of it is another. The route and the log lines are already there and the gate already
+reads them; what waits for the relay is only the control on the page, because until then it would promise something
+the house cannot do. Every promotion and demotion is a `phone` event in the log like every
 join and removal. Once web push lands (piece 3), the owner's phone hears the moment any phone is promoted.
 
 **Registering a house.** One switch under *This hub*: **Reachable from outside the house**. The hub makes a keypair
@@ -158,7 +160,19 @@ The first two steps need nothing from the maker and can land and be tested on a 
    `tests/test_api_lock.py` says so on purpose, and step 2 is what changes it. Checked against a real Caddy: the LAN
    door strips a forged stamp, and the away door stamps `relay` even when the request claims `Host: hub.local`, which
    is the bypass the split exists to stop.
-2. **The per-phone switch and the gate.** `remote` finally read, the sentence a home-only phone gets, the log lines.
+2. ~~**The gate.**~~ **Done, 12 September 2026.** `away_refused()` and `away_refusal()` in `hub/phones.py`, applied in
+   the same middleware that holds the code and the cookie. From outside the house: only a phone the house has let
+   out; the join routes never, not even to a phone that *is* let out, because a phone joins the house from inside it
+   where somebody can see who is asking; and the app's own files always, so it can load and say why it is not showing
+   the house. `/phones/me` gives no name and no way in to anyone out there it has not let out. A house with no code
+   has no phones and so lets nobody in from away at all. The words are the brain's and the panel only carries them
+   (`Away.vue`, `?away=1` previews it). `AwayGateTests` in `tests/test_api_lock.py`.
+
+   **The visible switch is deliberately not in this step.** `set_remote()`, `POST /phones/{id}/remote` and the log
+   lines have existed since pairing landed, and the gate now reads what they write — but until there is a relay,
+   turning a phone's switch on changes nothing a household could see. Piece 1 of this document says the panel never
+   shows a promise it cannot keep, so the switch on *People* lands with step 3 and not before. Nothing is missing
+   underneath it.
 3. **The relay on the VPS and `frpc` in the compose file**, one house, name hard-coded. First tap from outside.
 4. **The registration service and the switch in *This hub*.** Names, keys, more than one house.
 5. **The certificate:** DNS-01 on the hub, then the alias that covers home.

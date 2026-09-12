@@ -3,6 +3,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { store, start, halt, load, visibleRooms, activity, roomActive, houseLine, weatherLine, needsSetup, dismissToast, updateReady } from './store'
 import Setup from './Setup.vue'
 import Join from './Join.vue'
+import Away from './Away.vue'
 import CodePrompt from './CodePrompt.vue'
 import { lock } from './code'
 import Sky from './Sky.vue'
@@ -35,6 +36,9 @@ const rooms = computed(visibleRooms)
 /* the rail keeps the current room in view: on a wall it scrolls the list, on a phone the chip strip */
 watch(selected, () => nextTick(() => document.querySelector('.rail-item.active')?.scrollIntoView({ block: 'nearest', inline: 'nearest' })))
 const setup = computed(() => !!store.status && (store.previewSetup || needsSetup()))
+/* The house is not showing: either this phone is not in it yet, or it is being reached from outside and
+   the house did not open. Both put a screen of their own up in place of everything. */
+const shut = computed(() => lock.unpaired || !!lock.away)
 const panel = computed(() => isPage(store.sheet))   // This house is open, on one of its pages
 /* A phone at the door opens its own pane, and stays open until it is answered or put aside. It is
    not `store.opened` -- that is a device -- but it is the same surface and the room recedes behind
@@ -127,16 +131,17 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="shell" :data-ambient="ambient" :data-nav="nav" :data-face="face" :data-layout="layout" :data-flat="face === 'glass' && flat ? '' : null" :style="[tone, glass, openTint]" :class="{ resting: idle, 'in-setup': setup || lock.unpaired, 'opened-shell': !!store.opened || panel || asking }">
+  <div class="shell" :data-ambient="ambient" :data-nav="nav" :data-face="face" :data-layout="layout" :data-flat="face === 'glass' && flat ? '' : null" :style="[tone, glass, openTint]" :class="{ resting: idle, 'in-setup': setup || shut, 'opened-shell': !!store.opened || panel || asking }">
     <Sky :quiet="!idle && !setup" />
     <!-- glass lays its blooms on the sky the canvas just painted, under the veil -->
     <div class="sky-bloom" v-if="face === 'glass'"></div>
     <ArtDefs />
     <div class="sky-veil"></div>
-    <Join v-if="lock.unpaired" @joined="rejoin" />
+    <Away v-if="lock.away" />
+    <Join v-else-if="lock.unpaired" @joined="rejoin" />
     <Setup v-else-if="setup" />
-    <TopBar v-if="!setup && !lock.unpaired && nav === 'top'" :clock="clock" :day="day" :now="shown" :tab="tab" :in-room="!!room" @go="go" />
-    <aside class="rail" v-if="!setup && !lock.unpaired && nav === 'side'">
+    <TopBar v-if="!setup && !shut && nav === 'top'" :clock="clock" :day="day" :now="shown" :tab="tab" :in-room="!!room" @go="go" />
+    <aside class="rail" v-if="!setup && !shut && nav === 'side'">
       <div class="rail-clock">
         <div class="rail-time">{{ clock }}</div>
         <div class="rail-day">{{ day }}</div>
@@ -168,7 +173,7 @@ onUnmounted(() => {
       </div>
     </aside>
 
-    <main class="stage" v-if="!setup && !lock.unpaired">
+    <main class="stage" v-if="!setup && !shut">
       <Transition name="banner">
         <div class="banner" v-if="store.loaded && store.linkLost"><Icon name="refresh" :size="16" /> Reconnecting to the hub. What you see may be a little behind.</div>
       </Transition>
@@ -200,7 +205,7 @@ onUnmounted(() => {
       </Transition>
     </main>
 
-    <Household v-if="!setup && !lock.unpaired && nav === 'top'" :room="room?.id ?? null" />
+    <Household v-if="!setup && !shut && nav === 'top'" :room="room?.id ?? null" />
 
     <Viewer />
     <Opened v-if="store.opened" />

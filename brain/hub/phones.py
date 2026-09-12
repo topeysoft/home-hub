@@ -177,6 +177,45 @@ def from_away(headers) -> bool:
     return (headers.get(VIA) or "").strip().lower() == AWAY
 
 
+# ---- and what may pass from outside it ----
+JOIN_AT_HOME = ("/phones/ask", "/phones/code", "/phones/claim/")
+HOME_ONLY = "This phone works at home. Someone at the wall can let it out."
+NOT_YOURS = "This house is not open from here."
+
+
+def open_from_away(method: str, path: str) -> bool:
+    """What passes from outside the house without a phone the house has let out.
+
+    The app's own files, so it can load and say why it is not showing the house, and the one route that
+    tells it which door it came in at. Never the way in: a stranger on the internet is not offered the
+    question, and a phone is let out of the house from inside it or not at all.
+    """
+    if path.startswith(JOIN_AT_HOME): return False
+    return open_to_strangers(method, path)
+
+
+def away_refused(method: str, path: str, let_out: bool) -> bool:
+    """Is this request from outside the house turned away?
+
+    The way in is never open out there, not even to a phone the house has already let out: a phone joins
+    the house from inside it, where somebody can see who is asking. Everything else comes down to whether
+    this phone has been let out, and the app's own files pass either way so it can load and say so.
+    """
+    if path.startswith(JOIN_AT_HOME): return True
+    return not let_out and not open_from_away(method, path)
+
+
+def away_refusal(phone: dict | None, let_out: bool = False) -> dict:
+    """The words a request from away is turned down with, and a key the app can act on.
+
+    One of the house's own phones is told how that changes, because somebody at the wall can do it for
+    them. Anybody else is told nothing they could act on: from outside the house the join screen does not
+    exist, so there is nothing to offer and no house to name.
+    """
+    if let_out: return {"detail": "at-home", "message": "A phone joins the house from inside it."}
+    return {"detail": "remote", "message": HOME_ONLY} if phone else {"detail": "away", "message": NOT_YOURS}
+
+
 def open_to_strangers(method: str, path: str) -> bool:
     """What the panel needs before it is paired: the app itself, the join screen's own routes, and the sounds a speaker fetches."""
     if method.upper() in ("OPTIONS", "HEAD"): return True
