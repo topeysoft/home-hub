@@ -11,13 +11,14 @@
 import { computed, ref } from 'vue'
 import { setLook } from './api'
 import { notify, store } from './store'
-import { LAYOUTS, NAVS } from './layout'
+import { FACES, LAYOUTS, NAVS } from './layout'
 import { TONES, toneVars } from './tone'
 import Icon from './Icon.vue'
 
 const layout = computed(() => store.ambient.look?.layout ?? 'stack')
 const tone = computed(() => store.ambient.look?.tone ?? 'follow')
 const nav = computed(() => store.ambient.look?.nav ?? 'side')
+const face = computed(() => store.ambient.look?.face ?? 'paper')
 const busy = ref('')
 
 /* each swatch shows the tone as it is right now, under this sky: what you pick
@@ -27,12 +28,12 @@ function swatches(id: string) {
   return [v['--card-light'], v['--card-lock'], v['--card-plain']].filter(Boolean)
 }
 
-async function choose(key: 'tone' | 'layout' | 'nav', value: string) {
-  const current = key === 'tone' ? tone.value : key === 'layout' ? layout.value : nav.value
+async function choose(key: 'tone' | 'layout' | 'nav' | 'face', value: string) {
+  const current = { tone: tone.value, layout: layout.value, nav: nav.value, face: face.value }[key]
   if (busy.value || current === value) return
   busy.value = key + value
   const was = { ...(store.ambient.look ?? {}) }
-  store.ambient.look = { tone: tone.value, layout: layout.value, nav: nav.value, [key]: value }   // the panel answers first; the hub confirms
+  store.ambient.look = { tone: tone.value, layout: layout.value, nav: nav.value, face: face.value, [key]: value }   // the panel answers first; the hub confirms
   try { store.ambient.look = await setLook({ [key]: value }) }
   catch (e: any) { store.ambient.look = was as any; notify(e.message, 'error') }
   busy.value = ''
@@ -63,6 +64,17 @@ async function choose(key: 'tone' | 'layout' | 'nav', value: string) {
           <span class="look-hint">{{ n.hint }}</span>
         </span>
         <span class="look-shape" :class="'look-nav-' + n.id" aria-hidden="true"><i></i><i></i></span>
+      </button>
+    </div>
+
+    <h3 class="label">What it is made of</h3>
+    <div class="look-rows">
+      <button v-for="fc in FACES" :key="fc.id" class="look-row" :class="{ on: face === fc.id, busy: busy === 'face' + fc.id }" @click="choose('face', fc.id)">
+        <span class="look-text">
+          <span class="look-name">{{ fc.label }}<span class="look-tick" v-if="face === fc.id"><Icon name="check" :size="11" /></span></span>
+          <span class="look-hint">{{ fc.hint }}</span>
+        </span>
+        <span class="look-shape" :class="'look-face-' + fc.id" aria-hidden="true"><i></i><i></i></span>
       </button>
     </div>
 

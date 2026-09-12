@@ -12,6 +12,8 @@ const SIZES = { kiosk: [1280, 800], wall: [1920, 1080], tablet: [820, 1180], pho
 const SCREENS = [
   ['kiosk-home', 'kiosk', '/?at=19:40'],
   ['kiosk-home-day', 'kiosk', '/?at=13:00&wx=sunny'],
+  ['kiosk-wall', 'kiosk', '/?layout=wall&nav=top&at=19:40'],
+  ['kiosk-wall-glass', 'kiosk', '/?layout=wall&nav=top&face=glass&at=19:40'],
   ['kiosk-home-rain', 'kiosk', '/?at=23:10&wx=rainy'],
   ['kiosk-home-tall', 'kiosk', '/?at=19:40', [1280, 1600]],
   ['kiosk-room', 'kiosk', '/?room=living&at=19:40', [1280, 1000]],

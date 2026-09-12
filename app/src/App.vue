@@ -6,6 +6,7 @@ import Join from './Join.vue'
 import CodePrompt from './CodePrompt.vue'
 import { lock } from './code'
 import Sky from './Sky.vue'
+import ArtDefs from './ArtDefs.vue'
 import HomeView from './views/HomeView.vue'
 import RoomView from './views/RoomView.vue'
 import Viewer from './Viewer.vue'
@@ -15,9 +16,10 @@ import { isPage } from './pages'
 import Opened from './Opened.vue'
 import Icon from './Icon.vue'
 import { upcomingLine } from './upcoming'
-import { isTone, toneVars, type ToneName } from './tone'
-import { isLayout, isNav, type LayoutName, type NavName } from './layout'
+import { glassVars, isTone, toneVars, type ToneName } from './tone'
+import { isFace, isLayout, isNav, type FaceName, type LayoutName, type NavName } from './layout'
 import RailView from './views/RailView.vue'
+import WallView from './views/WallView.vue'
 import RoomsView from './views/RoomsView.vue'
 import CamerasView from './views/CamerasView.vue'
 import TopBar from './TopBar.vue'
@@ -50,6 +52,20 @@ const layout = computed<LayoutName>(() => isLayout(layoutParam) ? layoutParam : 
 /* where the way around the house lives -- the side list, or tabs across the
    top -- is the house's choice too; ?nav=top previews it. The tab is this
    screen's own, like the room it is in. */
+/* what the panel is made of: paper, or glass. The house's answer like the rest,
+   and ?face=glass previews it for this tab alone. */
+const faceParam = params.get('face')
+const face = computed<FaceName>(() => isFace(faceParam) ? faceParam : (isFace(store.ambient.look?.face) ? store.ambient.look!.face as FaceName : 'paper'))
+/* the pane's own properties, derived from the same sky the tone is: a face that
+   is not on costs nothing, because there is nothing to bind */
+const glass = computed(() => face.value === 'glass' ? glassVars(store.sky.elevation, store.sky.condition) : {})
+/* Whether this screen can paint a pane at all. Asked once: it cannot change
+   while the panel is open, and a host that cannot blur gets the face flattened
+   rather than taken away -- panel.css says what that means. ?flat=1 previews
+   it, which is the only way anyone will ever see it on a machine that can. */
+const flat = params.get('flat') === '1'
+  || !(CSS.supports('backdrop-filter', 'blur(1px)') || CSS.supports('-webkit-backdrop-filter', 'blur(1px)'))
+
 const navParam = params.get('nav')
 const nav = computed<NavName>(() => isNav(navParam) ? navParam : (isNav(store.ambient.look?.nav) ? store.ambient.look!.nav as NavName : 'side'))
 const tab = ref<'home' | 'rooms' | 'cameras'>('home')
@@ -103,8 +119,11 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="shell" :data-ambient="ambient" :data-nav="nav" :style="[tone, openTint]" :class="{ resting: idle, 'in-setup': setup || lock.unpaired, 'opened-shell': !!store.opened || panel }">
+  <div class="shell" :data-ambient="ambient" :data-nav="nav" :data-face="face" :data-layout="layout" :data-flat="face === 'glass' && flat ? '' : null" :style="[tone, glass, openTint]" :class="{ resting: idle, 'in-setup': setup || lock.unpaired, 'opened-shell': !!store.opened || panel }">
     <Sky :quiet="!idle && !setup" />
+    <!-- glass lays its blooms on the sky the canvas just painted, under the veil -->
+    <div class="sky-bloom" v-if="face === 'glass'"></div>
+    <ArtDefs />
     <div class="sky-veil"></div>
     <Join v-if="lock.unpaired" @joined="rejoin" />
     <Setup v-else-if="setup" />
@@ -168,6 +187,7 @@ onUnmounted(() => {
         <RoomsView v-else-if="nav === 'top' && tab === 'rooms'" key="rooms" :rooms="rooms" @open="open" />
         <CamerasView v-else-if="nav === 'top' && tab === 'cameras'" key="cameras" :rooms="rooms" />
         <RailView v-else-if="layout === 'rail'" key="home-rail" :rooms="rooms" :now="shown" :top-nav="nav === 'top'" :woke="woke" @open="open" />
+        <WallView v-else-if="layout === 'wall'" key="home-wall" :rooms="rooms" :now="shown" :top-nav="nav === 'top'" :woke="woke" @open="open" />
         <HomeView v-else key="home-stack" :rooms="rooms" :now="shown" :top-nav="nav === 'top'" @open="open" />
       </Transition>
     </main>

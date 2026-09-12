@@ -1,0 +1,345 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin: 0; font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif; }
+    a { color: #e9b872; } a:hover { color: #b8863e; }
+    .dsp { font-family: "Instrument Serif", "Iowan Old Style", Palatino, Georgia, serif; font-weight: 400; letter-spacing: -0.01em; }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: #0c0d10; color: #f1eee8; font-size: 17px; line-height: 1.4;">
+
+  <!-- the same field as Home: a room is not a different place -->
+  <div style="position: absolute; inset: 0; background: {{f.sky}};"></div>
+  <div style="position: absolute; inset: 0; background: {{f.veil}};"></div>
+  <div style="position: absolute; inset: 0; opacity: .5; pointer-events: none; background-image: url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .035 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E&quot;);"></div>
+
+  <!-- the one material vocabulary, shared with the Devices sheet: a cylinder is a
+       three-stop gradient, a plate is two, emitted light is a radial and never
+       takes the ambient. -->
+  <svg width="0" height="0" style="position: absolute;">
+    <defs>
+      <linearGradient id="mMetal" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="{{mat.metalLo}}"/><stop offset="45%" stop-color="{{mat.metalMid}}"/><stop offset="100%" stop-color="{{mat.metalLo}}"/>
+      </linearGradient>
+      <linearGradient id="mPlate" x1="0" y1="0" x2="0.3" y2="1">
+        <stop offset="0" stop-color="{{mat.metalMid}}"/><stop offset="100%" stop-color="{{mat.metalLo}}"/>
+      </linearGradient>
+      <linearGradient id="mMatte" x1="0" y1="0" x2="0.25" y2="1">
+        <stop offset="0" stop-color="{{mat.matteHi}}"/><stop offset="100%" stop-color="{{mat.matteLo}}"/>
+      </linearGradient>
+      <linearGradient id="mShade" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="{{mat.shadeHi}}"/><stop offset="100%" stop-color="{{mat.shadeLo}}"/>
+      </linearGradient>
+      <linearGradient id="mDark" x1="0" y1="0" x2="0.4" y2="1">
+        <stop offset="0" stop-color="{{mat.darkHi}}"/><stop offset="100%" stop-color="{{mat.darkLo}}"/>
+      </linearGradient>
+      <linearGradient id="mFabric" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="{{mat.fabricLo}}"/><stop offset="42%" stop-color="{{mat.fabricHi}}"/><stop offset="100%" stop-color="{{mat.fabricLo}}"/>
+      </linearGradient>
+      <radialGradient id="mPool" cx="50%" cy="34%" r="64%">
+        <stop offset="0" stop-color="#f6dcae" stop-opacity=".62"/><stop offset="54%" stop-color="#e9b872" stop-opacity=".22"/><stop offset="100%" stop-color="#e9b872" stop-opacity="0"/>
+      </radialGradient>
+      <linearGradient id="mCone" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#f6dcae" stop-opacity=".46"/><stop offset="100%" stop-color="#e9b872" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+  </svg>
+
+  <!-- the bar, unchanged from Home: Rooms is where you are -->
+  <div style="position: absolute; top: 0; left: 0; right: 0; height: 84px; display: flex; align-items: center; gap: 24px; padding: 0 40px;">
+    <div style="display: flex; align-items: center; gap: 16px; flex: 1 1 0; min-width: 0;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#b9b5ad" stroke-width="1.5" stroke-linecap="round"><path d="M4 8h16M4 14h10"/></svg>
+      <span style="font-size: 16px;">Thu, September 10</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 4px; padding: 4px; border-radius: 999px; background: rgba(26,28,34,.55); border: 1px solid rgba(255,255,255,.10); backdrop-filter: blur(18px) saturate(1.3);">
+      <div style="display: grid; place-items: center; width: 44px; height: 44px; border-radius: 999px; color: #7f7d77;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 11l8.5-7.5 8.5 7.5M5.5 9.5v10h13v-10"/></svg>
+      </div>
+      <div style="padding: 0 22px; height: 44px; display: grid; place-items: center; border-radius: 999px; font-size: 15.5px; color: #b9b5ad;">Your evening</div>
+      <div style="padding: 0 22px; height: 44px; display: grid; place-items: center; border-radius: 999px; background: rgba(255,255,255,.10); font-size: 15.5px; font-weight: 500;">Rooms</div>
+      <div style="padding: 0 22px; height: 44px; display: grid; place-items: center; border-radius: 999px; font-size: 15.5px; color: #b9b5ad;">Cameras</div>
+    </div>
+    <div style="display: flex; align-items: center; justify-content: flex-end; gap: 14px; flex: 1 1 0; min-width: 0;">
+      <span style="display: inline-flex; align-items: center; gap: 8px; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: #7f7d77;">
+        <span style="width: 6px; height: 6px; border-radius: 50%; background: #74c69d;"></span>Connected
+      </span>
+      <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(140deg, #8a7f6a, #4a4238); border: 1px solid rgba(255,255,255,.18);"></div>
+    </div>
+  </div>
+
+  <!-- the room's own head: where you are, what it is doing, and the way back -->
+  <div style="position: absolute; top: 104px; left: 40px; right: 40px; display: flex; align-items: flex-start; gap: 20px;">
+    <div style="flex: 0 0 auto; width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; background: rgba(26,28,34,.55); border: 1px solid rgba(255,255,255,.10); backdrop-filter: blur(18px) saturate(1.3); color: #b9b5ad; cursor: pointer;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 5.5l-6.5 6.5 6.5 6.5"/></svg>
+    </div>
+    <div style="flex: 1 1 0; min-width: 0;">
+      <h1 class="dsp" style="margin: 0; font-size: 52px; line-height: 1.02;">Kitchen</h1>
+      <p style="margin: 8px 0 0; font-size: 18px; color: #b9b5ad;">One light on</p>
+    </div>
+    <div style="flex: 0 0 auto; width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; background: rgba(26,28,34,.55); border: 1px solid rgba(255,255,255,.10); backdrop-filter: blur(18px) saturate(1.3); color: #b9b5ad; cursor: pointer;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3zM13.5 8.5l2 2"/></svg>
+    </div>
+  </div>
+
+  <!-- what the room can tell you, in one line of text: read, never tapped -->
+  <div style="position: absolute; top: 236px; left: 112px; right: 40px; display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
+    <span style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px 8px 12px; border-radius: 999px; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.10); color: #b9b5ad; font-size: 13.5px; backdrop-filter: blur(18px) saturate(1.3); cursor: pointer;">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#e9b872" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+      <span>Used by hand &middot; routines stay out for 1 h 18 min</span>
+      <span style="color: #e9b872;">Why?</span>
+    </span>
+    <span style="width: 14px;"></span>
+    <span style="display: inline-flex; align-items: center; gap: 8px; padding: 9px 14px 9px 11px; border-radius: 999px; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.10); color: #b9b5ad; font-size: 14px; backdrop-filter: blur(18px) saturate(1.3);">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7f7d77" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4.5a2 2 0 0 1 4 0v8.8a4 4 0 1 1-4 0zM12 9.5v8"/></svg>
+      <span>Humidity</span><span style="color: #f1eee8;">51%</span>
+    </span>
+    <span style="display: inline-flex; align-items: center; gap: 8px; padding: 9px 14px 9px 11px; border-radius: 999px; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.10); color: #b9b5ad; font-size: 14px; backdrop-filter: blur(18px) saturate(1.3);">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7f7d77" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3.5h10.5v17H5zM12.5 12h.01M15.5 3.5h3.5v17h-3.5"/></svg>
+      <span>Back door</span><span style="color: #f1eee8;">Closed</span>
+    </span>
+  </div>
+
+  <!-- the room, ranked. Four devices, and only one of them is doing anything. -->
+  <div style="position: absolute; top: 330px; left: 40px; right: 40px; height: 340px; display: flex; align-items: stretch; gap: 18px;">
+
+    <!-- the one thing that is on leads, and it is the only tile carrying the lamp accent -->
+    <div style="position: relative; flex: 0 0 auto; width: 446px; border-radius: 26px; overflow: hidden; background: {{t.light}}; border: 1px solid rgba(233,184,114,.34); color: {{t.ink}};">
+      <div style="position: absolute; inset: 0; background: radial-gradient(90% 70% at 78% 8%, rgba(233,184,114,.34), transparent 62%);"></div>
+      <svg width="270" height="234" viewBox="0 0 150 130" style="position: absolute; right: 12px; bottom: -6px;">
+        <path d="M70 30L46 130h100L118 30z" fill="url(#mCone)"/>
+        <rect x="26" y="8" width="124" height="3" fill="{{mat.metalMid}}" opacity=".18"/>
+        <rect x="88" y="11" width="10" height="8" fill="url(#mPlate)"/>
+        <path d="M67 30a26 22 0 0 1 52 0z" fill="url(#mMatte)"/>
+        <ellipse cx="93" cy="30" rx="26" ry="5" fill="#fbeed6" opacity=".95"/>
+        <ellipse cx="93" cy="32" rx="17" ry="3" fill="#f6dcae" opacity=".6"/>
+      </svg>
+      <div style="position: absolute; inset: 0; padding: 22px; display: flex; flex-direction: column;">
+        <div style="width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: #e9b872; color: #2a1c07;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 18h5M10.5 21h3M12 3a6 6 0 0 0-3.7 10.7c.7.6 1.1 1.4 1.2 2.3h5c.1-.9.5-1.7 1.2-2.3A6 6 0 0 0 12 3z"/></svg>
+        </div>
+        <div style="margin-top: auto; font-size: 19px; font-weight: 500;">Kitchen lights</div>
+        <div style="margin-top: 4px; font-size: 14.5px; color: {{t.lampInk}};">On, full</div>
+        <div style="margin-top: 16px; height: 3px; border-radius: 3px; background: {{t.track}};"><div style="width: 100%; height: 3px; border-radius: 3px; background: #e9b872;"></div></div>
+      </div>
+    </div>
+
+    <!-- how you change the room, in the room. Four here, because the Kitchen has four. -->
+    <div style="position: relative; flex: 0 0 auto; width: 336px; border-radius: 26px; overflow: hidden; background: {{t.scene}}; border: 1px solid {{t.edge}}; color: {{t.ink}}; padding: 20px 18px 18px;">
+      <div style="font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: {{t.sub}};">In the Kitchen</div>
+      <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 14px;">
+        <sc-for list="{{scenes}}" as="s" hint-placeholder-count="4">
+          <div style="display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: 12px; padding: 8px 14px 8px 8px; min-height: 61px; border-radius: 18px; background: {{t.chip}}; cursor: pointer;">
+            <span style="width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: {{t.chipOff}};">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="{{s.d}}"/></svg>
+            </span>
+            <span>
+              <span style="display: block; font-size: 16px; font-weight: 500;">{{s.label}}</span>
+              <span style="display: block; margin-top: 1px; font-size: 13px; color: {{t.sub}};">{{s.hint}}</span>
+            </span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <!-- off, and small. Same hue family as the light that is on; none of its weight. -->
+    <div style="flex: 0 0 auto; width: 262px; display: flex; flex-direction: column; gap: 18px;">
+      <div style="position: relative; flex: 1 1 0; border-radius: 26px; overflow: hidden; background: {{t.light}}; border: 1px solid {{t.edge}}; color: {{t.ink}}; padding: 18px;">
+        <svg width="180" height="156" viewBox="0 0 150 130" style="position: absolute; right: -6px; bottom: -10px;">
+          <rect x="20" y="40" width="130" height="7" rx="1.5" fill="url(#mPlate)"/>
+          <rect x="32" y="47" width="112" height="6" rx="3" fill="url(#mDark)"/>
+          <rect x="40" y="49" width="12" height="2.6" rx="1.3" fill="{{mat.metalLo}}" opacity=".85"/>
+          <rect x="62" y="49" width="12" height="2.6" rx="1.3" fill="{{mat.metalLo}}" opacity=".85"/>
+          <rect x="84" y="49" width="12" height="2.6" rx="1.3" fill="{{mat.metalLo}}" opacity=".85"/>
+          <rect x="106" y="49" width="12" height="2.6" rx="1.3" fill="{{mat.metalLo}}" opacity=".85"/>
+          <rect x="128" y="49" width="12" height="2.6" rx="1.3" fill="{{mat.metalLo}}" opacity=".85"/>
+        </svg>
+        <div style="position: relative; width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; background: {{t.chipOff}};">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 18h5M10.5 21h3M12 3a6 6 0 0 0-3.7 10.7c.7.6 1.1 1.4 1.2 2.3h5c.1-.9.5-1.7 1.2-2.3A6 6 0 0 0 12 3z"/></svg>
+        </div>
+        <div style="position: absolute; left: 18px; bottom: 18px;">
+          <div style="font-size: 16px; font-weight: 500;">Under-cabinet strip</div>
+          <div style="margin-top: 2px; font-size: 14px; color: {{t.sub}};">Off</div>
+        </div>
+      </div>
+
+      <!-- nothing known about it, so the icon goes oversized and dim and becomes the art -->
+      <div style="position: relative; flex: 1 1 0; border-radius: 26px; overflow: hidden; background: {{t.plain}}; border: 1px solid {{t.edge}}; color: {{t.ink}}; padding: 18px;">
+        <svg width="126" height="126" viewBox="0 0 24 24" fill="none" stroke="{{t.art}}" stroke-width="1.05" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; right: -22px; bottom: -22px;"><path d="M12 3.5v8.5M6.6 6.6a7.6 7.6 0 1 0 10.8 0"/></svg>
+        <div style="position: relative; width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; background: {{t.chipOff}};">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v8.5M6.6 6.6a7.6 7.6 0 1 0 10.8 0"/></svg>
+        </div>
+        <div style="position: absolute; left: 18px; bottom: 18px;">
+          <div style="font-size: 16px; font-weight: 500;">Coffee maker</div>
+          <div style="margin-top: 2px; font-size: 14px; color: {{t.sub}};">Off</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- a media tile with nothing playing has no artwork to be coloured by -->
+    <div style="position: relative; flex: 0 0 auto; width: 262px; border-radius: 26px; overflow: hidden; background: {{t.plain}}; border: 1px solid {{t.edge}}; color: {{t.ink}}; padding: 20px 18px;">
+      <svg width="212" height="184" viewBox="0 0 150 130" style="position: absolute; right: -14px; bottom: -8px;">
+        <ellipse cx="96" cy="122" rx="34" ry="7" fill="{{mat.metalLo}}" opacity=".4"/>
+        <path d="M66 34h60v78H66z" fill="url(#mFabric)"/>
+        <path d="M78 34v78M96 34v78M114 34v78" stroke="{{mat.fabricLo}}" stroke-width="1" opacity=".45"/>
+        <ellipse cx="96" cy="112" rx="30" ry="9" fill="{{mat.fabricLo}}"/>
+        <ellipse cx="96" cy="34" rx="30" ry="9" fill="url(#mPlate)"/>
+        <ellipse cx="96" cy="33" rx="19" ry="5.5" fill="{{mat.darkHi}}" opacity=".75"/>
+      </svg>
+      <div style="position: relative; width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: {{t.chipOff}};">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3.5h11a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1v-15a1 1 0 0 1 1-1zM12 17a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4zM12 8h.01"/></svg>
+      </div>
+      <div style="position: absolute; left: 18px; bottom: 20px;">
+        <div style="font-size: 19px; font-weight: 500;">Kitchen speaker</div>
+        <div style="margin-top: 4px; font-size: 14.5px; color: {{t.sub}};">Nothing playing</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- the room is short, and the screen says so rather than stretching to fill -->
+
+  <div style="position: absolute; left: 40px; right: 40px; bottom: 34px; display: flex; align-items: center; gap: 20px;">
+    <div style="display: flex; align-items: center; gap: 14px; height: 56px; padding: 0 26px 0 12px; border-radius: 999px; background: rgba(26,28,34,.55); border: 1px solid rgba(255,255,255,.10); backdrop-filter: blur(18px) saturate(1.3);">
+      <div style="width: 36px; height: 36px; border-radius: 50%; background: radial-gradient(circle at 32% 28%, #f4e3c4, #e9b872 42%, #8f6ad0 100%); box-shadow: 0 0 18px 2px rgba(233,184,114,.28);"></div>
+      <span style="font-size: 16px; color: #7f7d77;">Ask the house&hellip;</span>
+    </div>
+    <div style="margin-left: auto; display: flex; align-items: center; gap: 14px;">
+      <span style="font-size: 15px; color: #b9b5ad;">Family</span>
+      <div style="display: flex;">
+        <div style="width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(140deg, #8a7f6a, #4a4238); border: 2px solid #0c0d10;"></div>
+        <div style="width: 34px; height: 34px; border-radius: 50%; margin-left: -10px; background: linear-gradient(140deg, #b98a5e, #6a4a2e); border: 2px solid #0c0d10;"></div>
+        <div style="width: 34px; height: 34px; border-radius: 50%; margin-left: -10px; background: linear-gradient(140deg, #6f8f86, #35544c); border: 2px solid #0c0d10;"></div>
+        <div style="width: 34px; height: 34px; border-radius: 50%; margin-left: -10px; display: grid; place-items: center; background: rgba(255,255,255,.10); border: 2px solid #0c0d10; color: #b9b5ad;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5.5v13M5.5 12h13"/></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"field":{"editor":"enum","options":["Dusk","Night","Midday"],"default":"Dusk","section":"Sky"},"tone":{"editor":"enum","options":["Warm","Cool","Pastel","Follow the light"],"default":"Follow the light","section":"Tiles"}}'>
+/* The same colour rules as Home, copied rather than invented: a room is not a
+   different place, and a tile that means "on" must mean it in every room.
+   Tiles are specified RELATIVE to the sky -- always this much lighter, always
+   this far around the hue wheel -- so nothing inverts between dusk and noon. */
+class Component extends DCLogic {
+  renderVals() {
+    // --- sRGB -> OKLCH -------------------------------------------------
+    const lin = (c) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+    function oklch(r, g, b) {
+      const R = lin(r / 255), G = lin(g / 255), B = lin(b / 255);
+      const l = Math.cbrt(0.4122214708 * R + 0.5363325363 * G + 0.0514459929 * B);
+      const m = Math.cbrt(0.2119034982 * R + 0.6806995451 * G + 0.1073969566 * B);
+      const s = Math.cbrt(0.0883024619 * R + 0.2817188376 * G + 0.6299787005 * B);
+      const L = 0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s;
+      const A = 1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s;
+      const Bb = 0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s;
+      let H = Math.atan2(Bb, A) * 180 / Math.PI; if (H < 0) H += 360;
+      return { L: L, C: Math.hypot(A, Bb), H: H };
+    }
+
+    // --- the field. Partly cloudy, as Home's default is: the room draws no
+    //     weather of its own, but the sky it sits on is still weathered.
+    const w0 = { clouds: 0.42, rain: 0, snow: 0, fog: 0 };
+    const lerp = (a, b, t) => a + (b - a) * t;
+    const mix = (a, b, t) => [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)];
+    const weather = (c) => {
+      let o = mix(c, [58, 64, 72], w0.clouds * 0.55);
+      o = mix(o, [22, 24, 30], w0.rain * 0.3);
+      return mix(o, [116, 122, 128], w0.fog * 0.3);
+    };
+    const css = (c) => 'rgb(' + c.map((v) => Math.round(v)).join(',') + ')';
+
+    const FIELDS = {
+      'Dusk':   { stops: [[10, 14, 34], [38, 34, 74], [158, 84, 60]], at: 44, a: 0.52,
+                  veil: 'linear-gradient(180deg, rgba(12,13,16,.30) 0%, rgba(12,13,16,.52) 45%, rgba(12,13,16,.80) 100%)', day: false },
+      'Night':  { stops: [[4, 5, 10], [7, 9, 16], [12, 14, 26]], at: 55, a: 0.36,
+                  veil: 'linear-gradient(180deg, rgba(12,13,16,.20) 0%, rgba(12,13,16,.36) 45%, rgba(12,13,16,.66) 100%)', day: false },
+      'Midday': { stops: [[26, 78, 136], [70, 148, 202], [170, 200, 218]], at: 55, a: 0.34,
+                  veil: 'linear-gradient(180deg, rgba(12,13,16,.22) 0%, rgba(12,13,16,.34) 45%, rgba(12,13,16,.58) 100%)', day: true },
+    };
+    const fd = FIELDS[this.props.field] || FIELDS['Dusk'];
+    const st = fd.stops.map(weather);
+    const f = {
+      day: fd.day, veil: fd.veil,
+      sky: 'linear-gradient(180deg, ' + css(st[0]) + ' 0%, ' + css(st[1]) + ' ' + fd.at + '%, ' +
+           css(st[2]) + ' 84%, ' + css(mix(st[2], [8, 9, 14], 0.35)) + ' 100%)',
+    };
+    const veilRGB = [12, 13, 16];
+    const ground = oklch(
+      st[1][0] * (1 - fd.a) + veilRGB[0] * fd.a,
+      st[1][1] * (1 - fd.a) + veilRGB[1] * fd.a,
+      st[1][2] * (1 - fd.a) + veilRGB[2] * fd.a
+    );
+
+
+    /* What a device is MADE OF takes the ambient; what it EMITS does not. The
+       same block the Devices sheet uses -- one vocabulary, or the shelf stops
+       looking like one shelf. */
+    const hex2rgb = (h) => [parseInt(h.substr(1, 2), 16), parseInt(h.substr(3, 2), 16), parseInt(h.substr(5, 2), 16)];
+    const amb = (h) => css(mix(hex2rgb(h), st[1], 0.22));
+    const mat = {
+      metalLo: amb('#4a4640'), metalMid: amb('#b3aa9c'),
+      matteHi: amb('#f2efe8'), matteLo: amb('#c9c4b8'),
+      darkHi: amb('#3a3d44'), darkLo: amb('#15171b'),
+      shadeHi: amb('#f7e6c6'), shadeLo: amb('#e0b981'),
+      fabricHi: amb('#7a7468'), fabricLo: amb('#4e4a42'),
+    };
+    // --- a tone is a relationship to the field, not a fixed palette ----
+    const WARM = { light: 76,  lock: 66,  scene: 30  };
+    const COOL = { light: 210, lock: 245, scene: 330 };
+    const TONES = {
+      'Warm':   { dL: 0.135, C: 0.050, h: WARM },
+      'Cool':   { dL: 0.135, C: 0.058, h: COOL },
+      'Pastel': { dL: 0.335, C: 0.058, h: { light: 82, lock: 245, scene: 330 } },
+      'Follow the light': f.day
+        ? { dL: 0.335, C: 0.058, h: COOL }
+        : { dL: 0.135, C: 0.050, h: WARM },
+    };
+    const tn = TONES[this.props.tone] || TONES['Warm'];
+
+    const C = tn.C * (1 - 0.35 * Math.min(ground.C / 0.09, 1));
+    const L = Math.min(0.92, Math.max(0.16, ground.L + tn.dL));
+    const tile = (h, c) => 'linear-gradient(155deg, oklch(' + (L + 0.055).toFixed(3) + ' ' + c.toFixed(3) + ' ' + h +
+                           '), oklch(' + L.toFixed(3) + ' ' + c.toFixed(3) + ' ' + (h + 6) + '))';
+
+    const light = L > 0.62;   // ink flips once the tile out-lightens its own text
+    const t = {
+      light: tile(tn.h.light, C),
+      scene: tile(tn.h.scene, C),
+      // a tile with nothing of its own to say takes the quietest colour there is
+      plain: tile(tn.h.lock, C * 0.22),
+      ink: light ? '#1e1b24' : '#f1eee8',
+      sub: light ? 'rgba(30,27,36,.62)' : '#b9b5ad',
+      lampInk: light ? '#7a4a10' : '#e9b872',       // the lamp accent is semantic: it never moves
+      edge: light ? 'rgba(30,27,36,.14)' : 'rgba(255,255,255,.10)',
+      chip: light ? 'rgba(30,27,36,.10)' : 'rgba(255,255,255,.07)',
+      chipOff: light ? 'rgba(30,27,36,.13)' : 'rgba(255,255,255,.12)',
+      track: light ? 'rgba(30,27,36,.18)' : 'rgba(255,255,255,.18)',
+      art: light ? 'rgba(30,27,36,.13)' : 'rgba(255,255,255,.13)',
+    };
+
+    // the four the Kitchen qualifies for, in the app's own order and words
+    const scenes = [
+      { label: 'Movie', hint: 'Lights low, screen on', d: 'M3.5 5.5h17v13h-17zM3.5 9h17M3.5 15h17M7.5 5.5v13M16.5 5.5v13' },
+      { label: 'Guests', hint: 'Lights up bright', d: 'M12 3.5l1.8 5.2 5.2 1.8-5.2 1.8L12 17.5l-1.8-5.2L5 10.5l5.2-1.8zM5 17.5l.7 1.8 1.8.7-1.8.7L5 22.5l-.7-1.8-1.8-.7 1.8-.7z' },
+      { label: 'Sleep', hint: 'Lights and screens off', d: 'M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z' },
+      { label: 'All off', hint: 'Lights off, media paused', d: 'M12 3.5v8.5M6.6 6.6a7.6 7.6 0 1 0 10.8 0' },
+    ];
+
+    return { f: f, mat: mat, t: t, scenes: scenes };
+  }
+}
+</script>
+</body>
+</html>

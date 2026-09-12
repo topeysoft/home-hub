@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 import { store, notify, loadRoutines, visibleRooms } from './store'
 import { say, act, type Proposal } from './api'
 import Icon from './Icon.vue'
@@ -11,6 +11,21 @@ import Icon from './Icon.vue'
    so "lights off" inside a room means that room. */
 const props = defineProps<{ room?: string | null }>()
 const text = ref(''), busy = ref(false), note = ref(''), answer = ref(''), proposal = ref<(Proposal & { said: string }) | null>(null), doing = ref(false)
+
+/* At rest the box can be only its orb -- design/nightfall move 7, and it is the
+   face that decides whether that happens, not this file. `open` is one fact in
+   one place so the stylesheet never has to work out for itself whether there is
+   anything in the box: it is open while somebody is in it, while it is carrying
+   words, and while it is still finishing something. The last three matter more
+   than they look. `busy` disables the input, which drops focus, so without it a
+   box would shut on itself the moment a sentence was sent; and a note, an
+   answer or a proposal is the box's reply, which nobody has read yet. */
+const field = ref<HTMLInputElement | null>(null)
+const focused = ref(false)
+const open = computed(() => focused.value || !!text.value.trim() || busy.value || !!note.value || !!answer.value || !!proposal.value)
+/* the whole pill is the way in, because at rest the orb is all there is to aim
+   at and the input behind it is clipped to nothing */
+function reach() { field.value?.focus() }
 
 const hint = computed(() => {
   const rooms = visibleRooms().filter(r => r.id !== 'unassigned' && r.devices.length)
@@ -35,6 +50,11 @@ async function go() {
     else if (r.kind === 'rule') { note.value = 'Written up as a routine. It waits for your OK under Routines.'; loadRoutines() }
   } catch (e: any) { note.value = e.message }
   busy.value = false
+  /* and put the cursor back where it was. `busy` disables the input, which drops focus, and nothing
+     was giving it back -- so after every sentence a keyboard was left outside the box and had to
+     find its way in again. Under a face that rests the box, it also shut it on somebody who was
+     plainly still talking to the house. */
+  await nextTick(); field.value?.focus()
 }
 async function doIt() {
   const p = proposal.value; if (!p || doing.value) return
@@ -46,10 +66,15 @@ async function doIt() {
 </script>
 
 <template>
-  <div class="say">
-    <form class="search say-box" @submit.prevent="go">
+  <div class="say" :class="{ open }">
+    <form class="search say-box" @submit.prevent="go" @click="reach">
+      <!-- the orb: the house, listening. Drawn here rather than as a pseudo-element
+           because under glass it is lit from inside by blooms turning against each
+           other, and one ::before cannot hold two of them. Only the bottom bar shows
+           it; everywhere else the box keeps its sparkle (panel.css). -->
+      <span class="say-orb" aria-hidden="true"><i class="orb-cool"></i><i class="orb-warm"></i></span>
       <Icon name="sparkle" :size="18" />
-      <input v-model="text" :disabled="busy" :placeholder="room ? 'Tell this room…' : 'Tell the house…'" aria-label="Tell the house" enterkeyhint="send" autocomplete="off" autocapitalize="off" spellcheck="false" />
+      <input ref="field" v-model="text" :disabled="busy" @focus="focused = true" @blur="focused = false" :placeholder="room ? 'Tell this room…' : 'Tell the house…'" aria-label="Tell the house" enterkeyhint="send" autocomplete="off" autocapitalize="off" spellcheck="false" />
       <button class="button small" type="submit" :class="{ busy }" :disabled="!text.trim()">{{ busy ? 'Doing…' : 'Go' }}</button>
     </form>
     <p class="say-hint" v-if="!note && !answer && !proposal">{{ hint }}</p>
