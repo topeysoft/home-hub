@@ -449,6 +449,33 @@ rule and holds — but it is worth knowing that the day question is not only abo
 identity. It has a legibility floor under it, and that floor is what decides how
 light a pane is allowed to be.
 
+That floor has now been measured, and it is not a pane question at all: it is
+`--card-ink-2`. At `?at=12:30&wx=sunny`, with the ink composited over the ground
+at its own alpha and the ground read from behind the ink itself, the secondary
+line on three unrelated surfaces comes out at:
+
+| | glass | paper |
+| --- | --- | --- |
+| what a lamp is doing | 2.74 | 3.34 |
+| the line under a scene | 2.96 | 3.28 |
+| under the weather | 4.27 | 3.43 |
+
+The primary ink beside each of those is 6.9 to 7.7 on both faces, so nothing is
+wrong with the flip and nothing is wrong with either face -- the two track each
+other everywhere, which is the invariant to keep. What is thin is
+`rgba(30,27,36,.62)` on a card that daylight has taken to L .7: .62 of an alpha
+was chosen against the dark card it sits on after sunset, where the same ink
+reads 4.6 to 5.6. It is one number in `toneVars` and it belongs to whoever
+answers the day question, because raising it changes paper everywhere in
+daylight and that is a design decision rather than a fix.
+
+Two ways to get these numbers wrong, both found the hard way and both surviving
+a screenshot. Reading an ink as if it were opaque: `--card-ink-2` scored 6.90
+where it paints 3.26. And reading the ground from a point that is not behind the
+ink -- beside a clamped line it lands outside the surface on the open sky, and
+with the rail left mid-scroll it lands on whichever card is passing over. Hide
+the text and clip its own rect; put the row back to home first.
+
 The other unbuilt thing is a screen that is not a rail. A room fits on the
 screen, so [`Room.dc.html`](../Room.dc.html) argues it is a ranked grid rather
 than something you sweep — and rail-plus-pane is the spine of this direction.
