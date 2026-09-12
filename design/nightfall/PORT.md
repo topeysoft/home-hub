@@ -12,10 +12,31 @@ exactly where it is, and Nightfall is one more thing a house can be set to.
 
 ## Where this is
 
-Slices 1 to 4 have landed, each as its own commit: `git log --oneline a2cdf1a..HEAD`.
+Slices 1 to 5 have landed, each as its own commit: `git log --oneline a2cdf1a..HEAD`.
 Glass is a face a house can be set to, its material is derived from the sky, the
-field carries the blooms and the rail has its focal plane. Slices 5 and 6 are
-not started.
+field carries the blooms, the rail has its focal plane and the pane has its
+measured timings. Slice 6 is not started.
+
+Two things were found under slice 5 rather than written by it, and both are
+their own commits before it:
+
+- **There was no frost in the built panel at all.** `panel.css` wrote
+  `-webkit-backdrop-filter` by hand next to every standard `backdrop-filter`,
+  and the CSS minifier reads that pair as proof the prefixed one covers every
+  target: 19 of the file's 23 declarations came out of the build prefixed only.
+  Chrome 153 has removed the `-webkit-` alias. So the cards, the rail, both
+  panes and the whole of glass had been flat in every build for as long as that
+  browser has been current, while the source plainly said blur and every unit
+  test passed. The fix is to stop writing the prefix; the build adds it, and
+  correctly emits both. `e2e/face.spec.ts` is the guard, and it has to be an
+  e2e -- nothing that reads the stylesheet can see this, because the stylesheet
+  was right.
+- **The pane's close button was thirty pixels off the left of the screen.**
+  `[data-face='glass'] .back` declared `position: relative` for the rim's
+  containing block, which beats a plain `.opened-close`, so the button fell back
+  into the flow and `right: 30px` took it the other way. A wall panel has no
+  keyboard, so the veil was the only way out. The containing block belongs to
+  the surface, not the face.
 
 Run it: `cd app && npm run build && npm run mock`, then
 `localhost:8399/?face=glass&layout=rail&nav=top`, or pick **Glass** under *This
@@ -23,9 +44,9 @@ house -> How it looks*. `&at=12:30&wx=sunny` is noon, `&face=paper` is the
 before. Every change is scoped under `[data-face='glass']`, so paper is
 untouched and that is the thing to check first if something looks wrong.
 
-**One decision is open, and slice 5 should probably wait on it.** A face was
-defined as what the panel is MADE OF, not what is on it — so the material and
-the motion have landed on the panel's own arrangement, and the screen still
+**One decision is still open, and slice 5 has now run into it twice.** A face
+was defined as what the panel is MADE OF, not what is on it — so the material
+and the motion have landed on the panel's own arrangement, and the screen still
 does not look much like the artboard. It leads with a serif greeting, a next-up
 line and the attention strip, so the row starts two thirds down; the weather is
 a cloud in the header corner rather than a tall lozenge hung off-card; the type
@@ -34,10 +55,12 @@ Those are arrangement, type and radius, and none of them belong to a face.
 
 Closing that gap means a LAYOUT — a third beside stack and rail, in the shape
 `layout.ts` already describes — not more face. It is a real piece of work and
-nobody has asked for it yet. Slice 5 retimes `Opened.vue`, which a new layout
-would likely reuse rather than replace, so it is not wasted either way; but if
-the arrangement is going to change, it is worth knowing before the pane is
-tuned to the old one.
+nobody has asked for it yet. Slice 5 was worth doing either way, and was: a new
+layout would reuse the pane rather than replace it. But the one line of the
+slice that could not be done is arrangement — *the row you came from is still
+there, dimmed, above the pane* — and the reason is that on this arrangement the
+row is not where the pane stops short of. The pane is right; there is nothing
+above it to leave uncovered.
 
 ## The seam
 
@@ -141,13 +164,68 @@ The velocity blur is **not** in. It is a second blur on top of one the file
 already warns re-rasterises every frame of a swipe, and adding that cost before
 slice 6 has measured the first one is backwards. It waits for a number.
 
-**5. The pane.** *(next)*  `Opened.vue` already rises; it needs the measured timings.
+**5. The pane.** *(landed)*  `Opened.vue` already rose; it needed the measured timings.
 400ms up on `cubic-bezier(.12,.78,.24,1)`, 300ms down on
 `cubic-bezier(.4,0,.6,1)`, the object inside travelling further and still
 settling at 700ms, the bottom bar leaving 60ms *before* the pane starts and
 coming back 180ms after it has gone. The pane stops short of the top bar so the
-row you came from is still there, dimmed, above it — that is what makes it a
+row you came from is still there, dimmed, above it -- that is what makes it a
 drawer rather than a new screen. The room dims; it does not blur.
+
+Landed in three commits, because the timings could not be looked at until the
+pane was made of something.
+
+*The room dims; it does not blur* turned out to have a second reason underneath
+the stated one. A pane over an already-blurred room is a dark sheet over mush --
+the blur the pane is MADE of has nothing left to work on -- and the dim cannot
+be a `filter` either, because a filter on `.stage` forms a backdrop root and
+silently kills `backdrop-filter` on every card beneath it. It is the same trap
+as the rail's blur, which goes on each card and never on the row. So the room
+stays where it is and `--glass-scrim` takes it down: the air from under the
+pane, deepening as the day does, because a dark room is already most of the way
+to being out of the way and a bright one is not.
+
+*A pane is measured against the room, not the sky.* Both panes were still
+wearing paper's fixed near-black, invisible while the room behind them was mush
+and, once it was not, exactly the hole punched in the daylight `tone.ts` exists
+to prevent: at noon the room read L .49 and the pane .13. A card under glass
+holds its distance from the sky; a pane does not, because by the time you are
+looking at one the sky is not what is behind it. `--pane` is written as what it
+does to the scrimmed room -- each stop says how far it lifts what is behind it,
+and the painted lightness falls out of that and the stop's own alpha.
+
+The lifts are small, and it took measuring to find out how small. Lifted a
+card's distance, at noon the pane is a pale blue sheet with grey type on it: the
+muted ink came off the screen at 2.0:1 against paper's 4.4:1 at the same hour.
+Which is the other half -- the surface moved, so the ink has to move with it,
+the same as on a card. `--pane-ink-2` and `--pane-muted` hold a ratio against
+the pane's own foot rather than a colour, and never drop below what paper gives,
+so after dark nothing changes at all. Measured back off the screen at noon:
+6.1:1 and 4.7:1.
+
+*The timings* needed a real instant to count from, twice, and neither existed.
+`shown` cannot flip until the pane has painted once at `translateY(100%)`, two
+frames after the bar starts leaving, so the pane's delay is 28ms and those two
+frames are the rest of the 60. And the way back used to be counted from
+`Opened.vue`'s unmount timeout, which is a `setTimeout` on the same main thread
+that is painting a 300ms fall through a 30px blur and runs about 70ms late; a
+`closing` flag goes on at the instant the fall begins instead. It is a separate
+fact from `!shown` and has to be, because for two frames at the start a pane is
+also not shown and CSS cannot tell those apart.
+
+Measured off the transitions' own clocks rather than by sampling frames -- at
+1280x800 a frame runs about 25ms while a pane is being painted, which is coarser
+than the gaps involved. Bar at 0, veil at 25, pane at 51, landed at 480, the
+object still going until 760. The test asserts the ORDER, because that is what
+breaks silently and the numbers are load-dependent.
+
+One part of the slice did not land and could not: **the row you came from is not
+still there above the pane.** The pane stops short of the top bar as specified --
+176px at 1280x800 -- but this panel's home leads with a serif greeting, a
+next-up line and the attention strip, so the row does not begin until y 340 and
+the pane covers all of it. On the canvas the row starts at the top and the pane
+takes its lower two thirds. That is the arrangement, not the face, and it is the
+open decision below.
 
 **6. Reduced motion, and the floor.** *(not started)*  All eight moves collapse to opacity, the
 field stops drifting, the rail jumps. Then the question this whole port exists
@@ -167,6 +245,14 @@ identity. Whether that wants a distinct day face or just this one tracking
 lightness is a design decision nobody has made yet, and it does not block
 anything above.
 
+Slice 5 put a number on one corner of that. A pane at noon cannot be both lit
+glass and carry paper's greys: to give the muted ink paper's 4.4:1 it would have
+to come down to a near-black sheet, which is the hole punched in the daylight
+all over again. The pane carries its own ink instead, which is the house's own
+rule and holds — but it is worth knowing that the day question is not only about
+identity. It has a legibility floor under it, and that floor is what decides how
+light a pane is allowed to be.
+
 The other unbuilt thing is a screen that is not a rail. A room fits on the
 screen, so [`Room.dc.html`](../Room.dc.html) argues it is a ranked grid rather
 than something you sweep — and rail-plus-pane is the spine of this direction.
@@ -178,11 +264,25 @@ Small slices, each committed and looked at before the next one starts. The
 panel is checked by driving the real thing at 1280x800 against `mock/brain.mjs`
 and reading computed styles, not by trusting that the CSS says what it means --
 the rail's 56px lag was confirmed by measuring an exiting card at x -294 under
-glass against -350 under paper. `npx vitest run`, `npx playwright test`,
+glass against -350 under paper. Slice 5 needed two instruments past that, and
+both are worth keeping. For colour, screenshot a clip of the pane and read the
+pixels back, because a composite of a gradient over a blurred backdrop is not
+anywhere in the computed styles -- that is where 2.0:1 came from, and nothing
+else would have found it. For timing, listen for `transitionstart` and
+`transitionend` rather than sampling frames: a frame runs about 25ms while a
+pane is being painted, which is coarser than the gaps being measured, and a
+sampled trace put the bar and the pane at the same instant when they are 51ms
+apart. `npx vitest run`, `npx playwright test`,
 `npx vue-tsc --noEmit -p tsconfig.app.json` and `npx eslint` all pass; the hold
 gesture spec flakes under load and passes in isolation.
 
 Findings get written down rather than tuned away. The blooms read as a tint
 because the panel's sky is a painted scene and the face was drawn against an
 abstract field -- that is in slice 3 as a question, not fixed by raising an
-alpha until it looked right.
+alpha until it looked right. The same goes for the last 9ms of the pane's 60ms
+lead: it is one frame, chasing it moved the measurement the wrong way, and the
+comment in `panel.css` says so instead of pretending to 60.
+
+And check the built panel, not the dev server. The frost bug above only exists
+after minification, so `npm run dev` shows a face that `npm run build` does
+not.
