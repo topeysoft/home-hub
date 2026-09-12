@@ -115,6 +115,11 @@ class GateTests(unittest.TestCase):
                      ("DELETE", "/phones/abc"), ("POST", "/phones/asks/abc/allow"), ("GET", "/devices/cam/image"), ("GET", "/backup"), ("GET", "/health"), ("GET", "/rooms/kitchen/why")]:
             self.assertFalse(open_to_strangers(m, p), p)
 
+    def test_forgetting_a_thing_is_a_change_to_the_house(self):
+        """Driving a device never asks; ending its life here does."""
+        self.assertTrue(needs_code("DELETE", "/devices/light.kitchen"))
+        self.assertFalse(needs_code("POST", "/devices/light.kitchen/on"))
+
     def test_letting_a_phone_in_or_out_needs_the_code_but_asking_does_not(self):
         for m, p in [("POST", "/phones/asks/abc/allow"), ("DELETE", "/phones/asks/abc"), ("DELETE", "/phones/abc"), ("POST", "/phones/abc/remote")]:
             self.assertTrue(needs_code(m, p), p)
