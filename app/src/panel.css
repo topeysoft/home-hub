@@ -4347,6 +4347,16 @@ select.input {
    the corner the way a render would. It takes the card's ink, so it stays a
    whisper whether the card is dark or pale. Under the body, and never in the
    way of a finger. */
+/* The same drawing, filling a box instead of a corner: the album-art slot, which
+   holds a real picture when there is one and this when there is not. It stays a
+   square in the column layouts and goes full-bleed in the rail, and the drawing
+   follows either way because it is a viewBox, not a fixed size. */
+.slot-render {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
 /* Rung two: a drawing the hub ships, cropped into the corner the icon used to
    fill. Unlike the icon it is not faded to a watermark -- it IS the picture, so
    it sits at full strength and scales with the tile rather than taking a fixed
@@ -4360,6 +4370,12 @@ select.input {
   aspect-ratio: 150 / 130;
   z-index: 0;
   pointer-events: none;
+}
+/* A camera tile is full-bleed and much wider than the rest, so 74% of it is a
+   doorbell the size of a door. The drawing is a stand-in for a missing frame,
+   not the subject of the card: cap it and let the tile stay mostly empty. */
+.tile.camera .tile-render {
+  max-width: 200px;
 }
 /* a device that is not answering should look it, the same way its text does */
 .tile.dead .tile-render {

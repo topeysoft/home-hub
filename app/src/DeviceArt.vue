@@ -15,7 +15,10 @@ import { computed } from 'vue'
 import { BOX, device, materials, type ArtState, type Kind } from './art'
 import { store } from './store'
 
-const props = defineProps<{ kind: Kind; state: ArtState }>()
+/* corner: cropped into the bottom right of a tile, where the name and state own
+   the other half. slot: filling a box that exists to hold a picture -- the
+   album-art square, which is rung one's home and so is rung two's as well. */
+const props = withDefaults(defineProps<{ kind: Kind; state: ArtState; fit?: 'corner' | 'slot' }>(), { fit: 'corner' })
 
 /* the same materials ArtDefs paints into the gradients, for the handful of marks
    that take a flat colour rather than one of them */
@@ -23,7 +26,8 @@ const art = computed(() => device(props.kind, props.state, materials(store.sky.e
 </script>
 
 <template>
-  <svg class="tile-render" :viewBox="`0 0 ${BOX.w} ${BOX.h}`" aria-hidden="true" focusable="false" preserveAspectRatio="xMaxYMax meet">
+  <svg :class="fit === 'slot' ? 'slot-render' : 'tile-render'" :viewBox="`0 0 ${BOX.w} ${BOX.h}`"
+       aria-hidden="true" focusable="false" :preserveAspectRatio="fit === 'slot' ? 'xMidYMid meet' : 'xMaxYMax meet'">
     <component :is="m.el" v-for="(m, i) in art.marks" :key="i" v-bind="m.at" />
   </svg>
 </template>

@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { imageUrl, type Device } from '../api'
 import { perform, shortName, roomOf, store, isDead } from '../store'
 import Icon from '../Icon.vue'
+import DeviceArt from '../DeviceArt.vue'
 
 const props = defineProps<{ device: Device }>()
 const s = computed(() => props.device.state)
@@ -36,7 +37,9 @@ const stopSound = () => perform(d(), 'sound_off', undefined, { state: 'idle', at
   <div class="tile media wide" :class="{ on: playing, off, dead, pending }">
     <div class="media-art" :class="{ has: !!art }">
       <img v-if="art" :src="art" alt="" @error="art = ''" />
-      <Icon v-else :name="isTv ? 'tv' : 'media'" :size="28" />
+      <!-- rung two, in the slot rung one would have filled: a speaker or a screen,
+           drawn, rather than a 28px icon floating in an empty square -->
+      <DeviceArt v-else :kind="isTv ? 'tv' : 'speaker'" :state="{ playing }" fit="slot" />
     </div>
     <div class="media-text">
       <span class="tile-name">{{ name }}</span>
