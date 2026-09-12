@@ -106,6 +106,34 @@ input:focus-visible {
   height: 100%;
   display: block;
 }
+/* Character laid on the sky, for the glass face: the same z-index as the canvas
+   and later in the document, so it paints over the ramp and under the veil. The
+   ramp still decides how light the field is -- see tone.ts on why that matters
+   more than it looks like it should. Nothing on a wall panel is ever completely
+   still, and nothing on it is ever fast: this takes 46 seconds to cross and
+   never arrives. */
+.sky-bloom {
+  position: absolute;
+  inset: -12%;
+  z-index: -3;
+  pointer-events: none;
+  background: var(--glass-field);
+  animation: sky-drift 46s var(--ease) infinite alternate;
+}
+@keyframes sky-drift {
+  from {
+    transform: translate3d(-1.4%, -1%, 0) scale(1.03);
+  }
+  to {
+    transform: translate3d(1.8%, 1.4%, 0) scale(1.07);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sky-bloom {
+    animation: none;
+  }
+}
+
 .sky-veil {
   position: absolute;
   inset: 0;

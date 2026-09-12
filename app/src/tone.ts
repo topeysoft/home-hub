@@ -127,7 +127,7 @@ export function isTone(v: unknown): v is ToneName {
  */
 export function glassVars(elevation: number, condition: string): ToneVars {
   const field = oklch(ground(elevation, condition))
-  const [top] = palette(elevation, wxOf(condition))          // the sky's own top band, weathered
+  const [top, band, horizon] = palette(elevation, wxOf(condition))   // the sky's own three bands, weathered
 
   const gL = clamp(field.L + 0.10, 0.16, 0.9)
   const bright = clamp((field.L - 0.18) / 0.34)              // 0 at night, 1 at a clear noon
@@ -135,6 +135,7 @@ export function glassVars(elevation: number, condition: string): ToneVars {
   const at = (lo: number, hi: number) => lo + (hi - lo) * bright
   const a = (lo: number, hi: number) => at(lo, hi).toFixed(3)
   const air = (alpha: number) => rgb(mix(top, [4, 4, 10], 0.55), alpha)
+  const bloom = mix(band, [116, 92, 236], 0.42)              // the violet the face is built on, kept near the hour's own hue
 
   return {
     '--glass': `linear-gradient(148deg, oklch(${(gL + 0.07).toFixed(3)} 0.014 ${H} / .34),`
@@ -152,6 +153,17 @@ export function glassVars(elevation: number, condition: string): ToneVars {
        because a bright sky pushed through a 1.7 saturate goes lurid. */
     '--glass-sat': at(1.7, 1.15).toFixed(2),
     '--glass-br': at(1.06, 0.96).toFixed(3),
+    /* Four blooms laid on the sky, and the one thing to be careful about: they
+       are CHARACTER, not lightness. The sky's own ramp decides how light the
+       field is, because ground() is what every card and every pane is measured
+       against -- paint the field darker or lighter than that and every distance
+       in the system is a lie. So these go on at low alpha, over the ramp and
+       under the veil, and they lean on the hour's own hue rather than replacing
+       it: violet at dusk because dusk is violet, blue at noon because noon is. */
+    '--glass-field': `radial-gradient(58% 54% at 30% 64%, ${rgb(bloom, 0.4)}, transparent 68%),`
+      + ` radial-gradient(44% 42% at 74% 12%, ${rgb(mix(band, horizon, 0.5), 0.26)}, transparent 70%),`
+      + ` radial-gradient(62% 52% at 54% 110%, ${rgb(mix(bloom, top, 0.4), 0.44)}, transparent 72%),`
+      + ` radial-gradient(74% 64% at 6% 2%, ${rgb(mix(top, [12, 13, 16], 0.45), 0.5)}, transparent 72%)`,
     /* the one number that is about the machine rather than the hour: a Pi has a
        ceiling on how much blur it can paint, and this is where that gets sized. */
     '--glass-blur': '26px',

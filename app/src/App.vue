@@ -114,6 +114,8 @@ onUnmounted(() => {
 <template>
   <div class="shell" :data-ambient="ambient" :data-nav="nav" :data-face="face" :style="[tone, glass, openTint]" :class="{ resting: idle, 'in-setup': setup || lock.unpaired, 'opened-shell': !!store.opened || panel }">
     <Sky :quiet="!idle && !setup" />
+    <!-- glass lays its blooms on the sky the canvas just painted, under the veil -->
+    <div class="sky-bloom" v-if="face === 'glass'"></div>
     <ArtDefs />
     <div class="sky-veil"></div>
     <Join v-if="lock.unpaired" @joined="rejoin" />

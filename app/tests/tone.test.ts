@@ -173,7 +173,7 @@ describe('the pane, at every hour', () => {
     for (const condition of CONDITIONS) {
       for (const el of ELEVATIONS) {
         const v = glassVars(el, condition)
-        for (const k of ['--glass', '--glass-sweep', '--glass-rim', '--glass-inner', '--glass-drop', '--glass-sat', '--glass-br', '--glass-blur']) {
+        for (const k of ['--glass', '--glass-sweep', '--glass-rim', '--glass-inner', '--glass-drop', '--glass-sat', '--glass-br', '--glass-field', '--glass-blur']) {
           expect(v[k], `${k} / ${condition} / ${el}°`).toBeTruthy()
           expect(v[k]).not.toContain('NaN')
         }

@@ -59,6 +59,14 @@ measured against and a field painted darker than `ground` makes every distance
 in the system a lie. That was the one real mistake of the daylight pass; do not
 repeat it.
 
+Landed, with one thing found. This panel's sky is a painted scene — a ramp, a
+horizon, rolling ground under it, stars, drifting cloud — where the face was
+drawn against an abstract field. Blooms laid on a scene read as a tint rather
+than as the field, which is why the difference between paper and glass is
+quieter in the app than it is on the canvas. Whether glass wants the landscape
+suppressed, or wants these carried inside the canvas rather than over it, is a
+design call nobody has made.
+
 **4. The rail.** The biggest slice, and the one with the idea in it. `rail`
 layout already sweeps; what it does not have is a focal plane. Depth is one
 idea, not three — further back is blurrier, dimmer **and** slower:
