@@ -91,6 +91,23 @@ test('a phone at the door is over the arrangement, not in it', async ({ page }) 
   expect(how.covers).toBe(800)
 })
 
+/* Nobody is at the door once the house is not showing.
+
+   The narrow path the relay creates, and it is a transition rather than a steady state: a phone sitting at home
+   with an ask already in hand, whose owner then walks out. `store.asks` is already full, the next request comes back
+   through the relay, the house declines to open, and the pane would rise over the screen saying so. It cannot happen
+   by the asks LOADING from away -- everything is 403ing by then -- which is why it is worth a test rather than an
+   argument: the state is reachable only through a door that has already shut behind it. */
+test('a knock does not rise over a house that is not showing', async ({ page }) => {
+  await knocking(page)
+  await page.goto('/?face=glass&layout=wall&nav=top&at=19:40&away=1', { waitUntil: 'networkidle' })
+  await expect(page.locator('.away')).toHaveCount(1)
+  await page.waitForTimeout(1200)
+  await expect(page.locator('.ask-pane'), 'a phone at the door rose over the away screen').toHaveCount(0)
+  // and the shell is not pretending something is open on top of it either
+  expect(await page.getAttribute('.shell', 'class')).not.toContain('opened-shell')
+})
+
 test('letting one in asks for how long, and says so', async ({ page }) => {
   await knocking(page)
   await page.goto('/?face=glass&layout=wall&nav=top&at=19:40', { waitUntil: 'networkidle' })
