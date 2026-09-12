@@ -14,7 +14,7 @@
       "x": 1560,
       "y": 0,
       "w": 1440,
-      "h": 1640,
+      "h": 1800,
       "title": "The material"
     },
     {
@@ -41,6 +41,13 @@
       "y": 520,
       "w": 440,
       "text": "Taken off the reference video frame by frame at 30fps, not from memory of it.\n\nTHE PANE. The card does NOT grow in place. Glass rises from the bottom edge and stops short of the top bar, so the row you came from is still there, dimmed, above it. It is at 55% after 100ms and home at 400 -- not an expo curve; expo would be over by 150ms and read as a cut. The object inside travels further and is still settling 700ms in. The bottom bar leaves 60ms BEFORE the pane starts. Closing is 300ms with no tail.\n\nTHE SWIPE. This one is not a motion blur, which is what it looks like at first. The rail has a FOCAL PLANE: what you have swiped past goes out of focus and dims, what is still in front of you stays sharp. Hold the settled scrolled frame against the resting one and the cloud and the music card are blurred while the camera, the thermostat and the next card are not.\n\nThe sky does not travel with the rail either -- about 24px against the cards' 460. It blurs in place, and the lozenge hung in front of it fades to nothing.\n\nOn top of both, small: a 2.5px velocity blur, 150ms in and 500ms off, which is why even the cards that end up sharp are soft in the middle of the move."
+    },
+    {
+      "id": "daylight",
+      "x": -520,
+      "y": 980,
+      "w": 440,
+      "text": "DOES IT SURVIVE THE DAY? The Sky chip is the test, and the answer is yes.\n\nNothing on this screen is given a colour any more. The field IS the sky -- Sky.vue's own elevation ramp, weathered by the same {clouds, rain} the drawing reads, then veiled. The blooms Nightfall is built on are laid on top at low alpha: character, not lightness.\n\nEverything else holds a distance from that. The two painted cards sit ground L + .30 at hue 178 and 328, so they are mid-toned at night and pale at noon and never once stop being lighter than the sky. The glass sits ground L + .10, and its rim swaps ends as the day lightens -- at night you see the catch along the top, at noon the shadow under the foot, which is what glass actually does. A cover and a camera frame still bring their own picture and are never overpainted; the live green, the cooling blue and the lamp amber never move at all.\n\nTwo things worth knowing. Under heavy rain, midday and dusk look nearly the same -- correct, a rainy sky is a grey sky at any hour, so judge the direction on Clear. And at clear noon this is a bright blue panel: it holds up, but it is not called Nightfall any more. The indigo, the glow and the orb are an evening identity, and that is a naming question rather than a colour one."
     },
     {
       "id": "swaps",

@@ -29,20 +29,17 @@
        shade is its thickness, the drop is the air under it. */
     .gl {
       position: relative;
-      background: linear-gradient(148deg, rgba(255,255,255,.17), rgba(255,255,255,.055) 46%, rgba(255,255,255,.105));
-      backdrop-filter: blur(var(--bl, 26px)) saturate(1.7) brightness(1.06);
-      -webkit-backdrop-filter: blur(var(--bl, 26px)) saturate(1.7) brightness(1.06);
-      box-shadow:
-        inset 0 -46px 56px -48px rgba(8,6,32,.9),
-        0 28px 64px -26px rgba(6,5,28,.7),
-        0 2px 10px rgba(6,5,28,.3);
+      background: var(--glass);
+      backdrop-filter: blur(var(--bl, 26px)) saturate(var(--glass-sat, 1.7)) brightness(var(--glass-br, 1.06));
+      -webkit-backdrop-filter: blur(var(--bl, 26px)) saturate(var(--glass-sat, 1.7)) brightness(var(--glass-br, 1.06));
+      box-shadow: var(--inner), var(--drop);
     }
     /* the rim: a gradient border, brightest where the light is, drawn with a
        mask so it follows whatever radius the element already has */
     .gl::after, .sf::after {
       content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
       padding: 1.4px;
-      background: linear-gradient(158deg, rgba(255,255,255,.72), rgba(255,255,255,.08) 36%, rgba(255,255,255,.03) 62%, rgba(255,255,255,.42));
+      background: var(--rim);
       -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
       -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
       mask-composite: exclude;
@@ -50,10 +47,10 @@
     /* the sweep: one band of light across the pane, never more than one */
     .gl::before, .sf::before {
       content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
-      background: linear-gradient(112deg, transparent 26%, rgba(255,255,255,.15) 45%, rgba(255,255,255,.02) 56%, transparent 64%);
+      background: linear-gradient(112deg, transparent 26%, rgba(255,255,255,var(--sweep, .15)) 45%, rgba(255,255,255,.02) 56%, transparent 64%);
     }
     /* a painted surface: same edge and sweep, no blur, because it is not glass */
-    .sf { position: relative; box-shadow: inset 0 -40px 54px -48px rgba(40,20,60,.4), 0 24px 56px -24px rgba(6,5,28,.62), 0 2px 8px rgba(6,5,28,.26); }
+    .sf { position: relative; box-shadow: inset 0 -40px 54px -48px rgba(40,20,60,.4), var(--drop); }
 
     /* ---------- the wake ----------
        The panel does not appear, it arrives: the field blooms first, then the
@@ -94,22 +91,21 @@
   </style>
 </helmet>
 
-<div class="{{ ui.cls }}" style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: #0c0d28; color: var(--ink); font-size: 17px; line-height: 1.4; --bl: {{ ui.bl }}px; cursor: default;">
+<div class="{{ ui.cls }}" style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: #0c0d28; color: var(--ink); font-size: 17px; line-height: 1.4; --bl: {{ ui.bl }}px; --glass: {{ g.bg }}; --glass-sat: {{ g.sat }}; --glass-br: {{ g.br }}; --rim: {{ g.rim }}; --inner: {{ g.inner }}; --drop: {{ g.drop }}; --sweep: {{ g.sweep }}; cursor: default;">
 
   <!-- ================= the field =================
        An indigo evening, lit from low-left. Four blooms, not one gradient: a
        single ramp reads as a backdrop, overlapping blooms read as depth, and
        glass needs something with depth behind it or the blur has nothing to do. -->
   <div class="field" onClick="{{ ui.replay }}" style="position: absolute; inset: 0;">
-    <div style="position: absolute; inset: 0; background: #0c0d28;"></div>
-    <div class="drift" style="position: absolute; inset: -12%; background:
-      radial-gradient(58% 54% at 30% 64%, rgba(112,88,244,.7), transparent 68%),
-      radial-gradient(44% 42% at 74% 12%, rgba(62,92,216,.46), transparent 70%),
-      radial-gradient(62% 52% at 54% 110%, rgba(62,42,170,.78), transparent 72%),
-      radial-gradient(74% 64% at 6% 2%, rgba(26,28,92,.88), transparent 72%);"></div>
-    <div style="position: absolute; inset: 0; background: linear-gradient(180deg, rgba(8,7,30,.46), transparent 32%, transparent 60%, rgba(6,5,24,.5));"></div>
+    <div style="position: absolute; inset: 0; background: {{ f.sky }};"></div>
+    <div class="drift" style="position: absolute; inset: -12%; background: {{ f.blooms }};"></div>
+    <!-- the veil the panel already paints, at the strength the hour asks for:
+         it is what keeps the interface readable at noon, and it is the surface
+         every card below is measured against -->
+    <div style="position: absolute; inset: 0; background: {{ f.veil }};"></div>
     <!-- the dark air the weather hangs in -->
-    <div style="position: absolute; left: -30px; top: 140px; width: 560px; height: 420px; border-radius: 50%; background: radial-gradient(closest-side, rgba(10,8,38,.6), transparent 72%);"></div>
+    <div style="position: absolute; left: -30px; top: 140px; width: 560px; height: 420px; border-radius: 50%; background: radial-gradient(closest-side, {{ f.hollow }}, transparent 72%);"></div>
     <!-- the same grain the panel already paints, at the same strength -->
     <div style="position: absolute; inset: 0; opacity: .5; pointer-events: none; background-image: url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .035 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E&quot;);"></div>
   </div>
@@ -210,7 +206,7 @@
          which over an indigo field turns this pane violet. The weather is the one
          surface that has to stay neutral, because the drawing behind it is the
          thing being read. -->
-    <div class="gl" style="backdrop-filter: blur(30px) saturate(.62) brightness(.94); -webkit-backdrop-filter: blur(30px) saturate(.62) brightness(.94); background: linear-gradient(148deg, rgba(238,240,247,.15), rgba(19,20,31,.30) 46%, rgba(238,240,247,.085)); position: absolute; left: 214px; top: 146px; width: 226px; height: 372px; border-radius: 112px; transform: {{ r.sky }}; filter: {{ r.far }}; opacity: {{ r.lozO }}; transition: {{ r.focusTr }}; padding: 44px 30px 38px; display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden;">
+    <div class="gl" style="backdrop-filter: blur(30px) saturate(.62) brightness(.94); -webkit-backdrop-filter: blur(30px) saturate(.62) brightness(.94); background: {{ g.smoked }}; position: absolute; left: 214px; top: 146px; width: 226px; height: 372px; border-radius: 112px; transform: {{ r.sky }}; filter: {{ r.far }}; opacity: {{ r.lozO }}; transition: {{ r.focusTr }}; padding: 44px 30px 38px; display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden;">
       <!-- rain on the pane: the only place on the panel where the weather
            touches the material itself -->
       <div style="position: absolute; inset: 0; opacity: {{ w.drops }}; pointer-events: none;">
@@ -293,8 +289,8 @@
   </div>
 
   <!-- ================= the camera ================= -->
-  <div class="sf w w3" style="position: absolute; left: 860px; top: 180px; filter: {{ r.near }}; transition: {{ r.nearTr }}; width: 252px; height: 252px; border-radius: 28px; overflow: hidden; background: linear-gradient(155deg, #bde6df 0%, #9bd3cc 58%, #86c6c1 100%);">
-    <div style="position: absolute; left: -44px; bottom: -66px; width: 240px; height: 190px; border-radius: 50%; background: radial-gradient(closest-side, rgba(58,132,136,.34), transparent 72%);"></div>
+  <div class="sf w w3" style="position: absolute; left: 860px; top: 180px; filter: {{ r.near }}; transition: {{ r.nearTr }}; width: 252px; height: 252px; border-radius: 28px; overflow: hidden; background: {{ t.cam }};">
+    <div style="position: absolute; left: -44px; bottom: -66px; width: 240px; height: 190px; border-radius: 50%; background: radial-gradient(closest-side, {{ t.camBlob }}, transparent 72%);"></div>
 
     <svg width="222" height="192" viewBox="0 0 150 130" style="position: absolute; left: 32px; top: 2px;">
       <ellipse cx="74" cy="116" rx="30" ry="8" fill="rgba(34,84,86,.28)"/>
@@ -316,16 +312,16 @@
     </svg>
 
     <div style="position: absolute; left: 16px; right: 16px; bottom: 16px; display: flex; gap: 8px;">
-      <div style="height: 28px; padding: 0 14px; border-radius: 999px; background: #ffffff; display: flex; align-items: center; font-size: 10px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; color: #1d3f40; box-shadow: 0 2px 8px rgba(26,70,72,.24);">Backyard</div>
-      <div style="height: 28px; padding: 0 14px; border-radius: 999px; background: rgba(255,255,255,.42); display: flex; align-items: center; font-size: 10px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; color: rgba(20,54,56,.72);">Garage</div>
+      <div style="height: 28px; padding: 0 14px; border-radius: 999px; background: {{ t.chipOn }}; display: flex; align-items: center; font-size: 10px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; color: {{ t.chipOnInk }}; box-shadow: 0 2px 8px rgba(26,70,72,.24);">Backyard</div>
+      <div style="height: 28px; padding: 0 14px; border-radius: 999px; background: {{ t.chipOff }}; display: flex; align-items: center; font-size: 10px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; color: {{ t.chipOffInk }};">Garage</div>
     </div>
   </div>
 
   <!-- ================= the thermostat =================
        The dial goes round the number: the drawing is the readout, so nothing
        has to be written underneath saying what it is doing. -->
-  <div class="sf w w4" style="position: absolute; left: 860px; top: 452px; filter: {{ r.near }}; transition: {{ r.nearTr }}; width: 252px; height: 276px; border-radius: 28px; overflow: hidden; background: linear-gradient(155deg, #eed4e8 0%, #e0c2e0 56%, #cfb0d9 100%);">
-    <div style="position: absolute; left: -50px; bottom: -70px; width: 250px; height: 200px; border-radius: 50%; background: radial-gradient(closest-side, rgba(126,86,150,.32), transparent 72%);"></div>
+  <div class="sf w w4" style="position: absolute; left: 860px; top: 452px; filter: {{ r.near }}; transition: {{ r.nearTr }}; width: 252px; height: 276px; border-radius: 28px; overflow: hidden; background: {{ t.clim }};">
+    <div style="position: absolute; left: -50px; bottom: -70px; width: 250px; height: 200px; border-radius: 50%; background: radial-gradient(closest-side, {{ t.climBlob }}, transparent 72%);"></div>
 
     <svg width="188" height="188" viewBox="0 0 150 150" style="position: absolute; left: 34px; top: 16px;">
       <defs>
@@ -347,8 +343,8 @@
       <text x="75" y="70" text-anchor="middle" dominant-baseline="central" fill="#ffffff" font-family="Plus Jakarta Sans, system-ui, sans-serif" font-size="46" font-weight="300" letter-spacing="-2">71</text>
     </svg>
 
-    <div style="position: absolute; left: 16px; bottom: 16px; height: 28px; padding: 0 14px 0 11px; border-radius: 999px; background: rgba(255,255,255,.52); display: flex; align-items: center; gap: 7px; font-size: 10px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; color: rgba(48,26,60,.76);">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(48,26,60,.76)" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 2"/></svg>
+    <div style="position: absolute; left: 16px; bottom: 16px; height: 28px; padding: 0 14px 0 11px; border-radius: 999px; background: {{ t.chipOff }}; display: flex; align-items: center; gap: 7px; font-size: 10px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; color: {{ t.chipOffInk }};">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="{{ t.chipOffInk }}" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 2"/></svg>
       Scheduled
     </div>
   </div>
@@ -373,7 +369,7 @@
     <svg width="300" height="210" viewBox="0 0 172 120" style="position: absolute; left: 30px; top: 228px;">
       <defs>
         <linearGradient id="night" x1="0" y1="0" x2=".3" y2="1">
-          <stop offset="0" stop-color="#2b2f7a"/><stop offset="52%" stop-color="#1b2056"/><stop offset="100%" stop-color="#0e1236"/>
+          <stop offset="0" stop-color="{{ f.out0 }}"/><stop offset="52%" stop-color="{{ f.out1 }}"/><stop offset="100%" stop-color="{{ f.out2 }}"/>
         </linearGradient>
         <linearGradient id="slat" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stop-color="#ffffff"/><stop offset="58%" stop-color="#e2e9f2"/><stop offset="100%" stop-color="#aeb9c9"/>
@@ -384,12 +380,12 @@
       </defs>
       <!-- what is actually out there at nine o'clock -->
       <rect x="16" y="8" width="140" height="104" rx="3" fill="url(#night)"/>
-      <circle cx="128" cy="30" r="10" fill="#e8ecf7" opacity=".8"/>
-      <circle cx="122" cy="26" r="10" fill="#20265f" opacity=".92"/>
-      <circle cx="44" cy="24" r="1.3" fill="#ffffff" opacity=".7"/>
-      <circle cx="66" cy="40" r="1" fill="#ffffff" opacity=".5"/>
-      <circle cx="96" cy="18" r="1.2" fill="#ffffff" opacity=".6"/>
-      <circle cx="150" cy="52" r="1" fill="#ffffff" opacity=".45"/>
+      <circle cx="128" cy="30" r="10" fill="{{ f.discFill }}" opacity="{{ f.disc }}"/>
+      <circle cx="122" cy="26" r="10" fill="{{ f.out0 }}" opacity="{{ f.bite }}"/>
+      <circle cx="44" cy="24" r="1.3" fill="#ffffff" opacity="{{ f.stars }}"/>
+      <circle cx="66" cy="40" r="1" fill="#ffffff" opacity="{{ f.stars }}"/>
+      <circle cx="96" cy="18" r="1.2" fill="#ffffff" opacity="{{ f.stars }}"/>
+      <circle cx="150" cy="52" r="1" fill="#ffffff" opacity="{{ f.stars }}"/>
       <path d="M16 96 l10-14 7 9 9-16 8 12 9-8 11 15 10-19 8 13 10-10 9 14 9-8 11 12 10-9v21H16z" fill="#090c26"/>
       <rect x="96" y="90" width="11" height="8" rx="1.2" fill="#e9b872" opacity=".8"/>
       <!-- three slats of nine: seventy per cent open, drawn rather than written -->
@@ -514,7 +510,7 @@
       <svg width="560" height="420" viewBox="0 0 360 270" style="position: absolute; left: 20px; top: 16px;">
         <defs>
           <linearGradient id="gl2" x1="0" y1="0" x2=".3" y2="1">
-            <stop offset="0" stop-color="#343a78"/><stop offset="44%" stop-color="#1e2358"/><stop offset="100%" stop-color="#0d1133"/>
+            <stop offset="0" stop-color="{{ f.out0 }}"/><stop offset="44%" stop-color="{{ f.out1 }}"/><stop offset="100%" stop-color="{{ f.out2 }}"/>
           </linearGradient>
           <linearGradient id="fr2" x1="0" y1="0" x2=".35" y2="1">
             <stop offset="0" stop-color="#fbfdff"/><stop offset="58%" stop-color="#d3dae6"/><stop offset="100%" stop-color="#98a3b5"/>
@@ -535,13 +531,13 @@
         <!-- the glass, and what is on the other side of it at nine o'clock -->
         <rect x="26" y="22" width="308" height="200" rx="2.5" fill="url(#gl2)"/>
         <rect x="26" y="150" width="308" height="72" fill="url(#horizon)"/>
-        <circle cx="268" cy="150" r="20" fill="#e8ecf7" opacity=".86"/>
-        <circle cx="255" cy="142" r="20" fill="#262c66" opacity=".96"/>
-        <circle cx="72" cy="112" r="1.9" fill="#ffffff" opacity=".7"/>
-        <circle cx="118" cy="136" r="1.4" fill="#ffffff" opacity=".48"/>
-        <circle cx="168" cy="104" r="1.7" fill="#ffffff" opacity=".58"/>
-        <circle cx="214" cy="128" r="1.3" fill="#ffffff" opacity=".4"/>
-        <circle cx="96" cy="158" r="1.4" fill="#ffffff" opacity=".36"/>
+        <circle cx="268" cy="150" r="20" fill="{{ f.discFill }}" opacity="{{ f.disc }}"/>
+        <circle cx="255" cy="142" r="20" fill="{{ f.out0 }}" opacity="{{ f.bite }}"/>
+        <circle cx="72" cy="112" r="1.9" fill="#ffffff" opacity="{{ f.stars }}"/>
+        <circle cx="118" cy="136" r="1.4" fill="#ffffff" opacity="{{ f.stars }}"/>
+        <circle cx="168" cy="104" r="1.7" fill="#ffffff" opacity="{{ f.stars }}"/>
+        <circle cx="214" cy="128" r="1.3" fill="#ffffff" opacity="{{ f.stars }}"/>
+        <circle cx="96" cy="158" r="1.4" fill="#ffffff" opacity="{{ f.stars }}"/>
         <path d="M26 222 l20-30 15 18 19-34 17 25 19-17 22 31 21-40 18 28 20-22 19 30 19-17 22 25 21-19 25 23v2H26z" fill="#0a0d29"/>
         <rect x="176" y="196" width="21" height="15" rx="1.8" fill="#e9b872" opacity=".84"/>
         <rect x="26" y="22" width="308" height="200" fill="url(#sheen)"/>
@@ -607,6 +603,7 @@
 </x-dc>
 
 <script data-dc-script data-props='{
+  "sky": {"editor": "enum", "options": ["dusk", "night", "midday"], "default": "dusk", "section": "Sky"},
   "wx": {"editor": "enum", "options": ["rainy", "cloudy", "clear", "snowy"], "default": "rainy", "section": "Sky"},
   "rail": {"editor": "enum", "options": ["start", "scrolled"], "default": "start", "section": "Rail"},
   "live": {"editor": "boolean", "default": true, "section": "Motion"},
@@ -647,6 +644,24 @@ class Component extends DCLogic {
     const lerp = (a, b, t) => a + (b - a) * t
     const mix = (a, b, t) => [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)]
     const rgb = (c) => 'rgb(' + (c[0] | 0) + ',' + (c[1] | 0) + ',' + (c[2] | 0) + ')'
+    const rgba = (c, a) => 'rgba(' + (c[0] | 0) + ',' + (c[1] | 0) + ',' + (c[2] | 0) + ',' + a + ')'
+
+    /* sRGB -> OKLCH, straight out of sky.ts. Lightness here is perceptual,
+       which is the whole point: it is what lets a card hold the same apparent
+       distance from a sky that moves a long way between midnight and noon. */
+    const lin = (c) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4))
+    const oklch = (c) => {
+      const R = lin(c[0] / 255), G = lin(c[1] / 255), B = lin(c[2] / 255)
+      const l = Math.cbrt(0.4122214708 * R + 0.5363325363 * G + 0.0514459929 * B)
+      const m = Math.cbrt(0.2119034982 * R + 0.6806995451 * G + 0.1073969566 * B)
+      const s2 = Math.cbrt(0.0883024619 * R + 0.2817188376 * G + 0.6299787005 * B)
+      const L = 0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s2
+      const A = 1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s2
+      const Bb = 0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s2
+      let H = Math.atan2(Bb, A) * 180 / Math.PI
+      if (H < 0) H += 360
+      return { L: L, C: Math.hypot(A, Bb), H: H }
+    }
 
     const COND = {
       rainy: { clouds: .82, rain: .75, snow: 0, says: 'Rain, easing by ten' },
@@ -655,10 +670,111 @@ class Component extends DCLogic {
       snowy: { clouds: .85, rain: 0, snow: .7, says: 'Snow' },
     }
     const wx = COND[this.props.wx] || COND.rainy
-    /* Nine in the evening, but the sky behind this drawing is a lit violet, not
-       a black one -- so the cloud keeps more of its own white than it would over
-       a true night field. The ramp is the panel's; only where it is sampled moved. */
-    const night = .26
+
+    /* The sky's own elevation keyframes and veil, lifted from Sky.vue. Three
+       hours is enough to know whether a direction survives the day: the band a
+       card sits on runs L .15 at night to L .49 at noon, and anything specified
+       in absolute colour crosses over somewhere in between. */
+    const SKY = {
+      night: { stops: [[4, 5, 10], [7, 9, 16], [12, 14, 26]], at: 55, a: .36, night: 1, day: false,
+               veil: 'linear-gradient(180deg, rgba(12,13,16,.20) 0%, rgba(12,13,16,.36) 45%, rgba(12,13,16,.66) 100%)' },
+      dusk: { stops: [[10, 14, 34], [38, 34, 74], [158, 84, 60]], at: 44, a: .52, night: .72, day: false,
+              veil: 'linear-gradient(180deg, rgba(12,13,16,.30) 0%, rgba(12,13,16,.52) 45%, rgba(12,13,16,.80) 100%)' },
+      midday: { stops: [[26, 78, 136], [70, 148, 202], [170, 200, 218]], at: 55, a: .34, night: 0, day: true,
+                veil: 'linear-gradient(180deg, rgba(12,13,16,.22) 0%, rgba(12,13,16,.34) 45%, rgba(12,13,16,.58) 100%)' },
+    }
+    const sk = SKY[this.props.sky] || SKY.dusk
+    /* the three mixes palette() applies, so the field and the drawing in front
+       of it cannot disagree about the weather */
+    const weathered = (c) => {
+      let o = mix(c, [58, 64, 72], wx.clouds * .55)
+      o = mix(o, [22, 24, 30], wx.rain * .3)
+      return mix(o, [116, 122, 128], 0)
+    }
+    const st = sk.stops.map(weathered)
+    const VEIL = [12, 13, 16]
+    const ground = oklch(mix(st[1], VEIL, sk.a))
+
+    /* The field is the sky itself -- Sky.vue's own vertical ramp, then the veil.
+       That matters for more than looks: `ground` below is the veiled middle band,
+       and every card is specified as a distance from it. Paint the field any
+       darker than `ground` and the distances are all lies. The blooms are
+       character laid ON that, at low alpha, not the thing that sets its
+       lightness. */
+    const bloom = mix(st[1], [116, 92, 236], .42)          // the violet Nightfall is built on, kept near the hour's own hue
+    const f = {
+      sky: 'linear-gradient(180deg, ' + rgb(st[0]) + ' 0%, ' + rgb(st[1]) + ' ' + sk.at + '%, ' +
+           rgb(st[2]) + ' 84%, ' + rgb(mix(st[2], [8, 9, 14], .35)) + ' 100%)',
+      blooms:
+        'radial-gradient(58% 54% at 30% 64%, ' + rgba(bloom, .4) + ', transparent 68%),' +
+        'radial-gradient(44% 42% at 74% 12%, ' + rgba(mix(st[1], st[2], .5), .26) + ', transparent 70%),' +
+        'radial-gradient(62% 52% at 54% 110%, ' + rgba(mix(bloom, st[0], .4), .44) + ', transparent 72%),' +
+        'radial-gradient(74% 64% at 6% 2%, ' + rgba(mix(st[0], VEIL, .45), .5) + ', transparent 72%)',
+      veil: sk.veil,
+      hollow: rgba(mix(st[0], VEIL, .4), .42),
+      /* and what is on the other side of the blinds is the same sky, so a
+         midday window does not show a night out of it */
+      out0: rgb(mix(st[1], [255, 255, 255], sk.day ? .22 : .04)),
+      out1: rgb(mix(st[1], st[0], .35)),
+      out2: rgb(mix(st[0], VEIL, sk.day ? .1 : .34)),
+      disc: (sk.night * .84).toFixed(3),
+      discFill: '#e8ecf7',
+      bite: (sk.night * .95).toFixed(3),
+      stars: (sk.night * .7).toFixed(3),
+    }
+
+    /* GLASS. Not a fixed white film: it holds a distance from the field, the
+       same way a card does. At night that distance reads as a pale sheet on a
+       dark sky; at noon the same distance is nearly invisible and the pane has
+       to be carried by its rim and the air under it instead -- which is what
+       glass actually does in daylight. */
+    const gL = clamp(ground.L + .10, .16, .9)
+    const bright = clamp((ground.L - .18) / .34)          // 0 at night, 1 by noon
+    const g = {
+      bg: 'linear-gradient(148deg, oklch(' + (gL + .07).toFixed(3) + ' .014 ' + ground.H.toFixed(0) + ' / .34), ' +
+          'oklch(' + gL.toFixed(3) + ' .012 ' + ground.H.toFixed(0) + ' / .12) 46%, ' +
+          'oklch(' + (gL + .03).toFixed(3) + ' .014 ' + ground.H.toFixed(0) + ' / .24))',
+      smoked: 'linear-gradient(148deg, oklch(' + (gL + .09).toFixed(3) + ' .004 ' + ground.H.toFixed(0) + ' / .30), ' +
+              'oklch(' + Math.max(.1, gL - .1).toFixed(3) + ' .004 ' + ground.H.toFixed(0) + ' / .34) 46%, ' +
+              'oklch(' + (gL + .04).toFixed(3) + ' .004 ' + ground.H.toFixed(0) + ' / .2))',
+      sat: (1.7 - bright * .55).toFixed(2),
+      br: (1.06 - bright * .1).toFixed(3),
+      sweep: (.15 - bright * .07).toFixed(3),
+      /* the top edge catches light and the foot sits in shadow. On a dark field
+         you mostly see the catch; on a bright one you mostly see the shadow. */
+      rim: 'linear-gradient(158deg, rgba(255,255,255,' + lerp(.74, .4, bright).toFixed(2) + '), rgba(255,255,255,.08) 34%, ' +
+           'rgba(14,14,22,' + lerp(.02, .2, bright).toFixed(2) + ') 62%, rgba(255,255,255,' + lerp(.42, .26, bright).toFixed(2) + '))',
+      inner: 'inset 0 -46px 56px -48px ' + rgba(mix(st[0], VEIL, .5), .9),
+      /* a pane over a bright ground casts a shadow you can see; over a dark one
+         the shadow has nothing to do, so it tightens instead of deepening */
+      drop: '0 ' + (28 - bright * 8).toFixed(0) + 'px ' + (64 - bright * 20).toFixed(0) + 'px -26px ' +
+            rgba(mix(st[0], [4, 4, 10], .55), lerp(.7, .5, bright).toFixed(2)) + ', 0 2px 10px ' +
+            rgba(mix(st[0], [4, 4, 10], .55), lerp(.3, .42, bright).toFixed(2)),
+    }
+
+    /* THE PAINTED CARDS. dL is constant at every hour, so a tile never flips
+       from a lit surface to a hole punched in the daylight. Hue stays absolute:
+       mint is a place on the wheel, not a relationship. */
+    const dL = .30
+    const C = .078 * (1 - .35 * Math.min(ground.C / .09, 1))
+    const L = clamp(ground.L + dL, .16, .92)
+    const card = (h) => 'linear-gradient(155deg, oklch(' + (L + .055).toFixed(3) + ' ' + C.toFixed(3) + ' ' + h + '), ' +
+                        'oklch(' + L.toFixed(3) + ' ' + C.toFixed(3) + ' ' + (h + 6) + '))'
+    const pale = L > .62                                   // tone.ts's INK_FLIPS_AT
+    const t = {
+      cam: card(178), clim: card(328),
+      camBlob: 'oklch(' + Math.max(.1, L - .2).toFixed(3) + ' ' + (C * 1.2).toFixed(3) + ' 190 / .42)',
+      climBlob: 'oklch(' + Math.max(.1, L - .2).toFixed(3) + ' ' + (C * 1.2).toFixed(3) + ' 322 / .42)',
+      chipOn: pale ? '#ffffff' : 'rgba(255,255,255,.92)',
+      chipOnInk: pale ? 'oklch(.28 .05 200)' : 'oklch(.28 .05 200)',
+      chipOff: pale ? 'rgba(255,255,255,.46)' : 'rgba(255,255,255,.2)',
+      chipOffInk: pale ? 'oklch(.34 .04 320 / .82)' : 'rgba(255,255,255,.86)',
+    }
+
+    /* nightness, from sky.ts: 0 while the sun is up, 1 once it is well down.
+       Sampled a little shallower than the panel does, because the field behind
+       this drawing is a lit sky rather than a black one. */
+    const night = sk.night * .3
 
     // the cloud greys and swells as cover thickens; by night the moon is the
     // only light on it, but a thin wisp still catches that light
@@ -719,7 +835,7 @@ class Component extends DCLogic {
       : { o: '0', t: 'translateY(16px)', tr: 'opacity 140ms linear, transform 140ms linear' }
 
     return {
-      w,
+      w, f, g, t,
       ui: {
         cls: (this.state.wake ? 'wake ' : '') + (this.props.live === false ? 'still' : ''),
         bl: this.props.blur ?? 26,

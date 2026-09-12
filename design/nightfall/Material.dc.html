@@ -23,7 +23,7 @@
   </style>
 </helmet>
 
-<div style="position: relative; width: 1440px; min-height: 1640px; overflow: hidden; background: #0c0d28; color: #fff; font-size: 17px; line-height: 1.45;">
+<div style="position: relative; width: 1440px; min-height: 1800px; overflow: hidden; background: #0c0d28; color: #fff; font-size: 17px; line-height: 1.45;">
 
   <div style="position: absolute; inset: -12%; background:
     radial-gradient(58% 54% at 30% 64%, rgba(101,79,226,.5), transparent 68%),
@@ -48,38 +48,27 @@
 
     <!-- ---------------- the field ---------------- -->
     <div style="margin-top: 52px;">
-      <div class="lab">The field it all sits on</div>
-      <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 18px; margin-top: 16px;">
-        <div>
-          <div style="height: 76px; border-radius: 14px; background: #0c0d28;"></div>
-          <div style="margin-top: 10px; font-size: 14px; font-weight: 600;">Ground</div>
-          <div class="mono">#0c0d28</div>
-        </div>
-        <div>
-          <div style="height: 76px; border-radius: 14px; background: #654fe2;"></div>
-          <div style="margin-top: 10px; font-size: 14px; font-weight: 600;">Low bloom</div>
-          <div class="mono">30% 64% &middot; .62</div>
-        </div>
-        <div>
-          <div style="height: 76px; border-radius: 14px; background: #3854cc;"></div>
-          <div style="margin-top: 10px; font-size: 14px; font-weight: 600;">High bloom</div>
-          <div class="mono">74% 12% &middot; .40</div>
-        </div>
-        <div>
-          <div style="height: 76px; border-radius: 14px; background: #362498;"></div>
-          <div style="margin-top: 10px; font-size: 14px; font-weight: 600;">Under bloom</div>
-          <div class="mono">54% 110% &middot; .72</div>
-        </div>
-        <div>
-          <div style="height: 76px; border-radius: 14px; background: #1a1c58;"></div>
-          <div style="margin-top: 10px; font-size: 14px; font-weight: 600;">Corner</div>
-          <div class="mono">6% 2% &middot; .90</div>
-        </div>
+      <div class="lab">The field is not a colour, it is the hour</div>
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; margin-top: 16px;">
+        <sc-for list="{{ hours }}" as="h" hint-placeholder-count="3">
+          <div>
+            <div style="display: flex; gap: 10px;">
+              <div style="flex: 1 1 0; height: 104px; border-radius: 14px 0 0 14px; background: {{ h.sky }};"></div>
+              <div style="flex: 0 0 92px; height: 104px; border-radius: 0 14px 14px 0; background: {{ h.ground }};"></div>
+            </div>
+            <div style="margin-top: 12px; display: flex; align-items: baseline; justify-content: space-between; gap: 12px;">
+              <span style="font-size: 15px; font-weight: 600;">{{ h.name }}</span>
+              <span class="mono">ground L {{ h.gl }}</span>
+            </div>
+            <div class="mono">{{ h.note }}</div>
+          </div>
+        </sc-for>
       </div>
-      <p style="margin: 16px 0 0; max-width: 980px; font-size: 15px; color: rgba(255,255,255,.5);">
-        Four overlapping blooms, never one ramp. A single gradient reads as a backdrop; blooms that cross read
-        as depth &mdash; and a blur with nothing behind it has nothing to do. The whole field drifts 3% over 46s
-        and never arrives.
+      <p style="margin: 18px 0 0; max-width: 1020px; font-size: 15px; color: rgba(255,255,255,.5); text-wrap: pretty;">
+        Left of each pair is the sky&rsquo;s own ramp at that elevation; right of it is the veiled middle band &mdash;
+        the surface a card actually sits on, and the only thing anything else here is measured against. It travels
+        from L .13 to L .49 across the day, which is why nothing in this system is allowed a fixed colour. The four
+        blooms Nightfall is built on are laid ON that at low alpha: they are character, not lightness.
       </p>
     </div>
 
@@ -111,11 +100,11 @@
           </div>
           <div>
             <div style="font-size: 13px; font-weight: 600;">2 &middot; Tint</div>
-            <div class="mono">148deg<br>.17 &rarr; .055 &rarr; .105</div>
+            <div class="mono">148deg<br>ground L + .10<br>alpha .34 &rarr; .12</div>
           </div>
           <div>
             <div style="font-size: 13px; font-weight: 600;">3 &middot; Rim</div>
-            <div class="mono">1.4px, 158deg<br>.72 at the top<br>.42 at the foot</div>
+            <div class="mono">1.4px, 158deg<br>catch .74 &rarr; .40<br>shadow .02 &rarr; .20<br>as the day lightens</div>
           </div>
           <div>
             <div style="font-size: 13px; font-weight: 600;">4 &middot; Sweep</div>
@@ -146,17 +135,17 @@
           <div>
             <div class="rim sweep" style="position: relative; height: 128px; border-radius: 20px; backdrop-filter: blur(26px) saturate(1.7) brightness(1.06); -webkit-backdrop-filter: blur(26px) saturate(1.7) brightness(1.06); background: linear-gradient(148deg, rgba(255,255,255,.17), rgba(255,255,255,.055) 46%, rgba(255,255,255,.105)); box-shadow: inset 0 -46px 56px -48px rgba(8,6,32,.9), 0 28px 64px -26px rgba(6,5,28,.7);"></div>
             <div style="margin-top: 10px; font-size: 14px; font-weight: 600;">Pane</div>
-            <div class="mono">the sky, softened</div>
+            <div class="mono">ground L + .10, near-neutral</div>
           </div>
           <div>
             <div class="rim sweep" style="position: relative; height: 128px; border-radius: 20px; background: linear-gradient(155deg, #bde6df 0%, #9bd3cc 58%, #86c6c1 100%); box-shadow: 0 24px 56px -24px rgba(6,5,28,.62);"></div>
             <div style="margin-top: 10px; font-size: 14px; font-weight: 600;">Watching</div>
-            <div class="mono">#bde6df &rarr; #86c6c1</div>
+            <div class="mono">ground L + .30, hue 178</div>
           </div>
           <div>
             <div class="rim sweep" style="position: relative; height: 128px; border-radius: 20px; background: linear-gradient(155deg, #eed4e8 0%, #e0c2e0 56%, #cfb0d9 100%); box-shadow: 0 24px 56px -24px rgba(6,5,28,.62);"></div>
             <div style="margin-top: 10px; font-size: 14px; font-weight: 600;">Holding</div>
-            <div class="mono">#eed4e8 &rarr; #cfb0d9</div>
+            <div class="mono">ground L + .30, hue 328</div>
           </div>
           <div>
             <div class="rim sweep" style="position: relative; height: 128px; border-radius: 20px; overflow: hidden; background: linear-gradient(168deg, #17415c 0%, #0f2b45 46%, #07172c 100%); box-shadow: 0 24px 56px -24px rgba(6,5,28,.62);"></div>
@@ -166,8 +155,10 @@
         </div>
         <p style="margin: 18px 0 0; font-size: 15px; color: rgba(255,255,255,.5); text-wrap: pretty;">
           A card that already means something with its colour does not get overpainted: a cover and a camera
-          frame bring their own. The two painted fills are pale on purpose &mdash; they are the only things on
-          a night field carrying real hue, so they are what the eye lands on first.
+          frame bring their own. The other two are never given an absolute colour &mdash; they are given a
+          distance from the field, always this much lighter and always this far round the hue wheel. Fixed fills
+          look right at one hour and wrong at another, because the sky moves further across a day than the gap
+          between any two of these swatches.
         </p>
       </div>
 
@@ -277,8 +268,41 @@
 </div>
 </x-dc>
 
-<script data-dc-script data-props='{"$preview": {"width": 1440, "height": 1640}}'>
-class Component extends DCLogic {}
+<script data-dc-script data-props='{"$preview": {"width": 1440, "height": 1800}}'>
+/* The three hours, computed the way the panel computes them, so this sheet
+   cannot drift from Sky.vue either. */
+class Component extends DCLogic {
+  renderVals() {
+    const lerp = (a, b, t) => a + (b - a) * t
+    const mix = (a, b, t) => [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)]
+    const rgb = (c) => 'rgb(' + (c[0] | 0) + ',' + (c[1] | 0) + ',' + (c[2] | 0) + ')'
+    const lin = (c) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4))
+    const L = (c) => {
+      const R = lin(c[0] / 255), G = lin(c[1] / 255), B = lin(c[2] / 255)
+      const l = Math.cbrt(0.4122214708 * R + 0.5363325363 * G + 0.0514459929 * B)
+      const m = Math.cbrt(0.2119034982 * R + 0.6806995451 * G + 0.1073969566 * B)
+      const s = Math.cbrt(0.0883024619 * R + 0.2817188376 * G + 0.6299787005 * B)
+      return 0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s
+    }
+    const VEIL = [12, 13, 16]
+    const HOURS = [
+      { name: 'Night', at: 55, a: .36, note: 'sun 14 below', stops: [[4, 5, 10], [7, 9, 16], [12, 14, 26]] },
+      { name: 'Dusk', at: 44, a: .52, note: 'sun 3 below', stops: [[10, 14, 34], [38, 34, 74], [158, 84, 60]] },
+      { name: 'Midday', at: 55, a: .34, note: 'sun 40 up', stops: [[26, 78, 136], [70, 148, 202], [170, 200, 218]] },
+    ]
+    return {
+      hours: HOURS.map((h) => {
+        const g = mix(h.stops[1], VEIL, h.a)
+        return {
+          name: h.name, note: h.note,
+          sky: 'linear-gradient(180deg, ' + rgb(h.stops[0]) + ' 0%, ' + rgb(h.stops[1]) + ' ' + h.at + '%, ' + rgb(h.stops[2]) + ' 100%)',
+          ground: rgb(g),
+          gl: L(g).toFixed(3),
+        }
+      }),
+    }
+  }
+}
 </script>
 </body>
 </html>
