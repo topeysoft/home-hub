@@ -1,18 +1,26 @@
 <script setup lang="ts">
 /*
- * What Home owes a person, whatever layout they have chosen: the command box, a
- * phone asking to be let in, the nudges, and the things that need a look.
+ * The band: what Home owes a person, whatever layout they have chosen, as one
+ * strip of chips. The command box sits above it, and everything else here is a
+ * single line saying what wants them.
  *
- * It lives in one component rather than in each layout because two of these are
- * the ONLY route to something: <Asks /> is the only way to approve a new phone
- * (without it a house can only be joined from a phone already in it), and the
- * Sign in again in "Needs a look" is the only way to re-authenticate an expired
- * account without opening Home Assistant. A layout that forgot to copy them
- * would strand somebody, so there is nothing to copy. See layout.ts.
+ * It lives in one component rather than in each layout because two of these
+ * lines are the ONLY route to something: a phone asking to be let in is the
+ * only way a new phone joins a house it was not already in, and Needs a look
+ * carries the only Sign in again there is for an expired account -- without it
+ * the way back is Home Assistant's own UI, which is the thing this panel exists
+ * not to need. A layout that forgot to copy them would strand somebody, so
+ * there is nothing to copy. See layout.ts.
+ *
+ * Neither of those two is answered HERE any more, and that is the change worth
+ * knowing about. A phone at the door is a pane that opens itself (AskPane.vue);
+ * what has stopped answering is a page of This house (NotesPage.vue). What is
+ * left in the band is one chip each, so nothing in it is ever taller than a
+ * line of house news -- which is what lets a layout give the band a fixed
+ * height and stop the row moving when something wants you.
  */
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { loadHealth, notify, openFlow, store } from './store'
-import { requestUpdate, retryEntry, type Note } from './api'
+import { installUpdate, loadHealth, store } from './store'
 import Icon from './Icon.vue'
 import Say from './Say.vue'
 import Asks from './Asks.vue'
@@ -27,20 +35,6 @@ withDefaults(defineProps<{ say?: boolean }>(), { say: true })
 const update = computed(() => store.status?.update ?? null)
 const updateReady = computed(() => !!update.value?.available && update.value?.state?.state !== 'running' && !update.value?.requested && !store.updating)
 const updateBusy = computed(() => store.updating || !!update.value?.requested || update.value?.state?.state === 'running')
-async function install() {
-  try { await requestUpdate(); store.updating = true; notify('Updating. The lights keep working; this screen comes back on its own.') }
-  catch (e: any) { notify(e.message, 'error') }
-}
-const noteIcon = (k: string) => k === 'offline' ? 'refresh' : k === 'storage' ? 'home' : k === 'driver' ? 'switch' : 'sparkle'
-/* a line here is only worth reading if something can be done about it, so the ones that can carry the doing */
-const retrying = ref('')
-async function again(n: Note) {
-  if (!n.retry || retrying.value) return
-  retrying.value = n.retry
-  try { store.status = await retryEntry(n.retry); await loadHealth(); notify('Asked it to try again.') }
-  catch (e: any) { notify(e.message, 'error') }
-  retrying.value = ''
-}
 
 /* on a phone that is still in a browser tab: offer the home-screen install once, with the steps for this phone */
 const onPhone = matchMedia('(max-width: 860px)').matches
@@ -67,7 +61,7 @@ defineExpose({ updateReady })
        height and stop the row moving when something wants you. -->
   <div class="nudges">
   <Asks />
-  <button class="nudge" v-if="updateReady" @click="install">
+  <button class="nudge" v-if="updateReady" @click="installUpdate">
     <span class="nudge-icon"><Icon name="sparkle" :size="20" /></span>
     <span class="nudge-text"><span class="nudge-title">An update is ready</span><span class="nudge-sub">{{ update?.latest?.title || 'New for the hub.' }} Tap to install; it takes a few minutes and the lights keep working.</span></span>
   </button>
@@ -91,23 +85,17 @@ defineExpose({ updateReady })
     <span class="nudge-icon"><Icon name="phone" :size="20" /></span>
     <span class="nudge-text"><span class="nudge-title">Put the house on your home screen</span><span class="nudge-sub">One tap from your phone's first screen, full screen, no address to type.</span></span>
   </button>
+  <!-- What has stopped answering, as one line. The list it opens is a page of This house
+       (NotesPage.vue), because it is not news, it is a job with a button on it, and a house with
+       three faults was spending a third of Home on saying so. -->
+  <button class="nudge" v-if="store.notes.length" @click="store.sheet = 'notes'">
+    <span class="nudge-icon"><Icon name="switch" :size="20" /></span>
+    <span class="nudge-text"><span class="nudge-title">{{ store.notes.length === 1 ? 'Something needs a look' : `${store.notes.length} things need a look` }}</span><span class="nudge-sub">{{ store.notes[0].text }}</span></span>
+  </button>
   </div>
   <div class="phone-card" v-if="phoneSteps">
     <PhoneSteps />
     <button class="button small ghost" @click="dismissPhone">Done, don't show this again</button>
   </div>
 
-  <div class="block" v-if="store.notes.length">
-    <h2 class="label">Needs a look</h2>
-    <ul class="recent notes">
-      <li v-for="(n, i) in store.notes" :key="i">
-        <span class="recent-icon"><Icon :name="noteIcon(n.kind)" :size="16" /></span>
-        <span class="recent-text">{{ n.text }}</span>
-        <button v-if="n.flow" class="button small" @click="openFlow(n.flow)">{{ n.do || 'Sign in again' }}</button>
-        <button v-else-if="n.retry" class="button small" :class="{ busy: retrying === n.retry }" :disabled="!!retrying" @click="again(n)">{{ n.do || 'Try again' }}</button>
-        <button v-else-if="n.kind === 'update'" class="button small" @click="install">Try again</button>
-        <span v-else></span>
-      </li>
-    </ul>
-  </div>
 </template>

@@ -1,5 +1,5 @@
 import { reactive } from 'vue'
-import { getHome, getEvents, getAmbient, getScenes, getStatus, getDiscovered, getRoutines, getAssistant, getPresence, getHealth, getSounds, connect, act, setIntent, setHomeIntent, type Room, type Device, type Home, type Event, type Ambient, type Rules, type Status, type Found, type Intent, type Routine, type Assistant, type Presence, type Note, type Sound , getPhones, type Phone, type Ask } from './api'
+import { getHome, getEvents, getAmbient, getScenes, getStatus, getDiscovered, getRoutines, getAssistant, getPresence, getHealth, getSounds, connect, act, setIntent, setHomeIntent, type Room, type Device, type Home, type Event, type Ambient, type Rules, type Status, type Found, type Intent, type Routine, type Assistant, type Presence, type Note, type Sound, requestUpdate, getPhones, type Phone, type Ask } from './api'
 import { lock } from './code'
 import { sunPosition, sunGuess, moonPhase } from './sun'
 
@@ -13,7 +13,7 @@ export const store = reactive({
   ambient: { location: null, weather: null } as Ambient,
   ambientLoaded: false,
   rules: {} as Rules,                        // scene rules from the brain, to tell whether a room still matches its scene
-  sheet: (['location', 'add', 'code', 'why', 'routines', 'hub', 'look', 'house', 'people'].includes(new URLSearchParams(location.search).get('sheet') ?? '') ? new URLSearchParams(location.search).get('sheet') : null) as null | 'location' | 'add' | 'code' | 'why' | 'routines' | 'hub' | 'look' | 'house' | 'people',   // the few soft sheets the panel has; ?sheet=location previews one
+  sheet: (['location', 'add', 'code', 'why', 'routines', 'hub', 'look', 'house', 'people', 'notes'].includes(new URLSearchParams(location.search).get('sheet') ?? '') ? new URLSearchParams(location.search).get('sheet') : null) as null | 'location' | 'add' | 'code' | 'why' | 'routines' | 'hub' | 'look' | 'house' | 'people' | 'notes',   // the few soft sheets the panel has; ?sheet=location previews one
   whyRoom: new URLSearchParams(location.search).get('room') as string | null,   // the room the why sheet is about; ?sheet=why&room=kitchen previews it
   resume: new URLSearchParams(location.search).get('signin') as string | null,   // a conversation already open in the house (signing an account in again); the add sheet picks it up. ?sheet=add&signin=<flow> previews it
   routines: [] as Routine[],                 // the brain's rules, for the routines sheet and to name a rule on a room
@@ -296,6 +296,12 @@ export async function loadHealth() {
 export const routineById = (id: string) => store.routines.find(r => r.id === id)
 /** An update is there to install and nothing is already installing it. */
 export function updateReady(): boolean { const u = store.status?.update; return !!u?.available && u.state?.state !== 'running' && !u.requested && !store.updating }
+/** Install the update that is waiting, from wherever it is offered: the nudge in the band and the
+    Needs a look page both ask for the same one thing, and the host does the work. */
+export async function installUpdate() {
+  try { await requestUpdate(); store.updating = true; notify('Updating. The lights keep working; this screen comes back on its own.') }
+  catch (e: any) { notify(e.message, 'error') }
+}
 export function openWhy(roomId: string) { store.whyRoom = roomId; store.sheet = 'why' }
 /** Pick up a conversation the house already has open, on the sheet that draws every other one. */
 export function openFlow(flowId: string) { store.resume = flowId; store.sheet = 'add' }

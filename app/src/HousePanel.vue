@@ -26,11 +26,12 @@ import PeoplePage from './PeoplePage.vue'
 import AddPage from './AddPage.vue'
 import HubPage from './HubPage.vue'
 import CodePage from './CodePage.vue'
+import NotesPage from './NotesPage.vue'
 import AdvancedLink from './AdvancedLink.vue'
 import { isPage, type PageId } from './pages'
 
 const page = computed<PageId>(() => isPage(store.sheet) ? store.sheet : 'house')
-const PAGE: Record<Exclude<PageId, 'house'>, Component> = { location: LocationPage, look: LookPage, routines: RoutinesPage, people: PeoplePage, add: AddPage, hub: HubPage, code: CodePage }
+const PAGE: Record<Exclude<PageId, 'house'>, Component> = { location: LocationPage, look: LookPage, routines: RoutinesPage, people: PeoplePage, add: AddPage, hub: HubPage, code: CodePage, notes: NotesPage }
 
 /* a conversation the house already has open (signing an account in again) is
    handed to the Add page on the way in, once, so the page reads as that one job */
@@ -42,6 +43,7 @@ const locked = computed(() => !!store.status?.locked)
 const title = computed(() => ({
   house: 'This house', location: 'Where is home?', look: 'How the house looks', routines: 'Routines', people: 'People',
   add: resume.value ? 'Sign in again' : 'Add to the house', hub: 'This hub', code: locked.value ? 'Change the code' : 'Lock the settings',
+  notes: 'Needs a look',
 }[page.value]))
 
 /* each door says where it leads and how things stand there, so most questions
@@ -63,6 +65,7 @@ const found = computed(() => store.found.length ? `${store.found.length === 1 ? 
 const version = computed(() => { const v = store.status?.version; return !v || v === 'dev' ? 'Development build' : v })
 const hub = computed(() => ready.value ? `${version.value} · an update is ready` : version.value)
 const code = computed(() => locked.value ? 'Changing the house needs it' : 'Open to anyone on the Wi‑Fi')
+const notes = computed(() => store.notes.length === 1 ? store.notes[0].text : `${store.notes.length} things have stopped answering`)
 const doors = computed(() => [
   { id: 'location' as const, icon: 'pin', name: 'Where home is', hint: store.ambient.location?.name ?? 'Not set yet' },
   { id: 'look' as const, icon: 'sun', name: 'How it looks', hint: look.value },
@@ -71,6 +74,9 @@ const doors = computed(() => [
   { id: 'add' as const, icon: 'plus', name: 'Add a device', hint: found.value, attention: store.found.length > 0 },
   { id: 'hub' as const, icon: 'home', name: 'The hub', hint: hub.value, attention: ready.value },
   ...(store.status?.setup_done ? [{ id: 'code' as const, icon: 'lock', name: locked.value ? 'The code' : 'Lock the settings', hint: code.value }] : []),
+  /* only while there is something behind it. A door that is always there saying "nothing is wrong"
+     teaches a person to stop reading it, which is the opposite of what a fault list is for. */
+  ...(store.notes.length ? [{ id: 'notes' as const, icon: 'sparkle', name: 'Needs a look', hint: notes.value, attention: true }] : []),
 ])
 
 /* the front page: the house at a glance, and the one line for the curious */
