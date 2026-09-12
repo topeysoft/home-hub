@@ -5,7 +5,7 @@ test in other households is deferred, so the order below is by what the software
 
 ## Where we start
 
-The panel already takes plain words. A box at the top of Home (`app/src/Say.vue`) sends a sentence to `POST /say`,
+The panel already takes plain words. The command box (`app/src/Say.vue`) sends a sentence to `POST /say`,
 and `brain/hub/commands.py` answers it. That module is a **fixed grammar over the house's own names**: its rooms and
 their usual other names, its devices and their short names inside a room, the kinds of things (lights, doors, blinds,
 speakers, the thermostat), the scenes (movie, guests, sleep, all off, everything off) and the sounds on the hub. It
@@ -49,8 +49,9 @@ Voice is that same path with a microphone in front of it. Nothing below changes 
 
 ### 1. Push-to-talk on the panel
 
-A microphone button beside the command box. Hold it, speak, let go; the words appear in the box, are sent to `/say`
-exactly as if typed, and the answer shows the same way. Nothing new on the hub.
+**Hold the orb.** Not a microphone button beside the box -- see *The orb already is the microphone* below, which is
+the one part of this plan the design has overtaken since it was written. Hold, speak, let go; the words appear in the
+box, are sent to `/say` exactly as if typed, and the answer shows the same way. Nothing new on the hub.
 
 Speech-to-text comes from the browser (`SpeechRecognition`, on the kiosk tablet and on phones). That API needs a
 **secure context**: `https://`, or a browser told to trust `http://hub.local`. So on phones this shape waits on the
@@ -131,6 +132,63 @@ what a customer's box will most likely be; the Small tier is the floor that must
 where a satellite carries its own wake word and the hub carries speech-to-text, the Pi stays a perfectly good hub for
 a house that only ever says short commands, and the upgrade path is the box, not the software.
 
+## The orb already is the microphone
+
+*Added 12 September 2026, after moves 6 and 7 landed. This section is the only part of the plan above that the
+design has overtaken, and it is worth reading before shape 1 is built.*
+
+When this plan was written the command box was a box: a field at the top of Home, always open, always the full
+width. So "a microphone button beside the command box" was the obvious place to put push-to-talk. It is not any
+more. Under the Top navigation the box lives in the bar along the bottom and, under the Glass face, it **rests as
+its orb** and opens on a touch -- 460ms of width with the words 180ms behind (move 7, `design/nightfall/PORT.md`).
+Under Side navigation it is still a box at the top of the stage.
+
+And the canvas already draws what listening looks like. It is **move 6 of the eight**, the last one with nowhere to
+live, and its subject is that same orb rather than a new control:
+
+| | |
+|---|---|
+| what moves | the orb itself, scaled to **1.18** |
+| timing | **320ms in, 520ms out** |
+| the ring | one ring, once: `scale(.86)` to `scale(2.2)`, opacity peaking at `.55` and fading out across it |
+| why once | once per utterance, not a pulse. A pulse is a loading spinner; this is the house hearing one thing |
+
+So the affordance exists, it is drawn, and it is already on the screen. What is missing is not a control. It is a
+decision about a gesture.
+
+**One orb, two jobs.** Today a touch on the orb opens the box to type in. If holding it is how you talk to the house,
+then tap and hold do different things on the same object, and nothing on the panel currently teaches that. Three ways
+out, and this is the decision to take before shape 1 rather than during it:
+
+1. **Tap types, hold talks.** One object, two gestures, no new furniture, and it matches how a phone's keyboard
+   dictation key behaves. The cost is discoverability: a wall panel has no tooltip and nobody reads a hint twice.
+   Mitigated by the hint line the box already shows on focus, which can say so once.
+2. **Tap talks, the keyboard types.** Invert it: the orb is the microphone, and typing is reached from inside the
+   opened box. Better for the hands-full case voice exists for, worse for the case the box exists for today.
+3. **The orb splits when it opens.** At rest one orb; opened, the box carries a microphone at its far end. Two
+   objects, each with one job, at the cost of the drawn composition -- the board's opened box has an orb, a line of
+   words and nothing else.
+
+Proposal: **(1), tap types and hold talks**, with the box's hint line carrying it. It keeps the board's composition,
+it costs no new furniture, and the gesture is one people already have. But it is a real decision and it is the
+user's, not this document's.
+
+**Two constraints on building move 6, both already paid for once elsewhere in this codebase.**
+
+- *Reduced motion.* All eight moves collapse to opacity -- `PORT.md` slice 6 -- and a scale to 1.18 is exactly what
+  that block is for. The blanket rule at the top of `panel.css` kills animations and transitions, and
+  `e2e/face.spec.ts` asserts nothing anywhere is left moving. That test will fail on a new scale, which is it working.
+  Note that the orb's blooms are already a named exception there: a static blur is not a move.
+- *Where the scale goes.* On the orb itself, with the ring as a sibling -- not on a wrapper around both. The orb's
+  blooms are blurred with `filter` and the frost over them is `backdrop-filter`, and this file has three entries
+  already (the rail's cards, the pane over the room, the weather column) for what happens when an ancestor forms a
+  backdrop root. Whether a `transform` on an ancestor does that is worth **measuring rather than assuming**, and
+  keeping the scale on the orb means never having to find out.
+
+**What does not change.** Speech-to-text still goes to `/say` as text; the grammar still executes and the model still
+only proposes; and there is still a tap for everything voice can do. Listening is a state of a control that is
+already there, which is the cheapest possible way for this to arrive.
+
 ## What to answer, and how
 
 The grammar's answers are text today. Read aloud, they need to be shorter and kinder: "Front door is locked." works;
@@ -145,6 +203,7 @@ to read.
 |---|---|
 | Secure origin for the browser microphone | Wall panel first, in a kiosk browser told to trust `hub.local`; phones after the https decision |
 | Push-to-talk or always listening on the panel | Push-to-talk. A wall tablet listening all day is a different promise and needs a wake word (shape 3) |
+| Where push-to-talk lives, now that the box rests as an orb | The orb, held. See *The orb already is the microphone* -- and settle tap-vs-hold before building, not during |
 | Where speech-to-text runs | The browser in shape 1; the hub in shape 2; never a cloud by default |
 | How big a model | Chosen from the host's class at install, overridable in `.env`; the Large tier is the design point, the Small tier the floor |
 | Does voice ever bypass confirmation for the model's proposals | No |
@@ -160,7 +219,9 @@ recognition, and anything that needs a vendor's account. If a household needs on
 1. **Grow the grammar from the log.** Two weeks of `said` events from the house here; every not-understood phrase
    that a reasonable person would expect to work becomes a pattern with a test. Exit: fewer than one in ten typed
    sentences reach the assistant or a "didn't catch that".
-2. **Shape 1 on the wall.** The button, the kiosk browser trusting the hub, the two-second test.
+2. **Shape 1 on the wall.** The gesture decided, move 6 built on the orb (scale 1.18, 320/520, one ring), the kiosk
+   browser trusting the hub, the two-second test. Move 6 is the last of the eight with nowhere to live, so this
+   milestone finishes the canvas as well as starting voice.
 3. **Shape 2 on the hub.** Wyoming, faster-whisper and Piper as containers with profiles like the radios; the
    tier chooser in `install.sh`; the brain speaks Wyoming; the offline test on a Pi 5 and on a NUC-class box; the
    measured latency for each tier written into the table above.
