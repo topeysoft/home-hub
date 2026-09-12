@@ -85,3 +85,40 @@ test('it brings its own type and corners, and leaves the other arrangements wher
   expect(rail.asked, "Wall's typeface leaked into the Rail").toBe('Instrument Sans Variable')
   expect(rail.radius, "Wall's corners leaked into the Rail").toBe('26px')
 })
+
+/* Measured against the board rather than eyeballed. design/nightfall/Main.dc.html is 1440x900, so
+   every number here is a share of the screen and holds at any size. The cards keep the proportions
+   they were drawn at, which means their widths follow the row's height: the Rail's card lands near
+   square and the board's is portrait, and a panel read from across a room wants portrait, because
+   more of the house fits on it. */
+test('the row is proportioned the way the board draws it', async ({ page }) => {
+  const W = 1280, H = 800
+  const box = async (sel: string, nth = 0) => {
+    const b = (await page.locator(sel).nth(nth).boundingBox())!
+    return { x: b.x / W, y: b.y / H, w: b.width / W, h: b.height / H }
+  }
+  const near = (got: number, want: number, what: string) =>
+    expect(Math.abs(got - want), `${what}: ${(got * 100).toFixed(1)}% against the board's ${(want * 100).toFixed(1)}%`)
+      .toBeLessThan(0.015)
+
+  // what is playing: 332x548 of 1440x900
+  const media = await box('.bento-card')
+  near(media.x, 506 / 1440, 'the first card starts in the wrong place')
+  near(media.w, 332 / 1440, 'what is playing is the wrong width')
+  near(media.h, 548 / 900, 'what is playing is the wrong height')
+
+  // the glance column: two 252-wide cards where one tall card would be
+  const glance = await box('.bento-card', 1)
+  near(glance.x, 860 / 1440, 'the glance column starts in the wrong place')
+  near(glance.w, 252 / 1440, 'a glance card is the wrong width')
+
+  // the weather: 460 wide of 1440, and the pane 226x372 hung inside it
+  // where the weather stops and the row starts, rather than the column's own width: the board's
+  // block begins at the screen edge and the app's begins at the stage's padding, so the two
+  // widths are not the same measurement even when the edge between them is in the same place
+  const wx = await box('.wall-wx')
+  near(wx.x + wx.w, 484 / 1440, 'the weather gives way to the row in the wrong place')
+  const loz = await box('.wall-loz')
+  near(loz.w, 226 / 1440, 'the pane is the wrong width')
+  near(loz.h, 372 / 900, 'the pane is the wrong height')
+})

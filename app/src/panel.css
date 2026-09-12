@@ -222,15 +222,18 @@ input:focus-visible {
     brightness(var(--glass-br, 1.06));
   box-shadow: var(--glass-inner), var(--glass-drop);
 }
-/* The rim below is absolute, so its surface has to be a containing block. Every
-   surface here gets that except .back, which takes it from its own rule: a face
-   must not be able to move a control, and `[data-face='glass'] .back` beats a
-   plain `.opened-close`. */
+/* The rim below is absolute, so its surface has to be a containing block. Two
+   surfaces are not in this list and take it from their own rules instead: .back,
+   because a face must not be able to move a control and
+   `[data-face='glass'] .back` beats a plain `.opened-close`; and .wall-loz,
+   which is already absolutely positioned and so is already a containing block.
+   Handing `relative` to something that placed itself is how the pane's close
+   button ended up off the left of the screen, and it is how the weather's
+   lozenge ended up at the top of its column instead of the bottom. */
 [data-face='glass'] .room-card,
 [data-face='glass'] .tile,
 [data-face='glass'] .scene,
-[data-face='glass'] .banner,
-[data-face='glass'] .wall-loz {
+[data-face='glass'] .banner {
   position: relative;
 }
 /* the rim, drawn as a gradient border with a mask so it follows whatever radius
@@ -4776,6 +4779,33 @@ select.input {
 .wall-stage .bento .scene-card {
   height: auto;
   align-self: stretch;
+}
+/* The cards keep the proportions they were drawn at, which means their widths
+   have to follow the row's height rather than stay put. The Rail's card is
+   372x340 and lands near square; the same card on the board is 332x548, which
+   is portrait, and a wall panel read from across a room wants portrait -- more
+   of the house fits on the screen at once. Left at the Rail's widths the row
+   drifts back towards square as it gets taller, and one fewer card fits.
+
+   Every ratio here is off the board: 332/548 for what is playing, 392/548 and
+   352/548 for the tall cards after it, 252/252 for a glance card. Nothing is
+   picked by eye. */
+.wall-stage .bento {
+  --tall: calc(var(--row) * 2 + 18px);
+}
+.wall-stage .bento .tile.media {
+  width: calc(var(--tall) * 0.606);
+}
+.wall-stage .bento .tile.light {
+  width: calc(var(--tall) * 0.715);
+}
+.wall-stage .bento .tile.plain,
+.wall-stage .bento .scene-card {
+  width: calc(var(--tall) * 0.642);
+}
+.wall-stage .bento .tile.camera,
+.wall-stage .bento .tile.climate {
+  width: calc(var(--row) * 0.957);
 }
 /* the row takes everything the weather does not, and bleeds off the right edge
    only -- its left edge is a real edge here, because something is beside it */
