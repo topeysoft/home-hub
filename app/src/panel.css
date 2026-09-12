@@ -4297,7 +4297,20 @@ select.input {
   left: 0;
   right: 0;
   bottom: 0;
-  top: clamp(120px, 22vh, 260px);
+  /* A pane stops short of the row it came from, not of the top bar, and that is
+     the difference between a drawer and a new screen: the thing you were looking
+     at is still there, dimmed, above it. The board leaves 56 of its 900 showing
+     -- the top of a card and its corner -- which is 50px here, and 25vh is where
+     the row now starts plus those 50.
+
+     It used to be 22vh, chosen when it only had to clear the top bar, and for as
+     long as Home led with a greeting and an attention strip there was nothing
+     above the pane but furniture anyway. design/nightfall slice 5 wrote that
+     down as the one part of the slice that could not land, and said it was the
+     arrangement's to fix rather than the face's. Wall is that arrangement, and
+     with the band out of the flow the row finally starts high enough for this
+     number to mean what it says. */
+  top: clamp(120px, 25vh, 260px);
   overflow: hidden;
   border-radius: 34px 34px 0 0;
   border: 1px solid var(--edge-hi);
@@ -4919,6 +4932,57 @@ select.input {
 .wall-home .wall-stage + .block {
   margin-top: 12px;
 }
+/* ---------- the band, and a row that does not move ----------
+   The row is the whole of what Wall buys. It is 548 of the board's 900 and the
+   greeting, the house line and the next-up line were all given up to pay for it,
+   so a house with something to attend to must not hand a slice of it back.
+
+   It used to. The band is in the flow above the stage and the stage takes
+   `margin-block: auto`, so a chip appearing pushed the row 35px down the screen
+   -- which is the worst of both: the row got shorter AND the urgent thing was no
+   louder for it. It is also why a phone at the door and a fault list are now a
+   pane and a page: with those two out of the band, nothing left in it is taller
+   than one line of house news, and a band of a known height can come out of the
+   flow altogether.
+
+   So it hangs in the gap that is already there. The stage centres itself in
+   whatever height is left, which leaves 58px between the top bar and the row at
+   1280x800, and a chip is 57. `--stage-top` is what lets the band start at the
+   bar rather than at the stage's content box; the two are declared together for
+   that reason.
+
+   The row lands at a fixed 142 whatever is in the band, which puts the card at
+   150 against the board's 160 -- 1.25% of the screen, inside the 1.5% every
+   other proportion in e2e/wall.spec.ts is held to. Chasing the last ten would
+   mean giving up `margin-block: auto`, and with it the one thing that keeps this
+   arrangement sane on a screen that is not 800 tall. */
+.shell[data-nav='top'][data-layout='wall'] .wall-home {
+  position: relative;
+}
+.shell[data-nav='top'][data-layout='wall'] .wall-home > .nudges {
+  position: absolute;
+  top: calc(-1 * var(--stage-top, 0px));
+  left: 0;
+  right: 0;
+  margin: 0;
+  /* one line of chips, always: wrapping is how a band grows, and a band that can
+     grow is a row that can shrink. A fourth thing to attend to scrolls sideways
+     rather than taking the row's height. */
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.shell[data-nav='top'][data-layout='wall'] .wall-home > .nudges::-webkit-scrollbar {
+  display: none;
+}
+.shell[data-nav='top'][data-layout='wall'] .nudge {
+  flex: 0 0 auto;
+}
+/* and one line of sub, so a long sentence cannot do what a fourth chip cannot.
+   Wall gives up the second line of everything else it draws for the same reason. */
+.shell[data-nav='top'][data-layout='wall'] .nudge-sub {
+  -webkit-line-clamp: 1;
+}
 /* the left third: 460 of the board's 1440, and it holds its share rather than a
    fixed width, because the row beside it is what gets the rest */
 /* measured from the screen's edge rather than the stage's, which is where the
@@ -5300,7 +5364,10 @@ select.input {
   max-width: none;
 }
 .shell[data-nav='top'] .stage {
-  padding-top: 20px;
+  /* named because Wall hangs its band in this padding rather than above it, and the two have to
+     agree or the band and the row overlap -- see "the band, and a row that does not move" */
+  --stage-top: 20px;
+  padding-top: var(--stage-top);
   padding-bottom: 20px;
 }
 .topbar {
