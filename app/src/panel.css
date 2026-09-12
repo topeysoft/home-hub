@@ -4680,6 +4680,40 @@ select.input {
   -webkit-user-select: none;
   user-select: none;
 }
+/* A card leaves the row downward, and that direction is the whole point. It has already spent a beat
+   showing itself off (BentoRow says why); a card that then merely faded would be doing the thing the
+   house is trying not to look like -- disappearing, only slower. Dropping out is a departure: something
+   was taken out of the row, and the row closes leftward over the gap, so the two motions are different
+   and neither reads as the other. Down rather than up because up is where the greeting and the weather
+   are; down rather than back to the right because the row arrives from the right and scrolls sideways,
+   and a card moving that way reads as a scroll rather than a leaving. It accelerates out (ease-in): a
+   thing that speeds up as it goes has been dismissed, a thing that eases to a stop has been placed.
+
+   `transform` and `opacity` only: the row's entrance drives `translate`, so this must stay out of that
+   property. Two classes rather than a TransitionGroup, which wraps this row in a way that swallowed
+   taps meant for a card. */
+.bento-card.going {
+  /* The edge treatment above drives opacity AND filter from the scroll, and an animation outranks a
+     transition, so a card cannot be moved or faded while it is still under it. Releasing the leaving
+     card is what lets it go: it is on its way out, not being swept past. */
+  animation: none;
+  opacity: 1;
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 1, 1), transform 0.3s cubic-bezier(0.4, 0, 1, 1);
+  pointer-events: none;
+}
+.bento-card.gone {
+  opacity: 0;
+  transform: translateY(34px) scale(0.97);
+}
+@media (prefers-reduced-motion: reduce) {
+  /* No travel, and the beat before it does the explaining instead. */
+  .bento-card.going {
+    transition: opacity 0.18s ease;
+  }
+  .bento-card.gone {
+    transform: none;
+  }
+}
 .tile img {
   -webkit-user-drag: none;
   pointer-events: none;

@@ -15,7 +15,7 @@
  * their own; then whatever is left. A row of equal boxes is a spreadsheet, and
  * the difference between that and a room is the one small column.
  */
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { cap, scenesFor, store, whatsOn } from '../store'
 import type { Device, Room } from '../api'
 import SceneBar from '../SceneBar.vue'
@@ -36,7 +36,40 @@ const props = defineProps<{ rooms: Room[]; when: string; woke?: number }>()
 type Card = { key: string; kind: 'device' | 'scenes'; device?: Device }
 const cameras = computed(() => props.rooms.flatMap(r => r.devices.filter(d => cap(d) === 'camera')))
 const climates = computed(() => props.rooms.flatMap(r => r.devices.filter(d => cap(d) === 'climate')))
-const on = computed(() => whatsOn().filter(d => cap(d) !== 'camera' && cap(d) !== 'climate'))
+/* A card here stands for something that is on, so turning it off takes it out of the row. Going on the
+   tap itself reads as a glitch rather than an answer, so a thing that has stopped being on keeps its
+   place for a beat first: the card stays exactly where it was, showing itself off -- the fill drained,
+   the label changed -- and only then does the row close over it. The beat covers a thing a routine
+   turned off too, where a card vanishing under nobody's hand is stranger still.
+   Held rather than computed, because a card on its way out has to keep its place, and a row rebuilt
+   from what is still on has no place to keep. */
+const SHOWN = 620, FADE = 340, SPARE = 90   // read the card off, fade it, and do not cut the fade short
+const live = computed(() => whatsOn().filter(d => cap(d) !== 'camera' && cap(d) !== 'climate'))
+const going = reactive<Record<string, true>>({})   // still in the row, on its way out
+const gone = reactive<Record<string, true>>({})    // and now faded
+const on = ref<Device[]>([])
+function close(now: Device[]) {
+  const rest = new Map(now.map(d => [d.id, d]))
+  const kept: Device[] = []
+  for (const d of on.value) {
+    const still = rest.get(d.id)
+    if (still) { kept.push(still); rest.delete(d.id) }
+    else if (going[d.id]) kept.push(d)
+  }
+  on.value = [...kept, ...rest.values()]
+}
+watch(live, (now, was) => {
+  for (const d of was ?? []) {
+    if (!now.some(x => x.id === d.id) && !going[d.id]) {
+      going[d.id] = true                             // the class that arms the fade, with the card still at full strength
+      /* Two frames before it goes, the same way the row's own entrance arms itself above: a class that
+         both defines a transition and moves the value in one change cannot be relied on to animate. */
+      window.setTimeout(() => requestAnimationFrame(() => requestAnimationFrame(() => { gone[d.id] = true })), SHOWN)
+      window.setTimeout(() => { delete going[d.id]; delete gone[d.id]; close(live.value) }, SHOWN + FADE + SPARE)
+    }
+  }
+  close(now)
+}, { immediate: true })
 const scenes = computed(() => scenesFor(null).length > 0)
 const cards = computed<Card[]>(() => {
   const dev = (d: Device): Card => ({ key: d.id, kind: 'device', device: d })
@@ -116,7 +149,7 @@ onUnmounted(() => clearTimeout(settle))
   <!-- --flow-i is the card's place in the row: the entrance leans on it for the stagger -->
   <div class="bento" ref="bento" v-if="!empty" :class="flow" role="group" aria-label="On right now">
     <template v-for="(c, i) in cards" :key="c.key">
-      <component v-if="c.kind === 'device'" :is="tile(c.device!)" class="bento-card" :style="{ '--flow-i': i }" :device="c.device!" v-hold="() => (store.opened = c.device!)" />
+      <component v-if="c.kind === 'device'" :is="tile(c.device!)" class="bento-card" :class="{ going: !!going[c.device!.id], gone: !!gone[c.device!.id] }" :style="{ '--flow-i': i }" :device="c.device!" v-hold="() => (store.opened = c.device!)" />
       <div v-else class="bento-card tile scene-card" :style="{ '--flow-i': i }">
         <span class="scene-card-when">{{ when }}</span>
         <SceneBar :room="null" />
