@@ -4089,6 +4089,14 @@ select.input {
     transform 0.26s var(--ease),
     filter 0.26s var(--ease);
 }
+/* The two curves a pane moves on. Arriving and leaving are not the same move
+   played backwards: a pane arrives slowly and leaves quickly, because weight is
+   the whole idea and nothing on a wall panel should look flicked away. */
+[data-face='glass'] {
+  --pane-in: cubic-bezier(0.12, 0.78, 0.24, 1);
+  --pane-out: cubic-bezier(0.4, 0, 0.6, 1);
+}
+
 /* ---------- the room, with a pane in front of it, under glass ----------
    Paper pushes the house back and blurs it. Glass cannot, for two reasons that
    both matter. A pane over an already-blurred room is a dark sheet over mush:
@@ -4126,6 +4134,75 @@ select.input {
    and the pane read .13, which is precisely what tone.ts exists to stop a card
    doing. A pane holds a distance from the field instead, three stops down its
    own height, and the blur is what it is made of rather than a finish on it. */
+/* ---------- how a pane moves, under glass ----------
+   Measured off the reference rather than chosen: 400ms up, 300ms down, and the
+   object inside still settling at 700ms, long after the pane has landed. That
+   last one is what puts the object INSIDE the glass rather than printed on it.
+
+   The bottom bar goes first. It leaves 60ms before the pane starts to rise and
+   comes back 180ms after it has gone, so the pane never appears to push it out
+   of the way or to drag it back in -- the house gets out of the way, and then
+   the pane arrives. */
+[data-face='glass'] .opened-panel {
+  transition: transform 300ms var(--pane-out);
+}
+[data-face='glass'] .opened.shown .opened-panel {
+  /* 28ms, not 60: `shown` cannot flip until the pane has painted once at
+     translateY(100%), which is two frames after the shell learns a device is
+     open and the bar has started leaving. Those two frames are the rest of the
+     lead, and the veil -- which moves on `shown` -- is what makes them
+     measurable. Off the transitions' own clocks at 1280x800: the bar goes at 0,
+     the veil two frames later, and the pane 28ms after the veil -- a lead of 50
+     to 85ms in hand, depending on how long a frame is taking while a pane is
+     being painted through a 30px blur. The last of the 60 is not worth chasing:
+     a transition can only start on a frame, and asking for 35 instead of 28
+     moved the measurement to 77 rather than to 60, a whole frame the wrong
+     way. */
+  transition: transform 400ms var(--pane-in) 28ms;
+}
+/* the object travels further than the pane and keeps going after it has landed */
+[data-face='glass'] .opened-hero {
+  transform: translateX(220px) scale(1.1);
+  transition:
+    transform 300ms var(--pane-out),
+    opacity 240ms ease;
+}
+[data-face='glass'] .opened.shown .opened-hero {
+  transform: none;
+  transition:
+    transform 700ms var(--pane-in) 28ms,
+    opacity 300ms ease 28ms;
+}
+[data-face='glass'].shell.opened-shell > .bottombar {
+  opacity: 0;
+  transform: translateY(14px);
+  transition:
+    opacity 220ms var(--ease),
+    transform 220ms var(--ease);
+}
+/* Coming back: 180ms after the pane has gone, counted from the moment the fall
+   STARTS rather than from the moment the device is dropped out of the DOM. The
+   drop is a setTimeout on the same main thread that is painting a 300ms fall
+   through a 30px blur, and it runs late -- 73ms late, measured at 1280x800 --
+   so a delay counted from there inherits every bit of that. `closing` goes on
+   at the instant the fall begins, so 300 + 180 is what is actually written
+   down. Measured, it lands at about 525: the bar's transition can only start on
+   a frame, and while a pane is falling through a 30px blur those are long. */
+[data-face='glass'].shell.opened-shell:has(.opened.closing) > .bottombar {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 260ms var(--ease) 480ms,
+    transform 260ms var(--ease) 480ms;
+}
+/* This house has no `closing` of its own -- Vue times its leave -- so it still
+   counts from the drop: 320ms there, 160 here. Not while resting: that fade
+   belongs to the screensaver and has its own timing. */
+[data-face='glass'].shell:not(.opened-shell):not(.resting) > .bottombar {
+  transition:
+    opacity 260ms var(--ease) 160ms,
+    transform 260ms var(--ease) 160ms;
+}
 [data-face='glass'] .opened-panel,
 [data-face='glass'] .house-panel {
   /* the ink moves with the surface, the same as it does on a card: these are

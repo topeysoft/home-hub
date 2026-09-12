@@ -123,3 +123,54 @@ test('a pane dims the room under glass and blurs it under paper', async ({ page 
     }
   }
 })
+
+/* The order of the pane move, which is the part that breaks silently. The numbers themselves are
+   frame-noisy on a loaded machine -- panel.css carries the measured ones and why they land where
+   they do -- but the sequence is not: the bottom bar gets out of the way BEFORE the pane rises, the
+   object inside is still settling after the pane has landed, and on the way out the bar does not
+   come back until the pane has gone. Read off the transitions' own clocks, because a screenshot
+   cannot see an order and a sampled frame is coarser than the gaps being asserted. */
+test('under glass the house gets out of the way first, and the object lands last', async ({ page }) => {
+  await page.goto('/?face=glass&room=living&at=19:40&nav=top', { waitUntil: 'networkidle' })
+  await expect(page.locator('.tile.light').first()).toBeVisible()
+  await page.waitForTimeout(400)
+
+  await page.evaluate(() => {
+    const w = window as any
+    w.__log = []
+    const name = (el: Element) =>
+      el.classList.contains('opened-panel') ? 'pane'
+        : el.classList.contains('bottombar') ? 'bar'
+          : el.classList.contains('opened-hero') ? 'object' : ''
+    for (const ev of ['transitionstart', 'transitionend'])
+      document.addEventListener(ev, (e) => {
+        const n = e.target instanceof Element ? name(e.target) : ''
+        if (n && (e as TransitionEvent).propertyName === 'transform')
+          w.__log.push({ at: performance.now(), what: `${n}:${ev === 'transitionstart' ? 'start' : 'end'}` })
+      }, true)
+  })
+
+  const tile = page.locator('.tile.light').first()
+  const b = (await tile.boundingBox())!
+  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2)
+  await page.mouse.down()
+  await page.waitForTimeout(470)
+  await page.mouse.up()
+  await expect(page.locator('.opened-panel')).toBeVisible()
+  await page.waitForTimeout(1400)
+  await page.locator('.opened-close').click()
+  await page.waitForTimeout(1400)
+
+  const log: { at: number; what: string }[] = await page.evaluate(() => (window as any).__log)
+  const when = (what: string, nth = 0) => log.filter((e) => e.what === what)[nth]?.at
+  const seen = log.map((e) => e.what)
+
+  expect(seen, `nothing moved: ${JSON.stringify(seen)}`).toContain('pane:start')
+  expect(when('bar:start'), 'the bar did not leave before the pane rose')
+    .toBeLessThan(when('pane:start'))
+  expect(when('object:end'), 'the object stopped before the pane landed, so it is printed on it')
+    .toBeGreaterThan(when('pane:end'))
+  // the second of each is the way out
+  expect(when('bar:start', 1), 'the bar came back before the pane had gone')
+    .toBeGreaterThan(when('pane:start', 1) + 300)
+})

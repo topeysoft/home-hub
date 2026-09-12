@@ -9,6 +9,12 @@
  * further than the panel does, which is what makes it feel like an object
  * instead of a picture. Content comes up behind it in four beats.
  *
+ * Those are paper's. Glass has a measured set of its own, and a room that dims
+ * rather than blurring — all of it in panel.css under [data-face='glass'], none
+ * of it here, because a face gets to change how a thing moves and not what it
+ * is. The one exception is `closing` below, which exists because CSS cannot see
+ * the difference between a pane that has not risen yet and one on its way out.
+ *
  * The field takes the device's own colour while it is open: a warm lamp pushes
  * the whole room amber, a camera cools it. That is the one idea worth stealing
  * from the reference this was drawn from, and the sky gives it somewhere real
@@ -70,7 +76,14 @@ async function dim(e: Event) {
   catch (err: any) { notify(err.message, 'error') }
 }
 
-function close() { shown.value = false; setTimeout(() => (store.opened = null), 300) }   // a frame past the .28s slide down, so the last of it is never clipped
+/* `closing` is not the same fact as `!shown`, and the difference is two frames:
+   between mounting and the rise beginning, the pane is also not shown, and CSS
+   cannot tell those two apart. Something has to, because the bottom bar's way
+   back is counted from the moment the fall STARTS -- see panel.css. The
+   timeout is a frame past the longest fall either face has, paper's 280ms and
+   glass's 300, so the last of the slide is never clipped. */
+const closing = ref(false)
+function close() { shown.value = false; closing.value = true; setTimeout(() => (store.opened = null), 320) }
 
 function onKey(e: KeyboardEvent) { if (e.key === 'Escape') close() }
 /* Two frames, not one. onMounted runs before the browser has painted anything,
@@ -88,7 +101,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 </script>
 
 <template>
-  <div class="opened" :class="{ shown }" v-if="dev" role="dialog" :aria-label="dev.name">
+  <div class="opened" :class="{ shown, closing }" v-if="dev" role="dialog" :aria-label="dev.name">
     <div class="opened-veil" @click="close"></div>
     <div class="opened-panel" :data-cap="kind">
       <button class="back opened-close" @click="close" aria-label="Close"><Icon name="close" :size="18" /></button>
