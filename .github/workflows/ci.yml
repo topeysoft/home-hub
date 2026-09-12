@@ -18,8 +18,14 @@ on:
   workflow_call:              # the release workflows run this against a tag before they publish
 
 # A second push to the same branch makes the first one's run pointless; stop it rather than queue behind it.
+#
+# github.workflow is the CALLER's name when this runs as a reusable workflow, and it has to be in the
+# group. Both release workflows verify the same tag, so without it they share one group and the second
+# cancels the first — which is exactly what happened to v0.2.0: the brain image's verification was
+# killed three seconds in by the Pi image's, and the build refused to publish a release it could not
+# confirm. Right call by the guard, wrong reason.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
