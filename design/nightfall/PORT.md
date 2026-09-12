@@ -68,6 +68,17 @@ a bordered box would be a tile saying what the whole screen behind it is already
 saying. And the row gets the rest of the screen -- 548 tall on the board where
 the Rail can only afford 392.
 
+The row passes under the weather rather than stopping beside it, which is how
+the board stacks them: the weather is drawn first and the rail after, so a
+swiped card travels across it. Beside it, as a flex sibling, it could not -- a
+scroller clips at its own box, so a card stopped existing at the weather's edge
+and read as something with a fixed background covering it. One number in vw
+does three jobs there, because all three have to agree: where the weather ends,
+where the first card rests, and -- through scroll-padding, which insets the
+scrollport a view() timeline measures against -- where a card starts to recede.
+vw and not a percentage, because `padding` resolves a percentage against the
+containing block and `scroll-padding` against the scrollport.
+
 The weather recedes with the row, and that one is the layout's call rather than
 the face's. In the Rail the weather is a corner element and a face can decide
 whether it has depth; here it is the biggest thing on the screen, and a third of
