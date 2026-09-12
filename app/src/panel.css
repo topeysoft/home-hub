@@ -163,7 +163,15 @@ input:focus-visible {
 .bottombar {
   transition: opacity 0.5s var(--ease);
 }
-/* glass: a tone of its own, the sky softened behind it */
+/* glass: a tone of its own, the sky softened behind it.
+
+   `backdrop-filter` is written once, unprefixed, and the build adds whatever
+   prefix a browser needs. Writing `-webkit-backdrop-filter` next to it by hand
+   is what this file used to do, and it is worse than useless: the minifier
+   reads the pair as proof that the prefixed property covers every target and
+   drops the standard one -- so when Chrome 153 removed the -webkit- alias,
+   every frosted surface in the built panel went flat while the source still
+   plainly said blur. e2e/face.spec.ts is what would have caught it. */
 .room-card,
 .tile,
 .scene,
@@ -173,12 +181,10 @@ input:focus-visible {
 .recent-icon,
 .button.ghost {
   backdrop-filter: var(--frost);
-  -webkit-backdrop-filter: var(--frost);
 }
 .rail {
   background: rgba(12, 13, 16, 0.38);
   backdrop-filter: blur(24px) saturate(1.2);
-  -webkit-backdrop-filter: blur(24px) saturate(1.2);
 }
 
 /* ---------- glass: what the panel is made of, when a house asks for it ----------
@@ -212,8 +218,6 @@ input:focus-visible {
 [data-face='glass'] .banner {
   position: relative;
   backdrop-filter: blur(var(--glass-blur, 26px)) saturate(var(--glass-sat, 1.7))
-    brightness(var(--glass-br, 1.06));
-  -webkit-backdrop-filter: blur(var(--glass-blur, 26px)) saturate(var(--glass-sat, 1.7))
     brightness(var(--glass-br, 1.06));
   box-shadow: var(--glass-inner), var(--glass-drop);
 }
@@ -699,7 +703,6 @@ input:focus-visible {
   color: var(--ink-2);
   font-size: 14px;
   backdrop-filter: var(--frost);
-  -webkit-backdrop-filter: var(--frost);
 }
 .reading svg {
   color: var(--muted);
@@ -969,7 +972,6 @@ input:focus-visible {
   min-height: 0;
   background: var(--bg-2);
   backdrop-filter: none;
-  -webkit-backdrop-filter: none;
 }
 .tile.camera img {
   position: absolute;
@@ -1221,7 +1223,6 @@ input:focus-visible {
     transform 0.15s var(--ease),
     opacity 0.18s var(--ease);
   backdrop-filter: var(--frost);
-  -webkit-backdrop-filter: var(--frost);
 }
 .onnow-icon {
   width: 30px;
@@ -1790,7 +1791,6 @@ input:focus-visible {
     var(--surface);
   border: 1px solid rgba(233, 184, 114, 0.3);
   backdrop-filter: var(--frost);
-  -webkit-backdrop-filter: var(--frost);
 }
 .nudge:active {
   transform: scale(0.99);
@@ -1844,7 +1844,6 @@ input:focus-visible {
   z-index: 35;
   background: rgba(6, 7, 9, 0.55);
   backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
   display: grid;
   place-items: center;
   padding: 24px;
@@ -2109,7 +2108,6 @@ input:focus-visible {
   color: var(--lamp);
   margin-bottom: 26px;
   backdrop-filter: var(--frost);
-  -webkit-backdrop-filter: var(--frost);
 }
 .setup-mark.done {
   background: var(--live);
@@ -2208,7 +2206,6 @@ a.button {
   color: var(--ink-2);
   font-size: 15px;
   backdrop-filter: var(--frost);
-  -webkit-backdrop-filter: var(--frost);
 }
 .tips b {
   color: var(--ink);
@@ -2308,7 +2305,6 @@ select.input {
     color 0.18s var(--ease),
     border-color 0.18s var(--ease);
   backdrop-filter: var(--frost);
-  -webkit-backdrop-filter: var(--frost);
 }
 .chip-btn.on {
   background: var(--ink);
@@ -2822,7 +2818,6 @@ select.input {
   background: var(--surface);
   border: 1px solid var(--edge);
   backdrop-filter: var(--frost);
-  -webkit-backdrop-filter: var(--frost);
 }
 .sort-row.busy {
   opacity: 0.6;
@@ -2921,7 +2916,6 @@ select.input {
     rgba(16, 17, 21, 0.96)
   );
   backdrop-filter: blur(30px) saturate(1.25);
-  -webkit-backdrop-filter: blur(30px) saturate(1.25);
   transition: transform 0.38s var(--ease);
 }
 /* How long each way lasts is told to Vue in App.vue rather than inferred here:
@@ -4113,7 +4107,6 @@ select.input {
     rgba(16, 17, 21, 0.94)
   );
   backdrop-filter: blur(30px) saturate(1.25);
-  -webkit-backdrop-filter: blur(30px) saturate(1.25);
   transform: translateY(100%);
   transition: transform 0.28s var(--ease);
 }
@@ -4662,7 +4655,6 @@ select.input {
   background: rgba(26, 28, 34, 0.55);
   border: 1px solid var(--edge);
   backdrop-filter: var(--frost);
-  -webkit-backdrop-filter: var(--frost);
   flex: 0 0 auto;
 }
 .tab {
@@ -4711,7 +4703,6 @@ select.input {
   background: var(--surface);
   border: 1px solid var(--edge);
   backdrop-filter: var(--frost);
-  -webkit-backdrop-filter: var(--frost);
 }
 .topbar-add.attention::after {
   content: '';
@@ -4753,7 +4744,6 @@ select.input {
   background: rgba(26, 28, 34, 0.55);
   border: 1px solid var(--edge);
   backdrop-filter: var(--frost);
-  -webkit-backdrop-filter: var(--frost);
 }
 .bottombar .say-box > svg {
   display: none;
@@ -4929,7 +4919,6 @@ select.input {
 .look-shape.look-face-glass i:first-child {
   background: rgba(255, 255, 255, 0.16);
   backdrop-filter: blur(5px) saturate(1.6);
-  -webkit-backdrop-filter: blur(5px) saturate(1.6);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 .look-shape.look-face-paper i:last-child,
@@ -5212,7 +5201,6 @@ select.input {
   border-color: transparent;
   color: var(--card-ink, var(--ink));
   backdrop-filter: none;
-  -webkit-backdrop-filter: none;
 }
 .bento .scene-card .scene-icon {
   width: 44px;
