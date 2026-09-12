@@ -12,10 +12,16 @@ exactly where it is, and Nightfall is one more thing a house can be set to.
 
 ## Where this is
 
-Slices 1 to 5 have landed, each as its own commit: `git log --oneline a2cdf1a..HEAD`.
+All six slices have landed, each as its own commit: `git log --oneline a2cdf1a..HEAD`.
 Glass is a face a house can be set to, its material is derived from the sky, the
-field carries the blooms, the rail has its focal plane and the pane has its
-measured timings. Slice 6 is not started.
+field carries the blooms, the rail has its focal plane, the pane has its measured
+timings, and there is a floor under the whole thing.
+
+One thing is still owed and cannot be paid from here: **the Pi.** `npm run cost`
+is the instrument -- point it at a real hub with `BASE=` and it prints what a
+rail swipe costs in frames, under each face, on that host. Everything else about
+slice 6 is measured; that number is not, and guessing it would be worse than
+saying so.
 
 Two things were found under slice 5 rather than written by it, and both are
 their own commits before it:
@@ -227,13 +233,51 @@ the pane covers all of it. On the canvas the row starts at the top and the pane
 takes its lower two thirds. That is the arrangement, not the face, and it is the
 open decision below.
 
-**6. Reduced motion, and the floor.** *(not started)*  All eight moves collapse to opacity, the
-field stops drifting, the rail jumps. Then the question this whole port exists
-to answer: a Pi 5 at 1280×800, painting `backdrop-filter` on every card with an
-animated `filter` on five of them at once. If it will not hold, the honest
-answer is that the blur is sized to the host the way everything else is, and
-`glass` degrades to a flat tint on the floor rather than the whole face being
-abandoned.
+**6. Reduced motion, and the floor.** *(landed, except the Pi)*  All eight moves collapse to
+opacity, the field stops drifting, the rail jumps. Then the question this whole
+port exists to answer: a Pi 5 at 1280×800, painting `backdrop-filter` on every
+card with an animated `filter` on five of them at once. If it will not hold, the
+honest answer is that the blur is sized to the host the way everything else is,
+and `glass` degrades to a flat tint on the floor rather than the whole face
+being abandoned.
+
+*Reduced motion* was almost already true, and checked in a browser rather than
+assumed: the blanket block near the top of `panel.css` leaves no animation, no
+filter and no transition anywhere under either face, and `Sky.vue` draws its
+scene once instead of starting a loop. One thing was a step too far. The rail
+did not arm its arrival at all, so the row appeared between two frames, where
+the canvas asks for a 180ms fade -- a fade is not vestibular motion, a pop is
+only abrupt. The rail now arms it either way and the stylesheet decides what
+arriving means, which is the point: a move and its reduced form drifting apart
+is what happens when that decision lives in two files. The travel has to be
+cancelled explicitly, because `translate` is a plain property and the blanket
+block does nothing to it -- otherwise every card sits 696px right for one
+painted frame, which is the move this is supposed to remove.
+
+*The floor,* and the measurement reframes it. **Both faces paint the same 13
+frosted surfaces** at 1280x800. Paper has always put `--frost` on every tile;
+glass adds none. The whole difference is the radius -- 26px against 18 -- plus a
+saturate, and on the rail an animated 5px blur where paper animates 6. So the
+risk was never whether a host can blur. It is how wide, and that is one number:
+`--glass-blur`, with `--pane-blur` beside it.
+
+What `npm run cost` measures at 1280x800 with software rasterisation, which is
+the nearest thing to a weak GPU available without one: a 650ms rail swipe holds
+every frame under paper and drops about a quarter of them under glass,
+repeatably. A radius bill, not a face bill.
+
+The floor itself is built regardless, because there is one state the face could
+not survive: a host with no `backdrop-filter` at all. An unblurred glass card is
+.34 of a colour over the open sky and hardly a card -- the face would not
+degrade, it would vanish. `--glass-flat` and `--pane-flat` are not a second
+palette; each stop is the colour its translucent twin composites TO, so the rim,
+the sweep and the shadow are all still drawn and only the depth is gone.
+`data-flat` carries it rather than `@supports`, for two reasons: a feature query
+cannot be switched on to look at, and this is a state the panel will spend its
+whole life never being in, so nobody would ever see it -- `?flat=1` does. And
+the switch has a second job waiting, because a host that CAN blur but not fast
+enough wants exactly the same answer, and that is a measurement rather than a
+feature query.
 
 ## What is still open
 
@@ -258,6 +302,20 @@ screen, so [`Room.dc.html`](../Room.dc.html) argues it is a ranked grid rather
 than something you sweep — and rail-plus-pane is the spine of this direction.
 Whether it has an answer there is genuinely unknown.
 
+With all six slices in, what is left is not really port work any more. The Pi
+number is a half-hour on the right machine, and `npm run cost` is already
+pointed at it. Everything else on this page is a design decision: whether the
+day wants a face of its own, whether the sky should suppress its landscape under
+glass, whether Home should have a third layout, and whether a room is a rail at
+all. The face itself is finished, and every one of those can be answered without
+touching it.
+
+The `data-flat` switch is the one seam left half-used. It is wired to the
+question a browser can answer -- can this host paint a backdrop-filter -- and
+waiting on the one only a measurement can: can it paint one fast enough. If the
+Pi says no, that is where the answer goes, and the step before a flat tint is a
+smaller `--glass-blur` rather than no glass at all.
+
 ## How this work has been going, for whoever picks it up
 
 Small slices, each committed and looked at before the next one starts. The
@@ -272,7 +330,9 @@ else would have found it. For timing, listen for `transitionstart` and
 `transitionend` rather than sampling frames: a frame runs about 25ms while a
 pane is being painted, which is coarser than the gaps being measured, and a
 sampled trace put the bar and the pane at the same instant when they are 51ms
-apart. `npx vitest run`, `npx playwright test`,
+apart. And for cost, `npm run cost` -- a scripted rail swipe with the gaps
+between presented frames written down, which is the only one of the three meant
+to be run somewhere other than here. `npx vitest run`, `npx playwright test`,
 `npx vue-tsc --noEmit -p tsconfig.app.json` and `npx eslint` all pass; the hold
 gesture spec flakes under load and passes in isolation.
 

@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "mock": "node mock/brain.mjs",
     "shots": "node mock/shots.mjs",
+    "cost": "node mock/cost.mjs",
     "art-sheet": "node mock/art-sheet.mjs",
     "art-sheet:check": "node mock/art-sheet.mjs --check",
     "weather-sheet": "node mock/weather-sheet.mjs",
