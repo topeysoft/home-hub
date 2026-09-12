@@ -45,6 +45,55 @@ Voice is that same path with a microphone in front of it. Nothing below changes 
   mini PC or a VM with spare cores runs the same containers with bigger models and hears better. Voice is sized to the
   host it finds itself on (see *Fitting the hardware*), and nothing below is written so that it only works on a Pi.
 
+## What voice may do, and how the house heard you
+
+*Added 12 September 2026, from the question "should the model-in-the-loop rule be softened so voice can do lights and
+fans but not locks and the garage?"*
+
+**The answer is no, because that rule is not what would be stopping you.** "The model is never in the control loop"
+is about who EXECUTES, not about which things voice may touch. The grammar executes; the model only proposes. So a
+spoken "close the garage" does not reach the model at all -- `garage( door)?` is a cover in `commands.py`'s KINDS
+table, `close` is one of its direction words, and it runs at once, exactly the way a tap does. Locking up is already
+there too: "lock the front door", "lock up", "lock the house". **Voice closing a garage door is allowed by the rule as
+written, today, and would work the moment shape 1 lands.**
+
+Softening the rule would therefore buy nothing that was wanted, and would cost the thing it is for: an LLM's misparse
+of "unlock the back door" is a class of accident a deterministic grammar cannot have.
+
+**But the question underneath it is a real one, and there is no rule for it yet.** It is not *which devices may voice
+control*. It is *who is allowed to be heard*, and that depends on how the sentence arrived:
+
+| how the house heard it | who could have said it |
+|---|---|
+| typed in the command box | somebody standing at the panel, indoors |
+| the orb held down (shape 1) | somebody standing at the panel, indoors |
+| a satellite with a wake word (shape 3) | anybody within earshot -- including through a door, a window or a letterbox |
+
+Push-to-talk on the wall is the same trust as tapping the tile: your hand is on the panel, so you are already inside.
+There is nothing to gate. A satellite listening for a wake word is a different promise, and the attack is not
+hypothetical -- shouting a command through a letterbox at a voice assistant to unlock a door is a known one.
+
+So the rule to add is **about the route, not about the kind**:
+
+> What the house will do without asking depends on how it heard you. Anything you can do with a tap, you can do by
+> holding the orb. A satellite that hears a wake word may do everything except open a way into the house.
+
+**And the direction matters more than the device.** Closing and locking make a house safer; opening and unlocking are
+the only dangerous half. The grammar already distinguishes them -- `(open|close|shut|raise|lower)` for a cover,
+`(lock|unlock)` for a lock -- so a satellite can be allowed "close the garage" and "lock up" from anywhere in the
+house while "open the garage" and "unlock the front door" are the two that need more than a voice. That gives the
+wish that prompted this question in full, at no cost: **closing the garage door by voice, from any room, is safe
+because the failure mode of a misheard "close the garage" is a closed garage.**
+
+What "more than a voice" should be is the open part, and it is a choice between three, in order of how much they ask
+of a person: the panel says what was heard and waits for a tap; or the settings code, which the house already has and
+already gates the settings behind; or the household turns the whole class on per kind, with the risk in plain words,
+the way a nudge says what it is for. None of the three needs building before shape 1, because shape 1 is push-to-talk
+on the panel and the question does not arise until a satellite is in the house.
+
+Two things this does not change. The model still only proposes, by voice as by typing. And nothing here is voice-only:
+every one of these has a tap, which is the whole reason the gated half can be gated at all.
+
 ## Three shapes, in the order to build them
 
 ### 1. Push-to-talk on the panel
@@ -207,6 +256,7 @@ to read.
 | Where speech-to-text runs | The browser in shape 1; the hub in shape 2; never a cloud by default |
 | How big a model | Chosen from the host's class at install, overridable in `.env`; the Large tier is the design point, the Small tier the floor |
 | Does voice ever bypass confirmation for the model's proposals | No |
+| May voice do locks, doors and the garage | Yes, from the panel -- it is the same trust as a tap. From a wake-word satellite, the closing half only. See *What voice may do* |
 | Does the assistant see audio | No. It sees text, the same text a person could have typed |
 
 ## Not in this plan
@@ -225,4 +275,6 @@ recognition, and anything that needs a vendor's account. If a household needs on
 3. **Shape 2 on the hub.** Wyoming, faster-whisper and Piper as containers with profiles like the radios; the
    tier chooser in `install.sh`; the brain speaks Wyoming; the offline test on a Pi 5 and on a NUC-class box; the
    measured latency for each tier written into the table above.
-4. **Shape 3 with one satellite.** One box in the kitchen, paired from the panel, placed on New devices, the guest test.
+4. **Shape 3 with one satellite.** One box in the kitchen, paired from the panel, placed on New devices, the guest
+   test. And, before it ships rather than after, what "more than a voice" means for opening and unlocking -- this is
+   the milestone where a wake word in a room makes that question real.
