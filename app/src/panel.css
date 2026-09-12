@@ -1290,6 +1290,32 @@ input:focus-visible {
   align-items: center;
   gap: 8px;
 }
+/* A chip that has been tapped says what it did before the row closes over it: the icon becomes a tick and
+   the room underneath becomes the answer. Vanishing on the tap itself read as a glitch, which is the whole
+   reason this state exists. The leave is a collapse rather than a fade, so the gap closing is the sentence
+   the row finishes. */
+.onnow-chip.said {
+  opacity: 0.72;
+}
+.onnow-chip.said .onnow-place {
+  color: var(--lamp);
+}
+.onnow-leave-active {
+  transition: opacity 0.26s ease, transform 0.26s ease;
+}
+.onnow-leave-to {
+  opacity: 0;
+  transform: scale(0.94);
+}
+.onnow-move {
+  transition: transform 0.3s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .onnow-leave-active,
+  .onnow-move {
+    transition: none;
+  }
+}
 .onnow-chip {
   display: inline-flex;
   align-items: center;

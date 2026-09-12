@@ -40,6 +40,14 @@ function move(e: PointerEvent) {
     preview.value = Math.min(100, Math.max(1, Math.round(((e.clientX - r.left) / r.width) * 100)))
   }
 }
+/* The hold that opens a card swallows the release so a light never toggles on its way into its own panel
+   (hold.ts says why). The cost is that this tile is never told the pointer has gone, and a tile that still
+   believes a finger is down goes on dimming to a mouse that is only passing over it. Losing the capture is
+   the one signal that arrives either way, and it ends the gesture without doing anything -- a hold asked to
+   open the panel, it did not ask for a new brightness. A cancelled pointer means the same thing: the gesture
+   stopped, so nothing was asked for. */
+function release() { el = null; dragging = false; preview.value = null }
+
 async function up() {
   if (!el) return
   el = null
@@ -56,7 +64,7 @@ async function up() {
 
 <template>
   <div class="tile light" :class="{ on, dead, dimmable, pending }" role="button" :aria-label="`${name}, ${label}`" :aria-pressed="on"
-       tabindex="0" @pointerdown="down" @pointermove="move" @pointerup="up" @pointercancel="up" @keydown.enter.space.prevent="perform(device, on ? 'off' : 'on', undefined, { state: on ? 'off' : 'on' })">
+       tabindex="0" @pointerdown="down" @pointermove="move" @pointerup="up" @pointercancel="release" @lostpointercapture="release" @keydown.enter.space.prevent="perform(device, on ? 'off' : 'on', undefined, { state: on ? 'off' : 'on' })">
     <div class="fill" :style="{ width: pct + '%' }"></div>
     <DeviceArt :kind="kind" :state="{ on, brightness: pct / 100 }" />
     <span class="tile-maker" v-if="device.maker">{{ device.maker }}</span>
