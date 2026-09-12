@@ -125,6 +125,18 @@ blurs, and drops the reading. That is what the row's own `data-at-start` is now
 kept true for on every browser rather than only the ones without scroll-driven
 animations.
 
+The lag is a share of the card, not a count of pixels: the row runs from a 248px
+glance column to a 372px media card, so a fixed number overlaps the wide ones
+barely and the narrow ones twice as much. 45% of the card, less the row's 18px
+gap, puts coverage at 50 -> 99 -> 130px through the exit.
+
+One thing that does NOT fix, and it is worth knowing before someone tries again:
+the overlap is a during-the-swipe effect, not a resting one. The row snaps to
+card boundaries, so once it settles nothing is mid-exit and the receded card
+sits entirely behind its neighbour. The reference rests mid-card, which is why
+the stack stands still in the drawing. Making it persist at rest means changing
+where the rail stops, which is a decision about the rail rather than the face.
+
 The velocity blur is **not** in. It is a second blur on top of one the file
 already warns re-rasterises every frame of a swipe, and adding that cost before
 slice 6 has measured the first one is backwards. It waits for a number.

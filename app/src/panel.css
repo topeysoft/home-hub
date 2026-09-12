@@ -4365,9 +4365,9 @@ select.input {
    of flat cards. Glass is not even-handed, because a focal plane is not: what
    you have swiped PAST goes out of focus, and what is still in front of you
    stays sharp. Depth is one idea and not three -- further back is blurrier,
-   dimmer AND slower, so the leaving card also gives some of the scroll back and
-   the card in focus catches it and slides over the top. Being earlier in the
-   row, it is already underneath.
+   dimmer AND slower, so the leaving card also gives back 45% of its own width
+   and the card in focus catches it and slides over the top. Being earlier in
+   the row, it is already underneath.
 
    The lag is `transform` and not `translate` on purpose. `translate` belongs to
    the arrival below, and the note there is exactly why these two animations
@@ -4398,7 +4398,13 @@ select.input {
     to {
       opacity: 0.6;
       filter: blur(5px);
-      transform: translateX(56px);
+      /* A share of the card rather than a count of pixels. The row runs from a
+         248px glance column to a 372px media card, so a fixed lag overlaps the
+         wide ones barely and the narrow ones twice as much; a percentage
+         resolves against the card's own box and every card gives back the same
+         fraction of itself. 45% of the card, less the row's 18px gap, is about
+         the same bite the drawing takes. */
+      transform: translateX(45%);
     }
   }
 }
