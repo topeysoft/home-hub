@@ -124,7 +124,27 @@ export function isTone(v: unknown): v is ToneName {
  *
  * Everything here is derived from the same ground() the cards use, so a face and
  * a tone can never disagree about what hour it is. See design/nightfall.
+ *
+ * One word does two jobs below, and the difference is the whole of --pane. A
+ * card under glass is a pane of it laid on the SKY, so it holds its distance
+ * from the sky. A pane -- a device opened in place, or This house -- is laid on
+ * a room that the scrim has already taken down, so it holds its distance from
+ * that instead. Same material, measured against what is actually behind it.
  */
+
+/* What a pane does to the room behind it, head to foot. A stop lifts the room by
+   `lift` and covers `solid` of it, and those two give the painted lightness --
+   see --pane below. Shared with the ink, which has to clear the pane's foot. */
+const PANE_SOLID = [0.3, 0.58, 0.78]
+const PANE_LIFT = [0.05, 0.0, -0.02]
+
+/* The lightness text has to reach to clear a surface by `ratio`. For a grey,
+   oklch L is exactly the cube root of relative luminance, which is what turns a
+   contrast ratio into one line of arithmetic instead of a colour library. */
+function reads(onL: number, ratio: number): number {
+  return clamp(Math.cbrt(ratio * (onL ** 3 + 0.05) - 0.05), 0, 1)
+}
+
 export function glassVars(elevation: number, condition: string): ToneVars {
   const field = oklch(ground(elevation, condition))
   const [top, band, horizon] = palette(elevation, wxOf(condition))   // the sky's own three bands, weathered
@@ -134,8 +154,21 @@ export function glassVars(elevation: number, condition: string): ToneVars {
   const H = field.H.toFixed(0)
   const at = (lo: number, hi: number) => lo + (hi - lo) * bright
   const a = (lo: number, hi: number) => at(lo, hi).toFixed(3)
-  const air = (alpha: number) => rgb(mix(top, [4, 4, 10], 0.55), alpha)
+  const airOf = mix(top, [4, 4, 10], 0.55)                   // what a pane's shadow is made of, and its scrim
+  const air = (alpha: number) => rgb(airOf, alpha)
   const bloom = mix(band, [116, 92, 236], 0.42)              // the violet the face is built on, kept near the hour's own hue
+
+  /* How light the ROOM is once a pane is in front of it: the field, taken down
+     by the scrim below. A pane is not measured against the sky the way a card
+     is, because by the time you are looking at a pane the sky is not what is
+     behind it any more. This is the number a pane holds its distance from. */
+  const scrim = at(0.46, 0.62)
+  const roomL = field.L * (1 - scrim) + oklch(airOf).L * scrim
+  /* what the foot of a pane comes out at, which is where the text sits. Each
+     stop is painted so that covering `solid` of the room lands on `lift` above
+     it, so the composite is the lift -- that is the whole point of writing it
+     this way round. */
+  const bodyL = clamp(roomL + PANE_LIFT[2], 0.04, 0.92)
 
   return {
     '--glass': `linear-gradient(148deg, oklch(${(gL + 0.07).toFixed(3)} 0.014 ${H} / .34),`
@@ -164,15 +197,58 @@ export function glassVars(elevation: number, condition: string): ToneVars {
       + ` radial-gradient(44% 42% at 74% 12%, ${rgb(mix(band, horizon, 0.5), 0.26)}, transparent 70%),`
       + ` radial-gradient(62% 52% at 54% 110%, ${rgb(mix(bloom, top, 0.4), 0.44)}, transparent 72%),`
       + ` radial-gradient(74% 64% at 6% 2%, ${rgb(mix(top, [12, 13, 16], 0.45), 0.5)}, transparent 72%)`,
+    /* A PANE -- a device opened in place, or This house.
+
+       Written as what it does to the room rather than as a colour: each stop
+       says how far it LIFTS what is behind it, and the painted lightness falls
+       out of that and the stop's own alpha. Head to foot a pane gets more solid
+       and lifts less, so the room is a suggestion at the top and gone by the
+       time there is anything to read.
+
+       The lifts are small on purpose. A pane is not a card: a card is a lit
+       surface on the open sky and has to clear it by a good margin, while a
+       pane is a sheet in front of a room that has already been taken down, and
+       it carries a page of text. Lifted a card's distance it becomes, at noon,
+       a pale blue sheet with grey type on it -- measured off the screen, the
+       muted ink came out at 2.0:1 where paper gives 4.4:1 at the same hour.
+       What makes a pane read as glass is the catch along its top, the blur it
+       is made of and the sweep across it; not being the lightest thing in the
+       room. */
+    '--pane': (() => {
+      const L = (i: number) => clamp(roomL + PANE_LIFT[i] / PANE_SOLID[i], 0.06, 0.92).toFixed(3)
+      return `linear-gradient(168deg, oklch(${L(0)} 0.014 ${H} / ${PANE_SOLID[0]}),`
+        + ` oklch(${L(1)} 0.024 ${H} / ${PANE_SOLID[1]}) 44%,`
+        + ` oklch(${L(2)} 0.020 ${H} / ${PANE_SOLID[2]}))`
+    })(),
+    /* A pane carries its own ink, exactly as a card does, and for the same
+       reason: the surface moved, so what has to be read on it has to move too.
+       A pane is translucent over a room that gets bright, and at noon paper's
+       muted grey came off the screen at 2.0:1 on it. These hold a ratio against
+       the pane's own foot instead -- and hold it: measured off the screen the
+       small labels come back at 4.7:1 and the secondary line at 6.1:1, against
+       paper's 4.4 and 8.9 at the same hour. They are asked for a little more
+       than that, because bodyL is where the foot is COMPUTED to land and the
+       browser composites in sRGB rather than in oklch; the gap between the two
+       is about a fifth of a ratio. Neither ever falls below what paper already
+       gives, so after dark nothing changes at all. The main ink is not here:
+       #f1eee8 clears every pane at every hour without help. */
+    '--pane-ink-2': `oklch(${Math.max(0.76, reads(bodyL, 5.9)).toFixed(3)} 0.006 ${H})`,
+    '--pane-muted': `oklch(${Math.max(0.58, reads(bodyL, 4.9)).toFixed(3)} 0.010 ${H})`,
+    /* its top edge, and the air above it. The catch fades as the day comes up,
+       the same swap the rim makes: over a dark room you see the lit edge, over
+       a bright one the shadow the pane casts back up the screen. */
+    '--pane-edge': `inset 0 1.4px 0 rgba(255,255,255,${a(0.5, 0.3)}),`
+      + ` 0 -18px 40px -14px ${air(at(0.62, 0.46))}`,
     /* What the room is taken down to when a pane is in front of it. It deepens
        as the day does, and that is not backwards: a dark room is already most of
        the way to being out of the way, while a bright one has to be taken down
        further before a pane reads as being in front of it rather than part of
        it. The colour is the air from under the pane, so the room is dimmed by
        the pane's own shadow rather than by a grey laid over it. */
-    '--glass-scrim': air(at(0.46, 0.62)),
+    '--glass-scrim': air(scrim),
     /* the one number that is about the machine rather than the hour: a Pi has a
        ceiling on how much blur it can paint, and this is where that gets sized. */
     '--glass-blur': '26px',
+    '--pane-blur': '30px',
   }
 }

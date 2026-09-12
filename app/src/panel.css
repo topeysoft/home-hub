@@ -4118,6 +4118,26 @@ select.input {
 [data-face='glass'] .house-veil {
   background-color: var(--glass-scrim);
 }
+/* ---------- the pane itself, under glass ----------
+   Both panes are the same thing made of the same material -- a device opened in
+   place, and This house -- so they take one rule. Paper gives them a fixed
+   near-black, which was invisible while the room behind them was mush and is a
+   hole punched in the daylight now that it is not: at noon the room reads L .49
+   and the pane read .13, which is precisely what tone.ts exists to stop a card
+   doing. A pane holds a distance from the field instead, three stops down its
+   own height, and the blur is what it is made of rather than a finish on it. */
+[data-face='glass'] .opened-panel,
+[data-face='glass'] .house-panel {
+  /* the ink moves with the surface, the same as it does on a card: these are
+     inherited, so everything inside the pane picks them up without knowing it
+     is on a pane. tone.ts holds them to a ratio against the pane's own foot. */
+  --ink-2: var(--pane-ink-2);
+  --muted: var(--pane-muted);
+  background: var(--pane);
+  border-color: transparent;
+  backdrop-filter: blur(var(--pane-blur, 30px)) saturate(var(--glass-sat, 1.7));
+  box-shadow: var(--pane-edge);
+}
 .opened {
   position: fixed;
   inset: 0;

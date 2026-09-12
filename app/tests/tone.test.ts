@@ -189,11 +189,40 @@ describe('the pane, at every hour', () => {
     }
   })
 
+  /* A pane is measured against the ROOM, not the sky: by the time you are looking at one, the sky is
+     not what is behind it -- the scrim is. */
+  it('paints a pane against the dimmed room in front of it rather than the open sky', () => {
+    const foot = (v: string) => Number(v.match(/oklch\(([\d.]+)[^)]*\)\)$/)![1])
+    expect(foot(glassVars(40, 'sunny')['--pane']))
+      .toBeGreaterThan(foot(glassVars(-18, 'clear-night')['--pane']))
+  })
+
+  /* The other half of the same move. A card gets this from toneVars; a pane is translucent over a
+     room that gets bright, so paper's fixed greys came off the screen at 2.0:1 on it at noon. */
+  it('lifts the ink on a pane as the room behind it brightens, and never below what paper gives', () => {
+    const L = (v: string) => Number(v.match(/oklch\(([\d.]+)/)![1])
+    expect(L(glassVars(40, 'sunny')['--pane-muted']))
+      .toBeGreaterThan(L(glassVars(-18, 'clear-night')['--pane-muted']))
+    expect(L(glassVars(40, 'sunny')['--pane-ink-2']))
+      .toBeGreaterThanOrEqual(L(glassVars(-18, 'clear-night')['--pane-ink-2']))
+
+    for (const condition of CONDITIONS) {
+      for (const el of ELEVATIONS) {
+        const v = glassVars(el, condition)
+        expect(L(v['--pane-muted']), `muted / ${condition} / ${el}°`).toBeGreaterThanOrEqual(0.58)
+        expect(L(v['--pane-ink-2']), `ink-2 / ${condition} / ${el}°`).toBeGreaterThanOrEqual(0.76)
+        expect(L(v['--pane-ink-2']), `ink-2 under muted / ${condition} / ${el}°`)
+          .toBeGreaterThan(L(v['--pane-muted']))
+      }
+    }
+  })
+
   it('gives every property a value, at every hour and weather', () => {
     for (const condition of CONDITIONS) {
       for (const el of ELEVATIONS) {
         const v = glassVars(el, condition)
-        for (const k of ['--glass', '--glass-sweep', '--glass-rim', '--glass-inner', '--glass-drop', '--glass-sat', '--glass-br', '--glass-field', '--glass-scrim', '--glass-blur']) {
+        for (const k of ['--glass', '--glass-sweep', '--glass-rim', '--glass-inner', '--glass-drop', '--glass-sat', '--glass-br', '--glass-field', '--glass-scrim', '--glass-blur',
+          '--pane', '--pane-edge', '--pane-ink-2', '--pane-muted', '--pane-blur']) {
           expect(v[k], `${k} / ${condition} / ${el}°`).toBeTruthy()
           expect(v[k]).not.toContain('NaN')
         }
