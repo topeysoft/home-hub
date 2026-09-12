@@ -164,6 +164,13 @@ export function glassVars(elevation: number, condition: string): ToneVars {
       + ` radial-gradient(44% 42% at 74% 12%, ${rgb(mix(band, horizon, 0.5), 0.26)}, transparent 70%),`
       + ` radial-gradient(62% 52% at 54% 110%, ${rgb(mix(bloom, top, 0.4), 0.44)}, transparent 72%),`
       + ` radial-gradient(74% 64% at 6% 2%, ${rgb(mix(top, [12, 13, 16], 0.45), 0.5)}, transparent 72%)`,
+    /* What the room is taken down to when a pane is in front of it. It deepens
+       as the day does, and that is not backwards: a dark room is already most of
+       the way to being out of the way, while a bright one has to be taken down
+       further before a pane reads as being in front of it rather than part of
+       it. The colour is the air from under the pane, so the room is dimmed by
+       the pane's own shadow rather than by a grey laid over it. */
+    '--glass-scrim': air(at(0.46, 0.62)),
     /* the one number that is about the machine rather than the hour: a Pi has a
        ceiling on how much blur it can paint, and this is where that gets sized. */
     '--glass-blur': '26px',

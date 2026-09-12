@@ -4089,6 +4089,35 @@ select.input {
     transform 0.26s var(--ease),
     filter 0.26s var(--ease);
 }
+/* ---------- the room, with a pane in front of it, under glass ----------
+   Paper pushes the house back and blurs it. Glass cannot, for two reasons that
+   both matter. A pane over an already-blurred room is a dark sheet over mush:
+   the blur the pane is MADE of has nothing left to work on, so the material
+   goes flat at exactly the moment it is most in view. And a pane is only a
+   drawer if the row you came from is still legible above it -- 13px of blur
+   turns it into wallpaper, and then it may as well have been a new screen.
+
+   So under glass the room stays where it is and a scrim takes it down. A scrim
+   and not `filter: brightness()`, which is not a preference: a filter on .stage
+   forms a backdrop root, which silently kills `backdrop-filter` on every card
+   beneath it -- so the cards behind the pane would lose their own glass at the
+   moment the pane opened. Same trap as the rail, where the blur goes on each
+   card and never on the row. Paper gets away with a filter because it is
+   blurring anyway and there is nothing left to lose. */
+[data-face='glass'].shell.opened-shell > .rail,
+[data-face='glass'].shell.opened-shell > .stage,
+[data-face='glass'].shell.opened-shell > .topbar,
+[data-face='glass'].shell.opened-shell > .bottombar {
+  transform: none;
+  filter: none;
+}
+/* the scrim is the air from under the pane, so the room is dimmed by the pane's
+   own shadow rather than by a grey laid over it -- tone.ts derives it from the
+   hour like everything else */
+[data-face='glass'] .opened-veil,
+[data-face='glass'] .house-veil {
+  background-color: var(--glass-scrim);
+}
 .opened {
   position: fixed;
   inset: 0;

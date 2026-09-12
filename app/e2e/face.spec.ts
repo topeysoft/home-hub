@@ -78,3 +78,48 @@ test('the way out of a pane is in the same place whatever the panel is made of',
   }
   expect(where.glass).toEqual(where.paper)
 })
+
+/* What a pane does to the room behind it. Paper pushes it back and blurs it; glass cannot, for two
+   reasons that both show up on the screen. A pane over an already-blurred room is a dark sheet over
+   mush -- the blur the pane is MADE of has nothing left to work on. And a pane is only a drawer if
+   the row you came from is still legible above it. So under glass the room stays put and a scrim
+   takes it down. */
+test('a pane dims the room under glass and blurs it under paper', async ({ page }) => {
+  const room = () => page.evaluate(() => {
+    const st = getComputedStyle(document.querySelector('.stage')!)
+    const veil = document.querySelector('.opened-veil')
+    return {
+      filter: st.filter,
+      transform: st.transform,
+      scrim: veil ? getComputedStyle(veil).backgroundColor : 'no veil',
+    }
+  })
+
+  for (const face of ['paper', 'glass']) {
+    await page.goto(`/?face=${face}&room=living&at=19:40`, { waitUntil: 'networkidle' })
+    await expect(page.locator('.tile.light').first()).toBeVisible()
+    await page.waitForTimeout(400)
+
+    const tile = page.locator('.tile.light').first()
+    const b = (await tile.boundingBox())!
+    await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2)
+    await page.mouse.down()
+    await page.waitForTimeout(470)
+    await page.mouse.up()
+    await expect(page.locator('.opened-panel')).toBeVisible()
+    await page.waitForTimeout(700)
+
+    const r = await room()
+    if (face === 'paper') {
+      expect(r.filter, 'paper stopped blurring the room it pushed back').toContain('blur')
+    } else {
+      expect(r.filter, 'glass blurred the room, leaving its own pane nothing to blur').not.toContain('blur')
+      expect(r.transform, 'glass moved the room it was meant to leave where it was')
+        .toMatch(/^(none|matrix\(1, 0, 0, 1, 0, 0\))$/)
+      // a scrim with something in it, and not so much of it that the room is gone
+      const a = Number(r.scrim.match(/[\d.]+(?=\))/)?.[0] ?? (r.scrim === 'rgba(0, 0, 0, 0)' ? 0 : 1))
+      expect(a, `glass left the room undimmed: ${r.scrim}`).toBeGreaterThan(0.3)
+      expect(a, `glass dimmed the room out of existence: ${r.scrim}`).toBeLessThan(0.75)
+    }
+  }
+})

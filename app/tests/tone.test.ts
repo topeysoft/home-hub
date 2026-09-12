@@ -169,11 +169,31 @@ describe('the pane, at every hour', () => {
       .toBeLessThan(Number(glassVars(-18, 'clear-night')['--glass-sat']))
   })
 
+  /* The room a pane is in front of. Paper blurs it; glass cannot, because the blur the pane is made
+     of has nothing left to work on -- so the room is taken down by a scrim instead, and how far down
+     is the one thing here that goes UP as the day does. */
+  it('takes a bright room down further than a dark one, to sit a pane in front of either', () => {
+    const alpha = (c: string) => Number(c.match(/[\d.]+(?=\))/)![0])
+    expect(alpha(glassVars(40, 'sunny')['--glass-scrim']))
+      .toBeGreaterThan(alpha(glassVars(-18, 'clear-night')['--glass-scrim']))
+  })
+
+  it('never dims the room so far that what you came from stops being there', () => {
+    const alpha = (c: string) => Number(c.match(/[\d.]+(?=\))/)![0])
+    for (const condition of CONDITIONS) {
+      for (const el of ELEVATIONS) {
+        const a = alpha(glassVars(el, condition)['--glass-scrim'])
+        expect(a, `${condition} / ${el}°`).toBeGreaterThan(0.3)
+        expect(a, `${condition} / ${el}°`).toBeLessThan(0.75)
+      }
+    }
+  })
+
   it('gives every property a value, at every hour and weather', () => {
     for (const condition of CONDITIONS) {
       for (const el of ELEVATIONS) {
         const v = glassVars(el, condition)
-        for (const k of ['--glass', '--glass-sweep', '--glass-rim', '--glass-inner', '--glass-drop', '--glass-sat', '--glass-br', '--glass-field', '--glass-blur']) {
+        for (const k of ['--glass', '--glass-sweep', '--glass-rim', '--glass-inner', '--glass-drop', '--glass-sat', '--glass-br', '--glass-field', '--glass-scrim', '--glass-blur']) {
           expect(v[k], `${k} / ${condition} / ${el}°`).toBeTruthy()
           expect(v[k]).not.toContain('NaN')
         }
