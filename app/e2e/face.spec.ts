@@ -323,3 +323,53 @@ test('glass takes the ink with the surface, and leaves paper to flip as it alway
   const onPaper = await ink('/?room=living&face=paper&at=12:30&wx=partlycloudy', '.tile.plain .tile-name')
   expect(onPaper.dark, `paper stopped flipping its ink: rgb(${onPaper.rgb})`).toBe(true)
 })
+
+/* The exception the ink rule above has to carry with it.
+
+   A .scene laid on the sky is a pane and takes glass's light ink. A .scene laid on a scene CARD is
+   not: that chip opts out of the glass ground in its own rule, keeps --card-hi over --card-plain,
+   and is a lit surface by mid-morning -- at noon its composite lands at L .63, just past where
+   toneVars flips, which is the case the flip exists for. When glass started answering for its own
+   surfaces the ink list inherited none of the ground list's exceptions, and this chip went to
+   2.1:1 for its name and 1.2:1 for the line under it, while the one label the glass ink never
+   reached was the only thing on the card still readable.
+
+   Asserted as parity with paper rather than as a colour, because that is the actual rule: where a
+   surface declines the glass ground it declines the glass ink, so it must ink exactly as paper
+   does. */
+test('a scene chip on a card inks like paper, because that is what it is sitting on', async ({ page }) => {
+  const chipInk = async (face: string, at: string) => {
+    await page.goto(`/?face=${face}&layout=wall&nav=top&at=${at}&wx=sunny`, { waitUntil: 'networkidle' })
+    await expect(page.locator('.bento .scene-card .scene').first()).toBeVisible()
+    await page.waitForTimeout(900)
+    return page.evaluate(() => {
+      const cv = document.createElement('canvas'); cv.width = cv.height = 1
+      const ctx = cv.getContext('2d', { willReadFrequently: true })!
+      const read = (el: Element) => {
+        ctx.clearRect(0, 0, 1, 1)
+        ctx.fillStyle = getComputedStyle(el).color
+        ctx.fillRect(0, 0, 1, 1)
+        const d = ctx.getImageData(0, 0, 1, 1).data
+        return `${d[0]},${d[1]},${d[2]},${d[3]}`
+      }
+      const chip = document.querySelector('.bento .scene-card .scene')!
+      const name = chip.querySelector('.scene-name') ?? chip
+      return { chip: read(chip), name: read(name) }
+    })
+  }
+
+  // midday is the only time this can be wrong: the flip has not happened before it, and after dark
+  // paper and glass want the same light ink anyway
+  const onGlass = await chipInk('glass', '12:30')
+  const onPaper = await chipInk('paper', '12:30')
+  expect(onGlass.chip, `the chip took glass's ink: ${onGlass.chip} against paper's ${onPaper.chip}`)
+    .toBe(onPaper.chip)
+  expect(onGlass.name, `the chip's name took glass's ink: ${onGlass.name} against paper's ${onPaper.name}`)
+    .toBe(onPaper.name)
+
+  // and the surface it declined is still declined, so this stays a chip rather than becoming a pane
+  await page.goto('/?face=glass&layout=wall&nav=top&at=12:30&wx=sunny', { waitUntil: 'networkidle' })
+  await expect(page.locator('.bento .scene-card .scene').first()).toBeVisible()
+  const frosted = await frost(page, '.bento .scene-card .scene')
+  expect(frosted, 'the chip started blurring, so it is being treated as a pane after all').toBe('none')
+})

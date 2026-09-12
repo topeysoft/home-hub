@@ -6116,6 +6116,21 @@ select.input {
   border-radius: 18px;
   background: var(--card-hi, var(--surface-hi));
   border-color: transparent;
+  /* This chip opts out of the glass GROUND on the line above and the line below,
+     so it has to opt out of the glass INK here too -- the two belong together,
+     and when glass started answering for its own surfaces the ink list inherited
+     none of the ground list's exceptions.
+
+     A .scene laid on the sky is a pane, holds its distance from it, and takes
+     the light ink. This one is laid on a scene card, which keeps --card-plain
+     and is a lit surface by mid-morning: at noon the chip's own composite came
+     out at L .63, just past where toneVars flips, which is exactly the case the
+     flip exists for. Measured before this: 2.12:1 for the name, 1.20:1 for the
+     line under it, and the only thing on the card that read was the one label
+     the glass ink never reached. */
+  --card-ink: inherit;
+  --card-ink-2: inherit;
+  --card-lamp-ink: inherit;
   color: var(--card-ink, var(--ink));
   backdrop-filter: none;
 }
