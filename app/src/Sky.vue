@@ -8,7 +8,7 @@
  */
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { store } from './store'
-import { clamp, lerp, mix, palette, rgb, wxOf, type RGB, type Wx } from './sky'
+import { clamp, lerp, mix, palette, rgb, starAlpha, wxOf, type RGB, type Wx } from './sky'
 
 /* quiet: the interface is up, so the sun and moon stay softer and the moon keeps to the open sky above the stage,
    clear of the rail and the headline; at rest and during setup they have the whole screen */
@@ -64,7 +64,7 @@ function draw(t: number, dt: number) {
   ctx.fillStyle = g; ctx.fillRect(0, 0, W, H)
 
   /* stars */
-  const starA = clamp((-el - 3) / 8) * (1 - wx.clouds * .9) * (1 - wx.fog * .8)
+  const starA = starAlpha(el, wx)      // shared with the illustration beside the greeting, so both skies clear at once
   if (starA > 0) {
     ctx.fillStyle = '#fff'
     for (const s of stars) {

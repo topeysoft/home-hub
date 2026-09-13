@@ -106,6 +106,34 @@ input:focus-visible {
   height: 100%;
   display: block;
 }
+/* Character laid on the sky, for the glass face: the same z-index as the canvas
+   and later in the document, so it paints over the ramp and under the veil. The
+   ramp still decides how light the field is -- see tone.ts on why that matters
+   more than it looks like it should. Nothing on a wall panel is ever completely
+   still, and nothing on it is ever fast: this takes 46 seconds to cross and
+   never arrives. */
+.sky-bloom {
+  position: absolute;
+  inset: -12%;
+  z-index: -3;
+  pointer-events: none;
+  background: var(--glass-field);
+  animation: sky-drift 46s var(--ease) infinite alternate;
+}
+@keyframes sky-drift {
+  from {
+    transform: translate3d(-1.4%, -1%, 0) scale(1.03);
+  }
+  to {
+    transform: translate3d(1.8%, 1.4%, 0) scale(1.07);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sky-bloom {
+    animation: none;
+  }
+}
+
 .sky-veil {
   position: absolute;
   inset: 0;
@@ -135,7 +163,15 @@ input:focus-visible {
 .bottombar {
   transition: opacity 0.5s var(--ease);
 }
-/* glass: a tone of its own, the sky softened behind it */
+/* glass: a tone of its own, the sky softened behind it.
+
+   `backdrop-filter` is written once, unprefixed, and the build adds whatever
+   prefix a browser needs. Writing `-webkit-backdrop-filter` next to it by hand
+   is what this file used to do, and it is worse than useless: the minifier
+   reads the pair as proof that the prefixed property covers every target and
+   drops the standard one -- so when Chrome 153 removed the -webkit- alias,
+   every frosted surface in the built panel went flat while the source still
+   plainly said blur. e2e/face.spec.ts is what would have caught it. */
 .room-card,
 .tile,
 .scene,
@@ -145,13 +181,169 @@ input:focus-visible {
 .recent-icon,
 .button.ghost {
   backdrop-filter: var(--frost);
-  -webkit-backdrop-filter: var(--frost);
 }
 .rail {
   background: rgba(12, 13, 16, 0.38);
   backdrop-filter: blur(24px) saturate(1.2);
-  -webkit-backdrop-filter: blur(24px) saturate(1.2);
 }
+
+/* ---------- glass: what the panel is made of, when a house asks for it ----------
+   Six layers, always in this order: the blur is what the pane is made of, the
+   rim is its edge catching the light, the sweep is that light travelling across
+   it, the inner shade is its thickness, the drop is the air underneath. None of
+   them is a colour -- every one is derived from the sky in tone.ts, which is why
+   a pane at noon is carried by its shadow and a pane at midnight by its catch.
+
+   Three surfaces, and no fourth. A pane is what the house has nothing better to
+   say with; a card that already means something with its colour keeps it and
+   only gains the edge; and anything that brings its own picture -- artwork, a
+   camera frame -- is never overpainted at all. */
+[data-face='glass'] .room-card,
+[data-face='glass'] .tile.plain,
+[data-face='glass'] .scene,
+[data-face='glass'] .back,
+[data-face='glass'] .banner,
+[data-face='glass'] .wall-loz,
+[data-face='glass'] .topbar-add,
+[data-face='glass'] .tabs,
+[data-face='glass'] .bottombar .say-box {
+  background-color: transparent;
+  background-image: var(--glass-sweep), var(--glass);
+  border-color: transparent;
+  /* And the ink with it. toneVars flips --card-ink dark once a PAPER card passes
+     L .62, which by mid-morning it has -- but these surfaces are not that card
+     any more. A pane is translucent, so what it comes out at never gets far from
+     the sky's own band, and that band tops out at L .49 at noon, where the
+     house's light ink still reads 5.3:1. Left on the card's answer it was 2.4:1
+     of near-black on a dark pane, all day, everywhere the face repaints.
+
+     Redeclared rather than restyled: they are inherited, so everything inside
+     picks them up without knowing it is on glass. Same move as the opened pane,
+     which has carried its own ink since the pane was made of something -- this
+     is the half of it that never reached the cards. */
+  --card-ink: var(--ink);
+  --card-ink-2: var(--ink-2);
+  --card-lamp-ink: var(--lamp);
+}
+[data-face='glass'] .tile.light {
+  background-image: var(--glass-sweep), var(--card-light, var(--surface));
+  border-color: transparent;
+}
+[data-face='glass'] .room-card,
+[data-face='glass'] .tile,
+[data-face='glass'] .scene,
+[data-face='glass'] .back,
+[data-face='glass'] .banner,
+[data-face='glass'] .wall-loz,
+[data-face='glass'] .topbar-add,
+[data-face='glass'] .tabs,
+[data-face='glass'] .bottombar .say-box {
+  backdrop-filter: blur(var(--glass-blur, 26px)) saturate(var(--glass-sat, 1.7))
+    brightness(var(--glass-br, 1.06));
+  box-shadow: var(--glass-inner), var(--glass-drop);
+}
+/* The rim below is absolute, so its surface has to be a containing block. Three
+   surfaces are not in this list and take it from their own rules instead: .back,
+   because a face must not be able to move a control and
+   `[data-face='glass'] .back` beats a plain `.opened-close`; .wall-loz,
+   which is already absolutely positioned and so is already a containing block;
+   and .topbar-add, which declares `position: relative` for its own attention
+   dot and would take the same trap if this list handed it a second one.
+   Handing `relative` to something that placed itself is how the pane's close
+   button ended up off the left of the screen, and it is how the weather's
+   lozenge ended up at the top of its column instead of the bottom. */
+[data-face='glass'] .room-card,
+[data-face='glass'] .tile,
+[data-face='glass'] .scene,
+[data-face='glass'] .banner,
+[data-face='glass'] .tabs,
+[data-face='glass'] .bottombar .say-box {
+  position: relative;
+}
+/* the rim, drawn as a gradient border with a mask so it follows whatever radius
+   the surface already has. ::before is spoken for on a room card -- that is the
+   lamp glow -- so the edge lives on ::after everywhere, for one rule not two.
+   One exception, and it is the mirror of that one: .topbar-add spends ::after
+   on its attention dot, so its rim goes on ::before. Left in this list rather
+   than given a rule of its own, because two rims drifting apart is exactly what
+   "one rule not two" is here to prevent. Specificity is why it cannot simply
+   join the others: `[data-face='glass'] .topbar-add::after` and
+   `.topbar-add.attention::after` weigh the same, so the later one would win and
+   a button with something to say would quietly lose its edge. */
+[data-face='glass'] .room-card::after,
+[data-face='glass'] .tile::after,
+[data-face='glass'] .scene::after,
+[data-face='glass'] .back::after,
+[data-face='glass'] .banner::after,
+[data-face='glass'] .wall-loz::after,
+[data-face='glass'] .topbar-add::before,
+[data-face='glass'] .tabs::after,
+[data-face='glass'] .bottombar .say-box::after,
+[data-face='glass'] .bottombar .say-hint::after,
+[data-face='glass'] .bottombar .say-note::after,
+[data-face='glass'] .bottombar .say-answer::after,
+[data-face='glass'] .bottombar .drafts::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.4px;
+  pointer-events: none;
+  background: var(--glass-rim);
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+}
+/* ---------- the floor: glass without the lens ----------
+   A host that cannot paint a backdrop-filter gets the face anyway, flattened.
+   Every colour here is the one its translucent twin composites to, so the rim,
+   the sweep and the shadow are untouched and only the depth is gone -- which is
+   the right thing to lose, because an unblurred glass card is .34 alpha over
+   the open sky and hardly a card at all.
+
+   `data-flat` and not `@supports`, for two reasons. A feature query cannot be
+   turned on to look at, and this is a state the panel will spend its whole life
+   never being in, so it would never be looked at. And the switch has a second
+   job waiting for it: a host that CAN blur but not fast enough wants exactly
+   this answer, and that is a measurement rather than a feature query. */
+[data-face='glass'][data-flat] .room-card,
+[data-face='glass'][data-flat] .tile.plain,
+[data-face='glass'][data-flat] .scene,
+[data-face='glass'][data-flat] .back,
+[data-face='glass'][data-flat] .banner,
+[data-face='glass'][data-flat] .topbar-add,
+[data-face='glass'][data-flat] .tabs,
+[data-face='glass'][data-flat] .bottombar .say-box {
+  background-image: var(--glass-sweep), var(--glass-flat);
+}
+[data-face='glass'][data-flat] .room-card,
+[data-face='glass'][data-flat] .tile,
+[data-face='glass'][data-flat] .scene,
+[data-face='glass'][data-flat] .back,
+[data-face='glass'][data-flat] .banner,
+[data-face='glass'][data-flat] .opened-panel,
+[data-face='glass'][data-flat] .house-panel,
+[data-face='glass'][data-flat] .rail,
+[data-face='glass'][data-flat] .topbar-add,
+[data-face='glass'][data-flat] .tabs,
+[data-face='glass'][data-flat] .bottombar .say-box {
+  backdrop-filter: none;
+}
+[data-face='glass'][data-flat] .opened-panel,
+[data-face='glass'][data-flat] .house-panel {
+  background: var(--pane-flat);
+}
+/* the side rail is the panel's own furniture rather than a card, so it takes
+   the sky's deep directly instead of a distance from it */
+[data-face='glass'][data-flat] .rail {
+  background: var(--glass-scrim);
+}
+
 .shell::after {
   content: '';
   position: absolute;
@@ -346,6 +538,14 @@ input:focus-visible {
   background: var(--surface);
   border: 1px solid var(--edge);
   margin-top: 8px;
+  /* here rather than in the glass block, where every other surface gets it: a
+     face must not be able to move a control. `[data-face='glass'] .back` beats
+     a plain `.opened-close` on specificity, so declaring position there sent
+     the pane's close button back into the flow and 30px to the LEFT of the
+     screen edge -- present, focusable, and thirty pixels past where a finger
+     could ever reach it. Declared on the surface itself, the one button that
+     positions itself still wins. */
+  position: relative;
 }
 .back:active {
   background: var(--surface-press);
@@ -584,14 +784,682 @@ input:focus-visible {
 }
 
 /* ---------- tiles ---------- */
-.tiles {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-  grid-auto-rows: minmax(150px, auto);
-  grid-auto-flow: dense;
-  gap: 14px;
+/* ---------- a room, arranged ----------
+   A room does not scroll down. It fills in COLUMNS, top to bottom, and when
+   there is more room than fits it runs off to the right.
+
+   That is not a second arrangement for big rooms -- there is no mode, and the
+   grid does not know whether it fits. A four-device room ends two columns in
+   and never comes near the edge; a seven-device room lands near it; a
+   twenty-device room runs past it. Same rules, same three heights, same
+   ranking. An eight-device room and a nine-device room differ by one column,
+   not by being two different screens, and that is the whole point: two rooms in
+   one house must not look like two apps.
+
+   What it buys is the thing that started this. The way back used to scroll off
+   the top -- measured at 1280x800 in the living room, the button ended up at
+   y -264, gone, on a wall panel with no keyboard and no Escape. It cannot now,
+   and not because anything is pinned: the only axis that moves is one the head
+   does not sit on. There is no sticky rule here for anyone to break later.
+
+   And what falls off the right edge is never arbitrary. Size is the ranking
+   (RoomView.vue holds that table), so what goes over the edge is what is OFF.
+   Everything doing something is on the screen without moving a finger, which a
+   vertical scroll can never promise -- below the fold is just whatever landed
+   there.
+
+   Two things this has to carry, and both are easy to lose:
+
+   - The last column MUST be cut when there is overflow. A column that happens
+     to end flush with the edge tells a person that is everything, and it is
+     not. The half-cut card is what teaches the gesture on Home and it is
+     load-bearing here for the same reason. `scroll-snap-type: x proximity` and
+     not `mandatory`, so a column is never snapped flush against the edge.
+   - Below 860 this inverts and a room is a column again -- a phone is tall, not
+     wide, and a sideways sweep there would point at the wrong gesture. The
+     Home rail already does exactly this at the same breakpoint. */
+.stage:has(> .room) {
+  display: flex;
+  flex-direction: column;
+  overflow-y: hidden;
+  min-height: 0;
+}
+.room {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+/* the head keeps the old cap so the edit button stays beside the name instead
+   of flying to the far edge of a 1080p wall; the grid deliberately does NOT,
+   because capping it would spend the width this arrangement exists to use */
+.room > .stage-head {
+  flex: 0 0 auto;
+  max-width: 1360px;
+}
+/* why the room is like this, and what it can tell you, on one line. Two stacked
+   bands and a scene bar above them is three rows where one does, and between
+   them they spent 400 of the stage's 618px before the first device. */
+.room-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 0 0;
   min-width: 0;
-} /* dense: a small tile fills the gap a wide one leaves */
+  overflow: hidden;
+}
+/* `.room-line > .why-line` and not `.room-line > *`: the chip carries
+   `margin: -12px 0 26px` from the days when it was its own band, and a bare
+   `> *` weighs exactly the same as `.why-line` and loses to it for sitting
+   earlier in the file. The negative top margin then pulled the chip 12px out of
+   the row and `overflow: hidden` sliced the top off it. Third time this file
+   has been bitten by a (0,1,0) that reads like it should win. */
+.room-line > .why-line,
+.room-line > .reading,
+.room-line > * {
+  flex: 0 0 auto;
+  margin: 0;
+}
+.tiles {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-auto-flow: column dense;
+  /* THREE slots in a column, and a card takes one, two or all three.
+     Six tracks made the sizes exact fractions of a column -- a half was ½ and a
+     third was ⅓ -- and the arithmetic of that is what left holes: a half beside
+     a third is ⅚ of a column, so the room ended with a ragged 70px of nothing
+     under one column and not the others. Three slots cannot do that. Every
+     column is either one card, or a big one and a small one, or three small
+     ones, and it comes out flush every time. The cost is that the middle size is
+     now two thirds of a column rather than half of one, so two middles no longer
+     share a column -- the second one starts the next. */
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+  /* A column grows with the screen and then stops. A FIXED width was wrong in
+     the one direction that is easy to miss: at 1280 it filled the row, and at
+     1728 the same four columns left 450px of empty field down the right -- the
+     room had not got bigger, the screen had, and the tiles ignored it.
+
+     A wider panel is a panel read from further away, so what a bigger screen
+     buys is BIGGER tiles, not more of them. The cap is there because the
+     opposite failure is just as bad: a two-device bedroom with no cap gives
+     itself two 800px columns, and Room.dc.html is explicit that a short room
+     should say so rather than stretch to fill. The floor keeps four columns
+     inside 1280, which is the size this panel is actually read at. */
+  grid-auto-columns: var(--room-col, clamp(276px, 22vw, 400px));
+  /* the board's gutters: 16 down a column, 20 between them. The row gap is what
+     makes the three heights come out at the board's proportions -- a third is
+     two tracks and one gap, a half is three and two, a full is the column. */
+  gap: 16px 20px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  min-width: 0;
+}
+/* `dense` above, and this is the one place it earns itself: sizes are sorted
+   big-first, so a hole can only ever be backfilled by something SMALLER and
+   therefore less important. The reading order stays ranked and the column packs
+   full. */
+.tiles > .tile {
+  scroll-snap-align: start;
+  min-height: 0;
+  min-width: 0;
+}
+/* One column each, always. `.tile.wide` spans two in the old auto-fill grid and
+   on a phone still does -- here it would make a card two columns wide and a
+   third of one tall, which is not one of the three sizes and reads as a
+   mistake. The width is the column; only the height ranks. */
+.tiles > .tile.wide {
+  grid-column: auto;
+}
+/* `.tile[data-size]` and not `[data-size]`, and the extra class is load-bearing.
+   Several tiles place themselves in the grid they used to live in -- `.tile.wide`
+   spans two columns, `.tile.climate` spans two ROWS "so its neighbours keep
+   their size" -- and those are (0,2,0) selectors sitting later in this file than
+   these. A bare `[data-size='half']` weighs the same and loses, so a thermostat
+   marked half came out a third tall: the size table said one thing and the
+   screen did another, silently. Anything that places a tile in the old grid has
+   to be out-ranked here, not just answered. */
+.tiles > .tile[data-size='full'] {
+  grid-row: span 3;
+}
+.tiles > .tile[data-size='half'] {
+  grid-row: span 2;
+}
+.tiles > .tile[data-size='third'] {
+  grid-row: span 1;
+}
+/* Two corners, not one. A card that is 488 tall and one that is 152 do not read
+   as the same radius: the board draws 28 on the big two and 24 on the small one,
+   which is what keeps a column of thirds from looking like a stack of pills. */
+.tiles > .tile[data-size='full'],
+.tiles > .tile[data-size='half'] {
+  border-radius: 28px;
+}
+.tiles > .tile[data-size='third'] {
+  border-radius: 24px;
+}
+/* A lamp that is off should look off. Everywhere else in the house a light tile
+   is painted by CAPABILITY rather than by state -- the warm card is what says
+   "this is a light" -- and next to each other in one column that falls apart:
+   the reading lamp at Off and the floor lamp at 24% came out the same weight,
+   so the room could not be read at a glance, which is the only thing this
+   screen is for. Room.dc.html says it outright: off is "same hue family as the
+   light that is on; none of its weight."
+
+   Scoped to the room grid on purpose. On Home a light tile is one of a handful
+   of things on the screen and its colour is how you find it; here there are
+   three of them side by side and its colour has to mean something else. */
+.tiles > .tile.light:not(.on) {
+  background: var(--card-plain, var(--surface));
+}
+/* ---------- the scenes, as a card among the devices ----------
+   A card in the grid rather than a bar above it, and a FULL column of one: four
+   scenes each carrying the line that says what they do. The line is not a
+   decoration. "All off" and "Lights off, media paused" are not the same
+   promise, and this panel is read by people who did not set the house up --
+   taking the sentence away to save a column saved the column and lost the
+   card. design/room/Overflow.dc.html draws every one of them. */
+.room-scenes {
+  display: flex;
+  flex-direction: column;
+  padding: 22px;
+}
+.room-scenes-head {
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  flex: 0 0 auto;
+}
+/* The rows keep their own height and the card keeps whatever is left. Stretched
+   to fill the column they came out as four 90px slabs, which reads as a toolbar;
+   the board draws four quiet rows at the top of a card with air under them. */
+.scenes-stacked {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  gap: 10px;
+  margin: 17px 0 0;
+  flex: 0 0 auto;
+  min-height: 0;
+}
+.scenes-stacked .scene {
+  min-height: 0;
+  flex: 0 0 auto;
+  align-items: start;
+  column-gap: 13px;
+  padding: 13px 15px;
+  border-radius: 17px;
+  background: rgba(255, 255, 255, 0.055);
+  border-color: transparent;
+}
+/* No badge under the icon in the card. A filled square beside four rows reads as
+   four buttons in a toolbar; at 20px on its own the glyph is the whole signal,
+   which is what the row has instead of a border. */
+.scenes-stacked .scene-icon {
+  width: auto;
+  height: auto;
+  border-radius: 0;
+  background: none;
+  color: var(--ink-2);
+  padding-top: 1px;
+}
+.scenes-stacked .scene-label {
+  font-size: 16px;
+}
+.scenes-stacked .scene-hint {
+  font-size: 13px;
+  color: var(--muted);
+  white-space: normal;
+}
+/* the scene the room is in is said in the icon, not in a second card colour:
+   four tinted rows and one plain one is a card with a hole in it */
+.scenes-stacked .scene.active {
+  background: rgba(255, 255, 255, 0.055);
+  border-color: transparent;
+}
+.scenes-stacked .scene.active .scene-icon,
+.scenes-stacked .scene.done .scene-icon {
+  background: none;
+  color: var(--lamp);
+}
+.scenes-stacked .scene.done .scene-icon {
+  color: var(--live);
+}
+
+/* Everything below is the WALL panel's room, and only that.
+
+   Below 860 the room stops being columns and goes back to being a list (the
+   phone rules further down do that), and the moment it does, none of this
+   holds: a tile in a list is 150px tall whatever its size says, so a media card
+   laid out as a full-bleed poster puts its name on top of its own title, and a
+   third laid out as icon-over-name has nothing under it. The sizes still rank
+   the list -- they just stop setting anatomy. */
+@media (min-width: 861px) {
+  /* The room runs to the edge of the SCREEN, not to the stage's gutter.
+
+     This is the half-cut card, and it is load-bearing: a column that happens to
+     end flush with the last gutter tells a person that is everything, and when
+     the room overflows it is not. Inside the gutter the cut column fell in the
+     40px nobody can see and the sweep had nothing to teach it. The padding puts
+     the gutter back at the FAR end, so a room swept to its end still stops with
+     air after the last card rather than against the glass. */
+  .tiles {
+    margin-right: -40px;
+    padding-right: 40px;
+    scroll-padding-right: 40px;
+  }
+
+  /* ---------- the three heights, on the inside ----------
+     This is the bill for "three heights and nothing else", and it comes due here.
+     What a tile says is set by how much room it was given, so each height has its
+     own anatomy and there are only three of them -- the boards in design/room draw
+     all three, and this is that drawing in CSS.
+
+     FULL and HALF: no icon badge. The device is DRAWN on these two, and a 38px
+     glyph of the same thing in the corner is the word said twice. The name and
+     the state own the bottom left, the drawing owns the rest, and a light adds
+     its dimmer under the words.
+
+     THIRD: the icon and the name on one line at the top, what it is doing at the
+     bottom. There is no room here for a drawing and a badge both, so the badge
+     goes and the bare glyph stays -- at this size it is the only thing saying
+     what kind of thing this is before you read the name.
+
+     What never goes at any height is the NAME and the STATE. A tile that has
+     dropped either is not a smaller tile, it is a broken one. */
+  .tiles > .tile .tile-body {
+    min-height: 0;
+  }
+  .tiles > .tile[data-size='half'] .tile-body,
+  .tiles > .tile[data-size='full'] .tile-body {
+    padding: 22px;
+    justify-content: flex-end;
+    gap: 0;
+  }
+  .tiles > .tile[data-size='half'] > .tile-body > .tile-icon,
+  .tiles > .tile[data-size='full'] > .tile-body > .tile-icon {
+    display: none;
+  }
+  .tiles > .tile[data-size='half'] > .tile-body > .tile-name,
+  .tiles > .tile[data-size='full'] > .tile-body > .tile-name {
+    font-size: 19px;
+  }
+  .tiles > .tile[data-size='half'] > .tile-body > .tile-state,
+  .tiles > .tile[data-size='full'] > .tile-body > .tile-state {
+    font-size: 14.5px;
+    margin-top: 3px;
+  }
+  .tiles > .tile[data-size='third'] .tile-body {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    align-items: start;
+    column-gap: 11px;
+    padding: 17px 18px 15px;
+    gap: 0 11px;
+  }
+  /* `.tile[data-size]` and not `[data-size]`, and the class is load-bearing here
+     for a second reason: `.tile.light:not(.on) .tile-icon` and `.tile.on
+     .tile-icon` both paint this badge and both sit later in this file. A bare
+     `[data-size='third'] .tile-icon` weighs the same as one of them and less than
+     the other, so the badge came back on exactly the tiles that are lit. */
+  .tiles > .tile[data-size='third'] > .tile-body > .tile-icon {
+    grid-area: 1 / 1;
+    width: auto;
+    height: auto;
+    border-radius: 0;
+    background: none;
+    color: var(--card-ink-2, var(--ink-2));
+    margin: 0;
+  }
+  .tiles > .tile[data-size='third'] > .tile-body > .tile-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+  .tiles > .tile[data-size='third'] > .tile-body > .tile-name {
+    grid-area: 1 / 2;
+    align-self: center;
+    font-size: 16px;
+  }
+  .tiles > .tile[data-size='third'] > .tile-body > .tile-state {
+    grid-area: 2 / 1 / 3 / 3;
+    align-self: end;
+    font-size: 14.5px;
+  }
+  .tiles > .tile[data-size='third'] > .tile-body > .tile-bar {
+    grid-area: 3 / 1 / 4 / 3;
+  }
+  /* the maker, where the registry knows one: set as quietly as the board sets it,
+     which is as a word in the top corner rather than as a pill. A pill is a thing
+     you tap and this is not one. Gone entirely at a third, where the only two
+     things that fit are what it is and what it is doing. */
+  .tiles > .tile[data-size] .tile-maker {
+    top: 20px;
+    right: 20px;
+    padding: 0;
+    background: none;
+    border-radius: 0;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    color: var(--card-ink-2, var(--muted));
+    opacity: 0.7;
+  }
+  .tiles > .tile[data-size='third'] .tile-maker {
+    display: none;
+  }
+  /* A device drawing sizes itself from the tile's WIDTH (74% of it, at a fixed
+     aspect) and hangs off the bottom-right corner on purpose. At a third that is
+     the wrong dimension to size from -- a 380x180 tile came out with a 243-tall
+     lamp in it, sliced off 60px above its own top edge -- and it is also the
+     wrong half of the tile: the name and the icon are up there now.
+
+     So at a third the drawing goes, with one exception the board is explicit
+     about: a cover brings its own drawing and is never overpainted, because how
+     far a blind is down is a picture before it is a number. */
+  .tiles > .tile[data-size='third'] .tile-render {
+    display: none;
+  }
+  .tiles > .tile.plain.cover[data-size='third'] .tile-render {
+    display: block;
+    top: 15px;
+    right: 16px;
+    bottom: auto;
+    width: auto;
+    height: 46%;
+  }
+  /* A CEILING is drawn, not cropped. Rung two hangs a device drawing off the
+     bottom-right corner, which is right for a lamp on a stand or a plug: the
+     thing carries on past the card and the eye finishes it. A ceiling light is
+     the one drawing where that fails. Its mounting rail is a long horizontal
+     line, and cropped at the card's edge a line with no end is not a ceiling --
+     it is a bar, and it reads as an empty slider track sitting above the real
+     dimmer at the bottom of the same card. Both boards inset this drawing so
+     the rail begins and ends inside the card, and that is the difference
+     between a ceiling and a stray rule. */
+  .tiles > .tile.light[data-size='half'] .tile-render,
+  .tiles > .tile.light[data-size='full'] .tile-render {
+    /* the board's own placement, as fractions of the card so it holds at any
+       column width: half the card wide, a fifth in from the right, a fifth
+       down -- which is also what keeps the rail clear of the maker's name in
+       the corner above it */
+    right: 18%;
+    top: 19%;
+    bottom: auto;
+    width: 50%;
+    height: auto;
+  }
+  /* the oversized faint icon IS the art on a no-name device, so it is scaled
+     rather than dropped -- take it away and a shelf of plugs reads as empty
+     boxes, which is the thing it was added to fix */
+  .tiles > .tile[data-size='third'] .tile-art {
+    transform: scale(0.58);
+    transform-origin: 100% 100%;
+  }
+  .tiles > .tile[data-size='half'] .tile-art {
+    transform: scale(0.78);
+    transform-origin: 100% 100%;
+  }
+  /* A light says how much of itself it is giving in a bar under the words, 4px of
+     it, the width of the card's padding box -- the board draws one under every
+     lamp that is on and none under the ones that are not. At a third there is no
+     room for it and none is drawn: the number in the state line is the whole
+     answer there. */
+  .tiles > .tile.light[data-size='half'] .tile-body,
+  .tiles > .tile.light[data-size='full'] .tile-body {
+    padding-bottom: 37px;
+  }
+  .tiles > .tile.light.dimmable.on[data-size='half'] .tile-body::after,
+  .tiles > .tile.light.dimmable.on[data-size='full'] .tile-body::after {
+    left: 22px;
+    right: 22px;
+    bottom: 22px;
+    height: 4px;
+    border-radius: 2px;
+  }
+  .tiles > .tile.light.dimmable.on[data-size='half'] .fill::after,
+  .tiles > .tile.light.dimmable.on[data-size='full'] .fill::after {
+    left: 22px;
+    bottom: 22px;
+    height: 4px;
+    width: calc(100% - 44px);
+    border-radius: 2px;
+  }
+  .tiles > .tile.light.dimmable.on[data-size='third'] .tile-body::after,
+  .tiles > .tile.light.dimmable.on[data-size='third'] .fill::after {
+    display: none;
+  }
+  /* A lit lamp says its number in the card's own ink rather than in lamplight.
+     On Home a light tile is one of a handful of things on the screen and the amber
+     is how you find it; in a room there are three of them in one column and the
+     amber stops meaning anything -- the boards set every one of these lines in the
+     card's quiet ink and let the paint say which lamp is doing the work. */
+  .tiles > .tile.light.on[data-size] > .tile-body > .tile-state {
+    color: var(--card-ink-2, rgba(255, 255, 255, 0.78));
+  }
+
+  /* a thermostat at a third is the number and what the house is doing with it.
+     The dial, the step buttons and the mode chips are all in the pane, which is
+     where you go to change a mode -- on the tile they were a dial drawn at 92px
+     with its own reading pushed out through the bottom of the card. */
+  .tiles > .tile.climate[data-size='third'] .clim-rows,
+  .tiles > .tile.climate[data-size='third'] .clim-btn,
+  .tiles > .tile.climate[data-size='third'] .face-render,
+  .tiles > .tile.climate[data-size='third'] .clim-doing {
+    display: none;
+  }
+  .tiles > .tile.climate[data-size='third'] .tile-body {
+    display: flex;
+    padding: 17px 18px 15px;
+  }
+  .tiles > .tile.climate[data-size='third'] .clim-head .tile-icon {
+    width: auto;
+    height: auto;
+    border-radius: 0;
+    background: none;
+    margin: 0;
+  }
+  .tiles > .tile.climate[data-size='third'] .clim-head .tile-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+  .tiles > .tile.climate[data-size='third'] .clim-head .tile-name {
+    font-size: 16px;
+  }
+  .tiles > .tile.climate[data-size='third'] .clim-dial {
+    display: block;
+    margin: auto 0 0;
+  }
+  .tiles > .tile.climate[data-size='third'] .clim-center {
+    display: flex;
+    flex-direction: row;
+    align-items: baseline;
+    gap: 9px;
+    min-width: 0;
+  }
+  .tiles > .tile.climate[data-size='third'] .clim-face {
+    display: block;
+    aspect-ratio: auto;
+    max-height: none;
+    padding: 0;
+    width: auto;
+  }
+  /* the reading, in the face the rest of the house says numbers in */
+  .tiles > .tile.climate[data-size='third'] .clim-big {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: 44px;
+    letter-spacing: 0;
+    line-height: 1;
+  }
+  .tiles > .tile.climate[data-size='third'] .clim-unit {
+    display: none;
+  }
+  .tiles > .tile.climate[data-size='third'] .clim-short {
+    display: block;
+    font-size: 13.5px;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  /* a climate tile at half keeps its dial and its number and gives up the mode
+     and fan chips; both are in the pane, which is where you go to change a mode */
+  .tiles > .tile[data-size='half'] .clim-rows {
+    display: none;
+  }
+  .tiles > .tile[data-size='half'] .clim-dial {
+    margin: 8px 0 2px;
+  }
+  .tiles > .tile[data-size='half'] .clim-face {
+    max-height: 92px;
+  }
+  .tiles > .tile[data-size='half'] .clim-big {
+    font-size: 36px;
+  }
+  .tiles > .tile[data-size='half'] .clim-doing {
+    margin-top: 5px;
+    font-size: 12.5px;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  /* ---------- what is playing ----------
+     At full the artwork IS the card, edge to edge, with the words laid on it and
+     the name set small in the top corner -- the loudest thing in the room drawn
+     like it. Before this it was a 96px cover beside two lines of text in a 488px
+     card: 400px of empty card on the one tile everybody looks at first.
+
+     One button on it, and it is the one that matters. Volume and power are in the
+     pane; a transport row of five is a remote control, and the board draws a play
+     button and how far through it is. */
+  .tiles > .tile.media[data-size='full'] {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 22px;
+    row-gap: 0;
+  }
+  .tiles > .tile.media[data-size='full'] .media-art {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+    align-self: stretch;
+    /* under the words rather than over them, and WITHOUT positioning the words:
+       the small name is hung off the card's own top corner, so anything between it
+       and the card that takes `position: relative` steals the corner -- which is
+       exactly what happened, and put "TV" under the title in the middle of the
+       card. A negative layer keeps the picture behind in-flow content and leaves
+       the card as the only positioned thing above it. */
+    z-index: -2;
+  }
+  /* what keeps the words readable over someone else's artwork, which can be any
+     colour at all -- a title in white on a white album cover is not a design */
+  .tiles > .tile.media[data-size='full'] .media-veil {
+    display: block;
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(
+      180deg,
+      rgba(12, 13, 16, 0.5),
+      rgba(12, 13, 16, 0.12) 36%,
+      rgba(12, 13, 16, 0.34) 62%,
+      rgba(12, 13, 16, 0.88)
+    );
+  }
+  .tiles > .tile.media[data-size='full'] .media-text {
+    padding: 0;
+    gap: 3px;
+  }
+  .tiles > .tile.media[data-size='full'] .media-text .tile-name {
+    position: absolute;
+    left: 22px;
+    top: 22px;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+  }
+  .tiles > .tile.media[data-size='full'] .media-title {
+    font-size: 23px;
+  }
+  .tiles > .tile.media[data-size='full'] .media-controls {
+    gap: 16px;
+    margin-top: 18px;
+  }
+  .tiles > .tile.media[data-size='full'] .ctl.primary {
+    width: 48px;
+    height: 48px;
+    background: var(--lamp);
+    color: var(--lamp-ink);
+  }
+  .tiles > .tile.media[data-size='full'] .ctl.power,
+  .tiles > .tile.media[data-size='full'] .vol,
+  .tiles > .tile.media[data-size='third'] .ctl:not(.primary),
+  .tiles > .tile.media[data-size='third'] .vol,
+  .tiles > .tile.media[data-size='third'] .media-bar {
+    display: none;
+  }
+  .tiles > .tile.media[data-size='full'] .media-bar {
+    display: block;
+  }
+  /* paused, and a third: the artwork it is still holding, what is on it, and one
+     button with the word for what it is doing beside it. The board draws this one
+     twice, on both boards, and it is the smallest thing in the room that is still
+     a media player rather than a label. */
+  .tiles > .tile.media[data-size='third'] {
+    grid-template-columns: 58px minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    column-gap: 14px;
+    row-gap: 6px;
+    padding: 18px;
+  }
+  .tiles > .tile.media[data-size='third'] .media-art {
+    grid-row: 1;
+    width: 58px;
+    height: 58px;
+    border-radius: 12px;
+    align-self: start;
+  }
+  .tiles > .tile.media[data-size='third'] .media-text {
+    padding-top: 0;
+  }
+  .tiles > .tile.media[data-size='third'] .media-text .tile-name {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+  }
+  .tiles > .tile.media[data-size='third'] .media-title {
+    font-size: 17px;
+    margin-top: 3px;
+  }
+  .tiles > .tile.media[data-size='third'] .media-sub {
+    font-size: 13.5px;
+  }
+  .tiles > .tile.media[data-size='third'] .media-controls {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    align-self: end;
+    gap: 13px;
+  }
+  .tiles > .tile.media[data-size='third'] .ctl.primary {
+    width: 36px;
+    height: 36px;
+    background: var(--surface-hi);
+    color: var(--ink);
+  }
+  .tiles > .tile.media[data-size='third'] .media-when {
+    display: inline;
+  }
+  /* likewise the sound presets on a media tile */
+  .tiles > .tile[data-size='half'] .sounds,
+  .tiles > .tile[data-size='third'] .sounds {
+    display: none;
+  }
+}
+
 /* readings: what the room's sensors say, one line, no tiles to tap */
 .readings {
   display: flex;
@@ -610,7 +1478,6 @@ input:focus-visible {
   color: var(--ink-2);
   font-size: 14px;
   backdrop-filter: var(--frost);
-  -webkit-backdrop-filter: var(--frost);
 }
 .reading svg {
   color: var(--muted);
@@ -726,7 +1593,22 @@ input:focus-visible {
 .tile.light.on {
   border-color: rgba(233, 184, 114, 0.3);
 }
-.tile.light.dimmable.on::after {
+/* The dimmer's track, and it is drawn on the BODY rather than on the card.
+
+   The card's own ::after belongs to the glass face -- it is the rim, the edge
+   catching the light, and it is laid on with `inset: 0`. This rule used to take
+   that same pseudo-element and, being the heavier selector, won every property
+   it declared: left, right, bottom, height, background. It did not declare
+   `top`, so the rim's `top: 0` stayed behind it. Top, bottom AND height on one
+   absolute box is over-constrained, the bottom is dropped, and the track jumped
+   to the top of the card -- a 3px bar under the top edge of every lit dimmable
+   light on a glass panel, with its own amber fill still down at the bottom
+   where it belongs. Two bars, one of them meaningless.
+
+   The body is the same box as the fill (both resolve against the card's padding
+   box), so the track and the fill still line up to the pixel, and the card gets
+   its rim back. */
+.tile.light.dimmable.on .tile-body::after {
   content: '';
   position: absolute;
   left: 18px;
@@ -828,6 +1710,31 @@ input:focus-visible {
 .media-controls .ctl {
   flex: 0 0 auto;
 }
+/* How far through it is, and the word for what it is doing. Both belong to the
+   room grid, where a tile has one button instead of five -- the pane says all of
+   this in full, so neither is drawn until a height asks for it. */
+.media-bar {
+  display: none;
+  flex: 1 1 auto;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.18);
+  min-width: 0;
+}
+.media-bar i {
+  display: block;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.72);
+}
+.media-when {
+  display: none;
+  font-size: 13.5px;
+  color: var(--muted);
+}
+.media-veil {
+  display: none;
+}
 .ctl {
   width: 40px;
   height: 40px;
@@ -874,13 +1781,27 @@ input:focus-visible {
   background: transparent;
 }
 
+/* a cover's own bar: the picture of the number beside it */
+.tile-bar {
+  display: block;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--card-track, rgba(255, 255, 255, 0.16));
+  margin-top: 9px;
+}
+.tile-bar i {
+  display: block;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--card-ink-2, rgba(255, 255, 255, 0.6));
+}
+
 /* camera */
 .tile.camera {
   aspect-ratio: 16 / 9;
   min-height: 0;
   background: var(--bg-2);
   backdrop-filter: none;
-  -webkit-backdrop-filter: none;
 }
 .tile.camera img {
   position: absolute;
@@ -1069,9 +1990,45 @@ input:focus-visible {
   .room-card-name {
     font-size: 20px;
   }
+  /* a phone is tall, not wide: the room goes back to being a column, and the
+     three heights stop meaning anything because nothing is competing for a
+     fixed height any more. Same inversion the Home rail makes here. */
+  .stage:has(> .room) {
+    display: block;
+    overflow-y: auto;
+  }
+  .room {
+    display: block;
+  }
   .tiles {
+    grid-auto-flow: row;
+    grid-template-rows: none;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-columns: auto;
+    grid-auto-rows: minmax(150px, auto);
+    overflow-x: visible;
+    overflow-y: visible;
     gap: 10px;
+  }
+  .tiles > .tile[data-size] {
+    grid-row: auto;
+  }
+  /* the scenes take the width rather than a column of it: four rows with their
+     hints are taller than anything beside them, and in a two-column grid the
+     tallest cell sets the row -- so a card of scenes stretched the lamp next to
+     it to 500px of empty paint */
+  .tiles > .tile.room-scenes {
+    grid-column: span 2;
+  }
+  .tiles > .tile {
+    min-height: 150px;
+  }
+  .tiles > .tile.wide {
+    grid-column: span 2;
+  }
+  .room-line {
+    flex-wrap: wrap;
+    overflow: visible;
   }
   .tile.media {
     grid-template-columns: 72px 1fr;
@@ -1112,6 +2069,32 @@ input:focus-visible {
   align-items: center;
   gap: 8px;
 }
+/* A chip that has been tapped says what it did before the row closes over it: the icon becomes a tick and
+   the room underneath becomes the answer. Vanishing on the tap itself read as a glitch, which is the whole
+   reason this state exists. The leave is a collapse rather than a fade, so the gap closing is the sentence
+   the row finishes. */
+.onnow-chip.said {
+  opacity: 0.72;
+}
+.onnow-chip.said .onnow-place {
+  color: var(--lamp);
+}
+.onnow-leave-active {
+  transition: opacity 0.26s ease, transform 0.26s ease;
+}
+.onnow-leave-to {
+  opacity: 0;
+  transform: scale(0.94);
+}
+.onnow-move {
+  transition: transform 0.3s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .onnow-leave-active,
+  .onnow-move {
+    transition: none;
+  }
+}
 .onnow-chip {
   display: inline-flex;
   align-items: center;
@@ -1132,7 +2115,6 @@ input:focus-visible {
     transform 0.15s var(--ease),
     opacity 0.18s var(--ease);
   backdrop-filter: var(--frost);
-  -webkit-backdrop-filter: var(--frost);
 }
 .onnow-icon {
   width: 30px;
@@ -1701,7 +2683,6 @@ input:focus-visible {
     var(--surface);
   border: 1px solid rgba(233, 184, 114, 0.3);
   backdrop-filter: var(--frost);
-  -webkit-backdrop-filter: var(--frost);
 }
 .nudge:active {
   transform: scale(0.99);
@@ -1755,7 +2736,6 @@ input:focus-visible {
   z-index: 35;
   background: rgba(6, 7, 9, 0.55);
   backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
   display: grid;
   place-items: center;
   padding: 24px;
@@ -2020,7 +3000,6 @@ input:focus-visible {
   color: var(--lamp);
   margin-bottom: 26px;
   backdrop-filter: var(--frost);
-  -webkit-backdrop-filter: var(--frost);
 }
 .setup-mark.done {
   background: var(--live);
@@ -2119,7 +3098,6 @@ a.button {
   color: var(--ink-2);
   font-size: 15px;
   backdrop-filter: var(--frost);
-  -webkit-backdrop-filter: var(--frost);
 }
 .tips b {
   color: var(--ink);
@@ -2219,7 +3197,6 @@ select.input {
     color 0.18s var(--ease),
     border-color 0.18s var(--ease);
   backdrop-filter: var(--frost);
-  -webkit-backdrop-filter: var(--frost);
 }
 .chip-btn.on {
   background: var(--ink);
@@ -2733,7 +3710,28 @@ select.input {
   background: var(--surface);
   border: 1px solid var(--edge);
   backdrop-filter: var(--frost);
-  -webkit-backdrop-filter: var(--frost);
+}
+/* Forgetting sits at the end of the row it belongs to, after the room the thing is in. The row grows a
+   column for it only where it is offered -- editing a room, never New devices, where a forgotten thing
+   would only be discovered again. :has() rather than a class, so the row stays one shape in the markup. */
+.sort-row:has(.sort-forget) {
+  grid-template-columns: auto minmax(0, 1fr) minmax(140px, 200px) auto;
+}
+.sort-forget {
+  white-space: nowrap;
+  min-width: 96px;              /* asking must not resize the row: the rows stay lined up with each other */
+}
+/* What disappears, said before it does, across the row rather than inside the button -- a button that grew
+   to hold the name would pull its own row out of line with every other one. */
+.sort-forget-ask {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.sort-forget-ask b {
+  color: var(--ink);
+  font-weight: 500;
 }
 .sort-row.busy {
   opacity: 0.6;
@@ -2789,7 +3787,8 @@ select.input {
   .setup-lede {
     font-size: 16px;
   }
-  .sort-row {
+  .sort-row,
+  .sort-row:has(.sort-forget) {
     grid-template-columns: auto minmax(0, 1fr);
   }
   .sort-row .sort-room,
@@ -2832,7 +3831,6 @@ select.input {
     rgba(16, 17, 21, 0.96)
   );
   backdrop-filter: blur(30px) saturate(1.25);
-  -webkit-backdrop-filter: blur(30px) saturate(1.25);
   transition: transform 0.38s var(--ease);
 }
 /* How long each way lasts is told to Vue in App.vue rather than inferred here:
@@ -2843,7 +3841,7 @@ select.input {
   transition-duration: 0.28s;
 }
 .house-leave-active .house-veil {
-  transition-duration: 0.3s;   /* out with the panel, rather than lingering past it */
+  transition-duration: 0.3s; /* out with the panel, rather than lingering past it */
 }
 .house-enter-from .house-panel,
 .house-leave-to .house-panel {
@@ -3344,7 +4342,11 @@ select.input {
   display: flex;
   flex-direction: column;
 }
-.hub-rows li {
+/* Its own rows, not every row inside them. A page here puts whole lists in a
+   row -- the phones, the steps to a home screen -- and as a plain descendant
+   selector this caught their items too: a step landed in the 90px label column
+   and wrapped a word at a time, with a divider ruled under it. */
+.hub-rows > li {
   display: grid;
   grid-template-columns: 90px 1fr auto;
   align-items: center;
@@ -3352,7 +4354,7 @@ select.input {
   padding: 14px 0;
   border-bottom: 1px solid var(--edge);
 }
-.hub-rows li:last-child {
+.hub-rows > li:last-child {
   border-bottom: 0;
 }
 .hub-k {
@@ -3387,7 +4389,7 @@ select.input {
   max-width: 40ch;
 }
 @media (max-width: 640px) {
-  .hub-rows li {
+  .hub-rows > li {
     grid-template-columns: 1fr;
     gap: 8px;
   }
@@ -3516,6 +4518,7 @@ select.input {
   padding-left: 20px;
   font-size: 14px;
   color: var(--ink-2);
+  list-style: decimal; /* said plainly: list-style is inherited, and a list this sits inside turns its markers off */
 }
 .phone-steps li {
   margin: 2px 0;
@@ -3535,7 +4538,7 @@ select.input {
 .phone-card .button {
   margin-top: 10px;
 }
-.hub-rows li.hub-wide {
+.hub-rows > li.hub-wide {
   grid-template-columns: 1fr;
 }
 @media (max-width: 860px) {
@@ -3603,31 +4606,19 @@ select.input {
   }
 }
 
-/* ---------- the phones that belong to the house ---------- */
+/* ---------- a phone at the door ----------
+   The chip left in the band once its pane has been put aside. Every nudge is
+   already amber, because every nudge is the house asking for something, so this
+   one cannot be told apart by hue -- and hue is the wrong instrument anyway:
+   Asks.vue has always said to lift this with elevation and never with colour,
+   so that it is recognised by shape rather than by a tint somebody could
+   imitate. It gets the lit edge and the air under it instead, which is the one
+   thing in the band that looks like an object rather than a notice. */
 .nudge.ask {
-  grid-template-columns: auto 1fr auto;
-  cursor: default;
-}
-.nudge.ask:active {
-  transform: none;
-}
-.ask-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-.ask-actions .button {
-  margin: 0;
-}
-@media (max-width: 860px) {
-  .nudge.ask {
-    grid-template-columns: auto 1fr;
-  }
-  .ask-actions {
-    grid-column: 1 / -1;
-    justify-content: flex-start;
-  }
+  border-color: var(--lamp);
+  box-shadow:
+    0 0 0 1px var(--lamp-glow),
+    0 10px 28px -14px rgba(0, 0, 0, 0.7);
 }
 .phones {
   list-style: none;
@@ -3736,7 +4727,7 @@ select.input {
 .room-card:active {
   background: var(--card-press, var(--surface-press));
 }
-.tile.light.dimmable.on::after {
+.tile.light.dimmable.on .tile-body::after {
   background: var(--card-track, var(--edge-hi));
 }
 /* last word: on a pale card the lamp darkens to stay lamplight rather than glare */
@@ -3984,6 +4975,132 @@ select.input {
     transform 0.26s var(--ease),
     filter 0.26s var(--ease);
 }
+/* The two curves a pane moves on. Arriving and leaving are not the same move
+   played backwards: a pane arrives slowly and leaves quickly, because weight is
+   the whole idea and nothing on a wall panel should look flicked away. */
+[data-face='glass'] {
+  --pane-in: cubic-bezier(0.12, 0.78, 0.24, 1);
+  --pane-out: cubic-bezier(0.4, 0, 0.6, 1);
+}
+
+/* ---------- the room, with a pane in front of it, under glass ----------
+   Paper pushes the house back and blurs it. Glass cannot, for two reasons that
+   both matter. A pane over an already-blurred room is a dark sheet over mush:
+   the blur the pane is MADE of has nothing left to work on, so the material
+   goes flat at exactly the moment it is most in view. And a pane is only a
+   drawer if the row you came from is still legible above it -- 13px of blur
+   turns it into wallpaper, and then it may as well have been a new screen.
+
+   So under glass the room stays where it is and a scrim takes it down. A scrim
+   and not `filter: brightness()`, which is not a preference: a filter on .stage
+   forms a backdrop root, which silently kills `backdrop-filter` on every card
+   beneath it -- so the cards behind the pane would lose their own glass at the
+   moment the pane opened. Same trap as the rail, where the blur goes on each
+   card and never on the row. Paper gets away with a filter because it is
+   blurring anyway and there is nothing left to lose. */
+[data-face='glass'].shell.opened-shell > .rail,
+[data-face='glass'].shell.opened-shell > .stage,
+[data-face='glass'].shell.opened-shell > .topbar,
+[data-face='glass'].shell.opened-shell > .bottombar {
+  transform: none;
+  filter: none;
+}
+/* the scrim is the air from under the pane, so the room is dimmed by the pane's
+   own shadow rather than by a grey laid over it -- tone.ts derives it from the
+   hour like everything else */
+[data-face='glass'] .opened-veil,
+[data-face='glass'] .house-veil {
+  background-color: var(--glass-scrim);
+}
+/* ---------- the pane itself, under glass ----------
+   Both panes are the same thing made of the same material -- a device opened in
+   place, and This house -- so they take one rule. Paper gives them a fixed
+   near-black, which was invisible while the room behind them was mush and is a
+   hole punched in the daylight now that it is not: at noon the room reads L .49
+   and the pane read .13, which is precisely what tone.ts exists to stop a card
+   doing. A pane holds a distance from the field instead, three stops down its
+   own height, and the blur is what it is made of rather than a finish on it. */
+/* ---------- how a pane moves, under glass ----------
+   Measured off the reference rather than chosen: 400ms up, 300ms down, and the
+   object inside still settling at 700ms, long after the pane has landed. That
+   last one is what puts the object INSIDE the glass rather than printed on it.
+
+   The bottom bar goes first. It leaves 60ms before the pane starts to rise and
+   comes back 180ms after it has gone, so the pane never appears to push it out
+   of the way or to drag it back in -- the house gets out of the way, and then
+   the pane arrives. */
+[data-face='glass'] .opened-panel {
+  transition: transform 300ms var(--pane-out);
+}
+[data-face='glass'] .opened.shown .opened-panel {
+  /* 28ms, not 60: `shown` cannot flip until the pane has painted once at
+     translateY(100%), which is two frames after the shell learns a device is
+     open and the bar has started leaving. Those two frames are the rest of the
+     lead, and the veil -- which moves on `shown` -- is what makes them
+     measurable. Off the transitions' own clocks at 1280x800: the bar goes at 0,
+     the veil two frames later, and the pane 28ms after the veil -- a lead of 50
+     to 85ms in hand, depending on how long a frame is taking while a pane is
+     being painted through a 30px blur. The last of the 60 is not worth chasing:
+     a transition can only start on a frame, and asking for 35 instead of 28
+     moved the measurement to 77 rather than to 60, a whole frame the wrong
+     way. */
+  transition: transform 400ms var(--pane-in) 28ms;
+}
+/* the object travels further than the pane and keeps going after it has landed */
+[data-face='glass'] .opened-hero {
+  transform: translateX(220px) scale(1.1);
+  transition:
+    transform 300ms var(--pane-out),
+    opacity 240ms ease;
+}
+[data-face='glass'] .opened.shown .opened-hero {
+  transform: none;
+  transition:
+    transform 700ms var(--pane-in) 28ms,
+    opacity 300ms ease 28ms;
+}
+[data-face='glass'].shell.opened-shell > .bottombar {
+  opacity: 0;
+  transform: translateY(14px);
+  transition:
+    opacity 220ms var(--ease),
+    transform 220ms var(--ease);
+}
+/* Coming back: 180ms after the pane has gone, counted from the moment the fall
+   STARTS rather than from the moment the device is dropped out of the DOM. The
+   drop is a setTimeout on the same main thread that is painting a 300ms fall
+   through a 30px blur, and it runs late -- 73ms late, measured at 1280x800 --
+   so a delay counted from there inherits every bit of that. `closing` goes on
+   at the instant the fall begins, so 300 + 180 is what is actually written
+   down. Measured, it lands at about 525: the bar's transition can only start on
+   a frame, and while a pane is falling through a 30px blur those are long. */
+[data-face='glass'].shell.opened-shell:has(.opened.closing) > .bottombar {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 260ms var(--ease) 480ms,
+    transform 260ms var(--ease) 480ms;
+}
+/* This house has no `closing` of its own -- Vue times its leave -- so it still
+   counts from the drop: 320ms there, 160 here. Not while resting: that fade
+   belongs to the screensaver and has its own timing. */
+[data-face='glass'].shell:not(.opened-shell):not(.resting) > .bottombar {
+  transition:
+    opacity 260ms var(--ease) 160ms,
+    transform 260ms var(--ease) 160ms;
+}
+[data-face='glass'] .opened-panel,
+[data-face='glass'] .house-panel {
+  /* the ink moves with the surface, the same as it does on a card: these are
+     inherited, so everything inside the pane picks them up without knowing it
+     is on a pane. tone.ts holds them to a ratio against the pane's own foot. */
+  --ink-2: var(--pane-ink-2);
+  --muted: var(--pane-muted);
+  background: var(--pane);
+  border-color: transparent;
+  backdrop-filter: blur(var(--pane-blur, 30px)) saturate(var(--glass-sat, 1.7));
+  box-shadow: var(--pane-edge);
+}
 .opened {
   position: fixed;
   inset: 0;
@@ -4008,7 +5125,20 @@ select.input {
   left: 0;
   right: 0;
   bottom: 0;
-  top: clamp(120px, 22vh, 260px);
+  /* A pane stops short of the row it came from, not of the top bar, and that is
+     the difference between a drawer and a new screen: the thing you were looking
+     at is still there, dimmed, above it. The board leaves 56 of its 900 showing
+     -- the top of a card and its corner -- which is 50px here, and 25vh is where
+     the row now starts plus those 50.
+
+     It used to be 22vh, chosen when it only had to clear the top bar, and for as
+     long as Home led with a greeting and an attention strip there was nothing
+     above the pane but furniture anyway. design/nightfall slice 5 wrote that
+     down as the one part of the slice that could not land, and said it was the
+     arrangement's to fix rather than the face's. Wall is that arrangement, and
+     with the band out of the flow the row finally starts high enough for this
+     number to mean what it says. */
+  top: clamp(120px, 25vh, 260px);
   overflow: hidden;
   border-radius: 34px 34px 0 0;
   border: 1px solid var(--edge-hi);
@@ -4019,7 +5149,6 @@ select.input {
     rgba(16, 17, 21, 0.94)
   );
   backdrop-filter: blur(30px) saturate(1.25);
-  -webkit-backdrop-filter: blur(30px) saturate(1.25);
   transform: translateY(100%);
   transition: transform 0.28s var(--ease);
 }
@@ -4155,6 +5284,113 @@ select.input {
     opacity: 0.35;
   }
 }
+/* ---------- a phone at the door, as a pane ----------
+   It borrows the whole of the opened pane -- the rise, the fall, the room going
+   quiet behind it, all measured in design/nightfall slice 5 -- and one thing it
+   must not borrow: the colour.
+
+   Every other surface in this file holds a distance from the sky so that it
+   tracks the hour, and tone.ts exists to make that true. This one is fixed, and
+   the reason is not visual. It is the one place a person hands out a key to the
+   house, and recognising it instantly -- noticing when something about it is
+   off -- is the only defence they have against answering a prompt they should
+   not. A surface that looks different at every hour cannot be recognised.
+
+   Which would normally be exactly the hole punched in the daylight that slice 5
+   went to some trouble to close: a fixed near-black at noon. It is not, here,
+   and the difference is the scrim. The room behind a pane is already taken down
+   by --glass-scrim, so a dark pane is not sitting in a bright room; it IS the
+   room being out of the way. The ink comes with it, held at the same ratios the
+   rest of the panes use, so nothing gets harder to read after dark.
+
+   The hero, the steps and their timings are all the pane's own. Nothing below
+   is a second way of doing any of that. */
+.ask-pane .opened-panel {
+  --ink-2: rgba(255, 255, 255, 0.78);
+  --muted: rgba(255, 255, 255, 0.6);
+  background: linear-gradient(
+    168deg,
+    rgba(38, 34, 54, 0.97),
+    rgba(19, 17, 30, 0.99) 54%,
+    rgba(12, 11, 20, 1)
+  );
+  border-color: var(--edge-hi);
+}
+/* The lit edge the card always carried, at the size a pane is. Drawn as a masked
+   border the way the glass rim is, rather than as a gradient fading into the
+   face: an edge is the shape of the thing, and a haze across the top is just a
+   colour. It is the one mark on this pane that is not type or a button, and it
+   has a job -- it is what a person is meant to recognise. */
+.ask-pane .opened-panel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.4px;
+  pointer-events: none;
+  background: linear-gradient(
+    168deg,
+    var(--lamp),
+    rgba(233, 184, 114, 0.16) 26%,
+    transparent 58%
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+}
+/* the hero stays on the pane's own clock -- it arrives with it and leaves with
+   it -- and only its colour is this pane's */
+.ask-pane .opened-hero {
+  color: rgba(233, 184, 114, 0.34);
+}
+.ask-pane.shown .opened-hero {
+  opacity: 0.3;
+}
+.ask-says {
+  max-width: 44ch;
+  margin: 18px 0 0;
+  font-size: 17px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+.ask-says p {
+  margin: 0;
+}
+.ask-acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 28px 0 0;
+}
+.ask-acts .button {
+  margin: 0;
+}
+/* Back sits apart from the three spans, so a tap meant for "For today" never
+   lands on the way out of the question */
+.ask-back {
+  margin-left: auto !important;
+}
+.ask-more {
+  margin: 22px 0 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+@media (max-width: 860px) {
+  .ask-says {
+    font-size: 15.5px;
+  }
+  .ask-acts .button {
+    flex: 1 1 auto;
+  }
+  .ask-back {
+    margin-left: 0 !important;
+  }
+}
 /* the dimmer: the one control the tile is too small to carry properly */
 .opened-dim {
   margin-top: 34px;
@@ -4223,6 +5459,40 @@ select.input {
   -webkit-user-select: none;
   user-select: none;
 }
+/* A card leaves the row downward, and that direction is the whole point. It has already spent a beat
+   showing itself off (BentoRow says why); a card that then merely faded would be doing the thing the
+   house is trying not to look like -- disappearing, only slower. Dropping out is a departure: something
+   was taken out of the row, and the row closes leftward over the gap, so the two motions are different
+   and neither reads as the other. Down rather than up because up is where the greeting and the weather
+   are; down rather than back to the right because the row arrives from the right and scrolls sideways,
+   and a card moving that way reads as a scroll rather than a leaving. It accelerates out (ease-in): a
+   thing that speeds up as it goes has been dismissed, a thing that eases to a stop has been placed.
+
+   `transform` and `opacity` only: the row's entrance drives `translate`, so this must stay out of that
+   property. Two classes rather than a TransitionGroup, which wraps this row in a way that swallowed
+   taps meant for a card. */
+.bento-card.going {
+  /* The edge treatment above drives opacity AND filter from the scroll, and an animation outranks a
+     transition, so a card cannot be moved or faded while it is still under it. Releasing the leaving
+     card is what lets it go: it is on its way out, not being swept past. */
+  animation: none;
+  opacity: 1;
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 1, 1), transform 0.3s cubic-bezier(0.4, 0, 1, 1);
+  pointer-events: none;
+}
+.bento-card.gone {
+  opacity: 0;
+  transform: translateY(34px) scale(0.97);
+}
+@media (prefers-reduced-motion: reduce) {
+  /* No travel, and the beat before it does the explaining instead. */
+  .bento-card.going {
+    transition: opacity 0.18s ease;
+  }
+  .bento-card.gone {
+    transform: none;
+  }
+}
 .tile img {
   -webkit-user-drag: none;
   pointer-events: none;
@@ -4266,6 +5536,150 @@ select.input {
     }
   }
 }
+/* ---------- the rail's edges, under glass ----------
+   Paper softens both ends of the row, which is even-handed and right for a row
+   of flat cards. Glass is not even-handed, because a focal plane is not: what
+   you have swiped PAST goes out of focus, and what is still in front of you
+   stays sharp. Depth is one idea and not three -- further back is blurrier,
+   dimmer AND slower, so the leaving card also gives back 45% of its own width
+   and the card in focus catches it and slides over the top. Being earlier in
+   the row, it is already underneath.
+
+   The lag is `transform` and not `translate` on purpose. `translate` belongs to
+   the arrival below, and the note there is exactly why these two animations
+   have stayed off each other's properties; the two compose instead of fighting.
+
+   The arriving end keeps a little of paper's dim and none of its blur. The
+   half-cut card at the right edge is still the only sign there is more to sweep
+   to, and blurring what you are sweeping towards would say the opposite of what
+   the focal plane is for. */
+@supports (animation-timeline: view()) {
+  [data-face='glass'] .bento-card {
+    animation-name: bento-in-glass, bento-out-glass;
+  }
+  @keyframes bento-in-glass {
+    from {
+      opacity: 0.72;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes bento-out-glass {
+    from {
+      opacity: 1;
+      filter: blur(0);
+      transform: translateX(0);
+    }
+    to {
+      opacity: 0.6;
+      filter: blur(5px);
+      /* A share of the card rather than a count of pixels. The row runs from a
+         248px glance column to a 372px media card, so a fixed lag overlaps the
+         wide ones barely and the narrow ones twice as much; a percentage
+         resolves against the card's own box and every card gives back the same
+         fraction of itself. 45% of the card, less the row's 18px gap, is about
+         the same bite the drawing takes. */
+      transform: translateX(45%);
+    }
+  }
+}
+/* The weather is not in the rail, because it is not in the house. It stays
+   where it is and recedes instead -- and the reading goes altogether, because a
+   temperature you have swiped away from is not the thing you are reading any
+   more. :has() rather than a class, so the row's own attribute stays the single
+   source of whether the rail is home. */
+[data-face='glass'] .rail-wx {
+  transition:
+    filter 650ms var(--ease),
+    opacity 650ms var(--ease);
+}
+[data-face='glass'] .rail-home:has(.bento:not([data-at-start])) .rail-wx {
+  filter: blur(5px);
+  opacity: 0.8;
+}
+[data-face='glass'] .rail-wx-text {
+  transition: opacity 650ms var(--ease);
+}
+[data-face='glass'] .rail-home:has(.bento:not([data-at-start])) .rail-wx-text {
+  opacity: 0;
+}
+
+/* Where a card fades, under glass: across the weather, between the two edges
+   that matter.
+
+   Twice wrong before this. First the fade ran over a card's width and finished
+   147px clear of the weather, with the card out in the open and nothing behind
+   it to recede INTO. Then it was pulled tight to the weather's edge, which
+   turned out to be the wrong edge entirely: a card arrived at the sky already
+   dissolved, so there was nothing to watch it dissolve against.
+
+   The two edges are the weather's, where a card starts to go, and the ROW's,
+   where it has gone. A card holds its focus all the way to the weather and a
+   quarter of the way across it, fades over the rest of the sky -- which is the
+   whole reason the sky recedes at the same time, so there is something soft
+   behind the thing going soft -- and is gone by the time it reaches the left of
+   the screen.
+
+   All three are already named: --wx-gap is how far past the rest line the
+   weather's edge is, --wx-hold is how far into the sky a card carries its focus
+   before it starts to go, and --wx-end is where the weather's edge falls, which
+   is also how far it is from there to the row's. So the range is those, and it
+   holds at any width without a number of its own.
+
+   Glass only. Paper's even-handed edge softening belongs to the row's own ends
+   and has nothing to do with what is behind it. */
+@supports (animation-timeline: view()) {
+  [data-face='glass'] .wall-stage .bento-card {
+    animation-range:
+      entry 0% entry 100%,
+      exit calc(var(--wx-gap) + var(--wx-hold))
+      exit calc(var(--wx-gap) + var(--wx-end));
+  }
+}
+
+/* Wall's weather, receding with the row.
+
+   WHETHER it recedes is this layout's business, not the face's, and that is the
+   difference from the Rail above. There the weather is a corner element and a
+   face can reasonably decide whether it has depth. Here it is a third of the
+   screen, and a third of the screen holding perfectly still while everything
+   else moves does not read as background -- it reads as fixed furniture the
+   cards are sliding behind. So both faces recede it, and the reading goes
+   either way, because a temperature you have swiped away from is not the thing
+   you are reading any more.
+
+   HOW it recedes is the face's. Paper dims it. Glass also blurs it, which is
+   its focal plane; paper's softening belongs to the row's own edges and a blur
+   on something outside the row would be paper claiming a depth it does not have
+   anywhere else.
+
+   The blur goes on the drawing and on the pane separately, never on the column
+   holding both: a filter on .wall-wx forms a backdrop root and kills the
+   lozenge's own backdrop-filter, so the pane would go flat exactly as it
+   started to recede. Third time this file has had to say it, after the rail's
+   cards and the pane over the room.
+
+   The board also carries the sky 24px against the cards' 460. That is 5% -- a
+   rounding error on a 1280 screen -- and its own note says the sky does not
+   travel at all. It does not travel here either. */
+.wall-cloud,
+.wall-loz {
+  transition:
+    filter 650ms var(--ease),
+    opacity 650ms var(--ease);
+}
+.wall-home:has(.bento:not([data-at-start])) .wall-cloud {
+  opacity: 0.8;
+}
+.wall-home:has(.bento:not([data-at-start])) .wall-loz {
+  opacity: 0;
+}
+[data-face='glass'] .wall-home:has(.bento:not([data-at-start])) .wall-cloud,
+[data-face='glass'] .wall-home:has(.bento:not([data-at-start])) .wall-loz {
+  filter: blur(5px);
+}
+
 /* without scroll-driven animations: the same fade, no blur, as a mask on the
    row; each end lifts when there is nothing beyond it, so the first card at
    rest is never dimmed for a neighbour it does not have */
@@ -4296,6 +5710,340 @@ select.input {
   }
 }
 
+/* The two constants Wall brings with it, and the only place either one is
+   declared. layout.ts says why a layout is allowed them at all: this
+   arrangement was drawn against them, and given the house's own it is a near
+   miss rather than the thing that was drawn. Both stay inside this attribute,
+   so Stack and Rail are untouched whichever face is on.
+
+   The radius is a smaller correction than it looked. The board's card is 28px
+   and the house's --r-lg is 22, but bento cards have never used --r-lg -- they
+   were already 26. The gap was two pixels, not six. It is still worth closing,
+   because the whole point of this layout is being the drawing rather than
+   nearly it.
+
+   font-family and not just the token: `body` resolves --sans on itself, above
+   the shell, so a shell that redefined only the token would be inherited past. */
+[data-layout='wall'] {
+  --sans:
+    'Plus Jakarta Sans Variable', 'Plus Jakarta Sans', -apple-system,
+    'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
+  --r-lg: 28px;
+  font-family: var(--sans);
+}
+[data-layout='wall'] .bento .tile,
+[data-layout='wall'] .bento .scene-card {
+  border-radius: 28px;
+}
+
+/* ---------- Wall: the weather large, and what is on beside it ----------
+   The arrangement from design/nightfall/Main.dc.html, which is a 1440x900 board
+   and scales to this panel's 1280x800 at almost exactly 8/9. What makes it
+   different from the Rail is subtraction: no greeting, no house line, no
+   next-up line, so the row starts 180px down rather than two thirds of the way.
+   The date it gives up is in the top bar already.
+
+   The weather is not a card and must not become one. The sky's own drawing goes
+   straight onto the field, and a single lozenge of glass hangs in front of it --
+   that pane is what gives the left third depth, and a bordered box there would
+   be a tile saying what the whole screen behind it is already saying. */
+.wall-home {
+  max-width: none;
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+/* The weather is UNDER the row, not beside it, and that is the whole of how the
+   two relate. On the board the weather block is drawn first and the rail after
+   it, both unpositioned in z, so the cards paint on top: the rail carries them
+   460px left and the first one ends up at x 46, straight across the weather.
+   That is what the receding is FOR -- a card slides over a sky that has gone
+   soft and dim, and the depth is the point.
+
+   Beside it, as a flex sibling, the row could not do that. A scroller clips at
+   its own box, so a card swiped left simply stopped existing at the weather's
+   edge, which reads exactly as what it is: something with a fixed background
+   covering them. So the row spans the whole stage and rests its first card
+   clear of the weather with padding instead.
+
+   One number is declared here and used three times, because all three have to
+   agree: where the weather ends, where the row's first card rests, and --
+   through scroll-padding, which insets the scrollport a view() timeline
+   measures against -- where a card starts to recede.
+
+   In vw, and that is not a style choice. A percentage means two different
+   things to the two properties that need it: `padding` resolves it against the
+   containing block and `scroll-padding` against the scrollport, which here are
+   1200 and 1280. The first attempt at this had them 25px apart, which put the
+   first card a twelfth of the way into its own exit while the row was sitting
+   at home -- 11px out of place, slightly dim and slightly soft, at rest. A
+   viewport unit means the same thing to both.
+
+   33.6vw is where the board's weather ends: 484 of 1440. */
+.wall-stage {
+  --wx-end: clamp(300px, 33.6vw, 520px);
+  --wx-gap: 20px;
+  /* how far a card carries its focus INTO the weather before it starts to go.
+     Starting the moment it touched the edge was too eager: a card should be
+     over the sky, not merely arriving at it, before it begins to give up. */
+  --wx-hold: calc(var(--wx-end) / 4);
+  position: relative;
+  margin-block: auto; /* in the middle of whatever height is left, as the rail is */
+  min-width: 0;
+}
+.wall-home .wall-stage + .block {
+  margin-top: 12px;
+}
+/* ---------- the band, and a row that does not move ----------
+   The row is the whole of what Wall buys. It is 548 of the board's 900 and the
+   greeting, the house line and the next-up line were all given up to pay for it,
+   so a house with something to attend to must not hand a slice of it back.
+
+   It used to. The band is in the flow above the stage and the stage takes
+   `margin-block: auto`, so a chip appearing pushed the row 35px down the screen
+   -- which is the worst of both: the row got shorter AND the urgent thing was no
+   louder for it. It is also why a phone at the door and a fault list are now a
+   pane and a page: with those two out of the band, nothing left in it is taller
+   than one line of house news, and a band of a known height can come out of the
+   flow altogether.
+
+   So it hangs in the gap that is already there. The stage centres itself in
+   whatever height is left, which leaves 58px between the top bar and the row at
+   1280x800, and a chip is 57. `--stage-top` is what lets the band start at the
+   bar rather than at the stage's content box; the two are declared together for
+   that reason.
+
+   The row lands at a fixed 142 whatever is in the band, which puts the card at
+   150 against the board's 160 -- 1.25% of the screen, inside the 1.5% every
+   other proportion in e2e/wall.spec.ts is held to. Chasing the last ten would
+   mean giving up `margin-block: auto`, and with it the one thing that keeps this
+   arrangement sane on a screen that is not 800 tall. */
+.shell[data-nav='top'][data-layout='wall'] .wall-home {
+  position: relative;
+}
+.shell[data-nav='top'][data-layout='wall'] .wall-home > .nudges {
+  position: absolute;
+  top: calc(-1 * var(--stage-top, 0px));
+  left: 0;
+  right: 0;
+  margin: 0;
+  /* one line of chips, always: wrapping is how a band grows, and a band that can
+     grow is a row that can shrink. A fourth thing to attend to scrolls sideways
+     rather than taking the row's height. */
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.shell[data-nav='top'][data-layout='wall'] .wall-home > .nudges::-webkit-scrollbar {
+  display: none;
+}
+.shell[data-nav='top'][data-layout='wall'] .nudge {
+  flex: 0 0 auto;
+}
+/* and one line of sub, so a long sentence cannot do what a fourth chip cannot.
+   Wall gives up the second line of everything else it draws for the same reason. */
+.shell[data-nav='top'][data-layout='wall'] .nudge-sub {
+  -webkit-line-clamp: 1;
+}
+/* the left third: 460 of the board's 1440, and it holds its share rather than a
+   fixed width, because the row beside it is what gets the rest */
+/* measured from the screen's edge rather than the stage's, which is where the
+   board measures it from and is why the drawing is allowed out past the padding */
+.wall-wx {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: calc(var(--wx-end) - 40px);
+}
+/* the drawing sits high and left, and is allowed past the stage's padding: it is
+   scenery, not content, and scenery that stops at a margin reads as a picture of
+   scenery */
+.wall-cloud {
+  position: absolute;
+  left: -18px;
+  top: 0;
+  width: 320px;
+  height: 228px;
+  max-width: 100%;
+}
+/* The lozenge. The softest radius on the screen on purpose: everything else in
+   the house is a card, and the weather is the one thing the house does not
+   control, so it is the one shape that is not one. */
+.wall-loz {
+  position: absolute;
+  left: 46%;
+  bottom: 0;
+  width: min(201px, 70%);
+  height: 331px;
+  max-height: 100%;
+  border-radius: 100px;
+  padding: 40px 28px 34px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  overflow: hidden;
+  /* Paper's answer, and it has to be a real surface: --surface over a night sky
+     at this size is a faint outline rather than a pane, and the numbers on it
+     have nothing to sit on. So it takes the house's own plain card colour, the
+     one a room card uses -- under paper the panel is made of cards and a layout
+     does not get to change that. Glass swaps in the pane recipe further up. */
+  background: var(--card-plain, var(--surface));
+  border: 1px solid var(--card-edge, var(--edge));
+  color: var(--card-ink, var(--ink));
+  backdrop-filter: var(--frost);
+}
+.wall-temp {
+  /* the board's numerals are its own typeface at 200, not the house's serif:
+     there is no heading in this arrangement for the serif to be the voice of */
+  font-family: var(--sans);
+  font-size: 84px;
+  font-weight: 250;
+  line-height: 0.92;
+  letter-spacing: -0.045em;
+  font-variant-numeric: tabular-nums;
+}
+.wall-says {
+  margin-top: 16px;
+  font-size: 21px;
+  font-weight: 600;
+  line-height: 1.16;
+  letter-spacing: -0.018em;
+  text-wrap: balance;
+}
+.wall-sub {
+  margin-top: 9px;
+  font-size: 14px;
+  color: var(--card-ink-2, var(--ink-2));
+}
+.wall-sub.dim {
+  margin-top: 3px;
+  opacity: 0.72;
+}
+.wall-quiet {
+  margin: 6px 2px 26px;
+}
+/* The tall cards fill their whole span here. The Rail holds them 52px short and
+   centred, which is right when they sit under a greeting and the row is the
+   shorter half of the screen; on the board they are the full 548 and the glance
+   column beside them adds up to exactly the same, which is what makes the row
+   read as one block rather than as a row of things of different sizes. */
+.wall-stage .bento .tile.light,
+.wall-stage .bento .tile.media,
+.wall-stage .bento .tile.plain,
+.wall-stage .bento .scene-card {
+  height: auto;
+  align-self: stretch;
+}
+/* The cards keep the proportions they were drawn at, which means their widths
+   have to follow the row's height rather than stay put. The Rail's card is
+   372x340 and lands near square; the same card on the board is 332x548, which
+   is portrait, and a wall panel read from across a room wants portrait -- more
+   of the house fits on the screen at once. Left at the Rail's widths the row
+   drifts back towards square as it gets taller, and one fewer card fits.
+
+   Every ratio here is off the board: 332/548 for what is playing, 392/548 and
+   352/548 for the tall cards after it, 252/252 for a glance card. Nothing is
+   picked by eye. */
+.wall-stage .bento {
+  --tall: calc(var(--row) * 2 + 18px);
+}
+.wall-stage .bento .tile.media {
+  width: calc(var(--tall) * 0.606);
+}
+.wall-stage .bento .tile.light {
+  width: calc(var(--tall) * 0.715);
+}
+.wall-stage .bento .tile.plain,
+.wall-stage .bento .scene-card {
+  width: calc(var(--tall) * 0.642);
+}
+.wall-stage .bento .tile.camera,
+.wall-stage .bento .tile.climate {
+  width: calc(var(--row) * 0.957);
+}
+/* the row takes everything the weather does not, and bleeds off the right edge
+   only -- its left edge is a real edge here, because something is beside it */
+.wall-stage .bento {
+  /* over the weather, the way the board stacks them: the weather places itself
+     and this does not, so it needs saying out loud */
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  margin-inline: -40px;
+  padding-inline: calc(var(--wx-end) + var(--wx-gap)) 0;
+  scroll-padding-inline-start: calc(var(--wx-end) + var(--wx-gap));
+  /* 548 of the board's 900, which is what there is room for once the greeting is
+     gone: two rows and the gap between them, and taller than the Rail's by the
+     whole height of the header it does not have */
+  --row: clamp(168px, calc((100dvh - 332px) / 2), 264px);
+}
+
+/* On a phone there is no left third to give away: the screen is already a
+   column, so the weather goes above the row and the row stops being a row --
+   the same thing the Rail does at this width, and for the same reason. A
+   sideways sweep of wall-sized cards on a 390px screen is a worse column.
+
+   Everything the wide layout sets has to be undone by name. The generic phone
+   rule for .bento is a single class and this one is two, so it does not win. */
+@media (max-width: 860px) {
+  .wall-stage {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .wall-wx {
+    position: relative;
+    left: auto;
+    top: auto;
+    bottom: auto;
+    width: 100%;
+    height: 210px;
+    flex: 0 0 auto;
+  }
+  .wall-cloud {
+    left: -10px;
+    width: 210px;
+    height: 150px;
+  }
+  .wall-loz {
+    left: auto;
+    right: 4px;
+    top: 0;
+    bottom: auto;
+    width: 150px;
+    height: 200px;
+    border-radius: 75px;
+    padding: 24px 18px 22px;
+  }
+  .wall-temp {
+    font-size: 50px;
+  }
+  .wall-says {
+    margin-top: 10px;
+    font-size: 16px;
+  }
+  .wall-sub {
+    margin-top: 6px;
+    font-size: 12.5px;
+  }
+  .wall-stage .bento {
+    position: static;
+    margin-inline: 0;
+    padding-inline: 0;
+    scroll-padding-inline-start: 0;
+  }
+  .wall-stage .bento .tile.light,
+  .wall-stage .bento .tile.media,
+  .wall-stage .bento .tile.plain,
+  .wall-stage .bento .scene-card,
+  .wall-stage .bento .tile.camera,
+  .wall-stage .bento .tile.climate {
+    width: 100%;
+    height: auto;
+  }
+}
+
 /* ---------- the rail arrives ----------
    First load, waking from rest, coming back from a room: the cards come in from
    off the right edge, one after another from the left, and settle. It doubles as
@@ -4303,10 +6051,9 @@ select.input {
    the side they arrive from is the side there is more on.
 
    A transition, not an animation: the cards already carry the two scroll-driven
-   animations above, and `translate` is a property neither of them touches. The
-   reduced-motion block at the top of this file switches transitions off, and
-   RailView does not arm the flow at all in that case, so no card is ever left
-   sitting a step from where it belongs. See RailView.vue. */
+   animations above, and `translate` is a property neither of them touches. See
+   RailView.vue. Under reduced motion the row still arrives, as a fade -- the
+   block further down is where that is said. */
 /* Snapping off while they travel, and this is not a nicety: a translated card
    still offers itself as a snap position, so the row snapped to the first
    card's held-back place and scrolled 72px to meet it -- the cards stood still
@@ -4340,6 +6087,25 @@ select.input {
     transition: none;
   }
 }
+/* Reduced motion: the row arrives as a fade and nothing else. This is the one
+   thing allowed back through the blanket `transition: none !important` near the
+   top of the file, and it is not a loophole -- opacity is what every move in
+   this face collapses TO. Nothing travels, nothing scales, nothing blurs; the
+   row takes 180ms to be there instead of appearing between two frames, because
+   a fade is not vestibular motion and a pop is only abrupt.
+
+   The translate has to be cancelled rather than left to the dead transition:
+   `translate` is a plain property, not an animation, so .set would put every
+   card 696px right for exactly one painted frame before .go snapped it back. */
+@media (prefers-reduced-motion: reduce) {
+  .bento.set > .bento-card,
+  .bento.go > .bento-card {
+    translate: none !important;
+  }
+  .bento.go {
+    transition: opacity 180ms var(--ease) !important;
+  }
+}
 
 /* ---------- a tile with no artwork ----------
    Most devices will never have a picture. Rather than an empty frame waiting
@@ -4347,6 +6113,68 @@ select.input {
    the corner the way a render would. It takes the card's ink, so it stays a
    whisper whether the card is dark or pale. Under the body, and never in the
    way of a finger. */
+/* The same drawing, filling a box instead of a corner: the album-art slot, which
+   holds a real picture when there is one and this when there is not. It stays a
+   square in the column layouts and goes full-bleed in the rail, and the drawing
+   follows either way because it is a viewBox, not a fixed size. */
+.slot-render {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Rung two: a drawing the hub ships, cropped into the corner the icon used to
+   fill. Unlike the icon it is not faded to a watermark -- it IS the picture, so
+   it sits at full strength and scales with the tile rather than taking a fixed
+   size: the same lamp has to hold up on a 190px tile in a room and on a 372px
+   one at the head of the rail. */
+.tile-render {
+  position: absolute;
+  right: -5px;
+  bottom: -4px;
+  width: 74%;
+  aspect-ratio: 150 / 130;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* The dial itself, behind the number it is the dial for: a square that holds the
+   reading, so the drawing reserves its own room rather than overlapping the name
+   above it and the chips below. Shrink-to-fit width plus a square ratio means the
+   dial grows with what it has to hold — a range ("20-24") is half again as wide
+   as a single reading and gets a bigger dial, not a number over the bezel. */
+.clim-face {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  padding: 0 26px;
+  /* never wider or taller than the slot it was given: the bento card fixes its
+     own height to the rail's row, so a dial that sized itself purely from the
+     number would push the reading out through the bottom of the card */
+  max-width: 100%;
+  max-height: 100%;
+}
+.face-render {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  pointer-events: none;
+}
+/* A camera tile is full-bleed and much wider than the rest, so 74% of it is a
+   doorbell the size of a door. The drawing is a stand-in for a missing frame,
+   not the subject of the card: cap it and let the tile stay mostly empty. */
+.tile.camera .tile-render {
+  max-width: 200px;
+}
+/* a device that is not answering should look it, the same way its text does */
+.tile.dead .tile-render {
+  opacity: 0.4;
+  filter: grayscale(0.6);
+}
+
 .tile-art {
   position: absolute;
   right: -28px;
@@ -4398,7 +6226,10 @@ select.input {
   max-width: none;
 }
 .shell[data-nav='top'] .stage {
-  padding-top: 20px;
+  /* named because Wall hangs its band in this padding rather than above it, and the two have to
+     agree or the band and the row overlap -- see "the band, and a row that does not move" */
+  --stage-top: 20px;
+  padding-top: var(--stage-top);
   padding-bottom: 20px;
 }
 .topbar {
@@ -4437,7 +6268,6 @@ select.input {
   background: rgba(26, 28, 34, 0.55);
   border: 1px solid var(--edge);
   backdrop-filter: var(--frost);
-  -webkit-backdrop-filter: var(--frost);
   flex: 0 0 auto;
 }
 .tab {
@@ -4467,6 +6297,28 @@ select.input {
 .tab:active {
   background: var(--surface-press);
 }
+/* ---------- the tab bar, under glass ----------
+   The board draws this bar with no furniture on it at all -- a date, three
+   words, an avatar, and the field showing through between them -- and move 5
+   says so outright: no sliding pill, no underline, only the word's weight
+   changes. That was built and then taken back out, and the reason is worth
+   keeping rather than rediscovering.
+
+   Three bare words on a field read as a caption, not as a control. The pill is
+   what says the middle of the bar is a thing you touch, and on a panel across a
+   room that is the whole job: a person walking past has to see where to press
+   before they can read what it says. The board could leave it off because a
+   board is looked at from a chair.
+
+   So the pill stays and takes the material instead -- it is in the shared glass
+   lists up top with the say box, which is the same shape doing the same work at
+   the other end of the screen. That is the widening doing exactly what it is
+   for: the seam this face had was a glass card sitting under a paper pill, and
+   the answer to it was never to delete the pill.
+
+   The active tab keeps paper's fill. A thumb on glass is still a thumb, and
+   swapping it for a weight change here would be move 5 arriving by the back
+   door after the front one was closed. */
 .topbar-right {
   display: flex;
   align-items: center;
@@ -4486,7 +6338,6 @@ select.input {
   background: var(--surface);
   border: 1px solid var(--edge);
   backdrop-filter: var(--frost);
-  -webkit-backdrop-filter: var(--frost);
 }
 .topbar-add.attention::after {
   content: '';
@@ -4528,17 +6379,23 @@ select.input {
   background: rgba(26, 28, 34, 0.55);
   border: 1px solid var(--edge);
   backdrop-filter: var(--frost);
-  -webkit-backdrop-filter: var(--frost);
 }
 .bottombar .say-box > svg {
   display: none;
 }
-.bottombar .say-box::before {
-  content: '';
+/* the orb stands in for the sparkle down here, and only down here: a box at the
+   top of the stage is a field you type in, and the orb is what the house looks
+   like when it is waiting to be spoken to */
+.say-orb {
+  display: none;
+}
+.bottombar .say-orb {
+  display: block;
+  position: relative;
   flex: 0 0 auto;
   width: 36px;
   height: 36px;
-  border-radius: 50%; /* the orb: the house, listening */
+  border-radius: 50%;
   background: radial-gradient(
     circle at 32% 28%,
     #f4e3c4,
@@ -4585,6 +6442,165 @@ select.input {
 .bottombar .drafts {
   width: 460px;
   max-width: 80vw;
+}
+
+/* What the box says back is made of what the box is made of. These four hang over
+   the bar on their own, so they were the last paper literal left inside the face --
+   a near-black sheet with a hard edge, laid over a panel that has none anywhere
+   else. They are already absolutely positioned, so they are their own containing
+   block and must NOT be handed `position: relative`: that is how the pane's close
+   button ended up off the left of the screen and the weather's lozenge at the top
+   of its column. The rim above takes them on those terms, the same as .wall-loz. */
+[data-face='glass'] .bottombar .say-hint,
+[data-face='glass'] .bottombar .say-note,
+[data-face='glass'] .bottombar .say-answer,
+[data-face='glass'] .bottombar .drafts {
+  background-color: transparent;
+  background-image: var(--glass-sweep), var(--glass);
+  border-color: transparent;
+  backdrop-filter: blur(var(--glass-blur, 26px)) saturate(var(--glass-sat, 1.7))
+    brightness(var(--glass-br, 1.06));
+  box-shadow: var(--glass-inner), var(--glass-drop);
+}
+[data-face='glass'][data-flat] .bottombar .say-hint,
+[data-face='glass'][data-flat] .bottombar .say-note,
+[data-face='glass'][data-flat] .bottombar .say-answer,
+[data-face='glass'][data-flat] .bottombar .drafts {
+  background-image: var(--glass-sweep), var(--glass-flat);
+  backdrop-filter: none;
+}
+
+/* ---------- move 7: the command box, at rest and opened ----------
+   On the board the box at rest is only its orb, and one touch opens it: 460ms
+   of width, with the words 180ms behind it, so the box is already the right
+   size by the time there is anything to read in it. Shutting, there is no delay
+   at all -- the words go first and the width follows them home, because a box
+   closing on its own contents reads as a mistake rather than as a move.
+
+   It is a face's move and not the arrangement's, the same as the rail's focal
+   plane and the pane's rise, so paper keeps the whole box and every rule here
+   is scoped. What a face does NOT get is the width when it is open, or what
+   sits in it: that stays the layout's 460px. The board's own 430 -- 382 at this
+   size -- is drawn around a pill with no Go button in it, and taking 78px off
+   the words to reach the board's number would be a face moving a control, which
+   layout.ts says it may not do.
+
+   The strand is not dropped by this. The orb IS the command box, one tap from
+   being typed in, and the input behind it stays in the tab order the whole
+   time -- focusing it is what opens the box, so a keyboard never meets a shut
+   one. Say.vue holds the single fact of whether it is open, because the
+   stylesheet must not have to work out for itself whether there is a sentence
+   in flight or an answer nobody has read. */
+[data-face='glass'] {
+  --settle: cubic-bezier(0.32, 0.72, 0, 1); /* the board's own: fast out, long glide in */
+}
+[data-face='glass'] .bottombar .say-box {
+  /* the orb and its collar, and the collar has to be even or the resting pill is
+     not a circle: 7 + 42 + 7, where the board has 8 + 48 + 8. The left 7 is 6 of
+     padding plus the 1px edge .search already carries, which the board has not
+     got; the right 8 is left where paper has it, because that is where the Go
+     button sits once the box is open and the face does not get to move it. */
+  width: 56px;
+  gap: 12px;
+  padding: 0 8px 0 6px;
+  overflow: hidden;
+  transition:
+    width 460ms var(--settle),
+    background-color 260ms var(--settle);
+}
+[data-face='glass'] .bottombar .say.open .say-box {
+  width: 100%;
+  /* the board lifts the pill about a fifth as it opens. A background-COLOUR and
+     not a filter: a filter here would form a backdrop root and take the box's
+     own frost away at the instant it opened, which is the trap this file has
+     already walked into twice -- on the rail and on the room behind a pane. */
+  background-color: rgba(255, 255, 255, 0.028);
+}
+/* the words follow the width rather than being stretched by it */
+[data-face='glass'] .bottombar .say-box input,
+[data-face='glass'] .bottombar .say-box .button {
+  opacity: 0;
+  transition: opacity 260ms var(--settle);
+}
+[data-face='glass'] .bottombar .say.open .say-box input,
+[data-face='glass'] .bottombar .say.open .say-box .button {
+  opacity: 1;
+  transition-delay: 180ms;
+}
+/* ---------- the orb ----------
+   Lit from inside rather than painted on: four blooms behind a blur, turning
+   against each other at 14s and 19s, which is what separates a thing that is
+   listening from a button with a gradient on it.
+
+   It is the one place in the face carrying colours of its own instead of a
+   distance from the sky, and that is deliberate: a lit object is not a surface.
+   It is the licence the lamp glow and the weather drawing already have, and the
+   rule in layout.ts is about panes, which have to hold their distance at every
+   hour or the daylight goes. What it does mean is that the orb is an EVENING
+   identity, indigo at noon as much as at midnight -- which is exactly the open
+   question in design/nightfall/PORT.md about whether the day wants a face of
+   its own, and this is one more thing under it rather than an answer to it. */
+[data-face='glass'] .bottombar .say-orb {
+  width: 42px;
+  height: 42px;
+  overflow: hidden;
+  background: #17133d;
+  box-shadow:
+    inset 0 0 0 1.2px rgba(255, 255, 255, 0.34),
+    0 6px 18px -4px rgba(80, 40, 180, 0.6);
+}
+[data-face='glass'] .bottombar .say-orb i {
+  position: absolute;
+  filter: blur(7px); /* the board's 8 at its 48, scaled with the orb */
+}
+[data-face='glass'] .bottombar .say-orb .orb-cool {
+  inset: -34%;
+  animation: orb-turn 14s linear infinite;
+  background:
+    radial-gradient(closest-side at 32% 30%, #8b7bff, transparent 72%),
+    radial-gradient(closest-side at 72% 34%, #57e0d0, transparent 70%);
+}
+[data-face='glass'] .bottombar .say-orb .orb-warm {
+  inset: -30%;
+  opacity: 0.92;
+  animation: orb-turn 19s linear infinite reverse;
+  background:
+    radial-gradient(closest-side at 36% 72%, #ff8fc4, transparent 70%),
+    radial-gradient(closest-side at 74% 74%, #ffc98a, transparent 70%);
+}
+/* the catch on the glass in front of them, which does not turn */
+[data-face='glass'] .bottombar .say-orb::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    closest-side at 32% 24%,
+    rgba(255, 255, 255, 0.62),
+    transparent 56%
+  );
+}
+@keyframes orb-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+/* It turns for as long as the panel is awake, which on a wall is for ever, so it
+   stops when the screen does rather than ticking on behind a faded-out bar. */
+.shell.resting .say-orb i {
+  animation-play-state: paused;
+}
+/* A phone is not a wall: there is one box, it is the way in, and there is no
+   room to spend a tap on opening it. The face keeps its material here and gives
+   up its move. */
+@media (max-width: 860px) {
+  [data-face='glass'] .bottombar .say-box {
+    width: 100%;
+  }
+  [data-face='glass'] .bottombar .say-box input,
+  [data-face='glass'] .bottombar .say-box .button {
+    opacity: 1;
+  }
 }
 .household {
   display: flex;
@@ -4679,6 +6695,43 @@ select.input {
 }
 .look-shape.look-nav-top {
   grid-template-rows: 12px 1fr;
+}
+/* what the panel is made of: a flat card laid on the sky, or a pane with the
+   sky coming through it. The second swatch frosts, so the row shows the
+   difference rather than describing it */
+.look-shape.look-face-paper,
+.look-shape.look-face-glass {
+  position: relative;
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+  overflow: hidden;
+  border-radius: 8px;
+  background: linear-gradient(150deg, #3a3f6e, #7a5ec8 52%, #2a2f62);
+}
+.look-shape.look-face-paper i:first-child,
+.look-shape.look-face-glass i:first-child {
+  position: absolute;
+  inset: 8px 10px;
+  border-radius: 5px;
+}
+.look-shape.look-face-paper i:first-child {
+  background: var(--card-plain, rgba(255, 255, 255, 0.22));
+}
+.look-shape.look-face-glass i:first-child {
+  background: rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(5px) saturate(1.6);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+.look-shape.look-face-paper i:last-child,
+.look-shape.look-face-glass i:last-child {
+  display: none;
+}
+.look-row.on .look-shape.look-face-paper i,
+.look-row.on .look-shape.look-face-glass i {
+  background: rgba(255, 255, 255, 0.26);
+}
+.look-row.on .look-shape.look-face-paper i:first-child {
+  background: var(--card-plain, rgba(255, 255, 255, 0.3));
 }
 @media (max-width: 860px) {
   .topbar {
@@ -4888,10 +6941,23 @@ select.input {
   width: 44px;
   height: 44px;
 }
-.bento .tile.climate .clim-big {
+/* The rail card already drops the modes and the fan: it is the summary, and the
+   room tile is the control. The dial goes the same way and for the same reason —
+   this card's height is the rail's row, so a dial round the number could only be
+   bought by shrinking the number, and on a short screen (--row at its 150px
+   floor) it does not fit at all. The reading you can take from a doorway is
+   worth more here than the picture. */
+.bento .tile.climate .clim-face {
   grid-column: 2;
   grid-row: 1;
   justify-self: center;
+  padding: 0;
+  aspect-ratio: auto;
+}
+.bento .tile.climate .face-render {
+  display: none;
+}
+.bento .tile.climate .clim-big {
   font-size: 46px;
 }
 .bento .tile.climate .clim-doing {
@@ -4934,9 +7000,23 @@ select.input {
   border-radius: 18px;
   background: var(--card-hi, var(--surface-hi));
   border-color: transparent;
+  /* This chip opts out of the glass GROUND on the line above and the line below,
+     so it has to opt out of the glass INK here too -- the two belong together,
+     and when glass started answering for its own surfaces the ink list inherited
+     none of the ground list's exceptions.
+
+     A .scene laid on the sky is a pane, holds its distance from it, and takes
+     the light ink. This one is laid on a scene card, which keeps --card-plain
+     and is a lit surface by mid-morning: at noon the chip's own composite came
+     out at L .63, just past where toneVars flips, which is exactly the case the
+     flip exists for. Measured before this: 2.12:1 for the name, 1.20:1 for the
+     line under it, and the only thing on the card that read was the one label
+     the glass ink never reached. */
+  --card-ink: inherit;
+  --card-ink-2: inherit;
+  --card-lamp-ink: inherit;
   color: var(--card-ink, var(--ink));
   backdrop-filter: none;
-  -webkit-backdrop-filter: none;
 }
 .bento .scene-card .scene-icon {
   width: 44px;

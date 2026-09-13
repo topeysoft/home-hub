@@ -45,7 +45,35 @@ test.describe('with a mouse', () => {
 
     await expect(page.locator('.opened-panel')).toHaveCount(1)
     // The panel shows the device as it was. If the hold had also toggled, this is where it shows.
-    await expect(page.locator('.opened-big')).toContainText(before.split('%')[0])
+    // The number, not the tile's sentence: the tile says "On, 35%" and the pane says "35%", and what
+    // is being asserted is that the two are the same light -- not how either of them words it.
+    await expect(page.locator('.opened-big')).toContainText(before.match(/\d+/)?.[0] ?? before)
+  })
+
+  test('the card lets go of the pointer when a hold opened it', async ({ page }) => {
+    /* The hold swallows the release so the light does not toggle on its way in (see hold.ts). The card
+       was never told the pointer had gone, and went on dimming to a mouse that was only passing over it
+       afterwards. Nothing but a real browser sees this: it needs a capture, a swallowed release, and a
+       move with no button held. */
+    await settled(page, ROOM)
+    const fill = page.locator('.tile.light.dimmable .fill').first()
+    const { x, y } = await centre(page, '.tile.light.dimmable')
+    const box = (await page.locator('.tile.light.dimmable').first().boundingBox())!
+
+    await page.mouse.move(x, y)
+    await page.mouse.down()
+    await page.waitForTimeout(650)              // past the hold
+    await page.mouse.up()
+    await expect(page.locator('.opened')).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(page.locator('.opened')).toHaveCount(0)
+
+    const settledWidth = await fill.evaluate(e => (e as HTMLElement).style.width)
+    for (const frac of [0.2, 0.9]) {
+      await page.mouse.move(box.x + box.width * frac, box.y + box.height / 2)
+      await page.waitForTimeout(120)
+      expect(await fill.evaluate(e => (e as HTMLElement).style.width)).toBe(settledWidth)
+    }
   })
 
   test('a hold that is released early is still only a tap', async ({ page }) => {

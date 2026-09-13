@@ -4,7 +4,9 @@ import type { Room } from './api'
 import { capsOf, currentScene, runScene, scenesFor, store, type Scene } from './store'
 import Icon from './Icon.vue'
 
-const props = defineProps<{ room: Room | null }>()
+/* stacked: the scenes as a card in the room's grid rather than a bar across
+   the top of it -- same buttons, one column. See views/RoomView.vue. */
+const props = defineProps<{ room: Room | null; stacked?: boolean }>()
 const scenes = computed(() => scenesFor(props.room))
 const caps = computed(() => capsOf(props.room ? props.room.devices : store.rooms.flatMap(r => r.devices)))
 const current = computed(() => props.room ? currentScene(props.room) : null)   // highlighted only while the room still matches it
@@ -19,7 +21,7 @@ async function choose(s: Scene) {
 </script>
 
 <template>
-  <div class="scenes" v-if="scenes.length" role="group" :aria-label="room ? 'Room scenes' : 'House scenes'">
+  <div class="scenes" :class="{ 'scenes-stacked': stacked }" v-if="scenes.length" role="group" :aria-label="room ? 'Room scenes' : 'House scenes'">
     <button v-for="s in scenes" :key="s.id" class="scene" :class="{ active: current === s.id, busy: busy === s.id, done: done === s.id }" @click="choose(s)">
       <span class="scene-icon"><Icon :name="done === s.id ? 'check' : s.icon" :size="20" /></span>
       <span class="scene-text">

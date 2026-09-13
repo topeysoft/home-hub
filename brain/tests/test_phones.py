@@ -1,7 +1,7 @@
 """Run from brain/: .venv/bin/python -m unittest -v. The phones that belong to the house: asking, allowing, the code, leaving."""
 import tempfile, time, unittest
 from pathlib import Path
-from hub.phones import Phones, open_to_strangers, SPANS
+from hub.phones import Phones, open_to_strangers, from_away, SPANS
 from hub.lock import needs_code
 
 
@@ -115,11 +115,34 @@ class GateTests(unittest.TestCase):
                      ("DELETE", "/phones/abc"), ("POST", "/phones/asks/abc/allow"), ("GET", "/devices/cam/image"), ("GET", "/backup"), ("GET", "/health"), ("GET", "/rooms/kitchen/why")]:
             self.assertFalse(open_to_strangers(m, p), p)
 
+    def test_forgetting_a_thing_is_a_change_to_the_house(self):
+        """Driving a device never asks; ending its life here does."""
+        self.assertTrue(needs_code("DELETE", "/devices/light.kitchen"))
+        self.assertFalse(needs_code("POST", "/devices/light.kitchen/on"))
+
     def test_letting_a_phone_in_or_out_needs_the_code_but_asking_does_not(self):
         for m, p in [("POST", "/phones/asks/abc/allow"), ("DELETE", "/phones/asks/abc"), ("DELETE", "/phones/abc"), ("POST", "/phones/abc/remote")]:
             self.assertTrue(needs_code(m, p), p)
         for m, p in [("POST", "/phones/ask"), ("POST", "/phones/code"), ("GET", "/phones"), ("GET", "/phones/me"), ("GET", "/phones/claim/abc")]:
             self.assertFalse(needs_code(m, p), p)
+
+
+class FromAwayTests(unittest.TestCase):
+    """Which side of the front door a request came in on. docs/away.md, piece 2, step 1."""
+
+    def test_nothing_in_front_of_the_brain_means_at_home(self):
+        self.assertFalse(from_away({}))
+
+    def test_the_door_the_tunnel_feeds_says_so(self):
+        self.assertTrue(from_away({"x-hub-via": "relay"}))
+
+    def test_the_stamp_is_read_loosely(self):
+        for v in ("relay", "Relay", "RELAY", " relay "):
+            self.assertTrue(from_away({"x-hub-via": v}), v)
+
+    def test_anything_else_is_at_home(self):
+        for v in ("", "  ", "lan", "relayed", "relay, relay", "1", "true"):
+            self.assertFalse(from_away({"x-hub-via": v}), repr(v))
 
 
 if __name__ == "__main__":

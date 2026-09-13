@@ -6,7 +6,7 @@
       "y": 0,
       "w": 1440,
       "h": 900,
-      "title": "Home \u2014 tap the lamp tile",
+      "title": "Home — tap the lamp tile",
       "is_interactive": true
     },
     {
@@ -15,7 +15,7 @@
       "y": 0,
       "w": 1440,
       "h": 900,
-      "title": "Opened in place \u2014 still frame"
+      "title": "Opened in place — still frame"
     },
     {
       "file": "Daylight.dc.html",
@@ -39,7 +39,7 @@
       "y": 2040,
       "w": 1440,
       "h": 900,
-      "title": "One cloud, every condition"
+      "title": "One cloud, every condition, both lights"
     },
     {
       "file": "Tiles.dc.html",
@@ -57,6 +57,23 @@
       "h": 900,
       "title": "Tone setting",
       "is_interactive": true
+    },
+    {
+      "file": "Room.dc.html",
+      "x": 0,
+      "y": 3060,
+      "w": 1440,
+      "h": 900,
+      "title": "A room, ranked"
+    },
+    {
+      "file": "Devices.dc.html",
+      "x": 0,
+      "y": 4080,
+      "w": 1612,
+      "h": 1160,
+      "title": "A library, not a shelf of icons",
+      "is_interactive": true
     }
   ],
   "annotations": [
@@ -65,7 +82,7 @@
       "x": -540,
       "y": 40,
       "w": 440,
-      "text": "This one runs. Tap the floor lamp tile in the rail and the open animation plays at the measured timings; the \u2715 closes it.\n\nThree chips: Sky (dusk / night / midday), Tiles (four tones) and Weather (all fifteen conditions). Weather drives both the cloud beside the greeting AND the field behind everything \u2014 try Midday against sunny, then pouring."
+      "text": "This one runs. Tap the floor lamp tile in the rail and the open animation plays at the measured timings; the ✕ closes it.\n\nThree chips: Sky (dusk / night / midday), Tiles (four tones) and Weather (all fifteen conditions). Weather drives both the cloud beside the greeting AND the field behind everything — try Midday against sunny, then pouring."
     },
     {
       "id": "tint",
@@ -86,21 +103,35 @@
       "x": 2400,
       "y": 2080,
       "w": 420,
-      "text": "Follow the light is back, doing the thing that's actually distinct: the tiles change hue family, cool and light while the sun is up, lamplit and low once it's down. Every tone tracks the sky's lightness \u2014 this one also changes character.\n\nThe extra-dim switch is a preference now, not the fix: Pastel at night lands at L 0.483 rather than 0.80 on its own."
+      "text": "Follow the light is back, doing the thing that's actually distinct: the tiles change hue family, cool and light while the sun is up, lamplit and low once it's down. Every tone tracks the sky's lightness — this one also changes character.\n\nThe extra-dim switch is a preference now, not the fix: Pastel at night lands at L 0.483 rather than 0.80 on its own."
     },
     {
       "id": "weather-gone",
       "x": -540,
       "y": 480,
       "w": 440,
-      "text": "The weather lozenge is gone from the rail \u2014 the sky behind the panel already IS the forecast, so a tile saying 'clear' repeated the whole screen.\n\nThe cloud and the 17\u00b0 moved beside the greeting, where the row was one line of text across 1440px. That bought back 264px: it now holds Tonight's two scenes, and the back door."
+      "text": "The weather lozenge is gone from the rail — the sky behind the panel already IS the forecast, so a tile saying 'clear' repeated the whole screen.\n\nThe cloud and the 17° moved beside the greeting, where the row was one line of text across 1440px. That bought back 264px: it now holds Tonight's two scenes, and the back door."
     },
     {
       "id": "weather-parts",
       "x": -540,
       "y": 2080,
       "w": 440,
-      "text": "One illustration built from parts, not fifteen drawings. It reads the same {clouds, rain, snow, fog, lightning, wind} that wxOf() already hands the sky, so the picture and the sky cannot disagree \u2014 and a new condition needs no new art.\n\nThe field takes the same three mixes palette() applies, which is why the tiles dim in heavy rain without anything special-casing rain."
+      "text": "One illustration built from parts, not fifteen drawings. It reads the same {clouds, rain, snow, fog, lightning, wind} that wxOf() already hands the sky, so the picture and the sky cannot disagree — and a new condition needs no new art.\n\nThe field takes the same three mixes palette() applies, which is why the tiles dim in heavy rain without anything special-casing rain."
+    },
+    {
+      "id": "room-rank",
+      "x": -540,
+      "y": 3100,
+      "w": 440,
+      "text": "A room is drawn today as repeat(auto-fill, minmax(190px, 1fr)) — every device the same box, whether it is the light that is on or a plug that is off. The Kitchen has four things in it and the grid stretches all four to fill the width, so an idle room reads as a full one.\n\nHome already ranks: what is playing first and tall, the glance cards small. The room gets the same grammar. The one light that is on leads and is the only tile carrying the lamp accent; the scenes the room qualifies for sit beside it; everything off goes small and quiet, in the same hue family as the light that isn't.\n\nWhat does NOT become a tile: the sensors. Humidity and the back door are read, not tapped, so they stay the line of text they already are.\n\nIt is a rail on Home because the house is bigger than the screen. A room isn't, so this is a ranked grid — the whole room in view, nothing to sweep. And the room is short: the screen says so rather than stretching to the bottom."
+    },
+    {
+      "id": "device-library",
+      "x": -540,
+      "y": 4120,
+      "w": 440,
+      "text": "Rung two of When there is no artwork — specified there, never built. Every tile in the app today is at rung four: Icon at size 150, nine per cent opacity, for a floor lamp and a doorbell alike. That is why the cards read plain.\n\nSixteen drawings, one vocabulary — a cylinder is a three-stop gradient, anything round seen at an angle is an ellipse, thickness is two ellipses offset, emitted light is a radial.\n\nThe rule that keeps it honest: what a device is MADE OF takes the ambient, what it EMITS does not. A white shade goes cool at midday and creamy at dusk, because that is what a white thing in a room does. Mix the light it throws the same way and a lamp turns blue at noon — and the tile stops meaning 'on'. Emitted light sits with the lamp accent, the live green and the danger red: signals, and a signal that changes colour is not a signal.\n\nOne drawing per device, not one per state. The lamp's shade, floor pool and halo are all driven by the one brightness number, so the render IS the readout — which is the job the progress bar under the name was standing in for.\n\nRung four is still there, at the end of row three, on purpose. Most houses will mostly see it, and a library is only worth having if the floor it stands on still holds."
     }
   ],
   "launch": {

@@ -16,7 +16,7 @@ function allowedDay(r: Routine, d: Date): boolean {
   return true
 }
 /** The next sunrise or sunset after `from`, found by walking the day in two-minute steps. Null without a location. */
-function nextSun(from: Date, rise: boolean): Date | null {
+export function nextSun(from: Date, rise: boolean): Date | null {
   const loc = store.ambient.location; if (!loc) return null
   const H = -0.833
   let prev = sunPosition(from, loc.lat, loc.lon).elevation

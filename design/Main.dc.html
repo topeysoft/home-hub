@@ -25,6 +25,38 @@
   <div style="position: absolute; inset: 0; background: {{f.veil}};"></div>
   <div style="position: absolute; inset: 0; opacity: .5; pointer-events: none; background-image: url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .035 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E&quot;);"></div>
 
+  <!-- the one material vocabulary, shared with the Devices sheet: a cylinder is a
+       three-stop gradient, a plate is two, emitted light is a radial and never
+       takes the ambient. -->
+  <svg width="0" height="0" style="position: absolute;">
+    <defs>
+      <linearGradient id="mMetal" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="{{mat.metalLo}}"/><stop offset="45%" stop-color="{{mat.metalMid}}"/><stop offset="100%" stop-color="{{mat.metalLo}}"/>
+      </linearGradient>
+      <linearGradient id="mPlate" x1="0" y1="0" x2="0.3" y2="1">
+        <stop offset="0" stop-color="{{mat.metalMid}}"/><stop offset="100%" stop-color="{{mat.metalLo}}"/>
+      </linearGradient>
+      <linearGradient id="mMatte" x1="0" y1="0" x2="0.25" y2="1">
+        <stop offset="0" stop-color="{{mat.matteHi}}"/><stop offset="100%" stop-color="{{mat.matteLo}}"/>
+      </linearGradient>
+      <linearGradient id="mShade" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="{{mat.shadeHi}}"/><stop offset="100%" stop-color="{{mat.shadeLo}}"/>
+      </linearGradient>
+      <linearGradient id="mDark" x1="0" y1="0" x2="0.4" y2="1">
+        <stop offset="0" stop-color="{{mat.darkHi}}"/><stop offset="100%" stop-color="{{mat.darkLo}}"/>
+      </linearGradient>
+      <linearGradient id="mFabric" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="{{mat.fabricLo}}"/><stop offset="42%" stop-color="{{mat.fabricHi}}"/><stop offset="100%" stop-color="{{mat.fabricLo}}"/>
+      </linearGradient>
+      <radialGradient id="mPool" cx="50%" cy="34%" r="64%">
+        <stop offset="0" stop-color="#f6dcae" stop-opacity=".62"/><stop offset="54%" stop-color="#e9b872" stop-opacity=".22"/><stop offset="100%" stop-color="#e9b872" stop-opacity="0"/>
+      </radialGradient>
+      <linearGradient id="mCone" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#f6dcae" stop-opacity=".46"/><stop offset="100%" stop-color="#e9b872" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+  </svg>
+
   <!-- everything that recedes when a device opens -->
   <div class="mo" style="position: absolute; inset: 0; transform: {{m.bgT}}; filter: {{m.bgF}}; transform-origin: 50% 42%; transition: transform {{m.bgD}} cubic-bezier(.2,.7,.2,1), filter {{m.bgD}} cubic-bezier(.2,.7,.2,1);">
 
@@ -134,6 +166,15 @@
       <!-- tap target -->
       <div onClick="{{openLamp}}" style="position: relative; flex: 0 0 auto; width: 320px; height: 340px; border-radius: 26px; overflow: hidden; cursor: pointer; background: {{t.light}}; border: 1px solid rgba(233,184,114,.34); color: {{t.ink}};">
         <div style="position: absolute; inset: 0; background: radial-gradient(90% 70% at 78% 8%, rgba(233,184,114,.34), transparent 62%);"></div>
+        <svg width="250" height="217" viewBox="0 0 150 130" style="position: absolute; right: -4px; bottom: -8px;">
+          <ellipse cx="96" cy="104" rx="54" ry="24" fill="url(#mPool)"/>
+          <rect x="94" y="42" width="5" height="70" rx="2.5" fill="url(#mMetal)"/>
+          <path d="M72 42h49l-9-30h-31z" fill="url(#mShade)"/>
+          <ellipse cx="96.5" cy="42" rx="24.5" ry="5" fill="#fbeed6" opacity=".92"/>
+          <ellipse cx="96.5" cy="45" rx="18" ry="3.5" fill="#f6dcae" opacity=".55"/>
+          <ellipse cx="96" cy="115" rx="23" ry="6" fill="{{mat.metalLo}}"/>
+          <ellipse cx="96" cy="112" rx="23" ry="6" fill="{{mat.metalMid}}"/>
+        </svg>
         <div style="position: absolute; inset: 0; padding: 22px; display: flex; flex-direction: column;">
           <div style="width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: #e9b872; color: #2a1c07;">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 18h5M10.5 21h3M12 3a6 6 0 0 0-3.7 10.7c.7.6 1.1 1.4 1.2 2.3h5c.1-.9.5-1.7 1.2-2.3A6 6 0 0 0 12 3z"/></svg>
@@ -171,7 +212,14 @@
 
       <!-- clipped by the edge, so the rail still reads as scrollable -->
       <div style="position: relative; flex: 0 0 auto; width: 248px; height: 340px; border-radius: 26px; overflow: hidden; background: {{t.lock}}; border: 1px solid rgba(224,138,138,.34); color: {{t.ink}}; padding: 20px 18px;">
-        <div style="width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: {{t.chipOff}};">
+        <svg width="196" height="170" viewBox="0 0 150 130" style="position: absolute; right: -16px; bottom: 4px;">
+          <ellipse cx="96" cy="66" rx="34" ry="34" fill="{{mat.metalLo}}" opacity=".4"/>
+          <circle cx="94" cy="64" r="34" fill="url(#mPlate)"/>
+          <circle cx="94" cy="64" r="26" fill="none" stroke="{{mat.metalLo}}" stroke-width="1.4" opacity=".55"/>
+          <rect x="88" y="40" width="12" height="48" rx="6" transform="rotate(90 94 64)" fill="url(#mMetal)"/>
+          <circle cx="94" cy="64" r="5" fill="{{mat.darkLo}}" opacity=".7"/>
+        </svg>
+        <div style="position: relative; width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: {{t.chipOff}};">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 11h12v9.5H6zM9 11V8a3 3 0 0 1 6 0v3M12 15v2"/></svg>
         </div>
         <div style="position: absolute; left: 18px; bottom: 20px;">
@@ -363,6 +411,19 @@ class Component extends DCLogic {
       wind: w0.wind > 1.5 ? 0.72 : 0,
     };
 
+
+    /* What a device is MADE OF takes the ambient; what it EMITS does not. The
+       same block the Devices sheet uses -- one vocabulary, or the shelf stops
+       looking like one shelf. */
+    const hex2rgb = (h) => [parseInt(h.substr(1, 2), 16), parseInt(h.substr(3, 2), 16), parseInt(h.substr(5, 2), 16)];
+    const amb = (h) => css(mix(hex2rgb(h), st[1], 0.22));
+    const mat = {
+      metalLo: amb('#4a4640'), metalMid: amb('#b3aa9c'),
+      matteHi: amb('#f2efe8'), matteLo: amb('#c9c4b8'),
+      darkHi: amb('#3a3d44'), darkLo: amb('#15171b'),
+      shadeHi: amb('#f7e6c6'), shadeLo: amb('#e0b981'),
+      fabricHi: amb('#7a7468'), fabricLo: amb('#4e4a42'),
+    };
     // --- a tone is a relationship to the field, not a fixed palette ----
     // dL: how much lighter than the sky a tile sits -- constant at every hour,
     //     so a tile never flips from a lit surface to a dark hole at noon.
@@ -424,7 +485,7 @@ class Component extends DCLogic {
     }
 
     return {
-      f: f, t: t, m: m, w: w,
+      f: f, t: t, m: m, w: w, mat: mat,
       openLamp: () => this.setState({ open: true }),
       closeLamp: () => this.setState({ open: false }),
     };

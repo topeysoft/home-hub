@@ -28,7 +28,7 @@ from .suggest import Suggestions
 from .settings import Settings, DATA, env_file
 from .lock import Lock, needs_code
 from .pairing import Pairing
-from .phones import Phones, COOKIE, open_to_strangers
+from .phones import Phones, COOKIE, open_to_strangers, from_away, away_refused, away_refusal
 from . import camera
 
 log = logging.getLogger("hub")
@@ -468,12 +468,21 @@ app = FastAPI(title="home-hub brain", lifespan=lifespan)
 
 @app.middleware("http")
 async def settings_lock(request: Request, call_next):
-    """Once the house has a code: only its own phones get in, and changing the house needs the code. Driving it never does."""
+    """Once the house has a code: only its own phones get in, and changing the house needs the code. Driving it never does.
+
+    From away, on top of all of that: only a phone the house has let out, and never the way in. A house with
+    no code has no phones and so lets nobody in from outside, which is the right answer -- the door to the
+    outside is something a house turns on, not something it starts with.
+    """
     request.state.phone = None
+    request.state.away = from_away(request.headers)   # off the Wi-Fi, or in through the relay: docs/away.md piece 2
+    m, path = request.method, request.url.path
+    phone = hub.phones.identify(request.cookies.get(COOKIE)) if hub.lock.locked else None
+    let_out = bool(phone and phone.get("remote"))
+    if request.state.away and away_refused(m, path, let_out):
+        return JSONResponse(away_refusal(phone, let_out), status_code=403)
     if hub.lock.locked:
-        m, path = request.method, request.url.path
         if not open_to_strangers(m, path):
-            phone = hub.phones.identify(request.cookies.get(COOKIE))
             if not phone: return JSONResponse({"detail": "phone"}, status_code=401)
             request.state.phone = phone
         if needs_code(m, path):
@@ -653,6 +662,104 @@ async def rename_device(device_id: str, body: dict):
     if not name: raise HTTPException(400, "A name is needed.")
     try: await hub.ha.send("config/entity_registry/update", entity_id=dev.id, name=name)
     except Exception as e: raise HTTPException(502, f"could not rename it: {e}")
+    return {"ok": True}
+
+
+@app.delete("/devices/{device_id}")
+async def forget_device(device_id: str):
+    """Forget a device: out of the driver's registry, and out of the house with it.
+
+    A thing with hardware behind it goes by being taken off whatever brought it, which is what removing
+    it from its integration means; a thing that is only an entry goes from the entity registry. Not
+    everything can go one at a time -- what brought a device decides whether it may leave without the
+    account it came with -- and when that is the answer the house says so in its own words rather than
+    passing on the engine's. The account is the bigger hammer and it is a door of its own (docs/settings.md,
+    Accounts).
+
+    The model is not edited here. Forgetting changes the registry, the registry says so, and the rebuild
+    that every other change goes through picks it up -- the same path rename and move take.
+    """
+    hub.ready()
+    dev = hub.home.devices.get(device_id)
+    if not dev: raise HTTPException(404, "unknown device")
+    name = dev.name
+    try:
+        if dev.hw:
+            rows = await hub.ha.send("config/device_registry/list") or []
+            row = next((d for d in rows if d.get("id") == dev.hw), None)
+            entries = list((row or {}).get("config_entries") or [])
+            if not entries: raise RuntimeError("nothing owns it")
+            for entry in entries:
+                await hub.ha.send("config/device_registry/remove_config_entry_from_device", device_id=dev.hw, config_entry_id=entry)
+        else:
+            await hub.ha.send("config/entity_registry/remove", entity_id=dev.id)
+    except Exception as e:
+        log.warning("could not forget %s: %s", device_id, e)
+        raise HTTPException(502, f"{name} cannot be forgotten on its own. It goes when the account that brought it does.")
+    hub.log.add("home", dev.id, dev.room_id, "forgotten", source="user", detail={"name": name})
+    return {"ok": True}
+
+
+# ---------- the accounts the house has signed into ----------
+PLUMBING = {"mqtt", "zwave_js", "matter"}   # the brain set these up itself: they are the engine, not somebody's account
+
+
+@app.get("/accounts")
+async def accounts():
+    """Every service the house has signed into: how it stands, and how much of the house came in with it.
+
+    What counts as an account is what brought something in or wants something from a person -- an entry with
+    devices behind it, a sign-in waiting, or a complaint. That rule keeps the weather and the clock off a page
+    about accounts without a list of names to maintain, and it keeps the driver layer's own plumbing off it too,
+    which the brain added and no person ever signed into.
+
+    Three states and no more, in the house's words rather than the engine's: it is signed in, it needs signing
+    in, or it is not answering (docs/settings.md, Accounts).
+    """
+    hub.ready()
+    try: rows = list(await hub.ha.send("config_entries/get"))
+    except Exception as e: raise HTTPException(502, f"could not read the accounts: {e}")
+    try: devices = list(await hub.ha.send("config/device_registry/list") or [])
+    except Exception: devices = []
+    waiting = {w["handler"]: w for w in hub.provision.sign_ins}
+    stopped = {q["entry_id"]: q for q in hub.provision.problems}
+    count: dict[str, int] = {}
+    for d in devices:
+        for e in d.get("config_entries") or []: count[e] = count.get(e, 0) + 1
+
+    out = []
+    for r in rows:
+        entry, domain = r.get("entry_id"), r.get("domain")
+        if domain in PLUMBING: continue
+        flow = waiting.get(domain)
+        things, bad = count.get(entry, 0), stopped.get(entry)
+        if not things and not flow and not bad: continue
+        out.append({"id": entry, "kind": await hub.add.name_of(domain), "name": r.get("title") or domain,
+                    "state": "signin" if flow else "stopped" if bad else "on",
+                    "why": (bad or {}).get("reason") or "", "flow": (flow or {}).get("flow_id"), "things": things})
+    return {"accounts": sorted(out, key=lambda a: (a["state"] == "on", a["kind"].lower()))}
+
+
+@app.delete("/accounts/{entry_id}")
+async def remove_account(entry_id: str):
+    """Sell the camera, or be done with the account: everything it brought goes with it.
+
+    The engine owns the removal -- one call, and every device and entity that came in under this entry goes
+    from its registries. The house then rebuilds off the registry the way it does after any other change, so
+    the rooms lose those tiles on their own and nothing here has to hunt them down.
+    """
+    hub.ready()
+    try: rows = list(await hub.ha.send("config_entries/get"))
+    except Exception as e: raise HTTPException(502, f"could not read the accounts: {e}")
+    row = next((r for r in rows if r.get("entry_id") == entry_id), None)
+    if not row: raise HTTPException(404, "unknown account")
+    name = row.get("title") or row.get("domain")
+    try:
+        await asyncio.to_thread(hub.add._rest, "DELETE", f"/api/config/config_entries/entry/{entry_id}")
+    except Exception as e:
+        log.warning("could not remove account %s: %s", entry_id, e)
+        raise HTTPException(502, f"{name} would not come out. The engine said: {e}")
+    hub.log.add("home", entry_id, None, "account removed", source="user", detail={"name": name, "integration": row.get("domain")})
     return {"ok": True}
 
 
@@ -930,10 +1037,17 @@ def phone():
 # ---------- the phones that belong to the house ----------
 @app.get("/phones/me")
 def phones_me(request: Request):
-    """Open to anyone on the Wi‑Fi: is this phone in, and what is the house called. The join screen starts here."""
+    """Open to anyone on the Wi‑Fi: is this phone in, and what is the house called. The join screen starts here.
+
+    From away it is the one route that answers before the door does, so the app can load and say why it is
+    not showing the house. To anyone out there who is not a phone this house has let out it gives no name
+    and no way in: from outside, the house presents as locked, which is exactly what it is to them.
+    """
     phone = hub.phones.identify(request.cookies.get(COOKIE)) if hub.lock.locked else None
+    if request.state.away and not (phone and phone.get("remote")):
+        return {"locked": True, "paired": False, "home": "the house", "phone": None, "away": True}   # no name, no way in
     return {"locked": hub.lock.locked, "paired": (not hub.lock.locked) or bool(phone), "home": hub.settings.get("home_name") or "Home",
-            "phone": hub.phones._public(phone) if phone else None}
+            "phone": hub.phones._public(phone) if phone else None, "away": request.state.away}
 
 
 @app.get("/phones")

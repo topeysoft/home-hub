@@ -4,6 +4,7 @@ import type { Device } from '../api'
 import { setFan, setSense } from '../api'
 import { perform, shortName, roomOf, store, isDead, notify, cap } from '../store'
 import Icon from '../Icon.vue'
+import DeviceArt from '../DeviceArt.vue'
 
 /* A thermostat, laid out like the dial on the wall: the number you set large in the middle with a
    step either way, what the room is actually doing beneath it, then the modes, then the fan with
@@ -60,6 +61,18 @@ const doing = computed(() => {
   if (a.value.current_humidity != null) parts.push(`${Math.round(a.value.current_humidity)}% humidity`)
   return parts.join(' · ')
 })
+/* The same thing said in the width a third has: the unit, what the house is
+   doing, and the number it is doing it from. "Currently 74°F · Cooling · 40%
+   humidity" is a desk sentence; on a tile read from the far side of a room it
+   was being ellipsized in the middle of the only part that mattered. */
+const short = computed(() => {
+  if (dead.value) return 'Not responding'
+  if (off.value) return `${unit.value} · off`
+  const act = (ACTION[a.value.hvac_action] ?? MODES[mode.value] ?? mode.value).toLowerCase()
+  const cur = fmt(a.value.current_temperature)
+  const moving = a.value.hvac_action === 'heating' || a.value.hvac_action === 'cooling'
+  return cur === '–' ? `${unit.value} · ${act}` : moving ? `${unit.value} · ${act} from ${cur}` : `${unit.value} · now ${cur}`
+})
 const clamp = (t: number) => Math.min(a.value.max_temp ?? 35, Math.max(a.value.min_temp ?? 5, t))
 function nudge(dir: 1 | -1) {
   if (dead.value || off.value) return
@@ -76,6 +89,16 @@ function nudge(dir: 1 | -1) {
   }
 }
 function setMode(m: string) { if (!dead.value && m !== mode.value) perform(props.device, 'mode', { hvac_mode: m }, { state: m }) }
+
+/* The dial on the wall, drawn — the last device with a picture in art.ts that no tile ever showed.
+   Which way the arc runs is what the house is doing, not what it was asked for: the same fallback
+   the state line uses, so a thermostat set to cool but currently holding draws no arc and says
+   Holding. */
+const doingNow = computed(() => off.value || dead.value ? '' : a.value.hvac_action ?? mode.value)
+const artState = computed(() => ({
+  cooling: doingNow.value === 'cooling' || doingNow.value === 'cool',
+  heating: doingNow.value === 'heating' || doingNow.value === 'heat',
+}))
 
 /* the fan: Home Assistant only knows on and off (and "on" means hours), so the hub keeps the timer */
 const FAN = [{ m: 15, label: '15 min' }, { m: 30, label: '30 min' }, { m: 60, label: '1 hr' }, { m: 120, label: '2 hr' }]
@@ -108,10 +131,17 @@ async function fan(minutes: number) {
       <div class="clim-dial">
         <button class="clim-btn" :disabled="off || dead" @click="nudge(-1)" aria-label="Lower the target"><Icon name="minus" :size="20" /></button>
         <div class="clim-center">
-          <span class="clim-big" v-if="off || dead">{{ fmt(a.current_temperature) }}<span class="clim-unit">{{ unit }}</span></span>
-          <span class="clim-big" v-else-if="range">{{ fmt(a.target_temp_low) }}<span class="clim-dash">–</span>{{ fmt(a.target_temp_high) }}<span class="clim-unit">{{ unit }}</span></span>
-          <span class="clim-big" v-else>{{ fmt(shown) }}<span class="clim-unit">{{ unit }}</span></span>
+          <!-- The dial goes round the number, not into a corner: this tile has no
+               quiet corner, and art.ts drew it as the dial on the wall with the
+               number deliberately left out for the tile to supply. -->
+          <div class="clim-face">
+            <DeviceArt kind="thermostat" :state="artState" fit="face" />
+            <span class="clim-big" v-if="off || dead">{{ fmt(a.current_temperature) }}<span class="clim-unit">{{ unit }}</span></span>
+            <span class="clim-big" v-else-if="range">{{ fmt(a.target_temp_low) }}<span class="clim-dash">–</span>{{ fmt(a.target_temp_high) }}<span class="clim-unit">{{ unit }}</span></span>
+            <span class="clim-big" v-else>{{ fmt(shown) }}<span class="clim-unit">{{ unit }}</span></span>
+          </div>
           <span class="clim-doing">{{ off && !dead ? `Off · ${doing}` : doing }}</span>
+          <span class="clim-short">{{ short }}</span>
         </div>
         <button class="clim-btn" :disabled="off || dead" @click="nudge(1)" aria-label="Raise the target"><Icon name="plus" :size="20" /></button>
       </div>

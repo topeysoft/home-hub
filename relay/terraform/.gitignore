@@ -1,0 +1,7 @@
+# State names the zone and every record in it, so it does not belong in the repository. The lock
+# file does: it pins the provider to a hash, which is half of what "reproducible" means here.
+.terraform/
+*.tfstate
+*.tfstate.*
+terraform.tfvars
+crash.log

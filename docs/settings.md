@@ -25,7 +25,8 @@ Found by reading the brain and the panel, ranked by how soon a household hits it
 
 1. ~~**Signing in again.**~~ **Done, 10 September 2026.** HA opens a flow of its own when a token dies, and the panel
    now draws it: each one reaches Home as a *Needs a look* line with the button that finishes it. See *What landed*.
-2. **Removing anything.** No route deletes an account, a bridge or a device. Selling a camera means opening Home Assistant.
+2. ~~**Removing anything.**~~ **Done, 12 September 2026.** An account is removed from the *Accounts* door; a device is
+   forgotten from its row when a room is being edited. See *What landed* and the order below.
 3. **People.** Presence reads Home Assistant's person entities (`brain/hub/presence.py`), and the only way to make a
    person and give them a location is Home Assistant's UI plus its companion app. "Is anyone home?" depends on two
    interfaces the product says do not exist.
@@ -128,12 +129,70 @@ As it is, plus the few things that are about the hub and nothing else.
 
 Not covered yet: an account with no flow open (Ring is the one that matters, and it is step four), and removing one.
 
+## Where this stands
+
+*Read from the tree on 12 September 2026, so a session picking this up does not have to work it out again. Update the
+date when you change what is below it.*
+
+**Standing on its own feet.** The code (`brain/hub/lock.py`): controlling the house never asks for it, and
+`needs_code()` is the one list of what does — adding, renaming, moving, the location, the rules, the flows, the
+engine's sign-in. Five wrong codes from an address and that address waits the minute out. No code set means nothing is
+locked, which is how a hub starts. Pairing (`brain/hub/phones.py`, `app/src/Join.vue`, `app/src/PeoplePage.vue`) is
+whole: the three ways in, a random token per phone with only its hash kept, day/weekend/keep stays that sweep
+themselves, `open_to_strangers()` as the list of what a phone may reach before it belongs. The phones moved onto the
+People page, next to the people they belong to. Covered by `brain/tests/test_lock.py`, `test_api_lock.py`,
+`test_phones.py`, `test_settings.py`.
+
+**What the order above still has not touched**, checked rather than assumed:
+
+- **Removing things** (step 2) landed on 12 September 2026, both halves: a device is forgotten from the row it
+  sits on when a room is being edited, and an account is removed from the new *Accounts* door on *This house*.
+  Selling a camera no longer means opening Home Assistant.
+- **People** (step 3) is a page, not yet a model. `PeoplePage.vue` draws what `presence.py` reads, and
+  `presence.py` still reads Home Assistant's `person.*` entities and the alarm — so "is anyone home?" still rests on
+  the companion app this product says does not exist. A phone has a name, not an owner: nothing mints a per-person
+  key. **Roles do not exist anywhere in the tree** — *can change things* and *can control* are in this document and
+  nowhere else. Wi-Fi presence is not written; `last_seen` on a phone is touched by that phone making a request, not
+  by the hub watching the network.
+- **The engine's login** (step 5) is still Home Assistant's to reset: `app/src/Setup.vue` line 131 says so out loud.
+- **A device's own settings and Forget** (step 6) are not drawn on the long-press.
+- **The Advanced door** (step 7) is still four doors: `AddPage.vue`, `CodePage.vue`, `HousePanel.vue`, `HubPage.vue`
+  each mount `AdvancedLink.vue`.
+- **`remote` on a phone** is recorded, defaults off, and nothing reads it. It is a promise waiting on the relay;
+  see `docs/away.md` piece 2, which now carries the build for it.
+
 ## Order
 
 By how soon a non-technical person is stuck, and by what each unlocks.
 
 1. ~~**Sign in again from the panel.**~~ Done; see *What landed* above.
-2. **Remove an account or device.** One route, one confirmation, the model cleaned up.
+2. ~~**Remove an account or device.**~~ **Done, 12 September 2026.** **An account can be removed:** `GET
+   /accounts` is the list that had to exist first — a Remove button with no list under it is not a page — and
+   `DELETE /accounts/{entry_id}` hands the entry to the engine, which takes every device and entity that came in
+   under it out of its registries; the house rebuilds off the registry as it does after any other change, so the
+   rooms lose those tiles without anything here hunting them down. Behind the code. `AccountTests` in
+   `tests/test_api_house.py`, and `AccountsPage.vue` behind a new door on *This house*.
+
+   **What counts as an account** is answered rather than listed: an entry that brought devices in, or has a
+   sign-in waiting, or is complaining. That keeps the weather and the clock off a page about accounts with no
+   list of names to maintain, and keeps the driver layer's own plumbing off it too — the brain added MQTT,
+   Z-Wave and Matter itself and nobody signed into them. Three states and no more: *Signed in*, *Needs signing
+   in*, *Not answering*. A row waiting on a person carries the flow that finishes it, handed to the Add page
+   that already draws every other one.
+
+   **A device can be forgotten:** `DELETE
+   /devices/{id}` takes a thing off whatever brought it (`config/device_registry/remove_config_entry_from_device`
+   for each entry behind it) or out of the entity registry when there is no hardware, and the rebuild every other
+   change goes through carries it out of the model. It sits at the end of the row it belongs to when a room is
+   being edited, next to rename and move, and asks once across the row in words that name what disappears. Behind
+   the code, like every change. `ForgettingTests` in `tests/test_api_house.py`.
+
+   One thing is deliberately left. **An integration is allowed to refuse** to let a device go on its own, and
+   Home Assistant offers no way to ask in advance, so the house tries and then says *it goes when the account
+   that brought it does* — which is now a thing a person can actually act on, because the account is a row on a
+   page with a Remove beside it.
+
+   Not offered on *New devices*: a thing forgotten there is only discovered again.
 3. **People and presence.** The phone key, the People sheet, Wi-Fi presence with a grace period, presence reading the
    brain's own people. This is the largest item and the one everything else about "who" hangs on.
 4. **Ring's sign-in inside the panel.** After the Ring decision below.

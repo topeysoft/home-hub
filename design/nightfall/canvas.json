@@ -1,0 +1,78 @@
+{
+  "artboards": [
+    {
+      "file": "Main.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "The shared screen \u2014 tap a card",
+      "is_interactive": true
+    },
+    {
+      "file": "Material.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 1800,
+      "title": "The material"
+    },
+    {
+      "file": "Motion.dc.html",
+      "x": 0,
+      "y": 1380,
+      "w": 1440,
+      "h": 2110,
+      "title": "How it moves",
+      "is_interactive": true
+    }
+  ],
+  "annotations": [
+    {
+      "id": "screen",
+      "x": -520,
+      "y": 40,
+      "w": 440,
+      "text": "The reference, rebuilt at 1440x900 on this house: the same composition (weather left and off-card, what is playing tall in the middle, two glance tiles stacked, the rail cut by the right edge, the orb and the family along the bottom) with your own rooms in it.\n\nFour things are live. Tap the Blinds card and the pane rises the way the video does it. Tap the field to replay the wake. Tap play. Tap the orb and it opens into the command box.\n\nThe chips above the frame: Sky swaps the condition, which drives the drawing, the words and whether there is rain on the glass. Rail runs the horizontal scroll at its three rates. Material drags the blur from 0 to 48. Motion stops everything for a still look."
+    },
+    {
+      "id": "video",
+      "x": -520,
+      "y": 520,
+      "w": 440,
+      "text": "Taken off the reference video frame by frame at 30fps, not from memory of it.\n\nTHE PANE. The card does NOT grow in place. Glass rises from the bottom edge and stops short of the top bar, so the row you came from is still there, dimmed, above it. It is at 55% after 100ms and home at 400 -- not an expo curve; expo would be over by 150ms and read as a cut. The object inside travels further and is still settling 700ms in. The bottom bar leaves 60ms BEFORE the pane starts. Closing is 300ms with no tail.\n\nTHE SWIPE. This one is not a motion blur, which is what it looks like at first. The rail has a FOCAL PLANE: what you have swiped past goes out of focus and dims, what is still in front of you stays sharp. Hold the settled scrolled frame against the resting one and the cloud and the music card are blurred while the camera, the thermostat and the next card are not.\n\nThe sky does not travel with the rail either -- about 24px against the cards' 460. It blurs in place, and the lozenge hung in front of it fades to nothing.\n\nOn top of both, small: a 2.5px velocity blur, 150ms in and 500ms off, which is why even the cards that end up sharp are soft in the middle of the move."
+    },
+    {
+      "id": "daylight",
+      "x": -520,
+      "y": 980,
+      "w": 440,
+      "text": "DOES IT SURVIVE THE DAY? The Sky chip is the test, and the answer is yes.\n\nNothing on this screen is given a colour any more. The field IS the sky -- Sky.vue's own elevation ramp, weathered by the same {clouds, rain} the drawing reads, then veiled. The blooms Nightfall is built on are laid on top at low alpha: character, not lightness.\n\nEverything else holds a distance from that. The two painted cards sit ground L + .30 at hue 178 and 328, so they are mid-toned at night and pale at noon and never once stop being lighter than the sky. The glass sits ground L + .10, and its rim swaps ends as the day lightens -- at night you see the catch along the top, at noon the shadow under the foot, which is what glass actually does. A cover and a camera frame still bring their own picture and are never overpainted; the live green, the cooling blue and the lamp amber never move at all.\n\nTwo things worth knowing. Under heavy rain, midday and dusk look nearly the same -- correct, a rainy sky is a grey sky at any hour, so judge the direction on Clear. And at clear noon this is a bright blue panel: it holds up, but it is not called Nightfall any more. The indigo, the glow and the orb are an evening identity, and that is a naming question rather than a colour one."
+    },
+    {
+      "id": "swaps",
+      "x": -520,
+      "y": 1180,
+      "w": 440,
+      "text": "What is NOT the reference, deliberately:\n\nThe car card is your living-room blinds. It keeps the exact anatomy that made it work -- a name in two lines, round glass buttons, an object drawn rather than iconned, a bar and one number -- without carrying someone else's badge. The cover is drawn, not a record sleeve. The orb is its own thing rather than a copy of the one on the phone.\n\nEverything else is from mock/brain.mjs: Sonos with Blue in Green, the backyard camera, the thermostat cooling to 71, the blinds at 70%, the front door locked, Temi and Ade home and Sam out."
+    },
+    {
+      "id": "material",
+      "x": 3080,
+      "y": 40,
+      "w": 420,
+      "text": "The pane added up one layer at a time, over something worth refracting.\n\nThe layer that does the most work is 3, the rim: a 1.4px gradient border drawn with a mask so it follows whatever radius it is given, bright at the top and bright again at the foot. That double catch is the difference between glass and a translucent rectangle.\n\nThe four signal colours are lifted unchanged from panel.css, and the note under them is the rule the panel already holds itself to."
+    },
+    {
+      "id": "motion",
+      "x": -520,
+      "y": 1500,
+      "w": 440,
+      "text": "Every demo here runs at its real duration -- the bars in the scale included, which is why 120ms flickers and 1200ms glides.\n\nTwo numbers worth arguing about. 64ms, the gap between cards arriving: below about 50 the stagger stops being legible, above about 90 the last card is late enough to feel like a second event. And 300 against 400 on the pane -- leaving deliberately shorter than arriving, because a drawer you are done with should not make you wait.\n\nEight moves, no ninth. If something on the panel wants a new one, that is usually a sign it wants to be one of these eight instead."
+    }
+  ],
+  "launch": {
+    "view": "focused",
+    "file": "Main.dc.html"
+  }
+}

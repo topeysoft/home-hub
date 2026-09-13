@@ -2,8 +2,10 @@
 
 Run from brain/: .venv/bin/python -m unittest -v
 """
-import unittest
+import json, unittest
+from unittest import mock
 
+from hub.lock import needs_code
 from tests.apptest import ApiTest
 
 
@@ -116,6 +118,60 @@ class RoomEditTests(ApiTest):
         self.assertEqual(self.client.post("/devices/light.ceiling/move", json={"room_id": "attic"}).status_code, 404)
 
 
+class ForgettingTests(ApiTest):
+    """Selling a camera, or pulling a bulb out of a lamp for good: the end of a device's life in the house.
+
+    Until this there was no route that removed anything, and the only way was Home Assistant's own UI
+    (docs/settings.md, step 2). What the house cannot do on its own it says plainly rather than in the
+    engine's words.
+    """
+
+    def registry(self, *rows):
+        self.ha.answers["config/device_registry/list"] = list(rows)
+
+    def test_forgetting_a_thing_takes_it_off_whatever_brought_it(self):
+        self.registry({"id": "hw-ceiling", "config_entries": ["entry-hw-ceiling"]})
+        r = self.client.delete("/devices/light.ceiling")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(("config/device_registry/remove_config_entry_from_device",
+                       {"device_id": "hw-ceiling", "config_entry_id": "entry-hw-ceiling"}), self.ha.sent)
+
+    def test_a_thing_more_than_one_account_brought_is_taken_off_each(self):
+        self.registry({"id": "hw-ceiling", "config_entries": ["entry-a", "entry-b"]})
+        self.assertEqual(self.client.delete("/devices/light.ceiling").status_code, 200)
+        off = [kw["config_entry_id"] for ty, kw in self.ha.sent if ty == "config/device_registry/remove_config_entry_from_device"]
+        self.assertEqual(off, ["entry-a", "entry-b"])
+
+    def test_a_thing_that_is_only_an_entry_goes_from_the_entity_registry(self):
+        self.hub.home.devices["light.ceiling"].hw = None          # no hardware behind it: nothing to take it off
+        self.assertEqual(self.client.delete("/devices/light.ceiling").status_code, 200)
+        self.assertIn(("config/entity_registry/remove", {"entity_id": "light.ceiling"}), self.ha.sent)
+
+    def test_what_will_not_go_on_its_own_says_so_in_the_houses_words(self):
+        """HA lets an integration refuse. The person is told what to do about it, not what HA said."""
+        self.registry({"id": "hw-ceiling", "config_entries": ["entry-hw-ceiling"]})
+        self.ha.fail["config/device_registry/remove_config_entry_from_device"] = RuntimeError("Integration does not support device removal")
+        r = self.client.delete("/devices/light.ceiling")
+        self.assertEqual(r.status_code, 502)
+        self.assertIn("Ceiling light", r.json()["detail"])
+        self.assertIn("account that brought it", r.json()["detail"])
+        self.assertNotIn("Integration does not support", r.json()["detail"])
+
+    def test_a_thing_nothing_brought_is_not_quietly_left_alone(self):
+        self.registry({"id": "hw-ceiling", "config_entries": []})
+        self.assertEqual(self.client.delete("/devices/light.ceiling").status_code, 502)
+
+    def test_forgetting_something_that_is_not_there(self):
+        self.assertEqual(self.client.delete("/devices/light.nowhere").status_code, 404)
+
+    def test_it_is_written_down(self):
+        self.registry({"id": "hw-ceiling", "config_entries": ["entry-hw-ceiling"]})
+        self.client.delete("/devices/light.ceiling")
+        row = self.hub.log.recent(1, subject="light.ceiling")[0]
+        self.assertEqual(row["new"], "forgotten")
+        self.assertEqual(json.loads(row["detail"])["name"], "Ceiling light")
+
+
 class EntryTests(ApiTest):
     def test_the_rooms_the_family_comes_in_through_are_kept_and_unknown_ones_dropped(self):
         r = self.client.post("/home/entry", json={"rooms": ["front", "attic", "front"]})
@@ -136,3 +192,92 @@ class LookTests(ApiTest):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class AccountTests(ApiTest):
+    """The accounts the house has signed into, and the end of one. docs/settings.md, step 2's other half.
+
+    Until this there was no route that listed what the house had signed into, which is why removing one had
+    nowhere to live: a Remove button with no list under it is not a page.
+    """
+
+    ENTRIES = [
+        {"entry_id": "e-hue", "domain": "hue", "title": "Philips Hue", "state": "loaded"},
+        {"entry_id": "e-nest", "domain": "nest", "title": "Google Nest", "state": "loaded"},
+        {"entry_id": "e-mqtt", "domain": "mqtt", "title": "Mosquitto", "state": "loaded"},
+        {"entry_id": "e-met", "domain": "met", "title": "Weather", "state": "loaded"},
+    ]
+    DEVICES = [{"id": "d1", "config_entries": ["e-hue"]}, {"id": "d2", "config_entries": ["e-hue"]},
+               {"id": "d3", "config_entries": ["e-nest"]}, {"id": "d4", "config_entries": ["e-mqtt"]}]
+
+    def setUp(self):
+        super().setUp()
+        self.ha.answers["config_entries/get"] = list(self.ENTRIES)
+        self.ha.answers["config/device_registry/list"] = list(self.DEVICES)
+        self.ha.answers["manifest/get"] = lambda integration=None, **kw: {"name": integration.title()}
+
+    def accounts(self):
+        r = self.client.get("/accounts")
+        self.assertEqual(r.status_code, 200)
+        return {a["id"]: a for a in r.json()["accounts"]}
+
+    def test_an_account_is_a_thing_that_brought_something_in(self):
+        got = self.accounts()
+        self.assertIn("e-hue", got)
+        self.assertEqual(got["e-hue"]["things"], 2)
+        self.assertEqual(got["e-hue"]["state"], "on")
+
+    def test_the_engines_own_plumbing_is_not_somebodys_account(self):
+        """The brain added MQTT, Z-Wave and Matter itself; nobody signed into them."""
+        self.assertNotIn("e-mqtt", self.accounts())
+
+    def test_nor_is_the_weather(self):
+        """It brought no devices, wants nothing from anyone, and is not what this page is about."""
+        self.assertNotIn("e-met", self.accounts())
+
+    def test_an_account_waiting_for_a_person_says_so_and_carries_the_way_to_answer(self):
+        self.hub.provision.sign_ins = [{"handler": "nest", "flow_id": "flow-1", "kind": "Nest", "title": "Google Nest"}]
+        got = self.accounts()["e-nest"]
+        self.assertEqual(got["state"], "signin")
+        self.assertEqual(got["flow"], "flow-1")
+
+    def test_an_account_that_could_not_start_says_why(self):
+        self.hub.provision.problems = [{"entry_id": "e-nest", "domain": "nest", "title": "Google Nest",
+                                        "state": "setup_retry", "reason": "the key was revoked"}]
+        got = self.accounts()["e-nest"]
+        self.assertEqual(got["state"], "stopped")
+        self.assertIn("revoked", got["why"])
+
+    def test_what_needs_a_person_is_listed_before_what_is_fine(self):
+        self.hub.provision.sign_ins = [{"handler": "nest", "flow_id": "flow-1", "kind": "Nest", "title": "Google Nest"}]
+        order = [a["id"] for a in self.client.get("/accounts").json()["accounts"]]
+        self.assertLess(order.index("e-nest"), order.index("e-hue"))
+
+    # ---- the end of one ----
+    def test_removing_an_account_asks_the_engine_to_take_it_out(self):
+        sent = []
+        with mock.patch.object(self.hub.add, "_rest", lambda m, p, d=None: sent.append((m, p)) or {}):
+            r = self.client.delete("/accounts/e-hue")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(sent, [("DELETE", "/api/config/config_entries/entry/e-hue")])
+
+    def test_it_is_written_down_with_the_name_a_person_would_recognise(self):
+        with mock.patch.object(self.hub.add, "_rest", lambda m, p, d=None: {}):
+            self.client.delete("/accounts/e-hue")
+        row = self.hub.log.recent(1, subject="e-hue")[0]
+        self.assertEqual(row["new"], "account removed")
+        self.assertEqual(json.loads(row["detail"])["name"], "Philips Hue")
+
+    def test_removing_something_that_is_not_there(self):
+        self.assertEqual(self.client.delete("/accounts/e-nothing").status_code, 404)
+
+    def test_an_engine_that_refuses_is_passed_on_with_the_name_in_front(self):
+        def no(m, p, d=None): raise RuntimeError("Integration not loaded")
+        with mock.patch.object(self.hub.add, "_rest", no):
+            r = self.client.delete("/accounts/e-hue")
+        self.assertEqual(r.status_code, 502)
+        self.assertIn("Philips Hue", r.json()["detail"])
+
+    def test_removing_an_account_needs_the_code(self):
+        self.assertTrue(needs_code("DELETE", "/accounts/e-hue"))
+        self.assertFalse(needs_code("GET", "/accounts"))

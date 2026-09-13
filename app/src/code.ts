@@ -4,6 +4,9 @@ import { reactive } from 'vue'
 export const lock = reactive({
   prompt: null as null | { resolve: (ok: boolean) => void; wrong: boolean; note: string },
   unpaired: new URLSearchParams(location.search).get('join') === '1',   // the house has a code and this is not one of its phones: the join screen is up (?join=1 previews it)
+  /* Reached from outside the house, and the house did not open: the sentence it said, to show instead of
+     itself. The words are the brain's, as every sentence the house says is (?away=1 previews the screen). */
+  away: new URLSearchParams(location.search).get('away') === '1' ? 'This phone works at home. Someone at the wall can let it out.' : null as string | null,
 })
 const KEY = 'hub-code'
 function saved(): string { try { return sessionStorage.getItem(KEY) ?? '' } catch { return '' } }
@@ -30,6 +33,17 @@ export async function request(url: string, init: RequestInit = {}): Promise<Resp
     if (!(await askCode(wrong))) throw new Error('That needs the code.')
     wrong = true
     r = await go()
+  }
+  /* From away the house answers 403 rather than asking for anything: a phone it has not let out cannot
+     be talked into it from here, so there is nothing to prompt for and the screen says so instead. */
+  if (r.status === 403) {
+    let body: any = null
+    try { body = await r.clone().json() } catch {}
+    if (body && ['remote', 'away', 'at-home'].includes(body.detail)) {
+      const said: string = body.message ?? 'This house is not open from here.'
+      lock.away = said
+      throw new Error(said)
+    }
   }
   return r
 }

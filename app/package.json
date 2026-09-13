@@ -5,19 +5,27 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:mock": "node mock/dev.mjs",
     "build": "vue-tsc -b && vite build",
     "preview": "vite preview",
     "mock": "node mock/brain.mjs",
     "shots": "node mock/shots.mjs",
+    "cost": "node mock/cost.mjs",
+    "art-sheet": "node mock/art-sheet.mjs",
+    "art-sheet:check": "node mock/art-sheet.mjs --check",
+    "weather-sheet": "node mock/weather-sheet.mjs",
+    "weather-sheet:check": "node mock/weather-sheet.mjs --check",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "typecheck": "vue-tsc -b",
+    "lint": "eslint .",
     "e2e": "playwright test",
-    "lint": "eslint ."
+    "e2e:watch": "playwright test --ui"
   },
   "dependencies": {
     "@fontsource-variable/instrument-sans": "^5.3.0",
+    "@fontsource-variable/plus-jakarta-sans": "^5.3.0",
     "@fontsource/instrument-serif": "^5.3.0",
     "vue": "^3.5.41"
   },

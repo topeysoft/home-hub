@@ -12,6 +12,10 @@ const ip = ref('')
 onMounted(async () => {
   try { const p = await getPhone(); if (p.ip && !p.ip.startsWith('127.') && !url.includes(p.ip)) ip.value = p.ip } catch {}
 })
+/* The code is drawn by the hub. If it cannot be -- an old hub, or one whose
+   drawing library was never installed -- the address is the whole answer anyway,
+   so the card says that instead of leaving a broken picture on the wall. */
+const code = ref(true)
 const ua = navigator.userAgent
 const os = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && 'ontouchend' in document) ? 'ios' : /Android/.test(ua) ? 'android' : 'other'
 const onPhone = matchMedia('(max-width: 860px)').matches
@@ -24,10 +28,12 @@ const STEPS = {
 
 <template>
   <div class="phone" :class="{ compact }">
-    <div class="phone-qr" v-if="!onPhone"><img :src="qrUrl(url)" alt="A code the phone's camera opens the house from" width="132" height="132" /></div>
+    <div class="phone-qr" v-if="!onPhone && code"><img :src="qrUrl(url)" alt="A code the phone's camera opens the house from" width="132" height="132" @error="code = false" /></div>
     <div class="phone-text">
       <p class="phone-url">
-        <template v-if="!onPhone">Point the phone's camera at the code, or open </template><template v-else>You are at </template><b>{{ url }}</b>
+        <template v-if="onPhone">You are at </template>
+        <template v-else-if="code">Point the phone's camera at the code, or open </template>
+        <template v-else>On the phone, open </template><b>{{ url }}</b>
         <span v-if="ip"> · if that does not open, type <b>http://{{ ip }}</b> instead</span>
       </p>
       <div class="phone-os" v-for="k in shown" :key="k">

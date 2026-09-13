@@ -3,6 +3,8 @@ import { computed, ref } from 'vue'
 import type { Device } from '../api'
 import { perform, shortName, roomOf, store, isDead } from '../store'
 import Icon from '../Icon.vue'
+import DeviceArt from '../DeviceArt.vue'
+import { lightKind } from '../art'
 
 const props = defineProps<{ device: Device }>()
 const on = computed(() => props.device.state === 'on')
@@ -13,13 +15,19 @@ const live = computed(() => Math.round((props.device.attrs.brightness ?? 0) / 2.
 const preview = ref<number | null>(null)
 const pct = computed(() => preview.value ?? (on.value ? live.value || 100 : 0))
 const name = computed(() => shortName(props.device, roomOf(props.device)))
-const hintSeen = ref(safe(() => localStorage.getItem('dim-hint') === '1'))
-function safe<T>(f: () => T): T | false { try { return f() } catch { return false } }
+/* Which drawing this light gets. A guess off the name for now -- see lightKind's
+   own note; the real answer is a per-device setting nobody has been asked for yet. */
+const kind = computed(() => lightKind(props.device.name || name.value))
+/* What it is doing, in the words the boards use: on, and how much of itself it
+   is giving. The tile used to say "35% · slide to dim" until the first drag --
+   a number with an instruction stapled to it, in lamplight, on the one line a
+   person reads from the far side of the room. The gesture is still here and the
+   pane still says it in a sentence; the tile says the state. */
 const label = computed(() => {
   if (dead.value) return 'Not responding'
   if (!on.value) return 'Off'
   if (!dimmable.value) return 'On'
-  return hintSeen.value ? `${pct.value}%` : `${pct.value}% · slide to dim`
+  return `On, ${pct.value}%`
 })
 
 let startX = 0, dragging = false, el: HTMLElement | null = null
@@ -35,12 +43,19 @@ function move(e: PointerEvent) {
     preview.value = Math.min(100, Math.max(1, Math.round(((e.clientX - r.left) / r.width) * 100)))
   }
 }
+/* The hold that opens a card swallows the release so a light never toggles on its way into its own panel
+   (hold.ts says why). The cost is that this tile is never told the pointer has gone, and a tile that still
+   believes a finger is down goes on dimming to a mouse that is only passing over it. Losing the capture is
+   the one signal that arrives either way, and it ends the gesture without doing anything -- a hold asked to
+   open the panel, it did not ask for a new brightness. A cancelled pointer means the same thing: the gesture
+   stopped, so nothing was asked for. */
+function release() { el = null; dragging = false; preview.value = null }
+
 async function up() {
   if (!el) return
   el = null
   const d = props.device
   if (dragging && preview.value != null) {
-    hintSeen.value = true; safe(() => localStorage.setItem('dim-hint', '1'))
     await perform(d, 'on', { brightness_pct: preview.value }, { state: 'on', attrs: { brightness: Math.round(preview.value * 2.55) } })
   } else {
     await perform(d, on.value ? 'off' : 'on', undefined, { state: on.value ? 'off' : 'on' })
@@ -51,9 +66,9 @@ async function up() {
 
 <template>
   <div class="tile light" :class="{ on, dead, dimmable, pending }" role="button" :aria-label="`${name}, ${label}`" :aria-pressed="on"
-       tabindex="0" @pointerdown="down" @pointermove="move" @pointerup="up" @pointercancel="up" @keydown.enter.space.prevent="perform(device, on ? 'off' : 'on', undefined, { state: on ? 'off' : 'on' })">
+       tabindex="0" @pointerdown="down" @pointermove="move" @pointerup="up" @pointercancel="release" @lostpointercapture="release" @keydown.enter.space.prevent="perform(device, on ? 'off' : 'on', undefined, { state: on ? 'off' : 'on' })">
     <div class="fill" :style="{ width: pct + '%' }"></div>
-    <span class="tile-art" aria-hidden="true"><Icon name="light" :size="150" /></span>
+    <DeviceArt :kind="kind" :state="{ on, brightness: pct / 100 }" />
     <span class="tile-maker" v-if="device.maker">{{ device.maker }}</span>
     <div class="tile-body">
       <span class="tile-icon"><Icon name="light" /></span>

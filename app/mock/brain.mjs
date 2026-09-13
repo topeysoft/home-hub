@@ -2,7 +2,7 @@
    house of eight rooms. `npm run mock`, then open http://localhost:8399/ (every ?at= ?wx= ?month= ?room= ?sheet= ?setup=
    preview works), or `BRAIN=http://localhost:8399 npm run dev` for hot reload against it.
    Knobs: PORT, WX=rainy (a condition), FOUND=0 (nothing new nearby), ENGINE=down (the engine-starting screen),
-   LOCKED=1 (a code is set), FRESH=1 (first run), ASK=1 (a phone is asking to join; needs LOCKED=1), ?join=1 (the join screen). Nothing here talks to a real device; every POST says ok. */
+   LOCKED=1 (a code is set), FRESH=1 (first run), ASK=1 (a phone is asking to join; needs LOCKED=1), ?join=1 (the join screen). Nothing here talks to a real device; every POST or DELETE says ok. */
 import http from 'node:http'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -19,7 +19,7 @@ const rooms = [
     dev('l1', 'Ceiling light', 'living', 'light', 'on', { brightness: 90, supported_color_modes: ['brightness'] }, 'Philips Hue'),
     dev('l2', 'Floor lamp', 'living', 'light', 'on', { brightness: 60, supported_color_modes: ['brightness'] }),
     dev('l3', 'Reading lamp', 'living', 'light', 'off', { supported_color_modes: ['onoff'] }),
-    dev('m1', 'Living room TV', 'living', 'media', 'playing', { media_title: 'The Bear', media_artist: 'Season 3, Episode 4', app_name: 'Disney+', volume_level: 0.35, entity_picture: '/x.jpg' }),
+    dev('m1', 'Living room TV', 'living', 'media', 'playing', { media_title: 'The Bear', media_artist: 'Season 3, Episode 4', app_name: 'Disney+', volume_level: 0.35, entity_picture: '/x.jpg', media_position: 1421, media_duration: 3740 }),
     dev('s1', 'Sonos', 'living', 'media', 'paused', { media_title: 'Blue in Green', media_artist: 'Miles Davis', volume_level: 0.2 }),
     dev('c1', 'Blinds', 'living', 'cover', 'open', { current_position: 70 }, 'IKEA'),
     dev('t1', 'Thermostat', 'living', 'climate', 'cool', { current_temperature: 74, temperature: 71, hvac_action: 'cooling', hvac_modes: ['heat', 'cool', 'heat_cool', 'off'], fan_modes: ['on', 'auto'], fan_mode: 'auto', current_humidity: 48 }),
@@ -80,7 +80,7 @@ const presence = process.env.PEOPLE === '0'
   ? { somebody: null, since: null, source: null, people: [], alarm: null }
   : { somebody: true, since: Date.now() - 3600e3, source: 'people', people: [{ name: 'Temi', home: true }, { name: 'Sam', home: false }, { name: 'Ade', home: true }], alarm: null }
 const ambient = { location: { name: 'Holts Summit, MO', lat: 38.6355985, lon: -92.1176322 }, weather: { id: 'w', condition: process.env.WX || 'partlycloudy', temperature: 78, unit: '°F', humidity: 48, wind_speed: 6, wind_unit: 'mph' },
-  look: { tone: process.env.TONE || 'follow', layout: process.env.LAYOUT || 'stack', nav: process.env.NAV || 'side' } }   // LAYOUT=rail TONE=pastel NAV=top start the house somewhere else
+  look: { tone: process.env.TONE || 'follow', layout: process.env.LAYOUT || 'stack', nav: process.env.NAV || 'side', face: process.env.FACE || 'paper' } }   // LAYOUT=rail TONE=pastel NAV=top FACE=glass start the house somewhere else
 const scenes = { movie: [['light', 'off', {}], ['media', 'on', {}]], guests: [['light', 'on', {}]], asleep: [['light', 'off', {}], ['media', 'off', {}], ['lock', 'lock', {}]], empty: [['light', 'off', {}], ['media', 'pause', {}]], away: [['light', 'off', {}], ['media', 'off', {}], ['switch', 'off', {}], ['lock', 'lock', {}]] }
 const events = [
   { ts: now - 40, kind: 'state', subject: 'mo1', old: 'off', new: 'on', source: 'ha', detail: null },
@@ -138,6 +138,19 @@ const server = http.createServer((req, res) => {
   if (p === '/rules') return json(res, rules)
   if (p === '/discovered') return json(res, discovered)
   if (p === '/health') return json(res, { notes })
+  // What a speaker can play. The real brain generates the noises and lists the sounds folder; here it is
+  // a fixed shelf, so the sounds sheet has something to draw without a hub or a speaker in the room.
+  if (p === '/sounds') return json(res, {
+    sounds: [
+      { id: 'white', name: 'White noise', kind: 'made', ready: true },
+      { id: 'pink', name: 'Pink noise', kind: 'made', ready: true },
+      { id: 'brown', name: 'Brown noise', kind: 'made', ready: true },
+      { id: 'rain', name: 'Rain', kind: 'file', ready: true },
+      { id: 'waves', name: 'Waves', kind: 'file', ready: false },
+    ],
+    playing: {},
+    folder: '/data/sounds',
+  })
   if (p === '/flows/r1') {
     if (req.method !== 'POST') return json(res, signIn)
     const i = notes.findIndex(n => n.flow === 'r1'); if (i >= 0) notes.splice(i, 1)   // answered: the line on Home goes
@@ -155,6 +168,14 @@ const server = http.createServer((req, res) => {
   if (p === '/phone') return json(res, { ip: '192.168.1.40' })
   if (p === '/phones/me') return json(res, { locked: !!process.env.LOCKED, paired: true, home: 'Main Palace', phone: null })
   if (p === '/phones') return json(res, phones)
+  /* the accounts page: one of each state, so the page can be read without a house behind it.
+     ACCOUNTS=0 empties it (the nothing-signed-in-yet case). */
+  if (p === '/accounts') return json(res, { accounts: process.env.ACCOUNTS === '0' ? [] : [
+    { id: 'e-nest', kind: 'Google Nest', name: 'Google Nest', state: 'signin', why: '', flow: 'flow-nest', things: 4 },
+    { id: 'e-ring', kind: 'Ring', name: 'Ring', state: 'stopped', why: 'the key it was given has been revoked', flow: null, things: 3 },
+    { id: 'e-hue', kind: 'Philips Hue', name: 'Philips Hue bridge', state: 'on', why: '', flow: null, things: 11 },
+    { id: 'e-tesla', kind: 'Tesla', name: 'Tesla', state: 'on', why: '', flow: null, things: 1 },
+  ] })
   if (p === '/phones/ask' && req.method === 'POST') return json(res, { id: 'ask1', name: "Sam's iPhone", kind: 'phone', asked: now })
   if (p.startsWith('/phones/claim/')) return json(res, { state: 'waiting' })
   if (p === '/qr.svg') { res.writeHead(200, { 'Content-Type': 'image/svg+xml' }); return res.end(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 29 29'><rect width='29' height='29' fill='#fff'/><path d='M2 2h7v7H2zM3 3v5h5V3zM4 4h3v3H4zM20 2h7v7h-7zM21 3v5h5V3zM22 4h3v3h-3zM2 20h7v7H2zM3 21v5h5v-5zM4 22h3v3H4zM11 2h2v2h-2zM14 3h2v2h-2zM11 6h3v2h-3zM16 7h2v2h-2zM2 11h2v2H2zM5 12h2v2H5zM8 11h2v3H8zM11 10h2v3h-2zM14 11h3v2h-3zM18 10h2v3h-2zM21 11h2v2h-2zM24 12h3v2h-3zM3 15h3v2H3zM7 16h2v2H7zM11 14h2v3h-2zM14 15h2v3h-2zM17 14h3v2h-3zM21 15h2v3h-2zM24 16h3v2h-3zM11 19h2v2h-2zM14 20h3v2h-3zM18 19h2v3h-2zM21 20h2v2h-2zM24 19h3v3h-3zM11 23h3v2h-3zM15 24h2v3h-2zM18 23h3v2h-3zM22 24h2v2h-2zM25 23h2v4h-2z'/></svg>`) }
@@ -169,10 +190,10 @@ const server = http.createServer((req, res) => {
   if (img) { res.writeHead(200, { 'Content-Type': 'image/svg+xml' }); return res.end(PICS[img[1]] ?? pic('#333', '#111')) }
   if (p === '/look' && req.method === 'POST') { let b = ''; req.on('data', c => (b += c)); return req.on('end', () => {
     let v = {}; try { v = JSON.parse(b) } catch {}
-    for (const k of ['tone', 'layout', 'nav']) if (v[k]) ambient.look[k] = v[k]   // unknown keys dropped, as the brain does
+    for (const k of ['tone', 'layout', 'nav', 'face']) if (v[k]) ambient.look[k] = v[k]   // unknown keys dropped, as the brain does
     json(res, ambient.look)
   }) }
-  if (req.method === 'POST') return json(res, { ok: true })
+  if (req.method === 'POST' || req.method === 'DELETE') return json(res, { ok: true })   // forgetting a thing, or a phone leaving, answer like every other change
   let f = path.join(DIST, p === '/' ? 'index.html' : p)
   if (!fs.existsSync(f)) f = path.join(DIST, 'index.html')
   if (!fs.existsSync(f)) { res.writeHead(503, { 'Content-Type': 'text/plain' }); return res.end('No dist/ yet: run `npm run build` first, or use `BRAIN=http://localhost:' + PORT + ' npm run dev`.') }

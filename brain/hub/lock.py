@@ -19,7 +19,9 @@ def needs_code(method: str, path: str) -> bool:
     if path == "/rooms" and m == "POST": return True
     if path.startswith("/rooms/") and (m == "DELETE" or path.endswith("/rename")): return True
     if path.startswith("/devices/") and path.endswith(("/move", "/rename")): return True
+    if path.startswith("/devices/") and m == "DELETE": return True           # forgetting one is a change to the house, not a tap
     if path.startswith(("/flows", "/credentials")): return True
+    if path.startswith("/accounts") and m == "DELETE": return True   # everything it brought goes with it
     if path in ("/location", "/home/entry") and m == "POST": return True
     if path.startswith("/rules") and m in ("PUT", "POST", "DELETE"): return True
     if path == "/drafts/suggest": return False                                   # looking for habits changes nothing

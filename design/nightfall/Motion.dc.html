@@ -1,0 +1,473 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200;300;400;500;600;700&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: "Plus Jakarta Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      --e: cubic-bezier(.32,.72,0,1);
+      --e-out: cubic-bezier(.2,.7,.2,1);
+      --e-in: cubic-bezier(.12,.78,.24,1);      /* a pane arriving */
+      --e-out2: cubic-bezier(.4,0,.6,1);        /* a pane leaving */
+    }
+    a { color: #a99cff; } a:hover { color: #cfc7ff; }
+    .lab { font-size: 10px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: rgba(255,255,255,.44); }
+    .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11px; line-height: 1.55; color: rgba(255,255,255,.6); }
+    .stage { position: relative; height: 200px; border-radius: 20px; overflow: hidden; background: linear-gradient(150deg, rgba(255,255,255,.09), rgba(255,255,255,.035)); box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); }
+    .plate { position: absolute; border-radius: 12px; background: linear-gradient(148deg, rgba(255,255,255,.34), rgba(255,255,255,.12)); box-shadow: inset 0 0 0 1px rgba(255,255,255,.3); }
+
+    /* the scale: every bar runs at its real duration, so a blink looks like a
+       blink and a glide looks like a glide */
+    @keyframes grow { 0% { width: 0; opacity: 1; } 82% { width: 100%; opacity: 1; } 100% { width: 100%; opacity: .18; } }
+
+    /* 1 — the wake */
+    @keyframes riseLoop {
+      0% { opacity: 0; transform: translateY(26px) scale(.982); filter: blur(14px); }
+      20% { opacity: 1; transform: none; filter: blur(0); }
+      86% { opacity: 1; transform: none; filter: blur(0); }
+      100% { opacity: 0; transform: translateY(26px) scale(.982); filter: blur(14px); }
+    }
+    .riseLoop { animation: riseLoop 3400ms var(--e) infinite both; }
+
+    /* 2 — the press */
+    @keyframes pressLoop { 0%, 60% { transform: scale(1); } 66% { transform: scale(.972); } 79%, 100% { transform: scale(1); } }
+    .pressLoop { animation: pressLoop 2000ms var(--e) infinite; }
+
+    /* 3 — the pane. Each segment carries its own curve, because arriving and
+       leaving are not the same move played backwards. */
+    @keyframes paneLoop {
+      0%, 10% { transform: translateY(100%); animation-timing-function: var(--e-in); }
+      20%, 76% { transform: translateY(0); animation-timing-function: var(--e-out2); }
+      83.5%, 100% { transform: translateY(100%); }
+    }
+    .paneLoop { animation: paneLoop 4000ms linear infinite; }
+    @keyframes objLoop {
+      0%, 10% { transform: translateX(64px) scale(1.14); animation-timing-function: var(--e-in); }
+      27.5%, 76% { transform: none; animation-timing-function: var(--e-out2); }
+      83.5%, 100% { transform: translateX(64px) scale(1.14); }
+    }
+    .objLoop { animation: objLoop 4000ms linear infinite; }
+    @keyframes scrimLoop {
+      0%, 10% { opacity: 0; animation-timing-function: var(--e-in); }
+      20%, 76% { opacity: 1; animation-timing-function: var(--e-out2); }
+      83.5%, 100% { opacity: 0; }
+    }
+    .scrimLoop { animation: scrimLoop 4000ms linear infinite; }
+    @keyframes footLoop {
+      0%, 8.5% { opacity: 1; transform: none; }
+      13.5%, 79.5% { opacity: 0; transform: translateY(14px); }
+      86%, 100% { opacity: 1; transform: none; }
+    }
+    .footLoop { animation: footLoop 4000ms var(--e) infinite; }
+
+    /* 6 — the orb opening into the command box */
+    @keyframes boxLoop { 0%, 14% { width: 56px; } 25.5%, 72% { width: 300px; } 83.5%, 100% { width: 56px; } }
+    @keyframes hintLoop { 0%, 18.5% { opacity: 0; } 25%, 72% { opacity: 1; } 78%, 100% { opacity: 0; } }
+    .boxLoop { animation: boxLoop 4000ms var(--e) infinite; }
+    .hintLoop { animation: hintLoop 4000ms var(--e) infinite; }
+
+    /* 4 — the swipe. The rail has a focal plane: what it has gone past blurs
+       and dims, what is still in front of you stays sharp. The velocity blur on
+       top is small and short, and is why even the cards that end up sharp are
+       soft in the middle of the move. */
+    @keyframes swTrack { 0%, 12% { transform: none; } 25%, 72% { transform: translateX(-104px); } 85%, 100% { transform: none; } }
+    @keyframes swPast { 0%, 12% { filter: blur(0px); opacity: 1; transform: none; } 25%, 72% { filter: blur(4px); opacity: .6; transform: translateX(34px); } 85%, 100% { filter: blur(0px); opacity: 1; transform: none; } }
+    @keyframes swSky { 0%, 12% { filter: blur(0px); opacity: 1; } 25%, 72% { filter: blur(5px); opacity: .72; } 85%, 100% { filter: blur(0px); opacity: 1; } }
+    @keyframes swLoz { 0%, 12% { filter: blur(0px); opacity: 1; } 25%, 72% { filter: blur(5px); opacity: 0; } 85%, 100% { filter: blur(0px); opacity: 1; } }
+    @keyframes swNear { 0%, 12% { filter: blur(0px); } 15% { filter: blur(2.5px); } 25%, 72% { filter: blur(0px); } 75% { filter: blur(2.5px); } 85%, 100% { filter: blur(0px); } }
+    .swTrack { animation: swTrack 5000ms var(--e-out) infinite; }
+    .swPast { animation: swPast 5000ms var(--e-out) infinite; }
+    .swSky { animation: swSky 5000ms var(--e-out) infinite; }
+    .swLoz { animation: swLoz 5000ms var(--e-out) infinite; }
+    .swNear { animation: swNear 5000ms var(--e-out) infinite; }
+
+    /* 4 — changing tab */
+    @keyframes xfadeA { 0%, 40% { opacity: 1; transform: none; } 50.5%, 90% { opacity: 0; transform: translateX(-14px); } 100% { opacity: 1; transform: none; } }
+    @keyframes xfadeB { 0%, 40% { opacity: 0; transform: translateX(14px); } 50.5%, 90% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateX(14px); } }
+    .xfadeA { animation: xfadeA 4000ms var(--e) infinite; }
+    .xfadeB { animation: xfadeB 4000ms var(--e) infinite; }
+
+    /* 5 — listening */
+    @keyframes listenLoop { 0%, 18% { transform: scale(1); } 32%, 70% { transform: scale(1.18); } 86%, 100% { transform: scale(1); } }
+    @keyframes ringLoop { 0%, 22% { transform: scale(.86); opacity: 0; } 38% { opacity: .55; } 82%, 100% { transform: scale(2.2); opacity: 0; } }
+    .listenLoop { animation: listenLoop 3600ms var(--e) infinite; }
+    .ringLoop { animation: ringLoop 3600ms var(--e-out) infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes spinback { to { transform: rotate(-360deg); } }
+
+    /* 6 — the weather turning */
+    @keyframes wxA { 0%, 38% { opacity: 1; } 62%, 88% { opacity: 0; } 100% { opacity: 1; } }
+    @keyframes wxB { 0%, 38% { opacity: 0; } 62%, 88% { opacity: 1; } 100% { opacity: 0; } }
+    .wxA { animation: wxA 5000ms linear infinite; }
+    .wxB { animation: wxB 5000ms linear infinite; }
+    @keyframes fall { 0% { transform: translateY(-14px); opacity: 0; } 22% { opacity: 1; } 78% { opacity: 1; } 100% { transform: translateY(46px); opacity: 0; } }
+    .rain { animation: fall 1.6s linear infinite; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .riseLoop, .pressLoop, .paneLoop, .objLoop, .scrimLoop, .footLoop, .swTrack, .swPast, .swSky, .swLoz, .swNear, .boxLoop, .hintLoop, .xfadeA, .xfadeB, .listenLoop, .ringLoop, .wxA, .wxB, .rain { animation: none !important; }
+    }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 1440px; min-height: 2110px; overflow: hidden; background: #0c0d28; color: #fff; font-size: 17px; line-height: 1.45;">
+
+  <div style="position: absolute; inset: -12%; background:
+    radial-gradient(58% 54% at 30% 64%, rgba(101,79,226,.42), transparent 68%),
+    radial-gradient(44% 42% at 74% 12%, rgba(56,84,204,.3), transparent 70%),
+    radial-gradient(62% 52% at 54% 110%, rgba(54,36,152,.52), transparent 72%),
+    radial-gradient(74% 64% at 6% 2%, rgba(26,28,88,.9), transparent 72%);"></div>
+  <div style="position: absolute; inset: 0; opacity: .5; background-image: url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .035 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E&quot;);"></div>
+
+  <div style="position: relative; padding: 56px;">
+
+    <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 60px;">
+      <div>
+        <div class="lab">How it moves</div>
+        <h1 style="margin: 12px 0 0; font-size: 52px; font-weight: 600; letter-spacing: -.035em; line-height: 1;">Nightfall glass</h1>
+      </div>
+      <p style="margin: 0; max-width: 620px; font-size: 17px; color: rgba(255,255,255,.66); text-wrap: pretty;">
+        This screen hangs on a wall and is looked at from across a room, so nothing here is quick and nothing
+        here is a bounce. Weight is the whole idea: a pane of glass leaves fast and arrives slowly, and it
+        settles rather than stopping.
+      </p>
+    </div>
+
+    <!-- ---------------- curves ---------------- -->
+    <div style="margin-top: 52px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px;">
+
+      <div style="display: flex; gap: 22px; align-items: flex-start;">
+        <svg width="120" height="120" viewBox="0 0 120 120" style="flex: 0 0 auto; border-radius: 12px; background: rgba(255,255,255,.05); box-shadow: inset 0 0 0 1px rgba(255,255,255,.1);">
+          <path d="M0 120 L120 0" stroke="rgba(255,255,255,.14)" stroke-width="1" stroke-dasharray="3 4"/>
+          <path d="M0 120 C38.4 33.6 0 0 120 0" stroke="#8b7bff" stroke-width="2.4" fill="none"/>
+        </svg>
+        <div>
+          <div style="font-size: 16px; font-weight: 600;">The settle</div>
+          <div class="mono">cubic-bezier(.32,.72,0,1)</div>
+          <p style="margin: 8px 0 0; font-size: 14px; color: rgba(255,255,255,.56);">Everything a finger starts. Leaves at once, arrives without a stop.</p>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 18px; align-items: flex-start;">
+        <svg width="108" height="108" viewBox="0 0 120 120" style="flex: 0 0 auto; border-radius: 12px; background: rgba(255,255,255,.05); box-shadow: inset 0 0 0 1px rgba(255,255,255,.1);">
+          <path d="M0 120 L120 0" stroke="rgba(255,255,255,.14)" stroke-width="1" stroke-dasharray="3 4"/>
+          <path d="M0 120 C14.4 26.4 28.8 0 120 0" stroke="#ff8fc4" stroke-width="2.4" fill="none"/>
+        </svg>
+        <div>
+          <div style="font-size: 16px; font-weight: 600;">The pane arriving</div>
+          <div class="mono">cubic-bezier(.12,.78,.24,1)</div>
+          <p style="margin: 8px 0 0; font-size: 14px; color: rgba(255,255,255,.56);">Half the distance in the first 100ms, home at 400. Expo would be over by 150 and read as a cut.</p>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 18px; align-items: flex-start;">
+        <svg width="108" height="108" viewBox="0 0 120 120" style="flex: 0 0 auto; border-radius: 12px; background: rgba(255,255,255,.05); box-shadow: inset 0 0 0 1px rgba(255,255,255,.1);">
+          <path d="M0 120 L120 0" stroke="rgba(255,255,255,.14)" stroke-width="1" stroke-dasharray="3 4"/>
+          <path d="M0 120 C48 120 72 0 120 0" stroke="#57e0d0" stroke-width="2.4" fill="none"/>
+        </svg>
+        <div>
+          <div style="font-size: 16px; font-weight: 600;">The pane leaving</div>
+          <div class="mono">cubic-bezier(.4,0,.6,1)</div>
+          <p style="margin: 8px 0 0; font-size: 14px; color: rgba(255,255,255,.56);">Even at both ends, and short. Leaving should never take as long as arriving.</p>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 18px; align-items: flex-start;">
+        <svg width="108" height="108" viewBox="0 0 120 120" style="flex: 0 0 auto; border-radius: 12px; background: rgba(255,255,255,.05); box-shadow: inset 0 0 0 1px rgba(255,255,255,.1);">
+          <path d="M0 120 L120 0" stroke="rgba(255,255,255,.14)" stroke-width="1" stroke-dasharray="3 4"/>
+          <path d="M0 120 C24 36 24 0 120 0" stroke="#ffc98a" stroke-width="2.4" fill="none"/>
+        </svg>
+        <div>
+          <div style="font-size: 16px; font-weight: 600;">The house&#39;s own</div>
+          <div class="mono">cubic-bezier(.2,.7,.2,1)</div>
+          <p style="margin: 8px 0 0; font-size: 14px; color: rgba(255,255,255,.56);">Already in <a href="#">panel.css</a> as <span class="mono">--ease</span>: the rail, and anything the house decides by itself.</p>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ---------------- the scale ---------------- -->
+    <div style="margin-top: 52px;">
+      <div class="lab">Fourteen durations, and nothing between them</div>
+      <div style="display: flex; flex-direction: column; gap: 11px; margin-top: 18px;">
+
+        <div style="display: flex; align-items: center; gap: 20px;">
+          <span style="flex: 0 0 76px; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums;">120ms</span>
+          <div style="flex: 0 0 420px; height: 8px; border-radius: 8px; background: rgba(255,255,255,.12); overflow: hidden;"><div style="height: 100%; border-radius: 8px; background: #8b7bff; animation: grow 120ms var(--e) infinite;"></div></div>
+          <span style="font-size: 14px; color: rgba(255,255,255,.6);">a finger going down</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 20px;">
+          <span style="flex: 0 0 76px; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums;">150ms</span>
+          <div style="flex: 0 0 420px; height: 8px; border-radius: 8px; background: rgba(255,255,255,.12); overflow: hidden;"><div style="height: 100%; border-radius: 8px; background: #ff8fc4; animation: grow 150ms cubic-bezier(.3,0,.7,1) infinite;"></div></div>
+          <span style="font-size: 14px; color: rgba(255,255,255,.6);">the velocity blur coming in</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 20px;">
+          <span style="flex: 0 0 76px; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums;">220ms</span>
+          <div style="flex: 0 0 420px; height: 8px; border-radius: 8px; background: rgba(255,255,255,.12); overflow: hidden;"><div style="height: 100%; border-radius: 8px; background: #8b7bff; animation: grow 220ms var(--e) infinite;"></div></div>
+          <span style="font-size: 14px; color: rgba(255,255,255,.6);">a chip changing, a colour changing</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 20px;">
+          <span style="flex: 0 0 76px; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums;">260ms</span>
+          <div style="flex: 0 0 420px; height: 8px; border-radius: 8px; background: rgba(255,255,255,.12); overflow: hidden;"><div style="height: 100%; border-radius: 8px; background: #8b7bff; animation: grow 260ms var(--e) infinite;"></div></div>
+          <span style="font-size: 14px; color: rgba(255,255,255,.6);">a finger coming off &mdash; always longer than going down</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 20px;">
+          <span style="flex: 0 0 76px; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums;">300ms</span>
+          <div style="flex: 0 0 420px; height: 8px; border-radius: 8px; background: rgba(255,255,255,.12); overflow: hidden;"><div style="height: 100%; border-radius: 8px; background: #ff8fc4; animation: grow 300ms var(--e-out2) infinite;"></div></div>
+          <span style="font-size: 14px; color: rgba(255,255,255,.6);">the pane falling</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 20px;">
+          <span style="flex: 0 0 76px; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums;">400ms</span>
+          <div style="flex: 0 0 420px; height: 8px; border-radius: 8px; background: rgba(255,255,255,.12); overflow: hidden;"><div style="height: 100%; border-radius: 8px; background: #ff8fc4; animation: grow 400ms var(--e-in) infinite;"></div></div>
+          <span style="font-size: 14px; color: rgba(255,255,255,.6);">the pane rising</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 20px;">
+          <span style="flex: 0 0 76px; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums;">420ms</span>
+          <div style="flex: 0 0 420px; height: 8px; border-radius: 8px; background: rgba(255,255,255,.12); overflow: hidden;"><div style="height: 100%; border-radius: 8px; background: #57e0d0; animation: grow 420ms var(--e) infinite;"></div></div>
+          <span style="font-size: 14px; color: rgba(255,255,255,.6);">one tab giving way to the next</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 20px;">
+          <span style="flex: 0 0 76px; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums;">460ms</span>
+          <div style="flex: 0 0 420px; height: 8px; border-radius: 8px; background: rgba(255,255,255,.12); overflow: hidden;"><div style="height: 100%; border-radius: 8px; background: #57e0d0; animation: grow 460ms var(--e) infinite;"></div></div>
+          <span style="font-size: 14px; color: rgba(255,255,255,.6);">the orb opening into the box</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 20px;">
+          <span style="flex: 0 0 76px; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums;">500ms</span>
+          <div style="flex: 0 0 420px; height: 8px; border-radius: 8px; background: rgba(255,255,255,.12); overflow: hidden;"><div style="height: 100%; border-radius: 8px; background: #ff8fc4; animation: grow 500ms var(--e-out) infinite;"></div></div>
+          <span style="font-size: 14px; color: rgba(255,255,255,.6);">the velocity blur coming off again</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 20px;">
+          <span style="flex: 0 0 76px; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums;">650ms</span>
+          <div style="flex: 0 0 420px; height: 8px; border-radius: 8px; background: rgba(255,255,255,.12); overflow: hidden;"><div style="height: 100%; border-radius: 8px; background: #57e0d0; animation: grow 650ms var(--e-out) infinite;"></div></div>
+          <span style="font-size: 14px; color: rgba(255,255,255,.6);">the rail travelling, and what it goes past going out of focus</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 20px;">
+          <span style="flex: 0 0 76px; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums;">680ms</span>
+          <div style="flex: 0 0 420px; height: 8px; border-radius: 8px; background: rgba(255,255,255,.12); overflow: hidden;"><div style="height: 100%; border-radius: 8px; background: #57e0d0; animation: grow 680ms var(--e) infinite;"></div></div>
+          <span style="font-size: 14px; color: rgba(255,255,255,.6);">one card arriving, 64ms after the one to its left</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 20px;">
+          <span style="flex: 0 0 76px; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums;">700ms</span>
+          <div style="flex: 0 0 420px; height: 8px; border-radius: 8px; background: rgba(255,255,255,.12); overflow: hidden;"><div style="height: 100%; border-radius: 8px; background: #ff8fc4; animation: grow 700ms var(--e-in) infinite;"></div></div>
+          <span style="font-size: 14px; color: rgba(255,255,255,.6);">the object settling inside the pane, after the pane has landed</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 20px;">
+          <span style="flex: 0 0 76px; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums;">900ms</span>
+          <div style="flex: 0 0 420px; height: 8px; border-radius: 8px; background: rgba(255,255,255,.12); overflow: hidden;"><div style="height: 100%; border-radius: 8px; background: #ffc98a; animation: grow 900ms var(--e) infinite;"></div></div>
+          <span style="font-size: 14px; color: rgba(255,255,255,.6);">the readout filling in behind it</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 20px;">
+          <span style="flex: 0 0 76px; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums;">1200ms</span>
+          <div style="flex: 0 0 420px; height: 8px; border-radius: 8px; background: rgba(255,255,255,.12); overflow: hidden;"><div style="height: 100%; border-radius: 8px; background: #ffc98a; animation: grow 1200ms linear infinite;"></div></div>
+          <span style="font-size: 14px; color: rgba(255,255,255,.6);">the weather turning &mdash; the house's own crossfade, unchanged</span>
+        </div>
+
+      </div>
+      <p style="margin: 18px 0 0; max-width: 1000px; font-size: 15px; color: rgba(255,255,255,.5); text-wrap: pretty;">
+        Above the scale sit two things that never end: the field, drifting 3% over 46s, and the orb, whose two
+        blooms turn against each other at 14s and 19s. Neither is a transition &mdash; they are what stops a
+        wall panel looking switched off.
+      </p>
+    </div>
+
+    <!-- ---------------- the named moves ---------------- -->
+    <div style="margin-top: 52px; padding-bottom: 8px;">
+      <div class="lab">Eight moves, and the panel has no ninth</div>
+
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; margin-top: 18px;">
+
+        <div>
+          <div class="stage">
+            <div class="plate riseLoop" style="left: 20px; top: 42px; width: 66px; height: 116px; border-radius: 32px; animation-delay: 90ms;"></div>
+            <div class="plate riseLoop" style="left: 98px; top: 30px; width: 84px; height: 140px; animation-delay: 154ms;"></div>
+            <div class="plate riseLoop" style="left: 194px; top: 30px; width: 78px; height: 64px; animation-delay: 218ms;"></div>
+            <div class="plate riseLoop" style="left: 194px; top: 104px; width: 78px; height: 66px; animation-delay: 282ms;"></div>
+            <div class="plate riseLoop" style="left: 284px; top: 30px; width: 116px; height: 140px; animation-delay: 346ms;"></div>
+          </div>
+          <div style="margin-top: 14px; font-size: 17px; font-weight: 600;">1 &middot; The wake</div>
+          <div class="mono">680ms settle &middot; 64ms apart &middot; y+26, blur 14&rarr;0</div>
+          <p style="margin: 8px 0 0; font-size: 14px; color: rgba(255,255,255,.56); text-wrap: pretty;">The field blooms first, then the cards rise into it left to right. The blur coming off is what makes them land as glass rather than fade in as boxes.</p>
+        </div>
+
+        <div>
+          <div class="stage">
+            <div style="position: absolute; inset: 0; display: grid; place-items: center;">
+              <div class="pressLoop" style="width: 150px; height: 104px; border-radius: 20px; background: linear-gradient(148deg, rgba(255,255,255,.32), rgba(255,255,255,.11)); box-shadow: inset 0 0 0 1px rgba(255,255,255,.3), 0 18px 34px -16px rgba(6,5,28,.8);"></div>
+            </div>
+          </div>
+          <div style="margin-top: 14px; font-size: 17px; font-weight: 600;">2 &middot; The press</div>
+          <div class="mono">scale .972 &middot; 120ms down, 260ms back</div>
+          <p style="margin: 8px 0 0; font-size: 14px; color: rgba(255,255,255,.56); text-wrap: pretty;">Down fast, up slow: a finger stops a pane instantly and lets it go gradually. Never a bounce &mdash; glass does not overshoot.</p>
+        </div>
+
+        <div>
+          <div class="stage">
+            <!-- the row you came from, which stays exactly where it is -->
+            <div class="plate" style="left: 18px; top: 16px; width: 84px; height: 120px;"></div>
+            <div class="plate" style="left: 112px; top: 16px; width: 96px; height: 120px;"></div>
+            <div class="plate" style="left: 218px; top: 16px; width: 80px; height: 120px;"></div>
+            <div class="plate" style="left: 308px; top: 16px; width: 96px; height: 120px;"></div>
+            <div class="footLoop" style="position: absolute; left: 18px; bottom: 12px; width: 74px; height: 20px; border-radius: 999px; background: rgba(255,255,255,.3);"></div>
+            <div class="scrimLoop" style="position: absolute; inset: 0; background: rgba(9,7,34,.6);"></div>
+            <div class="paneLoop" style="position: absolute; left: 0; right: 0; top: 58px; bottom: 0; border-radius: 16px 16px 0 0; overflow: hidden; background: linear-gradient(168deg, rgba(255,255,255,.2), rgba(44,38,116,.5) 44%, rgba(20,17,62,.66)); box-shadow: inset 0 1.2px 0 rgba(255,255,255,.45), 0 -14px 34px -12px rgba(6,5,28,.7);">
+              <div style="position: absolute; left: 18px; top: 20px; width: 58px; height: 9px; border-radius: 3px; background: rgba(255,255,255,.72);"></div>
+              <div style="position: absolute; left: 18px; top: 40px; width: 36px; height: 5px; border-radius: 3px; background: rgba(255,255,255,.3);"></div>
+              <div style="position: absolute; left: 18px; bottom: 22px; width: 104px; height: 14px; border-radius: 999px; background: linear-gradient(90deg, #4f7fd8, #7fb4e8);"></div>
+              <div class="objLoop" style="position: absolute; right: 20px; top: 18px; width: 152px; height: 96px; border-radius: 10px; background: linear-gradient(150deg, #eef2f8, #9fabbd); box-shadow: 0 12px 26px -8px rgba(6,5,28,.7);"></div>
+            </div>
+          </div>
+          <div style="margin-top: 14px; font-size: 17px; font-weight: 600;">3 &middot; The pane</div>
+          <div class="mono">400ms up &middot; 300ms down &middot; object 700ms &middot; bar leaves 60ms early</div>
+          <p style="margin: 8px 0 0; font-size: 14px; color: rgba(255,255,255,.56); text-wrap: pretty;">A device does not grow out of its tile. A pane rises from the bottom edge and stops short of the top bar, so the row you came from is still there, dimmed, above it. The object inside travels further and keeps settling after the pane has landed &mdash; which is what puts it INSIDE the glass rather than printed on it.</p>
+        </div>
+
+        <div>
+          <div class="stage">
+            <div class="swSky" style="position: absolute; left: 8px; top: 30px; width: 112px; height: 80px;">
+              <svg viewBox="0 0 210 150" width="112" height="80"><g fill="rgba(255,255,255,.32)"><ellipse cx="72" cy="86" rx="56" ry="40"/><ellipse cx="118" cy="70" rx="48" ry="44"/><ellipse cx="150" cy="94" rx="42" ry="30"/><rect x="60" y="92" width="104" height="34" rx="17"/></g></svg>
+            </div>
+            <div class="swLoz plate" style="left: 72px; top: 54px; width: 54px; height: 112px; border-radius: 27px;"></div>
+            <div class="swTrack" style="position: absolute; inset: 0;">
+              <div class="swPast plate" style="left: 140px; top: 26px; width: 86px; height: 150px;"></div>
+              <div class="swNear plate" style="left: 236px; top: 26px; width: 70px; height: 150px;"></div>
+              <div class="swNear plate" style="left: 316px; top: 26px; width: 96px; height: 150px;"></div>
+              <div class="swNear plate" style="left: 422px; top: 26px; width: 96px; height: 150px;"></div>
+            </div>
+          </div>
+          <div style="margin-top: 14px; font-size: 17px; font-weight: 600;">4 &middot; The swipe</div>
+          <div class="mono">650ms travel &middot; past: blur 5, opacity .6, and 150 of the 460 given back &middot; velocity blur 2.5px, 150ms in 500ms off</div>
+          <p style="margin: 8px 0 0; font-size: 14px; color: rgba(255,255,255,.56); text-wrap: pretty;">The rail has a focal plane, and depth is one idea rather than three: further back is blurrier, dimmer AND slower. The card you have just passed gives back 150 of the rail&#39;s 460, so the one in focus catches it and slides over the top &mdash; and the sky, which gives back nearly all of it, is only the far end of the same ramp. The readout hung in front of the sky fades out, because a temperature you have swiped away from is not what you are reading any more.</p>
+        </div>
+
+        <div>
+          <div class="stage">
+            <div style="position: absolute; left: 0; right: 0; top: 22px; display: flex; justify-content: center; gap: 22px; font-size: 15px;">
+              <span class="xfadeA" style="font-weight: 600;">Your evening</span>
+              <span class="xfadeB" style="position: absolute; font-weight: 600;">Rooms</span>
+            </div>
+            <div class="xfadeA" style="position: absolute; left: 26px; right: 26px; top: 66px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px;">
+              <div style="height: 104px; border-radius: 14px; background: linear-gradient(148deg, rgba(255,255,255,.3), rgba(255,255,255,.1));"></div>
+              <div style="height: 104px; border-radius: 14px; background: linear-gradient(148deg, rgba(189,230,223,.7), rgba(134,198,193,.5));"></div>
+              <div style="height: 104px; border-radius: 14px; background: linear-gradient(148deg, rgba(238,212,232,.7), rgba(207,176,217,.5));"></div>
+            </div>
+            <div class="xfadeB" style="position: absolute; left: 26px; right: 26px; top: 66px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px;">
+              <div style="height: 104px; border-radius: 14px; background: linear-gradient(148deg, rgba(255,255,255,.26), rgba(255,255,255,.09));"></div>
+              <div style="height: 104px; border-radius: 14px; background: linear-gradient(148deg, rgba(255,255,255,.26), rgba(255,255,255,.09));"></div>
+              <div style="height: 104px; border-radius: 14px; background: linear-gradient(148deg, rgba(255,255,255,.26), rgba(255,255,255,.09));"></div>
+              <div style="height: 104px; border-radius: 14px; background: linear-gradient(148deg, rgba(255,255,255,.26), rgba(255,255,255,.09));"></div>
+            </div>
+          </div>
+          <div style="margin-top: 14px; font-size: 17px; font-weight: 600;">5 &middot; Changing tab</div>
+          <div class="mono">420ms &middot; cross-dissolve &plusmn;14px, in the direction of travel</div>
+          <p style="margin: 8px 0 0; font-size: 14px; color: rgba(255,255,255,.56); text-wrap: pretty;">The bar itself does not move &mdash; no sliding pill, no underline. Only the word&#39;s weight changes and the content underneath gives way.</p>
+        </div>
+
+        <div>
+          <div class="stage">
+            <div style="position: absolute; inset: 0; display: grid; place-items: center;">
+              <div style="position: relative; display: grid; place-items: center;">
+                <div class="ringLoop" style="position: absolute; width: 72px; height: 72px; border-radius: 50%; box-shadow: 0 0 0 1.6px rgba(167,150,255,.9);"></div>
+                <div class="listenLoop" style="position: relative; width: 72px; height: 72px; border-radius: 50%; overflow: hidden; background: #17133d; box-shadow: inset 0 0 0 1.4px rgba(255,255,255,.34), 0 10px 26px -6px rgba(80,40,180,.7);">
+                <div style="position: absolute; inset: -34%; animation: spin 14s linear infinite; filter: blur(8px); background: radial-gradient(closest-side at 32%% 30%%, #8b7bff, transparent 72%%), radial-gradient(closest-side at 72%% 34%%, #57e0d0, transparent 70%%);"></div>
+                <div style="position: absolute; inset: -30%%; animation: spinback 19s linear infinite; filter: blur(8px); background: radial-gradient(closest-side at 36%% 72%%, #ff8fc4, transparent 70%%), radial-gradient(closest-side at 74%% 74%%, #ffc98a, transparent 70%%); opacity: .92;"></div>
+                <div style="position: absolute; inset: 0; border-radius: 50%%; backdrop-filter: blur(9px) saturate(1.5); -webkit-backdrop-filter: blur(9px) saturate(1.5);"></div>
+                <div style="position: absolute; inset: 0; background: radial-gradient(closest-side at 32%% 24%%, rgba(255,255,255,.62), transparent 56%%);"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style="margin-top: 14px; font-size: 17px; font-weight: 600;">6 &middot; Listening</div>
+          <div class="mono">scale 1.18 &middot; 320ms in, 520ms out &middot; one ring, once</div>
+          <p style="margin: 8px 0 0; font-size: 14px; color: rgba(255,255,255,.56); text-wrap: pretty;">Lit from inside, not a gradient painted on. Two blooms turning against each other at 14s and 19s, behind their own frost.</p>
+        </div>
+
+        <div>
+          <div class="stage">
+            <div style="position: absolute; inset: 0; display: grid; place-items: center;">
+              <div class="boxLoop" style="height: 56px; border-radius: 999px; display: flex; align-items: center; gap: 12px; padding: 0 22px 0 6px; overflow: hidden; background: linear-gradient(148deg, rgba(255,255,255,.19), rgba(255,255,255,.06) 46%, rgba(255,255,255,.11)); box-shadow: inset 0 0 0 1px rgba(255,255,255,.2);">
+                <div style="position: relative; flex: 0 0 auto; width: 44px; height: 44px; border-radius: 50%; overflow: hidden; background: #17133d; box-shadow: inset 0 0 0 1.2px rgba(255,255,255,.34);">
+                <div style="position: absolute; inset: -34%; animation: spin 14s linear infinite; filter: blur(8px); background: radial-gradient(closest-side at 32%% 30%%, #8b7bff, transparent 72%%), radial-gradient(closest-side at 72%% 34%%, #57e0d0, transparent 70%%);"></div>
+                <div style="position: absolute; inset: -30%%; animation: spinback 19s linear infinite; filter: blur(8px); background: radial-gradient(closest-side at 36%% 72%%, #ff8fc4, transparent 70%%), radial-gradient(closest-side at 74%% 74%%, #ffc98a, transparent 70%%); opacity: .92;"></div>
+                <div style="position: absolute; inset: 0; border-radius: 50%%; backdrop-filter: blur(9px) saturate(1.5); -webkit-backdrop-filter: blur(9px) saturate(1.5);"></div>
+                <div style="position: absolute; inset: 0; background: radial-gradient(closest-side at 32%% 24%%, rgba(255,255,255,.62), transparent 56%%);"></div>
+                </div>
+                <span class="hintLoop" style="white-space: nowrap; font-size: 14px; color: rgba(255,255,255,.66);">Try &ldquo;kitchen lights off&rdquo;</span>
+              </div>
+            </div>
+          </div>
+          <div style="margin-top: 14px; font-size: 17px; font-weight: 600;">7 &middot; The command box</div>
+          <div class="mono">460ms of width &middot; the hint fades in 180ms behind it</div>
+          <p style="margin: 8px 0 0; font-size: 14px; color: rgba(255,255,255,.56); text-wrap: pretty;">The same orb, opened. Width leads and the words follow, so the box is already the right size by the time there is anything to read in it.</p>
+        </div>
+
+        <div>
+          <div class="stage">
+            <div style="position: absolute; inset: 0; display: grid; place-items: center;">
+              <div style="position: relative; width: 240px; height: 172px;">
+                <svg class="wxA" viewBox="0 0 210 150" width="240" height="172" style="position: absolute; inset: 0;">
+                  <defs>
+                    <radialGradient id="mA" cx="32%" cy="24%" r="78%">
+                      <stop offset="0" stop-color="rgb(146,150,162)"/><stop offset="58%" stop-color="rgb(118,123,136)"/><stop offset="100%" stop-color="rgb(88,94,107)"/>
+                    </radialGradient>
+                  </defs>
+                  <g fill="url(#mA)">
+                    <ellipse cx="72" cy="86" rx="56" ry="40"/><ellipse cx="118" cy="70" rx="48" ry="44"/>
+                    <ellipse cx="150" cy="94" rx="42" ry="30"/><rect x="60" y="92" width="104" height="34" rx="17"/>
+                  </g>
+                  <g opacity=".92">
+                    <path class="rain" d="M62 118 l-7 22 M88 118 l-7 22 M114 118 l-7 22 M140 118 l-7 22 " stroke="rgb(121,151,190)" stroke-width="4" stroke-linecap="round" fill="none"/>
+                    <path class="rain" d="M62 118 l-7 22 M88 118 l-7 22 M114 118 l-7 22 M140 118 l-7 22 " stroke="rgb(121,151,190)" stroke-width="4" stroke-linecap="round" fill="none" style="animation-delay: -.8s;"/>
+                  </g>
+                </svg>
+                <svg class="wxB" viewBox="0 0 210 150" width="240" height="172" style="position: absolute; inset: 0;">
+                  <defs>
+                    <radialGradient id="mB" cx="32%" cy="24%" r="78%">
+                      <stop offset="0" stop-color="rgb(180,186,200)"/><stop offset="58%" stop-color="rgb(150,157,172)"/><stop offset="100%" stop-color="rgb(116,123,138)"/>
+                    </radialGradient>
+                  </defs>
+                  <circle cx="150" cy="44" r="27" fill="#dfe4ee" opacity=".84"/>
+                  <circle cx="138" cy="38" r="27" fill="#0c0d28" opacity=".84"/>
+                  <g fill="url(#mB)" transform="translate(35.7 34) scale(.66)" opacity=".5">
+                    <ellipse cx="72" cy="86" rx="56" ry="40"/><ellipse cx="118" cy="70" rx="48" ry="44"/>
+                    <ellipse cx="150" cy="94" rx="42" ry="30"/><rect x="60" y="92" width="104" height="34" rx="17"/>
+                  </g>
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div style="margin-top: 14px; font-size: 17px; font-weight: 600;">8 &middot; The weather turning</div>
+          <div class="mono">1200ms linear &middot; rain falls on 1.6s, three ranks</div>
+          <p style="margin: 8px 0 0; font-size: 14px; color: rgba(255,255,255,.56); text-wrap: pretty;">The drawing and the field behind it read the same numbers, so they cannot disagree about the hour. Drops stay on the glass only while it is actually raining.</p>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 18px; padding: 26px 28px; border-radius: 20px; background: rgba(255,255,255,.05); box-shadow: inset 0 0 0 1px rgba(255,255,255,.11);">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#ffc98a" stroke-width="1.7" stroke-linecap="round" style="flex: 0 0 auto;"><circle cx="12" cy="12" r="9"/><path d="M12 7.6v5M12 16.2v.2"/></svg>
+          <div>
+            <div style="font-size: 17px; font-weight: 600; line-height: 1.3;">Under <span class="mono" style="font-size: 14px;">prefers-reduced-motion</span>, all eight collapse to opacity</div>
+            <p style="margin: 10px 0 0; font-size: 14px; color: rgba(255,255,255,.56); text-wrap: pretty;">
+              Nothing travels, nothing scales, nothing blurs, and the field stops drifting. The wake becomes a
+              180ms fade, the pane becomes a cut, the rail jumps. Every duration above still applies &mdash; only
+              the property being animated changes, which is why none of the timings need a second set of numbers.
+            </p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"$preview": {"width": 1440, "height": 2110}}'>
+class Component extends DCLogic {}
+</script>
+</body>
+</html>

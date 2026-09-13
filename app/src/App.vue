@@ -3,21 +3,25 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { store, start, halt, load, visibleRooms, activity, roomActive, houseLine, weatherLine, needsSetup, dismissToast, updateReady } from './store'
 import Setup from './Setup.vue'
 import Join from './Join.vue'
+import Away from './Away.vue'
 import CodePrompt from './CodePrompt.vue'
 import { lock } from './code'
 import Sky from './Sky.vue'
+import ArtDefs from './ArtDefs.vue'
 import HomeView from './views/HomeView.vue'
 import RoomView from './views/RoomView.vue'
 import Viewer from './Viewer.vue'
 import WhySheet from './WhySheet.vue'
 import HousePanel from './HousePanel.vue'
+import AskPane from './AskPane.vue'
 import { isPage } from './pages'
 import Opened from './Opened.vue'
 import Icon from './Icon.vue'
 import { upcomingLine } from './upcoming'
-import { isTone, toneVars, type ToneName } from './tone'
-import { isLayout, isNav, type LayoutName, type NavName } from './layout'
+import { glassVars, isTone, toneVars, type ToneName } from './tone'
+import { isFace, isLayout, isNav, type FaceName, type LayoutName, type NavName } from './layout'
 import RailView from './views/RailView.vue'
+import WallView from './views/WallView.vue'
 import RoomsView from './views/RoomsView.vue'
 import CamerasView from './views/CamerasView.vue'
 import TopBar from './TopBar.vue'
@@ -32,7 +36,16 @@ const rooms = computed(visibleRooms)
 /* the rail keeps the current room in view: on a wall it scrolls the list, on a phone the chip strip */
 watch(selected, () => nextTick(() => document.querySelector('.rail-item.active')?.scrollIntoView({ block: 'nearest', inline: 'nearest' })))
 const setup = computed(() => !!store.status && (store.previewSetup || needsSetup()))
+/* The house is not showing: either this phone is not in it yet, or it is being reached from outside and
+   the house did not open. Both put a screen of their own up in place of everything. */
+const shut = computed(() => lock.unpaired || !!lock.away)
 const panel = computed(() => isPage(store.sheet))   // This house is open, on one of its pages
+/* A phone at the door opens its own pane, and stays open until it is answered or put aside. It is
+   not `store.opened` -- that is a device -- but it is the same surface and the room recedes behind
+   it the same way, so it counts towards the shell's opened state. */
+/* A phone that was at the door before this screen went away is not at the door now: the ask pane sits
+   outside the guards below, so it is this computed that has to know the house is not showing. */
+const asking = computed(() => !shut.value && store.asks.length > 0 && !store.askAside)
 const room = computed(() => rooms.value.find(r => r.id === selected.value) ?? null)
 
 const ambient = computed(() => store.sky.elevation < -8 ? 'night' : store.sky.elevation < 6 ? (store.sky.azimuth < 180 ? 'dawn' : 'dusk') : 'day')
@@ -50,6 +63,20 @@ const layout = computed<LayoutName>(() => isLayout(layoutParam) ? layoutParam : 
 /* where the way around the house lives -- the side list, or tabs across the
    top -- is the house's choice too; ?nav=top previews it. The tab is this
    screen's own, like the room it is in. */
+/* what the panel is made of: paper, or glass. The house's answer like the rest,
+   and ?face=glass previews it for this tab alone. */
+const faceParam = params.get('face')
+const face = computed<FaceName>(() => isFace(faceParam) ? faceParam : (isFace(store.ambient.look?.face) ? store.ambient.look!.face as FaceName : 'paper'))
+/* the pane's own properties, derived from the same sky the tone is: a face that
+   is not on costs nothing, because there is nothing to bind */
+const glass = computed(() => face.value === 'glass' ? glassVars(store.sky.elevation, store.sky.condition) : {})
+/* Whether this screen can paint a pane at all. Asked once: it cannot change
+   while the panel is open, and a host that cannot blur gets the face flattened
+   rather than taken away -- panel.css says what that means. ?flat=1 previews
+   it, which is the only way anyone will ever see it on a machine that can. */
+const flat = params.get('flat') === '1'
+  || !(CSS.supports('backdrop-filter', 'blur(1px)') || CSS.supports('-webkit-backdrop-filter', 'blur(1px)'))
+
 const navParam = params.get('nav')
 const nav = computed<NavName>(() => isNav(navParam) ? navParam : (isNav(store.ambient.look?.nav) ? store.ambient.look!.nav as NavName : 'side'))
 const tab = ref<'home' | 'rooms' | 'cameras'>('home')
@@ -83,7 +110,10 @@ function touched() {
   lastTouch = Date.now()
   if (idle.value) { idle.value = false; open(null); woke.value++ }
 }
-watch(() => store.asks.length, (n, o) => { if (n > o) touched() })   // a phone knocking wakes the wall so the card is seen
+/* A phone knocking wakes the wall, and clears anything put aside so the pane comes back up: this is
+   the one event the panel turns the screen on for, and a knock that has been set aside must not
+   silence the next one. */
+watch(() => store.asks.length, (n, o) => { if (n > o) { store.askAside = false; touched() } })
 async function rejoin() { halt(); await start() }                       // this screen just joined: read the house and reconnect
 function checkIdle() { if (!idle.value && kiosk.matches && !store.viewer && !store.sheet && !setup.value && Date.now() - lastTouch > IDLE_AFTER) idle.value = true }
 
@@ -103,13 +133,17 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="shell" :data-ambient="ambient" :data-nav="nav" :style="[tone, openTint]" :class="{ resting: idle, 'in-setup': setup || lock.unpaired, 'opened-shell': !!store.opened || panel }">
+  <div class="shell" :data-ambient="ambient" :data-nav="nav" :data-face="face" :data-layout="layout" :data-flat="face === 'glass' && flat ? '' : null" :style="[tone, glass, openTint]" :class="{ resting: idle, 'in-setup': setup || shut, 'opened-shell': !!store.opened || panel || asking }">
     <Sky :quiet="!idle && !setup" />
+    <!-- glass lays its blooms on the sky the canvas just painted, under the veil -->
+    <div class="sky-bloom" v-if="face === 'glass'"></div>
+    <ArtDefs />
     <div class="sky-veil"></div>
-    <Join v-if="lock.unpaired" @joined="rejoin" />
+    <Away v-if="lock.away" />
+    <Join v-else-if="lock.unpaired" @joined="rejoin" />
     <Setup v-else-if="setup" />
-    <TopBar v-if="!setup && !lock.unpaired && nav === 'top'" :clock="clock" :day="day" :now="shown" :tab="tab" :in-room="!!room" @go="go" />
-    <aside class="rail" v-if="!setup && !lock.unpaired && nav === 'side'">
+    <TopBar v-if="!setup && !shut && nav === 'top'" :clock="clock" :day="day" :now="shown" :tab="tab" :in-room="!!room" @go="go" />
+    <aside class="rail" v-if="!setup && !shut && nav === 'side'">
       <div class="rail-clock">
         <div class="rail-time">{{ clock }}</div>
         <div class="rail-day">{{ day }}</div>
@@ -141,7 +175,7 @@ onUnmounted(() => {
       </div>
     </aside>
 
-    <main class="stage" v-if="!setup && !lock.unpaired">
+    <main class="stage" v-if="!setup && !shut">
       <Transition name="banner">
         <div class="banner" v-if="store.loaded && store.linkLost"><Icon name="refresh" :size="16" /> Reconnecting to the hub. What you see may be a little behind.</div>
       </Transition>
@@ -168,14 +202,16 @@ onUnmounted(() => {
         <RoomsView v-else-if="nav === 'top' && tab === 'rooms'" key="rooms" :rooms="rooms" @open="open" />
         <CamerasView v-else-if="nav === 'top' && tab === 'cameras'" key="cameras" :rooms="rooms" />
         <RailView v-else-if="layout === 'rail'" key="home-rail" :rooms="rooms" :now="shown" :top-nav="nav === 'top'" :woke="woke" @open="open" />
+        <WallView v-else-if="layout === 'wall'" key="home-wall" :rooms="rooms" :now="shown" :top-nav="nav === 'top'" :woke="woke" @open="open" />
         <HomeView v-else key="home-stack" :rooms="rooms" :now="shown" :top-nav="nav === 'top'" @open="open" />
       </Transition>
     </main>
 
-    <Household v-if="!setup && !lock.unpaired && nav === 'top'" :room="room?.id ?? null" />
+    <Household v-if="!setup && !shut && nav === 'top'" :room="room?.id ?? null" />
 
     <Viewer />
     <Opened v-if="store.opened" />
+    <AskPane v-if="asking" />
     <!-- :duration because what moves is inside: Vue times a transition from the
          element it is put on, and this one's root never moves, so on the way out
          it was pulling the panel off the screen before it had slid anywhere.
