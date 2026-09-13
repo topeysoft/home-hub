@@ -1,0 +1,4 @@
+# Copy to terraform.tfvars and fill in when the box exists. Until then an empty address is a valid
+# state: the plan makes no records and the directory still reviews.
+relay_ipv4 = ""
+relay_ipv6 = ""
