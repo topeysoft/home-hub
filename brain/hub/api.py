@@ -700,6 +700,69 @@ async def forget_device(device_id: str):
     return {"ok": True}
 
 
+# ---------- the accounts the house has signed into ----------
+PLUMBING = {"mqtt", "zwave_js", "matter"}   # the brain set these up itself: they are the engine, not somebody's account
+
+
+@app.get("/accounts")
+async def accounts():
+    """Every service the house has signed into: how it stands, and how much of the house came in with it.
+
+    What counts as an account is what brought something in or wants something from a person -- an entry with
+    devices behind it, a sign-in waiting, or a complaint. That rule keeps the weather and the clock off a page
+    about accounts without a list of names to maintain, and it keeps the driver layer's own plumbing off it too,
+    which the brain added and no person ever signed into.
+
+    Three states and no more, in the house's words rather than the engine's: it is signed in, it needs signing
+    in, or it is not answering (docs/settings.md, Accounts).
+    """
+    hub.ready()
+    try: rows = list(await hub.ha.send("config_entries/get"))
+    except Exception as e: raise HTTPException(502, f"could not read the accounts: {e}")
+    try: devices = list(await hub.ha.send("config/device_registry/list") or [])
+    except Exception: devices = []
+    waiting = {w["handler"]: w for w in hub.provision.sign_ins}
+    stopped = {q["entry_id"]: q for q in hub.provision.problems}
+    count: dict[str, int] = {}
+    for d in devices:
+        for e in d.get("config_entries") or []: count[e] = count.get(e, 0) + 1
+
+    out = []
+    for r in rows:
+        entry, domain = r.get("entry_id"), r.get("domain")
+        if domain in PLUMBING: continue
+        flow = waiting.get(domain)
+        things, bad = count.get(entry, 0), stopped.get(entry)
+        if not things and not flow and not bad: continue
+        out.append({"id": entry, "kind": await hub.add.name_of(domain), "name": r.get("title") or domain,
+                    "state": "signin" if flow else "stopped" if bad else "on",
+                    "why": (bad or {}).get("reason") or "", "flow": (flow or {}).get("flow_id"), "things": things})
+    return {"accounts": sorted(out, key=lambda a: (a["state"] == "on", a["kind"].lower()))}
+
+
+@app.delete("/accounts/{entry_id}")
+async def remove_account(entry_id: str):
+    """Sell the camera, or be done with the account: everything it brought goes with it.
+
+    The engine owns the removal -- one call, and every device and entity that came in under this entry goes
+    from its registries. The house then rebuilds off the registry the way it does after any other change, so
+    the rooms lose those tiles on their own and nothing here has to hunt them down.
+    """
+    hub.ready()
+    try: rows = list(await hub.ha.send("config_entries/get"))
+    except Exception as e: raise HTTPException(502, f"could not read the accounts: {e}")
+    row = next((r for r in rows if r.get("entry_id") == entry_id), None)
+    if not row: raise HTTPException(404, "unknown account")
+    name = row.get("title") or row.get("domain")
+    try:
+        await asyncio.to_thread(hub.add._rest, "DELETE", f"/api/config/config_entries/entry/{entry_id}")
+    except Exception as e:
+        log.warning("could not remove account %s: %s", entry_id, e)
+        raise HTTPException(502, f"{name} would not come out. The engine said: {e}")
+    hub.log.add("home", entry_id, None, "account removed", source="user", detail={"name": name, "integration": row.get("domain")})
+    return {"ok": True}
+
+
 # ---------- adding things ----------
 @app.get("/discovered")
 async def discovered():

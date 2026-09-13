@@ -3,7 +3,9 @@
 Run from brain/: .venv/bin/python -m unittest -v
 """
 import json, unittest
+from unittest import mock
 
+from hub.lock import needs_code
 from tests.apptest import ApiTest
 
 
@@ -190,3 +192,92 @@ class LookTests(ApiTest):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class AccountTests(ApiTest):
+    """The accounts the house has signed into, and the end of one. docs/settings.md, step 2's other half.
+
+    Until this there was no route that listed what the house had signed into, which is why removing one had
+    nowhere to live: a Remove button with no list under it is not a page.
+    """
+
+    ENTRIES = [
+        {"entry_id": "e-hue", "domain": "hue", "title": "Philips Hue", "state": "loaded"},
+        {"entry_id": "e-nest", "domain": "nest", "title": "Google Nest", "state": "loaded"},
+        {"entry_id": "e-mqtt", "domain": "mqtt", "title": "Mosquitto", "state": "loaded"},
+        {"entry_id": "e-met", "domain": "met", "title": "Weather", "state": "loaded"},
+    ]
+    DEVICES = [{"id": "d1", "config_entries": ["e-hue"]}, {"id": "d2", "config_entries": ["e-hue"]},
+               {"id": "d3", "config_entries": ["e-nest"]}, {"id": "d4", "config_entries": ["e-mqtt"]}]
+
+    def setUp(self):
+        super().setUp()
+        self.ha.answers["config_entries/get"] = list(self.ENTRIES)
+        self.ha.answers["config/device_registry/list"] = list(self.DEVICES)
+        self.ha.answers["manifest/get"] = lambda integration=None, **kw: {"name": integration.title()}
+
+    def accounts(self):
+        r = self.client.get("/accounts")
+        self.assertEqual(r.status_code, 200)
+        return {a["id"]: a for a in r.json()["accounts"]}
+
+    def test_an_account_is_a_thing_that_brought_something_in(self):
+        got = self.accounts()
+        self.assertIn("e-hue", got)
+        self.assertEqual(got["e-hue"]["things"], 2)
+        self.assertEqual(got["e-hue"]["state"], "on")
+
+    def test_the_engines_own_plumbing_is_not_somebodys_account(self):
+        """The brain added MQTT, Z-Wave and Matter itself; nobody signed into them."""
+        self.assertNotIn("e-mqtt", self.accounts())
+
+    def test_nor_is_the_weather(self):
+        """It brought no devices, wants nothing from anyone, and is not what this page is about."""
+        self.assertNotIn("e-met", self.accounts())
+
+    def test_an_account_waiting_for_a_person_says_so_and_carries_the_way_to_answer(self):
+        self.hub.provision.sign_ins = [{"handler": "nest", "flow_id": "flow-1", "kind": "Nest", "title": "Google Nest"}]
+        got = self.accounts()["e-nest"]
+        self.assertEqual(got["state"], "signin")
+        self.assertEqual(got["flow"], "flow-1")
+
+    def test_an_account_that_could_not_start_says_why(self):
+        self.hub.provision.problems = [{"entry_id": "e-nest", "domain": "nest", "title": "Google Nest",
+                                        "state": "setup_retry", "reason": "the key was revoked"}]
+        got = self.accounts()["e-nest"]
+        self.assertEqual(got["state"], "stopped")
+        self.assertIn("revoked", got["why"])
+
+    def test_what_needs_a_person_is_listed_before_what_is_fine(self):
+        self.hub.provision.sign_ins = [{"handler": "nest", "flow_id": "flow-1", "kind": "Nest", "title": "Google Nest"}]
+        order = [a["id"] for a in self.client.get("/accounts").json()["accounts"]]
+        self.assertLess(order.index("e-nest"), order.index("e-hue"))
+
+    # ---- the end of one ----
+    def test_removing_an_account_asks_the_engine_to_take_it_out(self):
+        sent = []
+        with mock.patch.object(self.hub.add, "_rest", lambda m, p, d=None: sent.append((m, p)) or {}):
+            r = self.client.delete("/accounts/e-hue")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(sent, [("DELETE", "/api/config/config_entries/entry/e-hue")])
+
+    def test_it_is_written_down_with_the_name_a_person_would_recognise(self):
+        with mock.patch.object(self.hub.add, "_rest", lambda m, p, d=None: {}):
+            self.client.delete("/accounts/e-hue")
+        row = self.hub.log.recent(1, subject="e-hue")[0]
+        self.assertEqual(row["new"], "account removed")
+        self.assertEqual(json.loads(row["detail"])["name"], "Philips Hue")
+
+    def test_removing_something_that_is_not_there(self):
+        self.assertEqual(self.client.delete("/accounts/e-nothing").status_code, 404)
+
+    def test_an_engine_that_refuses_is_passed_on_with_the_name_in_front(self):
+        def no(m, p, d=None): raise RuntimeError("Integration not loaded")
+        with mock.patch.object(self.hub.add, "_rest", no):
+            r = self.client.delete("/accounts/e-hue")
+        self.assertEqual(r.status_code, 502)
+        self.assertIn("Philips Hue", r.json()["detail"])
+
+    def test_removing_an_account_needs_the_code(self):
+        self.assertTrue(needs_code("DELETE", "/accounts/e-hue"))
+        self.assertFalse(needs_code("GET", "/accounts"))

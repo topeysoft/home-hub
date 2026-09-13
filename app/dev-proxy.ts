@@ -11,7 +11,7 @@
  * again without something saying so.
  */
 export const BRAIN_PATHS = [
-  '/ambient', '/assistant', '/backup', '/catalog', '/credentials', '/devices', '/discovered',
+  '/accounts', '/ambient', '/assistant', '/backup', '/catalog', '/credentials', '/devices', '/discovered',
   '/drafts', '/events', '/flows', '/geo', '/health', '/home', '/location', '/look', '/pair',
   '/phone', '/phones', '/presence', '/qr.svg', '/restore', '/rooms', '/rules', '/say', '/scenes',
   '/setup', '/sounds', '/suggestions', '/update',

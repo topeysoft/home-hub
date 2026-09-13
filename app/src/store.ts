@@ -1,5 +1,5 @@
 import { reactive } from 'vue'
-import { getHome, getEvents, getAmbient, getScenes, getStatus, getDiscovered, getRoutines, getAssistant, getPresence, getHealth, getSounds, connect, act, setIntent, setHomeIntent, type Room, type Device, type Home, type Event, type Ambient, type Rules, type Status, type Found, type Intent, type Routine, type Assistant, type Presence, type Note, type Sound, requestUpdate, getPhones, type Phone, type Ask } from './api'
+import { getHome, getEvents, getAmbient, getScenes, getStatus, getDiscovered, getRoutines, getAssistant, getPresence, getHealth, getSounds, connect, act, setIntent, setHomeIntent, type Room, type Device, type Home, type Event, type Ambient, type Rules, type Status, type Found, type Intent, type Routine, type Assistant, type Presence, type Note, type Sound, requestUpdate, getPhones, type Phone, type Ask, getAccounts, type Account } from './api'
 import { lock } from './code'
 import { sunPosition, sunGuess, moonPhase } from './sun'
 
@@ -13,7 +13,7 @@ export const store = reactive({
   ambient: { location: null, weather: null } as Ambient,
   ambientLoaded: false,
   rules: {} as Rules,                        // scene rules from the brain, to tell whether a room still matches its scene
-  sheet: (['location', 'add', 'code', 'why', 'routines', 'hub', 'look', 'house', 'people', 'notes'].includes(new URLSearchParams(location.search).get('sheet') ?? '') ? new URLSearchParams(location.search).get('sheet') : null) as null | 'location' | 'add' | 'code' | 'why' | 'routines' | 'hub' | 'look' | 'house' | 'people' | 'notes',   // the few soft sheets the panel has; ?sheet=location previews one
+  sheet: (['location', 'add', 'code', 'why', 'routines', 'hub', 'look', 'house', 'people', 'accounts', 'notes'].includes(new URLSearchParams(location.search).get('sheet') ?? '') ? new URLSearchParams(location.search).get('sheet') : null) as null | 'location' | 'add' | 'code' | 'why' | 'routines' | 'hub' | 'look' | 'house' | 'people' | 'accounts' | 'notes',   // the few soft sheets the panel has; ?sheet=location previews one
   whyRoom: new URLSearchParams(location.search).get('room') as string | null,   // the room the why sheet is about; ?sheet=why&room=kitchen previews it
   resume: new URLSearchParams(location.search).get('signin') as string | null,   // a conversation already open in the house (signing an account in again); the add sheet picks it up. ?sheet=add&signin=<flow> previews it
   routines: [] as Routine[],                 // the brain's rules, for the routines sheet and to name a rule on a room
@@ -23,6 +23,7 @@ export const store = reactive({
   assistant: null as Assistant | null,       // whether the hub can talk to the model at all
   presence: null as Presence | null,         // who is home, from the brain; null until it has said
   notes: [] as Note[],                       // what needs a look, in the brain's words
+  accounts: [] as Account[],                 // the services the house has signed into, for the Accounts page and its door
   sounds: [] as Sound[],                     // what a speaker can play: the hub's noises and the files in its sounds folder
   updating: false,                           // this screen asked for an update; cleared when a new build answers
   restoring: false,                          // this screen sent a backup back; cleared when the hub returns
@@ -312,6 +313,9 @@ export const needsSetup = () => !store.status || !store.status.setup_done   // o
 export async function refreshStatus() {
   try { store.status = await getStatus() } catch { if (!store.status && !lock.unpaired) store.error = 'The hub is not answering.' }
 }
+export async function loadAccounts() {
+  try { store.accounts = await getAccounts() } catch {}
+}
 export async function loadPhones() {
   if (!store.status?.locked) { store.phones = []; store.asks = []; return }
   try { const p = await getPhones(); store.phones = p.phones; store.asks = p.asks } catch {}
@@ -341,7 +345,7 @@ export async function load() {
   await refreshStatus()
   if (lock.unpaired) return                    // the join screen is up; the house answers once this phone is in
   try { applyHome(await getHome()) } catch { store.error = 'The hub is not answering.' }
-  loadAmbient(); loadRules(); loadRoutines(); loadAssistant(); loadPresence(); loadHealth(); loadSounds(); loadPhones()
+  loadAmbient(); loadRules(); loadRoutines(); loadAssistant(); loadPresence(); loadHealth(); loadSounds(); loadPhones(); loadAccounts()
 }
 let foundPoll: number | undefined
 export async function start() {

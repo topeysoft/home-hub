@@ -64,6 +64,14 @@ export const addRoom = (name: string) => post<{ id: string; name: string }>('/ro
 export const renameRoom = (id: string, name: string) => post(`/rooms/${encodeURIComponent(id)}/rename`, { name })
 export const moveDevice = (id: string, room_id: string | null) => post(`/devices/${encodeURIComponent(id)}/move`, { room_id })
 export const renameDevice = (id: string, name: string) => post(`/devices/${encodeURIComponent(id)}/rename`, { name })
+/* Every service the house has signed into: how it stands, and how much of the house came in with it.
+   Three states and no more -- on, waiting to be signed into, or not answering. */
+export type Account = { id: string; kind: string; name: string; state: 'on' | 'signin' | 'stopped'; why: string; flow: string | null; things: number }
+export async function getAccounts(): Promise<Account[]> {
+  const r = await request('/accounts'); if (!r.ok) await fail(r); return (await r.json()).accounts
+}
+export async function removeAccount(id: string) { const r = await request(`/accounts/${encodeURIComponent(id)}`, { method: 'DELETE' }); if (!r.ok) await fail(r) }
+
 /* The end of a thing's life in the house: off whatever brought it, and out of the model with it. */
 export async function forgetDevice(id: string) { const r = await request(`/devices/${encodeURIComponent(id)}`, { method: 'DELETE' }); if (!r.ok) await fail(r) }
 export const setFan = (id: string, minutes: number) => post<{ ok: boolean; fan_until: number | null }>(`/devices/${encodeURIComponent(id)}/fan`, { minutes })

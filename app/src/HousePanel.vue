@@ -23,6 +23,7 @@ import LocationPage from './LocationPage.vue'
 import LookPage from './LookPage.vue'
 import RoutinesPage from './RoutinesPage.vue'
 import PeoplePage from './PeoplePage.vue'
+import AccountsPage from './AccountsPage.vue'
 import AddPage from './AddPage.vue'
 import HubPage from './HubPage.vue'
 import CodePage from './CodePage.vue'
@@ -31,7 +32,7 @@ import AdvancedLink from './AdvancedLink.vue'
 import { isPage, type PageId } from './pages'
 
 const page = computed<PageId>(() => isPage(store.sheet) ? store.sheet : 'house')
-const PAGE: Record<Exclude<PageId, 'house'>, Component> = { location: LocationPage, look: LookPage, routines: RoutinesPage, people: PeoplePage, add: AddPage, hub: HubPage, code: CodePage, notes: NotesPage }
+const PAGE: Record<Exclude<PageId, 'house'>, Component> = { location: LocationPage, look: LookPage, routines: RoutinesPage, people: PeoplePage, accounts: AccountsPage, add: AddPage, hub: HubPage, code: CodePage, notes: NotesPage }
 
 /* a conversation the house already has open (signing an account in again) is
    handed to the Add page on the way in, once, so the page reads as that one job */
@@ -41,7 +42,7 @@ watch(page, p => { if (p === 'add') { resume.value = store.resume; store.resume 
 const ready = computed(updateReady)
 const locked = computed(() => !!store.status?.locked)
 const title = computed(() => ({
-  house: 'This house', location: 'Where is home?', look: 'How the house looks', routines: 'Routines', people: 'People',
+  house: 'This house', location: 'Where is home?', look: 'How the house looks', routines: 'Routines', people: 'People', accounts: 'Accounts',
   add: resume.value ? 'Sign in again' : 'Add to the house', hub: 'This hub', code: locked.value ? 'Change the code' : 'Lock the settings',
   notes: 'Needs a look',
 }[page.value]))
@@ -61,6 +62,13 @@ const people = computed(() => {
   const who = p.length ? `${p.length === 1 ? '1 person' : `${p.length} people`}, ${home} home` : 'Nobody set up yet'
   return phones ? `${who} · ${phones === 1 ? '1 phone' : `${phones} phones`}` : who
 })
+/* the door answers the question the page exists for: is anything waiting on a person? */
+const accounts = computed(() => {
+  const a = store.accounts, want = a.filter(x => x.state !== 'on')
+  if (!a.length) return 'Nothing signed in yet'
+  if (!want.length) return a.length === 1 ? '1 account, signed in' : `${a.length} accounts, all signed in`
+  return want.length === 1 ? `${want[0].name} ${want[0].state === 'signin' ? 'needs signing in' : 'is not answering'}` : `${want.length} need a look`
+})
 const found = computed(() => store.found.length ? `${store.found.length === 1 ? '1 thing' : `${store.found.length} things`} found nearby` : 'Lights, plugs, cameras, locks')
 const version = computed(() => { const v = store.status?.version; return !v || v === 'dev' ? 'Development build' : v })
 const hub = computed(() => ready.value ? `${version.value} · an update is ready` : version.value)
@@ -71,6 +79,7 @@ const doors = computed(() => [
   { id: 'look' as const, icon: 'sun', name: 'How it looks', hint: look.value },
   { id: 'routines' as const, icon: 'sparkle', name: 'Routines', hint: routines.value },
   { id: 'people' as const, icon: 'people', name: 'People and phones', hint: people.value },
+  { id: 'accounts' as const, icon: 'lock', name: 'Accounts', hint: accounts.value, attention: store.accounts.some(a => a.state !== 'on') },
   { id: 'add' as const, icon: 'plus', name: 'Add a device', hint: found.value, attention: store.found.length > 0 },
   { id: 'hub' as const, icon: 'home', name: 'The hub', hint: hub.value, attention: ready.value },
   ...(store.status?.setup_done ? [{ id: 'code' as const, icon: 'lock', name: locked.value ? 'The code' : 'Lock the settings', hint: code.value }] : []),
