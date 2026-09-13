@@ -18,13 +18,16 @@ const name = computed(() => shortName(props.device, roomOf(props.device)))
 /* Which drawing this light gets. A guess off the name for now -- see lightKind's
    own note; the real answer is a per-device setting nobody has been asked for yet. */
 const kind = computed(() => lightKind(props.device.name || name.value))
-const hintSeen = ref(safe(() => localStorage.getItem('dim-hint') === '1'))
-function safe<T>(f: () => T): T | false { try { return f() } catch { return false } }
+/* What it is doing, in the words the boards use: on, and how much of itself it
+   is giving. The tile used to say "35% · slide to dim" until the first drag --
+   a number with an instruction stapled to it, in lamplight, on the one line a
+   person reads from the far side of the room. The gesture is still here and the
+   pane still says it in a sentence; the tile says the state. */
 const label = computed(() => {
   if (dead.value) return 'Not responding'
   if (!on.value) return 'Off'
   if (!dimmable.value) return 'On'
-  return hintSeen.value ? `${pct.value}%` : `${pct.value}% · slide to dim`
+  return `On, ${pct.value}%`
 })
 
 let startX = 0, dragging = false, el: HTMLElement | null = null
@@ -53,7 +56,6 @@ async function up() {
   el = null
   const d = props.device
   if (dragging && preview.value != null) {
-    hintSeen.value = true; safe(() => localStorage.setItem('dim-hint', '1'))
     await perform(d, 'on', { brightness_pct: preview.value }, { state: 'on', attrs: { brightness: Math.round(preview.value * 2.55) } })
   } else {
     await perform(d, on.value ? 'off' : 'on', undefined, { state: on.value ? 'off' : 'on' })

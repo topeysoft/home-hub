@@ -1,0 +1,75 @@
+{
+  "artboards": [
+    {
+      "file": "Main.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "A \u2014 the room, ranked"
+    },
+    {
+      "file": "Rail.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "B \u2014 the room as one sweep"
+    },
+    {
+      "file": "Overflow.dc.html",
+      "x": 3120,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "C \u2014 the same arrangement, a wider room"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "why",
+      "x": -560,
+      "y": 0,
+      "w": 480,
+      "text": "WHY THIS EXISTS\n\nIn the panel today the way back out of a room scrolls off the top. Measured at 1280x800 in the living room: scroll to the bottom and the back button sits at y -264 \u2014 not hard to see, gone. That is a real defect and it is fixed on both of these boards, because on both of them the head does not move.\n\nThe question underneath it was whether a room should sweep sideways like Home instead of scrolling down. These two boards are that question, drawn at the same room and the same hour so they can be judged rather than argued about.\n\nThe room is the Living room from mock/brain.mjs \u2014 the busiest one, seven devices, the only one that currently overflows. The Kitchen and the Bedroom have four each and already fit."
+    },
+    {
+      "id": "measured",
+      "x": -560,
+      "y": 470,
+      "w": 480,
+      "text": "WHAT IS ACTUALLY EATING THE SCREEN\n\nNot the devices. The head. In the panel today, at 1280x800:\n\n  head (back, name, activity)   y 104, 82 tall\n  scene bar                     y 204, 62 tall\n  why-line                      y 283, 37 tall\n  readings                      y 338, 40 tall\n  FIRST DEVICE                  y 400\n\n400 of the stage's 618px \u2014 65% \u2014 is spent before the first device appears. Four stacked bands, each its own row.\n\nBoard A gets it to one head and one chip row by putting the scenes in the grid as a card and letting the why-line and the readings share a line. Board B cannot: a single sweep row has no room for a card that is not a device, so the scenes stay chrome and the row starts 60px lower."
+    },
+    {
+      "id": "option-a",
+      "x": 0,
+      "y": 960,
+      "w": 700,
+      "text": "A \u2014 THE ROOM, RANKED\n\nEverything in the room on one screen, nothing scrolling in either direction. Size is the ranking: what is DOING something is large and painted (the TV, the ceiling light at 90%), what is merely on is middling (the floor lamp), what is off is small and takes none of the light (the reading lamp). How you change the room is a card among the devices rather than a bar above them.\n\nFOR: a room is a closed set and you came here to find one thing in it \u2014 seeing all of it beats sweeping it. The way back cannot scroll away because nothing scrolls. It is also what design/Room.dc.html already argues: \"the room, ranked\" and \"the room is short, and the screen says so rather than stretching to fill\".\n\nAGAINST: three tile sizes instead of one, which is more to hold in your head and more to get wrong as rooms vary. The smallest tiles are 142x172 \u2014 legible at a desk, less so from the far side of a room. And a room with 20 devices still will not fit on its own \u2014 see board C, which is this same grid with more columns in it."
+    },
+    {
+      "id": "option-b",
+      "x": 1560,
+      "y": 960,
+      "w": 700,
+      "text": "B \u2014 THE ROOM AS ONE SWEEP\n\nHome's gesture, applied to a room. Every card the same size, 300x422 \u2014 bigger than anything on board A \u2014 one rhythm across the whole screen, and one gesture in the house instead of two.\n\nFOR: consistency is not a small thing on a panel that non-technical people walk up to. If every screen in the house sweeps sideways, there is one thing to learn. The cards are larger and more legible from across a room, and the anatomy is identical to the Home rail, so the code is too.\n\nAGAINST: seven devices at 300 wide do not fit in 1440. Four are visible, the fifth is cut, and the floor lamp and reading lamp are off the right edge entirely \u2014 you cannot see your own room without sweeping it. On Home the half-cut card is an invitation, because the evening has no end; here it means part of your room is hidden, which is the opposite promise from the same drawing. The scene bar also goes back to being chrome, costing 62px off the top of every room before anything in the room is shown.\n\nAnd it does not fix the complaint that started this. \"I should not have to scroll to see items\" is still true \u2014 you sweep instead of scroll, and three of seven are still hidden."
+    },
+    {
+      "id": "option-c",
+      "x": 3120,
+      "y": 960,
+      "w": 700,
+      "text": "C \u2014 THE SAME ARRANGEMENT, A WIDER ROOM\n\nNot a third option. This is board A with thirteen devices in it instead of seven, and nothing has been switched on to make that work.\n\nThe rule: tiles take one of three heights and nothing else \u2014 FULL 488, HALF 236, THIRD 152 \u2014 and columns fill top to bottom, then start again to the right. A four-device room ends two columns in and never comes near the edge. A seven-device room is board A. This one runs past 1440 and the overflow goes sideways.\n\nThis is the thing to get right, and it is why \"if it doesn't fit, it scrolls\" is the wrong way to say it: there is no mode. The arrangement does not know whether it fits. An eight-device room and a nine-device room differ by one column, not by being two different screens.\n\nWHAT IT BUYS\n\nThe way back cannot scroll away \u2014 not because it is pinned, but because the only axis that moves is one the head does not occupy. There is no sticky rule for anyone to break later.\n\nAnd what is hidden is never arbitrary. Size is the ranking, so what falls off the right edge is what is OFF: the reading lamp, the purifier, the soundbar, the balcony door. Everything that is doing something is on the screen without moving a finger. A vertical scroll cannot promise that \u2014 what is below the fold is just whatever landed there.\n\nWHAT IT COSTS\n\nThree heights, forever. If a room can never scroll down, tile height is set by the screen rather than by the content, so every device tile has to be expressible as a full, a half or a third. That is a real constraint and it should be taken on deliberately now, not discovered later.\n\nThe last column MUST be cut. A column that happens to end flush with 1440 tells the viewer that is everything, and it is not. The half-cut card is what teaches the gesture on Home and it is load-bearing here too.\n\nAnd on a phone this inverts: at 390 wide a room is a vertical list again. The panel already does that for the Home rail below 860px, so it is the rule that is already in the house, not a new one."
+    },
+    {
+      "id": "built",
+      "x": 3120,
+      "y": 1560,
+      "w": 700,
+      "text": "WHAT BUILDING IT TAUGHT\n\nC is in the panel now. Measured at 1280x800 against the mock house: the living room, kitchen and bedroom all scroll zero pixels in either direction, and the way back holds at y 112 after sweeping a room to its far end. It was scrolling 376px and losing the back button to y -264.\n\nFour things the drawing did not know.\n\n1. THE ARRANGEMENT HAS TO BE HELD. Ranked off live state, turning the main lamp off promoted the next-brightest one, resized both and reflowed every column \u2014 the tiles moved under the finger that had just tapped them, and a second tap in the same place reached a different device. The plan is now computed when you enter the room and when devices are added or removed, never because something was switched on. A room is arranged for the state you found it in.\n\n2. THE SCENES CARD IS A HALF, AND IT DROPS THE HINTS. Four scenes with \"Lights low, screen on\" under each needs a full column, and a full column for the scenes pushed the living room past the edge. The hint is a sentence you read at a desk; this panel is read from across a room, where the icon and the word are the whole signal. The sentence is still in the scene bar.\n\n3. MEDIA HAS A FLOOR OF HALF, even paused. A third-height media tile has no room for its transport, and taking the play button away from a paused speaker to save 75px is a worse trade than a slightly fuller room.\n\n4. THE OLD GRID FIGHTS BACK. Two tiles place themselves \u2014 .tile.wide spans two columns, .tile.climate spans two rows \u2014 and both out-ranked the new size rules by being later in the stylesheet. A thermostat marked half came out a third tall, silently. Anything that places a tile has to be out-ranked, not just answered.\n\nThis board has been corrected to match: its second column was two half-width tiles side by side, which is a fourth size and breaks the rule the board's own note states."
+    }
+  ],
+  "launch": {
+    "view": "canvas"
+  }
+}

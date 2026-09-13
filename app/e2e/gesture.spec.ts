@@ -45,7 +45,9 @@ test.describe('with a mouse', () => {
 
     await expect(page.locator('.opened-panel')).toHaveCount(1)
     // The panel shows the device as it was. If the hold had also toggled, this is where it shows.
-    await expect(page.locator('.opened-big')).toContainText(before.split('%')[0])
+    // The number, not the tile's sentence: the tile says "On, 35%" and the pane says "35%", and what
+    // is being asserted is that the two are the same light -- not how either of them words it.
+    await expect(page.locator('.opened-big')).toContainText(before.match(/\d+/)?.[0] ?? before)
   })
 
   test('the card lets go of the pointer when a hold opened it', async ({ page }) => {

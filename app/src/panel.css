@@ -784,14 +784,682 @@ input:focus-visible {
 }
 
 /* ---------- tiles ---------- */
-.tiles {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-  grid-auto-rows: minmax(150px, auto);
-  grid-auto-flow: dense;
-  gap: 14px;
+/* ---------- a room, arranged ----------
+   A room does not scroll down. It fills in COLUMNS, top to bottom, and when
+   there is more room than fits it runs off to the right.
+
+   That is not a second arrangement for big rooms -- there is no mode, and the
+   grid does not know whether it fits. A four-device room ends two columns in
+   and never comes near the edge; a seven-device room lands near it; a
+   twenty-device room runs past it. Same rules, same three heights, same
+   ranking. An eight-device room and a nine-device room differ by one column,
+   not by being two different screens, and that is the whole point: two rooms in
+   one house must not look like two apps.
+
+   What it buys is the thing that started this. The way back used to scroll off
+   the top -- measured at 1280x800 in the living room, the button ended up at
+   y -264, gone, on a wall panel with no keyboard and no Escape. It cannot now,
+   and not because anything is pinned: the only axis that moves is one the head
+   does not sit on. There is no sticky rule here for anyone to break later.
+
+   And what falls off the right edge is never arbitrary. Size is the ranking
+   (RoomView.vue holds that table), so what goes over the edge is what is OFF.
+   Everything doing something is on the screen without moving a finger, which a
+   vertical scroll can never promise -- below the fold is just whatever landed
+   there.
+
+   Two things this has to carry, and both are easy to lose:
+
+   - The last column MUST be cut when there is overflow. A column that happens
+     to end flush with the edge tells a person that is everything, and it is
+     not. The half-cut card is what teaches the gesture on Home and it is
+     load-bearing here for the same reason. `scroll-snap-type: x proximity` and
+     not `mandatory`, so a column is never snapped flush against the edge.
+   - Below 860 this inverts and a room is a column again -- a phone is tall, not
+     wide, and a sideways sweep there would point at the wrong gesture. The
+     Home rail already does exactly this at the same breakpoint. */
+.stage:has(> .room) {
+  display: flex;
+  flex-direction: column;
+  overflow-y: hidden;
+  min-height: 0;
+}
+.room {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+/* the head keeps the old cap so the edit button stays beside the name instead
+   of flying to the far edge of a 1080p wall; the grid deliberately does NOT,
+   because capping it would spend the width this arrangement exists to use */
+.room > .stage-head {
+  flex: 0 0 auto;
+  max-width: 1360px;
+}
+/* why the room is like this, and what it can tell you, on one line. Two stacked
+   bands and a scene bar above them is three rows where one does, and between
+   them they spent 400 of the stage's 618px before the first device. */
+.room-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 0 0;
   min-width: 0;
-} /* dense: a small tile fills the gap a wide one leaves */
+  overflow: hidden;
+}
+/* `.room-line > .why-line` and not `.room-line > *`: the chip carries
+   `margin: -12px 0 26px` from the days when it was its own band, and a bare
+   `> *` weighs exactly the same as `.why-line` and loses to it for sitting
+   earlier in the file. The negative top margin then pulled the chip 12px out of
+   the row and `overflow: hidden` sliced the top off it. Third time this file
+   has been bitten by a (0,1,0) that reads like it should win. */
+.room-line > .why-line,
+.room-line > .reading,
+.room-line > * {
+  flex: 0 0 auto;
+  margin: 0;
+}
+.tiles {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-auto-flow: column dense;
+  /* THREE slots in a column, and a card takes one, two or all three.
+     Six tracks made the sizes exact fractions of a column -- a half was ½ and a
+     third was ⅓ -- and the arithmetic of that is what left holes: a half beside
+     a third is ⅚ of a column, so the room ended with a ragged 70px of nothing
+     under one column and not the others. Three slots cannot do that. Every
+     column is either one card, or a big one and a small one, or three small
+     ones, and it comes out flush every time. The cost is that the middle size is
+     now two thirds of a column rather than half of one, so two middles no longer
+     share a column -- the second one starts the next. */
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+  /* A column grows with the screen and then stops. A FIXED width was wrong in
+     the one direction that is easy to miss: at 1280 it filled the row, and at
+     1728 the same four columns left 450px of empty field down the right -- the
+     room had not got bigger, the screen had, and the tiles ignored it.
+
+     A wider panel is a panel read from further away, so what a bigger screen
+     buys is BIGGER tiles, not more of them. The cap is there because the
+     opposite failure is just as bad: a two-device bedroom with no cap gives
+     itself two 800px columns, and Room.dc.html is explicit that a short room
+     should say so rather than stretch to fill. The floor keeps four columns
+     inside 1280, which is the size this panel is actually read at. */
+  grid-auto-columns: var(--room-col, clamp(276px, 22vw, 400px));
+  /* the board's gutters: 16 down a column, 20 between them. The row gap is what
+     makes the three heights come out at the board's proportions -- a third is
+     two tracks and one gap, a half is three and two, a full is the column. */
+  gap: 16px 20px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  min-width: 0;
+}
+/* `dense` above, and this is the one place it earns itself: sizes are sorted
+   big-first, so a hole can only ever be backfilled by something SMALLER and
+   therefore less important. The reading order stays ranked and the column packs
+   full. */
+.tiles > .tile {
+  scroll-snap-align: start;
+  min-height: 0;
+  min-width: 0;
+}
+/* One column each, always. `.tile.wide` spans two in the old auto-fill grid and
+   on a phone still does -- here it would make a card two columns wide and a
+   third of one tall, which is not one of the three sizes and reads as a
+   mistake. The width is the column; only the height ranks. */
+.tiles > .tile.wide {
+  grid-column: auto;
+}
+/* `.tile[data-size]` and not `[data-size]`, and the extra class is load-bearing.
+   Several tiles place themselves in the grid they used to live in -- `.tile.wide`
+   spans two columns, `.tile.climate` spans two ROWS "so its neighbours keep
+   their size" -- and those are (0,2,0) selectors sitting later in this file than
+   these. A bare `[data-size='half']` weighs the same and loses, so a thermostat
+   marked half came out a third tall: the size table said one thing and the
+   screen did another, silently. Anything that places a tile in the old grid has
+   to be out-ranked here, not just answered. */
+.tiles > .tile[data-size='full'] {
+  grid-row: span 3;
+}
+.tiles > .tile[data-size='half'] {
+  grid-row: span 2;
+}
+.tiles > .tile[data-size='third'] {
+  grid-row: span 1;
+}
+/* Two corners, not one. A card that is 488 tall and one that is 152 do not read
+   as the same radius: the board draws 28 on the big two and 24 on the small one,
+   which is what keeps a column of thirds from looking like a stack of pills. */
+.tiles > .tile[data-size='full'],
+.tiles > .tile[data-size='half'] {
+  border-radius: 28px;
+}
+.tiles > .tile[data-size='third'] {
+  border-radius: 24px;
+}
+/* A lamp that is off should look off. Everywhere else in the house a light tile
+   is painted by CAPABILITY rather than by state -- the warm card is what says
+   "this is a light" -- and next to each other in one column that falls apart:
+   the reading lamp at Off and the floor lamp at 24% came out the same weight,
+   so the room could not be read at a glance, which is the only thing this
+   screen is for. Room.dc.html says it outright: off is "same hue family as the
+   light that is on; none of its weight."
+
+   Scoped to the room grid on purpose. On Home a light tile is one of a handful
+   of things on the screen and its colour is how you find it; here there are
+   three of them side by side and its colour has to mean something else. */
+.tiles > .tile.light:not(.on) {
+  background: var(--card-plain, var(--surface));
+}
+/* ---------- the scenes, as a card among the devices ----------
+   A card in the grid rather than a bar above it, and a FULL column of one: four
+   scenes each carrying the line that says what they do. The line is not a
+   decoration. "All off" and "Lights off, media paused" are not the same
+   promise, and this panel is read by people who did not set the house up --
+   taking the sentence away to save a column saved the column and lost the
+   card. design/room/Overflow.dc.html draws every one of them. */
+.room-scenes {
+  display: flex;
+  flex-direction: column;
+  padding: 22px;
+}
+.room-scenes-head {
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  flex: 0 0 auto;
+}
+/* The rows keep their own height and the card keeps whatever is left. Stretched
+   to fill the column they came out as four 90px slabs, which reads as a toolbar;
+   the board draws four quiet rows at the top of a card with air under them. */
+.scenes-stacked {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  gap: 10px;
+  margin: 17px 0 0;
+  flex: 0 0 auto;
+  min-height: 0;
+}
+.scenes-stacked .scene {
+  min-height: 0;
+  flex: 0 0 auto;
+  align-items: start;
+  column-gap: 13px;
+  padding: 13px 15px;
+  border-radius: 17px;
+  background: rgba(255, 255, 255, 0.055);
+  border-color: transparent;
+}
+/* No badge under the icon in the card. A filled square beside four rows reads as
+   four buttons in a toolbar; at 20px on its own the glyph is the whole signal,
+   which is what the row has instead of a border. */
+.scenes-stacked .scene-icon {
+  width: auto;
+  height: auto;
+  border-radius: 0;
+  background: none;
+  color: var(--ink-2);
+  padding-top: 1px;
+}
+.scenes-stacked .scene-label {
+  font-size: 16px;
+}
+.scenes-stacked .scene-hint {
+  font-size: 13px;
+  color: var(--muted);
+  white-space: normal;
+}
+/* the scene the room is in is said in the icon, not in a second card colour:
+   four tinted rows and one plain one is a card with a hole in it */
+.scenes-stacked .scene.active {
+  background: rgba(255, 255, 255, 0.055);
+  border-color: transparent;
+}
+.scenes-stacked .scene.active .scene-icon,
+.scenes-stacked .scene.done .scene-icon {
+  background: none;
+  color: var(--lamp);
+}
+.scenes-stacked .scene.done .scene-icon {
+  color: var(--live);
+}
+
+/* Everything below is the WALL panel's room, and only that.
+
+   Below 860 the room stops being columns and goes back to being a list (the
+   phone rules further down do that), and the moment it does, none of this
+   holds: a tile in a list is 150px tall whatever its size says, so a media card
+   laid out as a full-bleed poster puts its name on top of its own title, and a
+   third laid out as icon-over-name has nothing under it. The sizes still rank
+   the list -- they just stop setting anatomy. */
+@media (min-width: 861px) {
+  /* The room runs to the edge of the SCREEN, not to the stage's gutter.
+
+     This is the half-cut card, and it is load-bearing: a column that happens to
+     end flush with the last gutter tells a person that is everything, and when
+     the room overflows it is not. Inside the gutter the cut column fell in the
+     40px nobody can see and the sweep had nothing to teach it. The padding puts
+     the gutter back at the FAR end, so a room swept to its end still stops with
+     air after the last card rather than against the glass. */
+  .tiles {
+    margin-right: -40px;
+    padding-right: 40px;
+    scroll-padding-right: 40px;
+  }
+
+  /* ---------- the three heights, on the inside ----------
+     This is the bill for "three heights and nothing else", and it comes due here.
+     What a tile says is set by how much room it was given, so each height has its
+     own anatomy and there are only three of them -- the boards in design/room draw
+     all three, and this is that drawing in CSS.
+
+     FULL and HALF: no icon badge. The device is DRAWN on these two, and a 38px
+     glyph of the same thing in the corner is the word said twice. The name and
+     the state own the bottom left, the drawing owns the rest, and a light adds
+     its dimmer under the words.
+
+     THIRD: the icon and the name on one line at the top, what it is doing at the
+     bottom. There is no room here for a drawing and a badge both, so the badge
+     goes and the bare glyph stays -- at this size it is the only thing saying
+     what kind of thing this is before you read the name.
+
+     What never goes at any height is the NAME and the STATE. A tile that has
+     dropped either is not a smaller tile, it is a broken one. */
+  .tiles > .tile .tile-body {
+    min-height: 0;
+  }
+  .tiles > .tile[data-size='half'] .tile-body,
+  .tiles > .tile[data-size='full'] .tile-body {
+    padding: 22px;
+    justify-content: flex-end;
+    gap: 0;
+  }
+  .tiles > .tile[data-size='half'] > .tile-body > .tile-icon,
+  .tiles > .tile[data-size='full'] > .tile-body > .tile-icon {
+    display: none;
+  }
+  .tiles > .tile[data-size='half'] > .tile-body > .tile-name,
+  .tiles > .tile[data-size='full'] > .tile-body > .tile-name {
+    font-size: 19px;
+  }
+  .tiles > .tile[data-size='half'] > .tile-body > .tile-state,
+  .tiles > .tile[data-size='full'] > .tile-body > .tile-state {
+    font-size: 14.5px;
+    margin-top: 3px;
+  }
+  .tiles > .tile[data-size='third'] .tile-body {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    align-items: start;
+    column-gap: 11px;
+    padding: 17px 18px 15px;
+    gap: 0 11px;
+  }
+  /* `.tile[data-size]` and not `[data-size]`, and the class is load-bearing here
+     for a second reason: `.tile.light:not(.on) .tile-icon` and `.tile.on
+     .tile-icon` both paint this badge and both sit later in this file. A bare
+     `[data-size='third'] .tile-icon` weighs the same as one of them and less than
+     the other, so the badge came back on exactly the tiles that are lit. */
+  .tiles > .tile[data-size='third'] > .tile-body > .tile-icon {
+    grid-area: 1 / 1;
+    width: auto;
+    height: auto;
+    border-radius: 0;
+    background: none;
+    color: var(--card-ink-2, var(--ink-2));
+    margin: 0;
+  }
+  .tiles > .tile[data-size='third'] > .tile-body > .tile-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+  .tiles > .tile[data-size='third'] > .tile-body > .tile-name {
+    grid-area: 1 / 2;
+    align-self: center;
+    font-size: 16px;
+  }
+  .tiles > .tile[data-size='third'] > .tile-body > .tile-state {
+    grid-area: 2 / 1 / 3 / 3;
+    align-self: end;
+    font-size: 14.5px;
+  }
+  .tiles > .tile[data-size='third'] > .tile-body > .tile-bar {
+    grid-area: 3 / 1 / 4 / 3;
+  }
+  /* the maker, where the registry knows one: set as quietly as the board sets it,
+     which is as a word in the top corner rather than as a pill. A pill is a thing
+     you tap and this is not one. Gone entirely at a third, where the only two
+     things that fit are what it is and what it is doing. */
+  .tiles > .tile[data-size] .tile-maker {
+    top: 20px;
+    right: 20px;
+    padding: 0;
+    background: none;
+    border-radius: 0;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    color: var(--card-ink-2, var(--muted));
+    opacity: 0.7;
+  }
+  .tiles > .tile[data-size='third'] .tile-maker {
+    display: none;
+  }
+  /* A device drawing sizes itself from the tile's WIDTH (74% of it, at a fixed
+     aspect) and hangs off the bottom-right corner on purpose. At a third that is
+     the wrong dimension to size from -- a 380x180 tile came out with a 243-tall
+     lamp in it, sliced off 60px above its own top edge -- and it is also the
+     wrong half of the tile: the name and the icon are up there now.
+
+     So at a third the drawing goes, with one exception the board is explicit
+     about: a cover brings its own drawing and is never overpainted, because how
+     far a blind is down is a picture before it is a number. */
+  .tiles > .tile[data-size='third'] .tile-render {
+    display: none;
+  }
+  .tiles > .tile.plain.cover[data-size='third'] .tile-render {
+    display: block;
+    top: 15px;
+    right: 16px;
+    bottom: auto;
+    width: auto;
+    height: 46%;
+  }
+  /* A CEILING is drawn, not cropped. Rung two hangs a device drawing off the
+     bottom-right corner, which is right for a lamp on a stand or a plug: the
+     thing carries on past the card and the eye finishes it. A ceiling light is
+     the one drawing where that fails. Its mounting rail is a long horizontal
+     line, and cropped at the card's edge a line with no end is not a ceiling --
+     it is a bar, and it reads as an empty slider track sitting above the real
+     dimmer at the bottom of the same card. Both boards inset this drawing so
+     the rail begins and ends inside the card, and that is the difference
+     between a ceiling and a stray rule. */
+  .tiles > .tile.light[data-size='half'] .tile-render,
+  .tiles > .tile.light[data-size='full'] .tile-render {
+    /* the board's own placement, as fractions of the card so it holds at any
+       column width: half the card wide, a fifth in from the right, a fifth
+       down -- which is also what keeps the rail clear of the maker's name in
+       the corner above it */
+    right: 18%;
+    top: 19%;
+    bottom: auto;
+    width: 50%;
+    height: auto;
+  }
+  /* the oversized faint icon IS the art on a no-name device, so it is scaled
+     rather than dropped -- take it away and a shelf of plugs reads as empty
+     boxes, which is the thing it was added to fix */
+  .tiles > .tile[data-size='third'] .tile-art {
+    transform: scale(0.58);
+    transform-origin: 100% 100%;
+  }
+  .tiles > .tile[data-size='half'] .tile-art {
+    transform: scale(0.78);
+    transform-origin: 100% 100%;
+  }
+  /* A light says how much of itself it is giving in a bar under the words, 4px of
+     it, the width of the card's padding box -- the board draws one under every
+     lamp that is on and none under the ones that are not. At a third there is no
+     room for it and none is drawn: the number in the state line is the whole
+     answer there. */
+  .tiles > .tile.light[data-size='half'] .tile-body,
+  .tiles > .tile.light[data-size='full'] .tile-body {
+    padding-bottom: 37px;
+  }
+  .tiles > .tile.light.dimmable.on[data-size='half'] .tile-body::after,
+  .tiles > .tile.light.dimmable.on[data-size='full'] .tile-body::after {
+    left: 22px;
+    right: 22px;
+    bottom: 22px;
+    height: 4px;
+    border-radius: 2px;
+  }
+  .tiles > .tile.light.dimmable.on[data-size='half'] .fill::after,
+  .tiles > .tile.light.dimmable.on[data-size='full'] .fill::after {
+    left: 22px;
+    bottom: 22px;
+    height: 4px;
+    width: calc(100% - 44px);
+    border-radius: 2px;
+  }
+  .tiles > .tile.light.dimmable.on[data-size='third'] .tile-body::after,
+  .tiles > .tile.light.dimmable.on[data-size='third'] .fill::after {
+    display: none;
+  }
+  /* A lit lamp says its number in the card's own ink rather than in lamplight.
+     On Home a light tile is one of a handful of things on the screen and the amber
+     is how you find it; in a room there are three of them in one column and the
+     amber stops meaning anything -- the boards set every one of these lines in the
+     card's quiet ink and let the paint say which lamp is doing the work. */
+  .tiles > .tile.light.on[data-size] > .tile-body > .tile-state {
+    color: var(--card-ink-2, rgba(255, 255, 255, 0.78));
+  }
+
+  /* a thermostat at a third is the number and what the house is doing with it.
+     The dial, the step buttons and the mode chips are all in the pane, which is
+     where you go to change a mode -- on the tile they were a dial drawn at 92px
+     with its own reading pushed out through the bottom of the card. */
+  .tiles > .tile.climate[data-size='third'] .clim-rows,
+  .tiles > .tile.climate[data-size='third'] .clim-btn,
+  .tiles > .tile.climate[data-size='third'] .face-render,
+  .tiles > .tile.climate[data-size='third'] .clim-doing {
+    display: none;
+  }
+  .tiles > .tile.climate[data-size='third'] .tile-body {
+    display: flex;
+    padding: 17px 18px 15px;
+  }
+  .tiles > .tile.climate[data-size='third'] .clim-head .tile-icon {
+    width: auto;
+    height: auto;
+    border-radius: 0;
+    background: none;
+    margin: 0;
+  }
+  .tiles > .tile.climate[data-size='third'] .clim-head .tile-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+  .tiles > .tile.climate[data-size='third'] .clim-head .tile-name {
+    font-size: 16px;
+  }
+  .tiles > .tile.climate[data-size='third'] .clim-dial {
+    display: block;
+    margin: auto 0 0;
+  }
+  .tiles > .tile.climate[data-size='third'] .clim-center {
+    display: flex;
+    flex-direction: row;
+    align-items: baseline;
+    gap: 9px;
+    min-width: 0;
+  }
+  .tiles > .tile.climate[data-size='third'] .clim-face {
+    display: block;
+    aspect-ratio: auto;
+    max-height: none;
+    padding: 0;
+    width: auto;
+  }
+  /* the reading, in the face the rest of the house says numbers in */
+  .tiles > .tile.climate[data-size='third'] .clim-big {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: 44px;
+    letter-spacing: 0;
+    line-height: 1;
+  }
+  .tiles > .tile.climate[data-size='third'] .clim-unit {
+    display: none;
+  }
+  .tiles > .tile.climate[data-size='third'] .clim-short {
+    display: block;
+    font-size: 13.5px;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  /* a climate tile at half keeps its dial and its number and gives up the mode
+     and fan chips; both are in the pane, which is where you go to change a mode */
+  .tiles > .tile[data-size='half'] .clim-rows {
+    display: none;
+  }
+  .tiles > .tile[data-size='half'] .clim-dial {
+    margin: 8px 0 2px;
+  }
+  .tiles > .tile[data-size='half'] .clim-face {
+    max-height: 92px;
+  }
+  .tiles > .tile[data-size='half'] .clim-big {
+    font-size: 36px;
+  }
+  .tiles > .tile[data-size='half'] .clim-doing {
+    margin-top: 5px;
+    font-size: 12.5px;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  /* ---------- what is playing ----------
+     At full the artwork IS the card, edge to edge, with the words laid on it and
+     the name set small in the top corner -- the loudest thing in the room drawn
+     like it. Before this it was a 96px cover beside two lines of text in a 488px
+     card: 400px of empty card on the one tile everybody looks at first.
+
+     One button on it, and it is the one that matters. Volume and power are in the
+     pane; a transport row of five is a remote control, and the board draws a play
+     button and how far through it is. */
+  .tiles > .tile.media[data-size='full'] {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 22px;
+    row-gap: 0;
+  }
+  .tiles > .tile.media[data-size='full'] .media-art {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+    align-self: stretch;
+    /* under the words rather than over them, and WITHOUT positioning the words:
+       the small name is hung off the card's own top corner, so anything between it
+       and the card that takes `position: relative` steals the corner -- which is
+       exactly what happened, and put "TV" under the title in the middle of the
+       card. A negative layer keeps the picture behind in-flow content and leaves
+       the card as the only positioned thing above it. */
+    z-index: -2;
+  }
+  /* what keeps the words readable over someone else's artwork, which can be any
+     colour at all -- a title in white on a white album cover is not a design */
+  .tiles > .tile.media[data-size='full'] .media-veil {
+    display: block;
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(
+      180deg,
+      rgba(12, 13, 16, 0.5),
+      rgba(12, 13, 16, 0.12) 36%,
+      rgba(12, 13, 16, 0.34) 62%,
+      rgba(12, 13, 16, 0.88)
+    );
+  }
+  .tiles > .tile.media[data-size='full'] .media-text {
+    padding: 0;
+    gap: 3px;
+  }
+  .tiles > .tile.media[data-size='full'] .media-text .tile-name {
+    position: absolute;
+    left: 22px;
+    top: 22px;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+  }
+  .tiles > .tile.media[data-size='full'] .media-title {
+    font-size: 23px;
+  }
+  .tiles > .tile.media[data-size='full'] .media-controls {
+    gap: 16px;
+    margin-top: 18px;
+  }
+  .tiles > .tile.media[data-size='full'] .ctl.primary {
+    width: 48px;
+    height: 48px;
+    background: var(--lamp);
+    color: var(--lamp-ink);
+  }
+  .tiles > .tile.media[data-size='full'] .ctl.power,
+  .tiles > .tile.media[data-size='full'] .vol,
+  .tiles > .tile.media[data-size='third'] .ctl:not(.primary),
+  .tiles > .tile.media[data-size='third'] .vol,
+  .tiles > .tile.media[data-size='third'] .media-bar {
+    display: none;
+  }
+  .tiles > .tile.media[data-size='full'] .media-bar {
+    display: block;
+  }
+  /* paused, and a third: the artwork it is still holding, what is on it, and one
+     button with the word for what it is doing beside it. The board draws this one
+     twice, on both boards, and it is the smallest thing in the room that is still
+     a media player rather than a label. */
+  .tiles > .tile.media[data-size='third'] {
+    grid-template-columns: 58px minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    column-gap: 14px;
+    row-gap: 6px;
+    padding: 18px;
+  }
+  .tiles > .tile.media[data-size='third'] .media-art {
+    grid-row: 1;
+    width: 58px;
+    height: 58px;
+    border-radius: 12px;
+    align-self: start;
+  }
+  .tiles > .tile.media[data-size='third'] .media-text {
+    padding-top: 0;
+  }
+  .tiles > .tile.media[data-size='third'] .media-text .tile-name {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+  }
+  .tiles > .tile.media[data-size='third'] .media-title {
+    font-size: 17px;
+    margin-top: 3px;
+  }
+  .tiles > .tile.media[data-size='third'] .media-sub {
+    font-size: 13.5px;
+  }
+  .tiles > .tile.media[data-size='third'] .media-controls {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    align-self: end;
+    gap: 13px;
+  }
+  .tiles > .tile.media[data-size='third'] .ctl.primary {
+    width: 36px;
+    height: 36px;
+    background: var(--surface-hi);
+    color: var(--ink);
+  }
+  .tiles > .tile.media[data-size='third'] .media-when {
+    display: inline;
+  }
+  /* likewise the sound presets on a media tile */
+  .tiles > .tile[data-size='half'] .sounds,
+  .tiles > .tile[data-size='third'] .sounds {
+    display: none;
+  }
+}
+
 /* readings: what the room's sensors say, one line, no tiles to tap */
 .readings {
   display: flex;
@@ -925,7 +1593,22 @@ input:focus-visible {
 .tile.light.on {
   border-color: rgba(233, 184, 114, 0.3);
 }
-.tile.light.dimmable.on::after {
+/* The dimmer's track, and it is drawn on the BODY rather than on the card.
+
+   The card's own ::after belongs to the glass face -- it is the rim, the edge
+   catching the light, and it is laid on with `inset: 0`. This rule used to take
+   that same pseudo-element and, being the heavier selector, won every property
+   it declared: left, right, bottom, height, background. It did not declare
+   `top`, so the rim's `top: 0` stayed behind it. Top, bottom AND height on one
+   absolute box is over-constrained, the bottom is dropped, and the track jumped
+   to the top of the card -- a 3px bar under the top edge of every lit dimmable
+   light on a glass panel, with its own amber fill still down at the bottom
+   where it belongs. Two bars, one of them meaningless.
+
+   The body is the same box as the fill (both resolve against the card's padding
+   box), so the track and the fill still line up to the pixel, and the card gets
+   its rim back. */
+.tile.light.dimmable.on .tile-body::after {
   content: '';
   position: absolute;
   left: 18px;
@@ -1027,6 +1710,31 @@ input:focus-visible {
 .media-controls .ctl {
   flex: 0 0 auto;
 }
+/* How far through it is, and the word for what it is doing. Both belong to the
+   room grid, where a tile has one button instead of five -- the pane says all of
+   this in full, so neither is drawn until a height asks for it. */
+.media-bar {
+  display: none;
+  flex: 1 1 auto;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.18);
+  min-width: 0;
+}
+.media-bar i {
+  display: block;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.72);
+}
+.media-when {
+  display: none;
+  font-size: 13.5px;
+  color: var(--muted);
+}
+.media-veil {
+  display: none;
+}
 .ctl {
   width: 40px;
   height: 40px;
@@ -1071,6 +1779,21 @@ input:focus-visible {
   margin: 0;
   accent-color: var(--lamp);
   background: transparent;
+}
+
+/* a cover's own bar: the picture of the number beside it */
+.tile-bar {
+  display: block;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--card-track, rgba(255, 255, 255, 0.16));
+  margin-top: 9px;
+}
+.tile-bar i {
+  display: block;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--card-ink-2, rgba(255, 255, 255, 0.6));
 }
 
 /* camera */
@@ -1267,9 +1990,45 @@ input:focus-visible {
   .room-card-name {
     font-size: 20px;
   }
+  /* a phone is tall, not wide: the room goes back to being a column, and the
+     three heights stop meaning anything because nothing is competing for a
+     fixed height any more. Same inversion the Home rail makes here. */
+  .stage:has(> .room) {
+    display: block;
+    overflow-y: auto;
+  }
+  .room {
+    display: block;
+  }
   .tiles {
+    grid-auto-flow: row;
+    grid-template-rows: none;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-columns: auto;
+    grid-auto-rows: minmax(150px, auto);
+    overflow-x: visible;
+    overflow-y: visible;
     gap: 10px;
+  }
+  .tiles > .tile[data-size] {
+    grid-row: auto;
+  }
+  /* the scenes take the width rather than a column of it: four rows with their
+     hints are taller than anything beside them, and in a two-column grid the
+     tallest cell sets the row -- so a card of scenes stretched the lamp next to
+     it to 500px of empty paint */
+  .tiles > .tile.room-scenes {
+    grid-column: span 2;
+  }
+  .tiles > .tile {
+    min-height: 150px;
+  }
+  .tiles > .tile.wide {
+    grid-column: span 2;
+  }
+  .room-line {
+    flex-wrap: wrap;
+    overflow: visible;
   }
   .tile.media {
     grid-template-columns: 72px 1fr;
@@ -3968,7 +4727,7 @@ select.input {
 .room-card:active {
   background: var(--card-press, var(--surface-press));
 }
-.tile.light.dimmable.on::after {
+.tile.light.dimmable.on .tile-body::after {
   background: var(--card-track, var(--edge-hi));
 }
 /* last word: on a pale card the lamp darkens to stay lamplight rather than glare */

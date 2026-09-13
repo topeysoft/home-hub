@@ -61,6 +61,18 @@ const doing = computed(() => {
   if (a.value.current_humidity != null) parts.push(`${Math.round(a.value.current_humidity)}% humidity`)
   return parts.join(' · ')
 })
+/* The same thing said in the width a third has: the unit, what the house is
+   doing, and the number it is doing it from. "Currently 74°F · Cooling · 40%
+   humidity" is a desk sentence; on a tile read from the far side of a room it
+   was being ellipsized in the middle of the only part that mattered. */
+const short = computed(() => {
+  if (dead.value) return 'Not responding'
+  if (off.value) return `${unit.value} · off`
+  const act = (ACTION[a.value.hvac_action] ?? MODES[mode.value] ?? mode.value).toLowerCase()
+  const cur = fmt(a.value.current_temperature)
+  const moving = a.value.hvac_action === 'heating' || a.value.hvac_action === 'cooling'
+  return cur === '–' ? `${unit.value} · ${act}` : moving ? `${unit.value} · ${act} from ${cur}` : `${unit.value} · now ${cur}`
+})
 const clamp = (t: number) => Math.min(a.value.max_temp ?? 35, Math.max(a.value.min_temp ?? 5, t))
 function nudge(dir: 1 | -1) {
   if (dead.value || off.value) return
@@ -129,6 +141,7 @@ async function fan(minutes: number) {
             <span class="clim-big" v-else>{{ fmt(shown) }}<span class="clim-unit">{{ unit }}</span></span>
           </div>
           <span class="clim-doing">{{ off && !dead ? `Off · ${doing}` : doing }}</span>
+          <span class="clim-short">{{ short }}</span>
         </div>
         <button class="clim-btn" :disabled="off || dead" @click="nudge(1)" aria-label="Raise the target"><Icon name="plus" :size="20" /></button>
       </div>

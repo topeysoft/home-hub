@@ -69,6 +69,9 @@ function tap() {
       <span class="tile-icon"><Icon :name="kind" /></span>
       <span class="tile-name">{{ name }}</span>
       <span class="tile-state" :class="{ big: kind === 'sensor' }">{{ label }}</span>
+      <!-- a cover says how far in a bar as well as in words: "70% open" is the
+           number, the bar is the picture of it, and the board draws both -->
+      <span class="tile-bar" v-if="kind === 'cover' && device.attrs.current_position != null" aria-hidden="true"><i :style="{ width: device.attrs.current_position + '%' }"></i></span>
     </div>
   </button>
 </template>

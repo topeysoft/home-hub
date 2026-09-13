@@ -16,6 +16,15 @@ const name = computed(() => shortName(props.device, roomOf(props.device)))
 const title = computed(() => props.device.attrs.media_title || (playing.value ? 'Playing' : s.value === 'paused' ? 'Paused' : off.value ? 'Off' : dead.value ? 'Not responding' : 'Idle'))
 const sub = computed(() => [props.device.attrs.media_artist, props.device.attrs.app_name].filter(Boolean).join(' · '))
 const volume = computed(() => Math.round((props.device.attrs.volume_level ?? 0) * 100))
+/* How far through it is, for the bar the board draws beside the play button on a
+   tile that has the room for one. Absent on plenty of players -- a radio stream
+   has no end -- and then there is no bar rather than an empty one. */
+const progress = computed(() => {
+  const pos = Number(props.device.attrs.media_position), dur = Number(props.device.attrs.media_duration)
+  return Number.isFinite(pos) && Number.isFinite(dur) && dur > 0 ? Math.min(100, Math.max(0, (pos / dur) * 100)) : null
+})
+/* the one word beside the button on a small tile: what it is doing, not what is on it */
+const when = computed(() => dead.value ? 'Not responding' : playing.value ? 'Playing' : s.value === 'paused' ? 'Paused' : off.value ? 'Off' : 'Idle')
 
 const art = ref('')
 watch(() => props.device.attrs.entity_picture, (p) => { art.value = p ? imageUrl(props.device.id) : '' }, { immediate: true })
@@ -41,6 +50,8 @@ const stopSound = () => perform(d(), 'sound_off', undefined, { state: 'idle', at
            drawn, rather than a 28px icon floating in an empty square -->
       <DeviceArt v-else :kind="isTv ? 'tv' : 'speaker'" :state="{ playing }" fit="slot" />
     </div>
+    <!-- laid over the artwork at full height, where the words sit on it -->
+    <div class="media-veil" aria-hidden="true"></div>
     <div class="media-text">
       <span class="tile-name">{{ name }}</span>
       <span class="media-title">{{ title }}</span>
@@ -49,11 +60,13 @@ const stopSound = () => perform(d(), 'sound_off', undefined, { state: 'idle', at
     <div class="media-controls" v-if="!off && !dead">
       <button v-if="!isTv" class="ctl" @click="perform(device, 'previous')" aria-label="Previous"><Icon name="prev" :size="20" /></button>
       <button class="ctl primary" @click="toggle" :aria-label="playing ? 'Pause' : 'Play'"><Icon :name="playing ? 'pause' : 'play'" :size="22" /></button>
+      <span class="media-when">{{ when }}</span>
+      <div class="media-bar" v-if="progress != null" aria-hidden="true"><i :style="{ width: progress + '%' }"></i></div>
       <button v-if="!isTv" class="ctl" @click="perform(device, 'next')" aria-label="Next"><Icon name="next" :size="20" /></button>
       <label class="vol"><Icon name="volume" :size="18" />
         <input type="range" min="0" max="100" :value="volume" aria-label="Volume" @change="setVolume" />
       </label>
-      <button class="ctl" @click="power" aria-label="Turn off"><Icon name="power" :size="20" /></button>
+      <button class="ctl power" @click="power" aria-label="Turn off"><Icon name="power" :size="20" /></button>
     </div>
     <div class="media-controls" v-else-if="!dead">
       <button class="ctl primary" @click="power" aria-label="Turn on"><Icon name="power" :size="22" /></button>
