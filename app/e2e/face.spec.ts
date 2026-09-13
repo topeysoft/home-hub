@@ -373,3 +373,72 @@ test('a scene chip on a card inks like paper, because that is what it is sitting
   const frosted = await frost(page, '.bento .scene-card .scene')
   expect(frosted, 'the chip started blurring, so it is being treated as a pane after all').toBe('none')
 })
+
+/* The tab bar, which is where the face's reach was widened and so is where the widening has to be
+   held honest. layout.ts now says a face gets every surface and still may not move, rename, hide or
+   add a control, so this checks both halves at once.
+
+   The pill is the interesting part. The board has no pill and move 5 says so outright -- but three
+   bare words on a field read as a caption rather than as a control, and on a panel read from across
+   a room seeing WHERE to press comes before reading what it says. So the pill stays and changes
+   what it is made of, which is the whole point of the widening: the seam this face had was a glass
+   card sitting under a paper pill, and deleting the pill was never the answer to it. This test is
+   what stops someone reading move 5 on the board and taking it off again. */
+test('glass re-materialises the tab pill instead of taking it away', async ({ page }) => {
+  const bar = () => page.evaluate(() => {
+    const nav = getComputedStyle(document.querySelector('.tabs')!)
+    const tabs = [...document.querySelectorAll('.tab')].map((t) => {
+      const cs = getComputedStyle(t)
+      const r = t.getBoundingClientRect()
+      return {
+        label: t.textContent!.trim(),
+        active: t.classList.contains('active'),
+        fill: cs.backgroundColor,
+        onScreen: r.x >= 0 && r.x + r.width <= 1280 && r.width > 40,
+      }
+    })
+    return {
+      frost: nav.backdropFilter,
+      ground: nav.backgroundImage,
+      rim: getComputedStyle(document.querySelector('.tabs')!, '::after').background,
+      tabs,
+    }
+  })
+
+  await page.goto('/?face=paper&layout=wall&nav=top&at=19:40', { waitUntil: 'networkidle' })
+  await expect(page.locator('.tab').first()).toBeVisible()
+  await page.waitForTimeout(400)
+  const paper = await bar()
+
+  await page.goto('/?face=glass&layout=wall&nav=top&at=19:40', { waitUntil: 'networkidle' })
+  await expect(page.locator('.tab').first()).toBeVisible()
+  await page.waitForTimeout(400)
+  const glass = await bar()
+
+  // the pill is still a pill on both, and the active tab still has a thumb under it
+  for (const [face, bars] of [['paper', paper], ['glass', glass]] as const) {
+    expect(bars.frost, `${face} lost the frost behind its tab pill`).toContain('blur')
+    expect(bars.tabs.find((t) => t.active)!.fill, `${face} lost the fill under its active tab`)
+      .not.toBe('rgba(0, 0, 0, 0)')
+  }
+
+  // but it is made of the face now: glass paints a ground and an edge paper never had
+  expect(glass.ground, 'the tab pill is still wearing paper under glass').not.toBe('none')
+  expect(paper.ground, "paper's tab pill picked up a ground it never had").toBe('none')
+  expect(glass.rim, 'the tab pill has no rim under glass, so it is not made of glass').toContain('gradient')
+  // and it is the face's own blur, not paper's narrower one
+  const radius = (s: string) => Number(s.match(/blur\((\d+(?:\.\d+)?)px\)/)?.[1] ?? 0)
+  expect(radius(glass.frost), `glass kept paper's blur radius: ${glass.frost}`)
+    .toBeGreaterThan(radius(paper.frost))
+
+  // the control itself came through untouched: same tabs, same order, all still reachable
+  expect(glass.tabs.map((t) => t.label), 'the face changed which tabs there are, or their order')
+    .toEqual(paper.tabs.map((t) => t.label))
+  expect(glass.tabs.map((t) => t.active), 'the face changed which tab you are on')
+    .toEqual(paper.tabs.map((t) => t.active))
+  for (const t of glass.tabs)
+    expect(t.onScreen, `"${t.label}" is off the screen or too small to hit under glass`).toBe(true)
+
+  await page.locator('.tab', { hasText: 'Rooms' }).click()
+  await expect(page.locator('.room-card').first()).toBeVisible()
+})

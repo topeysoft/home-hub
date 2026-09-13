@@ -204,6 +204,8 @@ input:focus-visible {
 [data-face='glass'] .back,
 [data-face='glass'] .banner,
 [data-face='glass'] .wall-loz,
+[data-face='glass'] .topbar-add,
+[data-face='glass'] .tabs,
 [data-face='glass'] .bottombar .say-box {
   background-color: transparent;
   background-image: var(--glass-sweep), var(--glass);
@@ -233,16 +235,20 @@ input:focus-visible {
 [data-face='glass'] .back,
 [data-face='glass'] .banner,
 [data-face='glass'] .wall-loz,
+[data-face='glass'] .topbar-add,
+[data-face='glass'] .tabs,
 [data-face='glass'] .bottombar .say-box {
   backdrop-filter: blur(var(--glass-blur, 26px)) saturate(var(--glass-sat, 1.7))
     brightness(var(--glass-br, 1.06));
   box-shadow: var(--glass-inner), var(--glass-drop);
 }
-/* The rim below is absolute, so its surface has to be a containing block. Two
+/* The rim below is absolute, so its surface has to be a containing block. Three
    surfaces are not in this list and take it from their own rules instead: .back,
    because a face must not be able to move a control and
-   `[data-face='glass'] .back` beats a plain `.opened-close`; and .wall-loz,
-   which is already absolutely positioned and so is already a containing block.
+   `[data-face='glass'] .back` beats a plain `.opened-close`; .wall-loz,
+   which is already absolutely positioned and so is already a containing block;
+   and .topbar-add, which declares `position: relative` for its own attention
+   dot and would take the same trap if this list handed it a second one.
    Handing `relative` to something that placed itself is how the pane's close
    button ended up off the left of the screen, and it is how the weather's
    lozenge ended up at the top of its column instead of the bottom. */
@@ -250,18 +256,28 @@ input:focus-visible {
 [data-face='glass'] .tile,
 [data-face='glass'] .scene,
 [data-face='glass'] .banner,
+[data-face='glass'] .tabs,
 [data-face='glass'] .bottombar .say-box {
   position: relative;
 }
 /* the rim, drawn as a gradient border with a mask so it follows whatever radius
    the surface already has. ::before is spoken for on a room card -- that is the
-   lamp glow -- so the edge lives on ::after everywhere, for one rule not two. */
+   lamp glow -- so the edge lives on ::after everywhere, for one rule not two.
+   One exception, and it is the mirror of that one: .topbar-add spends ::after
+   on its attention dot, so its rim goes on ::before. Left in this list rather
+   than given a rule of its own, because two rims drifting apart is exactly what
+   "one rule not two" is here to prevent. Specificity is why it cannot simply
+   join the others: `[data-face='glass'] .topbar-add::after` and
+   `.topbar-add.attention::after` weigh the same, so the later one would win and
+   a button with something to say would quietly lose its edge. */
 [data-face='glass'] .room-card::after,
 [data-face='glass'] .tile::after,
 [data-face='glass'] .scene::after,
 [data-face='glass'] .back::after,
 [data-face='glass'] .banner::after,
 [data-face='glass'] .wall-loz::after,
+[data-face='glass'] .topbar-add::before,
+[data-face='glass'] .tabs::after,
 [data-face='glass'] .bottombar .say-box::after,
 [data-face='glass'] .bottombar .say-hint::after,
 [data-face='glass'] .bottombar .say-note::after,
@@ -300,6 +316,8 @@ input:focus-visible {
 [data-face='glass'][data-flat] .scene,
 [data-face='glass'][data-flat] .back,
 [data-face='glass'][data-flat] .banner,
+[data-face='glass'][data-flat] .topbar-add,
+[data-face='glass'][data-flat] .tabs,
 [data-face='glass'][data-flat] .bottombar .say-box {
   background-image: var(--glass-sweep), var(--glass-flat);
 }
@@ -311,6 +329,8 @@ input:focus-visible {
 [data-face='glass'][data-flat] .opened-panel,
 [data-face='glass'][data-flat] .house-panel,
 [data-face='glass'][data-flat] .rail,
+[data-face='glass'][data-flat] .topbar-add,
+[data-face='glass'][data-flat] .tabs,
 [data-face='glass'][data-flat] .bottombar .say-box {
   backdrop-filter: none;
 }
@@ -5518,6 +5538,28 @@ select.input {
 .tab:active {
   background: var(--surface-press);
 }
+/* ---------- the tab bar, under glass ----------
+   The board draws this bar with no furniture on it at all -- a date, three
+   words, an avatar, and the field showing through between them -- and move 5
+   says so outright: no sliding pill, no underline, only the word's weight
+   changes. That was built and then taken back out, and the reason is worth
+   keeping rather than rediscovering.
+
+   Three bare words on a field read as a caption, not as a control. The pill is
+   what says the middle of the bar is a thing you touch, and on a panel across a
+   room that is the whole job: a person walking past has to see where to press
+   before they can read what it says. The board could leave it off because a
+   board is looked at from a chair.
+
+   So the pill stays and takes the material instead -- it is in the shared glass
+   lists up top with the say box, which is the same shape doing the same work at
+   the other end of the screen. That is the widening doing exactly what it is
+   for: the seam this face had was a glass card sitting under a paper pill, and
+   the answer to it was never to delete the pill.
+
+   The active tab keeps paper's fill. A thumb on glass is still a thumb, and
+   swapping it for a weight change here would be move 5 arriving by the back
+   door after the front one was closed. */
 .topbar-right {
   display: flex;
   align-items: center;

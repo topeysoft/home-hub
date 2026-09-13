@@ -56,6 +56,23 @@ export function isNav(v: unknown): v is NavName {
  * listed at the top of this file and they are not negotiable per-face either.
  * Nor does a face get an absolute palette. Like a tone, it is specified as a
  * distance from the sky, so it holds at every hour -- tone.ts says why.
+ *
+ * What it DOES get is every surface. That is a deliberate widening, and it is
+ * written down here for the same reason Wall's two constants are: a rule that
+ * quietly grows is worse than one that says what it now covers.
+ *
+ * Glass reached the cards, the panes, the lozenge and the orb, and stopped. The
+ * result was a screen made of two materials -- glass where a card was, paper
+ * everywhere else -- because nobody was sure a face was allowed to touch a tab
+ * bar, a chip, or the inside of This house. It is: re-materialising a control
+ * is not moving one. The tabs stay where they are, in the same order, reaching
+ * the same three screens; what changes is what they are made of and how they
+ * answer a finger. A face that may only dress a card is not a face, it is a
+ * card style, and the board it was drawn from has no such seam in it.
+ *
+ * The line that has not moved is the one above: a face may not move, rename,
+ * hide or add a control. If a change cannot be made by swapping material and
+ * motion alone, it belongs to the layout or to the panel, not here.
  */
 export type FaceName = 'paper' | 'glass'
 
