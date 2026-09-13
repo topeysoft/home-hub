@@ -50,7 +50,7 @@ services:
       - SESSION_SECRET=${ZWAVE_SESSION_SECRET}
 
   matter-server:
-    image: ghcr.io/home-assistant-libs/python-matter-server:8.1.2
+    image: ghcr.io/home-assistant-libs/python-matter-server:8.1.0
     container_name: matter-server
     restart: unless-stopped
     network_mode: host      # Matter commissioning needs mDNS and IPv6 on the LAN
