@@ -55,7 +55,7 @@ is about who EXECUTES, not about which things voice may touch. The grammar execu
 spoken "close the garage" does not reach the model at all -- `garage( door)?` is a cover in `commands.py`'s KINDS
 table, `close` is one of its direction words, and it runs at once, exactly the way a tap does. Locking up is already
 there too: "lock the front door", "lock up", "lock the house". **Voice closing a garage door is allowed by the rule as
-written, today, and would work the moment shape 1 lands.**
+written, today, and would work the moment a microphone lands.**
 
 Softening the rule would therefore buy nothing that was wanted, and would cost the thing it is for: an LLM's misparse
 of "unlock the back door" is a class of accident a deterministic grammar cannot have.
@@ -66,7 +66,7 @@ control*. It is *who is allowed to be heard*, and that depends on how the senten
 | how the house heard it | who could have said it |
 |---|---|
 | typed in the command box | somebody standing at the panel, indoors |
-| the orb tapped (shape 1) | somebody standing at the panel, indoors |
+| the orb tapped (on the wall, or shape 1 on a phone) | somebody standing at the panel, indoors |
 | the orb woken by a wake word (later; see *A wake word is another route*) | anybody within earshot of the panel -- and a panel is often in a hall, near the door |
 | a satellite with a wake word (shape 3) | anybody within earshot -- including through a door, a window or a letterbox |
 
@@ -92,13 +92,18 @@ because the failure mode of a misheard "close the garage" is a closed garage.**
 What "more than a voice" should be is the open part, and it is a choice between three, in order of how much they ask
 of a person: the panel says what was heard and waits for a tap; or the settings code, which the house already has and
 already gates the settings behind; or the household turns the whole class on per kind, with the risk in plain words,
-the way a nudge says what it is for. None of the three needs building before shape 1, because shape 1 is the panel's
-own microphone, touched by a hand, and the question does not arise until something in the house listens for a word.
+the way a nudge says what it is for. None of the three needs building first, because every route that exists today is
+a microphone touched by a hand -- the orb on the wall, and shape 1 on a phone -- and the question does not arise until
+something in the house listens for a word.
 
 Two things this does not change. The model still only proposes, by voice as by typing. And nothing here is voice-only:
 every one of these has a tap, which is the whole reason the gated half can be gated at all.
 
 ## Three shapes, in the order to build them
+
+*The order below is the order they were conceived. The order to build them is in **Milestones**, and 14 September 2026
+split shape 1 in two: its gesture, which the wall gets first, and its browser recogniser, which turns out to be only
+ever the phone's.*
 
 ### 1. Tap the orb and talk
 
@@ -108,26 +113,32 @@ box, are sent to `/say` exactly as if typed, and the answer shows the same way. 
 was settled on 12 September 2026: **the orb is the microphone, and typing is reached from inside the box once it is
 open.**
 
-Speech-to-text comes from the browser (`SpeechRecognition`, on the kiosk tablet and on phones). That API needs a
-**secure context**: `https://`, or a browser told to trust `http://hub.local`. So on phones this shape waits on the
-real certificate per hub from `docs/away.md` (a public name per house, reached directly at home and through the maker's
-relay away). For the wall panel, which is a device the hub owner controls, a kiosk browser can be told to treat the hub's
-address as secure without a certificate, so the wall can listen before phones do. Where the browser cannot
+Speech-to-text comes from the browser (`SpeechRecognition`). That API needs a **secure context**: `https://`, or a
+browser told to trust `http://hub.local`. So this shape waits on the real certificate per hub from `docs/away.md` (a
+public name per house, reached directly at home and through the maker's relay away). Where the browser cannot
 recognise speech there is nothing to hide and no branch to write: the tap opens the box to type in, which is exactly
 what a tap does today.
 
-**One thing to establish before building rather than after.** The wall is Chromium -- `app/playwright.config.ts` runs
-the wall project on Desktop Chrome -- and Chrome's `SpeechRecognition` has historically sent the audio away to be
-recognised on Google's servers. Chrome has since added an on-device mode, but it is opted into explicitly and the
-model is fetched first; it is not what a page gets by default. This plan files browser speech-to-text under *runs on
-the device holding the microphone* and promises **works with the internet down**, and shipping shape 1 without
-knowing which of the two is actually happening would honour neither. Measure it on the kiosk browser the wall really
-runs, the same way the backdrop-root question is to be measured rather than assumed. If on-device recognition is not
-there, shape 1 on the wall waits for shape 2 instead of quietly becoming a cloud feature.
+**The wall is no longer in that paragraph, and this is the part to read twice.** It used to be: a kiosk browser could
+be told to treat the hub's address as secure without a certificate, so the wall would listen before phones did. The
+wall stopped being a browser on 13 September 2026. It is `kiosk/`, an Android launcher around a WebView, and **a
+WebView has no Web Speech API at all** -- `SpeechRecognition` there is not throttled or cloud-backed, it does not
+exist. Nor can a WebView be told to trust `http://hub.local` the way a Chrome kiosk can with a flag. Both halves of
+the wall's route are gone, so **shape 1 is the phone's shape**, and the wall's microphone is settled below in *The
+wall's microphone is the hub's ear*. What this section still owns for both is the gesture, which is the substance of
+it and depends on neither.
 
-Exit test: from the wall, tap the orb and say "kitchen lights off"; the orb holds its listening state while the
-sentence is spoken, the lights go off, and the toast reads *Kitchen lights off.* within two seconds of the last word.
-No model was called, and no audio left the panel.
+**And the thing to establish before building rather than after is now only the phone's.** Chrome's
+`SpeechRecognition` has historically sent the audio away to be recognised on Google's servers. Chrome has since added
+an on-device mode, but it is opted into explicitly and the model is fetched first; it is not what a page gets by
+default. This plan files browser speech-to-text under *runs on the device holding the microphone* and promises
+**works with the internet down**, and shipping this to a phone without knowing which of the two is actually happening
+would honour neither. So it is still to be measured, on a phone browser rather than on the wall -- and if on-device
+recognition is not there, phones wait for shape 2 as well. The wall answers the question by not asking it.
+
+Exit test: from a phone on the house's own Wi-Fi, tap the orb and say "kitchen lights off"; the orb holds its
+listening state while the sentence is spoken, the lights go off, and the toast reads *Kitchen lights off.* within two
+seconds of the last word. No model was called, and no audio left the phone.
 
 ### 2. Local recognition on the hub
 
@@ -271,6 +282,52 @@ free.
 only proposes; and there is still a tap for everything voice can do. Listening is a state of a control that is
 already there, which is the cheapest possible way for this to arrive.
 
+## The wall's microphone is the hub's ear
+
+*Settled 14 September 2026, after `kiosk/` landed and turned up that a WebView has no Web Speech API. This replaces
+what shape 1 said about the wall. It changes no rule and no route -- only which engine the wall reaches, and in which
+order the two shapes arrive.*
+
+`kiosk/README.md` recorded two ways out and picked neither: hand the panel **Android's own recogniser** through a
+small bridge, or let the wall's voice wait for **shape 2**.
+
+**Not Android's recogniser.** It fails the same test Chrome's was going to be held to, on worse hardware.
+`SpeechRecognizer` routes to Google's recognition service and is cloud-backed by default; on-device recognition is
+`createOnDeviceSpeechRecognizer()` at **API 33 or later**, and the kiosk's `minSdk` is 23 for the reason its own
+README gives -- wall tablets are older than the resolvers they ship with. A tablet with no Play services has no
+recogniser at all. This plan's contingency had already decided that case: if on-device recognition is not there, the
+wall waits for shape 2 rather than quietly becoming a cloud feature.
+
+**But the microphone is worth building before the recogniser, and apart from it.** The kiosk bridges **capture, not
+recognition** -- `AudioRecord`, and the audio goes to the hub, where shape 2 has to be anyway. Three things follow.
+
+*It deletes a dependency instead of adding one.* `getUserMedia` in a WebView needs a secure context too, so the
+"kiosk browser told to trust `hub.local`" line was load-bearing for capture as much as for recognition -- and there
+is no such flag in a WebView. Native capture never meets the question: no origin, no certificate, nothing to trust.
+
+*The order this plan wanted survives.* **The wall still listens before phones do**, through shape 2 instead of
+shape 1. Everything the wall needs is on this side of the box -- a container, a route, an APK -- while phones are
+behind the certificate, which is behind the relay.
+
+*And **works with the internet down** becomes true on the wall by construction*, rather than by a measurement that
+could have gone the other way.
+
+**One instruction shapes the bridge.** The panel asks for **an audio stream, not for text**, with two sources behind
+one interface: `getUserMedia` where it exists, the kiosk's bridge where it does not. Same panel code, same route on
+the brain, same Wyoming behind it. That keeps `docs/apps.md`'s *nothing lives only in the app* true -- the wall
+contributes hardware, not a feature -- and the degradation settled on 12 September falls out free: no bridge and no
+`getUserMedia` means a tap opens the box to type, which is what a tap does today.
+
+Two details land in the wall's favour. A kiosk made device owner can grant itself `RECORD_AUDIO` with
+`setPermissionGrantState`, so there is no permission dialog on a panel with nobody standing at it -- one more thing
+the `dpm` step buys. And Android lights its own microphone indicator whenever something is capturing, which under
+tap-to-talk is exactly right: an OS-level proof of *the microphone is visibly off until then*, free, and one more
+reason the wall does not want a wake word.
+
+Exit test: from the wall, tap the orb and say "kitchen lights off"; the orb holds its listening state while the
+sentence is spoken, the lights go off, and the toast reads *Kitchen lights off.* within two seconds of the last word.
+No model was called, and no audio left the house.
+
 ## A wake word is another route, not a replacement for the tap
 
 *Added 12 September 2026, from the question "isn't it possible to have a wake word too, or instead?"*
@@ -310,17 +367,18 @@ variant of each answer, alongside the `text`, is cheap to add in `commands.py` w
 model (explanations, proposals) are not read aloud; a proposal is a card to look at, and an explanation is a paragraph
 to read.
 
-## Decisions to make before shape 1
+## Decisions to make before a microphone
 
 | Question | Proposal |
 |---|---|
-| Secure origin for the browser microphone | Wall panel first, in a kiosk browser told to trust `hub.local`; phones after the https decision |
+| Secure origin for the browser microphone | Phones only, after the https decision. The wall needs none: it captures natively, and a WebView could not have been told to trust `hub.local` in any case |
+| How the wall hears at all, now that it is a WebView | The kiosk captures the audio and the hub recognises it -- settled 14 September 2026. Not Android's own recogniser, which is cloud-backed below API 33 and absent without Play services. See *The wall's microphone is the hub's ear* |
 | Touched or always listening on the panel | Touched. A wall tablet listening all day is a different promise and needs a wake word (shape 2 at the earliest; see *A wake word is another route*) |
 | Where talking to the house lives, now that the box rests as an orb | The orb, **tapped** -- settled 12 September 2026. The orb is the microphone and the keyboard is reached from inside the opened box. See *The orb already is the microphone* |
 | What the tap costs, having no "letting go" | A listening state move 6 was not drawn with, a second tap that means stop, and an endpointer whose patience a person can feel. This is the substance of shape 1 |
 | A wake word on the panel as well as the tap | Yes, but with shape 2 and not before, and as a switch a household turns on. It adds a route rather than inheriting the panel's, so the closing-half-only rule reaches the panel with it |
-| Whether the browser's recognition really runs on the device | To be measured on the kiosk browser before shape 1 ships. Chrome's default has been the cloud and on-device is opt-in; if it is not available there, shape 1 waits for shape 2 |
-| Where speech-to-text runs | The browser in shape 1; the hub in shape 2; never a cloud by default |
+| Whether the browser's recognition really runs on the device | Still to be measured, but on a phone browser and not on the wall -- a WebView has no `SpeechRecognition` to measure. Chrome's default has been the cloud and on-device is opt-in; if it is not there, phones wait for shape 2 as well |
+| Where speech-to-text runs | The browser in shape 1, which is phones; the hub in shape 2, which is the wall and everything after it; never a cloud by default |
 | How big a model | Chosen from the host's class at install, overridable in `.env`; the Large tier is the design point, the Small tier the floor |
 | Does voice ever bypass confirmation for the model's proposals | No |
 | May voice do locks, doors and the garage | Yes, from the panel -- it is the same trust as a tap. From a wake-word satellite, the closing half only. See *What voice may do* |
@@ -336,14 +394,18 @@ recognition, and anything that needs a vendor's account. If a household needs on
 1. **Grow the grammar from the log.** Two weeks of `said` events from the house here; every not-understood phrase
    that a reasonable person would expect to work becomes a pattern with a test. Exit: fewer than one in ten typed
    sentences reach the assistant or a "didn't catch that".
-2. **Shape 1 on the wall.** The gesture is decided -- tap talks -- so what is left is move 6 built on the orb: the
-   listening state it holds while somebody speaks, then the ring once when the sentence lands (scale 1.18, 320/520).
-   With it, the on-device recognition established on the kiosk browser the wall really runs, that browser trusting
-   the hub, and the two-second test. Move 6 is the last of the eight with nowhere to live, so this milestone finishes
-   the canvas as well as starting voice.
-3. **Shape 2 on the hub.** Wyoming, faster-whisper and Piper as containers with profiles like the radios; the
-   tier chooser in `install.sh`; the brain speaks Wyoming; the offline test on a Pi 5 and on a NUC-class box; the
-   measured latency for each tier written into the table above.
-4. **Shape 3 with one satellite.** One box in the kitchen, paired from the panel, placed on New devices, the guest
+2. **Move 6 on the orb.** The gesture is decided -- tap talks -- so what is left is the drawing: the listening state
+   the orb holds while somebody speaks, then the ring once when the sentence lands (scale 1.18, 320/520), a second
+   tap that means stop, and an endpointer whose patience a person can feel. It needs no recogniser and can be built
+   against a stub. Move 6 is the last of the eight with nowhere to live, so this milestone finishes the canvas before
+   voice has an engine at all.
+3. **Shape 2 on the hub, which is the wall's voice.** Wyoming, faster-whisper and Piper as containers with profiles
+   like the radios; the tier chooser in `install.sh`; a route beside `/say` that takes audio; the brain speaks
+   Wyoming; the offline test on a Pi 5 and on a NUC-class box; the measured latency for each tier written into the
+   table above. Then the smallest native piece in the whole plan -- `AudioRecord` and the bridge in `kiosk/` -- last,
+   because until the rest of this lands it has nothing to talk to.
+4. **Shape 1 on phones,** once `docs/away.md` has given a house a real certificate: the browser's recognition
+   measured first, then the same orb, the same route and the same answers the wall already has.
+5. **Shape 3 with one satellite.** One box in the kitchen, paired from the panel, placed on New devices, the guest
    test. And, before it ships rather than after, what "more than a voice" means for opening and unlocking -- this is
    the milestone where a wake word in a room makes that question real.

@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">Elyir</string>
+    <string name="looking">Looking for the house</string>
+    <string name="address_hint">hub.local</string>
+    <string name="use">Use this</string>
+    <string name="reload">Reload</string>
+    <string name="leave">Leave kiosk</string>
+</resources>

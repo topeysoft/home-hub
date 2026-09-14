@@ -83,6 +83,9 @@ container before the Pi's first start so the two do not fight over Ring's token.
   log, websocket stream, first-run setup, device discovery. Talks only to HA's websocket and REST.
   Serves `app/dist`. `brain/Dockerfile` packages it with the panel built in.
 - `app/` — Vue PWA for the wall kiosk and phone (`npm run build` → served by the brain).
+- `kiosk/` — the wall's home screen: a small Android launcher that boots into the panel, stays awake and
+  full screen, finds the hub over mDNS when `hub.local` will not resolve, and has one way out (the clock's
+  corner, held). It draws no house of its own; the panel comes from the hub. `kiosk/README.md`.
 - The command box: `POST /say` runs `brain/hub/commands.py`, a fixed grammar over the house's own names (rooms and their
   usual other names, devices, kinds, scenes, sounds) that executes at once and deterministically. What it cannot place
   goes to the assistant, which only proposes. Every sentence is logged as a `said` event, understood or not, so the

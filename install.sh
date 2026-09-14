@@ -84,7 +84,22 @@ if [ "$(hostname)" != "$HOSTNAME_WANTED" ]; then
   sed -i "s/127\.0\.1\.1.*/127.0.1.1\t$HOSTNAME_WANTED/" /etc/hosts 2>/dev/null || true
 fi
 pkg "$AVAHI" 2>/dev/null || true   # mDNS, so hub.local resolves on phones and tablets
+# ...and a service record, for the things that cannot resolve a .local name at all. Plenty of wall
+# tablets cannot; the kiosk in kiosk/ asks for this and gets an address that always works.
+mkdir -p /etc/avahi/services 2>/dev/null && cat > /etc/avahi/services/home-hub.service <<'MDNS' 2>/dev/null || true
+<?xml version="1.0" standalone='no'?>
+<!DOCTYPE service-group SYSTEM "avahi-service.dtd">
+<service-group>
+  <name replace-wildcards="yes">%h</name>
+  <service>
+    <type>_home-hub._tcp</type>
+    <port>80</port>
+    <txt-record>path=/</txt-record>
+  </service>
+</service-group>
+MDNS
 systemctl enable --now avahi-daemon >/dev/null 2>&1 || true
+systemctl reload-or-restart avahi-daemon >/dev/null 2>&1 || true
 
 say "4/5  Settings"
 if [ ! -f .env ]; then

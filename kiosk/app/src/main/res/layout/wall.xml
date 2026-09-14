@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/ground">
+
+    <WebView
+        android:id="@+id/web"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/ground" />
+
+    <!-- Shown before the first load, and again whenever the house stops answering. It never
+         covers a panel that is working: the web view keeps whatever it last drew underneath. -->
+    <LinearLayout
+        android:id="@+id/waiting"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/ground"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="32dp">
+
+        <TextView
+            android:id="@+id/line"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/looking"
+            android:textColor="@color/ink"
+            android:textSize="26sp" />
+
+        <TextView
+            android:id="@+id/hint"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:textColor="@color/quiet"
+            android:textSize="15sp" />
+    </LinearLayout>
+</FrameLayout>

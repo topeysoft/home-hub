@@ -67,7 +67,8 @@ an ACME client in the brain, and the rough edge where a hub offline past a renew
 almost entirely **for browsers on phones**:
 
 - The wall runs plain http and does not need it.
-- Its microphone (`docs/voice.md` shape 1) can be a kiosk browser told to trust `hub.local`.
+- Its microphone does not need it either: the kiosk captures audio natively and the hub recognises it (settled 14
+  September 2026; `docs/voice.md`, *The wall's microphone is the hub's ear*), so no secure context is ever asked for.
 - Guests are LAN-only by rule, and the LAN is plain http, so a guest never meets it.
 - What is left is a household's own phones, away from home, in a browser — plus web push and the phone microphone.
 
@@ -102,6 +103,13 @@ accident.
 
 It is cheaper than either app, it belongs to the out-of-the-box promise rather than to this plan, and it is the one
 piece of native code here that is worth writing before the relay exists.
+
+*Built, 13 September 2026: `kiosk/`. A home-screen launcher around a web view of the hub's own panel — full screen,
+awake, home button leading back into the house, mDNS discovery for the tablets that cannot resolve `hub.local`, and
+one way out in the clock's corner. `kiosk/README.md` has the build and the `dpm set-device-owner` step. One thing it
+turned up for `docs/voice.md`: a WebView has no Web Speech API at all, so shape 1's browser microphone cannot run on
+the wall as written. Settled 14 September 2026 -- the kiosk will capture audio natively and the hub will recognise it,
+which makes shape 2 the wall's voice and leaves shape 1 to phones.*
 
 ## Desktop: no
 

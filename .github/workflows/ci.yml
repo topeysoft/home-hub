@@ -1,9 +1,10 @@
-# Every push and pull request. Five jobs, and a change has to get past all of them:
+# Every push and pull request. Six jobs, and a change has to get past all of them:
 #
 #   brain   the hub's own tests, its linter, and the coverage floor
 #   panel   the screens: types, linter, unit tests, coverage floor, and that it builds
 #   e2e     the built panel driven in a real browser against the mock brain
 #   shell   the scripts that run on the hub host
+#   kiosk   the wall's launcher: its own tests, and that it still builds
 #   image   the brain's container, built for both kinds of host but not pushed
 #
 # The image job is here rather than only in brain-image.yml so a Dockerfile that no longer builds is
@@ -109,6 +110,20 @@ jobs:
         run: |
           sudo apt-get install -y shellcheck >/dev/null
           shellcheck -S warning -e SC2154 install.sh tools/add-sound.sh driver-layer/radios.sh driver-layer/host/firstboot.sh driver-layer/host/update.sh driver-layer/host/restore.sh driver-layer/host/pi-image/stage-hub/prerun.sh driver-layer/host/pi-image/stage-hub/00-home-hub/*.sh
+
+  kiosk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: tests
+        run: cd kiosk && ./gradlew testDebugUnitTest
+      - name: the wall still builds
+        run: cd kiosk && ./gradlew assembleDebug
 
   image:
     runs-on: ubuntu-latest
