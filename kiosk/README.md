@@ -86,9 +86,12 @@ It is optional. Everything above works without it; the pinning is the only diffe
 - **No microphone yet — and when it grows one it will recognise nothing.** A WebView has no Web
   Speech API — `SpeechRecognition` simply does not exist in it — so `docs/voice.md`'s shape 1 cannot
   run on this wall as written. Settled 14 September 2026: the wall does **not** get Android's own
-  recogniser, which is cloud-backed below API 33 and missing altogether without Play services, and
-  `minSdk` here is 23. It gets `AudioRecord` and a bridge that hands the panel an audio stream, and
-  the hub does the listening — `docs/voice.md`, *The wall's microphone is the hub's ear*. Native
-  capture also sidesteps the secure context `getUserMedia` would have wanted and a WebView cannot be
-  given. So this stays empty until shape 2 exists on the hub; the panel's own path in a phone browser
-  is unaffected either way.
+  recogniser. On-device recognition arrived in API 31 and still waits on a model the tablet has to
+  fetch; anything older is a round trip to a cloud; and a recogniser of any kind wants a recognition
+  service on the device, which in practice means Play services. `minSdk` here is 23, and a wall
+  tablet is usually the oldest thing in the house. It gets `AudioRecord` and a bridge that hands the
+  panel an audio stream, and the hub does the listening — `docs/voice.md`, *The wall's microphone is
+  the hub's ear*. Capturing natively also sidesteps the secure context `getUserMedia` would have
+  wanted and a WebView cannot be given. None of it exists yet, down to the `RECORD_AUDIO` this
+  manifest does not ask for: the wall stays deaf until shape 2 exists on the hub, and the panel's own
+  path in a phone browser is unaffected either way.
