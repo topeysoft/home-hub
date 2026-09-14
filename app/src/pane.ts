@@ -162,7 +162,7 @@ const ACTION_WORDS: Record<string, string> = {
 }
 function actionText(ev: Event, unit: string): string {
   const word = String(ev.new ?? '')
-  let detail: any = {}
+  let detail: any
   try { detail = ev.detail ? JSON.parse(ev.detail) : {} } catch { detail = {} }
   if (word.startsWith('fan ')) return `Fan for ${word.slice(4)}`
   if (word === 'fan off') return 'Fan off'

@@ -11,7 +11,7 @@ import { expect, test, type Page } from '@playwright/test'
 /* Every test here holds a gesture for half a second, waits out the pane's rise and its fall, and
    several of them do that three or four times over. Six running at once on a working machine is
    genuinely slower than Playwright's 30s default, and a timeout there says nothing about the panel. */
-test.beforeEach(({ }, testInfo) => testInfo.setTimeout(60_000))
+test.describe.configure({ timeout: 60_000 })
 
 /** Hold a tile until ITS pane opens, then start listening to what the panel asks the house for.
     `instrument` is the rig that tile should have produced; a press measured a moment too early
