@@ -119,7 +119,12 @@ systemctl daemon-reload 2>/dev/null || true
 systemctl enable --now home-hub-update.path home-hub-restore.path >/dev/null 2>&1 || true
 
 say "5/5  Starting the house"
-docker compose pull -q --ignore-buildable 2>/dev/null || true
+# Pre-pull everything the compose file pins. A tag that no longer exists on the registry would
+# otherwise surface as a wall of daemon errors from `up`, with none of the other images fetched and
+# nothing started, so say which reference is missing in one line instead.
+if ! PULLED="$(docker compose pull -q --ignore-buildable 2>&1)"; then
+  echo "$PULLED" | sed -n 's/.*failed to resolve reference "\([^"]*\)".*/  could not fetch \1 — that pin is not on the registry/p' | sort -u
+fi
 if PULL="$(docker compose pull -q brain 2>&1)"; then
   echo "  brain image: $(docker image inspect ghcr.io/topeysoft/home-hub-brain:latest --format '{{index .RepoDigests 0}}' 2>/dev/null | cut -d@ -f2 | cut -c1-19)"
 else

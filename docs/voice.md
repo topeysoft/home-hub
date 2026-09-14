@@ -66,51 +66,68 @@ control*. It is *who is allowed to be heard*, and that depends on how the senten
 | how the house heard it | who could have said it |
 |---|---|
 | typed in the command box | somebody standing at the panel, indoors |
-| the orb held down (shape 1) | somebody standing at the panel, indoors |
+| the orb tapped (shape 1) | somebody standing at the panel, indoors |
+| the orb woken by a wake word (later; see *A wake word is another route*) | anybody within earshot of the panel -- and a panel is often in a hall, near the door |
 | a satellite with a wake word (shape 3) | anybody within earshot -- including through a door, a window or a letterbox |
 
-Push-to-talk on the wall is the same trust as tapping the tile: your hand is on the panel, so you are already inside.
+The orb on the wall is the same trust as tapping the tile: your hand is on the panel, so you are already inside.
 There is nothing to gate. A satellite listening for a wake word is a different promise, and the attack is not
 hypothetical -- shouting a command through a letterbox at a voice assistant to unlock a door is a known one.
 
 So the rule to add is **about the route, not about the kind**:
 
 > What the house will do without asking depends on how it heard you. Anything you can do with a tap, you can do by
-> holding the orb. A satellite that hears a wake word may do everything except open a way into the house.
+> tapping the orb and speaking. Anything woken by a wake word -- on a satellite, or later on the panel itself -- may
+> do everything except open a way into the house.
 
 **And the direction matters more than the device.** Closing and locking make a house safer; opening and unlocking are
 the only dangerous half. The grammar already distinguishes them -- `(open|close|shut|raise|lower)` for a cover,
 `(lock|unlock)` for a lock -- so a satellite can be allowed "close the garage" and "lock up" from anywhere in the
-house while "open the garage" and "unlock the front door" are the two that need more than a voice. That gives the
+house while "open the garage" and "unlock the front door" are the two that need more than a voice. Note that the
+fourth row is the panel's own, once a wake word runs on it: the gate follows the route, so it reaches the wall panel
+too, indoors or not. That gives the
 wish that prompted this question in full, at no cost: **closing the garage door by voice, from any room, is safe
 because the failure mode of a misheard "close the garage" is a closed garage.**
 
 What "more than a voice" should be is the open part, and it is a choice between three, in order of how much they ask
 of a person: the panel says what was heard and waits for a tap; or the settings code, which the house already has and
 already gates the settings behind; or the household turns the whole class on per kind, with the risk in plain words,
-the way a nudge says what it is for. None of the three needs building before shape 1, because shape 1 is push-to-talk
-on the panel and the question does not arise until a satellite is in the house.
+the way a nudge says what it is for. None of the three needs building before shape 1, because shape 1 is the panel's
+own microphone, touched by a hand, and the question does not arise until something in the house listens for a word.
 
 Two things this does not change. The model still only proposes, by voice as by typing. And nothing here is voice-only:
 every one of these has a tap, which is the whole reason the gated half can be gated at all.
 
 ## Three shapes, in the order to build them
 
-### 1. Push-to-talk on the panel
+### 1. Tap the orb and talk
 
-**Hold the orb.** Not a microphone button beside the box -- see *The orb already is the microphone* below, which is
-the one part of this plan the design has overtaken since it was written. Hold, speak, let go; the words appear in the
-box, are sent to `/say` exactly as if typed, and the answer shows the same way. Nothing new on the hub.
+**Tap the orb.** Not a microphone button beside the box -- see *The orb already is the microphone* below, which is
+the one part of this plan the design has overtaken since it was written. Tap, speak, stop; the words appear in the
+box, are sent to `/say` exactly as if typed, and the answer shows the same way. Nothing new on the hub. The gesture
+was settled on 12 September 2026: **the orb is the microphone, and typing is reached from inside the box once it is
+open.**
 
 Speech-to-text comes from the browser (`SpeechRecognition`, on the kiosk tablet and on phones). That API needs a
 **secure context**: `https://`, or a browser told to trust `http://hub.local`. So on phones this shape waits on the
 real certificate per hub from `docs/away.md` (a public name per house, reached directly at home and through the maker's
 relay away). For the wall panel, which is a device the hub owner controls, a kiosk browser can be told to treat the hub's
-address as secure without a certificate, so the wall can have push-to-talk before phones do. Where the browser cannot
-recognise speech, the button does not appear; the box still works.
+address as secure without a certificate, so the wall can listen before phones do. Where the browser cannot
+recognise speech there is nothing to hide and no branch to write: the tap opens the box to type in, which is exactly
+what a tap does today.
 
-Exit test: from the wall, hold the button and say "kitchen lights off"; the lights go off and the toast reads *Kitchen
-lights off.* within two seconds of letting go. No model was called.
+**One thing to establish before building rather than after.** The wall is Chromium -- `app/playwright.config.ts` runs
+the wall project on Desktop Chrome -- and Chrome's `SpeechRecognition` has historically sent the audio away to be
+recognised on Google's servers. Chrome has since added an on-device mode, but it is opted into explicitly and the
+model is fetched first; it is not what a page gets by default. This plan files browser speech-to-text under *runs on
+the device holding the microphone* and promises **works with the internet down**, and shipping shape 1 without
+knowing which of the two is actually happening would honour neither. Measure it on the kiosk browser the wall really
+runs, the same way the backdrop-root question is to be measured rather than assumed. If on-device recognition is not
+there, shape 1 on the wall waits for shape 2 instead of quietly becoming a cloud feature.
+
+Exit test: from the wall, tap the orb and say "kitchen lights off"; the orb holds its listening state while the
+sentence is spoken, the lights go off, and the toast reads *Kitchen lights off.* within two seconds of the last word.
+No model was called, and no audio left the panel.
 
 ### 2. Local recognition on the hub
 
@@ -187,7 +204,7 @@ a house that only ever says short commands, and the upgrade path is the box, not
 design has overtaken, and it is worth reading before shape 1 is built.*
 
 When this plan was written the command box was a box: a field at the top of Home, always open, always the full
-width. So "a microphone button beside the command box" was the obvious place to put push-to-talk. It is not any
+width. So "a microphone button beside the command box" was the obvious place to put a microphone. It is not any
 more. Under the Top navigation the box lives in the bar along the bottom and, under the Glass face, it **rests as
 its orb** and opens on a touch -- 460ms of width with the words 180ms behind (move 7, `design/nightfall/PORT.md`).
 Under Side navigation it is still a box at the top of the stage.
@@ -205,29 +222,45 @@ live, and its subject is that same orb rather than a new control:
 So the affordance exists, it is drawn, and it is already on the screen. What is missing is not a control. It is a
 decision about a gesture.
 
-**One orb, two jobs.** Today a touch on the orb opens the box to type in. If holding it is how you talk to the house,
-then tap and hold do different things on the same object, and nothing on the panel currently teaches that. Three ways
-out, and this is the decision to take before shape 1 rather than during it:
+**One orb, two jobs.** Today a touch on the orb opens the box to type in. If talking to the house happens on the orb
+too, then two gestures live on one object, and nothing on the panel currently teaches that. Three ways out were
+weighed:
 
 1. **Tap types, hold talks.** One object, two gestures, no new furniture, and it matches how a phone's keyboard
    dictation key behaves. The cost is discoverability: a wall panel has no tooltip and nobody reads a hint twice.
-   Mitigated by the hint line the box already shows on focus, which can say so once.
 2. **Tap talks, the keyboard types.** Invert it: the orb is the microphone, and typing is reached from inside the
    opened box. Better for the hands-full case voice exists for, worse for the case the box exists for today.
 3. **The orb splits when it opens.** At rest one orb; opened, the box carries a microphone at its far end. Two
    objects, each with one job, at the cost of the drawn composition -- the board's opened box has an orb, a line of
    words and nothing else.
 
-Proposal: **(1), tap types and hold talks**, with the box's hint line carrying it. It keeps the board's composition,
-it costs no new furniture, and the gesture is one people already have. But it is a real decision and it is the
-user's, not this document's.
+**Settled on 12 September 2026: (2), tap talks.** The orb is the microphone; the keyboard is reached from inside the
+box once it has opened. Two things follow, one free and one that has to be drawn.
+
+*Free: it degrades correctly.* Where the browser cannot recognise speech, a tap opens the box to type in -- which is
+precisely what a tap does today. There is no control to hide, no "the button does not appear" branch, and no second
+path through the code for the panels that cannot listen. Hold-to-talk never had that property: it needed a microphone
+to go missing from a control that is also the way in to typing. Tap is also the kinder gesture on a panel mounted at
+head height, and for anybody who cannot hold a press steady.
+
+*Not free: there is no letting go.* Holding gives you an endpoint for nothing -- the sentence ends when the finger
+lifts. With a tap, the house decides when you have stopped talking, and that has a consequence for move 6 as the
+canvas draws it. One ring, once, 320ms in and 520ms out is *the house heard one thing*: an utterance mark, and it is
+right where it is, at the end. What tap-to-talk needs as well is the state before it -- **the house is listening, held
+for as long as the person takes** -- and then the ring when the sentence lands. So three things fall out of the
+decision: move 6 gains a resting listening state it was not drawn with, a second tap has to mean stop, and the
+recogniser's endpointer becomes something a person can feel -- cut off mid-sentence if it is impatient, left hanging
+if it is not. Getting that right is the substance of shape 1, and it is the one thing hold would have given away
+free.
 
 **Two constraints on building move 6, both already paid for once elsewhere in this codebase.**
 
 - *Reduced motion.* All eight moves collapse to opacity -- `PORT.md` slice 6 -- and a scale to 1.18 is exactly what
   that block is for. The blanket rule at the top of `panel.css` kills animations and transitions, and
   `e2e/face.spec.ts` asserts nothing anywhere is left moving. That test will fail on a new scale, which is it working.
-  Note that the orb's blooms are already a named exception there: a static blur is not a move.
+  Note that the orb's blooms are already a named exception there: a static blur is not a move. The listening state the
+  tap adds has to collapse the same way, and it is the harder half: it persists, so under reduced motion it still has
+  to *say* the house is listening without moving to do it.
 - *Where the scale goes.* On the orb itself, with the ring as a sibling -- not on a wrapper around both. The orb's
   blooms are blurred with `filter` and the frost over them is `backdrop-filter`, and this file has three entries
   already (the rail's cards, the pane over the room, the weather column) for what happens when an ancestor forms a
@@ -237,6 +270,37 @@ user's, not this document's.
 **What does not change.** Speech-to-text still goes to `/say` as text; the grammar still executes and the model still
 only proposes; and there is still a tap for everything voice can do. Listening is a state of a control that is
 already there, which is the cheapest possible way for this to arrive.
+
+## A wake word is another route, not a replacement for the tap
+
+*Added 12 September 2026, from the question "isn't it possible to have a wake word too, or instead?"*
+
+It is possible, and this plan already assumes it arrives: the tier table above puts `openWakeWord` on the hub for a
+panel microphone at Medium, and for every microphone, satellites included, at Large. So the question was never
+whether. It is where it runs, what that costs, and whether it replaces the tap.
+
+| where the wake word runs | what it costs |
+|---|---|
+| **In the panel's browser**, a small model in WASM (openWakeWord through onnxruntime-web, or Porcupine) | A build of its own, and a microphone indicator lit all day on a wall tablet. Honours *nothing leaves the room*. |
+| **On the hub**, which is what the tier table says | Cheapest to build, and the panel then streams audio across the LAN all day. Worth saying plainly: the satellite rule above calls on-device detection *the only acceptable arrangement*, and the hub is a different room from the panel. This is the row to be honest about rather than the one to pick by default. |
+| **A satellite standing near the panel** (ESP32, microWakeWord) | On-device by construction, which is the arrangement this plan prefers -- but it is shape 3, and it is a second box on the wall. |
+
+**Why "too" and not "instead", in the order the reasons matter.**
+
+1. *It is a different promise.* A wake word means always listening. The decision table already settled that against
+   the panel, and the reason has not changed: a wall tablet listening all day is not the same product as a panel that
+   listens when it is touched.
+2. *It changes the route, and the route is what the gate is made of.* That is the fourth row added to the table in
+   *What voice may do* above. A wake word on the panel does not inherit the panel's trust, because the trust came
+   from the hand on the glass and not from the panel being indoors -- and a wall panel is often in a hall, within
+   earshot of the front door. So the closing-half-only rule reaches the panel the moment a wake word is live on it.
+   The tap does not have this problem and never will: a hand on the glass is the whole proof.
+3. *Wake words miss.* In a kitchen with a tap running and a radio on, the word is not always heard, and a browser
+   with no model has no wake word at all. Nothing here is voice-only, and the tap is the thing that keeps that true.
+
+So the tap is shape 1 and does not go away. The wake word belongs with shape 2, where recognition is on the hub
+anyway and the audio path already exists -- and it arrives as a switch the household turns on, with the fourth row of
+the route table turned on alongside it.
 
 ## What to answer, and how
 
@@ -251,8 +315,11 @@ to read.
 | Question | Proposal |
 |---|---|
 | Secure origin for the browser microphone | Wall panel first, in a kiosk browser told to trust `hub.local`; phones after the https decision |
-| Push-to-talk or always listening on the panel | Push-to-talk. A wall tablet listening all day is a different promise and needs a wake word (shape 3) |
-| Where push-to-talk lives, now that the box rests as an orb | The orb, held. See *The orb already is the microphone* -- and settle tap-vs-hold before building, not during |
+| Touched or always listening on the panel | Touched. A wall tablet listening all day is a different promise and needs a wake word (shape 2 at the earliest; see *A wake word is another route*) |
+| Where talking to the house lives, now that the box rests as an orb | The orb, **tapped** -- settled 12 September 2026. The orb is the microphone and the keyboard is reached from inside the opened box. See *The orb already is the microphone* |
+| What the tap costs, having no "letting go" | A listening state move 6 was not drawn with, a second tap that means stop, and an endpointer whose patience a person can feel. This is the substance of shape 1 |
+| A wake word on the panel as well as the tap | Yes, but with shape 2 and not before, and as a switch a household turns on. It adds a route rather than inheriting the panel's, so the closing-half-only rule reaches the panel with it |
+| Whether the browser's recognition really runs on the device | To be measured on the kiosk browser before shape 1 ships. Chrome's default has been the cloud and on-device is opt-in; if it is not available there, shape 1 waits for shape 2 |
 | Where speech-to-text runs | The browser in shape 1; the hub in shape 2; never a cloud by default |
 | How big a model | Chosen from the host's class at install, overridable in `.env`; the Large tier is the design point, the Small tier the floor |
 | Does voice ever bypass confirmation for the model's proposals | No |
@@ -269,9 +336,11 @@ recognition, and anything that needs a vendor's account. If a household needs on
 1. **Grow the grammar from the log.** Two weeks of `said` events from the house here; every not-understood phrase
    that a reasonable person would expect to work becomes a pattern with a test. Exit: fewer than one in ten typed
    sentences reach the assistant or a "didn't catch that".
-2. **Shape 1 on the wall.** The gesture decided, move 6 built on the orb (scale 1.18, 320/520, one ring), the kiosk
-   browser trusting the hub, the two-second test. Move 6 is the last of the eight with nowhere to live, so this
-   milestone finishes the canvas as well as starting voice.
+2. **Shape 1 on the wall.** The gesture is decided -- tap talks -- so what is left is move 6 built on the orb: the
+   listening state it holds while somebody speaks, then the ring once when the sentence lands (scale 1.18, 320/520).
+   With it, the on-device recognition established on the kiosk browser the wall really runs, that browser trusting
+   the hub, and the two-second test. Move 6 is the last of the eight with nowhere to live, so this milestone finishes
+   the canvas as well as starting voice.
 3. **Shape 2 on the hub.** Wyoming, faster-whisper and Piper as containers with profiles like the radios; the
    tier chooser in `install.sh`; the brain speaks Wyoming; the offline test on a Pi 5 and on a NUC-class box; the
    measured latency for each tier written into the table above.
