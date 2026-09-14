@@ -126,6 +126,65 @@ test('the row is proportioned the way the board draws it', async ({ page }) => {
   near(loz.h, 372 / 900, 'the pane is the wrong height')
 })
 
+/* The sky's drawing, actually drawn. It is the one thing on Home the house does not control and
+   the first thing seen from across a room, and it is assembled from paint servers it defines
+   itself -- a gradient for the cloud, a mask for the moon's bite. Both are addressed by id, so
+   this asserts the drawing is asking ITSELF for them: the copy the top bar carries for a phone is
+   hidden at this width, and a reference that lands there paints nothing at all (the cloud) or
+   silently drops the mask (a full moon on every clear night). Neither failure logs anything --
+   the sky simply comes up empty. */
+test('the sky is drawn from its own materials, not a hidden copy of them', async ({ page }) => {
+  const art = page.locator('.wall-cloud')
+  await expect(art).toBeVisible()
+
+  const refs = await art.evaluate(svg => {
+    const out: { attr: string; found: boolean; ownDefs: boolean; hidden: boolean }[] = []
+    for (const el of svg.querySelectorAll('*')) {
+      for (const attr of ['fill', 'stroke', 'mask', 'filter', 'clip-path']) {
+        const v = el.getAttribute(attr)
+        const id = v?.match(/^url\(#(.+)\)$/)?.[1]
+        if (!id) continue
+        const target = svg.ownerDocument.getElementById(id)
+        let hidden = false
+        for (let n: Element | null = target; n; n = n.parentElement) {
+          if (getComputedStyle(n).display === 'none') { hidden = true; break }
+        }
+        out.push({ attr: `${el.tagName}.${attr}`, found: !!target, ownDefs: !!target && target.closest('svg') === svg, hidden })
+      }
+    }
+    return out
+  })
+
+  expect(refs.length, 'the drawing references nothing, so this test is asserting nothing').toBeGreaterThan(1)
+  for (const r of refs) {
+    expect(r.found, `${r.attr} points at an id nothing answers to`).toBe(true)
+    expect(r.ownDefs, `${r.attr} is painted from another copy of the drawing`).toBe(true)
+    expect(r.hidden, `${r.attr} is painted from a hidden subtree, which paints nothing`).toBe(false)
+  }
+})
+
+/* A thermostat in the row, which is the card with the most on it: an icon and a name, the number
+   with a step either way, and one line saying what the house is doing. The tile writes that line
+   twice -- once at a card's width and once short enough for a third -- and the size picks which,
+   so a card showing both is a card saying the same thing twice. It cost more than a repeat: in
+   this row .clim-center is `display: contents`, so the spare line becomes a grid item of its own
+   in the first column, widens it past the step button, and walks the number off the centre of the
+   card it is the subject of. */
+test('a thermostat in the row says what it is doing once, under a centred number', async ({ page }) => {
+  const card = page.locator('.bento .tile.climate').first()
+  await expect(card).toBeVisible()
+
+  const lines = await card.locator('.clim-doing, .clim-short').evaluateAll(
+    els => els.filter(e => getComputedStyle(e).display !== 'none').map(e => e.textContent!.trim()))
+  expect(lines, `the state line is on the card ${lines.length} times: ${JSON.stringify(lines)}`).toHaveLength(1)
+
+  const off = await card.evaluate(el => {
+    const mid = (e: Element) => { const r = e.getBoundingClientRect(); return (r.left + r.right) / 2 }
+    return Math.abs(mid(el.querySelector('.clim-face')!) - mid(el.querySelector('.tile-body')!))
+  })
+  expect(off, 'the number is not on the card\'s centre line').toBeLessThan(1)
+})
+
 /* The weather recedes with the row. It is not in the rail -- it is not in the house -- so it does
    not travel; it goes out of focus and the reading goes altogether, because a temperature you have
    swiped away from is not the thing you are reading any more. Without this the left third stays

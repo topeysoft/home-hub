@@ -15,32 +15,43 @@
  * How big it is and where it sits are the arrangement's business and are set in
  * CSS; everything about what it depicts is here.
  */
-import { computed } from 'vue'
+import { computed, useId } from 'vue'
 import { illustration } from './sky'
 import { store } from './store'
 
 const wx = computed(() => illustration(store.sky.elevation, store.sky.condition))
+
+/* A name of its own for this copy's gradient and mask, because there is more than one copy.
+   The bar carries a second drawing for a phone and the stylesheet decides which screen shows
+   it, so on a wall both are in the document and the hidden one is FIRST -- and a paint server
+   is addressed by id across the whole document, so the sky's cloud was asking for a gradient
+   inside a `display: none` subtree, which is not reliably referenceable. Chromium's answer is
+   to paint nothing: the fluffy cloud simply was not there, on the one screen it is drawn for.
+   ArtDefs.vue is the other half of this rule -- materials every drawing shares are mounted
+   once and addressed by one name; anything a component brings its own copy of needs its own. */
+const uid = useId()
+const cloudId = `wxcloud-${uid}`, moonId = `wxmoon-${uid}`
 </script>
 
 <template>
   <svg viewBox="0 0 210 150" aria-hidden="true">
     <defs>
-      <radialGradient id="wxcloud" cx="34%" cy="28%" r="78%">
+      <radialGradient :id="cloudId" cx="34%" cy="28%" r="78%">
         <stop offset="0" :stop-color="wx.cloud.fill[0]" stop-opacity=".97" />
         <stop offset="62%" :stop-color="wx.cloud.fill[1]" stop-opacity=".93" />
         <stop offset="100%" :stop-color="wx.cloud.fill[2]" stop-opacity=".85" />
       </radialGradient>
       <!-- the bite only ever falls on the moon itself, and leaves the sky behind it alone -->
-      <mask id="wxmoon" maskUnits="userSpaceOnUse" x="0" y="0" width="210" height="150">
+      <mask :id="moonId" maskUnits="userSpaceOnUse" x="0" y="0" width="210" height="150">
         <rect x="0" y="0" width="210" height="150" fill="#fff" />
         <circle :cx="wx.moon.biteX" cy="38" r="27" fill="#000" />
       </mask>
     </defs>
     <path v-if="wx.stars.opacity > 0.02" :d="wx.stars.d" fill="#eef2fb" :opacity="wx.stars.opacity" />
     <circle cx="150" cy="44" r="27" :fill="wx.sun.col" :opacity="wx.sun.opacity" />
-    <circle cx="150" cy="44" r="27" :fill="wx.moon.col" :opacity="wx.moon.opacity" mask="url(#wxmoon)" />
+    <circle cx="150" cy="44" r="27" :fill="wx.moon.col" :opacity="wx.moon.opacity" :mask="`url(#${moonId})`" />
     <path v-if="wx.wind.d" :d="wx.wind.d" :stroke="wx.wind.col" stroke-width="3.4" stroke-linecap="round" fill="none" :opacity="wx.wind.opacity" />
-    <g :transform="wx.cloud.transform" :opacity="wx.cloud.opacity" fill="url(#wxcloud)">
+    <g :transform="wx.cloud.transform" :opacity="wx.cloud.opacity" :fill="`url(#${cloudId})`">
       <ellipse cx="72" cy="86" rx="56" ry="40" /><ellipse cx="118" cy="70" rx="48" ry="44" />
       <ellipse cx="150" cy="94" rx="42" ry="30" /><rect x="60" y="92" width="104" height="34" rx="17" />
     </g>
