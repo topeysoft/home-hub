@@ -5973,6 +5973,36 @@ select.input {
 [data-layout='wall'] .bento .scene-card {
   border-radius: 28px;
 }
+/* ...and the pane a card opens onto speaks it too. The device boards in
+   design/device were drawn against the house's Instrument pair and the pane
+   still wears them, so here a card saying "Thermostat" in the sans opened onto
+   the same word in the serif, one tap apart -- the same name, two typefaces,
+   with the card still visible behind it. There is no serif at all in
+   design/nightfall, and .wall-temp above already says why: this arrangement has
+   no heading for the serif to be the voice of, and its numerals are its own
+   face held light. So the pane's three `display` elements follow the panel
+   behind them, on the recipe the weather uses.
+
+   Only the pane. The house still says the serif elsewhere on this layout --
+   the clock in the top bar, the resting screen, the setup pages -- and those
+   are not a word repeated one tap apart from itself. Scoped to Wall like
+   everything else in this block: the other arrangements were drawn with the
+   serif and keep it. */
+[data-layout='wall'] .opened .display {
+  font-family: var(--sans);
+}
+[data-layout='wall'] .opened-name {
+  /* the arrangement's own regular: at 500 the name outweighed the reading under
+     it, which is the thing on this pane that is supposed to be read first */
+  font-weight: 400;
+  letter-spacing: -0.03em;
+}
+/* the reading and the dial's number are numerals, and take the weather's weight */
+[data-layout='wall'] .opened-big,
+[data-layout='wall'] .rig-dial-n {
+  font-weight: 250;
+  letter-spacing: -0.04em;
+}
 
 /* ---------- Wall: the weather large, and what is on beside it ----------
    The arrangement from design/nightfall/Main.dc.html, which is a 1440x900 board
