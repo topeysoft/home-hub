@@ -498,6 +498,22 @@ somebody to ask, rather than shipping as the fourth line of a settings sheet nob
 Conversation (a back-and-forth with the model by voice), music search by voice, voice-driven setup, per-person voice
 recognition, and anything that needs a vendor's account. If a household needs one of these, it is a new plan.
 
+**And speaking to the house from away.** *Added 14 September 2026, because the exit test above stopped covering it.*
+Shape 1 is gated behind the real certificate per hub, and that certificate is the same public name per house that
+`docs/away.md` reaches through the maker's relay -- so the first phones that can speak to the house are, by
+construction, phones that can also be away from it. A phone away that tapped the orb would stream audio to the hub
+across a VPS somebody else runs.
+
+The promise would survive it: nothing between a phone and the house terminates TLS, the relay routes by SNI and
+carries bytes it cannot read, and the house holds the only key. What would leak is not the audio but the fact of it --
+that a house streamed audio, and when. `docs/messages.md` has already reasoned about exactly this shape once, for web
+push: *that rule is kept by the encryption and broken by the metadata.*
+
+Nobody has asked for it, the exit test above is an at-home test, and a microphone is not a thing to extend to a new
+route quietly. So it is deferred rather than designed: **voice works on the house's own Wi-Fi.** A panel away shows
+the box and the keyboard, which is what it has today. If a household wants to speak to their house from the car, that
+is a new plan, and the first thing it has to say is what the relay can see.
+
 ## Milestones
 
 1. **Grow the grammar from the log.** Two weeks of `said` events from the house here; every not-understood phrase
