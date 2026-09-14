@@ -136,9 +136,25 @@ default. This plan files browser speech-to-text under *runs on the device holdin
 would honour neither. So it is still to be measured, on a phone browser rather than on the wall -- and if on-device
 recognition is not there, phones wait for shape 2 as well. The wall answers the question by not asking it.
 
+**Measured, 14 September 2026, and the contingency above has fired.** Chrome does expose the on-device mode, as
+`processLocally` on a `SpeechRecognition`. Asking for it fails at `start()` with `language-not-supported` until the
+model has been fetched -- which, on a machine that has never used this API, is every single time. What a page gets
+when it falls back is the cloud. So on this browser, today, speech-to-text in a phone browser is a network service,
+and the sentence above is the one that applies: **phones wait for shape 2 as well.** The plan was built to absorb
+this answer, and absorbing it costs nothing that was not already being built, because the hub has to hear for the
+wall regardless.
+
+Two notes for whoever re-measures it. It must be real Chrome: Playwright's bundled Chromium has the API and no speech
+service behind it, so it neither errors nor hears, and a harness will tell you less than nothing. And the instrument
+is in the panel already -- `?listen=browser` in `app/src/ear.ts` asks for on-device and falls back loudly, warning in
+the console every time audio leaves the machine; `?listen=browser-local` refuses the fallback, and that refusal *is*
+the measurement. Neither flag is on in any house: `canListen()` is false without one.
+
 Exit test: from a phone on the house's own Wi-Fi, tap the orb and say "kitchen lights off"; the orb holds its
 listening state while the sentence is spoken, the lights go off, and the toast reads *Kitchen lights off.* within two
-seconds of the last word. No model was called, and no audio left the phone.
+seconds of the last word. No model was called, and no audio left the house -- the house, and not the phone, because
+once phones wait for shape 2 the recogniser is the hub and the audio has to cross the LAN to reach it. That is the
+same promise the wall makes, and it is the one *works with the internet down* was always about.
 
 ### 2. Local recognition on the hub
 
@@ -465,7 +481,7 @@ somebody to ask, rather than shipping as the fourth line of a settings sheet nob
 | Where talking to the house lives, now that the box rests as an orb | The orb, **tapped** -- settled 12 September 2026. The orb is the microphone and the keyboard is reached from inside the opened box. See *The orb already is the microphone* |
 | What the tap costs, having no "letting go" | A listening state move 6 was not drawn with, a second tap that means stop, and an endpointer whose patience a person can feel. This is the substance of shape 1 |
 | A wake word on the panel as well as the tap | Yes, but with shape 2 and not before, and as a switch a household turns on. It adds a route rather than inheriting the panel's, so the closing-half-only rule reaches the panel with it |
-| Whether the browser's recognition really runs on the device | Still to be measured, but on a phone browser and not on the wall -- a WebView has no `SpeechRecognition` to measure. Chrome's default has been the cloud and on-device is opt-in; if it is not there, phones wait for shape 2 as well |
+| Whether the browser's recognition really runs on the device | **Measured 14 September 2026: no.** Chrome offers `processLocally` and then refuses it with `language-not-supported` until the model has been fetched, which on a machine that has never used the API is every time; the fallback is a cloud. So phones wait for shape 2 as well, exactly as shape 1 said they would. Behind `?listen=browser` in `app/src/ear.ts`; real Chrome, not a test harness |
 | Where speech-to-text runs | The browser in shape 1, which is phones; the hub in shape 2, which is the wall and everything after it; never a cloud by default |
 | How big a model | Chosen from the host's class at install, overridable in `.env`; the Large tier is the design point, the Small tier the floor |
 | Does voice ever bypass confirmation for the model's proposals | No |
@@ -500,8 +516,12 @@ recognition, and anything that needs a vendor's account. If a household needs on
    flag, the way `?listen=1` gave the orb something to listen to before any engine existed. Then the smallest native
    piece in the whole plan -- `AudioRecord` and the bridge in `kiosk/` -- last,
    because until the rest of this lands it has nothing to talk to.
-4. **Shape 1 on phones,** once `docs/away.md` has given a house a real certificate: the browser's recognition
-   measured first, then the same orb, the same route and the same answers the wall already has.
+4. **Shape 1 on phones** -- which is now a smaller milestone than it was, and later. Its recognition was measured on
+   14 September 2026 and Chrome's is a cloud service unless somebody has fetched the model, so this no longer waits
+   only on the certificate in `docs/away.md`: it waits on shape 2, whose recogniser it will use. What is left of it
+   is the certificate, a secure origin, and pointing the orb at the hub instead of at the browser -- the same route
+   and the same answers the wall already has. A browser that grows real on-device recognition would make it a shape
+   of its own again, and nothing here has to change for that to be true.
 5. **Shape 3 with one satellite.** One box in the kitchen, paired from the panel, placed on New devices, the guest
    test. And, before it ships rather than after, what "more than a voice" means for opening and unlocking -- this is
    the milestone where a wake word in a room makes that question real.
