@@ -1,5 +1,7 @@
-import asyncio, json, unittest
+import asyncio, http.server, json, threading, unittest
 from hub import camera
+from hub.model import Device
+from tests.apptest import ApiTest
 from tests.test_pairing import FakeHA
 
 
@@ -77,9 +79,6 @@ class RelayTest(unittest.TestCase):
         self.assertEqual([s[1]["session_id"] for s in ha.sent if s[0] == "camera/webrtc/candidate"], ["s9"])
 
 
-if __name__ == "__main__": unittest.main()
-
-
 class MjpegTest(unittest.TestCase):
     """HA's stream arrives a frame at a time; the proxy must hand each on as it comes, not wait for a full buffer."""
     def test_chunks_arrive_as_sent(self):
@@ -107,3 +106,91 @@ class MjpegTest(unittest.TestCase):
 
     def test_refused_stream_raises(self):
         with self.assertRaises(OSError): camera.mjpeg("http://127.0.0.1:1", "tok", "camera.door")
+
+
+class FramesTest(unittest.TestCase):
+    """The age the panel puts on a picture. HA hands back whatever the integration is holding -- Ring
+    cuts its still out of the last recorded video and keeps it until the next event -- so the only
+    honest thing to say is how long these exact bytes have been the answer."""
+    def test_the_same_frame_keeps_the_time_it_first_arrived(self):
+        f = camera.Frames()
+        tag, age = f.stamp("camera.door", b"night")
+        self.assertEqual(age, 0)
+        f._seen["camera.door"] = (tag, f._seen["camera.door"][1] - 4 * 3600)   # four hours of nothing happening
+        again, age = f.stamp("camera.door", b"night")
+        self.assertEqual(again, tag, "the same bytes are the same frame")
+        self.assertEqual(age, 4 * 3600, "and are four hours old, however often they were fetched")
+
+    def test_a_new_frame_starts_the_clock_again(self):
+        f = camera.Frames()
+        tag, _ = f.stamp("camera.door", b"night")
+        f._seen["camera.door"] = (tag, f._seen["camera.door"][1] - 4 * 3600)
+        moved, age = f.stamp("camera.door", b"morning")
+        self.assertNotEqual(moved, tag)
+        self.assertEqual(age, 0)
+
+    def test_cameras_are_dated_apart(self):
+        f = camera.Frames()
+        a, _ = f.stamp("camera.door", b"one")
+        b, _ = f.stamp("camera.drive", b"two")
+        self.assertNotEqual(a, b)
+        self.assertEqual(f.stamp("camera.door", b"one")[0], a, "the door's frame is not the drive's")
+
+    def test_a_house_of_cameras_does_not_grow_without_end(self):
+        f = camera.Frames()
+        for n in range(camera.Frames.LIMIT + 10): f.stamp(f"camera.{n}", b"x")
+        self.assertLessEqual(len(f._seen), camera.Frames.LIMIT)
+
+
+class StillRouteTest(ApiTest):
+    """/devices/{id}/image, end to end against something standing in for HA."""
+    def setUp(self):
+        super().setUp()
+        self.frames = [b"night-frame"]
+        served = self.frames
+
+        class H(http.server.BaseHTTPRequestHandler):
+            def do_GET(self):
+                assert self.path == "/api/camera_proxy/camera.door", self.path
+                body = served[0]
+                self.send_response(200)
+                self.send_header("Content-Type", "image/jpeg"); self.send_header("Content-Length", str(len(body)))
+                self.end_headers(); self.wfile.write(body)
+            def log_message(self, *a): pass
+
+        self.ha_server = http.server.HTTPServer(("127.0.0.1", 0), H)
+        threading.Thread(target=self.ha_server.serve_forever, daemon=True).start()
+        self.addCleanup(self.ha_server.server_close)
+        self.addCleanup(self.ha_server.shutdown)
+        self.hub.ha.url = f"http://127.0.0.1:{self.ha_server.server_port}"
+        self.hub.ha.token = "tok"
+        self.hub.home.devices["camera.door"] = Device("camera.door", "Front door camera", "front", "camera", "idle")
+
+    def test_the_still_is_dated_so_the_panel_need_not_guess(self):
+        r = self.client.get("/devices/camera.door/image")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.content, b"night-frame")
+        self.assertTrue(r.headers["etag"])
+        self.assertEqual(r.headers["x-frame-age"], "0")
+        self.assertEqual(r.headers["cache-control"], "no-store")
+
+    def test_a_panel_that_already_holds_the_frame_is_told_so_and_told_its_age(self):
+        first = self.client.get("/devices/camera.door/image")
+        tag = first.headers["etag"]
+        self.hub.frames._seen["camera.door"] = (tag.strip('"'), self.hub.frames._seen["camera.door"][1] - 4 * 3600)
+        again = self.client.get("/devices/camera.door/image", headers={"If-None-Match": tag})
+        self.assertEqual(again.status_code, 304)
+        self.assertEqual(again.content, b"")                     # the bytes stay on the LAN
+        self.assertEqual(again.headers["x-frame-age"], str(4 * 3600), "and the panel learns the picture is old")
+
+    def test_a_frame_that_changes_is_sent_and_dated_afresh(self):
+        first = self.client.get("/devices/camera.door/image")
+        self.frames[0] = b"morning-frame"
+        second = self.client.get("/devices/camera.door/image", headers={"If-None-Match": first.headers["etag"]})
+        self.assertEqual(second.status_code, 200)
+        self.assertEqual(second.content, b"morning-frame")
+        self.assertNotEqual(second.headers["etag"], first.headers["etag"])
+        self.assertEqual(second.headers["x-frame-age"], "0")
+
+
+if __name__ == "__main__": unittest.main()

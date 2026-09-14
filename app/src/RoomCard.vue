@@ -14,9 +14,11 @@ import { imageUrl, type Room } from './api'
 import { activity, activityParts, cap, isDead, perform, runScene, scenesFor, shortName, store } from './store'
 import { leadLight, playingIn, temperature, type Size } from './rooms'
 import { kindFor } from './art'
+import { useStill } from './still'
 import Icon from './Icon.vue'
 import DeviceArt from './DeviceArt.vue'
 
+const SLOW = 30000     // a room card is a glance across the house, not the camera screen
 const props = defineProps<{ room: Room; size: Size }>()
 defineEmits<{ open: [id: string] }>()
 
@@ -59,15 +61,17 @@ const lit = computed(() => props.room.devices.some(d => d.state === 'on' || d.st
 function turnOff() { const s = allOff.value; if (s) runScene(props.room, s) }
 const toggleMedia = () => { const d = media.value; if (d) perform(d, 'pause', undefined, { state: 'paused' }) }
 
-/* A camera room brings its own picture and it beats anything we can draw. One
-   frame, taken when the tab opens: this is a glance at the house, not the
-   camera page, and a wall of cards each polling its own stream is how a Pi
-   falls over. The viewer is one tap away and it is live. */
-const still = ref('')
+/* A camera room brings its own picture and it beats anything we can draw. This
+   used to be one frame taken when the tab opens, which on a camera that only
+   updates on motion could leave last night on the wall all day. It is watched
+   now instead -- slowly, and shared with the room's own tiles, so a wall of
+   cards is still one fetch per camera and not one per card. The viewer is one
+   tap away and it is live. */
 const wantsStill = computed(() =>
   !!camera.value && camera.value.state !== 'unavailable' &&
   (filming.value || props.room.devices.every(d => cap(d) === 'camera')))
-onMounted(() => { if (wantsStill.value && camera.value) still.value = imageUrl(camera.value.id) })
+const watched = useStill(() => wantsStill.value ? camera.value?.id : undefined, SLOW)
+const still = computed(() => watched.value.url)
 const art = ref('')
 onMounted(() => { if (media.value?.attrs.entity_picture) art.value = imageUrl(media.value.id) })
 </script>
@@ -77,7 +81,7 @@ onMounted(() => { if (media.value?.attrs.entity_picture) art.value = imageUrl(me
     <!-- the whole card is the way in; the controls sit above it -->
     <button class="room-cell-open" @click="$emit('open', room.id)" :aria-label="`Open ${room.name}`"></button>
 
-    <img v-if="still" class="room-cell-still" :src="still" alt="" @error="still = ''" />
+    <img v-if="still" class="room-cell-still" :src="still" alt="" />
     <img v-else-if="art" class="room-cell-art" :src="art" alt="" @error="art = ''" />
     <!-- the lamp bleeding off the corner: `.room-card.active` already draws it,
          and it is what says "on" without painting the room a different colour -->

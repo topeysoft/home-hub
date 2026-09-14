@@ -3,9 +3,10 @@
 Two ways, best first. WebRTC: the panel's offer and HA's answer cross here, then the browser and
 HA's go2rtc talk to each other directly; the brain never sees a frame. Motion JPEG: HA's
 `camera_proxy_stream` passed through one chunk at a time, for cameras HA cannot hand to go2rtc and
-browsers that cannot do WebRTC. Stills (`/devices/{id}/image`) remain the floor under both.
+browsers that cannot do WebRTC. Stills (`/devices/{id}/image`) remain the floor under both, and
+`Frames` below dates them: a still is only as new as the frame HA happens to be holding.
 """
-import asyncio, json, logging, urllib.request
+import asyncio, hashlib, json, logging, time, urllib.request
 
 log = logging.getLogger(__name__)
 CONNECT_TIMEOUT = 15      # seconds to wait for HA to start an MJPEG stream
@@ -65,3 +66,36 @@ def mjpeg(url: str, token: str, entity_id: str):
                 if not b: return
                 yield b
     return ctype, chunks()
+
+
+class Frames:
+    """When each camera's picture last actually changed.
+
+    HA hands back whatever the integration has, and for a cloud camera that is often the same frame
+    for hours: Ring cuts its still out of the last recorded video and holds it until the next event,
+    so a doorbell that saw nothing overnight answers every request with the same dark 4am frame. The
+    panel used to date a picture from the moment it fetched the bytes, which made a four-hour-old
+    frame wear a "Just now" chip.
+
+    Nothing here makes the picture newer -- it makes the age true. The bytes are hashed and the time
+    those bytes first appeared is kept; the same bytes keep their first time however often they are
+    asked for, and the panel is told how old they are rather than left to guess.
+
+    The age is "unchanged for", which is only a lower bound on the age of the picture: a hub that has
+    just started has not been watching long enough to know a frame is old, and says so a few minutes
+    later once the frame has not moved. The camera never tells anybody when it took the picture.
+    """
+    LIMIT = 64          # cameras remembered; more than a house has, and forgetting one only costs it its age
+
+    def __init__(self):
+        self._seen: dict[str, tuple[str, float]] = {}      # device id -> (digest, when those bytes first arrived)
+
+    def stamp(self, device_id: str, data: bytes) -> tuple[str, int]:
+        """(etag, whole seconds these bytes have been the answer)."""
+        tag = hashlib.sha256(data).hexdigest()[:16]
+        was = self._seen.get(device_id)
+        if was is None or was[0] != tag:
+            if device_id not in self._seen and len(self._seen) >= self.LIMIT:
+                self._seen.pop(next(iter(self._seen)))
+            was = self._seen[device_id] = (tag, time.time())
+        return tag, max(0, int(time.time() - was[1]))

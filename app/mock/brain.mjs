@@ -146,6 +146,8 @@ const catalog = [{ domain: 'hue', name: 'Philips Hue', brand: 'Philips', local: 
 const pic = (a, b) => `<svg xmlns='http://www.w3.org/2000/svg' width='640' height='360'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='${a}'/><stop offset='1' stop-color='${b}'/></linearGradient></defs><rect width='640' height='360' fill='url(#g)'/><ellipse cx='420' cy='300' rx='300' ry='90' fill='rgba(0,0,0,.25)'/></svg>`
 const PICS = { f2: pic('#3b4a5c', '#1b2230'), g1: pic('#2f2a26', '#14110f'), y1: pic('#2c4a2f', '#111a12'), m1: pic('#7a3b2a', '#2a1410') }
 
+const started = Date.now()      // the mock's frames are as old as the mock, bar the one that is deliberately stale
+
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.json': 'application/json', '.woff2': 'font/woff2', '.webmanifest': 'application/manifest+json' }
 const json = (res, body) => { res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(body)) }
 
@@ -222,7 +224,17 @@ const server = http.createServer((req, res) => {
     return json(res, { kind: 'done', text: 'Kitchen lights off.', said: t, count: 2 }) }) }
   if (/^\/devices\/[^/]+\/stream/.test(p)) { res.writeHead(502); return res.end() }   // no video here: the viewer settles for stills
   const img = p.match(/^\/devices\/([^/]+)\/image/)
-  if (img) { res.writeHead(200, { 'Content-Type': 'image/svg+xml' }); return res.end(PICS[img[1]] ?? pic('#333', '#111')) }
+  if (img) {
+    // Dated the way the brain dates a frame: the same picture keeps the time it first appeared, so the
+    // panel can be watched telling the truth about a camera that never sends a new one. g1 is that
+    // camera -- the still it answers with is an hour old and stays an hour old.
+    const body = PICS[img[1]] ?? pic('#333', '#111')
+    const tag = `"${Buffer.from(body).length.toString(16)}${img[1]}"`
+    const age = img[1] === 'g1' ? 3600 : Math.round((Date.now() - started) / 1000)
+    const headers = { 'Cache-Control': 'no-store', ETag: tag, 'X-Frame-Age': String(age) }
+    if ((req.headers['if-none-match'] || '').includes(tag)) { res.writeHead(304, headers); return res.end() }
+    res.writeHead(200, { 'Content-Type': 'image/svg+xml', ...headers }); return res.end(body)
+  }
   if (p === '/look' && req.method === 'POST') { let b = ''; req.on('data', c => (b += c)); return req.on('end', () => {
     let v = {}; try { v = JSON.parse(b) } catch {}
     for (const k of ['feel', 'tone', 'layout', 'nav', 'face']) if (v[k]) ambient.look[k] = v[k]   // unknown keys dropped, as the brain does

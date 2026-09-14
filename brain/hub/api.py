@@ -103,6 +103,7 @@ class Hub:
         self.comfort = Comfort(self)                   # a thermostat sensing its room from another sensor
         self._comfort_task = None
         self.provision = Provision(self)               # connects the radios, Matter and MQTT to HA itself
+        self.frames = camera.Frames()                  # when each camera's picture last changed, so the panel can date it
         self._tick_task = self._drivers_task = None
         self._wake = asyncio.Event()
         self._rebuild_task = None
@@ -947,8 +948,15 @@ def get_events(limit: int = 100, subject: str | None = None): return hub.log.rec
 
 
 @app.get("/devices/{device_id}/image")
-async def device_image(device_id: str):
-    """Latest still from a camera. The app polls this; the brain never stores frames."""
+async def device_image(device_id: str, request: Request):
+    """Latest still from a camera. The app polls this; the brain never stores frames.
+
+    HA is asked every time -- there is no cache here -- but the answer is dated: `X-Frame-Age` is how
+    many seconds these exact bytes have been what HA hands back, which is the only honest thing anyone
+    can say about how old the picture is (see camera.Frames). Seconds rather than a clock reading,
+    because a wall panel's clock is not the hub's. A panel that already holds the frame sends its ETag
+    back and gets a 304 with a fresh age, so a camera that has not moved all night costs a header.
+    """
     hub.ready()
     dev = hub.home.devices.get(device_id)
     if not dev: raise HTTPException(404, "unknown device")
@@ -966,7 +974,12 @@ async def device_image(device_id: str):
         data, ctype = await asyncio.to_thread(fetch)
     except Exception as e:
         raise HTTPException(502, f"image unavailable: {e}")
-    return Response(content=data, media_type=ctype, headers={"Cache-Control": "no-store"})
+    tag, age = hub.frames.stamp(device_id, data)
+    headers = {"Cache-Control": "no-store", "ETag": f'"{tag}"', "X-Frame-Age": str(age)}
+    sent = [t.strip().removeprefix("W/").strip('"') for t in (request.headers.get("if-none-match") or "").split(",")]
+    if tag in sent:
+        return Response(status_code=304, headers=headers)
+    return Response(content=data, media_type=ctype, headers=headers)
 
 
 def _camera(device_id: str):
