@@ -11,8 +11,14 @@ from what people actually say. The plan for the microphone is docs/voice.md.
 import re
 from .intents import RoomState
 
-WORD_NUM = {"a": 1, "an": 1, "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9,
-            "ten": 10, "fifteen": 15, "twenty": 20, "thirty": 30, "forty": 40, "forty five": 45, "fifty": 50, "sixty": 60, "ninety": 90}
+# The numbers people SAY, as against the ones they type. A typed sentence has "72" in it; a spoken one
+# never does, and speech-to-text hands over "seventy two". Reading the longest single word out of that
+# gives 2, which is worse than not understanding: the thermostat goes somewhere nobody asked for and
+# the house sounds confident about it. So the whole run of number words is read as one number.
+WORD_NUM = {"a": 1, "an": 1, "zero": 0, "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8,
+            "nine": 9, "ten": 10, "eleven": 11, "twelve": 12, "thirteen": 13, "fourteen": 14, "fifteen": 15, "sixteen": 16,
+            "seventeen": 17, "eighteen": 18, "nineteen": 19, "twenty": 20, "thirty": 30, "forty": 40, "fifty": 50, "sixty": 60,
+            "seventy": 70, "eighty": 80, "ninety": 90}
 # Other words for a room, by the words a room is usually called. An alias only counts when no room's own name matched
 # and a room whose name contains the canonical words exists ("hall" finds "Hallway"; "den" is only ever a room called Den).
 ROOM_ALIASES = {"living room": ("lounge", "family room", "front room", "sitting room", "tv room", "living"),
@@ -72,9 +78,23 @@ def _cut(word: str, text: str) -> str:
 def _number(text: str):
     m = re.search(r"(\d+(?:\.\d+)?)", text)
     if m: return float(m.group(1))
-    for w, n in sorted(WORD_NUM.items(), key=lambda kv: -len(kv[0])):
-        if _has(w, text): return float(n)
-    return None
+    return _spoken(text)
+
+
+def _spoken(text: str):
+    """The first run of number words, added up the way it was said: "seventy two" is 72, not 2.
+
+    A run is adjacent words and nothing else -- one ordinary word ends it -- so "turn on one lamp and
+    two fans" is still 1 and not 3. "hundred" multiplies what came before it, which is the only word
+    in spoken English up to a hundred that is not simply added on."""
+    run = []
+    for token in re.findall(r"[\w']+", text.lower()):
+        if token in WORD_NUM or token == "hundred": run.append(token)
+        elif run: break
+    if not run: return None
+    n = 0
+    for w in run: n = (n or 1) * 100 if w == "hundred" else n + WORD_NUM[w]
+    return float(n)
 
 
 def _minutes(text: str):
@@ -241,7 +261,15 @@ class Commands:
             r = self.hub.home.rooms.get(d.room_id)
             if r:
                 for rn in room_names(r):
-                    if names[0].startswith(rn + " "): names.append(names[0][len(rn) + 1:])
+                    # "Kitchen counter" is also "counter", inside the Kitchen. But a device called
+                    # after its room and its kind -- "Backyard Light", "Den TV" -- is left with a
+                    # short name that is only the kind word, and a kind word is not a name: it is in
+                    # every sentence about that kind anywhere in the house. "Turn off bathroom light"
+                    # matched the Backyard Light on the strength of the word "light" and turned off a
+                    # floodlight in the garden. Kinds are what KINDS is for, and it is tried next.
+                    if names[0].startswith(rn + " "):
+                        short = names[0][len(rn) + 1:]
+                        if not any(re.fullmatch(pat, short) for pat, _, _ in KINDS): names.append(short)
             for n in names:
                 if n and len(n) > 1 and _has(re.escape(n), t) and (best is None or len(n) > len(best[1])): best = (d, n)
         return best if best else (None, "")

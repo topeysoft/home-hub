@@ -53,6 +53,16 @@ class Say(unittest.IsolatedAsyncioTestCase):
 
     async def say(self, text, room=None): return await self.hub.commands.say(text, room)
 
+    def home_with_outdoor_lights(self):
+        """Two rooms whose names collide the way a real house's do: a Bathroom whose light is not
+        called "light" at all, and a Backyard whose light is."""
+        add = lambda r, d: (self.hub.home.rooms[r].devices.append(d), self.hub.home.devices.__setitem__(d.id, d))
+        for rid, name in (("bathroom", "Bathroom"), ("backyard", "Backyard")):
+            self.hub.home.rooms[rid] = Room(rid, name)
+        add("bathroom", Device("light.bathroom_dimmer", "Dimmer", "bathroom", "light", "on"))
+        add("backyard", Device("light.backyard", "Backyard Light", "backyard", "light", "on"))
+        self.hub.acts.clear()
+
     async def test_room_and_kind(self):
         out = await self.say("Please turn the kitchen lights off")
         self.assertEqual(out["kind"], "done"); self.assertEqual(out["text"], "Kitchen lights off.")
@@ -125,6 +135,46 @@ class Say(unittest.IsolatedAsyncioTestCase):
         await self.say("make the den warmer"); self.assertEqual(self.hub.acts[-1][2], {"temperature": 72.0})
         await self.say("den thermostat to cool"); self.assertEqual(self.hub.acts[-1], ("climate.den", "mode", {"hvac_mode": "cool"}))
         await self.say("heating off in the den"); self.assertEqual(self.hub.acts[-1], ("climate.den", "off", {}))
+
+    async def test_a_kind_word_is_not_a_short_name(self):
+        """Found in a real house: "Turn off bathroom light" turned off a floodlight in the garden.
+
+        A device is also known by its name with its room's taken off the front -- "Kitchen counter"
+        is "counter" in the Kitchen. Where a device is called after its room AND its kind, that
+        leaves the bare kind word as a name: "Backyard Light" was also "light", which is in every
+        sentence about a light anywhere in the house. It matched first and won, and the Bathroom's
+        own light -- called "Dimmer", with no "light" in it -- never got a look in."""
+        self.home_with_outdoor_lights()
+        await self.say("turn off bathroom light")
+        self.assertEqual([a[0] for a in self.hub.acts], ["light.bathroom_dimmer"])
+        # the singular and the plural have to agree; only the plural ever worked
+        self.hub.acts.clear()
+        await self.say("turn off bathroom lights")
+        self.assertEqual([a[0] for a in self.hub.acts], ["light.bathroom_dimmer"])
+        # and a room whose light IS called after it still answers to its own name
+        self.hub.acts.clear()
+        await self.say("turn off backyard light")
+        self.assertEqual([a[0] for a in self.hub.acts], ["light.backyard"])
+
+    async def test_spoken_numbers(self):
+        """The numbers a microphone hands over. Nobody says "seventy two" to a keyboard, so until
+        voice arrived the grammar only ever met digits -- and read "seventy two" as 2, which is not a
+        failure anybody can see: the house sets a thermostat to 2 and sounds sure of itself."""
+        from hub.commands import _number
+        self.assertEqual(_number("seventy two degrees"), 72.0)
+        self.assertEqual(_number("sixty five"), 65.0)
+        self.assertEqual(_number("seventy-two"), 72.0)          # however the recogniser punctuates it
+        self.assertEqual(_number("a hundred percent"), 100.0)
+        self.assertEqual(_number("72 degrees"), 72.0)           # a typed one still wins outright
+        self.assertIsNone(_number("make the den warmer"))
+        # a run is adjacent words and nothing else, so an ordinary word between two of them ends it
+        self.assertEqual(_number("turn on one lamp and two fans"), 1.0)
+        self.assertEqual(_number("for an hour"), 1.0)
+
+        await self.say("set the den thermostat to seventy two degrees")
+        self.assertEqual(self.hub.acts[-1], ("climate.den", "set", {"temperature": 72.0}))
+        await self.say("play rain in the kitchen for twenty five minutes")
+        self.assertEqual(self.hub.acts[-1][2], {"sound": "rain", "minutes": 25})
 
     async def test_sounds(self):
         out = await self.say("play rain in the kitchen for an hour")
