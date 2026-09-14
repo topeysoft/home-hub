@@ -16,7 +16,7 @@
  * the difference between that and a room is the one small column.
  */
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
-import { cap, scenesFor, store, whatsOn } from '../store'
+import { ago, cap, done, justDone, scenesFor, store, whatsOn } from '../store'
 import type { Device, Room } from '../api'
 import SceneBar from '../SceneBar.vue'
 import CameraTile from '../tiles/CameraTile.vue'
@@ -36,12 +36,16 @@ const props = defineProps<{ rooms: Room[]; when: string; woke?: number }>()
 type Card = { key: string; kind: 'device' | 'scenes'; device?: Device }
 const cameras = computed(() => props.rooms.flatMap(r => r.devices.filter(d => cap(d) === 'camera')))
 const climates = computed(() => props.rooms.flatMap(r => r.devices.filter(d => cap(d) === 'climate')))
-/* A card here stands for something that is on, so turning it off takes it out of the row. Going on the
-   tap itself reads as a glitch rather than an answer, so a thing that has stopped being on keeps its
-   place for a beat first: the card stays exactly where it was, showing itself off -- the fill drained,
-   the label changed -- and only then does the row close over it. The beat covers a thing a routine
-   turned off too, where a card vanishing under nobody's hand is stranger still.
-   Held rather than computed, because a card on its way out has to keep its place, and a row rebuilt
+/* A card here stands for something that is on, so turning it off would take it out of the row. It does
+   not, and that is the rule this row is built around: a card you have just quieted KEEPS ITS PLACE --
+   drained, saying what it now is and when -- until the panel looks away. A card going out from under
+   the finger that touched it is the wrong answer to "did that work", and the row closing over the gap
+   moves every other card under the hand as well. Tapping it again puts the thing back, which is where
+   the undo lives now. store.ts (`done`) says what clears them; App.vue says when.
+
+   The beat below is what is left for the other way a card can stop being on: a routine, or somebody in
+   another room. Nobody's hand is on the screen for that one, so it reads itself off and goes.
+   Held rather than computed, because a card keeping its place is the whole point, and a row rebuilt
    from what is still on has no place to keep. */
 const SHOWN = 620, FADE = 340, SPARE = 90   // read the card off, fade it, and do not cut the fade short
 const live = computed(() => whatsOn().filter(d => cap(d) !== 'camera' && cap(d) !== 'climate'))
@@ -54,13 +58,17 @@ function close(now: Device[]) {
   for (const d of on.value) {
     const still = rest.get(d.id)
     if (still) { kept.push(still); rest.delete(d.id) }
-    else if (going[d.id]) kept.push(d)
+    else if (going[d.id] || done[d.id]) kept.push(d)
   }
-  on.value = [...kept, ...rest.values()]
+  /* Kept cards this row has never held: Home was left and come back to while one was standing. They
+     join at the end rather than being lost, so what you did is still here however you got back. */
+  const held = new Set([...kept, ...rest.values()].map(d => d.id))
+  const back = justDone().filter(d => !held.has(d.id) && cap(d) !== 'camera' && cap(d) !== 'climate')
+  on.value = [...kept, ...rest.values(), ...back]
 }
 watch(live, (now, was) => {
   for (const d of was ?? []) {
-    if (!now.some(x => x.id === d.id) && !going[d.id]) {
+    if (!now.some(x => x.id === d.id) && !going[d.id] && !done[d.id]) {
       going[d.id] = true                             // the class that arms the fade, with the card still at full strength
       /* Two frames before it goes, the same way the row's own entrance arms itself above: a class that
          both defines a transition and moves the value in one change cannot be relied on to animate. */
@@ -70,6 +78,17 @@ watch(live, (now, was) => {
   }
   close(now)
 }, { immediate: true })
+/* Swept: the panel looked away and the kept cards are not owed a place any more. No beat and no fade --
+   the whole point of the moment is that there is nobody in front of it to see one. */
+watch(() => Object.keys(done).length, () => close(live.value))
+/* When a kept card was quieted, re-read on the half-minute so "just now" does not sit there for an hour.
+   Only the WHEN: the card's own state line is already saying what it is, and a corner chip repeating
+   "Off" next to the word Off is the kind of thing a wall panel has no room for. */
+const tick = ref(Date.now())
+let minute: number | undefined
+onMounted(() => (minute = window.setInterval(() => (tick.value = Date.now()), 30000)))
+onUnmounted(() => clearInterval(minute))
+const keptLine = (d: Device) => done[d.id] && !live.value.some(x => x.id === d.id) ? ago(done[d.id].at / 1000, tick.value) : ''
 const scenes = computed(() => scenesFor(null).length > 0)
 const cards = computed<Card[]>(() => {
   const dev = (d: Device): Card => ({ key: d.id, kind: 'device', device: d })
@@ -149,7 +168,7 @@ onUnmounted(() => clearTimeout(settle))
   <!-- --flow-i is the card's place in the row: the entrance leans on it for the stagger -->
   <div class="bento" ref="bento" v-if="!empty" :class="flow" role="group" aria-label="On right now">
     <template v-for="(c, i) in cards" :key="c.key">
-      <component v-if="c.kind === 'device'" :is="tile(c.device!)" class="bento-card" :class="{ going: !!going[c.device!.id], gone: !!gone[c.device!.id] }" :style="{ '--flow-i': i }" :device="c.device!" v-hold="() => (store.opened = c.device!)" />
+      <component v-if="c.kind === 'device'" :is="tile(c.device!)" class="bento-card" :class="{ going: !!going[c.device!.id], gone: !!gone[c.device!.id], kept: !!keptLine(c.device!) }" :data-kept="keptLine(c.device!) || null" :style="{ '--flow-i': i }" :device="c.device!" v-hold="() => (store.opened = c.device!)" />
       <div v-else class="bento-card tile scene-card" :style="{ '--flow-i': i }">
         <span class="scene-card-when">{{ when }}</span>
         <SceneBar :room="null" />

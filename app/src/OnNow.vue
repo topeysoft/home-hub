@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import type { Device } from './api'
-import { whatsOn, cap, perform, shortName, roomOf, store, notify } from './store'
+import { whatsOn, cap, done, doneLine, isActive, justDone, perform, shortName, roomOf, store } from './store'
 import Icon from './Icon.vue'
 
 /* Everything that is on across the house, each a chip that turns it off with one tap. The house line says "something is
@@ -9,27 +9,35 @@ import Icon from './Icon.vue'
 const MAX = 8
 const on = computed(whatsOn)
 
-/* A tapped chip leaves the list, because the thing it stood for is not on any more. Going on the tap
-   itself reads as a glitch rather than an answer, so it stays where it is for a beat and says what it
-   did -- off, closed, locked -- and only then does the row close over it. The rows are held here rather
-   than computed straight from `on` for exactly that: a chip on its way out has to keep its place, and a
-   list rebuilt from what is still on has no place to keep. */
-const SAID = 1100
-const said = reactive<Record<string, string>>({})
+/* A tapped chip does NOT leave the list. It keeps its place, says what it did and when -- "Off · just now" -- and
+   tapping it again puts the thing back, which is where the undo lives; a chip going out from under the finger that
+   touched it is the wrong answer to "did that work", and the row closing over the gap moves every other chip under the
+   hand as well. What clears them is the panel looking away: store.ts (`done`) says what that means, App.vue says when.
+   The rows are held here rather than computed straight from `on` for exactly that -- a chip that has been quieted has to
+   keep its place, and a list rebuilt from what is still on has no place to keep. */
 const rows = ref<Device[]>([])
 function sync(now: Device[]) {
-  const live = new Map(now.map(d => [d.id, d]))
+  const rest = new Map(now.map(d => [d.id, d]))
   const kept: Device[] = []
   for (const d of rows.value) {
-    const still = live.get(d.id)
-    if (still) { kept.push(still); live.delete(d.id) }
-    else if (said[d.id]) kept.push(d)            // gone, but still saying what it did
+    const still = rest.get(d.id)
+    if (still) { kept.push(still); rest.delete(d.id) }
+    else if (done[d.id]) kept.push(d)                // off, and still saying so
   }
-  rows.value = [...kept, ...live.values()]
+  /* quieted somewhere else, or before Home was come back to: still this person's own doing, so still here */
+  const held = new Set([...kept, ...rest.values()].map(d => d.id))
+  rows.value = [...kept, ...rest.values(), ...justDone().filter(d => !held.has(d.id))]
 }
 watch(on, sync, { immediate: true })
+watch(() => Object.keys(done).length, () => sync(on.value))
+
+const tick = ref(Date.now())   // so "just now" does not sit there for an hour
+let minute: number | undefined
+onMounted(() => (minute = window.setInterval(() => (tick.value = Date.now()), 30000)))
+onUnmounted(() => clearInterval(minute))
+
 const shown = computed(() => rows.value.slice(0, MAX))
-const more = computed(() => Math.max(0, on.value.length - MAX))
+const more = computed(() => Math.max(0, on.value.length - shown.value.filter(d => isActive(d)).length))
 
 const place = (d: Device) => roomOf(d)?.name ?? ''
 function what(d: Device): string {
@@ -45,32 +53,35 @@ function quiet(d: Device): [string, string] | null {
   if (['light', 'switch', 'fan', 'media', 'climate'].includes(k)) return ['off', 'off']
   return null
 }
-const hint = (d: Device) => { const q = quiet(d); return !q ? '' : q[0] === 'close' ? 'Tap to close' : q[0] === 'lock' ? 'Tap to lock' : 'Tap to turn off' }
-/* the chip vanishes once the thing is off, so the toast is the way back: Undo puts it on again. A door stays locked. */
-const UNDO: Record<string, [string, string]> = { off: ['on', 'on'], close: ['open', 'open'] }
+/* and the way back from each, for a chip that is standing there saying it did one. A door is not on this
+   list on purpose: the house locks from here and unlocks at the door, so a stray tap cannot open it. */
+const BACK: Record<string, [string, string]> = { Off: ['on', 'on'], Closed: ['open', 'open'], Paused: ['play', 'playing'] }
+const kept = (d: Device) => !!done[d.id] && !isActive(d)
+const back = (d: Device) => kept(d) ? BACK[done[d.id].verb] ?? null : null
+const line = (d: Device) => kept(d) ? doneLine(d.id, tick.value) : place(d)
+function hint(d: Device): string {
+  if (kept(d)) { const b = back(d); return !b ? '' : b[0] === 'open' ? 'Tap to open' : b[0] === 'play' ? 'Tap to play' : 'Tap to turn back on' }
+  const q = quiet(d); return !q ? '' : q[0] === 'close' ? 'Tap to close' : q[0] === 'lock' ? 'Tap to lock' : 'Tap to turn off'
+}
+const dead = (d: Device) => kept(d) ? !back(d) : !quiet(d)
 async function tap(d: Device) {
-  const q = quiet(d); if (!q || store.pending[d.id]) return
-  /* marked before the house is asked, not after: the state it sets is optimistic too, so by the time the
-     round trip is back this thing has already left `on` and the row would have closed over it unmarked. */
-  said[d.id] = q[0] === 'close' ? 'Closed' : q[0] === 'lock' ? 'Locked' : 'Off'
-  const ok = await perform(d, q[0], undefined, { state: q[1] })
-  if (!ok) { delete said[d.id]; sync(on.value); return }
-  setTimeout(() => { delete said[d.id]; sync(on.value) }, SAID)
-  const back = UNDO[q[0]], name = shortName(d, roomOf(d))
-  const line = q[0] === 'close' ? `${name} closing` : q[0] === 'lock' ? `${name} locked` : `${name} off`
-  notify(line, 'info', back ? { label: 'Undo', run: () => perform(d, back[0], undefined, { state: back[1] }) } : undefined)
+  if (store.pending[d.id]) return
+  /* The chip says what happened, so there is no toast to say it again -- and the chip is the undo, which
+     is what a toast used to carry out of the room after six seconds. */
+  const go = kept(d) ? back(d) : quiet(d)
+  if (go) await perform(d, go[0], undefined, { state: go[1] })
 }
 </script>
 
 <template>
-  <div class="onnow" v-if="on.length" role="group" aria-label="On right now">
+  <div class="onnow" v-if="rows.length" role="group" aria-label="On right now">
     <TransitionGroup name="onnow">
-      <button v-for="d in shown" :key="d.id" class="onnow-chip" :class="[cap(d), { fixed: !quiet(d), pending: store.pending[d.id], said: !!said[d.id] }]"
-              :disabled="!quiet(d) || !!said[d.id]" :title="hint(d)"
-              :aria-label="said[d.id] ? `${what(d)} in the ${place(d)}. ${said[d.id]}.` : `${what(d)} in the ${place(d)}. ${hint(d)}`" @click="tap(d)"
+      <button v-for="d in shown" :key="d.id" class="onnow-chip" :class="[cap(d), { fixed: dead(d), pending: store.pending[d.id], kept: kept(d) }]"
+              :disabled="dead(d)" :title="hint(d)"
+              :aria-label="`${what(d)} in the ${place(d)}. ${kept(d) ? line(d) + '.' : ''} ${hint(d)}`.replace(/\s+/g, ' ').trim()" @click="tap(d)"
               v-hold="() => (store.opened = d)">
-        <span class="onnow-icon"><Icon :name="said[d.id] ? 'check' : cap(d)" :size="16" /></span>
-        <span class="onnow-text"><span class="onnow-name">{{ what(d) }}</span><span class="onnow-place">{{ said[d.id] || place(d) }}</span></span>
+        <span class="onnow-icon"><Icon :name="kept(d) ? 'check' : cap(d)" :size="16" /></span>
+        <span class="onnow-text"><span class="onnow-name">{{ what(d) }}</span><span class="onnow-place">{{ line(d) }}</span></span>
       </button>
     </TransitionGroup>
     <span class="onnow-more" v-if="more > 0">and {{ more }} more</span>

@@ -1,0 +1,139 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      /* app/src/panel.css :root, unchanged */
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp: #e9b872; --lamp-deep: #b8863e; --lamp-ink: #2a1c07;
+      --live: #74c69d; --danger: #e08a8a; --cool: #7ab0e8;
+      --edge: rgba(255,255,255,.10); --edge-hi: rgba(255,255,255,.18);
+      --surface-hi: rgba(255,255,255,.08);
+    }
+    a { color: #e9b872; } a:hover { color: #b8863e; }
+    .dsp { font-family: "Instrument Serif", "Iowan Old Style", Palatino, Georgia, serif; font-weight: 400; letter-spacing: -.01em; }
+    /* the five zones, at the sizes the pane already uses */
+    .room { font-size: 15px; color: var(--ink-2); }
+    .name { margin: 4px 0 0; font-size: 56px; line-height: 1.04; }
+    .read { font-size: 76px; line-height: 1; letter-spacing: -.02em; }
+    .why { font-size: 15.5px; color: var(--ink-2); }
+    .fact-v { font-size: 20px; font-weight: 500; }
+    .fact-k { margin-top: 2px; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+    /* a verb: the round control the pane already draws, at its own 56px */
+    .ctl { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-hi); border: 1px solid var(--edge); color: var(--ink-2); }
+    .ctl.on { background: var(--lamp); border-color: transparent; color: var(--lamp-ink); }
+    .ctl.wide { width: auto; height: 56px; border-radius: 999px; padding: 0 24px; display: inline-flex; align-items: center; gap: 11px; font-size: 16.5px; color: var(--ink); }
+    .ctl.wide.on { color: var(--lamp-ink); font-weight: 500; }
+    .pill { display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 14px; border-radius: 999px; font-size: 13.5px; color: var(--ink-2); background: var(--surface-hi); }
+    .lbl { font-size: 12.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .ic { flex: 0 0 auto; }
+    /* the day strip every pane carries along its foot */
+    .day-line { position: absolute; left: 48px; right: 48px; height: 1px; background: var(--edge); }
+    .ev-t { font-size: 13px; color: var(--muted); }
+    .ev { font-size: 15px; color: var(--ink-2); margin-top: 3px; }
+  </style>
+</helmet>
+
+<!-- CLIMATE -- the only kind whose instrument is a number you set rather than a level you drag. Every control here is already in the brain: set, mode, fan minutes, sense-from. -->
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: #0c0d10; color: var(--ink); font-size: 17px; line-height: 1.4;">
+
+  <div style="position: absolute; inset: 0; background: linear-gradient(rgb(20,23,38) 0%, rgb(35,36,58) 42%, rgb(78,55,52) 86%, rgb(54,40,40) 100%);"></div>
+  <div style="position: absolute; inset: 0; background: radial-gradient(90% 70% at 62% 78%, rgba(122,176,232,.26), transparent 66%);"></div>
+  <div style="position: absolute; inset: 0; opacity: .5; background-image: url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.035'/%3E%3C/svg%3E&quot;);"></div>
+  <div style="position: absolute; left: 0; right: 0; top: 0; height: 260px; overflow: hidden; transform: scale(.955); transform-origin: 50% 0; filter: blur(13px) brightness(.52) saturate(.85);">
+    <div style="position: absolute; top: 22px; left: 40px; display: flex; align-items: baseline; gap: 13px;">
+      <span class="dsp" style="font-size: 27px;">7:40 PM</span><span style="font-size: 15px; color: #b9b5ad;">Sunday, September 13</span>
+    </div>
+    <div style="position: absolute; top: 15px; left: 526px; width: 389px; height: 54px; border-radius: 999px; background: rgba(26,28,34,.55);"></div>
+    <div style="position: absolute; top: 104px; left: 96px;">
+      <div class="dsp" style="font-size: 52px; line-height: 1;">Living room</div>
+      <div style="margin-top: 10px; font-size: 16px; color: #b9b5ad;">Movie &middot; by a routine</div>
+    </div>
+    <div style="position: absolute; top: 200px; left: 40px; right: 40px; height: 160px; display: flex; gap: 14px;">
+      <div style="flex: 1; border-radius: 22px; background: rgba(255,255,255,.07);"></div>
+      <div style="flex: 1; border-radius: 22px; background: rgba(255,255,255,.05);"></div>
+      <div style="flex: 1; border-radius: 22px; background: rgba(233,184,114,.10);"></div>
+      <div style="flex: 1; border-radius: 22px; background: rgba(255,255,255,.05);"></div>
+    </div>
+  </div>
+  <div style="position: absolute; left: 0; right: 0; top: 225px; bottom: 0; overflow: hidden; border-radius: 34px 34px 0 0; border: 1px solid rgba(255,255,255,.18); border-bottom: 0; background: linear-gradient(rgba(26,28,34,.80), rgba(16,17,21,.94));">
+    <div style="position: absolute; inset: 0; background: radial-gradient(78% 86% at 72% 96%, rgba(122,176,232,.2), transparent 64%);"></div>
+    <div style="position: absolute; top: 26px; right: 30px; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; color: #b9b5ad; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.10);">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </div>
+    
+    <div style="position: absolute; left: 48px; top: 44px; width: 560px;">
+      <div class="room">Living room</div>
+      <h2 class="dsp name">Thermostat</h2>
+    </div>
+    <div style="position: absolute; left: 48px; top: 202px; display: flex; gap: 12px;"><div class="ctl" title="Turn it off"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v8.5M6.6 6.6a7.6 7.6 0 1 0 10.8 0"/></svg></div><div class="ctl" title="Why is it cooling"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l1.8 5.2 5.2 1.8-5.2 1.8L12 17.5l-1.8-5.2L5 10.5l5.2-1.8zM5 17.5l.7 1.8 1.8.7-1.8.7L5 22.5l-.7-1.8-1.8-.7 1.8-.7z"/></svg></div><div class="ctl" title="Rename or move"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3zM13.5 8.5l2 2"/></svg></div></div>
+    <div style="position: absolute; left: 48px; top: 294px; width: 556px;">
+      <div class="dsp read">74&deg;</div>
+      <div class="why" style="margin-top: 18px;">Cooling towards 71&deg;. Asked for by hand at 6:40.</div>
+      <div style="display: flex; gap: 34px; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--edge);">
+        <div><div class="fact-v">48%</div><div class="fact-k">Humidity</div></div>
+        <div><div class="fact-v">Auto</div><div class="fact-k">Fan</div></div>
+        <div><div class="fact-v">This room</div><div class="fact-k">Sensing</div></div>
+        <div><div class="fact-v">Movie</div><div class="fact-k">In the room</div></div>
+      </div>
+    </div>
+  <div style="position: absolute; left: 640px; top: 72px; width: 752px; height: 420px; border-radius: 32px; background: rgba(255,255,255,.035); border: 1px solid var(--edge);">
+    
+    <div style="position: absolute; inset: 26px; display: flex; gap: 24px; align-items: center;">
+      <div class="ctl" style="width: 72px; height: 72px;"><svg class="ic" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 12h13"/></svg></div>
+      
+    <svg width="320" height="320" viewBox="0 0 320 320" style="flex: 0 0 auto;">
+      <circle cx="160" cy="160" r="132" fill="none" stroke="rgba(255,255,255,.10)" stroke-width="18" stroke-linecap="round"
+              stroke-dasharray="622 829" transform="rotate(125 160 160)"/>
+      <circle cx="160" cy="160" r="132" fill="none" stroke="#7ab0e8" stroke-width="18" stroke-linecap="round"
+              stroke-dasharray="86 829" stroke-dashoffset="-402" transform="rotate(125 160 160)"/>
+      <circle cx="160" cy="160" r="132" fill="none" stroke="rgba(255,255,255,.9)" stroke-width="26" stroke-linecap="round"
+              stroke-dasharray="5 829" stroke-dashoffset="-402" transform="rotate(125 160 160)"/>
+      <text x="160" y="150" text-anchor="middle" font-family="Instrument Serif, Georgia, serif" font-size="84" fill="#f1eee8">71&deg;</text>
+      <text x="160" y="184" text-anchor="middle" font-size="13.5" letter-spacing="2.4" fill="#7f7d77">ASKED FOR</text>
+      <text x="160" y="232" text-anchor="middle" font-size="16" fill="#7ab0e8">Cooling &middot; 74&deg; now</text>
+    </svg>
+      <div class="ctl" style="width: 72px; height: 72px;"><svg class="ic" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.5v13M5.5 12h13"/></svg></div>
+      <div style="flex: 1 1 0; display: flex; flex-direction: column; gap: 12px; padding-left: 6px;">
+        <div class="lbl">What it should do</div>
+        <div style="display: flex; flex-wrap: wrap; gap: 9px;">
+          <span class="pill" style="height: 42px; padding: 0 18px; font-size: 15px;">Warm it</span>
+          <span class="pill" style="height: 42px; padding: 0 18px; font-size: 15px; background: rgba(122,176,232,.22); color: #d6e8fb;">Cool it</span>
+          <span class="pill" style="height: 42px; padding: 0 18px; font-size: 15px;">Either</span>
+          <span class="pill" style="height: 42px; padding: 0 18px; font-size: 15px;">Off</span>
+        </div>
+        <div style="margin-top: 10px; height: 62px; border-radius: 20px; border: 1px solid var(--edge); background: rgba(255,255,255,.05); display: flex; align-items: center; gap: 13px; padding: 0 18px;">
+          <svg class="ic" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#b9b5ad" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 9h11a2.5 2.5 0 1 0-2.5-2.5M3.5 13h15a2.5 2.5 0 1 1-2.5 2.5M3.5 17h8a2 2 0 1 1-2 2"/></svg><span style="font-size: 16px;">Fan for half an hour</span>
+        </div>
+        <div style="height: 62px; border-radius: 20px; border: 1px solid var(--edge); background: rgba(255,255,255,.05); display: flex; align-items: center; gap: 13px; padding: 0 18px;">
+          <svg class="ic" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#b9b5ad" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M12 13.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/></svg><span style="font-size: 16px;">Going by the room sensor</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="day-line" style="top: 542px;"></div>
+  <div style="position: absolute; left: 48px; top: 568px; display: flex; align-items: center; gap: 12px;">
+    <span class="lbl">Today</span>
+  </div>
+  <div style="position: absolute; left: 200px; right: 48px; top: 562px; display: flex; gap: 44px;">
+    <div style="flex: 0 0 auto; max-width: 230px;"><div class="ev-t">6:40 pm</div><div class="ev">Asked for 71&deg;, by hand</div></div>
+    <div style="flex: 0 0 auto; max-width: 230px;"><div class="ev-t">6:41 pm</div><div class="ev">Started cooling</div></div>
+    <div style="flex: 0 0 auto; max-width: 230px;"><div class="ev-t">1:15 pm</div><div class="ev">76&deg;, nobody home</div></div>
+    <div style="flex: 0 0 auto; max-width: 230px;"><div class="ev-t">7:00 am</div><div class="ev">Asked for 70&deg;, by Morning</div></div>
+  </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

@@ -440,5 +440,9 @@ test('glass re-materialises the tab pill instead of taking it away', async ({ pa
     expect(t.onScreen, `"${t.label}" is off the screen or too small to hit under glass`).toBe(true)
 
   await page.locator('.tab', { hasText: 'Rooms' }).click()
-  await expect(page.locator('.room-card').first()).toBeVisible()
+  // `.room-cell`, not `.room-card`: the Rooms tab is its own ranked arrangement now
+  // and the three home layouts keep the grid. Both take the face -- see panel.css.
+  await expect(page.locator('.room-cell').first()).toBeVisible()
+  expect(await frost(page, '.room-cell'), 'the Rooms tab is the one screen the face does not reach')
+    .toContain('blur')
 })

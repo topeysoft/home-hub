@@ -105,11 +105,20 @@ export function shortName(d: Device, room?: Room | null): string {
 }
 
 /* ---------- one line about a room, written for a person ---------- */
-export function activity(r: Room): string {
+/*
+ * The line before it is joined, because one card wants it short by one phrase.
+ *
+ * The Rooms tab's lead card spends a whole row on what is playing -- the
+ * artwork, the title, the button -- so repeating "The Bear" in the line above
+ * it says the same thing twice and pushes what ELSE the room is doing off the
+ * end. `withMedia: false` leaves the row to say it. Every other caller joins
+ * them all, which is what activity() below does.
+ */
+export function activityParts(r: Room, withMedia = true): string[] {
   const parts: string[] = []
   const lights = r.devices.filter(d => cap(d) === 'light' && d.state === 'on').length
   if (lights) parts.push(lights === 1 ? '1 light on' : `${lights} lights on`)
-  for (const d of r.devices.filter(d => cap(d) === 'media' && d.state === 'playing'))
+  if (withMedia) for (const d of r.devices.filter(d => cap(d) === 'media' && d.state === 'playing'))
     parts.push(d.attrs.media_title ? `${d.attrs.media_title}` : `${shortName(d, r)} playing`)
   const open = r.devices.filter(d => cap(d) === 'cover' && d.state === 'open').length
   if (open) parts.push(open === 1 ? 'Blind open' : `${open} blinds open`)
@@ -120,6 +129,10 @@ export function activity(r: Room): string {
   for (const d of r.devices.filter(d => cap(d) === 'vacuum' && d.state === 'cleaning')) parts.push(`${shortName(d, r)} cleaning`)
   if (r.devices.some(d => cap(d) === 'motion' && d.state === 'on')) parts.push('Motion')
   if (r.devices.some(d => cap(d) === 'camera' && d.state === 'recording')) parts.push('Recording')
+  return parts
+}
+export function activity(r: Room): string {
+  const parts = activityParts(r)
   if (parts.length) return parts.join(' · ')
   if (r.id === 'unassigned') return r.devices.length === 1 ? '1 to place' : `${r.devices.length} to place`
   if (!r.devices.length) return 'Nothing here yet'
@@ -208,15 +221,70 @@ export function notify(text: string, kind: 'info' | 'error' = 'info', action?: {
   toastTimer = window.setTimeout(() => (store.toast = null), kind === 'error' ? 5000 : action ? 6000 : 2800)   // long enough to reach for Undo
 }
 export function dismissToast() { store.toast = null; clearTimeout(toastTimer) }
+
+/* ---------- what you have just done, still on the screen ---------- */
+/*
+ * A thing you have just quieted is off, and Home's row is a row of what is on,
+ * so the card it stood in had no reason to be there any more and left a beat
+ * after the tap. That beat was the wrong answer to "did that work": the screen
+ * took the thing away instead of telling you about it, and the row closing over
+ * the gap moved everything else under the hand that was still there.
+ *
+ * So it stays. The card keeps its place, drained, saying what it now is and when
+ * it became that, and tapping it again puts it back -- an undo in the place the
+ * person is already looking, for as long as they are looking, rather than one
+ * riding out on a toast. It is marked before the house is asked, like the state
+ * the guess sets, because by the time the round trip is back the thing has
+ * already left `whatsOn()` and the row would have closed over it unmarked.
+ *
+ * What clears it is the panel LOOKING AWAY: a wall going to rest, a phone going
+ * behind another app, or -- for a screen nobody ever leaves -- half an hour.
+ * Nobody is watching at that moment, so the row can close over the gap without
+ * anything moving under a finger. App.vue owns those three moments; every part
+ * of Home reads the same map, so a layout cannot disagree about it.
+ *
+ * A scene is not in here. "Everything off" means the row to empty, and that
+ * emptying is the confirmation; ten grey cards would argue with it.
+ */
+export const done = reactive<Record<string, { verb: string; at: number }>>({})
+const QUIETED: Record<string, string> = { off: 'Off', close: 'Closed', lock: 'Locked', pause: 'Paused' }
+const WOKEN = new Set(['on', 'open', 'unlock', 'play'])
+/* Held high on purpose: this is a stop on memory, not a policy about the screen. A cap a person can
+   reach by turning off the lights in four rooms would take the earliest card back out from under them,
+   which is the very thing this exists to stop; Home clips what it can draw at its own end. */
+const DONE_KEEP = 24, DONE_FOR = 30 * 60 * 1000
+function markDone(id: string, verb: string) {
+  done[id] = { verb, at: Date.now() }
+  const ids = Object.keys(done)
+  if (ids.length > DONE_KEEP)
+    for (const old of ids.sort((a, b) => done[a].at - done[b].at).slice(0, ids.length - DONE_KEEP)) delete done[old]
+}
+/** The panel looked away (all), or has simply been holding one too long (the rest). */
+export function forgetDone(all = false) {
+  const now = Date.now()
+  for (const id of Object.keys(done)) if (all || now - done[id].at > DONE_FOR) delete done[id]
+}
+/** What Home is still showing though it is off: quieted by hand, not yet forgotten. */
+export function justDone(): Device[] {
+  return Object.keys(done).map(deviceById).filter((d): d is Device => !!d && !isActive(d) && !PASSIVE.has(cap(d)))
+}
+/** "Off, just now" -- what a kept card says about itself. */
+export function doneLine(id: string, now = Date.now()): string {
+  const d = done[id]; if (!d) return ''
+  return `${d.verb} · ${ago(d.at / 1000, now).toLowerCase()}`
+}
 /** Apply the expected result right away, ask the house, and step back if it refuses. */
 export async function perform(d: Device, action: string, data?: Record<string, unknown>, guess?: { state?: string; attrs?: Record<string, any> }) {
-  const before = { state: d.state, attrs: { ...d.attrs } }
+  const before = { state: d.state, attrs: { ...d.attrs } }, wasDone = done[d.id]
   if (guess?.state) d.state = guess.state
   if (guess?.attrs) d.attrs = { ...d.attrs, ...guess.attrs }
+  /* guessed, with the state: what this did is the card's own sentence once it is no longer on */
+  if (QUIETED[action]) markDone(d.id, QUIETED[action]); else if (WOKEN.has(action)) delete done[d.id]
   store.pending[d.id] = true
   try { await act(d.id, action, data) }
   catch (e: any) {
     d.state = before.state; d.attrs = before.attrs; delete store.pending[d.id]
+    if (wasDone) done[d.id] = wasDone; else delete done[d.id]
     notify(`${shortName(d, roomOf(d))} didn't respond`, 'error'); return false
   }
   window.setTimeout(() => delete store.pending[d.id], 5000)   // the stream normally clears it much sooner

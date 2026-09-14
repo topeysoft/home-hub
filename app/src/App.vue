@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { store, start, halt, load, visibleRooms, activity, roomActive, houseLine, weatherLine, needsSetup, dismissToast, updateReady } from './store'
+import { store, start, halt, load, visibleRooms, activity, roomActive, houseLine, weatherLine, needsSetup, dismissToast, updateReady, forgetDone } from './store'
 import Setup from './Setup.vue'
 import Join from './Join.vue'
 import Away from './Away.vue'
@@ -20,6 +20,7 @@ import Icon from './Icon.vue'
 import { upcomingLine } from './upcoming'
 import { glassVars, isTone, toneVars, type ToneName } from './tone'
 import { isFace, isLayout, isNav, type FaceName, type LayoutName, type NavName } from './layout'
+import { feelFrom, placeOf, TOUCHED_AT, READ_AT } from './look'
 import RailView from './views/RailView.vue'
 import WallView from './views/WallView.vue'
 import RoomsView from './views/RoomsView.vue'
@@ -56,9 +57,27 @@ const ambient = computed(() => store.sky.elevation < -8 ? 'night' : store.sky.el
    so previewing a look never changes what the rest of the house is showing. */
 const params = new URLSearchParams(location.search)
 const toneParam = params.get('tone'), layoutParam = params.get('layout')
-const toneName = computed<ToneName>(() => isTone(toneParam) ? toneParam : (isTone(store.ambient.look?.tone) ? store.ambient.look!.tone as ToneName : 'follow'))
+
+/* The house's feel, which is what the Look page actually writes: one of three,
+   and it supplies the face and the tone unless somebody has been under
+   Customise and set one by hand. Falls back to Calm, so a hub that has never
+   been asked and an old one that has no feel stored both land somewhere real. */
+const feel = computed(() => feelFrom(store.ambient.look))
+
+/* Where this screen is. The ONE thing here that is the screen's answer rather
+   than the house's, and only because it is not a preference: a phone is a phone.
+   Bound to the two seams look.ts names so it re-reads on a rotate or a resize
+   rather than being sampled once at boot -- a tablet turned on its side is a
+   different room to arrange for. */
+const atTouch = window.matchMedia(`(min-width: ${TOUCHED_AT}px)`)
+const atRead = window.matchMedia(`(min-width: ${READ_AT}px)`)
+const width = ref(window.innerWidth)
+const measure = () => (width.value = window.innerWidth)
+const place = computed(() => placeOf(width.value))
+
+const toneName = computed<ToneName>(() => isTone(toneParam) ? toneParam : (isTone(store.ambient.look?.tone) ? store.ambient.look!.tone as ToneName : feel.value.tone))
 const tone = computed(() => toneVars(store.sky.elevation, store.sky.condition, toneName.value))
-const layout = computed<LayoutName>(() => isLayout(layoutParam) ? layoutParam : (isLayout(store.ambient.look?.layout) ? store.ambient.look!.layout as LayoutName : 'stack'))
+const layout = computed<LayoutName>(() => isLayout(layoutParam) ? layoutParam : (isLayout(store.ambient.look?.layout) ? store.ambient.look!.layout as LayoutName : place.value.layout))
 
 /* where the way around the house lives -- the side list, or tabs across the
    top -- is the house's choice too; ?nav=top previews it. The tab is this
@@ -66,7 +85,7 @@ const layout = computed<LayoutName>(() => isLayout(layoutParam) ? layoutParam : 
 /* what the panel is made of: paper, or glass. The house's answer like the rest,
    and ?face=glass previews it for this tab alone. */
 const faceParam = params.get('face')
-const face = computed<FaceName>(() => isFace(faceParam) ? faceParam : (isFace(store.ambient.look?.face) ? store.ambient.look!.face as FaceName : 'paper'))
+const face = computed<FaceName>(() => isFace(faceParam) ? faceParam : (isFace(store.ambient.look?.face) ? store.ambient.look!.face as FaceName : feel.value.face))
 /* the pane's own properties, derived from the same sky the tone is: a face that
    is not on costs nothing, because there is nothing to bind */
 const glass = computed(() => face.value === 'glass' ? glassVars(store.sky.elevation, store.sky.condition) : {})
@@ -78,7 +97,7 @@ const flat = params.get('flat') === '1'
   || !(CSS.supports('backdrop-filter', 'blur(1px)') || CSS.supports('-webkit-backdrop-filter', 'blur(1px)'))
 
 const navParam = params.get('nav')
-const nav = computed<NavName>(() => isNav(navParam) ? navParam : (isNav(store.ambient.look?.nav) ? store.ambient.look!.nav as NavName : 'side'))
+const nav = computed<NavName>(() => isNav(navParam) ? navParam : (isNav(store.ambient.look?.nav) ? store.ambient.look!.nav as NavName : place.value.nav))
 const tab = ref<'home' | 'rooms' | 'cameras'>('home')
 function go(t: 'home' | 'rooms' | 'cameras') { tab.value = t; open(null) }
 
@@ -115,7 +134,19 @@ function touched() {
    silence the next one. */
 watch(() => store.asks.length, (n, o) => { if (n > o) { store.askAside = false; touched() } })
 async function rejoin() { halt(); await start() }                       // this screen just joined: read the house and reconnect
-function checkIdle() { if (!idle.value && kiosk.matches && !store.viewer && !store.sheet && !setup.value && Date.now() - lastTouch > IDLE_AFTER) idle.value = true }
+function checkIdle() {
+  if (!idle.value && kiosk.matches && !store.viewer && !store.sheet && !setup.value && Date.now() - lastTouch > IDLE_AFTER) idle.value = true
+  forgetDone(idle.value)   // and the stale ones either way, for a screen that never rests
+}
+/*
+ * The panel has looked away, and that is the ONE moment Home may take back a
+ * card you have just quieted: at rest, behind another app, or half an hour on.
+ * Nobody is watching, so the row closes over the gap with nothing moving under a
+ * finger -- which is the whole reason those cards stay in the first place. See
+ * `done` in store.ts. Coming back from hidden does not sweep: a phone brought
+ * out of a pocket is somebody looking again, and this already ran on the way in.
+ */
+function looked() { if (document.visibilityState === 'hidden') forgetDone(true) }
 
 let tick: number | undefined, idler: number | undefined
 onMounted(() => {
@@ -124,11 +155,17 @@ onMounted(() => {
   idler = window.setInterval(checkIdle, 5000)
   window.addEventListener('pointerdown', touched, { capture: true })
   window.addEventListener('keydown', touched, { capture: true })
+  document.addEventListener('visibilitychange', looked)
+  atTouch.addEventListener('change', measure)
+  atRead.addEventListener('change', measure)
 })
 onUnmounted(() => {
   halt(); clearInterval(tick); clearInterval(idler)
   window.removeEventListener('pointerdown', touched, { capture: true })
   window.removeEventListener('keydown', touched, { capture: true })
+  document.removeEventListener('visibilitychange', looked)
+  atTouch.removeEventListener('change', measure)
+  atRead.removeEventListener('change', measure)
 })
 </script>
 
@@ -199,8 +236,8 @@ onUnmounted(() => {
       </div>
       <Transition v-else name="view" mode="out-in">
         <RoomView v-if="room" :key="room.id" :room="room" @back="open(null)" @open="open" />
-        <RoomsView v-else-if="nav === 'top' && tab === 'rooms'" key="rooms" :rooms="rooms" @open="open" />
-        <CamerasView v-else-if="nav === 'top' && tab === 'cameras'" key="cameras" :rooms="rooms" />
+        <RoomsView v-else-if="nav === 'top' && tab === 'rooms'" key="rooms" :rooms="rooms" :woke="woke" @open="open" />
+        <CamerasView v-else-if="nav === 'top' && tab === 'cameras'" key="cameras" :rooms="rooms" :woke="woke" />
         <RailView v-else-if="layout === 'rail'" key="home-rail" :rooms="rooms" :now="shown" :top-nav="nav === 'top'" :woke="woke" @open="open" />
         <WallView v-else-if="layout === 'wall'" key="home-wall" :rooms="rooms" :now="shown" :top-nav="nav === 'top'" :woke="woke" @open="open" />
         <HomeView v-else key="home-stack" :rooms="rooms" :now="shown" :top-nav="nav === 'top'" @open="open" />

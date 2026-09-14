@@ -16,8 +16,7 @@
  */
 import { computed, onMounted, onUnmounted, ref, watch, type Component } from 'vue'
 import { store, updateReady } from './store'
-import { TONES } from './tone'
-import { FACES, LAYOUTS, NAVS } from './layout'
+import { adjusted, feelFrom } from './look'
 import Icon from './Icon.vue'
 import LocationPage from './LocationPage.vue'
 import LookPage from './LookPage.vue'
@@ -49,10 +48,11 @@ const title = computed(() => ({
 
 /* each door says where it leads and how things stand there, so most questions
    are answered from the list without opening anything */
-const look = computed(() => {
-  const l = store.ambient.look
-  return [TONES.find(t => t.id === l?.tone)?.label ?? 'Follow the light', LAYOUTS.find(x => x.id === l?.layout)?.label ?? 'Stack', NAVS.find(n => n.id === l?.nav)?.label ?? 'Side', FACES.find(f => f.id === l?.face)?.label ?? 'Paper'].join(' · ')
-})
+/* One feel, not four dials. The old line read "Follow the light · Stack · Side ·
+   Paper", which is four answers to a question nobody asked and, since the
+   arrangement went automatic, one of them was a guess: it said Stack on a wall
+   panel laying itself out as a wall. A door says where it leads. */
+const look = computed(() => feelFrom(store.ambient.look).label + (adjusted(store.ambient.look) ? ', adjusted' : ''))
 const routines = computed(() => {
   const n = store.routines.length, off = store.routines.filter(r => r.enabled === false).length
   return n ? `${n === 1 ? '1 routine' : `${n} routines`}${off ? `, ${off} off` : ''}` : 'None yet'

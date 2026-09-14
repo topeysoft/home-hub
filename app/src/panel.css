@@ -198,7 +198,9 @@ input:focus-visible {
    say with; a card that already means something with its colour keeps it and
    only gains the edge; and anything that brings its own picture -- artwork, a
    camera frame -- is never overpainted at all. */
+[data-face='glass'] .look-mini-card,
 [data-face='glass'] .room-card,
+[data-face='glass'] .room-cell,
 [data-face='glass'] .tile.plain,
 [data-face='glass'] .scene,
 [data-face='glass'] .back,
@@ -225,11 +227,14 @@ input:focus-visible {
   --card-ink-2: var(--ink-2);
   --card-lamp-ink: var(--lamp);
 }
+[data-face='glass'] .look-mini-card.lit,
 [data-face='glass'] .tile.light {
   background-image: var(--glass-sweep), var(--card-light, var(--surface));
   border-color: transparent;
 }
+[data-face='glass'] .look-mini-card,
 [data-face='glass'] .room-card,
+[data-face='glass'] .room-cell,
 [data-face='glass'] .tile,
 [data-face='glass'] .scene,
 [data-face='glass'] .back,
@@ -252,7 +257,9 @@ input:focus-visible {
    Handing `relative` to something that placed itself is how the pane's close
    button ended up off the left of the screen, and it is how the weather's
    lozenge ended up at the top of its column instead of the bottom. */
+[data-face='glass'] .look-mini-card,
 [data-face='glass'] .room-card,
+[data-face='glass'] .room-cell,
 [data-face='glass'] .tile,
 [data-face='glass'] .scene,
 [data-face='glass'] .banner,
@@ -270,7 +277,9 @@ input:focus-visible {
    join the others: `[data-face='glass'] .topbar-add::after` and
    `.topbar-add.attention::after` weigh the same, so the later one would win and
    a button with something to say would quietly lose its edge. */
+[data-face='glass'] .look-mini-card::after,
 [data-face='glass'] .room-card::after,
+[data-face='glass'] .room-cell::after,
 [data-face='glass'] .tile::after,
 [data-face='glass'] .scene::after,
 [data-face='glass'] .back::after,
@@ -312,6 +321,7 @@ input:focus-visible {
    job waiting for it: a host that CAN blur but not fast enough wants exactly
    this answer, and that is a measurement rather than a feature query. */
 [data-face='glass'][data-flat] .room-card,
+[data-face='glass'][data-flat] .room-cell,
 [data-face='glass'][data-flat] .tile.plain,
 [data-face='glass'][data-flat] .scene,
 [data-face='glass'][data-flat] .back,
@@ -322,6 +332,7 @@ input:focus-visible {
   background-image: var(--glass-sweep), var(--glass-flat);
 }
 [data-face='glass'][data-flat] .room-card,
+[data-face='glass'][data-flat] .room-cell,
 [data-face='glass'][data-flat] .tile,
 [data-face='glass'][data-flat] .scene,
 [data-face='glass'][data-flat] .back,
@@ -2069,14 +2080,21 @@ input:focus-visible {
   align-items: center;
   gap: 8px;
 }
-/* A chip that has been tapped says what it did before the row closes over it: the icon becomes a tick and
-   the room underneath becomes the answer. Vanishing on the tap itself read as a glitch, which is the whole
-   reason this state exists. The leave is a collapse rather than a fade, so the gap closing is the sentence
-   the row finishes. */
-.onnow-chip.said {
+/* A chip that has been tapped does not leave: the icon becomes a tick and the room underneath becomes the
+   answer -- "Off · just now" -- and it keeps its place until the panel looks away. Vanishing on the tap
+   itself read as a glitch, and the row closing over the gap moved every other chip under the same finger.
+   Tapping it again puts the thing back, so the chip is also the undo; store.ts (`done`) says what clears
+   it. The leave below is for the sweep, and for a thing the house turned off on its own. */
+.onnow-chip.kept {
   opacity: 0.72;
+  background: var(--surface);
+  border-color: var(--edge);
 }
-.onnow-chip.said .onnow-place {
+.onnow-chip.kept .onnow-icon {
+  background: var(--surface-hi);
+  color: var(--ink-2);
+}
+.onnow-chip.kept .onnow-place {
   color: var(--lamp);
 }
 .onnow-leave-active {
@@ -4943,8 +4961,240 @@ select.input {
 .look-shape.look-rail i:last-child {
   opacity: 0.45;
 } /* the one cut by the edge */
+/* the weather large on the left, and what is on beside it. Missing until the
+   Automatic row started naming this arrangement out loud, so it drew a wall as
+   three stacked bars -- which is the drawing of Stack, one row above it. */
+.look-shape.look-wall {
+  grid-template-columns: 1.15fr 1fr;
+  grid-template-rows: 1fr 1fr;
+}
+.look-shape.look-wall i:first-child {
+  grid-row: 1 / -1;
+}
 .look-row.on .look-shape i {
   background: var(--lamp);
+}
+
+/* ---------- three looks, shown as themselves ----------
+   A preview that is a drawing of a look can only ever be a promise. These are
+   the look: the hour's own sky under the panel's own veil, the cards in the
+   colours toneVars is handing the panel behind this sheet, and — the point of
+   the selector work above — glass made of glass rather than of a grey rounded
+   rectangle pretending. Three of them fit across a wall panel and stack down a
+   phone, because this page has to answer on both. */
+.look-feels {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.look-feel {
+  display: grid;
+  gap: 7px;
+  align-content: start;
+  padding: 10px 10px 13px;
+  text-align: left;
+  border-radius: 20px;
+  background: var(--surface-hi);
+  border: 1px solid var(--edge);
+  transition:
+    background 0.18s var(--ease),
+    border-color 0.18s var(--ease);
+}
+.look-feel:active {
+  transform: scale(0.99);
+}
+.look-feel.on {
+  background:
+    linear-gradient(rgba(233, 184, 114, 0.12), rgba(233, 184, 114, 0.12)),
+    var(--surface);
+  border-color: rgba(233, 184, 114, 0.55);
+}
+.look-feel.busy {
+  opacity: 0.6;
+  pointer-events: none;
+}
+.look-feel-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16.5px;
+  font-weight: 500;
+}
+.look-feel .look-hint {
+  font-size: 13px;
+}
+/* the artboard. isolation, so the pane's blur has the mini's own sky to work on
+   and not whatever the sheet happens to be sitting over; a smaller blur than the
+   panel's, because 26px across a 30px card is fog rather than glass */
+.look-mini {
+  position: relative;
+  display: block;
+  isolation: isolate;
+  overflow: hidden;
+  aspect-ratio: 4 / 3;
+  border-radius: 13px;
+  --glass-blur: 9px;
+}
+.look-mini-sky,
+.look-mini-veil,
+.look-mini-bloom {
+  position: absolute;
+  border-radius: inherit;
+  pointer-events: none;
+}
+.look-mini-sky {
+  inset: 0;
+  background: var(--mini-sky);
+}
+/* the same character the glass face lays on the real sky, at the same alphas --
+   still, because nothing is moving in a picture this small */
+.look-mini-bloom {
+  inset: -12%;
+  border-radius: 0;
+  background: var(--glass-field);
+}
+/* the veil, copied stop for stop from .sky-veil: a preview that is more legible
+   than the screen it is previewing is lying about the screen */
+.look-mini-veil {
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(12, 13, 16, 0.3) 0%,
+    rgba(12, 13, 16, 0.52) 45%,
+    rgba(12, 13, 16, 0.8) 100%
+  );
+}
+/* The bento Home actually is, at a twelfth of the size: a strip along the top,
+   one card carrying the room, two stacked beside it, and the command box along
+   the foot. Not the real components -- a mini does not need to know what a
+   thermostat is -- but the real shape, because a preview made of two equal
+   rectangles previews nothing anyone will recognise when they close this sheet. */
+.look-mini-panel {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  gap: 4px;
+  padding: 7px;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: 10px 1fr 1fr 12px;
+}
+.look-mini-card {
+  border-radius: 5px;
+  border: 1px solid var(--card-edge, transparent);
+}
+.look-mini-card.head {
+  grid-area: 1 / 1 / 2 / -1;
+}
+.look-mini-card.lit {
+  grid-area: 2 / 1 / 4 / 3;
+  border-radius: 7px;
+}
+.look-mini-card.lock {
+  grid-area: 2 / 3 / 3 / 4;
+}
+.look-mini-card.plain {
+  grid-area: 3 / 3 / 4 / 4;
+}
+.look-mini-card.wide {
+  grid-area: 4 / 1 / 5 / -1;
+}
+/* Scoped to paper on purpose. The glass rules above weigh the same as these and
+   sit earlier in the file, so an unscoped `.look-mini-card.lit` would quietly
+   repaint a pane as a card and the Nightfall preview would show Calm. */
+.look-mini[data-face='paper'] .look-mini-card.head,
+.look-mini[data-face='paper'] .look-mini-card.plain,
+.look-mini[data-face='paper'] .look-mini-card.wide {
+  background: var(--card-plain);
+}
+.look-mini[data-face='paper'] .look-mini-card.lit {
+  background: var(--card-light);
+}
+.look-mini[data-face='paper'] .look-mini-card.lock {
+  background: var(--card-lock);
+}
+/* the panel's drop is measured for a card the size of a hand; at this size it
+   would be a bruise under the whole mini */
+.look-mini[data-face='glass'] .look-mini-card {
+  box-shadow: var(--glass-inner), 0 5px 12px -8px rgba(8, 9, 14, 0.7);
+}
+
+/* what the page worked out on its own, said out loud */
+.look-place {
+  margin: 14px 2px 0;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.look-place b {
+  font-weight: 500;
+  color: var(--ink-2);
+}
+.look-reset {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 10px 0 0;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 14px;
+  background: var(--surface-hi);
+  border: 1px solid var(--edge);
+}
+.look-reset.busy {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* The four dials, kept and put where they belong: behind one quiet row, so the
+   page asks one question of everybody and holds four for whoever came for them. */
+.look-more {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin: 22px 0 0;
+  padding: 13px 16px;
+  border-radius: 18px;
+  font-size: 15px;
+  color: var(--muted);
+  background: var(--surface-hi);
+  border: 1px solid var(--edge);
+}
+.look-more svg {
+  transform: rotate(180deg);
+  transition: transform 0.2s var(--ease);
+}
+.look-more.open {
+  color: var(--ink);
+}
+.look-more.open svg {
+  transform: rotate(-90deg);
+}
+.look-custom {
+  margin-top: 4px;
+}
+
+@media (max-width: 640px) {
+  /* a phone reads this as a list, the way it reads everything else on this page */
+  .look-feels {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .look-feel {
+    grid-template-columns: 104px 1fr;
+    column-gap: 14px;
+    align-items: center;
+    padding: 11px 14px 11px 11px;
+  }
+  .look-mini {
+    grid-row: 1 / 3;
+  }
+  .look-feel-name {
+    align-self: end;
+  }
+  .look-feel .look-hint {
+    align-self: start;
+  }
 }
 
 /* ---------- one device, opened in place ----------
@@ -5493,6 +5743,35 @@ select.input {
     transform: none;
   }
 }
+/* A card still standing for something you have just quieted. Its own state line already says what it is --
+   Off, Closed, Locked -- so this says WHEN, which is the part that explains why an off thing is sitting in
+   a row of what is on. It goes when the panel looks away, and tapping the card puts the thing back:
+   BentoRow.vue and `done` in store.ts carry the reasoning. Bottom right, because every tile keeps its icon
+   top left and its words bottom left, and the maker chip already owns the other corner. A media card is
+   the exception -- its controls live where this would land, and a paused player says so itself. */
+.bento-card.kept::before {
+  content: attr(data-kept);
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  z-index: 2;
+  max-width: calc(100% - 32px);
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1.45;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: var(--card-hi, var(--surface-hi));
+  color: var(--card-ink-2, var(--ink-2));
+  pointer-events: none;
+}
+.bento-card.kept.media::before {
+  content: none;
+}
 .tile img {
   -webkit-user-drag: none;
   pointer-events: none;
@@ -5992,40 +6271,67 @@ select.input {
     flex-direction: column;
     gap: 16px;
   }
+  /* The weather leaves the stage altogether, and goes to the top bar as the
+     drawing and the number -- design/phone/Main.dc.html.
+
+     It used to stay, as the cloud with the lozenge shrunk to a 150x200 circle
+     beside it, and that was the bug this screen was reported for: the pane is
+     absolutely positioned, the band above it is too, and on a phone they landed
+     on the same 37 pixels with the pane painted second. But moving the pane
+     would only have stopped it covering something. The reason it goes is that
+     it was never a pane here: a lozenge of glass is what gives the Wall's left
+     third depth, and at 390px there is no left third for it to hang in front
+     of -- it is just a circle sitting on the screen, and it was charging 210 of
+     the stage's 564 for a number the bar can carry in 57.
+
+     The row starts 90px higher for it: the first card at 312 rather than 402,
+     and the second one showing 130px of itself above the fold instead of 40.
+
+     What does not come along is the words. The bar has 153px free beside
+     Connected and the two buttons; "78° Partly cloudy" with the drawing needs
+     139, and the longest thing WEATHER_LABEL can say is not "Partly cloudy" but
+     "Unusual weather", which needs 166. A status that fits on an ordinary
+     Tuesday and breaks the bar on a strange one is worse than one that never
+     came. Sunset and humidity go with it; the Rail has never shown them at this
+     width either. */
   .wall-wx {
-    position: relative;
-    left: auto;
-    top: auto;
-    bottom: auto;
-    width: 100%;
-    height: 210px;
-    flex: 0 0 auto;
+    display: none;
   }
-  .wall-cloud {
-    left: -10px;
-    width: 210px;
-    height: 150px;
+  /* The band comes back INTO the flow, and wraps.
+
+     Out of the flow is right on a wall and only on a wall: it hangs in the 58px
+     the stage leaves between the top bar and the row, so a house with something
+     to attend to does not shorten the row to say so. A phone has no such gap --
+     the band landed at the top of the stage and the weather was drawn over it.
+     Nothing here is out of the flow any more, so nothing can be painted over.
+
+     And a chip takes the width instead of 420 of it. `nowrap` on a wall means a
+     fourth thing to attend to scrolls sideways rather than costing the row its
+     height; in a 358px column it meant the first chip was cut at the screen's
+     edge and the second began at x 446, off the screen, behind a scroll with
+     nothing to say it was there. Both of these were things the house wanted
+     decided and one of them was invisible. */
+  .shell[data-nav='top'][data-layout='wall'] .wall-home > .nudges {
+    position: static;
+    flex-wrap: wrap;
+    overflow-x: visible;
+    margin: 0 0 16px;
   }
-  .wall-loz {
-    left: auto;
-    right: 4px;
-    top: 0;
-    bottom: auto;
-    width: 150px;
-    height: 200px;
-    border-radius: 75px;
-    padding: 24px 18px 22px;
+  .shell[data-nav='top'][data-layout='wall'] .nudge {
+    flex: 1 1 100%;
+    max-width: none;
   }
-  .wall-temp {
-    font-size: 50px;
+  /* the sky, and then who this box is talking to, and then the two things you
+     can do to it: the bar's second row, given the whole width to say that in */
+  .shell[data-layout='wall'] .topbar-wx {
+    display: inline-flex;
   }
-  .wall-says {
-    margin-top: 10px;
-    font-size: 16px;
+  .shell[data-layout='wall'] .topbar-right {
+    flex: 1 1 100%;
+    justify-content: flex-start;
   }
-  .wall-sub {
-    margin-top: 6px;
-    font-size: 12.5px;
+  .shell[data-layout='wall'] .topbar-add:not(.topbar-house) {
+    margin-left: auto;
   }
   .wall-stage .bento {
     position: static;
@@ -6326,6 +6632,26 @@ select.input {
   gap: 14px;
   flex: 1 1 0;
   min-width: 0;
+}
+/* The sky in the bar. It is drawn on every screen and shown on one -- a phone
+   running the Wall, where the stage has given the weather up. Hidden here rather
+   than switched in TopBar.vue because "is there room" is a question about the
+   width of the screen, and the widths live in this file. */
+.topbar-wx {
+  display: none;
+  align-items: center;
+  gap: 7px;
+  flex: 0 0 auto;
+}
+.topbar-cloud {
+  width: 30px;
+  height: 22px;
+  flex: 0 0 auto;
+}
+.topbar-temp {
+  font-size: 15px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
 }
 .topbar-add {
   position: relative;
@@ -7104,5 +7430,530 @@ select.input {
   }
   .bento .tile.media {
     min-height: 260px;
+  }
+}
+
+/* ==========================================================================
+   THE ROOMS TAB: the house, ranked
+   design/rooms/Main.dc.html · src/rooms.ts · src/RoomCard.vue
+
+   The tab was repeat(auto-fill, minmax(200px, 1fr)) -- nine identical 218x108
+   boxes that came to 1360x226 in a 618px stage, so two thirds of a wall panel
+   was sky and the room with the television in it had its line ellipsised.
+
+   Everything below is `.rooms-*` and `.room-cell-*` on purpose: `.room-card` is
+   still the three home layouts' card and `.tiles` is still the room screen's
+   grid, and neither of them changes. This is a fourth surface that borrows the
+   room screen's arrangement, not a rewrite of either.
+
+   A fourth NAME, though, and not a fourth MATERIAL: `.room-cell` is listed
+   beside `.room-card` in every `[data-face='glass']` rule above, so a house set
+   to glass gets glass here too. Left out of them it rendered the same under both
+   faces -- the one screen in the panel the look did not reach -- which is the
+   thing "three surfaces, and no fourth" is written up there to prevent.
+   ========================================================================== */
+.stage:has(> .rooms) {
+  display: flex;
+  flex-direction: column;
+  overflow-y: hidden;
+  min-height: 0;
+}
+.rooms {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+/* the head keeps the cap; the bento deliberately does not, because the width is
+   the thing this arrangement exists to use -- same split as the room screen */
+.rooms > .stage-head {
+  flex: 0 0 auto;
+  max-width: 1360px;
+  margin-bottom: 20px;
+}
+/* Three classes deep on purpose: `.shell[data-nav='top'] .stage-head h1` sets
+   46px on a short wall and would otherwise win this on specificity, leaving the
+   Rooms tab with a heading a size larger than the one it was drawn at. */
+.shell .rooms .stage-head h1 {
+  font-size: 42px;
+  line-height: 1.05;
+  max-width: 22ch;
+}
+
+/* ---------- the arrangement: three heights, columns filling down then right ---------- */
+.rooms-bento {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  display: grid;
+  grid-auto-flow: column dense;
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+  grid-auto-columns: var(--room-col, clamp(276px, 22vw, 400px));
+  gap: 16px 20px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+}
+.rooms-bento > .room-cell {
+  scroll-snap-align: start;
+  min-width: 0;
+  min-height: 0;
+}
+.rooms-bento > .room-cell[data-size='full'] {
+  grid-row: span 3;
+}
+.rooms-bento > .room-cell[data-size='half'] {
+  grid-row: span 2;
+}
+.rooms-bento > .room-cell[data-size='third'] {
+  grid-row: span 1;
+}
+
+/* ---------- the card ---------- */
+.room-cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 18px 20px;
+  border-radius: 24px;
+  background: rgba(26, 28, 34, 0.82);
+  border: 1px solid var(--edge);
+  backdrop-filter: var(--frost);
+  transition:
+    transform 0.18s var(--ease),
+    border-color 0.25s var(--ease);
+}
+.room-cell[data-size='full'],
+.room-cell[data-size='half'] {
+  border-radius: 28px;
+  padding: 22px;
+}
+/* a lit room is the same card with its light on, not a card made of something
+   else: the amber rim and the corner lamp `.room-card.active` already draws */
+.room-cell.lit,
+.room-cell.waiting {
+  border-color: rgba(233, 184, 114, 0.5);
+}
+.room-cell.waiting {
+  border-style: dashed;
+}
+.room-cell-glow {
+  position: absolute;
+  inset: -28% -18% auto auto;
+  width: 70%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: rgba(233, 184, 114, 0.3);
+  filter: blur(40px);
+  pointer-events: none;
+}
+.room-cell.empty {
+  opacity: 0.62;
+}
+/* the way in is the card itself, underneath everything it says, so the controls
+   on top of it are real buttons rather than a button inside a button */
+.room-cell-open {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+  border-radius: inherit;
+}
+.room-cell:active {
+  transform: scale(0.99);
+}
+.room-cell-still,
+.room-cell-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+.room-cell-art {
+  filter: blur(26px) saturate(1.3);
+  transform: scale(1.3);
+  opacity: 0.72;
+}
+/* words over a picture need their own ground, or a bright frame eats them */
+.room-cell-veil {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(rgba(12, 13, 16, 0.15) 0%, rgba(12, 13, 16, 0.5) 52%, rgba(12, 13, 16, 0.88) 100%);
+}
+/* The drawing is what the room LOOKS like lit, not the card's subject. At 46%
+   of a half the lamp was the card and the room's name read as its caption. */
+.room-cell-draw {
+  position: absolute;
+  inset: 15% 0 auto;
+  height: 34%;
+  pointer-events: none;
+  opacity: 0.85;
+}
+
+.room-cell-top,
+.room-cell-foot {
+  position: relative;
+  z-index: 2;
+  pointer-events: none;
+}
+.room-cell-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 20px;
+}
+.room-cell-foot {
+  margin-top: auto;
+  min-width: 0;
+}
+.room-cell-mark {
+  color: var(--ink-2);
+}
+.room-cell.lit .room-cell-mark {
+  color: rgba(255, 236, 200, 0.86);
+}
+.room-cell-cap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+.room-cell-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--live, #6fcf97);
+}
+.room-cell-dot.rec {
+  background: var(--danger, #e0685f);
+}
+.room-cell-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  height: 28px;
+  padding: 0 11px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.3);
+  font-size: 13px;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.room-cell-chip.live {
+  margin-left: 0;
+  margin-right: auto;
+  font-size: 11.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.room-cell-chip svg {
+  color: var(--muted);
+}
+
+.room-cell-name {
+  font-size: 19px;
+  font-weight: 500;
+  letter-spacing: -0.012em;
+  line-height: 1.15;
+}
+.room-cell[data-size='half'] .room-cell-name {
+  font-size: 23px;
+  letter-spacing: -0.015em;
+}
+.room-cell[data-size='full'] .room-cell-name {
+  font-size: 30px;
+  letter-spacing: -0.018em;
+}
+.room-cell.empty .room-cell-name {
+  color: var(--ink-2);
+}
+.room-cell-line {
+  margin-top: 4px;
+  font-size: 13.5px;
+  color: var(--ink-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.room-cell[data-size='half'] .room-cell-line,
+.room-cell[data-size='full'] .room-cell-line {
+  font-size: 14.5px;
+  margin-top: 5px;
+}
+.room-cell.waiting .room-cell-line {
+  color: var(--lamp);
+}
+.room-cell.empty .room-cell-line {
+  color: var(--muted);
+}
+
+/* ---------- what a full column buys: the rows a line cannot hold ---------- */
+.room-cell-now {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin-top: 18px;
+  min-width: 0;
+}
+.room-cell-thumb {
+  flex: 0 0 auto;
+  width: 52px;
+  height: 52px;
+  border-radius: 11px;
+  overflow: hidden;
+  background: linear-gradient(150deg, rgba(196, 96, 64, 0.7), rgba(74, 32, 38, 0.7) 70%);
+}
+.room-cell-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.room-cell-now-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.room-cell-now-title {
+  font-size: 16px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.room-cell-now-sub {
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.room-cell-lamp {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 4px 11px;
+  margin-top: 16px;
+  font-size: 15px;
+  color: var(--ink-2);
+}
+.room-cell-lamp svg {
+  color: rgba(255, 236, 200, 0.82);
+}
+.room-cell-lamp-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.room-cell-lamp-pct {
+  font-variant-numeric: tabular-nums;
+}
+.room-cell-bar {
+  grid-column: 1 / -1;
+  display: block;
+  margin-top: 5px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.2);
+  overflow: hidden;
+}
+.room-cell[data-size='half'] > .room-cell-foot > .room-cell-bar {
+  margin-top: 12px;
+}
+.room-cell-bar i {
+  display: block;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 236, 200, 0.9);
+}
+
+/* ---------- the one thing a card can do without going into the room ---------- */
+.room-cell-knob,
+.room-cell-play,
+.room-cell-pill {
+  pointer-events: auto;
+  border: 0;
+  cursor: pointer;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.12);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.room-cell-knob {
+  margin-left: auto;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+.room-cell-chip + .room-cell-knob {
+  margin-left: 8px;
+}
+.room-cell-play {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--lamp);
+  color: #2a1c10;
+}
+.room-cell-pill {
+  width: 100%;
+  gap: 9px;
+  margin-top: 18px;
+  height: 44px;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+}
+.room-cell-pill.ghost {
+  background: rgba(255, 255, 255, 0.08);
+}
+.room-cell-knob:active,
+.room-cell-play:active,
+.room-cell-pill:active {
+  transform: scale(0.96);
+}
+
+/* ---------- a phone: the same ranking, read downwards ---------- */
+@media (max-width: 860px) {
+  .stage:has(> .rooms) {
+    display: block;
+    overflow-y: auto;
+  }
+  .rooms {
+    display: block;
+  }
+  .shell .rooms .stage-head h1 {
+    font-size: 32px;
+  }
+  /* The sideways sweep is a wall-panel gesture; at 390px it would be one card a
+     screen. Two columns, and the ranking survives as reading order -- the lead
+     room is still first and still the tallest thing on the page. */
+  .rooms-bento {
+    grid-auto-flow: row;
+    grid-template-rows: none;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-columns: auto;
+    grid-auto-rows: minmax(150px, auto);
+    overflow-x: visible;
+    overflow-y: visible;
+    gap: 10px;
+  }
+  .rooms-bento > .room-cell[data-size] {
+    grid-row: auto;
+    min-height: 150px;
+  }
+  .rooms-bento > .room-cell[data-size='full'] {
+    grid-column: span 2;
+  }
+  /* a half is 174px wide here, and the drawing lands under the power knob at
+     that size. The name and the line are the whole card on a phone. */
+  .room-cell-draw {
+    display: none;
+  }
+}
+
+/* ==========================================================================
+   THE ROOMS AND CAMERAS TABS ARRIVE
+   src/arrive.ts · src/views/RoomsView.vue · src/views/CamerasView.vue
+
+   Home's row has always come in -- first load, waking from rest, coming back
+   from a room -- and these two tabs sat there already assembled, which made
+   them read as a different product from the screen one tap away. Same
+   mechanism, same numbers, same two classes: `set` puts everything a step off
+   its place with no transition, `go` turns the transition on and staggers it by
+   the card's place in the order.
+
+   `translate` and not `transform`, and that is not a preference. A room card
+   already spends `transform` on its press, and a camera tile's own rules use it
+   too; a second writer on the same property means one of them silently wins.
+   `translate` is a property nothing else here touches, which is the same reason
+   the rail's arrival is on it -- see the note above `.bento.set`.
+   ========================================================================== */
+.rooms-bento.set,
+.rooms-bento.go {
+  scroll-snap-type: none;
+  overflow-anchor: none;
+}
+.rooms-bento.set,
+.cameras-all.set {
+  opacity: 0;
+}
+.rooms-bento.go,
+.cameras-all.go {
+  opacity: 1;
+  transition: opacity 380ms var(--ease);
+}
+/* The house arrives from the RIGHT, because that is the way it runs off the
+   screen: the columns fill down and then go right, so a card travelling in from
+   there is the arrangement telling you where the rest of it is. Home's row says
+   the same thing the same way. */
+.rooms-bento.set > .room-cell {
+  translate: 696px 0;
+}
+.rooms-bento.go > .room-cell {
+  translate: 0 0;
+  transition: translate 560ms var(--ease);
+  transition-delay: calc(min(var(--flow-i, 0), 9) * 56ms);
+}
+/* Cameras come UP. Nothing sweeps on that tab -- it is a grid that wraps and
+   runs down -- so travel from the right would point at a gesture the screen
+   does not have. Below is where the rest of the frames are, so below is where
+   they come from, and a shorter distance because a grid's cards are already
+   near their places; 696px is the width of a sweep, not of a wrap. */
+.cameras-all.set > .tile.camera {
+  translate: 0 22px;
+}
+.cameras-all.go > .tile.camera {
+  translate: 0 0;
+  transition: translate 480ms var(--ease);
+  transition-delay: calc(min(var(--flow-i, 0), 9) * 48ms);
+}
+@media (max-width: 860px) {
+  /* a phone's Rooms tab is a two-column grid that scrolls down, so the sideways
+     travel would point at a sweep that is not there. It arrives as one fade,
+     which is what the rail already does at this width. */
+  .rooms-bento.set > .room-cell,
+  .rooms-bento.go > .room-cell {
+    translate: none;
+    transition: none;
+  }
+}
+/* Reduced motion: both arrive as a fade and nothing else -- the same answer the
+   rail's arrival gives, and for the same reason. Nothing travels, nothing
+   scales, nothing blurs; the screen takes 180ms to be there instead of
+   appearing between two frames, because a fade is not vestibular motion and a
+   pop is only abrupt.
+
+   The travel is cancelled rather than left to a dead transition: `translate` is
+   a plain property, not an animation, so `.set` would put every card off its
+   place for exactly one painted frame before `.go` snapped it back -- which is
+   a jump, and a jump is the one thing this is here to avoid. */
+@media (prefers-reduced-motion: reduce) {
+  .rooms-bento.set > .room-cell,
+  .rooms-bento.go > .room-cell,
+  .cameras-all.set > .tile.camera,
+  .cameras-all.go > .tile.camera {
+    translate: none !important;
+  }
+  .rooms-bento.go,
+  .cameras-all.go {
+    transition: opacity 180ms var(--ease) !important;
   }
 }

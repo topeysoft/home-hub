@@ -36,7 +36,16 @@ DEFAULT_HA = "http://localhost:8123"
 # How the panel looks. The keys are the whole vocabulary: anything else a screen
 # sends is dropped, so an old panel cannot teach the house a setting it will not
 # understand. Values are checked in the panel, which owns what they mean.
-LOOK = {"tone": "follow", "layout": "stack", "nav": "side"}   # nav: where the way around the house lives -- a list down the side, or tabs across the top
+#
+# "feel" is the one a person actually picks -- one of three whole looks. The rest
+# are what a feel resolves to, written out beside it so a panel that predates
+# feels still finds a face and a tone it understands. "auto" means the screen
+# arranges itself, which is what a phone and a wall have always needed and never
+# had; any other value there is somebody's deliberate answer under Customise, so
+# a house that set its look by hand before feels existed keeps exactly what it
+# chose. "face" was missing from this list, which quietly dropped every Glass a
+# panel ever sent: the panel showed it, the house never kept it.
+LOOK = {"feel": "calm", "tone": "follow", "face": "paper", "layout": "auto", "nav": "auto"}   # nav: where the way around the house lives -- a list down the side, or tabs across the top
 US_ZONES = ("America/New_York", "America/Chicago", "America/Denver", "America/Phoenix", "America/Los_Angeles", "America/Anchorage",
             "America/Juneau", "America/Sitka", "America/Nome", "America/Adak", "America/Boise", "America/Detroit", "America/Menominee",
             "America/Indiana/", "America/Kentucky/", "America/North_Dakota/", "Pacific/Honolulu", "US/")
@@ -231,9 +240,11 @@ class Hub:
         return {"location": self.location, "weather": self.weather, "look": self.look}
 
     def set_look(self, look):
-        """How the panel looks, kept by the house rather than by the screen: a
-        tone for the cards and an arrangement for Home. Every screen in the
-        house shows the same one, and a new screen is already right."""
+        """How the panel looks, kept by the house rather than by the screen: one
+        feel, and what it resolves to. Every screen in the house shows the same
+        feel, and a new screen is already right. Arrangement is the exception and
+        deliberately so -- see look.ts -- so "auto" is a real answer here, not a
+        missing one."""
         self.look = {**self.look, **{k: v for k, v in look.items() if k in LOOK}}
         self.settings.set(look=self.look)
         self._broadcast(json.dumps({"type": "ambient", "ambient": self.ambient()}))

@@ -1,0 +1,138 @@
+{
+  "pages": [
+    {
+      "id": "page-1",
+      "name": "The Wall on a phone"
+    },
+    {
+      "id": "page-2",
+      "name": "Not chosen"
+    }
+  ],
+  "artboards": [
+    {
+      "file": "Today.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "Today — the Wall on a phone",
+      "page": "page-1"
+    },
+    {
+      "file": "Main.dc.html",
+      "x": 520,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "B — the sky in the hub row",
+      "page": "page-1"
+    },
+    {
+      "file": "Clock.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "A — the sky in the clock row",
+      "page": "page-2"
+    },
+    {
+      "file": "Gone.dc.html",
+      "x": 520,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "C — no sky at all",
+      "page": "page-2"
+    },
+    {
+      "file": "Inline.dc.html",
+      "x": 1040,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "Inline — the weather kept in the stage",
+      "page": "page-2"
+    },
+    {
+      "file": "Stack.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "Stack — hand the phone over",
+      "page": "page-2"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "why",
+      "x": -560,
+      "y": 0,
+      "w": 480,
+      "page": "page-1",
+      "text": "WHY THIS EXISTS\n\n\"The weather card seems to cover important information.\" It does, and it is not the weather's fault -- it is two Wall decisions that are never undone at phone width, meeting a third that is absolutely positioned.\n\nMeasured in the running panel at 390x844, Home on the Wall layout:\n\n  top bar                0 -> 156\n  the nudge band       156 -> 213   (absolute)\n  the weather          176 -> 386\n  the weather pane     176 -> 376   (absolute)\n  the first card       402 -> 662\n  the stage ends            -> 720\n\nThe band and the pane occupy the same 37 pixels of screen, and the pane is painted second.\n\nWHAT IS ACTUALLY WRONG\n\n1. THE BAND IS OUT OF THE FLOW. `.shell[data-nav='top'][data-layout='wall'] .wall-home > .nudges` is `position: absolute`, hung in the gap the Wall leaves between the top bar and its row. The stylesheet says why, and on a wall it is right: the gap is 58px, a chip is 57, and a house with something to attend to must not shorten the row to say so. On a phone there is no gap. The band lands at the top of the stage and the weather is drawn straight over it.\n\n2. THE CHIPS DO NOT WRAP. The same rule sets `flex-wrap: nowrap; overflow-x: auto`, and `.shell[data-nav='top'] .nudge` allows 420px. In a 358px column the first chip is cut at the screen's edge and the second starts at x 446 -- off the screen entirely, behind a horizontal scroll with nothing to say it is there.\n\n3. THE PANE HAS NOTHING TO HANG IN FRONT OF. The Wall's weather is deliberately not a card: the sky's drawing goes on the field and one lozenge of glass hangs before it, and that is what gives the left third depth. There is no left third at 390px. The lozenge becomes a 150x200 circle sitting on top of whatever is behind it, and it costs 210px of a 564px stage -- 37% of the screen -- to say 78 degrees.\n\nEvery board on this page fixes 1 and 2 the same way: the band comes back into the flow and wraps. They differ only in what happens to the weather, which is 3."
+    },
+    {
+      "id": "today-note",
+      "x": 0,
+      "y": 904,
+      "w": 480,
+      "page": "page-1",
+      "text": "TODAY\n\nNot a proposal. Traced off the running panel at 390x844, which is why the chip is cut at the same pixel it is cut at on the phone.\n\nThe second nudge is not drawn because it is not on the screen: it begins at x 446, 56px past the right edge.\n\nWorth noticing what is NOT wrong. The cards below are fine -- one column, natural heights, the doorbell cut by the bottom bar in the way that says there is more. The Wall's phone rules did that part. It is only the top 230px that breaks."
+    },
+    {
+      "id": "the-trade",
+      "x": 520,
+      "y": 904,
+      "w": 900,
+      "page": "page-1",
+      "text": "WHAT ALL THREE OF THESE BUY, AND WHAT THEY GIVE UP\n\nThe weather leaves the stage. That is the whole move, and it is worth 90px: the first card goes from 402 to 312, and the second card shows 130px of itself above the fold instead of 40. On a 564px stage that is not a tidy-up, it is a quarter of the screen coming back.\n\nWHAT CANNOT COME WITH IT: THE WORDS.\n\nMeasured at 390 in the panel's own faces -- the clock row leaves 116px free after the time and the date, the hub row leaves 153px after Connected and the two buttons. The drawing and the number need 57. \"78° Partly cloudy\" with the drawing needs 139, and the longest label in WEATHER_LABEL is not \"Partly cloudy\" -- it is \"Unusual weather\", which needs 166 and fits in neither row.\n\nA status that fits on an ordinary Tuesday and breaks the bar on a strange one is worse than one that never came, so the words go and the drawing stays. That is not a loss so much as a return: the cloud IS the condition, and it is the same trade the Rail made when its own lozenge went -- \"the sky behind the panel already IS the forecast, so a tile saying 'clear' repeated the whole screen.\"\n\nSunset and humidity go with them. They are already absent from the Rail at this width, so nothing new is being decided.\n\nAND ONE THING THAT DOES NOT CHANGE: all three still tap through to nothing. The weather has no page of its own, so the number in the bar is a reading, not a door. If sunset and humidity turn out to be missed, that is the thing to build -- not a bigger chip."
+    },
+    {
+      "id": "option-b",
+      "x": 520,
+      "y": 1300,
+      "w": 440,
+      "page": "page-1",
+      "text": "B -- THE SKY IN THE HUB ROW  ·  CHOSEN\n\nThe drawing and the number leading the row, at the gutter, with Connected beside them and the two buttons pushed to the far end.\n\nFOR: 153px of room instead of 116, so the tight case in A cannot happen. It also reads cleanly left to right -- two things the house is telling you, then two things you can do -- and it leaves the clock row as one uninterrupted line, which is the most typographic thing on the screen.\n\nAGAINST: it puts the weather next to Connected, and those two are not the same kind of fact. One is about the sky and one is about whether this box can reach the hub; sitting them together invites reading the dot as belonging to the temperature. It is also the busier row of the two -- four things where A leaves two."
+    },
+    {
+      "id": "scroll",
+      "x": 1480,
+      "y": 904,
+      "w": 440,
+      "page": "page-1",
+      "text": "ONE THING NO BOARD HERE FIXES\n\nOn a phone the Wall's row is 13 cards in a single column: 2550px of cards in a 2816px scroll, against a 564px stage. Five screens of swiping to reach the last camera.\n\nThat is the same on every board on both pages, which is why none of them pretends to solve it. Worth its own pass: what a phone should show of a house with thirty devices in it, and whether \"everything, in rank order, forever\" is the answer at 390px when it is not the answer at 1440."
+    },
+    {
+      "id": "option-a",
+      "x": 0,
+      "y": 904,
+      "w": 440,
+      "page": "page-2",
+      "text": "A -- THE SKY IN THE CLOCK ROW\n\nThe drawing and the number at the right end of the row that already carries the time and the date. That row was one name and 116px of nothing.\n\nFOR: the row becomes what it is for -- when it is, out there. The time anchors the left, the sky the right, and the balance is the same one the panel draws at wall size with the clock at one end. The hub's own row is left alone: Connected and the two buttons are about this box and what you can do to it, which is a different subject.\n\nAGAINST: 116px is the tighter of the two rows. A 12-hour clock plus a long date and a three-digit temperature is the case to watch -- \"12:58 PM Wednesday, September 24\" with \"100°\" comes to 108 of the 116.\n\nRECOMMENDED, on the strength of the row meaning one thing."
+    },
+    {
+      "id": "option-c",
+      "x": 520,
+      "y": 904,
+      "w": 440,
+      "page": "page-2",
+      "text": "C -- NO SKY AT ALL\n\nThe phone says nothing about the weather and gives the whole stage to the house.\n\nFOR: it is the argument the panel already makes, taken to its end. The field behind every screen is painted from the real condition and the real sun -- that is what tone.ts is for -- so a phone that shows a cloud is drawing a picture of its own background. Nothing to fit, nothing to measure, no case where a long label breaks a row.\n\nAGAINST: a gradient is a mood, not a reading. Nobody gets 78 degrees off a field, and on a home panel the temperature is close to the most-glanced number there is -- it is the one thing on this screen you might pick the phone up FOR. The Rail kept its number for exactly this reason when it gave up its lozenge, and the Rail is the layout this whole page keeps deferring to.\n\nWorth drawing because it is the honest end of the argument, and worth rejecting on the number."
+    },
+    {
+      "id": "also",
+      "x": 1040,
+      "y": 904,
+      "w": 900,
+      "page": "page-2",
+      "text": "ALSO CONSIDERED\n\nINLINE keeps the weather in the stage and only fixes what is broken: the band comes into the flow and wraps, and the pane becomes the one-line form the Rail uses at this width. Its case was that the first card lands at 402, exactly where it lands today, so the fix costs nothing. That is still true -- but \"costs nothing\" is a weaker thing to be than \"gives 90px back\", which is what moving the weather into the bar does. Kept because if the bar turns out to be the wrong home for a temperature, this is where it goes instead.\n\nSTACK hands the phone over: below 861px the Wall stops being the Wall and renders what Stack renders. The layout picker says it outright -- Stack \"reads well on a phone\", Wall is \"made to be read from across a room\" -- and a phone is not a room away. Nothing to maintain, and denser where density is worth having: nine things that are on, as chips, in the height the Wall spends on one card.\n\nIts cost is that it silently overrides a choice somebody made, and throws away the cards -- what is playing, the doorbell, the thermostat -- which are the reason to pick Wall at all. The Rail does not do this; it has its own phone form and keeps its own cards. If the Wall hands off to Stack, the three layouts stop being three arrangements of one house and become two arrangements and an alias.\n\nStill the right answer if the Wall's phone form ever needs a fourth special case."
+    }
+  ],
+  "launch": {
+    "view": "canvas",
+    "page": "page-1"
+  }
+}

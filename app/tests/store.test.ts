@@ -1,10 +1,10 @@
 /* The house as the panel understands it: what a room is doing, what a scene means, and the names
    people read off tiles. These all end up as words on a wall. */
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Device, Room } from '../src/api'
 import {
-  activity, cap, capsOf, currentScene, houseLine, isActive, isDead, roomActive,
-  sceneHolds, scenesFor, shortName, store, visibleRooms, whatsOn,
+  activity, cap, capsOf, currentScene, doneLine, forgetDone, houseLine, isActive, isDead, justDone,
+  perform, roomActive, sceneHolds, scenesFor, shortName, store, visibleRooms, whatsOn,
 } from '../src/store'
 
 const dev = (id: string, name: string, capability: string, state: string, attrs: Record<string, any> = {}): Device =>
@@ -207,5 +207,54 @@ describe('scenes', () => {
     expect(currentScene(r)).toBe('movie')
     r.devices[0].state = 'off'
     expect(currentScene(r)).toBeNull()
+  })
+})
+
+/* What you have just done, still on the screen. A thing you quiet leaves `whatsOn` at once -- it is not
+   on any more -- and Home would have closed the row over the card under the finger that tapped it. So the
+   panel remembers what it did instead, and every layout draws from this one map; only the panel looking
+   away empties it. See `done` in store.ts, and App.vue for the three moments that count as looking away. */
+describe('what you have just done', () => {
+  beforeEach(() => {
+    forgetDone(true)
+    vi.stubGlobal('fetch', async () => ({ ok: true, status: 200 }) as unknown as Response)
+  })
+  afterEach(() => { forgetDone(true); vi.unstubAllGlobals() })
+
+  const lamp = () => {
+    store.rooms = [room('living', 'Living room', [dev('l', 'Lamp', 'light', 'on')])]
+    return store.rooms[0].devices[0]
+  }
+
+  it('keeps a thing it has just quieted, though it is not on any more', async () => {
+    await perform(lamp(), 'off', undefined, { state: 'off' })
+    expect(whatsOn()).toEqual([])
+    expect(justDone().map(d => d.id)).toEqual(['l'])
+    expect(doneLine('l')).toBe('Off · just now')
+  })
+
+  it('says what it did, not just that it did something', async () => {
+    store.rooms = [room('front', 'Front door', [dev('b', 'Blind', 'cover', 'open'), dev('k', 'Door', 'lock', 'unlocked')])]
+    const [blind, door] = store.rooms[0].devices
+    await perform(blind, 'close', undefined, { state: 'closed' })
+    await perform(door, 'lock', undefined, { state: 'locked' })
+    expect(doneLine('b').startsWith('Closed')).toBe(true)
+    expect(doneLine('k').startsWith('Locked')).toBe(true)
+  })
+
+  it('takes it back the moment the thing is on again, which is what the card\'s second tap does', async () => {
+    const l = lamp()
+    await perform(l, 'off', undefined, { state: 'off' })
+    await perform(l, 'on', undefined, { state: 'on' })
+    expect(justDone()).toEqual([])
+    expect(whatsOn().map(d => d.id)).toEqual(['l'])
+  })
+
+  it('holds it while the panel is being looked at, and drops it when it is not', async () => {
+    await perform(lamp(), 'off', undefined, { state: 'off' })
+    forgetDone()                     // the half-hour sweep, with the card a second old
+    expect(justDone().map(d => d.id)).toEqual(['l'])
+    forgetDone(true)                 // at rest, or gone behind another app
+    expect(justDone()).toEqual([])
   })
 })

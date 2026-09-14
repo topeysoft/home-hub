@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { store, cap, houseLine, whatsOn, describe, ago, refreshEvents, loadHealth } from '../store'
+import { store, cap, houseLine, whatsOn, justDone, describe, ago, refreshEvents, loadHealth } from '../store'
 import { type Room } from '../api'
 import { upcomingLine } from '../upcoming'
 import Icon from '../Icon.vue'
@@ -17,7 +17,12 @@ const hour = computed(() => props.now.getHours())
 const greeting = computed(() => hour.value < 5 ? 'Good night' : hour.value < 12 ? 'Good morning' : hour.value < 17 ? 'Good afternoon' : hour.value < 21 ? 'Good evening' : 'Good night')
 const line = computed(houseLine)
 const next = computed(() => upcomingLine(props.now))   // what the house will do next on its own
-const anyOn = computed(() => whatsOn().length > 0)
+/* The strip stands while anything is on AND while anything is still saying it has just been turned off --
+   see `done` in store.ts. A block that vanished under the last tap would take the heading with it, which is
+   the biggest jump on the screen. When only the quieted ones are left the heading says so rather than
+   calling them on. */
+const anyOn = computed(() => whatsOn().length > 0 || justDone().length > 0)
+const onLabel = computed(() => whatsOn().length ? 'On right now' : 'Just turned off')
 const cameras = computed(() => props.rooms.flatMap(r => r.devices.filter(d => cap(d) === 'camera')))
 
 const tick = ref(Date.now())   // its own clock, so "3 minutes ago" keeps up; not props.now, which is the hour the shell is showing
@@ -50,7 +55,7 @@ onUnmounted(() => { clearInterval(t1); clearInterval(t2); clearInterval(t3) })
     <Attention :say="!topNav" />
 
     <div class="block" v-if="anyOn">
-      <h2 class="label">On right now</h2>
+      <h2 class="label">{{ onLabel }}</h2>
       <OnNow />
     </div>
 
