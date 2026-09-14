@@ -1,0 +1,146 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      /* app/src/panel.css :root, unchanged */
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp: #e9b872; --lamp-deep: #b8863e; --lamp-ink: #2a1c07;
+      --live: #74c69d; --danger: #e08a8a; --cool: #7ab0e8;
+      --edge: rgba(255,255,255,.10); --edge-hi: rgba(255,255,255,.18);
+      --surface-hi: rgba(255,255,255,.08);
+    }
+    a { color: #e9b872; } a:hover { color: #b8863e; }
+    .dsp { font-family: "Instrument Serif", "Iowan Old Style", Palatino, Georgia, serif; font-weight: 400; letter-spacing: -.01em; }
+    /* the five zones, at the sizes the pane already uses */
+    .room { font-size: 15px; color: var(--ink-2); }
+    .name { margin: 4px 0 0; font-size: 56px; line-height: 1.04; }
+    .read { font-size: 76px; line-height: 1; letter-spacing: -.02em; }
+    .why { font-size: 15.5px; color: var(--ink-2); }
+    .fact-v { font-size: 20px; font-weight: 500; }
+    .fact-k { margin-top: 2px; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+    /* a verb: the round control the pane already draws, at its own 56px */
+    .ctl { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-hi); border: 1px solid var(--edge); color: var(--ink-2); }
+    .ctl.on { background: var(--lamp); border-color: transparent; color: var(--lamp-ink); }
+    .ctl.wide { width: auto; height: 56px; border-radius: 999px; padding: 0 24px; display: inline-flex; align-items: center; gap: 11px; font-size: 16.5px; color: var(--ink); }
+    .ctl.wide.on { color: var(--lamp-ink); font-weight: 500; }
+    .pill { display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 14px; border-radius: 999px; font-size: 13.5px; color: var(--ink-2); background: var(--surface-hi); }
+    .lbl { font-size: 12.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .ic { flex: 0 0 auto; }
+    /* the day strip every pane carries along its foot */
+    .day-line { position: absolute; left: 48px; right: 48px; height: 1px; background: var(--edge); }
+    .ev-t { font-size: 13px; color: var(--muted); }
+    .ev { font-size: 15px; color: var(--ink-2); margin-top: 3px; }
+  </style>
+</helmet>
+
+<!-- QUIET -- motion, a thermometer and a door contact. None of the three has a tile today, so none of them can be opened at all; what they are owed is the day they have had. -->
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: #0c0d10; color: var(--ink); font-size: 17px; line-height: 1.4;">
+
+  <div style="position: absolute; inset: 0; background: linear-gradient(rgb(20,23,38) 0%, rgb(35,36,58) 42%, rgb(78,55,52) 86%, rgb(54,40,40) 100%);"></div>
+  <div style="position: absolute; inset: 0; background: radial-gradient(90% 70% at 62% 78%, rgba(122,176,232,.14), transparent 66%);"></div>
+  <div style="position: absolute; inset: 0; opacity: .5; background-image: url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.035'/%3E%3C/svg%3E&quot;);"></div>
+  <div style="position: absolute; left: 48px; top: 56px; width: 860px;">
+    <div class="lbl">A sheet, not a screen</div>
+    <h1 class="dsp" style="margin: 10px 0 0; font-size: 46px; line-height: 1.06;">The ones that only watch</h1>
+    <p style="margin: 12px 0 0; font-size: 17px; color: var(--ink-2); max-width: 760px;">These three have no verb, so they have no tile either &mdash; the room screen shows them as readings in its header. Holding a reading is now what opens one, which is the cheapest door that exists: the strip was already on the screen.</p>
+  </div>
+    <div style="position: absolute; left: 48px; top: 220px; width: 420px; height: 590px; border-radius: 28px; border: 1px solid var(--edge); background: linear-gradient(rgba(26,28,34,.8), rgba(16,17,21,.94)); overflow: hidden;">
+      <div style="position: absolute; left: 28px; right: 28px; top: 26px;">
+        <div class="room" style="font-size: 13.5px;">Living room</div>
+        <div class="dsp" style="font-size: 34px; line-height: 1.06; margin-top: 3px;">Motion</div>
+        <div style="display: flex; gap: 10px; margin-top: 18px;">
+          <div class="ctl" style="width: 46px; height: 46px;"><svg class="ic" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 13.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM7.5 7.5a6.5 6.5 0 0 0 0 9M16.5 7.5a6.5 6.5 0 0 1 0 9M4.5 4.5a10.5 10.5 0 0 0 0 15M19.5 4.5a10.5 10.5 0 0 1 0 15"/></svg></div>
+          <div class="ctl" style="width: 46px; height: 46px;"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l1.8 5.2 5.2 1.8-5.2 1.8L12 17.5l-1.8-5.2L5 10.5l5.2-1.8zM5 17.5l.7 1.8 1.8.7-1.8.7L5 22.5l-.7-1.8-1.8-.7 1.8-.7z"/></svg></div>
+          <div class="ctl" style="width: 46px; height: 46px;"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3zM13.5 8.5l2 2"/></svg></div>
+        </div>
+        <div class="dsp" style="font-size: 46px; line-height: 1; margin-top: 26px;">Moving</div>
+        <div style="margin-top: 12px; font-size: 14.5px; color: var(--ink-2);">Something is in the room right now.</div>
+      </div>
+      <div style="position: absolute; left: 28px; right: 28px; top: 322px;">
+        <div class="lbl" style="margin-bottom: 12px;">Today</div>
+        
+    <div style="position: relative; height: 74px; border-radius: 16px; background: rgba(255,255,255,.05); border: 1px solid var(--edge); overflow: hidden;">
+      <div style="position: absolute; left: 7%; top: 0; bottom: 0; width: 1.2%; background: rgba(233,184,114,.72);"></div><div style="position: absolute; left: 26%; top: 0; bottom: 0; width: 2.2%; background: rgba(233,184,114,.72);"></div><div style="position: absolute; left: 34%; top: 0; bottom: 0; width: 0.9%; background: rgba(233,184,114,.72);"></div><div style="position: absolute; left: 47%; top: 0; bottom: 0; width: 3.4%; background: rgba(233,184,114,.72);"></div><div style="position: absolute; left: 58%; top: 0; bottom: 0; width: 1.4%; background: rgba(233,184,114,.72);"></div><div style="position: absolute; left: 71%; top: 0; bottom: 0; width: 4.2%; background: rgba(233,184,114,.72);"></div><div style="position: absolute; left: 82%; top: 0; bottom: 0; width: 1.6%; background: rgba(233,184,114,.72);"></div><div style="position: absolute; left: 90%; top: 0; bottom: 0; width: 2.4%; background: rgba(233,184,114,.72);"></div><div style="position: absolute; left: 97%; top: 0; bottom: 0; width: 2.6%; background: rgba(233,184,114,.72);"></div>
+    </div>
+    <div style="display: flex; justify-content: space-between; margin-top: 10px; font-size: 12.5px; color: var(--muted);">
+      <span>midnight</span><span>noon</span><span>now</span>
+    </div>
+      </div>
+      <div style="position: absolute; left: 28px; right: 28px; top: 466px; padding-top: 16px; border-top: 1px solid var(--edge); display: flex; gap: 28px;">
+        <div><div class="fact-v" style="font-size: 17px;">14 times</div><div class="fact-k" style="font-size: 11.5px;">Seen</div></div><div><div class="fact-v" style="font-size: 17px;">&mdash;</div><div class="fact-k" style="font-size: 11.5px;">Quiet since</div></div><div><div class="fact-v" style="font-size: 17px;">4 h</div><div class="fact-k" style="font-size: 11.5px;">Longest gap</div></div>
+      </div>
+      <div style="position: absolute; left: 28px; right: 28px; top: 536px; font-size: 13.5px; line-height: 1.45; color: var(--muted);">A motion sensor is how a room knows it is occupied, so this is also the page that explains the rest of the house.</div>
+    </div>
+    <div style="position: absolute; left: 510px; top: 220px; width: 420px; height: 590px; border-radius: 28px; border: 1px solid var(--edge); background: linear-gradient(rgba(26,28,34,.8), rgba(16,17,21,.94)); overflow: hidden;">
+      <div style="position: absolute; left: 28px; right: 28px; top: 26px;">
+        <div class="room" style="font-size: 13.5px;">Living room</div>
+        <div class="dsp" style="font-size: 34px; line-height: 1.06; margin-top: 3px;">Temperature</div>
+        <div style="display: flex; gap: 10px; margin-top: 18px;">
+          <div class="ctl" style="width: 46px; height: 46px;"><svg class="ic" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4.5a2 2 0 0 1 4 0v8.8a4 4 0 1 1-4 0zM12 9.5v8"/></svg></div>
+          <div class="ctl" style="width: 46px; height: 46px;"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l1.8 5.2 5.2 1.8-5.2 1.8L12 17.5l-1.8-5.2L5 10.5l5.2-1.8zM5 17.5l.7 1.8 1.8.7-1.8.7L5 22.5l-.7-1.8-1.8-.7 1.8-.7z"/></svg></div>
+          <div class="ctl" style="width: 46px; height: 46px;"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3zM13.5 8.5l2 2"/></svg></div>
+        </div>
+        <div class="dsp" style="font-size: 46px; line-height: 1; margin-top: 26px;">73.4&deg;</div>
+        <div style="margin-top: 12px; font-size: 14.5px; color: var(--ink-2);">Four degrees off the thermostat, which is asking for 71&deg;.</div>
+      </div>
+      <div style="position: absolute; left: 28px; right: 28px; top: 322px;">
+        <div class="lbl" style="margin-bottom: 12px;">Today</div>
+        
+    <svg width="100%" height="74" viewBox="0 0 364 74" preserveAspectRatio="none">
+      <path d="M0 58 L34 60 L68 62 L102 56 L136 42 L170 28 L204 18 L238 16 L272 22 L306 32 L340 40 L364 44"
+            fill="none" stroke="#e9b872" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+      <path d="M0 58 L34 60 L68 62 L102 56 L136 42 L170 28 L204 18 L238 16 L272 22 L306 32 L340 40 L364 44 L364 74 L0 74z"
+            fill="rgba(233,184,114,.13)"/>
+    </svg>
+    <div style="display: flex; justify-content: space-between; margin-top: 10px; font-size: 12.5px; color: var(--muted);">
+      <span>64&deg; at 5 am</span><span>78&deg; at 3 pm</span><span>73.4&deg; now</span>
+    </div>
+      </div>
+      <div style="position: absolute; left: 28px; right: 28px; top: 466px; padding-top: 16px; border-top: 1px solid var(--edge); display: flex; gap: 28px;">
+        <div><div class="fact-v" style="font-size: 17px;">78&deg;</div><div class="fact-k" style="font-size: 11.5px;">High</div></div><div><div class="fact-v" style="font-size: 17px;">64&deg;</div><div class="fact-k" style="font-size: 11.5px;">Low</div></div><div><div class="fact-v" style="font-size: 17px;">48%</div><div class="fact-k" style="font-size: 11.5px;">Humidity</div></div>
+      </div>
+      <div style="position: absolute; left: 28px; right: 28px; top: 536px; font-size: 13.5px; line-height: 1.45; color: var(--muted);">The thermostat can be told to go by this reading instead of its own &mdash; the brain already does it.</div>
+    </div>
+    <div style="position: absolute; left: 972px; top: 220px; width: 420px; height: 590px; border-radius: 28px; border: 1px solid var(--edge); background: linear-gradient(rgba(26,28,34,.8), rgba(16,17,21,.94)); overflow: hidden;">
+      <div style="position: absolute; left: 28px; right: 28px; top: 26px;">
+        <div class="room" style="font-size: 13.5px;">Kitchen</div>
+        <div class="dsp" style="font-size: 34px; line-height: 1.06; margin-top: 3px;">Back door</div>
+        <div style="display: flex; gap: 10px; margin-top: 18px;">
+          <div class="ctl" style="width: 46px; height: 46px;"><svg class="ic" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3.5h10.5v17H5zM12.5 12h.01M15.5 3.5h3.5v17h-3.5"/></svg></div>
+          <div class="ctl" style="width: 46px; height: 46px;"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l1.8 5.2 5.2 1.8-5.2 1.8L12 17.5l-1.8-5.2L5 10.5l5.2-1.8zM5 17.5l.7 1.8 1.8.7-1.8.7L5 22.5l-.7-1.8-1.8-.7 1.8-.7z"/></svg></div>
+          <div class="ctl" style="width: 46px; height: 46px;"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3zM13.5 8.5l2 2"/></svg></div>
+        </div>
+        <div class="dsp" style="font-size: 46px; line-height: 1; margin-top: 26px;">Shut</div>
+        <div style="margin-top: 12px; font-size: 14.5px; color: var(--ink-2);">Shut since 4:12 pm, open for six minutes before that.</div>
+      </div>
+      <div style="position: absolute; left: 28px; right: 28px; top: 322px;">
+        <div class="lbl" style="margin-bottom: 12px;">Today</div>
+        
+    <div style="position: relative; height: 74px; border-radius: 16px; background: rgba(255,255,255,.05); border: 1px solid var(--edge); overflow: hidden;">
+      <div style="position: absolute; left: 29%; top: 0; bottom: 0; width: 1.1%; background: rgba(224,104,95,.78);"></div><div style="position: absolute; left: 43%; top: 0; bottom: 0; width: 0.8%; background: rgba(224,104,95,.78);"></div><div style="position: absolute; left: 57%; top: 0; bottom: 0; width: 2.4%; background: rgba(224,104,95,.78);"></div><div style="position: absolute; left: 69%; top: 0; bottom: 0; width: 0.9%; background: rgba(224,104,95,.78);"></div>
+    </div>
+    <div style="display: flex; justify-content: space-between; margin-top: 10px; font-size: 12.5px; color: var(--muted);">
+      <span>midnight</span><span>noon</span><span>now</span>
+    </div>
+      </div>
+      <div style="position: absolute; left: 28px; right: 28px; top: 466px; padding-top: 16px; border-top: 1px solid var(--edge); display: flex; gap: 28px;">
+        <div><div class="fact-v" style="font-size: 17px;">4 times</div><div class="fact-k" style="font-size: 11.5px;">Opened</div></div><div><div class="fact-v" style="font-size: 17px;">19 min</div><div class="fact-k" style="font-size: 11.5px;">Open for</div></div><div><div class="fact-v" style="font-size: 17px;">4:06 pm</div><div class="fact-k" style="font-size: 11.5px;">Last</div></div>
+      </div>
+      <div style="position: absolute; left: 28px; right: 28px; top: 536px; font-size: 13.5px; line-height: 1.45; color: var(--muted);">The one kind whose whole worth is the strip: nobody wants a door&#39;s state, they want to know when it moved.</div>
+    </div>
+</div>
+</x-dc>
+</body>
+</html>

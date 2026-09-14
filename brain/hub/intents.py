@@ -71,12 +71,16 @@ SERVICE = {
     ("media", "pause"): ("media_player", "media_pause"), ("media", "play"): ("media_player", "media_play"),
     ("media", "next"): ("media_player", "media_next_track"), ("media", "previous"): ("media_player", "media_previous_track"),
     ("media", "volume"): ("media_player", "volume_set"),
-    ("fan", "on"): ("fan", "turn_on"), ("fan", "off"): ("fan", "turn_off"),
+    ("fan", "on"): ("fan", "turn_on"), ("fan", "off"): ("fan", "turn_off"), ("fan", "set"): ("fan", "set_percentage"),
     ("cover", "open"): ("cover", "open_cover"), ("cover", "close"): ("cover", "close_cover"),
+    ("cover", "set"): ("cover", "set_cover_position"), ("cover", "stop"): ("cover", "stop_cover"),
     ("lock", "lock"): ("lock", "lock"), ("lock", "unlock"): ("lock", "unlock"),
     ("climate", "set"): ("climate", "set_temperature"), ("climate", "mode"): ("climate", "set_hvac_mode"),
     ("climate", "preset"): ("climate", "set_preset_mode"), ("climate", "fan"): ("climate", "set_fan_mode"),
     ("climate", "on"): ("climate", "turn_on"), ("climate", "off"): ("climate", "turn_off"),
+    # A vacuum or a mower has nowhere to go but out and back, which is why it has no on.
+    ("vacuum", "start"): ("vacuum", "start"), ("vacuum", "return"): ("vacuum", "return_to_base"),
+    ("vacuum", "stop"): ("vacuum", "stop"),
 }
 
 

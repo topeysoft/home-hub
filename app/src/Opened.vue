@@ -5,9 +5,7 @@
  * The home does not get covered, it recedes: scaled back, blurred and dimmed,
  * so the panel reads as something in front of the house rather than a new page.
  * The timings are measured, not invented — 320ms for the home to fall back,
- * 380ms for the panel to rise, and the hero arrives 80ms late and travels
- * further than the panel does, which is what makes it feel like an object
- * instead of a picture. Content comes up behind it in four beats.
+ * 380ms for the panel to rise, and the content comes up behind it in four beats.
  *
  * Those are paper's. Glass has a measured set of its own, and a room that dims
  * rather than blurring — all of it in panel.css under [data-face='glass'], none
@@ -16,64 +14,82 @@
  * the difference between a pane that has not risen yet and one on its way out.
  *
  * The field takes the device's own colour while it is open: a warm lamp pushes
- * the whole room amber, a camera cools it. That is the one idea worth stealing
- * from the reference this was drawn from, and the sky gives it somewhere real
- * to sit. Everything here sits behind the app's reduced-motion block, which
- * turns the whole sequence into a plain cross-fade.
+ * the whole room amber, a camera cools it.
+ *
+ * WHAT THIS PANE IS, since it used to be one layout for everything. Six slots,
+ * and only the fifth changes from a lamp to a mower:
+ *
+ *   1  where and what      the room, then the name
+ *   2  what you can do     the kind's real verbs -- never a blanket power
+ *                          button, which for a lock, a blind, a camera and a
+ *                          mower was an action the brain refuses with a 400
+ *   3  what it says        one reading, in serif
+ *   4  why it is like that one line, then the facts this thing actually knows
+ *   5  the instrument      the control a tile is too small for. This is the
+ *                          half of the pane that used to hold a 260px
+ *                          watermark of the device's own icon and nothing else
+ *   6  what it did today   /events, narrowed to this one device
+ *
+ * See design/device for the boards all of that was drawn on.
  */
-import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { act } from './api'
-import { cap, isDead, notify, perform, roomOf, store } from './store'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { getDeviceEvents, type Event } from './api'
+import { cap, deviceById, isDead, notify, perform, roomOf, store } from './store'
+import { facts as factsOf, moments as momentsOf, paneKind, reading, verbs as verbsOf, whyLine } from './pane'
 import Icon from './Icon.vue'
+import LightPane from './panes/LightPane.vue'
+import MediaPane from './panes/MediaPane.vue'
+import ClimatePane from './panes/ClimatePane.vue'
+import CoverPane from './panes/CoverPane.vue'
+import LockPane from './panes/LockPane.vue'
+import CameraPane from './panes/CameraPane.vue'
+import SimplePane from './panes/SimplePane.vue'
+import SensePane from './panes/SensePane.vue'
 
 const dev = computed(() => store.opened)
 const kind = computed(() => dev.value ? cap(dev.value) : '')
-const room = computed(() => dev.value ? roomOf(dev.value)?.name ?? '' : '')
+const room = computed(() => dev.value ? roomOf(dev.value) : null)
 const shown = ref(false)              // flipped a frame after mount, so the transitions have a from-state to leave from
-
-/* the one number worth saying in large type: how bright, how warm, or just what it is doing */
-const big = computed(() => {
-  const d = dev.value; if (!d) return ''
-  const a = d.attrs ?? {}
-  if (dead.value) return 'Not answering'
-  if (kind.value === 'light' && d.state === 'on' && a.brightness != null) return Math.round((a.brightness / 255) * 100) + '%'
-  if (kind.value === 'climate' && a.current_temperature != null) return Math.round(a.current_temperature) + '°'
-  if (kind.value === 'cover' && a.current_position != null) return a.current_position + '%'
-  if (kind.value === 'fan' && d.state === 'on' && a.percentage) return a.percentage + '%'
-  return d.state === 'on' ? 'On' : d.state === 'playing' ? 'Playing' : d.state === 'off' ? 'Off' : d.state
-})
-/* only what this particular device actually knows about itself: no filler rows */
-const facts = computed(() => {
-  const d = dev.value; if (!d) return [] as { k: string; v: string }[]
-  const a = d.attrs ?? {}
-  const out: { k: string; v: string }[] = []
-  if (a.color_temp_kelvin) out.push({ k: 'Warmth', v: a.color_temp_kelvin + 'K' })
-  if (kind.value === 'climate' && a.temperature != null) out.push({ k: 'Set to', v: Math.round(a.temperature) + '°' })
-  if (a.media_title) out.push({ k: 'Playing', v: String(a.media_title) })
-  if (a.percentage != null && kind.value === 'fan') out.push({ k: 'Speed', v: a.percentage + '%' })
-  if (d.maker) out.push({ k: 'Made by', v: d.maker })   // hw is the registry's opaque id, never worth showing
-  return out.slice(0, 3)
-})
-
 const dead = computed(() => !!dev.value && isDead(dev.value))
-const on = computed(() => dev.value?.state === 'on' || dev.value?.state === 'playing')
-async function toggle() {
-  const d = dev.value; if (!d || dead.value) return
-  try { await act(d.id, on.value ? 'off' : 'on') } catch (e: any) { notify(e.message, 'error') }
+
+const INSTRUMENTS: Record<string, any> = {
+  light: LightPane, media: MediaPane, climate: ClimatePane, cover: CoverPane,
+  lock: LockPane, camera: CameraPane, fan: SimplePane, switch: SimplePane, vacuum: SimplePane, sense: SensePane,
 }
-/* the panel has to be worth opening: the tile can already toggle, so what it
-   owes is the control the tile is too small for. For a light that is the dimmer,
-   at a size you can hit without looking. */
-const dimmable = computed(() => kind.value === 'light' && !!dev.value && 'brightness' in (dev.value.attrs ?? {}))
-const pct = computed(() => {
-  const b = dev.value?.attrs?.brightness
-  return dev.value?.state === 'on' && b != null ? Math.round((b / 255) * 100) : 0
-})
-async function dim(e: Event) {
+const instrument = computed(() => dev.value ? INSTRUMENTS[paneKind(dev.value)] ?? SimplePane : null)
+
+/* what this one thing has done, from the log the brain already keeps. Asked for once on the way in
+   and again whenever the thing itself changes, which is the only time there is anything new. */
+const events = ref<Event[]>([])
+async function look() {
   const d = dev.value; if (!d) return
-  const v = Number((e.target as HTMLInputElement).value)
-  try { await perform(d, 'on', { brightness_pct: v }, { state: 'on', attrs: { brightness: Math.round(v * 2.55) } }) }
-  catch (err: any) { notify(err.message, 'error') }
+  try { events.value = await getDeviceEvents(d.id, 12) } catch { events.value = [] }
+}
+watch(() => dev.value?.id, look, { immediate: true })
+watch(() => [dev.value?.state, JSON.stringify(dev.value?.attrs ?? {})].join('|'), () => { if (dev.value) look() })
+
+const big = computed(() => dev.value ? reading(dev.value, store.tempUnit) : '')
+const facts = computed(() => dev.value ? factsOf(dev.value, room.value, store.tempUnit, events.value) : [])
+const verbs = computed(() => dev.value ? verbsOf(dev.value) : [])
+const moments = computed(() => dev.value ? momentsOf(events.value, dev.value, 4, Date.now(), store.tempUnit) : [])
+const why = computed(() => dev.value ? whyLine(dev.value, events.value, room.value, Date.now(), store.tempUnit) : '')
+
+async function verb(id: string) {
+  const d = dev.value; if (!d) return
+  if (id === 'why') { store.whyRoom = d.room_id; store.sheet = 'why'; return }
+  if (id === 'edit') { store.sheet = 'house'; close(); return }
+  if (id === 'watch') { store.viewer = d; close(); return }
+  if (id === 'lamp') {
+    const lamp = deviceById(String(d.attrs.light))
+    if (lamp) await perform(lamp, lamp.state === 'on' ? 'off' : 'on', undefined, { state: lamp.state === 'on' ? 'off' : 'on' })
+    return
+  }
+  if (id === 'power') {
+    if (dead.value) return
+    const on = d.state === 'on' || d.state === 'playing' || (cap(d) === 'climate' && d.state !== 'off')
+    try { await perform(d, on ? 'off' : 'on', undefined, { state: on ? 'off' : 'on' }) }
+    catch (e: any) { notify(e.message, 'error') }
+  }
 }
 
 /* `closing` is not the same fact as `!shown`, and the difference is two frames:
@@ -106,34 +122,49 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
     <div class="opened-panel" :data-cap="kind">
       <button class="back opened-close" @click="close" aria-label="Close"><Icon name="close" :size="18" /></button>
 
-      <!-- the hero: late, and travelling further than the panel did -->
-      <span class="opened-hero" aria-hidden="true"><Icon :name="kind || 'switch'" :size="260" /></span>
+      <div class="opened-body pane-body">
+        <div class="pane-said">
+          <div class="opened-step s0">
+            <div class="opened-room" v-if="room">{{ room.name }}</div>
+            <h2 class="display opened-name">{{ dev.name }}</h2>
+          </div>
 
-      <div class="opened-body">
-        <div class="opened-step s0">
-          <div class="opened-room" v-if="room">{{ room }}</div>
-          <h2 class="display opened-name">{{ dev.name }}</h2>
+          <div class="opened-step s1 opened-acts">
+            <button v-for="v in verbs" :key="v.id" class="ctl" :class="{ primary: v.primary, off: v.primary && !v.on, lit: !v.primary && v.on }"
+                    :disabled="dead && v.id === 'power'" :aria-label="v.label" :title="v.label" @click="verb(v.id)">
+              <Icon :name="v.icon" :size="v.primary ? 22 : 20" />
+            </button>
+          </div>
+
+          <div class="opened-step s2">
+            <div class="opened-big display">{{ big }}</div>
+            <p class="pane-why" v-if="why">{{ why }}</p>
+          </div>
+
         </div>
 
-        <div class="opened-step s1 opened-acts">
-          <button class="ctl primary" :class="{ off: !on }" @click="toggle" :disabled="dead" :aria-label="on ? 'Turn off' : 'Turn on'">
-            <Icon name="power" :size="22" />
-          </button>
-          <button class="ctl" v-if="kind === 'camera'" @click="store.viewer = dev; close()" aria-label="Watch"><Icon name="camera" :size="20" /></button>
-          <button class="ctl" @click="store.sheet = 'why'" aria-label="Why did this happen"><Icon name="sparkle" :size="20" /></button>
-        </div>
-
-        <div class="opened-step s2 opened-big display">{{ big }}</div>
-
-        <div class="opened-step s3 opened-dim" v-if="dimmable" :style="{ '--dim': pct + '%' }">
-          <input type="range" min="1" max="100" :value="pct" :disabled="dead" @change="dim" @input="dim" aria-label="Brightness" />
-          <p class="opened-dim-hint">Drag to dim. It stays here until a routine moves it.</p>
-        </div>
-
-        <div class="opened-step s3 opened-facts" v-if="facts.length">
+        <!-- the facts sit under what was said on a wall, and under the INSTRUMENT on a phone, where
+             the control has to be reachable without scrolling past four numbers to get to it -->
+        <div class="opened-step s3 opened-facts pane-facts" v-if="facts.length">
           <div v-for="f in facts" :key="f.k">
             <div class="opened-fact-v">{{ f.v }}</div>
             <div class="opened-fact-k">{{ f.k }}</div>
+          </div>
+        </div>
+
+        <!-- the instrument: the control a tile is too small for -->
+        <div class="pane-rig" v-if="instrument">
+          <component :is="instrument" :device="dev" :events="events" :moments="moments" />
+        </div>
+      </div>
+
+      <!-- what this one thing did today -->
+      <div class="opened-step s3 pane-day" v-if="moments.length">
+        <span class="opened-fact-k pane-day-head">Today</span>
+        <div class="pane-day-row">
+          <div v-for="(m, i) in moments" :key="i" class="pane-moment">
+            <div class="pane-moment-t">{{ m.when }}</div>
+            <div class="pane-moment-x">{{ m.text }}</div>
           </div>
         </div>
       </div>

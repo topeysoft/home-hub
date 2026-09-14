@@ -16,7 +16,7 @@ const now = Math.floor(Date.now() / 1000)
 const dev = (id, name, room_id, capability, state, attrs = {}, maker = null) => ({ id, name, room_id, capability, state, attrs, maker })   // maker: what the registry knows, often nothing
 const rooms = [
   { id: 'living', name: 'Living room', intent: 'movie', set_by: 'rule:evening-lights', hold_until: null, devices: [
-    dev('l1', 'Ceiling light', 'living', 'light', 'on', { brightness: 90, supported_color_modes: ['brightness'] }, 'Philips Hue'),
+    dev('l1', 'Ceiling light', 'living', 'light', 'on', { brightness: 90, color_temp_kelvin: 2700, supported_color_modes: ['brightness', 'color_temp'] }, 'Philips Hue'),
     dev('l2', 'Floor lamp', 'living', 'light', 'on', { brightness: 60, supported_color_modes: ['brightness'] }),
     dev('l3', 'Reading lamp', 'living', 'light', 'off', { supported_color_modes: ['onoff'] }),
     dev('m1', 'Living room TV', 'living', 'media', 'playing', { media_title: 'The Bear', media_artist: 'Season 3, Episode 4', app_name: 'Disney+', volume_level: 0.35, entity_picture: '/x.jpg', media_position: 1421, media_duration: 3740 }),
@@ -90,6 +90,35 @@ const events = [
   { ts: now - 2400, kind: 'state', subject: 'k5', old: 'on', new: 'off', source: 'ha', detail: null },
   { ts: now - 5400, kind: 'state', subject: 'o2', old: 'on', new: 'unavailable', source: 'ha', detail: null },
 ]
+/* A day per device, so an opened pane has a foot and a sensor has a shape. The hub answers
+   /events?subject=<id> from the same log; this is that answer, made up for one house.
+   `hrs` is hours ago, and a row is [hours, kind, old, new, source, detail]. */
+const day = (id, rows) => rows.map(([hrs, kind, old, nw, source = 'ha', detail = null]) =>
+  ({ ts: now - Math.round(hrs * 3600), kind, subject: id, old, new: nw, source, detail: detail && JSON.stringify(detail) }))
+/* a thermometer's day: a reading each time it moved, which is what the pane draws a line through */
+const temps = [[13, 64.2], [11.5, 65.8], [10, 68.1], [8.5, 71.4], [7, 74.9], [5.5, 77.2], [4.5, 78.0], [3, 76.6], [2, 75.1], [1, 74.2], [0.3, 73.4]]
+const perDevice = [
+  ...day('l1', [[1.6, 'action', null, 'on', 'user', { brightness_pct: 35 }], [2.5, 'state', 'off', 'on'],
+                [6.2, 'state', 'on', 'off'], [12, 'state', 'off', 'on']]),
+  ...day('l2', [[2.4, 'state', 'off', 'on'], [9, 'state', 'on', 'off']]),
+  ...day('m1', [[0.6, 'action', null, 'play', 'user'], [5.6, 'state', 'playing', 'off']]),
+  ...day('t1', [[1.1, 'action', null, 'set', 'user', { temperature: 71 }], [1.05, 'state', 'off', 'cool'],
+                [6.5, 'state', 'cool', 'off'], [12.7, 'action', null, 'set', 'user', { temperature: 70 }]]),
+  ...day('c1', [[12.5, 'action', null, 'set', 'user', { position: 70 }], [12.55, 'state', 'closed', 'open'], [21.3, 'state', 'open', 'closed']]),
+  ...day('f1', [[1.9, 'state', 'locked', 'unlocked'], [2.4, 'action', null, 'unlock', 'user'], [6.6, 'state', 'unlocked', 'locked'], [11.3, 'state', 'locked', 'unlocked']]),
+  ...day('y1', [[0.03, 'state', 'streaming', 'recording'], [1.6, 'state', 'idle', 'recording'], [2.9, 'state', 'recording', 'idle'], [8.3, 'state', 'idle', 'recording']]),
+  ...day('y2', [[5.2, 'state', 'cleaning', 'docked'], [7.4, 'action', null, 'start', 'user'], [7.35, 'state', 'docked', 'cleaning']]),
+  ...day('b3', [[22, 'action', null, 'set', 'user', { percentage: 40 }], [22.1, 'state', 'off', 'on']]),
+  ...day('k3', [[12.4, 'state', 'on', 'off'], [12.9, 'action', null, 'on for 30 min', 'user', { minutes: 30 }]]),
+  /* motion through the day, which is the strip a sensor's pane is read for */
+  ...day('mo1', [[0.4, 'state', 'on', 'off'], [0.45, 'state', 'off', 'on'], [1.2, 'state', 'on', 'off'],
+                 [1.25, 'state', 'off', 'on'], [3.1, 'state', 'on', 'off'], [3.2, 'state', 'off', 'on'], [6.8, 'state', 'on', 'off'],
+                 [6.9, 'state', 'off', 'on'], [11.4, 'state', 'on', 'off'], [11.5, 'state', 'off', 'on']]),
+  ...day('k5', [[3.6, 'state', 'on', 'off'], [3.7, 'state', 'off', 'on'], [7.2, 'state', 'on', 'off'], [7.3, 'state', 'off', 'on'],
+                [11.1, 'state', 'on', 'off'], [11.2, 'state', 'off', 'on']]),
+  ...day('te1', temps.map(([h, v], i) => [h, 'state', i ? String(temps[i - 1][1]) : null, String(v)])),
+  ...day('k6', [[0.5, 'state', '49', '51'], [4, 'state', '54', '49'], [8, 'state', '47', '54']]),
+]
 const rules = { rules: [
   { id: 'evening-lights', name: 'Living room lights on at dusk', room: 'living', when: { sun: 'set', offset: -1200 }, then: { intent: 'movie' }, enabled: true },
   { id: 'kitchen-motion', name: 'Kitchen lights when someone walks in', room: 'kitchen', when: { motion: true }, if: [['sun', 'below', 0]], then: { intent: 'occupied' }, enabled: true },
@@ -134,7 +163,13 @@ const server = http.createServer((req, res) => {
   if (p === '/ambient') return json(res, ambient)
   if (p === '/presence') return json(res, presence)
   if (p === '/scenes') return json(res, scenes)
-  if (p === '/events') return json(res, events)
+  /* the hub narrows its log by subject; a pane's foot is that query and nothing else */
+  if (p === '/events') {
+    const subject = url.searchParams.get('subject')
+    const limit = Number(url.searchParams.get('limit')) || 100
+    const all = [...events, ...perDevice].sort((a, b) => b.ts - a.ts)
+    return json(res, (subject ? all.filter(e => e.subject === subject) : all).slice(0, limit))
+  }
   if (p === '/rules') return json(res, rules)
   if (p === '/discovered') return json(res, discovered)
   if (p === '/health') return json(res, { notes })

@@ -143,7 +143,9 @@ test('under glass the house gets out of the way first, and the object lands last
     const name = (el: Element) =>
       el.classList.contains('opened-panel') ? 'pane'
         : el.classList.contains('bottombar') ? 'bar'
-          : el.classList.contains('opened-hero') ? 'object' : ''
+          /* the object of a pane: the instrument on a device, the 260px hero on the ask-pane,
+             which is the one pane still drawn that way */
+          : el.classList.contains('pane-rig') || el.classList.contains('opened-hero') ? 'object' : ''
     for (const ev of ['transitionstart', 'transitionend'])
       document.addEventListener(ev, (e) => {
         const n = e.target instanceof Element ? name(e.target) : ''

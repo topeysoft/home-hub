@@ -1,0 +1,245 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      /* app/src/panel.css :root, unchanged */
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp: #e9b872; --lamp-deep: #b8863e; --lamp-ink: #2a1c07;
+      --live: #74c69d; --danger: #e08a8a; --cool: #7ab0e8;
+      --edge: rgba(255,255,255,.10); --edge-hi: rgba(255,255,255,.18);
+      --surface-hi: rgba(255,255,255,.08);
+    }
+    a { color: #e9b872; } a:hover { color: #b8863e; }
+    .dsp { font-family: "Instrument Serif", "Iowan Old Style", Palatino, Georgia, serif; font-weight: 400; letter-spacing: -.01em; }
+    /* the five zones, at the sizes the pane already uses */
+    .room { font-size: 15px; color: var(--ink-2); }
+    .name { margin: 4px 0 0; font-size: 56px; line-height: 1.04; }
+    .read { font-size: 76px; line-height: 1; letter-spacing: -.02em; }
+    .why { font-size: 15.5px; color: var(--ink-2); }
+    .fact-v { font-size: 20px; font-weight: 500; }
+    .fact-k { margin-top: 2px; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+    /* a verb: the round control the pane already draws, at its own 56px */
+    .ctl { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-hi); border: 1px solid var(--edge); color: var(--ink-2); }
+    .ctl.on { background: var(--lamp); border-color: transparent; color: var(--lamp-ink); }
+    .ctl.wide { width: auto; height: 56px; border-radius: 999px; padding: 0 24px; display: inline-flex; align-items: center; gap: 11px; font-size: 16.5px; color: var(--ink); }
+    .ctl.wide.on { color: var(--lamp-ink); font-weight: 500; }
+    .pill { display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 14px; border-radius: 999px; font-size: 13.5px; color: var(--ink-2); background: var(--surface-hi); }
+    .lbl { font-size: 12.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .ic { flex: 0 0 auto; }
+    /* the day strip every pane carries along its foot */
+    .day-line { position: absolute; left: 48px; right: 48px; height: 1px; background: var(--edge); }
+    .ev-t { font-size: 13px; color: var(--muted); }
+    .ev { font-size: 15px; color: var(--ink-2); margin-top: 3px; }
+  </style>
+</helmet>
+
+<!-- TODAY -- the pane as it ships, traced at 1440x900 against the mock house. Every kind gets the same four lines in the same places, and between 131 and 349px of the pane is empty. -->
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: #0c0d10; color: var(--ink); font-size: 17px; line-height: 1.4;">
+
+  <div style="position: absolute; inset: 0; background: linear-gradient(rgb(20,23,38) 0%, rgb(35,36,58) 42%, rgb(78,55,52) 86%, rgb(54,40,40) 100%);"></div>
+  <div style="position: absolute; inset: 0; background: radial-gradient(90% 70% at 62% 78%, rgba(233,184,114,.10), transparent 66%);"></div>
+  <div style="position: absolute; inset: 0; opacity: .5; background-image: url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.035'/%3E%3C/svg%3E&quot;);"></div>
+  <div style="position: absolute; left: 48px; top: 44px; width: 860px;">
+    <div class="lbl">Measured, not remembered</div>
+    <h1 class="dsp" style="margin: 10px 0 0; font-size: 46px; line-height: 1.06;">What a long press opens today</h1>
+    <p style="margin: 12px 0 0; font-size: 17px; color: var(--ink-2); max-width: 800px;">Held a tile of every kind in the running panel and measured what rose. Nine kinds, one layout, one watermark.</p>
+  </div>
+
+  <!-- the television, at 0.4 of full size, with what was measured marked on it -->
+  <div style="position: absolute; left: 48px; top: 214px; width: 490px; height: 230px; overflow: hidden; border-radius: 12px 12px 0 0;">
+    <div style="position: absolute; left: 0; top: 0; width: 1440px; height: 675px; transform: scale(.34); transform-origin: 0 0;">
+      
+    <div style="position: relative; width: 1440px; height: 675px; border-radius: 34px 34px 0 0; border: 1px solid rgba(255,255,255,.18); border-bottom: 0; overflow: hidden; background: linear-gradient(rgba(26,28,34,.8), rgba(16,17,21,.94));">
+      <div style="position: absolute; right: 4%; bottom: -6%; opacity: .5; color: rgba(233,184,114,.3);"><svg class="ic" width="260" height="260" viewBox="0 0 24 24" fill="none" stroke="rgba(233,184,114,.3)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3.5h11a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1v-15a1 1 0 0 1 1-1zM12 17a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4zM12 8h.01"/></svg></div>
+      <div style="position: absolute; top: 26px; right: 30px; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.1);"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#b9b5ad" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
+      <div style="position: absolute; left: 48px; top: 44px; width: 592px;">
+        <div class="room">Living room</div>
+        <h2 class="dsp name">Living room TV</h2>
+        <div style="display: flex; gap: 12px; margin-top: 26px;">
+          <div class="ctl on"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2a1c07" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v8.5M6.6 6.6a7.6 7.6 0 1 0 10.8 0"/></svg></div>
+          <div class="ctl"><svg class="ic" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l1.8 5.2 5.2 1.8-5.2 1.8L12 17.5l-1.8-5.2L5 10.5l5.2-1.8zM5 17.5l.7 1.8 1.8.7-1.8.7L5 22.5l-.7-1.8-1.8-.7 1.8-.7z"/></svg></div>
+        </div>
+        <div class="dsp" style="font-size: 76px; line-height: 1; margin-top: 40px;">Playing</div>
+        <div style="margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--edge);"><div class="fact-v">The Bear</div><div class="fact-k">Playing</div></div>
+      </div>
+    </div>
+    </div>
+  </div>
+  
+    <div style="position: absolute; left: 48px; top: 210px; width: 346px; height: 1px; background: rgba(224,104,95,.7);"></div>
+    <div style="position: absolute; left: 404px; top: 201px; font-size: 12.5px; color: #e0685f; white-space: nowrap;">the pane: 1440 &times; 675, at y 225</div>
+  
+    <div style="position: absolute; left: 66px; top: 296px; width: 150px; height: 1px; background: rgba(224,104,95,.7);"></div>
+    <div style="position: absolute; left: 226px; top: 287px; font-size: 12.5px; color: #e0685f; white-space: nowrap;">the reading, 76px</div>
+  
+    <div style="position: absolute; left: 66px; top: 352px; width: 300px; height: 1px; background: rgba(224,104,95,.7);"></div>
+    <div style="position: absolute; left: 376px; top: 343px; font-size: 12.5px; color: #e0685f; white-space: nowrap;">260px of pane below this, empty</div>
+  <div style="position: absolute; left: 48px; top: 474px; width: 540px; font-size: 14.5px; color: var(--ink-2); line-height: 1.6;">
+    The same four measurements came back for every kind held: the pane at <span style="color: var(--ink);">0, 225, 1440 &times; 675</span>, the name at <span style="color: var(--ink);">49, 295</span>, the reading at <span style="color: var(--ink);">49, 475</span>, and between <span style="color: var(--ink);">131 and 349px</span> of pane with nothing in it. The watermark behind is 260px, drawn from the same nine-icon set whatever was opened.
+  </div>
+  <div style="position: absolute; left: 672px; top: 190px; width: 720px;">
+    <div class="lbl">What the pane said, kind by kind</div>
+    <div style="margin-top: 16px; display: flex; flex-direction: column; gap: 11px;">
+      
+      <div style="display: flex; align-items: baseline; gap: 14px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,.06); white-space: nowrap;">
+        <span style="flex: 0 0 206px; font-size: 15.5px;">Ceiling light</span>
+        <span style="flex: 0 0 84px; font-family: 'Instrument Serif', Georgia, serif; font-size: 21px; color: #f1eee8;">35%</span>
+        <span style="flex: 0 0 84px; font-size: 14px; color: var(--ink-2);">Turn off</span>
+        <span style="flex: 1 1 0; font-size: 13.5px; color: var(--muted);">The one instrument that exists.</span>
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 14px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,.06); white-space: nowrap;">
+        <span style="flex: 0 0 206px; font-size: 15.5px;">Living room TV</span>
+        <span style="flex: 0 0 84px; font-family: 'Instrument Serif', Georgia, serif; font-size: 21px; color: #f1eee8;">Playing</span>
+        <span style="flex: 0 0 84px; font-size: 14px; color: var(--ink-2);">Turn off</span>
+        <span style="flex: 1 1 0; font-size: 13.5px; color: var(--muted);">Artwork, position, transport: dropped.</span>
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 14px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,.06); white-space: nowrap;">
+        <span style="flex: 0 0 206px; font-size: 15.5px;">Thermostat</span>
+        <span style="flex: 0 0 84px; font-family: 'Instrument Serif', Georgia, serif; font-size: 21px; color: #e0685f;">74&deg;</span>
+        <span style="flex: 0 0 84px; font-size: 14px; color: #e0685f;">Turn on</span>
+        <span style="flex: 1 1 0; font-size: 13.5px; color: var(--muted);">No way to set the temperature.</span>
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 14px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,.06); white-space: nowrap;">
+        <span style="flex: 0 0 206px; font-size: 15.5px;">Blinds</span>
+        <span style="flex: 0 0 84px; font-family: 'Instrument Serif', Georgia, serif; font-size: 21px; color: #e0685f;">70%</span>
+        <span style="flex: 0 0 84px; font-size: 14px; color: #e0685f;">Turn on</span>
+        <span style="flex: 1 1 0; font-size: 13.5px; color: var(--muted);">&ldquo;cover cannot on&rdquo;: the button errors.</span>
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 14px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,.06); white-space: nowrap;">
+        <span style="flex: 0 0 206px; font-size: 15.5px;">Front door</span>
+        <span style="flex: 0 0 84px; font-family: 'Instrument Serif', Georgia, serif; font-size: 21px; color: #e0685f;">locked</span>
+        <span style="flex: 0 0 84px; font-size: 14px; color: #e0685f;">Turn on</span>
+        <span style="flex: 1 1 0; font-size: 13.5px; color: var(--muted);">The raw state string. Same error.</span>
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 14px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,.06); white-space: nowrap;">
+        <span style="flex: 0 0 206px; font-size: 15.5px;">Backyard cam</span>
+        <span style="flex: 0 0 84px; font-family: 'Instrument Serif', Georgia, serif; font-size: 21px; color: #e0685f;">recording</span>
+        <span style="flex: 0 0 84px; font-size: 14px; color: #e0685f;">Turn on</span>
+        <span style="flex: 1 1 0; font-size: 13.5px; color: var(--muted);">No picture until you press Watch.</span>
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 14px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,.06); white-space: nowrap;">
+        <span style="flex: 0 0 206px; font-size: 15.5px;">Robot mower</span>
+        <span style="flex: 0 0 84px; font-family: 'Instrument Serif', Georgia, serif; font-size: 21px; color: #e0685f;">docked</span>
+        <span style="flex: 0 0 84px; font-size: 14px; color: #e0685f;">Turn on</span>
+        <span style="flex: 1 1 0; font-size: 13.5px; color: var(--muted);">Same error. A mower has no on.</span>
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 14px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,.06); white-space: nowrap;">
+        <span style="flex: 0 0 206px; font-size: 15.5px;">Motion, Temperature, Back door</span>
+        <span style="flex: 0 0 84px; font-family: 'Instrument Serif', Georgia, serif; font-size: 21px; color: #e0685f;">&mdash;</span>
+        <span style="flex: 0 0 84px; font-size: 14px; color: #e0685f;">&mdash;</span>
+        <span style="flex: 1 1 0; font-size: 13.5px; color: var(--muted);">No tile, so nothing to hold.</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="position: absolute; left: 672px; top: 638px; width: 720px; font-size: 14.5px; color: var(--ink-2); line-height: 1.55;">
+    Four of the nine kinds offer a control the brain refuses: <span style="color: var(--ink);">act(id,&nbsp;&lsquo;on&rsquo;)</span> has no entry in SERVICE for a lock, a cover, a camera or a vacuum, so the one big button on those panes raises a 400 and puts an error across the screen.
+  </div>
+    <div style="position: absolute; left: 48px; top: 690px; width: 306px;">
+      <div style="position: relative; width: 306px; height: 143px; overflow: hidden;">
+        <div style="position: absolute; left: 0; top: 0; width: 1440px; height: 675px; transform: scale(.2125); transform-origin: 0 0;">
+          
+    <div style="position: relative; width: 1440px; height: 675px; border-radius: 34px 34px 0 0; border: 1px solid rgba(255,255,255,.18); border-bottom: 0; overflow: hidden; background: linear-gradient(rgba(26,28,34,.8), rgba(16,17,21,.94));">
+      <div style="position: absolute; right: 4%; bottom: -6%; opacity: .5; color: rgba(233,184,114,.3);"><svg class="ic" width="260" height="260" viewBox="0 0 24 24" fill="none" stroke="rgba(233,184,114,.3)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 11h12v9.5H6zM9 11V8a3 3 0 0 1 6 0v3M12 15v2"/></svg></div>
+      <div style="position: absolute; top: 26px; right: 30px; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.1);"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#b9b5ad" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
+      <div style="position: absolute; left: 48px; top: 44px; width: 592px;">
+        <div class="room">Front door</div>
+        <h2 class="dsp name">Front door</h2>
+        <div style="display: flex; gap: 12px; margin-top: 26px;">
+          <div class="ctl on"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2a1c07" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v8.5M6.6 6.6a7.6 7.6 0 1 0 10.8 0"/></svg></div>
+          <div class="ctl"><svg class="ic" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l1.8 5.2 5.2 1.8-5.2 1.8L12 17.5l-1.8-5.2L5 10.5l5.2-1.8zM5 17.5l.7 1.8 1.8.7-1.8.7L5 22.5l-.7-1.8-1.8-.7 1.8-.7z"/></svg></div>
+        </div>
+        <div class="dsp" style="font-size: 76px; line-height: 1; margin-top: 40px;">locked</div>
+        
+      </div>
+    </div>
+        </div>
+      </div>
+      <div style="margin-top: 12px; font-size: 15px;">Front door</div>
+      <div style="margin-top: 3px; font-size: 13.5px; color: var(--muted); line-height: 1.45;">Same pane, 349px of it empty.</div>
+    </div>
+    <div style="position: absolute; left: 392px; top: 690px; width: 306px;">
+      <div style="position: relative; width: 306px; height: 143px; overflow: hidden;">
+        <div style="position: absolute; left: 0; top: 0; width: 1440px; height: 675px; transform: scale(.2125); transform-origin: 0 0;">
+          
+    <div style="position: relative; width: 1440px; height: 675px; border-radius: 34px 34px 0 0; border: 1px solid rgba(255,255,255,.18); border-bottom: 0; overflow: hidden; background: linear-gradient(rgba(26,28,34,.8), rgba(16,17,21,.94));">
+      <div style="position: absolute; right: 4%; bottom: -6%; opacity: .5; color: rgba(233,184,114,.3);"><svg class="ic" width="260" height="260" viewBox="0 0 24 24" fill="none" stroke="rgba(233,184,114,.3)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5h17v10h-17zM12 16.5a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM8.5 8.5l1.5-3h4l1.5 3"/></svg></div>
+      <div style="position: absolute; top: 26px; right: 30px; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.1);"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#b9b5ad" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
+      <div style="position: absolute; left: 48px; top: 44px; width: 592px;">
+        <div class="room">Backyard</div>
+        <h2 class="dsp name">Backyard cam</h2>
+        <div style="display: flex; gap: 12px; margin-top: 26px;">
+          <div class="ctl on"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2a1c07" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v8.5M6.6 6.6a7.6 7.6 0 1 0 10.8 0"/></svg></div>
+          <div class="ctl"><svg class="ic" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l1.8 5.2 5.2 1.8-5.2 1.8L12 17.5l-1.8-5.2L5 10.5l5.2-1.8zM5 17.5l.7 1.8 1.8.7-1.8.7L5 22.5l-.7-1.8-1.8-.7 1.8-.7z"/></svg></div>
+        </div>
+        <div class="dsp" style="font-size: 76px; line-height: 1; margin-top: 40px;">recording</div>
+        
+      </div>
+    </div>
+        </div>
+      </div>
+      <div style="margin-top: 12px; font-size: 15px;">Backyard cam</div>
+      <div style="margin-top: 3px; font-size: 13.5px; color: var(--muted); line-height: 1.45;">Same pane. The camera is not shown.</div>
+    </div>
+    <div style="position: absolute; left: 736px; top: 690px; width: 306px;">
+      <div style="position: relative; width: 306px; height: 143px; overflow: hidden;">
+        <div style="position: absolute; left: 0; top: 0; width: 1440px; height: 675px; transform: scale(.2125); transform-origin: 0 0;">
+          
+    <div style="position: relative; width: 1440px; height: 675px; border-radius: 34px 34px 0 0; border: 1px solid rgba(255,255,255,.18); border-bottom: 0; overflow: hidden; background: linear-gradient(rgba(26,28,34,.8), rgba(16,17,21,.94));">
+      <div style="position: absolute; right: 4%; bottom: -6%; opacity: .5; color: rgba(233,184,114,.3);"><svg class="ic" width="260" height="260" viewBox="0 0 24 24" fill="none" stroke="rgba(233,184,114,.3)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 13.8a1.8 1.8 0 1 0 0-3.6 1.8 1.8 0 0 0 0 3.6zM12 10.2c0-3.2 1.4-5.2 3.6-5.2 1.8 0 2.4 1.6 1 3.2-1.2 1.4-2.8 2-4.6 2zM12 13.8c0 3.2-1.4 5.2-3.6 5.2-1.8 0-2.4-1.6-1-3.2 1.2-1.4 2.8-2 4.6-2zM10.2 12c-3.2 0-5.2-1.4-5.2-3.6 0-1.8 1.6-2.4 3.2-1 1.4 1.2 2 2.8 2 4.6zM13.8 12c3.2 0 5.2 1.4 5.2 3.6 0 1.8-1.6 2.4-3.2 1-1.4-1.2-2-2.8-2-4.6z"/></svg></div>
+      <div style="position: absolute; top: 26px; right: 30px; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.1);"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#b9b5ad" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
+      <div style="position: absolute; left: 48px; top: 44px; width: 592px;">
+        <div class="room">Bedroom</div>
+        <h2 class="dsp name">Ceiling fan</h2>
+        <div style="display: flex; gap: 12px; margin-top: 26px;">
+          <div class="ctl on"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2a1c07" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v8.5M6.6 6.6a7.6 7.6 0 1 0 10.8 0"/></svg></div>
+          <div class="ctl"><svg class="ic" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l1.8 5.2 5.2 1.8-5.2 1.8L12 17.5l-1.8-5.2L5 10.5l5.2-1.8zM5 17.5l.7 1.8 1.8.7-1.8.7L5 22.5l-.7-1.8-1.8-.7 1.8-.7z"/></svg></div>
+        </div>
+        <div class="dsp" style="font-size: 76px; line-height: 1; margin-top: 40px;">40%</div>
+        <div style="margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--edge);"><div class="fact-v">40%</div><div class="fact-k">Speed</div></div>
+      </div>
+    </div>
+        </div>
+      </div>
+      <div style="margin-top: 12px; font-size: 15px;">Ceiling fan</div>
+      <div style="margin-top: 3px; font-size: 13.5px; color: var(--muted); line-height: 1.45;">Same pane, no speed control.</div>
+    </div>
+    <div style="position: absolute; left: 1080px; top: 690px; width: 306px;">
+      <div style="position: relative; width: 306px; height: 143px; overflow: hidden;">
+        <div style="position: absolute; left: 0; top: 0; width: 1440px; height: 675px; transform: scale(.2125); transform-origin: 0 0;">
+          
+    <div style="position: relative; width: 1440px; height: 675px; border-radius: 34px 34px 0 0; border: 1px solid rgba(255,255,255,.18); border-bottom: 0; overflow: hidden; background: linear-gradient(rgba(26,28,34,.8), rgba(16,17,21,.94));">
+      <div style="position: absolute; right: 4%; bottom: -6%; opacity: .5; color: rgba(233,184,114,.3);"><svg class="ic" width="260" height="260" viewBox="0 0 24 24" fill="none" stroke="rgba(233,184,114,.3)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v17M12 3.5l-3 3M12 3.5l3 3M12 20.5l-3-3M12 20.5l3-3M4.6 7.75l14.8 8.5M4.6 7.75l4.1-1.1M4.6 7.75l1.1 4.1M19.4 16.25l-4.1 1.1M19.4 16.25l-1.1-4.1M19.4 7.75l-14.8 8.5M19.4 7.75l-4.1-1.1M19.4 7.75l-1.1 4.1M4.6 16.25l4.1 1.1M4.6 16.25l1.1-4.1"/></svg></div>
+      <div style="position: absolute; top: 26px; right: 30px; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.1);"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#b9b5ad" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
+      <div style="position: absolute; left: 48px; top: 44px; width: 592px;">
+        <div class="room">Living room</div>
+        <h2 class="dsp name">Thermostat</h2>
+        <div style="display: flex; gap: 12px; margin-top: 26px;">
+          <div class="ctl on"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2a1c07" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v8.5M6.6 6.6a7.6 7.6 0 1 0 10.8 0"/></svg></div>
+          <div class="ctl"><svg class="ic" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l1.8 5.2 5.2 1.8-5.2 1.8L12 17.5l-1.8-5.2L5 10.5l5.2-1.8zM5 17.5l.7 1.8 1.8.7-1.8.7L5 22.5l-.7-1.8-1.8-.7 1.8-.7z"/></svg></div>
+        </div>
+        <div class="dsp" style="font-size: 76px; line-height: 1; margin-top: 40px;">74&deg;</div>
+        <div style="margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--edge);"><div class="fact-v">71&deg;</div><div class="fact-k">Set to</div></div>
+      </div>
+    </div>
+        </div>
+      </div>
+      <div style="margin-top: 12px; font-size: 15px;">Thermostat</div>
+      <div style="margin-top: 3px; font-size: 13.5px; color: var(--muted); line-height: 1.45;">Same pane, no way to set it.</div>
+    </div>
+</div>
+</x-dc>
+</body>
+</html>

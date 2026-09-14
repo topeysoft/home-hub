@@ -127,7 +127,14 @@ const kiosk = window.matchMedia('(min-width: 861px)')
 const woke = ref(0)   // counted so Home can arrive again on every wake, not only on the first load
 function touched() {
   lastTouch = Date.now()
-  if (idle.value) { idle.value = false; open(null); woke.value++ }
+  if (!idle.value) return
+  idle.value = false
+  /* Waking goes home, so what somebody left open before the panel rested goes with it. A phone
+     asking to join is the exception and stays: that one is a question still waiting for an answer,
+     not something left lying around. */
+  store.opened = null
+  open(null)
+  woke.value++
 }
 /* A phone knocking wakes the wall, and clears anything put aside so the pane comes back up: this is
    the one event the panel turns the screen on for, and a knock that has been set aside must not

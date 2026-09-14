@@ -84,38 +84,38 @@
       <div style="display: flex; gap: 34px; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--edge);">
         <div><div class="fact-v">IKEA</div><div class="fact-k">Made by</div></div>
         <div><div class="fact-v">7:10 am</div><div class="fact-k">Opened</div></div>
-        <div><div class="fact-v">Movie</div><div class="fact-k">In the room</div></div>
-        <div><div class="fact-v">West</div><div class="fact-k">Window faces</div></div>
+        <div><div class="fact-v">Movie</div><div class="fact-k">The room is on</div></div>
       </div>
     </div>
   <div style="position: absolute; left: 640px; top: 72px; width: 752px; height: 420px; border-radius: 32px; background: rgba(255,255,255,.035); border: 1px solid var(--edge);">
     
-    <div style="position: absolute; inset: 26px; display: flex; gap: 34px; align-items: center;">
+    <div style="position: absolute; inset: 26px; display: flex; gap: 22px; align-items: center;">
       <!-- the blind IS the control: drag its edge, and the window under it is
            the sky the panel already knows the colour of -->
-      <div style="position: relative; width: 316px; height: 340px; flex: 0 0 auto;">
+      <div style="position: relative; width: 268px; height: 340px; flex: 0 0 auto;">
         <div style="position: absolute; inset: 0; border-radius: 14px; overflow: hidden; border: 1px solid var(--edge-hi); background: linear-gradient(rgb(46,44,74), rgb(120,74,62) 72%, rgb(74,50,48));"></div>
         <div style="position: absolute; left: 0; right: 0; top: 0; height: 30%; background: repeating-linear-gradient(rgba(236,232,224,.94) 0 9px, rgba(196,190,180,.94) 9px 12px); border-radius: 14px 14px 0 0; box-shadow: 0 14px 22px -10px rgba(0,0,0,.6);"></div>
         <div style="position: absolute; left: 50%; top: 30%; width: 96px; height: 26px; margin: -13px 0 0 -48px; border-radius: 13px; background: #f1eee8; box-shadow: 0 4px 14px rgba(0,0,0,.4);"></div>
         <div style="position: absolute; left: 50%; top: 30%; width: 34px; height: 3px; margin: -1px 0 0 -17px; border-radius: 2px; background: rgba(42,28,7,.35);"></div>
       </div>
-      <div style="display: flex; flex-direction: column; gap: 12px; width: 118px; padding-top: 6px;">
-        <span class="lbl">Open</span>
-        <span style="font-size: 15px; color: var(--ink-2);">100%</span>
-        <span style="flex: 1 1 0;"></span>
-        <span style="font-size: 15px; color: var(--lamp); font-weight: 500;">70% &mdash; here</span>
-        <span style="flex: 1 1 0;"></span>
-        <span style="font-size: 15px; color: var(--ink-2);">Shut</span>
+      <div style="position: relative; width: 104px; height: 340px; flex: 0 0 auto;">
+        <div style="position: absolute; left: 0; top: 6px; bottom: 6px; width: 1px; background: var(--edge-hi);"></div>
+        <div style="position: absolute; left: 0; top: 6px; width: 13px; height: 1px; background: var(--edge-hi);"></div>
+        <div style="position: absolute; left: 0; bottom: 6px; width: 13px; height: 1px; background: var(--edge-hi);"></div>
+        <div style="position: absolute; left: 22px; top: -2px; font-size: 14px; color: var(--muted);">Wide open</div>
+        <div style="position: absolute; left: 22px; bottom: -2px; font-size: 14px; color: var(--muted);">Shut</div>
+        <div style="position: absolute; left: -5px; top: 30%; width: 11px; height: 11px; margin-top: -5px; border-radius: 50%; background: var(--lamp);"></div>
+        <div style="position: absolute; left: 22px; top: 30%; margin-top: -12px; font-size: 17px; font-weight: 500; color: var(--lamp);">70%</div>
       </div>
-      <div style="flex: 1 1 0; display: flex; flex-direction: column; gap: 13px;">
-        <div class="ctl wide" style="width: 100%; height: 76px; justify-content: flex-start; padding: 0 24px; font-size: 18px;"><svg class="ic" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.5v13M5.5 12h13"/></svg><span>All the way up</span></div>
-        <div class="ctl wide" style="width: 100%; height: 76px; justify-content: flex-start; padding: 0 24px; font-size: 18px;"><svg class="ic" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg><span>Stop it there</span></div>
-        <div class="ctl wide" style="width: 100%; height: 76px; justify-content: flex-start; padding: 0 24px; font-size: 18px;"><svg class="ic" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 12h13"/></svg><span>All the way down</span></div>
+      <div style="flex: 1 1 0; display: flex; flex-direction: column; gap: 14px;">
+        <div class="ctl wide" style="width: 100%; height: 82px; justify-content: flex-start; padding: 0 26px; font-size: 18px; white-space: nowrap;"><svg class="ic" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.5v13M5.5 12h13"/></svg><span>Right up</span></div>
+        <div class="ctl wide" style="width: 100%; height: 82px; justify-content: flex-start; padding: 0 26px; font-size: 18px; white-space: nowrap;"><svg class="ic" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg><span>Stop there</span></div>
+        <div class="ctl wide" style="width: 100%; height: 82px; justify-content: flex-start; padding: 0 26px; font-size: 18px; white-space: nowrap;"><svg class="ic" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 12h13"/></svg><span>Right down</span></div>
       </div>
     </div>
   </div>
-    <div style="position: absolute; right: 26px; bottom: 22px; display: inline-flex; align-items: center; gap: 9px; height: 30px; padding: 0 14px; border-radius: 999px; border: 1px dashed rgba(233,184,114,.5); font-size: 12.5px; letter-spacing: .04em; color: rgba(233,184,114,.9);">
-      <span style="width: 5px; height: 5px; border-radius: 50%; background: rgba(233,184,114,.9);"></span>needs: cover set_position and stop
+    <div style="position: absolute; right: 26px; bottom: 22px; display: inline-flex; align-items: center; gap: 9px; height: 30px; padding: 0 14px; border-radius: 999px; border: 1px solid rgba(116,198,157,.45); font-size: 12.5px; letter-spacing: .04em; color: rgba(116,198,157,.95);">
+      <span style="width: 5px; height: 5px; border-radius: 50%; background: rgba(116,198,157,.95);"></span>built: cover set_position and stop
     </div>
   <div class="day-line" style="top: 542px;"></div>
   <div style="position: absolute; left: 48px; top: 568px; display: flex; align-items: center; gap: 12px;">

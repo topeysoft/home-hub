@@ -1,0 +1,227 @@
+{
+  "artboards": [
+    {
+      "file": "Today.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Today \u2014 what a long press opens now",
+      "page": "page-1"
+    },
+    {
+      "file": "Anatomy.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "The grammar \u2014 one pane, five slots",
+      "page": "page-1"
+    },
+    {
+      "file": "Main.dc.html",
+      "x": 3120,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "The light \u2014 the archetype",
+      "page": "page-1"
+    },
+    {
+      "file": "Media.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Media \u2014 what is playing",
+      "page": "page-2"
+    },
+    {
+      "file": "Climate.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Climate \u2014 the dial",
+      "page": "page-2"
+    },
+    {
+      "file": "Cover.dc.html",
+      "x": 3120,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Cover \u2014 the blind is the control",
+      "page": "page-2"
+    },
+    {
+      "file": "Lock.dc.html",
+      "x": 0,
+      "y": 1400,
+      "w": 1440,
+      "h": 900,
+      "title": "Lock \u2014 the one that is not a tap",
+      "page": "page-2"
+    },
+    {
+      "file": "Camera.dc.html",
+      "x": 1560,
+      "y": 1400,
+      "w": 1440,
+      "h": 900,
+      "title": "Camera \u2014 the picture is the pane",
+      "page": "page-2"
+    },
+    {
+      "file": "Simple.dc.html",
+      "x": 3120,
+      "y": 1400,
+      "w": 1440,
+      "h": 900,
+      "title": "Plug, fan, mower \u2014 a single verb",
+      "page": "page-2"
+    },
+    {
+      "file": "Quiet.dc.html",
+      "x": 0,
+      "y": 2800,
+      "w": 1440,
+      "h": 900,
+      "title": "Motion, thermometer, door \u2014 the ones that only watch",
+      "page": "page-2"
+    },
+    {
+      "file": "Phone.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "The light, at 390\u00d7844",
+      "page": "page-3"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "why",
+      "x": -820,
+      "y": 0,
+      "w": 520,
+      "text": "WHY THIS EXISTS\n\n\"The device detail views are still very basic.\" They are, and it is measurable rather than a matter of taste.\n\nHeld a tile of each of the nine kinds in the running panel at 1440x900 against the mock house, and read the pane off the DOM. Every kind came back identical: the pane at 0, 225, 1440 x 675; the name at 49, 295; the reading at 49, 475; one fact at most; two round buttons; a 260px watermark of the kind's own icon in the bottom right, and between 131 and 349px of pane with nothing in it at all.\n\nWorse than empty, in four cases it is wrong. Opened.vue's one big control calls act(id, 'on'), and the brain's SERVICE table has no ('lock','on'), ('cover','on'), ('camera','on') or ('vacuum','on'). Press the amber button on a locked front door and the house answers 400 and throws an error across the screen. The pane also prints the raw state where it has no phrase for it -- \"locked\", \"recording\", \"docked\", lower-case, straight out of Home Assistant.\n\nAnd three kinds cannot be opened at all: motion, a thermometer and a door contact are PASSIVE, so the room screen gives them no tile, so there is nothing to press and hold. They are the things the house knows the most about.\n\nTHE PROPOSAL, IN ONE LINE\nThe pane keeps its rise, its recede and its four beats. The right two-thirds -- the watermark -- becomes the INSTRUMENT: the one control a tile is too small for, drawn in the kind's own terms. The foot of every pane becomes what this thing has done today.",
+      "page": "page-1"
+    },
+    {
+      "id": "built",
+      "x": -820,
+      "y": 760,
+      "w": 520,
+      "page": "page-1",
+      "text": "WHAT SHIPPED, 13 SEPTEMBER\n\nThe boards were built rather than argued with, and the panel now does what they drew. What changed in the building:\n\nTHE INSTRUMENT IS THE OBJECT. The 260px watermark used to travel further than the pane and settle after it -- the move that makes a pane read as a thing rather than a picture. The instrument inherited that beat instead of the four the body uses, under both faces. e2e/face.spec.ts watches for it.\n\nTHE CAMERA LOST ITS SIGHTINGS ROW. Drawn here under the picture; in the running pane it said the same four times the foot of every pane already says. The picture takes the whole instrument and the times live along the foot with everything else. A still kept per sighting is the one thing on these boards the house still cannot do.\n\nTHE ONES THAT ONLY WATCH ARE OPENED BY THEIR READING. The open question on the Quiet board was whether a passive thing gets a tile. It does not: the room header already draws it as a reading, and a reading is now a button that can be held like any tile. No room layout moved.\n\nWHAT IS ON THE SCREEN AND NOT ON THESE BOARDS: a plug's timer chips also cancel (\"Leave it on\"), and a cover with no position -- a garage door -- falls back to the three buttons at full width, as the Cover note asked for.\n\nThe panes are app/src/panes/, the words they use are app/src/pane.ts, and both are tested: app/tests/pane.test.ts for the words, app/e2e/pane.spec.ts for what the house is actually told when a hand uses one."
+    },
+    {
+      "id": "today-note",
+      "x": 0,
+      "y": 960,
+      "w": 700,
+      "text": "TODAY\n\nNot a proposal: a trace. The television is drawn at 0.34 of full size with what was measured marked on it; the table beside it is what each kind's pane actually said, string for string, on the evening of 13 September against app/mock/brain.mjs.\n\nThe four small panes along the foot are the same pane again, four more times. That is the finding: nine kinds, one layout. A light, a mower and a front door are not the same kind of thing, and the pane treats them as though they were.",
+      "page": "page-1"
+    },
+    {
+      "id": "anatomy-note",
+      "x": 1560,
+      "y": 960,
+      "w": 700,
+      "text": "THE GRAMMAR\n\nSix slots, and only the fifth is new. 1 to 4 are what the pane already draws, in the places it already draws them. 5 is the watermark's space, spent on the one control the tile could not carry. 6 is /events?subject=<id>, which the brain already answers -- app/src/api.ts just does not pass the argument yet.\n\nWHAT THIS BUYS, AND WHAT IT COSTS\n\nEvery kind is the same object with a different instrument, so nothing new has to be learned to go from a lamp to a thermostat. The pane stops being a place you visit and find nothing.\n\nThe cost is honest: nine instruments to draw and keep, against one layout today. The right-hand column of the table is the whole engineering bill -- four actions in SERVICE (cover set_position and stop, fan percentage, vacuum start and return, a plug timer), one subject filter, and a tile for the three kinds that only watch.",
+      "page": "page-1"
+    },
+    {
+      "id": "light-note",
+      "x": 3120,
+      "y": 960,
+      "w": 700,
+      "text": "THE LIGHT -- THE ARCHETYPE\n\nEvery other board is this one with a different instrument, so it is the one to argue with first.\n\nA light has two physical properties and one habit. The two columns are the properties, at 168 and 126 wide and 312 tall -- a hand finds them from across a room without aiming, which a 4px CSS range input never will. The three cards are the habit: Reading, Evening, Night are each one brightness_pct the house can already send, so somebody who will never drag anything still gets the lamp they want. They are also where a house learns: what the three are should eventually come from what this lamp is actually set to, not from a designer.\n\nOPEN QUESTION: colour. The mock house has one hs lamp (Hue color lamp 1, still in New devices) and the model keeps rgb_color and supported_color_modes. A colour lamp needs a third column, and a wheel is the wrong instrument for a wall panel -- a row of eight chosen colours is probably right. Not drawn here.",
+      "page": "page-1"
+    },
+    {
+      "id": "media-note",
+      "x": 0,
+      "y": 960,
+      "w": 700,
+      "text": "MEDIA\n\nThe payload already carries media_title, media_artist, app_name, entity_picture, volume_level, and -- in the mock -- media_position and media_duration. The pane today keeps one of them and draws a speaker outline.\n\nSo this instrument is not new work in the brain at all: it is the artwork at 300px, where it is up to, the transport, and the volume. The only thing worth arguing about is what the READING should be. Here it is the show's title in serif, on the grounds that \"The Bear\" is the one thing worth saying large; the state (\"Playing\") moves into the line under it.\n\nA SPEAKER IS A DIFFERENT PANE. The Sonos in the same room has no artwork worth 300px and does have the sound chips the tile already offers (White noise, Rain, Waves). Same five slots, a narrower instrument -- not drawn here, and worth its own board before this ships.",
+      "page": "page-2"
+    },
+    {
+      "id": "climate-note",
+      "x": 1560,
+      "y": 960,
+      "w": 700,
+      "text": "CLIMATE\n\nThe one kind whose instrument is a number you SET rather than a level you drag, so it is the one place a dial earns its keep: the arc runs 60 to 86 over 270 degrees, the white handle is what you asked for, the blue is the gap the box is closing.\n\nEverything here already exists in the brain: ('climate','set'), ('climate','mode'), the fan timer at POST /devices/{id}/fan, and the sense-from-another-sensor at POST /devices/{id}/sense. This board is the clearest case that the pane, not the house, is what is thin -- the hub can do all of this today and the panel offers none of it.\n\nThe plain-language mode labels (Warm it / Cool it / Either / Off) are deliberate: heat, cool, heat_cool and off are Home Assistant's words, not a family's.",
+      "page": "page-2"
+    },
+    {
+      "id": "cover-note",
+      "x": 3120,
+      "y": 960,
+      "w": 700,
+      "text": "COVER\n\nThe blind is the control: drag its edge to where you want it, against the sky the panel already knows the colour of. The three buttons are for when you do not want to aim, and Stop there is the one a blind genuinely needs.\n\nNEEDS THE BRAIN: SERVICE has ('cover','open') and ('cover','close') only. set_position and stop are two rows in that table and two lines in the adapter.\n\nA GARAGE DOOR IS NOT A BLIND. The mock house has one (Garage door, closed, no position). Where there is no current_position there is nothing to drag, and the pane should fall back to the two buttons at full width rather than draw a blind that cannot move. Worth drawing before this ships.",
+      "page": "page-2"
+    },
+    {
+      "id": "lock-note",
+      "x": 0,
+      "y": 2360,
+      "w": 700,
+      "text": "LOCK\n\nThe only pane whose main control is not a tap, and the reason is the one rule this house keeps: nothing that matters happens on a brush of a sleeve. The slide is carried the whole way or nothing changes, and what you were looking at stays exactly where it was.\n\nNo new work in the brain -- ('lock','lock') and ('lock','unlock') both exist. What has to go is the power button Opened.vue puts here today, which sends 'on' and gets a 400 back.\n\n\"Let someone in\" is drawn because the house already knows about phones and people, but it is a promise this board cannot keep on its own -- it needs the pairing work to mean anything. Treat it as a placeholder.",
+      "page": "page-2"
+    },
+    {
+      "id": "camera-note",
+      "x": 1560,
+      "y": 2360,
+      "w": 700,
+      "text": "CAMERA\n\nThe only kind where the instrument is not a control: the picture is what you came for, so the picture is the pane. The panel already fetches the still (GET /devices/{id}/image) and the viewer already relays a live stream; the pane makes you press Watch before it shows you anything.\n\nThe floodlight verb is real: the model puts the camera's own lamp on it as attrs.light (the Backyard cam's is y1l), and the camera viewer already offers it.\n\nNEEDS THE BRAIN: the strip of moments. The hub logs every sighting in its event log but keeps no picture of one, so \"when it saw something\" is currently four times and four empty frames. Either keep one still per sighting, or drop the frames and keep the times.",
+      "page": "page-2"
+    },
+    {
+      "id": "simple-note",
+      "x": 3120,
+      "y": 2360,
+      "w": 700,
+      "text": "PLUG, FAN, MOWER\n\nThree kinds whose whole instrument is one control, drawn on one sheet so the family can be judged at once rather than three boards saying the same thing.\n\nThe fan's three named speeds are a position, not a shortcut: nobody standing at a wall panel picks 37 per cent. The plug's timer is the one thing a coffee maker or a heater actually wants. The mower has nowhere to go but out and back.\n\nNEEDS THE BRAIN, all small: fan percentage, a plug timer (on for N minutes -- the thermostat's fan timer is the same shape and already exists), and vacuum start/return, which SERVICE has no rows for at all.",
+      "page": "page-2"
+    },
+    {
+      "id": "quiet-note",
+      "x": 0,
+      "y": 3760,
+      "w": 700,
+      "text": "MOTION, A THERMOMETER, A DOOR CONTACT\n\nThe gap this canvas is least comfortable about. store.ts marks these PASSIVE, the room screen leaves them out, and a thing with no tile cannot be held -- so the three kinds the house knows the most about are the three you cannot look at.\n\nThey have no verb, so their instrument is the only thing they have: the day they have had. All three strips come from the event log the brain already keeps and already filters by subject.\n\nThe middle one is not decoration. The thermostat next door can be told to go by this reading instead of its own (POST /devices/{id}/sense, already built), so the thermometer's pane is where that decision actually belongs.\n\nTHE DECISION THIS NEEDS: whether a passive thing gets a tile in the room (and changes what the Rooms tab looks like), or whether these panes are reached some other way -- from the room's Why sheet, or from the thermostat that is sensing from them.",
+      "page": "page-2"
+    },
+    {
+      "id": "phone-note",
+      "x": 0,
+      "y": 960,
+      "w": 520,
+      "text": "THE SAME PANE, FOLDED\n\nThe panel's own phone rules, unchanged: the pane starts at 16vh rather than 25, the body pads 30/24, the name drops to 34px and the reading to 44.\n\nThe instrument turns on its side -- brightness and warmth become full-width bars, the three levels become a row -- and the day strip becomes one line. Nothing is dropped, which is the test: if a kind's instrument cannot fold into 342px, it is too clever for this house.",
+      "page": "page-3"
+    }
+  ],
+  "launch": {
+    "view": "canvas",
+    "page": "page-1"
+  },
+  "pages": [
+    {
+      "id": "page-1",
+      "name": "The case"
+    },
+    {
+      "id": "page-2",
+      "name": "Each kind"
+    },
+    {
+      "id": "page-3",
+      "name": "On a phone"
+    }
+  ]
+}

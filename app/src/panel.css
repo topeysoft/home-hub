@@ -153,9 +153,19 @@ input:focus-visible {
 .shell.resting .rail,
 .shell.resting .stage,
 .shell.resting .topbar,
-.shell.resting .bottombar {
+.shell.resting .bottombar,
+/* and anything held open in front of the house: a device, or a phone asking to join. The resting
+   screen is the sky and four lines of type, and it is drawn ABOVE this layer -- so a pane left
+   open at bedtime used to sit there fully lit with the clock floating over it, which reads as a
+   rendering fault rather than as a house at rest. It goes with the room behind it. */
+.shell.resting .opened {
   opacity: 0;
   transition: opacity 0.9s var(--ease);
+}
+/* and takes no touches while it is invisible: the first press on a resting screen is the one that
+   wakes it, and it must not also land on the veil of a pane nobody can see */
+.shell.resting .opened {
+  pointer-events: none;
 }
 .rail,
 .stage,
@@ -5641,66 +5651,6 @@ select.input {
     margin-left: 0 !important;
   }
 }
-/* the dimmer: the one control the tile is too small to carry properly */
-.opened-dim {
-  margin-top: 34px;
-  max-width: 520px;
-}
-.opened-dim input {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 100%;
-  height: 56px;
-  margin: 0;
-  background: transparent;
-}
-.opened-dim input::-webkit-slider-runnable-track {
-  height: 56px;
-  border-radius: 28px;
-  border: 1px solid var(--edge);
-  background: linear-gradient(
-    90deg,
-    rgba(233, 184, 114, 0.55),
-    var(--lamp) var(--dim, 0%),
-    var(--surface-hi) var(--dim, 0%)
-  );
-}
-.opened-dim input::-moz-range-track {
-  height: 56px;
-  border-radius: 28px;
-  border: 1px solid var(--edge);
-  background: linear-gradient(
-    90deg,
-    rgba(233, 184, 114, 0.55),
-    var(--lamp) var(--dim, 0%),
-    var(--surface-hi) var(--dim, 0%)
-  );
-}
-.opened-dim input::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 40px;
-  height: 40px;
-  margin-top: 8px;
-  border-radius: 50%;
-  background: var(--ink);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
-}
-.opened-dim input::-moz-range-thumb {
-  width: 40px;
-  height: 40px;
-  border: 0;
-  border-radius: 50%;
-  background: var(--ink);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
-}
-.opened-dim input:disabled {
-  opacity: 0.45;
-}
-.opened-dim-hint {
-  margin: 12px 2px 0;
-  font-size: 14.5px;
-  color: var(--ink-2);
-}
 /* a held card is ours, not the browser's: no callout, no selection, no image drag */
 .tile,
 .onnow-chip,
@@ -7956,4 +7906,1294 @@ select.input {
   .cameras-all.go {
     transition: opacity 180ms var(--ease) !important;
   }
+}
+
+/* ---------- the instrument: the right-hand half of an opened device ----------
+ *
+ * What used to be here was a 260px watermark of the device's own icon and
+ * between 131 and 349px of empty pane, measured at 1440x900 with every kind
+ * held in turn. The pane now spends that half on the one control a tile is too
+ * small for, and grows a foot that says what this thing did today.
+ *
+ * Everything below is scoped to `.pane-body`, because the ask-pane borrows the
+ * opened pane whole and must keep the single column it was drawn with.
+ * design/device holds the boards.
+ */
+.opened-panel:has(.pane-body) {
+  display: flex;
+  flex-direction: column;
+}
+.pane-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  /* a pane taller than the screen scrolls rather than printing itself over its own foot; on a wall
+     nothing reaches this, on a phone everything does */
+  overflow-y: auto;
+  scrollbar-width: none;
+  display: grid;
+  grid-template-columns: minmax(0, 560px) minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
+  gap: 34px;
+  max-width: none;
+  padding: 44px 48px 0;
+  min-height: 0;
+}
+.pane-said {
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
+}
+.pane-facts {
+  grid-column: 1;
+  grid-row: 2;
+  align-self: start;
+}
+.pane-why {
+  margin: 18px 0 0;
+  font-size: 15.5px;
+  line-height: 1.5;
+  color: var(--ink-2);
+  max-width: 30em;
+}
+/* The instrument is the OBJECT of this pane: it travels further than the pane did and settles
+   after it has landed, which is the move the 260px watermark used to make and the reason a pane
+   reads as a thing rather than a picture. It keeps that beat instead of the body's four, so it
+   carries no .opened-step. Glass has its own further, slower version below. */
+.pane-rig {
+  opacity: 0;
+  transform: translateX(140px);
+  transition:
+    transform 0.24s var(--ease),
+    opacity 0.24s ease;
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  min-width: 0;
+  /* clear of the close button, which sits at 26/30 and would otherwise land on this corner */
+  margin-top: 28px;
+  border-radius: 32px;
+  border: 1px solid var(--edge);
+  background: rgba(255, 255, 255, 0.035);
+  padding: 26px;
+  display: flex;
+  min-height: 340px;
+  max-height: 100%;
+  overflow: hidden;
+}
+.pane-rig > * {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.opened.shown .pane-rig {
+  opacity: 1;
+  transform: translateX(0);
+  transition:
+    transform 0.52s var(--ease) 0.08s,
+    opacity 0.3s ease 0.08s;
+}
+[data-face='glass'] .pane-rig {
+  transform: translateX(180px) scale(1.04);
+  transition:
+    transform 300ms var(--pane-out),
+    opacity 240ms ease;
+}
+[data-face='glass'] .opened.shown .pane-rig {
+  transform: none;
+  transition:
+    transform 700ms var(--pane-in) 28ms,
+    opacity 300ms ease 28ms;
+}
+
+/* the foot: the last few things this one device did, from /events?subject= */
+.pane-day {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: baseline;
+  gap: 40px;
+  margin: 22px 48px 30px;
+  padding-top: 18px;
+  border-top: 1px solid var(--edge);
+}
+.pane-day-head {
+  flex: 0 0 auto;
+  margin: 0;
+}
+.pane-day-row {
+  display: flex;
+  gap: 40px;
+  min-width: 0;
+  overflow: hidden;
+}
+.pane-moment {
+  min-width: 0;
+}
+.pane-moment-t {
+  font-size: 13px;
+  color: var(--muted);
+}
+.pane-moment-x {
+  margin-top: 3px;
+  font-size: 15px;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+/* a verb that is on without being the primary one: a camera's floodlight */
+.opened-acts .ctl.lit {
+  background: rgba(233, 184, 114, 0.18);
+  color: var(--lamp);
+}
+
+/* ---- a control's own children must not take the gesture off it ----
+   `touch-action` does not inherit, so a finger that lands on the knob of a slider, on the lit part
+   of a dimmer, or on the blind itself got the browser's pan gesture instead of the control's drag:
+   the pane scrolled and nothing moved. Every one of these is paint rather than a control, so it
+   takes no pointer at all, and anything nested that IS a control (the dial's two buttons) keeps its
+   own. This is the difference between a mouse pass and a finger pass. */
+.rig-col *,
+.rig-slider *,
+.rig-window *,
+.rig-track *,
+.rig-dial * {
+  touch-action: none;
+}
+.rig-fill,
+.rig-mark,
+.rig-end,
+.rig-handle,
+.rig-slider-fill,
+.rig-slider-knob,
+.rig-window-sky,
+.rig-blind,
+.rig-blind-grip,
+.rig-track-fill,
+.rig-track-knob,
+.rig-track-words,
+.rig-ring,
+.rig-dial-face {
+  pointer-events: none;
+}
+
+/* ---- the shared furniture of an instrument ---- */
+.rig {
+  display: flex;
+  gap: 24px;
+  width: 100%;
+  min-width: 0;
+}
+.rig-lbl {
+  font-size: 12.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.rig-btn,
+.rig-big {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  border-radius: 22px;
+  border: 1px solid var(--edge);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--ink);
+  font: inherit;
+  font-size: 17px;
+  padding: 0 24px;
+  height: 76px;
+  cursor: pointer;
+  transition: background 0.18s var(--ease);
+}
+.rig-big {
+  justify-content: center;
+  height: 118px;
+  font-size: 19px;
+  border-radius: 26px;
+}
+.rig-btn:hover,
+.rig-big:hover {
+  background: rgba(255, 255, 255, 0.09);
+}
+.rig-btn:disabled,
+.rig-big:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.rig-big.on {
+  background: rgba(233, 184, 114, 0.14);
+  border-color: rgba(233, 184, 114, 0.5);
+}
+.rig-btn.wide {
+  justify-content: center;
+}
+.rig-big,
+.rig-btn.wide,
+.rig-speed,
+.rig-row-acts .clim-chip {
+  text-align: center;
+}
+.rig-empty {
+  margin: 14px 0 0;
+  font-size: 14.5px;
+  color: var(--muted);
+  max-width: 34em;
+}
+.rig-hint {
+  font-size: 15px;
+  color: var(--ink-2);
+}
+
+/* ---- a light: two columns and three levels ---- */
+.rig-light {
+  gap: 26px;
+}
+.rig-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  flex: 0 0 auto;
+}
+.rig-col {
+  position: relative;
+  width: 168px;
+  flex: 1 1 auto;
+  min-height: 200px;
+  border-radius: 84px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--edge);
+  overflow: hidden;
+  touch-action: none;
+  cursor: grab;
+}
+.rig-col.held {
+  cursor: grabbing;
+}
+.rig-col.dead {
+  opacity: 0.45;
+}
+.rig-fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(rgba(243, 203, 143, 0.95), rgba(196, 145, 72, 0.9));
+  transition: height 0.12s linear;
+}
+.rig-mark {
+  position: absolute;
+  left: 34px;
+  right: 34px;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.6);
+  transform: translateY(12px);
+}
+.rig-end {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: grid;
+  place-items: center;
+  color: rgba(255, 255, 255, 0.3);
+  pointer-events: none;
+}
+.rig-end.top {
+  top: 22px;
+}
+.rig-end.bottom {
+  bottom: 20px;
+}
+.rig-end.bottom.lit {
+  color: rgba(42, 28, 7, 0.5);
+}
+.rig-col.warmth {
+  width: 126px;
+  border-radius: 63px;
+  background: linear-gradient(#dae7ff, #f6ecdc 44%, #f2c887 74%, #e79a4a);
+  overflow: visible;
+}
+.rig-handle {
+  position: absolute;
+  left: -7px;
+  right: -7px;
+  height: 44px;
+  margin-bottom: -22px;
+  border-radius: 24px;
+  border: 2.5px solid rgba(255, 255, 255, 0.94);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.38);
+  display: grid;
+  place-items: center;
+}
+.rig-handle i {
+  font-style: normal;
+  font-size: 14.5px;
+  font-weight: 500;
+  color: #2a1c07;
+}
+.rig-levels {
+  flex: 1 1 0;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  justify-content: center;
+}
+.rig-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 84px;
+  padding: 0 22px;
+  border-radius: 24px;
+  border: 1px solid var(--edge);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--ink);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  transition: background 0.18s var(--ease);
+}
+.rig-card:hover {
+  background: rgba(255, 255, 255, 0.09);
+}
+.rig-card.on {
+  border-color: rgba(233, 184, 114, 0.55);
+  background: rgba(233, 184, 114, 0.14);
+}
+.rig-card:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.rig-card-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--lamp);
+  flex: 0 0 auto;
+}
+.rig-card-name {
+  display: block;
+  font-size: 19px;
+}
+.rig-card-sub {
+  display: block;
+  margin-top: 2px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.rig-card.on .rig-card-sub {
+  color: var(--ink-2);
+}
+
+/* ---- what is playing ---- */
+.rig-media {
+  gap: 28px;
+}
+.rig-art {
+  flex: 0 0 auto;
+  align-self: center;
+  width: 300px;
+  max-width: 40%;
+  aspect-ratio: 1;
+  border-radius: 20px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.05);
+  display: grid;
+  place-items: center;
+}
+.rig-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.rig-play {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 20px;
+}
+.rig-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.rig-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  font-size: 13.5px;
+  color: var(--ink-2);
+  background: var(--surface-hi);
+  white-space: nowrap;
+  max-width: 18em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rig-chip.app {
+  background: rgba(122, 176, 232, 0.16);
+  color: #cfe3fa;
+}
+.rig-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.16);
+  overflow: hidden;
+}
+.rig-bar i {
+  display: block;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--lamp);
+}
+.rig-times {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 11px;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.rig-transport {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.opened .ctl.big {
+  width: 84px;
+  height: 84px;
+}
+.rig-transport .ctl.primary {
+  background: var(--lamp);
+  color: var(--lamp-ink);
+}
+.rig-volume {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  color: var(--ink-2);
+}
+.rig-slider {
+  position: relative;
+  flex: 1 1 0;
+  height: 44px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--edge);
+  touch-action: none;
+  cursor: pointer;
+}
+.rig-slider-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.2);
+}
+.rig-slider-knob {
+  position: absolute;
+  top: 5px;
+  width: 32px;
+  height: 32px;
+  margin-left: -16px;
+  border-radius: 50%;
+  background: var(--ink);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+}
+.rig-volume-n {
+  width: 3.2em;
+  text-align: right;
+  font-size: 15px;
+}
+.rig-sounds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* ---- the dial ---- */
+.rig-climate {
+  gap: 30px;
+  align-items: center;
+}
+.rig-dial {
+  position: relative;
+  flex: 0 0 auto;
+  width: 330px;
+  height: 330px;
+  /* the ring is dragged, so the browser must not read the drag as a scroll */
+  touch-action: none;
+  cursor: grab;
+}
+.rig-dial.turning {
+  cursor: grabbing;
+}
+.rig-dial.still {
+  cursor: default;
+}
+/* while a finger is on it the handle stops easing: it should sit under the thumb, not behind it */
+.rig-dial.turning circle {
+  transition: none;
+}
+.rig-ring {
+  width: 100%;
+  height: 100%;
+}
+.rig-dial-face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  text-align: center;
+  padding: 0 16%;
+}
+.rig-dial-n {
+  font-size: 78px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.rig-dial-n i {
+  font-style: normal;
+  font-size: 32px;
+  vertical-align: super;
+}
+.rig-dial-doing {
+  margin-top: 16px;
+  font-size: 15px;
+  color: var(--ink-2);
+}
+.rig-dial-btn {
+  position: absolute;
+  bottom: 0;
+  width: 68px;
+  height: 68px;
+}
+.rig-dial-btn.low {
+  left: 0;
+}
+.rig-dial-btn.high {
+  right: 0;
+}
+.rig-side {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  justify-content: center;
+}
+.rig-modes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+.rig-mode {
+  height: 48px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: var(--surface-hi);
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 15.5px;
+  /* a chip, not a row: `button { text-align: left }` at the top of this file governs every button in
+     the panel, and these are the artboard's centred pills */
+  text-align: center;
+  cursor: pointer;
+  transition: background 0.15s var(--ease);
+}
+.rig-mode:hover {
+  background: var(--surface-press);
+}
+.rig-mode.on {
+  border-color: rgba(122, 176, 232, 0.45);
+}
+.rig-mode.on {
+  background: rgba(122, 176, 232, 0.22);
+  color: #d6e8fb;
+}
+.rig-row {
+  /* one surface with the choice inside it, the way the board drew the fan and the sensor: a loose
+     label above loose chips read as a settings list rather than as part of the dial */
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 62px;
+  padding: 10px 16px;
+  border-radius: 20px;
+  border: 1px solid var(--edge);
+  background: rgba(255, 255, 255, 0.05);
+}
+.rig-row-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+  font-size: 15.5px;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.rig-row-acts {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 7px;
+}
+.rig-row-acts .clim-chip {
+  padding: 0 14px;
+}
+
+/* ---- a blind, which is its own control ---- */
+.rig-cover {
+  gap: 22px;
+  align-items: stretch;
+}
+.rig-window {
+  position: relative;
+  flex: 0 0 auto;
+  width: 268px;
+  max-width: 34%;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid var(--edge-hi);
+  touch-action: none;
+  cursor: grab;
+}
+.rig-window-sky {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(rgb(46, 44, 74), rgb(120, 74, 62) 72%, rgb(74, 50, 48));
+}
+.rig-blind {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  background: repeating-linear-gradient(
+    rgba(236, 232, 224, 0.94) 0 9px,
+    rgba(196, 190, 180, 0.94) 9px 12px
+  );
+  box-shadow: 0 14px 22px -10px rgba(0, 0, 0, 0.6);
+  transition: height 0.12s linear;
+}
+.rig-blind-grip {
+  position: absolute;
+  left: 50%;
+  bottom: -13px;
+  width: 96px;
+  height: 26px;
+  margin-left: -48px;
+  border-radius: 13px;
+  background: #f1eee8;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+.rig-blind-grip i {
+  width: 34px;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(42, 28, 7, 0.35);
+}
+.rig-scale {
+  position: relative;
+  flex: 0 0 auto;
+  width: 104px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.rig-scale-line {
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 1px;
+  background: var(--edge-hi);
+}
+.rig-scale-top {
+  position: absolute;
+  left: 20px;
+  top: 0;
+}
+.rig-scale-bottom {
+  position: absolute;
+  left: 20px;
+  bottom: 0;
+}
+.rig-scale-now {
+  position: absolute;
+  left: 20px;
+  font-size: 17px;
+  font-weight: 500;
+  color: var(--lamp);
+  transform: translateY(50%);
+}
+.rig-scale-now i {
+  position: absolute;
+  left: -25px;
+  top: 50%;
+  width: 11px;
+  height: 11px;
+  margin-top: -5px;
+  border-radius: 50%;
+  background: var(--lamp);
+}
+.rig-cover-acts {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  justify-content: center;
+}
+.rig-cover-acts .rig-btn {
+  height: 82px;
+}
+
+/* ---- a door, which does not open on a tap ---- */
+.rig-lock {
+  gap: 30px;
+  align-items: center;
+}
+.rig-door {
+  position: relative;
+  flex: 0 0 auto;
+  width: 216px;
+  height: 100%;
+  min-height: 240px;
+  max-height: 330px;
+  border-radius: 10px 10px 4px 4px;
+  border: 1px solid var(--edge-hi);
+  background: linear-gradient(100deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.05) 62%);
+  box-shadow: inset -18px 0 28px -26px rgba(0, 0, 0, 0.8);
+}
+.rig-door-panel {
+  position: absolute;
+  left: 20px;
+  right: 44px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.03);
+}
+.rig-door-panel.top {
+  top: 20px;
+  height: 40%;
+}
+.rig-door-panel.bottom {
+  bottom: 20px;
+  height: 37%;
+}
+.rig-door-knob {
+  position: absolute;
+  right: 18px;
+  top: 55%;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.45);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+.rig-jamb {
+  position: absolute;
+  right: -14px;
+  top: 0;
+  bottom: 0;
+  width: 12px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.09);
+}
+.rig-bolt {
+  position: absolute;
+  right: -12px;
+  top: 44%;
+  width: 34px;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--live);
+  box-shadow: 0 0 18px rgba(116, 198, 157, 0.45);
+  opacity: 0;
+  transform: translateX(-14px);
+  transition:
+    transform 0.3s var(--ease),
+    opacity 0.2s var(--ease);
+}
+.rig-door.locked .rig-bolt {
+  opacity: 1;
+  transform: translateX(0);
+}
+.rig-lock-side {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.rig-track {
+  position: relative;
+  height: 104px;
+  margin-top: 14px;
+  border-radius: 52px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--edge);
+  overflow: hidden;
+  touch-action: none;
+  cursor: grab;
+}
+.rig-track.dead {
+  opacity: 0.45;
+  cursor: default;
+}
+.rig-track-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: rgba(116, 198, 157, 0.16);
+}
+.rig-track-knob {
+  position: absolute;
+  top: 8px;
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: var(--live);
+  color: #0f2419;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+.rig-track-knob.open {
+  background: var(--lamp);
+  color: var(--lamp-ink);
+}
+.rig-track-words {
+  position: absolute;
+  left: 116px;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  font-size: 18px;
+  color: var(--ink-2);
+}
+.rig-note {
+  margin: 16px 0 0;
+  font-size: 14.5px;
+  color: var(--muted);
+}
+.rig-lock-acts {
+  display: flex;
+  gap: 12px;
+  margin-top: 26px;
+}
+
+/* ---- a camera, whose instrument is the picture ---- */
+.rig-camera {
+  flex-direction: column;
+  gap: 18px;
+}
+.rig-still {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 220px;
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid var(--edge);
+  background: #10131a;
+  padding: 0;
+  cursor: pointer;
+}
+.rig-still img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.rig-still-none {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 15px;
+}
+.rig-still-tag {
+  position: absolute;
+  left: 16px;
+  top: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: rgba(12, 14, 18, 0.62);
+  font-size: 13.5px;
+  color: var(--ink);
+}
+.rig-still-tag i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+.rig-still-tag.live i {
+  background: var(--danger);
+}
+.rig-still-watch {
+  position: absolute;
+  right: 14px;
+  bottom: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  height: 36px;
+  padding: 0 15px;
+  border-radius: 999px;
+  background: rgba(12, 14, 18, 0.62);
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.rig-sightings {
+  flex: 0 0 auto;
+}
+.rig-sighting-row {
+  display: flex;
+  gap: 30px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+.rig-sighting b {
+  display: block;
+  font-size: 15px;
+  font-weight: 500;
+}
+.rig-sighting span {
+  display: block;
+  margin-top: 2px;
+  font-size: 13.5px;
+  color: var(--muted);
+}
+
+/* ---- a plug, a fan, a mower ---- */
+.rig-simple {
+  flex-direction: column;
+  gap: 14px;
+  justify-content: center;
+}
+.rig-simple .rig-big {
+  flex: 1 1 auto;
+  max-height: 210px;
+}
+.rig-speeds {
+  display: flex;
+  gap: 14px;
+  flex: 1 1 auto;
+  min-height: 150px;
+  max-height: 240px;
+}
+.rig-speed {
+  flex: 1 1 0;
+  border-radius: 22px;
+  border: 1px solid var(--edge);
+  background: rgba(255, 255, 255, 0.04);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 16px;
+  padding: 18px 0;
+  color: var(--ink-2);
+  font: inherit;
+  cursor: pointer;
+}
+.rig-speed.on {
+  border-color: rgba(233, 184, 114, 0.55);
+  background: rgba(233, 184, 114, 0.14);
+  color: var(--ink);
+}
+.rig-speed-bar {
+  width: 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.22);
+}
+.rig-speed.on .rig-speed-bar {
+  background: var(--lamp);
+}
+.rig-speed-name {
+  font-size: 16px;
+}
+.rig-timer {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.rig-timer.one {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.rig-when {
+  display: grid;
+  place-items: center;
+  height: 66px;
+  border-radius: 20px;
+  border: 1px solid var(--edge);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 15.5px;
+  text-align: center;
+  cursor: pointer;
+  transition: background 0.15s var(--ease);
+}
+.rig-when:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+.rig-when:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.rig-when.said {
+  border-style: dashed;
+  cursor: default;
+  color: var(--lamp);
+}
+
+/* ---- the ones that only watch ---- */
+.rig-sense {
+  flex-direction: column;
+  gap: 16px;
+  justify-content: center;
+}
+.rig-sense-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.rig-sense-now {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 16px;
+  color: var(--ink-2);
+}
+.rig-sense-now.on {
+  color: var(--lamp);
+}
+.rig-strip {
+  position: relative;
+  height: 74px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--edge);
+  overflow: hidden;
+}
+.rig-blip {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: rgba(233, 184, 114, 0.75);
+}
+.rig-strip.contact .rig-blip {
+  background: rgba(224, 138, 138, 0.8);
+}
+.rig-strip-ends,
+.rig-graph-ends {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.rig-strip-sum {
+  display: flex;
+  gap: 30px;
+  margin-top: 18px;
+  font-size: 15px;
+  color: var(--ink-2);
+}
+.rig-strip-sum b {
+  font-size: 19px;
+  font-weight: 500;
+  color: var(--ink);
+}
+.rig-graph svg {
+  width: 100%;
+  height: 150px;
+  display: block;
+}
+.rig-graph-line {
+  fill: none;
+  stroke: var(--lamp);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.rig-graph-fill {
+  fill: rgba(233, 184, 114, 0.13);
+  stroke: none;
+}
+
+/* ---- the same pane, folded onto a phone ----
+   The instrument goes under what was said rather than beside it, and the
+   columns turn on their sides. Nothing is dropped: a kind whose instrument
+   cannot fold into a phone's width is too clever for this house. */
+@media (max-width: 860px) {
+  /* On a phone the whole pane scrolls, foot and all: the day is four lines here rather than four
+     columns, and pinning it to the bottom would spend a third of the screen on it. */
+  .opened-panel:has(.pane-body) {
+    overflow-y: auto;
+    scrollbar-width: none;
+  }
+  .pane-body {
+    /* natural height, so the PANEL is what scrolls: a flexed body would keep its own height and
+       print the instrument over the facts instead */
+    flex: 0 0 auto;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 22px;
+    padding: 30px 24px 0;
+    overflow: visible;
+  }
+  .pane-said,
+  .pane-rig,
+  .pane-facts {
+    grid-column: 1;
+  }
+  .pane-said {
+    grid-row: 1;
+  }
+  .pane-rig {
+    grid-row: 2;
+  }
+  .pane-facts {
+    grid-row: 3;
+  }
+  .pane-rig {
+    margin-top: 0;
+    padding: 18px;
+    min-height: 0;
+    border-radius: 26px;
+  }
+  .rig-light,
+  .rig-media,
+  .rig-climate,
+  .rig-cover,
+  .rig-lock {
+    flex-direction: column;
+    gap: 18px;
+  }
+  .rig-slot {
+    width: 100%;
+  }
+  /* a column becomes a bar: the same drag, on its side */
+  .rig-col {
+    width: 100%;
+    min-height: 0;
+    height: 76px;
+    border-radius: 38px;
+  }
+  .rig-col.warmth {
+    width: 100%;
+    height: 52px;
+    border-radius: 26px;
+    /* the same scale on its side: warm at the end a thumb rests on, cool at the far one */
+    background: linear-gradient(90deg, #e79a4a, #f2c887 26%, #f6ecdc 56%, #dae7ff);
+  }
+  .rig-levels {
+    min-width: 0;
+  }
+  .rig-art {
+    width: 100%;
+    max-width: none;
+    aspect-ratio: 16 / 9;
+  }
+  .rig-dial {
+    width: 100%;
+    max-width: 300px;
+    height: 300px;
+    height: 300px;
+    align-self: center;
+  }
+  .rig-window {
+    width: 100%;
+    max-width: none;
+    height: 200px;
+  }
+  .rig-scale,
+  .rig-door {
+    display: none;
+  }
+  .pane-day {
+    margin: 18px 24px 24px;
+    gap: 20px;
+    flex-direction: column;
+  }
+  .pane-day-row {
+    flex-direction: column;
+    gap: 12px;
+  }
+  .pane-moment-x {
+    white-space: normal;
+  }
+}
+
+/* a column turned on its side: the fill runs across, and so does the finger */
+.rig-col.bar .rig-fill {
+  top: 0;
+  bottom: 0;
+  right: auto;
+  background: linear-gradient(90deg, rgba(196, 145, 72, 0.9), rgba(243, 203, 143, 0.95));
+}
+.rig-col.bar .rig-mark {
+  left: auto;
+  right: auto;
+  top: 22px;
+  bottom: 22px;
+  width: 3px;
+  height: auto;
+  transform: translateX(-14px);
+}
+.rig-col.bar .rig-end.top {
+  top: 0;
+  bottom: 0;
+  left: auto;
+  right: 22px;
+  width: 24px;
+}
+.rig-col.bar .rig-end.bottom {
+  top: 0;
+  bottom: 0;
+  right: auto;
+  left: 22px;
+  width: 24px;
+}
+.rig-col.warmth.bar .rig-handle {
+  left: auto;
+  right: auto;
+  top: -6px;
+  bottom: -6px;
+  height: auto;
+  width: 46px;
+  margin: 0 0 0 -23px;
+  border-radius: 16px;
+}
+
+/* a reading is a button now: it can be held open like any tile (see RoomView) */
+button.reading {
+  font-family: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+button.reading[data-held] {
+  transform: scale(0.96);
+  transition: transform 0.18s var(--ease);
 }

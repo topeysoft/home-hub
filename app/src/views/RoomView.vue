@@ -150,9 +150,13 @@ onUnmounted(() => clearInterval(tick))
           <button class="why-line" v-if="setBy" @click="openWhy(room.id)" title="Why is this room like this?">
             <Icon :name="setBy.icon" :size="15" /><span>{{ setBy.text }}</span><span class="why-ask">Why?</span>
           </button>
-          <span v-for="d in readings" :key="d.id" class="reading" :class="{ on: readingOn(d), dead: isDead(d) }">
+          <!-- A reading can be held open like anything else. It is the only way in for the three
+               kinds that have no tile -- motion, a thermometer, a door contact -- and it costs the
+               room nothing, because the strip is already here. -->
+          <button v-for="d in readings" :key="d.id" class="reading" :class="{ on: readingOn(d), dead: isDead(d) }"
+                  v-hold="() => (store.opened = d)" :title="`Hold to open ${d.name}`">
             <Icon :name="cap(d)" :size="15" /><span class="reading-name" v-if="readingName(d, room)">{{ readingName(d, room) }}</span><span class="reading-value">{{ readingLabel(d) }}</span>
-          </span>
+          </button>
         </div>
       </div>
       <button class="back room-edit" @click="editing = true" aria-label="Edit this room" title="Rename or move things"><Icon name="edit" :size="20" /></button>

@@ -428,6 +428,32 @@ class Hub:
             dev.attrs = {k: v for k, v in dev.attrs.items() if k != "fan_until"}
             self._broadcast(json.dumps({"type": "device", "device": dev.__dict__}))
 
+    async def run_for(self, dev, minutes: int):
+        """Switch something on and off again `minutes` later; 0 cancels a running timer and leaves the thing as it is.
+        The same shape as the thermostat's fan above, and for the same reason: the driver has no timer, so it lives
+        here, a restart forgets it, and what is left behind is a thing that is simply on."""
+        if t := self._timers.pop(dev.id, None): t.cancel()
+        if minutes <= 0:
+            self.home.extras.pop(dev.id, None)
+        else:
+            await self.act(dev, "on")
+            self.home.extras[dev.id] = {"off_at": time.time() + minutes * 60}
+            self._timers[dev.id] = asyncio.create_task(self._off_later(dev.id, minutes * 60))
+            self.log.add("action", dev.id, None, f"on for {minutes} min", source="user", detail={"minutes": minutes})
+        dev.attrs = {**{k: v for k, v in dev.attrs.items() if k != "off_at"}, **self.home.extras.get(dev.id, {})}
+        self._broadcast(json.dumps({"type": "device", "device": dev.__dict__}))
+
+    async def _off_later(self, eid: str, seconds: int):
+        await asyncio.sleep(seconds)
+        self._timers.pop(eid, None); self.home.extras.pop(eid, None)
+        dev = self.home.devices.get(eid)
+        if not dev: return
+        try: await self.act(dev, "off", source="timer")
+        except Exception as e:
+            log.warning("could not switch %s off at the end of its timer: %s", eid, e)
+        dev.attrs = {k: v for k, v in dev.attrs.items() if k != "off_at"}
+        self._broadcast(json.dumps({"type": "device", "device": dev.__dict__}))
+
     async def act(self, dev, action: str, data: dict | None = None, source="user", said: str | None = None):
         """One device, one action: the path a tile's tap, a typed command and a confirmed proposal all take.
         Raises ValueError when the thing cannot do that; whatever the driver raises comes through as it is."""
@@ -986,6 +1012,21 @@ async def device_fan(device_id: str, body: dict | None = None):
     await hub.fan(dev, minutes)
     if dev.room_id in hub.home.rooms: hub.hold(hub.home.rooms[dev.room_id])
     return {"ok": True, "fan_until": dev.attrs.get("fan_until")}
+
+
+@app.post("/devices/{device_id}/timer")
+async def device_timer(device_id: str, body: dict | None = None):
+    """On for a while, then off again: {"minutes": 30}; 0 cancels the timer and leaves it on.
+    A coffee maker and a heater are what this is for; a thing with no off has no timer."""
+    hub.ready()
+    dev = hub.home.devices.get(device_id)
+    if not dev: raise HTTPException(404, "unknown device")
+    if (dev.capability.split(".")[0], "off") not in SERVICE: raise HTTPException(400, "this cannot be put on a timer")
+    try: minutes = max(0, min(720, int((body or {}).get("minutes") or 0)))
+    except (TypeError, ValueError): raise HTTPException(400, "minutes must be a number")
+    await hub.run_for(dev, minutes)
+    if dev.room_id in hub.home.rooms: hub.hold(hub.home.rooms[dev.room_id])
+    return {"ok": True, "off_at": dev.attrs.get("off_at")}
 
 
 @app.post("/devices/{device_id}/sense")

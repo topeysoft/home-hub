@@ -35,7 +35,7 @@ class TableTest(unittest.TestCase):
 
 class ServiceTableTests(unittest.TestCase):
     def test_every_action_maps_onto_a_real_home_assistant_domain_and_service(self):
-        domains = {"light", "switch", "media_player", "fan", "cover", "lock", "climate"}
+        domains = {"light", "switch", "media_player", "fan", "cover", "lock", "climate", "vacuum"}
         for (cap, action), (domain, service) in SERVICE.items():
             with self.subTest(cap=cap, action=action):
                 self.assertIn(domain, domains)
@@ -49,6 +49,12 @@ class ServiceTableTests(unittest.TestCase):
 
     def test_a_door_can_be_locked_and_unlocked_and_a_blind_opened_and_closed(self):
         for key in (("lock", "lock"), ("lock", "unlock"), ("cover", "open"), ("cover", "close")):
+            with self.subTest(key=key): self.assertIn(key, SERVICE)
+
+    def test_what_a_device_pane_needs_beyond_what_a_tile_ever_asked_for(self):
+        """A tile can only switch things; a pane put in front of one thing has to be able to put a
+        blind where you want it, run a fan at a speed, and send a mower out and back."""
+        for key in (("cover", "set"), ("cover", "stop"), ("fan", "set"), ("vacuum", "start"), ("vacuum", "return")):
             with self.subTest(key=key): self.assertIn(key, SERVICE)
 
 

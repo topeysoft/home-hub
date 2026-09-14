@@ -75,6 +75,8 @@ export async function removeAccount(id: string) { const r = await request(`/acco
 /* The end of a thing's life in the house: off whatever brought it, and out of the model with it. */
 export async function forgetDevice(id: string) { const r = await request(`/devices/${encodeURIComponent(id)}`, { method: 'DELETE' }); if (!r.ok) await fail(r) }
 export const setFan = (id: string, minutes: number) => post<{ ok: boolean; fan_until: number | null }>(`/devices/${encodeURIComponent(id)}/fan`, { minutes })
+/** On now, off again in `minutes`; 0 cancels the timer and leaves it on. A plug, a lamp, a heater. */
+export const runFor = (id: string, minutes: number) => post<{ ok: boolean; off_at: number | null }>(`/devices/${encodeURIComponent(id)}/timer`, { minutes })
 export const setSense = (id: string, sensor: string | null) => post(`/devices/${encodeURIComponent(id)}/sense`, { sensor })
 export async function getDiscovered(): Promise<Found[]> {
   const r = await request('/discovered'); if (!r.ok) await fail(r); return r.json()
@@ -116,6 +118,11 @@ export async function getScenes(): Promise<Rules> {
 }
 export async function getEvents(limit = 40): Promise<Event[]> {
   const r = await request(`/events?limit=${limit}`); if (!r.ok) await fail(r); return r.json()
+}
+/** What one thing has done, newest first: the foot of its opened pane. The log has always been able
+    to answer this; nothing until now had a reason to ask. */
+export async function getDeviceEvents(id: string, limit = 8): Promise<Event[]> {
+  const r = await request(`/events?limit=${limit}&subject=${encodeURIComponent(id)}`); if (!r.ok) await fail(r); return r.json()
 }
 /** The last few times a room was set, held or shadowed, each with the rule's reasons. */
 export async function getWhy(roomId: string, limit = 6): Promise<Event[]> {

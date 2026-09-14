@@ -1,0 +1,153 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      /* app/src/panel.css :root, unchanged */
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp: #e9b872; --lamp-deep: #b8863e; --lamp-ink: #2a1c07;
+      --live: #74c69d; --danger: #e08a8a; --cool: #7ab0e8;
+      --edge: rgba(255,255,255,.10); --edge-hi: rgba(255,255,255,.18);
+      --surface-hi: rgba(255,255,255,.08);
+    }
+    a { color: #e9b872; } a:hover { color: #b8863e; }
+    .dsp { font-family: "Instrument Serif", "Iowan Old Style", Palatino, Georgia, serif; font-weight: 400; letter-spacing: -.01em; }
+    /* the five zones, at the sizes the pane already uses */
+    .room { font-size: 15px; color: var(--ink-2); }
+    .name { margin: 4px 0 0; font-size: 56px; line-height: 1.04; }
+    .read { font-size: 76px; line-height: 1; letter-spacing: -.02em; }
+    .why { font-size: 15.5px; color: var(--ink-2); }
+    .fact-v { font-size: 20px; font-weight: 500; }
+    .fact-k { margin-top: 2px; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+    /* a verb: the round control the pane already draws, at its own 56px */
+    .ctl { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-hi); border: 1px solid var(--edge); color: var(--ink-2); }
+    .ctl.on { background: var(--lamp); border-color: transparent; color: var(--lamp-ink); }
+    .ctl.wide { width: auto; height: 56px; border-radius: 999px; padding: 0 24px; display: inline-flex; align-items: center; gap: 11px; font-size: 16.5px; color: var(--ink); }
+    .ctl.wide.on { color: var(--lamp-ink); font-weight: 500; }
+    .pill { display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 14px; border-radius: 999px; font-size: 13.5px; color: var(--ink-2); background: var(--surface-hi); }
+    .lbl { font-size: 12.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .ic { flex: 0 0 auto; }
+    /* the day strip every pane carries along its foot */
+    .day-line { position: absolute; left: 48px; right: 48px; height: 1px; background: var(--edge); }
+    .ev-t { font-size: 13px; color: var(--muted); }
+    .ev { font-size: 15px; color: var(--ink-2); margin-top: 3px; }
+  </style>
+</helmet>
+
+<!-- CAMERA -- the only kind where the instrument is not a control at all. The picture is what you came for, so the picture is the pane. -->
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: #0c0d10; color: var(--ink); font-size: 17px; line-height: 1.4;">
+
+  <div style="position: absolute; inset: 0; background: linear-gradient(rgb(20,23,38) 0%, rgb(35,36,58) 42%, rgb(78,55,52) 86%, rgb(54,40,40) 100%);"></div>
+  <div style="position: absolute; inset: 0; background: radial-gradient(90% 70% at 62% 78%, rgba(122,176,232,.18), transparent 66%);"></div>
+  <div style="position: absolute; inset: 0; opacity: .5; background-image: url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.035'/%3E%3C/svg%3E&quot;);"></div>
+  <div style="position: absolute; left: 0; right: 0; top: 0; height: 260px; overflow: hidden; transform: scale(.955); transform-origin: 50% 0; filter: blur(13px) brightness(.52) saturate(.85);">
+    <div style="position: absolute; top: 22px; left: 40px; display: flex; align-items: baseline; gap: 13px;">
+      <span class="dsp" style="font-size: 27px;">7:40 PM</span><span style="font-size: 15px; color: #b9b5ad;">Sunday, September 13</span>
+    </div>
+    <div style="position: absolute; top: 15px; left: 526px; width: 389px; height: 54px; border-radius: 999px; background: rgba(26,28,34,.55);"></div>
+    <div style="position: absolute; top: 104px; left: 96px;">
+      <div class="dsp" style="font-size: 52px; line-height: 1;">Backyard</div>
+      <div style="margin-top: 10px; font-size: 16px; color: #b9b5ad;">Quiet &middot; nothing running</div>
+    </div>
+    <div style="position: absolute; top: 200px; left: 40px; right: 40px; height: 160px; display: flex; gap: 14px;">
+      <div style="flex: 1; border-radius: 22px; background: rgba(255,255,255,.07);"></div>
+      <div style="flex: 1; border-radius: 22px; background: rgba(255,255,255,.05);"></div>
+      <div style="flex: 1; border-radius: 22px; background: rgba(233,184,114,.10);"></div>
+      <div style="flex: 1; border-radius: 22px; background: rgba(255,255,255,.05);"></div>
+    </div>
+  </div>
+  <div style="position: absolute; left: 0; right: 0; top: 225px; bottom: 0; overflow: hidden; border-radius: 34px 34px 0 0; border: 1px solid rgba(255,255,255,.18); border-bottom: 0; background: linear-gradient(rgba(26,28,34,.80), rgba(16,17,21,.94));">
+    <div style="position: absolute; inset: 0; background: radial-gradient(78% 86% at 72% 96%, rgba(122,176,232,.14), transparent 64%);"></div>
+    <div style="position: absolute; top: 26px; right: 30px; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; color: #b9b5ad; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.10);">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </div>
+    
+    <div style="position: absolute; left: 48px; top: 44px; width: 560px;">
+      <div class="room">Backyard</div>
+      <h2 class="dsp name">Backyard cam</h2>
+    </div>
+    <div style="position: absolute; left: 48px; top: 202px; display: flex; gap: 12px;"><div class="ctl on" title="Watch it full screen"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5h17v10h-17zM12 16.5a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM8.5 8.5l1.5-3h4l1.5 3"/></svg></div><div class="ctl" title="Its floodlight"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 18h5M10.5 21h3M12 3a6 6 0 0 0-3.7 10.7c.7.6 1.1 1.4 1.2 2.3h5c.1-.9.5-1.7 1.2-2.3A6 6 0 0 0 12 3z"/></svg></div><div class="ctl" title="Why is it recording"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l1.8 5.2 5.2 1.8-5.2 1.8L12 17.5l-1.8-5.2L5 10.5l5.2-1.8zM5 17.5l.7 1.8 1.8.7-1.8.7L5 22.5l-.7-1.8-1.8-.7 1.8-.7z"/></svg></div><div class="ctl" title="Rename or move"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3zM13.5 8.5l2 2"/></svg></div></div>
+    <div style="position: absolute; left: 48px; top: 294px; width: 556px;">
+      <div class="dsp read">Recording</div>
+      <div class="why" style="margin-top: 18px;">Something moved at 7:38. It keeps recording while it sees movement.</div>
+      <div style="display: flex; gap: 34px; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--edge);">
+        <div><div class="fact-v">Off</div><div class="fact-k">Floodlight</div></div>
+        <div><div class="fact-v">9 times</div><div class="fact-k">Seen today</div></div>
+        <div><div class="fact-v">Robot mower</div><div class="fact-k">Also out here</div></div>
+      </div>
+    </div>
+  <div style="position: absolute; left: 640px; top: 72px; width: 752px; height: 420px; border-radius: 32px; background: rgba(255,255,255,.035); border: 1px solid var(--edge);">
+    
+    <div style="position: absolute; inset: 26px; display: flex; flex-direction: column; gap: 18px;">
+      
+    <!-- the camera's own frame, at the size a camera deserves. The panel already
+         fetches this still (/devices/<id>/image); today the pane draws a 260px
+         outline of a camera instead and makes you press Watch to see anything. -->
+    <div style="position: relative; width: 100%; height: 262px; border-radius: 20px; overflow: hidden; border: 1px solid rgba(255,255,255,.13);">
+      <div style="position: absolute; inset: 0; background: linear-gradient(rgb(26,32,44) 0%, rgb(34,44,48) 52%, rgb(22,30,26) 100%);"></div>
+      <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 46%; background: linear-gradient(rgba(40,58,44,.7), rgba(16,26,18,.95));"></div>
+      <div style="position: absolute; left: 0; right: 0; bottom: 46%; height: 3px; background: rgba(120,140,120,.28);"></div>
+      <svg width="100%" height="262" viewBox="0 0 640 262" style="position: absolute; inset: 0;">
+        <path d="M0 150h640" stroke="rgba(160,180,160,.18)" stroke-width="1"/>
+        <path d="M84 150l0-64 30-16 30 16 0 64z" fill="rgba(12,18,14,.75)"/>
+        <path d="M470 152c18-38 40-58 60-58s42 20 60 58z" fill="rgba(10,16,12,.8)"/>
+        <ellipse cx="530" cy="92" rx="54" ry="42" fill="rgba(12,20,14,.85)"/>
+        <rect x="222" y="118" width="196" height="34" rx="6" fill="rgba(14,20,16,.72)"/>
+        <circle cx="320" cy="206" r="56" fill="rgba(233,184,114,.10)"/>
+      </svg>
+      <div style="position: absolute; left: 18px; top: 16px; display: inline-flex; align-items: center; gap: 9px; height: 32px; padding: 0 14px; border-radius: 999px; background: rgba(12,14,18,.62); font-size: 13.5px; letter-spacing: .04em;">
+        <span style="width: 8px; height: 8px; border-radius: 50%; background: #e0685f;"></span>Recording
+      </div>
+      <div style="position: absolute; right: 18px; bottom: 16px; font-size: 13px; color: rgba(241,238,232,.7);">7:40:12 pm</div>
+    </div>
+      <div>
+        <div class="lbl">When it saw something</div>
+        <div style="display: flex; gap: 12px; margin-top: 10px;">
+      <div style="flex: 1 1 0;">
+        <div style="height: 78px; border-radius: 12px; border: 1px solid var(--edge); background: linear-gradient(140deg, rgba(40,54,44,.9), rgba(18,26,20,.95));"></div>
+        <div style="margin-top: 8px; font-size: 13.5px; color: var(--ink-2);">7:38 pm</div>
+      </div>
+      <div style="flex: 1 1 0;">
+        <div style="height: 78px; border-radius: 12px; border: 1px solid var(--edge); background: linear-gradient(154deg, rgba(40,54,44,.9), rgba(18,26,20,.95));"></div>
+        <div style="margin-top: 8px; font-size: 13.5px; color: var(--ink-2);">6:02 pm</div>
+      </div>
+      <div style="flex: 1 1 0;">
+        <div style="height: 78px; border-radius: 12px; border: 1px solid var(--edge); background: linear-gradient(168deg, rgba(40,54,44,.9), rgba(18,26,20,.95));"></div>
+        <div style="margin-top: 8px; font-size: 13.5px; color: var(--ink-2);">4:47 pm</div>
+      </div>
+      <div style="flex: 1 1 0;">
+        <div style="height: 78px; border-radius: 12px; border: 1px solid var(--edge); background: linear-gradient(182deg, rgba(40,54,44,.9), rgba(18,26,20,.95));"></div>
+        <div style="margin-top: 8px; font-size: 13.5px; color: var(--ink-2);">11:20 am</div>
+      </div></div>
+      </div>
+    </div>
+  </div>
+    <div style="position: absolute; right: 26px; bottom: 22px; display: inline-flex; align-items: center; gap: 9px; height: 30px; padding: 0 14px; border-radius: 999px; border: 1px dashed rgba(233,184,114,.5); font-size: 12.5px; letter-spacing: .04em; color: rgba(233,184,114,.9);">
+      <span style="width: 5px; height: 5px; border-radius: 50%; background: rgba(233,184,114,.9);"></span>still outstanding: a picture kept per sighting
+    </div>
+  <div class="day-line" style="top: 542px;"></div>
+  <div style="position: absolute; left: 48px; top: 568px; display: flex; align-items: center; gap: 12px;">
+    <span class="lbl">Today</span>
+  </div>
+  <div style="position: absolute; left: 200px; right: 48px; top: 562px; display: flex; gap: 44px;">
+    <div style="flex: 0 0 auto; max-width: 230px;"><div class="ev-t">7:38 pm</div><div class="ev">Started recording</div></div>
+    <div style="flex: 0 0 auto; max-width: 230px;"><div class="ev-t">7:12 pm</div><div class="ev">Floodlight on, by hand</div></div>
+    <div style="flex: 0 0 auto; max-width: 230px;"><div class="ev-t">2:04 pm</div><div class="ev">Came back after a drop</div></div>
+    <div style="flex: 0 0 auto; max-width: 230px;"><div class="ev-t">8:20 am</div><div class="ev">Quiet until noon</div></div>
+  </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
