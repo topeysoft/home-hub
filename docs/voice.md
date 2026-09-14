@@ -367,6 +367,94 @@ variant of each answer, alongside the `text`, is cheap to add in `commands.py` w
 model (explanations, proposals) are not read aloud; a proposal is a card to look at, and an explanation is a paragraph
 to read.
 
+### Where the voice comes out
+
+*Added 14 September 2026, from the question "will the wall answer back, the way Alexa and Siri do?" The tier table
+above names Piper and sizes it per host, and then never says which loudspeaker it reaches. This is that missing half,
+and it is smaller than it looks: every piece is already in the house.*
+
+**The panel plays it, the same way a speaker plays rain.** The brain synthesises the sentence with Piper and hands
+the panel a URL on the hub's LAN address; the panel plays it with an `Audio` element and nothing else. That is the
+arrangement `sounds.py` already has with a Cast speaker -- the hub hosts the audio, the thing with the loudspeaker
+fetches it from the hub's own address -- and *works with the internet down* is inherited from it rather than argued
+for again.
+
+Three routes were weighed, and two are written down only to be refused:
+
+| where the sound comes out | what it costs |
+|---|---|
+| **The panel, as audio in the page** | Nothing that is not already built. `mediaPlaybackRequiresUserGesture = false` is set in `kiosk/app/src/main/java/app/elyir/kiosk/Wall.kt:201` with a comment that anticipates exactly this -- *a sound a rule started just plays* -- so a WebView with nobody standing at it can be handed a clip and play it. The same few lines of panel code answer on a phone in shape 1. |
+| **The kiosk, natively** (`MediaPlayer` behind a bridge) | A second path for what the first path already does, an APK release for a feature, and phones still need the browser path anyway. It breaks `docs/apps.md`'s *nothing lives only in the app* for nothing: the wall contributes a loudspeaker, not a feature -- the same sentence *The wall's microphone is the hub's ear* ends on. |
+| **The room's speaker**, through `sounds.py` | Tempting, because that path exists whole today. Refused: an answer has to come from where the hand was, and a Cast join alone is seconds. The speaker in the corner answering a question you asked the wall is a different product, and a worse one. |
+
+**The one trap, and it is a real one.** The clip must not land in the sounds folder. That folder is a person's own
+library -- `sounds.py`'s first paragraph is *drop in rain.mp3 and "Rain" appears on every speaker's tile* -- and
+minted speech there would turn up as something to play in a bedroom. So: a route of its own beside `/say`,
+synthesising on demand for a short-lived token, never a file under `DATA / "sounds"` and never in `catalog()`.
+
+**What is open, and it is the only thing here that is:** the wall has no volume. `sounds.py` takes a volume per
+speaker; the panel has none, the tier table does not mention one, and a wall tablet's rocker is usually behind the
+mount. The kiosk is device owner and can set the media stream itself, which is the likely answer -- but which
+control a *person* touches is undecided, and it wants deciding alongside move 6 rather than after it, because a wall
+that answers too loudly at night is the first thing a household will complain about.
+
+Exit test: with the router's uplink unplugged, from the wall, tap the orb and say "is the front door locked?"; the
+answer is spoken from the panel inside the same two seconds shape 2's own test already allows.
+
+### When the house speaks, and when it stays quiet
+
+**The house speaks when it was spoken to.** That is the whole rule, and it is the same shape as the trust rule in
+*What voice may do*: the route decides, not the kind. A sentence that arrived as speech is answered as speech; a
+sentence that arrived as typing is answered on the glass, silently, exactly as it is today. Nobody types at a wall
+and wants it to talk back, and nobody speaks to it with their hands full and wants to walk over and read.
+
+| how the sentence arrived | how it is answered |
+|---|---|
+| typed in the box | on the screen only. Nothing changes from today |
+| the orb tapped and spoken to | spoken, and on the screen as well |
+| the orb woken by a wake word (later) | spoken, on whichever panel heard it |
+| a satellite with a wake word (shape 3) | spoken by the satellite that heard it, and on no screen at all |
+
+Only one thing ever speaks: whatever heard the sentence. Two panels in earshot both answering it is what this
+rule quietly prevents -- the answer belongs to the turn, and the turn belongs to the microphone.
+
+**What it says depends on the kind, because two of the five must not be read aloud.** `commands.py` answers with one
+of five kinds, and the paragraph above already rules out the model's: a proposal is a card to look at, an explanation
+is a paragraph to read. But refusing to read those aloud leaves a person standing there, hands full, hearing nothing
+at all -- which is worse than either. So each gets a **spoken pointer**: not the answer, a sentence saying where the
+answer is.
+
+| kind | spoken |
+|---|---|
+| `done` | the `spoken` variant. *"Living room TV on."* |
+| `answer` | the `spoken` variant, shortened as above. *"One of the two kitchen lights is on."* |
+| `explain` | a pointer, never the paragraph. *"There's an answer on the screen."* |
+| `action` | a pointer, never the proposal. *"There's something to confirm on the screen."* Nothing happens until a hand does it; that rule does not move for voice |
+| `rule` | a pointer. *"I've written that up; it's waiting under Routines."* |
+| not understood -- the 422 | spoken, always. *"I didn't catch that."* Silence here reads as the house ignoring you, and `Say.vue` has already learned that lesson once on the screen |
+
+**A message is never spoken.** Not a receipt, not a house message, not an attention chip, and -- the one worth saying
+plainly -- **not an alert**. `docs/messages.md` gives the four classes and routes an alert to the band, the log, and a
+push to a phone; none of those is a voice in a hall at 2am. Three reasons, in the order they matter: that plan's own
+rule *a message is never the only way to know something* goes false the moment the house says a thing out loud to an
+empty room; *alert-class is the household's list, not ours*, and a default that speaks is not the quiet default it
+promises; and a wall panel talking to nobody is the fastest way to make a person unplug it. The wall is a screen in
+the room -- `docs/messages.md` says exactly that when it refuses the wall a push of its own -- and it stays one. A
+household that wants the hall to announce the front door is a new plan, and it starts from the alert class rather
+than from here.
+
+**Bedtime is the one case the route rule does not cover, and the house already knows the answer.** `RoomState.asleep`
+is real state, per room and house-wide, and it is set by "good night" through this very grammar. A panel in a room
+that is asleep answers on the glass and does not speak, whoever asked it -- and the sentence that put the house to
+bed is the last thing it says aloud. One condition, no clock, no quiet hours, no setting: the kind of thing the house
+is meant to work out rather than be told.
+
+**No new switch.** Turning voice on is already one switch with one sentence of explanation, and answering aloud
+arrives inside it -- a house that can hear can answer. The rules above are what a knob would otherwise have been for,
+and each of them is something the house can decide for itself. If a household genuinely wants a wall that listens and
+stays silent, that is a second line under *This hub* on the sheet the switch is already on; it should wait for
+somebody to ask, rather than shipping as the fourth line of a settings sheet nobody reads.
+
 ## Decisions to make before a microphone
 
 | Question | Proposal |
@@ -383,6 +471,11 @@ to read.
 | Does voice ever bypass confirmation for the model's proposals | No |
 | May voice do locks, doors and the garage | Yes, from the panel -- it is the same trust as a tap. From a wake-word satellite, the closing half only. See *What voice may do* |
 | Does the assistant see audio | No. It sees text, the same text a person could have typed |
+| Where a spoken answer comes out | The panel plays it as audio in the page, from a clip the hub synthesised -- not natively in the kiosk, and not on the room's speaker. Settled 14 September 2026; see *Where the voice comes out* |
+| When the house answers aloud at all | When it was spoken to, never when it was typed to, and never in a room that is asleep. The route decides, the same way it decides what voice may do |
+| Whether the wall reads messages and alerts aloud | No. A message is never spoken, alerts included; `docs/messages.md`'s classes route those to the band, the log and a phone. A household that wants the hall to announce the front door is a new plan |
+| What the model's answers sound like | They are not read out -- a proposal is a card and an explanation is a paragraph -- but silence is worse, so each gets a one-line spoken pointer to the screen |
+| How loud the wall is, and who turns it down | **Open.** The kiosk is device owner and can set the media stream, which is the likely answer; which control a person touches is undecided and belongs with move 6 |
 
 ## Not in this plan
 
@@ -402,7 +495,10 @@ recognition, and anything that needs a vendor's account. If a household needs on
 3. **Shape 2 on the hub, which is the wall's voice.** Wyoming, faster-whisper and Piper as containers with profiles
    like the radios; the tier chooser in `install.sh`; a route beside `/say` that takes audio; the brain speaks
    Wyoming; the offline test on a Pi 5 and on a NUC-class box; the measured latency for each tier written into the
-   table above. Then the smallest native piece in the whole plan -- `AudioRecord` and the bridge in `kiosk/` -- last,
+   table above. The answering half rides along with it and needs no microphone at all -- Piper, the `spoken` variants
+   in `commands.py`, the route that mints a clip and the panel that plays it can be built and heard behind a preview
+   flag, the way `?listen=1` gave the orb something to listen to before any engine existed. Then the smallest native
+   piece in the whole plan -- `AudioRecord` and the bridge in `kiosk/` -- last,
    because until the rest of this lands it has nothing to talk to.
 4. **Shape 1 on phones,** once `docs/away.md` has given a house a real certificate: the browser's recognition
    measured first, then the same orb, the same route and the same answers the wall already has.
