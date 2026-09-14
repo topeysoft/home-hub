@@ -3549,6 +3549,15 @@ select.input {
 .tile.climate.on .clim-doing {
   color: var(--ink-2);
 }
+/* The same sentence in a third's width, and only there: the tile renders both
+   lines and the size picks one. Off by default, because a card that shows both
+   says the reading twice -- and in the rail, where .clim-center is
+   `display: contents`, the spare line lands in the grid's first column and
+   widens it past the step button, which walks the number off the card's centre.
+   The third-width rule above turns it back on. */
+.clim-short {
+  display: none;
+}
 .clim-btn {
   width: 52px;
   height: 52px;

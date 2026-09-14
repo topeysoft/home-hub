@@ -32,6 +32,14 @@ export const vHold: Directive<HTMLElement, (() => void) | undefined> = {
     const cancel = () => { clearTimeout(s.t); s.t = undefined }
     const down = (e: PointerEvent) => {
       if (e.button !== undefined && e.button !== 0) return
+      /* A control inside the card is the control, and the card stays out of its way.
+         Not politeness — the capture below retargets everything that follows the press,
+         the click included, at the card, so a thermostat's step buttons and a player's
+         transport never heard their own tap. Nothing is lost: the rest of the card is
+         still the way in, and holding a button to open the thing it belongs to was
+         never the gesture anyone reached for. */
+      const hit = (e.target as Element | null)?.closest?.('button, a, input, select, textarea, [role="button"], [role="slider"]')
+      if (hit && hit !== el && el.contains(hit)) return
       s.x = e.clientX; s.y = e.clientY; s.fired = false
       cancel()
       /* capture the pointer for the duration: a finger that drifts a pixel or two

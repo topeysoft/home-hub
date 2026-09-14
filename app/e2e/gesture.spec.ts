@@ -4,6 +4,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
 const ROOM = '/?room=living&at=19:40'
+const HOME = '/?at=19:40'
 
 async function settled(page: Page, url: string) {
   await page.goto(url, { waitUntil: 'networkidle' })
@@ -89,5 +90,34 @@ test.describe('with a mouse', () => {
 
     await expect(page.locator('.opened-panel')).toHaveCount(0)
     await expect(state).not.toHaveText(before, { timeout: 3000 })
+  })
+
+  /* The third thing on a card, after the tap and the hold: a control drawn inside it. The hold
+     captures the pointer so a finger may drift off the card's edge, and a capture retargets
+     everything that follows at the card -- the click included. A thermostat's step buttons never
+     heard their own tap, on every arrangement, and nothing said so: the card simply did not move. */
+  test('a step button inside a card takes its own tap', async ({ page }) => {
+    await settled(page, HOME)                 // the row's thermostat is the card that carries them
+    const big = page.locator('.bento .tile.climate .clim-big').first()
+    const before = (await big.innerText()).trim()
+
+    await page.locator('.bento .tile.climate .clim-btn[aria-label="Raise the target"]').first().click()
+    await expect(big).not.toHaveText(before, { timeout: 3000 })
+    // one step, in the house's unit -- not the ceiling a Celsius clamp put a Fahrenheit house at
+    const after = Number((await big.innerText()).match(/-?\d+(\.\d+)?/)![0])
+    expect(Math.abs(after - Number(before.match(/-?\d+(\.\d+)?/)![0]))).toBeLessThanOrEqual(1)
+
+    await expect(page.locator('.opened-panel'), 'the tap opened the device as well').toHaveCount(0)
+  })
+
+  /* The card still opens: the control keeps its own tap, it does not take the card's gesture. */
+  test('holding a card that has controls in it still opens the device', async ({ page }) => {
+    await settled(page, HOME)
+    const { x, y } = await centre(page, '.bento .tile.climate')
+    await page.mouse.move(x, y - 40)          // the card, not one of its buttons
+    await page.mouse.down()
+    await page.waitForTimeout(520)
+    await page.mouse.up()
+    await expect(page.locator('.opened-panel')).toHaveCount(1)
   })
 })

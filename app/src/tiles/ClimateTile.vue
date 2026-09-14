@@ -73,7 +73,10 @@ const short = computed(() => {
   const moving = a.value.hvac_action === 'heating' || a.value.hvac_action === 'cooling'
   return cur === '–' ? `${unit.value} · ${act}` : moving ? `${unit.value} · ${act} from ${cur}` : `${unit.value} · now ${cur}`
 })
-const clamp = (t: number) => Math.min(a.value.max_temp ?? 35, Math.max(a.value.min_temp ?? 5, t))
+/* What the thermostat will take, in the house's unit. A thermostat that doesn't say gets the
+   pane's fallback, not a bare 5 and 35: those are Celsius, and against a house reading in
+   Fahrenheit one tap on + asked a 71° room for 35° -- the ceiling, not a degree warmer. */
+const clamp = (t: number) => Math.min(a.value.max_temp ?? (unit.value.includes('F') ? 90 : 32), Math.max(a.value.min_temp ?? (unit.value.includes('F') ? 50 : 10), t))
 function nudge(dir: 1 | -1) {
   if (dead.value || off.value) return
   const s = step.value * dir
