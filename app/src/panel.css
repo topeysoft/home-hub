@@ -6699,7 +6699,12 @@ select.input {
 .bottombar .say-hint {
   display: none;
 }
-.bottombar .say:focus-within .say-hint {
+/* ...and while the house is listening, which is not a focus: a tap on the orb
+   never puts a keyboard in the box. Joined to the rule above rather than given
+   one of its own, because two rules for one sheet is how the rim's exceptions
+   started -- and under reduced motion these words are the whole of move 6. */
+.bottombar .say:focus-within .say-hint,
+.bottombar .say.listening .say-hint {
   display: block;
   padding: 9px 14px;
   border-radius: 12px;
@@ -9196,4 +9201,95 @@ button.reading {
 button.reading[data-held] {
   transform: scale(0.96);
   transition: transform 0.18s var(--ease);
+}
+
+/* ---------- move 6: the house is listening ----------
+ *
+ * The last of the eight to find somewhere to live. design/nightfall Motion, 6 -
+ * Listening: the orb held at 1.18 while somebody is talking, 320ms in and 520ms
+ * out, and one ring when the sentence lands -- scale(.86) out to scale(2.2),
+ * opacity peaking at .55 and gone by the end. Once per sentence, not a pulse: a
+ * pulse is a loading spinner, and this is the house hearing one thing.
+ *
+ * The held state is the half the canvas was NOT drawn with, and it is here
+ * because a tap has no letting go: the board's ring is the mark at the end, so
+ * something has to say the house is still there while the sentence is being
+ * said. Under reduced motion that is all that is left of this move, and it is
+ * carried in words -- Say.vue puts "Listening…" in the line under the box --
+ * because a state that persists cannot say itself by moving.
+ *
+ * The scale is on the orb ITSELF and the ring is a sibling, never a wrapper
+ * around the two: the orb's blooms are blurred with `filter` behind their own
+ * `backdrop-filter`, and this file has three entries already for what happens
+ * when an ancestor forms a backdrop root. Keeping the scale here means never
+ * having to find out whether a transform makes one more.
+ */
+.say-orb {
+  transition: transform 520ms var(--settle, var(--ease));
+}
+.say.listening .say-orb {
+  transform: scale(1.18);
+  transition-duration: 320ms;
+}
+/* A sibling of the box, not a child: the pill is `overflow: hidden` under glass
+   and would clip the ring at 56px, and the orb is clipped tighter still to keep
+   its blooms round. So it is placed on `.say`, over the orb, from the same
+   numbers the collar is made of. */
+.say-ring {
+  display: none;
+}
+.bottombar .say-ring {
+  display: block;
+  position: absolute;
+  left: 10px; /* the orb's own left, from .bottombar .say-box's padding */
+  top: 10px; /* (56 - 36) / 2, the collar */
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  pointer-events: none;
+  box-shadow: 0 0 0 1.6px rgba(167, 150, 255, 0.9);
+  animation: say-ring 520ms var(--ease) forwards;
+}
+[data-face='glass'] .bottombar .say-ring {
+  /* the glass orb is 42 in a 7 + 42 + 7 collar, and the 7 is 6 of padding plus
+     the 1px edge .search carries; the same three numbers as the resting pill */
+  left: 7px;
+  top: 7px;
+  width: 42px;
+  height: 42px;
+}
+@keyframes say-ring {
+  from {
+    transform: scale(0.86);
+    opacity: 0;
+  }
+  38% {
+    opacity: 0.55;
+  }
+  to {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .say-orb {
+    transition: none;
+  }
+  .say.listening .say-orb {
+    transform: none;
+  }
+  /* the move collapses to the fade every one of the eight collapses to -- and it
+     keeps an animation rather than losing one, because Say.vue takes the ring
+     off on its own animationend and a ring that never ended would never go */
+  .bottombar .say-ring {
+    animation: say-ring-still 520ms linear forwards;
+  }
+  @keyframes say-ring-still {
+    from {
+      opacity: 0.55;
+    }
+    to {
+      opacity: 0;
+    }
+  }
 }
