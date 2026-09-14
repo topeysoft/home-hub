@@ -12,7 +12,7 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import type { Device } from '../api'
 import { runFor } from '../api'
-import { cap, isDead, notify, perform } from '../store'
+import { cap, guessNow, isDead, notify, perform } from '../store'
 import Icon from '../Icon.vue'
 
 const props = defineProps<{ device: Device }>()
@@ -35,8 +35,8 @@ async function timer(minutes: number) {
   busy.value = true
   try {
     const r = await runFor(props.device.id, minutes)
-    props.device.attrs = { ...a.value, off_at: r.off_at ?? undefined }
-    if (minutes) { props.device.state = 'on'; notify(`On for ${minutes < 60 ? `${minutes} minutes` : 'an hour'}.`) }
+    guessNow(props.device, { state: minutes ? 'on' : undefined, attrs: { off_at: r.off_at ?? undefined } })
+    if (minutes) notify(`On for ${minutes < 60 ? `${minutes} minutes` : 'an hour'}.`)
     else notify('It will stay on until somebody switches it off.')
   } catch (e: any) { notify(`Couldn't set the timer: ${e.message}`, 'error') }
   busy.value = false

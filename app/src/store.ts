@@ -273,11 +273,24 @@ export function doneLine(id: string, now = Date.now()): string {
   const d = done[id]; if (!d) return ''
   return `${d.verb} · ${ago(d.at / 1000, now).toLowerCase()}`
 }
+/* What the house is about to say, said now.
+ *
+ * A device object is the one the store holds -- a pane is handed it, not a copy -- so writing the
+ * expected reading into it is how the drawing moves before the hub has answered. `perform` does it
+ * either side of the request, and a pane under a finger does it with no request at all: while a
+ * finger is down the drawing moves and the house is left alone, and only the release asks for
+ * anything (panes/slide.ts). That second case used to be written out longhand in each pane, as an
+ * assignment through `props.device` -- the same write as this, from a place a component is not
+ * allowed to write from. The write was never the problem; the address was. So it lives here, where
+ * the store's own object is the store's to change, and a pane asks for it by name. */
+export function guessNow(d: Device, guess: { state?: string; attrs?: Record<string, any> }) {
+  if (guess.state) d.state = guess.state
+  if (guess.attrs) d.attrs = { ...d.attrs, ...guess.attrs }
+}
 /** Apply the expected result right away, ask the house, and step back if it refuses. */
 export async function perform(d: Device, action: string, data?: Record<string, unknown>, guess?: { state?: string; attrs?: Record<string, any> }) {
   const before = { state: d.state, attrs: { ...d.attrs } }, wasDone = done[d.id]
-  if (guess?.state) d.state = guess.state
-  if (guess?.attrs) d.attrs = { ...d.attrs, ...guess.attrs }
+  if (guess) guessNow(d, guess)
   /* guessed, with the state: what this did is the card's own sentence once it is no longer on */
   if (QUIETED[action]) markDone(d.id, QUIETED[action]); else if (WOKEN.has(action)) delete done[d.id]
   store.pending[d.id] = true

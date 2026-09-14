@@ -10,7 +10,7 @@
  */
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { imageUrl, type Device } from '../api'
-import { isDead, perform, store } from '../store'
+import { guessNow, isDead, perform, store } from '../store'
 import Icon from '../Icon.vue'
 import DeviceArt from '../DeviceArt.vue'
 import { useSlide } from './slide'
@@ -47,7 +47,7 @@ const volume = computed(() => Math.round((a.value.volume_level ?? 0) * 100))
 const setVolume = (v: number) => perform(props.device, 'volume', { volume_level: v / 100 }, { attrs: { volume_level: v / 100 } })
 const vol = useSlide({
   vertical: false,
-  live: v => (props.device.attrs = { ...a.value, volume_level: v / 100 }),
+  live: v => guessNow(props.device, { attrs: { volume_level: v / 100 } }),
   settle: v => { setVolume(v) },
 })
 const toggle = () => playing.value ? perform(props.device, 'pause', undefined, { state: 'paused' }) : perform(props.device, 'play', undefined, { state: 'playing' })

@@ -9,7 +9,7 @@
  */
 import { computed } from 'vue'
 import type { Device } from '../api'
-import { isDead, perform } from '../store'
+import { guessNow, isDead, perform } from '../store'
 import Icon from '../Icon.vue'
 import { useSlide } from './slide'
 
@@ -22,7 +22,7 @@ const moving = computed(() => props.device.state === 'opening' || props.device.s
 
 const to = (p: number) => perform(props.device, 'set', { position: Math.round(p) }, { attrs: { current_position: Math.round(p) }, state: p > 0 ? 'open' : 'closed' })
 const slide = useSlide({
-  live: v => (props.device.attrs = { ...a.value, current_position: v }),
+  live: v => guessNow(props.device, { attrs: { current_position: v } }),
   settle: v => { to(v) },
 })
 </script>

@@ -9,7 +9,7 @@
  */
 import { computed } from 'vue'
 import type { Device } from '../api'
-import { isDead, notify, perform } from '../store'
+import { guessNow, isDead, notify, perform } from '../store'
 import Icon from '../Icon.vue'
 import { useNarrow, useSlide } from './slide'
 
@@ -38,11 +38,11 @@ async function warm(v: number) {
 /* while a finger is down the drawing moves and the house is left alone; see panes/slide.ts */
 const guess = computed({
   get: () => pct.value,
-  set: (v: number) => { props.device.attrs = { ...a.value, brightness: Math.round(v * 2.55) }; if (!on.value) props.device.state = 'on' },
+  set: (v: number) => guessNow(props.device, { state: on.value ? undefined : 'on', attrs: { brightness: Math.round(v * 2.55) } }),
 })
 const warmGuess = computed({
   get: () => warmth.value ?? 0,
-  set: (v: number) => { props.device.attrs = { ...a.value, color_temp_kelvin: Math.round(WARM + (v / 100) * (COOL - WARM)) } },
+  set: (v: number) => guessNow(props.device, { attrs: { color_temp_kelvin: Math.round(WARM + (v / 100) * (COOL - WARM)) } }),
 })
 const narrow = useNarrow()          // a phone drags the same two things on their sides
 const dim = useSlide({ vertical: () => !narrow.value, live: v => (guess.value = v), settle: v => bright(v) })
