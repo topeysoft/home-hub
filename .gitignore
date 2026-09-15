@@ -18,3 +18,10 @@ driver-layer/host/pi-image/stage-hub/00-home-hub/files/
 driver-layer/ring-mqtt/*
 !driver-layer/ring-mqtt/config.json
 brain/sounds/
+
+# Brilliant mesh: secrets and build output
+brilliant/esp32-bridge/include/secrets.h
+brilliant/esp32-bridge/.pio/
+brilliant/**/mesh-net.json
+brilliant/**/events.log
+brilliant/.venv/

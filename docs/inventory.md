@@ -17,9 +17,9 @@ Control path legend: **local** = works with the internet down, **cloud** = vendo
 | Matter device 3425BEC06C79 | ? | ? | Matter | local | `matter` | identify | one operational Matter node on the LAN |
 | Tesla Wall Connector Gen 3 | garage | Tesla | Wi-Fi | local (vitals API) | `tesla_wall_connector` | in HA | 192.168.86.23; a car was plugged in at setup |
 | Ring (cameras/doorbell) | ? | Ring | Wi-Fi | cloud | `ring` | keep | list each device |
-| Brilliant Control panels (each) | ? | Brilliant NextGen | Wi-Fi | local via brilliant-mqtt agent on panel | HACS `joyfulhouse/brilliant-mqtt` | keep | enable Root SSH Login in panel settings; one panel is elected to bridge all mesh devices |
-| Brilliant Smart Dimmer Switches (each) | ? | Brilliant NextGen | BLE mesh via a Control | local via elected panel | brilliant-mqtt (mesh) | keep | list every switch with its room and the load it drives |
-| Brilliant Smart Plugs (each) | ? | Brilliant NextGen | BLE mesh via a Control | local via elected panel | brilliant-mqtt (mesh) | keep |  |
+| Brilliant Control panels (each) | ? | Brilliant NextGen | Wi-Fi | none | `-` | drop | both failed identically (blank screen, unrecoverable); neither answers on the network. Not replaced — see `docs/brilliant.md` |
+| Brilliant Smart Dimmer Switches (each) | ? | Brilliant NextGen | BLE mesh (SIG) | local via our own mesh | `brilliant/esp32-bridge` → MQTT | keep | no Control needed: factory reset, then re-provision into our own network. On/off and dimming are stock SIG models. List every switch with its room and the load it drives |
+| Brilliant Smart Plugs (each) | ? | Brilliant NextGen | BLE mesh (SIG) | local via our own mesh | `brilliant/esp32-bridge` → MQTT | keep | same path as the dimmers; not yet re-provisioned |
 | GE (Z-Wave switches?) | ? | GE / Jasco | Z-Wave | local once on Z-Wave stick | `zwave_js` | keep, re-pair | list each device |
 | Wink hub + devices | ? | Wink | Zigbee / Z-Wave | none | `-` | drop hub, re-pair devices |  |
 | LiftMaster/Chamberlain garage opener (myQ) | garage | Chamberlain | myQ cloud (blocked) | none; add ratgdo board | `esphome` via ratgdo | keep, needs ratgdo | check learn button: yellow/purple works, white (Security+ 3.0) does not |
