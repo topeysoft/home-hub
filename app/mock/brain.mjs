@@ -79,7 +79,40 @@ const status = { driver: process.env.ENGINE === 'down' ? 'down' : 'ready', reaso
 const presence = process.env.PEOPLE === '0'
   ? { somebody: null, since: null, source: null, people: [], alarm: null }
   : { somebody: true, since: Date.now() - 3600e3, source: 'people', people: [{ name: 'Temi', home: true }, { name: 'Sam', home: false }, { name: 'Ade', home: true }], alarm: null }
+/* What is coming, the way a real hub shapes it (brain/hub/forecast.py). Built from the hour the
+   panel is actually running in, so ?at= previews land in the middle of it rather than behind it:
+   the afternoon warms, it rains from four until six, and it clears. FORECAST=0 takes it away, which
+   is the house this panel still has to work on -- plenty of weather integrations serve none. */
+const forecastHours = () => {
+  /* A real hub carries twelve hours from now (brain/hub/forecast.py). This carries thirty-six from
+     MIDNIGHT instead, which is the one difference worth having: ?at= previews an hour of the day on
+     the panel and the mock cannot see that query, so a forecast that started at the real clock would
+     leave a preview of the evening with two rows and a preview of the morning with none. Starting at
+     midnight means every hour anybody previews has a full row of hours after it. */
+  const midnight = new Date(); midnight.setHours(0, 0, 0, 0)
+  const hour = h => {
+    const t = Math.round(69 + 11 * Math.sin(((h % 24) - 9) / 24 * Math.PI * 2))   // coldest around three, warmest around three
+    const wet = (h % 24) >= 16 && (h % 24) < 18                                    // it rains from four until six
+    const night = (h % 24) < 6 || (h % 24) >= 20
+    return { at: new Date(midnight.getTime() + h * 3600e3).toISOString(),
+             condition: wet ? 'rainy' : night ? 'clear-night' : (h % 24) % 5 === 0 ? 'cloudy' : 'partlycloudy',
+             temperature: t, rain: wet ? 80 : 10 }
+  }
+  /* and the curve is anchored to the house's own reading, so the row for the hour it is now says
+     what the big number on the pane says. A mock whose forecast disagrees with its own weather by
+     twenty degrees is a mock that makes every screenshot look like a bug. */
+  const rows = Array.from({ length: 36 }, (_, h) => hour(h))
+  const nowRow = rows[new Date().getHours()]
+  const shift = 78 - nowRow.temperature
+  return rows.map(r => ({ ...r, temperature: r.temperature + shift }))
+}
+const forecastDays = () => {
+  const midnight = new Date(); midnight.setHours(0, 0, 0, 0)
+  const shape = [[0, 84, 61, 'rainy'], [1, 88, 64, 'sunny'], [2, 77, 59, 'partlycloudy'], [3, 79, 60, 'cloudy'], [4, 81, 62, 'sunny']]
+  return shape.map(([d, hi, lo, c]) => ({ at: new Date(midnight.getTime() + d * 86400e3).toISOString(), condition: c, high: hi, low: lo, rain: c === 'rainy' ? 70 : 10 }))
+}
 const ambient = { location: { name: 'Holts Summit, MO', lat: 38.6355985, lon: -92.1176322 }, weather: { id: 'w', condition: process.env.WX || 'partlycloudy', temperature: 78, unit: '°F', humidity: 48, wind_speed: 6, wind_unit: 'mph' },
+  forecast: process.env.FORECAST === '0' ? null : { hourly: forecastHours(), daily: forecastDays() },
   look: { feel: process.env.FEEL || 'calm', tone: process.env.TONE || 'follow', face: process.env.FACE || 'paper', layout: process.env.LAYOUT || 'auto', nav: process.env.NAV || 'auto' } }   // FEEL=nightfall LAYOUT=rail TONE=pastel NAV=top FACE=glass start the house somewhere else
 const scenes = { movie: [['light', 'off', {}], ['media', 'on', {}]], guests: [['light', 'on', {}]], asleep: [['light', 'off', {}], ['media', 'off', {}], ['lock', 'lock', {}]], empty: [['light', 'off', {}], ['media', 'pause', {}]], away: [['light', 'off', {}], ['media', 'off', {}], ['switch', 'off', {}], ['lock', 'lock', {}]] }
 const events = [

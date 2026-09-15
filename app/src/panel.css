@@ -5988,13 +5988,18 @@ select.input {
 .wall-loz {
   transition:
     filter 650ms var(--ease),
-    opacity 650ms var(--ease);
+    opacity 650ms var(--ease),
+    /* and the press, because the lozenge opens. One list: see .wall-loz below. */
+    transform 160ms var(--ease);
 }
 .wall-home:has(.bento:not([data-at-start])) .wall-cloud {
   opacity: 0.8;
 }
 .wall-home:has(.bento:not([data-at-start])) .wall-loz {
   opacity: 0;
+  /* and it stops taking touches with its light: an invisible button raised over
+     the row would eat the swipe that is still in progress */
+  pointer-events: none;
 }
 [data-face='glass'] .wall-home:has(.bento:not([data-at-start])) .wall-cloud,
 [data-face='glass'] .wall-home:has(.bento:not([data-at-start])) .wall-loz {
@@ -6272,6 +6277,20 @@ select.input {
   align-items: center;
   text-align: center;
   overflow: hidden;
+  /* it opens (WallView.vue says why that is not the same as being a card), so it
+     answers a finger like everything else that does. The transition for that is
+     up with the recede's, NOT here: a second `transition` on this selector sits
+     later in the file at the same weight and replaces the first, which silently
+     costs the pane its 650ms fade on a swipe. */
+  cursor: pointer;
+  /* ABOVE THE ROW, and only this. .bento is z-index 1 across the whole width
+     with 500-odd px of left padding holding the first card clear of the weather
+     -- so the row's empty half sits over the lozenge and swallowed every tap
+     until this line. Not on .wall-wx: the drawing must stay UNDER the row, or a
+     card swiped across the screen would pass behind the cloud. The lozenge can
+     be raised on its own because at rest no card is over it, and by the time one
+     is, it has faded to nothing (just below). */
+  z-index: 2;
   /* Paper's answer, and it has to be a real surface: --surface over a night sky
      at this size is a faint outline rather than a pane, and the numbers on it
      have nothing to sit on. So it takes the house's own plain card colour, the
@@ -6281,6 +6300,9 @@ select.input {
   border: 1px solid var(--card-edge, var(--edge));
   color: var(--card-ink, var(--ink));
   backdrop-filter: var(--frost);
+}
+.wall-loz:active {
+  transform: scale(0.985);
 }
 .wall-temp {
   /* the board's numerals are its own typeface at 200, not the house's serif:
@@ -8142,6 +8164,154 @@ select.input {
 .pane-rig > * {
   flex: 1 1 auto;
   min-width: 0;
+}
+
+/* ---------- Outside: the forecast, in the pane the lozenge opens ----------
+   WeatherPane.vue says why the weather gets a pane at all. What is here is the
+   INSTRUMENT half of it, and it is the only instrument in the panel that reads
+   rather than controls -- the others are a dial, a slider, a ring.
+
+   The rain marks take the panel's own cooling blue, the same 122,176,232 a
+   thermostat uses. A forecast is not the place to introduce a colour: the house
+   has three signals, they mean cold, alive and wrong, and rain is the first of
+   those. */
+.wx-rig {
+  flex-direction: column;
+}
+/* no forecast in this house: the drawing takes the half the rows would have had.
+   Centred rather than stretched -- it is a picture, and a picture pulled to the
+   corners of a box stops being one. */
+.wx-rig.art {
+  align-items: center;
+  justify-content: center;
+}
+.wx-art {
+  flex: 0 1 auto;
+  width: min(100%, 400px);
+  height: auto;
+  max-height: 100%;
+  opacity: 0.92;
+}
+.wx-ahead {
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+  width: 100%;
+  min-width: 0;
+}
+/* the hours: a row of marks, tallest at the warmest hour on show. The scale is
+   relative to the hours drawn rather than absolute, so a four-degree day still
+   reads as a shape and a thirty-degree one does not run off the top. */
+.wx-hours {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 8px;
+}
+.wx-hour {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.wx-hour-t {
+  font-size: 15px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.wx-hour-bar {
+  width: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.34);
+}
+.wx-hour-bar.wet {
+  background: rgb(122, 176, 232);
+}
+.wx-hour.wet .wx-hour-t,
+.wx-day-s {
+  color: rgb(122, 176, 232);
+}
+.wx-hour-k {
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.wx-rule {
+  height: 1px;
+  background: var(--edge);
+}
+/* the days: each one's range placed inside the whole week's, because the
+   comparison a person actually makes is whether tomorrow is warmer than today */
+.wx-days {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.wx-day {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 46px minmax(60px, 1.4fr) 46px;
+  align-items: center;
+  gap: 14px;
+}
+.wx-day-n {
+  font-size: 15px;
+  font-weight: 500;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wx-day-s {
+  margin-left: 10px;
+  font-size: 13px;
+  font-weight: 400;
+}
+.wx-day-lo {
+  font-size: 15px;
+  color: var(--muted);
+  text-align: right;
+}
+.wx-day-hi {
+  font-size: 15px;
+  font-weight: 500;
+}
+.wx-day-bar {
+  position: relative;
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.1);
+}
+.wx-day-bar i {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 3px;
+  background: linear-gradient(90deg, rgba(122, 176, 232, 0.8), var(--lamp));
+}
+/* a phone has no room for the two columns the pane is drawn in, and the row of
+   hours is the first thing that stops fitting */
+@media (max-width: 860px) {
+  .wx-hours {
+    gap: 4px;
+  }
+  .wx-hour-t,
+  .wx-day-lo,
+  .wx-day-hi {
+    font-size: 13.5px;
+  }
+  .wx-day-s {
+    display: none;
+  }
+  /* "Wednesday" is nine characters and the wall's column is sized for a wall.
+     The bar gives up what the name needs; the bar is a comparison and survives
+     being shorter, a clipped weekday is just wrong. */
+  .wx-day {
+    grid-template-columns: minmax(0, 1.2fr) 34px minmax(40px, 1fr) 34px;
+    gap: 10px;
+  }
 }
 .opened.shown .pane-rig {
   opacity: 1;

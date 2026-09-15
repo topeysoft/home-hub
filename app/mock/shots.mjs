@@ -14,6 +14,8 @@ const SCREENS = [
   ['kiosk-home-day', 'kiosk', '/?at=13:00&wx=sunny'],
   ['kiosk-wall', 'kiosk', '/?layout=wall&nav=top&at=19:40'],
   ['kiosk-wall-glass', 'kiosk', '/?layout=wall&nav=top&face=glass&at=19:40'],
+  ['kiosk-outside', 'kiosk', '/?layout=wall&nav=top&outside=1&at=13:00'],          // the pane the weather opens
+  ['phone-outside', 'phone', '/?outside=1&at=13:00', [390, 900]],
   ['kiosk-home-rain', 'kiosk', '/?at=23:10&wx=rainy'],
   ['kiosk-home-tall', 'kiosk', '/?at=19:40', [1280, 1600]],
   ['kiosk-room', 'kiosk', '/?room=living&at=19:40', [1280, 1000]],

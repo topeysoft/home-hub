@@ -10,6 +10,7 @@ from starlette.background import BackgroundTask
 from fastapi import Request
 from . import ha_setup
 from .ha_adapter import HAAdapter, AuthError
+from . import forecast as forecast_of
 from .model import CONTROLS, Home, kinds_for, kind_of
 from .events import EventLog
 from .intents import RoomState, SERVICE, plan, rules_as_data, holds
@@ -86,6 +87,8 @@ class Hub:
         self.entry: list = list(self.settings.get("entry") or [])   # room ids the family comes in through; rules for "entry" run there
         self.look = {**LOOK, **(self.settings.get("look") or {})}   # how the panel looks: one house, one answer, every screen
         self.weather = None
+        self.forecast = None        # what is coming, asked for rather than watched: forecast.py says why
+        self._forecast_task = None
         self.temp_unit = "°F"
         self.tz = datetime.now().astimezone().tzinfo   # the home's zone, from HA's config once connected
         self.add = Onboarding(self)
@@ -191,6 +194,7 @@ class Hub:
         self.engine.load(force=True); self.engine.seed()
         self.comfort.load()
         self._pick_weather(snap[3])
+        self._ask_forecast()
         self.ha.on_event(self._on_event)
         self._set("ready")
         asyncio.create_task(self.provision.refresh())   # look at the driver layer now, not at the next half-minute
@@ -234,6 +238,37 @@ class Hub:
         ws.sort(key=lambda s: ("hourly" in s["entity_id"] or "daily" in s["entity_id"], s["entity_id"]))
         self.weather = self._weather_of(ws[0]) if ws else None
 
+    def _ask_forecast(self):
+        """Go and get what is coming, without making anybody wait for it. Every caller of this is on
+        a path that has something else to broadcast first -- the panel gets the weather immediately
+        and the forecast a moment later, which is the right way round: the current condition is what
+        the screen draws and the forecast is what one pane reads."""
+        if self._forecast_task and not self._forecast_task.done(): self._forecast_task.cancel()
+        self._forecast_task = asyncio.create_task(self._forecast_now())
+
+    async def _forecast_now(self):
+        eid = self.weather and self.weather["id"]
+        had = self.forecast
+        try:
+            self.forecast = await forecast_of.fetch(self.ha, eid) if eid else None
+        except Exception:
+            log.exception("forecast")
+            return
+        # only when it actually says something new: this runs on the hour and most hours the rows
+        # are the same rows, and a broadcast is every open panel re-rendering a pane
+        if self.forecast != had: self._broadcast(json.dumps({"type": "ambient", "ambient": self.ambient()}))
+
+    async def _forecast_loop(self):
+        """On the hour, near enough. A forecast that is an hour stale is still a forecast; one that
+        is a day stale is a lie, and asking more often than the integration itself refreshes is the
+        panel making work for somebody's weather API."""
+        while True:
+            await asyncio.sleep(3600)
+            try:
+                if self.driver == "ready" and self.weather: await self._forecast_now()
+            except Exception:
+                log.exception("forecast tick")
+
     def _weather_of(self, s):
         a = s["attributes"]
         return {"id": s["entity_id"], "condition": s["state"], "temperature": a.get("temperature"),
@@ -241,7 +276,7 @@ class Hub:
                 "wind_speed": a.get("wind_speed"), "wind_unit": a.get("wind_speed_unit")}
 
     def ambient(self):
-        return {"location": self.location, "weather": self.weather, "look": self.look}
+        return {"location": self.location, "weather": self.weather, "forecast": self.forecast, "look": self.look}
 
     def set_look(self, look):
         """How the panel looks, kept by the house rather than by the screen: one
@@ -318,7 +353,10 @@ class Hub:
         self.comfort.load()
         had = self.weather and self.weather["id"]
         self._pick_weather(snap[3])
-        if (self.weather and self.weather["id"]) != had: self._broadcast(json.dumps({"type": "ambient", "ambient": self.ambient()}))
+        if (self.weather and self.weather["id"]) != had:
+            self.forecast = None       # the old entity's rows are not this one's
+            self._ask_forecast()
+            self._broadcast(json.dumps({"type": "ambient", "ambient": self.ambient()}))
         self.log.add("home", "registry", None, "rebuilt", source="system",
                      detail={"rooms": len(self.home.rooms), "devices": len(self.home.devices)})
         self._broadcast(json.dumps({"type": "home", "home": self.home_dict()}))
@@ -522,6 +560,7 @@ async def lifespan(app):
     hub._tick_task = asyncio.create_task(hub.engine.run())
     hub._drivers_task = asyncio.create_task(hub.provision.run())
     hub._comfort_task = asyncio.create_task(hub._comfort_loop())
+    hub._forecast_ticker = asyncio.create_task(hub._forecast_loop())
     hub._update_task = asyncio.create_task(hub.updates.run())
     hub._suggest_task = asyncio.create_task(hub.assistant.run())
     yield

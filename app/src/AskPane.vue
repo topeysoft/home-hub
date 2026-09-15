@@ -48,21 +48,52 @@ const shown = ref(false)
    not `!shown`, because for two frames at the start a pane is also not shown and
    the stylesheet counts the bottom bar's way back from the fall beginning */
 const closing = ref(false)
-function aside() {
+function fall(then: () => void) {
   shown.value = false; closing.value = true
-  setTimeout(() => (store.askAside = true), 320)
+  setTimeout(then, 320)
+}
+function rise() {
+  closing.value = false
+  requestAnimationFrame(() => requestAnimationFrame(() => (shown.value = true)))
+}
+function aside() { fall(() => (store.askAside = true)) }
+
+/* Answering is the end of it. The pane used to stand there afterwards showing the same phone and the
+   same two buttons, because it only leaves when the hub says the ask is gone -- and the hub does not
+   say so until the phone itself picks the key up, which can be a while and, when the person let it in,
+   was not being said at all. Whichever way it goes, the fall starts on the tap: the decision is made
+   here, the toast carries the word, and a question already answered must not be left on a wall for
+   somebody else to answer again.
+
+   The ask is dropped locally rather than waiting for the phones event, so this holds even if that
+   event never arrives. When another phone is behind it the pane rises again with the next one, one at
+   a time, arriving the way this one did -- not sitting there already open on a new name. */
+function answered(id: string) {
+  fall(() => {
+    store.asks = store.asks.filter(a => a.id !== id)
+    choosing.value = false; busy.value = false
+    if (store.asks.length) rise()
+  })
 }
 
 async function allow(span: 'day' | 'weekend' | 'keep') {
   const a = ask.value; if (!a || busy.value) return
   busy.value = true
-  try { await allowPhone(a.id, span); notify(`${a.name} is in${span === 'day' ? ' for today' : span === 'weekend' ? ' for the weekend' : ''}.`) }
-  catch (e: any) { if (e.message !== 'That needs the code.') notify(e.message, 'error') }
-  choosing.value = false; busy.value = false
+  try {
+    await allowPhone(a.id, span)
+    notify(`${a.name} is in${span === 'day' ? ' for today' : span === 'weekend' ? ' for the weekend' : ''}.`)
+    answered(a.id)
+  } catch (e: any) {
+    // the code was asked for and not given, or the hub said no: the question stands, so the pane does
+    if (e.message !== 'That needs the code.') notify(e.message, 'error')
+    choosing.value = false; busy.value = false
+  }
 }
 async function deny() {
   const a = ask.value; if (!a || busy.value) return
-  try { await denyPhone(a.id) } catch (e: any) { if (e.message !== 'That needs the code.') notify(e.message, 'error') }
+  busy.value = true
+  try { await denyPhone(a.id); answered(a.id) }
+  catch (e: any) { if (e.message !== 'That needs the code.') notify(e.message, 'error'); busy.value = false }
 }
 
 /* A wall panel has no keyboard, so Escape is not the way out and never the only

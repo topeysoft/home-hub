@@ -17,6 +17,13 @@
  * read as depth rather than as an empty tile -- a card there would be a box
  * saying what the whole screen behind it is already saying.
  *
+ * It does OPEN, though, and that is not a contradiction of the line above. What
+ * it opens is WeatherPane.vue, which is the only pane in the panel with no
+ * controls in it -- there is nothing to do to the weather. So the lozenge is
+ * still not a card: a card is a thing you operate, and this is a reading that
+ * has more to say than four lines. Everything that kept wanting a fifth line in
+ * here went there instead, which is what lets this stay a glance.
+ *
  * Everything else is shared: the same row, the same tiles, the same drawing of
  * the sky. <Attention /> comes first and unchanged -- see layout.ts for why
  * that is not a per-layout decision, and it is the one thing here the board
@@ -74,12 +81,12 @@ onUnmounted(() => clearInterval(t))
       <!-- the sky, and the one pane of glass hung in front of it -->
       <div class="wall-wx" v-if="temp || says">
         <WeatherArt class="wall-cloud" />
-        <div class="wall-loz">
+        <button class="wall-loz" @click="store.outside = true" :aria-label="`Outside, ${temp} ${says}`">
           <div class="wall-temp" v-if="temp">{{ temp }}</div>
           <div class="wall-says" v-if="says">{{ says }}</div>
           <div class="wall-sub" v-if="sun">{{ sun }}</div>
           <div class="wall-sub dim" v-if="also">{{ also }}</div>
-        </div>
+        </button>
       </div>
 
       <BentoRow :rooms="rooms" :when="when" :woke="woke">

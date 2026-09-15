@@ -7,6 +7,7 @@ nobody has to open Home Assistant.
 ```sh
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 .venv/bin/python main.py          # finds HA at http://localhost:8123 (HA_URL / HA_TOKEN in ../driver-layer/.env override)
+HUB_RELOAD=1 .venv/bin/python main.py   # development: restarts itself whenever anything under hub/ changes
 curl localhost:8300/setup/status  # {"driver": "ready", "setup_done": true, ...}
 curl localhost:8300/home
 curl -X POST localhost:8300/devices/media_player.nadine_s_room_roku_tv/off
@@ -16,6 +17,25 @@ curl localhost:8300/rules                             # the rules and whether th
 curl localhost:8300/rules/welcome-home/dry-run        # what a rule would do this instant, every condition with its value
 curl localhost:8300/rooms/<room_id>/why               # the last few times the room was set, held or shadowed, and by what
 ```
+
+### Do not develop against a stale hub
+
+`HUB_RELOAD=1` exists because the failure it prevents is silent. A hub left running from before your
+last edit keeps serving the older shape of `/ambient` or `/home`; the panel renders whatever it is
+given without complaint, and the result looks like a panel bug — a missing field reads as a missing
+feature. Nothing on the screen says the brain is old.
+
+So in development, start it with `dev.py` — `npm run brain` from the panel's directory, or
+`.venv/bin/python dev.py` from here. It stops whatever hub is already on the port, says what it
+replaced and how long that had been up, and starts a fresh one with reload on. One command, because
+two is how the trap gets you: a stale hub is by definition already holding the port, so a plain
+start just fails with `[Errno 48] Address already in use`, which names neither the process nor the
+fix. It will only stop a hub of ours — anything else on the port is reported and left alone, so a
+brain running under docker-compose is never killed by something aimed at its port.
+
+The watcher is pointed at `hub/` alone, deliberately: the hub writes `settings.json`, `events.db`,
+`rules.json` and `phones.json` into this directory, so a watcher on the whole of it would restart
+the house every time it logged an event.
 
 ## Tests
 

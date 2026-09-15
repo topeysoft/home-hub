@@ -1,5 +1,5 @@
 """Run from brain/: .venv/bin/python -m unittest -v. The phones that belong to the house: asking, allowing, the code, leaving."""
-import tempfile, time, unittest
+import json, tempfile, time, unittest
 from pathlib import Path
 from hub.phones import Phones, open_to_strangers, from_away, SPANS
 from hub.lock import needs_code
@@ -49,6 +49,19 @@ class PhonesTests(unittest.TestCase):
         self.assertEqual(self.phones.claim(ask["id"]), ("gone", None, None))          # handed over once
         self.assertEqual(self.phones.list()["asks"], [])
         with self.assertRaises(KeyError): self.phones.allow(ask["id"])
+
+    def test_allowing_tells_the_panels_the_knock_is_answered(self):
+        """The last word the walls hear must not still have the phone at the door.
+
+        Letting one in broadcast while the ask was still tokenless, so every panel was told in the same
+        breath that the phone had joined and that it was still knocking -- and nothing said otherwise
+        until the phone itself claimed the key, which is whenever it next polls. The wall that answered
+        kept the pane up, and so did every other wall in the house."""
+        ask = self.phones.ask("Sam's iPhone")
+        self.hub.sent.clear()
+        self.phones.allow(ask["id"])
+        self.assertEqual(json.loads(self.hub.sent[-1])["asks"], [])
+        self.assertEqual(len(json.loads(self.hub.sent[-1])["phones"]), 1)
 
     def test_not_now_ends_the_ask(self):
         ask = self.phones.ask("Someone")

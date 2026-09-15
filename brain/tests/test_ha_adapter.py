@@ -112,6 +112,20 @@ class TalkingTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(await first, "states")
         self.assertEqual(await second, "config")
 
+    async def test_a_forecast_is_asked_for_with_return_response(self):
+        """The one call whose ANSWER matters. Without return_response HA runs the service, succeeds,
+        and hands back nothing at all -- so a forecast that silently went empty would look exactly
+        like a house with no forecast, and this is the flag that tells them apart."""
+        rows = {"weather.home": {"forecast": [{"datetime": "2026-09-15T13:00:00+00:00", "condition": "sunny"}]}}
+        ha, ws = await self.start(reply=answer({"context": {}, "response": rows}))
+        got = await ha.forecast("weather.home", "hourly")
+        self.assertEqual(got, rows)
+        call = [m for m in ws.sent if m.get("type") == "call_service"][0]
+        self.assertTrue(call["return_response"])
+        self.assertEqual(call["service"], "get_forecasts")
+        self.assertEqual(call["service_data"], {"type": "hourly"})
+        self.assertEqual(call["target"], {"entity_id": "weather.home"})
+
     async def test_what_the_engine_refuses_comes_back_as_an_error_with_its_words(self):
         def refuse(m):
             if m["type"] == "subscribe_events": return answer()(m)

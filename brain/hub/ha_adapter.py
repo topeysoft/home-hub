@@ -112,3 +112,13 @@ class HAAdapter:
     async def call(self, domain: str, service: str, entity_id: str | None, **data):
         kw = {"target": {"entity_id": entity_id}} if entity_id else {}
         return await self.send("call_service", domain=domain, service=service, service_data=data, **kw)
+
+    async def forecast(self, entity_id: str, kind: str = "hourly"):
+        """A weather entity's forecast, which is the one thing above this file that cannot be read
+        off a state. HA answers it only as a service RESPONSE -- `return_response` is required, and
+        without it the call succeeds and returns nothing at all -- so it does not go through
+        `call()`, whose shape has no room for an answer."""
+        r = await self.send("call_service", domain="weather", service="get_forecasts",
+                            service_data={"type": kind}, target={"entity_id": entity_id},
+                            return_response=True)
+        return (r or {}).get("response")

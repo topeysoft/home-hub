@@ -10,6 +10,11 @@ export const store = reactive({
   viewer: null as Device | null,            // camera shown full screen
   events: [] as Event[],
   opened: null as Device | null,   // one device, held open in front of the house
+  /* the weather, held open in the same pane. Its own flag rather than a seat in `opened`,
+     because the weather is not a device and never will be: it has no id, no room and nothing
+     to do to it, and widening `opened` to hold it would put a null check on every line that
+     reads a device out of it. See WeatherPane.vue. */
+  outside: new URLSearchParams(location.search).get('outside') === '1',   // ?outside=1 previews it, the way ?sheet= and ?rest=1 preview the others
   ambient: { location: null, weather: null } as Ambient,
   ambientLoaded: false,
   rules: {} as Rules,                        // scene rules from the brain, to tell whether a room still matches its scene

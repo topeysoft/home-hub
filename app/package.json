@@ -9,6 +9,7 @@
     "build": "vue-tsc -b && vite build",
     "preview": "vite preview",
     "mock": "node mock/brain.mjs",
+    "brain": "cd ../brain && .venv/bin/python dev.py",
     "shots": "node mock/shots.mjs",
     "cost": "node mock/cost.mjs",
     "art-sheet": "node mock/art-sheet.mjs",

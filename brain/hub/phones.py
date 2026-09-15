@@ -107,6 +107,10 @@ class Phones:
         if span not in SPANS: raise ValueError("For today, for the weekend, or keep.")
         p, token = self._admit(a["name"], a.get("kind") or "phone", "wall", span)
         a["token"], a["phone"], a["allowed"] = token, p["id"], time.time()
+        # _admit already said the phones changed, but it said it a line too early: the ask still had no
+        # token then, so every screen was told the phone was in AND that it was still at the door. Say it
+        # again now that the ask is answered, so the knock clears off the walls that did not answer it.
+        self._changed()
         return self._public(p)
 
     def deny(self, ask_id: str):

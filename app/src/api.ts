@@ -35,7 +35,13 @@ export type Weather = { id: string; condition: string; temperature: number | nul
 export type Place = { name: string; lat: number; lon: number; tz?: string | null }
 /* look: how the panel looks, decided once by the house rather than per screen */
 export type Look = { feel?: string; tone: string; layout: string; nav?: string; face?: string }
-export type Ambient = { location: Place | null; weather: Weather | null; look?: Look }
+/* What is coming. Asked for rather than watched (brain/hub/forecast.py says why), and either half
+   may be empty: plenty of integrations serve daily and refuse hourly. `rain` is a probability in
+   per cent where the house has one, which is not everywhere. */
+export type Hour = { at: string; condition: string; temperature: number | null; rain: number | null }
+export type Day = { at: string; condition: string; high: number | null; low: number | null; rain: number | null }
+export type Forecast = { hourly: Hour[]; daily: Day[] }
+export type Ambient = { location: Place | null; weather: Weather | null; forecast?: Forecast | null; look?: Look }
 export type Event = { ts: number; kind: string; subject: string; old: string | null; new: string | null; source: string; detail: string | null }
 /* Who is home, as the brain sees it: null while it cannot tell (no people, no alarm). */
 export type Presence = { somebody: boolean | null; since: number | null; source: 'people' | 'alarm' | null; people: { name: string; home: boolean | null }[]; alarm: string | null }

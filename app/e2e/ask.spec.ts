@@ -108,6 +108,53 @@ test('a knock does not rise over a house that is not showing', async ({ page }) 
   expect(await page.getAttribute('.shell', 'class')).not.toContain('opened-shell')
 })
 
+/* The pane is the question. Once it has been answered it is not a question any more, and leaving it
+   standing on a wall -- the same phone, the same two buttons -- invites the next person past to answer
+   it again. It used to stand there because it only left when the hub said the ask was gone, and the hub
+   did not say so until the phone itself came back for the key. The fall starts on the tap instead. */
+test('answering it puts it away, and says so on the way out', async ({ page }) => {
+  await knocking(page)
+  await page.route('**/phones/asks/a1/allow', (route) => route.fulfill({ json: { id: 'p1', name: "Sam's iPhone" } }))
+  await page.goto('/?face=glass&layout=wall&nav=top&at=19:40', { waitUntil: 'networkidle' })
+  const pane = page.locator('.ask-pane')
+  await pane.getByRole('button', { name: 'Let it in' }).click()
+  await pane.getByRole('button', { name: 'Keep' }).click()
+  await expect(page.locator('.ask-pane'), 'the pane stood there after the phone was let in').toHaveCount(0)
+  // and the knock is answered, not put aside: nothing is left in the band offering to open it again
+  await expect(page.locator('.nudge.ask')).toHaveCount(0)
+  // the word the pane was carrying survives it
+  await expect(page.getByText("Sam's iPhone is in.")).toBeVisible()
+})
+
+test('saying not now puts it away too', async ({ page }) => {
+  await knocking(page)
+  await page.route('**/phones/asks/a1', (route) => route.fulfill({ json: { ok: true } }))
+  await page.goto('/?face=glass&layout=wall&nav=top&at=19:40', { waitUntil: 'networkidle' })
+  await page.locator('.ask-pane').getByRole('button', { name: 'Not now' }).click()
+  await expect(page.locator('.ask-pane')).toHaveCount(0)
+  await expect(page.locator('.nudge.ask')).toHaveCount(0)
+})
+
+/* One at a time means the next one arrives the way the first did -- rising -- rather than the pane
+   staying open and swapping the name under a finger that is still coming down on a button. */
+test('the phone behind it rises on its own', async ({ page }) => {
+  const second = { id: 'a2', name: "Ada's phone", kind: 'phone', asked: Math.round(Date.now() / 1000) - 10 }
+  await knocking(page, [ASK, second])
+  await page.route('**/phones/asks/a1/allow', (route) => route.fulfill({ json: { id: 'p1', name: "Sam's iPhone" } }))
+  await page.goto('/?face=glass&layout=wall&nav=top&at=19:40', { waitUntil: 'networkidle' })
+  const pane = page.locator('.ask-pane')
+  await expect(pane.locator('.ask-more')).toContainText('One more phone is waiting')
+  await pane.getByRole('button', { name: 'Let it in' }).click()
+  await pane.getByRole('button', { name: 'Keep' }).click()
+  await expect(pane.locator('.opened-name')).toContainText("Ada's phone")
+  await expect(pane.locator('.ask-more')).toHaveCount(0)
+  // it came back up, rather than never having gone down
+  await page.waitForTimeout(600)
+  expect(await page.getAttribute('.ask-pane', 'class')).toContain('shown')
+  // and it is back at the first question, not still holding the spans the last answer was picked from
+  await expect(pane.getByRole('button', { name: 'Let it in' })).toBeVisible()
+})
+
 test('letting one in asks for how long, and says so', async ({ page }) => {
   await knocking(page)
   await page.goto('/?face=glass&layout=wall&nav=top&at=19:40', { waitUntil: 'networkidle' })

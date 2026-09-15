@@ -1,0 +1,147 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200;300;400;500;600;700&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Plus Jakarta Sans", -apple-system, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: #a99cff; } a:hover { color: #cfc7ff; }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: #14162a; color: #ffffff; font-size: 17px; line-height: 1.4;">
+
+  <!-- the field -->
+  <div style="position: absolute; inset: 0; background: linear-gradient(180deg, #121520 0%, #191b29 24%, #1a1b29 46%, #211e26 66%, #281e22 80%, #15161a 88%, #0f1012 100%);"></div>
+  <div style="position: absolute; left: -60px; top: -80px; width: 720px; height: 560px; border-radius: 50%; background: radial-gradient(closest-side, rgba(58,54,96,.42), transparent 72%);"></div>
+
+  <!-- THE HOME, RECEDED. Not covered: scaled back, blurred and dimmed, so the
+       pane reads as something in front of the house rather than a new screen.
+       What is left showing is the bar and the top of what you touched. -->
+  <div style="position: absolute; inset: 0; filter: blur(9px) saturate(.9); opacity: .5; transform: scale(.972); transform-origin: 50% 40%;">
+    <div style="position: absolute; left: 44px; top: 30px; display: flex; align-items: baseline; gap: 14px;">
+      <span style="font-size: 30px; font-weight: 300; letter-spacing: -.03em;">7:40 PM</span>
+      <span style="font-size: 15px; color: rgba(255,255,255,.66);">Tuesday, September 15</span>
+    </div>
+    <div style="position: absolute; left: 44px; top: 96px; width: 470px; height: 62px; border-radius: 31px; background: rgba(30,30,36,.72); border: 1px solid rgba(255,255,255,.10);"></div>
+    <!-- the top of the cloud and the pane you tapped -->
+    <svg width="360" height="257" viewBox="0 0 210 150" style="position: absolute; left: 24px; top: 186px;">
+      <defs>
+        <radialGradient id="lobeS" cx="32%" cy="24%" r="78%">
+          <stop offset="0" stop-color="#e4e8f1"/><stop offset="58%" stop-color="#b3bbc9"/><stop offset="100%" stop-color="#848d9e"/>
+        </radialGradient>
+      </defs>
+      <g fill="url(#lobeS)">
+        <ellipse cx="72" cy="86" rx="56" ry="40"/><ellipse cx="118" cy="70" rx="48" ry="44"/>
+        <ellipse cx="150" cy="94" rx="42" ry="30"/><rect x="60" y="92" width="104" height="34" rx="17"/>
+      </g>
+    </svg>
+    <div style="position: absolute; left: 540px; top: 200px; width: 332px; height: 300px; border-radius: 28px; background: linear-gradient(170deg, rgba(150,60,40,.8), rgba(30,22,26,.9));"></div>
+    <div style="position: absolute; left: 900px; top: 200px; width: 252px; height: 300px; border-radius: 28px; background: rgba(40,44,60,.7);"></div>
+  </div>
+
+  <!-- the tint the open thing lends the room. The weather is neutral: it is the
+       one thing on the panel the house does not light. -->
+  <div style="position: absolute; inset: 0; background: radial-gradient(90% 70% at 62% 78%, rgba(122,140,190,.22), transparent 66%);"></div>
+
+  <!-- ================= THE PANE =================
+       Stops at 25vh, not at the top bar: the thing you were looking at is still
+       there, dimmed, above it. 34px on the top corners only. -->
+  <div style="position: absolute; left: 0; right: 0; top: 225px; bottom: 0; border-radius: 34px 34px 0 0; border: 1px solid rgba(255,255,255,.14); border-bottom: 0; background: linear-gradient(180deg, rgba(26,28,34,.80), rgba(16,17,21,.94)); backdrop-filter: blur(30px) saturate(1.25); -webkit-backdrop-filter: blur(30px) saturate(1.25); overflow: hidden;">
+
+    <!-- the way out, where every pane keeps it -->
+    <div style="position: absolute; top: 26px; right: 30px; width: 44px; height: 44px; border-radius: 50%; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.06); display: flex; align-items: center; justify-content: center;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.8)" stroke-width="1.9" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </div>
+
+    <div style="display: grid; grid-template-columns: minmax(0, 560px) minmax(0, 1fr); grid-template-rows: auto 1fr; gap: 34px; padding: 44px 48px 44px; height: 100%;">
+
+      <!-- what was said -->
+      <div style="grid-column: 1; grid-row: 1; min-width: 0;">
+        <div style="font-size: 15px; color: rgba(255,255,255,.66);">Outside</div>
+        <h2 style="margin: 4px 0 0; font-size: 56px; font-weight: 400; line-height: 1.04; letter-spacing: -.03em;">Partly cloudy</h2>
+
+        <!-- NO ROW OF VERBS. Every other pane has one here; the weather has
+             nothing to do, which is the whole reason this one is safe to open. -->
+
+        <div style="margin-top: 40px; font-size: 76px; font-weight: 250; line-height: 1; letter-spacing: -.02em;">78&deg;</div>
+        <p style="margin: 18px 0 0; font-size: 15.5px; line-height: 1.5; color: rgba(255,255,255,.66); max-width: 30em;">Rain from 4 PM, clearing by seven. Two windows are open in the living room and kitchen.</p>
+      </div>
+
+      <!-- the facts, under what was said -->
+      <div style="grid-column: 1; grid-row: 2; align-self: start; display: flex; flex-wrap: wrap; gap: 30px; margin-top: 22px; padding-top: 18px; border-top: 1px solid rgba(255,255,255,.10);">
+          <div>
+            <div style="font-size: 20px; font-weight: 500;">48%</div>
+            <div style="margin-top: 2px; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: rgba(255,255,255,.42);">Humidity</div>
+          </div>
+          <div>
+            <div style="font-size: 20px; font-weight: 500;">6 mph</div>
+            <div style="margin-top: 2px; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: rgba(255,255,255,.42);">Wind</div>
+          </div>
+          <div>
+            <div style="font-size: 20px; font-weight: 500;">7:17 PM</div>
+            <div style="margin-top: 2px; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: rgba(255,255,255,.42);">Sunset</div>
+          </div>
+          <div>
+            <div style="font-size: 20px; font-weight: 500;">71&deg;</div>
+            <div style="margin-top: 2px; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: rgba(255,255,255,.42);">Inside</div>
+          </div>
+      </div>
+
+      <!-- THE INSTRUMENT: the thing a 226px pane is too small for -->
+      <div style="grid-column: 2; grid-row: 1 / span 2; min-width: 0; margin-top: 28px; border-radius: 32px; border: 1px solid rgba(255,255,255,.10); background: rgba(255,255,255,.035); padding: 26px; min-height: 340px; display: flex; flex-direction: column; gap: 26px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;"><div style="font-size: 15px; font-weight: 500; color: #ffffff;">78&deg;</div><div style="width: 3px; height: 50px; border-radius: 2px; background: rgba(255,255,255,.34);"></div><div style="font-size: 11.5px; font-weight: 500; letter-spacing: .05em; color: rgba(255,255,255,.42);">NOW</div></div>
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;"><div style="font-size: 15px; font-weight: 500; color: #ffffff;">82&deg;</div><div style="width: 3px; height: 67px; border-radius: 2px; background: rgba(255,255,255,.34);"></div><div style="font-size: 11.5px; font-weight: 500; letter-spacing: .05em; color: rgba(255,255,255,.42);">1 PM</div></div>
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;"><div style="font-size: 15px; font-weight: 500; color: #ffffff;">84&deg;</div><div style="width: 3px; height: 75px; border-radius: 2px; background: rgba(255,255,255,.34);"></div><div style="font-size: 11.5px; font-weight: 500; letter-spacing: .05em; color: rgba(255,255,255,.42);">2 PM</div></div>
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;"><div style="font-size: 15px; font-weight: 500; color: #ffffff;">83&deg;</div><div style="width: 3px; height: 71px; border-radius: 2px; background: rgba(255,255,255,.34);"></div><div style="font-size: 11.5px; font-weight: 500; letter-spacing: .05em; color: rgba(255,255,255,.42);">3 PM</div></div>
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;"><div style="font-size: 15px; font-weight: 500; color: #9db8e8;">76&deg;</div><div style="width: 3px; height: 42px; border-radius: 2px; background: #7f96c8;"></div><div style="font-size: 11.5px; font-weight: 500; letter-spacing: .05em; color: rgba(255,255,255,.42);">4 PM</div></div>
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;"><div style="font-size: 15px; font-weight: 500; color: #9db8e8;">74&deg;</div><div style="width: 3px; height: 33px; border-radius: 2px; background: #7f96c8;"></div><div style="font-size: 11.5px; font-weight: 500; letter-spacing: .05em; color: rgba(255,255,255,.42);">5 PM</div></div>
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;"><div style="font-size: 15px; font-weight: 500; color: #ffffff;">73&deg;</div><div style="width: 3px; height: 29px; border-radius: 2px; background: rgba(255,255,255,.34);"></div><div style="font-size: 11.5px; font-weight: 500; letter-spacing: .05em; color: rgba(255,255,255,.42);">6 PM</div></div>
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;"><div style="font-size: 15px; font-weight: 500; color: #ffffff;">71&deg;</div><div style="width: 3px; height: 21px; border-radius: 2px; background: rgba(255,255,255,.34);"></div><div style="font-size: 11.5px; font-weight: 500; letter-spacing: .05em; color: rgba(255,255,255,.42);">7 PM</div></div>
+        </div>
+        <div style="height: 1px; background: rgba(255,255,255,.08);"></div>
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+          <div style="display: grid; grid-template-columns: 96px 44px 1fr 44px; align-items: center; gap: 14px;">
+            <div style="font-size: 15px; font-weight: 500;">Today<span style="margin-left: 10px; font-size: 13px; color: #9db8e8;">Rain</span></div>
+            <div style="font-size: 15px; color: rgba(255,255,255,.42); text-align: right;">61&deg;</div>
+            <div style="position: relative; height: 5px; border-radius: 3px; background: rgba(255,255,255,.10);">
+              <div style="position: absolute; left: 0%; right: 26%; top: 0; bottom: 0; border-radius: 3px; background: linear-gradient(90deg, rgba(160,186,232,.75), rgba(232,192,122,.85));"></div>
+            </div>
+            <div style="font-size: 15px; font-weight: 500;">84&deg;</div>
+          </div>
+          <div style="display: grid; grid-template-columns: 96px 44px 1fr 44px; align-items: center; gap: 14px;">
+            <div style="font-size: 15px; font-weight: 500;">Tomorrow</div>
+            <div style="font-size: 15px; color: rgba(255,255,255,.42); text-align: right;">64&deg;</div>
+            <div style="position: relative; height: 5px; border-radius: 3px; background: rgba(255,255,255,.10);">
+              <div style="position: absolute; left: 12%; right: 9%; top: 0; bottom: 0; border-radius: 3px; background: linear-gradient(90deg, rgba(160,186,232,.75), rgba(232,192,122,.85));"></div>
+            </div>
+            <div style="font-size: 15px; font-weight: 500;">88&deg;</div>
+          </div>
+          <div style="display: grid; grid-template-columns: 96px 44px 1fr 44px; align-items: center; gap: 14px;">
+            <div style="font-size: 15px; font-weight: 500;">Thursday</div>
+            <div style="font-size: 15px; color: rgba(255,255,255,.42); text-align: right;">59&deg;</div>
+            <div style="position: relative; height: 5px; border-radius: 3px; background: rgba(255,255,255,.10);">
+              <div style="position: absolute; left: 0%; right: 44%; top: 0; bottom: 0; border-radius: 3px; background: linear-gradient(90deg, rgba(160,186,232,.75), rgba(232,192,122,.85));"></div>
+            </div>
+            <div style="font-size: 15px; font-weight: 500;">77&deg;</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

@@ -16,6 +16,7 @@ import HousePanel from './HousePanel.vue'
 import AskPane from './AskPane.vue'
 import { isPage } from './pages'
 import Opened from './Opened.vue'
+import WeatherPane from './WeatherPane.vue'
 import Icon from './Icon.vue'
 import { upcomingLine } from './upcoming'
 import { glassVars, isTone, toneVars, type ToneName } from './tone'
@@ -133,6 +134,7 @@ function touched() {
      asking to join is the exception and stays: that one is a question still waiting for an answer,
      not something left lying around. */
   store.opened = null
+  store.outside = false
   open(null)
   woke.value++
 }
@@ -177,7 +179,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="shell" :data-ambient="ambient" :data-nav="nav" :data-face="face" :data-layout="layout" :data-flat="face === 'glass' && flat ? '' : null" :style="[tone, glass, openTint]" :class="{ resting: idle, 'in-setup': setup || shut, 'opened-shell': !!store.opened || panel || asking }">
+  <div class="shell" :data-ambient="ambient" :data-nav="nav" :data-face="face" :data-layout="layout" :data-flat="face === 'glass' && flat ? '' : null" :style="[tone, glass, openTint]" :class="{ resting: idle, 'in-setup': setup || shut, 'opened-shell': !!store.opened || store.outside || panel || asking }">
     <Sky :quiet="!idle && !setup" />
     <!-- glass lays its blooms on the sky the canvas just painted, under the veil -->
     <div class="sky-bloom" v-if="face === 'glass'"></div>
@@ -255,6 +257,7 @@ onUnmounted(() => {
 
     <Viewer />
     <Opened v-if="store.opened" />
+    <WeatherPane v-if="store.outside" :now="shown" />
     <AskPane v-if="asking" />
     <!-- :duration because what moves is inside: Vue times a transition from the
          element it is put on, and this one's root never moves, so on the way out

@@ -1,0 +1,113 @@
+{
+  "artboards": [
+    {
+      "file": "Today.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 520,
+      "h": 620,
+      "title": "Today \u2014 what ships"
+    },
+    {
+      "file": "DirectionA.dc.html",
+      "x": 600,
+      "y": 0,
+      "w": 520,
+      "h": 620,
+      "title": "A \u2014 Inside and out"
+    },
+    {
+      "file": "Main.dc.html",
+      "x": 1200,
+      "y": 0,
+      "w": 520,
+      "h": 620,
+      "title": "B \u2014 What is coming"
+    },
+    {
+      "file": "DirectionD.dc.html",
+      "x": 1800,
+      "y": 0,
+      "w": 520,
+      "h": 620,
+      "title": "D \u2014 The day"
+    },
+    {
+      "file": "DirectionC.dc.html",
+      "x": 2400,
+      "y": 0,
+      "w": 520,
+      "h": 700,
+      "title": "C \u2014 The house's answer"
+    },
+    {
+      "file": "Sheet.dc.html",
+      "x": 0,
+      "y": 1240,
+      "w": 1440,
+      "h": 900,
+      "title": "The pane \u2014 tapping the weather"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "brief",
+      "x": -560,
+      "y": 0,
+      "w": 480,
+      "text": "THE QUESTION\n\nThe lozenge is 226x372 of the best space on the screen and it answers \"what is it doing outside right now?\" \u2014 the one weather question a person standing in their own house can already answer by looking out of a window.\n\nSo every direction here is judged on one thing: does it tell you something the window does not?\n\nAll five are the same pane, same drawing, same four-line anatomy. Only the words change. Nothing here needs a new shape \u2014 if a direction needed one, that would be the argument against it."
+    },
+    {
+      "id": "knows",
+      "x": -560,
+      "y": 420,
+      "w": 480,
+      "text": "WHAT THE HOUSE ACTUALLY KNOWS\n\nToday, from the weather entity: condition, temperature, humidity, wind. That is all brain/hub/api.py reads \u2014 `_weather_of()`, four attributes off the current state.\n\nAlready in the house, unused here: indoor temperature (every thermostat's current_temperature, every sensor.temperature), open windows and doors (the contact capability), the covers, the thermostat's mode.\n\nNOT fetched at all: any forecast. HA has one behind the `weather.get_forecasts` service, hourly and daily. Nothing in the hub calls it.\n\nSo A and C cost panel work only. B and D need that one service call, a forecast field on the ambient payload, and a refresh \u2014 real work, but contained, and it is the same call for both.\n\nThe rule the panel already holds itself to: WallView.vue refuses to draw \"Feels like 81\u00b0\" because nothing in the house measures it. Nothing on this canvas invents a reading either."
+    },
+    {
+      "id": "today-note",
+      "x": 0,
+      "y": 660,
+      "w": 480,
+      "text": "TODAY \u2014 what ships\n\nFour lines: the number, the condition, sunset, humidity.\n\nThe number and the condition are the window's job. Sunset is charm, and the sky behind the panel is already drawing it. Humidity is the weakest line on the screen \u2014 48% is a fact almost nobody acts on.\n\nHere as the control, not as a straw man: it is a beautiful object, and whatever replaces a line has to be worth more than the calm it costs."
+    },
+    {
+      "id": "a-note",
+      "x": 600,
+      "y": 660,
+      "w": 480,
+      "text": "A \u2014 INSIDE AND OUT\n\n78 out, 71 in. The comparison is the point: it is the number that makes somebody open a window or close the blinds, and it is the one thing a weather app on a phone can never show, because it is the only one that knows the house.\n\nCosts no hub work at all \u2014 the thermostat's reading is already on the panel, one tile away.\n\nTradeoff: it is still only NOW. And the second number moves the eye off the big one, so the pane stops being readable in one glance from across a room, which is what the size of that numeral is for.\n\nThe small caps \"Outside\" is doing real work here and is worth arguing about \u2014 without it the two numbers are just two numbers."
+    },
+    {
+      "id": "main-note",
+      "x": 1200,
+      "y": 660,
+      "w": 480,
+      "text": "B \u2014 WHAT IS COMING  (the leading one)\n\nThe change, not the state. \"Rain from 4 PM\" is the sentence that alters what somebody does in the next hour, and it is the reason a weather display earns wall space at all.\n\nSunset and humidity both go. The high/low takes the quiet line, because a range is the second thing you want and the first thing you can read at a glance.\n\nIt keeps the existing anatomy exactly \u2014 four lines, same sizes \u2014 so it is the smallest visual change on this canvas and the largest change in usefulness.\n\nTradeoff: it needs the forecast (see the note far left), and it needs a good answer for the hours when nothing is coming. \"Clear through midnight\" is the obvious fallback and it is weaker than the line it replaces. Worth deciding before this gets built."
+    },
+    {
+      "id": "d-note",
+      "x": 1800,
+      "y": 660,
+      "w": 480,
+      "text": "D \u2014 THE DAY\n\nThe next eight hours as one ribbon: the temperature curve, the rain banded where it falls, three hour marks.\n\nThe most information per pixel on the canvas, and the only direction that shows SHAPE \u2014 that it warms until two and rains for two hours and clears.\n\nTradeoff, and it is a real one: a ribbon this small is read at arm's length, and this panel is drawn to be read from across a room. It may simply be the wrong instrument for a wall. Judge this one by walking away from the screen.\n\nSame forecast call as B \u2014 if B is built, this is a later refinement of it rather than a separate piece of work."
+    },
+    {
+      "id": "c-note",
+      "x": 2400,
+      "y": 740,
+      "w": 480,
+      "text": "C \u2014 THE HOUSE'S ANSWER\n\nThe lozenge does not change at all. The weather's consequence goes to the band instead: rain is coming and two windows are open.\n\nThis is the architecturally honest one. WallView.vue is explicit that the weather is \"not in the house\" \u2014 it is scenery, it parallaxes at its own rate, it is deliberately not a card and not tappable. An actionable line inside it fights that, and fights the rule that nothing vanishes under a tap.\n\nThe band is already defined as \"what Home owes a person\" and is already the only route to some things. A weather consequence belongs there.\n\nTradeoff: it says nothing at all on the ordinary day when the house has no stake in the weather \u2014 which is most days. So this is not really an alternative to B. It is the thing to build AFTER B, on top of the same forecast."
+    },
+    {
+      "id": "sheet-note",
+      "x": 1520,
+      "y": 1240,
+      "w": 520,
+      "text": "THE PANE \u2014 tapping the weather\n\nThis is the answer to the crowding, and it is a better one than picking between A, B and D.\n\nThe pill goes back to being a glance. Everything that wanted a fifth line \u2014 the forecast, the day, inside against outside, the house's stake in it \u2014 moves here, where it is read at arm's length because you walked over and touched it.\n\nIt is the pane every other card already opens: 25vh from the top so the row you came from is still there dimmed above it, 34px on the top corners only, the said column at 560 and the instrument beside it at 32px radius. Nothing new was invented for the weather.\n\nONE SLOT IS DELIBERATELY EMPTY. Every other pane has a row of verbs under the name. The weather has none \u2014 there is nothing to do to it. That is exactly what makes the lozenge safe to make tappable: WallView.vue's objection is that the weather is scenery and must not behave like a control, and a pane with no controls in it does not. Nothing changes under the tap; nothing vanishes under it either.\n\nWhat it costs: the same forecast call as B and D, plus the pane wiring. The pill itself can then stay exactly as it is today, or take B's one line \u2014 that choice stops being urgent once this exists."
+    }
+  ],
+  "launch": {
+    "view": "canvas"
+  }
+}
