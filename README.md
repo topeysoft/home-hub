@@ -134,6 +134,8 @@ container before the Pi's first start so the two do not fight over Ring's token.
 - `docs/away.md` — Away from home: why no VPN and no cloud tunnel, the three pieces (pairing, a relay the maker runs, a
   real certificate per hub), what has landed, and the build and open decisions for the two that have not.
 - `docs/voice.md` — The microphone: the shapes considered and what each waits on.
+- `docs/kinds.md` — Letting somebody correct a device's kind: why a lamp on a smart plug never hears "kitchen lights
+  off", and the two fields that keep the fix from making it untouchable.
 - `docs/apps.md` — Phone, tablet and desktop apps: why the panel already is the app, the four things a native
   shell would carry, and the one fork (the hub's certificate, or a pinned one in a shell) to settle after the relay.
 - `tools/ha_bootstrap.py` — the old manual bootstrap; the brain's setup screen does this now.
