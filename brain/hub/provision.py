@@ -66,6 +66,7 @@ class Provision:
         self.parts = {pid: {"id": pid, "name": name, "state": "unknown", "text": "Looking…", "port": port} for pid, name, port, _, _ in PARTS}
         self._failed_at: dict[str, float] = {}
         self.problems: list[dict] = []     # integrations HA has but could not set up, with HA's reason
+        self.domains: dict[str, str] = {}  # config entry -> what integration it is. A device carries its entry (model.Device.entry); this is how health.py turns that into "the Z-Wave radio" and gathers everything that went quiet with it
         self.sign_ins: list[dict] = []     # accounts whose sign-in ran out, each with the flow that finishes it
 
     def summary(self) -> list[dict]:
@@ -91,6 +92,7 @@ class Provision:
         changed = False
         rows = await self._entries()
         entries = {e["domain"] for e in rows}
+        self.domains = {e["entry_id"]: e["domain"] for e in rows}
         sign_ins = await self.hub.add.sign_ins()
         if sign_ins != self.sign_ins:
             self.sign_ins = sign_ins; changed = True
@@ -132,6 +134,16 @@ class Provision:
         try: return list(await self.hub.ha.send("config_entries/get"))
         except Exception as e:
             log.warning("could not list HA's integrations: %s", e); return []
+
+    async def retry_part(self, pid: str):
+        """Try a part the hub runs itself again, now rather than when the backoff runs out.
+
+        A part that failed to connect is left alone for RETRY_AFTER so a stick that is genuinely not there is
+        not hammered every half minute. That is right for the loop and wrong for a person who has just plugged
+        the stick back in, so Needs a look offers this and it forgets the backoff."""
+        if pid not in self.parts: raise KeyError(pid)
+        self._failed_at.pop(pid, None)
+        await self.refresh()
 
     async def retry(self, entry_id: str):
         """Ask HA to set an integration up again, after the person fixed what it complained about."""

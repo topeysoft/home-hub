@@ -12,10 +12,19 @@ export type Part = { id: string; name: string; state: 'unknown' | 'off' | 'addin
    branch, for a hub being worked on). `available` is null when the hub genuinely cannot tell. */
 export type Update = { version: string; commit: string; channel: 'release' | 'main'; latest: { version: string; sha: string; when: string; title: string } | null; available: boolean | null; checked: number | null; requested: boolean; state: { state: 'running' | 'done' | 'failed'; started?: number; finished?: number; commit?: string } | null; error: string | null }
 export type Status = { driver: Driver; reason: string; setup_done: boolean; locked?: boolean; owner: string | null; home: string | null; location: boolean; rooms: number; devices: number; drivers: Part[]; problems?: Problem[]; version?: string; update?: Update }
+/* One job on Needs a look. The brain writes every word of it, including the words on the buttons: the
+   panel does not know what it is looking at, so it draws `acts` and invents nothing. `with` is what went
+   quiet behind this one fault -- fix the fault and they all come back, which is why they are not lines of
+   their own. See brain/hub/health.py. */
+export type Act = { do: string; act: 'flow' | 'entry' | 'part' | 'check' | 'forget' | 'update'; to: string | null
+  ask?: string        // a question to answer first, where the doing is worth a second's thought
+  yes?: string }      // the words that answer it, with the name in them
+export type Quiet = { id: string; name: string; where: string }
 export type Note = { kind: 'offline' | 'storage' | 'driver' | 'update'; text: string; since: number | null; subject: string | null
-  flow?: string       // an account waiting to be signed in again: the conversation that finishes it
-  retry?: string      // something that could not start: the thing to ask again
-  do?: string }       // the words for the button, when there is something to do
+  where?: string      // an offline thing: which room, and what sort of thing it is -- enough to go and look at it
+  name?: string       // an offline thing: what it is called, apart from the sentence it is in
+  with?: Quiet[]      // what went quiet with this fault
+  acts?: Act[] }      // what can be done about it, in order
 export type Found = { flow_id: string; handler: string; kind: string; title: string; source: string }
 export type CatalogItem = { domain: string; name: string; brand?: string | null; local: boolean }
 export type Field = { name: string; kind: 'text' | 'password' | 'number' | 'boolean' | 'select' | 'section'; label: string; hint: string; required: boolean; default: any; options?: { value: any; label: string }[]; fields?: Field[]; expanded?: boolean }
@@ -93,6 +102,11 @@ export const setFan = (id: string, minutes: number) => post<{ ok: boolean; fan_u
 /** On now, off again in `minutes`; 0 cancels the timer and leaves it on. A plug, a lamp, a heater. */
 export const runFor = (id: string, minutes: number) => post<{ ok: boolean; off_at: number | null }>(`/devices/${encodeURIComponent(id)}/timer`, { minutes })
 export const setSense = (id: string, sensor: string | null) => post(`/devices/${encodeURIComponent(id)}/sense`, { sensor })
+/* Ask a thing that has gone quiet whether it is there, and say what came back. A thing that is genuinely
+   unplugged is still quiet afterwards, and saying so is the point: that is when removing it is the answer. */
+export const checkDevice = (id: string) => post<{ ok: boolean; answering: boolean; text: string }>(`/devices/${encodeURIComponent(id)}/check`)
+/* Try a part of the driver layer again now, rather than waiting out its five-minute backoff. */
+export const retryPart = (part_id: string) => post<{ ok: boolean; drivers: Part[] }>(`/drivers/${encodeURIComponent(part_id)}/retry`)
 export async function getDiscovered(): Promise<Found[]> {
   const r = await request('/discovered'); if (!r.ok) await fail(r); return r.json()
 }

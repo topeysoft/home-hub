@@ -130,12 +130,41 @@ const why = [
   { ts: now - 7200, kind: 'intent', subject: 'living', old: 'empty', new: 'occupied', source: 'panel', detail: null },
 ]
 const discovered = process.env.FOUND === '0' ? [] : [{ flow_id: 'f1', handler: 'sonos', kind: 'speaker', title: 'Sonos Roam', source: 'zeroconf' }, { flow_id: 'f2', handler: 'cast', kind: 'tv', title: 'Chromecast (Den)', source: 'zeroconf' }]
-// NEEDSLOOK=1 gives Home its quiet list, with the two lines that can be acted on from there.
+// NEEDSLOOK=1 gives Home its quiet list. Every line is a job: it says what can be done about it in `acts`,
+// and a fault gathers what went quiet behind it in `with` -- one dead radio is one line and not seven.
+// The shape here is the shape a real house was showing: a radio down, and everything on it gone with it.
+const quietOnes = [
+  { id: 'l4', name: 'Front door', where: 'Hall · a lock' },
+  { id: 'l5', name: 'Dimmer', where: 'Living room · a light' },
+  { id: 'l6', name: 'Home Theater Light', where: 'Den · a light' },
+  { id: 'l7', name: 'Holts Summit Alarm Siren', where: 'Hall · a plug' },
+  { id: 'l8', name: 'Porch light', where: 'Porch · a light' },
+  { id: 'l9', name: 'Garage sensor', where: 'Garage · a plug' },
+]
 const notes = process.env.NEEDSLOOK ? [
-  { kind: 'driver', subject: 'nest', since: null, text: 'Google Nest needs signing in again: home-hub.', flow: 'r1', do: 'Sign in again' },
-  { kind: 'driver', subject: 'e-hue', since: null, retry: 'e-hue', do: 'Try again', text: 'Hue bridge could not connect: no route to host' },
-  { kind: 'offline', subject: 'l4', since: now - 86400 * 2, text: 'Porch light has been offline since Tuesday.' },
+  { kind: 'driver', subject: 'nest', since: null, text: 'Google Nest needs signing in again: home-hub.', with: [],
+    acts: [{ do: 'Sign in again', act: 'flow', to: 'r1' }] },
+  { kind: 'driver', subject: 'zwave', since: null, text: 'Z-Wave radio is not running: could not connect.', with: quietOnes,
+    acts: [{ do: 'Try again', act: 'part', to: 'zwave' }] },
+  { kind: 'driver', subject: 'e-hue', since: null, text: 'Hue bridge could not connect: no route to host', with: [],
+    acts: [{ do: 'Try again', act: 'entry', to: 'e-hue' }] },
+  { kind: 'offline', subject: 'l1', name: 'Bedroom TV', where: 'Bedroom · a speaker', since: now - 86400 * 9,
+    text: 'Bedroom TV has been offline since Sep 6.',
+    acts: [{ do: 'Check again', act: 'check', to: 'l1' },
+           { do: "It's gone, remove it", act: 'forget', to: 'l1', yes: 'Yes, remove Bedroom TV',
+             ask: 'Remove Bedroom TV from the house? It comes off the account that brought it.' }] },
+  { kind: 'storage', subject: null, since: null, acts: [], text: "The hub's storage is nearly full: 35.5 GB left." },
 ] : []
+// NEEDSLOOK=many: a house where a lot has gone quiet with nothing in common, for the fold on the page.
+if (process.env.NEEDSLOOK === 'many') {
+  for (const q of quietOnes.concat(quietOnes.map(q => ({ ...q, id: q.id + 'b', name: q.name + ' 2' })))) {
+    notes.splice(-1, 0, { kind: 'offline', subject: q.id, name: q.name, where: q.where, since: now - 86400,
+      text: `${q.name} has been offline since yesterday.`,
+      acts: [{ do: 'Check again', act: 'check', to: q.id },
+             { do: "It's gone, remove it", act: 'forget', to: q.id, yes: `Yes, remove ${q.name}`,
+               ask: `Remove ${q.name} from the house? It comes off the account that brought it.` }] })
+  }
+}
 // the sign-in conversation behind that first line: HA asks for the password again, nothing else
 const signIn = { type: 'form', flow_id: 'r1', handler: 'nest', kind: 'Google Nest', step_id: 'reauth_confirm',
   hint: 'Google signed this hub out. Signing in again brings the cameras, doorbell and thermostat back.',
@@ -188,9 +217,16 @@ const server = http.createServer((req, res) => {
     playing: {},
     folder: '/data/sounds',
   })
+  // the two ways out of a quiet thing, and the way back into a part that stopped
+  if (p.startsWith('/devices/') && p.endsWith('/check') && req.method === 'POST') {
+    const id = p.split('/')[2]
+    const n = notes.find(x => x.subject === id)
+    return json(res, { ok: true, answering: false, text: `${n?.name || 'It'} still is not answering.` })
+  }
+  if (p === '/drivers/zwave/retry' && req.method === 'POST') return json(res, { ok: true, drivers: status.drivers })
   if (p === '/flows/r1') {
     if (req.method !== 'POST') return json(res, signIn)
-    const i = notes.findIndex(n => n.flow === 'r1'); if (i >= 0) notes.splice(i, 1)   // answered: the line on Home goes
+    const i = notes.findIndex(n => n.acts?.some(a => a.to === 'r1')); if (i >= 0) notes.splice(i, 1)   // answered: the line on Home goes
     return json(res, { type: 'create_entry', flow_id: 'r1', handler: 'nest', kind: 'Google Nest', entry_title: 'home-hub' })
   }
   if (p === '/catalog') return json(res, catalog)

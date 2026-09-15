@@ -768,6 +768,30 @@ async def set_device_kind(device_id: str, body: dict):
     return {"ok": True, "kind": kind_of(dev)}
 
 
+@app.post("/devices/{device_id}/check")
+async def check_device(device_id: str):
+    """Ask a thing that has gone quiet whether it is there, now rather than whenever the driver next tries.
+
+    This is the first of the two ways out of Needs a look (the other is forgetting it). It is deliberately
+    honest: the answer comes back as the device's state and the panel says what it found, because a button
+    that spins and tells you nothing is what the page had before. A thing that is genuinely unplugged will
+    still be quiet after this, and being told so plainly is the point -- that is when "It's gone, remove it"
+    is the right next tap. Defined above the catch-all /devices/{id}/{action} so it stays its own thing.
+    """
+    hub.ready()
+    dev = hub.home.devices.get(device_id)
+    if not dev: raise HTTPException(404, "unknown device")
+    try: await hub.ha.call("homeassistant", "update_entity", dev.id)
+    except Exception as e:
+        log.warning("could not check %s: %s", device_id, e)
+        raise HTTPException(502, f"Could not ask {dev.name}.")
+    await asyncio.sleep(2)     # give the driver a moment to answer before the panel reads the state back
+    fresh = hub.home.devices.get(device_id)
+    answering = bool(fresh) and fresh.state != "unavailable"
+    return {"ok": True, "answering": answering,
+            "text": f"{dev.name} is answering again." if answering else f"{dev.name} still is not answering."}
+
+
 @app.delete("/devices/{device_id}")
 async def forget_device(device_id: str):
     """Forget a device: out of the driver's registry, and out of the house with it.
@@ -1307,6 +1331,18 @@ async def sounds():
 
 
 # ---------- health ----------
+@app.post("/drivers/{part_id}/retry")
+async def retry_part(part_id: str):
+    """Try a part of the driver layer again -- the Z-Wave radio, Matter, Messages -- after a person has put
+    right whatever it complained about. Without this the only answer to "Z-Wave radio is not running" was to
+    wait out a five-minute backoff with nothing on the screen saying so."""
+    hub.ready()
+    try: await hub.provision.retry_part(part_id)
+    except KeyError: raise HTTPException(404, "unknown part")
+    except Exception as e: raise HTTPException(502, f"could not try it again: {e}")
+    return {"ok": True, "drivers": hub.provision.summary()}
+
+
 @app.get("/health")
 def health():
     """What needs a look, in plain words: [{"kind", "text", "since", "subject"}]. Empty is good news."""

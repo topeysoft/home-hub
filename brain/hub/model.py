@@ -100,6 +100,7 @@ class Device:
     maker: str | None = None       # who made the unit, from the driver's device registry; the one thing a tile can say about hardware it has no picture of
     kind: str | None = None        # what the OWNER says this is, where they have said anything: a lamp on a plug is a light. Read it through kind_of(), never instead of capability
     since: float = field(default_factory=time.time)  # when it entered the state it is in; a rule's `for` counts from here, and HA's own last_changed survives a restart of this brain
+    entry: str | None = None       # the account or radio that brought it (the driver's config entry). What a fault is grouped under: when one stops answering, everything on it goes quiet at once, and health.py says that once instead of once per device
 
 
 @dataclass
@@ -151,6 +152,7 @@ class Home:
                 r.intent, r.set_by, r.hold_until, r.motion_at = was[rid].intent, was[rid].set_by, was[rid].hold_until, was[rid].motion_at
         dev_area = {d["id"]: d.get("area_id") for d in ha_devices}
         dev_words = {d["id"]: " ".join(str(d.get(k) or "") for k in ("name_by_user", "name", "model", "manufacturer")) for d in ha_devices}
+        dev_entry = {d["id"]: next(iter(d.get("config_entries") or []), None) for d in ha_devices}   # what brought the hardware, for entries that do not name it themselves
         self.hardware = {d["id"]: {"name": d.get("name_by_user") or d.get("name") or "", "manufacturer": d.get("manufacturer") or "", "model": d.get("model") or ""} for d in ha_devices}
         reg = {e["entity_id"]: e for e in entities}
         st = {s["entity_id"]: s for s in states}
@@ -173,6 +175,7 @@ class Home:
                 for suffix in (" Live view", " Live View", " Camera"):
                     if name.endswith(suffix): name = name[: -len(suffix)]
             d = Device(eid, name, room, cap, s["state"], self.attrs_for(eid, cap, s["attributes"]), e.get("device_id"), bool(e.get("area_id")), seen_at(s), since=changed_at(s))
+            d.entry = e.get("config_entry_id") or dev_entry.get(e.get("device_id") or "")
             d.maker = self.hardware.get(e.get("device_id") or "", {}).get("manufacturer") or None
             d.kind = self.shown_as(eid, cap)
             self.devices[eid] = d

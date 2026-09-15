@@ -4870,26 +4870,33 @@ select.input {
     margin-block: 0;
   }
 }
-/* Needs a look is the one list that carries buttons, and without a ground they
-   sit as white pills straight on the sky. One surface for the whole list, not
-   one per row: three cards would make a quiet section out-shout the ask card
-   above it, which is a single object and the more urgent one. The existing row
-   hairlines go on serving as dividers. Scoped to .notes so Recently stays bare. */
+/* Needs a look carries buttons, and buttons want a ground under them or they
+   sit as loose pills on the sheet. It used to get that from one pale slab built
+   out of --card-* -- and that was right when this list lived on HOME, where a
+   card is an object standing off the sky and --card-plain is mixed FROM the sky
+   to do it (tone.ts). The list is a page of This house now. The sky is not
+   behind it any more, so a surface tuned to the sky reads as a bright slab
+   dropped on a dark sheet, and in Nightfall that is exactly what it looked like.
+   The old note also worried about out-shouting the ask card above it; there is
+   no card above it now, the page is its own.
+
+   So it takes the ground This house already uses for a list of things with
+   buttons on them: one row per job in --surface, the way Accounts does it
+   (.phones li). Same tokens, same radius, same 6px between them -- two pages
+   that do the same work now look like they do. */
 .notes {
-  background: var(--card-plain, var(--surface));
-  border: 1px solid var(--card-edge, var(--edge));
-  border-radius: 20px;
-  padding: 2px 18px;
-}
-.notes .recent-icon {
-  background: var(--card-hi, var(--surface-hi));
-  color: var(--card-ink-2, var(--ink-2));
-}
-.notes .recent-text {
-  color: var(--card-ink, var(--ink));
+  gap: 6px;
 }
 .notes li {
-  border-bottom-color: var(--card-edge, var(--edge));
+  padding: 12px 14px;
+  border: 1px solid var(--edge);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+/* .recent hairlines divided a slab; a row that is its own card keeps its own
+   edge all the way round, last one included. */
+.notes li:last-child {
+  border-bottom: 1px solid var(--edge);
 }
 
 /* ---------- how the house looks ---------- */
@@ -9543,5 +9550,93 @@ button.reading[data-held] {
   .viewer-frame.connecting::after,
   .rig-still.connecting::after {
     display: none;
+  }
+}
+
+/* ---------- Needs a look: a page of jobs ---------- */
+/* Every row now carries what to do about it, and a fault carries the things
+   that went quiet behind it, so a row is two or three lines tall instead of
+   one. .recent centres its three columns, which is right for a one-line row
+   and wrong the moment the middle column grows -- the icon would float to the
+   middle of a paragraph and the buttons would sit halfway down it. Only here,
+   everything hangs from the top. */
+.notes li {
+  align-items: start;
+}
+.notes .recent-icon {
+  margin-top: 1px;
+}
+.notes .recent-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  line-height: 1.45;
+}
+/* Where to go and look. Quiet, because the sentence above it is the news and
+   this is the footnote that makes the news useful. The panel's own --muted, not
+   --card-ink-2: that one flips to dark ink for a pale card, and these rows are
+   the sheet's dark --surface. */
+.note-where {
+  font-size: 13px;
+  color: var(--muted);
+}
+.note-with {
+  font-size: 13px;
+  color: var(--muted);
+}
+.note-thing {
+  display: block;
+}
+.note-thing-where {
+  color: var(--muted);
+}
+.note-thing-where::before {
+  content: " · ";
+}
+/* "and 3 more" inside a sentence: a word you can press, not a pill. A button
+   here would make the sentence into a row of controls. */
+.linky {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: var(--lamp, var(--ink));
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+/* The doing. Stacked, because a row can offer two (check it, or be rid of it)
+   and side by side they crowd the sentence they belong to. */
+.note-acts {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  max-width: 260px;
+}
+/* The second tap. The question replaces the buttons on its own row rather than
+   opening anything, so what is about to disappear is said, with its name in it,
+   in the place the tap happened. */
+.note-ask {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--muted);
+  text-align: left;
+}
+.more-quiet {
+  margin-top: 12px;
+  align-self: flex-start;
+}
+@media (max-width: 860px) {
+  /* On a phone the third column has nowhere to go, so the row becomes two rows:
+     the sentence, then what to do about it under it. */
+  .notes li {
+    grid-template-columns: auto 1fr;
+  }
+  .note-acts {
+    grid-column: 2;
+    max-width: none;
   }
 }

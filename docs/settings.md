@@ -119,9 +119,14 @@ As it is, plus the few things that are about the hub and nothing else.
 - `provision.py` keeps the waiting ones beside its other complaints, refreshed on the same half-minute tick. A dead
   token usually makes HA complain about the account *and* open a flow; the flow is the one worth offering, so it
   stands in for the complaint rather than the house saying the same thing twice.
-- `health.py` turns each into a *Needs a look* sentence carrying the way to answer it: the flow for a sign-in, the
-  entry for something that could not start, and the words for its button. The words come from the brain, as every
-  other sentence there does.
+- `health.py` turns each into a *Needs a look* **job**, not a sentence: `acts` is the list of things that can be
+  done about it -- the flow for a sign-in, the entry or the part for something that could not start, and for a thing
+  that has gone quiet either asking it again or being rid of it. The words on the buttons come from the brain, as
+  every other sentence there does, down to the question a removal asks first.
+- A fault is said once. A device carries the entry that brought it (`model.Device.entry`) and `provision.domains`
+  says what each entry is, so a radio that stopped gathers everything that went quiet with it into its own `with`
+  rather than letting them stand as lines of their own. One dead radio was reading as seven separate mysteries with
+  the cause last; it is one row now, with the six named under it, and putting the radio right clears all of them.
 - Home's list draws those buttons. *Sign in again* hands the flow to the sheet that already draws every other one,
   which then reads as being about that one job: no *Found nearby*, no *Behind the scenes*, no Advanced link. Walking
   away leaves the flow open, so the line on Home still offers it.
