@@ -8848,11 +8848,25 @@ select.input {
   padding: 0;
   cursor: pointer;
 }
-.rig-still img {
+.rig-still img,
+.rig-still video {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
+}
+/* the two moving ways, laid over the still and shown only once a picture is
+   actually moving -- the viewer's arrangement, in a smaller frame */
+.rig-still-moving,
+.rig-still-video {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.4s var(--ease);
+}
+.rig-still.playing .rig-still-moving[src],
+.rig-still.playing .rig-still-video {
+  opacity: 1;
 }
 .rig-still-none {
   position: absolute;
@@ -9384,4 +9398,74 @@ button.reading[data-held] {
   min-width: 0;
   min-height: 0;
   scroll-snap-align: start;
+}
+
+/* ---------- a camera that is coming, and not one that is stuck ----------
+ *
+ * The still is instant and a stream is not. `live.ts` gives an attempt WAIT =
+ * 12s before giving up on it and the viewer runs its two ways one after the
+ * other, so a camera that is simply off leaves a person looking at a motionless
+ * photograph for up to twenty-four seconds. Nothing on the screen changes in
+ * that time, which makes "this is broken" the correct reading of everything
+ * except the outcome.
+ *
+ * So the frame says it is working, in the plainest way a frame can: a hairline
+ * travelling the top edge. Deliberately NOT on the picture itself -- dimming or
+ * sweeping the photograph would be the panel obscuring the one thing somebody
+ * opened a camera to look at, and a security picture is not a loading skeleton.
+ *
+ * Under reduced motion the blanket rule at the top of this file takes the
+ * animation away, and a bar frozen at its start is worse than no bar at all --
+ * it is a second still object pretending to be busy. So it is removed outright
+ * there, and the words carry the state instead: Viewer.vue's chip reads
+ * "Connecting" and then "Still trying" once the second way begins, which is the
+ * one thing that distinguishes second 2 from second 23.
+ */
+.viewer-frame.connecting::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  z-index: 4;
+  pointer-events: none;
+  background-image: linear-gradient(90deg, transparent, var(--live), transparent);
+  background-size: 38% 100%;
+  background-repeat: no-repeat;
+  animation: viewer-connecting 1.5s ease-in-out infinite;
+}
+@keyframes viewer-connecting {
+  from {
+    background-position: -40% 0;
+  }
+  to {
+    background-position: 140% 0;
+  }
+}
+/* The sheet on Home gets the same hairline, on its own smaller frame. It can afford to be quieter
+   than the viewer for a reason worth writing down: the viewer PROMISES live -- it chains the two ways
+   the moment it opens and says Connecting -- while the sheet promises nothing, so somebody who never
+   looks away sees a dated still and is uninformed rather than misled. Quieter, not absent: the whole
+   complaint was that nothing on the screen moved. */
+.rig-still.connecting::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  z-index: 4;
+  pointer-events: none;
+  background-image: linear-gradient(90deg, transparent, var(--live), transparent);
+  background-size: 38% 100%;
+  background-repeat: no-repeat;
+  animation: viewer-connecting 1.5s ease-in-out infinite;
+  opacity: 0.8;
+}
+@media (prefers-reduced-motion: reduce) {
+  .viewer-frame.connecting::after,
+  .rig-still.connecting::after {
+    display: none;
+  }
 }

@@ -89,6 +89,25 @@ describe('asking for it again', () => {
     expect(fetching.mock.calls[1][1].headers['If-None-Match']).toBe('"a"')
   })
 
+  /* The age the brain quotes is "unchanged for", which a restart resets -- it has only just started
+     watching and cannot know the frame is old. This is the line that keeps that from reaching a
+     screen: a panel that still holds the frame gets a 304, and a 304 never re-dates anything. So a
+     hub restart cannot make a four-hour-old picture read "Just now" under a panel that is up. */
+  it('keeps the age it knows when the brain has forgotten it', async () => {
+    fetching.mockResolvedValue(frame('night', 4 * 3600))
+    watchStill('camera.door')
+    await settle()
+    const dated = stillFor('camera.door').at
+    expect(ageLabel(dated)).toBe('4h ago')
+
+    // the hub restarts: same bytes, so the ETag still matches and the answer is a 304 -- carrying an
+    // age of 0, because the brain is watching these bytes for the first time
+    fetching.mockResolvedValue({ ok: false, status: 304, headers: new Headers({ 'X-Frame-Age': '0' }), blob: async () => new Blob() } as unknown as Response)
+    await vi.advanceTimersByTimeAsync(BASE)
+    expect(stillFor('camera.door').at, 'a 304 re-dated the picture').toBe(dated)
+    expect(ageLabel(stillFor('camera.door').at)).toBe('4h ago')
+  })
+
   it('takes 304 for the answer it is: the picture we have is still the picture', async () => {
     watchStill('camera.door')
     await settle()

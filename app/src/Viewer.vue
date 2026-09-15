@@ -22,6 +22,12 @@ const dev = computed(() => store.viewer)
 const video = ref<HTMLVideoElement>(), moving = ref<HTMLImageElement>()
 const loading = ref(true)
 const playing = ref(false), trying = ref(false), audio = ref(false), sound = ref(false)
+/* Which of the two ways is being tried. It is only ever read to say so out loud -- `live.ts` gives an
+   attempt 12 seconds before it gives up on it, and the viewer runs them one after the other, so a
+   camera that is simply off leaves somebody looking at a photograph for up to 24 seconds. Saying
+   "Connecting" for all of that is true and useless: it reads the same at second 2 and at second 23,
+   which is exactly how a screen that is working comes to look like a screen that is stuck. */
+const second = ref(false)
 let live: Live | null = null
 
 /* The still is asked for more often here than on a card -- this is the screen somebody is standing in
@@ -35,7 +41,8 @@ const label = computed(() => {
   if (dead.value) return 'Offline'
   if (playing.value) return 'Live'
   const age = src.value ? ageLabel(still.value.at) : 'Loading…'
-  return trying.value ? `Connecting · ${age}` : age
+  if (!trying.value) return age
+  return `${second.value ? 'Still trying' : 'Connecting'} · ${age}`
 })
 const place = computed(() => roomOf(dev.value!)?.name ?? '')
 const lamp = computed(() => { const l = dev.value?.attrs?.light ? deviceById(dev.value.attrs.light) : undefined; return l && l.state !== 'unavailable' ? l : undefined })
@@ -45,7 +52,7 @@ function toggleLamp() { if (lamp.value && !lampBusy.value) perform(lamp.value, l
 function close() { store.viewer = null }
 function key(e: KeyboardEvent) { if (e.key === 'Escape') close() }
 
-function drop() { live?.stop(); live = null; playing.value = false; trying.value = false; audio.value = false; hush() }
+function drop() { live?.stop(); live = null; playing.value = false; trying.value = false; second.value = false; audio.value = false; hush() }
 function hush() { sound.value = false; if (video.value) video.value.muted = true }
 function toggleSound() { if (!video.value) return; sound.value = !sound.value; video.value.muted = !sound.value }
 async function start() {
@@ -62,8 +69,8 @@ async function start() {
   })
   // Neither moving picture could be had: the still is already being watched underneath, so stop trying.
   const stills = () => { live = null; trying.value = false }
-  const second = () => { live = mjpeg(id, moving.value!, on(stills)) }
-  live = 'RTCPeerConnection' in window ? webrtc(id, video.value, on(second)) : mjpeg(id, moving.value, on(stills))
+  const fallback = () => { second.value = true; live = mjpeg(id, moving.value!, on(stills)) }
+  live = 'RTCPeerConnection' in window ? webrtc(id, video.value, on(fallback)) : mjpeg(id, moving.value, on(stills))
 }
 
 /* One frame out of the live picture, kept where every card showing this camera can find it. Every few
@@ -86,7 +93,7 @@ watch(dead, (d) => { if (d) drop(); else start() })
 
 <template>
   <div class="viewer" v-if="dev" @click.self="close">
-    <div class="viewer-frame" :class="{ loading: loading && !playing, playing }">
+    <div class="viewer-frame" :class="{ loading: loading && !playing, playing, connecting: trying && !playing }">
       <img v-if="src" class="viewer-still" :src="src" alt="" />
       <img ref="moving" class="viewer-moving" alt="" />
       <video ref="video" class="viewer-video" autoplay muted playsinline></video>
