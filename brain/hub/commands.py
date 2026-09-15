@@ -10,6 +10,10 @@ from what people actually say. The plan for the microphone is docs/voice.md.
 """
 import re
 from .intents import RoomState
+# What a thing is SHOWN as. The grammar reads the owner's word throughout, and that is the whole reason
+# kinds exist: a lamp on a plug shown as a light has to go off at "kitchen lights off", or only the picture
+# was ever fixed. What is then CALLED on it is picked from its capability, over in api.act(). docs/kinds.md.
+from .model import kind_of
 
 # The numbers people SAY, as against the ones they type. A typed sentence has "72" in it; a spoken one
 # never does, and speech-to-text hands over "seventy two". Reading the longest single word out of that
@@ -199,7 +203,7 @@ class Commands:
         # a thing named in full beats a room hiding inside its name: "garage door" is the door, not the Garage
         if named and (room is None or len(phrase) >= len(t) - len(cut) - 4):
             room, t = home.rooms.get(named.room_id), _cut(re.escape(phrase), t)
-            return await self._device([named], t, named.capability.split(".")[0], None, said, room, False)
+            return await self._device([named], t, kind_of(named).split(".")[0], None, said, room, False)
         t = cut
         if room is None and not everywhere: room = here
         scope = [room] if room else [r for r in home.rooms.values() if r.id != "unassigned"]
@@ -219,14 +223,14 @@ class Commands:
         if room and re.fullmatch(r"((turn |switch |shut |put )?(it |everything |all |things )?(off|out|down)|all off|everything off|off please|quiet)", t):
             return await self._room(room, RoomState.empty, said)
         if room and re.fullmatch(r"((turn |switch |put )?(it |everything |all )?(on|up)|on please|wake up|come on)", t):
-            lights = [d for d in room.devices if d.capability == "light"]
+            lights = [d for d in room.devices if kind_of(d) == "light"]
             if lights: return await self._do(lights, "on", {}, said, f"{room.name} {_plural(len(lights), 'light')} on.")
         # a room and a bare verb: the kind is in the verb
         if room:
             for pat, kind in ((r"(open|close|shut|raise|lower)( up| it| them| the blinds)?", "cover"), (r"(lock|unlock)( it| them| up)?", "lock"),
                               (r"(make( it)? |a bit |a little |turn( it)? |it'?s )?(warmer|cooler|hotter|colder|too (hot|cold|warm|chilly)|up a bit|down a bit)( in here)?", "climate")):
                 if re.fullmatch(pat, t):
-                    found = [d for d in room.devices if d.capability == kind]
+                    found = [d for d in room.devices if kind_of(d) == kind]
                     if not found: raise NotUnderstood(f"There is no {dict(cover='blind or door', lock='lock', climate='thermostat')[kind]} in the {room.name}.")
                     return await self._device(found, t, kind, None, said, room, False)
         # a thing, or a kind of thing, and what to do with it
@@ -247,7 +251,7 @@ class Commands:
         return {"kind": "done", "text": "Good night. The house is off." if state is RoomState.asleep else "Everything is off.", "room": "home", "intent": state.value}
 
     async def _all_locks(self, action, said):
-        locks = [d for d in self.hub.home.devices.values() if d.capability == "lock" and d.room_id != "unassigned"]
+        locks = [d for d in self.hub.home.devices.values() if kind_of(d) == "lock" and d.room_id != "unassigned"]
         if not locks: raise NotUnderstood("There is no lock in the house yet.")
         return await self._do(locks, action, {}, said, f"{_plural(len(locks), 'Door', 'All doors')} {action}ed.".replace("unlockeded", "unlocked").replace("lockeded", "locked"))
 
@@ -277,11 +281,11 @@ class Commands:
     def _target(self, t: str, devices: list, room):
         """A device by name, else a kind of thing by its word. (devices, the rest of the sentence, kind, flavour)."""
         d, n = self._by_name(t, devices)
-        if d: return [d], _cut(re.escape(n), t), d.capability.split(".")[0], None
+        if d: return [d], _cut(re.escape(n), t), kind_of(d).split(".")[0], None
         for pat, kind, flavour in KINDS:
             m = re.search(rf"(?<![\w'])(?:{pat})(?![\w'])", t)
             if not m: continue
-            found = [d for d in devices if d.capability.split(".")[0] == kind and d.room_id != "unassigned"]
+            found = [d for d in devices if kind_of(d).split(".")[0] == kind and d.room_id != "unassigned"]
             if flavour == "tv": found = [d for d in found if TV.search(d.name)] or found
             elif flavour == "speaker": found = [d for d in found if not TV.search(d.name)] or found
             if not found:
@@ -378,7 +382,7 @@ class Commands:
         sound, word = best
         rest = _cut(re.escape(word), t2)
         rest = re.sub(r"^(play|put on|put|start|turn on|some|a bit of|a little|the|on)\b\s*", "", rest).strip()
-        speakers = [d for d in devices if d.capability == "media" and not TV.search(d.name)] or [d for d in devices if d.capability == "media"]
+        speakers = [d for d in devices if kind_of(d) == "media" and not TV.search(d.name)] or [d for d in devices if kind_of(d) == "media"]
         named = [d for d in speakers if _has(re.escape(norm(d.name)), rest)]
         if named: speakers = named
         if not speakers: raise NotUnderstood(f"There is no speaker{f' in the {room.name}' if room else ' in the house yet'}.")
@@ -419,17 +423,17 @@ class Commands:
         if m:
             want = m.group(3)
             active = {"on": ("on", "playing"), "playing": ("playing",), "open": ("open",), "unlocked": ("unlocked",)}[want]
-            hits = [d for d in devices if d.state in active and d.capability.split(".")[0] not in ("camera", "motion", "contact", "sensor")]
-            if want == "open": hits += [d for d in devices if d.capability == "contact" and d.state == "on"]
+            hits = [d for d in devices if d.state in active and kind_of(d).split(".")[0] not in ("camera", "motion", "contact", "sensor")]
+            if want == "open": hits += [d for d in devices if kind_of(d) == "contact" and d.state == "on"]
             if not hits: return {"kind": "answer", "text": f"Nothing is {want}{f' in the {room.name}' if room else ''}."}
             return {"kind": "answer", "text": ", ".join(self._named(d, room) for d in hits[:6]) + (f" and {len(hits) - 6} more" if len(hits) > 6 else "") + "."}
         m = room and re.fullmatch(r"(is|are) (it |everything |anything )?(open|opened|closed|shut|locked|unlocked|on|off)\??", t)
         if m:
             want = m.group(3)
             kinds = ("cover", "contact") if want in ("open", "opened", "closed", "shut") else ("lock",) if want in ("locked", "unlocked") else ("light",)
-            found = [d for d in room.devices if d.capability in kinds]
+            found = [d for d in room.devices if kind_of(d) in kinds]
             if not found: raise NotUnderstood(f"Nothing in the {room.name} can be {want}.")
-            return {"kind": "answer", "text": self._state_line(found, found[0].capability, room)}
+            return {"kind": "answer", "text": self._state_line(found, kind_of(found[0]), room)}
         m = re.fullmatch(r"(is|are) (the |my |our )?(.+?) (on|off|open|opened|closed|shut|locked|unlocked|playing|paused|running|still on|still open)\??", t)
         if m:
             target, _, kind, _ = self._target(m.group(3), devices, room)
@@ -451,8 +455,8 @@ class Commands:
         def word(d):
             s = d.state
             if s in ("unavailable", "unknown"): return "not responding"
-            if d.capability == "contact": return "open" if s == "on" else "closed"
-            if d.capability == "motion": return "seeing motion" if s == "on" else "seeing no motion"
+            if kind_of(d) == "contact": return "open" if s == "on" else "closed"
+            if kind_of(d) == "motion": return "seeing motion" if s == "on" else "seeing no motion"
             return s.replace("_", " ")
         if len(targets) == 1:
             d = targets[0]

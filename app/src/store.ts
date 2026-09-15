@@ -80,7 +80,14 @@ async function loadAmbient() {
 const ACTIVE = new Set(['on', 'playing', 'open', 'unlocked', 'cleaning', 'streaming', 'recording'])
 export const isActive = (d: Device) => ACTIVE.has(d.state)
 export const isDead = (d: Device) => d.state === 'unavailable' || d.state === 'unknown'
-export const cap = (d: Device) => d.capability.split('.')[0]
+/* What the house treats a thing AS: the owner's answer where they have given one, the driver's otherwise.
+   Every tile, pane, verb and room line reads this. Nothing that picks a service does -- that is the
+   brain's job, from `capability`, and the panel never sees it. See docs/kinds.md. */
+export const cap = (d: Device) => (d.kind || d.capability).split('.')[0]
+/** Said quietly under the name on a thing's own pane, and nowhere else: a tile is a glance, and the
+    point of the override is that the thing stops looking unusual. Empty where nobody has said anything. */
+export const shownAs = (d: Device) => d.kind && d.kind !== d.capability ? `Shown as ${KIND_NOUN[cap(d)] ?? cap(d)}` : ''
+export const KIND_NOUN: Record<string, string> = { light: 'a light', switch: 'a plug', fan: 'a fan', media: 'a speaker', cover: 'a blind', climate: 'a thermostat', lock: 'a lock', camera: 'a camera', vacuum: 'a vacuum' }
 export const PASSIVE = new Set(['sensor', 'motion', 'contact', 'camera'])
 export const visibleRooms = () => {
   const rs = store.rooms.filter(r => r.id !== 'unassigned' || r.devices.length)
@@ -418,7 +425,7 @@ function applyIntent(i: Intent) {
 function applyDevice(d: Device) {
   for (const r of store.rooms) {
     const i = r.devices.findIndex(x => x.id === d.id)
-    if (i >= 0) { r.devices[i] = d; delete store.pending[d.id]; if (store.viewer?.id === d.id) store.viewer = d; eventsSoon(); return }
+    if (i >= 0) { r.devices[i] = d; delete store.pending[d.id]; if (store.viewer?.id === d.id) store.viewer = d; if (store.opened?.id === d.id) store.opened = d; eventsSoon(); return }
   }
 }
 let stop: (() => void) | undefined, lostTimer: number | undefined, skyTimer: number | undefined

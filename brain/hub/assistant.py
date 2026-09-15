@@ -10,6 +10,7 @@ import asyncio, json, logging, os, re, time
 from collections import defaultdict
 from datetime import datetime
 from . import rules as rules_mod
+from .model import kind_of
 from .presence import word as presence_word
 
 LABEL = {"occupied": "Here", "empty": "All off", "asleep": "Sleep", "away": "Everything off", "movie": "Movie", "guests": "Guests"}
@@ -163,7 +164,7 @@ class Assistant:
     def house(self) -> str:
         home, p = self.hub.home, self.hub.presence
         rooms = [f"  {r.id}: {r.name}" for r in home.rooms.values() if r.id != "unassigned"]
-        devs = [f"  {d.id} | {d.name} | {d.capability} | in {d.room_id} | now {d.state}" for d in home.devices.values() if d.room_id != "unassigned"]
+        devs = [f"  {d.id} | {d.name} | {kind_of(d)} | in {d.room_id} | now {d.state}" for d in home.devices.values() if d.room_id != "unassigned"]
         ids = [r.get("id") for r in self.hub.engine.raw.get("rules", []) if isinstance(r, dict)]
         sounds = ", ".join(f"{s['id']} ({s['name']})" for s in self.hub.sounds.catalog()) or "none"
         now = datetime.now(self.hub.tz)

@@ -38,6 +38,44 @@ def capability_for(domain: str, device_class: str | None, words: str = "") -> st
     return None
 
 
+# ---- what a thing is, when the house has it wrong (docs/kinds.md) ----
+# A device may be shown as any kind whose controls it can already serve, and no other. What each kind
+# needs of a device is below; a kind is offered where the device serves exactly that and nothing more,
+# which is why a plug may be a lamp (both want an on and an off) and may not be a blind (which wants a
+# position) or a thermostat (which wants a temperature). The offer is computed from this table, never
+# typed, and that is what stops the panel drawing a brightness slider onto something that cannot dim.
+CONTROLS = {"light": ("onoff",), "switch": ("onoff",), "fan": ("onoff",),
+            "media": ("onoff", "playing"), "cover": ("position",), "climate": ("temperature",),
+            "lock": ("bolt",), "vacuum": ("errand",), "camera": ("picture",)}
+# Neither re-typed into nor out of. docs/voice.md gates what may be opened and unlocked by direction, and
+# a kind override is a way to walk around that gate by re-typing the thing the gate is about. The table
+# above already keeps both alone in their groups; this is the rule said out loud, so that adding a kind
+# later cannot quietly open the door.
+GATED = ("lock", "cover")
+
+
+def kinds_for(capability: str) -> list[str]:
+    """Every kind this thing may be shown as, its own included, in the order the panel offers them.
+    Empty where there is no choice to make: a reading is not a thing to control, and a lock is not a
+    thing to re-type."""
+    cap = (capability or "").split(".")[0]
+    if cap in GATED or cap not in CONTROLS: return []
+    wants = CONTROLS[cap]
+    offer = [k for k, needs in CONTROLS.items() if needs == wants and k not in GATED]
+    return offer if len(offer) > 1 else []
+
+
+def kind_of(d) -> str:
+    """What the house should treat a device AS: the owner's answer where they have given one, the
+    driver's otherwise. Everything that draws, names or parses reads this.
+
+    The three places that pick a Home Assistant service read `capability` instead, and must keep
+    doing so -- api.act(), the timer guard beside it, and intents.plan(). Writing "light" into the
+    capability of a switch entity makes the brain call light.turn_on on it, HA refuses, and the thing
+    is left worse than mis-typed: untouchable, and the panel did it."""
+    return d.kind or d.capability
+
+
 @dataclass
 class Device:
     id: str                 # stable product id = HA entity_id for now
@@ -50,6 +88,7 @@ class Device:
     own_room: bool = False         # room set on this entry itself rather than inherited from the hardware
     seen: float = field(default_factory=time.time)   # when the driver last heard from it; a stale sensor is not steered by
     maker: str | None = None       # who made the unit, from the driver's device registry; the one thing a tile can say about hardware it has no picture of
+    kind: str | None = None        # what the OWNER says this is, where they have said anything: a lamp on a plug is a light. Read it through kind_of(), never instead of capability
 
 
 @dataclass
@@ -71,6 +110,7 @@ class Home:
         self.extras: dict[str, dict] = {}  # what the brain knows about a device that HA does not (a fan timer's end); shown with its attrs
         self.lamps: dict[str, str] = {}    # camera id -> the light built into the same unit (Ring floodlight and spotlight cams)
         self.hardware: dict[str, dict] = {}   # driver device id -> {"name", "manufacturer", "model"}: what the maker called the unit, for naming new things
+        self.kinds: dict[str, str] = {}    # device id -> what the owner said it is. Kept here so a rebuild carries it; the hub loads and saves it with the rest of the settings
 
     def attrs_for(self, eid, cap, a):
         """HA's attributes plus what the brain knows. While the brain runs a fan timer the fan is on whatever the
@@ -123,6 +163,7 @@ class Home:
                     if name.endswith(suffix): name = name[: -len(suffix)]
             d = Device(eid, name, room, cap, s["state"], self.attrs_for(eid, cap, s["attributes"]), e.get("device_id"), bool(e.get("area_id")), seen_at(s))
             d.maker = self.hardware.get(e.get("device_id") or "", {}).get("manufacturer") or None
+            d.kind = self.shown_as(eid, cap)
             self.devices[eid] = d
             self.rooms[room].devices.append(d)
         # A camera with a lamp built in: the viewer offers the lamp beside the picture, the way Ring's own app does.
@@ -133,6 +174,15 @@ class Home:
         self.lamps = {d.id: lights[d.hw] for d in self.devices.values() if d.capability == "camera" and d.hw in lights}
         for cid, lid in self.lamps.items(): self.devices[cid].attrs["light"] = lid
         return self
+
+    def shown_as(self, eid: str, capability: str) -> str | None:
+        """The owner's kind for this device, or None where they have not given one or it no longer fits.
+
+        The stored answer is kept either way. A thing whose capability changes underneath it — a plug
+        pulled out and a real bulb put in — keeps what the owner said as long as the new thing can still
+        serve it, and the record survives a spell where it cannot rather than being quietly thrown away."""
+        k = self.kinds.get(eid)
+        return k if k and k != capability and k in kinds_for(capability) else None
 
     def apply_state(self, entity_id, new_state) -> Device | None:
         d = self.devices.get(entity_id)

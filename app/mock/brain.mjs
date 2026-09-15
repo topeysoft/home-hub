@@ -240,6 +240,32 @@ const server = http.createServer((req, res) => {
     for (const k of ['feel', 'tone', 'layout', 'nav', 'face']) if (v[k]) ambient.look[k] = v[k]   // unknown keys dropped, as the brain does
     json(res, ambient.look)
   }) }
+  /* Show this as: the same rule the brain computes, so the pane can be read without a house behind it.
+     Kinds that share their controls may stand in for each other and no others -- a plug may be a lamp,
+     and may not be a blind. docs/kinds.md. */
+  const kindOf = d => (d.kind || d.capability).split('.')[0]
+  const CONTROLS = { light: 'onoff', switch: 'onoff', fan: 'onoff', media: 'onoff+playing', climate: 'temperature', vacuum: 'errand', camera: 'picture' }
+  const WORD = { light: 'Light', switch: 'Plug', fan: 'Fan', media: 'Speaker', climate: 'Thermostat', vacuum: 'Vacuum', camera: 'Camera' }
+  const offerFor = d => {
+    const wants = CONTROLS[d.capability.split('.')[0]]
+    const offer = wants ? Object.keys(CONTROLS).filter(k => CONTROLS[k] === wants) : []
+    return offer.length > 1 ? offer : []
+  }
+  const kinds = p.match(/^\/devices\/([^/]+)\/kinds$/)
+  if (kinds) {
+    const d = home.rooms.flatMap(r => r.devices).find(x => x.id === kinds[1])
+    if (!d) { res.writeHead(404, { 'Content-Type': 'application/json' }); return res.end('{"detail":"unknown device"}') }
+    const offer = offerFor(d)
+    return json(res, { capability: d.capability, kind: kindOf(d), offer, words: Object.fromEntries(offer.map(k => [k, WORD[k]])),
+                       why: offer.length ? 'This can be switched on and off, so it can be shown as anything that switches on and off.' : '' })
+  }
+  const setKind = p.match(/^\/devices\/([^/]+)\/kind$/)
+  if (setKind && req.method === 'POST') { let b = ''; req.on('data', c => (b += c)); return req.on('end', () => {
+    const d = home.rooms.flatMap(r => r.devices).find(x => x.id === setKind[1])
+    let k = null; try { k = JSON.parse(b).kind || null } catch {}
+    if (d) d.kind = k && k !== d.capability ? k : null
+    json(res, { ok: true, kind: d ? kindOf(d) : k })
+  }) }
   if (req.method === 'POST' || req.method === 'DELETE') return json(res, { ok: true })   // forgetting a thing, or a phone leaving, answer like every other change
   let f = path.join(DIST, p === '/' ? 'index.html' : p)
   if (!fs.existsSync(f)) f = path.join(DIST, 'index.html')

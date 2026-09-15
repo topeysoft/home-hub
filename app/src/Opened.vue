@@ -19,7 +19,9 @@
  * WHAT THIS PANE IS, since it used to be one layout for everything. Six slots,
  * and only the fifth changes from a lamp to a mower:
  *
- *   1  where and what      the room, then the name
+ *   1  where and what      the room, then the name -- and under it, quietly, what
+ *                          the house is showing this as when its owner has
+ *                          disagreed with the driver (docs/kinds.md)
  *   2  what you can do     the kind's real verbs -- never a blanket power
  *                          button, which for a lock, a blind, a camera and a
  *                          mower was an action the brain refuses with a 400
@@ -33,8 +35,8 @@
  * See design/device for the boards all of that was drawn on.
  */
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { getDeviceEvents, type Event } from './api'
-import { cap, deviceById, isDead, notify, perform, roomOf, store } from './store'
+import { getDeviceEvents, getDeviceKinds, setDeviceKind, type Event, type Kinds } from './api'
+import { cap, deviceById, isDead, notify, perform, roomOf, shownAs, store } from './store'
 import { facts as factsOf, moments as momentsOf, paneKind, reading, verbs as verbsOf, whyLine } from './pane'
 import Icon from './Icon.vue'
 import LightPane from './panes/LightPane.vue'
@@ -67,6 +69,42 @@ async function look() {
 }
 watch(() => dev.value?.id, look, { immediate: true })
 watch(() => [dev.value?.state, JSON.stringify(dev.value?.attrs ?? {})].join('|'), () => { if (dev.value) look() })
+
+/* ---------- what it is, when the house has it wrong ----------
+   A lamp on a smart plug is a switch to the driver and a light to everybody who lives there, and until
+   somebody can say so from here the only way to fix it is to leave the panel and edit an entity in Home
+   Assistant -- the one move the whole box is shaped to avoid. So it sits under the name, because that is
+   where somebody already is when they notice.
+
+   What may be offered is the brain's to decide, not this file's: it is computed from what the device can
+   already serve, which is what stops a brightness slider being drawn onto something that cannot dim. An
+   offer of fewer than two is no choice at all, and nothing is drawn. */
+const kinds = ref<Kinds | null>(null)
+const picking = ref(false)
+const offer = computed(() => kinds.value && kinds.value.offer.length > 1 ? kinds.value : null)
+const said = computed(() => dev.value ? shownAs(dev.value) : '')
+watch(() => dev.value?.id, async id => {
+  kinds.value = null; picking.value = false
+  if (!id) return
+  try { const k = await getDeviceKinds(id); if (dev.value?.id === id) kinds.value = k } catch { kinds.value = null }
+}, { immediate: true })
+
+/* The row stays open behind the choice, and the choice stays where the finger left it: what you just
+   touched is the way back out of it. The pane re-draws at once rather than waiting for the brain to say
+   so -- the same guess every other control on this panel makes -- and puts itself back if it was wrong. */
+async function showAs(k: string) {
+  const d = dev.value; if (!d || !kinds.value) return
+  if (k === kinds.value.kind) return
+  const was = d.kind
+  d.kind = k === d.capability ? null : k
+  kinds.value = { ...kinds.value, kind: k }
+  try { await setDeviceKind(d.id, k) }
+  catch (e: any) {
+    d.kind = was
+    kinds.value = { ...kinds.value, kind: was || d.capability }
+    notify(e.message, 'error')
+  }
+}
 
 const big = computed(() => dev.value ? reading(dev.value, store.tempUnit) : '')
 const facts = computed(() => dev.value ? factsOf(dev.value, room.value, store.tempUnit, events.value) : [])
@@ -127,6 +165,21 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
           <div class="opened-step s0">
             <div class="opened-room" v-if="room">{{ room.name }}</div>
             <h2 class="display opened-name">{{ dev.name }}</h2>
+
+            <!-- what it is. Quiet, and only ever here: a tile is a glance, and the point of the
+                 override is that the thing stops looking unusual. -->
+            <div class="opened-kind" v-if="offer">
+              <button class="opened-kind-say" :aria-expanded="picking" @click="picking = !picking">
+                {{ said || 'Show this as' }}
+              </button>
+              <div class="opened-kind-pick" v-if="picking">
+                <div class="opened-kind-row">
+                  <button v-for="k in offer.offer" :key="k" class="opened-kind-one" :class="{ on: k === offer.kind }"
+                          :aria-pressed="k === offer.kind" @click="showAs(k)">{{ offer.words[k] }}</button>
+                </div>
+                <p class="opened-kind-why">{{ offer.why }}</p>
+              </div>
+            </div>
           </div>
 
           <div class="opened-step s1 opened-acts">
@@ -137,7 +190,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
           </div>
 
           <div class="opened-step s2">
-            <div class="opened-big display">{{ big }}</div>
+            <div class="opened-big display" :class="{ absent: dead }">{{ big }}</div>
             <p class="pane-why" v-if="why">{{ why }}</p>
           </div>
 

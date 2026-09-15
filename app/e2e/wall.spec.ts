@@ -89,6 +89,25 @@ test('it brings its own type and corners, and leaves the other arrangements wher
   expect(rail.radius, "Wall's corners leaked into the Rail").toBe('26px')
 })
 
+/* Wider than the board it was drawn on, which is where this one used to go wrong and where no other
+   test in the suite looks: both projects run at 1440 or less, and the room head's cap was 1360 + a
+   40px gutter, so at every width anybody tested it landed exactly where following the room would
+   have. Past 1440 the grid kept going and the head did not, and the edit button hung in the middle
+   of the screen with nothing to belong to. The invariant is the alignment, not the number. */
+test('the edit button keeps to the room\'s own edge however wide the wall is', async ({ page }) => {
+  await page.goto('/?room=living&at=19:40', { waitUntil: 'networkidle' })
+  await expect(page.locator('.room-edit')).toBeVisible()
+  for (const width of [1280, 1440, 1920, 2560]) {
+    await page.setViewportSize({ width, height: 800 })
+    await page.waitForTimeout(300)
+    const edge = await page.evaluate(() => {
+      const r = (sel: string) => Math.round(document.querySelector(sel)!.getBoundingClientRect().right)
+      return { edit: r('.room-edit'), room: r('.room') }
+    })
+    expect(edge.edit, `at ${width}px the edit button left the room's right edge`).toBe(edge.room)
+  }
+})
+
 /* Measured against the board rather than eyeballed. design/nightfall/Main.dc.html is 1440x900, so
    every number here is a share of the screen and holds at any size. The cards keep the proportions
    they were drawn at, which means their widths follow the row's height: the Rail's card lands near

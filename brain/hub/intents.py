@@ -2,6 +2,7 @@
 import json, logging, shutil
 from enum import Enum
 from pathlib import Path
+from .model import kind_of
 from .settings import DATA
 
 log = logging.getLogger("hub.scenes")
@@ -85,11 +86,23 @@ SERVICE = {
 
 
 def plan(room, state: RoomState):
-    """Return the concrete calls needed to move a room into `state`."""
+    """Return the concrete calls needed to move a room into `state`.
+
+    The two lines that used to be one `if`, and the reason they are apart. WHICH devices a scene sweeps
+    up is what the owner says they are, so a lamp on a plug shown as a light goes off at bedtime with
+    the rest of the lights. WHAT is then called on each one is what the driver says it is: `switch` is
+    a switch entity whatever it is shown as, and asking HA for light.turn_off on it is refused. Both
+    lines reading the same field is how this fails, and it fails silently — the scene runs, the lamp
+    does not move, and nobody is told.
+
+    The data goes with the kind it was written for. A scene that dims the lights to 15% has nothing to
+    say to a plug, so a device standing in for another kind gets the bare action: on is all it has."""
     calls = []
     for cap, action, data in rules()[state]:
         for d in room.devices:
-            if d.capability == cap and (cap, action) in SERVICE:
-                domain, service = SERVICE[(cap, action)]
-                calls.append((domain, service, d.id, data))
+            if kind_of(d) != cap: continue
+            own = d.capability.split(".")[0]              # the driver's, always: this picks the service
+            if (own, action) not in SERVICE: continue
+            domain, service = SERVICE[(own, action)]
+            calls.append((domain, service, d.id, data if own == cap else {}))
     return calls

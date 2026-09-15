@@ -1,5 +1,8 @@
 import { request } from './code'
-export type Device = { id: string; name: string; room_id: string; capability: string; state: string; attrs: Record<string, any>; hw?: string | null; own_room?: boolean; maker?: string | null }
+/* `capability` is the driver's word for what this is and it picks the Home Assistant service; `kind` is
+   the owner's, where they have given one. Read the two together through cap() in store.ts, never the raw
+   field: a lamp on a smart plug is a switch to the driver and a light to everybody who lives there. */
+export type Device = { id: string; name: string; room_id: string; capability: string; state: string; attrs: Record<string, any>; hw?: string | null; own_room?: boolean; maker?: string | null; kind?: string | null }
 export type Room = { id: string; name: string; devices: Device[]; intent: string; set_by?: string | null; hold_until?: number | null; motion_at?: number | null }
 export type Intent = { room: string; intent: string; set_by: string | null; hold_until: number | null }
 export type Home = { name?: string | null; temp_unit?: string; entry?: string[]; rooms: Room[] }   // entry: the rooms people come in through
@@ -64,6 +67,15 @@ export const addRoom = (name: string) => post<{ id: string; name: string }>('/ro
 export const renameRoom = (id: string, name: string) => post(`/rooms/${encodeURIComponent(id)}/rename`, { name })
 export const moveDevice = (id: string, room_id: string | null) => post(`/devices/${encodeURIComponent(id)}/move`, { room_id })
 export const renameDevice = (id: string, name: string) => post(`/devices/${encodeURIComponent(id)}/rename`, { name })
+/* Show this as. `offer` is what this thing may be shown as, its own kind included, computed by the brain
+   from what the device can already serve -- a plug may be a lamp, and may not be a blind. It comes back
+   empty where there is nothing to choose, and the pane then offers nothing at all. */
+export type Kinds = { capability: string; kind: string; offer: string[]; words: Record<string, string>; why: string }
+export async function getDeviceKinds(id: string): Promise<Kinds> {
+  const r = await request(`/devices/${encodeURIComponent(id)}/kinds`); if (!r.ok) await fail(r); return r.json()
+}
+/** Say what a thing is. The driver's own word puts it back. */
+export const setDeviceKind = (id: string, kind: string | null) => post<{ ok: boolean; kind: string }>(`/devices/${encodeURIComponent(id)}/kind`, { kind })
 /* Every service the house has signed into: how it stands, and how much of the house came in with it.
    Three states and no more -- on, waiting to be signed into, or not answering. */
 export type Account = { id: string; kind: string; name: string; state: 'on' | 'signin' | 'stopped'; why: string; flow: string | null; things: number }

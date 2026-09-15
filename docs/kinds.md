@@ -1,8 +1,9 @@
 # Kinds: what a thing is, when the house has it wrong
 
 *Written 14 September 2026, from the question "is it possible or advisable to let somebody set a device's kind
-by hand if it was assigned the wrong one?" This is a plan for a decision, not a commitment to build. The short
-answer is yes and yes, and almost all of this file is about the word ONLY in the sentence that makes it safe.*
+by hand if it was assigned the wrong one?" The short answer is yes and yes, and almost all of this file is about
+the word ONLY in the sentence that makes it safe. Built the same day; the design below is what shipped, and
+**What was built** at the foot says where each part of it lives.*
 
 ## The question, and the short answer
 
@@ -73,7 +74,7 @@ This is not a rule about tidiness either. It is what stops the panel drawing a b
 capability of a `switch.porch_lamp` and the brain calls `light.turn_on` on a switch entity, and HA refuses it. The
 device would then be worse than mis-typed: it would be untouchable, and the panel would have done it.
 
-**And there is a second place, which is the one that would be found last.** `intents.py`'s `calls()` builds a scene's
+**And there is a second place, which is the one that would be found last.** `intents.py`'s `plan()` builds a scene's
 service the same way, from the scene's capability rather than the device's:
 
     if d.capability == cap and (cap, action) in SERVICE:
@@ -148,14 +149,29 @@ Inventing kinds the house does not have, splitting one entity into two devices, 
 that changes what the driver reports rather than how the house reads it. A device that is genuinely wrong IN Home
 Assistant is a Home Assistant problem, and the Advanced door is how you get to it.
 
-## Milestones
+## What was built
 
-1. **The second field**, doing nothing anybody can see: `kind` beside `capability`, stored with the other per-device
-   overrides, serialised to the panel, and every reader switched to `kind or capability` except the three that pick a
-   service — `act()`, `intents.py`'s `calls()`, and the timer guard. With a test for each, because these are the ones
-   that will be broken by accident and two of the three fail silently.
-2. **The grammar reads it**, with a test for the sentence this is all for: a lamp on a plug, shown as a light, going
-   off when somebody says "kitchen lights off".
-3. **The control on the pane** — *Show this as*, the computed list, the one sentence, and nothing offered where there
-   is no choice.
-4. **The gate**, before it ships rather than after: locks and garages refused both ways, with a test that tries.
+1. **The second field.** `Device.kind` beside `capability` in `model.py`, with `kind_of(d)` — `kind or capability` —
+   as the one way everything else reads it. The offer is `kinds_for(capability)`, computed from a `CONTROLS` table
+   of what each kind needs of a device: kinds that want the same controls may stand in for each other and no others,
+   which is why the only group with more than one member is light / plug / fan. Stored in `settings.json` under
+   `kinds`, so a backup carries it; held on `Home.kinds` so a registry rebuild does not forget it.
+
+2. **The three that keep reading `capability`**, each with a comment saying why it looks like an oversight and is not:
+   `act()`, the timer guard beside it, and `intents.plan()`. `plan()` is the one that would have been found last —
+   selecting the device reads `kind_of`, building the call reads `capability`, and they used to be the same `if`.
+   There is a fourth thing the trap turned up: a scene's *data* is shaped for the kind it was written for, so Movie's
+   `brightness_pct: 15` reaches a re-typed plug as a bare on. `act()` drops the extras the same way.
+
+3. **The grammar reads it.** `commands.py` is `kind_of` throughout — the KINDS table, a thing named in full, the room
+   verbs, what is on, what the house answers with. That is the whole reason to build it.
+
+4. **The control on the pane.** *Show this as*, quietly under the name in `Opened.vue`: the line says what it is
+   shown as where somebody has disagreed with the driver, and opens a row of what it may be with the one sentence
+   under it. Nothing is drawn where the offer has fewer than two entries. `GET /devices/{id}/kinds` computes the
+   offer; `POST /devices/{id}/kind` sets it, and the driver's own word clears it.
+
+5. **The gate.** `GATED = ("lock", "cover")` in `model.py`, refused both ways in and tested both ways.
+
+Tests: `brain/tests/test_kinds.py` (the offer, the scene plan, where it is stored, the service calls, and the
+sentence this is all for) and `app/tests/kinds.test.ts` (what the panel treats a thing as, and what it says).

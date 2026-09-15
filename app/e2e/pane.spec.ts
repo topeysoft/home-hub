@@ -56,6 +56,24 @@ async function drag(page: Page, selector: string, fx: number, fy: number) {
   await page.waitForTimeout(400)
 }
 
+/* The one test in this file that reads a size rather than a request, and it is here because what it
+   catches is silent in the same way: nothing errors, the words are right, and the pane simply says
+   the wrong thing loudest. "Not answering" is not a reading -- it is the absence of one, and at the
+   scale meant for 35% and Locked it is thirteen characters shouting over the name of the thing that
+   has gone quiet, while the line underneath already carries the part nobody knew (since when). */
+test('a thing that has stopped answering does not shout over its own name', async ({ page }) => {
+  await open(page, 'office', '.tile.light.dead', '.rig-light')
+  const size = (sel: string) => page.locator(sel).evaluate(el => parseFloat(getComputedStyle(el).fontSize))
+  expect(await page.locator('.opened-big').textContent()).toBe('Not answering')
+  expect(await size('.opened-big'), 'the absence of a reading outweighed the name').toBeLessThan(await size('.opened-name'))
+
+  /* and the other way for a thing that IS answering, because the reading is what this pane is built
+     around -- you know which device you opened, you came to find out what it is doing */
+  await page.keyboard.press('Escape')
+  await open(page, 'living', '.tile.light.dimmable', '.rig-light')
+  expect(await size('.opened-big')).toBeGreaterThan(await size('.opened-name'))
+})
+
 test('a lamp is dimmed by dragging its column, and the house hears once', async ({ page }) => {
   const posts = await open(page, 'living', '.tile.light.dimmable', '.rig-light')
   await drag(page, '.rig-col:not(.warmth)', 0.5, 0.15)

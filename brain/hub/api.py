@@ -10,7 +10,7 @@ from starlette.background import BackgroundTask
 from fastapi import Request
 from . import ha_setup
 from .ha_adapter import HAAdapter, AuthError
-from .model import Home
+from .model import CONTROLS, Home, kinds_for, kind_of
 from .events import EventLog
 from .intents import RoomState, SERVICE, plan, rules_as_data, holds
 from .onboarding import Onboarding
@@ -77,6 +77,7 @@ class Hub:
         self.env = env_file()
         self.ha: HAAdapter | None = None
         self.home = Home()
+        self.home.kinds = dict(self.settings.get("kinds") or {})   # what the owner said things are; kept in settings so a restore brings it back with the rest of the house
         self.log = EventLog(DATA / "events.db")
         self.streams: set[WebSocket] = set()
         self.driver, self.reason = "down", ""
@@ -465,12 +466,37 @@ class Hub:
             if action == "sound": await self.sounds.play(dev, str(data.get("sound", "")), data.get("minutes"), data.get("volume"), source=source)
             else: await self.sounds.stop(dev, source=source)
         else:
+            # capability, never kind_of(dev), and this is the point rather than an oversight. The owner may
+            # say a plug is a light; the entity behind it is still a switch, and light.turn_on on a switch
+            # is refused by HA. What a thing is SHOWN as belongs to the panel and the grammar; what is
+            # CALLED on it belongs to the driver. See docs/kinds.md and model.kind_of().
+            #
+            # The extras go with the kind they were written for, so a re-typed thing gets the bare action:
+            # "dim the kitchen lights" reaches a lamp on a plug as an on, because a plug has no 30%, and a
+            # brightness sent to switch.turn_on is refused outright. Turning on is the part it can do.
+            if dev.kind and dev.kind != dev.capability: data = {}
             key = (dev.capability.split(".")[0], action)
             if key not in SERVICE: raise ValueError(f"{dev.capability} cannot {action}")
             domain, service = SERVICE[key]
             await self.ha.call(domain, service, dev.id, **data)
             self.log.add("action", dev.id, None, action, source=source, detail={**data, **({"said": said} if said else {})} or None)
         if dev.capability != "camera" and dev.room_id in self.home.rooms: self.hold(self.home.rooms[dev.room_id])
+
+    def show_as(self, dev, kind: str | None):
+        """Say what a device IS. Presentation and grammar follow; the service call never does.
+
+        Clearing it, and saying the driver's own word, are the same move: the record goes, and the house
+        is back to what the driver says. Raises ValueError when the kind is not one this thing can serve."""
+        offer = kinds_for(dev.capability)
+        if kind and kind not in offer: raise ValueError(f"{dev.name} cannot be shown as a {KIND_WORD.get(kind, kind).lower()}.")
+        was = kind_of(dev)
+        if kind and kind != dev.capability: self.home.kinds[dev.id] = kind
+        else: self.home.kinds.pop(dev.id, None)
+        self.settings.set(kinds=self.home.kinds)
+        dev.kind = self.home.shown_as(dev.id, dev.capability)
+        self.log.add("home", dev.id, was, kind_of(dev), source="user", detail={"shown_as": True})
+        self._broadcast(json.dumps({"type": "device", "device": dev.__dict__}))
+        return dev
 
     def hold(self, room, state: RoomState = RoomState.occupied):
         """Someone touched a device in this room by hand: rules leave it alone for a while."""
@@ -701,6 +727,43 @@ async def rename_device(device_id: str, body: dict):
     try: await hub.ha.send("config/entity_registry/update", entity_id=dev.id, name=name)
     except Exception as e: raise HTTPException(502, f"could not rename it: {e}")
     return {"ok": True}
+
+
+# ---------- what a thing is, when the house has it wrong (docs/kinds.md) ----------
+# The third field a person can see and disagree with, after its name and its room. A lamp on a smart plug
+# is a switch as far as the driver is concerned and HA is not wrong -- but it is a light in the only sense
+# the person living there cares about, and until they can say so "kitchen lights off" does not touch it.
+
+# The panel's own words for a kind, because "capability" and "domain" are not words this panel uses.
+KIND_WORD = {"light": "Light", "switch": "Plug", "fan": "Fan", "media": "Speaker",
+             "cover": "Blind", "climate": "Thermostat", "lock": "Lock", "camera": "Camera", "vacuum": "Vacuum"}
+# Why the list is short, said in the panel's own words rather than in HA's. One line per group of kinds
+# that share their controls; the offer is computed, and this only explains it.
+WHY = {("onoff",): "This can be switched on and off, so it can be shown as anything that switches on and off."}
+
+
+@app.get("/devices/{device_id}/kinds")
+async def device_kinds(device_id: str):
+    """What this thing may be shown as. Empty where there is nothing to choose: the panel offers no menu
+    with one entry in it, and none at all for a reading or a lock."""
+    hub.ready()
+    dev = hub.home.devices.get(device_id)
+    if not dev: raise HTTPException(404, "unknown device")
+    offer = kinds_for(dev.capability)
+    return {"capability": dev.capability, "kind": kind_of(dev), "offer": offer,
+            "words": {k: KIND_WORD.get(k, k) for k in offer},
+            "why": WHY.get(CONTROLS.get(dev.capability.split(".")[0], ()), "") if offer else ""}
+
+
+@app.post("/devices/{device_id}/kind")
+async def set_device_kind(device_id: str, body: dict):
+    """Show this as something else. `{"kind": "light"}`, or the driver's own word (or null) to put it back."""
+    hub.ready()
+    dev = hub.home.devices.get(device_id)
+    if not dev: raise HTTPException(404, "unknown device")
+    try: hub.show_as(dev, (body.get("kind") or "").strip() or None)
+    except ValueError as e: raise HTTPException(400, str(e))
+    return {"ok": True, "kind": kind_of(dev)}
 
 
 @app.delete("/devices/{device_id}")
@@ -1034,6 +1097,7 @@ async def device_timer(device_id: str, body: dict | None = None):
     hub.ready()
     dev = hub.home.devices.get(device_id)
     if not dev: raise HTTPException(404, "unknown device")
+    # capability, like act() above: a timer has to know what can really be switched off, not what it is shown as.
     if (dev.capability.split(".")[0], "off") not in SERVICE: raise HTTPException(400, "this cannot be put on a timer")
     try: minutes = max(0, min(720, int((body or {}).get("minutes") or 0)))
     except (TypeError, ValueError): raise HTTPException(400, "minutes must be a number")

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { store, start, halt, load, visibleRooms, activity, roomActive, houseLine, weatherLine, needsSetup, dismissToast, updateReady, forgetDone } from './store'
+import { store, start, halt, load, visibleRooms, activity, roomActive, houseLine, weatherLine, needsSetup, dismissToast, updateReady, forgetDone, cap } from './store'
 import Setup from './Setup.vue'
 import Join from './Join.vue'
 import Away from './Away.vue'
@@ -106,7 +106,7 @@ function go(t: 'home' | 'rooms' | 'cameras') { tab.value = t; open(null) }
    house at rest is lit by anyway. */
 const openTint = computed(() => {
   const d = store.opened; if (!d) return {}
-  const warm = ['light', 'media', 'switch', 'fan'].includes(d.capability.split('.')[0])
+  const warm = ['light', 'media', 'switch', 'fan'].includes(cap(d))
   return { '--open-tint': `var(${warm ? '--tint-light' : '--tint-lock'}, rgba(233,184,114,.30))` }
 })
 const weather = computed(weatherLine)

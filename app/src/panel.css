@@ -851,12 +851,18 @@ input:focus-visible {
   flex: 1 1 auto;
   min-height: 0;
 }
-/* the head keeps the old cap so the edit button stays beside the name instead
-   of flying to the far edge of a 1080p wall; the grid deliberately does NOT,
-   because capping it would spend the width this arrangement exists to use */
+/* The head follows the room's own width -- no cap of its own -- so the edit
+   button lands in the same right gutter as the last card below it and the menu
+   above it. It used to stop at 1360px, and the number was never a decision: the
+   board this screen was drawn on (design/room/Main.dc.html) is 1440 wide with
+   40px gutters, so 1360 WAS the full content width and the head's right edge and
+   the grid's were the same edge. Then the grid was un-capped to spend the width
+   this arrangement exists to use, and the head kept a figure that had quietly
+   stopped meaning "all of it" -- invisible up to 1440, and above it the button
+   hangs in the middle of the screen with nothing to belong to. Following the
+   parent is the same 1400 on the board and stays right past it. */
 .room > .stage-head {
   flex: 0 0 auto;
-  max-width: 1360px;
 }
 /* why the room is like this, and what it can tell you, on one line. Two stacked
    bands and a scene bar above them is three rows where one does, and between
@@ -5466,6 +5472,66 @@ select.input {
   font-size: clamp(34px, 5vw, 56px);
   line-height: 1.04;
 }
+/* Show this as: what a thing IS, when the house has it wrong. Quiet under the name,
+   because a plug that somebody has said is a lamp should stop looking unusual --
+   and it is the only place this is ever said. docs/kinds.md. */
+.opened-kind {
+  margin-top: 10px;
+}
+.opened-kind-say {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  color: var(--muted);
+  cursor: pointer;
+  /* the one mark that says this quiet line is a control, without spending an icon on it */
+  text-decoration: underline dotted;
+  text-decoration-color: var(--edge-hi);
+  text-underline-offset: 4px;
+}
+.opened-kind-say:hover {
+  color: var(--ink-2);
+  text-decoration-color: var(--ink-2);
+}
+.opened-kind-pick {
+  margin-top: 10px;
+}
+.opened-kind-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.opened-kind-one {
+  padding: 7px 15px;
+  border: 1px solid var(--edge);
+  border-radius: 999px;
+  background: var(--surface-hi);
+  font: inherit;
+  font-size: 14px;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition:
+    background 0.18s ease,
+    color 0.18s ease,
+    border-color 0.18s ease;
+}
+.opened-kind-one:hover {
+  border-color: var(--edge-hi);
+}
+.opened-kind-one.on {
+  border-color: transparent;
+  background: var(--lamp);
+  color: var(--lamp-ink);
+}
+.opened-kind-why {
+  margin: 10px 0 0;
+  max-width: 44ch;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--muted);
+}
 .opened-acts {
   display: flex;
   gap: 12px;
@@ -5488,6 +5554,16 @@ select.input {
   font-size: clamp(44px, 7vw, 76px);
   line-height: 1;
   letter-spacing: -0.02em;
+}
+/* A thing that has stopped answering has no reading, and "Not answering" is not one -- it is the
+   absence of one, said where the reading would have been. At the full size it is thirteen characters
+   across the whole pane, louder than the name and saying the same thing as the line underneath it,
+   which already carries the part a person did not know (since when). So it steps back under the name
+   and takes the quieter ink: the scale above is for 35%, 74°, Locked -- values, not apologies. */
+.opened-big.absent {
+  font-size: clamp(27px, 3.2vw, 38px);
+  letter-spacing: -0.01em;
+  color: var(--ink-2);
 }
 .opened-facts {
   display: flex;

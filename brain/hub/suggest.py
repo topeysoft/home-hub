@@ -9,6 +9,7 @@ whatever is still unplaced, with the rooms, the device's neighbours on the same 
 only ever proposes; a person taps Use, and the move and rename go through the same guarded routes as by hand.
 """
 import json, logging, re
+from .model import kind_of
 from .commands import find_room, norm
 
 log = logging.getLogger("hub.suggest")
@@ -73,11 +74,11 @@ class Suggestions:
             room, _ = find_room(norm(words), self.hub.home.rooms)
             placed = next((self.hub.home.rooms.get(x.room_id) for x in siblings if x.room_id != "unassigned"), None)
             if room is None and placed is not None: room = placed
-            name = clean_name(d.name, d.capability, room.name if room else None)
+            name = clean_name(d.name, kind_of(d), room.name if room else None)
             why = (f"\"{room.name}\" is in its name" if room and _has_word(room.name, words) else f"the same unit as {placed.devices[0].name}" if room and placed else
                    ("a plainer name" if name != d.name else ""))
             out.append({"id": d.id, "name": name, "room": room.id if room else "", "why": why, "source": "house",
-                        "was": d.name, "kind": d.capability, "hardware": hw.get("name") or "", "siblings": [x.name for x in siblings]})
+                        "was": d.name, "kind": kind_of(d), "hardware": hw.get("name") or "", "siblings": [x.name for x in siblings]})
         return out
 
     async def all(self) -> dict:
