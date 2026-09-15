@@ -30,7 +30,7 @@ from .suggest import Suggestions
 from .settings import Settings, DATA, env_file
 from .lock import Lock, needs_code
 from .pairing import Pairing
-from .phones import Phones, COOKIE, open_to_strangers, from_away, away_refused, away_refusal
+from .phones import Phones, COOKIE, holds_keys, open_to_strangers, from_away, away_refused, away_refusal
 from . import camera
 
 log = logging.getLogger("hub")
@@ -1303,27 +1303,50 @@ def phones_code(body: dict, request: Request):
     return _with_cookie({"ok": True, "phone": hub.phones._public(phone)}, request, phone, token)
 
 
+def _keys(request: Request):
+    """Refuse a phone that may hold its own key but not hand out others.
+
+    The code was the only thing standing here, and the code is one secret the whole house shares -- so a
+    phone let in at the wall for the afternoon, once it heard the code read out in a kitchen, could admit
+    anyone, evict anyone, and let a phone out of the house. The docstrings have always said this decision
+    belongs to a paired screen (phones.py says so too); this is that sentence, enforced.
+
+    A house with no code has no phones and no door, and every phone on the Wi-Fi runs it. That is the
+    hub's oldest promise and it is not this function's to take back, so an unlocked house passes.
+    """
+    if hub.lock.locked and not holds_keys(request.state.phone):
+        raise HTTPException(403, "This phone can run the house, not decide who else does. Ask at the wall.")
+
+
 @app.post("/phones/asks/{ask_id}/allow")
-def phones_allow(ask_id: str, body: dict | None = None):
+def phones_allow(request: Request, ask_id: str, body: dict | None = None):
     """Behind the code, from a paired screen: {"span": "day" | "weekend" | "keep"}."""
+    _keys(request)
     try: return hub.phones.allow(ask_id, (body or {}).get("span") or "keep")
     except KeyError as e: raise HTTPException(404, str(e.args[0]))
     except ValueError as e: raise HTTPException(400, str(e))
 
 
 @app.delete("/phones/asks/{ask_id}")
-def phones_deny(ask_id: str):
-    hub.phones.deny(ask_id); return {"ok": True}
+def phones_deny(request: Request, ask_id: str):
+    _keys(request); hub.phones.deny(ask_id); return {"ok": True}
 
 
 @app.delete("/phones/{phone_id}")
-def phones_remove(phone_id: str):
+def phones_remove(request: Request, phone_id: str):
+    # Leaving is not evicting: any phone may take itself out of the house, which is the button on its own
+    # row under People and phones. Taking somebody else out is a key.
+    me = request.state.phone
+    if not (me and me["id"] == phone_id): _keys(request)
     if not hub.phones.remove(phone_id): raise HTTPException(404, "No such phone.")
     return {"ok": True}
 
 
 @app.post("/phones/{phone_id}/remote")
-def phones_remote(phone_id: str, body: dict):
+def phones_remote(request: Request, phone_id: str, body: dict):
+    # Not even for itself: a phone talking its own way out of the house is the one promotion that must
+    # come from somebody standing at the wall.
+    _keys(request)
     try: return hub.phones.set_remote(phone_id, bool(body.get("remote")))
     except KeyError as e: raise HTTPException(404, str(e.args[0]))
 

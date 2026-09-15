@@ -409,10 +409,22 @@ export async function refreshStatus() {
 export async function loadAccounts() {
   try { store.accounts = await getAccounts() } catch {}
 }
-export async function loadPhones() {
+/* The phones this screen is allowed to know about, and the knocks it is allowed to answer -- which is
+   not the same list on every phone in the house, so it is always the hub's answer to THIS phone rather
+   than anything worked out here. A screen that holds no keys gets itself and no asks, and the pane that
+   rises on asks therefore never rises on it.
+
+   `tell` is the live nudge rather than a page load: say who just joined, and let the row of events know. */
+export async function loadPhones(tell = false) {
   if (!store.status?.locked) { store.phones = []; store.asks = []; return }
-  try { const p = await getPhones(); store.phones = p.phones; store.asks = p.asks } catch {}
+  const known = new Set(store.phones.map(x => x.id))
+  try { const p = await getPhones(); store.phones = p.phones; store.asks = p.asks } catch { return }
+  if (!tell) return
+  eventsSoon()
+  for (const x of store.phones) if (!known.has(x.id) && !x.me && known.size) notify(`${x.name} joined the house.`)   // told on every screen that can see them; the newcomer already knows
 }
+/** May this screen decide who else gets in? The house's answer, in the row it keeps for this phone. */
+export const holdsKeys = () => !store.status?.locked || ['setup', 'code'].includes(store.phones.find(p => p.me)?.how ?? '')
 let foundTimer: number | undefined
 export async function refreshFound() {
   if (store.status?.driver !== 'ready') return
@@ -446,11 +458,7 @@ export async function start() {
   if (lock.unpaired) { updateSky(); return }   // the sky still follows the clock; nothing to stream to until this phone is in, and rejoin() starts again
   updateSky(); clearInterval(skyTimer); skyTimer = window.setInterval(updateSky, 30000)
   clearInterval(foundPoll); foundPoll = window.setInterval(refreshFound, 60000)
-  stop = connect({ device: applyDevice, home: applyHome, intent: applyIntent, drafts: d => { store.drafts = d; eventsSoon() }, presence: p => { store.presence = p; eventsSoon() }, phones: p => {
-    const known = new Set(store.phones.map(x => x.id))
-    store.phones = p.phones; store.asks = p.asks; eventsSoon()
-    for (const x of p.phones) if (!known.has(x.id) && !x.me && known.size) notify(`${x.name} joined the house.`)   // told on every screen; the newcomer already knows
-  }, ambient: a => { store.ambient = a; updateSky() }, status: s => {
+  stop = connect({ device: applyDevice, home: applyHome, intent: applyIntent, drafts: d => { store.drafts = d; eventsSoon() }, presence: p => { store.presence = p; eventsSoon() }, phones: () => loadPhones(true), ambient: a => { store.ambient = a; updateSky() }, status: s => {
     const was = store.status?.driver, version = store.status?.version
     store.status = s
     if (store.updating && version && s.version && s.version !== version) { store.updating = false; notify(`Updated to ${s.version}.`) }

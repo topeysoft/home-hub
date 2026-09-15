@@ -1,7 +1,7 @@
 """Run from brain/: .venv/bin/python -m unittest -v. The phones that belong to the house: asking, allowing, the code, leaving."""
 import json, tempfile, time, unittest
 from pathlib import Path
-from hub.phones import Phones, open_to_strangers, from_away, SPANS
+from hub.phones import Phones, holds_keys, open_to_strangers, from_away, SPANS
 from hub.lock import needs_code
 
 
@@ -60,8 +60,9 @@ class PhonesTests(unittest.TestCase):
         ask = self.phones.ask("Sam's iPhone")
         self.hub.sent.clear()
         self.phones.allow(ask["id"])
-        self.assertEqual(json.loads(self.hub.sent[-1])["asks"], [])
-        self.assertEqual(len(json.loads(self.hub.sent[-1])["phones"]), 1)
+        self.assertEqual(self.phones.list()["asks"], [])
+        self.assertEqual(len(self.phones.list()["phones"]), 1)
+        self.assertTrue(self.hub.sent, "no panel was told the knock had been answered")
 
     def test_not_now_ends_the_ask(self):
         ask = self.phones.ask("Someone")
@@ -106,8 +107,48 @@ class PhonesTests(unittest.TestCase):
         self.phones.allow(ask["id"]); self.phones.claim(ask["id"])
         kinds = [(k, new) for k, _, new, _, _ in self.hub.log.rows]
         self.assertEqual(kinds, [("phone", "asked"), ("phone", "joined")])
-        self.assertTrue(all('"type": "phones"' in m for m in self.hub.sent))
+        self.assertTrue(all(json.loads(m) == {"type": "phones"} for m in self.hub.sent))
         self.assertGreaterEqual(len(self.hub.sent), 2)
+
+    def test_being_let_in_is_not_the_same_as_letting_in(self):
+        """`how` is written down for this, and until now nothing read it.
+
+        A phone let in at a wall is a guest: it runs the house, it does not keep it. The screen that set
+        the house up does, and so does a phone whose owner typed the code on it -- knowing the code is
+        already the whole of the house, so nothing is being widened by saying so."""
+        wall, _ = self.phones.from_setup()
+        typed, _ = self.phones.with_code("Owner's phone")
+        ask = self.phones.ask("A guest")
+        self.phones.allow(ask["id"], "day")
+        guest = self.phones.get(self.phones.asks[ask["id"]]["phone"])
+        self.assertEqual([holds_keys(p) for p in (wall, typed, guest)], [True, True, False])
+        self.assertFalse(holds_keys(None))
+
+    def test_a_guest_is_shown_itself_and_nobody_else(self):
+        """The roster is the household and its visitors. A phone let in for the afternoon does not get it.
+
+        This is also what keeps the knock off their screen: the pane rises on `asks`, and theirs is empty
+        however many phones are at the door."""
+        self.phones.from_setup()
+        ask = self.phones.ask("A guest")
+        self.phones.allow(ask["id"], "day")
+        guest = self.phones.get(self.phones.asks[ask["id"]]["phone"])
+        self.phones.ask("Somebody else")                      # somebody at the door while the guest looks
+        mine = self.phones.list(me=guest)
+        self.assertEqual([p["name"] for p in mine["phones"]], ["A guest"])
+        self.assertTrue(mine["phones"][0]["me"])
+        self.assertEqual(mine["asks"], [])
+        # and the wall still sees all of it
+        wall = self.phones.get(self.phones.list()["phones"][0]["id"])
+        self.assertEqual(len(self.phones.list(me=wall)["phones"]), 2)
+        self.assertEqual(len(self.phones.list(me=wall)["asks"]), 1)
+
+    def test_the_roster_never_rides_on_the_broadcast(self):
+        """One message goes to every panel at once, so it cannot carry a list that differs per phone."""
+        self.phones.ask("Sam")
+        self.phones.with_code("Owner's phone")
+        for m in self.hub.sent:
+            self.assertEqual(json.loads(m), {"type": "phones"})
 
     def test_names_are_tidied(self):
         p, _ = self.phones.with_code("   Sam's   iPhone  ")

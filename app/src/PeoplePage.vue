@@ -9,7 +9,7 @@
  * little computer, so they moved here with the people they belong to.
  */
 import { computed, ref } from 'vue'
-import { store, notify } from './store'
+import { store, notify, holdsKeys } from './store'
 import { removePhone, type Phone } from './api'
 import { initials, personTone } from './people'
 import Icon from './Icon.vue'
@@ -35,6 +35,13 @@ async function remove(p: Phone) {
   sure.value = ''; removing.value = ''
 }
 const adding = ref(new URLSearchParams(location.search).get('add') === '1')   // ?sheet=people&add=1 previews the steps
+
+/* A phone that was let in at a wall is shown itself and nobody else -- the hub answers /phones with what
+   this phone may see, not with the household. So the count below would be reading its own row back as
+   "One phone belongs to the house", which is both wrong and the kind of wrong that reads as a bug. It
+   says what is true instead: this is your phone, here is the way out of the house, and the rest of it is
+   not yours to see. */
+const keys = computed(() => holdsKeys())
 
 </script>
 
@@ -63,9 +70,14 @@ const adding = ref(new URLSearchParams(location.search).get('add') === '1')   //
         <button class="button small" @click="adding = !adding">{{ adding ? 'Hide' : 'Show how' }}</button>
       </li>
       <li class="hub-wide" v-if="adding"><PhoneSteps /></li>
-      <li v-if="store.status?.locked">
+      <li v-if="store.status?.locked && keys">
         <span class="hub-k">Phones</span>
         <span class="hub-v">{{ store.phones.length === 1 ? 'One phone belongs' : `${store.phones.length} phones belong` }} to the house. Each runs it from the Wi‑Fi; none reaches it from outside yet.<span class="hub-sub"> A phone that is removed is out at once.</span></span>
+        <span></span>
+      </li>
+      <li v-else-if="store.status?.locked">
+        <span class="hub-k">This phone</span>
+        <span class="hub-v">This phone was let in at the wall, so it runs the house but does not keep it.<span class="hub-sub"> Who else belongs, and who else gets in, is answered at the wall. You can take this phone out below whenever you like.</span></span>
         <span></span>
       </li>
       <li class="hub-wide" v-if="store.status?.locked && store.phones.length">

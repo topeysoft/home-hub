@@ -127,6 +127,62 @@ class JoiningTests(ApiTest):
         self.client.cookies.set(COOKIE, token)
         self.assertEqual(self.client.post(f"/phones/asks/{ask['id']}/allow", json={}).status_code, 401)
 
+    # ---- a key is not the same thing as a way in ----
+    def guest(self):
+        """A phone let in at the wall, with the code in hand: the case the code alone never covered."""
+        ask = self.client.post("/phones/ask", json={"name": "Guest"}).json()
+        wall, wall_token = self.hub.phones.from_setup()
+        self.hub.phones.allow(ask["id"], "day")
+        _, phone, token = self.hub.phones.claim(ask["id"])
+        return phone, token, wall, wall_token
+
+    def test_a_phone_let_in_at_the_wall_cannot_let_anybody_else_in(self):
+        """The hole the code could not close, because the code is one secret the whole house shares.
+
+        A phone let in for the afternoon, once somebody reads the code out in a kitchen, could admit
+        anyone. It holds the code here and is still refused: what it may do turns on how it got in."""
+        phone, token, _, _ = self.guest()
+        self.client.cookies.set(COOKIE, token)
+        nxt = self.client.post("/phones/ask", json={"name": "Somebody else"}).json()
+        r = self.client.post(f"/phones/asks/{nxt['id']}/allow", json={"span": "keep"}, headers={"x-hub-code": self.code})
+        self.assertEqual(r.status_code, 403)
+        self.assertEqual(self.hub.phones.claim(nxt["id"])[0], "waiting")     # and nothing was issued
+        # nor may it wave the knock away on the wall's behalf
+        self.assertEqual(self.client.delete(f"/phones/asks/{nxt['id']}", headers={"x-hub-code": self.code}).status_code, 403)
+
+    def test_a_phone_let_in_at_the_wall_is_shown_itself_and_no_knocks(self):
+        phone, token, _, _ = self.guest()
+        self.client.cookies.set(COOKIE, token)
+        self.client.post("/phones/ask", json={"name": "Somebody else"})
+        seen = self.client.get("/phones").json()
+        self.assertEqual([p["name"] for p in seen["phones"]], ["Guest"])
+        self.assertEqual(seen["asks"], [])
+
+    def test_a_guest_may_leave_but_not_evict(self):
+        """Leaving is the button on its own row; taking somebody else out is a key."""
+        phone, token, wall, _ = self.guest()
+        self.client.cookies.set(COOKIE, token)
+        self.assertEqual(self.client.delete(f"/phones/{wall['id']}", headers={"x-hub-code": self.code}).status_code, 403)
+        self.assertIsNotNone(self.hub.phones.get(wall["id"]))
+        self.assertEqual(self.client.delete(f"/phones/{phone['id']}", headers={"x-hub-code": self.code}).status_code, 200)
+        self.assertIsNone(self.hub.phones.get(phone["id"]))
+
+    def test_a_guest_cannot_talk_its_own_way_out_of_the_house(self):
+        phone, token, _, _ = self.guest()
+        self.client.cookies.set(COOKIE, token)
+        r = self.client.post(f"/phones/{phone['id']}/remote", json={"remote": True}, headers={"x-hub-code": self.code})
+        self.assertEqual(r.status_code, 403)
+        self.assertFalse(self.hub.phones.get(phone["id"])["remote"])
+
+    def test_the_wall_that_set_the_house_up_may_still_do_all_of_it(self):
+        """The guard is not a wall that cannot answer its own door."""
+        phone, _, wall, wall_token = self.guest()
+        self.client.cookies.set(COOKIE, wall_token)
+        nxt = self.client.post("/phones/ask", json={"name": "Somebody else"}).json()
+        self.assertEqual(self.client.post(f"/phones/asks/{nxt['id']}/allow", json={"span": "keep"}, headers={"x-hub-code": self.code}).status_code, 200)
+        self.assertEqual(self.client.delete(f"/phones/{phone['id']}", headers={"x-hub-code": self.code}).status_code, 200)
+        self.assertEqual(len(self.client.get("/phones").json()["phones"]), 2)
+
     def test_removing_a_phone_puts_it_out_at_once(self):
         joined = self.client.post("/phones/code", json={"code": self.code, "name": "Temi's phone"}).json()
         self.assertEqual(self.client.get("/home").status_code, 200)

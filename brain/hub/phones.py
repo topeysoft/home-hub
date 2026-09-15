@@ -19,6 +19,25 @@ ASK_TTL = 10 * 60          # an unanswered ask fades after ten minutes
 SEEN_EVERY = 5 * 60        # last_seen is written at most this often
 SPANS = {"day": 24 * 3600, "weekend": 3 * 24 * 3600, "keep": None}
 
+# Which phones may decide who else gets in, by how they got in themselves.
+#
+# The screen that set the house up, and the phones whose owner typed the code on them. NOT a phone that
+# was let in at a wall -- `how` is "wall" for those, meaning "admitted by somebody at a wall", and being
+# admitted is not the same as being able to admit. That difference is the whole reason `how` is written
+# down, and until now nothing read it: the code was the only thing between a phone let in for the
+# afternoon and the door to the rest of the house.
+#
+# A second wall panel becomes one of these the way it already does -- somebody stands at it and types the
+# code -- rather than by being let in from the first wall, which would make it a guest that happens to be
+# screwed to a wall. `kind` is not consulted anywhere here on purpose: it is a guess from the user agent
+# (api.py), so it can say whatever the phone holding it wants it to say.
+KEYS = ("setup", "code")
+
+
+def holds_keys(p: dict | None) -> bool:
+    """May this phone hand out keys to the house, or only hold its own?"""
+    return bool(p) and p.get("how") in KEYS
+
 
 def _hash(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
@@ -55,8 +74,18 @@ class Phones:
         return {k: p.get(k) for k in ("id", "name", "kind", "joined", "expires", "remote", "last_seen", "how")} | {"me": bool(me and me["id"] == p["id"])}
 
     def list(self, me: dict | None = None) -> dict:
+        """What this phone may see. A phone that holds no keys sees itself and nothing else.
+
+        Everyone in the house used to get the whole roster -- every name, how each one got in, when each
+        was last seen, and who was knocking right now. That is the household and its visitors, handed to
+        a phone let in for the afternoon. It is also what put the knock on their screen at all: the pane
+        rises on whatever is in `asks`, so a guest with no asks has nothing to answer.
+        """
         self._sweep()
-        return {"phones": [self._public(p, me) for p in sorted(self.data, key=lambda p: p.get("joined") or 0)],
+        rows = sorted(self.data, key=lambda p: p.get("joined") or 0)
+        if me and not holds_keys(me):
+            return {"phones": [self._public(p, me) for p in rows if p["id"] == me["id"]], "asks": []}
+        return {"phones": [self._public(p, me) for p in rows],
                 "asks": [self._ask_public(a) for a in self.asks.values() if not a.get("token") and not a.get("denied")]}
 
     def get(self, phone_id: str) -> dict | None:
@@ -153,7 +182,13 @@ class Phones:
         return {"id": a["id"], "name": a["name"], "kind": a.get("kind"), "asked": a["asked"]}
 
     def _changed(self):
-        try: self.hub._broadcast(json.dumps({"type": "phones", **self.list()}))
+        """Tell the panels the phones changed -- and only that.
+
+        This is one message to every open panel at once, so it cannot carry the roster: what a phone may
+        see depends on which phone it is, and that is a question only `list` can answer, per request, with
+        the cookie in hand. So the panels are nudged and each asks for its own answer.
+        """
+        try: self.hub._broadcast(json.dumps({"type": "phones"}))
         except Exception: pass
 
 

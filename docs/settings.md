@@ -148,6 +148,19 @@ themselves, `open_to_strangers()` as the list of what a phone may reach before i
 People page, next to the people they belong to. Covered by `brain/tests/test_lock.py`, `test_api_lock.py`,
 `test_phones.py`, `test_settings.py`.
 
+**A way in is not a key** (15 September 2026). The code was the only thing standing between a phone and the door to
+the rest of the house, and the code is one secret the whole house shares — so a phone let in for the afternoon, once
+somebody read the code out in a kitchen, could admit anyone, evict anyone, and let a phone out of the house. `how` had
+recorded the difference since pairing was built and nothing read it. `holds_keys()` in `phones.py` now does: the screen
+that set the house up and the phones whose owner typed the code themselves may hand out keys; a phone whose `how` is
+`wall` — admitted by somebody at a wall — may not, and holding the code does not change that. It still runs the house,
+and it may still take itself out of it: leaving is not evicting. `kind` is deliberately not consulted, being a guess
+from the user agent. The same rule narrows what a phone may see: `list()` answers a keyless phone with its own row and
+no asks, so the household, how each phone got in, when each was last seen, and who is knocking right now stay with the
+screens that keep the house. That is also what keeps the join pane off a guest's screen — it rises on `asks`, and
+theirs is empty. One consequence worth knowing: the live `phones` message is now a nudge carrying nothing, because one
+message goes to every panel at once and the answer differs per phone, so each panel asks `/phones` for its own.
+
 **What the order above still has not touched**, checked rather than assumed:
 
 - **Removing things** (step 2) landed on 12 September 2026, both halves: a device is forgotten from the row it
@@ -156,15 +169,19 @@ People page, next to the people they belong to. Covered by `brain/tests/test_loc
 - **People** (step 3) is a page, not yet a model. `PeoplePage.vue` draws what `presence.py` reads, and
   `presence.py` still reads Home Assistant's `person.*` entities and the alarm — so "is anyone home?" still rests on
   the companion app this product says does not exist. A phone has a name, not an owner: nothing mints a per-person
-  key. **Roles do not exist anywhere in the tree** — *can change things* and *can control* are in this document and
-  nowhere else. Wi-Fi presence is not written; `last_seen` on a phone is touched by that phone making a request, not
+  key. **Roles still do not exist anywhere in the tree** — *can change things* and *can control* are in this document
+  and nowhere else. The one distinction that is now real is not a role and does not want to become one by accident:
+  `holds_keys()` asks how a phone got in, not who is holding it, so it separates the screens that keep the house from
+  the phones let into it and says nothing about people. A guest let in at the wall is the closest thing to *can
+  control* that exists, and it arrived as a security fix rather than as the model. Wi-Fi presence is not written; `last_seen` on a phone is touched by that phone making a request, not
   by the hub watching the network.
 - **The engine's login** (step 5) is still Home Assistant's to reset: `app/src/Setup.vue` line 131 says so out loud.
 - **A device's own settings and Forget** (step 6) are not drawn on the long-press.
 - **The Advanced door** (step 7) is still four doors: `AddPage.vue`, `CodePage.vue`, `HousePanel.vue`, `HubPage.vue`
   each mount `AdvancedLink.vue`.
 - **`remote` on a phone** is recorded, defaults off, and nothing reads it. It is a promise waiting on the relay;
-  see `docs/away.md` piece 2, which now carries the build for it.
+  see `docs/away.md` piece 2, which now carries the build for it. Turning it on is a key, and not one a phone may turn
+  on itself: talking your own way out of the house is the one promotion that has to come from somebody at the wall.
 
 ## Order
 
