@@ -76,10 +76,17 @@ test('it brings its own type and corners, and leaves the other arrangements wher
     }
   })
 
+  // the top bar's clock goes with the typeface. It is the house's own chrome rather than the
+  // layout's, so it does not follow --sans on its own -- it carries `display`, and left alone it
+  // was the only serif on this arrangement, set twelve pixels from a date already in the sans.
+  const clock = () => page.evaluate(() =>
+    getComputedStyle(document.querySelector('.topbar-time')!).fontFamily.split(',')[0].replace(/['"]/g, ''))
+
   const wall = await look()
   expect(wall.asked, 'Wall is not in its own typeface').toBe('Plus Jakarta Sans Variable')
   expect(wall.loaded, 'the typeface was asked for but never loaded, so this is the fallback').toBe(true)
   expect(wall.radius).toBe('28px')
+  expect(await clock(), 'the clock is still the lone serif on the arrangement').toBe('Plus Jakarta Sans Variable')
 
   await page.goto('/?layout=rail&nav=top&at=19:40', { waitUntil: 'networkidle' })
   await expect(page.locator('.bento').first()).toBeVisible()
@@ -87,6 +94,52 @@ test('it brings its own type and corners, and leaves the other arrangements wher
   const rail = await look()
   expect(rail.asked, "Wall's typeface leaked into the Rail").toBe('Instrument Sans Variable')
   expect(rail.radius, "Wall's corners leaked into the Rail").toBe('26px')
+  expect(await clock(), "Wall's clock leaked into the Rail, which was drawn with the serif").toBe('Instrument Serif')
+})
+
+/* The panel with everything taken away is still this panel. Rest is the screen a wall is looked at
+   on longest -- most of a day, from across a room -- so a house that woke in one typeface and
+   rests in another has changed its mind while nobody was watching. Its own navigation, because the
+   resting screen is reached by a query rather than by waiting out the idle timer. */
+test('it rests in the typeface it woke in', async ({ page }) => {
+  const resting = async (url: string) => {
+    await page.goto(url, { waitUntil: 'networkidle' })
+    await expect(page.locator('.idle-time')).toBeVisible()
+    return page.evaluate(async () => {
+      await document.fonts.ready
+      return getComputedStyle(document.querySelector('.idle-time')!).fontFamily.split(',')[0].replace(/['"]/g, '')
+    })
+  }
+  expect(await resting('/?layout=wall&rest=1&at=22:00'), 'Wall wakes in the sans and rests in the serif')
+    .toBe('Plus Jakarta Sans Variable')
+  expect(await resting('/?layout=rail&rest=1&at=22:00'), "Wall's typeface leaked into the Rail's resting screen")
+    .toBe('Instrument Serif')
+})
+
+/* Centred, where design/nightfall draws it flush left, and panel.css says why: the board's pane is
+   nearly filled by its numerals and this one is not, so flush left leaves a wedge of empty glass
+   down one side of a shape that has no sides.
+
+   The axis rather than the rule. text-align is a property and a property is not a promise; what
+   has to hold is that the lines and the 100px radius around them share a centre, which stays true
+   however the pane is later made to fill. */
+test('the weather reads on the pane\'s own axis', async ({ page }) => {
+  // the INK, not the box. Each line is a block that fills the pane's content box whichever way it
+  // is aligned, so a bounding box here reads the same flush left as centred and asserts nothing.
+  // A range over the text measures where the glyphs actually land.
+  const off = await page.evaluate(() => {
+    const ink = (sel: string) => {
+      const r = document.createRange()
+      r.selectNodeContents(document.querySelector(sel)!)
+      const b = r.getBoundingClientRect()
+      return b.x + b.width / 2
+    }
+    const loz = document.querySelector('.wall-loz')!.getBoundingClientRect()
+    const axis = loz.x + loz.width / 2
+    return ['.wall-temp', '.wall-says', '.wall-sub'].map(s => [s, ink(s) - axis] as const)
+  })
+  for (const [line, d] of off)
+    expect(Math.abs(d), `${line} sits ${d.toFixed(1)}px off the pane's centre line`).toBeLessThan(2)
 })
 
 /* Wider than the board it was drawn on, which is where this one used to go wrong and where no other
