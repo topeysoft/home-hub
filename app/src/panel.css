@@ -6066,13 +6066,27 @@ select.input {
    face held light. So the pane's three `display` elements follow the panel
    behind them, on the recipe the weather uses.
 
-   Only the pane. The house still says the serif elsewhere on this layout --
-   the clock in the top bar, the resting screen, the setup pages -- and those
-   are not a word repeated one tap apart from itself. Scoped to Wall like
-   everything else in this block: the other arrangements were drawn with the
-   serif and keep it. */
+   The top bar's clock goes with it, for a plainer reason than the pane's. It
+   was the last serif anywhere on this arrangement, set twelve pixels from a
+   date already in the sans, and a lone serif beside its own date reads as a
+   slip rather than as a second voice. A typeface earns its place by being the
+   voice of something; here the serif had nothing left to speak for.
+
+   The house still says the serif elsewhere -- the resting screen, the setup
+   pages -- and those are whole screens in it rather than one line beside a
+   sentence that is not. Scoped to Wall like everything else in this block: the
+   other arrangements were drawn with the serif and keep it. */
 [data-layout='wall'] .opened .display {
   font-family: var(--sans);
+}
+[data-layout='wall'] .topbar-time {
+  font-family: var(--sans);
+  /* held lighter than the serif drew itself, so it sits with the weather's 250
+     rather than outweighing it, and a hair smaller because the sans runs wider
+     at the same size and the date beside it has a wrapping point to keep */
+  font-weight: 300;
+  font-size: 27px;
+  letter-spacing: -0.03em;
 }
 [data-layout='wall'] .opened-name {
   /* the arrangement's own regular: at 500 the name outweighed the reading under
@@ -6233,6 +6247,15 @@ select.input {
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
+  /* Centred, where the board it came from is flush left. The board's lozenge is
+     460 of a 1440 screen and the numerals nearly fill it, so flush left costs
+     it nothing; here the shape holds its share instead of a width, the content
+     box is around 145px, and a two-digit temperature leaves a wedge of empty
+     glass down one side of a shape that has no side. A 100px radius is
+     symmetric about its own axis and the lines have to be too -- it is the one
+     place on the panel where the container, not the column, sets the margin. */
+  align-items: center;
+  text-align: center;
   overflow: hidden;
   /* Paper's answer, and it has to be a real surface: --surface over a night sky
      at this size is a faint outline rather than a pane, and the numbers on it
