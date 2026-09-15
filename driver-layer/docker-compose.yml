@@ -98,6 +98,12 @@ services:
       # release: the newest version tag. main: the branch, for a hub being worked on. install.sh writes it.
       - HUB_CHANNEL=${HUB_CHANNEL:-release}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}   # the assistant's key, if it is not pasted into the panel instead
+      # Whether this house can answer out loud, and in whose voice. Empty is off and is every house
+      # today: the panel then answers on the glass exactly as it does now. Set VOICE_TTS=piper with
+      # COMPOSE_PROFILES=voice to turn the pair on together. docs/voice.md.
+      - VOICE_TTS=${VOICE_TTS:-}
+      - VOICE_TTS_PORT=${VOICE_TTS_PORT:-10200}
+      - VOICE_TTS_VOICE=${VOICE_TTS_VOICE:-}
 
   caddy:
     # The front door: http://hub.local on :80 with no setup at all, https alongside for those who install the root certificate.
@@ -131,3 +137,27 @@ services:
       - ENABLEMODES=true
     volumes:
       - ./ring-mqtt:/data
+
+  wyoming-piper:
+    # The house's own voice. docs/voice.md, *Where the voice comes out*: the brain synthesises an answer
+    # here and the PANEL plays it, as audio in the page, from a URL on the hub's own LAN address — the
+    # same arrangement sounds.py has with a Cast speaker, so it keeps working with the internet down.
+    #
+    # A profile, like the radios: COMPOSE_PROFILES=voice in .env turns it on. Off is the right default
+    # and is what every house is today — nothing can HEAR yet, and a house with no microphone has
+    # nothing to answer. Nothing else in the stack changes when it is on; the brain finds it on
+    # loopback because both run with network_mode: host.
+    #
+    # Which voice a household hears is still open (docs/voice.md's tier table sizes the quality per
+    # host, and the name below is a placeholder that a .env wins over). The first run fetches the model
+    # into ./piper-data and needs the internet once; after that it is local like everything else.
+    image: rhasspy/wyoming-piper:2.5.2
+    container_name: wyoming-piper
+    restart: unless-stopped
+    profiles: [voice]
+    network_mode: host
+    command: --uri tcp://0.0.0.0:${VOICE_TTS_PORT:-10200} --voice ${VOICE_TTS_VOICE:-en_GB-alba-medium}
+    environment:
+      - TZ=${TZ}
+    volumes:
+      - ./piper-data:/data

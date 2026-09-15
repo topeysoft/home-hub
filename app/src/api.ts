@@ -36,9 +36,12 @@ export async function getPresence(): Promise<Presence> {
 
 const json = { 'Content-Type': 'application/json' }
 async function fail(r: Response): Promise<never> {
-  let detail = r.statusText
-  try { detail = (await r.json()).detail ?? detail } catch {}
-  throw new Error(detail)
+  let detail = r.statusText, speak: Spoken | undefined
+  /* `speak` rides along on a refusal as well as on an answer, and the 422 from /say is the reason:
+     docs/voice.md has the house say "I didn't catch that" out loud ALWAYS, because silence there
+     reads as being ignored. Every other caller sees the Error it has always seen. */
+  try { const body = await r.json(); detail = body?.detail ?? detail; speak = body?.speak ?? undefined } catch {}
+  throw Object.assign(new Error(detail), speak ? { speak } : {})
 }
 
 async function post<T = any>(url: string, body?: unknown): Promise<T> {
@@ -221,9 +224,15 @@ export function connect(on: { device: (d: Device) => void; home: (h: Home) => vo
 }
 /* The command box: one sentence in, one answer out. done and answer already happened (the grammar ran them, the way a tap
    does); action and rule are the assistant's proposals and have not. Driving the house never needs the code. */
-export type Said = { kind: 'done'; text: string; said: string; count?: number } | { kind: 'answer'; text: string; said: string }
-  | { kind: 'explain'; question: string; answer: string; said: string } | (Proposal & { said: string }) | (Routine & { kind: 'rule'; said: string })
-export const say = (text: string, room?: string | null) => post<Said>('/say', { text, room: room ?? undefined })
+export type Said = ({ kind: 'done'; text: string; said: string; count?: number } | { kind: 'answer'; text: string; said: string }
+  | { kind: 'explain'; question: string; answer: string; said: string } | (Proposal & { said: string }) | (Routine & { kind: 'rule'; said: string })) & Answered
+/* What the house would say out loud, and the clip on the hub that says it. Present only when the sentence
+   ARRIVED by microphone and the room is awake — the route decides, not the kind (docs/voice.md). `spoken`
+   is the sentence either way, which is what makes it something a test can read without an engine running. */
+export type Spoken = { url: string; text: string }
+type Answered = { spoken?: string; speak?: Spoken }
+export const say = (text: string, room?: string | null, spoken = false) =>
+  post<Said>('/say', { text, room: room ?? undefined, ...(spoken ? { spoken: true } : {}) })
 /* Names and rooms for things under New devices: proposed by the house, then the assistant; nothing moves until Use is tapped. */
 export type Suggestion = { id: string; name: string; room: string; why: string; source: 'house' | 'assistant' }
 export async function getSuggestions(): Promise<{ items: Suggestion[]; assistant: boolean }> {

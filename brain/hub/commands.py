@@ -55,6 +55,14 @@ LABEL = {"occupied": "Here", "empty": "All off", "asleep": "Sleep", "away": "Eve
 class NotUnderstood(Exception):
     """The grammar has nothing for this sentence. The message is for the person."""
 
+    @property
+    def spoken(self) -> str:
+        """Said out loud, always -- docs/voice.md: silence here reads as the house ignoring you, and
+        `Say.vue` has already learned that lesson once on the screen. Most of these are one short
+        sentence and are read as they are. The one that lists phrases to TYPE is not a thing to say
+        to somebody whose hands are full, so past a breath's worth it falls back to the short form."""
+        return refusal_aloud(str(self))
+
 
 def norm(s: str) -> str:
     s = (s or "").replace("’", "'").replace("‘", "'").lower()
@@ -144,15 +152,86 @@ def _plural(n: int, one: str, many: str | None = None) -> str:
     return one if n == 1 else (many or one + "s")
 
 
+# ---------- the same answer, said instead of shown ----------
+#
+# docs/voice.md, *What to answer, and how*. Every reply here is written for the glass, and the glass
+# carries things a voice cannot pronounce: a degree sign, a middle dot, a per-cent, two sentences at
+# once. So a reply may carry a `spoken` beside its `text`, and where it does not, `aloud()` reads the
+# text. Nothing in here changes a word of what the panel shows -- the screen keeps its own line, and
+# the voice is a second rendering of the same answer, never a different answer.
+
+NOUN = {"light": "light", "switch": "plug", "fan": "fan", "media": "screen", "climate": "thermostat",
+        "lock": "door", "cover": "blind"}
+# Which half of a split set is worth saying. A person asking "are the lights off?" is asking to find
+# out about the ones that are ON; the others are not news. docs/voice.md's own worked example.
+NOTABLE = {"light": "on", "switch": "on", "fan": "on", "media": "playing", "lock": "unlocked",
+           "cover": "open", "contact": "open"}
+# A count somebody hears rather than reads. Small numbers only: past a dozen, "fourteen" is no clearer
+# than "14", and a set that big was never going to be read out as a list anyway.
+COUNT = ("no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve")
+
+
+def _state_word(d) -> str:
+    """What the state of a thing is called when somebody asks. Lifted out of `_state_line` so the
+    spoken summary counts the very same words the written line prints."""
+    s = d.state
+    if s in ("unavailable", "unknown"): return "not responding"
+    if kind_of(d) == "contact": return "open" if s == "on" else "closed"
+    if kind_of(d) == "motion": return "seeing motion" if s == "on" else "seeing no motion"
+    return s.replace("_", " ")
+
+
+def _count(n: int) -> str:
+    return COUNT[n] if 0 <= n < len(COUNT) else str(n)
+
+
+def aloud(text: str) -> str:
+    """A line written for the screen, said instead: the typography becomes words, or goes."""
+    t = (text or "").replace("\u00b7", ",").replace("%", " percent")
+    t = t.replace('"', "").replace("\u201c", "").replace("\u201d", "")   # quotation marks are not pronounced
+    t = t.replace("\u00b0", " degrees")
+    return re.sub(r"\s+([,.;])", r"\1", re.sub(r"\s+", " ", t)).strip()
+
+
+# What a voice says for the three kinds that must not be read out. docs/voice.md: refusing to read
+# them leaves a person standing there with their hands full hearing nothing at all, which is worse
+# than either -- so each gets a sentence saying WHERE the answer is, and never the answer.
+POINTERS = {"explain": "There's an answer on the screen.",
+            "action": "There's something to confirm on the screen.",
+            "rule": "I've written that up; it's waiting under Routines."}
+
+
+def spoken_line(out: dict) -> str:
+    """The one sentence a reply is worth out loud."""
+    if out.get("kind") in POINTERS: return POINTERS[out["kind"]]
+    return aloud(out.get("spoken") or out.get("text") or "")
+
+
+def refusal_aloud(message: str) -> str:
+    """A refusal, said out loud -- docs/voice.md: the 422 is spoken ALWAYS, because silence when the
+    house did not catch you reads as being ignored, and `Say.vue` has already learned that lesson once
+    on the screen. Most refusals are one short sentence and are said as they are. The ones that list
+    phrases to TYPE are not things to say to somebody whose hands are full, so past a breath's worth
+    they fall back to the short form rather than reading out an essay nobody asked for."""
+    line = aloud(message)
+    return line if 0 < len(line) <= 100 else "I didn't catch that."
+
+
 class Commands:
     def __init__(self, hub):
         self.hub = hub
 
     # ---- what the panel calls ----
-    async def say(self, text: str, room_id: str | None = None) -> dict:
+    async def say(self, text: str, room_id: str | None = None, spoken: bool = False) -> dict:
         """One sentence in, one answer out: {"kind": "done" | "answer" | "explain" | "action" | "rule", ...}.
         done and answer come from the grammar and have already happened; action and rule are the assistant's
-        proposals and have not. Raises NotUnderstood with words for the person."""
+        proposals and have not. Raises NotUnderstood with words for the person.
+
+        `spoken` is how the sentence ARRIVED, not what to do about it: true when a microphone heard it,
+        false when somebody typed it. It changes nothing here beyond the log -- every reply carries its
+        `spoken` line either way, and whether anything reads that line out is `voice.py`'s decision and
+        docs/voice.md's rule. Keeping it in the log is what lets the grammar grow from speech separately
+        from typing, which it will have to: people do not type the sentences they say."""
         said = " ".join((text or "").split())
         if len(said) < 2: raise NotUnderstood("Say what you'd like the house to do.")
         here = self.hub.home.rooms.get(room_id) if room_id and room_id != "unassigned" else None
@@ -160,10 +239,11 @@ class Commands:
             out = await self._grammar(said, here)
             if out is None: out = await self._assistant(said, here)
         except Exception as e:
-            self._log(said, here, {"understood": False, "reason": str(e)})
+            self._log(said, here, {"understood": False, "reason": str(e), "spoken": spoken})
             raise
-        self._log(said, here, {"understood": out["kind"] in ("done", "answer", "explain"), "kind": out["kind"], "text": out.get("text") or out.get("name") or out.get("answer")})
-        return {**out, "said": said}
+        self._log(said, here, {"understood": out["kind"] in ("done", "answer", "explain"), "kind": out["kind"],
+                               "text": out.get("text") or out.get("name") or out.get("answer"), "spoken": spoken})
+        return {**out, "said": said, "spoken": spoken_line(out)}
 
     def _log(self, said, here, detail):
         self.hub.log.add("said", here.id if here else "home", None, said, source="user", detail=detail)
@@ -244,7 +324,8 @@ class Commands:
     # ---- scenes ----
     async def _room(self, room, state, said):
         await self.hub.set_intent(room, state, source="user", detail={"said": said})
-        return {"kind": "done", "text": f"{room.name} · {LABEL[state.value]}", "room": room.id, "intent": state.value}
+        return {"kind": "done", "text": f"{room.name} · {LABEL[state.value]}", "spoken": f"{room.name}, {LABEL[state.value].lower()}.",
+                "room": room.id, "intent": state.value}
 
     async def _home(self, state, said):
         await self.hub.set_home_intent(state, source="user", detail={"said": said})
@@ -345,7 +426,7 @@ class Commands:
             d = targets[0]
             r = self.hub.home.rooms.get(d.room_id)
             return d.name if not r or norm(d.name).startswith(norm(r.name)) or not spread else f"{r.name} {d.name[0].lower() + d.name[1:]}"
-        noun = {"light": "light", "switch": "plug", "fan": "fan", "media": "screen", "climate": "thermostat", "lock": "door", "cover": "blind"}.get(kind, "thing")
+        noun = NOUN.get(kind, "thing")
         if room: return f"{room.name} {_plural(len(targets), noun)}"
         return f"All {len(targets)} {_plural(len(targets), noun)}"
 
@@ -433,16 +514,16 @@ class Commands:
             kinds = ("cover", "contact") if want in ("open", "opened", "closed", "shut") else ("lock",) if want in ("locked", "unlocked") else ("light",)
             found = [d for d in room.devices if kind_of(d) in kinds]
             if not found: raise NotUnderstood(f"Nothing in the {room.name} can be {want}.")
-            return {"kind": "answer", "text": self._state_line(found, kind_of(found[0]), room)}
+            return self._state_reply(found, kind_of(found[0]), room)
         m = re.fullmatch(r"(is|are) (the |my |our )?(.+?) (on|off|open|opened|closed|shut|locked|unlocked|playing|paused|running|still on|still open)\??", t)
         if m:
             target, _, kind, _ = self._target(m.group(3), devices, room)
             if target is None: raise NotUnderstood(f"The house has nothing called \"{m.group(3)}\"{f' in the {room.name}' if room else ''}.")
-            return {"kind": "answer", "text": self._state_line(target, kind, room)}
+            return self._state_reply(target, kind, room)
         m = re.fullmatch(r"(is|are) (the |my |our )?(.+?)\??", t)
         if m and not t.startswith(("is it", "is there", "is anything")):
             target, _, kind, _ = self._target(m.group(3), devices, room)
-            if target is not None: return {"kind": "answer", "text": self._state_line(target, kind, room)}
+            if target is not None: return self._state_reply(target, kind, room)
         if t.startswith("why"): return None       # the assistant explains from the log
         return None
 
@@ -452,20 +533,35 @@ class Commands:
         return f"{r.name} {d.name[0].lower() + d.name[1:]}"
 
     def _state_line(self, targets, kind, room) -> str:
-        def word(d):
-            s = d.state
-            if s in ("unavailable", "unknown"): return "not responding"
-            if kind_of(d) == "contact": return "open" if s == "on" else "closed"
-            if kind_of(d) == "motion": return "seeing motion" if s == "on" else "seeing no motion"
-            return s.replace("_", " ")
         if len(targets) == 1:
             d = targets[0]
-            return f"{d.name} is {word(d)}."
+            return f"{d.name} is {_state_word(d)}."
         states = {}
-        for d in targets: states.setdefault(word(d), []).append(d)
-        noun = {"light": "light", "switch": "plug", "fan": "fan", "media": "screen", "lock": "door", "cover": "blind", "climate": "thermostat"}.get(kind, "thing")
+        for d in targets: states.setdefault(_state_word(d), []).append(d)
+        noun = NOUN.get(kind, "thing")
         if len(states) == 1: return f"All {len(targets)} {_plural(len(targets), noun)} are {next(iter(states))}."
         return ". ".join(f"{', '.join(self._named(d, room) for d in ds)} {'is' if len(ds) == 1 else 'are'} {s}" for s, ds in states.items()) + "."
+
+    def _state_spoken(self, targets, kind, room) -> str:
+        """The written line answers about each thing; out loud, answer the question instead.
+
+        docs/voice.md's own worked example is this method's whole reason: "Kitchen ceiling is on.
+        Kitchen counter is off." is right on the glass and wrong in the air, where it wants to be
+        "One of the two kitchen lights is on." A single thing, and a set that agrees with itself,
+        already say themselves well enough and are read as they are."""
+        states = {}
+        for d in targets: states.setdefault(_state_word(d), []).append(d)
+        if len(targets) == 1 or len(states) == 1: return self._state_line(targets, kind, room)
+        want = NOTABLE.get(kind)
+        if want not in states: want = max(states, key=lambda s: len(states[s]))
+        n = len(states[want])
+        where = f"{room.name.lower()} " if room else ""
+        return (f"{_count(n).capitalize()} of the {_count(len(targets))} {where}"
+                f"{_plural(len(targets), NOUN.get(kind, 'thing'))} {'is' if n == 1 else 'are'} {want}.")
+
+    def _state_reply(self, targets, kind, room) -> dict:
+        return {"kind": "answer", "text": self._state_line(targets, kind, room),
+                "spoken": self._state_spoken(targets, kind, room)}
 
 
 def _num(v):

@@ -23,7 +23,8 @@ from .updates import Updates
 from .health import Health
 from .backup import Backup
 from .sounds import Sounds, DIR as SOUNDS_DIR
-from .commands import Commands, NotUnderstood
+from .commands import Commands, NotUnderstood, refusal_aloud
+from .voice import Voice
 from .suggest import Suggestions
 from .settings import Settings, DATA, env_file
 from .lock import Lock, needs_code
@@ -99,6 +100,7 @@ class Hub:
         self.backup = Backup(self)                     # the house as one file, and back
         self.sounds = Sounds(self)                     # noise and rain on a speaker, looped here, with a sleep timer
         self.commands = Commands(self)                 # plain words into moves, by a fixed grammar first and the assistant after
+        self.voice = Voice(self)                       # the same answers, said out loud -- inert until a hub has an engine
         self.suggest = Suggestions(self)               # names and rooms for things not placed yet; proposes, never moves
         self._timers: dict[str, asyncio.Task] = {}     # things the brain will do later for a device (switch a fan off)
         self.comfort = Comfort(self)                   # a thermostat sensing its room from another sensor
@@ -1130,13 +1132,42 @@ async def device_action(device_id: str, action: str, data: dict | None = None):
 
 @app.post("/say")
 async def say(body: dict):
-    """{"text": "kitchen lights off", "room": "<optional room id the panel is showing>"}. The grammar runs at once, the way a tap
-    does; what it cannot place goes to the assistant, which only proposes. Answers: {"kind": "done" | "answer" | "explain" |
-    "action" | "rule", ...}. Driving the house never needs the code, and neither does asking."""
+    """{"text": "kitchen lights off", "room": "<optional room id the panel is showing>", "spoken": false}. The grammar runs at
+    once, the way a tap does; what it cannot place goes to the assistant, which only proposes. Answers: {"kind": "done" |
+    "answer" | "explain" | "action" | "rule", ...}. Driving the house never needs the code, and neither does asking.
+
+    `spoken` is how the sentence ARRIVED -- true from a microphone, false from the keyboard -- and it is the only thing that
+    decides whether the house answers out loud, because docs/voice.md's rule is that the route decides and not the kind.
+    A reply may then carry `speak`: {"url", "text"}, a clip on this hub for the panel to play. Everything else is unchanged,
+    so a panel that knows nothing about any of this sends no flag, gets no clip, and behaves exactly as it does today."""
     hub.ready()
-    try: return await hub.commands.say(str(body.get("text") or ""), body.get("room"))
-    except NotUnderstood as e: raise HTTPException(422, str(e))
-    except AssistantError as e: raise HTTPException(e.status, str(e))
+    spoken = bool((body or {}).get("spoken"))
+    room_id = (body or {}).get("room")
+    room = hub.home.rooms.get(room_id) if room_id and room_id != "unassigned" else None
+    try:
+        out = await hub.commands.say(str(body.get("text") or ""), room_id, spoken)
+    except (NotUnderstood, AssistantError) as e:
+        # docs/voice.md: a refusal is spoken, ALWAYS. Silence here reads as the house ignoring you, and
+        # Say.vue has already learned that lesson once on the screen. Both exceptions land together
+        # because to the person standing there they are one thing -- the house not doing it -- and the
+        # status and the words are unchanged either way, so a typed sentence sees exactly what it saw.
+        clip = await hub.voice.answer({"spoken": refusal_aloud(str(e))}, room, spoken)
+        status = e.status if isinstance(e, AssistantError) else 422
+        return JSONResponse({"detail": str(e), **({"speak": clip} if clip else {})}, status_code=status)
+    clip = await hub.voice.answer(out, room, spoken)
+    return {**out, **({"speak": clip} if clip else {})}
+
+
+@app.get("/say/clip/{token}")
+def say_clip(token: str):
+    """The house's own answer, as audio, for about a minute after it was minted.
+
+    Beside /say and not under /sounds, and that is the whole point of it: the sounds folder is a person's
+    own library, and minted speech there would turn up as something to play in a bedroom. This holds bytes
+    in memory behind an unguessable token and forgets them on a timer -- nothing is ever written down."""
+    wav = hub.voice.take(token)
+    if wav is None: raise HTTPException(404, "that clip has gone")
+    return Response(content=wav, media_type="audio/wav", headers={"Cache-Control": "no-store"})
 
 
 # ---------- placing new things ----------

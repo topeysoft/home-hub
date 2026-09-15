@@ -28,6 +28,16 @@ def seen_at(s) -> float:
     return time.time()
 
 
+def changed_at(s) -> float:
+    """When an entity last CHANGED, as against when it was last heard from. HA keeps the two apart and a
+    rule that waits needs the change: a lock that reports itself every minute has not been unlocked a
+    minute. Unreadable, or absent, is taken as now -- the same way round as `seen_at`, so a timestamp we
+    cannot parse starts a wait rather than instantly ending one."""
+    v = s.get("last_changed") or s.get("last_updated")
+    try: return datetime.fromisoformat(v).timestamp()
+    except (TypeError, ValueError): return time.time()
+
+
 def capability_for(domain: str, device_class: str | None, words: str = "") -> str | None:
     """`words` is everything that names the entity and the device it belongs to; it decides sensor versus appliance."""
     if domain in CAP_BY_DOMAIN: return CAP_BY_DOMAIN[domain]
@@ -89,6 +99,7 @@ class Device:
     seen: float = field(default_factory=time.time)   # when the driver last heard from it; a stale sensor is not steered by
     maker: str | None = None       # who made the unit, from the driver's device registry; the one thing a tile can say about hardware it has no picture of
     kind: str | None = None        # what the OWNER says this is, where they have said anything: a lamp on a plug is a light. Read it through kind_of(), never instead of capability
+    since: float = field(default_factory=time.time)  # when it entered the state it is in; a rule's `for` counts from here, and HA's own last_changed survives a restart of this brain
 
 
 @dataclass
@@ -161,7 +172,7 @@ class Home:
             if cap == "camera":
                 for suffix in (" Live view", " Live View", " Camera"):
                     if name.endswith(suffix): name = name[: -len(suffix)]
-            d = Device(eid, name, room, cap, s["state"], self.attrs_for(eid, cap, s["attributes"]), e.get("device_id"), bool(e.get("area_id")), seen_at(s))
+            d = Device(eid, name, room, cap, s["state"], self.attrs_for(eid, cap, s["attributes"]), e.get("device_id"), bool(e.get("area_id")), seen_at(s), since=changed_at(s))
             d.maker = self.hardware.get(e.get("device_id") or "", {}).get("manufacturer") or None
             d.kind = self.shown_as(eid, cap)
             self.devices[eid] = d
@@ -191,6 +202,7 @@ class Home:
         d.attrs = self.attrs_for(entity_id, d.capability, new_state["attributes"])
         d.name = new_state["attributes"].get("friendly_name", d.name)   # a rename shows up here first
         d.seen = seen_at(new_state)
+        d.since = changed_at(new_state)
         return d
 
     def to_dict(self):

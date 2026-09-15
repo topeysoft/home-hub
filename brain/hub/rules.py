@@ -54,6 +54,15 @@ def _compare(op, actual, val) -> bool:
     return False
 
 
+def _wait(when: dict) -> float:
+    """A trigger's `for`: how long the thing has to have been true before the rule counts. Seconds, and
+    zero means none. Shared by the two triggers that take one, so they cannot drift apart -- and `bool`
+    is refused by hand, because in Python `True` is an int and "for": true is a typo, not three seconds."""
+    w = when.get("for", 0)
+    if isinstance(w, bool) or not isinstance(w, (int, float)) or w < 0: raise ValueError('"for" is seconds, 0 or more')
+    return float(w)
+
+
 def _condition_parts(c):
     """[subject, op, value], or [device, id, value] / [device, id, op, value] -> (subject, arg, op, value)."""
     if c[0] == "device":
@@ -89,11 +98,14 @@ def validate(raw, rooms: set) -> tuple[list, list]:
             if kind == "sun" and when[kind] not in ("rise", "set"): raise ValueError("sun must be rise or set")
             if kind == "presence":
                 if when[kind] not in ("somebody", "nobody"): raise ValueError("presence must be somebody or nobody")
-                wait = when.get("for", 0)
-                if not (isinstance(wait, (int, float)) and wait >= 0): raise ValueError('"for" is seconds, 0 or more')
+                _wait(when)
             if kind == "intent": RoomState(when[kind])
-            if kind == "device" and not (isinstance(when[kind], str) and when.get("state") is not None):
-                raise ValueError("a device trigger needs a device id and a state")
+            if kind == "device":
+                if not (isinstance(when[kind], str) and when.get("state") is not None):
+                    raise ValueError("a device trigger needs a device id and a state")
+                # and it may WAIT, which turns an event into a standing condition: "the front door has
+                # been unlocked for three hours" is a different rule from "the front door unlocked".
+                _wait(when)
             for c in r.get("if") or []:
                 if not (isinstance(c, list) and len(c) >= 3 and c[0] in SUBJECTS): raise ValueError(f"bad condition {c}")
                 _, _, op, _ = _condition_parts(c)
@@ -117,6 +129,7 @@ class Engine:
         self._last_tick = None      # when the tick last ran, so time and sun triggers fire exactly once
         self._idle_done = {}        # (rule id, room id) -> the motion_at an idle rule already fired for
         self._presence_done = {}    # rule id -> the presence `since` a waiting presence rule already fired for
+        self._device_done = {}      # rule id -> the device `since` a waiting device rule already fired for: once per spell, not once a second
         self._sun_cache = {}        # (date, lat, lon) -> (sunrise, sunset)
 
     # ---- the file ----
@@ -276,7 +289,8 @@ class Engine:
             want = "open" if dev.state == "on" else "closed"
             self._run((r for r in self._active("contact", room.id) if r["when"]["contact"] == want),
                       {"contact": want, "device": dev.id})
-        self._run((r for r in self._active("device") if r["when"]["device"] == dev.id and str(r["when"]["state"]) == dev.state),
+        self._run((r for r in self._active("device")
+                   if r["when"]["device"] == dev.id and str(r["when"]["state"]) == dev.state and not r["when"].get("for")),
                   {"device": dev.id, "state": dev.state})
 
     def on_presence(self):
@@ -350,6 +364,16 @@ class Engine:
                 if ts - p.since >= wait and self._presence_done.get(r["id"]) != p.since:
                     self._presence_done[r["id"]] = p.since
                     self._run([r], {"presence": now_word, "for": wait, "since": p.since})
+        # and a device that has STAYED somewhere. `d.since` is HA's own last_changed, so a brain that
+        # restarts an hour in still fires at three hours rather than at four: the wait is the door's,
+        # not this process's. Dedupe on that same `since`, so one spell unlocked says it once.
+        for r in self._active("device"):
+            wait = r["when"].get("for") or 0
+            d = self.hub.home.devices.get(r["when"]["device"]) if wait else None
+            if not d or str(r["when"]["state"]) != d.state: continue
+            if ts - d.since >= wait and self._device_done.get(r["id"]) != d.since:
+                self._device_done[r["id"]] = d.since
+                self._run([r], {"device": d.id, "state": d.state, "for": wait, "since": d.since})
 
     def dry_run(self, rule_id):
         """What a rule would do, with every condition's current value. `would` is off, not yet, wait (a condition
@@ -381,7 +405,10 @@ class Engine:
         elif "presence" in when and when.get("for"):
             p = self.hub.presence
             nxt = p.since + when["for"] if p.since and presence_word(p.somebody) == when["presence"] else None
-        timer = any(k in when for k in ("idle", "time", "sun")) or ("presence" in when and bool(when.get("for")))
+        elif "device" in when and when.get("for"):
+            d = self.hub.home.devices.get(when["device"])
+            nxt = d.since + when["for"] if d and str(when["state"]) == d.state else None
+        timer = any(k in when for k in ("idle", "time", "sun")) or (bool(when.get("for")) and any(k in when for k in ("presence", "device")))
         if not r.get("enabled", True): would = "off"
         elif "presence" in when and self.hub.presence.somebody is None: would = "wait"   # the house cannot tell who is home yet
         elif not all(c[-1] for c in checked): would = "wait"

@@ -82,6 +82,18 @@ class ValidateTests(unittest.TestCase):
         self.assertEqual(len(errors), 5)
         self.assertIn("duplicate", errors[-1])
 
+    def test_a_wait_is_seconds_on_the_two_triggers_that_take_one(self):
+        good, errors = rules.validate({"rules": [
+            rule("held", when={"device": "lock.front", "state": "unlocked", "for": 10800}, then={"notify": "still unlocked"}),
+            rule("gone", room="home", when={"presence": "nobody", "for": 600}, then={"intent": "away"}),
+            rule("typo", when={"device": "lock.front", "state": "unlocked", "for": True}, then={"notify": "no"}),
+            rule("backwards", when={"device": "lock.front", "state": "unlocked", "for": -1}, then={"notify": "no"}),
+        ]}, {"hall"})
+        self.assertEqual([r["id"] for r in good], ["held", "gone"])
+        # "for": true is a typo, not three seconds -- Python would otherwise read the bool as an int
+        self.assertEqual(len(errors), 2)
+        self.assertTrue(all("seconds" in e for e in errors))
+
     def test_compare(self):
         self.assertTrue(rules._compare("between", "23:10", ["22:00", "06:00"]))
         self.assertFalse(rules._compare("between", "12:00", ["22:00", "06:00"]))
@@ -190,6 +202,58 @@ class EngineTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(bed["would"], "armed"); self.assertGreater(bed["next"], time.time())
         self.assertEqual(hub.engine.dry_run("dusk")["would"], "armed")
         self.assertEqual(hub.engine.dry_run("off")["would"], "off")
+
+
+    async def unlocked(self, hub):
+        """A door that has just been unlocked, and the rule that minds how long it stays that way."""
+        lock = Device("lock.front", "Front door", "hall", "lock", "locked")
+        hub.home.rooms["hall"].devices.append(lock); hub.home.devices[lock.id] = lock
+        use(hub, rule("left-unlocked", when={"device": lock.id, "state": "unlocked", "for": 10800},
+                      then={"notify": "The front door has been unlocked for three hours."}))
+        lock.state, lock.since = "unlocked", time.time()
+        hub.engine.on_state(lock, "locked"); await self.settle()
+        return lock
+
+    async def test_a_device_that_waits_arms_rather_than_fires(self):
+        hub = FakeHub()
+        lock = await self.unlocked(hub)
+        # the moment it unlocked is not the moment: "unlocked" and "unlocked for three hours" are
+        # different rules, and the second one must not go off at the click of the first
+        self.assertEqual(hub.log.of("notify"), [])
+        t = datetime(2026, 9, 6, 12, 0, tzinfo=TZ)
+        hub.engine.tick(t); hub.engine.tick(t + timedelta(seconds=1)); await self.settle()
+        self.assertEqual(hub.log.of("notify"), [])
+        lock.since = time.time() - 10800
+        for s in range(2, 6): hub.engine.tick(t + timedelta(seconds=s))
+        await self.settle()
+        self.assertEqual(len(hub.log.of("notify")), 1)          # once, and not once a second after that
+        self.assertEqual(hub.log.of("notify")[0]["detail"]["trigger"]["for"], 10800)
+
+    async def test_locking_it_and_leaving_it_again_is_a_new_wait(self):
+        hub = FakeHub()
+        lock = await self.unlocked(hub)
+        t = datetime(2026, 9, 6, 12, 0, tzinfo=TZ)
+        lock.since = time.time() - 10800
+        hub.engine.tick(t); hub.engine.tick(t + timedelta(seconds=1)); await self.settle()
+        self.assertEqual(len(hub.log.of("notify")), 1)
+        lock.state, lock.since = "locked", time.time()
+        hub.engine.on_state(lock, "unlocked"); await self.settle()
+        for s in range(2, 4): hub.engine.tick(t + timedelta(seconds=s))
+        await self.settle()
+        self.assertEqual(len(hub.log.of("notify")), 1)          # locked: nothing to say
+        lock.state, lock.since = "unlocked", time.time() - 10800
+        for s in range(4, 7): hub.engine.tick(t + timedelta(seconds=s))
+        await self.settle()
+        self.assertEqual(len(hub.log.of("notify")), 2)          # a second spell is a second sentence
+
+    async def test_dry_run_knows_a_device_is_waiting(self):
+        hub = FakeHub()
+        lock = await self.unlocked(hub)
+        lock.since = 1000.0
+        out = hub.engine.dry_run("left-unlocked")
+        self.assertEqual((out["would"], out["next"]), ("armed", 1000.0 + 10800))
+        lock.state = "locked"                                   # nothing to wait for while it is shut
+        self.assertEqual(hub.engine.dry_run("left-unlocked")["next"], None)
 
 
 if __name__ == "__main__":

@@ -112,6 +112,7 @@ per entry room and does nothing while none are chosen.
 | `{"motion": "on"}` | any motion device in the room turns on | a motion sensor in the room |
 | `{"contact": "open"}` / `"closed"` | any contact device in the room changes to that | a door or window sensor |
 | `{"device": "<id>", "state": "<s>"}` | one named device reaches a state | escape hatch, discouraged |
+| `{"device": "<id>", "state": "<s>", "for": 10800}` | one named device has *stayed* in a state that long | as above. The wait counts from HA's own `last_changed`, kept on the device as `since`, so a brain that restarts an hour in still fires at three hours rather than at four |
 | `{"idle": 600}` | the room has had no motion for that many seconds | a motion sensor; counts from `motion_at` |
 | `{"time": "22:30"}` | the wall clock reaches that time, once a day | the home's timezone |
 | `{"sun": "set", "offset": -1800}` / `"rise"` | sunset or sunrise, with an offset in seconds | the home's location |
@@ -120,6 +121,12 @@ per entry room and does nothing while none are chosen.
 
 Triggers with `for` or `idle` are timers. The evaluator arms them when the condition starts and
 fires them if it still holds when the time is up.
+
+A `for` on a device is what turns an event into a standing condition, and the two are different
+rules: *the front door unlocked* is a moment, and *the front door has been unlocked for three hours*
+is a state of affairs. A rule that waits does not fire at the click of the one that does not — it
+arms, and the tick decides. It then fires **once per spell**: locking the door and leaving it open
+again starts a new wait and earns a second sentence, but a door left open all afternoon says so once.
 
 ### Conditions (`if`, all must hold)
 

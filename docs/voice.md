@@ -378,10 +378,17 @@ the route table turned on alongside it.
 ## What to answer, and how
 
 The grammar's answers are text today. Read aloud, they need to be shorter and kinder: "Front door is locked." works;
-"Kitchen ceiling is on. Kitchen counter is off." should become "One of the two kitchen lights is on." A `spoken`
-variant of each answer, alongside the `text`, is cheap to add in `commands.py` when shape 2 lands. Answers from the
+"Kitchen ceiling is on. Kitchen counter is off." should become "One of the two kitchen lights is on." Answers from the
 model (explanations, proposals) are not read aloud; a proposal is a card to look at, and an explanation is a paragraph
 to read.
+
+**Built 15 September 2026.** A reply may now carry a `spoken` beside its `text`, and where it does not, `aloud()` reads
+the text: degree signs, per-cents, middle dots and quotation marks become words or go. The screen keeps its own line
+unchanged throughout — the voice is a second rendering of the same answer, never a different answer. Two places needed
+a written sentence and a said one to differ, and they are the two the paragraph above named: a scene, whose `text` is
+the label `Kitchen · Movie`, and a split set, where `_state_spoken()` counts rather than lists. The five kinds, the
+pointers and the refusal are in `spoken_line()` and `refusal_aloud()` in `commands.py`, with `tests/test_voice.py`
+holding each one.
 
 ### Where the voice comes out
 
@@ -408,7 +415,8 @@ library -- `sounds.py`'s first paragraph is *drop in rain.mp3 and "Rain" appears
 minted speech there would turn up as something to play in a bedroom. So: a route of its own beside `/say`,
 synthesising on demand for a short-lived token, never a file under `DATA / "sounds"` and never in `catalog()`.
 
-**What is open, and it is the only thing here that is:** the wall has no volume. `sounds.py` takes a volume per
+**What is open, and it is still the only thing here that is** — 15 September 2026, when the rest of this section was
+built: the wall has no volume. `sounds.py` takes a volume per
 speaker; the panel has none, the tier table does not mention one, and a wall tablet's rocker is usually behind the
 mount. The kiosk is device owner and can set the media stream itself, which is the likely answer -- but which
 control a *person* touches is undecided, and it wants deciding alongside move 6 rather than after it, because a wall
@@ -416,6 +424,14 @@ that answers too loudly at night is the first thing a household will complain ab
 
 Exit test: with the router's uplink unplugged, from the wall, tap the orb and say "is the front door locked?"; the
 answer is spoken from the panel inside the same two seconds shape 2's own test already allows.
+
+*This test cannot be run yet and will not be until shape 2, because nothing anywhere can be spoken to — `canListen()`
+is false in every house and Chrome's recognition was measured as cloud-backed on 14 September. What was built on 15
+September is everything on the far side of the microphone: `brain/hub/voice.py` (the Wyoming client to Piper, the
+rules about when the house may speak, and a clip store that holds bytes in memory and never writes a file), the
+`/say/clip/{token}` route beside `/say`, `app/src/mouth.ts` as `ear.ts`'s opposite number, and `wyoming-piper` as a
+Compose profile like the radios. It can be heard today behind `?speak=browser`, which is the browser's own voice and
+never a house's — the same shape, and the same warning, as `?listen=browser`.*
 
 ### When the house speaks, and when it stays quiet
 
@@ -471,6 +487,48 @@ and each of them is something the house can decide for itself. If a household ge
 stays silent, that is a second line under *This hub* on the sheet the switch is already on; it should wait for
 somebody to ask, rather than shipping as the fourth line of a settings sheet nobody reads.
 
+## Announcing: the house speaking first
+
+*Added 15 September 2026, asked for in these words: somebody is at the dining table where the wall is mounted, and
+somebody else opens the front door in the living room. Should the wall say so? And the garage, and a back door left
+unlocked — and later, that the front door has been unlocked for three hours.*
+
+**This is the thing the section above refuses**, and it refuses it on purpose: *a message is never spoken, alerts
+included*, and *a household that wants the hall to announce the front door is a new plan, and it starts from the alert
+class rather than from here*. This section is that new plan being started, not that rule being quietly dropped.
+
+**Asking for it as a switch answers two of the three reasons it was refused.** *Alert-class is the household's list,
+not ours* is kept exactly — this is a household choosing, which is what that rule asks for. *A message is never the
+only way to know something* is kept too: the band, the log and the phone push are all still there, and the wall is a
+fourth way, never the way. What survives is the third: **a wall panel talking to nobody**, which is the one the
+asking household cannot answer for every other household.
+
+Three things were settled, and the first two decide the shape:
+
+| Question | Settled |
+|---|---|
+| Does announcing need somebody in the room? | **No — announce regardless.** The gate would have been `room.motion_at`, the same signal idle rules count from, and it was refused because it makes the behaviour depend on a sensor that most rooms with a wall in them do not have. A wall in a room with no motion sensor would simply never announce, and nothing on the screen would say why. Announcing to an empty dining room is the cost, and it is the one a person can hear and turn off |
+| A door at 2am, in a house that is asleep | **The household chooses**, as a second line under the switch. The rule for *answers* does not move — a room that is asleep still answers on the glass and does not speak. But the 2am door is the announcement most worth hearing, so silence cannot be the only setting, and neither can noise: this is the one place the plan grows a second line rather than deciding for everybody |
+| What it is built on | The alert class in `docs/messages.md`, which does not exist yet. See below |
+
+**What blocks it, and it is an ordering problem rather than a taste one.** Announcing is the alert class reaching a
+new channel, and there is no alert class: `brain/hub/messages.py` is item 2 of that document's Order and has not been
+written. Today a message is a string built at the call site, and `rules.py`'s `notify` outcome notifies nobody in
+particular. Building the wall's voice before the catalogue means writing the routing twice and then throwing one away
+— so the order is the catalogue first, announcing second, and *the class decides the channel, never the call site*
+reaches the loudspeaker along with everything else.
+
+**What it can already stand on.** The whole of the answering half — Piper, the clip route, `mouth.ts` — is the same
+plumbing, built and tested, and announcing is a second trigger into it rather than a second path. And the trigger
+itself landed the same day: a `for` on a device trigger in `rules.py`, so *the front door has been unlocked for three
+hours* is a rule the house can hold. It earns its place with or without a loudspeaker — it is an alert on a phone
+first, and a sentence in a hall only if somebody asks for one.
+
+**Two things this plan will have to say and does not say yet:** which wall speaks when a house has several (the
+*only one thing ever speaks* rule above belongs to the microphone that heard the turn, and an announcement has no
+microphone), and how loud any of it is — which is the same open question the section above ends on, made sharper,
+because a sentence nobody asked for at 2am is the worst case of it.
+
 ## Decisions to make before a microphone
 
 | Question | Proposal |
@@ -491,7 +549,8 @@ somebody to ask, rather than shipping as the fourth line of a settings sheet nob
 | When the house answers aloud at all | When it was spoken to, never when it was typed to, and never in a room that is asleep. The route decides, the same way it decides what voice may do |
 | Whether the wall reads messages and alerts aloud | No. A message is never spoken, alerts included; `docs/messages.md`'s classes route those to the band, the log and a phone. A household that wants the hall to announce the front door is a new plan |
 | What the model's answers sound like | They are not read out -- a proposal is a card and an explanation is a paragraph -- but silence is worse, so each gets a one-line spoken pointer to the screen |
-| How loud the wall is, and who turns it down | **Open.** The kiosk is device owner and can set the media stream, which is the likely answer; which control a person touches is undecided and belongs with move 6 |
+| How loud the wall is, and who turns it down | **Open**, and the one thing in the answering half that still is. The kiosk is device owner and can set the media stream, which is the likely answer; which control a person touches is undecided and belongs with move 6. *Announcing* makes it sharper, not different |
+| Does the wall ever announce something nobody asked for | Yes, as a switch a household turns on, and not until `docs/messages.md`'s alert class exists. It announces whether or not the room has anybody in it, and whether it speaks at night is a second line under that switch. Asked for and settled 15 September 2026; see *Announcing* |
 
 ## Not in this plan
 
@@ -527,11 +586,15 @@ is a new plan, and the first thing it has to say is what the relay can see.
 3. **Shape 2 on the hub, which is the wall's voice.** Wyoming, faster-whisper and Piper as containers with profiles
    like the radios; the tier chooser in `install.sh`; a route beside `/say` that takes audio; the brain speaks
    Wyoming; the offline test on a Pi 5 and on a NUC-class box; the measured latency for each tier written into the
-   table above. The answering half rides along with it and needs no microphone at all -- Piper, the `spoken` variants
-   in `commands.py`, the route that mints a clip and the panel that plays it can be built and heard behind a preview
-   flag, the way `?listen=1` gave the orb something to listen to before any engine existed. Then the smallest native
-   piece in the whole plan -- `AudioRecord` and the bridge in `kiosk/` -- last,
+   table above. Then the smallest native piece in the whole plan -- `AudioRecord` and the bridge in `kiosk/` -- last,
    because until the rest of this lands it has nothing to talk to.
+
+   **The answering half of this milestone is done, 15 September 2026.** It needed no microphone, exactly as this
+   milestone said it would not: `voice.py`, the `spoken` variants in `commands.py`, `/say/clip/{token}`, `mouth.ts`,
+   and `wyoming-piper` as a Compose profile, heard behind `?speak=browser` the way `?listen=1` gave the orb something
+   to listen to before any engine existed. What is left of this milestone is the hearing half and the measurements --
+   and the latency table above is still expectations rather than results, because there is nothing to measure until
+   speech-to-text lands.
 4. **Shape 1 on phones** -- which is now a smaller milestone than it was, and later. Its recognition was measured on
    14 September 2026 and Chrome's is a cloud service unless somebody has fetched the model, so this no longer waits
    only on the certificate in `docs/away.md`: it waits on shape 2, whose recogniser it will use. What is left of it

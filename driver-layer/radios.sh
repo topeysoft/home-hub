@@ -19,6 +19,10 @@ cd "$(dirname "$0")"
 touch .env
 ZB_NET="$(grep '^ZIGBEE_NET=' .env | cut -d= -f2- || true)"
 ZW_NET="$(grep '^ZWAVE_NET=' .env | cut -d= -f2- || true)"
+# Profiles this script does not own -- voice, and whatever comes after it -- are carried through.
+# COMPOSE_PROFILES is one line everybody shares, and this script's job is the radios: a stick being
+# unplugged must not switch off the hub's voice, which is what rewriting the whole line would do.
+KEPT="$(grep '^COMPOSE_PROFILES=' .env | cut -d= -f2- | tr ',' '\n' | grep -vx -e zigbee -e zwave -e none | paste -sd, - || true)"
 
 sticks() { find /dev/serial/by-id -maxdepth 1 -mindepth 1 -printf '%f\n' 2>/dev/null || true; }
 ZB="$(sticks | grep -i -E 'skyconnect|zbt-|zbdongle|sonoff|mg24|cc2652|zigbee|efr32|nabu' | grep -v -i hubz | head -1 || true)"
@@ -55,7 +59,8 @@ else del_env ZIGBEE_SERIAL; del_env ZIGBEE_PORT; fi
 if [ -n "$ZW_NET" ]; then set_env ZWAVE_SERIAL /dev/null; PROFILES="${PROFILES:+$PROFILES,}zwave"; seed_zwave
 elif [ -n "$ZW" ]; then set_env ZWAVE_SERIAL "/dev/serial/by-id/$ZW"; PROFILES="${PROFILES:+$PROFILES,}zwave"; seed_zwave
 else del_env ZWAVE_SERIAL; fi
-set_env COMPOSE_PROFILES "${PROFILES:-none}"
+ALL="$PROFILES${PROFILES:+${KEPT:+,}}$KEPT"
+set_env COMPOSE_PROFILES "${ALL:-none}"
 echo "  Zigbee: ${ZB_NET:-${ZB:-none found}}"
 echo "  Z-Wave: ${ZW_NET:-${ZW:-none found}}"
 [ "${1:-}" = "detect" ] && exit 0

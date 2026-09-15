@@ -191,6 +191,14 @@ The first two are today's work and depend on nothing.
   simpler rule and the noisier house. Recommend every owner, with the per-phone switch as the answer.
 - **Does the wall ever push?** No. It is a screen in the room; it wakes from its clock, which pairing already does for
   a phone at the door. Recorded here so it stops coming back.
+- **Does the wall ever SPEAK an alert?** *Asked for on 15 September 2026 — someone at the dining table, and the front
+  door opening in the living room.* Yes, eventually, as a **fifth channel on the `alert` class** and never as a
+  default: a household turns it on, and the house then announces whether or not anybody is in the room. It is
+  `docs/voice.md`'s *Announcing*, and it waits on step 2 of the Order above, because a channel is something a class
+  routes to and there is no class yet. Three things about it belong here rather than there: *alert-class is the
+  household's list, not ours* is what makes it allowable at all; *a message is never the only way to know something*
+  holds, because the band, the log and the push are all still there and the wall is a fourth way rather than the way;
+  and the wall speaking does not earn it a push, so *does the wall ever push* above stays No.
 - **Is a rule's note ever an `alert`?** The rule's author is a person writing a sentence, which means the class would
   have to be theirs to choose — a switch on the routine. Probably yes, probably not in the first cut.
 - **Rate limits.** Push services throttle, and iOS holds a budget per home-screen app that a chatty house will spend.

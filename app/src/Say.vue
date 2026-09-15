@@ -3,6 +3,7 @@ import { computed, nextTick, ref } from 'vue'
 import { store, notify, loadRoutines, visibleRooms } from './store'
 import { say, act, type Proposal } from './api'
 import { canListen, listen, type Ear } from './ear'
+import { speak, hush as quiet } from './mouth'
 import Icon from './Icon.vue'
 
 /* The command box. A sentence goes to the brain, whose fixed grammar runs it at once the way a tap does ("kitchen
@@ -49,8 +50,10 @@ function reach() {
   if (listening.value) return hush()          // a second tap is how you stop
   if (open.value || !canListen()) return void field.value?.focus()
   /* a new sentence starts with the last one's answer cleared away -- the same thing `go` does for
-     something typed, and without it the house appears to be answering what you are only now saying */
-  note.value = ''; answer.value = ''; proposal.value = null
+     something typed, and without it the house appears to be answering what you are only now saying.
+     `quiet()` is that same clearing for the half you hear: talking over the last answer is the one
+     way a voice can be ruder than silence. */
+  note.value = ''; answer.value = ''; proposal.value = null; quiet()
   ear = listen({
     /* the words as they arrive, so a long sentence visibly keeps the house's attention rather than
        looking like nothing is happening */
@@ -82,8 +85,12 @@ async function go(spoken = false) {
   if (!said || busy.value) return
   busy.value = true; note.value = ''; answer.value = ''; proposal.value = null
   try {
-    const r = await say(said, props.room)
+    const r = await say(said, props.room, spoken)
     text.value = ''
+    /* Out loud only where the sentence ARRIVED out loud -- docs/voice.md: the route decides, not the
+       kind. Nobody types at a wall and wants it to talk back. The brain keeps this same rule and only
+       mints a clip for a spoken turn, so this is the panel agreeing rather than the panel deciding. */
+    if (spoken) speak(r)
     if (r.kind === 'done') notify(r.text)
     else if (r.kind === 'answer') answer.value = r.text
     else if (r.kind === 'explain') answer.value = r.answer
@@ -94,6 +101,9 @@ async function go(spoken = false) {
        "a sentence somebody is still typing" -- nobody is mid-word -- so leaving it there only held
        the box open, and the house repeating what it heard is the more useful half of it anyway. */
     note.value = spoken && said ? `“${said}” — ${e.message}` : e.message
+    /* and said, always. docs/voice.md is firm about this one: silence when the house did not catch
+       you reads as being ignored, which is the lesson the note above already learned on the screen. */
+    if (spoken) speak(e)
   }
   if (spoken) text.value = ''
   busy.value = false
