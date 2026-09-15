@@ -2,6 +2,7 @@
    device read as being in front of the house rather than on top of it. A settled screenshot cannot
    tell you whether it moved, only where it ended up, so this reads the transform as it happens. */
 import { expect, test, type Page } from '@playwright/test'
+import { freeze, press } from './press'
 
 async function stage(page: Page) {
   return page.evaluate(() => {
@@ -14,16 +15,16 @@ async function stage(page: Page) {
 async function holdOpen(page: Page) {
   const tile = page.locator('.tile.light').first()
   const box = (await tile.boundingBox())!
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
-  await page.mouse.down()
-  await page.waitForTimeout(470)      // past the hold threshold: the panel is on its way
-  await page.mouse.up()
+  /* 470 against hold.ts's 420 was the thinnest bet in the suite -- 50ms of tolerance, where the
+     tests that actually flaked had 100 and 270. Advanced on a stopped clock it is not a bet. */
+  await press(page, box.x + box.width / 2, box.y + box.height / 2, 470)
 }
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/?room=living&at=19:40', { waitUntil: 'networkidle' })
   await expect(page.locator('.tile.light').first()).toBeVisible()
-  await page.waitForTimeout(700)
+  await page.waitForTimeout(700)      // the cards finish arriving before a gesture means anything
+  await freeze(page)
 })
 
 test('the house is untouched until something is opened', async ({ page }) => {

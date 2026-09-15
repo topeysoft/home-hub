@@ -7,6 +7,7 @@
  * threw an error across the screen. A picture of that pane looks fine.
  */
 import { expect, test, type Page } from '@playwright/test'
+import { freeze, press } from './press'
 
 /* Every test here holds a gesture for half a second, waits out the pane's rise and its fall, and
    several of them do that three or four times over. Six running at once on a working machine is
@@ -174,10 +175,8 @@ test('the kinds that only watch can be opened at all, and show their day', async
   const reading = page.locator('button.reading').first()
   await expect(reading).toBeVisible()
   const box = (await reading.boundingBox())!
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
-  await page.mouse.down()
-  await page.waitForTimeout(520)
-  await page.mouse.up()
+  await freeze(page)
+  await press(page, box.x + box.width / 2, box.y + box.height / 2, 520)
 
   await expect(page.locator('.opened-panel')).toHaveCount(1)
   await page.waitForTimeout(600)
