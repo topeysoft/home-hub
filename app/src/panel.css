@@ -7004,11 +7004,6 @@ select.input {
   color: var(--muted);
   margin-right: 6px;
 }
-.cameras-all {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 14px;
-}
 /* the drawing of each way around, for the sheet: a bar down the side, or across the top */
 .look-shape.look-nav-side {
   grid-template-columns: 14px 1fr;
@@ -9331,4 +9326,62 @@ button.reading[data-held] {
       opacity: 0;
     }
   }
+}
+
+/* ==========================================================================
+   THE CAMERAS TAB
+   ==========================================================================
+   The Rooms tab's frame around the room screen's tiles: the stage stops
+   scrolling, the head keeps its place, and the house runs off to the RIGHT
+   rather than below a fold. Before this the tab was a wrapping grid inside a
+   scrolling stage and `.tile.wide` put one camera on each row, so three
+   cameras were 1483px of column in a 618px stage -- the heading scrolled away
+   and the last frame was cut off by the command box.
+
+   `--cam-rows` and `--cam-row` are measured in CamerasView.vue: how many rows
+   fit across, and how tall a row may be before a 16:9 view would be cropped to
+   portrait. CSS cannot count frames against a width, and a camera's picture is
+   the one thing on this screen that must not be squeezed to fill it.
+   ========================================================================== */
+.stage:has(> .cameras) {
+  display: flex;
+  flex-direction: column;
+  overflow-y: hidden;
+  min-height: 0;
+}
+.cameras {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  max-width: none;
+}
+.cameras > .stage-head {
+  flex: 0 0 auto;
+  margin-bottom: 20px;
+}
+.cameras-all {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(var(--cam-rows, 1), var(--cam-row, 1fr));
+  grid-auto-columns: clamp(300px, 30vw, 520px);
+  gap: 16px 20px;
+  align-content: start;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+}
+/* The room screen's own reset, for the same reason it has one: a camera is
+   `.tile.wide`, which spans two columns of a grid this arrangement does not
+   have, and the tile's 16:9 belongs to the cell here rather than to the tile. */
+.cameras-all > .tile.camera {
+  grid-column: auto;
+  aspect-ratio: auto;
+  min-width: 0;
+  min-height: 0;
+  scroll-snap-align: start;
 }
