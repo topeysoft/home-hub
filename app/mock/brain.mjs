@@ -313,8 +313,8 @@ const server = http.createServer((req, res) => {
      Kinds that share their controls may stand in for each other and no others -- a plug may be a lamp,
      and may not be a blind. docs/kinds.md. */
   const kindOf = d => (d.kind || d.capability).split('.')[0]
-  const CONTROLS = { light: 'onoff', switch: 'onoff', fan: 'onoff', media: 'onoff+playing', climate: 'temperature', vacuum: 'errand', camera: 'picture' }
-  const WORD = { light: 'Light', switch: 'Plug', fan: 'Fan', media: 'Speaker', climate: 'Thermostat', vacuum: 'Vacuum', camera: 'Camera' }
+  const CONTROLS = { light: 'onoff', switch: 'onoff', fan: 'onoff', alarm: 'onoff', media: 'onoff+playing', climate: 'temperature', vacuum: 'errand', camera: 'picture' }
+  const WORD = { light: 'Light', switch: 'Plug', fan: 'Fan', alarm: 'Alarm', media: 'Speaker', climate: 'Thermostat', vacuum: 'Vacuum', camera: 'Camera' }
   const offerFor = d => {
     const wants = CONTROLS[d.capability.split('.')[0]]
     const offer = wants ? Object.keys(CONTROLS).filter(k => CONTROLS[k] === wants) : []
@@ -326,7 +326,7 @@ const server = http.createServer((req, res) => {
     if (!d) { res.writeHead(404, { 'Content-Type': 'application/json' }); return res.end('{"detail":"unknown device"}') }
     const offer = offerFor(d)
     return json(res, { capability: d.capability, kind: kindOf(d), offer, words: Object.fromEntries(offer.map(k => [k, WORD[k]])),
-                       why: offer.length ? 'This can be switched on and off, so it can be shown as anything that switches on and off.' : '' })
+                       why: offer.length ? 'This can be switched on and off, so it can be shown as anything that switches on and off. An alarm is the one that asks before it sounds.' : '' })
   }
   const setKind = p.match(/^\/devices\/([^/]+)\/kind$/)
   if (setKind && req.method === 'POST') { let b = ''; req.on('data', c => (b += c)); return req.on('end', () => {

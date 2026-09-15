@@ -4765,6 +4765,23 @@ select.input {
   background: var(--card-hi, var(--surface-hi));
   color: var(--card-ink-2, var(--ink-2));
 }
+/* A siren going off is the one state on this board that must not read as the same card with a
+   different word in it -- the whole point of the kind is that a person crossing the room knows.
+   Everything else that is on wears lamplight, because on here means a light is on; this one
+   wears the rose the panel already keeps for something wrong. After the card rules above, and
+   that is on purpose: those set .tile.plain.on .tile-state back to the card's own ink. */
+.tile.alarm.on {
+  background: rgba(224, 138, 138, 0.16);
+  border-color: rgba(224, 138, 138, 0.55);
+}
+.tile.alarm.on .tile-icon {
+  background: var(--danger);
+  color: var(--lamp-ink);
+}
+.tile.alarm.on .tile-state,
+.tile.alarm.on .tile-name {
+  color: var(--danger);
+}
 .tile.plain:active,
 .tile.light:active,
 .room-card:active {
@@ -8449,6 +8466,12 @@ select.input {
 .rig-big.on {
   background: rgba(233, 184, 114, 0.14);
   border-color: rgba(233, 184, 114, 0.5);
+}
+/* waiting for the second tap -- the same amber edge a tile wears while it waits (.tile.arming),
+   and no more than that: this is a button saying what the next tap does, not an alert */
+.rig-big.arming {
+  border-color: rgba(233, 184, 114, 0.5);
+  color: var(--lamp);
 }
 .rig-btn.wide {
   justify-content: center;

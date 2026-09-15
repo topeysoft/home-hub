@@ -54,7 +54,14 @@ def capability_for(domain: str, device_class: str | None, words: str = "") -> st
 # which is why a plug may be a lamp (both want an on and an off) and may not be a blind (which wants a
 # position) or a thermostat (which wants a temperature). The offer is computed from this table, never
 # typed, and that is what stops the panel drawing a brightness slider onto something that cannot dim.
-CONTROLS = {"light": ("onoff",), "switch": ("onoff",), "fan": ("onoff",),
+#
+# `alarm` is in the on/off group for a different reason from the other three, and it is worth saying:
+# a siren reaches this house as a `switch` and there is nothing in HA's domains that says "this one is
+# loud". Shown as a plug it gets a plug's tile, which fires on one tap -- and the failure mode of a
+# stray finger on a plug is a lamp, while the failure mode of a stray finger on this is a siren at 2am.
+# The kind is how a person tells the house which of the two it is holding; everything that asks before
+# it acts hangs off it (app/src/twice.ts, and the scenes that step over it in intents.py).
+CONTROLS = {"light": ("onoff",), "switch": ("onoff",), "fan": ("onoff",), "alarm": ("onoff",),
             "media": ("onoff", "playing"), "cover": ("position",), "climate": ("temperature",),
             "lock": ("bolt",), "vacuum": ("errand",), "camera": ("picture",)}
 # Neither re-typed into nor out of. docs/voice.md gates what may be opened and unlocked by direction, and

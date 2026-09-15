@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /*
- * The kinds whose whole instrument is one control: a plug, a fan, a mower.
+ * The kinds whose whole instrument is one control: a plug, a fan, a mower, an alarm.
  *
  * A plug gets an on and a for-how-long, because a coffee maker and a heater are what a plug is
  * usually holding. A fan gets three named speeds, because nobody standing at a wall panel picks
@@ -8,11 +8,18 @@
  *
  * The timer is the hub's, not the driver's: POST /devices/<id>/timer, the same shape as the
  * thermostat's fan. A restart forgets it and what is left behind is a thing that is simply on.
+ *
+ * An alarm is a plug with two things taken away and one added, and each of the three is the
+ * point. It asks twice before it sounds (twice.ts). It has no for-how-long, because "sound the
+ * siren for an hour" is not a sentence anybody meant to say and the row of cards offered it in
+ * one tap. And it says sound and silence rather than on and off, so the button reads as what it
+ * does to a house rather than what it does to a circuit.
  */
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import type { Device } from '../api'
 import { runFor } from '../api'
 import { cap, guessNow, isDead, notify, perform } from '../store'
+import { useArm } from '../twice'
 import Icon from '../Icon.vue'
 
 const props = defineProps<{ device: Device }>()
@@ -50,6 +57,11 @@ const hasSpeed = computed(() => a.value.percentage != null)
 const setSpeed = (s: { name: string; pct: number }) =>
   perform(props.device, hasSpeed.value ? 'set' : 'on', hasSpeed.value ? { percentage: s.pct } : undefined, { state: 'on', attrs: { percentage: s.pct } })
 
+/* ---- an alarm: the same one button, and it asks first ---- */
+const { armed, tap: armedTap } = useArm()
+const sound = () => armedTap(kind.value, on.value ? 'off' : 'on',
+  () => perform(props.device, on.value ? 'off' : 'on', undefined, { state: on.value ? 'off' : 'on' }))
+
 /* ---- a mower or a vacuum: out, and back ---- */
 const out = computed(() => props.device.state === 'cleaning')
 const heading = computed(() => props.device.state === 'returning')
@@ -69,6 +81,13 @@ const heading = computed(() => props.device.state === 'returning')
       </div>
       <button class="rig-btn wide" :disabled="dead" @click="perform(device, on ? 'off' : 'on', undefined, { state: on ? 'off' : 'on' })">
         <Icon name="power" :size="20" /><span>{{ on ? 'Switch it off' : 'Switch it on' }}</span>
+      </button>
+    </template>
+
+    <!-- an alarm: one button, armed, and nothing beside it to press by mistake -->
+    <template v-else-if="kind === 'alarm'">
+      <button class="rig-big" :class="{ on, arming: !!armed }" :disabled="dead" @click="sound">
+        <Icon name="alarm" :size="24" /><span>{{ armed || (on ? 'Silence it' : 'Sound it') }}</span>
       </button>
     </template>
 

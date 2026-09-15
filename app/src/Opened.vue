@@ -38,6 +38,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { getDeviceEvents, getDeviceKinds, setDeviceKind, type Event, type Kinds } from './api'
 import { cap, deviceById, isDead, notify, perform, roomOf, shownAs, store } from './store'
 import { facts as factsOf, moments as momentsOf, paneKind, reading, verbs as verbsOf, whyLine } from './pane'
+import { useArm } from './twice'
 import Icon from './Icon.vue'
 import LightPane from './panes/LightPane.vue'
 import MediaPane from './panes/MediaPane.vue'
@@ -56,7 +57,7 @@ const dead = computed(() => !!dev.value && isDead(dev.value))
 
 const INSTRUMENTS: Record<string, any> = {
   light: LightPane, media: MediaPane, climate: ClimatePane, cover: CoverPane,
-  lock: LockPane, camera: CameraPane, fan: SimplePane, switch: SimplePane, vacuum: SimplePane, sense: SensePane,
+  lock: LockPane, camera: CameraPane, fan: SimplePane, switch: SimplePane, alarm: SimplePane, vacuum: SimplePane, sense: SensePane,
 }
 const instrument = computed(() => dev.value ? INSTRUMENTS[paneKind(dev.value)] ?? SimplePane : null)
 
@@ -106,7 +107,12 @@ async function showAs(k: string) {
   }
 }
 
-const big = computed(() => dev.value ? reading(dev.value, store.tempUnit) : '')
+/* The verb row asks twice about the same two things the tile does, and says so in the one place on
+   this pane that is already words: the reading. A row of icon-only buttons cannot wear a sentence,
+   and a dialogue over the top of the pane would be the "Are you sure?" health.py rules out. */
+const { armed, tap: armedTap, clear: disarm } = useArm()
+watch(() => dev.value?.id, () => disarm())
+const big = computed(() => armed.value || (dev.value ? reading(dev.value, store.tempUnit) : ''))
 const facts = computed(() => dev.value ? factsOf(dev.value, room.value, store.tempUnit, events.value) : [])
 const verbs = computed(() => dev.value ? verbsOf(dev.value) : [])
 const moments = computed(() => dev.value ? momentsOf(events.value, dev.value, 4, Date.now(), store.tempUnit) : [])
@@ -125,8 +131,10 @@ async function verb(id: string) {
   if (id === 'power') {
     if (dead.value) return
     const on = d.state === 'on' || d.state === 'playing' || (cap(d) === 'climate' && d.state !== 'off')
-    try { await perform(d, on ? 'off' : 'on', undefined, { state: on ? 'off' : 'on' }) }
-    catch (e: any) { notify(e.message, 'error') }
+    armedTap(cap(d), on ? 'off' : 'on', async () => {
+      try { await perform(d, on ? 'off' : 'on', undefined, { state: on ? 'off' : 'on' }) }
+      catch (e: any) { notify(e.message, 'error') }
+    })
   }
 }
 

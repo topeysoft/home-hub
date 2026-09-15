@@ -149,6 +149,57 @@ Inventing kinds the house does not have, splitting one entity into two devices, 
 that changes what the driver reports rather than how the house reads it. A device that is genuinely wrong IN Home
 Assistant is a Home Assistant problem, and the Advanced door is how you get to it.
 
+## An alarm, and the tap that woke the baby
+
+*Added 15 September 2026, from the report that a stray tap on a tile set off a siren in the night. The
+question asked with it was the right one: "there's no option to show this as an alarm, and a thing like
+this should not just be a switch."*
+
+**Nothing above had considered alarms, and that is the honest answer to "what was the thought here".**
+A siren is not a domain this house knows -- `CAP_BY_DOMAIN` has nine and `siren` is not one, and
+`alarm_control_panel` is read only by `presence.py`, to decide whether anybody is home. So a siren
+arrives as whatever it exposes, which is a `switch`, and from there one rule applies: a switch's tile is
+a toggle, one tap, run at once. Nobody decided a siren should be one-touch. The switch bucket decided
+it, because a siren that presents itself as a switch is indistinguishable from a plug with a lamp on it.
+
+**The rule it should have met already existed, for exactly one action.** `PlainTile.vue` armed on
+`unlock` and nothing else: a door opens on the second tap, never the first. And `docs/voice.md` states
+the principle in general -- *the direction matters more than the device*, and closing and locking are
+free because the failure mode of a misheard "close the garage" is a closed garage. Put a siren through
+that test and it fails: the failure mode of a stray finger is a noise the whole house hears, at 2am,
+and unlike an unlocked door it cannot be put back. So the gap was in which actions the rule named, not
+in the rule.
+
+**`alarm` is therefore a kind, in the on/off group, and the second tap is what hangs off it.** The kind
+is the only way the panel can know: a person tells the house which of the two things it is holding, and
+`asksTwice()` in `app/src/twice.ts` -- one table, read by the tile, the pane's verb row and the
+instrument under it -- decides what waits. Only ONE direction of each pair is in that table. Silencing,
+like locking, is always one tap: a house made quieter should never be made to wait.
+
+Three things went with it, and each is a place the plug's own behaviour would have been wrong:
+
+- **No scene names an alarm, in either direction,** and the omission in `intents.py` is the decision
+  rather than an oversight. A siren shown as a plug used to go off with the plugs at Everything off,
+  which looks like a mercy until you notice how many sirens put their ARMED state on that same switch:
+  a nightly Good night would then disarm the house, silently. Sounding one from a scene is worse again.
+  Silencing stays one tap, on the tile, in *On right now*, or in a sentence.
+- **No timer.** The plug's instrument offers *for 10 min / 30 min / an hour* beside its button, one tap
+  each. "Sound the siren for an hour" is not a sentence anybody meant to say. The route refuses it too,
+  and that guard is the one place in `device_timer` that reads `kind_of` rather than `capability` --
+  because a timer switches a thing ON, which is the half that is never free.
+- **It leaves the plug bucket in the grammar.** "Turn on the plugs" reached it while it was a plug.
+  `commands.py` gives the alarm its own word, ahead of the plugs, and its own branch ahead of the
+  generic on/off -- which ends `or rest == ""`, so a bare "the alarm" used to mean turn it on. Silencing
+  answers to every word anybody would use; sounding one needs a word that means it.
+
+The words change with the kind, and that is half of why the second tap is not a surprise: *Sounding* and
+*Silent* rather than On and Off, *Sound it* and *Silence it* on the pane, and a room whose siren is going
+says **Alarm sounding** before it says anything about its lamps.
+
+**What is still a switch: everything the driver does.** `act()` calls `switch.turn_on`, as it does for a
+lamp on a plug, and for the same reason. Nothing here is a new service, a new domain or a new kind of
+device -- it is the house being told what the thing in the hall is for.
+
 ## What was built
 
 1. **The second field.** `Device.kind` beside `capability` in `model.py`, with `kind_of(d)` — `kind or capability` —

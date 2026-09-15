@@ -50,6 +50,7 @@ export function reading(d: Device, unit = '°'): string {
       return s !== 'on' ? 'Off' : b != null ? pct(b) : 'On'
     }
     case 'switch': return s === 'on' ? 'On' : 'Off'
+    case 'alarm': return s === 'on' ? 'Sounding' : 'Silent'
     case 'media': return a.media_title || (s === 'playing' ? 'Playing' : s === 'paused' ? 'Paused' : s === 'off' || s === 'standby' ? 'Off' : 'Idle')
     case 'climate': return a.current_temperature != null ? `${Math.round(a.current_temperature)}${u}` : s === 'off' ? 'Off' : cap1(s)
     case 'cover': return a.current_position != null && a.current_position > 0 && a.current_position < 100
@@ -72,6 +73,10 @@ export function verbs(d: Device): Verb[] {
   const on = d.state === 'on' || d.state === 'playing' || d.state === 'cleaning'
   if (k === 'light' || k === 'switch' || k === 'media' || k === 'fan')
     out.push({ id: 'power', icon: 'power', label: on ? 'Turn it off' : 'Turn it on', primary: true, on })
+  /* Its own words, not "Turn it on". What this button does is make a noise the whole house hears,
+     and a verb that says so is half of why the second tap is not a surprise. */
+  if (k === 'alarm')
+    out.push({ id: 'power', icon: 'alarm', label: on ? 'Silence it' : 'Sound it', primary: true, on })
   if (k === 'climate')
     out.push({ id: 'power', icon: 'power', label: d.state === 'off' ? 'Turn it on' : 'Turn it off', primary: true, on: d.state !== 'off' })
   if (k === 'camera') {

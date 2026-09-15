@@ -19,6 +19,13 @@ class RoomState(str, Enum):
 
 # intent -> list of (capability, action, data). Lives in ../scenes.json so it can be edited, and later authored
 # by the assistant, without touching code. These defaults only apply if that file is missing or broken.
+#
+# No scene names `alarm`, in either direction, and the omission is the decision. A siren shown as a plug
+# used to go off with the plugs at Everything off, which looks like a mercy until you notice that a great
+# many sirens put their ARMED state on that same switch: a nightly Good night would then disarm the house,
+# silently, and a person would find out the hard way. Sounding one from a scene is worse again. So the
+# sweep steps over it and silencing stays one tap, on the tile, in On right now, or in a sentence that
+# says so. Held down by test_kinds.py.
 DEFAULT_ACTIONS = {
     RoomState.occupied: [],
     RoomState.empty:   [("light", "off", {}), ("media", "pause", {})],

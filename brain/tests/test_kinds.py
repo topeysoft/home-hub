@@ -25,7 +25,7 @@ class OfferTests(unittest.TestCase):
     def test_anything_that_switches_on_and_off_may_be_shown_as_anything_else_that_does(self):
         for cap in ("switch", "light", "fan"):
             with self.subTest(cap=cap):
-                self.assertEqual(sorted(kinds_for(cap)), ["fan", "light", "switch"])
+                self.assertEqual(sorted(kinds_for(cap)), ["alarm", "fan", "light", "switch"])
 
     def test_a_kind_wanting_a_position_a_temperature_or_a_volume_is_never_on_offer(self):
         # This is the rule that stops the panel drawing a brightness slider onto something that cannot dim.
@@ -90,7 +90,7 @@ class StoredTests(ApiTest):
 
     def test_the_panel_is_told_what_may_be_offered_and_why_the_list_is_short(self):
         r = self.client.get("/devices/switch.kettle/kinds").json()
-        self.assertEqual(sorted(r["offer"]), ["fan", "light", "switch"])
+        self.assertEqual(sorted(r["offer"]), ["alarm", "fan", "light", "switch"])
         self.assertEqual(r["kind"], "switch")
         self.assertIn("switched on and off", r["why"])
         self.assertEqual(r["words"]["switch"], "Plug")
@@ -218,6 +218,96 @@ class GrammarTests(ApiTest):
         self.assertEqual(ask(), "Ceiling light is on.")          # one light, and a plug the question walks past
         self.shown_as_a_light()
         self.assertEqual(ask(), "All 2 lights are on.")
+
+
+class AlarmTests(ApiTest):
+    """The kind that exists because of what a mistake costs.
+
+    A siren reaches this house as a `switch` -- there is no siren in CAP_BY_DOMAIN and nothing in HA's
+    domains says "this one is loud" -- so it got a plug's tile, which fires on one tap, and a plug's
+    instrument, which offered to run it for an hour. The failure mode of a stray finger on a plug is a
+    lamp. The failure mode of a stray finger on this one is a siren at 2am. Everything below is the
+    house being told which of the two it is holding.
+
+    The second tap itself lives in the panel (app/src/twice.ts, app/tests/twice.test.ts), the way the
+    front door's does. What the brain owes is the rest: the kind on offer, the sweep stepping over it,
+    the timer refused, and a grammar in which quiet is free and loud has to be asked for."""
+
+    def setUp(self):
+        super().setUp()
+        siren = self.hub.home.devices["switch.kettle"]
+        siren.name = "Siren"                                  # what it is, so the sentences below read as anybody would say them
+        self.assertEqual(self.client.post("/devices/switch.kettle/kind", json={"kind": "alarm"}).status_code, 200)
+
+    def say(self, text, **kw):
+        return self.client.post("/say", json={"text": text, **kw}).json()
+
+    def test_a_plug_may_be_shown_as_an_alarm_in_the_panels_own_word_for_it(self):
+        r = self.client.get("/devices/switch.kettle/kinds").json()
+        self.assertIn("alarm", r["offer"])
+        self.assertEqual(r["words"]["alarm"], "Alarm")
+        self.assertEqual(r["kind"], "alarm")
+
+    def test_it_is_still_a_switch_to_the_driver_and_a_tap_reaches_it_as_one(self):
+        self.client.post("/devices/switch.kettle/on")
+        self.assertEqual(self.ha.called("switch", "turn_on", "switch.kettle"), [("switch", "turn_on", "switch.kettle", {})])
+        self.assertEqual(self.ha.called("alarm"), [])
+
+    def test_no_scene_sounds_it_and_no_scene_silences_it(self):
+        # The omission in intents.DEFAULT_ACTIONS is the decision, and this is it written down. A great
+        # many sirens put their ARMED state on this same switch, so Everything off sweeping it up with
+        # the plugs would disarm the house every night, silently. Nor may a scene ever sound one.
+        intents._rules.update(mtime=object(), actions=intents.DEFAULT_ACTIONS, hold=intents.DEFAULT_HOLD)
+        self.addCleanup(intents._rules.update, {"mtime": None})
+        siren = self.hub.home.devices["switch.kettle"]
+        room = Room("kitchen", "Kitchen"); room.devices = [siren]
+        for state in RoomState:
+            with self.subTest(scene=state.value):
+                self.assertEqual([c for c in plan(room, state) if c[2] == "switch.kettle"], [])
+
+    def test_a_plug_that_is_left_a_plug_is_still_swept_up_by_everything_off(self):
+        # The sweep is not weakened for everything else: this is the very behaviour being stepped over.
+        intents._rules.update(mtime=object(), actions=intents.DEFAULT_ACTIONS, hold=intents.DEFAULT_HOLD)
+        self.addCleanup(intents._rules.update, {"mtime": None})
+        kettle = Device("switch.kettle2", "Kettle", "kitchen", "switch", "on")
+        room = Room("kitchen", "Kitchen"); room.devices = [kettle]
+        self.assertIn(("switch", "turn_off", "switch.kettle2", {}), plan(room, RoomState.away))
+
+    def test_an_alarm_is_not_put_on_a_timer(self):
+        # "On for thirty minutes" is a coffee maker. The same sentence about a siren is thirty minutes
+        # of siren, and the plug's instrument offered it on a card beside the button, in one tap.
+        r = self.client.post("/devices/switch.kettle/timer", json={"minutes": 30})
+        self.assertEqual(r.status_code, 400)
+        self.assertIn("alarm", r.json()["detail"])
+        self.assertEqual(self.ha.called("switch", entity_id="switch.kettle"), [])
+
+    def test_it_leaves_the_plug_bucket_so_turning_on_the_plugs_no_longer_reaches_it(self):
+        self.say("kitchen plugs on")
+        self.assertEqual(self.ha.called("switch", entity_id="switch.kettle"), [])
+
+    def test_silencing_it_answers_to_every_word_anybody_would_use(self):
+        for words in ("silence the alarm", "alarm off", "turn off the siren", "stop the alarm", "kitchen alarm off"):
+            with self.subTest(said=words):
+                self.ha.calls.clear()
+                self.say(words, room="kitchen")
+                self.assertEqual(self.ha.called("switch", "turn_off", "switch.kettle"),
+                                 [("switch", "turn_off", "switch.kettle", {})])
+
+    def test_sounding_it_needs_a_word_that_means_it(self):
+        self.say("sound the alarm", room="kitchen")
+        self.assertEqual(self.ha.called("switch", "turn_on", "switch.kettle"), [("switch", "turn_on", "switch.kettle", {})])
+
+    def test_naming_it_and_nothing_else_does_not_set_it_off(self):
+        # The generic on/off branch ends `or rest == ""`, so a bare "the alarm" used to mean turn it on.
+        # That is this accident in the shape of a sentence, and the answer says what to say instead.
+        r = self.client.post("/say", json={"text": "the alarm", "room": "kitchen"})
+        self.assertEqual(self.ha.called("switch", entity_id="switch.kettle"), [])
+        self.assertEqual(r.status_code, 422)                       # not understood, and deliberately so
+        self.assertIn("silence", r.json()["detail"].lower())
+
+    def test_the_house_says_it_is_sounding_rather_than_that_it_is_on(self):
+        self.hub.home.devices["switch.kettle"].state = "on"
+        self.assertIn("sounding", self.say("is the alarm on?", room="kitchen")["text"].lower())
 
 
 if __name__ == "__main__":

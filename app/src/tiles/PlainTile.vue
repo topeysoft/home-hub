@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import type { Device } from '../api'
 import { cap, isActive, isDead, perform, shortName, roomOf, store } from '../store'
 import { readingLabel } from '../readings'
 import Icon from '../Icon.vue'
 import DeviceArt from '../DeviceArt.vue'
 import { kindFor, type ArtState } from '../art'
+import { useArm } from '../twice'
 
 const props = defineProps<{ device: Device }>()
 const kind = computed(() => cap(props.device))
@@ -33,7 +34,9 @@ const label = computed(() => {
   const d = props.device, k = kind.value
   if (dead.value) return 'Not responding'
   if (passive.value) return readingLabel(d)
-  if (k === 'lock') return arming.value ? 'Tap again to unlock' : d.state === 'locked' ? 'Locked' : d.state === 'unlocked' ? 'Unlocked' : d.state
+  if (armed.value) return armed.value
+  if (k === 'lock') return d.state === 'locked' ? 'Locked' : d.state === 'unlocked' ? 'Unlocked' : d.state
+  if (k === 'alarm') return d.state === 'on' ? 'Sounding' : 'Silent'
   if (k === 'cover') return d.attrs.current_position != null && d.state === 'open' ? `${d.attrs.current_position}% open` : d.state === 'open' ? 'Open' : 'Closed'
   if (k === 'fan') return d.state === 'on' ? (d.attrs.percentage ? `${d.attrs.percentage}%` : 'On') : 'Off'
   if (k === 'vacuum') return d.state === 'cleaning' ? 'Cleaning' : d.state === 'docked' ? 'Docked' : d.state
@@ -45,16 +48,14 @@ const next = computed<[string, string]>(() => {
   if (k === 'lock') return d.state === 'locked' ? ['unlock', 'unlocked'] : ['lock', 'locked']
   return d.state === 'on' ? ['off', 'off'] : ['on', 'on']
 })
-const arming = ref(false)
-let armTimer: number | undefined
+/* The two that are not one tap -- unlocking a door, sounding an alarm -- and the words
+   they wear while they wait. twice.ts says which, and is the only place that says it. */
+const { armed, tap: armedTap } = useArm()
+const arming = computed(() => !!armed.value)
 function tap() {
   if (passive.value || dead.value) return
   const [action, state] = next.value
-  if (action === 'unlock' && !arming.value) {                // a door opens on the second tap, never the first
-    arming.value = true; clearTimeout(armTimer); armTimer = window.setTimeout(() => (arming.value = false), 3000); return
-  }
-  arming.value = false; clearTimeout(armTimer)
-  perform(props.device, action, undefined, { state })
+  armedTap(kind.value, action, () => perform(props.device, action, undefined, { state }))
 }
 </script>
 

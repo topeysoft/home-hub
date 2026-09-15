@@ -49,6 +49,38 @@ describe('the room it is in', () => {
   })
 })
 
+describe('a siren, once somebody has said it is one', () => {
+  const siren = (kind?: string, state = 'off'): Device =>
+    ({ id: 'switch.siren', name: 'Siren', room_id: 'living', capability: 'switch', state, attrs: {}, kind })
+
+  it('says what it is doing to a house, not what it is doing to a circuit', () => {
+    expect(reading(siren('alarm', 'on'))).toBe('Sounding')
+    expect(reading(siren('alarm'))).toBe('Silent')
+    expect(reading(siren('alarm', 'on'))).not.toBe('On')
+  })
+  it('offers to sound and to silence, in those words', () => {
+    const power = (d: Device) => verbs(d).find(v => v.id === 'power')
+    expect(power(siren('alarm'))?.label).toBe('Sound it')
+    expect(power(siren('alarm', 'on'))?.label).toBe('Silence it')
+  })
+  it('gets the plug’s one-control instrument, because that is all it is underneath', () => {
+    expect(paneKind(siren('alarm'))).toBe('alarm')
+  })
+  it('is what a room says first: a siren is not what a room is doing, it is what it is shouting', () => {
+    expect(activityParts(room(siren('alarm', 'on'), plug('light')))).toEqual(['Alarm sounding', '1 light on'])
+  })
+  it('says nothing at all while it is silent', () => {
+    expect(activityParts(room(siren('alarm')))).toEqual([])
+  })
+  it('is on the strip of what is on, where one tap silences it', () => {
+    store.rooms = [room(siren('alarm', 'on'))]
+    expect(whatsOn().map(d => d.id)).toEqual(['switch.siren'])
+  })
+  it('says so quietly on its own pane', () => {
+    expect(shownAs(siren('alarm'))).toBe('Shown as an alarm')
+  })
+})
+
 describe('saying so', () => {
   it('says it quietly, in the panel’s own words', () => {
     expect(shownAs(plug('light'))).toBe('Shown as a light')

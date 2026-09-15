@@ -92,7 +92,7 @@ export const cap = (d: Device) => (d.kind || d.capability).split('.')[0]
 /** Said quietly under the name on a thing's own pane, and nowhere else: a tile is a glance, and the
     point of the override is that the thing stops looking unusual. Empty where nobody has said anything. */
 export const shownAs = (d: Device) => d.kind && d.kind !== d.capability ? `Shown as ${KIND_NOUN[cap(d)] ?? cap(d)}` : ''
-export const KIND_NOUN: Record<string, string> = { light: 'a light', switch: 'a plug', fan: 'a fan', media: 'a speaker', cover: 'a blind', climate: 'a thermostat', lock: 'a lock', camera: 'a camera', vacuum: 'a vacuum' }
+export const KIND_NOUN: Record<string, string> = { light: 'a light', switch: 'a plug', fan: 'a fan', alarm: 'an alarm', media: 'a speaker', cover: 'a blind', climate: 'a thermostat', lock: 'a lock', camera: 'a camera', vacuum: 'a vacuum' }
 export const PASSIVE = new Set(['sensor', 'motion', 'contact', 'camera'])
 export const visibleRooms = () => {
   const rs = store.rooms.filter(r => r.id !== 'unassigned' || r.devices.length)
@@ -102,7 +102,7 @@ export const roomOf = (d: Device) => store.rooms.find(r => r.id === d.room_id)
 export const deviceById = (id: string) => { for (const r of store.rooms) { const d = r.devices.find(x => x.id === id); if (d) return d } }
 
 /* ---------- names: say "Speaker" inside the Bedroom, not "Bedroom speaker" ---------- */
-const GENERIC = /^((ceiling|floor|desk|table|main|left|right|wall|bedside|overhead|front|back|side) )?(speaker|tv|television|light|lights|lamp|fan|lock|door|blind|blinds|shade|shades|camera|plug|switch|thermostat|vacuum|window|motion|sensor|strip|doorbell)$/i
+const GENERIC = /^((ceiling|floor|desk|table|main|left|right|wall|bedside|overhead|front|back|side) )?(speaker|tv|television|light|lights|lamp|fan|lock|door|blind|blinds|shade|shades|camera|plug|switch|thermostat|vacuum|window|motion|sensor|strip|doorbell|alarm|siren)$/i
 const norm = (s: string) => s.replace(/[’‘]/g, "'").toLowerCase().trim()
 export function shortName(d: Device, room?: Room | null): string {
   let n = d.name.trim()
@@ -128,6 +128,9 @@ export function shortName(d: Device, room?: Room | null): string {
  */
 export function activityParts(r: Room, withMedia = true): string[] {
   const parts: string[] = []
+  /* First, and on its own terms. Everything else in this line is what a room is doing;
+     a siren is what a room is SHOUTING, and it does not queue behind the lamps. */
+  if (r.devices.some(d => cap(d) === 'alarm' && d.state === 'on')) parts.push('Alarm sounding')
   const lights = r.devices.filter(d => cap(d) === 'light' && d.state === 'on').length
   if (lights) parts.push(lights === 1 ? '1 light on' : `${lights} lights on`)
   if (withMedia) for (const d of r.devices.filter(d => cap(d) === 'media' && d.state === 'playing'))

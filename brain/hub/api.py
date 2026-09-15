@@ -776,11 +776,12 @@ async def rename_device(device_id: str, body: dict):
 # the person living there cares about, and until they can say so "kitchen lights off" does not touch it.
 
 # The panel's own words for a kind, because "capability" and "domain" are not words this panel uses.
-KIND_WORD = {"light": "Light", "switch": "Plug", "fan": "Fan", "media": "Speaker",
+KIND_WORD = {"light": "Light", "switch": "Plug", "fan": "Fan", "alarm": "Alarm", "media": "Speaker",
              "cover": "Blind", "climate": "Thermostat", "lock": "Lock", "camera": "Camera", "vacuum": "Vacuum"}
 # Why the list is short, said in the panel's own words rather than in HA's. One line per group of kinds
 # that share their controls; the offer is computed, and this only explains it.
-WHY = {("onoff",): "This can be switched on and off, so it can be shown as anything that switches on and off."}
+WHY = {("onoff",): "This can be switched on and off, so it can be shown as anything that switches on and off. "
+                  "An alarm is the one that asks before it sounds."}
 
 
 @app.get("/devices/{device_id}/kinds")
@@ -1164,6 +1165,11 @@ async def device_timer(device_id: str, body: dict | None = None):
     if not dev: raise HTTPException(404, "unknown device")
     # capability, like act() above: a timer has to know what can really be switched off, not what it is shown as.
     if (dev.capability.split(".")[0], "off") not in SERVICE: raise HTTPException(400, "this cannot be put on a timer")
+    # ...and the one place the OWNER's word has to be read here as well. "On for thirty minutes" is a
+    # coffee maker; the same sentence about a siren is thirty minutes of siren, and the panel offered it
+    # in one tap on a card beside the button. A timer switches a thing ON, so this is the same rule as
+    # everywhere else: quiet is free, loud is not, and loud is never on a timer.
+    if kind_of(dev).split(".")[0] == "alarm": raise HTTPException(400, "an alarm is not put on a timer")
     try: minutes = max(0, min(720, int((body or {}).get("minutes") or 0)))
     except (TypeError, ValueError): raise HTTPException(400, "minutes must be a number")
     await hub.run_for(dev, minutes)

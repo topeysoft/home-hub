@@ -40,6 +40,9 @@ KINDS = (   # words for a kind of thing, in the order they are tried; the garage
     (r"tvs?|telly|television|screen|projector", "media", "tv"),
     (r"speakers?|music|radio|stereo|sound system|audio|sonos|homepod|echo", "media", "speaker"),
     (r"fans?", "fan", None),
+    # Before the plugs, and the order is the point: a siren is a switch entity, so without its own word
+    # here "turn on the plugs" would reach it. Shown as an alarm it leaves the plug bucket entirely.
+    (r"alarms?|sirens?|klaxons?", "alarm", None),
     (r"plugs?|outlets?|sockets?|switch(es)?", "switch", None),
     (r"doors?|locks?|deadbolt", "lock", None),
     (r"thermostat|heat(ing|er)?|ac|a/c|air ?con(ditioning|ditioner)?|temperature|temp|furnace", "climate", None),
@@ -161,11 +164,11 @@ def _plural(n: int, one: str, many: str | None = None) -> str:
 # the voice is a second rendering of the same answer, never a different answer.
 
 NOUN = {"light": "light", "switch": "plug", "fan": "fan", "media": "screen", "climate": "thermostat",
-        "lock": "door", "cover": "blind"}
+        "lock": "door", "cover": "blind", "alarm": "alarm"}
 # Which half of a split set is worth saying. A person asking "are the lights off?" is asking to find
 # out about the ones that are ON; the others are not news. docs/voice.md's own worked example.
 NOTABLE = {"light": "on", "switch": "on", "fan": "on", "media": "playing", "lock": "unlocked",
-           "cover": "open", "contact": "open"}
+           "cover": "open", "contact": "open", "alarm": "on"}
 # A count somebody hears rather than reads. Small numbers only: past a dozen, "fourteen" is no clearer
 # than "14", and a set that big was never going to be read out as a list anyway.
 COUNT = ("no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve")
@@ -178,6 +181,7 @@ def _state_word(d) -> str:
     if s in ("unavailable", "unknown"): return "not responding"
     if kind_of(d) == "contact": return "open" if s == "on" else "closed"
     if kind_of(d) == "motion": return "seeing motion" if s == "on" else "seeing no motion"
+    if kind_of(d) == "alarm": return "sounding" if s == "on" else "silent"
     return s.replace("_", " ")
 
 
@@ -379,6 +383,15 @@ class Commands:
         """What to do with the thing named. `rest` is the sentence with the thing taken out."""
         first = targets[0]
         who = self._who(targets, kind, room, spread)
+        # Before the generic on/off, because the generic one ends `or rest == ""` -- a bare "the alarm"
+        # would turn it on, which is the sentence-shaped version of the accident this kind exists to stop.
+        # Silencing answers to every word for it; sounding one needs a word that means it, and nothing else.
+        if kind == "alarm":
+            if _has("off|out|kill|down|shut|stop|silence|quiet|mute|cancel|enough", rest) and not _has("on", rest):
+                return await self._do(targets, "off", {}, said, f"{who} silenced.")
+            if _has("sound|trigger|set off|go off|panic", rest) or _has("on", rest):
+                return await self._do(targets, "on", {}, said, f"{who} sounding.")
+            raise NotUnderstood(f"Say \"silence the {NOUN['alarm']}\" to stop it, or \"sound the {NOUN['alarm']}\" to set it off.")
         if kind in ("light", "switch", "fan", "media", "climate"):
             pct = re.search(r"(\d+)\s*(%|percent)", rest)
             if kind == "light":
