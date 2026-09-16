@@ -9,8 +9,10 @@ export type Home = { name?: string | null; temp_unit?: string; entry?: string[];
 export type Driver = 'down' | 'fresh' | 'needs-login' | 'connecting' | 'ready'
 export type Part = { id: string; name: string; state: 'unknown' | 'off' | 'adding' | 'ready' | 'failed' | 'sign-in' | 'waiting'; text: string; port: number }
 /* channel: which code this hub follows — 'release' (version tags, what a house runs) or 'main' (the
-   branch, for a hub being worked on). `available` is null when the hub genuinely cannot tell. */
-export type Update = { version: string; commit: string; channel: 'release' | 'main'; latest: { version: string; sha: string; when: string; title: string } | null; available: boolean | null; checked: number | null; requested: boolean; state: { state: 'running' | 'done' | 'failed'; started?: number; finished?: number; commit?: string } | null; error: string | null }
+   branch, for a hub being worked on). `available` is null when the hub genuinely cannot tell, and
+   `offer` is the same answer minus a version that was installed, would not start, and was put back:
+   the hub stops raising that one on its own, and the button under This hub still installs it. */
+export type Update = { version: string; commit: string; channel: 'release' | 'main'; latest: { version: string; sha: string; when: string; title: string } | null; available: boolean | null; offer: boolean | null; rejected: string | null; checked: number | null; requested: boolean; state: { state: 'running' | 'done' | 'failed' | 'reverted'; started?: number; finished?: number; commit?: string; to?: string; bad?: string; reverted?: boolean } | null; error: string | null }
 export type Status = { driver: Driver; reason: string; setup_done: boolean; locked?: boolean; owner: string | null; home: string | null; location: boolean; rooms: number; devices: number; drivers: Part[]; problems?: Problem[]; version?: string; update?: Update }
 /* One job on Needs a look. The brain writes every word of it, including the words on the buttons: the
    panel does not know what it is looking at, so it draws `acts` and invents nothing. `with` is what went

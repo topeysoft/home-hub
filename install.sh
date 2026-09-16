@@ -116,6 +116,11 @@ fi
 # is how it is changed.
 sed -i '/^HUB_CHANNEL=/d' .env 2>/dev/null || true
 echo "HUB_CHANNEL=$CHANNEL" >> .env
+# The image pin belongs here too, not only in this script's own environment. A compose brought up by
+# any other hand -- somebody debugging, or host/update.sh putting an old image back after a rollback
+# -- would otherwise resolve :latest and break the rule that code and container move together.
+sed -i '/^HUB_BRAIN_IMAGE=/d' .env 2>/dev/null || true
+if [ -n "${HUB_BRAIN_IMAGE:-}" ]; then echo "HUB_BRAIN_IMAGE=$HUB_BRAIN_IMAGE" >> .env; fi
 # radios: only start what is plugged in, now and whenever a stick is plugged in or pulled later
 chmod +x radios.sh
 ./radios.sh detect
@@ -141,7 +146,7 @@ if ! PULLED="$(docker compose pull -q --ignore-buildable 2>&1)"; then
   echo "$PULLED" | sed -n 's/.*failed to resolve reference "\([^"]*\)".*/  could not fetch \1 — that pin is not on the registry/p' | sort -u
 fi
 if PULL="$(docker compose pull -q brain 2>&1)"; then
-  echo "  brain image: $(docker image inspect ghcr.io/topeysoft/home-hub-brain:latest --format '{{index .RepoDigests 0}}' 2>/dev/null | cut -d@ -f2 | cut -c1-19)"
+  echo "  brain image: $(docker image inspect "${HUB_BRAIN_IMAGE:-ghcr.io/topeysoft/home-hub-brain:latest}" --format '{{index .RepoDigests 0}}' 2>/dev/null | cut -d@ -f2 | cut -c1-19)"
 else
   case "$PULL" in
     *denied*|*unauthorized*|*401*|*403*) echo "  the published brain image is not public (GitHub package visibility); building it here from the code above, which takes a few minutes" ;;

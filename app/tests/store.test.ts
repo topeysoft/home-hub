@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Device, Room } from '../src/api'
 import {
   activity, cap, capsOf, currentScene, doneLine, forgetDone, houseLine, isActive, isDead, justDone,
-  perform, roomActive, sceneHolds, scenesFor, shortName, store, visibleRooms, whatsOn,
+  perform, roomActive, sceneHolds, scenesFor, shortName, store, updateReady, visibleRooms, whatsOn,
 } from '../src/store'
 
 const dev = (id: string, name: string, capability: string, state: string, attrs: Record<string, any> = {}): Device =>
@@ -256,5 +256,33 @@ describe('what you have just done', () => {
     expect(justDone().map(d => d.id)).toEqual(['l'])
     forgetDone(true)                 // at rest, or gone behind another app
     expect(justDone()).toEqual([])
+  })
+})
+
+describe('an update the hub should raise by itself', () => {
+  const update = (u: Record<string, any>) => { store.status = { update: u } as any; store.updating = false }
+
+  it('is offered when there is one and nothing is already installing it', () => {
+    update({ available: true, offer: true, requested: false, state: null })
+    expect(updateReady()).toBe(true)
+  })
+
+  it('goes quiet once the install has been asked for', () => {
+    update({ available: true, offer: true, requested: true, state: null })
+    expect(updateReady()).toBe(false)
+    update({ available: true, offer: true, requested: false, state: { state: 'running' } })
+    expect(updateReady()).toBe(false)
+  })
+
+  it('does not nudge for a version that was installed and put back', () => {
+    /* `available` is still true -- there really is a newer build, and This hub still offers the
+       button. What stops is the hub pushing it at somebody who has already been through it once. */
+    update({ available: true, offer: false, rejected: '1.3.0', requested: false, state: { state: 'reverted', bad: 'v1.3.0' } })
+    expect(updateReady()).toBe(false)
+  })
+
+  it('says nothing at all when the hub cannot tell', () => {
+    update({ available: null, offer: null, requested: false, state: null })
+    expect(updateReady()).toBe(false)
   })
 })

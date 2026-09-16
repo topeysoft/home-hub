@@ -160,5 +160,77 @@ class HostReportTests(UpdateTest):
         self.assertIsNone(u.summary()["state"])
 
 
+class RolledBackTests(UpdateTest):
+    """A version the host installed, could not bring back up, and put back. docs/updates.md, piece 1."""
+
+    def reverted(self, bad="v1.3.0", state="reverted"):
+        updates.STATE.write_text(json.dumps({"state": state, "started": 1, "finished": 2, "bad": bad}))
+
+    async def offered(self, u):
+        out = await u.check()
+        return out["available"], out["offer"]
+
+    async def test_a_version_that_was_put_back_is_not_raised_again_on_its_own(self):
+        u = self.make(version="v1.2.0")
+        u.fetch = self.release("v1.3.0")
+        self.assertEqual(await self.offered(u), (True, True))
+        self.reverted("v1.3.0")
+        # It is still true that a newer build exists; what changes is whether the hub pushes it.
+        self.assertEqual(await self.offered(u), (True, False))
+        self.assertEqual(u.summary()["rejected"], "1.3.0")
+
+    async def test_the_v_does_not_make_it_a_different_version_here_either(self):
+        u = self.make(version="v1.2.0")
+        u.fetch = self.release("v1.3.0")
+        self.reverted("1.3.0")                                     # the host named it without the v
+        self.assertEqual(await self.offered(u), (True, False))
+
+    async def test_the_release_after_the_one_that_failed_is_offered_normally(self):
+        u = self.make(version="v1.2.0")
+        u.fetch = self.release("v1.3.1")
+        self.reverted("v1.3.0")
+        self.assertEqual(await self.offered(u), (True, True))
+
+    async def test_a_person_can_still_ask_for_it_from_this_hub(self):
+        # The nudge is what stops; the button is not. Trying it twice is often what fixes it.
+        u = self.make(version="v1.2.0")
+        u.latest = self.release("v1.3.0")()
+        self.reverted("v1.3.0")
+        self.assertTrue(u.request()["requested"])
+        self.assertEqual(json.loads(updates.REQUEST.read_text())["to"], "v1.3.0")
+
+    async def test_an_update_that_could_not_even_be_put_back_is_refused_the_same_way(self):
+        u = self.make(version="v1.2.0")
+        u.fetch = self.release("v1.3.0")
+        self.reverted("v1.3.0", state="failed")
+        self.assertEqual(await self.offered(u), (True, False))
+
+    async def test_an_ordinary_failure_with_no_version_named_holds_nothing_back(self):
+        # The installer stopped before anything moved: there is no bad version, so nothing is refused.
+        u = self.make(version="v1.2.0")
+        u.fetch = self.release("v1.3.0")
+        updates.STATE.write_text(json.dumps({"state": "failed", "started": 1, "finished": 2}))
+        self.assertEqual(await self.offered(u), (True, True))
+
+    async def test_the_fix_for_a_rejected_release_is_raised_the_moment_it_exists(self):
+        """What the panel is told about is `offer` moving, not `available`.
+
+        After a rollback both are already settled -- there is a newer build (true) and the hub is not
+        pushing it (false) -- so the release that comes along to fix it moves only the second one. A
+        hub that watched `available` would sit on the fix in silence, because from its point of view
+        nothing changed. The rollback itself needs no broadcast: putting the old image back restarts
+        the brain, so every panel reconnects and asks.
+        """
+        u = self.make(version="v1.2.0")
+        u.fetch = self.release("v1.3.0")
+        self.reverted("v1.3.0")
+        await u.check()
+        sent = len(self.hub.sent)
+        u.fetch = self.release("v1.3.1")
+        out = await u.check()
+        self.assertEqual((out["available"], out["offer"]), (True, True))
+        self.assertGreater(len(self.hub.sent), sent)
+
+
 if __name__ == "__main__":
     unittest.main()

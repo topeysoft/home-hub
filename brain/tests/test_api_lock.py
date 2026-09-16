@@ -74,6 +74,15 @@ class LockedHouseTests(ApiTest):
         self.assertIn("Wait", r.json()["detail"])
 
 
+    def test_the_undo_can_ask_whether_the_house_came_back_without_a_code_or_a_phone(self):
+        """host/update.sh has neither, and an undo that needed one would stop working the day
+        somebody removed a phone. It carries the build and nothing about the house."""
+        r = self.client.get("/alive")
+        self.assertEqual(r.status_code, 200)
+        self.assertTrue(r.json()["ok"])
+        self.assertEqual(set(r.json()), {"ok", "version", "commit"})
+
+
 class JoiningTests(ApiTest):
     def setUp(self):
         super().setUp()
@@ -244,7 +253,8 @@ class WhichSideOfTheDoorTests(unittest.TestCase):
     def test_the_panel_itself_loads_before_a_phone_belongs_to_the_house(self):
         for path in ("/", "/index.html", "/assets/index-abc123.js", "/assets/index-abc123.css",
                      "/manifest.webmanifest", "/sw.js", "/favicon.svg", "/phones/me", "/phones/ask",
-                     "/phones/code", "/phones/claim/abc", "/sounds/rain.mp3", "/qr.svg"):
+                     "/phones/code", "/phones/claim/abc", "/sounds/rain.mp3", "/qr.svg",
+                     "/alive"):   # the host asking whether the house came back after an update
             with self.subTest(path=path):
                 self.assertTrue(open_to_strangers("GET", path))
 

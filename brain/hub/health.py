@@ -153,9 +153,22 @@ class Health:
         return out
 
     def update(self) -> list:
+        """An update that did not finish, did not start, or could not be undone.
+
+        All three end in the same *Try again*, because that is the only thing a household can do from
+        the wall, and all three say the house is working -- which is true, and is the sentence somebody
+        standing in front of a panel full of warnings most needs to read.
+        """
         st = self.hub.updates.state() or {}
-        if st.get("state") == "failed":
-            return [{"kind": "update", "subject": None, "since": st.get("finished"),
-                     "text": "The last update did not finish. You can try it again from here.",
-                     "acts": [{"do": "Try again", "act": "update", "to": None}]}]
-        return []
+        state, bad = st.get("state"), st.get("bad")
+        what = f"Version {bad}" if bad else "The last update"
+        if state == "reverted":
+            text = f"{what} did not start, so the hub put back the one it was on. Everything is working; you can try it again from here."
+        elif state == "failed" and st.get("reverted") is False:
+            text = f"{what} did not start, and the hub could not put back the one it was on. Try it again; if this keeps saying the same thing, the hub needs a hand."
+        elif state == "failed":
+            text = "The last update did not finish. You can try it again from here."
+        else:
+            return []
+        return [{"kind": "update", "subject": None, "since": st.get("finished"), "text": text,
+                 "acts": [{"do": "Try again", "act": "update", "to": None}]}]

@@ -7,6 +7,12 @@ install.sh, which brings the code to the newest release, pulls the images and re
 update.json in the same volume says how it went. The brain never runs docker itself and never
 restarts anything on its own.
 
+The host also undoes an update that does not come back: it records where the hub was, waits for the
+brain to answer on the loopback and keep answering, and otherwise puts the old commit and the old
+image back. What arrives here is a fourth state, `reverted`, naming the version that did it -- which
+is the one thing this module has to act on, because a rollback followed six hours later by the same
+install is a loop rather than a safety net. See docs/updates.md, piece 1.
+
 Two channels, because a hub in someone's house and the hub on the developer's desk want different
 things. `release` (the default, and what every hub ships as) follows version tags: nothing reaches a
 family until it is tagged. `main` follows the branch, commit by commit, which is what a hub being
@@ -62,9 +68,32 @@ class Updates:
         try: return json.loads(STATE.read_text())
         except (OSError, ValueError): return None
 
+    def rejected(self) -> str:
+        """A version this hub installed, could not bring back up, and put back. host/update.sh names it.
+
+        The point of writing it down is that the hub must not walk into it again on its own: a rollback
+        that is followed six hours later by the same install is a loop, not a safety net.
+        """
+        st = self.state() or {}
+        return self._norm(st.get("bad") or "") if st.get("state") in ("reverted", "failed") else ""
+
+    @property
+    def offer(self):
+        """Whether the hub should raise this update by itself, as against whether one exists.
+
+        `available` stays the honest answer about the world -- there *is* a newer build -- and this is
+        the answer about what the house should do with that. They come apart in exactly one place: a
+        version that was tried and put back. Home stops nudging for it; the button under *This hub*
+        keeps working, because a person choosing to try again is a different act from a hub deciding
+        to, and trying it twice is often what fixes it.
+        """
+        if not self.available: return self.available          # False and None pass through unchanged
+        return self._norm((self.latest or {}).get("version") or "") != self.rejected()
+
     def summary(self) -> dict:
         return {"version": self.version, "commit": self.commit[:12], "channel": self.channel, "latest": self.latest,
-                "available": self.available, "checked": self.checked, "requested": REQUEST.exists(),
+                "available": self.available, "offer": self.offer, "rejected": self.rejected() or None,
+                "checked": self.checked, "requested": REQUEST.exists(),
                 "state": self.state(), "error": self.error}
 
     def fetch(self) -> dict:
@@ -78,12 +107,12 @@ class Updates:
                 "when": d.get("published_at") or "", "title": (d.get("name") or d["tag_name"])[:120]}
 
     async def check(self) -> dict:
-        was = self.available
+        was = self.offer
         try: self.latest, self.error = await asyncio.to_thread(self.fetch), None
         except Exception as e:
             self.error = str(e); log.info("update check: %s", e)
         self.checked = time.time()
-        if self.available != was: self._tell()
+        if self.offer != was: self._tell()
         return self.summary()
 
     async def run(self):

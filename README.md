@@ -104,6 +104,13 @@ container before the Pi's first start so the two do not fight over Ring's token.
 - Updates: the brain knows which build it is and checks GitHub's main a few times a day. When it has moved on, Home
   shows *An update is ready*; one tap (behind the settings code) writes `brain-data/update.request`, a systemd path
   unit on the host runs `install.sh` again, and the panel comes back on the new build. `driver-layer/host/update.sh`.
+  **An update that does not come back is undone by the hub itself.** Before anything moves, where it was — the commit
+  and the image the brain container is actually running — goes into `brain-data/update.prev`; afterwards the brain has
+  to answer on `127.0.0.1:8300/alive` and keep answering, or the old commit and the old image go back and the version
+  that did it is named in `update.json`. Home then stops offering that version on its own; the button under *This hub*
+  still installs it, because a person trying again is a different thing from a hub deciding to. Putting it back needs
+  no network, which matters when the thing that broke was the network. The plan for the rest — a signed manifest,
+  updating overnight without being asked, and release notes written for a house — is `docs/updates.md`.
 - Health: Home has a quiet *Needs a look* list when something is off: a device offline since Tuesday, storage nearly
   full, a driver that wants signing in, an update that did not finish. `GET /health`; the words come from the brain.
   A line that can be acted on carries the way to do it, so none of them sends anyone to Home Assistant: an account whose
@@ -131,6 +138,9 @@ container before the Pi's first start so the two do not fight over Ring's token.
 - `docs/settings.md` — Settings without a settings page: the four nouns under *This hub* (People, Accounts, Devices, This hub),
   what still forces a visit to Home Assistant's UI, and the order to close each gap so the Advanced door is never a step.
   Its *Where this stands* section is the dated ground truth for how much of that order has actually been built.
+- `docs/updates.md` — Updates: what is built (the undo above), and the four pieces after it — a signed release
+  manifest and images by digest, the hub updating itself at night, notes written for a house rather than a repository,
+  and a hold to stop a bad release spreading. The rules each piece may not break are at the top.
 - `docs/away.md` — Away from home: why no VPN and no cloud tunnel, the three pieces (pairing, a relay the maker runs, a
   real certificate per hub), what has landed, and the build and open decisions for the two that have not.
 - `docs/voice.md` — The microphone: the shapes considered and what each waits on.

@@ -1433,6 +1433,17 @@ async def restore(request: Request):
 
 
 # ---------- updates ----------
+@app.get("/alive")
+def alive():
+    """The host asking whether the house came back after an update. See docs/updates.md, piece 1.
+
+    Open to strangers, because the host running host/update.sh is one: it has no phone cookie and no
+    settings code, and an undo that depended on a pairing decision would be an undo that stopped
+    working the day somebody removed a phone. It carries the build and nothing about the house.
+    """
+    return {"ok": True, "version": hub.updates.version, "commit": hub.updates.commit[:12]}
+
+
 @app.get("/update")
 def update_status(): return hub.updates.summary()
 

@@ -20,6 +20,10 @@ async function install() {
   try { await requestUpdate(); store.updating = true; notify('Updating. The lights keep working; this screen comes back on its own.') }
   catch (e: any) { notify(e.message, 'error') }
 }
+/* A version that was installed, would not start, and was put back by the host (docs/updates.md,
+   piece 1). Home stops nudging for it; here it is still one tap, because this page is where a person
+   is the one choosing, and trying it a second time is often what fixes it. */
+const rolledBack = computed(() => update.value?.state?.state === 'reverted' ? (update.value?.state?.bad || update.value?.rejected || 'That update') : '')
 const when = (ts?: number | null) => ts ? new Date(ts * 1000).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' }) : ''
 </script>
 
@@ -30,8 +34,8 @@ const when = (ts?: number | null) => ts ? new Date(ts * 1000).toLocaleString([],
     <ul class="hub-rows">
       <li>
         <span class="hub-k">Software</span>
-        <span class="hub-v">{{ !store.status?.version || store.status.version === 'dev' ? 'Development build' : store.status.version }}<span class="hub-sub" v-if="update?.checked"> · checked {{ when(update.checked) }}</span></span>
-        <button class="button small" v-if="update?.available && !store.updating && !update.requested" @click="install">Install the update</button>
+        <span class="hub-v">{{ !store.status?.version || store.status.version === 'dev' ? 'Development build' : store.status.version }}<span class="hub-sub" v-if="rolledBack"> · {{ rolledBack }} didn’t start, so this one was put back</span><span class="hub-sub" v-else-if="update?.checked"> · checked {{ when(update.checked) }}</span></span>
+        <button class="button small" v-if="update?.available && !store.updating && !update.requested" @click="install">{{ rolledBack ? 'Try again' : 'Install the update' }}</button>
         <span class="hub-sub" v-else-if="store.updating || update?.requested || update?.state?.state === 'running'">Updating…</span>
         <span class="hub-sub" v-else-if="update?.available === false">Up to date</span>
         <span class="hub-sub" v-else-if="update?.error">Couldn't check: no internet?</span>

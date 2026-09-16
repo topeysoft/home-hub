@@ -194,7 +194,7 @@ class Phones:
 
 # ---- which requests a phone may make before it belongs ----
 OPEN_PREFIXES = ("/phones/claim/", "/assets/", "/sounds/", "/icons/")
-OPEN_PATHS = {"/", "/phones/me", "/phones/ask", "/phones/code", "/qr.svg", "/phone", "/index.html", "/manifest.webmanifest", "/sw.js", "/favicon.ico", "/favicon.svg", "/robots.txt"}
+OPEN_PATHS = {"/", "/alive", "/phones/me", "/phones/ask", "/phones/code", "/qr.svg", "/phone", "/index.html", "/manifest.webmanifest", "/sw.js", "/favicon.ico", "/favicon.svg", "/robots.txt"}
 OPEN_SUFFIXES = (".js", ".css", ".svg", ".png", ".ico", ".woff2", ".webmanifest", ".json", ".html", ".txt", ".map")
 
 

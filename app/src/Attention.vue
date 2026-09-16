@@ -33,7 +33,7 @@ withDefaults(defineProps<{ say?: boolean }>(), { say: true })
 
 /* an update, offered once it exists and installed with one tap; the host does the work */
 const update = computed(() => store.status?.update ?? null)
-const updateReady = computed(() => !!update.value?.available && update.value?.state?.state !== 'running' && !update.value?.requested && !store.updating)
+const updateReady = computed(() => !!update.value?.offer && update.value?.state?.state !== 'running' && !update.value?.requested && !store.updating)
 const updateBusy = computed(() => store.updating || !!update.value?.requested || update.value?.state?.state === 'running')
 
 /* on a phone that is still in a browser tab: offer the home-screen install once, with the steps for this phone */

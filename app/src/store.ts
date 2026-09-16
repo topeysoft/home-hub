@@ -391,8 +391,10 @@ export async function loadHealth() {
   try { store.notes = (await getHealth()).notes } catch {}
 }
 export const routineById = (id: string) => store.routines.find(r => r.id === id)
-/** An update is there to install and nothing is already installing it. */
-export function updateReady(): boolean { const u = store.status?.update; return !!u?.available && u.state?.state !== 'running' && !u.requested && !store.updating }
+/** An update the hub should raise by itself, and nothing is already installing it. `offer` rather
+    than `available` so a version that was tried and rolled back is not pushed at anybody again; it
+    is still installable from This hub, where a person is the one choosing. */
+export function updateReady(): boolean { const u = store.status?.update; return !!u?.offer && u.state?.state !== 'running' && !u.requested && !store.updating }
 /** Install the update that is waiting, from wherever it is offered: the nudge in the band and the
     Needs a look page both ask for the same one thing, and the host does the work. */
 export async function installUpdate() {

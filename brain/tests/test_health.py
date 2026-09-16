@@ -64,6 +64,28 @@ class HealthTests(unittest.TestCase):
                                  "Nest could not connect: the key expired", "The hub's storage is nearly full: 1.0 GB left.",
                                  "The last update did not finish. You can try it again from here."])
 
+    def test_an_update_that_did_not_start_says_the_house_is_working(self):
+        # The rollback already happened. What is left to say is which version, that nothing is broken,
+        # and that trying again is a thing a person may do from here. docs/updates.md, piece 1.
+        with tempfile.TemporaryDirectory() as d:
+            keep, updates.STATE = updates.STATE, Path(d) / "update.json"
+            updates.STATE.write_text(json.dumps({"state": "reverted", "finished": 5, "bad": "v1.3.0"}))
+            notes = self.h.update()
+            updates.STATE = keep
+        self.assertEqual(len(notes), 1)
+        self.assertIn("Version v1.3.0 did not start", notes[0]["text"])
+        self.assertIn("Everything is working", notes[0]["text"])
+        self.assertEqual([a["act"] for a in notes[0]["acts"]], ["update"])
+
+    def test_an_update_that_could_not_even_be_put_back_says_so_rather_than_claim_a_rollback(self):
+        with tempfile.TemporaryDirectory() as d:
+            keep, updates.STATE = updates.STATE, Path(d) / "update.json"
+            updates.STATE.write_text(json.dumps({"state": "failed", "finished": 5, "bad": "v1.3.0", "reverted": False}))
+            notes = self.h.update()
+            updates.STATE = keep
+        self.assertIn("could not put back", notes[0]["text"])
+        self.assertIn("needs a hand", notes[0]["text"])
+
     def test_when_words(self):
         now = time.time()
         self.assertEqual(health.when(now - 86400, TZ, now) in ("yesterday",) or True, True)
