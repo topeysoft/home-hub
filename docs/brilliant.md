@@ -206,3 +206,26 @@ descriptor, an authority token), and that space is effectively unbounded without
 firmware or Brilliant's cloud firmware package would name it, and neither is in hand. The combined-oracle
 tooling (`tools/` + `dfu-probe/`) remains, so the hunt can resume if that information ever surfaces; blind
 parameter brute-forcing is not a good use of time.
+
+### The live panel, and capturing the netkey by being provisioned
+
+A later discovery reframed everything: the wall panel's **screen is dead but the panel is alive** — the mobile
+app still controls the six switches still on its network. A dead screen is not a dead panel. That means the
+panel is a working mesh *provisioner*, and provisioners hand the network key to devices they provision.
+
+The panel itself is a sealed black box on the LAN — no SSH (Root SSH was never enabled, and the dead screen
+can't enable it), no ADB, no HomeKit bridge, nothing inbound; the app reaches it via Brilliant's cloud. So we
+cannot log in and read the key. But we don't have to: **if the panel provisions a device, it gives that device
+the netkey.**
+
+`brilliant/mesh-provisionee/` is an ESP32 that poses as a fresh Brilliant switch — the device side of the same
+provisioning protocol `tools/provision.py` drives, sharing the verified crypto plus ECDH P-256. It advertises
+as unprovisioned (No-OOB), accepts the panel's provisioning over PB-GATT, and prints the netkey the panel
+delivers. With that key, the panel's whole mesh — every switch's PIR and tap-state, published to the panel —
+becomes decryptable, locally, with nothing pulled from the wall.
+
+**First attempt:** the app's "Add a device" flow (which searches for nearby faceplates, not only QR codes) never
+listed our spoof. The device presents but does not look authentic — most likely because Brilliant discovers
+switches via the **PB-ADV** unprovisioned beacon (a `0x2B` mesh-beacon AD type) rather than the PB-GATT service
+we advertise, and/or filters the list by a Brilliant-specific Device UUID. The fix is to capture a real switch's
+unprovisioned beacon (by resetting our expendable node `0x0002`) and replicate it exactly.
