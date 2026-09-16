@@ -18,7 +18,7 @@ Control path legend: **local** = works with the internet down, **cloud** = vendo
 | Tesla Wall Connector Gen 3 | garage | Tesla | Wi-Fi | local (vitals API) | `tesla_wall_connector` | in HA | 192.168.86.23; a car was plugged in at setup |
 | Ring (cameras/doorbell) | ? | Ring | Wi-Fi | cloud | `ring` | keep | list each device |
 | Brilliant Control panels (each) | ? | Brilliant NextGen | Wi-Fi | none | `-` | drop | both failed identically (blank screen, unrecoverable); neither answers on the network. Not replaced — see `docs/brilliant.md` |
-| Brilliant Smart Dimmer Switches (each) | ? | Brilliant NextGen | BLE mesh (SIG) | local via our own mesh | `brilliant/esp32-bridge` → MQTT | keep | no Control needed: factory reset, then re-provision into our own network. On/off and dimming are stock SIG models. List every switch with its room and the load it drives |
+| Brilliant Smart Dimmer Switches (each) | ? | Brilliant NextGen | BLE mesh (SIG) | local via our own mesh | `brilliant/esp32-bridge` → MQTT | keep | no Control needed: factory reset, then re-provision into our own network. On/off and dimming are stock SIG models. Local taps are NOT reported to the mesh (optimistic state only); PIR and gestures unreachable — see `docs/brilliant.md`. List every switch with its room and the load it drives |
 | Brilliant Smart Plugs (each) | ? | Brilliant NextGen | BLE mesh (SIG) | local via our own mesh | `brilliant/esp32-bridge` → MQTT | keep | same path as the dimmers; not yet re-provisioned |
 | GE (Z-Wave switches?) | ? | GE / Jasco | Z-Wave | local once on Z-Wave stick | `zwave_js` | keep, re-pair | list each device |
 | Wink hub + devices | ? | Wink | Zigbee / Z-Wave | none | `-` | drop hub, re-pair devices |  |

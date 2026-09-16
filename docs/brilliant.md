@@ -84,9 +84,39 @@ documented toolchain and a known pinout. Worth remembering; not currently needed
   firmware's own AES-CMAC is verified on a workstation against RFC 4493 before it is ever flashed. This caught
   nothing in the end, but it is how we knew.
 
-## What is still open
+## The vendor model: asked and answered
 
-The vendor model `0x0820/0x0001` is bound to our AppKey and its publish address points at us, both confirmed
-by the node. **Nothing has yet been observed coming out of it.** Every listening window so far has run with
-nobody at the switch, so silence is not evidence. Whether PIR motion and the scene gestures are exposed is the
-one question this work has not answered.
+`0x0820/0x0001` does not give up the PIR or the gestures, and the reason is structural rather than a
+decoding failure we could grind past.
+
+**The switch transmits nothing on the mesh when touched.** Not a publication to the wrong address, not a
+message under a key we lacked — nothing at all. A raw network-layer capture decrypts with the NetKey alone,
+so it sees every PDU to any destination under any application key, control messages included. Across 150
+seconds of somebody standing at the switch tapping, double-tapping, waving and sliding the groove: zero.
+
+**Local touch bypasses the mesh entirely.** Read `Generic OnOff` state, tap the switch so the light changes,
+read again: unchanged, twice. The firmware drives the triac directly and never updates the model. So the mesh
+state reflects what we commanded, never what the switch is actually doing.
+
+**It is not a configuration mistake.** Every link in the chain was verified rather than assumed:
+
+| Check | Result |
+|---|---|
+| Publication mechanism | works — an unacknowledged Set changes state and the node publishes `Generic OnOff Status` to `0x0001` |
+| Publish config on the node | read back: `0x1000`, `0x1002` and the vendor model all → `0x0001`, appkey 0, TTL 7 |
+| Vendor model AppKey binding | `Config Vendor Model App Get` → bound appkeys `[0]` |
+| All 64 vendor opcodes, no params | no reply from any; node healthy throughout, state unchanged, nothing damaged |
+| Vendor model subscription | status `0x08` **Not a Subscribe Model** |
+
+That last row is the answer. A model that publishes but cannot subscribe is an **event source**, not a command
+target — it exists to *send* gestures to a Control, which is why probing opcodes at it produced nothing and
+never could. Whatever the Control did to make it start emitting is not reachable through the standard
+configuration models, and black-box probing has been taken as far as it sensibly goes.
+
+**What this costs.** Control works completely: on, off and dimming over MQTT, verified end to end from the
+hub's broker. What is lost is feedback — when somebody uses the switch by hand, Home Assistant will not know,
+and its state drifts until the next command. Treat these as optimistic-state lights.
+
+**The way to full function** is the nRF52832 and its labelled SWD header, described above. Own firmware would
+expose the PIR as a `Sensor Server` and taps as a real `Generic OnOff Server`. That began as a curiosity in
+the FCC photographs; it is now the only route to motion and gestures.
