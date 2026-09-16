@@ -117,10 +117,29 @@ python3 tools/release-manifest.py "$TAG" > "$TMP/release.json"
 # registry by hand. cosign's keyless signature says exactly that, and checking it *here* is what
 # lets hubs get away with holding no cosign and no Sigstore root: they trust one ed25519 key, and
 # that key is only ever put to a manifest whose image passed this. docs/updates.md, piece 2.
-BRAIN="$(sed -n 's/^ *"brain": "\([^"]*\)".*//p' "$TMP/release.json")"
+BRAIN="$(sed -n 's/^ *"brain": "\([^"]*\)".*/\1/p' "$TMP/release.json")"
 if command -v cosign >/dev/null 2>&1; then
   echo "Checking $TAG built the image it claims..."
-  cosign verify "$BRAIN"     --certificate-oidc-issuer https://token.actions.githubusercontent.com     --certificate-identity-regexp "^https://github.com/$(git remote get-url origin | sed -E 's#.*github.com[:/]([^/]+/[^/.]+).*#\1#')/\.github/workflows/brain-image\.yml@refs/tags/$TAG\$"     > /dev/null || { echo "That image was not built by this repository's workflow from $TAG. Not signing it."; exit 1; }
+  # cosign reads docker's own credentials and knows nothing about gh, so a package that is not public
+  # is UNAUTHORIZED to it even when everything else here reads it perfectly well. Hand it the same
+  # credential release-manifest.py uses, rather than making somebody `docker login` and leave a
+  # registry password sitting in their docker config afterwards.
+  #
+  # As a username and password, NOT --registry-token: that flag passes the value straight through as
+  # the bearer, and ghcr wants a token of its own in exchange for the credential first. With the
+  # token flag it gets as far as the signature and then says "DENIED: invalid token", which reads
+  # like the signature is bad rather than like nobody has logged in.
+  REG_PASS="${GITHUB_TOKEN:-${GH_TOKEN:-${CR_PAT:-$(gh auth token 2>/dev/null || true)}}}"
+  REG_USER="$(gh api user -q .login 2>/dev/null || echo x)"
+  SLUG="$(git remote get-url origin | sed -E 's#.*github.com[:/]([^/]+/[^/.]+).*#\1#')"
+  WHO="^https://github.com/$SLUG/\.github/workflows/brain-image\.yml@refs/tags/$TAG\$"
+  if ! cosign verify "$BRAIN" \
+      ${REG_PASS:+--registry-username "$REG_USER" --registry-password "$REG_PASS"} \
+      --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+      --certificate-identity-regexp "$WHO" > /dev/null; then
+    echo "That image was not built by this repository's workflow from $TAG. Not signing it."
+    exit 1
+  fi
 elif [ "${HOME_HUB_SKIP_COSIGN:-}" = 1 ]; then
   echo "cosign is not installed, and HOME_HUB_SKIP_COSIGN=1 says sign anyway. The image is going out unchecked."
 else
