@@ -263,7 +263,7 @@ and something once they have been quiet for it; nothing when there is nothing to
 back, when an update is already running, or when somebody has just tapped; one go a night and then the next night;
 and the log saying `hub`.
 
-### 4. Notes written for a house
+### 4. Notes written for a house *(landed 16 September 2026)*
 
 `releases/0.3.0.md` in the repository, with a `what` section of two to four plain sentences about effects — *speakers
 remember their volume*, *the kitchen appears on the wall faster* — and an optional `details` for whoever wants it. CI
@@ -276,6 +276,37 @@ current release at the top and the history under it. The history is what answers
 which is the question a household actually asks.
 
 **A release with no notes file does not ship.** Better a tag that fails CI than a family reading a commit subject.
+
+**What landed, and the one place it departs from the plan above.** The notes are **not fetched and not read out of the
+manifest** — they are copied into the brain's image (`COPY releases/ /srv/releases/`) and read from there. That is
+strictly better than what this document originally described, and it fell out of a constraint: the brain has no
+ed25519 anywhere in its dependencies, so it could not have verified a manifest it fetched. Reading them from the image
+means the notes a hub shows are the notes for the code it is actually running, they need no verification of their own
+because the image was already verified, they read with the internet down, and **the history is free** — the image
+carries every release file up to its own version, so *This hub → What's new* has one without storing anything.
+
+The rest: `releases/README.md` is the format and the rules; `brain/hub/notes.py` is the parser;
+`tools/release-manifest.py` **refuses to build a record for a tag whose notes are missing or read like a changelog**,
+which is the part that makes the rule real rather than aspirational. `tools/release.sh` publishes the same file as the
+GitHub release body, and `Updates.fetch()` parses it, so the release *waiting* to install is described in its own words
+too — that one is unverified, and it describes without ever deciding.
+
+**The card is on Home the morning after, and does not vanish under the tap.** It carries the words themselves rather
+than a link to them, it opens *This hub* when tapped, and **opening that page is what marks it read** — somebody who
+came to look has, by definition, looked. A hub that has only ever run the version it is on marks its own version read
+at startup and says nothing: somebody who has just plugged one in is being set up, not caught up.
+
+**Checked on the glass**, not only in tests: `WHATSNEW=1 npm run mock` puts both states in the panel. The first attempt
+put the lines in a `<ul>` inside the row and every line came out wearing the row's own pill, which is what looking at
+it is for; the second reads as prose, like every other row on that page.
+
+**What was verified.** Sixteen tests in `brain/tests/test_notes.py` over the parser (both sections, only one section,
+prose outside a heading, `*` bullets, nothing at all, the `v` prefix, a build with no notes), the history (newest by
+version and not by name, so `0.10.0` beats `0.9.0`; the README in that folder is not a release; no folder at all is an
+empty history and not a crash) and what the wall shows (nothing on a hub that has only ever run this version; once,
+and then not again, on one that updated; nothing for a release that shipped without notes; nothing for one with only
+a Details section, which is still readable on *This hub*). Nine cases against the checker: a commit subject, Home
+Assistant, entities, a filename, a commit hash, a container, no lines, too many lines, no file at all.
 
 ### 5. A hold and a rollout
 

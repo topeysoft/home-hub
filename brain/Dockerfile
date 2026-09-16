@@ -16,10 +16,13 @@ COPY brain/requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 COPY brain/ ./
 COPY sounds/ /srv/sounds/
+# What changed, in words a household reads. In the image rather than fetched, so the notes a hub
+# shows are the notes for the code it is running -- see brain/hub/notes.py and docs/updates.md.
+COPY releases/ /srv/releases/
 COPY --from=panel /app/dist /srv/app/dist
 ARG HUB_VERSION=dev
 ARG HUB_COMMIT=
-ENV HUB_DATA=/data HUB_PORT=8300 HUB_SOUNDS_LIBRARY=/srv/sounds PYTHONUNBUFFERED=1 HUB_VERSION=$HUB_VERSION HUB_COMMIT=$HUB_COMMIT
+ENV HUB_DATA=/data HUB_PORT=8300 HUB_SOUNDS_LIBRARY=/srv/sounds HUB_NOTES=/srv/releases PYTHONUNBUFFERED=1 HUB_VERSION=$HUB_VERSION HUB_COMMIT=$HUB_COMMIT
 VOLUME /data
 EXPOSE 8300
 CMD ["python", "main.py"]

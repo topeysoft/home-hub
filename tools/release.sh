@@ -82,8 +82,13 @@ echo "Signed with the key hubs know as $(basename "$SIGNER")."
 sed -n '2,12p' "$TMP/release.json"
 echo "  ...and the rest"
 
+NOTES="releases/${TAG#v}.md"
 if command -v gh >/dev/null 2>&1; then
   gh release upload "$TAG" "$TMP/release.json" "$TMP/release.json.sig" --clobber
+  # The release body is the notes file as written. A hub reads the same lines out of it to say what
+  # is waiting, where it used to show whatever the last commit subject happened to be; the copy that
+  # gets installed comes from inside the image, so these two can never disagree about a release.
+  [ -f "$NOTES" ] && gh release edit "$TAG" --notes-file "$NOTES"
   echo "Attached to the $TAG release. Hubs on the release channel can now install it."
 else
   cp "$TMP/release.json" "$TMP/release.json.sig" .

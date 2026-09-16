@@ -17,6 +17,10 @@ and it only ever reads it *after* the signature has been checked, so the parser 
 this tool wrote rather than at anything a stranger chose.
 """
 import base64, json, os, re, subprocess, sys, time, urllib.error, urllib.request
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "brain"))
+from hub import notes as release_notes            # noqa: E402 -- the path above is what makes it importable
 
 COMPOSE = "driver-layer/docker-compose.yml"
 BRAIN = "ghcr.io/topeysoft/home-hub-brain"
@@ -100,14 +104,51 @@ def rented() -> dict:
     return out
 
 
+# What a release note may not say. Deliberately short: a checker that tried to detect jargon in
+# general would either miss it or block a real sentence, and the point is to catch the three ways
+# these actually go wrong -- somebody pastes a commit subject, names a file, or writes for the repo.
+# The first three come straight from the rule the panel already holds: nothing on it ever mentions
+# Home Assistant, entities, or YAML.
+BANNED = [
+    (re.compile(r"home ?assistant", re.I), "the panel never names Home Assistant, and a release note is the panel"),
+    (re.compile(r"\bentit(y|ies)\b", re.I), "a household has lights and speakers, not entities"),
+    (re.compile(r"\b(yaml|docker|container|systemd|mqtt)\b", re.I), "a word from inside the hub, not from inside a house"),
+    (re.compile(r"\b[\w-]+\.(py|ts|vue|yml|yaml|sh|json|md)\b"), "a filename"),
+    (re.compile(r"^(feat|fix|chore|refactor|docs|test|perf)(\([^)]*\))?:", re.I), "a commit subject"),
+    (re.compile(r"\b(?=[0-9a-f]*\d)[0-9a-f]{7,40}\b"), "a commit hash"),
+]
+
+
+def read_notes(version: str) -> dict:
+    """The release's own notes, checked. A release without them does not ship.
+
+    Refusing here rather than warning is the point: the alternative is a family reading
+    `feat(sort): implement scrolling behavior for New devices list` off their kitchen wall, and
+    that only ever happens because nobody was stopped.
+    """
+    path = Path("releases") / f"{version}.md"
+    try: n = release_notes.parse(path.read_text())
+    except OSError:
+        raise SystemExit(f"No release notes at {path}.\n"
+                         f"  Every release ships with them -- see releases/README.md for the shape and the rules.")
+    if not n["what"]:
+        raise SystemExit(f"{path} has no 'What's new' lines. See releases/README.md.")
+    if len(n["what"]) > 6:
+        raise SystemExit(f"{path} has {len(n['what'])} 'What's new' lines. Two to four; the rest is Details.")
+    for line in n["what"]:
+        if len(line) > 160: raise SystemExit(f"{path}: this line is too long for a wall:\n  {line}")
+        for pattern, why in BANNED:
+            if pattern.search(line):
+                raise SystemExit(f"{path}: {why}:\n  {line}")
+    return n
+
+
 def main() -> int:
     if len(sys.argv) != 2: return print(__doc__, file=sys.stderr) or 2
     tag = sys.argv[1]
     commit = git("rev-list", "-n", "1", tag)
     version = tag.lstrip("vV")
-    notes_file = f"releases/{version}.md"                        # piece 4 writes these; empty until then
-    try: notes = open(notes_file).read().strip()
-    except OSError: notes = ""
+    notes = read_notes(version)
     found = rented()
     # A manifest that pins nothing is the failure this cannot be allowed to have: it verifies, it
     # installs, and every image comes down by tag exactly as if none of this existed.

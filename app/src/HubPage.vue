@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { store, notify } from './store'
-import { downloadBackup, requestUpdate, setAutoUpdate } from './api'
+import { downloadBackup, getUpdateNotes, markNotesRead, requestUpdate, setAutoUpdate, type UpdateNotes } from './api'
 import Restore from './Restore.vue'
 import AdvancedLink from './AdvancedLink.vue'
 
@@ -41,6 +41,15 @@ async function flipAuto() {
   catch (e: any) { notify(e.message, 'error') }
   autoBusy.value = false
 }
+/* What changed. Opening this page is what marks the morning-after card read: nothing vanishes under
+   a tap on Home, and somebody who came here to look has, by definition, looked. */
+const notes = ref<UpdateNotes | null>(null)
+const earlier = ref(false)
+const earlierReleases = computed(() => (notes.value?.history ?? []).filter(r => r.version !== notes.value?.notes?.version && r.what.length))
+onMounted(async () => {
+  try { notes.value = await getUpdateNotes() } catch { /* an older hub, or no notes in this build */ }
+  if (store.status?.update?.whats_new) { try { await markNotesRead() } catch { /* it will come back tomorrow */ } }
+})
 const when = (ts?: number | null) => ts ? new Date(ts * 1000).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' }) : ''
 </script>
 
@@ -58,9 +67,19 @@ const when = (ts?: number | null) => ts ? new Date(ts * 1000).toLocaleString([],
         <span class="hub-sub" v-else-if="update?.error">Couldn't check: no internet?</span>
         <span v-else></span>
       </li>
+      <li v-if="notes?.notes?.what?.length || earlierReleases.length">
+        <span class="hub-k">What's new</span>
+        <span class="hub-v">{{ notes?.notes?.what?.length ? notes.notes.what.join(' ') : 'Nothing was written down for this build.' }}
+          <template v-if="earlier">
+            <span class="was" v-for="r in earlierReleases" :key="r.version"><b>{{ r.version }}</b> {{ r.what.join(' ') }}</span>
+          </template>
+        </span>
+        <button class="button small" v-if="earlierReleases.length" @click="earlier = !earlier">{{ earlier ? 'Hide' : 'Earlier' }}</button>
+        <span v-else></span>
+      </li>
       <li>
         <span class="hub-k">Updates</span>
-        <span class="hub-v">{{ update?.auto ? 'Installed overnight, on their own.' : 'Installed when you tap, and not before.' }}<span class="hub-sub">{{ update?.verified ? ' Only ones this hub can check are installed.' : ' This hub has no way to check an update yet, so it waits to be asked.' }}</span></span>
+        <span class="hub-v">{{ update?.auto ? 'Installed overnight, on their own.' : 'Installed when you tap, and not before.' }}<span class="hub-sub">{{ update?.verified ? ' Only ones this hub can check, and it puts back any that won’t start.' : ' This hub can’t check an update yet, so it waits to be asked.' }}</span></span>
         <button class="toggle" role="switch" :aria-checked="!!update?.auto" aria-label="Install updates overnight" :class="{ on: update?.auto, busy: autoBusy }" @click="flipAuto"><span class="knob"></span></button>
       </li>
       <li>
@@ -77,3 +96,10 @@ const when = (ts?: number | null) => ts ? new Date(ts * 1000).toLocaleString([],
     <AdvancedLink />
   </div>
 </template>
+
+<style scoped>
+/* One earlier release per line, quieter than the one this hub is on. Kept here rather than in
+   panel.css: it is three declarations and only this page has them. */
+.was { display: block; margin-top: 0.45em; font-size: 0.92em; opacity: 0.55; }
+.was b { font-weight: 600; margin-right: 0.35em; }
+</style>

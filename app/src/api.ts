@@ -12,7 +12,11 @@ export type Part = { id: string; name: string; state: 'unknown' | 'off' | 'addin
    branch, for a hub being worked on). `available` is null when the hub genuinely cannot tell, and
    `offer` is the same answer minus a version that was installed, would not start, and was put back:
    the hub stops raising that one on its own, and the button under This hub still installs it. */
-export type Update = { version: string; commit: string; channel: 'release' | 'main'; latest: { version: string; sha: string; when: string; title: string } | null; available: boolean | null; offer: boolean | null; rejected: string | null; auto: boolean; verified: boolean; checked: number | null; requested: boolean; state: { state: 'running' | 'done' | 'failed' | 'reverted' | 'refused'; started?: number; finished?: number; commit?: string; to?: string; bad?: string; reverted?: boolean } | null; error: string | null }
+/** What changed, in words a household reads. Written by hand into releases/<version>.md and shipped
+   inside the brain's image, so these are the notes for the code this hub is actually running. */
+export type ReleaseNotes = { version: string; what: string[]; details: string }
+export type UpdateNotes = { notes: ReleaseNotes | null; history: ReleaseNotes[] }
+export type Update = { version: string; commit: string; channel: 'release' | 'main'; latest: { version: string; sha: string; when: string; title: string; what: string[] } | null; whats_new: ReleaseNotes | null; available: boolean | null; offer: boolean | null; rejected: string | null; auto: boolean; verified: boolean; checked: number | null; requested: boolean; state: { state: 'running' | 'done' | 'failed' | 'reverted' | 'refused'; started?: number; finished?: number; commit?: string; to?: string; bad?: string; reverted?: boolean } | null; error: string | null }
 export type Status = { driver: Driver; reason: string; setup_done: boolean; locked?: boolean; owner: string | null; home: string | null; location: boolean; rooms: number; devices: number; drivers: Part[]; problems?: Problem[]; version?: string; update?: Update }
 /* One job on Needs a look. The brain writes every word of it, including the words on the buttons: the
    panel does not know what it is looking at, so it draws `acts` and invents nothing. `with` is what went
@@ -174,6 +178,12 @@ export async function getRoutines(): Promise<RoutineFile> {
 export const requestUpdate = () => post<Update>('/update')
 /** Whether the hub installs updates in the night on its own. */
 export const setAutoUpdate = (auto: boolean) => post<Update>('/update/auto', { auto })
+/** This build's notes and every release before it the image carries. */
+export async function getUpdateNotes(): Promise<UpdateNotes> {
+  const r = await request('/update/notes'); if (!r.ok) await fail(r); return r.json()
+}
+/** Somebody has read what's new; the card does not come back. */
+export const markNotesRead = () => post<Update>('/update/notes/seen')
 /** The house as one file, fetched with the code and handed to the browser as a download. */
 export async function downloadBackup(): Promise<void> {
   const r = await request('/backup'); if (!r.ok) await fail(r)

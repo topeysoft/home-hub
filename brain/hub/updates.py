@@ -21,6 +21,7 @@ worked on wants. install.sh writes HUB_CHANNEL into the compose environment; not
 import asyncio, hashlib, json, logging, os, re, time, urllib.request
 from datetime import datetime
 
+from . import notes
 from .settings import DATA
 
 log = logging.getLogger("hub.updates")
@@ -55,6 +56,10 @@ class Updates:
         self.verified = (os.environ.get("HUB_VERIFIED") or "") == "1"
         self.latest, self.checked, self.error = None, None, None
         self.asked_at = 0.0               # when this hub last installed something without being asked
+        # A hub that has only ever run this version has nothing to announce: somebody who has just
+        # plugged one in is being set up, not caught up. So the first version a hub sees is marked
+        # read, and the card is for the ones after it.
+        if self.hub.settings.get("notes_seen") is None: self.hub.settings.set(notes_seen=self.version)
 
     @property
     def available(self):
@@ -124,6 +129,27 @@ class Updates:
         if not self.minute_of_the_night() <= minute < (WINDOW[1] - WINDOW[0]) * 60: return False
         return not self.busy(now)
 
+    def notes(self) -> dict | None:
+        """What changed in the version this hub is running, or None if it carries no notes."""
+        return notes.read(self.version)
+
+    @property
+    def whats_new(self) -> dict | None:
+        """The notes to put on the wall, or None. Cleared by reading them, and never shown twice.
+
+        This is where piece 4 pays for pieces 1 to 3: with the hub updating itself overnight, nobody
+        is ever standing in front of a release note before it installs, so the notes belong here --
+        the morning after, once, on the screen somebody walks past anyway.
+        """
+        if self.hub.settings.get("notes_seen") == self.version: return None
+        n = self.notes()
+        return n if n and n["what"] else None
+
+    def read_notes(self) -> dict:
+        """Somebody has seen what is new. It does not come back."""
+        self.hub.settings.set(notes_seen=self.version)
+        self._tell(); return self.summary()
+
     def state(self):
         try: return json.loads(STATE.read_text())
         except (OSError, ValueError): return None
@@ -156,7 +182,7 @@ class Updates:
     def summary(self) -> dict:
         return {"version": self.version, "commit": self.commit[:12], "channel": self.channel, "latest": self.latest,
                 "available": self.available, "offer": self.offer, "rejected": self.rejected() or None,
-                "auto": self.auto, "verified": self.verified,
+                "auto": self.auto, "verified": self.verified, "whats_new": self.whats_new,
                 "checked": self.checked, "requested": REQUEST.exists(),
                 "state": self.state(), "error": self.error}
 
@@ -167,8 +193,12 @@ class Updates:
                     "title": d["commit"]["message"].splitlines()[0][:120]}
         d = _get(RELEASE_API)
         # A release with no title of its own is named by its tag; the panel puts this in a sentence.
+        # `what` is the same lines that ship inside the next image, taken here from the release body
+        # so a household can read what is waiting rather than a commit subject. It describes and
+        # never decides -- nothing here is signed, and what actually installs is the host's business.
         return {"version": d["tag_name"], "sha": d.get("target_commitish") or "",
-                "when": d.get("published_at") or "", "title": (d.get("name") or d["tag_name"])[:120]}
+                "when": d.get("published_at") or "", "title": (d.get("name") or d["tag_name"])[:120],
+                "what": [line[:160] for line in notes.parse(d.get("body") or "")["what"][:4]]}
 
     async def check(self) -> dict:
         was = self.offer

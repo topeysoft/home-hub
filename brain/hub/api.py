@@ -20,6 +20,7 @@ from .comfort import Comfort
 from .rules import Engine
 from .presence import Presence, WATCHED, word as presence_word
 from .assistant import Assistant, AssistantError
+from . import notes as notes_mod
 from .updates import Updates
 from .health import Health
 from .backup import Backup
@@ -1481,6 +1482,18 @@ async def update_check(): return await hub.updates.check()
 def update_request():
     """Install the update: the host does it, the panel watches. Behind the settings code."""
     return hub.updates.request()
+
+
+@app.get("/update/notes")
+def update_notes():
+    """What changed: this build's own notes, and every release before it the image carries."""
+    return {"notes": hub.updates.notes(), "history": notes_mod.history()}
+
+
+@app.post("/update/notes/seen")
+def update_notes_seen():
+    """Somebody read what was new. Dismissing a card is not a change to the house, so no code."""
+    return hub.updates.read_notes()
 
 
 @app.post("/update/auto")

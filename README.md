@@ -115,8 +115,11 @@ container before the Pi's first start so the two do not fight over Ring's token.
   house for anything for half an hour. One switch under *This hub* turns that off and it stays off; a hub with no
   release keys waits to be asked, because updating by itself from something nothing checks is the supply-chain
   problem with the person taken out of it. An automatic install is logged as the hub's doing, not a person's.
-  The plan for the rest — release notes written for a house, and a hold to stop a bad release spreading — is
-  `docs/updates.md`.
+  **What changed is on the wall the next morning**, in a house's own words: `releases/<version>.md` is written by
+  hand, ships inside the image, and is refused by `tools/release-manifest.py` if it is missing or reads like a
+  changelog — no filenames, no containers, no commit subjects, and never Home Assistant. The card opens *This hub*,
+  where the current release and every one before it that the build carries are kept. The plan for the rest — a hold
+  to stop a bad release spreading — is `docs/updates.md`.
 - Health: Home has a quiet *Needs a look* list when something is off: a device offline since Tuesday, storage nearly
   full, a driver that wants signing in, an update that did not finish. `GET /health`; the words come from the brain.
   A line that can be acted on carries the way to do it, so none of them sends anyone to Home Assistant: an account whose

@@ -36,6 +36,15 @@ const update = computed(() => store.status?.update ?? null)
 const updateReady = computed(() => !!update.value?.offer && update.value?.state?.state !== 'running' && !update.value?.requested && !store.updating)
 const updateBusy = computed(() => store.updating || !!update.value?.requested || update.value?.state?.state === 'running')
 
+/* What changed, the morning after the hub updated itself. Since piece 4 of docs/updates.md the
+   ordinary way an update happens is overnight, so nobody is ever standing in front of a release note
+   before it installs -- this is the only place the notes get read, and the card carries the words
+   themselves rather than a link to them.
+
+   Tapping opens This hub, where the notes live, and does not clear the card under the finger:
+   opening that page is what marks them read. */
+const whatsNew = computed(() => store.status?.update?.whats_new ?? null)
+
 /* on a phone that is still in a browser tab: offer the home-screen install once, with the steps for this phone */
 const onPhone = matchMedia('(max-width: 860px)').matches
 const standalone = matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true
@@ -69,6 +78,10 @@ defineExpose({ updateReady })
     <span class="nudge-icon pulse"><Icon name="refresh" :size="20" /></span>
     <span class="nudge-text"><span class="nudge-title">Updating the hub</span><span class="nudge-sub">This screen will blink and come back on its own. Nothing needs doing.</span></span>
   </div>
+  <button class="nudge" v-if="whatsNew" @click="store.sheet = 'hub'">
+    <span class="nudge-icon"><Icon name="sparkle" :size="20" /></span>
+    <span class="nudge-text"><span class="nudge-title">What's new</span><span class="nudge-sub">{{ whatsNew.what.join(' ') }}</span></span>
+  </button>
   <button class="nudge" v-if="store.found.length" @click="store.sheet = 'add'">
     <span class="nudge-icon"><Icon name="sparkle" :size="20" /></span>
     <span class="nudge-text"><span class="nudge-title">{{ store.found.length === 1 ? `Found ${store.found[0].title}` : `Found ${store.found.length} new things nearby` }}</span><span class="nudge-sub">{{ store.found.length === 1 ? 'Tap to add it to the house.' : store.found.slice(0, 3).map(f => f.title).join(', ') + (store.found.length > 3 ? '…' : '') }}</span></span>

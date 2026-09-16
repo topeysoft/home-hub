@@ -75,6 +75,19 @@ const status = { driver: process.env.ENGINE === 'down' ? 'down' : 'ready', reaso
     { id: 'matter', name: 'Matter', state: 'ready', text: 'Running', port: 5580 },
     { id: 'ring', name: 'Ring', state: 'sign-in', text: 'Needs a sign-in', port: 55123 },
   ], problems: [] }
+/* What changed, in a house's words (docs/updates.md piece 4). Off unless asked for, so the panel's
+   ordinary previews and the e2e run see the hub page exactly as they did before: WHATSNEW=1 puts the
+   morning-after card on Home and the What's new row under This hub. */
+const releaseNotes = [
+  { version: '0.3.0', what: ['Speakers remember how loud you had them.', 'The kitchen comes up on the wall faster after the hub restarts.'], details: 'Longer, for whoever goes looking.' },
+  { version: '0.2.2', what: ['Blinds stop where you let go of them.'], details: '' },
+]
+if (process.env.WHATSNEW === '1') {
+  status.version = 'v0.3.0'
+  status.update = { version: 'v0.3.0', commit: 'abc123def456', channel: 'release', latest: null, whats_new: releaseNotes[0],
+                    available: false, offer: false, rejected: null, auto: true, verified: true,
+                    checked: Date.now() / 1000, requested: false, state: null, error: null }
+}
 // who the house knows and who is in, for the household strip; PEOPLE=0 is a house with nobody set up
 const presence = process.env.PEOPLE === '0'
   ? { somebody: null, since: null, source: null, people: [], alarm: null }
@@ -223,6 +236,8 @@ const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://x')
   const p = url.pathname
   if (p === '/setup/status') return json(res, status)
+  if (p === '/update/notes') return json(res, { notes: releaseNotes[0], history: releaseNotes })
+  if (p === '/update/notes/seen' && req.method === 'POST') { if (status.update) status.update.whats_new = null; return json(res, status.update ?? {}) }
   if (p === '/home') return json(res, home)
   if (p === '/ambient') return json(res, ambient)
   if (p === '/presence') return json(res, presence)
