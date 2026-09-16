@@ -29,6 +29,7 @@ REPO = os.environ.get("HUB_REPO") or "topeysoft/home-hub"
 RELEASE_API = f"https://api.github.com/repos/{REPO}/releases/latest"
 MAIN_API = f"https://api.github.com/repos/{REPO}/commits/main"
 EVERY = 6 * 3600
+RECHECK = 5 * 60                      # how soon opening This hub can make the hub ask GitHub again
 TICK = 300                            # how often the loop looks at the clock, as against at GitHub
 WINDOW = (2, 5)                       # the local hours a house is most likely to be asleep
 QUIET = 30 * 60                       # ...and how long since anybody asked the house for anything
@@ -249,6 +250,20 @@ class Updates:
         self.checked = time.time()
         if self.offer != was: self._tell()
         return self.summary()
+
+    async def check_now(self) -> dict:
+        """Somebody opened This hub. Ask again now, unless the hub asked a few minutes ago.
+
+        The page is the affordance: opening it is the check, the "checked" time under the version
+        is the answer, and the Install button appears on its own if there is something. There is
+        deliberately no "Check for updates" button to explain -- a hub that needs one is a hub
+        confessing it might be lying about "Up to date". The throttle is for GitHub's rate limit
+        and for a wall that is tapped in and out of settings ten times in a minute; a failed check
+        counts as a look too, so a house with no internet is not asked to wait twenty seconds on
+        every open.
+        """
+        if self.checked and time.time() - self.checked < RECHECK: return self.summary()
+        return await self.check()
 
     async def run(self):
         await asyncio.sleep(90)            # let the house come up first

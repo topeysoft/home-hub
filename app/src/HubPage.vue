@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { store, notify } from './store'
-import { downloadBackup, getUpdateNotes, markNotesRead, requestUpdate, setAutoUpdate, type UpdateNotes } from './api'
+import { checkForUpdate, downloadBackup, getUpdateNotes, markNotesRead, requestUpdate, setAutoUpdate, type UpdateNotes } from './api'
 import Restore from './Restore.vue'
 import AdvancedLink from './AdvancedLink.vue'
 
@@ -53,6 +53,10 @@ const earlierReleases = computed(() => (notes.value?.history ?? []).filter(r => 
 onMounted(async () => {
   try { notes.value = await getUpdateNotes() } catch { /* an older hub, or no notes in this build */ }
   if (store.status?.update?.whats_new) { try { await markNotesRead() } catch { /* it will come back tomorrow */ } }
+  /* Opening this page is also the check for an update: no button to explain, "checked just now" under
+     the version is the answer, and Install appears by itself if there is one. Last, because it can
+     take the brain a few seconds to hear back, and the notes should not wait on it. */
+  try { const u = await checkForUpdate(); if (store.status) store.status.update = u } catch { /* offline, or an older hub: the row already says so */ }
 })
 const when = (ts?: number | null) => ts ? new Date(ts * 1000).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' }) : ''
 </script>

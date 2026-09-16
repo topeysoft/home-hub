@@ -472,3 +472,40 @@ class NightlyTests(UpdateTest):
         u.request(source="hub")
         self.assertEqual(self.hub.log.rows[-1]["source"], "hub")
         self.assertEqual(self.hub.log.rows[-1]["new"], "v1.3.0")
+
+
+class OpeningThisHubTests(UpdateTest):
+    """Opening This hub is the check: it asks GitHub now, unless the hub asked a few minutes ago."""
+    def setUp(self):
+        super().setUp()
+        self.u = self.make(version="v1.2.0"); self.asked = 0
+        def fetch():
+            self.asked += 1; return self.release("v1.3.0")()
+        self.u.fetch = fetch
+        self.now = 1_000_000.0
+
+    async def test_opening_the_page_asks(self):
+        with mock.patch("hub.updates.time.time", return_value=self.now):
+            self.assertTrue((await self.u.check_now())["available"])
+        self.assertEqual(self.asked, 1)
+
+    async def test_opening_it_again_a_minute_later_does_not_ask_twice(self):
+        with mock.patch("hub.updates.time.time", return_value=self.now): await self.u.check_now()
+        with mock.patch("hub.updates.time.time", return_value=self.now + 60): out = await self.u.check_now()
+        self.assertEqual(self.asked, 1)
+        self.assertTrue(out["available"])          # the answer from a minute ago, not nothing
+        self.assertEqual(out["checked"], self.now)
+
+    async def test_and_asks_again_once_the_few_minutes_are_up(self):
+        with mock.patch("hub.updates.time.time", return_value=self.now): await self.u.check_now()
+        with mock.patch("hub.updates.time.time", return_value=self.now + updates.RECHECK + 1): await self.u.check_now()
+        self.assertEqual(self.asked, 2)
+
+    async def test_a_failed_look_counts_as_a_look(self):
+        def fetch():
+            self.asked += 1; raise OSError("no internet")
+        self.u.fetch = fetch
+        with mock.patch("hub.updates.time.time", return_value=self.now): out = await self.u.check_now()
+        self.assertIsNotNone(out["error"])
+        with mock.patch("hub.updates.time.time", return_value=self.now + 60): await self.u.check_now()
+        self.assertEqual(self.asked, 1)

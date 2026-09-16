@@ -1475,7 +1475,9 @@ def update_status(): return hub.updates.summary()
 
 
 @app.post("/update/check")
-async def update_check(): return await hub.updates.check()
+async def update_check():
+    """The panel opened This hub: look for a newer build now. Throttled; changes nothing in the house, so no code."""
+    return await hub.updates.check_now()
 
 
 @app.post("/update")

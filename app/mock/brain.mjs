@@ -237,6 +237,7 @@ const server = http.createServer((req, res) => {
   const p = url.pathname
   if (p === '/setup/status') return json(res, status)
   if (p === '/update/notes') return json(res, { notes: releaseNotes[0], history: releaseNotes })
+  if (p === '/update/check' && req.method === 'POST') { if (status.update) status.update.checked = Date.now() / 1000; return json(res, status.update ?? {}) }
   if (p === '/update/notes/seen' && req.method === 'POST') { if (status.update) status.update.whats_new = null; return json(res, status.update ?? {}) }
   if (p === '/home') return json(res, home)
   if (p === '/ambient') return json(res, ambient)

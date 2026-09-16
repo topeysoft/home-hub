@@ -176,6 +176,8 @@ export async function getRoutines(): Promise<RoutineFile> {
   const r = await request('/rules'); if (!r.ok) await fail(r); return r.json()
 }
 export const requestUpdate = () => post<Update>('/update')
+/** Somebody opened This hub: look for a newer build now rather than at the hub's next look. Throttled on the brain. */
+export const checkForUpdate = () => post<Update>('/update/check')
 /** Whether the hub installs updates in the night on its own. */
 export const setAutoUpdate = (auto: boolean) => post<Update>('/update/auto', { auto })
 /** This build's notes and every release before it the image carries. */
