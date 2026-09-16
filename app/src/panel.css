@@ -2045,6 +2045,12 @@ input:focus-visible {
   .room {
     display: block;
   }
+  /* the stage is the scroller again here, so New devices gives the axis back
+     rather than putting a second one inside the first */
+  .sort {
+    overflow-y: visible;
+    min-height: auto;
+  }
   .tiles {
     grid-auto-flow: row;
     grid-template-rows: none;
@@ -3752,14 +3758,30 @@ select.input {
 }
 
 /* placing new devices */
+/* This list is the one that MOVES. New devices borrows `.room` for its shell,
+   so it inherits the rule above that stops the stage scrolling -- and that rule
+   is right for a room, where what overflows goes sideways and the way back can
+   never be scrolled off the top. This screen has no sideways anything: it is a
+   column of rows, and a house with more unplaced things than fit a screen had
+   the rest of them simply out of reach, under the command box, with nothing to
+   scroll. Fourteen found devices on a 1280x800 wall put the last one at y 1408.
+
+   So the scroll goes on the list rather than back on the stage, which keeps
+   what that rule was protecting: the head does not move, the way back stays
+   where a thumb left it, and the only thing that travels is the thing there is
+   more of. Below 860 the stage scrolls again (see the phone block) and the
+   list hands the axis back, so a phone keeps one scroll rather than two. */
 .sort {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 0 0 8px;
   display: flex;
   flex-direction: column;
   gap: 10px;
   max-width: 760px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
 }
 .sort-row {
   display: grid;
@@ -4611,6 +4633,7 @@ select.input {
 /* ---------- placing new things: what the brain proposes ---------- */
 .suggest-bar {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: space-between;
   gap: 14px;
