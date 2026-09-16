@@ -101,6 +101,9 @@ finish() {  # state, extra json
 }
 
 rm -f "$REFUSED"
+# The last word on whether this release is still wanted, asked now rather than up to half an hour
+# ago: a hold published while the house was asleep should stop the install it was published to stop.
+systemctl start home-hub-channel.service >/dev/null 2>&1 || HOME_HUB_DIR="$DIR" "$DIR/driver-layer/host/channel.sh" >/dev/null 2>&1 || true
 HOME_HUB_DIR="$DIR" HOME_HUB_CHANNEL="$CHANNEL" "$DIR/install.sh" > "$LOG" 2>&1
 RC=$?
 

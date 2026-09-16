@@ -43,6 +43,14 @@ older_than() {  # older_than A B -> true when A sorts before B by version
 # 0: verified, and VERIFIED_COMMIT / HUB_BRAIN_IMAGE / HUB_IMG_* are set
 # 1: could not be verified -- do not install this
 # 2: this hub has no key yet, so there is nothing to verify against
+# Is the maker withholding this release? The file is the host's own -- channel.sh wrote it after
+# checking the signature -- so reading it here is reading something only root put there. No file
+# means nothing is held, which is the failure direction this whole mechanism is allowed to have.
+held_back() {  # version, channel file
+  [ -s "$2" ] || return 1
+  sed -n '/"hold"/,/]/p' "$2" | grep -q "\"$1\""
+}
+
 # Does any key this hub holds vouch for these bytes?
 signed_by_us() {  # file, signature
   local key
@@ -66,6 +74,12 @@ verify_release() {
   fi
   if ! signed_by_us "$tmp/release.json" "$tmp/release.json.sig"; then
     echo "  $tag is not signed by any key this hub trusts, so it is not being installed"; return 1
+  fi
+
+  # Before anything else about the release: has the maker pulled it since it was signed? A manifest
+  # is signed once and cannot say this, which is the whole reason the channel file exists.
+  if held_back "$tag" "${HOME_HUB_CHANNEL_FILE:-$dir/driver-layer/brain-data/channel.json}"; then
+    echo "  $tag has been held back by the maker, so it is not being installed"; return 1
   fi
 
   want="$(mf version "$tmp/release.json")"

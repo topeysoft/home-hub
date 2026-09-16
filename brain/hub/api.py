@@ -1481,7 +1481,8 @@ async def update_check(): return await hub.updates.check()
 @app.post("/update")
 def update_request():
     """Install the update: the host does it, the panel watches. Behind the settings code."""
-    return hub.updates.request()
+    try: return hub.updates.request()
+    except ValueError as e: raise HTTPException(409, str(e))
 
 
 @app.get("/update/notes")

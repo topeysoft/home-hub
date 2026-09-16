@@ -19,12 +19,16 @@ class UpdateTest(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.dir = tempfile.TemporaryDirectory(); d = Path(self.dir.name)
         self.keep = (updates.REQUEST, updates.STATE)
+        self.keep_channel = updates.CHANNEL
         updates.REQUEST, updates.STATE = d / "update.request", d / "update.json"
+        updates.CHANNEL = d / "channel.json"
         self.hub = FakeHub()
         self.hub.status = lambda: {"update": self.hub.updates.summary()}
 
     def tearDown(self):
-        updates.REQUEST, updates.STATE = self.keep; self.dir.cleanup()
+        updates.REQUEST, updates.STATE = self.keep
+        updates.CHANNEL = self.keep_channel
+        self.dir.cleanup()
 
     def make(self, version="v1.2.0", commit="a" * 40, channel="release", verified=""):
         with mock.patch.dict(os.environ, {"HUB_VERSION": version, "HUB_COMMIT": commit, "HUB_CHANNEL": channel,
@@ -245,6 +249,101 @@ if __name__ == "__main__":
     unittest.main()
 
 
+class HoldAndRolloutTests(UpdateTest):
+    """What the maker is saying about releases right now. docs/updates.md, piece 5."""
+
+    def channel(self, **doc):
+        updates.CHANNEL.parent.mkdir(parents=True, exist_ok=True)
+        updates.CHANNEL.write_text(json.dumps({"schema": 1, "made": "2026-09-16T00:00:00Z"} | doc))
+
+    def waiting(self, version="v1.3.0"):
+        u = self.make(version="v1.2.0", verified="1")
+        u.latest = self.release(version)()
+        return u
+
+    # ---- a hold ----
+    def test_a_held_release_is_not_offered_installed_or_tappable(self):
+        u = self.waiting()
+        self.assertTrue(u.offer)
+        self.channel(hold=["v1.3.0"])
+        self.assertTrue(u.available)                       # it still exists; that has not changed
+        self.assertFalse(u.offer)
+        self.assertTrue(u.summary()["held"])
+        with self.assertRaises(ValueError): u.request()    # the panel gets a sentence, not a restart
+
+    def test_the_v_is_not_what_makes_two_versions_different_here_either(self):
+        u = self.waiting()
+        self.channel(hold=["1.3.0"])
+        self.assertTrue(u.held())
+
+    def test_a_hold_on_some_other_release_changes_nothing(self):
+        u = self.waiting()
+        self.channel(hold=["v1.2.9", "v1.4.0"])
+        self.assertTrue(u.offer)
+        self.assertFalse(u.summary()["held"])
+
+    def test_no_channel_file_means_nothing_is_held(self):
+        # The direction this is allowed to fail in: the alternative hands anybody who can block a
+        # network the power to freeze every hub on the version it is on.
+        u = self.waiting()
+        self.assertFalse(u.held())
+        self.assertTrue(u.offer)
+
+    def test_a_channel_file_that_got_mangled_does_not_take_the_panel_down(self):
+        u = self.waiting()
+        updates.CHANNEL.parent.mkdir(parents=True, exist_ok=True)
+        updates.CHANNEL.write_text("{half a file")
+        self.assertEqual(u.channel_says(), {})
+        self.assertTrue(u.offer)
+
+    # ---- and a rollout ----
+    def test_a_release_only_part_way_out_reaches_some_houses_and_not_others(self):
+        seen = []
+        for n in range(40):
+            self.hub.settings.data["hub_id"] = f"hub{n}"
+            u = self.waiting()
+            self.channel(rollout={"v1.3.0": 0.25})
+            seen.append(u.reached_us())
+        self.assertTrue(any(seen))
+        self.assertTrue(any(not x for x in seen))
+        self.assertLess(sum(seen), 30)                     # a quarter, give or take, and nothing like all
+
+    def test_all_the_way_out_reaches_everybody(self):
+        for n in range(10):
+            self.hub.settings.data["hub_id"] = f"hub{n}"
+            u = self.waiting()
+            self.channel(rollout={"v1.3.0": 1})
+            self.assertTrue(u.reached_us())
+
+    def test_the_same_houses_are_not_first_every_time(self):
+        """The version is mixed into the hash on purpose. Hashing the id alone would make one
+        unlucky tenth of houses the guinea pigs for every release this hub ever ships."""
+        self.hub.settings.data["hub_id"] = "a-particular-house"
+        first = []
+        for n in range(3, 40):
+            v = f"v1.{n}.0"
+            u = self.waiting(v)
+            self.channel(rollout={v: 0.25})
+            first.append(u.reached_us())
+        self.assertTrue(any(first))
+        self.assertTrue(any(not x for x in first))
+
+    def test_a_share_nobody_can_read_is_not_a_hold(self):
+        u = self.waiting()
+        self.channel(rollout={"v1.3.0": "a quarter"})
+        self.assertTrue(u.reached_us())
+
+    def test_a_rollout_slows_the_hub_down_and_never_a_person(self):
+        """Somebody standing at the wall with Install in front of them has decided. Being in the
+        second nine tenths is a reason for the hub to wait and not a reason to refuse them."""
+        self.hub.settings.data["hub_id"] = "not-in-the-first-tenth"
+        u = self.waiting()
+        self.channel(rollout={"v1.3.0": 0.0})
+        self.assertFalse(u.reached_us())
+        self.assertTrue(u.offer)                           # still offered, and the button still works
+        self.assertTrue(u.request()["requested"])
+
+
 class NightlyTests(UpdateTest):
     """The hub installing an update by itself, in the small hours. docs/updates.md, piece 3."""
 
@@ -296,6 +395,12 @@ class NightlyTests(UpdateTest):
         u = self.ready()
         self.assertFalse(u.due(self.tonight(u, past=-1)))
         self.assertTrue(u.due(self.tonight(u, past=0)))
+
+    def test_a_release_that_has_not_reached_this_house_yet_is_not_installed_in_the_night(self):
+        u = self.ready()
+        self.hub.settings.data["hub_id"] = "not-in-the-first-tenth"
+        updates.CHANNEL.write_text(json.dumps({"rollout": {"v1.3.0": 0.0}}))
+        self.assertFalse(u.due(self.tonight(u)))
 
     def test_a_hub_busy_at_its_own_minute_tries_again_later_the_same_night(self):
         # Rather than waiting a whole day, which is a day spent on the version that had the bug.

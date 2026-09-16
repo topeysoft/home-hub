@@ -308,7 +308,7 @@ and then not again, on one that updated; nothing for a release that shipped with
 a Details section, which is still readable on *This hub*). Nine cases against the checker: a commit subject, Home
 Assistant, entities, a filename, a commit hash, a container, no lines, too many lines, no file at all.
 
-### 5. A hold and a rollout
+### 5. A hold and a rollout *(landed 16 September 2026, except the telemetry)*
 
 ~~**A stable hub identifier**~~ — **done with piece 3.** `Settings.hub_id()`, and `minute_of_the_night()` is the
 worked example of hashing it into a bucket that piece 5 repeats against `rollout`.
@@ -321,6 +321,55 @@ it in a house.
 **One line of telemetry**, opt-out, and it needs to be small enough to describe in a sentence on the panel: the hub
 identifier, the version it moved from, the version it moved to, and whether it worked. Nothing about the house, ever.
 Without it a rollout that is failing looks exactly like a rollout that is going fine.
+
+**Not built, and deliberately.** It is the only thing on this list that needs somewhere to send it, and that somewhere
+is maker infrastructure — a small endpoint and something to keep the rows in — which is Terraform and a Cloudflare
+account, not code in this repository. Building the hub half of it now would mean a switch on the panel that promises a
+maker is watching when nobody is, which is the one thing this document has said not to do at every other turn. It
+waits for the endpoint, and it should be built together with the relay's registration service (`docs/away.md` piece 2)
+rather than separately: both want one small thing the maker runs, and a hub identity to speak to it with.
+
+**What landed.** `tools/channel.py` publishes it (`show`, `hold`, `unhold`, `out <version> <share>`), signing with the
+same key as a release and attaching it to a fixed `channel` release — so a hold goes up in seconds with `gh` and
+needs no infrastructure at all, which is why this piece did not have to wait for any. `driver-layer/host/channel.sh`
+fetches and checks it every half hour (`home-hub-channel.timer`) and again immediately before any install, and writes
+the verified copy into the data volume. `Updates.held()` and `Updates.reached_us()` read that copy.
+
+**The host checks it and the brain only reads the result**, which is the answer to the question this piece opened
+with. The brain has no ed25519 anywhere in its dependencies, so a channel file it fetched itself would be a stranger's
+word about whether this house should update. The split already existed for releases; this reuses it exactly.
+
+**Three rules, and the reasoning is the design.**
+
+- **It may only ever slow a hub down.** There is deliberately no way to say *install this version*. A file that could
+  name a release could name an old one, and a downgrade is the one thing a signature over a release cannot protect a
+  house from. Withholding is all it does.
+- **Missing, stale or unsigned means no hold.** Failing the other way hands anybody who can block a network the power
+  to freeze every hub on the version it is on — and the whole point of piece 3 is that updates actually land. A hold
+  is a maker's convenience; the signature over the release is the security control.
+- **`made` is inside the signature**, so an old file cannot be replayed as a new one, and after thirty days it is
+  ignored anyway. That bounds how long a replayed hold can withhold anything. A hold meant to outlive that gets
+  re-signed, which is one command.
+
+**A hold stops a person's tap too; a rollout never does.** They are different statements. *This release is broken* is
+worth more than a household's guess that it might be fine, so the button goes away and the panel says who paused it.
+*This release has only gone to a tenth of houses* is not about this house at all — somebody standing at the wall with
+Install in front of them has decided, and being in the second nine tenths is a reason for the hub to wait, not a
+reason to refuse them.
+
+**The version is mixed into the rollout hash**, not just the hub id. Hashing the id alone would make one unlucky tenth
+of houses the first to take every release this hub ever ships — a thing to do to a test fleet and not to somebody's
+home.
+
+**What was verified.** Eleven tests over the brain's half (a held release is not offered, not installed and not
+tappable, and `available` stays true because it is still true; the `v` prefix; a hold on some other release; no file;
+a mangled file; a quarter of forty hubs and not all of them; all the way out reaching everybody; the same house not
+being first for every version; an unreadable share not acting as a hold; a rollout not blocking a person) and one
+more in the nightly set. And the host's half stood up against a real keypair and a `file://` releases server: a
+genuine hold refuses the install with a sentence naming it, a hold signed by another key is not even written to disk,
+a genuine hold replayed from a year ago is ignored as stale, and a maker who stops publishing withholds nothing.
+That harness earned itself twice over — the first run passed every case while `channel.sh` was silently failing to
+find `verify.sh`, so nothing was being checked at all, and the guard that now catches that came out of it.
 
 ## One thing to fix regardless of all of the above
 

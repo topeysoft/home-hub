@@ -35,6 +35,7 @@ QUIET = 30 * 60                       # ...and how long since anybody asked the 
 RETRY = 12 * 3600                     # one go a night, so a failing update does not run all night
 REQUEST = DATA / "update.request"     # the panel asked; the host's home-hub-update.path is watching for this file
 STATE = DATA / "update.json"          # written by the host's update.sh: running, done or failed
+CHANNEL = DATA / "channel.json"       # written by the host's channel.sh, after it checked the signature
 RELEASE = re.compile(r"^v?\d+\.\d+")  # what a version tag looks like, next to "dev" and "main-1a2b3c4"
 
 
@@ -120,6 +121,10 @@ class Updates:
         """Should this hub install, by itself, right now?"""
         now = now or time.time()
         if not (self.auto and self.offer): return False
+        # A staged release slows the hub down and never a person: somebody standing at the wall with
+        # Install in front of them has decided, and being in the second nine tenths is not a reason
+        # to refuse them. This is the only place it applies.
+        if not self.reached_us(): return False
         if now - self.asked_at < RETRY: return False                     # it has had its go tonight
         if REQUEST.exists() or (self.state() or {}).get("state") == "running": return False
         here = datetime.fromtimestamp(now, self.hub.tz)
@@ -154,6 +159,40 @@ class Updates:
         try: return json.loads(STATE.read_text())
         except (OSError, ValueError): return None
 
+    def channel_says(self) -> dict:
+        """What the maker is saying about releases right now, as against what a release is.
+
+        The host fetched this and checked it against the same keys as a release (host/channel.sh);
+        the brain could not have, having no ed25519 anywhere in its dependencies. No file is the
+        answer "nothing is held and everything is fully out", which is the direction this is allowed
+        to fail in: the alternative hands anybody who can block a network the power to freeze every
+        hub on the version it is on.
+        """
+        try: return json.loads(CHANNEL.read_text())
+        except (OSError, ValueError): return {}
+
+    def held(self, version: str | None = None) -> bool:
+        """Has the maker pulled this release since signing it? Nothing installs it, asked or not."""
+        v = self._norm(version or (self.latest or {}).get("version") or "")
+        return bool(v) and v in {self._norm(x) for x in (self.channel_says().get("hold") or [])}
+
+    def reached_us(self, version: str | None = None) -> bool:
+        """Has this release been let out as far as this house yet?
+
+        A release goes to a tenth of hubs first, then the rest. The hub's own id decides which, and
+        the version is mixed into the hash on purpose: hashing the id alone would make the same
+        unlucky houses the first to take every release forever, which is a thing to do to a test
+        fleet and not to somebody's home.
+        """
+        v = (version or (self.latest or {}).get("version") or "")
+        share = (self.channel_says().get("rollout") or {})
+        want = next((x for k, x in share.items() if self._norm(k) == self._norm(v)), 1.0)
+        try: want = max(0.0, min(1.0, float(want)))
+        except (TypeError, ValueError): return True                  # a number nobody can read is not a hold
+        if want >= 1.0: return True
+        h = hashlib.sha256(f"{self.hub.settings.hub_id()}|{self._norm(v)}".encode()).hexdigest()
+        return (int(h[:8], 16) % 1000) < want * 1000
+
     def rejected(self) -> str:
         """A version this hub will not walk into again on its own. host/update.sh names it.
 
@@ -177,12 +216,14 @@ class Updates:
         to, and trying it twice is often what fixes it.
         """
         if not self.available: return self.available          # False and None pass through unchanged
+        if self.held(): return False                          # the maker has pulled it since signing it
         return self._norm((self.latest or {}).get("version") or "") != self.rejected()
 
     def summary(self) -> dict:
         return {"version": self.version, "commit": self.commit[:12], "channel": self.channel, "latest": self.latest,
                 "available": self.available, "offer": self.offer, "rejected": self.rejected() or None,
                 "auto": self.auto, "verified": self.verified, "whats_new": self.whats_new,
+                "held": self.held(), "reached_us": self.reached_us(),
                 "checked": self.checked, "requested": REQUEST.exists(),
                 "state": self.state(), "error": self.error}
 
@@ -229,6 +270,9 @@ class Updates:
         nobody in the house did it.
         """
         want = (self.latest or {}).get("version") or ""
+        # The host refuses a held release too, and its copy of the channel is the fresher one. This
+        # is here so the panel gets a sentence instead of a restart that ends in "not installed".
+        if self.held(want): raise ValueError("That update has been paused by the people who make the hub.")
         REQUEST.parent.mkdir(parents=True, exist_ok=True)
         REQUEST.write_text(json.dumps({"at": time.time(), "channel": self.channel, "from": self.version, "to": want,
                                        "from_commit": self.commit, "to_commit": (self.latest or {}).get("sha") or ""}))

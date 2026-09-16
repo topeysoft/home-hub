@@ -1,0 +1,13 @@
+# Every half hour. A hold has to reach a hub before the hub's own minute of the night comes round,
+# and the window is three hours wide, so half an hour is comfortably inside it; host/update.sh also
+# starts the service by hand right before it installs anything, so the last word is always fresh.
+[Unit]
+Description=Home Hub: ask what the maker is saying about releases
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=30min
+RandomizedDelaySec=5min
+
+[Install]
+WantedBy=timers.target

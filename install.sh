@@ -125,6 +125,13 @@ systemctl enable --now avahi-daemon >/dev/null 2>&1 || true
 systemctl reload-or-restart avahi-daemon >/dev/null 2>&1 || true
 
 say "4/5  Settings"
+# The host as an appliance: watchdog, a cap on container logs, a cap on the journal. Exit 10 means
+# the log cap is new and every container is made again below, once, to take it.
+chmod +x host/harden.sh
+RECREATE=""
+if host/harden.sh; then :; else
+  case $? in 10) RECREATE="--force-recreate" ;; *) echo "  (host hardening did not finish; the house starts anyway)" ;; esac
+fi
 # The key this hub checks releases against, copied out of the checkout once and never again: $DIR is
 # the thing being updated, so a key kept only there could be replaced by the same push it exists to
 # catch. The first install trusts the repository it came from; every update after it trusts this file.
@@ -164,6 +171,9 @@ if [ -n "${HUB_BRAIN_IMAGE:-}" ]; then echo "HUB_BRAIN_IMAGE=$HUB_BRAIN_IMAGE" >
 # back to rather than a digest from some release it is no longer on.
 sed -i '/^HUB_IMG_/d' .env 2>/dev/null || true
 for v in ${HUB_IMAGE_VARS:-}; do echo "$v=${!v}" >> .env; done
+# Messages take a password: made once, written into .env, handed to every part by compose.
+chmod +x mqtt-auth.sh
+./mqtt-auth.sh
 # radios: only start what is plugged in, now and whenever a stick is plugged in or pulled later
 chmod +x radios.sh
 ./radios.sh detect
@@ -174,12 +184,15 @@ ACTION=="remove", SUBSYSTEM=="tty", KERNEL=="ttyUSB*|ttyACM*", RUN+="/usr/bin/sy
 RULES
 udevadm control --reload 2>/dev/null || true
 # updates and restores: the panel writes brain-data/update.request or restore.request; these units see it and act
-chmod +x host/update.sh host/restore.sh
-for u in home-hub-update.service home-hub-update.path home-hub-restore.service home-hub-restore.path; do
+chmod +x host/update.sh host/restore.sh host/channel.sh
+for u in home-hub-update.service home-hub-update.path home-hub-restore.service home-hub-restore.path \
+         home-hub-channel.service home-hub-channel.timer; do
   sed "s#/opt/home-hub#$DIR#g" "host/$u" > "/etc/systemd/system/$u"
 done
 systemctl daemon-reload 2>/dev/null || true
-systemctl enable --now home-hub-update.path home-hub-restore.path >/dev/null 2>&1 || true
+systemctl enable --now home-hub-update.path home-hub-restore.path home-hub-channel.timer >/dev/null 2>&1 || true
+# ...and ask once now, so a hub coming up after a hold was published knows about it before its first night.
+HOME_HUB_DIR="$DIR" ./host/channel.sh >/dev/null 2>&1 || true
 
 say "5/5  Starting the house"
 # Pre-pull everything the compose file pins. A tag that no longer exists on the registry would
@@ -197,7 +210,8 @@ else
   esac
   docker compose build -q brain
 fi
-docker compose up -d --remove-orphans
+# shellcheck disable=SC2086
+docker compose up -d --remove-orphans $RECREATE
 
 IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
 say "Done. On a phone or tablet on the same Wi‑Fi open:"

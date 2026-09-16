@@ -118,8 +118,12 @@ container before the Pi's first start so the two do not fight over Ring's token.
   **What changed is on the wall the next morning**, in a house's own words: `releases/<version>.md` is written by
   hand, ships inside the image, and is refused by `tools/release-manifest.py` if it is missing or reads like a
   changelog — no filenames, no containers, no commit subjects, and never Home Assistant. The card opens *This hub*,
-  where the current release and every one before it that the build carries are kept. The plan for the rest — a hold
-  to stop a bad release spreading — is `docs/updates.md`.
+  where the current release and every one before it that the build carries are kept.
+  **A bad release is stopped without cutting another one**: `tools/channel.py hold v0.3.1` signs a small file that
+  hubs check against the same keys, within half an hour and always before they install. The same file lets a release
+  out to a fraction of houses first (`tools/channel.py out v0.3.2 0.1`). It can only ever withhold — there is no way
+  to say *install this* — and missing, stale or unsigned means nothing is held, because the alternative would let
+  anyone who can block a network freeze every hub where it stands. `docs/updates.md`.
 - Health: Home has a quiet *Needs a look* list when something is off: a device offline since Tuesday, storage nearly
   full, a driver that wants signing in, an update that did not finish. `GET /health`; the words come from the brain.
   A line that can be acted on carries the way to do it, so none of them sends anyone to Home Assistant: an account whose
@@ -166,7 +170,9 @@ container before the Pi's first start so the two do not fight over Ring's token.
 
 `driver-layer/docker-compose.mac.yml` runs Home Assistant, Mosquitto and Caddy in Docker with no
 radios and no host networking (Docker Desktop on macOS cannot do mDNS discovery, so devices are
-added by IP or by brand). The brain runs from its venv (`cd brain && .venv/bin/python main.py`) and
+added by IP or by brand). Run `driver-layer/mqtt-auth.sh` once first: Mosquitto refuses to start
+without its password file, and the brain reads the same `.env` to give the engine the password.
+The brain runs from its venv (`cd brain && .venv/bin/python main.py`) and
 finds HA at `http://localhost:8123`. Panel: `http://localhost:8300/` (or `:8088` through Caddy).
 
 The brain keeps what it learns in `brain/settings.json` (gitignored): the engine login it created,
@@ -195,8 +201,14 @@ keys, are written once by `radios.sh`), and Matter. The panel's *Behind the scen
 part's state; Ring is the one that needs a person, once, to sign in. Plugging a stick in later
 starts its container and connects it the same way.
 
-For the curious: Zigbee2MQTT admin is on `:8080`, Z‑Wave JS UI on `:8091`, and Home Assistant on
-`:8123`, the Advanced door, linked from the bottom of the location and add sheets, never the product.
+For the curious: Home Assistant on `:8123` is the Advanced door, linked from the bottom of the location
+and add sheets, never the product. Zigbee2MQTT's and Z‑Wave JS UI's own consoles (`:8080`, `:8091`) and
+the Matter server answer on the hub itself only, not on the Wi‑Fi (`ssh -L 8080:localhost:8080 hub.local`
+reaches one); they have no sign-in of their own, so nothing on the network gets to pair or unpair a device
+past the panel. Messages (Mosquitto, `:1883`) stays on the Wi‑Fi because a bridge on the network needs it,
+and takes a password: `driver-layer/mqtt-auth.sh` makes it once into `.env`, writes the broker's password file
+and Ring's config from it, compose hands it to Zigbee2MQTT, and the brain gives it to the engine. The host itself gets a watchdog and capped logs from
+`driver-layer/host/harden.sh`. What is still open on the Wi‑Fi, and why, is in `docs/shipping.md`.
 
 ### Brilliant
 

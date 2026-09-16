@@ -29,6 +29,10 @@ const rolledBack = computed(() => update.value?.state?.state === 'reverted' ? (u
    button appears -- the same tap would refuse the same release, and this one is not the household's
    to fix. */
 const refused = computed(() => update.value?.state?.state === 'refused' ? (update.value?.state?.bad || 'That update') : '')
+/* The people who make the hub have pulled this release since signing it (docs/updates.md, piece 5).
+   No button, and not because this hub failed at anything: it is the one case where somebody tapping
+   Install would be overruled on purpose, and saying so is better than a tap that goes nowhere. */
+const held = computed(() => !!update.value?.held)
 /* Installing in the night without being asked. On by default where the hub can check what it is
    installing, because the alternative is what actually happens otherwise: nobody walks to the wall,
    and the house sits a year behind on the release that had the bug. A hub that cannot check waits
@@ -60,8 +64,8 @@ const when = (ts?: number | null) => ts ? new Date(ts * 1000).toLocaleString([],
     <ul class="hub-rows">
       <li>
         <span class="hub-k">Software</span>
-        <span class="hub-v">{{ !store.status?.version || store.status.version === 'dev' ? 'Development build' : store.status.version }}<span class="hub-sub" v-if="refused"> · {{ refused }} couldn’t be checked, so it wasn’t installed</span><span class="hub-sub" v-else-if="rolledBack"> · {{ rolledBack }} didn’t start, so this one was put back</span><span class="hub-sub" v-else-if="update?.checked"> · checked {{ when(update.checked) }}</span></span>
-        <button class="button small" v-if="update?.available && !refused && !store.updating && !update.requested" @click="install">{{ rolledBack ? 'Try again' : 'Install the update' }}</button>
+        <span class="hub-v">{{ !store.status?.version || store.status.version === 'dev' ? 'Development build' : store.status.version }}<span class="hub-sub" v-if="held"> · {{ update?.latest?.version }} was paused by the people who make the hub</span><span class="hub-sub" v-else-if="refused"> · {{ refused }} couldn’t be checked, so it wasn’t installed</span><span class="hub-sub" v-else-if="rolledBack"> · {{ rolledBack }} didn’t start, so this one was put back</span><span class="hub-sub" v-else-if="update?.checked"> · checked {{ when(update.checked) }}</span></span>
+        <button class="button small" v-if="update?.available && !refused && !held && !store.updating && !update.requested" @click="install">{{ rolledBack ? 'Try again' : 'Install the update' }}</button>
         <span class="hub-sub" v-else-if="store.updating || update?.requested || update?.state?.state === 'running'">Updating…</span>
         <span class="hub-sub" v-else-if="update?.available === false">Up to date</span>
         <span class="hub-sub" v-else-if="update?.error">Couldn't check: no internet?</span>
