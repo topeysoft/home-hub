@@ -277,6 +277,22 @@ brain's container for amd64 and arm64 (tagged `0.2.0`, `0.2` and `latest`, and s
 flash-and-go Pi image, attached to a GitHub release with its checksum. A tag is not a branch, so branch protection
 does not cover one — the test run is what stops a release being cut from a commit that never passed.
 
+**The first one, in order.** `tools/release.sh --check v0.3.0` says which of these is not done yet and
+changes nothing, so it is the thing to run between each step:
+
+1. **Make the GHCR package public.** Until the brain image is readable, no release can be signed at all —
+   `tools/release-manifest.py` names every image by digest and cannot resolve one it cannot see. It is also what
+   stops a hub in a house compiling the brain on its own processor instead of pulling it.
+2. **`tools/release.sh --new-key`, then `tools/release.sh --new-key spare`,** in the same sitting. Commit both public
+   halves; keep the private halves off this machine's only disk and off GitHub. A hub trusts the keys it was
+   installed with and never adds one, so the spare has to exist before the first hub ships or it never can.
+3. **Write `releases/0.3.0.md`** — see `releases/README.md`. A release without notes does not ship.
+4. **Tag and push**, then wait for CI to publish the images.
+5. **`tools/release.sh v0.3.0`**, which signs it and attaches the record.
+6. **Watch one hub take it**: it should verify the release, check out the commit the record names, pull by digest,
+   come back, and show what is new on the wall the next morning. `driver-layer/brain-data/update.json` says how it
+   went and `update.log` says why if it did not.
+
 **`tools/release.sh` is what makes a release installable**, and it is a separate step because it signs with a key
 that is not on GitHub. It asks the registries what the tag's images actually are, checks cosign's word that the brain
 image was built by this repository's workflow from this tag, writes the commit and every image digest into
