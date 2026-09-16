@@ -186,3 +186,23 @@ undocumented and our earlier no-parameter sweep drew no reply.
 **Where that leaves the ladder:** OTA is not closed, but it is now gated behind reverse-engineering an
 undocumented trigger, with uncertain odds. The SWD reflash remains the one route certain to work — at the cost
 of pulling each switch once.
+
+### Hunting the DFU trigger: the combined oracle
+
+If a Brilliant vendor-model message is what makes the switch call `nrf_mesh_dfu_request()`, we can find it
+without guessing blind: run the ESP32 DFU offer continuously (it reports any `0xFFFB` data-request), and send
+candidate vendor opcodes to our node over the SIG mesh one at a time. A data-request appearing right after an
+opcode would name the trigger. The offer sends no firmware, so the whole hunt stays non-destructive.
+
+`brilliant-mqtt` (`joyfulhouse/brilliant-mqtt`) does not help here: it talks to the panel's *internal* message
+bus (a virtual `ble_mesh` device), and the panel's closed software translates that to mesh — the raw vendor
+opcodes and the DFU trigger live in the panel firmware, which the dead panels no longer give us.
+
+**Result so far:** all 64 vendor opcodes `0xC0..0xFF` (company `0x0820`), sent with no parameters, produced no
+data-request; the node stayed healthy. So no *bare* vendor opcode is the trigger.
+
+That is the tractable case exhausted. A real trigger most likely carries parameters (a target FWID, a transfer
+descriptor, an authority token), and that space is effectively unbounded without documentation — the panel
+firmware or Brilliant's cloud firmware package would name it, and neither is in hand. The combined-oracle
+tooling (`tools/` + `dfu-probe/`) remains, so the hunt can resume if that information ever surfaces; blind
+parameter brute-forcing is not a good use of time.
