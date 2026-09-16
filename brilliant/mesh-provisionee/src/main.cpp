@@ -159,14 +159,26 @@ class InCB : public BLECharacteristicCallbacks {
 static void put_ble_beacon() {
     BLEAdvertisementData adv;
     adv.setFlags(0x06);
-    adv.setCompleteServices(SVC_PROV);
-    // Mesh Provisioning Service adv: service-data = 16-byte Device UUID + 2-byte OOB info
+    adv.setCompleteServices(SVC_PROV);            // PB-GATT discovery
+    // PB-ADV Unprovisioned Device beacon: AD type 0x2B, beacon type 0x00,
+    // 16-byte Device UUID, 2-byte OOB info. This is how mesh provisioners
+    // (very likely the Brilliant panel) discover unprovisioned devices.
+    std::string beacon; beacon.push_back((char)0x14); // len: type+beacontype+uuid+oob = 20
+    beacon.push_back((char)0x2B);                     // AD type: Mesh Beacon
+    beacon.push_back((char)0x00);                     // beacon type: Unprovisioned Device
+    beacon.append((const char*)devUUID, 16);
+    beacon.push_back((char)0x00); beacon.push_back((char)0x00); // OOB info
+    adv.addData(beacon);
+    // Scan response carries the PB-GATT service-data (device UUID + OOB)
+    BLEAdvertisementData rsp;
     std::string sd; sd.resize(18);
-    memcpy(&sd[0], devUUID, 16); sd[16]=0; sd[17]=0;   // OOB info = none
-    adv.setServiceData(SVC_PROV, sd);
+    memcpy(&sd[0], devUUID, 16); sd[16]=0; sd[17]=0;
+    rsp.setServiceData(SVC_PROV, sd);
+    rsp.setName("Brilliant Switch");
     BLEAdvertising *a = BLEDevice::getAdvertising();
     a->setAdvertisementData(adv);
-    a->setScanResponse(false);
+    a->setScanResponseData(rsp);
+    a->setScanResponse(true);
     a->start();
 }
 
