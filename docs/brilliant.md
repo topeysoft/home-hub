@@ -153,3 +153,36 @@ broadcast raw `0xFEE4` advertising packets. macOS cannot be the source — CoreB
 arbitrary service data — so the source is the ESP32 (raw advertising) or the Pi's BlueZ, or a Nordic dongle
 driven by `nrfutil`. This is the active line of work; the SWD reflash remains the fallback if the DFU turns
 out to be signed.
+
+### The ESP32 DFU probe, and why unsolicited OTA does not work
+
+`brilliant/dfu-probe/` is an ESP32 that broadcasts a proprietary-mesh DFU **State (Application)** offer — a
+correctly-formed `0xFFFD` packet advertising company `0x0820`, app `0x0001`, at a version one higher than the
+switches run (`0x0c107187` vs `0x0c107186`). A switch willing to receive a transfer would answer with **DFU
+data-request** packets (`0xFFFB`) *before any flash is written*, so the offer alone is a zero-risk reachability
+test.
+
+Two engineering notes from getting it on air: the ESP32 must advertise with a **public** address
+(`BLE_ADDR_TYPE_RANDOM` without a configured random address silently refuses to start), and a **low-duty scan**
+(30 ms window per 320 ms) is needed or the scanner starves the transmitter — verified by sniffing our own
+`fdff…` packets from the hub.
+
+**Result: the switches never answer.** Our offer is confirmed on air and the switches are in range (their
+FWID beacons arrive fine), but no switch emits a single data-request across repeated runs.
+
+**Why, from Nordic's own source.** Receiving DFU is opt-in at the application layer. A device that hears a
+newer-firmware beacon raises `NRF_MESH_EVT_DFU_FIRMWARE_OUTDATED` to its application, and
+`doc/.../dfu_integrating_into_app.md` is explicit: *"If the application decides to receive new firmware, it
+must call the `nrf_mesh_dfu_request` [function]… If neither `nrf_mesh_dfu_request` nor `nrf_mesh_dfu_relay` is
+called… "* nothing happens. Brilliant's firmware does not auto-accept — correctly, since auto-accepting
+unsigned OTA from any passing broadcaster would be a glaring hole.
+
+So the transport is open to us, but the **trigger is not**: the Control panel must have sent some proprietary
+message that made the switch call `nrf_mesh_dfu_request()`. That trigger is unknown — most likely a Brilliant
+vendor-model message. Finding it is the one remaining over-the-air avenue, and it is a needle-in-a-haystack:
+the vendor model `0x0820/0x0001` takes unicast messages (we hold the app key), but its opcodes are
+undocumented and our earlier no-parameter sweep drew no reply.
+
+**Where that leaves the ladder:** OTA is not closed, but it is now gated behind reverse-engineering an
+undocumented trigger, with uncertain odds. The SWD reflash remains the one route certain to work — at the cost
+of pulling each switch once.
