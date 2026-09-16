@@ -131,7 +131,7 @@ the panel to check itself, which is a different piece and probably belongs with 
 And CI lints `update.sh` but does not run it; the harness above is a scratchpad script, not a test, which is a gap to
 close when the shell job grows a way to run one.
 
-### 2. A signature
+### 2. A signature *(landed 16 September 2026)*
 
 Today the answer to *what may run as root in this house* is *whatever the newest `v*` tag points at*. Tags move; a
 stolen token, a compromised Action or a bad afternoon at GitHub all reach every hub. The fix is not to trust the
@@ -157,6 +157,52 @@ it is Terraform like everything else in `docs/away.md` — nothing about it is c
 **Rented images too.** `2026.9.1` is a name Home Assistant can move, and the hub pulls it as root. Once the manifest
 carries digests, the pins in `docker-compose.yml` become the record of what was tested and the manifest becomes what
 is installed.
+
+**What landed.** `tools/release-manifest.py` builds the record for a tag, resolving every digest by asking the
+registries anonymously rather than the local Docker daemon — a laptop with an old layer cached would otherwise sign a
+digest nobody else can pull. `tools/release.sh` makes the keypair (`--new-key`, once ever) and signs a tag;
+`driver-layer/host/verify.sh` is what a hub checks with, and `install.sh` calls it before the checkout moves and then
+checks out **the commit the manifest names**, not the tag. Every image in `docker-compose.yml` became
+`${HUB_IMG_<SERVICE>:-<the tag>}`, so a verified release pins by digest and the tag stays as the readable default and
+the record of what was tested.
+
+**Where the key lives is the whole design.** Not in `$DIR`: that is the thing being updated, so a key kept only there
+could be replaced by the same push it exists to catch. It is copied once to `/etc/home-hub/release-key.pub` on the
+first install and never overwritten. **The first install trusts the repository it came from; every update after it
+trusts the key.** That boundary is real, and the flashed image narrows it, because the image was built from a tag and
+carries the key already.
+
+**Two corrections to what this document said before it was built.**
+
+- **`rollout` and `hold` are not in the release manifest.** They were written down here as fields of it, and they
+  cannot be: a signed per-release file cannot be changed without re-signing, and piece 5 wants a hold that takes
+  effect in minutes. They belong in a separate, separately signed channel file. Piece 5 owns it.
+- **A release that cannot be checked is not a failed update,** and folding the two together would have been the
+  panel's mistake, not the host's. `install.sh` exits 3, `update.sh` writes a `refused` state, and the health line
+  says the house is working and carries **no Try again** — the same tap refuses the same release, and sending a
+  household round that loop is worse than telling them plainly that this one is not theirs to fix.
+
+**Cosign is checked by the maker, not by the hub.** CI signs the image keylessly on every tag, and `tools/release.sh`
+verifies that signature — the workflow, the repository and the tag — before it will put the maker's key to a manifest.
+So the two signatures nest rather than sit side by side: hubs hold one ed25519 public key and need no cosign binary,
+no Sigstore root and no network beyond the release, and the maker's signature still cannot be given to an image this
+repository's workflow did not build.
+
+**What was verified**, again by standing it up rather than reading it: a real git repository with two tags, a real
+ed25519 keypair, real `openssl`, and a fake releases server behind a `file://` URL. It installs a release signed by
+the maker whose tag and commit agree, and refuses, with a sentence naming the reason each time: a tag moved onto
+another commit after signing; a manifest signed by a different key; a manifest edited after signing; a release with no
+signed record at all; a record naming a different version; and an upgrade path below `min_from`. A hub with no key yet
+returns 2 and says so rather than pretending either way. Separately checked that a good verification leaves the caller
+holding `VERIFIED_COMMIT`, the brain digest and one `HUB_IMG_*` per service — under exactly the names
+`docker-compose.yml` reads, which is a spelling mistake away from silently falling back to tags — and that the compose
+file still resolves to the pinned tags when nothing is set.
+
+**What is not covered.** The first install, by construction: `curl | bash` from `main` trusts the repository, and so
+does the `git clone` under it. Nothing verifies `install.sh` itself on that first run, and the honest fix is the
+flashed image rather than a cleverer script. Also `tools/release.sh` has to be run by hand after CI publishes a tag's
+images — it needs the digests to exist — so there is a window where a tagged release exists and hubs refuse it. That
+is the right way round, and it is still a reason not to leave a tag sitting unsigned.
 
 ### 3. By itself, at night
 
@@ -217,8 +263,11 @@ setup**, not a nudge that Home repeats.
 
 ## Open decisions
 
-- **Who holds the signing key, and what happens when it is lost.** A second key in the manifest from the start costs
-  nothing now and is impossible to add later, once hubs are in houses that only trust the first one.
+- **What happens when the signing key is lost.** Still open, and now urgent rather than theoretical: the mechanism is
+  built and the first `--new-key` is the point of no return. A hub that has installed the public half refuses every
+  release the matching private half did not sign, so losing it means no hub in any house can ever be updated again.
+  A second key trusted from the start costs nothing now and is impossible to add later. `verify.sh` reads one key
+  file; making it read a directory of them is a small change *today*.
 - **Does a hub ever refuse to run an old build?** A release old enough to be dangerous is exactly the one on a hub
   that has been off for a year, and refusing to start is the worst possible way to tell somebody.
 - **What the wall says while the engine is restarting.** For most updates only the brain moves and the panel blinks;

@@ -86,6 +86,17 @@ class HealthTests(unittest.TestCase):
         self.assertIn("could not put back", notes[0]["text"])
         self.assertIn("needs a hand", notes[0]["text"])
 
+    def test_a_release_that_could_not_be_checked_is_news_and_not_a_job(self):
+        # No Try again: the same tap refuses the same release, and this one is not the household's to fix.
+        with tempfile.TemporaryDirectory() as d:
+            keep, updates.STATE = updates.STATE, Path(d) / "update.json"
+            updates.STATE.write_text(json.dumps({"state": "refused", "finished": 5, "bad": "v1.3.0"}))
+            notes = self.h.update()
+            updates.STATE = keep
+        self.assertEqual(notes[0]["acts"], [])
+        self.assertIn("could not be checked", notes[0]["text"])
+        self.assertIn("house is working normally", notes[0]["text"])
+
     def test_when_words(self):
         now = time.time()
         self.assertEqual(health.when(now - 86400, TZ, now) in ("yesterday",) or True, True)

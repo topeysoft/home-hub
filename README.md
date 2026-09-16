@@ -148,6 +148,9 @@ container before the Pi's first start so the two do not fight over Ring's token.
   off", and the two fields that keep the fix from making it untouchable.
 - `docs/apps.md` — Phone, tablet and desktop apps: why the panel already is the app, the four things a native
   shell would carry, and the one fork (the hub's certificate, or a pinned one in a shell) to settle after the relay.
+- `docs/shipping.md` — Shipping it: why the unit to sell is a Compute Module 5 and not a Pi 5, the staged hardware path
+  (Pi 5 kit, CM5 in a partner box, a custom carrier only later), radios on the network rather than USB, and the list of
+  what is open on the Wi‑Fi or missing from the appliance layer before a stranger pays, with what can be done today.
 - `tools/ha_bootstrap.py` — the old manual bootstrap; the brain's setup screen does this now.
 
 ## Developing on the Mac (until the Pi arrives)
@@ -244,15 +247,34 @@ A version tag is what ships. Nothing else does.
 
 ```sh
 git tag v0.2.0 && git push --tags
+# ...wait for CI to publish the images, then:
+tools/release.sh v0.2.0
 ```
 
-That runs the full test suite against the tagged commit and, only if it passes, builds two things: the
-brain's container for amd64 and arm64 (tagged `0.2.0`, `0.2` and `latest`), and the flash-and-go Pi
-image, attached to a GitHub release with its checksum. A tag is not a branch, so branch protection
+The tag runs the full test suite against the tagged commit and, only if it passes, builds two things: the
+brain's container for amd64 and arm64 (tagged `0.2.0`, `0.2` and `latest`, and signed with cosign), and the
+flash-and-go Pi image, attached to a GitHub release with its checksum. A tag is not a branch, so branch protection
 does not cover one — the test run is what stops a release being cut from a commit that never passed.
+
+**`tools/release.sh` is what makes a release installable**, and it is a separate step because it signs with a key
+that is not on GitHub. It asks the registries what the tag's images actually are, checks cosign's word that the brain
+image was built by this repository's workflow from this tag, writes the commit and every image digest into
+`release.json`, signs it, and attaches both to the release. Until it has run, hubs see the release and refuse it —
+which is the right way round, and a reason not to leave a tag sitting unsigned. `tools/release.sh --new-key` makes
+the keypair, once ever; the private half belongs somewhere off GitHub and backed up, because a hub that trusts the
+public half will refuse every release the private half did not sign. `docs/updates.md`.
 
 Pushes to main publish `main` and `sha-<sha>` images and nothing else. **A merge to main does not
 reach anybody's hub.**
+
+Every hub verifies a release before it installs it: `driver-layer/host/verify.sh` checks the maker's signature over
+`release.json`, then the hub checks out **the commit the manifest names** rather than the tag (so a moved tag changes
+nothing) and pulls every image, ours and the rented ones, **by digest**. The key it checks against is copied to
+`/etc/home-hub/release-key.pub` on the first install and never replaced — the first install trusts the repository, and
+every update after it trusts the key. A release that cannot be checked is not installed and is not reported as a
+failure: nothing moved, and the panel says so without offering a *Try again* that could not help. The `main` channel
+is not verified, deliberately: there are no manifests for commits, a hub following a branch is a hub being worked on,
+and an override that skipped the check for releases would only end up pasted into a house.
 
 Every hub follows one of two channels, written into `driver-layer/.env` by `install.sh`:
 

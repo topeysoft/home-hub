@@ -22,6 +22,7 @@ DIR="${HOME_HUB_DIR:-/opt/home-hub}"
 DATA="$DIR/driver-layer/brain-data"
 ENVF="$DIR/driver-layer/.env"
 REQ="$DATA/update.request"; STATE="$DATA/update.json"; LOG="$DATA/update.log"; PREV="$DATA/update.prev"
+REFUSED="$DATA/update.refused"   # install.sh writes the tag here when it would not vouch for a release
 # The brain is on host networking, so the host reaches it directly. /alive is open on purpose and
 # carries nothing about the house: see docs/updates.md, piece 1.
 ALIVE="${HOME_HUB_ALIVE:-http://127.0.0.1:8300/alive}"
@@ -99,7 +100,20 @@ finish() {  # state, extra json
     "$1" "$STARTED" "$(date +%s)" "$(git -C "$DIR" rev-parse HEAD 2>/dev/null || echo unknown)" "${2:-}" > "$STATE"
 }
 
-if HOME_HUB_DIR="$DIR" HOME_HUB_CHANNEL="$CHANNEL" "$DIR/install.sh" > "$LOG" 2>&1; then
+rm -f "$REFUSED"
+HOME_HUB_DIR="$DIR" HOME_HUB_CHANNEL="$CHANNEL" "$DIR/install.sh" > "$LOG" 2>&1
+RC=$?
+
+if [ "$RC" -eq 3 ]; then
+  # The release could not be checked against this hub's key, so install.sh moved nothing at all: no
+  # undo to do, and nothing about the house is different. Kept apart from a failure on purpose --
+  # tapping Try again cannot fix an unsigned release, and telling somebody to is wasting their time.
+  BAD="$(cat "$REFUSED" 2>/dev/null)"; rm -f "$REFUSED"
+  finish refused ',"bad":"'"${BAD:-}"'","log":"update.log"'
+  exit 1
+fi
+
+if [ "$RC" -eq 0 ]; then
   # What the hub has just been moved onto, for naming a version that turns out not to work. The
   # request said what was wanted; this says what arrived, which is the one to refuse next time.
   GOT="${WANT:-$(git -C "$DIR" describe --tags --exact-match 2>/dev/null || git -C "$DIR" rev-parse --short HEAD 2>/dev/null)}"

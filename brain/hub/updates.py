@@ -69,13 +69,16 @@ class Updates:
         except (OSError, ValueError): return None
 
     def rejected(self) -> str:
-        """A version this hub installed, could not bring back up, and put back. host/update.sh names it.
+        """A version this hub will not walk into again on its own. host/update.sh names it.
 
-        The point of writing it down is that the hub must not walk into it again on its own: a rollback
-        that is followed six hours later by the same install is a loop, not a safety net.
+        Two ways a version gets here, and they are not the same thing. It was installed, would not
+        come back, and was put back -- a rollback followed six hours later by the same install is a
+        loop, not a safety net. Or the host would not vouch for it at all: no signed record of what
+        it is, or one this hub's key does not recognise (docs/updates.md, piece 2), in which case
+        nothing moved and nothing about the house is different.
         """
         st = self.state() or {}
-        return self._norm(st.get("bad") or "") if st.get("state") in ("reverted", "failed") else ""
+        return self._norm(st.get("bad") or "") if st.get("state") in ("reverted", "failed", "refused") else ""
 
     @property
     def offer(self):

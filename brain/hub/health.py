@@ -162,6 +162,12 @@ class Health:
         st = self.hub.updates.state() or {}
         state, bad = st.get("state"), st.get("bad")
         what = f"Version {bad}" if bad else "The last update"
+        if state == "refused":
+            # Nothing was installed and nothing is broken, so this is news rather than a job. And it
+            # carries no Try again: the same tap would refuse the same release, and sending somebody
+            # round that loop is worse than telling them plainly that it is not theirs to fix.
+            return [{"kind": "update", "subject": None, "since": st.get("finished"), "acts": [],
+                     "text": f"{what} could not be checked, so the hub did not install it. Nothing has changed and the house is working normally."}]
         if state == "reverted":
             text = f"{what} did not start, so the hub put back the one it was on. Everything is working; you can try it again from here."
         elif state == "failed" and st.get("reverted") is False:

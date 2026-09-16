@@ -24,6 +24,11 @@ async function install() {
    piece 1). Home stops nudging for it; here it is still one tap, because this page is where a person
    is the one choosing, and trying it a second time is often what fixes it. */
 const rolledBack = computed(() => update.value?.state?.state === 'reverted' ? (update.value?.state?.bad || update.value?.rejected || 'That update') : '')
+/* A release the hub would not vouch for: no signed record of what it is, or one signed by a key this
+   hub does not know (docs/updates.md, piece 2). Nothing was installed and nothing is broken, and no
+   button appears -- the same tap would refuse the same release, and this one is not the household's
+   to fix. */
+const refused = computed(() => update.value?.state?.state === 'refused' ? (update.value?.state?.bad || 'That update') : '')
 const when = (ts?: number | null) => ts ? new Date(ts * 1000).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' }) : ''
 </script>
 
@@ -34,8 +39,8 @@ const when = (ts?: number | null) => ts ? new Date(ts * 1000).toLocaleString([],
     <ul class="hub-rows">
       <li>
         <span class="hub-k">Software</span>
-        <span class="hub-v">{{ !store.status?.version || store.status.version === 'dev' ? 'Development build' : store.status.version }}<span class="hub-sub" v-if="rolledBack"> · {{ rolledBack }} didn’t start, so this one was put back</span><span class="hub-sub" v-else-if="update?.checked"> · checked {{ when(update.checked) }}</span></span>
-        <button class="button small" v-if="update?.available && !store.updating && !update.requested" @click="install">{{ rolledBack ? 'Try again' : 'Install the update' }}</button>
+        <span class="hub-v">{{ !store.status?.version || store.status.version === 'dev' ? 'Development build' : store.status.version }}<span class="hub-sub" v-if="refused"> · {{ refused }} couldn’t be checked, so it wasn’t installed</span><span class="hub-sub" v-else-if="rolledBack"> · {{ rolledBack }} didn’t start, so this one was put back</span><span class="hub-sub" v-else-if="update?.checked"> · checked {{ when(update.checked) }}</span></span>
+        <button class="button small" v-if="update?.available && !refused && !store.updating && !update.requested" @click="install">{{ rolledBack ? 'Try again' : 'Install the update' }}</button>
         <span class="hub-sub" v-else-if="store.updating || update?.requested || update?.state?.state === 'running'">Updating…</span>
         <span class="hub-sub" v-else-if="update?.available === false">Up to date</span>
         <span class="hub-sub" v-else-if="update?.error">Couldn't check: no internet?</span>

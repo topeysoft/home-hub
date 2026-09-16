@@ -47,19 +47,38 @@ want_ref() {
   [ "$CHANNEL" = "main" ] && { echo "origin/main"; return; }
   git -C "$DIR" tag -l 'v*' --sort=-v:refname | head -1
 }
+# Whether a release is what the maker says it is, and what it says to run. host/verify.sh comes from
+# the checkout as it is *now* -- the one the last verified update left behind -- and is read before
+# anything moves, so the code doing the checking is never the code being installed.
+# shellcheck source=driver-layer/host/verify.sh
+[ -f "$DIR/driver-layer/host/verify.sh" ] && . "$DIR/driver-layer/host/verify.sh"
 go_to_ref() {
-  local ref; ref="$(want_ref)"
+  local ref target; ref="$(want_ref)"
   if [ -z "$ref" ]; then
     ref="origin/main"; echo "  nothing tagged yet, so: main"
   fi
-  git -C "$DIR" reset -q --hard "$ref" && git -C "$DIR" clean -qfd -e driver-layer/
+  target="$ref"
+  # A hub following main is a hub being worked on: there are no manifests for commits, and an
+  # override that skipped the check for releases would only end up pasted into a house.
+  if [ "$CHANNEL" = "release" ] && command -v verify_release >/dev/null 2>&1; then
+    verify_release "$ref" "$DIR"; case $? in
+      0) target="$VERIFIED_COMMIT" ;;
+      2) echo "  this hub has no release key yet, so $ref is taken on trust this once" ;;
+      *) echo "  staying on $(git -C "$DIR" describe --tags --always 2>/dev/null): nothing is installed that cannot be checked"
+         echo "$ref" > "$DIR/driver-layer/brain-data/update.refused" 2>/dev/null || true
+         return 1 ;;
+    esac
+  fi
+  git -C "$DIR" reset -q --hard "$target" && git -C "$DIR" clean -qfd -e driver-layer/
   case "$ref" in v*) VERSION="${ref#v}" ;; esac
   echo "  $CHANNEL: ${ref} — $(git -C "$DIR" log -1 --format='%h %s' | cut -c1-60)"
 }
 if [ -d "$DIR/.git" ]; then
   command -v git >/dev/null 2>&1 || pkg git
   if git -C "$DIR" fetch -q --tags --force origin main 2>/dev/null; then
-    go_to_ref
+    # 3, not 1: a release that could not be checked is a different thing from an install that broke,
+    # and a household tapping Try again cannot fix it. host/update.sh tells the two apart.
+    go_to_ref || exit 3
   else
     echo "  could not reach $REPO; keeping the code that is here"
   fi
@@ -69,12 +88,16 @@ else
   # A full clone rather than --depth 1: the tags are how a release is found, and they are only
   # a few megabytes here.
   command -v git >/dev/null 2>&1 || pkg git
-  git clone -q "$REPO" "$DIR" && go_to_ref
+  git clone -q "$REPO" "$DIR" && { go_to_ref || exit 3; }
 fi
 cd "$DIR/driver-layer"
-# Code and container move together: a hub on v0.2.0 runs the 0.2.0 image, not whatever is newest.
-if [ -n "$VERSION" ]; then export HUB_BRAIN_IMAGE="ghcr.io/topeysoft/home-hub-brain:${VERSION}"
-elif [ "$CHANNEL" = "main" ]; then export HUB_BRAIN_IMAGE="ghcr.io/topeysoft/home-hub-brain:main"
+# Code and container move together: a hub on v0.2.0 runs the 0.2.0 image, not whatever is newest. A
+# verified release has already said which image, by digest; this is the fallback for a hub following
+# main and for the first install of a release that predates the signing.
+if [ -z "${HUB_BRAIN_IMAGE:-}" ]; then
+  if [ -n "$VERSION" ]; then export HUB_BRAIN_IMAGE="ghcr.io/topeysoft/home-hub-brain:${VERSION}"
+  elif [ "$CHANNEL" = "main" ]; then export HUB_BRAIN_IMAGE="ghcr.io/topeysoft/home-hub-brain:main"
+  fi
 fi
 export HUB_CHANNEL="$CHANNEL"
 
@@ -102,6 +125,16 @@ systemctl enable --now avahi-daemon >/dev/null 2>&1 || true
 systemctl reload-or-restart avahi-daemon >/dev/null 2>&1 || true
 
 say "4/5  Settings"
+# The key this hub checks releases against, copied out of the checkout once and never again: $DIR is
+# the thing being updated, so a key kept only there could be replaced by the same push it exists to
+# catch. The first install trusts the repository it came from; every update after it trusts this file.
+# host/verify.sh reads it. A flashed image narrows that first-install trust, because the image was
+# built from a tag and carries the key already.
+KEYFILE="${HOME_HUB_KEY:-/etc/home-hub/release-key.pub}"
+if [ ! -s "$KEYFILE" ] && [ -s host/release-key.pub ]; then
+  mkdir -p "$(dirname "$KEYFILE")" && cp host/release-key.pub "$KEYFILE" && chmod 0644 "$KEYFILE"
+  echo "  release key installed; from here on this hub installs nothing it cannot check"
+fi
 if [ ! -f .env ]; then
   TZ_NOW="$(cat /etc/timezone 2>/dev/null || timedatectl show -p Timezone --value 2>/dev/null || echo UTC)"
   IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
@@ -121,6 +154,11 @@ echo "HUB_CHANNEL=$CHANNEL" >> .env
 # -- would otherwise resolve :latest and break the rule that code and container move together.
 sed -i '/^HUB_BRAIN_IMAGE=/d' .env 2>/dev/null || true
 if [ -n "${HUB_BRAIN_IMAGE:-}" ]; then echo "HUB_BRAIN_IMAGE=$HUB_BRAIN_IMAGE" >> .env; fi
+# ...and the rented images the verified release pinned by digest. Written fresh every run and left
+# out entirely when there is nothing to pin, so the tags in docker-compose.yml are what a hub falls
+# back to rather than a digest from some release it is no longer on.
+sed -i '/^HUB_IMG_/d' .env 2>/dev/null || true
+for v in ${HUB_IMAGE_VARS:-}; do echo "$v=${!v}" >> .env; done
 # radios: only start what is plugged in, now and whenever a stick is plugged in or pulled later
 chmod +x radios.sh
 ./radios.sh detect

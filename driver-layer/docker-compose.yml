@@ -4,7 +4,7 @@
 
 services:
   mosquitto:
-    image: eclipse-mosquitto:2
+    image: ${HUB_IMG_MOSQUITTO:-eclipse-mosquitto:2}
     container_name: mosquitto
     restart: unless-stopped
     ports:
@@ -15,7 +15,7 @@ services:
       - ./mosquitto/log:/mosquitto/log
 
   zigbee2mqtt:
-    image: koenkk/zigbee2mqtt:2.14.1
+    image: ${HUB_IMG_ZIGBEE2MQTT:-koenkk/zigbee2mqtt:2.14.1}
     container_name: zigbee2mqtt
     restart: unless-stopped
     profiles: [zigbee]
@@ -32,7 +32,7 @@ services:
       - ZIGBEE2MQTT_CONFIG_SERIAL_PORT=${ZIGBEE_PORT:-/dev/zigbee}
 
   zwave-js-ui:
-    image: zwavejs/zwave-js-ui:11.23.0
+    image: ${HUB_IMG_ZWAVE_JS_UI:-zwavejs/zwave-js-ui:11.23.0}
     container_name: zwave-js-ui
     restart: unless-stopped
     profiles: [zwave]
@@ -50,7 +50,7 @@ services:
       - SESSION_SECRET=${ZWAVE_SESSION_SECRET}
 
   matter-server:
-    image: ghcr.io/home-assistant-libs/python-matter-server:8.1.0
+    image: ${HUB_IMG_MATTER_SERVER:-ghcr.io/home-assistant-libs/python-matter-server:8.1.0}
     container_name: matter-server
     restart: unless-stopped
     network_mode: host      # Matter commissioning needs mDNS and IPv6 on the LAN
@@ -62,7 +62,7 @@ services:
     # websocket on ws://<host>:5580/ws
 
   homeassistant:
-    image: ghcr.io/home-assistant/home-assistant:2026.9.1
+    image: ${HUB_IMG_HOMEASSISTANT:-ghcr.io/home-assistant/home-assistant:2026.9.1}
     container_name: homeassistant
     restart: unless-stopped
     network_mode: host      # discovery (mDNS, SSDP, Cast, HomeKit) needs the real LAN
@@ -107,7 +107,7 @@ services:
 
   caddy:
     # The front door: http://hub.local on :80 with no setup at all, https alongside for those who install the root certificate.
-    image: caddy:2
+    image: ${HUB_IMG_CADDY:-caddy:2}
     container_name: caddy
     restart: unless-stopped
     network_mode: host
@@ -126,7 +126,7 @@ services:
     # Ring Alarm and everything paired to its base station (Z-Wave locks, switches, plugs, contact and
     # motion sensors) via Ring's cloud, published to Mosquitto with HA discovery. First run: open
     # http://<host>:55123, sign in to Ring (with 2FA); the token is kept in ./ring-mqtt after that.
-    image: tsightler/ring-mqtt:5.9.3
+    image: ${HUB_IMG_RING_MQTT:-tsightler/ring-mqtt:5.9.3}
     container_name: ring-mqtt
     restart: unless-stopped
     depends_on: [mosquitto]
@@ -151,7 +151,7 @@ services:
     # Which voice a household hears is still open (docs/voice.md's tier table sizes the quality per
     # host, and the name below is a placeholder that a .env wins over). The first run fetches the model
     # into ./piper-data and needs the internet once; after that it is local like everything else.
-    image: rhasspy/wyoming-piper:2.5.2
+    image: ${HUB_IMG_WYOMING_PIPER:-rhasspy/wyoming-piper:2.5.2}
     container_name: wyoming-piper
     restart: unless-stopped
     profiles: [voice]

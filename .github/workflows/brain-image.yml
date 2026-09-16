@@ -18,6 +18,7 @@ on:
 permissions:
   contents: read
   packages: write
+  id-token: write      # cosign signs with the workflow's own OIDC identity; there is no key to keep
 
 jobs:
   # Tags bypass branch protection, so a release is verified here before it is published. Pushes to
@@ -51,6 +52,7 @@ jobs:
             type=raw,value=main,enable={{is_default_branch}}
             type=sha
       - uses: docker/build-push-action@v6
+        id: build
         with:
           context: .
           file: brain/Dockerfile
@@ -63,3 +65,15 @@ jobs:
             HUB_COMMIT=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      # Keyless: the signature binds "built by this workflow, in this repository, from this commit",
+      # with no key for anybody to lose or steal. It is not what a hub checks -- a hub checks the
+      # maker's own signature over the release manifest, because this one would sign an attacker's
+      # commit just as happily if they could push. tools/release.sh checks this before signing that,
+      # so the maker's signature is only ever given to an image this workflow actually built.
+      # docs/updates.md, piece 2.
+      - uses: sigstore/cosign-installer@v3
+        if: github.ref_type == 'tag'
+      - name: sign the image
+        if: github.ref_type == 'tag'
+        run: cosign sign --yes "ghcr.io/${{ github.repository_owner }}/home-hub-brain@${{ steps.build.outputs.digest }}"

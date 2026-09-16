@@ -205,6 +205,14 @@ class RolledBackTests(UpdateTest):
         self.reverted("v1.3.0", state="failed")
         self.assertEqual(await self.offered(u), (True, False))
 
+    async def test_a_release_the_host_would_not_vouch_for_is_not_offered_either(self):
+        # Nothing was installed and nothing is broken; what stops is the hub raising it. docs/updates.md, piece 2.
+        u = self.make(version="v1.2.0")
+        u.fetch = self.release("v1.3.0")
+        self.reverted("v1.3.0", state="refused")
+        self.assertEqual(await self.offered(u), (True, False))
+        self.assertEqual(u.summary()["rejected"], "1.3.0")
+
     async def test_an_ordinary_failure_with_no_version_named_holds_nothing_back(self):
         # The installer stopped before anything moved: there is no bad version, so nothing is refused.
         u = self.make(version="v1.2.0")
