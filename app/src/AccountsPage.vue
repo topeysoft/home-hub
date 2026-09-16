@@ -75,7 +75,7 @@ async function remove(a: Account) {
       </li>
       <li v-else>
         <span class="hub-k">Accounts</span>
-        <span class="hub-v">Nothing signed in yet.<span class="hub-sub"> Things that live behind an account — a camera, a thermostat, a doorbell — are added from <i>Add a device</i>, and appear here once they are.</span></span>
+        <span class="hub-v">Nothing signed in yet.<span class="hub-sub line">Things that live behind an account — a camera, a thermostat, a doorbell — are added from <i>Add a device</i>, and appear here once they are.</span></span>
         <button class="button small" @click="store.sheet = 'add'">Add a device</button>
       </li>
     </ul>

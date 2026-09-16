@@ -61,23 +61,23 @@ const keys = computed(() => holdsKeys())
       </li>
       <li v-else>
         <span class="hub-k">Household</span>
-        <span class="hub-v">Nobody yet.<span class="hub-sub"> Once the house knows who lives here it can say who is in, and greet them by name.</span></span>
+        <span class="hub-v">Nobody yet.<span class="hub-sub line">Once the house knows who lives here it can say who is in, and greet them by name.</span></span>
         <span></span>
       </li>
       <li>
         <span class="hub-k">Add</span>
-        <span class="hub-v">Put the house on their phone. Scan once, and it opens like an app from their first screen.</span>
+        <span class="hub-v">Put the house on their phone.<span class="hub-sub line">Scan once, and it opens like an app from their first screen.</span></span>
         <button class="button small" @click="adding = !adding">{{ adding ? 'Hide' : 'Show how' }}</button>
       </li>
       <li class="hub-wide" v-if="adding"><PhoneSteps /></li>
       <li v-if="store.status?.locked && keys">
         <span class="hub-k">Phones</span>
-        <span class="hub-v">{{ store.phones.length === 1 ? 'One phone belongs' : `${store.phones.length} phones belong` }} to the house. Each runs it from the Wi‑Fi; none reaches it from outside yet.<span class="hub-sub"> A phone that is removed is out at once.</span></span>
+        <span class="hub-v">{{ store.phones.length === 1 ? 'One phone belongs' : `${store.phones.length} phones belong` }} to the house.<span class="hub-sub line">Each runs it from the Wi‑Fi; none reaches it from outside yet. A phone that is removed is out at once.</span></span>
         <span></span>
       </li>
       <li v-else-if="store.status?.locked">
         <span class="hub-k">This phone</span>
-        <span class="hub-v">This phone was let in at the wall, so it runs the house but does not keep it.<span class="hub-sub"> Who else belongs, and who else gets in, is answered at the wall. You can take this phone out below whenever you like.</span></span>
+        <span class="hub-v">This phone was let in at the wall, so it runs the house but does not keep it.<span class="hub-sub line">Who else belongs, and who else gets in, is answered at the wall. You can take this phone out below whenever you like.</span></span>
         <span></span>
       </li>
       <li class="hub-wide" v-if="store.status?.locked && store.phones.length">
@@ -91,7 +91,7 @@ const keys = computed(() => holdsKeys())
       </li>
       <li v-else-if="store.status?.setup_done && !store.status?.locked">
         <span class="hub-k">Phones</span>
-        <span class="hub-v">Without a code, every phone on the Wi‑Fi can run the house.<span class="hub-sub"> Set one and only the phones you let in can.</span></span>
+        <span class="hub-v">Without a code, every phone on the Wi‑Fi can run the house.<span class="hub-sub line">Set one and only the phones you let in can.</span></span>
         <button class="button small" @click="store.sheet = 'code'">Set a code</button>
       </li>
     </ul>

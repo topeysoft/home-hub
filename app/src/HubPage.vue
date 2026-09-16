@@ -83,17 +83,17 @@ const when = (ts?: number | null) => ts ? new Date(ts * 1000).toLocaleString([],
       </li>
       <li>
         <span class="hub-k">Updates</span>
-        <span class="hub-v">{{ update?.auto ? 'Installed overnight, on their own.' : 'Installed when you tap, and not before.' }}<span class="hub-sub">{{ update?.verified ? ' Only ones this hub can check, and it puts back any that won’t start.' : ' This hub can’t check an update yet, so it waits to be asked.' }}</span></span>
+        <span class="hub-v">{{ update?.auto ? 'Installed overnight, on their own.' : 'Installed when you tap, and not before.' }}<span class="hub-sub line">{{ update?.verified ? 'Only ones this hub can check, and it puts back any that won’t start.' : 'This hub can’t check an update yet, so it waits to be asked.' }}</span></span>
         <button class="toggle" role="switch" :aria-checked="!!update?.auto" aria-label="Install updates overnight" :class="{ on: update?.auto, busy: autoBusy }" @click="flipAuto"><span class="knob"></span></button>
       </li>
       <li>
         <span class="hub-k">Backup</span>
-        <span class="hub-v">Settings, rooms, routines, the engine's setup and the radios' keys, in one file.<span class="hub-sub"> It holds the house's keys: keep it private.</span></span>
+        <span class="hub-v">Everything the house knows, in one file.<span class="hub-sub line">Settings, rooms, routines, the engine's setup and the radios' keys. It holds the house's keys, so keep the file private.</span></span>
         <button class="button small" :class="{ busy }" @click="backup">{{ busy ? 'Packing…' : 'Back up' }}</button>
       </li>
       <li>
         <span class="hub-k">Restore</span>
-        <span class="hub-v">Put a backup back, here or on a new hub. Everything running now is replaced by what is in the file.</span>
+        <span class="hub-v">Put a backup back, here or on a new hub.<span class="hub-sub line">Everything running now is replaced by what is in the file.</span></span>
         <Restore small />
       </li>
     </ul>

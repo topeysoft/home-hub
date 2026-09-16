@@ -4450,9 +4450,19 @@ select.input {
   font-size: 14.5px;
   line-height: 1.4;
 }
+/* The quiet half of a row. Two kinds, and they are not the same thing: a
+   fragment qualifying the value -- "· checked Wed 2:44 PM" -- rides along on
+   the value's own line, while a whole sentence gets .line and sits under it.
+   Run inline, a sentence turns the row into a two-colour paragraph whose break
+   lands wherever the window puts it, so the row changes shape with its width
+   and a reader cannot see where the fact ends and the caveat starts. */
 .hub-sub {
   color: var(--muted);
   font-size: 13px;
+}
+.hub-sub.line {
+  display: block;
+  margin-top: 3px;
 }
 .hub-rows .button {
   margin: 0;
