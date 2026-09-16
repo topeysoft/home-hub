@@ -599,6 +599,31 @@ async def settings_lock(request: Request, call_next):
     return await call_next(request)
 
 
+# How long a phone may keep a copy. Left unsaid, a browser is free to guess -- RFC 9111 lets it treat
+# a response with no Cache-Control as fresh for a slice of the time since Last-Modified -- and a home
+# screen app on iOS keeps its own copy, in its own store, separate from the same phone's Safari. That
+# is how somebody ends up tapping the icon and getting the build the hub stopped serving days ago
+# while Safari beside it shows the new one, with no way in from the wall to clear it.
+#
+# So the panel says it plainly. The files under /assets/ have the build's hash in their names and can
+# never mean anything else, so they are kept for good; index.html and the few beside it are checked
+# every time, which the ETag turns into a 304 and not a download. Anything that already asked for
+# something specific (a camera frame, the QR) keeps what it asked for.
+PANEL_FOREVER = "public, max-age=31536000, immutable"   # hashed by the build: a new build is a new name
+PANEL_FRESH = "no-cache"                                # keep a copy, but ask before using it
+
+
+@app.middleware("http")
+async def panel_caching(request: Request, call_next):
+    r = await call_next(request)
+    path = request.url.path
+    # Sounds are their own thing: a speaker fetches them by byte range and re-fetches on its own.
+    if "cache-control" in r.headers or path.startswith("/sounds/"):
+        return r
+    r.headers["Cache-Control"] = PANEL_FOREVER if path.startswith("/assets/") else PANEL_FRESH
+    return r
+
+
 def _with_cookie(body: dict, request: Request, phone: dict, token: str) -> JSONResponse:
     """The phone's token, in a cookie the page's scripts cannot read. Secure when the front door was https."""
     r = JSONResponse(body)
