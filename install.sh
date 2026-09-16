@@ -130,10 +130,10 @@ say "4/5  Settings"
 # catch. The first install trusts the repository it came from; every update after it trusts this file.
 # host/verify.sh reads it. A flashed image narrows that first-install trust, because the image was
 # built from a tag and carries the key already.
-KEYFILE="${HOME_HUB_KEY:-/etc/home-hub/release-key.pub}"
-if [ ! -s "$KEYFILE" ] && [ -s host/release-key.pub ]; then
-  mkdir -p "$(dirname "$KEYFILE")" && cp host/release-key.pub "$KEYFILE" && chmod 0644 "$KEYFILE"
-  echo "  release key installed; from here on this hub installs nothing it cannot check"
+KEYDIR="${HOME_HUB_KEYS:-/etc/home-hub/release-keys.d}"
+if [ ! -d "$KEYDIR" ] && ls host/release-keys.d/*.pub >/dev/null 2>&1; then
+  mkdir -p "$KEYDIR" && cp host/release-keys.d/*.pub "$KEYDIR"/ && chmod 0644 "$KEYDIR"/*.pub
+  echo "  $(ls "$KEYDIR"/*.pub | wc -l | tr -d ' ') release key(s) installed; from here on this hub installs nothing it cannot check"
 fi
 if [ ! -f .env ]; then
   TZ_NOW="$(cat /etc/timezone 2>/dev/null || timedatectl show -p Timezone --value 2>/dev/null || echo UTC)"

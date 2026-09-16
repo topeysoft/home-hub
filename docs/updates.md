@@ -166,11 +166,18 @@ checks out **the commit the manifest names**, not the tag. Every image in `docke
 `${HUB_IMG_<SERVICE>:-<the tag>}`, so a verified release pins by digest and the tag stays as the readable default and
 the record of what was tested.
 
-**Where the key lives is the whole design.** Not in `$DIR`: that is the thing being updated, so a key kept only there
-could be replaced by the same push it exists to catch. It is copied once to `/etc/home-hub/release-key.pub` on the
-first install and never overwritten. **The first install trusts the repository it came from; every update after it
-trusts the key.** That boundary is real, and the flashed image narrows it, because the image was built from a tag and
-carries the key already.
+**Where the keys live is the whole design.** Not in `$DIR`: that is the thing being updated, so a key kept only there
+could be replaced by the same push it exists to catch. They are copied once into `/etc/home-hub/release-keys.d/` on
+the first install and never added to. **The first install trusts the repository it came from; every update after it
+trusts the keys.** That boundary is real, and the flashed image narrows it, because the image was built from a tag and
+carries the keys already.
+
+**A directory, not one file**, and that part is done now because it cannot be done later. A hub never adds a key after
+its first install — a key arriving from the repository afterwards is exactly the push this exists to catch — so a
+second key has to be there from the beginning or it can never be there at all, and without one, losing the first means
+no hub in any house can be updated again, ever. `tools/release.sh --new-key spare` makes it; keep it offline,
+somewhere other than the first, and never sign with it until you have to. Any key in the directory may sign a release.
+This closes the open decision this document opened with.
 
 **Two corrections to what this document said before it was built.**
 
@@ -263,11 +270,10 @@ setup**, not a nudge that Home repeats.
 
 ## Open decisions
 
-- **What happens when the signing key is lost.** Still open, and now urgent rather than theoretical: the mechanism is
-  built and the first `--new-key` is the point of no return. A hub that has installed the public half refuses every
-  release the matching private half did not sign, so losing it means no hub in any house can ever be updated again.
-  A second key trusted from the start costs nothing now and is impossible to add later. `verify.sh` reads one key
-  file; making it read a directory of them is a small change *today*.
+- **Whether there is a spare key, and where it lives.** The mechanism no longer forces the answer — `verify.sh` trusts
+  a directory — but the answer still has to be given before the first hub ships, because a hub never adds a key after
+  its first install. Recommended: two keys, made at the same time, on different machines, the spare never used until
+  it has to be.
 - **Does a hub ever refuse to run an old build?** A release old enough to be dangerous is exactly the one on a hub
   that has been off for a year, and refusing to start is the worst possible way to tell somebody.
 - **What the wall says while the engine is restarting.** For most updates only the brain moves and the panel blinks;

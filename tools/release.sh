@@ -15,25 +15,31 @@
 # which is the right way round but is also a reason not to leave a tag sitting unsigned.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-PRIV="${HOME_HUB_RELEASE_KEY:-$HOME/.home-hub/release-key.pem}"
-PUB="driver-layer/host/release-key.pub"
+NAME="${2:-release}"
+PRIV="${HOME_HUB_RELEASE_KEY:-$HOME/.home-hub/$NAME-key.pem}"
+KEYS="driver-layer/host/release-keys.d"
 
 if [ "${1:-}" = "--new-key" ]; then
-  [ -s "$PRIV" ] && { echo "There is already a key at $PRIV. Making another one locks out every hub that trusts this one."; exit 1; }
-  mkdir -p "$(dirname "$PRIV")"; ( umask 077; openssl genpkey -algorithm ed25519 -out "$PRIV" )
-  openssl pkey -in "$PRIV" -pubout -out "$PUB"
+  [ -s "$PRIV" ] && { echo "There is already a key at $PRIV. Overwriting it locks out every hub that trusts it."; exit 1; }
+  mkdir -p "$(dirname "$PRIV")" "$KEYS"; ( umask 077; openssl genpkey -algorithm ed25519 -out "$PRIV" )
+  openssl pkey -in "$PRIV" -pubout -out "$KEYS/$NAME.pub"
   cat <<TEXT
 
 Private key: $PRIV   (0600)
-Public key:  $PUB   — commit this; it is what every hub will trust
+Public key:  $KEYS/$NAME.pub   — commit this; it is what hubs will trust
 
-Two things, and they are the whole security of this:
+Three things, and they are the whole security of this:
 
   * Back the private key up somewhere off this machine and off GitHub. A hub that has
-    installed the public half will refuse every release the matching private half did not
-    sign, so losing it means no hub in any house can ever be updated again.
-  * A hub takes the public key on its first install and never replaces it. Changing this
-    file later does not reach a hub that already has one.
+    installed the public half refuses every release the matching private half did not
+    sign, so losing it with no second key means no hub in any house can ever be updated
+    again.
+  * Make a second one NOW if you are ever going to:  $0 --new-key spare
+    A hub trusts the keys it was installed with and never adds one -- a key arriving from
+    the repository later is exactly the push all of this exists to catch. Keep the spare
+    offline, somewhere different, and never sign with it until you have to.
+  * Hubs already in houses are not reached by any of this. The keys they hold are the keys
+    they had on their first install.
 
 TEXT
   exit 0
@@ -66,8 +72,13 @@ fi
 openssl pkeyutl -sign -inkey "$PRIV" -rawin -in "$TMP/release.json" -out "$TMP/release.json.sig"
 # Never hand out a signature without checking it against the public half that hubs will hold: a
 # mismatched pair is silent here and is a brick in every house.
-openssl pkeyutl -verify -pubin -inkey "$PUB" -rawin -in "$TMP/release.json" -sigfile "$TMP/release.json.sig" >/dev/null \
-  || { echo "The signature does not check against $PUB. Do not upload this."; exit 1; }
+SIGNER=""
+for k in "$KEYS"/*.pub; do
+  openssl pkeyutl -verify -pubin -inkey "$k" -rawin -in "$TMP/release.json" -sigfile "$TMP/release.json.sig" >/dev/null 2>&1 \
+    && { SIGNER="$k"; break; }
+done
+[ -n "$SIGNER" ] || { echo "That signature checks against none of the public keys in $KEYS, so no hub would accept it. Not uploading."; exit 1; }
+echo "Signed with the key hubs know as $(basename "$SIGNER")."
 sed -n '2,12p' "$TMP/release.json"
 echo "  ...and the rest"
 

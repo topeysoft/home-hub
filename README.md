@@ -261,16 +261,18 @@ that is not on GitHub. It asks the registries what the tag's images actually are
 image was built by this repository's workflow from this tag, writes the commit and every image digest into
 `release.json`, signs it, and attaches both to the release. Until it has run, hubs see the release and refuse it —
 which is the right way round, and a reason not to leave a tag sitting unsigned. `tools/release.sh --new-key` makes
-the keypair, once ever; the private half belongs somewhere off GitHub and backed up, because a hub that trusts the
-public half will refuse every release the private half did not sign. `docs/updates.md`.
+the keypair; the private half belongs somewhere off GitHub and backed up, because a hub that trusts the public half
+will refuse every release the private half did not sign. **Make a spare at the same time**
+(`tools/release.sh --new-key spare`): a hub trusts the keys it was installed with and never adds one, so a second key
+has to exist before the first hub ships or it can never exist at all. `docs/updates.md`.
 
 Pushes to main publish `main` and `sha-<sha>` images and nothing else. **A merge to main does not
 reach anybody's hub.**
 
 Every hub verifies a release before it installs it: `driver-layer/host/verify.sh` checks the maker's signature over
 `release.json`, then the hub checks out **the commit the manifest names** rather than the tag (so a moved tag changes
-nothing) and pulls every image, ours and the rented ones, **by digest**. The key it checks against is copied to
-`/etc/home-hub/release-key.pub` on the first install and never replaced — the first install trusts the repository, and
+nothing) and pulls every image, ours and the rented ones, **by digest**. The keys it checks against are copied into
+`/etc/home-hub/release-keys.d/` on the first install and never added to — the first install trusts the repository, and
 every update after it trusts the key. A release that cannot be checked is not installed and is not reported as a
 failure: nothing moved, and the panel says so without offering a *Try again* that could not help. The `main` channel
 is not verified, deliberately: there are no manifests for commits, a hub following a branch is a hub being worked on,

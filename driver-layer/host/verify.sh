@@ -22,7 +22,12 @@
 # manifests for commits, a hub following a branch is a hub being worked on, and pretending otherwise
 # would mean an escape hatch that ends up pasted into a house. And it has no override -- a hub that
 # cannot verify a release does not install it.
-KEY="${HOME_HUB_KEY:-/etc/home-hub/release-key.pub}"
+# A directory, not one file, and that is a decision that cannot be taken later: a hub trusts the keys
+# it was installed with and never adds one, because a key arriving from the repository afterwards is
+# exactly the push this whole file exists to catch. So a second key has to be there from the first
+# install or it can never be there at all -- and without one, losing the first means no hub in any
+# house can be updated again, ever. Any key in here may sign a release.
+KEYS="${HOME_HUB_KEYS:-/etc/home-hub/release-keys.d}"
 RELEASES="${HOME_HUB_RELEASES:-https://github.com/topeysoft/home-hub/releases/download}"
 
 # The manifest's own fields, read with sed. Safe here for one reason only: nothing reads this file
@@ -38,18 +43,29 @@ older_than() {  # older_than A B -> true when A sorts before B by version
 # 0: verified, and VERIFIED_COMMIT / HUB_BRAIN_IMAGE / HUB_IMG_* are set
 # 1: could not be verified -- do not install this
 # 2: this hub has no key yet, so there is nothing to verify against
+# Does any key this hub holds vouch for these bytes?
+signed_by_us() {  # file, signature
+  local key
+  for key in "$KEYS"/*.pub; do
+    [ -s "$key" ] || continue
+    openssl pkeyutl -verify -pubin -inkey "$key" -rawin -in "$1" -sigfile "$2" >/dev/null 2>&1 && return 0
+  done
+  return 1
+}
+
+held_keys() { ls "$KEYS"/*.pub 2>/dev/null | wc -l | tr -d ' '; }
+
 verify_release() {
   local tag="$1" dir="$2" tmp want got
-  [ -s "$KEY" ] || return 2
+  [ "$(held_keys)" -gt 0 ] || return 2
   command -v openssl >/dev/null 2>&1 || { echo "  openssl is missing, so a release cannot be checked"; return 1; }
   tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' RETURN
   if ! curl -fsSL "$RELEASES/$tag/release.json" -o "$tmp/release.json" \
     || ! curl -fsSL "$RELEASES/$tag/release.json.sig" -o "$tmp/release.json.sig"; then
     echo "  $tag has no signed record of what it is, so it is not being installed"; return 1
   fi
-  if ! openssl pkeyutl -verify -pubin -inkey "$KEY" -rawin -in "$tmp/release.json" \
-       -sigfile "$tmp/release.json.sig" >/dev/null 2>&1; then
-    echo "  $tag is not signed by the key this hub trusts, so it is not being installed"; return 1
+  if ! signed_by_us "$tmp/release.json" "$tmp/release.json.sig"; then
+    echo "  $tag is not signed by any key this hub trusts, so it is not being installed"; return 1
   fi
 
   want="$(mf version "$tmp/release.json")"
@@ -86,6 +102,7 @@ verify_release() {
     HUB_IMAGE_VARS="$HUB_IMAGE_VARS $var"
   done <<< "$(sed -n 's/^ *"\([a-z0-9-]*\)": "\([^"]*@sha256:[0-9a-f]*\)".*/\1 \2/p' "$tmp/release.json")"
   export HUB_IMAGE_VARS
-  echo "  $tag verified: $(echo "$VERIFIED_COMMIT" | cut -c1-12), $(echo "$HUB_BRAIN_IMAGE" | sed 's/.*@sha256:/brain sha256:/' | cut -c1-26), and $(echo "$HUB_IMAGE_VARS" | wc -w | tr -d ' ') images pinned by digest"
+  local n; n="$(echo "$HUB_IMAGE_VARS" | wc -w | tr -d ' ')"
+  echo "  $tag verified: $(echo "$VERIFIED_COMMIT" | cut -c1-12), $(echo "$HUB_BRAIN_IMAGE" | sed 's/.*@sha256:/brain sha256:/' | cut -c1-26), and $n image$([ "$n" = 1 ] || echo s) pinned by digest"
   return 0
 }
