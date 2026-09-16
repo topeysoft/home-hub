@@ -29,7 +29,6 @@
   --sans:
     'Instrument Sans Variable', 'Instrument Sans', -apple-system, 'SF Pro Text',
     'Segoe UI', system-ui, sans-serif;
-  --serif: 'Instrument Serif', 'Iowan Old Style', 'Palatino', Georgia, serif;
   --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 .shell[data-ambient='dawn'] {
@@ -81,10 +80,28 @@ input:focus-visible {
 ::-webkit-scrollbar {
   display: none;
 }
+/* Every title in the house, in the same face the screen under it is already in.
+   The panel used to keep a second typeface for these -- a serif, as the voice of
+   the headings -- and it worked screen by screen and not at all across the app:
+   a room name in the serif over cards in the sans, one tab away from a Wall that
+   had already given the serif up for exactly that reason (see the layout block
+   below, which argued it three times before it was argued once here). A face
+   earns its place by being the voice of something; this one had been reduced to
+   being the voice of whichever line happened to be a heading.
+
+   --sans and not a face by name, because the token is what each arrangement gets
+   to answer: Wall says Plus Jakarta on the shell, so its titles say it too, and
+   the others keep Instrument Sans. The heading follows the home screen it came
+   from rather than overruling it.
+
+   Tracked tighter than the body. The serif carried display sizes on its own
+   contrast and a sans has none, so at 56px the same -0.01em reads loose; -0.025em
+   puts the word back together without touching the smaller sizes, which are all
+   set below their own tracking anyway. */
 .display {
-  font-family: var(--serif);
+  font-family: var(--sans);
   font-weight: 400;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.025em;
   text-wrap: balance;
 }
 
@@ -388,10 +405,11 @@ input:focus-visible {
   margin-bottom: 24px;
 }
 .rail-time {
-  font-family: var(--serif);
+  font-family: var(--sans);
   font-size: 46px;
   line-height: 1;
-  letter-spacing: -0.02em;
+  /* a hair tighter than the serif was set, for the reason `.display` gives */
+  letter-spacing: -0.035em;
   font-variant-numeric: tabular-nums;
 }
 .rail-day {
@@ -1314,10 +1332,10 @@ input:focus-visible {
   }
   /* the reading, in the face the rest of the house says numbers in */
   .tiles > .tile.climate[data-size='third'] .clim-big {
-    font-family: var(--serif);
+    font-family: var(--sans);
     font-weight: 400;
     font-size: 44px;
-    letter-spacing: 0;
+    letter-spacing: -0.03em;
     line-height: 1;
   }
   .tiles > .tile.climate[data-size='third'] .clim-unit {
@@ -2598,7 +2616,7 @@ input:focus-visible {
 .idle-time {
   font-size: clamp(96px, 16vw, 200px);
   line-height: 1;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.04em;
   color: var(--ink);
   font-variant-numeric: tabular-nums;
 }
@@ -5577,7 +5595,7 @@ select.input {
   margin-top: 40px;
   font-size: clamp(44px, 7vw, 76px);
   line-height: 1;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.035em;
 }
 /* A thing that has stopped answering has no reading, and "Not answering" is not one -- it is the
    absence of one, said where the reading would have been. At the full size it is thirteen characters
@@ -6078,50 +6096,30 @@ select.input {
 [data-layout='wall'] .bento .scene-card {
   border-radius: 28px;
 }
-/* ...and the pane a card opens onto speaks it too. The device boards in
-   design/device were drawn against the house's Instrument pair and the pane
-   still wears them, so here a card saying "Thermostat" in the sans opened onto
-   the same word in the serif, one tap apart -- the same name, two typefaces,
-   with the card still visible behind it. There is no serif at all in
-   design/nightfall, and .wall-temp above already says why: this arrangement has
-   no heading for the serif to be the voice of, and its numerals are its own
-   face held light. So the pane's three `display` elements follow the panel
-   behind them, on the recipe the weather uses.
+/* What follows used to be where the serif was taken off this arrangement, one
+   element at a time -- the pane, the top bar's clock, the resting screen -- each
+   with its own argument for why a lone serif beside a sentence in the sans reads
+   as a slip rather than as a second voice. The house has since agreed with all
+   three everywhere: `.display` resolves --sans now, so there is no serif left on
+   any arrangement to take off this one.
 
-   The top bar's clock goes with it, for a plainer reason than the pane's. It
-   was the last serif anywhere on this arrangement, set twelve pixels from a
-   date already in the sans, and a lone serif beside its own date reads as a
-   slip rather than as a second voice. A typeface earns its place by being the
-   voice of something; here the serif had nothing left to speak for.
-
-   The resting screen goes with them, for the same reason again: it is the panel
-   with everything taken away, so it is the one screen a person looks at longest
-   and the one that has to agree with what they last touched. A house that rests
-   into a different typeface than it woke in has changed its mind while nobody
-   was watching.
-
-   The house still says the serif elsewhere -- the setup pages -- and those are
-   whole screens in it rather than one line beside a sentence that is not.
-   Scoped to Wall like everything else in this block: the other arrangements
-   were drawn with the serif and keep it, waking and resting both. */
-[data-layout='wall'] .opened .display {
-  font-family: var(--sans);
-}
+   What stays here is the part that was never about the serif: Plus Jakarta goes
+   down to 200 and Instrument Sans stops at 400, so the light weights below are
+   this typeface's and not the house's, and they have to stay inside this
+   attribute. The sizes and the tracking go with them for the same reason -- they
+   were measured against Jakarta's width. */
 [data-layout='wall'] .topbar-time {
-  font-family: var(--sans);
-  /* held lighter than the serif drew itself, so it sits with the weather's 250
-     rather than outweighing it, and a hair smaller because the sans runs wider
-     at the same size and the date beside it has a wrapping point to keep */
+  /* held lighter, so it sits with the weather's 250 rather than outweighing it,
+     and a hair smaller because Jakarta runs wider at the same size and the date
+     beside it has a wrapping point to keep */
   font-weight: 300;
   font-size: 27px;
   letter-spacing: -0.03em;
 }
 [data-layout='wall'] .idle-time {
-  font-family: var(--sans);
   /* the weather's recipe rather than the top bar's, because this is the same
      thing the weather is: the arrangement's one enormous numeral. 300 at 200px
-     is a slab -- the serif carried that size on its own contrast and the sans
-     has none, so it is held at the weather's 250 and tracked in to match. */
+     is a slab, so it is held at the weather's 250 and tracked in to match. */
   font-weight: 250;
   letter-spacing: -0.045em;
 }
@@ -6322,8 +6320,9 @@ select.input {
   transform: scale(0.985);
 }
 .wall-temp {
-  /* the board's numerals are its own typeface at 200, not the house's serif:
-     there is no heading in this arrangement for the serif to be the voice of */
+  /* the board's numerals are this arrangement's own typeface held at 200, which
+     is a weight the house's Instrument Sans does not reach -- see the layout
+     block above for why the light end of Jakarta stays scoped to Wall */
   font-family: var(--sans);
   font-size: 84px;
   font-weight: 250;

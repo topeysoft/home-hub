@@ -25,7 +25,7 @@
  *   2  what you can do     the kind's real verbs -- never a blanket power
  *                          button, which for a lock, a blind, a camera and a
  *                          mower was an action the brain refuses with a 400
- *   3  what it says        one reading, in serif
+ *   3  what it says        one reading, large
  *   4  why it is like that one line, then the facts this thing actually knows
  *   5  the instrument      the control a tile is too small for. This is the
  *                          half of the pane that used to hold a 260px

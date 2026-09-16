@@ -7,7 +7,7 @@
 <body>
 <x-dc>
 <helmet>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
   <style>
     * { box-sizing: border-box; }
     body {
@@ -22,7 +22,8 @@
       --surface-hi: rgba(255,255,255,.08);
     }
     a { color: #e9b872; } a:hover { color: #b8863e; }
-    .dsp { font-family: "Instrument Serif", "Iowan Old Style", Palatino, Georgia, serif; font-weight: 400; letter-spacing: -.01em; }
+    .dsp { /* the titles, in the face the board is already in -- see app/src/panel.css */
+           font-family: inherit; font-weight: 400; letter-spacing: -.025em; }
     /* the five zones, at the sizes the pane already uses */
     .room { font-size: 15px; color: var(--ink-2); }
     .name { margin: 4px 0 0; font-size: 56px; line-height: 1.04; }
@@ -100,7 +101,7 @@
                 stroke-dasharray="72 758" stroke-dashoffset="-263" transform="rotate(135 165 165)"/>
         <circle cx="165" cy="165" r="132" fill="none" stroke="#f1eee8" stroke-width="25" stroke-linecap="round"
                 stroke-dasharray="6 824" stroke-dashoffset="-260" transform="rotate(135 165 165)"/>
-        <text x="165" y="158" text-anchor="middle" font-family="Instrument Serif, Georgia, serif" font-size="86" fill="#f1eee8">71&deg;</text>
+        <text x="165" y="158" text-anchor="middle" font-family="Instrument Sans, system-ui, sans-serif" font-size="86" fill="#f1eee8">71&deg;</text>
         <text x="165" y="190" text-anchor="middle" font-size="12.5" letter-spacing="2.4" fill="#7f7d77">ASKED FOR</text>
         <text x="165" y="228" text-anchor="middle" font-size="16" fill="#7ab0e8">Cooling &middot; 74&deg; in here now</text>
       </svg>

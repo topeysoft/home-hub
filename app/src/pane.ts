@@ -37,7 +37,7 @@ export function paneKind(d: Device): string {
   return k === 'sensor' || k === 'motion' || k === 'contact' ? 'sense' : k
 }
 
-/* ---------- the one reading, in serif, large ---------- */
+/* ---------- the one reading, large ---------- */
 /** The single thing worth saying about this device in large type. For a player that is what is
     playing rather than the fact that it is playing: "The Bear", not "Playing". */
 export function reading(d: Device, unit = '°'): string {

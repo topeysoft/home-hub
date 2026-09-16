@@ -7,7 +7,7 @@
 <body>
 <x-dc>
 <helmet>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
   <style>
     * { box-sizing: border-box; }
     body {
@@ -22,7 +22,8 @@
       --surface-hi: rgba(255,255,255,.08);
     }
     a { color: #e9b872; } a:hover { color: #b8863e; }
-    .dsp { font-family: "Instrument Serif", "Iowan Old Style", Palatino, Georgia, serif; font-weight: 400; letter-spacing: -.01em; }
+    .dsp { /* the titles, in the face the board is already in -- see app/src/panel.css */
+           font-family: inherit; font-weight: 400; letter-spacing: -.025em; }
     /* the five zones, at the sizes the pane already uses */
     .room { font-size: 15px; color: var(--ink-2); }
     .name { margin: 4px 0 0; font-size: 56px; line-height: 1.04; }
@@ -95,49 +96,49 @@
       
       <div style="display: flex; align-items: baseline; gap: 14px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,.06); white-space: nowrap;">
         <span style="flex: 0 0 206px; font-size: 15.5px;">Ceiling light</span>
-        <span style="flex: 0 0 84px; font-family: 'Instrument Serif', Georgia, serif; font-size: 21px; color: #f1eee8;">35%</span>
+        <span style="flex: 0 0 84px; font-size: 21px; color: #f1eee8;">35%</span>
         <span style="flex: 0 0 84px; font-size: 14px; color: var(--ink-2);">Turn off</span>
         <span style="flex: 1 1 0; font-size: 13.5px; color: var(--muted);">The one instrument that exists.</span>
       </div>
       <div style="display: flex; align-items: baseline; gap: 14px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,.06); white-space: nowrap;">
         <span style="flex: 0 0 206px; font-size: 15.5px;">Living room TV</span>
-        <span style="flex: 0 0 84px; font-family: 'Instrument Serif', Georgia, serif; font-size: 21px; color: #f1eee8;">Playing</span>
+        <span style="flex: 0 0 84px; font-size: 21px; color: #f1eee8;">Playing</span>
         <span style="flex: 0 0 84px; font-size: 14px; color: var(--ink-2);">Turn off</span>
         <span style="flex: 1 1 0; font-size: 13.5px; color: var(--muted);">Artwork, position, transport: dropped.</span>
       </div>
       <div style="display: flex; align-items: baseline; gap: 14px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,.06); white-space: nowrap;">
         <span style="flex: 0 0 206px; font-size: 15.5px;">Thermostat</span>
-        <span style="flex: 0 0 84px; font-family: 'Instrument Serif', Georgia, serif; font-size: 21px; color: #e0685f;">74&deg;</span>
+        <span style="flex: 0 0 84px; font-size: 21px; color: #e0685f;">74&deg;</span>
         <span style="flex: 0 0 84px; font-size: 14px; color: #e0685f;">Turn on</span>
         <span style="flex: 1 1 0; font-size: 13.5px; color: var(--muted);">No way to set the temperature.</span>
       </div>
       <div style="display: flex; align-items: baseline; gap: 14px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,.06); white-space: nowrap;">
         <span style="flex: 0 0 206px; font-size: 15.5px;">Blinds</span>
-        <span style="flex: 0 0 84px; font-family: 'Instrument Serif', Georgia, serif; font-size: 21px; color: #e0685f;">70%</span>
+        <span style="flex: 0 0 84px; font-size: 21px; color: #e0685f;">70%</span>
         <span style="flex: 0 0 84px; font-size: 14px; color: #e0685f;">Turn on</span>
         <span style="flex: 1 1 0; font-size: 13.5px; color: var(--muted);">&ldquo;cover cannot on&rdquo;: the button errors.</span>
       </div>
       <div style="display: flex; align-items: baseline; gap: 14px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,.06); white-space: nowrap;">
         <span style="flex: 0 0 206px; font-size: 15.5px;">Front door</span>
-        <span style="flex: 0 0 84px; font-family: 'Instrument Serif', Georgia, serif; font-size: 21px; color: #e0685f;">locked</span>
+        <span style="flex: 0 0 84px; font-size: 21px; color: #e0685f;">locked</span>
         <span style="flex: 0 0 84px; font-size: 14px; color: #e0685f;">Turn on</span>
         <span style="flex: 1 1 0; font-size: 13.5px; color: var(--muted);">The raw state string. Same error.</span>
       </div>
       <div style="display: flex; align-items: baseline; gap: 14px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,.06); white-space: nowrap;">
         <span style="flex: 0 0 206px; font-size: 15.5px;">Backyard cam</span>
-        <span style="flex: 0 0 84px; font-family: 'Instrument Serif', Georgia, serif; font-size: 21px; color: #e0685f;">recording</span>
+        <span style="flex: 0 0 84px; font-size: 21px; color: #e0685f;">recording</span>
         <span style="flex: 0 0 84px; font-size: 14px; color: #e0685f;">Turn on</span>
         <span style="flex: 1 1 0; font-size: 13.5px; color: var(--muted);">No picture until you press Watch.</span>
       </div>
       <div style="display: flex; align-items: baseline; gap: 14px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,.06); white-space: nowrap;">
         <span style="flex: 0 0 206px; font-size: 15.5px;">Robot mower</span>
-        <span style="flex: 0 0 84px; font-family: 'Instrument Serif', Georgia, serif; font-size: 21px; color: #e0685f;">docked</span>
+        <span style="flex: 0 0 84px; font-size: 21px; color: #e0685f;">docked</span>
         <span style="flex: 0 0 84px; font-size: 14px; color: #e0685f;">Turn on</span>
         <span style="flex: 1 1 0; font-size: 13.5px; color: var(--muted);">Same error. A mower has no on.</span>
       </div>
       <div style="display: flex; align-items: baseline; gap: 14px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,.06); white-space: nowrap;">
         <span style="flex: 0 0 206px; font-size: 15.5px;">Motion, Temperature, Back door</span>
-        <span style="flex: 0 0 84px; font-family: 'Instrument Serif', Georgia, serif; font-size: 21px; color: #e0685f;">&mdash;</span>
+        <span style="flex: 0 0 84px; font-size: 21px; color: #e0685f;">&mdash;</span>
         <span style="flex: 0 0 84px; font-size: 14px; color: #e0685f;">&mdash;</span>
         <span style="flex: 1 1 0; font-size: 13.5px; color: var(--muted);">No tile, so nothing to hold.</span>
       </div>

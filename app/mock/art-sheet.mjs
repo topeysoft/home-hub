@@ -132,12 +132,13 @@ const page = `<!doctype html>
 <body>
 <x-dc>
 <helmet>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
   <style>
     *, *::before, *::after { box-sizing: border-box; }
     body { margin: 0; font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif; }
     a { color: #e9b872; } a:hover { color: #b8863e; }
-    .dsp { font-family: "Instrument Serif", "Iowan Old Style", Palatino, Georgia, serif; font-weight: 400; letter-spacing: -0.01em; }
+    .dsp { /* the titles, in the face the board is already in -- see app/src/panel.css */
+           font-family: inherit; font-weight: 400; letter-spacing: -.025em; }
     .cap { font-size: 13px; letter-spacing: .07em; text-transform: uppercase; color: #7f7d77; }
     .tile { position: relative; height: 190px; border-radius: 22px; overflow: hidden; }
     .art { position: absolute; right: -4px; bottom: -2px; }

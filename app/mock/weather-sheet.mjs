@@ -150,12 +150,13 @@ const page = `<!doctype html>
 <body>
 <x-dc>
 <helmet>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
   <style>
     *, *::before, *::after { box-sizing: border-box; }
     body { margin: 0; font-family: "Instrument Sans", -apple-system, system-ui, sans-serif; }
     a { color: #e9b872; } a:hover { color: #b8863e; }
-    .dsp { font-family: "Instrument Serif", Palatino, Georgia, serif; font-weight: 400; letter-spacing: -0.01em; }
+    .dsp { /* the titles, in the face the board is already in -- see app/src/panel.css */
+           font-family: inherit; font-weight: 400; letter-spacing: -.025em; }
     .cell { display: flex; flex-direction: column; align-items: flex-start; }
     .pair { display: flex; width: 100%; height: 140px; border-radius: 16px; overflow: hidden; border: 1px solid rgba(255,255,255,.09); }
     .half { position: relative; flex: 1 1 0; min-width: 0; }

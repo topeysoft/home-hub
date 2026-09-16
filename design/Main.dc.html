@@ -7,11 +7,12 @@
 <body>
 <x-dc>
 <helmet>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
   <style>
     body { margin: 0; font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif; }
     a { color: #e9b872; } a:hover { color: #b8863e; }
-    .dsp { font-family: "Instrument Serif", "Iowan Old Style", Palatino, Georgia, serif; font-weight: 400; letter-spacing: -0.01em; }
+    .dsp { /* the titles, in the face the board is already in -- see app/src/panel.css */
+           font-family: inherit; font-weight: 400; letter-spacing: -.025em; }
     @media (prefers-reduced-motion: reduce) { .mo { transition: opacity .18s linear !important; } }
   </style>
 </helmet>

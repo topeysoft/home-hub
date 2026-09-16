@@ -4,7 +4,8 @@ import sys, time, serial
 port = sys.argv[1] if len(sys.argv) > 1 else "/dev/cu.usbserial-0001"
 secs = float(sys.argv[2]) if len(sys.argv) > 2 else 60
 s = serial.Serial(port, 115200, timeout=0.3)
-s.setDTR(False); s.setRTS(True); time.sleep(0.15); s.setRTS(False)  # pulse EN
+if "--no-reset" not in sys.argv:
+    s.setDTR(False); s.setRTS(True); time.sleep(0.15); s.setRTS(False)  # pulse EN
 end = time.time() + secs
 buf = b""
 while time.time() < end:

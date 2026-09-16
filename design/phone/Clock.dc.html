@@ -7,7 +7,7 @@
 <body>
 <x-dc>
 <helmet>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200;300;400;500;600;700&family=Instrument+Serif&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200;300;400;500;600;700&display=swap">
   <style>
     * { box-sizing: border-box; }
     body {
@@ -46,7 +46,8 @@
       content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
       background: linear-gradient(112deg, transparent 26%, rgba(255,255,255,var(--sweep)) 45%, rgba(255,255,255,.02) 56%, transparent 64%);
     }
-    .dsp { font-family: "Instrument Serif", Georgia, serif; font-weight: 400; letter-spacing: -.01em; }
+    .dsp { /* the titles, in the face the board is already in -- see app/src/panel.css */
+           font-family: inherit; font-weight: 400; letter-spacing: -.025em; }
     .cap { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); }
     .ic { flex: 0 0 auto; }
     /* a thing the house wants you to decide, as the panel draws it */
