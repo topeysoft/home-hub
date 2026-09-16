@@ -24,6 +24,7 @@ remote provisioning). Carry the laptop.
 
     # 1. factory reset the switch: pull the Safety Disconnect, push it back,
     #    hold the touch plate ~10s until the LED goes out
+    python3 tools/census.py             # which switches are ours, which still need a reset
     python3 tools/meshscan.py 30        # confirm it now advertises 0x1827
     python3 tools/provision.py          # claim it
     python3 tools/compo.py              # what models does it expose?
