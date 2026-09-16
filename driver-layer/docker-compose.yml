@@ -97,6 +97,9 @@ services:
       # Which code this hub follows, so the panel offers the same thing install.sh would install.
       # release: the newest version tag. main: the branch, for a hub being worked on. install.sh writes it.
       - HUB_CHANNEL=${HUB_CHANNEL:-release}
+      # Whether the host holds release keys. It decides one thing: whether this hub is allowed to
+      # install updates in the night without being asked. install.sh writes it; docs/updates.md.
+      - HUB_VERIFIED=${HUB_VERIFIED:-}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}   # the assistant's key, if it is not pasted into the panel instead
       # Whether this house can answer out loud, and in whose voice. Empty is off and is every house
       # today: the panel then answers on the glass exactly as it does now. Set VOICE_TTS=piper with

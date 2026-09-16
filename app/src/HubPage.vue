@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { store, notify } from './store'
-import { downloadBackup, requestUpdate } from './api'
+import { downloadBackup, requestUpdate, setAutoUpdate } from './api'
 import Restore from './Restore.vue'
 import AdvancedLink from './AdvancedLink.vue'
 
@@ -29,6 +29,18 @@ const rolledBack = computed(() => update.value?.state?.state === 'reverted' ? (u
    button appears -- the same tap would refuse the same release, and this one is not the household's
    to fix. */
 const refused = computed(() => update.value?.state?.state === 'refused' ? (update.value?.state?.bad || 'That update') : '')
+/* Installing in the night without being asked. On by default where the hub can check what it is
+   installing, because the alternative is what actually happens otherwise: nobody walks to the wall,
+   and the house sits a year behind on the release that had the bug. A hub that cannot check waits
+   to be asked, and says so here rather than leaving a switch that means something different. */
+const autoBusy = ref(false)
+async function flipAuto() {
+  if (autoBusy.value) return
+  autoBusy.value = true
+  try { await setAutoUpdate(!update.value?.auto) }
+  catch (e: any) { notify(e.message, 'error') }
+  autoBusy.value = false
+}
 const when = (ts?: number | null) => ts ? new Date(ts * 1000).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' }) : ''
 </script>
 
@@ -45,6 +57,11 @@ const when = (ts?: number | null) => ts ? new Date(ts * 1000).toLocaleString([],
         <span class="hub-sub" v-else-if="update?.available === false">Up to date</span>
         <span class="hub-sub" v-else-if="update?.error">Couldn't check: no internet?</span>
         <span v-else></span>
+      </li>
+      <li>
+        <span class="hub-k">Updates</span>
+        <span class="hub-v">{{ update?.auto ? 'Installed overnight, on their own.' : 'Installed when you tap, and not before.' }}<span class="hub-sub">{{ update?.verified ? ' Only ones this hub can check are installed.' : ' This hub has no way to check an update yet, so it waits to be asked.' }}</span></span>
+        <button class="toggle" role="switch" :aria-checked="!!update?.auto" aria-label="Install updates overnight" :class="{ on: update?.auto, busy: autoBusy }" @click="flipAuto"><span class="knob"></span></button>
       </li>
       <li>
         <span class="hub-k">Backup</span>

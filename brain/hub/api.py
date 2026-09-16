@@ -1458,6 +1458,12 @@ def update_request():
     return hub.updates.request()
 
 
+@app.post("/update/auto")
+def update_auto(body: dict):
+    """{"auto": true|false}: whether this hub installs updates in the night without being asked."""
+    return hub.updates.set_auto(bool(body.get("auto")))
+
+
 # ---------- the assistant: writes and explains, never runs ----------
 @app.get("/assistant")
 def assistant_status(): return hub.assistant.status()

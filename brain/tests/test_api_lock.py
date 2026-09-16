@@ -246,7 +246,8 @@ class WhichSideOfTheDoorTests(unittest.TestCase):
                              ("POST", "/location"), ("POST", "/home/entry"), ("GET", "/setup/advanced"),
                              ("POST", "/setup/pin"), ("POST", "/flows"), ("POST", "/credentials"),
                              ("POST", "/assistant/key"), ("GET", "/backup"), ("POST", "/restore"),
-                             ("POST", "/pair"), ("DELETE", "/phones/abc"), ("POST", "/update")]:
+                             ("POST", "/pair"), ("DELETE", "/phones/abc"), ("POST", "/update"),
+                             ("POST", "/update/auto")]:
             with self.subTest(path=path):
                 self.assertTrue(needs_code(method, path))
 

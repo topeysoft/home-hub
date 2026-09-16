@@ -16,16 +16,28 @@ class FakeLog:
     def add(self, kind, subject, old=None, new=None, source="device", detail=None):
         self.rows.append({"ts": time.time(), "kind": kind, "subject": subject, "old": old, "new": new, "source": source, "detail": detail})
     def last_by_subject(self, kind, new): return {}
+    def last_user(self): return max((r["ts"] for r in self.rows if r["source"] == "user"), default=0.0)
     def recent(self, limit=100, subject=None, kinds=None):
         rows = [r for r in reversed(self.rows) if (not subject or r["subject"] == subject) and (not kinds or r["kind"] in kinds)]
         return rows[:limit]
     def of(self, kind): return [r for r in self.rows if r["kind"] == kind]
 
 
+class FakeSettings:
+    """settings.json without the file. hub_id is made the same way the real one makes it."""
+    def __init__(self): self.data = {}
+    def get(self, key, default=None): return self.data.get(key, default)
+    def set(self, **updates): self.data.update(updates)
+    def hub_id(self):
+        if not self.data.get("hub_id"): self.data["hub_id"] = "0123456789abcdef"
+        return self.data["hub_id"]
+
+
 class FakeHub:
     def __init__(self):
         self.tz, self.location, self.driver, self.entry = TZ, LOC, "ready", []
         self.home, self.log, self.sent = Home(), FakeLog(), []
+        self.settings = FakeSettings()
         self.home.rooms = {"hall": Room("hall", "Hallway"), "den": Room("den", "Den")}
         self.motion = Device("binary_sensor.hall_motion", "Hall motion", "hall", "motion", "off")
         self.light = Device("light.hall", "Hall light", "hall", "light", "off")

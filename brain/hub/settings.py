@@ -8,7 +8,7 @@ What belongs here is anything the HOUSE decides once and every screen then agree
 not is per-screen preference: which room a kiosk opens into, whether a phone has been offered the
 home-screen install. Those stay in the browser, because two screens are allowed to differ on them.
 """
-import json, os
+import json, os, secrets
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -23,6 +23,23 @@ class Settings:
 
     def get(self, key, default=None):
         return self.data.get(key, default)
+
+    def hub_id(self) -> str:
+        """This hub's own name for itself. Made once, at random, and kept.
+
+        Not derived from the hardware. A MAC address or a machine-id would leak something about the
+        house to anything the id is ever shown to, and would change under a household that moved the
+        hub onto a new box -- which is the one moment it most wants to still be the same hub. It
+        lives here, so it rides the backup and a restore keeps it.
+
+        Nothing about the house can be read out of it, and nothing should ever be hung on it that a
+        household would mind a stranger knowing. Today it decides which minute of the night this hub
+        installs an update in, so that ten thousand houses do not all move at once.
+        """
+        v = self.get("hub_id")
+        if not v:
+            v = secrets.token_hex(8); self.set(hub_id=v)
+        return v
 
     def set(self, **updates):
         self.data.update(updates)

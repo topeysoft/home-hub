@@ -18,7 +18,9 @@ things. `release` (the default, and what every hub ships as) follows version tag
 family until it is tagged. `main` follows the branch, commit by commit, which is what a hub being
 worked on wants. install.sh writes HUB_CHANNEL into the compose environment; nothing else chooses.
 """
-import asyncio, json, logging, os, re, time, urllib.request
+import asyncio, hashlib, json, logging, os, re, time, urllib.request
+from datetime import datetime
+
 from .settings import DATA
 
 log = logging.getLogger("hub.updates")
@@ -26,6 +28,10 @@ REPO = os.environ.get("HUB_REPO") or "topeysoft/home-hub"
 RELEASE_API = f"https://api.github.com/repos/{REPO}/releases/latest"
 MAIN_API = f"https://api.github.com/repos/{REPO}/commits/main"
 EVERY = 6 * 3600
+TICK = 300                            # how often the loop looks at the clock, as against at GitHub
+WINDOW = (2, 5)                       # the local hours a house is most likely to be asleep
+QUIET = 30 * 60                       # ...and how long since anybody asked the house for anything
+RETRY = 12 * 3600                     # one go a night, so a failing update does not run all night
 REQUEST = DATA / "update.request"     # the panel asked; the host's home-hub-update.path is watching for this file
 STATE = DATA / "update.json"          # written by the host's update.sh: running, done or failed
 RELEASE = re.compile(r"^v?\d+\.\d+")  # what a version tag looks like, next to "dev" and "main-1a2b3c4"
@@ -43,7 +49,12 @@ class Updates:
         self.version = os.environ.get("HUB_VERSION") or "dev"   # a tag, or main-<short sha>
         self.commit = os.environ.get("HUB_COMMIT") or ""
         self.channel = "main" if (os.environ.get("HUB_CHANNEL") or "release").lower() == "main" else "release"
+        # Whether the host holds release keys, written into the compose environment by install.sh.
+        # It decides the default below and nothing else; the checking itself is the host's, and this
+        # being wrong would make the hub shy rather than reckless.
+        self.verified = (os.environ.get("HUB_VERIFIED") or "") == "1"
         self.latest, self.checked, self.error = None, None, None
+        self.asked_at = 0.0               # when this hub last installed something without being asked
 
     @property
     def available(self):
@@ -63,6 +74,55 @@ class Updates:
     def _norm(v: str) -> str:
         """`v0.2.0` and `0.2.0` are the same release. CI tags the image without the v; git carries it."""
         return (v or "").lstrip("vV")
+
+    @property
+    def auto(self) -> bool:
+        """Whether this hub installs updates without being asked.
+
+        On by default, because the alternative is what actually happens otherwise: nobody walks to
+        the wall, nobody types the code, and the house sits three releases behind for a year running
+        the bug that was fixed in March. Every appliance a household already owns does this.
+
+        On by default *only where the hub can check what it is installing*, though. Updating by
+        itself from a source nothing verifies is the supply-chain problem with the person taken out
+        of it, so a hub with no release keys waits to be asked. A household's own answer, once given,
+        outranks both.
+        """
+        v = self.hub.settings.get("auto_update")
+        return self.verified if v is None else bool(v)
+
+    def set_auto(self, on: bool) -> dict:
+        self.hub.settings.set(auto_update=bool(on))
+        self.hub.log.add("home", "update", None, f"automatic {'on' if on else 'off'}", source="user")
+        self._tell(); return self.summary()
+
+    def minute_of_the_night(self) -> int:
+        """Which minute of the window this hub uses: the same every night, different per house.
+
+        Ten thousand hubs waking at two o'clock exactly would arrive at the maker's releases together
+        and, worse, would all take a bad release in the same minute. The hub's own id spreads them,
+        and being stable rather than random means a household that notices the hub restarts at twenty
+        past two is not wrong tomorrow.
+        """
+        h = hashlib.sha256(self.hub.settings.hub_id().encode()).hexdigest()
+        return int(h[:8], 16) % ((WINDOW[1] - WINDOW[0]) * 60)
+
+    def busy(self, now: float) -> bool:
+        """Somebody is up. The window is the small hours, but a house is not a clock."""
+        return now - (self.hub.log.last_user() or 0) < QUIET
+
+    def due(self, now: float | None = None) -> bool:
+        """Should this hub install, by itself, right now?"""
+        now = now or time.time()
+        if not (self.auto and self.offer): return False
+        if now - self.asked_at < RETRY: return False                     # it has had its go tonight
+        if REQUEST.exists() or (self.state() or {}).get("state") == "running": return False
+        here = datetime.fromtimestamp(now, self.hub.tz)
+        minute = (here.hour - WINDOW[0]) * 60 + here.minute
+        # Anywhere from this hub's minute to the end of the window: one that was busy at its own
+        # minute tries again later the same night rather than waiting a whole day.
+        if not self.minute_of_the_night() <= minute < (WINDOW[1] - WINDOW[0]) * 60: return False
+        return not self.busy(now)
 
     def state(self):
         try: return json.loads(STATE.read_text())
@@ -96,6 +156,7 @@ class Updates:
     def summary(self) -> dict:
         return {"version": self.version, "commit": self.commit[:12], "channel": self.channel, "latest": self.latest,
                 "available": self.available, "offer": self.offer, "rejected": self.rejected() or None,
+                "auto": self.auto, "verified": self.verified,
                 "checked": self.checked, "requested": REQUEST.exists(),
                 "state": self.state(), "error": self.error}
 
@@ -121,17 +182,28 @@ class Updates:
     async def run(self):
         await asyncio.sleep(90)            # let the house come up first
         while True:
-            try: await self.check()
-            except Exception: log.exception("update check")
-            await asyncio.sleep(EVERY)
+            try:
+                if not self.checked or time.time() - self.checked > EVERY: await self.check()
+                if self.due():
+                    log.info("installing %s without being asked: the house has been quiet and it is this hub's minute",
+                             (self.latest or {}).get("version"))
+                    self.request(source="hub")
+            except Exception: log.exception("update tick")
+            await asyncio.sleep(TICK)
 
-    def request(self) -> dict:
-        """The panel's tap. Writes the file the host watches; nothing happens in here."""
+    def request(self, source: str = "user") -> dict:
+        """A tap on the panel, or the hub's own small hours. Writes the file the host watches.
+
+        `source` is what tells the two apart in the log and under Recent, and it is worth the word:
+        a household that finds the hub on a new version in the morning should be able to see that
+        nobody in the house did it.
+        """
         want = (self.latest or {}).get("version") or ""
         REQUEST.parent.mkdir(parents=True, exist_ok=True)
         REQUEST.write_text(json.dumps({"at": time.time(), "channel": self.channel, "from": self.version, "to": want,
                                        "from_commit": self.commit, "to_commit": (self.latest or {}).get("sha") or ""}))
-        self.hub.log.add("home", "update", self.version, want, source="user")
+        if source == "hub": self.asked_at = time.time()
+        self.hub.log.add("home", "update", self.version, want, source=source)
         self._tell(); return self.summary()
 
     def _tell(self):

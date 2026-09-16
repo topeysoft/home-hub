@@ -26,8 +26,9 @@ class UpdateTest(unittest.IsolatedAsyncioTestCase):
     def tearDown(self):
         updates.REQUEST, updates.STATE = self.keep; self.dir.cleanup()
 
-    def make(self, version="v1.2.0", commit="a" * 40, channel="release"):
-        with mock.patch.dict(os.environ, {"HUB_VERSION": version, "HUB_COMMIT": commit, "HUB_CHANNEL": channel}):
+    def make(self, version="v1.2.0", commit="a" * 40, channel="release", verified=""):
+        with mock.patch.dict(os.environ, {"HUB_VERSION": version, "HUB_COMMIT": commit, "HUB_CHANNEL": channel,
+                                          "HUB_VERIFIED": verified}):
             self.hub.updates = updates.Updates(self.hub)
         return self.hub.updates
 
@@ -242,3 +243,127 @@ class RolledBackTests(UpdateTest):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class NightlyTests(UpdateTest):
+    """The hub installing an update by itself, in the small hours. docs/updates.md, piece 3."""
+
+    def ready(self, **kw):
+        """A hub that can verify, with an update waiting for it."""
+        u = self.make(version="v1.2.0", verified="1", **kw)
+        u.latest = self.release("v1.3.0")()
+        return u
+
+    @staticmethod
+    def at(hour, minute, day=17):
+        from datetime import datetime
+        from tests.test_rules import TZ
+        return datetime(2026, 9, day, hour, minute, tzinfo=TZ).timestamp()
+
+    def tonight(self, u, past=1):
+        """`past` minutes after this hub's own minute of the window."""
+        m = u.minute_of_the_night() + past
+        return self.at(updates.WINDOW[0] + m // 60, m % 60)
+
+    # ---- whether it is on at all ----
+    def test_a_hub_that_cannot_check_what_it_installs_waits_to_be_asked(self):
+        # Updating by itself from something nothing verifies is the supply-chain problem with the
+        # person taken out of it. No keys on the host, no updating in the night.
+        self.assertFalse(self.make(verified="").auto)
+
+    def test_a_hub_that_can_check_installs_on_its_own(self):
+        self.assertTrue(self.make(verified="1").auto)
+
+    def test_the_household_outranks_both(self):
+        u = self.make(verified="1")
+        u.set_auto(False)
+        self.assertFalse(u.auto)
+        self.assertEqual(self.hub.log.rows[-1]["new"], "automatic off")
+        u.set_auto(True)
+        self.assertTrue(u.auto)
+        # ...and it stays said, on a hub that could not check either way
+        v = self.make(verified="")
+        self.assertTrue(v.auto)
+
+    # ---- when ----
+    def test_not_in_the_evening_and_not_over_breakfast(self):
+        u = self.ready()
+        for hour, minute in ((21, 30), (0, 30), (5, 30), (12, 0)):
+            with self.subTest(at=f"{hour}:{minute:02d}"):
+                self.assertFalse(u.due(self.at(hour, minute)))
+
+    def test_not_before_this_hub_s_own_minute_comes_round(self):
+        u = self.ready()
+        self.assertFalse(u.due(self.tonight(u, past=-1)))
+        self.assertTrue(u.due(self.tonight(u, past=0)))
+
+    def test_a_hub_busy_at_its_own_minute_tries_again_later_the_same_night(self):
+        # Rather than waiting a whole day, which is a day spent on the version that had the bug.
+        u = self.ready()
+        self.assertTrue(u.due(self.tonight(u, past=30)))
+
+    def test_two_hubs_do_not_move_in_the_same_minute(self):
+        # Ten thousand houses waking at two o'clock exactly would take a bad release together.
+        seen = set()
+        for hub_id in ("aaa", "bbb", "ccc", "ddd", "eee", "fff"):
+            self.hub.settings.data["hub_id"] = hub_id
+            seen.add(self.make(verified="1").minute_of_the_night())
+        self.assertGreater(len(seen), 3)
+        self.assertTrue(all(0 <= m < 180 for m in seen))
+
+    def test_the_same_hub_uses_the_same_minute_every_night(self):
+        # A household that notices the hub restarts at twenty past two is not wrong tomorrow.
+        u = self.ready()
+        self.assertEqual(u.minute_of_the_night(), self.make(verified="1").minute_of_the_night())
+
+    # ---- and whether the house is asleep, which is not the same as the hour ----
+    def test_somebody_is_still_up(self):
+        u = self.ready()
+        now = self.tonight(u)
+        u.hub.log.last_user = lambda: now - 60
+        self.assertFalse(u.due(now))
+        u.hub.log.last_user = lambda: now - updates.QUIET - 60
+        self.assertTrue(u.due(now))
+
+    # ---- and what it will not walk into ----
+    def test_nothing_to_install_is_not_a_reason_to_restart_the_house(self):
+        u = self.make(version="v1.3.0", verified="1")
+        u.latest = self.release("v1.3.0")()
+        self.assertFalse(u.due(self.tonight(u)))
+
+    def test_a_version_that_was_put_back_is_never_installed_unasked(self):
+        u = self.ready()
+        updates.STATE.write_text(json.dumps({"state": "reverted", "bad": "v1.3.0"}))
+        self.assertFalse(u.due(self.tonight(u)))
+
+    def test_it_does_not_walk_in_on_an_update_already_running(self):
+        u = self.ready()
+        updates.STATE.write_text(json.dumps({"state": "running", "started": 1}))
+        self.assertFalse(u.due(self.tonight(u)))
+        updates.STATE.unlink()
+        u.request()                                                # somebody tapped a moment ago
+        self.assertFalse(u.due(self.tonight(u)))
+
+    def test_one_go_a_night(self):
+        """An update that fails for a reason nothing here can see would otherwise run every five
+        minutes until morning, restarting the house each time.
+
+        The clock is patched rather than passed in: `due` takes a moment for the tests' benefit but
+        `request` records the real one, and the two only mean anything together.
+        """
+        u = self.ready()
+        now = self.tonight(u)
+        with mock.patch("hub.updates.time.time", return_value=now):
+            self.assertTrue(u.due())
+            u.request(source="hub")
+            updates.REQUEST.unlink()                               # the host has taken it
+        with mock.patch("hub.updates.time.time", return_value=now + 600):
+            self.assertFalse(u.due())                              # same night, an hour later: no
+        with mock.patch("hub.updates.time.time", return_value=now + 86400):
+            self.assertTrue(u.due())                               # the next night, same minute: yes
+
+    def test_the_log_says_the_hub_did_it_and_not_somebody_in_the_house(self):
+        u = self.ready()
+        u.request(source="hub")
+        self.assertEqual(self.hub.log.rows[-1]["source"], "hub")
+        self.assertEqual(self.hub.log.rows[-1]["new"], "v1.3.0")

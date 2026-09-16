@@ -211,7 +211,7 @@ flashed image rather than a cleverer script. Also `tools/release.sh` has to be r
 images — it needs the digests to exist — so there is a window where a tagged release exists and hubs refuse it. That
 is the right way round, and it is still a reason not to leave a tag sitting unsigned.
 
-### 3. By itself, at night
+### 3. By itself, at night *(landed 16 September 2026)*
 
 Only after 1 and 2, and the order is the point: automatic updating from an unverified source is the supply-chain
 problem with the human taken out of it.
@@ -225,12 +225,43 @@ the house, and never inside a few minutes of anyone touching the wall.
 Choosing *Ask me first* is the panel exactly as it is today.
 
 **Urgent is a property of the release, not of the hub.** A manifest may say `urgent: true`, and an urgent release
-installs at the next quiet moment rather than waiting for the window or for a week of quiet. It still respects a
-household that turned automatic off; what it does there is nudge harder and say why.
+installs at the next quiet moment rather than waiting for the window. It still respects a household that turned
+automatic off; what it does there is nudge harder and say why. *(Not built — see the correction below.)*
 
 **The morning after is the feature.** This is the piece that changes what notes are *for*: nobody reads them before a
 tap they never make, so they belong on the wall the next morning, as one dismissible card saying what is new. Which is
 piece 4.
+
+**What landed.** `Settings.hub_id()` is the identifier — random, made once, kept in `settings.json` so it rides the
+backup, and deliberately not derived from the hardware: a MAC address would leak something about the house to anything
+the id is ever shown to, and would change under a household that moved the hub onto a new box, which is the one moment
+it most wants to still be the same hub. `Updates.minute_of_the_night()` hashes it into a minute of the window;
+`due()` holds the conditions; the loop ticks every five minutes and asks. `EventLog.last_user()` is the "is anybody up"
+test, with an index to match. The switch is `POST /update/auto`, behind the settings code like every other change to
+the house, and a row under *This hub*.
+
+**The default resolves itself, so it needed no decision.** `auto` is on where the hub can check what it is installing
+and off where it cannot — `install.sh` writes `HUB_VERIFIED=1` into the compose environment when the key directory has
+something in it, and the brain reads that and nothing else. So the rule is one sentence: **a hub only updates itself
+without being asked if it can prove what it installed and undo what did not work**, which is pieces 2 and 1 exactly.
+A household's own answer outranks both and stays said. Getting `HUB_VERIFIED` wrong makes a hub shy, never reckless.
+
+**An automatic install is logged as `source: "hub"`**, not `"user"`. A household that finds the hub on a new version in
+the morning should be able to see under *Recent* that nobody in the house did it.
+
+**One correction.** `urgent` was written down here as part of this piece and is not built. It needs the brain to read
+the manifest, which is piece 4's fetch, and on its own it buys very little now that updates land nightly anyway: the
+gap it closes is the few hours between a fix being signed and the next window. It moves to piece 4.
+
+**What was verified.** Sixteen tests over `due()`, because it is a conjunction and every term is a way to get it
+wrong: off for a hub that cannot verify, on for one that can, the household's answer beating both; nothing at half
+nine at night, at half past midnight, at half five in the morning or at noon; nothing a minute before this hub's own
+minute and something a minute after; still due half an hour later, so a hub that was busy at its minute tries again
+the same night rather than waiting a day; six hub ids landing on more than three different minutes, all inside the
+window, and the same id landing on the same minute every night; nothing while somebody was up in the last half hour
+and something once they have been quiet for it; nothing when there is nothing to install, when the version was put
+back, when an update is already running, or when somebody has just tapped; one go a night and then the next night;
+and the log saying `hub`.
 
 ### 4. Notes written for a house
 
@@ -248,8 +279,8 @@ which is the question a household actually asks.
 
 ### 5. A hold and a rollout
 
-**A stable hub identifier**, made once and kept in `settings.json` — random, not derived from hardware, and it rides
-the backup. Nothing else in the repository provides one, and pieces 3 and 5 both need it.
+~~**A stable hub identifier**~~ — **done with piece 3.** `Settings.hub_id()`, and `minute_of_the_night()` is the
+worked example of hashing it into a bucket that piece 5 repeats against `rollout`.
 
 **`rollout: 0.1` in the manifest**, against a hash of that identifier, so a tenth of hubs take a release first and the
 rest follow when it is raised. **`hold: true`** stops it spreading at all, in the minutes after somebody notices,

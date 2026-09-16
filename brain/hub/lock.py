@@ -27,7 +27,7 @@ def needs_code(method: str, path: str) -> bool:
     if path == "/drafts/suggest": return False                                   # looking for habits changes nothing
     if path.startswith("/drafts/") and m in ("POST", "DELETE"): return True   # approving or discarding a suggestion; asking for one stays open
     if path == "/assistant/key": return True
-    if path == "/update" and m == "POST": return True
+    if path in ("/update", "/update/auto") and m == "POST": return True   # changing how the house updates itself is a setting
     if path == "/backup" or (path == "/restore" and m == "POST"): return True   # the archive carries the house's keys
     if path.startswith("/pair") and m != "GET": return True
     if path.startswith("/phones") and m != "GET": return path not in ("/phones/ask", "/phones/code")   # letting a phone in, or out, is a setting; asking is not

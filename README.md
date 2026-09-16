@@ -109,8 +109,14 @@ container before the Pi's first start so the two do not fight over Ring's token.
   to answer on `127.0.0.1:8300/alive` and keep answering, or the old commit and the old image go back and the version
   that did it is named in `update.json`. Home then stops offering that version on its own; the button under *This hub*
   still installs it, because a person trying again is a different thing from a hub deciding to. Putting it back needs
-  no network, which matters when the thing that broke was the network. The plan for the rest — a signed manifest,
-  updating overnight without being asked, and release notes written for a house — is `docs/updates.md`.
+  no network, which matters when the thing that broke was the network.
+  **A hub that can check what it is installing installs it overnight, on its own**, in the small hours, at a minute
+  of its own derived from its id (so ten thousand houses do not move at once) and only once nobody has asked the
+  house for anything for half an hour. One switch under *This hub* turns that off and it stays off; a hub with no
+  release keys waits to be asked, because updating by itself from something nothing checks is the supply-chain
+  problem with the person taken out of it. An automatic install is logged as the hub's doing, not a person's.
+  The plan for the rest — release notes written for a house, and a hold to stop a bad release spreading — is
+  `docs/updates.md`.
 - Health: Home has a quiet *Needs a look* list when something is off: a device offline since Tuesday, storage nearly
   full, a driver that wants signing in, an update that did not finish. `GET /health`; the words come from the brain.
   A line that can be acted on carries the way to do it, so none of them sends anyone to Home Assistant: an account whose

@@ -9,6 +9,7 @@ class EventLog:
         self.db.execute("""CREATE TABLE IF NOT EXISTS events(
             ts REAL, kind TEXT, subject TEXT, old TEXT, new TEXT, source TEXT, detail TEXT)""")
         self.db.execute("CREATE INDEX IF NOT EXISTS ix_ts ON events(ts)")
+        self.db.execute("CREATE INDEX IF NOT EXISTS ix_source_ts ON events(source, ts)")
 
     def add(self, kind, subject, old=None, new=None, source="device", detail=None):
         with self.lock:
@@ -28,6 +29,11 @@ class EventLog:
         q += " ORDER BY ts DESC LIMIT ?"
         rows = self.db.execute(q, args + (limit,)).fetchall()
         return [dict(zip(("ts", "kind", "subject", "old", "new", "source", "detail"), r)) for r in rows]
+
+    def last_user(self) -> float:
+        """When somebody last asked the house for something, or 0. Nothing in a house is a better
+        proxy for "is anyone up" than this: taps, sentences, scenes and settings all land here."""
+        return self.db.execute("SELECT MAX(ts) FROM events WHERE source='user'").fetchone()[0] or 0.0
 
     def last_by_subject(self, kind, new) -> dict:
         """subject -> the last time it was logged reaching `new`. Rooms rebuild motion_at from this after a restart."""

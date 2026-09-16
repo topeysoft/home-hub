@@ -149,6 +149,11 @@ fi
 # is how it is changed.
 sed -i '/^HUB_CHANNEL=/d' .env 2>/dev/null || true
 echo "HUB_CHANNEL=$CHANNEL" >> .env
+# Whether this hub can check what it installs. The brain reads it to decide whether it may update in
+# the night on its own: a hub that cannot verify a release waits to be asked, because updating by
+# itself from something nothing checks is the supply-chain problem with the person taken out of it.
+sed -i '/^HUB_VERIFIED=/d' .env 2>/dev/null || true
+if ls "$KEYDIR"/*.pub >/dev/null 2>&1; then echo "HUB_VERIFIED=1" >> .env; fi
 # The image pin belongs here too, not only in this script's own environment. A compose brought up by
 # any other hand -- somebody debugging, or host/update.sh putting an old image back after a rollback
 # -- would otherwise resolve :latest and break the rule that code and container move together.
