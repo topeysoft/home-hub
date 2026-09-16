@@ -208,7 +208,14 @@ else
     *denied*|*unauthorized*|*401*|*403*) echo "  the published brain image is not public (GitHub package visibility); building it here from the code above, which takes a few minutes" ;;
     *) echo "  could not pull the brain image (no internet?); building it here from the code above, which takes a few minutes" ;;
   esac
-  docker compose build -q brain
+  # Stamp what is being built. CI passes these when it publishes the image; a build here passed
+  # nothing, so the brain came up calling itself "dev" with no commit -- and updates.py reads an
+  # empty commit as "nobody can tell", which quietly switches update checking off on exactly the
+  # hubs that had to build their own. The checkout this was built from is the answer, and it is
+  # right there.
+  BUILT_COMMIT="$(git -C "$DIR" rev-parse HEAD 2>/dev/null || echo "")"
+  BUILT_VERSION="${VERSION:-main-$(git -C "$DIR" rev-parse --short HEAD 2>/dev/null || echo unknown)}"
+  docker compose build -q --build-arg "HUB_VERSION=$BUILT_VERSION" --build-arg "HUB_COMMIT=$BUILT_COMMIT" brain
 fi
 # shellcheck disable=SC2086
 docker compose up -d --remove-orphans $RECREATE
