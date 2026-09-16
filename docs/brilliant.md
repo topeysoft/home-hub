@@ -120,3 +120,36 @@ and its state drifts until the next command. Treat these as optimistic-state lig
 **The way to full function** is the nRF52832 and its labelled SWD header, described above. Own firmware would
 expose the PIR as a `Sensor Server` and taps as a real `Generic OnOff Server`. That began as a curiosity in
 the FCC photographs; it is now the only route to motion and gestures.
+
+## The over-the-air route: DFU over mesh
+
+The switches broadcast, continuously, a service-data advertisement under Nordic's UUID `0xFEE4`:
+
+    feffaf00 01 02 20080000 0100 8671100c <netid4>
+    handle 0xFFFE = proprietary-mesh DFU FWID beacon
+    company_id 0x0820 (Brilliant), app_id 0x0001, app_version 0x0c107186
+
+That is **DFU over the mesh** — Nordic's proprietary firmware-update transport, riding the advertising bearer,
+separate from the BT SIG mesh we use for control. It is almost certainly how the Control panels updated the
+switches, and it means firmware can in principle be replaced **over the air, with the switch in the wall** —
+no SWD, no pulling it out. Our own claimed node broadcasts the same beacon (its trailing bytes track our
+network id), so it can be the guinea pig without disturbing the captive switches.
+
+**The open question is signing.** The proprietary DFU supports ECDSA P-256 signatures
+(`NRF_MESH_DFU_PUBLIC_KEY_LEN 64`, `NRF_MESH_DFU_SIGNATURE_LEN 64`), verified by the bootloader against a
+public key in its *device page*. Signing is optional and per-device: required only if Brilliant flashed a
+public key. If they did, we cannot push our own firmware (no private key) and the SWD reflash is the only
+route. If they did not, we own these switches completely, over the air. This cannot be read remotely — it is
+determined by attempting a transfer.
+
+**Why attempting it is low-risk.** DFU uses *banking*: an incoming transfer is stored in a spare flash bank
+and only copied over the running application once it validates. A rejected (e.g. unsigned) transfer is
+discarded and the running firmware is untouched. A device applies a transfer only when the application ID
+matches and the version is higher, so the probe is naturally scoped to the one node we aim at.
+
+**What it takes.** Two builds: (1) a replacement nRF52832 mesh application exposing a `Sensor Server` (PIR)
+and a real `Generic OnOff Server` (taps), built on the nRF5 SDK for Mesh; and (2) a DFU *source* that can
+broadcast raw `0xFEE4` advertising packets. macOS cannot be the source — CoreBluetooth will not broadcast
+arbitrary service data — so the source is the ESP32 (raw advertising) or the Pi's BlueZ, or a Nordic dongle
+driven by `nrfutil`. This is the active line of work; the SWD reflash remains the fallback if the DFU turns
+out to be signed.
