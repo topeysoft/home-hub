@@ -14,6 +14,7 @@ import sys
 from bleak import BleakClient, BleakScanner
 from cryptography.hazmat.primitives.asymmetric import ec
 
+import ble
 import mesh
 
 PROV_SVC = "00001827-0000-1000-8000-00805f9b34fb"
@@ -84,17 +85,18 @@ async def main():
     rx = asyncio.Queue()
     net = mesh.load()
     print(f"network store: {mesh.STORE}")
-    print(f"  netkey {net['netkey']}  iv_index {net['iv_index']}")
+    print(f"  network id {mesh.k3(bytes.fromhex(net['netkey'])).hex()}"
+          f"  iv_index {net['iv_index']}   (netkey not printed)")
     print(f"  {len(net['nodes'])} node(s) already provisioned\n")
 
     print("finding unprovisioned node...")
-    dev = await BleakScanner.find_device_by_filter(
-        lambda d, ad: PROV_SVC in [u.lower() for u in (ad.service_uuids or [])],
-        timeout=30.0)
+    # Nearest, not first-heard: a node claimed at -90 dBm provisions over the
+    # advertising bearer just fine and is then unreachable over GATT, which
+    # surfaces much later as an unexplained connect timeout.
+    dev = await ble.find_unprovisioned()
     if not dev:
         print("no unprovisioned node found.")
         return
-    print(f"found {dev.address} {dev.name!r}")
     if DRY:
         print("--dry-run: stopping before any state change.")
         return

@@ -112,16 +112,17 @@ class Node:
             t = m["transport"]
             if t[0] & 0x80:
                 continue
-            for key, tag in ((self.devkey, 4), (self.appkey, 4)):
+            # The nonce takes the message's real destination, not our own
+            # address; see tools/test_nonce.py for why that distinction bites.
+            akf = (t[0] >> 6) & 1
+            for key, nt in (((self.appkey, 0x01) if akf
+                             else (self.devkey, 0x02)),
+                            (self.devkey, 0x02), (self.appkey, 0x01)):
+                nonce = bytes([nt, 0x00]) + m["seq"].to_bytes(3, "big") \
+                    + m["src"].to_bytes(2, "big") + m["dst"].to_bytes(2, "big") \
+                    + self.iv.to_bytes(4, "big")
                 try:
-                    fn = (mesh.app_decrypt_devkey if key is self.devkey
-                          else lambda *a, **k: mesh.ccm_decrypt(
-                              self.appkey,
-                              b"\x01\x00" + m["seq"].to_bytes(3, "big")
-                              + m["src"].to_bytes(2, "big")
-                              + self.src.to_bytes(2, "big")
-                              + self.iv.to_bytes(4, "big"), t[1:], tag=4))
-                    plain = fn(key, self.iv, m["seq"], m["src"], self.src, t[1:])
+                    plain = mesh.ccm_decrypt(key, nonce, t[1:], tag=4)
                 except Exception:
                     continue
                 op = plain[0] if plain[0] < 0x80 else int.from_bytes(plain[:2], "big")
@@ -162,6 +163,40 @@ class Node:
         await self._tx(access, use_appkey=True)
 
 
+async def ensure_bound(n, net, node):
+    """Add AppKey 0 to the node and bind the stock models, once.
+
+    Provisioning hands over the NetKey and a DevKey and nothing else. Until a
+    Config AppKey Add lands, the node holds no application key, so every bind
+    answers `Invalid AppKey Index`, every publication set is refused, and every
+    Get we send under the AppKey is undecryptable at the node and simply goes
+    unanswered. That failure reads exactly like a switch that ignores the mesh,
+    which is why this is no longer left to whoever runs the tools in the right
+    order.
+    """
+    if node.get("bound"):
+        return False
+    print("  node has no AppKey yet -- adding and binding")
+    await n.appkey_add()
+    ok = True
+    for mid, name in ((0x1000, "Generic OnOff Server"),
+                      (0x1002, "Generic Level Server")):
+        r = await n.bind(mid)
+        # Config Model App Status: opcode(2) status(1) ...
+        st = r[2] if r and len(r) > 2 else None
+        if st == 0x00:
+            print(f"     {name}: bound")
+        else:
+            ok = False
+            print(f"     {name}: NOT BOUND (status "
+                  f"{'0x%02x' % st if st is not None else 'no reply'}) -- "
+                  f"commands to this model will be ignored")
+    node["bound"] = ok
+    mesh.save(net)
+    print()
+    return True
+
+
 async def main():
     global rx
     rx = asyncio.Queue()
@@ -189,13 +224,7 @@ async def main():
         await send(cli, PDU_PROXY_CFG, cfg, mtu)
         await asyncio.sleep(0.4)
 
-        if not node.get("bound"):
-            await n.appkey_add()
-            await n.bind(0x1000)   # Generic OnOff Server
-            await n.bind(0x1002)   # Generic Level Server
-            node["bound"] = True
-            mesh.save(net)
-            print()
+        await ensure_bound(n, net, node)
 
         if cmd == "blink":
             print("WATCH THE LIGHT:")

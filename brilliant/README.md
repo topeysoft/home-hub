@@ -1,5 +1,8 @@
 # Brilliant switches, without Brilliant
 
+> **Resuming this work?** Read [`STATUS.md`](STATUS.md) first — current state, the captured
+> panel keys, the `panel_*` tools, and the next task. Full history in [`../docs/brilliant.md`](../docs/brilliant.md).
+
 The Brilliant Control panels are dead and no more will be bought. The Smart Dimmer Switches they used to
 bridge are fine: they speak standard Bluetooth SIG mesh, and this directory owns them directly.
 
@@ -33,6 +36,15 @@ remote provisioning). Carry the laptop.
 
 Needs `bleak` and `cryptography`.
 
+## Reading the switch back
+
+    python3 tools/state.py              # OnOff + Level, read-only, before/after a hand touch
+    python3 tools/rawlog.py 180         # every PDU, decoded or not
+    python3 tools/test_nonce.py         # the decrypt cases that used to fail silently
+
+`verify.py` is **not** a way to read state: it uses an acknowledged `Generic OnOff Set`, which applies a value
+and then reports the value it applied. Use `state.py`, which sends `Generic OnOff Get`.
+
 ## The bridge
 
     python3 tools/make_secrets.py > esp32-bridge/include/secrets.h   # then add WiFi
@@ -60,3 +72,8 @@ variants. ESP32-S2 is absent on purpose: no Bluetooth radio.
   dongle or giving that up.
 - **Incoming segmented access messages are not reassembled on the ESP32** yet. They log as
   `[rx] segmented access`. `tools/explore.py` already does this and can be ported.
+- **"Nothing arrived" is usually a decode failure, not silence.** The listeners decode at the application
+  layer and used to print nothing when that failed, which hid every message published to a group address and
+  every segmented message with a 64-bit MIC. Reach for `rawlog.py` before concluding a node is mute: it prints
+  each PDU's network header first and names the reason the application layer could not open it — including
+  whether the message is under an AppKey we do not hold.

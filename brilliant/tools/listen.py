@@ -13,11 +13,25 @@ import time
 
 from bleak import BleakClient, BleakScanner
 
+import ble
 import mesh
 import onoff as O
 from explore import describe, opcode_of, try_decrypt
 
-SECONDS = int(sys.argv[1]) if len(sys.argv) > 1 else 180
+def _arg_int(default):
+    """argv[1] as an int, tolerating anything else.
+
+    These modules get imported by other tools, which carry their own argv.
+    Parsing it eagerly at import time made `import rawlog` crash whenever the
+    importing tool's first argument was not a number -- and the crash looked
+    exactly like a probe that got no reply.
+    """
+    try:
+        return int(sys.argv[1])
+    except (IndexError, ValueError):
+        return default
+
+SECONDS = _arg_int(180)
 
 
 async def main():
@@ -27,7 +41,7 @@ async def main():
     node = net["nodes"][key]
     print(f"target {key} ({node['name']!r}) -- connecting...")
 
-    dev = await BleakScanner.find_device_by_address(node["ble_address"], timeout=30.0)
+    dev = await ble.find_node(node["ble_address"])
     if not dev:
         print("node not found (is it powered and in range?)")
         return
@@ -68,6 +82,11 @@ async def main():
                 continue
             plain = try_decrypt(n, m)
             if not plain:
+                tag = f"UNDECODED -> 0x{m['dst']:04x}"
+                seen[tag] = seen.get(tag, 0) + 1
+                raw.append((time.time() - t0, tag, m["transport"].hex()))
+                print(f"  +{time.time() - t0:6.1f}s  [{m['src']:#06x}] {tag}: "
+                      f"{m['transport'].hex()}")
                 continue
             op, olen = evt = opcode_of(plain)
             params = plain[olen:]

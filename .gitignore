@@ -25,3 +25,7 @@ brilliant/esp32-bridge/.pio/
 brilliant/**/mesh-net.json
 brilliant/**/events.log
 brilliant/.venv/
+brilliant/dfu-probe/.pio
+brilliant/mesh-provisionee/.pio/
+brilliant/tools/snapshot-*.json
+brilliant/tools/originals-*.json

@@ -14,9 +14,13 @@ from bleak import BleakScanner
 
 import mesh
 
-# The network the dead Brilliant Control panels provisioned. Anything still
-# advertising this needs a factory reset before it can be claimed.
-OLD_BRILLIANT_NET = bytes.fromhex("3deef9825e444955")
+# The Brilliant-provisioned network. This was labelled "the dead panels' network"
+# until we found that one panel is alive -- dead screen, working radio -- and the
+# mobile app still drives the switches on it. So these are very likely LIVE nodes
+# in a mesh somebody still uses, and they are also the nodes whose PIR and tap
+# traffic we want to decrypt. Resetting one evicts it from that mesh and breaks
+# the working setup, so this is no longer a "reset it" recommendation.
+BRILLIANT_NET = bytes.fromhex("3deef9825e444955")
 
 SECS = int(sys.argv[1]) if len(sys.argv) > 1 else 30
 found = {}
@@ -35,8 +39,8 @@ def main():
                 nid = sd[1:9]
                 if nid == ours:
                     label = "ours"
-                elif nid == OLD_BRILLIANT_NET:
-                    label = "old Brilliant net - reset it"
+                elif nid == BRILLIANT_NET:
+                    label = "Brilliant net - LIVE, do not reset"
                 else:
                     label = "unknown network"
                 found[dev.address] = (label, ad.rssi, nid.hex())
@@ -56,7 +60,14 @@ def main():
     for addr, (label, rssi, nid) in sorted(found.items(), key=lambda x: -x[1][1]):
         print(f"  {rssi:>4} dBm  {label:28s} netid={nid}  {addr}")
     mine = sum(1 for v in found.values() if v[0] == "ours")
-    print(f"\n  {mine} ours, {len(found) - mine} still to claim")
+    free = sum(1 for v in found.values() if v[0].startswith("UNPROVISIONED"))
+    live = sum(1 for v in found.values() if v[0].startswith("Brilliant net"))
+    print(f"\n  {mine} ours, {free} unprovisioned and claimable, "
+          f"{live} on the Brilliant network")
+    if live:
+        print("\n  The Brilliant-network nodes are reachable by the surviving panel"
+              "\n  and the mobile app. Do not factory-reset one to claim it unless"
+              "\n  you mean to take it off that mesh for good.")
 
 
 if __name__ == "__main__":

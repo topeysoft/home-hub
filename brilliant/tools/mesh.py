@@ -69,7 +69,13 @@ def net_encrypt(netkey, iv_index, ctl, ttl, seq, src, dst, transport_pdu,
                 nonce_type=0x00):
     nid, ek, pk = k2(netkey, b"\x00")
     ivi = iv_index & 1
-    nonce = bytes([nonce_type, (ctl << 7) | (ttl & 0x7F)]) + seq.to_bytes(3, "big") \
+    # Proxy Nonce (type 0x03) has a fixed 0x00 pad in octet 1, NOT CTL|TTL --
+    # that field only belongs in the Network Nonce (type 0x00). Getting this
+    # wrong makes proxy-config messages undecryptable by spec-correct firmware
+    # (our own tolerant switches accepted it; the real panel switches did not,
+    # so "open the filter" silently failed and nothing was ever forwarded).
+    b1 = 0x00 if nonce_type == 0x03 else ((ctl << 7) | (ttl & 0x7F))
+    nonce = bytes([nonce_type, b1]) + seq.to_bytes(3, "big") \
         + src.to_bytes(2, "big") + b"\x00\x00" + iv_index.to_bytes(4, "big")
     mic_len = 8 if ctl else 4
     enc = ccm_encrypt(ek, nonce, dst.to_bytes(2, "big") + transport_pdu,

@@ -13,6 +13,7 @@ import sys
 
 from bleak import BleakClient, BleakScanner
 
+import ble
 import mesh
 import onoff as O
 
@@ -33,7 +34,21 @@ CFG_STATUS = {0x00: "Success", 0x01: "Invalid Address", 0x02: "Invalid Model",
               0x0F: "Cannot Set", 0x10: "Unspecified Error",
               0x11: "Invalid Binding"}
 
-LISTEN = int(sys.argv[1]) if len(sys.argv) > 1 else 75
+def _arg_int(default):
+    """argv[1] as an int, tolerating anything else.
+
+    This module gets imported by other tools, which carry their own argv.
+    Parsing it eagerly at import time made the import crash whenever the
+    importing tool's first argument was not a number -- and the crash looked
+    exactly like a probe that got no reply.
+    """
+    try:
+        return int(sys.argv[1])
+    except (IndexError, ValueError):
+        return default
+
+
+LISTEN = _arg_int(75)
 
 segs = {}
 
@@ -157,11 +172,16 @@ def try_decrypt(n, m):
         akf = (t[0] >> 6) & 1
         body, seq_use, tag = t[1:], m["seq"], 4
 
+    # The application nonce takes the message's REAL destination and the
+    # ASZMIC bit. Hardcoding our own address here silently discarded anything
+    # the node published to a group address; ignoring ASZMIC discarded every
+    # segmented message carrying a 64-bit MIC. Both look like "it sent nothing".
+    aszmic = 0x80 if (tag == 8) else 0x00
     for key, kind in (((n.appkey, "app") if akf else (n.devkey, "dev")),
                       (n.devkey, "dev"), (n.appkey, "app")):
-        nt = b"\x01\x00" if kind == "app" else b"\x02\x00"
+        nt = bytes([0x01 if kind == "app" else 0x02, aszmic])
         nonce = nt + seq_use.to_bytes(3, "big") + m["src"].to_bytes(2, "big") \
-            + n.src.to_bytes(2, "big") + n.iv.to_bytes(4, "big")
+            + m["dst"].to_bytes(2, "big") + n.iv.to_bytes(4, "big")
         try:
             return mesh.ccm_decrypt(key, nonce, body, tag=tag)
         except Exception:
@@ -176,7 +196,7 @@ async def main():
     node = net["nodes"][key]
     print(f"target {key} ({node['name']!r})\n")
 
-    dev = await BleakScanner.find_device_by_address(node["ble_address"], timeout=30.0)
+    dev = await ble.find_node(node["ble_address"])
     if not dev:
         print("node not found")
         return
@@ -192,6 +212,9 @@ async def main():
         await O.send(cli, 0x02, cfg, mtu)
         await asyncio.sleep(0.4)
         print(f"connected, MTU {mtu}\n--- binding ---")
+
+        # Without this every bind below answers Invalid AppKey Index.
+        await O.ensure_bound(n, net, node)
 
         await bind(n, cli, mtu, VENDOR_MID, vendor=True)
         await bind(n, cli, mtu, 0x0002)
@@ -219,6 +242,12 @@ async def main():
                 continue
             plain = try_decrypt(n, m)
             if not plain:
+                # Never swallow this: a PDU we decrypted at the network layer
+                # but not at the application layer is a real event we cannot
+                # read, which is a different fact from silence.
+                tag = f"UNDECODED -> 0x{m['dst']:04x}"
+                seen[tag] = seen.get(tag, 0) + 1
+                print(f"  [{m['src']:#06x}] {tag}: {m['transport'].hex()}")
                 continue
             op, olen = opcode_of(plain)
             params = plain[olen:]
