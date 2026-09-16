@@ -128,8 +128,11 @@ installer itself stopping part way (put back, `failed`). The request file is gon
 **What is not covered, and is worth knowing.** The proof is *the brain answers*. An image that starts, serves, and is
 subtly wrong — a panel that renders nothing, a migration that quietly dropped the rules — passes. Catching that needs
 the panel to check itself, which is a different piece and probably belongs with piece 5's telemetry rather than here.
-And CI lints `update.sh` but does not run it; the harness above is a scratchpad script, not a test, which is a gap to
-close when the shell job grows a way to run one.
+~~And CI lints `update.sh` but does not run it.~~ **Closed, 16 September 2026.** `driver-layer/host/tests.sh` is that
+harness and the two after it, made permanent and run by the `shell` job: twenty-five cases over the undo, the
+signature and the hold, needing git, openssl, curl and python3 and nothing else -- no docker, no network, no root.
+Checked that it fails when it should, by breaking the signature check and the hold check in turn and watching the
+right cases go red.
 
 ### 2. A signature *(landed 16 September 2026)*
 

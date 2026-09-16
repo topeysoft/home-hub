@@ -105,11 +105,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: syntax
-        run: bash -n install.sh tools/add-sound.sh driver-layer/radios.sh driver-layer/mqtt-auth.sh driver-layer/host/harden.sh driver-layer/host/firstboot.sh driver-layer/host/update.sh driver-layer/host/restore.sh driver-layer/host/verify.sh driver-layer/host/channel.sh tools/release.sh driver-layer/host/pi-image/stage-hub/prerun.sh driver-layer/host/pi-image/stage-hub/00-home-hub/*.sh
+        run: bash -n install.sh tools/add-sound.sh driver-layer/radios.sh driver-layer/mqtt-auth.sh driver-layer/host/harden.sh driver-layer/host/firstboot.sh driver-layer/host/update.sh driver-layer/host/restore.sh driver-layer/host/verify.sh driver-layer/host/channel.sh driver-layer/host/tests.sh tools/release.sh driver-layer/host/pi-image/stage-hub/prerun.sh driver-layer/host/pi-image/stage-hub/00-home-hub/*.sh
       - name: shellcheck
         run: |
           sudo apt-get install -y shellcheck >/dev/null
-          shellcheck -S warning -e SC2154 install.sh tools/add-sound.sh driver-layer/radios.sh driver-layer/mqtt-auth.sh driver-layer/host/harden.sh driver-layer/host/firstboot.sh driver-layer/host/update.sh driver-layer/host/restore.sh driver-layer/host/verify.sh driver-layer/host/channel.sh tools/release.sh driver-layer/host/pi-image/stage-hub/prerun.sh driver-layer/host/pi-image/stage-hub/00-home-hub/*.sh
+          shellcheck -S warning -e SC2154 install.sh tools/add-sound.sh driver-layer/radios.sh driver-layer/mqtt-auth.sh driver-layer/host/harden.sh driver-layer/host/firstboot.sh driver-layer/host/update.sh driver-layer/host/restore.sh driver-layer/host/verify.sh driver-layer/host/channel.sh driver-layer/host/tests.sh tools/release.sh driver-layer/host/pi-image/stage-hub/prerun.sh driver-layer/host/pi-image/stage-hub/00-home-hub/*.sh
+
+      # Linting these was the weakest possible guarantee about the three scripts a household most
+      # depends on and can least repair: the undo, the signature that decides what runs as root, and
+      # the hold. This runs them, against a real keypair and a file:// releases server.
+      - name: the update path, run rather than read
+        run: driver-layer/host/tests.sh
 
   kiosk:
     runs-on: ubuntu-latest
