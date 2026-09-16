@@ -58,7 +58,7 @@ services:
     ports:
       - "55123:55123"
     environment:
-      - MQTTURL=mqtt://mosquitto:1883
+      # ring-mqtt reads only ./ring-mqtt/config.json here too: mqtt-auth.sh renders it with the password.
       - ENABLEMODES=true
     volumes:
       - ./ring-mqtt:/data

@@ -25,6 +25,9 @@ fail() { printf '{"state":"failed","started":%s,"finished":%s,"log":"restore.log
     [ -n "$KEEP_HOST" ] && sed -i "s|^HUB_HOST=.*|$KEEP_HOST|" .env
   fi
   rm -rf "$TMP" "$TAR"
+  # The broker's password file and Ring's config are made from .env, and .env just came from the
+  # backup: render them again so every part agrees with it. The brain does the same for the engine.
+  chmod +x mqtt-auth.sh && ./mqtt-auth.sh
   docker compose up -d
 } > "$LOG" 2>&1 || fail
 printf '{"state":"done","started":%s,"finished":%s}\n' "$STARTED" "$(date +%s)" > "$STATE"

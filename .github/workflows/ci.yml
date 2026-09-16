@@ -110,6 +110,8 @@ jobs:
         tools/add-sound.sh
         tools/release.sh
         driver-layer/radios.sh
+        driver-layer/mqtt-auth.sh
+        driver-layer/host/harden.sh
         driver-layer/host/firstboot.sh
         driver-layer/host/update.sh
         driver-layer/host/restore.sh

@@ -5,10 +5,11 @@ integration to HA itself: it walks the same config flow the panel would draw, wi
 in. This runs on connect and then every half minute, so a radio plugged in later is picked up too, and
 the panel is told what was found in plain words (`drivers` in /setup/status).
 """
-import asyncio, json, logging, os, time
+import asyncio, hashlib, json, logging, os, time
 
 log = logging.getLogger("hub.drivers")
 RETRY_AFTER = 300     # seconds before a part that failed to connect is tried again
+DONE = {"already_configured", "reconfigure_successful"}   # an abort that means the flow got where it was going
 
 # id, name, port the brain probes, HA integration to add (None: nothing to add), answers for its flow.
 # {host} is where HA reaches the other containers: localhost with host networking (the Pi), a
@@ -72,6 +73,28 @@ class Provision:
     def summary(self) -> list[dict]:
         return list(self.parts.values())
 
+    def mqtt_auth(self) -> tuple[str, str] | None:
+        """The broker's password, if this hub has one: MQTT_USER / MQTT_PASSWORD from .env (the Mac) or the
+        container's environment (the hub, where compose hands them in). None means the broker is open."""
+        env = self.hub.env
+        u = env.get("MQTT_USER") or os.environ.get("MQTT_USER")
+        p = env.get("MQTT_PASSWORD") or os.environ.get("MQTT_PASSWORD")
+        return (u, p) if u and p else None
+
+    def answers(self, pid: str, answers: dict) -> dict:
+        """A part's answers with this hub filled in: where HA reaches it, and for Messages the password."""
+        out = {k: (v.format(host=self.host) if isinstance(v, str) else v) for k, v in answers.items()}
+        if pid == "mqtt" and (auth := self.mqtt_auth()):
+            out["username"], out["password"] = auth
+        return out
+
+    def _mqtt_fp(self) -> str | None:
+        """What the engine was last told the broker's password is, as a fingerprint kept in settings; the
+        password itself stays in .env. Differs from the current one on a hub that just gained a password, or
+        on a house restored onto a hub that made a different one -- both times the engine needs telling."""
+        auth = self.mqtt_auth()
+        return hashlib.sha256(f"{auth[0]}:{auth[1]}".encode()).hexdigest()[:16] if auth else None
+
     def _set(self, pid, state, text=None):
         p = self.parts[pid]
         text = text if text is not None else WORDS.get((pid, state), {"ready": "Running", "adding": "Connecting…"}.get(state, ""))
@@ -108,12 +131,29 @@ class Provision:
                 changed |= self._set(pid, "off"); continue
             if domain:
                 if domain in entries:
+                    fp = self._mqtt_fp() if pid == "mqtt" else None
+                    if fp and self.hub.settings.get("mqtt_auth") != fp:
+                        # The engine has Messages, but not with this password: a hub that just gained one, or a
+                        # house restored onto a different hub. Tell it, through HA's own reconfigure flow.
+                        if time.time() - self._failed_at.get(pid, 0) < RETRY_AFTER: continue
+                        entry = next((e["entry_id"] for e in rows if e["domain"] == domain), None)
+                        if self._set(pid, "adding"): self._tell()
+                        try:
+                            await self.reconfigure(domain, entry, self.answers(pid, answers))
+                            self.hub.settings.set(mqtt_auth=fp)
+                            self.hub.log.add("home", "driver", None, f"{name} signed in", source="system", detail={"integration": domain})
+                            log.info("%s: gave HA the broker's password", name)
+                        except Exception as e:
+                            self._failed_at[pid] = time.time()
+                            log.warning("%s: could not give HA the password: %s", name, e)
+                            changed |= self._set(pid, "failed", f"Could not sign in: {e}"); continue
                     changed |= self._set(pid, "ready"); continue
                 if time.time() - self._failed_at.get(pid, 0) < RETRY_AFTER: continue
                 if self._set(pid, "adding"): self._tell()
                 try:
-                    await self.add(domain, {k: (v.format(host=self.host) if isinstance(v, str) else v) for k, v in answers.items()})
+                    await self.add(domain, self.answers(pid, answers))
                     entries.add(domain)
+                    if pid == "mqtt" and (fp := self._mqtt_fp()): self.hub.settings.set(mqtt_auth=fp)
                     self.hub.log.add("home", "driver", None, f"{name} connected", source="system", detail={"integration": domain})
                     log.info("%s: added %s to HA", name, domain)
                     changed |= self._set(pid, "ready")
@@ -160,14 +200,21 @@ class Provision:
     async def add(self, domain: str, answers: dict):
         """Walk a config flow to the end with these answers. Forms get their fields filled from `answers` or
         the integration's defaults; a menu takes the manual/custom path; 'already configured' counts as done."""
+        await self._walk(await self.hub.add.start(domain), answers)
+
+    async def reconfigure(self, domain: str, entry_id: str, answers: dict):
+        """The same walk over an entry HA already has, so its answers change in place and nothing that hangs
+        off it -- every device Messages brought in -- is forgotten and found again."""
+        await self._walk(await self.hub.add.reconfigure(domain, entry_id), answers)
+
+    async def _walk(self, step: dict, answers: dict):
         add = self.hub.add
-        step = await add.start(domain)
         try:
             for _ in range(8):
                 t = step.get("type")
                 if t == "create_entry": return
                 if t == "abort":
-                    if "already" in (step.get("reason") or "").lower(): return
+                    if step.get("reason_id") in DONE or "already" in (step.get("reason") or "").lower(): return
                     raise RuntimeError(step.get("reason") or "stopped")
                 if t == "menu":
                     ids = [o["id"] for o in step.get("options") or []]

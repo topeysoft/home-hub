@@ -170,6 +170,12 @@ class Onboarding:
             return await self.credentials_step(handler)
         return await self.describe(step)
 
+    async def reconfigure(self, handler: str, entry_id: str) -> dict:
+        """The same flow, started against an entry that already exists. HA calls it reconfigure: the form comes
+        back with the old answers suggested, and the end is an abort whose reason means it worked."""
+        step = await asyncio.to_thread(self._rest, "POST", "/api/config/config_entries/flow", {"handler": handler, "entry_id": entry_id, "show_advanced_options": False})
+        return await self.describe(step)
+
     async def step(self, flow_id: str) -> dict:
         return await self.describe(await asyncio.to_thread(self._rest, "GET", f"/api/config/config_entries/flow/{flow_id}"))
 
@@ -199,6 +205,7 @@ class Onboarding:
             out["options"] = [{"id": o, "label": _fill(S.get(f"{key}.step.{sid}.menu_options.{o}", o.replace("_", " ").title()), ph)} for o in (step.get("menu_options") or [])]
         elif step.get("type") == "abort":
             r = step.get("reason") or "stopped"
+            out["reason_id"] = r     # HA's own word for it, for code that must not guess from the translated sentence
             out["reason"] = _fill(S.get(f"{key}.abort.{r}", r.replace("_", " ")), ph)
             out["hint"], out["retry"] = _abort_hint(h, r, ph.get("name") or await self.name_of(h))
         elif step.get("type") == "create_entry":

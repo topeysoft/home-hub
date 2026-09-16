@@ -10,6 +10,9 @@ class FakeAdd:
         self.script, self.submitted, self.cancelled, self.waiting = list(script), [], [], list(waiting)
     async def sign_ins(self): return list(self.waiting)
     async def start(self, handler): return self.script.pop(0)
+    async def reconfigure(self, handler, entry_id):
+        self.reconfigured.append((handler, entry_id)); return self.script.pop(0)
+    reconfigured: list = []
     async def step(self, flow_id): return self.script.pop(0)
     async def submit(self, flow_id, data):
         self.submitted.append(data); return self.script.pop(0)
@@ -33,9 +36,16 @@ class FakeLog:
     def add(self, *a, **kw): self.rows.append((a, kw))
 
 
+class FakeSettings:
+    def __init__(self, **data): self.data = dict(data)
+    def get(self, k, default=None): return self.data.get(k, default)
+    def set(self, **updates): self.data.update(updates)
+
+
 class FakeHub:
-    def __init__(self, add=None, ha=None):
-        self.env, self.driver, self.add, self.ha, self.log, self.sent = {}, "ready", add or FakeAdd([]), ha or FakeHA(), FakeLog(), []
+    def __init__(self, add=None, ha=None, env=None, settings=None):
+        self.env, self.driver, self.add, self.ha, self.log, self.sent = dict(env or {}), "ready", add or FakeAdd([]), ha or FakeHA(), FakeLog(), []
+        self.settings = settings or FakeSettings()
     def _broadcast(self, msg): self.sent.append(msg)
     def status(self): return {"drivers": self.provision.summary()}
 
@@ -72,6 +82,71 @@ class AddTests(unittest.IsolatedAsyncioTestCase):
             await provision.Provision(FakeHub(add)).add("mqtt", {"broker": "x"})
         self.assertIn("Cannot connect", str(cm.exception))
         self.assertEqual(add.cancelled, ["f1"])
+
+
+def _only(port_open):
+    async def probe(host, port, timeout=1.5): return port in port_open
+    return probe
+
+
+AUTH = {"MQTT_USER": "hub", "MQTT_PASSWORD": "s3cret"}
+
+
+class MessagesPasswordTests(unittest.IsolatedAsyncioTestCase):
+    """The broker takes a password (driver-layer/mqtt-auth.sh); the engine has to be told it, once per password."""
+
+    async def test_adding_messages_sends_the_password_and_remembers_it(self):
+        add = FakeAdd([form([("broker", None), ("port", 1883), ("username", None), ("password", None)]), {"type": "create_entry"}])
+        hub = FakeHub(add, FakeHA(), env=AUTH); p = provision.Provision(hub); hub.provision = p
+        with patch.object(provision, "probe", _only({1883})):
+            await p.refresh()
+        self.assertEqual(add.submitted[0]["username"], "hub")
+        self.assertEqual(add.submitted[0]["password"], "s3cret")
+        self.assertEqual(hub.settings.get("mqtt_auth"), p._mqtt_fp())
+        self.assertEqual(p.parts["mqtt"]["state"], "ready")
+
+    async def test_without_a_password_nothing_is_sent_for_one(self):
+        add = FakeAdd([form([("broker", None), ("username", None), ("password", None)]), {"type": "create_entry"}])
+        hub = FakeHub(add); p = provision.Provision(hub); hub.provision = p
+        with patch.object(provision, "probe", _only({1883})):
+            await p.refresh()
+        self.assertNotIn("username", add.submitted[0])
+        self.assertIsNone(hub.settings.get("mqtt_auth"))
+
+    async def test_an_entry_that_predates_the_password_is_reconfigured_in_place(self):
+        add = FakeAdd([form([("broker", None), ("username", None), ("password", None)]), {"type": "abort", "reason": "Re-configuration was successful", "reason_id": "reconfigure_successful"}])
+        add.reconfigured = []
+        hub = FakeHub(add, FakeHA(entries=["mqtt"]), env=AUTH); p = provision.Provision(hub); hub.provision = p
+        with patch.object(provision, "probe", _only({1883})):
+            await p.refresh()
+        self.assertEqual(add.reconfigured, [("mqtt", "e-mqtt")])
+        self.assertEqual(add.submitted, [{"broker": "localhost", "username": "hub", "password": "s3cret"}])
+        self.assertEqual(add.cancelled, [])
+        self.assertEqual(hub.settings.get("mqtt_auth"), p._mqtt_fp())
+        self.assertEqual(p.parts["mqtt"]["state"], "ready")
+        self.assertIn("Messages signed in", [a[3] for a, _ in hub.log.rows])
+
+    async def test_an_entry_that_already_knows_the_password_is_left_alone(self):
+        add = FakeAdd([]); add.reconfigured = []
+        hub = FakeHub(add, FakeHA(entries=["mqtt"]), env=AUTH); p = provision.Provision(hub); hub.provision = p
+        hub.settings.set(mqtt_auth=p._mqtt_fp())
+        with patch.object(provision, "probe", _only({1883})):
+            await p.refresh()
+        self.assertEqual(add.reconfigured, [])
+        self.assertEqual(p.parts["mqtt"]["state"], "ready")
+
+    async def test_a_failed_reconfigure_says_so_and_backs_off(self):
+        add = FakeAdd([form([("broker", None)], errors={"base": "Cannot connect"})]); add.reconfigured = []
+        hub = FakeHub(add, FakeHA(entries=["mqtt"]), env=AUTH); p = provision.Provision(hub); hub.provision = p
+        with patch.object(provision, "probe", _only({1883})):
+            await p.refresh()
+        self.assertEqual(p.parts["mqtt"]["state"], "failed")
+        self.assertIn("Cannot connect", p.parts["mqtt"]["text"])
+        self.assertIsNone(hub.settings.get("mqtt_auth"))
+        self.assertEqual(add.cancelled, ["f1"])
+        with patch.object(provision, "probe", _only({1883})):
+            await p.refresh()                      # inside RETRY_AFTER: not asked again
+        self.assertEqual(len(add.reconfigured), 1)
 
 
 class UnitTests(unittest.TestCase):

@@ -21,7 +21,7 @@ services:
     profiles: [zigbee]
     depends_on: [mosquitto]
     ports:
-      - "8080:8080"          # Zigbee2MQTT admin UI (Advanced door)
+      - "127.0.0.1:8080:8080"    # Zigbee2MQTT's own UI: on the hub itself only (ssh -L 8080:localhost:8080), never the Wi-Fi
     volumes:
       - ./zigbee2mqtt:/app/data
       - /run/udev:/run/udev:ro
@@ -30,6 +30,8 @@ services:
     environment:
       - TZ=${TZ}
       - ZIGBEE2MQTT_CONFIG_SERIAL_PORT=${ZIGBEE_PORT:-/dev/zigbee}
+      - ZIGBEE2MQTT_CONFIG_MQTT_USER=${MQTT_USER:-}            # the broker's password, from mqtt-auth.sh
+      - ZIGBEE2MQTT_CONFIG_MQTT_PASSWORD=${MQTT_PASSWORD:-}
 
   zwave-js-ui:
     image: ${HUB_IMG_ZWAVE_JS_UI:-zwavejs/zwave-js-ui:11.23.0}
@@ -39,8 +41,8 @@ services:
     tty: true
     stop_signal: SIGINT
     ports:
-      - "8091:8091"          # Z-Wave JS UI admin (Advanced door)
-      - "3000:3000"          # websocket server consumed by Home Assistant
+      - "127.0.0.1:8091:8091"    # Z-Wave JS UI's own UI: on the hub itself only, never the Wi-Fi
+      - "127.0.0.1:3000:3000"    # websocket server consumed by Home Assistant, on the same host
     volumes:
       - ./zwave-js-ui:/usr/src/app/store
     devices:
@@ -59,7 +61,9 @@ services:
     volumes:
       - ./matter-server:/data
       - /run/dbus:/run/dbus:ro
-    # websocket on ws://<host>:5580/ws
+    # The image's own command plus the websocket pinned to loopback: on the host network it would
+    # otherwise answer the whole Wi-Fi, and it has no password of its own. ws://localhost:5580/ws.
+    command: ["--storage-path", "/data", "--paa-root-cert-dir", "/data/credentials", "--listen-address", "127.0.0.1", "--listen-address", "::1"]
 
   homeassistant:
     image: ${HUB_IMG_HOMEASSISTANT:-ghcr.io/home-assistant/home-assistant:2026.9.1}
@@ -100,6 +104,9 @@ services:
       # Whether the host holds release keys. It decides one thing: whether this hub is allowed to
       # install updates in the night without being asked. install.sh writes it; docs/updates.md.
       - HUB_VERIFIED=${HUB_VERIFIED:-}
+      # The broker's password (mqtt-auth.sh), so the brain can give it to the engine's Messages part.
+      - MQTT_USER=${MQTT_USER:-}
+      - MQTT_PASSWORD=${MQTT_PASSWORD:-}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}   # the assistant's key, if it is not pasted into the panel instead
       # Whether this house can answer out loud, and in whose voice. Empty is off and is every house
       # today: the panel then answers on the glass exactly as it does now. Set VOICE_TTS=piper with
@@ -134,9 +141,10 @@ services:
     restart: unless-stopped
     depends_on: [mosquitto]
     ports:
-      - "55123:55123"
+      - "55123:55123"        # Ring's own sign-in form; still on the Wi-Fi, see docs/shipping.md
     environment:
-      - MQTTURL=mqtt://mosquitto:1883
+      # In Docker ring-mqtt reads only ./ring-mqtt/config.json, which mqtt-auth.sh renders from
+      # config.template.json with the broker's password in its mqtt_url. Nothing here names the broker.
       - ENABLEMODES=true
     volumes:
       - ./ring-mqtt:/data
