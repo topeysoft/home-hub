@@ -125,6 +125,15 @@ was left behind — it installed and came back (`done`, on the new commit); it i
 back (`failed`, `reverted: false`, and the version named rather than a rollback claimed that did not take); and the
 installer itself stopping part way (put back, `failed`). The request file is gone in all four, so a hub cannot loop.
 
+**One thing `host/tests.sh` cannot cover.** `install.sh`'s image fallback needs a real Docker daemon, so the case that
+bit hardest here was found by hand rather than by a test: a verified release pins the brain **by digest**, and nothing
+can build a digest — Docker refuses with *"refusing to create a tag with a digest reference"*. Falling back to a local
+build was therefore impossible on exactly the hubs the fallback exists for: a package that is not public, or no
+internet. It builds under a name of the hub's own now. What that costs is worth saying plainly: the code is still the
+commit the signed record named, so it is built from the source the release described, but the pinned binary is gone and
+with it the base images the Dockerfile names by tag rather than by digest. Weaker than pulling what CI built; much
+stronger than not updating.
+
 **What is not covered, and is worth knowing.** The proof is *the brain answers*. An image that starts, serves, and is
 subtly wrong — a panel that renders nothing, a migration that quietly dropped the rules — passes. Catching that needs
 the panel to check itself, which is a different piece and probably belongs with piece 5's telemetry rather than here.

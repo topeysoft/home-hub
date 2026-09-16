@@ -215,6 +215,23 @@ else
   # right there.
   BUILT_COMMIT="$(git -C "$DIR" rev-parse HEAD 2>/dev/null || echo "")"
   BUILT_VERSION="${VERSION:-main-$(git -C "$DIR" rev-parse --short HEAD 2>/dev/null || echo unknown)}"
+  # A digest names an image that exists on a registry, and nothing can build one: docker refuses
+  # outright with "refusing to create a tag with a digest reference". So a verified release, which
+  # pins by digest on purpose, could not fall back to building at all -- the install would fail on
+  # every hub that cannot reach the registry, which is the one case the fallback exists for. Build
+  # under a name of this hub's own instead.
+  #
+  # What that costs is worth being honest about. The code is still the commit the signed record
+  # named, so this is built from exactly the source the release described; what is lost is the
+  # pinned binary, and with it the pinned base images the Dockerfile does not name by digest. It is
+  # a weaker guarantee than pulling what CI built, and a much stronger one than not updating.
+  case "${HUB_BRAIN_IMAGE:-}" in
+    *@sha256:*)
+      export HUB_BRAIN_IMAGE="home-hub/brain:$BUILT_VERSION"
+      sed -i '/^HUB_BRAIN_IMAGE=/d' .env 2>/dev/null || true
+      echo "HUB_BRAIN_IMAGE=$HUB_BRAIN_IMAGE" >> .env
+      echo "  built here, so it is $HUB_BRAIN_IMAGE rather than the digest the release named" ;;
+  esac
   docker compose build -q --build-arg "HUB_VERSION=$BUILT_VERSION" --build-arg "HUB_COMMIT=$BUILT_COMMIT" brain
 fi
 # shellcheck disable=SC2086
