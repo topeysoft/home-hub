@@ -15,6 +15,22 @@ SENSOR_CLASSES = {"temperature", "humidity", "illuminance"}   # power/energy bel
 # until there is an appliances view; a room's tiles and a thermostat's sensor picker never see them.
 APPLIANCE = re.compile(r"\b(fridge|refrigerator|freezer|oven|range|cavity|cooktop|stove|hob|dishwasher|washer|dryer|water heater|"
                        r"boiler|grill|smoker|sous ?vide|setpoint|probe|kettle|coffee|wine|humidor|aquarium|pool|spa|hot tub)\b", re.I)
+# A switch that is a FEATURE of a machine rather than a plug with something on it: a fridge's ice maker, a
+# dishwasher's delay start, a pool's heater. Narrower than APPLIANCE on purpose. A kettle or a coffee maker
+# on a smart plug is exactly what a plug is for, and Everything off switching it off when the house empties
+# is the promise a plug makes; a fridge's ice maker going off with it is a fridge with no ice in the morning.
+# The words tried are the entity's and its hardware's together, so "Refrigerator" on the unit names all of
+# its switches. What HA calls an outlet stays a plug whatever it is named. docs/kinds.md, *An appliance*.
+MACHINE = re.compile(r"\b(fridge|refrigerator|freezer|ice ?maker|ice|dishwasher|washer|washing machine|dryer|oven|"
+                     r"range|cooktop|stove|hob|hood|water heater|boiler|furnace|aquarium|pool|spa|hot tub|sauna|wine|humidor)\b", re.I)
+
+
+def guessed_kind(capability: str, device_class: str | None, words: str = "") -> str | None:
+    """What the house makes of a thing from its name, under the owner's word and over the driver's.
+    Only one guess is made today: a switch inside a machine is an appliance. None where the driver's
+    word stands as it is."""
+    if capability == "switch" and device_class != "outlet" and MACHINE.search(words or ""): return "appliance"
+    return None
 
 
 def seen_at(s) -> float:
@@ -61,7 +77,11 @@ def capability_for(domain: str, device_class: str | None, words: str = "") -> st
 # stray finger on a plug is a lamp, while the failure mode of a stray finger on this is a siren at 2am.
 # The kind is how a person tells the house which of the two it is holding; everything that asks before
 # it acts hangs off it (app/src/twice.ts, and the scenes that step over it in intents.py).
-CONTROLS = {"light": ("onoff",), "switch": ("onoff",), "fan": ("onoff",), "alarm": ("onoff",),
+#
+# `appliance` is in the same group for the opposite reason from `alarm`: nothing about it needs a second
+# tap, but nothing about it should be swept up either. A plug promises to go off when the house empties.
+# A fridge's ice maker is a switch entity too, and it must not keep that promise.
+CONTROLS = {"light": ("onoff",), "switch": ("onoff",), "fan": ("onoff",), "alarm": ("onoff",), "appliance": ("onoff",),
             "media": ("onoff", "playing"), "cover": ("position",), "climate": ("temperature",),
             "lock": ("bolt",), "vacuum": ("errand",), "camera": ("picture",)}
 # Neither re-typed into nor out of. docs/voice.md gates what may be opened and unlocked by direction, and
@@ -90,7 +110,14 @@ def kind_of(d) -> str:
     doing so -- api.act(), the timer guard beside it, and intents.plan(). Writing "light" into the
     capability of a switch entity makes the brain call light.turn_on on it, HA refuses, and the thing
     is left worse than mis-typed: untouchable, and the panel did it."""
-    return d.kind or d.capability
+    return d.kind or d.guess or d.capability
+
+
+def default_kind(d) -> str:
+    """What this thing is shown as when nobody has said otherwise: the house's guess where it made one,
+    the driver's word where it did not. The owner's answer is stored only where it differs from this,
+    which is how "it is a plug" over a guessed appliance is a record and not a no-op."""
+    return d.guess or d.capability
 
 
 @dataclass
@@ -106,6 +133,9 @@ class Device:
     seen: float = field(default_factory=time.time)   # when the driver last heard from it; a stale sensor is not steered by
     maker: str | None = None       # who made the unit, from the driver's device registry; the one thing a tile can say about hardware it has no picture of
     kind: str | None = None        # what the OWNER says this is, where they have said anything: a lamp on a plug is a light. Read it through kind_of(), never instead of capability
+    guess: str | None = None       # what the HOUSE makes of it from its name, under the owner's word: a switch on a fridge is an appliance. guessed_kind() is the only thing that sets it
+    hw_name: str | None = None     # what the unit it belongs to is called ("Refrigerator"), so the panel can show a machine's features as one thing
+    named_by_unit: bool = False    # HA composes its name from the unit's ("Garage Light" + "Motion"), so renaming the unit renames it; the old style carries its own name and must be renamed by hand
     since: float = field(default_factory=time.time)  # when it entered the state it is in; a rule's `for` counts from here, and HA's own last_changed survives a restart of this brain
     entry: str | None = None       # the account or radio that brought it (the driver's config entry). What a fault is grouped under: when one stops answering, everything on it goes quiet at once, and health.py says that once instead of once per device
 
@@ -128,6 +158,7 @@ class Home:
         self.intent: str = "unknown"     # the last home-wide intent (bedtime, everything off)
         self.extras: dict[str, dict] = {}  # what the brain knows about a device that HA does not (a fan timer's end); shown with its attrs
         self.lamps: dict[str, str] = {}    # camera id -> the light built into the same unit (Ring floodlight and spotlight cams)
+        self.eyes: dict[str, str] = {}     # light/switch/fan id -> the motion sensor built into the same unit (a Brilliant switch, a Ring pathlight): docs/units.md
         self.hardware: dict[str, dict] = {}   # driver device id -> {"name", "manufacturer", "model"}: what the maker called the unit, for naming new things
         self.kinds: dict[str, str] = {}    # device id -> what the owner said it is. Kept here so a rebuild carries it; the hub loads and saves it with the rest of the settings
 
@@ -137,6 +168,7 @@ class Home:
         extra = self.extras.get(eid, {})
         out = {**self._keep_attrs(cap, a), **extra}
         if cap == "camera" and eid in self.lamps: out["light"] = self.lamps[eid]
+        if eid in self.eyes: out["motion"] = self.eyes[eid]
         if extra.get("fan_until", 0) > time.time(): out["fan_mode"] = "on"
         return out
 
@@ -184,7 +216,10 @@ class Home:
             d = Device(eid, name, room, cap, s["state"], self.attrs_for(eid, cap, s["attributes"]), e.get("device_id"), bool(e.get("area_id")), seen_at(s), since=changed_at(s))
             d.entry = e.get("config_entry_id") or dev_entry.get(e.get("device_id") or "")
             d.maker = self.hardware.get(e.get("device_id") or "", {}).get("manufacturer") or None
-            d.kind = self.shown_as(eid, cap)
+            d.hw_name = self.hardware.get(e.get("device_id") or "", {}).get("name") or None
+            d.named_by_unit = bool(e.get("has_entity_name"))
+            d.guess = guessed_kind(cap, s["attributes"].get("device_class") or e.get("original_device_class"), words)
+            d.kind = self.shown_as(eid, cap, d.guess)
             self.devices[eid] = d
             self.rooms[room].devices.append(d)
         # A camera with a lamp built in: the viewer offers the lamp beside the picture, the way Ring's own app does.
@@ -194,16 +229,26 @@ class Home:
             if d.capability == "light" and d.hw: lights.setdefault(d.hw, d.id)
         self.lamps = {d.id: lights[d.hw] for d in self.devices.values() if d.capability == "camera" and d.hw in lights}
         for cid, lid in self.lamps.items(): self.devices[cid].attrs["light"] = lid
+        # A switch with a motion sensor built in -- a Brilliant dimmer, a Ring pathlight, a motion switch --
+        # is one thing on the wall, and its tile is where its motion belongs. The sensor stays a device of
+        # its own as well, so rules and the room's line read it as they always did. docs/units.md.
+        eyes = {}
+        for d in self.devices.values():
+            if d.capability == "motion" and d.hw: eyes.setdefault(d.hw, d.id)
+        self.eyes = {d.id: eyes[d.hw] for d in self.devices.values() if d.capability in ("light", "switch", "fan") and d.hw in eyes}
+        for cid, mid in self.eyes.items(): self.devices[cid].attrs["motion"] = mid
         return self
 
-    def shown_as(self, eid: str, capability: str) -> str | None:
+    def shown_as(self, eid: str, capability: str, guess: str | None = None) -> str | None:
         """The owner's kind for this device, or None where they have not given one or it no longer fits.
 
         The stored answer is kept either way. A thing whose capability changes underneath it — a plug
         pulled out and a real bulb put in — keeps what the owner said as long as the new thing can still
-        serve it, and the record survives a spell where it cannot rather than being quietly thrown away."""
+        serve it, and the record survives a spell where it cannot rather than being quietly thrown away.
+        Measured against the house's guess where it made one: "plug" is an answer on a switch the house
+        took for an appliance, and nothing at all on one it did not."""
         k = self.kinds.get(eid)
-        return k if k and k != capability and k in kinds_for(capability) else None
+        return k if k and k != (guess or capability) and k in kinds_for(capability) else None
 
     def apply_state(self, entity_id, new_state) -> Device | None:
         d = self.devices.get(entity_id)

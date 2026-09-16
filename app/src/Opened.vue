@@ -35,8 +35,9 @@
  * See design/device for the boards all of that was drawn on.
  */
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { getDeviceEvents, getDeviceKinds, setDeviceKind, type Event, type Kinds } from './api'
-import { cap, deviceById, isDead, notify, perform, roomOf, shownAs, store } from './store'
+import { getDeviceEvents, getDeviceKinds, moveDevice, renameDevice, setDeviceKind, type Event, type Kinds } from './api'
+import { partsOf, renameParts, renamesUnit } from './units'
+import { cap, defaultKind, deviceById, isDead, notify, perform, roomOf, shownAs, store } from './store'
 import { facts as factsOf, moments as momentsOf, paneKind, reading, verbs as verbsOf, whyLine } from './pane'
 import { useArm } from './twice'
 import Icon from './Icon.vue'
@@ -57,7 +58,7 @@ const dead = computed(() => !!dev.value && isDead(dev.value))
 
 const INSTRUMENTS: Record<string, any> = {
   light: LightPane, media: MediaPane, climate: ClimatePane, cover: CoverPane,
-  lock: LockPane, camera: CameraPane, fan: SimplePane, switch: SimplePane, alarm: SimplePane, vacuum: SimplePane, sense: SensePane,
+  lock: LockPane, camera: CameraPane, fan: SimplePane, switch: SimplePane, alarm: SimplePane, appliance: SimplePane, vacuum: SimplePane, sense: SensePane,
 }
 const instrument = computed(() => dev.value ? INSTRUMENTS[paneKind(dev.value)] ?? SimplePane : null)
 
@@ -97,12 +98,12 @@ async function showAs(k: string) {
   const d = dev.value; if (!d || !kinds.value) return
   if (k === kinds.value.kind) return
   const was = d.kind
-  d.kind = k === d.capability ? null : k
+  d.kind = k === defaultKind(d) ? null : k     // the way back is what it would be shown as anyway, which for a fridge's switch is the house's guess
   kinds.value = { ...kinds.value, kind: k }
   try { await setDeviceKind(d.id, k) }
   catch (e: any) {
     d.kind = was
-    kinds.value = { ...kinds.value, kind: was || d.capability }
+    kinds.value = { ...kinds.value, kind: was || defaultKind(d) }
     notify(e.message, 'error')
   }
 }
@@ -121,7 +122,7 @@ const why = computed(() => dev.value ? whyLine(dev.value, events.value, room.val
 async function verb(id: string) {
   const d = dev.value; if (!d) return
   if (id === 'why') { store.whyRoom = d.room_id; store.sheet = 'why'; return }
-  if (id === 'edit') { store.sheet = 'house'; close(); return }
+  if (id === 'edit') { startEdit(); return }
   if (id === 'watch') { store.viewer = d; close(); return }
   if (id === 'lamp') {
     const lamp = deviceById(String(d.attrs.light))
@@ -136,6 +137,48 @@ async function verb(id: string) {
       catch (e: any) { notify(e.message, 'error') }
     })
   }
+}
+
+/* Rename or move it, HERE. The verb used to open the house's settings panel, which has no rename in it --
+   a promise the button made and the panel broke. The name and the room are the two things a person can see
+   and disagree with (the kind is the third, above), so they are edited where they are read: the head of
+   the pane turns into a name field and a room picker, and Done puts it back.
+
+   A light called "Walkway Pathlight Light" on hardware called "Walkway Pathlight" is the unit, so renaming
+   it renames the unit and its parts follow (units.ts). A fridge's "Ice Maker" is a feature: only itself. */
+const editing = ref(false), saving = ref(false)
+const newName = ref(''), newRoom = ref('')
+const rooms = computed(() => store.rooms.filter(r => r.id !== 'unassigned'))
+const asUnit = computed(() => !!dev.value && renamesUnit(dev.value))
+function startEdit() {
+  const d = dev.value; if (!d) return
+  newName.value = asUnit.value ? (d.hw_name ?? d.name) : d.name
+  newRoom.value = d.room_id === 'unassigned' ? '' : d.room_id
+  editing.value = true
+}
+watch(() => dev.value?.id, () => (editing.value = false))
+async function saveEdit() {
+  const d = dev.value; if (!d || saving.value) return
+  const name = newName.value.trim(), was = asUnit.value ? (d.hw_name ?? d.name) : d.name
+  const room = newRoom.value
+  saving.value = true
+  try {
+    if (name && name !== was) {
+      if (asUnit.value) { await renameDevice(d.id, name, true); renameParts(partsOf(d), was, name) }
+      else { await renameDevice(d.id, name); d.name = name }
+    }
+    if (room && room !== d.room_id) {
+      await moveDevice(d.id, room)
+      /* the thing goes now, its parts with it; the house confirms with a rebuild */
+      for (const part of partsOf(d)) {
+        const from = store.rooms.find(r => r.id === part.room_id), to = store.rooms.find(r => r.id === room)
+        if (from && to && from !== to) { from.devices = from.devices.filter(x => x.id !== part.id); to.devices.push(part); part.room_id = room }
+      }
+    }
+    if ((name && name !== was) || (room && room !== d.room_id)) notify(name !== was && room !== d.room_id ? `${name} is in the ${rooms.value.find(r => r.id === room)?.name ?? 'room'} now.` : name !== was ? `Renamed to ${name}.` : `${d.name} is in the ${rooms.value.find(r => r.id === room)?.name ?? 'room'} now.`)
+    editing.value = false
+  } catch (e: any) { notify(`Couldn't change it: ${e.message}`, 'error') }
+  saving.value = false
 }
 
 /* `closing` is not the same fact as `!shown`, and the difference is two frames:
@@ -171,8 +214,23 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
       <div class="opened-body pane-body">
         <div class="pane-said">
           <div class="opened-step s0">
-            <div class="opened-room" v-if="room">{{ room.name }}</div>
-            <h2 class="display opened-name">{{ dev.name }}</h2>
+            <template v-if="!editing">
+              <div class="opened-room" v-if="room">{{ room.name }}</div>
+              <h2 class="display opened-name">{{ dev.name }}</h2>
+            </template>
+            <!-- the same two lines, as things to change: the room, then the name -->
+            <form class="opened-edit" v-else @submit.prevent="saveEdit">
+              <select class="sort-room opened-edit-room" v-model="newRoom" aria-label="Room">
+                <option value="" disabled>Which room?</option>
+                <option v-for="r in rooms" :key="r.id" :value="r.id">{{ r.name }}</option>
+              </select>
+              <input class="opened-edit-name" v-model="newName" spellcheck="false" aria-label="Name" autofocus @keydown.escape="editing = false" />
+              <p class="opened-edit-note" v-if="asUnit">The whole unit takes this name: {{ partsOf(dev).length }} parts, its motion sensor among them.</p>
+              <div class="opened-edit-acts">
+                <button type="submit" class="button small" :disabled="saving || !newName.trim()">Done</button>
+                <button type="button" class="button small ghost" :disabled="saving" @click="editing = false">Cancel</button>
+              </div>
+            </form>
 
             <!-- what it is. Quiet, and only ever here: a tile is a glance, and the point of the
                  override is that the thing stops looking unusual. -->

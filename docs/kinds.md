@@ -200,6 +200,60 @@ says **Alarm sounding** before it says anything about its lamps.
 lamp on a plug, and for the same reason. Nothing here is a new service, a new domain or a new kind of
 device -- it is the house being told what the thing in the hall is for.
 
+## An appliance, and the fridge that has four of them
+
+*Added 16 September 2026, from "the refrigerator's ice maker shows up as a switch, which works, but should it not
+be shown as what it is?" -- and, once it was being built, "keep it generic: the stove, the dishwasher, the washer
+and the dryer arrive the same way."*
+
+**The problem is behaviour before it is looks.** A fridge's ice maker reaches the hub as `switch.refrigerator_ice_maker`,
+and HA is not wrong: it is a switch. Shown as a plug it gets a plug's behaviour, and a plug makes one promise a fridge's
+feature must not keep -- it goes off when the house empties. Everything off sweeps `("switch", "off")`, so leaving the
+house switched the ice maker off, and "turn off the plugs" reached it through the plug bucket. That is the siren story
+again, with the opposite sign: nothing about an ice maker needs a second tap, and nothing about it should be swept up.
+
+**So `appliance` is a kind, in the on/off group,** and the one sentence under the offer is the whole distinction:
+*a plug goes off with Everything off; an appliance is part of a machine and is left alone.* A space heater on a plug
+stays a plug, on purpose. Nothing in `intents.py` changed to make this true -- `plan()` selects by `kind_of`, and an
+appliance is not a `switch` -- but it is held down by a test, because it is the reason the kind exists.
+
+**One kind, not one per feature.** Ice maker, Ice Bites, power cool, sabbath mode, a dishwasher's delay start, a
+dryer's steam: they all behave the same way, and a catalogue of feature kinds would never end and would bloat *Show
+this as*. What tells them apart is their name, and the panel reads it -- a feature with ice in its name wears the
+snowflake the weather already draws, anything else its machine.
+
+**The house guesses, and the owner can overrule.** `guessed_kind()` in `model.py`: a `switch` that HA has not
+classed as an outlet, whose words (the entity's and its hardware's together, the same `words` the fridge-thermometer
+rule reads) match `MACHINE`, is shown as an appliance until somebody says otherwise. `MACHINE` is narrower than
+`APPLIANCE` on purpose: a kettle or a coffee maker on a smart plug is exactly what a plug is for, so those words are
+not in it. The guess lives in `Device.guess`, under the owner's word and over the driver's -- `kind_of(d)` is now
+`kind or guess or capability` -- and the stored override is measured against `default_kind(d)` rather than against
+`capability`, so "it is a plug" on a switch the house took for an appliance is a record that survives a rebuild, and
+"it is an appliance" on the same switch is the way back and leaves nothing behind. `shown_as()` takes the guess for
+the same reason.
+
+**A feature answers to its own name.** "Refrigerator Ice Maker" is also "ice maker" in a sentence, the way "Kitchen
+counter" is also "counter" inside the Kitchen: `_by_name()` shortens by the unit's name (`Device.hw_name`) as well
+as by the room's. "Turn off the plugs" walks past it; "turn off the ice maker" reaches it; so does "the appliances".
+
+**What is on right now does not list it.** An ice maker is on all year, and a card for it in the row of what is on
+would be a card that never leaves. `whatsOn()` and `roomActive()` leave appliances out; the room's line does not
+count them among the plugs; the tile is where its state is, and that is enough.
+
+**And the machine is one thing on the wall.** The threshold for this was "once one machine has three or more
+features on the panel", and the house that asked already had one. `app/src/machines.ts`: two or more appliance
+features on one unit (`hw`, the driver's own grouping) are a machine, drawn by `MachineTile.vue` as one card named
+after the unit with a row per feature -- a tap flips the row, a hold opens it, and the card has no on of its own,
+because "the fridge is on" is not a thing anybody at a wall panel needs telling. Three rows fit a third; more take a
+half. One feature on its own stays a tile. The grouping reads what a thing is SHOWN as, so a feature the owner has
+called a plug leaves the card, and two plugs on one strip never form one.
+
+**Not built, and why.** The readings inside the machine -- the fridge and freezer temperatures -- are still not
+devices at all; `capability_for()` hides `APPLIANCE` sensors until there is an appliances view. The card is most of
+that view, and putting the temperatures on it is the next step, but it needs a capability the room strip and the
+thermostat's sensor picker both ignore, and that is its own piece of work. No timer on an appliance: "ice maker for
+ten minutes" is a plug's sentence.
+
 ## What was built
 
 1. **The second field.** `Device.kind` beside `capability` in `model.py`, with `kind_of(d)` — `kind or capability` —
@@ -223,6 +277,12 @@ device -- it is the house being told what the thing in the hall is for.
    offer; `POST /devices/{id}/kind` sets it, and the driver's own word clears it.
 
 5. **The gate.** `GATED = ("lock", "cover")` in `model.py`, refused both ways in and tested both ways.
+
+6. **An appliance.** `appliance` in `CONTROLS`; `MACHINE` and `guessed_kind()` beside `APPLIANCE`; `Device.guess`
+   and `Device.hw_name`; `default_kind()` next to `kind_of()`, read by `show_as()` and `shown_as()`. `commands.py`
+   shortens a name by its unit's, and has a word for the kind. On the panel: `cap()` reads the guess, `iconFor()`
+   reads the name, `machines.ts` and `tiles/MachineTile.vue` draw a unit as one card, `RoomView.vue` places it.
+   Tests: the `Appliance*` classes in `brain/tests/test_kinds.py`, and `app/tests/machines.test.ts`.
 
 Tests: `brain/tests/test_kinds.py` (the offer, the scene plan, where it is stored, the service calls, and the
 sentence this is all for) and `app/tests/kinds.test.ts` (what the panel treats a thing as, and what it says).

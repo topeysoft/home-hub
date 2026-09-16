@@ -49,7 +49,7 @@ export function reading(d: Device, unit = '°'): string {
       const b = bright(d)
       return s !== 'on' ? 'Off' : b != null ? pct(b) : 'On'
     }
-    case 'switch': return s === 'on' ? 'On' : 'Off'
+    case 'switch': case 'appliance': return s === 'on' ? 'On' : 'Off'
     case 'alarm': return s === 'on' ? 'Sounding' : 'Silent'
     case 'media': return a.media_title || (s === 'playing' ? 'Playing' : s === 'paused' ? 'Paused' : s === 'off' || s === 'standby' ? 'Off' : 'Idle')
     case 'climate': return a.current_temperature != null ? `${Math.round(a.current_temperature)}${u}` : s === 'off' ? 'Off' : cap1(s)
@@ -71,7 +71,7 @@ export function reading(d: Device, unit = '°'): string {
 export function verbs(d: Device): Verb[] {
   const k = cap(d), out: Verb[] = []
   const on = d.state === 'on' || d.state === 'playing' || d.state === 'cleaning'
-  if (k === 'light' || k === 'switch' || k === 'media' || k === 'fan')
+  if (k === 'light' || k === 'switch' || k === 'media' || k === 'fan' || k === 'appliance')
     out.push({ id: 'power', icon: 'power', label: on ? 'Turn it off' : 'Turn it on', primary: true, on })
   /* Its own words, not "Turn it on". What this button does is make a noise the whole house hears,
      and a verb that says so is half of why the second tap is not a surprise. */
@@ -108,13 +108,14 @@ export function facts(d: Device, room?: Room | null, unit = '°', events: Event[
   if (k === 'fan') add('Speed', a.percentage != null ? pct(a.percentage) : null)
   if (k === 'cover') add('Open', a.current_position != null ? pct(a.current_position) : null)
   if (k === 'camera' && a.light) add('Floodlight', deviceById(String(a.light))?.state === 'on' ? 'On' : 'Off')
+  if (a.motion) add('Motion sensor', deviceById(String(a.motion))?.state === 'on' ? 'Seeing motion' : 'Nobody about')   // built into the unit (units.ts)
 
   /* A plug, a door and a mower carry almost nothing in their attributes -- which is why their panes
      used to be empty. What they do have is a day, and the log already keeps it. */
   if (events.length) {
     const on = spans(events)
     const last = (match: (e: Event) => boolean) => { const e = events.find(match); return e ? whenText(e.ts) : null }
-    if (k === 'switch' || k === 'fan') {
+    if (k === 'switch' || k === 'fan' || k === 'appliance') {
       add('On today', on.length ? forLong(on) : null)
       add('Last on', last(e => e.kind === 'state' && e.new === 'on'))
     }

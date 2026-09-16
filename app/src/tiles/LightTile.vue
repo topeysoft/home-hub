@@ -5,6 +5,7 @@ import { perform, shortName, roomOf, store, isDead } from '../store'
 import Icon from '../Icon.vue'
 import DeviceArt from '../DeviceArt.vue'
 import { lightKind } from '../art'
+import { seeing } from '../units'
 
 const props = defineProps<{ device: Device }>()
 const on = computed(() => props.device.state === 'on')
@@ -23,11 +24,13 @@ const kind = computed(() => lightKind(props.device.name || name.value))
    a number with an instruction stapled to it, in lamplight, on the one line a
    person reads from the far side of the room. The gesture is still here and the
    pane still says it in a sentence; the tile says the state. */
+/* A light with a motion sensor built in (units.ts) says so here, on the one line, while it sees
+   someone: the sensor is part of the same thing on the wall, and this tile is where the thing is. */
+const eye = computed(() => seeing(props.device))
 const label = computed(() => {
   if (dead.value) return 'Not responding'
-  if (!on.value) return 'Off'
-  if (!dimmable.value) return 'On'
-  return `On, ${pct.value}%`
+  const base = !on.value ? 'Off' : !dimmable.value ? 'On' : `On, ${pct.value}%`
+  return eye.value ? `${base} · Motion` : base
 })
 
 let startX = 0, dragging = false, el: HTMLElement | null = null
@@ -65,7 +68,7 @@ async function up() {
 </script>
 
 <template>
-  <div class="tile light" :class="{ on, dead, dimmable, pending }" role="button" :aria-label="`${name}, ${label}`" :aria-pressed="on"
+  <div class="tile light" :class="{ on, dead, dimmable, pending, seeing: eye }" role="button" :aria-label="`${name}, ${label}`" :aria-pressed="on"
        tabindex="0" @pointerdown="down" @pointermove="move" @pointerup="up" @pointercancel="release" @lostpointercapture="release" @keydown.enter.space.prevent="perform(device, on ? 'off' : 'on', undefined, { state: on ? 'off' : 'on' })">
     <div class="fill" :style="{ width: pct + '%' }"></div>
     <DeviceArt :kind="kind" :state="{ on, brightness: pct / 100 }" />

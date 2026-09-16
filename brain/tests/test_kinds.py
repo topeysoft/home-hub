@@ -15,7 +15,7 @@ import json, unittest
 
 from hub import intents
 from hub.intents import RoomState, plan
-from hub.model import Device, Room, kinds_for
+from hub.model import Device, Room, kinds_for, kind_of
 from tests.apptest import ApiTest, house
 
 
@@ -25,7 +25,7 @@ class OfferTests(unittest.TestCase):
     def test_anything_that_switches_on_and_off_may_be_shown_as_anything_else_that_does(self):
         for cap in ("switch", "light", "fan"):
             with self.subTest(cap=cap):
-                self.assertEqual(sorted(kinds_for(cap)), ["alarm", "fan", "light", "switch"])
+                self.assertEqual(sorted(kinds_for(cap)), ["alarm", "appliance", "fan", "light", "switch"])
 
     def test_a_kind_wanting_a_position_a_temperature_or_a_volume_is_never_on_offer(self):
         # This is the rule that stops the panel drawing a brightness slider onto something that cannot dim.
@@ -90,7 +90,7 @@ class StoredTests(ApiTest):
 
     def test_the_panel_is_told_what_may_be_offered_and_why_the_list_is_short(self):
         r = self.client.get("/devices/switch.kettle/kinds").json()
-        self.assertEqual(sorted(r["offer"]), ["alarm", "fan", "light", "switch"])
+        self.assertEqual(sorted(r["offer"]), ["alarm", "appliance", "fan", "light", "switch"])
         self.assertEqual(r["kind"], "switch")
         self.assertIn("switched on and off", r["why"])
         self.assertEqual(r["words"]["switch"], "Plug")
@@ -312,3 +312,111 @@ class AlarmTests(ApiTest):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# ---------- an appliance, and the fridge that has four of them ----------
+
+def fridge_house():
+    """The house above with a Samsung fridge in the kitchen. Its ice maker and its Ice Bites reach the hub
+    as plain switches, named after the unit they are part of, and so does a plug HA has classed as an
+    outlet whose owner happened to call it after the freezer it powers."""
+    from tests.apptest import area, entity, hardware, state
+    areas, devices, entities, states = house()
+    devices = devices + [hardware("hw-fridge", "kitchen", "Refrigerator", manufacturer="Samsung", model="RF29"),
+                         hardware("hw-plug", "kitchen", "Kasa plug", manufacturer="TP-Link", model="HS103")]
+    entities = entities + [entity("switch.refrigerator_ice_maker", "hw-fridge"), entity("switch.refrigerator_ice_bites", "hw-fridge"),
+                           entity("switch.freezer_plug", "hw-plug", original_device_class="outlet")]
+    states = states + [state("switch.refrigerator_ice_maker", "on", friendly_name="Refrigerator Ice Maker"),
+                       state("switch.refrigerator_ice_bites", "off", friendly_name="Refrigerator Ice Bites"),
+                       state("switch.freezer_plug", "on", friendly_name="Garage freezer", device_class="outlet")]
+    return areas, devices, entities, states
+
+
+class ApplianceTests(unittest.TestCase):
+    """A switch that is a feature of a machine is not a plug, and the house can tell from its name."""
+
+    def setUp(self):
+        from hub.model import Home
+        self.home = Home().build(*fridge_house())
+        intents._rules.update(mtime=object(), actions=intents.DEFAULT_ACTIONS, hold=intents.DEFAULT_HOLD)
+        self.addCleanup(intents._rules.update, {"mtime": None})
+
+    def test_a_switch_on_a_fridge_is_taken_for_an_appliance_from_the_units_name(self):
+        ice = self.home.devices["switch.refrigerator_ice_maker"]
+        self.assertEqual((ice.capability, ice.guess, ice.kind, kind_of(ice)), ("switch", "appliance", None, "appliance"))
+        self.assertEqual((ice.hw_name, ice.maker), ("Refrigerator", "Samsung"))
+
+    def test_a_kettle_on_a_plug_stays_a_plug_because_a_plug_is_what_switches_it_off_at_everything_off(self):
+        self.assertEqual(kind_of(self.home.devices["switch.kettle"]), "switch")
+
+    def test_what_ha_calls_an_outlet_stays_a_plug_whatever_it_is_named(self):
+        self.assertEqual(kind_of(self.home.devices["switch.freezer_plug"]), "switch")
+
+    def test_everything_off_walks_past_it_and_still_switches_the_plugs_off(self):
+        calls = plan(self.home.rooms["kitchen"], RoomState.away)
+        self.assertIn(("switch", "turn_off", "switch.kettle", {}), calls)
+        self.assertIn(("switch", "turn_off", "switch.freezer_plug", {}), calls)
+        self.assertNotIn("switch.refrigerator_ice_maker", [c[2] for c in calls])
+
+    def test_an_appliance_is_on_offer_to_anything_that_switches_on_and_off(self):
+        self.assertIn("appliance", kinds_for("switch"))
+        self.assertNotIn("appliance", kinds_for("cover"))
+
+
+class ApplianceSaidTests(ApiTest):
+    """The owner's word over the house's guess, both ways."""
+
+    def setUp(self):
+        super().setUp()
+        self.hub.home.build(*fridge_house())
+
+    def ice(self): return self.hub.home.devices["switch.refrigerator_ice_maker"]
+
+    def test_the_panel_is_told_it_is_an_appliance_and_may_be_a_plug(self):
+        r = self.client.get("/devices/switch.refrigerator_ice_maker/kinds").json()
+        self.assertEqual(r["kind"], "appliance")
+        self.assertEqual(r["words"]["appliance"], "Appliance")
+        self.assertIn("left alone", r["why"])
+
+    def test_saying_it_is_a_plug_over_a_guess_is_a_record_and_survives_a_rebuild(self):
+        self.assertEqual(self.client.post("/devices/switch.refrigerator_ice_maker/kind", json={"kind": "switch"}).json()["kind"], "switch")
+        self.assertEqual(kind_of(self.ice()), "switch")
+        self.assertEqual(json.loads((self.data / "settings.json").read_text())["kinds"], {"switch.refrigerator_ice_maker": "switch"})
+        self.hub.home.build(*fridge_house())
+        self.assertEqual(kind_of(self.ice()), "switch")
+
+    def test_saying_the_houses_own_guess_puts_it_back_and_leaves_no_record(self):
+        self.client.post("/devices/switch.refrigerator_ice_maker/kind", json={"kind": "switch"})
+        self.client.post("/devices/switch.refrigerator_ice_maker/kind", json={"kind": "appliance"})
+        self.assertEqual((self.ice().kind, kind_of(self.ice())), (None, "appliance"))
+        self.assertEqual(json.loads((self.data / "settings.json").read_text())["kinds"], {})
+
+    def test_a_plug_may_be_told_it_is_an_appliance_and_is_then_left_alone_by_everything_off(self):
+        intents._rules.update(mtime=object(), actions=intents.DEFAULT_ACTIONS, hold=intents.DEFAULT_HOLD)
+        self.addCleanup(intents._rules.update, {"mtime": None})
+        self.client.post("/devices/switch.kettle/kind", json={"kind": "appliance"})
+        self.assertEqual(plan(self.hub.home.rooms["kitchen"], RoomState.away), [c for c in plan(self.hub.home.rooms["kitchen"], RoomState.away) if c[2] != "switch.kettle"])
+        self.assertEqual(json.loads((self.data / "settings.json").read_text())["kinds"], {"switch.kettle": "appliance"})
+
+
+class ApplianceSentenceTests(unittest.IsolatedAsyncioTestCase):
+    """Out of the plug bucket, and reachable by its own name."""
+
+    def setUp(self):
+        from tests.test_commands import Hub
+        self.hub = Hub()
+        add = lambda r, d: (self.hub.home.rooms[r].devices.append(d), self.hub.home.devices.__setitem__(d.id, d))
+        add("kitchen", Device("switch.kettle", "Kettle", "kitchen", "switch", "on"))
+        add("kitchen", Device("switch.ice_maker", "Refrigerator Ice Maker", "kitchen", "switch", "on", guess="appliance", hw_name="Refrigerator"))
+
+    async def test_turn_off_the_plugs_walks_past_the_ice_maker(self):
+        await self.hub.commands.say("turn off the kitchen plugs")
+        self.assertEqual([a[0] for a in self.hub.acts], ["switch.kettle"])
+
+    async def test_but_it_answers_to_its_name(self):
+        await self.hub.commands.say("turn off the ice maker")
+        self.assertEqual([a[0] for a in self.hub.acts], ["switch.ice_maker"])
+
+    async def test_and_to_the_word_appliances(self):
+        await self.hub.commands.say("turn off the kitchen appliances")
+        self.assertEqual([a[0] for a in self.hub.acts], ["switch.ice_maker"])
