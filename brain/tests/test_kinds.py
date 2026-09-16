@@ -15,7 +15,7 @@ import json, unittest
 
 from hub import intents
 from hub.intents import RoomState, plan
-from hub.model import Device, Room, kind_of, kinds_for
+from hub.model import Device, Room, kinds_for
 from tests.apptest import ApiTest, house
 
 

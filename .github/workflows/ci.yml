@@ -102,14 +102,33 @@ jobs:
 
   shell:
     runs-on: ubuntu-latest
+    # One list for both steps below. Job-level rather than a YAML anchor, because Actions does not
+    # support anchors -- a workflow using one does not run at all.
+    env:
+      SHELLS: >-
+        install.sh
+        tools/add-sound.sh
+        tools/release.sh
+        driver-layer/radios.sh
+        driver-layer/host/firstboot.sh
+        driver-layer/host/update.sh
+        driver-layer/host/restore.sh
+        driver-layer/host/verify.sh
+        driver-layer/host/channel.sh
+        driver-layer/host/tests.sh
+        driver-layer/host/pi-image/stage-hub/prerun.sh
+        driver-layer/host/pi-image/stage-hub/00-home-hub/*.sh
     steps:
       - uses: actions/checkout@v4
+      # `bash -n a.sh b.sh` reads a.sh as the script and everything after it as that script's
+      # arguments, so for the life of this job the syntax step checked install.sh and nothing else:
+      # a broken script anywhere further down the list passed in silence. Hence the loop.
       - name: syntax
-        run: bash -n install.sh tools/add-sound.sh driver-layer/radios.sh driver-layer/mqtt-auth.sh driver-layer/host/harden.sh driver-layer/host/firstboot.sh driver-layer/host/update.sh driver-layer/host/restore.sh driver-layer/host/verify.sh driver-layer/host/channel.sh driver-layer/host/tests.sh tools/release.sh driver-layer/host/pi-image/stage-hub/prerun.sh driver-layer/host/pi-image/stage-hub/00-home-hub/*.sh
+        run: for f in $SHELLS; do bash -n "$f" || exit 1; done
       - name: shellcheck
         run: |
           sudo apt-get install -y shellcheck >/dev/null
-          shellcheck -S warning -e SC2154 install.sh tools/add-sound.sh driver-layer/radios.sh driver-layer/mqtt-auth.sh driver-layer/host/harden.sh driver-layer/host/firstboot.sh driver-layer/host/update.sh driver-layer/host/restore.sh driver-layer/host/verify.sh driver-layer/host/channel.sh driver-layer/host/tests.sh tools/release.sh driver-layer/host/pi-image/stage-hub/prerun.sh driver-layer/host/pi-image/stage-hub/00-home-hub/*.sh
+          shellcheck -S warning -e SC2154 $SHELLS
 
       # Linting these was the weakest possible guarantee about the three scripts a household most
       # depends on and can least repair: the undo, the signature that decides what runs as root, and

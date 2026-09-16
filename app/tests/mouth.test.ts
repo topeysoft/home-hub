@@ -11,11 +11,15 @@ const at = (search: string) => vi.stubGlobal('location', { ...window.location, s
 
 /* One fake Audio for the page, recording what it was asked to play. */
 const played: string[] = []
-let last: { src: string; paused: boolean }
+/* Every clip the page made, newest last. A `let last = this` in the constructor read better and is
+   the one thing eslint will not have (no-this-alias); this also stops one test's last clip leaking
+   into the next, which it did. */
+const made: { src: string; paused: boolean }[] = []
+const last = () => made[made.length - 1]
 class FakeAudio {
   src: string
   paused = false
-  constructor(src: string) { this.src = src; played.push(src); last = this }
+  constructor(src: string) { this.src = src; played.push(src); made.push(this) }
   play() { return Promise.resolve() }
   pause() { this.paused = true }
   addEventListener() {}
@@ -24,7 +28,7 @@ class FakeAudio {
 const said: string[] = []
 const synth = { speak: (u: { text: string }) => said.push(u.text), cancel: () => said.push('(cancel)') }
 
-afterEach(() => { hush(); played.length = 0; said.length = 0; vi.unstubAllGlobals() })
+afterEach(() => { hush(); played.length = 0; made.length = 0; said.length = 0; vi.unstubAllGlobals() })
 
 describe('a house with no voice, which is every house today', () => {
   it('says nothing at all rather than borrowing the browser\'s voice', () => {
@@ -58,7 +62,7 @@ describe('a hub that has synthesised the answer', () => {
     at('')
     vi.stubGlobal('Audio', FakeAudio)
     speak({ speak: { url: '/say/clip/one', text: 'one' } })
-    const first = last
+    const first = last()
     speak({ speak: { url: '/say/clip/two', text: 'two' } })
     expect(first.paused).toBe(true)
     expect(played).toEqual(['/say/clip/one', '/say/clip/two'])
@@ -69,7 +73,7 @@ describe('a hub that has synthesised the answer', () => {
     vi.stubGlobal('Audio', FakeAudio)
     speak({ speak: { url: '/say/clip/one', text: 'one' } })
     hush()
-    expect(last.paused).toBe(true)
+    expect(last().paused).toBe(true)
   })
 })
 

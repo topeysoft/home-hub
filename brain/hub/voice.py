@@ -211,7 +211,7 @@ class Voice:
         if not line or not self.enabled: return None
         try:
             wav = await asyncio.wait_for(synthesize(line), TIMEOUT)
-        except (VoiceError, asyncio.TimeoutError, OSError, ValueError, json.JSONDecodeError) as e:
+        except (VoiceError, TimeoutError, OSError, ValueError, json.JSONDecodeError) as e:
             # Never raised at the person: they can read the answer, and a house that fails a request
             # because its voice is down has turned a loudspeaker into a dependency.
             log.warning("could not say %r: %s", line[:60], e)
