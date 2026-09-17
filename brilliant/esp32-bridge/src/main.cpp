@@ -1131,6 +1131,20 @@ void loop() {
 
     if (!connected) {
         linkUp = false;
+        // Give Wi-Fi the radio to itself before scanning again if the broker is
+        // not up. A puck that cannot find a proxy otherwise spends 6 seconds of
+        // every 8 in a blocking active BLE scan, and on a shared radio that is
+        // enough that a TCP connect never completes -- the broker sees no
+        // connection attempt at all, so the puck looks alive and stays mute for
+        // ever. It self-heals the moment a proxy is found, which is why this
+        // only bites a puck that is out of range of its mesh.
+        if (WiFi.status() == WL_CONNECTED && !mqtt.connected()) {
+            for (int i = 0; i < 8 && !mqtt.connected(); i++) {
+                mqttReconnect();
+                mqtt.loop();
+                delay(500);      // no BLE activity in this window
+            }
+        }
         if (!haveTarget && !findProxy()) {
             if (emptyScans < 3) emptyScans++;
             lightSet(emptyScans >= 3 ? Light::Far : Light::Looking);
