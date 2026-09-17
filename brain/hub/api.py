@@ -1111,7 +1111,8 @@ def bridge_link_add(body: dict):
     hub.ready()
     try:
         return hub.relay.add(body.get("from") or {}, body.get("to") or {},
-                             str(body.get("name") or ""), bool(body.get("enabled", True)))
+                             str(body.get("name") or ""), bool(body.get("enabled", True)),
+                             str(body.get("on") or "press"))
     except (KeyError, TypeError, ValueError) as e:
         raise HTTPException(400, str(e))
 

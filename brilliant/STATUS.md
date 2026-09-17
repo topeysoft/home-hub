@@ -291,7 +291,7 @@ branch it is parked in.
 ## Known switch addresses (from the bridge's sweep)
 
 Answered `Generic OnOff Get` to all-nodes: `0x0004 0x0005 0x0006 0x0008 0x000a 0x000b 0x000e 0x0010 0x0011 0x0014
-0x0016` (11). `0x0010`/`0x0011` are probably the live panel's own loads. `0x0002` and `0x0012` are panel elements
+0x0016` (11). `0x0011` is the **stairway load** — confirmed 17 September by blinking it while a person watched the lamp, which **disproves the earlier guess** that `0x0010`/`0x0011` were the live panel's own loads. `0x0010` is untested and that guess should be treated as unsupported too. `0x0002` and `0x0012` are panel elements
 that poll switches and are excluded; `0x0018` is polled by the panel and never answers.
 
 ## Uncommitted work (all on disk, nothing staged by this pass)

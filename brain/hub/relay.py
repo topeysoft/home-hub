@@ -13,6 +13,16 @@ another, and the only place the two meet is the broker. So a link is nothing but
     mesh/<from-net>/<from-addr>/state       ->   mesh/<to-net>/<to-addr>/set
     mesh/<from-net>/<from-addr>/brightness  ->   mesh/<to-net>/<to-addr>/brightness/set
 
+A link says how to listen, and for a companion the answer is NOT its state. Watching a real pair
+settled it: a companion announces a press as a vendor message addressed to its partner (`0403` on
+0xc12008, three presses out of three), while its OWN on/off position drifts free of the light -- the
+companion said ON while the load said OFF on the same sweep. So mirroring a companion's state would
+drive the light to whatever arbitrary position the companion happened to be holding. What a companion
+means is "somebody pressed me", and the honest answer to that is to TOGGLE the load.
+
+    on: "press"   a vendor press from this switch toggles the load. Two switches, one light.
+    on: "state"   the load is made to match this switch. One light following another.
+
 Four things keep it honest, and each one is a bug that was reasoned out before it could happen:
 
   * a retained message is not a press. Every puck republishes all of its state, retained, on every
@@ -43,6 +53,9 @@ SETTLE = 0.2      # a press publishes state and brightness together; send once, 
 CONFIRM = 2.0     # the load answers with its own Status well inside this when the link is good
 TRIES = 3
 ECHO = 3.0        # how long our own command is ignored coming back
+PRESS = 0.4       # a mesh message can arrive twice; two presses by hand are never this close
+VENDOR = "0xc12008"   # the model a Brilliant switch says everything of its own on
+PRESSED = "04"        # ...and the command byte that means a finger, `0403` being press-and-argument
 
 
 def _addr(s: str) -> str:
@@ -60,6 +73,22 @@ def _net(s: str) -> str:
     return s
 
 
+def pressed(payload: str) -> str | None:
+    """The partner a vendor press names, or None if this message is not a press.
+
+    A companion press is `0403` on the vendor model, addressed to the switch it works with -- which is
+    why a press names its pair outright. Anything else on that model is configuration or a heartbeat."""
+    try:
+        e = json.loads(payload)
+    except (TypeError, ValueError):
+        return None
+    if e.get("kind") != "vendor" or e.get("opcode") != VENDOR:
+        return None
+    if not str(e.get("params") or "").startswith(PRESSED):
+        return None
+    return str(e.get("dst") or "")
+
+
 class Relay:
     """The links, and the press being carried. Publishing goes through the engine, like everything else."""
 
@@ -71,6 +100,7 @@ class Relay:
         self.links: list[dict] = []
         self._value: dict[tuple, str] = {}    # (net, addr, leaf) -> the last value we were told
         self._sent: dict[tuple, float] = {}   # (net, addr) -> when we last drove it ourselves
+        self._pressed: dict[tuple, float] = {}  # (net, addr) -> when a press from it last counted
         self._pending: dict[str, asyncio.Task] = {}
         self._tasks: set[asyncio.Task] = set()
         self.carried = 0                      # presses carried since the brain started, for the log
@@ -86,12 +116,19 @@ class Relay:
         self.links = [l for l in (raw.get("links") or []) if self._ok(l)]
 
     def _ok(self, l) -> bool:
+        """Also fills in how to listen, so a link written by hand is not silently half a rule. A row
+        from before there was a choice means "state": that is what it was doing when it was written."""
         try:
-            return bool(_net(l["from"]["net"]) and _addr(l["from"]["addr"])
-                        and _net(l["to"]["net"]) and _addr(l["to"]["addr"]))
+            ok = bool(_net(l["from"]["net"]) and _addr(l["from"]["addr"])
+                      and _net(l["to"]["net"]) and _addr(l["to"]["addr"]))
         except (KeyError, TypeError, ValueError):
             log.warning("relay: ignoring a link that does not name two switches: %r", l)
             return False
+        if l.get("on") not in ("press", "state"):
+            if l.get("on") is not None:
+                log.warning("relay: %r is not a way to listen; taking %s as a mirror", l.get("on"), l.get("id"))
+            l["on"] = "state"
+        return ok
 
     def save(self):
         self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -102,12 +139,17 @@ class Relay:
     def as_data(self) -> dict:
         return {"links": self.links, "carried": self.carried}
 
-    def add(self, frm: dict, to: dict, name: str = "", enabled: bool = True) -> dict:
-        """One companion, one load. Adding the same pair twice updates it rather than doubling it."""
+    def add(self, frm: dict, to: dict, name: str = "", enabled: bool = True, on: str = "press") -> dict:
+        """One companion, one load. Adding the same pair twice updates it rather than doubling it.
+
+        `on` is what to listen to: "press" (a companion -- toggle the load) or "state" (mirror)."""
+        if on not in ("press", "state"):
+            raise ValueError(f"a link listens for a press or a state, not {on!r}")
         link = {"id": f"{_net(frm['net'])[:4]}{_addr(frm['addr'])}-{_net(to['net'])[:4]}{_addr(to['addr'])}",
                 "name": str(name or "").strip(),
                 "from": {"net": _net(frm["net"]), "addr": _addr(frm["addr"])},
                 "to": {"net": _net(to["net"]), "addr": _addr(to["addr"])},
+                "on": on,
                 "enabled": bool(enabled)}
         if link["from"] == link["to"]:
             raise ValueError("a switch cannot be its own companion")
@@ -129,6 +171,10 @@ class Relay:
         """Every `mesh/<net>/<addr>/<leaf>` the brain hears, from hub.bridge's one subscription.
 
         Retained sets the baseline and stops there. Live decides whether anything moved."""
+        if leaf == "event":
+            if not retain and pressed(payload) is not None:
+                self._press(net, addr)
+            return
         if leaf not in ("state", "brightness"):
             return
         key = (net, addr, leaf)
@@ -137,10 +183,44 @@ class Relay:
             return
         if time.monotonic() - self._sent.get((net, addr), 0) < ECHO:
             return                    # this is our own command coming back
-        for link in self.links:
-            f = link["from"]
-            if link.get("enabled", True) and f["net"] == net and f["addr"] == addr:
-                self._soon(link)
+        for link in self._for(net, addr, "state"):
+            self._soon(link)
+
+    def _for(self, net: str, addr: str, on: str):
+        """The enabled links listening to this switch, in this way. A press link is deaf to state and
+        a state link is deaf to presses: a companion does both and would otherwise act twice."""
+        return [l for l in self.links
+                if l.get("enabled", True) and l.get("on", "state") == on
+                and l["from"]["net"] == net and l["from"]["addr"] == addr]
+
+    def _press(self, net: str, addr: str):
+        """Somebody pressed this switch. The mesh can deliver the same message twice; a hand cannot."""
+        now = time.monotonic()
+        if now - self._pressed.get((net, addr), 0) < PRESS:
+            return
+        self._pressed[(net, addr)] = now
+        for link in self._for(net, addr, "press"):
+            self._spawn(self._toggle(link))
+
+    async def _toggle(self, link: dict):
+        """A press says a person wants the other thing, so the load goes to the opposite of where it is.
+
+        If we have never heard the load's state we do not guess: a light that comes on when somebody
+        meant to turn it off is worse than one that does nothing and says why."""
+        to = link["to"]
+        what = link.get("name") or f"{link['from']['addr']} \u2192 {to['addr']}"
+        now = (self._value.get((to["net"], to["addr"], "state")) or "").upper()
+        if now not in ("ON", "OFF"):
+            log.warning("relay: %s pressed, but %s has never said whether it is on", what, to["addr"])
+            self._say(what, to, "toggle")
+            return
+        want = "OFF" if now == "ON" else "ON"
+        if await self._drive(to, want):
+            self.carried += 1
+            log.info("relay: %s pressed -- %s turned %s", what, to["addr"], want.lower())
+        else:
+            log.warning("relay: %s pressed, but %s did not answer -- asked %d times", what, to["addr"], self.tries)
+            self._say(what, to, want)
 
     def _soon(self, link: dict):
         """Coalesce: a press lands as state and brightness a moment apart, and is one command."""

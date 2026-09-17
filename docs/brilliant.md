@@ -490,8 +490,8 @@ and not a radio in the hub: it works the same whether the hub is a Pi, a NUC or 
 
 **What it proved, against the Mac dev stack.** One `Generic OnOff Get` to the all-nodes address made every OnOff
 server answer: eleven switches (`0x0004 0x0005 0x0006 0x0008 0x000a 0x000b 0x000e 0x0010 0x0011 0x0014 0x0016`),
-three more than anyone had counted; `0x0010`/`0x0011` are most likely the live panel's own loads, since a
-Control panel replaces a one-to-four-gang switch itself. Their on/off and dim levels arrived as they were
+three more than anyone had counted; `0x0010`/`0x0011` were guessed to be the live panel's own loads, since a
+Control panel replaces a one-to-four-gang switch itself. **That guess is wrong for `0x0011`:** on 17 September it was blinked on command while a person watched, and identified as the stairway switch — the load half of the two-way pair whose companion we had reset. `0x0010` remains untested, so treat the same guess about it as unsupported rather than confirmed. Their on/off and dim levels arrived as they were
 touched. `brightness/set 128` over MQTT dimmed the hallway to half — the switch published `Level Status f401`
 (500/1000) to all-nodes on its own — and `255` brought it back; HA's brightness went 255 → 128 → 255 on the
 retained topic. The MQTT session then held for the whole soak, with commands still landing five minutes in. HA
@@ -663,8 +663,27 @@ In this order:
 4. **Config Model App Bind** → **vendor `0x0820/0x0001`** → status `0x00`. The model identifier here is
    *company id LE ‖ model id LE* (4 bytes), not the 2-byte SIG form. **Without this bind, every step 4 write is
    dropped without a reply** — the symptom is a switch that binds fine and then answers no vendor Get at all.
+5. **Config Model Publication Set on all three models**, publish address **`0xffff`**, TTL 7, period 0,
+   retransmit 0 → status `0x00`. The Status comes back **segmented**, so a reader that ignores segmented
+   messages will report failure on a write that succeeded.
+
+**Binding is not publishing, and forgetting step 5 makes a SILENT SWITCH.** A model announces nothing unless
+it has a publish address; provisioning and binding leave it at `0x0000`. Such a node answers every Get, obeys
+every Set, and volunteers nothing — no tap, no state change, no motion — which reads as a dead switch that is
+somehow still reachable. This is exactly what happened to the first switches this house adopted: `0x0004` was
+pressed and swiped by hand and published *nothing*, while `0x0003` (same network, same provisioner, but which
+had `explore.py` point its models somewhere) published on its own. Reading it back settled it in one line:
+`0x0003` had all three models on `0x0001`, `0x0004` had all three on `0x0000`. `tools/publication.py <addr>`
+shows it and `--to 0xffff` sets it.
+
+`0xffff` is chosen because it is what the console itself does — a panel switch broadcasts its own touch as a
+`Generic OnOff Status` to all-nodes — and because it means any puck on the network hears the switch without
+depending on which address happens to be listening.
 
 ### 4. Write the load configuration (AppKey-encrypted)
+
+*(Numbering note: the publication step above is part of section 3's config sequence; the field writes below
+still come after all of it.)*
 
 Vendor access PDUs are `C1 20 08` (opcode ‖ company id LE), then:
 
@@ -703,3 +722,58 @@ and ramps; the lamp follows. A switch still in on/off mode echoes a level and th
 
 `tools/restore_switch.py adopt <captured.json>` / `verify <addr>` runs steps 1–4 and 6 from the laptop, and is
 the reference implementation of this sequence.
+
+
+## The multi-way pair protocol: switches talk to each other, and the console is not in it
+
+*17 September 2026. This supersedes an earlier conclusion of mine in this document that switches never address
+each other and that multi-way was probably mediated by the Control panel. Both were wrong, and the caveat I
+attached to them — that no intact pair had been pressed while anything was capturing — turned out to be the
+whole story.*
+
+An intact two-way pair on the panel network (`0x0005` the main with the load, `0x0006` its companion) was
+pressed by hand while everything on the mesh was captured. Three companion presses, then three main presses.
+
+**A companion press is a vendor message straight to the main:**
+
+    0x0006 -> 0x0005   C1 2008 04 03      the companion's press command
+    0x0005             (its load moves)
+    0x0005 -> 0xffff   Generic OnOff Status   the main announces its new state
+
+**A main press is the broadcast alone** — no `0403`, no exchange with the companion. Two distinguishable
+signatures, repeated three times each. Separately, when the main changes state it sends the companion a
+**zero-length** vendor message, which also appears as its reply to a `0403`; that reads as the ack.
+
+**The console never commands anything.** Across the 150-second capture and both controlled runs there is not a
+single `Generic OnOff Set` (`0x8202`/`0x8203`) from any source. The panel elements `0x0002` and `0x0012` appear
+only polling *other* switches with Gets. Multi-way on this pair is peer-to-peer and the panel is a bystander.
+
+### What this changes
+
+- **Pairing is discoverable on the wire.** `0403` from A to B names the pair outright, and because a companion
+  press and a main press have different signatures, a listener can tell which end was touched. Learning a
+  house's existing pairs by watching is back on the table; I had written it off.
+- **The hard rule looks retirable.** If the pairs do not go through the console, unplugging it should not kill
+  them. Not yet retired: one pair, and it deserves repeats before anyone pulls that plug.
+- **A relay must trigger on the press, not on the companion's state.** The companion holds its own independent
+  position: at one resync `0x0006` reported OnOff `ON` while `0x0005` reported `OFF`. Copying the companion's
+  state onto the load would drive the light to whatever arbitrary position the companion happened to hold.
+
+### Two of my own claims that this corrects
+
+- **`04` is not merely a "bare ack".** The opcode table above catalogues it that way from the old no-parameter
+  sweep. It takes an argument, and `04 03` is a press. The sweep found nothing because it sent commands with no
+  parameters, not because the command family was empty.
+- **Zero-length vendor messages are real and used.** The same sweep concluded a zero-length message is dropped
+  before dispatch. A zero-length vendor message is what the main sends its companion in a working exchange. The
+  sweep's silence meant "no reply warranted", not "not understood".
+
+**Caveats worth carrying.** Timestamps are arrival time at the Mac, not mesh time, so ordering *within* one
+second is soft; everything at second granularity and coarser is solid. One pair, one house. And one line in the
+first capture — a main-state change adjacent to the first companion press — cannot be attributed with
+confidence either way.
+
+**Field `0x0c` is not settled.** This document earlier called it an on/off notice, on the strength of it
+following commanded state on switch `0x0003`. In this capture it reads `01` while the main reports `OFF`, and
+falls to `00` only long after, which fits an activity or occupancy flag with a hold better than a load state.
+Treat both readings as unconfirmed; it was never the thing anything depended on.

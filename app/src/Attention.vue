@@ -76,7 +76,7 @@ defineExpose({ updateReady })
   </button>
   <div class="nudge quiet" v-else-if="updateBusy">
     <span class="nudge-icon pulse"><Icon name="refresh" :size="20" /></span>
-    <span class="nudge-text"><span class="nudge-title">Updating the hub</span><span class="nudge-sub">This screen will blink and come back on its own. Nothing needs doing.</span></span>
+    <span class="nudge-text"><span class="nudge-title">Updating the hub</span><span class="nudge-sub">This screen will blink and come back. Nothing to do.</span></span>
   </div>
   <button class="nudge" v-if="whatsNew" @click="store.sheet = 'hub'">
     <span class="nudge-icon"><Icon name="sparkle" :size="20" /></span>
