@@ -1560,6 +1560,22 @@ input:focus-visible {
     transform 0.15s var(--ease);
   touch-action: pan-y;
 }
+/* `pan-y` above is from when the tiles wrapped and the page under them scrolled down: it kept a
+   sideways drag on a dimmer as a drag. On the panel every one of these rows scrolls SIDEWAYS, and
+   the cards are the whole row, so a finger has nowhere to land but a card -- and `pan-y` told the
+   browser that finger may only pan up and down. A mouse never noticed (touch-action only speaks to
+   touch); the first real touch screen scrolled the rooms list, whose cells never had the rule, and
+   nothing else. Both directions, not just x: the stage scrolls down as well, and a finger that
+   starts on a card and moves down is scrolling the page. A dimmer's sideways drag gives way to the
+   scroll on touch, which is what hold.ts already promises -- a moving finger is a scroll, never
+   anything else -- and the pane still dims by its slider. The phone layouts below fold these rows
+   into columns and put `pan-y` back. */
+.bento .tile,
+.tiles > .tile,
+.camera-row .tile,
+.cameras-all > .tile {
+  touch-action: pan-x pan-y;
+}
 .tile.wide {
   grid-column: span 2;
 }
@@ -2060,6 +2076,9 @@ input:focus-visible {
     overflow-x: visible;
     overflow-y: visible;
     gap: 10px;
+  }
+  .tiles > .tile {
+    touch-action: pan-y; /* a column again: a sideways drag is the dimmer's, the page is the only scroll */
   }
   .tiles > .tile[data-size] {
     grid-row: auto;
@@ -7594,6 +7613,7 @@ select.input {
   .bento .tile {
     height: auto;
     min-height: 150px;
+    touch-action: pan-y; /* a column again: a sideways drag is the dimmer's, the page is the only scroll */
   }
   .bento .tile.light,
   .bento .tile.media,
@@ -9901,5 +9921,351 @@ button.reading[data-held] {
   .note-acts {
     grid-column: 2;
     max-width: none;
+  }
+}
+
+/* ---------- setting up a bridge ----------
+   The sheet is the panel's own; only what is inside it is new. Drawn from design/puck/. */
+.sheet.bridge .sheet-body {
+  padding-bottom: 28px;
+}
+.bridge-art {
+  display: block;
+  width: auto;
+  height: 178px;
+}
+.bridge-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  gap: 14px;
+  height: 252px;
+  margin-bottom: 18px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--edge);
+  overflow: hidden;
+}
+/* the hub-and-lead drawing is wider than it is tall, so it gets the width instead */
+.bridge-stage.wide {
+  height: 208px;
+}
+.bridge-stage.wide .bridge-art {
+  width: 100%;
+  height: auto;
+}
+/* the light it throws, falling on the stage behind it. Fixed amber, not mixed with the sky: what a
+   thing EMITS never takes the ambient (art.ts). */
+.bridge-stage::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  width: 380px;
+  height: 380px;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(closest-side, rgba(233, 184, 114, 0.26), transparent 70%);
+  pointer-events: none;
+}
+.bridge-stage.wide::before {
+  display: none;
+}
+.bridge-caption {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.bridge-label {
+  position: absolute;
+  bottom: 14px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.bridge-label.left {
+  left: 16%;
+}
+.bridge-label.right {
+  right: 19%;
+}
+/* a plain statement of fact, next to the amber one adding a thing already uses */
+.bridge-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--surface);
+  border: 1px solid var(--edge);
+  margin-bottom: 4px;
+}
+.bridge-row.good {
+  background: linear-gradient(rgba(116, 198, 157, 0.08), rgba(116, 198, 157, 0.08)), var(--surface);
+  border-color: rgba(116, 198, 157, 0.3);
+}
+.bridge-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: var(--surface-hi);
+  color: var(--ink-2);
+}
+.bridge-icon.good {
+  background: var(--live);
+  color: #0b2216;
+}
+.bridge-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.bridge-name {
+  font-size: 15.5px;
+  font-weight: 500;
+}
+.bridge-sub {
+  font-size: 13px;
+  color: var(--muted);
+}
+.bridge-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+.bridge-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--lamp);
+  transition: width 0.6s var(--ease);
+}
+.bridge-steps {
+  list-style: none;
+  margin: 0 0 22px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.bridge-steps li {
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  gap: 12px;
+  align-items: center;
+  font-size: 15px;
+  color: var(--muted);
+}
+.bridge-steps li.done,
+.bridge-steps li.live {
+  color: var(--ink-2);
+}
+.bridge-steps li.live {
+  color: var(--ink);
+}
+.bridge-tick {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid var(--edge);
+}
+.bridge-steps li.done .bridge-tick {
+  background: var(--live);
+  border-color: var(--live);
+  color: #0b2216;
+}
+.bridge-steps li.live .bridge-tick {
+  border-color: var(--lamp);
+}
+/* the three things its light can say, as a legend to take away with you */
+.bridge-lights {
+  list-style: none;
+  margin: 0 0 18px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.bridge-lights li {
+  display: grid;
+  place-items: center;
+  gap: 2px;
+  padding: 16px 10px 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--edge);
+  text-align: center;
+}
+.bridge-lights li.good {
+  background: rgba(116, 198, 157, 0.06);
+  border-color: rgba(116, 198, 157, 0.28);
+}
+.bridge-lights .bridge-art {
+  height: 108px;
+  margin-bottom: 6px;
+}
+.bridge-lights .bridge-name {
+  font-size: 14.5px;
+}
+.bridge-lights .bridge-sub {
+  line-height: 1.35;
+}
+@media (max-width: 860px) {
+  .bridge-lights {
+    grid-template-columns: 1fr;
+  }
+  .bridge-lights li {
+    grid-template-columns: auto 1fr;
+    justify-items: start;
+    text-align: left;
+    gap: 2px 14px;
+  }
+  .bridge-lights .bridge-art {
+    grid-row: span 2;
+    height: 72px;
+    margin: 0;
+  }
+  .bridge-stage {
+    height: 208px;
+  }
+  .bridge-art {
+    height: 148px;
+  }
+}
+
+/* ---------- naming by touch ----------
+   New devices, when the things in it can announce themselves. design/puck/Naming.dc.html. */
+.press-bar {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background:
+    linear-gradient(rgba(233, 184, 114, 0.08), rgba(233, 184, 114, 0.08)),
+    var(--surface);
+  border: 1px solid rgba(233, 184, 114, 0.26);
+}
+.press-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 13px;
+  display: grid;
+  place-items: center;
+  background: var(--lamp);
+  color: var(--lamp-ink);
+}
+.press-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.press-name {
+  font-size: 16px;
+  font-weight: 500;
+}
+.press-sub {
+  font-size: 13.5px;
+  color: var(--muted);
+}
+/* the row it belongs to, where it already was */
+.sort-row.pressed {
+  background:
+    linear-gradient(rgba(233, 184, 114, 0.1), rgba(233, 184, 114, 0.1)),
+    var(--surface);
+  border-color: rgba(233, 184, 114, 0.4);
+}
+.press-line {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--edge);
+}
+.press-said {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 14.5px;
+  color: var(--ink-2);
+}
+.press-rooms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.press-rooms .chip-btn {
+  padding: 9px 15px;
+  font-size: 14.5px;
+  color: var(--ink);
+}
+.press-rooms .chip-btn.ghost {
+  color: var(--muted);
+}
+
+/* ---------- letting a new switch in ----------
+   design/puck/Switch.dc.html (the wall hands over) and Scan.dc.html (the phone reads it). */
+.handoff {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 20px;
+  align-items: center;
+  padding: 20px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--edge);
+  margin-bottom: 18px;
+}
+.handoff-qr {
+  width: 168px;
+  height: 168px;
+  border-radius: 16px;
+  background: #fff;
+  display: grid;
+  place-items: center;
+}
+.handoff-text p {
+  margin: 6px 0 0;
+  line-height: 1.5;
+}
+/* the camera, and the four corners that say where to point it */
+.finder {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  max-height: 58vh;
+  margin: 0 auto 18px;
+  border-radius: 22px;
+  overflow: hidden;
+  background: #0a0b0e;
+}
+.finder-feed {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.finder-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+@media (max-width: 860px) {
+  .handoff {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
   }
 }

@@ -7,6 +7,7 @@ import http from 'node:http'
 import fs from 'node:fs'
 import path from 'node:path'
 import crypto from 'node:crypto'
+import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 
 const DIST = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'dist')
@@ -65,6 +66,24 @@ const rooms = [
     dev('u2', 'Smart plug', 'unassigned', 'switch', 'off', {}),
   ] },
 ]
+/* SWITCHES=11 fills New devices with a bridge's worth of look-alike wall switches -- the moment
+   naming by touch exists for, and the one that cannot be judged with two rows in the list. Their
+   names are the ones the bridge actually gives them, addresses and all, because that is the problem. */
+const MESH = ['0004', '0005', '0006', '0008', '000a', '000b', '000e', '0010', '0011', '0014', '0016']
+const unassigned = rooms.find(r => r.id === 'unassigned')
+for (let i = 0; i < Number(process.env.SWITCHES || 0) && i < MESH.length; i++)
+  unassigned.devices.push(dev(`mesh${MESH[i]}`, `Brilliant switch ${MESH[i]}`, 'unassigned', 'light', 'off', { brightness: 0, has_motion: true }))
+
+/* A press, which is the whole mechanism: a switch announcing itself because a human touched it.
+   POST /press or /press/<id> makes one happen; PRESS=1 rotates through them on its own so the
+   screen can just be watched. Mock only -- on a hub this is the driver's own state event. */
+let pressedId = null, pressedAt = 0
+function pressEvent() {
+  if (process.env.PRESS === '1' && !pressedId) { pressedId = unassigned.devices[0]?.id; pressedAt = Date.now() / 1000 }
+  if (!pressedId || Date.now() / 1000 - pressedAt > 45) return []
+  return [{ ts: pressedAt, kind: 'state', subject: pressedId, old: 'off', new: 'on', source: 'device', detail: null }]
+}
+
 const home = { name: "Temi's house", temp_unit: '°F', rooms }
 const status = { driver: process.env.ENGINE === 'down' ? 'down' : 'ready', reason: process.env.ENGINE === 'down' ? "The hub's engine is not answering yet." : '',
   setup_done: process.env.FRESH !== '1', owner: 'Temi', home: "Temi's house", location: true, rooms: 8, devices: 30, locked: process.env.LOCKED === '1',
@@ -232,6 +251,47 @@ const phones = { phones: [
   { id: 'p2', name: "Nadine's Android phone", kind: 'phone', joined: now - 3600, expires: now + 86400 * 2, remote: false, last_seen: now - 600, how: 'wall', me: false },
 ], asks: process.env.ASK ? [{ id: 'a1', name: "Sam's iPhone", kind: 'phone', asked: now - 30 }] : [] }
 
+/* ---------- a bridge being set up ----------
+   The real brain watches a thing on a cable; this walks a clock, so the sheet can be seen moving.
+   BRIDGE=cable starts at the knock and runs the whole way; the other values pin one moment. */
+const BRIDGE = process.env.BRIDGE || ''
+/* BRIDGES=1 is a house that already HAS a bridge and is not busy -- which is the normal case, and the
+   one that puts the Wall switch door on the Add screen. WAITING=1 is a new switch sitting there
+   unprovisioned, which is what that door then has something to say about. */
+const HAVE = { bridges: Number(process.env.BRIDGES || (process.env.BRIDGE ? 1 : 0)), waiting: Number(process.env.WAITING || 0) }
+let bridgeAt = 0                      // when "yes, that's mine" was pressed; 0 = still knocking
+let bridgePinned = null               // set by dismiss/placed, or by a pinned BRIDGE value
+function bridgeNow() { return { ...HAVE, ...job() } }
+function job() {
+  if (!BRIDGE) return { state: 'none' }
+  if (bridgePinned) return bridgePinned === 'ready'
+    ? { state: 'ready', how: 'cable', switches: 11, unplaced: 8 }
+    : { state: 'none' }
+  if (BRIDGE !== 'cable') {
+    return {
+      knocking: { state: 'knocking', how: 'air' },
+      working: { state: 'working', how: 'cable', step: 'keys' },
+      placing: { state: 'placing', how: 'cable', switches: 11, signal: 'strong' },
+      ready: { state: 'ready', how: 'cable', switches: 11, unplaced: 8 },
+      failed: { state: 'failed', how: 'cable', text: 'The bridge stopped answering halfway through. Unplug it, plug it back into the hub, and it will pick up where it left off.' },
+    }[BRIDGE] ?? { state: 'none' }
+  }
+  if (!bridgeAt) return { state: 'knocking', how: 'cable' }
+  const t = (Date.now() - bridgeAt) / 1000
+  if (t < 4) return { state: 'working', how: 'cable', step: 'software' }
+  if (t < 8) return { state: 'working', how: 'cable', step: 'wifi' }
+  if (t < 12) return { state: 'working', how: 'cable', step: 'keys' }
+  /* the walk: nothing heard at first, then a switch or two, then the lot */
+  const heard = t < 16 ? 0 : t < 20 ? 2 : 11
+  if (t < 24) return { state: 'placing', how: 'cable', switches: heard, signal: heard ? (heard > 4 ? 'strong' : 'weak') : 'none' }
+  return { state: 'ready', how: 'cable', switches: 11, unplaced: 8 }
+}
+
+const BRAIN = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'brain')
+/* the last resort when there is no brain venv to draw with: a code-shaped picture that decodes to
+   nothing. It is honest about being a picture only in this name. */
+const FAKE_QR = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 29 29'><rect width='29' height='29' fill='#fff'/><path d='M2 2h7v7H2zM3 3v5h5V3zM4 4h3v3H4zM20 2h7v7h-7zM21 3v5h5V3zM22 4h3v3h-3zM2 20h7v7H2zM3 21v5h5v-5zM4 22h3v3H4zM11 2h2v2h-2zM14 3h2v2h-2zM11 6h3v2h-3zM16 7h2v2h-2zM2 11h2v2H2zM5 12h2v2H5zM8 11h2v3H8zM11 10h2v3h-2zM14 11h3v2h-3zM18 10h2v3h-2zM21 11h2v2h-2zM24 12h3v2h-3zM3 15h3v2H3zM7 16h2v2H7zM11 14h2v3h-2zM14 15h2v3h-2zM17 14h3v2h-3zM21 15h2v3h-2zM24 16h3v2h-3zM11 19h2v2h-2zM14 20h3v2h-3zM18 19h2v3h-2zM21 20h2v2h-2zM24 19h3v3h-3zM11 23h3v2h-3zM15 24h2v3h-2zM18 23h3v2h-3zM22 24h2v2h-2zM25 23h2v4h-2z'/></svg>`
+
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://x')
   const p = url.pathname
@@ -244,10 +304,17 @@ const server = http.createServer((req, res) => {
   if (p === '/presence') return json(res, presence)
   if (p === '/scenes') return json(res, scenes)
   /* the hub narrows its log by subject; a pane's foot is that query and nothing else */
+  if (p.startsWith('/press') && req.method === 'POST') {
+    pressedId = p.split('/')[2] || unassigned.devices[Math.floor(Math.random() * unassigned.devices.length)]?.id
+    pressedAt = Date.now() / 1000
+    const d = unassigned.devices.find(x => x.id === pressedId)
+    if (d) { d.state = d.state === 'on' ? 'off' : 'on'; if (d.attrs) d.attrs.brightness = d.state === 'on' ? 180 : 0; push({ type: 'device', device: d }) }
+    return json(res, { ok: true, id: pressedId, state: d?.state })
+  }
   if (p === '/events') {
     const subject = url.searchParams.get('subject')
     const limit = Number(url.searchParams.get('limit')) || 100
-    const all = [...events, ...perDevice].sort((a, b) => b.ts - a.ts)
+    const all = [...pressEvent(), ...events, ...perDevice].sort((a, b) => b.ts - a.ts)
     return json(res, (subject ? all.filter(e => e.subject === subject) : all).slice(0, limit))
   }
   if (p === '/rules') return json(res, rules)
@@ -279,6 +346,25 @@ const server = http.createServer((req, res) => {
     return json(res, { type: 'create_entry', flow_id: 'r1', handler: 'nest', kind: 'Google Nest', entry_title: 'home-hub' })
   }
   if (p === '/catalog') return json(res, catalog)
+  /* A bridge being set up. BRIDGE=cable walks the whole job the way a real one does -- software,
+     Wi-Fi, keys, then the walk to find it a socket -- so the sheet can be watched rather than
+     described. BRIDGE=knocking|working|placing|ready|failed pins one moment instead. */
+  if (p === '/bridge') return json(res, bridgeNow())
+  /* Letting a new switch in: the phone sends whatever its camera read, whole. */
+  if (p === '/bridge/switches' && req.method === 'POST') {
+    HAVE.waiting = Math.max(0, HAVE.waiting - 1)
+    const d = dev('mesh-new', 'Brilliant switch 0019', 'unassigned', 'light', 'off', { brightness: 0, has_motion: true })
+    unassigned.devices.push(d)
+    push({ type: 'device', device: d })
+    return json(res, { state: 'done', device_id: d.id, name: d.name, text: 'A light that dims, and a motion sensor.' })
+  }
+  if (p.startsWith('/bridge/') && req.method === 'POST') {
+    const what = p.split('/')[2]
+    if (what === 'adopt') { bridgeAt = Date.now(); bridgePinned = null }       // yes, that one is mine: the job starts
+    if (what === 'dismiss') { bridgePinned = 'none'; }
+    if (what === 'placed') { bridgePinned = 'ready' }
+    return json(res, bridgeNow())
+  }
   if (p === '/pair') return json(res, { state: 'idle' })
   if (p === '/assistant') return json(res, { available: true, configured: false, source: null, model: 'claude-sonnet-5' })
   if (p === '/setup/drivers') return json(res, status)
@@ -300,7 +386,24 @@ const server = http.createServer((req, res) => {
   ] })
   if (p === '/phones/ask' && req.method === 'POST') return json(res, { id: 'ask1', name: "Sam's iPhone", kind: 'phone', asked: now })
   if (p.startsWith('/phones/claim/')) return json(res, { state: 'waiting' })
-  if (p === '/qr.svg') { res.writeHead(200, { 'Content-Type': 'image/svg+xml' }); return res.end(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 29 29'><rect width='29' height='29' fill='#fff'/><path d='M2 2h7v7H2zM3 3v5h5V3zM4 4h3v3H4zM20 2h7v7h-7zM21 3v5h5V3zM22 4h3v3h-3zM2 20h7v7H2zM3 21v5h5v-5zM4 22h3v3H4zM11 2h2v2h-2zM14 3h2v2h-2zM11 6h3v2h-3zM16 7h2v2h-2zM2 11h2v2H2zM5 12h2v2H5zM8 11h2v3H8zM11 10h2v3h-2zM14 11h3v2h-3zM18 10h2v3h-2zM21 11h2v2h-2zM24 12h3v2h-3zM3 15h3v2H3zM7 16h2v2H7zM11 14h2v3h-2zM14 15h2v3h-2zM17 14h3v2h-3zM21 15h2v3h-2zM24 16h3v2h-3zM11 19h2v2h-2zM14 20h3v2h-3zM18 19h2v3h-2zM21 20h2v2h-2zM24 19h3v3h-3zM11 23h3v2h-3zM15 24h2v3h-2zM18 23h3v2h-3zM22 24h2v2h-2zM25 23h2v4h-2z'/></svg>`) }
+  /* A real code where one can be drawn, and a picture of one where it cannot.
+
+     This used to be a fixed decorative pattern that ignored `text`, which is fine for a screenshot
+     and a trap for anything else: the wall's hand-off code and the phone-onboarding code both looked
+     right and decoded to nothing, so a camera pointed at the mock silently did nothing at all. The
+     hub draws these with qrcode in Python (qr_svg_bytes, brain/hub/api.py); if that venv is here,
+     use it, so what the mock shows is the same code the hub would show. */
+  if (p === '/qr.svg') {
+    const text = url.searchParams.get('text') || ''
+    let svg = null
+    try {
+      svg = execFileSync(path.join(BRAIN, '.venv/bin/python'),
+        ['-c', 'import sys; sys.path.insert(0, sys.argv[1]); from hub.api import qr_svg_bytes; sys.stdout.buffer.write(qr_svg_bytes(sys.argv[2]))', BRAIN, text],
+        { timeout: 4000 })
+    } catch {}
+    res.writeHead(200, { 'Content-Type': 'image/svg+xml' })
+    return res.end(svg ?? FAKE_QR)
+  }
   if (p === '/say' && req.method === 'POST') { let b = ''; req.on('data', c => (b += c)); return req.on('end', () => { let t = ''; try { t = JSON.parse(b).text || '' } catch {}
     if (/^(is|are|what|who|how)\b/i.test(t)) return json(res, { kind: 'answer', text: 'Front door is locked.', said: t })
     if (/cosy|cozy|nice/i.test(t)) return json(res, { kind: 'action', device: 'l2', device_name: 'Floor lamp', action: 'on', data: { brightness_pct: 30 }, name: 'Floor lamp on, low', said: t })
@@ -358,12 +461,25 @@ const server = http.createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': MIME[path.extname(f)] || 'application/octet-stream' })
   fs.createReadStream(f).pipe(res)
 })
-// keep the websocket open so the panel shows Connected; nothing is ever sent
+/* The panel's live stream. It used to be held open and never written to, which was fine until a
+   screen existed whose whole point is something happening in the room while you watch -- naming a
+   switch by pressing it. Now anything the mock changes can be pushed the way the hub pushes it. */
+const live = new Set()
+function push(msg) { const s = JSON.stringify(msg); for (const sock of live) { try { sock.write(frame(s)) } catch { live.delete(sock) } } }
+function frame(text) {
+  const b = Buffer.from(text)
+  const head = b.length < 126 ? Buffer.from([0x81, b.length])
+    : Buffer.concat([Buffer.from([0x81, 126]), Buffer.from([b.length >> 8, b.length & 0xff])])
+  return Buffer.concat([head, b])
+}
+// keep the websocket open; the panel shows Connected, and push() above sends when there is something to say
 server.on('upgrade', (req, socket) => {
   if (/\/webrtc$/.test(req.url)) return socket.destroy()   // no WebRTC here either
   const key = req.headers['sec-websocket-key']
   const accept = crypto.createHash('sha1').update(key + '258EAFA5-E914-47DA-95CA-C5AB0DC85B11').digest('base64')
   socket.write('HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ' + accept + '\r\n\r\n')
-  socket.on('error', () => {})
+  live.add(socket)
+  socket.on('close', () => live.delete(socket))
+  socket.on('error', () => { live.delete(socket); })
 })
 server.listen(PORT, () => console.log(`mock brain on http://localhost:${PORT}/`))

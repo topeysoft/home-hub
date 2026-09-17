@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { addRoom, moveDevice, renameDevice, forgetDevice, getSuggestions, type Device, type Room, type Suggestion } from './api'
 import { store, cap, notify } from './store'
 import Icon from './Icon.vue'
+import { pressedIn, snapshot, type Seen } from './pressed'
 
 /* The "New devices" room: everything that has not been put in a room yet, each with a name to
    check and a room to pick. Once placed, a device leaves this list on its own. The same rows
@@ -59,6 +60,53 @@ async function createAndMove(d: Device) {
   catch (e: any) { notify(`Couldn't add the room: ${e.message}`, 'error'); delete busy.value[d.id] }
 }
 
+/* ---------- naming by touch ----------
+
+   Eleven identical rows called "Switch 000a" is the failure this exists to stop. A switch on a wall
+   announces itself the moment a human presses it -- that is how the house reads its state at all --
+   so the way to tell the rows apart is to go and press one, and the row it belongs to says so.
+
+   In place, never at the top. A row that jumped would move under the finger of somebody already
+   reaching for it, and a second tap in the same place would reach a different thing; the room grid
+   learned that the hard way. It highlights where it is and scrolls itself into view.
+
+   Nothing here is new machinery: it reads the same event log the why-sheet reads. The only events
+   that count are state changes on things in THIS list, recent, and not ones this screen caused --
+   a rename or a move makes no state event, so a press is the only thing left. */
+const PRESS_FOR = 45000
+const pressed = ref<{ id: string; at: number } | null>(null)
+const now = ref(Date.now())
+const live = computed(() => pressed.value && now.value - pressed.value.at < PRESS_FOR ? pressed.value.id : null)
+/* Only things that can announce themselves: a wall switch does, a bulb behind a bridge does, a camera
+   does not. Saying "go and press one" over a list of things that cannot answer would be a lie. */
+const CAN_PRESS = ['light', 'switch', 'cover', 'lock']
+const pressable = computed(() => props.room.devices.filter(d => CAN_PRESS.includes(cap(d))))
+const teach = computed(() => !props.editing && pressable.value.length > 1)
+/* The press itself, in pressed.ts -- and it is the only thing this screen watches. */
+let seen: Seen = {}
+watch(() => props.room.devices.map(d => `${d.id}:${d.state}`).join(), () => {
+  const was = seen
+  seen = snapshot(props.room.devices)
+  const hit = pressedIn(was, pressable.value, id => !!busy.value[id])
+  if (!hit) return
+  pressed.value = { id: hit, at: Date.now() }
+  now.value = Date.now()
+  setTimeout(() => document.querySelector('.sort-row.pressed')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 30)
+}, { immediate: true })
+let tick: number | undefined
+onMounted(() => { tick = window.setInterval(() => (now.value = Date.now()), 1000) })
+onUnmounted(() => clearInterval(tick))
+/* what a pressed thing turned out to be, in its own words rather than its address */
+function what(d: Device) {
+  const c = cap(d), bits: string[] = []
+  if (c === 'light') bits.push(d.attrs?.brightness != null ? 'A light that dims' : 'A light')
+  else if (c === 'switch') bits.push('A switch')
+  else if (c === 'lock') bits.push('A lock')
+  else if (c === 'cover') bits.push('A blind')
+  if (d.attrs?.has_motion || /motion/i.test(d.name)) bits.push('with a motion sensor in it')
+  return bits.join(', ') + '.'
+}
+
 /* what the brain proposes for each new thing */
 const suggestions = ref<Record<string, Suggestion>>({})
 const thinking = ref(false), applying = ref(false)
@@ -102,26 +150,44 @@ watch(() => props.room.devices.length, (n, was) => { if (n > (was ?? 0)) think()
       </div>
     </header>
 
+    <!-- how to tell them apart at all. Drawn from design/puck/Naming.dc.html. -->
+    <div class="press-bar" v-if="teach">
+      <span class="press-icon"><Icon name="switch" :size="20" /></span>
+      <span class="press-text">
+        <span class="press-name">Go and press one</span>
+        <span class="press-sub">Top or bottom, it does not matter — the one you press says so here. Nothing will switch on that was not going to.</span>
+      </span>
+    </div>
+
     <div class="suggest-bar" v-if="!editing && room.devices.length && (thinking || placeable)">
       <span class="suggest-lede"><Icon name="sparkle" :size="16" /><span>{{ thinking ? 'Working out where these go…' : placeable === 1 ? 'One of these looks like it has a home. Check it and tap Use.' : `${placeable} of these look like they have a home. Check them, or place them all.` }}</span></span>
       <button class="button small" v-if="placeable > 1" :class="{ busy: applying }" @click="useAll">Place all {{ placeable }}</button>
     </div>
 
     <ul class="sort" v-if="room.devices.length">
-      <li v-for="d in room.devices" :key="d.id" class="sort-row" :class="{ busy: busy[d.id] }">
+      <li v-for="d in room.devices" :key="d.id" class="sort-row" :class="{ busy: busy[d.id], pressed: live === d.id }">
         <span class="sort-icon"><Icon :name="iconFor(d)" :size="20" /></span>
         <input class="sort-name" :value="names[d.id] ?? d.name" @input="names[d.id] = ($event.target as HTMLInputElement).value" @change="rename(d)" @keydown.enter="($event.target as HTMLInputElement).blur()" spellcheck="false" aria-label="Name" />
         <template v-if="adding === d.id">
           <input class="sort-name" v-model="newRoom" placeholder="Name the room" autofocus @keydown.enter="createAndMove(d)" @keydown.escape="adding = null" />
           <button class="button small" @click="createAndMove(d)">Add</button>
         </template>
-        <select v-else class="sort-room" :value="here" @change="move(d, ($event.target as HTMLSelectElement).value)" aria-label="Room">
+        <select v-else-if="live !== d.id || editing" class="sort-room" :value="here" @change="move(d, ($event.target as HTMLSelectElement).value)" aria-label="Room">
           <option value="" disabled>Which room?</option>
           <option v-for="r in rooms" :key="r.id" :value="r.id">{{ r.name }}</option>
           <option value="__new">A new room…</option>
         </select>
         <button v-if="editing && adding !== d.id" class="button small ghost sort-forget" :class="{ warn: forgetting === d.id }" @click="forget(d)">{{ forgetting === d.id ? 'Forget?' : 'Forget' }}</button>
         <p class="sort-forget-ask" v-if="forgetting === d.id"><b>{{ d.name }}</b> goes from the house, and from whatever brought it. Tap again to do it.</p>
+        <!-- the one that was just pressed: the rooms as chips, because the answer is one tap away
+             and a dropdown would hide it behind two -->
+        <div class="press-line" v-if="live === d.id && !editing">
+          <span class="press-said"><span class="pulse-dot"></span>This one just came on. {{ what(d) }}</span>
+          <div class="press-rooms">
+            <button v-for="r in rooms" :key="r.id" class="chip-btn" @click="move(d, r.id)">{{ r.name }}</button>
+            <button class="chip-btn ghost" @click="move(d, '__new')">Another room…</button>
+          </div>
+        </div>
         <div class="suggest-line" v-if="!editing && suggestions[d.id]">
           <Icon name="sparkle" :size="14" />
           <span>Looks like <b>{{ suggestions[d.id].name }}</b><template v-if="suggestions[d.id].room"> in the <b>{{ roomName(suggestions[d.id].room) }}</b></template><span class="suggest-why" v-if="suggestions[d.id].why"> · {{ suggestions[d.id].why }}</span></span>

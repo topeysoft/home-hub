@@ -1,5 +1,5 @@
 import { reactive } from 'vue'
-import { getHome, getEvents, getAmbient, getScenes, getStatus, getDiscovered, getRoutines, getAssistant, getPresence, getHealth, getSounds, connect, act, setIntent, setHomeIntent, type Room, type Device, type Home, type Event, type Ambient, type Rules, type Status, type Found, type Intent, type Routine, type Assistant, type Presence, type Note, type Sound, requestUpdate, getPhones, type Phone, type Ask, getAccounts, type Account } from './api'
+import { getBridge, type Bridge, getHome, getEvents, getAmbient, getScenes, getStatus, getDiscovered, getRoutines, getAssistant, getPresence, getHealth, getSounds, connect, act, setIntent, setHomeIntent, type Room, type Device, type Home, type Event, type Ambient, type Rules, type Status, type Found, type Intent, type Routine, type Assistant, type Presence, type Note, type Sound, requestUpdate, getPhones, type Phone, type Ask, getAccounts, type Account } from './api'
 import { lock } from './code'
 import { sunPosition, sunGuess, moonPhase } from './sun'
 
@@ -42,6 +42,11 @@ export const store = reactive({
   homeName: '' as string,
   tempUnit: '' as string,                   // the house's temperature unit, from the home's location (°F in the US)
   found: [] as Found[],                      // things noticed on the network that are not set up yet
+  /* Bridges: how many the house has, and the one job that may be running on one right now -- one at a
+     time, because it is a person holding a thing. null on a hub that knows nothing about bridges at
+     all, which is most of them. `state: 'none'` is a hub that has them and is not busy, which is not
+     the same thing and is why this is not cleared to null -- see refreshBridge(). */
+  bridge: null as Bridge | null,
   sky: { elevation: -20, azimuth: 0, phase: 0, hour: 0, month: 6, condition: 'clear-night', guessed: true },   // what the sky draws; month is seasonal (0 midwinter → 6 midsummer, either hemisphere)
 })
 
@@ -430,6 +435,22 @@ export async function loadPhones(tell = false) {
 }
 /** May this screen decide who else gets in? The house's answer, in the row it keeps for this phone. */
 export const holdsKeys = () => !store.status?.locked || ['setup', 'code'].includes(store.phones.find(p => p.me)?.how ?? '')
+/* ---------- a bridge being set up ----------
+
+   Asked for rather than streamed, because it only matters while somebody is standing there: the poll
+   runs every couple of seconds while a bridge is mid-job and backs off to a minute when there is
+   nothing to say. A hub with no bridge support at all answers 404 and the panel simply never shows
+   the sheet -- that is why this swallows its errors instead of raising them. */
+let bridgeTimer: number | undefined
+export async function refreshBridge() {
+  clearTimeout(bridgeTimer)
+  try {
+    store.bridge = await getBridge()
+  } catch { store.bridge = null }
+  const live = !!store.bridge && !['none', 'ready'].includes(store.bridge.state)
+  bridgeTimer = window.setTimeout(refreshBridge, live ? 2000 : 60000)
+}
+
 let foundTimer: number | undefined
 export async function refreshFound() {
   if (store.status?.driver !== 'ready') return
@@ -463,6 +484,7 @@ export async function start() {
   if (lock.unpaired) { updateSky(); return }   // the sky still follows the clock; nothing to stream to until this phone is in, and rejoin() starts again
   updateSky(); clearInterval(skyTimer); skyTimer = window.setInterval(updateSky, 30000)
   clearInterval(foundPoll); foundPoll = window.setInterval(refreshFound, 60000)
+  refreshBridge()
   stop = connect({ device: applyDevice, home: applyHome, intent: applyIntent, drafts: d => { store.drafts = d; eventsSoon() }, presence: p => { store.presence = p; eventsSoon() }, phones: () => loadPhones(true), ambient: a => { store.ambient = a; updateSky() }, status: s => {
     const was = store.status?.driver, version = store.status?.version
     store.status = s
@@ -475,4 +497,4 @@ export async function start() {
     else lostTimer = window.setTimeout(() => (store.linkLost = true), 4000)   // a blink on startup is not worth a banner
   } })
 }
-export function halt() { stop?.(); clearInterval(skyTimer); clearInterval(foundPoll) }
+export function halt() { stop?.(); clearInterval(skyTimer); clearInterval(foundPoll); clearTimeout(bridgeTimer) }

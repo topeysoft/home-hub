@@ -85,6 +85,45 @@ export const startPair = (kind: string, code?: string) => post<Pair>('/pair', { 
 export const pairPin = (pin: string) => post<Pair>('/pair/pin', { pin })
 export async function getPair(): Promise<Pair> { const r = await request('/pair'); if (!r.ok) await fail(r); return r.json() }
 export async function stopPair(): Promise<Pair> { const r = await request('/pair', { method: 'DELETE' }); if (!r.ok) await fail(r); return r.json() }
+/* A BRIDGE is a small thing on a charger that brings in devices the hub has no radio of its own for --
+   today the wall switches on the Brilliant mesh. It arrives one of two ways and the house says the same
+   sentence either way: on the hub's cable (a bare one, which the hub also gives its software to) or over
+   the air (one that already has it, and knocks). The panel draws this state and decides nothing; the
+   screens are design/puck/Knock.dc.html and design/puck/Cable.dc.html.
+
+   `state` is where the job is, not what the thing is:
+     none      nothing to say
+     knocking  one is offering itself and is blinking; nobody has let it in
+     working   it is being set up, which is `step` and the ones before it
+     placing   set up, and now in somebody's hand looking for a socket
+     ready     it is somewhere, and `switches` came in with it
+     failed    `text` says why, in the brain's words */
+export type Bridge = {
+  state: 'none' | 'knocking' | 'working' | 'placing' | 'ready' | 'failed'
+  how?: 'cable' | 'air'
+  step?: 'software' | 'wifi' | 'keys'
+  text?: string
+  switches?: number                        // how many it can hear from where it is
+  signal?: 'strong' | 'weak' | 'none'
+  unplaced?: number                        // of those, how many have no room yet
+  waiting?: number                         // switches nearby that have never been let in (see addSwitch)
+  bridges?: number                         // how many are set up and working, job or no job
+}
+/* Letting a NEW switch in. A factory-fresh one will not join without the secret printed on its back,
+   which is the mesh's own rule and not ours -- so the code has to be read off the thing itself, with
+   a camera, and the wall panel has not got one. `code` is whatever the camera read, sent whole: the
+   panel does not parse it, because what is in it is the bridge's business and it changes per maker.
+   design/puck/Switch.dc.html (the wall hands over) and Scan.dc.html (the phone reads it). */
+export type Letting = { state: 'working' | 'done' | 'failed'; text?: string; device_id?: string; name?: string }
+export const addSwitch = (code: string) => post<Letting>('/bridge/switches', { code })
+export const BRIDGE_STEPS = ['software', 'wifi', 'keys'] as const
+export async function getBridge(): Promise<Bridge> { const r = await request('/bridge'); if (!r.ok) await fail(r); return r.json() }
+/** Yes, that one is mine. The keys only go anywhere after this. */
+export const adoptBridge = () => post<Bridge>('/bridge/adopt')
+/** Not mine: stop offering it. It knocks again if it is unplugged and plugged back in. */
+export const dismissBridge = () => post<Bridge>('/bridge/dismiss')
+/** Leave it here -- the placing is over, whatever the signal says. */
+export const placedBridge = () => post<Bridge>('/bridge/placed')
 export const retryEntry = (entry_id: string) => post<Status>(`/setup/retry/${encodeURIComponent(entry_id)}`)
 export const setCredentials = (handler: string, client_id: string, client_secret: string, hints?: Record<string, string>) => post<Step>('/credentials', { handler, client_id, client_secret, hints })
 export const addRoom = (name: string) => post<{ id: string; name: string }>('/rooms', { name })

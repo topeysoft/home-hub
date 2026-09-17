@@ -4,6 +4,7 @@ import { getCatalog, startFlow, getFlow, submitFlow, cancelFlow, setCredentials,
 import { store, notify, refreshFound, loadHealth } from './store'
 import Icon from './Icon.vue'
 import PairPanel from './PairPanel.vue'
+import AddSwitch from './AddSwitch.vue'
 import { parseKeyFile, keyFileWarning } from './keyfile'
 
 /* Adding things to the house. Lists what was noticed on the network, offers a search for anything
@@ -16,6 +17,11 @@ const props = defineProps<{ resume?: string | null }>()
 const RADIO = { zigbee: { label: 'Zigbee device', sub: 'Bulbs, sensors, plugs, remotes' }, zwave: { label: 'Z‑Wave device', sub: 'Switches, locks, sensors' }, matter: { label: 'Matter device', sub: 'With a QR code on it' } } as const
 const radios = computed(() => (store.status?.drivers ?? []).filter(p => p.state === 'ready' && p.id in RADIO).map(p => ({ id: p.id as keyof typeof RADIO, ...RADIO[p.id as keyof typeof RADIO] })))
 const pairKind = ref<keyof typeof RADIO | null>(null)
+/* Things that come in through a bridge rather than off one of the hub's own radios. Their own door,
+   because a wall switch is not "over the hub's radios" -- the hub cannot hear it at all, a bridge
+   can. ?add=switch lands here: it is where the code on the wall sends the phone. */
+const switching = ref(new URLSearchParams(location.search).get('add') === 'switch')
+const bridged = computed(() => (store.bridge?.bridges ?? 0) > 0)
 const step = ref<Step | null>(null)
 const values = reactive<Record<string, any>>({})
 const busy = ref(false), q = ref(''), catalog = ref<CatalogItem[] | null>(null), error = ref('')
@@ -134,6 +140,7 @@ onUnmounted(() => clearTimeout(poll))
 <template>
   <div class="add">
     <PairPanel v-if="pairKind" :kind="pairKind" @close="pairKind = null; refreshFound()" />
+    <AddSwitch v-else-if="switching" @close="switching = false; refreshFound()" />
     <p class="add-empty" v-else-if="!step && resume && busy">Opening…</p>
     <template v-else-if="!step">
       <div class="add-block" v-if="store.found.length">
@@ -148,6 +155,16 @@ onUnmounted(() => clearTimeout(poll))
       </div>
       <p class="add-empty" v-else-if="store.status?.driver === 'ready'">Nothing new has been noticed on the network yet. Things you plug in tend to appear here within a minute.</p>
       <p class="add-empty" v-else>Looking around…</p>
+
+      <div class="add-block" v-if="bridged">
+        <h3 class="label">Through the bridge</h3>
+        <div class="radios">
+          <button class="radio-btn" @click="switching = true">
+            <span class="found-icon"><Icon name="switch" :size="18" /></span>
+            <span class="found-text"><span class="found-title">Wall switch</span><span class="found-kind">{{ store.bridge?.waiting ? `${store.bridge.waiting} waiting to be let in` : 'The ones that came with the house' }}</span></span>
+          </button>
+        </div>
+      </div>
 
       <div class="add-block" v-if="radios.length">
         <h3 class="label">Over the hub's radios</h3>

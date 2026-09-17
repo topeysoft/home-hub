@@ -12,6 +12,7 @@ import HomeView from './views/HomeView.vue'
 import RoomView from './views/RoomView.vue'
 import Viewer from './Viewer.vue'
 import WhySheet from './WhySheet.vue'
+import BridgeSheet from './BridgeSheet.vue'
 import HousePanel from './HousePanel.vue'
 import AskPane from './AskPane.vue'
 import { isPage } from './pages'
@@ -265,6 +266,9 @@ onUnmounted(() => {
          These two numbers are the panel's own slide and the veil's fade. -->
     <Transition name="house" :duration="{ enter: 420, leave: 320 }"><HousePanel v-if="panel" /></Transition>
     <Transition name="sheet"><WhySheet v-if="store.sheet === 'why'" /></Transition>
+    <!-- A bridge being set up opens itself: somebody has just plugged a thing in, in this room, and
+         is standing here. It is not a place in the house to navigate to. -->
+    <Transition name="sheet"><BridgeSheet v-if="store.bridge && store.bridge.state !== 'none'" /></Transition>
     <Transition name="sheet"><CodePrompt v-if="lock.prompt" /></Transition>
 
     <Transition name="toast">
