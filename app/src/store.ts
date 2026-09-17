@@ -474,15 +474,38 @@ export async function load() {
   loadAmbient(); loadRules(); loadRoutines(); loadAssistant(); loadPresence(); loadHealth(); loadSounds(); loadPhones(); loadAccounts()
 }
 let foundPoll: number | undefined
+/* The hub came back on a different build from the one this page was reading. Until it reloads, the
+   page IS the old build: the "Updated to" toast used to be the whole of it, and a wall or a phone kept
+   running last week's panel against this week's brain until somebody thought to pull down on it.
+   index.html is served no-cache and the assets are named by their hash, so a reload is the new panel
+   and not a stale one. The moment is the right one too: a new version only ever arrives with the
+   link coming back after the brain restarted, when the screen was saying "Updating the hub" or
+   "Reconnecting" -- never under somebody's finger. The version is kept for the page that comes next,
+   because a toast does not survive the reload and the screen should still say what happened. */
+export function newBuild(was: string | undefined, now: string | undefined): boolean {
+  return !!was && !!now && was !== now && now !== 'dev'
+}
+export function reloadOnto(version: string) {
+  try { sessionStorage.setItem('hub.updated', version) } catch { /* a private window keeps nothing; the reload still happens */ }
+  location.reload()
+}
+/** The page after the reload: say what the one before it saw. */
+export function sayUpdated() {
+  let v = ''
+  try { v = sessionStorage.getItem('hub.updated') || ''; if (v) sessionStorage.removeItem('hub.updated') } catch { /* nothing kept */ }
+  if (v) notify(`Updated to ${v}.`)
+}
+
 export async function start() {
   await load()
+  sayUpdated()
   if (lock.unpaired) { updateSky(); return }   // the sky still follows the clock; nothing to stream to until this phone is in, and rejoin() starts again
   updateSky(); clearInterval(skyTimer); skyTimer = window.setInterval(updateSky, 30000)
   clearInterval(foundPoll); foundPoll = window.setInterval(refreshFound, 60000)
   stop = connect({ device: applyDevice, home: applyHome, intent: applyIntent, drafts: d => { store.drafts = d; eventsSoon() }, presence: p => { store.presence = p; eventsSoon() }, phones: () => loadPhones(true), ambient: a => { store.ambient = a; updateSky() }, status: s => {
     const was = store.status?.driver, version = store.status?.version
     store.status = s
-    if (store.updating && version && s.version && s.version !== version) { store.updating = false; notify(`Updated to ${s.version}.`) }
+    if (newBuild(version, s.version)) { store.updating = false; reloadOnto(s.version!); return }
     if (s.driver === 'ready' && was !== 'ready') { load() }   // the engine just came up: read the house
   }, link: v => {
     store.linkUp = v
