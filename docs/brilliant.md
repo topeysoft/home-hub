@@ -835,3 +835,31 @@ only at boot, and pairing may be the same. The test is a power cycle followed by
 
 **n = 1.** One pristine companion, one house. The `0x0005` match is exact and the zeroes are consistent, but a
 second pair would make this solid.
+
+
+### Replay a companion's config from a companion, not from a main
+
+The adopt recipe above says to capture a configured switch's vendor store and replay it. That is right, but it
+needs a qualifier learned the hard way: **the capture must come from a switch of the same role.**
+
+Adopting the stairway companion, its config was replayed from `0x0011`, a *main*. That set carried `0x1b = 00`.
+A pristine working companion carries **`0x1b = 03`**. The adopted switch was, in effect, told it was not a
+companion — and behaved accordingly: it registered a press and applied it to its own OnOff state, and emitted no
+`0403` to anyone, through every other part of the recipe being correct (bound, published, partner address set,
+power cycled). Everything worked except the one emission that makes a companion a companion.
+
+That fits the observed behaviour of a real pair. A switch that believes it is a main applies a press to its own
+load; a switch that knows it is a companion routes the press outward. `0x1b` looks like the flag that chooses
+between those two paths, and it is the only field in the diff of working-against-silent that reads like a mode
+rather than a per-device calibration:
+
+| Field | working companion `0x0006` | our silent `0x0004` | reading |
+|---|---|---|---|
+| `0x1b` | `03` | `00` (ours, replayed from a main) | **mode: companion vs load-driving** |
+| `0x4c` / `0x4d` / `0x52` | `64` / `00` / `64` | `e803` / `0807` / `e803` | dimming curve — a companion drives nothing |
+| `0x06` | `4600` | `5900` | per-device calibration |
+
+38 of the fields both answer are identical, so the store is otherwise a faithful adoption.
+
+**Untested at the time of writing:** `0x1b` has been set to `03` on `0x0004` and verified on readback, but it
+needs a power cycle and a press to confirm, since everything written during adoption is read only at boot.
