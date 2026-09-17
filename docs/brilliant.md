@@ -797,12 +797,24 @@ against the switches already captured:
 | Switch | `0x08` | `0x1a` | what it is |
 |---|---|---|---|
 | `0x0006` | `0500` → **0x0005** | `03` | companion of `0x0005` |
+| `0x0005` | `0000` | `02` | **the main of that same pair** |
 | `0x000a` | `0000` | `02` | single-pole dimmer |
-| `0x0011` | `0000` | `01` | main of a two-way pair |
+| `0x0011` | `0000` | `01` | main whose companion we reset |
 
 **`0x08` is the partner's unicast address**, little-endian, and it is exactly the address that companion sends
-its `0403` to. Every switch that is not a companion carries zero. `0x1a` looks like the role — 3 companion,
-1 two-way main, 2 single-pole — though that is one example of each.
+its `0403` to.
+
+**Only the companion stores it — pairing is ONE write, not two.** The main of the intact pair carries zero in
+`0x08`, the same as a switch with no companion at all. That is worth knowing before building a provisioner
+around writing both ends. It leaves a question: the main sends the companion a zero-length vendor message
+*unprompted* when its own state changes, so it knows the companion's address from somewhere. Not from `0x08`.
+The likeliest reading is that it answers and remembers whoever last sent it a `0403`, which would be runtime
+state rather than stored configuration — and would mean a freshly booted main may not notify its companion
+until that companion has pressed once. Untested.
+
+**`0x1a` is NOT the role, and an earlier version of this section said it was.** That claim rested on one example
+each. With the pair's main added, `02` appears on both a paired main and a single-pole, so it does not separate
+them. All that survives is that the companion reads `03` where nothing else does.
 
 This is readable with the **AppKey alone**, which matters more than it sounds: Configuration Server state needs
 a device key we will never have for the console's switches, but the vendor store does not. **So the whole
