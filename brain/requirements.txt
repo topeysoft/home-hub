@@ -3,3 +3,5 @@ uvicorn[standard]>=0.30
 websockets>=13
 anthropic>=1
 qrcode>=8
+pyserial>=3.5
+esptool>=5

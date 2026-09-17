@@ -108,6 +108,7 @@ export type Bridge = {
   unplaced?: number                        // of those, how many have no room yet
   waiting?: number                         // switches nearby that have never been let in (see addSwitch)
   bridges?: number                         // how many are set up and working, job or no job
+  needs?: 'wifi'                           // failed because the hub has nothing to give: a hub on a cable does not know the house's Wi-Fi until told once
 }
 /* Letting a NEW switch in. A factory-fresh one will not join without the secret printed on its back,
    which is the mesh's own rule and not ours -- so the code has to be read off the thing itself, with

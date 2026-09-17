@@ -176,6 +176,31 @@ Not yet: the hub side (a udev rule like `driver-layer/radios.sh`, esptool + this
 brain's `/bridge` state machine the panel already draws), and board A (the puck knocking over BLE). The light's
 colours have not been looked at with an eye yet -- `light=heard` above is the state, not the LED.
 
+## The hub does the cable job itself (17 September, small hours: brain/hub/bridge.py)
+
+The brain now owns the whole of design/puck/Cable.dc.html. `Bridges` watches the hub's USB every three
+seconds; a serial device that appears and answers `hello` (or, if it is silent, that esptool says is an
+ESP32) becomes the job the panel draws -- `knocking` until someone at the wall says it is theirs, which is
+behind the code, then `working` through software (a bare board is flashed with `releases/bridge/esp32s3-ship.bin`),
+Wi-Fi and keys, then `placing`, with what the puck hears coming back over the broker (`mesh/bridge/<chip>/
+{status,net,proxy}` and the switches under its net) until "leave it here" makes it `ready` with the unplaced
+count. Routes: `GET /bridge`, `POST /bridge/{adopt,dismiss,placed}`; `POST /bridge/switches` answers 501 in
+words until the puck can provision. 23 tests with a fake cable; the real one drove the desk S3 through knock,
+adopt and the write in 8.5 s.
+
+- **The house's mesh keys** are made once by the brain (`/data/mesh-keys.json`, 0600) -- a fresh house gets fresh
+  keys. A house with a Brilliant panel imports the captured ones: `python -m hub.bridge import
+  ~/.config/brilliant-mesh/panel-net.json` on the hub, once.
+- **The Wi-Fi is the one thing the hub may not have.** This hub is on Ethernet; its wlan0 connection's password
+  is in host config the container cannot read. The brain takes `settings.wifi` (not yet settable from the panel)
+  or `PUCK_WIFI_SSID/PUCK_WIFI_PASS` in `.env`, and otherwise ends the job `failed` with `needs: wifi` and a
+  sentence, rather than pretending. The "tell it once under This hub" page is the next panel piece.
+- **The container needs /dev.** docker-compose now binds `/dev:/dev` for the brain with cgroup rules for ttyUSB
+  (188) and ttyACM (166), so a port that appears after start can be opened. `pyserial` and `esptool>=5` are in
+  the brain's requirements; `tools/build-bridge.sh` merges the ship image (bootloader, partitions, boot_app0,
+  app) into the one file the brain flashes at 0x0, with a manifest beside it. It has not been deployed to the hub
+  yet -- that is a push and a `docker compose up -d`.
+
 ## Two pucks, two networks (16 September, late)
 
 The same firmware now runs on an **ESP32-S3** (`/dev/cu.usbmodem2101`, `pio run -e esp32s3`) with its own header

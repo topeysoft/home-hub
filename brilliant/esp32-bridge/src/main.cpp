@@ -25,6 +25,7 @@
 //   mesh/bridge/<chip>/status          online | offline        (retained, LWT)
 //   mesh/bridge/<chip>/proxy           "<ble addr> rssi <n>"    (retained)
 //   mesh/bridge/<chip>/iv              iv index in use          (retained)
+//   mesh/bridge/<chip>/net             network id it carries    (retained)
 //   mesh/<net>/<addr>/state            ON | OFF                 (retained)
 //   mesh/<net>/<addr>/brightness       0-255                    (retained)
 //   mesh/<net>/<addr>/motion           ON | OFF                 (retained)
@@ -957,6 +958,10 @@ static void mqttReconnect() {
     bridgeTopic(t, sizeof(t), "iv");
     snprintf(v, sizeof(v), "%lu", (unsigned long)ivIndex);
     mqtt.publish(t, v, true);
+    // Which mesh this puck carries, so the hub can count the switches that are this bridge's and not
+    // another's (brain/hub/bridge.py reads it off the broker while the puck is being placed).
+    bridgeTopic(t, sizeof(t), "net");
+    mqtt.publish(t, netHex, true);
     for (uint8_t i = 0; i < nSwitches; i++) {
         switches[i].announced = false;
         announce(switches[i]);

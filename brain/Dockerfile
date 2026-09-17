@@ -15,6 +15,7 @@ WORKDIR /srv/brain
 COPY brain/requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 COPY brain/ ./
+COPY brilliant/tools/puck_cable.py ./tools_puck.py
 COPY sounds/ /srv/sounds/
 # What changed, in words a household reads. In the image rather than fetched, so the notes a hub
 # shows are the notes for the code it is running -- see brain/hub/notes.py and docs/updates.md.

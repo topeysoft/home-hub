@@ -31,6 +31,7 @@ from .suggest import Suggestions
 from .settings import Settings, DATA, env_file
 from .lock import Lock, needs_code
 from .pairing import Pairing
+from .bridge import Bridges
 from .phones import Phones, COOKIE, holds_keys, open_to_strangers, from_away, away_refused, away_refusal
 from . import camera
 
@@ -95,6 +96,7 @@ class Hub:
         self.add = Onboarding(self)
         self.lock = Lock(self.settings)
         self.pair = Pairing(self)
+        self.bridge = Bridges(self)        # a puck on the cable, and the ones the house has
         self.phones = Phones(self)                     # which phones belong to the house, once it has a code
         self.engine = Engine(self)                     # rules: signals in, room intents out
         self.presence = Presence(self)                 # who is home, from HA's persons and the alarm's mode
@@ -200,6 +202,7 @@ class Hub:
         self._set("ready")
         asyncio.create_task(self.provision.refresh())   # look at the driver layer now, not at the next half-minute
         asyncio.create_task(self.sounds.ensure())        # the generated noises, once
+        asyncio.create_task(self.bridge.watch())         # what appears on the USB from now on
         self._broadcast(json.dumps({"type": "home", "home": self.home_dict()}))
         self._broadcast(json.dumps({"type": "ambient", "ambient": self.ambient()}))
         log.info("home: %d rooms, %d devices, weather=%s", len(self.home.rooms), len(self.home.devices), self.weather and self.weather["id"])
@@ -1009,6 +1012,40 @@ async def set_credentials(body: dict):
 async def cancel_flow(flow_id: str):
     await hub.add.cancel(flow_id)
     return {"ok": True}
+
+
+# ---------- a bridge on the cable ----------
+# The state the panel draws (app/src/BridgeSheet.vue) and the two answers a person gives. Adopting is
+# behind the code, which is what "nothing has been let in yet" on the wall means: until then the hub has
+# only noticed a thing on its USB, and none of the house's keys have gone anywhere.
+@app.get("/bridge")
+def bridge_status(): return hub.bridge.status()
+
+
+@app.post("/bridge/adopt")
+async def bridge_adopt():
+    hub.ready()
+    try: return await hub.bridge.adopt()
+    except ValueError as e: raise HTTPException(409, str(e))
+
+
+@app.post("/bridge/dismiss")
+async def bridge_dismiss(): return await hub.bridge.dismiss()
+
+
+@app.post("/bridge/placed")
+async def bridge_placed():
+    try: return await hub.bridge.placed()
+    except ValueError as e: raise HTTPException(409, str(e))
+
+
+@app.post("/bridge/switches")
+async def bridge_switch(body: dict):
+    """Letting a factory-fresh switch in needs the puck to act as a provisioner, which it cannot yet
+    (brilliant/STATUS.md, "Own keys later"). The route exists so the phone's scan has somewhere honest
+    to land rather than a 404 that reads as a broken house."""
+    hub.ready()
+    raise HTTPException(501, "This house cannot let a new switch in yet. The ones that came with it are all here; adding one is coming.")
 
 
 # ---------- pairing radio devices ----------

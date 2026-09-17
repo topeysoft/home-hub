@@ -95,6 +95,15 @@ services:
     volumes:
       - ./brain-data:/data  # settings.json (names, location, the engine login), events.db, rules.json, scenes.json
       - .:/driver:ro        # read-only view of the driver layer, for backups
+      # A bridge puck on the hub's USB is set up by the brain over its serial port (hub/bridge.py). The
+      # device node appears after the container started, so /dev is shared rather than a device
+      # listed, and the cgroup rules below are what let the brain open a tty that was not there at
+      # start: 188 is ttyUSB (a bridge chip), 166 is ttyACM (a native USB port). Read-only would not
+      # do -- flashing and talking are both writes.
+      - /dev:/dev
+    device_cgroup_rules:
+      - 'c 188:* rmw'
+      - 'c 166:* rmw'
     environment:
       - TZ=${TZ}
       - HUB_DRIVER=/driver
