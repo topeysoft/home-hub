@@ -1,0 +1,122 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      /* the panel's own tokens, unchanged -- app/src/panel.css */
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp: #e9b872; --lamp-ink: #2a1c07; --live: #74c69d; --danger: #e08a8a;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    /* the sheet, as the panel builds it */
+    .sheet { width: 560px; border-radius: 26px; background: rgba(22,24,30,.92);
+             border: 1px solid var(--edge-hi); box-shadow: 0 40px 100px -30px rgba(0,0,0,.9); overflow: hidden; }
+    .sheet h2 { margin: 0; font-size: 36px; line-height: 1.05; font-weight: 400; letter-spacing: -.025em; }
+    .lede { margin: 0 0 20px; color: var(--ink-2); font-size: 15px; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 999px;
+           background: var(--ink); color: var(--bg); font-weight: 500; font-size: 17px; }
+    .btn.big { padding: 15px 28px; }
+    .btn.ghost { background: var(--surface-hi); color: var(--ink); border: 1px solid var(--edge); }
+    .btn.sm { padding: 8px 14px; font-size: 14px; }
+    /* a found thing, as the Add screen already draws one */
+    .found { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
+             padding: 12px 14px; border-radius: 16px; border: 1px solid rgba(233,184,114,.3);
+             background: linear-gradient(rgba(233,184,114,.1), rgba(233,184,114,.1)), var(--surface); }
+    .found .ic { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center;
+                 background: var(--lamp); color: var(--lamp-ink); }
+    .row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
+           padding: 12px 14px; border-radius: 16px; background: var(--surface); border: 1px solid var(--edge); }
+    .t1 { font-size: 15.5px; font-weight: 500; }
+    .t2 { font-size: 13px; color: var(--muted); }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--lamp); }
+    .field { height: 50px; padding: 0 14px; border-radius: 14px; background: var(--surface-hi);
+             border: 1px solid var(--edge); display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 17px; }
+    .bar { height: 6px; border-radius: 999px; background: rgba(255,255,255,.1); overflow: hidden; }
+    .bar i { display: block; height: 100%; border-radius: 999px; background: var(--lamp); }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: var(--bg); color: var(--ink); font-size: 17px; line-height: 1.4;">
+
+  <div style="position: absolute; inset: 0; background: linear-gradient(rgb(29,33,46) 0%, rgb(41,42,63) 44%, rgb(92,63,57) 84%, rgb(62,44,42) 100%);"></div>
+  <div style="position: absolute; left: -222px; top: -135px; width: 1855px; height: 1156px; background: radial-gradient(58% 54% at 30% 64%, rgba(72,63,135,.4), transparent 68%), radial-gradient(62% 52% at 54% 110%, rgba(55,51,100,.44), transparent 72%);"></div>
+  <div style="position: absolute; inset: 0; background: linear-gradient(rgba(12,13,16,.14) 0%, rgba(12,13,16,.3) 45%, rgba(12,13,16,.66) 100%);"></div>
+
+  <div style="position: absolute; left: 0; top: 0; width: 1440px; height: 84px; display: flex; align-items: center; padding: 0 40px; gap: 18px;">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+    <span style="font-size: 16px; color: var(--ink-2);">Home</span>
+  </div>
+
+  <div style="position: absolute; left: 56px; top: 108px; width: 1328px;">
+    <h1 class="dsp" style="margin: 0; font-size: 44px;">New devices</h1>
+    <p style="margin: 10px 0 0; color: var(--ink-2); font-size: 16px; max-width: 76ch;">Check each name and say which room it lives in. It moves there on its own.</p>
+  </div>
+
+  <!-- the teach bar, as built -->
+  <div style="position: absolute; left: 56px; top: 232px; width: 1328px; display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 18px; background: linear-gradient(rgba(233,184,114,.08), rgba(233,184,114,.08)), var(--surface); border: 1px solid rgba(233,184,114,.26);">
+    <span style="width: 40px; height: 40px; border-radius: 13px; display: grid; place-items: center; background: var(--lamp); color: var(--lamp-ink);">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 3v7"/><path d="M6.3 7.3a8 8 0 1 0 11.4 0"/></svg>
+    </span>
+    <span><span class="t1" style="font-size: 16px;">Go and press one</span><span class="t2" style="display: block; font-size: 13.5px;">Top or bottom, it does not matter &mdash; the one you press says so here. Nothing will switch on that was not going to.</span></span>
+  </div>
+
+  <!-- rows -->
+  <div style="position: absolute; left: 56px; top: 316px; width: 1328px; display: flex; flex-direction: column; gap: 8px;">
+
+    <!-- a pair the house already knows about: one row, not two. Made by the flow on the phone (Pair.dc.html)
+         or by the extra press below. Touched things stay put and are their own undo. -->
+    <div class="row" style="grid-template-columns: auto 1fr auto auto; padding: 14px 16px;">
+      <span style="width: 40px; height: 40px; border-radius: 13px; background: var(--surface-hi); display: grid; place-items: center;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ink-2)" stroke-width="1.8" stroke-linecap="round"><path d="M12 3v3M19 12h3M2 12h3"/><circle cx="12" cy="12" r="3.4"/></svg>
+      </span>
+      <span><span class="t1" style="font-size: 16px;">Stairs &mdash; light</span><span class="t2" style="display: block;">2 switches &middot; one at each end</span></span>
+      <span style="display: inline-flex; align-items: center; height: 40px; padding: 0 16px; border-radius: 999px; background: var(--ink); color: var(--bg); font-size: 15px; font-weight: 500;">Stairs</span>
+      <span class="t2" style="padding-left: 6px;">Not the same light</span>
+    </div>
+
+    <div class="row" style="padding: 14px 16px;"><span style="width: 40px; height: 40px; border-radius: 13px; background: var(--surface-hi); display: grid; place-items: center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ink-2)" stroke-width="1.8" stroke-linecap="round"><path d="M12 3v3M19 12h3M2 12h3"/><circle cx="12" cy="12" r="3.4"/></svg></span><span class="t1" style="font-size: 16px;">Brilliant switch 0006</span><span class="field" style="width: 220px;">Which room?</span></div>
+
+    <!-- the one just pressed: chips for the room, and the one extra question, quiet -->
+    <div class="found" style="grid-template-columns: auto 1fr; padding: 16px 18px;">
+      <span class="ic" style="width: 40px; height: 40px; border-radius: 13px;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 3v3M19 12h3M2 12h3"/><circle cx="12" cy="12" r="3.4"/></svg>
+      </span>
+      <span><span class="t1" style="font-size: 17px;">Brilliant switch 000a</span><span class="t2" style="display: block;">&nbsp;</span></span>
+      <div style="grid-column: 1 / -1; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--edge);">
+        <div class="t2" style="display: inline-flex; align-items: center; gap: 9px; margin-bottom: 10px; color: var(--ink-2); font-size: 14.5px;"><span class="dot"></span>You just pressed this one. A light that dims, with a motion sensor in it.</div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+          <span style="display: inline-flex; align-items: center; height: 40px; padding: 0 16px; border-radius: 999px; background: var(--surface); border: 1px solid var(--edge); font-size: 14.5px;">Hallway</span>
+          <span style="display: inline-flex; align-items: center; height: 40px; padding: 0 16px; border-radius: 999px; background: var(--surface); border: 1px solid var(--edge); font-size: 14.5px;">Kitchen</span>
+          <span style="display: inline-flex; align-items: center; height: 40px; padding: 0 16px; border-radius: 999px; background: var(--surface); border: 1px solid var(--edge); font-size: 14.5px;">Living room</span>
+          <span style="display: inline-flex; align-items: center; height: 40px; padding: 0 16px; border-radius: 999px; background: var(--surface); border: 1px solid var(--edge); font-size: 14.5px;">Landing</span>
+          <span style="display: inline-flex; align-items: center; height: 40px; padding: 0 16px; border-radius: 999px; background: var(--surface); border: 1px solid var(--edge); font-size: 14.5px; color: var(--muted);">Another room&hellip;</span>
+        </div>
+        <!-- the extra press. An offer, not a step: it times out on its own and nothing waits on it. -->
+        <div style="display: flex; align-items: center; gap: 10px; margin-top: 14px; color: var(--ink-2); font-size: 14.5px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--lamp)" stroke-width="1.8" stroke-linecap="round"><path d="M12 3v7"/><path d="M6.3 7.3a8 8 0 1 0 11.4 0"/></svg>
+          <span>Another switch for this same light? <b style="color: var(--ink); font-weight: 500;">Go and press it too.</b></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="row" style="padding: 14px 16px;"><span style="width: 40px; height: 40px; border-radius: 13px; background: var(--surface-hi); display: grid; place-items: center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ink-2)" stroke-width="1.8" stroke-linecap="round"><path d="M12 3v3M19 12h3M2 12h3"/><circle cx="12" cy="12" r="3.4"/></svg></span><span class="t1" style="font-size: 16px;">Brilliant switch 000e</span><span class="field" style="width: 220px;">Which room?</span></div>
+    <div class="row" style="padding: 14px 16px;"><span style="width: 40px; height: 40px; border-radius: 13px; background: var(--surface-hi); display: grid; place-items: center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ink-2)" stroke-width="1.8" stroke-linecap="round"><path d="M12 3v3M19 12h3M2 12h3"/><circle cx="12" cy="12" r="3.4"/></svg></span><span class="t1" style="font-size: 16px;">Brilliant switch 0014</span><span class="field" style="width: 220px;">Which room?</span></div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
