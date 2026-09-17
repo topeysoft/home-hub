@@ -620,3 +620,86 @@ Two things this run also settled:
 **So the console is retirable in full.** A factory-reset Brilliant dimmer becomes a working dimmer with motion
 on our own network by: provision, bind (`0x1000`, `0x1002`, `0x0820/0x0001`), write the load-type/config fields
 captured from a still-configured switch, power-cycle. Nothing Brilliant remains in the loop.
+
+## Spec: adopting a switch, as a provisioner would replay it
+
+*Written for the firmware/puck provisioner behind "Add a wall switch". This is the exact ordered sequence,
+with the two orderings that are load-bearing called out. Proven by hand on two switches (16 September 2026).*
+
+**The one rule that is easy to miss:** the vendor model must be bound to the AppKey **before** any vendor
+config write, and the config must be written **before** the power-cycle. Get either order wrong and the switch
+looks like it is simply refusing to be configured — writes are accepted on the wire and silently dropped.
+
+### 1. Discover
+
+The switch advertises unprovisioned: PB-GATT service `0x1827`, and a PB-ADV Unprovisioned Device beacon
+(AD type `0x2B`). Its **QR code is 32 bytes of ASCII hex: the first 16 are the Device UUID, the last 16 are a
+128-bit Static OOB secret.** Match the advertised UUID against the scanned QR's first half.
+
+On macOS, scan with a detection callback rather than a one-shot discover: the switch interleaves its `0xFEE4`
+DFU beacon with the `0x1827` beacon, and a scan that keeps only the latest advertisement misses it
+(`tools/ble.py`).
+
+### 2. Provision (PB-GATT)
+
+| Step | Notes |
+|---|---|
+| Invite | attention 0x00 |
+| ← Capabilities | |
+| Start | algorithm `0x00`, public key `0x00`, **auth method `0x01` (Static OOB)** for a QR add; `0x00` (No OOB) works for a switch we factory-reset ourselves |
+| PublicKey ⇄ | P-256 ECDH. **The PDU buffer must hold 65 bytes** (type + 64-byte key) — a 64-byte buffer overflows and reboots the chip mid-handshake |
+| Confirmation ⇄ | `CMAC(conf_key, random ‖ auth)`, where `auth` is the QR's 16-byte OOB for method `0x01`, else 16 zero bytes |
+| Random ⇄ | verify the provisioner's confirmation |
+| Data | netkey, key index, flags, **IV index**, unicast. IV index must match the network or every later message fails to decrypt, silently |
+| ← Complete | |
+
+### 3. Configure the node (DevKey-encrypted, to its new unicast)
+
+In this order:
+
+1. **Config AppKey Add** — netkey index 0, appkey index 0, the AppKey → status `0x00`.
+2. **Config Model App Bind** → `Generic OnOff Server 0x1000` → status `0x00`.
+3. **Config Model App Bind** → `Generic Level Server 0x1002` → status `0x00`.
+4. **Config Model App Bind** → **vendor `0x0820/0x0001`** → status `0x00`. The model identifier here is
+   *company id LE ‖ model id LE* (4 bytes), not the 2-byte SIG form. **Without this bind, every step 4 write is
+   dropped without a reply** — the symptom is a switch that binds fine and then answers no vendor Get at all.
+
+### 4. Write the load configuration (AppKey-encrypted)
+
+Vendor access PDUs are `C1 20 08` (opcode ‖ company id LE), then:
+
+    write   C1 2008 12 <field> <value LE> 00      ->  C1 2008 13 <field> <value> 00
+    read    C1 2008 11 <field>                    ->  C1 2008 13 <field> <value> 00
+
+**The trailing `00` on a write is load-bearing** — omit it and the write is ignored silently. Order among the
+fields does not matter; they must all come after the binds. Values are the ones captured from a switch the
+console had already set up (`tools/vendor_store.py`), because they differ per switch. The hallway dimmer's set,
+as a worked reference:
+
+| Field | Value | What it appears to be |
+|---|---|---|
+| `0x1b` | `00` | **load type candidate** — `00` on both dimmers seen, `03` on the unit stuck in on/off mode |
+| `0x56` | `03` | **load type candidate** — `03` on the dimmer, `02` on the unit stuck in on/off mode |
+| `0x1a` | `02` | not the load type: two working dimmers differed here (`02` and `01`) |
+| `0x48`, `0x4f` | `01`, `01` | **enable unsolicited reporting** of field `0x13`; setting them starts a ~5 Hz publication |
+| `0x03`, `0x07` | `c800` (200), `f401` (500) | thresholds for that reporting; leaving them at 0 floods the mesh |
+| `0x4c`, `0x4d`, `0x52` | `64`, `00`, `64` | dimming curve/limits, per switch |
+
+**Not bisected.** The set as a whole is the recipe and it works; which single field flips dimmer vs switch was
+not isolated, because each guess costs a power-cycle and a human looking at a lamp. `0x1b` and `0x56` are the
+two candidates, on the evidence above. Fields deliberately **not** replayed: `0x0e` (Device UUID), `0x47`
+(device id), `0x0b` and `0x1d` (free-running counters), `0x13` (live motion reading), `0x0c` (on/off notice).
+
+### 5. Power-cycle the switch
+
+Mains off and on. **The load type is read only at boot** — this is why every live write looked inert for a whole
+evening. There is no mesh message that applies it.
+
+### 6. Verify
+
+`Generic Level Set` = `82 06 <level LE> <tid> <transition 0x05> <delay 0x00>`, level on a **0–1000 scale**, not
+the SIG `−32768…32767` mapping. A working dimmer answers `Generic Level Status` carrying *present* and *target*
+and ramps; the lamp follows. A switch still in on/off mode echoes a level and the lamp does not move.
+
+`tools/restore_switch.py adopt <captured.json>` / `verify <addr>` runs steps 1–4 and 6 from the laptop, and is
+the reference implementation of this sequence.

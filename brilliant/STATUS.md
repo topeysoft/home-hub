@@ -104,6 +104,9 @@ Full contract at the top of `esp32-bridge/src/main.cpp`; the story of building i
   re-provisioned as `0x0005` on our network: provision, bind (`0x1000`, `0x1002`, and the vendor model
   `0x0820/0x0001` — the vendor bind is essential or config writes are dropped), write the switch's own captured
   config (`tools/vendor_store.py` reads it), power-cycle. It then dimmed on command with the lamp following, 30→100→10→60→100%.
+  The exact ordered sequence, written as a spec a firmware provisioner can replay (and which fields do what), is
+  **Spec: adopting a switch** in [`../docs/brilliant.md`](../docs/brilliant.md); `tools/restore_switch.py` is the
+  reference implementation (`adopt <captured.json>`, then power-cycle, then `verify <addr>`).
 - ~~Confirm motion with a body.~~ Done: a walk past `0x000b` raised `0x13` from ~5 to 8 and the bridge reported motion.
 - **Bisect the recipe** (optional): which of the seven fields is the selector; `0x48`/`0x4f` are the reporting enable,
   `0x03`/`0x07` its thresholds, so `0x1a`/`0x1b`/`0x56` are the mode candidates. Nobody walked past a switch during the build. Field `0x13` rests at different
