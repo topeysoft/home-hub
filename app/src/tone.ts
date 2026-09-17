@@ -145,13 +145,58 @@ function reads(onL: number, ratio: number): number {
   return clamp(Math.cbrt(ratio * (onL ** 3 + 0.05) - 0.05), 0, 1)
 }
 
-export function glassVars(elevation: number, condition: string): ToneVars {
+/*
+ * What a tone does to GLASS, which until 17 Sep 2026 was nothing at all.
+ *
+ * glassVars took an elevation and a condition and no tone, so on the glass face
+ * Warm, Cool and Pastel all resolved to the same pane -- while the Look page
+ * went on offering all four under a heading that says "Cards", with swatches
+ * built from toneVars that ignore the face. Four different colours to choose
+ * between, and choosing did nothing. See design/nightfall page 2.
+ *
+ * THE RULE: a tone leans the PANE, never the SKY. The sky is real -- it tracks
+ * the hour and the weather, and every card and every pane in the system holds
+ * its distance from ground(). Warming it would make every distance here a lie,
+ * and it would be a lie about the weather. The glass is a made object, and what
+ * a made object is tinted with is a choice. So --glass-field is untouched below
+ * and only the pane moves.
+ *
+ * `follow` is deliberately NOT in this table. On paper it changes character --
+ * pastel by day, warm after dark -- and doing that here would repaint every
+ * Nightfall house in the world after sunset tomorrow, which is a change to the
+ * default rather than the repair of a dead control. Left out, the pane keeps
+ * the sky's own hue exactly as it always has, and nobody's house moves unless
+ * they went and asked.
+ *
+ * Chroma is the number that matters: the pane sits at .012 unleaned, which is
+ * near enough neutral, and .045 is the least that reads as a tint rather than
+ * as a rendering artefact. Pastel is the one tone that has to move more than
+ * its hue -- on paper its whole character is a much lighter card, dL .335
+ * against .135 -- so here it is a MILKIER pane rather than merely a bluer one,
+ * lifted and carried at a higher solidity.
+ */
+type Lean = { H: number; C: number; dL: number; alpha: [number, number, number]; sweep: number }
+const LEANS: Record<Exclude<ToneName, 'follow'>, Lean> = {
+  warm: { H: 66, C: 0.045, dL: 0, alpha: [0.36, 0.14, 0.26], sweep: 1.07 },
+  cool: { H: 245, C: 0.045, dL: 0, alpha: [0.36, 0.14, 0.26], sweep: 1.07 },
+  pastel: { H: 245, C: 0.038, dL: 0.1, alpha: [0.48, 0.24, 0.4], sweep: 1.36 },
+}
+const PANE_ALPHA: [number, number, number] = [0.34, 0.12, 0.24]
+
+export function glassVars(elevation: number, condition: string, name: ToneName = 'follow'): ToneVars {
   const field = oklch(ground(elevation, condition))
   const [top, band, horizon] = palette(elevation, wxOf(condition))   // the sky's own three bands, weathered
 
-  const gL = clamp(field.L + 0.10, 0.16, 0.9)
+  const lean = name === 'follow' ? null : LEANS[name]
+  const gL = clamp(field.L + 0.10 + (lean?.dL ?? 0), 0.16, 0.9)
   const bright = clamp((field.L - 0.18) / 0.34)              // 0 at night, 1 at a clear noon
-  const H = field.H.toFixed(0)
+  const H = (lean?.H ?? field.H).toFixed(0)
+  const gC = lean?.C ?? 0.014
+  const alpha = lean?.alpha ?? PANE_ALPHA
+  /* the catch along a pane's edge is made of the same light the pane is, so a
+     warm pane cannot be trimmed in white without reading as two materials */
+  const rimInk = (at: number | string) =>
+    lean ? `oklch(0.97 0.018 ${H} / ${at})` : `rgba(255,255,255,${at})`
   const at = (lo: number, hi: number) => lo + (hi - lo) * bright
   const a = (lo: number, hi: number) => at(lo, hi).toFixed(3)
   const airOf = mix(top, [4, 4, 10], 0.55)                   // what a pane's shadow is made of, and its scrim
@@ -171,14 +216,14 @@ export function glassVars(elevation: number, condition: string): ToneVars {
   const bodyL = clamp(roomL + PANE_LIFT[2], 0.04, 0.92)
 
   return {
-    '--glass': `linear-gradient(148deg, oklch(${(gL + 0.07).toFixed(3)} 0.014 ${H} / .34),`
-      + ` oklch(${gL.toFixed(3)} 0.012 ${H} / .12) 46%,`
-      + ` oklch(${(gL + 0.03).toFixed(3)} 0.014 ${H} / .24))`,
+    '--glass': `linear-gradient(148deg, oklch(${(gL + 0.07).toFixed(3)} ${gC.toFixed(3)} ${H} / ${alpha[0]}),`
+      + ` oklch(${gL.toFixed(3)} ${(gC * 0.857).toFixed(3)} ${H} / ${alpha[1]}) 46%,`
+      + ` oklch(${(gL + 0.03).toFixed(3)} ${gC.toFixed(3)} ${H} / ${alpha[2]}))`,
     /* one band of light across the pane, never more than one */
-    '--glass-sweep': `linear-gradient(112deg, transparent 26%, rgba(255,255,255,${a(0.15, 0.08)}) 45%,`
+    '--glass-sweep': `linear-gradient(112deg, transparent 26%, rgba(255,255,255,${(at(0.15, 0.08) * (lean?.sweep ?? 1)).toFixed(3)}) 45%,`
       + ` rgba(255,255,255,.02) 56%, transparent 64%)`,
-    '--glass-rim': `linear-gradient(158deg, rgba(255,255,255,${a(0.74, 0.4)}), rgba(255,255,255,.08) 34%,`
-      + ` rgba(14,14,22,${a(0.02, 0.2)}) 62%, rgba(255,255,255,${a(0.42, 0.26)}))`,
+    '--glass-rim': `linear-gradient(158deg, ${rimInk(a(0.74, 0.4))}, ${rimInk('.08')} 34%,`
+      + ` rgba(14,14,22,${a(0.02, 0.2)}) 62%, ${rimInk(a(0.42, 0.26))})`,
     '--glass-inner': `inset 0 -46px 56px -48px ${rgb(mix(top, [12, 13, 16], 0.5), 0.9)}`,
     '--glass-drop': `0 ${Math.round(at(28, 20))}px ${Math.round(at(64, 44))}px -26px ${air(at(0.7, 0.5))},`
       + ` 0 2px 10px ${air(at(0.3, 0.42))}`,
@@ -214,6 +259,12 @@ export function glassVars(elevation: number, condition: string): ToneVars {
        What makes a pane read as glass is the catch along its top, the blur it
        is made of and the sweep across it; not being the lightest thing in the
        room. */
+    /* A pane takes the tone's HUE with everything else made of glass, but not
+       pastel's lift. Its lightness is derived from roomL, and the ink below
+       holds a measured ratio against where that lands; lifting it here would
+       move the floor those numbers were read off without moving the numbers. A
+       milkier card and a pane the usual weight is the safe half of the trade,
+       and the pane is the one surface in the panel carrying a page of text. */
     '--pane': (() => {
       const L = (i: number) => clamp(roomL + PANE_LIFT[i] / PANE_SOLID[i], 0.06, 0.92).toFixed(3)
       return `linear-gradient(168deg, oklch(${L(0)} 0.014 ${H} / ${PANE_SOLID[0]}),`

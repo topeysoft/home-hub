@@ -11,11 +11,18 @@
  * then running off to the RIGHT. What goes over the right edge is therefore
  * always the quiet end of the house -- ranking decides what is hidden, rather
  * than whatever happened to land below a fold.
+ *
+ * Since 17 Sep 2026 there is a fourth height and rather less going over that
+ * edge. A room with nothing on is a ROW, not a card, so the quiet end of a big
+ * house is an index you scan instead of a wall of empty rectangles -- a
+ * thirteen-room house now lands inside the screen with margin to spare, where
+ * before it hid three rooms past the right-hand side. rooms.ts decides which a
+ * room gets; nothing here has to know.
  */
 import { computed, ref, watch } from 'vue'
 import type { Room } from '../api'
 import { houseLine } from '../store'
-import { arrangeRooms, type Cell } from '../rooms'
+import { arrangeRooms, tracks, type Cell } from '../rooms'
 import { useArrive } from '../arrive'
 import RoomCard from '../RoomCard.vue'
 
@@ -43,6 +50,10 @@ const flow = useArrive(() => !props.rooms.length, () => props.woke)
  */
 const plan = ref<Cell[]>([])
 const byId = computed(() => new Map(props.rooms.map(r => [r.id, r])))
+/* where each card and row sits in the grid's fifteen tracks -- see rooms.ts.
+   Derived from the plan rather than stored with it, so the thing the test pins
+   stays the arrangement and not the arithmetic that lays it out. */
+const track = computed(() => tracks(plan.value))
 watch(
   () => props.rooms.map(r => r.id).join(),
   () => (plan.value = arrangeRooms(props.rooms)),
@@ -63,7 +74,8 @@ watch(
          of the house last -->
     <div class="rooms-bento" :class="flow">
       <template v-for="(c, i) in plan" :key="c.id">
-        <RoomCard v-if="byId.get(c.id)" :room="byId.get(c.id)!" :size="c.size" :style="{ '--flow-i': i }" @open="$emit('open', $event)" />
+        <RoomCard v-if="byId.get(c.id)" :room="byId.get(c.id)!" :size="c.size"
+          :style="{ '--flow-i': i, '--span': track[i].span, '--row-at': track[i].at }" @open="$emit('open', $event)" />
       </template>
     </div>
   </section>

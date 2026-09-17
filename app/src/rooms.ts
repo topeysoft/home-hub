@@ -14,9 +14,9 @@
  * RoomCard.vue for what each size is allowed to say.
  */
 import type { Device, Room } from './api'
-import { cap, isActive, isDead, roomActive } from './store'
+import { activityParts, cap, isActive, isDead, roomActive } from './store'
 
-export type Size = 'full' | 'half' | 'third'
+export type Size = 'full' | 'half' | 'third' | 'row'
 export type Cell = { id: string; size: Size }
 
 const lit = (d: Device) => cap(d) === 'light' && d.state === 'on' && !isDead(d)
@@ -69,8 +69,31 @@ export function rankRooms(rooms: Room[]): Room[] {
     .map(x => x.r)
 }
 
+/* How much the room has to say, counted rather than guessed: the same parts the
+   card's own line is built from. */
+const saying = (r: Room) => activityParts(r).length
+
 /*
- * ONE room leads, and one stands beside it. The rest are thirds.
+ * A row spans three of the grid's fifteen tracks, so five rows are exactly one
+ * column -- which is where the 106px in design/rooms/QuietIndex.dc.html came
+ * from, and it is also the rule: the index is WHOLE COLUMNS or it is nothing.
+ *
+ * Tried first as a simple threshold, and the mock house showed why it does not
+ * work: four quiet rooms made one column with three rows in it and 240px of sky
+ * underneath, which does not read as an index, it reads as a bug. So the
+ * remainder -- the highest-ranked of the quiet rooms, the ones nearest to doing
+ * something -- stay cards and join the bento above, and only whole columns of
+ * five go to the index.
+ *
+ * The cost is honest and worth writing down: a house whose quiet end hovers
+ * near a multiple of five will see the tab change shape as rooms come on and
+ * go off. Nothing here is worth a hole in the wall to avoid that.
+ */
+const PER_COLUMN = 5
+
+/*
+ * ONE room leads, one stands beside it, and the quiet end of the house is an
+ * index rather than a wall of empty cards.
  *
  * The room screen says it about lamps -- "a room with four lights on is not a
  * room with four headlines in it" -- and a house with four rooms on is not a
@@ -78,15 +101,64 @@ export function rankRooms(rooms: Room[]): Room[] {
  * evening with the kitchen, the office and the bedroom all on came out as three
  * big cards and no lead, which is the flat grid again with bigger boxes.
  *
- * The lead is FULL when something is playing in it, because that is the room
- * that cannot be said in one line: artwork, a title, a button and the lamps.
- * Without a screen on, the loudest room in the house still fits in a half.
+ * What changed on 17 Sep 2026 is the other end. A room with nothing on has one
+ * short sentence to its name, and a 300x186 card is three times the furniture
+ * that sentence needs; ten of them ran the house off the right edge of a wall
+ * panel and hid three rooms behind it. As rows they are an index you scan, the
+ * house fits on one screen, and the space comes back to the rooms that are
+ * actually doing something -- which is why the lead may now be FULL without a
+ * screen on, so long as it has more than one thing to say. See
+ * design/rooms/QuietIndex.dc.html.
  */
 export function sizeRooms(ranked: Room[]): Cell[] {
-  return ranked.map((r, i) => ({
-    id: r.id,
-    size: tier(r) > 0 || i > 1 ? 'third' : i === 0 ? (playingIn(r) ? 'full' : 'half') : 'half',
-  }))
+  const quiet = ranked.filter(r => tier(r) > 0).length
+  const rows = quiet - (quiet % PER_COLUMN)
+  /* the quiet rooms are already last -- that is what tier() sorts on -- so the
+     index is simply the tail, and everything before it is the bento */
+  const firstRow = ranked.length - rows
+  return ranked.map((r, i): Cell => {
+    if (i >= firstRow) return { id: r.id, size: 'row' }
+    if (tier(r) > 0) return { id: r.id, size: 'third' }
+    if (i > 1) return { id: r.id, size: 'third' }
+    if (i === 1) return { id: r.id, size: 'half' }
+    return { id: r.id, size: playingIn(r) || (rows > 0 && saying(r) >= 2) ? 'full' : 'half' }
+  })
+}
+
+/* What each size is worth in the grid's fifteen tracks. The same table the test
+   adds up to check the wall comes out flush. */
+const TRACKS = { full: 15, half: 10, third: 5, row: 3 } as const
+const COLUMN = 15
+
+export type Track = { span: number; at?: number }
+
+/*
+ * Where each cell sits in the grid, which the grid cannot be left to work out
+ * on its own. Two things go wrong if it is:
+ *
+ * The bento's last column is often short -- a house whose cards come to fifty
+ * tracks leaves five at the foot of the fourth column -- and `column dense`
+ * will drop the first row of the index into that hole. The index then runs one
+ * room short for the rest of its length and the bottom of a column is a gap
+ * where a room should be. So the last CARD stretches to the foot of its column,
+ * which closes the hole and is better looking than the hole was.
+ *
+ * And a row is placed on its own track rather than flowed, so five rows are one
+ * column top to bottom and the sixth starts the next. Flowed, a row that
+ * happened to fit a leftover two tracks would take them and drag the rest of
+ * the index up behind it.
+ */
+export function tracks(plan: Cell[]): Track[] {
+  const out: Track[] = plan.map(c => ({ span: TRACKS[c.size] }))
+  const cards = plan.reduce((n, c, i) => c.size === 'row' ? n : i + 1, 0)   // one past the last card
+  let fill = 0
+  for (let i = 0; i < cards; i++) {
+    fill = fill + out[i].span > COLUMN ? out[i].span : fill + out[i].span
+  }
+  if (cards && fill < COLUMN) out[cards - 1].span += COLUMN - fill
+  const first = plan.findIndex(c => c.size === 'row')
+  if (first >= 0) for (let i = first; i < plan.length; i++) out[i].at = 1 + 3 * ((i - first) % PER_COLUMN)
+  return out
 }
 
 /** The whole arrangement, which is the two above and nothing else. */

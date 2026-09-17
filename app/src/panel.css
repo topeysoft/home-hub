@@ -3920,7 +3920,14 @@ select.input {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) minmax(160px, 220px);
   gap: 12px;
-  align-items: center;
+  /* Lined up on the row's FIRST LINE -- the 44px name field -- and not on the
+     middle of the row. Centred, a unit with a parts line under its name made the
+     middle column taller than the others, so the icon and the room picker sank
+     10px below the name they belong to while every plain row beside them stayed
+     level. Measured on New devices: the field's middle sat at 653 and its own
+     icon's at 664. Everything shorter than the field is nudged to the middle of
+     it below, which is the one line they all have in common. */
+  align-items: start;
   padding: 10px 12px;
   border-radius: 18px;
   background: var(--surface);
@@ -3962,10 +3969,20 @@ select.input {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 0 12px 6px;
-  margin-top: -4px;
+  padding: 0 12px;
+  /* was -4px, which tucked the line up THROUGH the field's bottom border and
+     clipped its ascenders -- "Light · Motion" lost its top on every unit */
+  margin-top: 3px;
   font-size: 13.5px;
   color: var(--muted);
+}
+/* the middle of the name field, for the things beside it that are shorter than
+   it: the icon at 40 and the small buttons at 36 */
+.sort-row > .sort-icon {
+  margin-top: 2px;
+}
+.sort-row > .button {
+  margin-top: 4px;
 }
 .sort-icon {
   width: 40px;
@@ -5211,6 +5228,12 @@ select.input {
   width: 26px;
   height: 40px;
   border-radius: 8px;
+}
+/* glass is one material, not three cards, so it gets one chip -- and the width
+   the three of them had, because a pane says what it is by how much of the sky
+   it lets through and 26px of it says nothing */
+.look-swatch.one i {
+  width: 88px;
 }
 /* a drawing of the arrangement, not a screenshot of it: one row you sweep
    through, or a column you scroll */
@@ -7886,7 +7909,17 @@ select.input {
   min-width: 0;
   display: grid;
   grid-auto-flow: column dense;
-  grid-template-rows: repeat(3, minmax(0, 1fr));
+  /* Fifteen tracks, not three, and the three are still exactly where they were:
+     a span of five tracks with four gaps between them measures the same as one
+     track of three did, for any stage height and any gap. So the card sizes are
+     untouched and the grid gains a fourth rhythm for free -- a row is a span of
+     THREE, which makes five rows exactly one column. That is where the 106px in
+     design/rooms/QuietIndex.dc.html comes from; it was not chosen, it fell out.
+
+     One grid rather than two side by side, because the arrival at the foot of
+     this file staggers `.rooms-bento > .room-cell` as a direct child, and a wall
+     of rooms that half-arrives is worse than a wall that is merely plain. */
+  grid-template-rows: repeat(15, minmax(0, 1fr));
   grid-auto-columns: var(--room-col, clamp(276px, 22vw, 400px));
   gap: 16px 20px;
   overflow-x: auto;
@@ -7899,14 +7932,24 @@ select.input {
   min-width: 0;
   min-height: 0;
 }
+/* The span each size is worth, and `--span` is how the LAST card of the bento
+   stretches to the foot of its column -- see tracks() in rooms.ts. The literal
+   stays as the fallback so a card is the right height even if nothing sets it. */
 .rooms-bento > .room-cell[data-size='full'] {
-  grid-row: span 3;
+  grid-row: span var(--span, 15);
 }
 .rooms-bento > .room-cell[data-size='half'] {
-  grid-row: span 2;
+  grid-row: span var(--span, 10);
 }
 .rooms-bento > .room-cell[data-size='third'] {
-  grid-row: span 1;
+  grid-row: span var(--span, 5);
+}
+.rooms-bento > .room-cell[data-size='row'] {
+  /* placed, not flowed: `column dense` above will drop a three-track row into a
+     three-track hole left by the cards, which costs the index a room at the
+     bottom of its last column and puts a gap where a room should be. The start
+     comes from rooms.ts, which knows how many rows there are to place. */
+  grid-row: var(--row-at, auto) / span 3;
 }
 
 /* ---------- the card ---------- */
@@ -7917,8 +7960,19 @@ select.input {
   overflow: hidden;
   padding: 18px 20px;
   border-radius: 24px;
-  background: rgba(26, 28, 34, 0.82);
-  border: 1px solid var(--edge);
+  /* The tone, which this surface went without. Warm, Cool and Pastel are
+     `--card-plain` and the ink that has to sit on it, and every surface that
+     carries no colour of its own reads them -- `.tile.plain`, `.tile.light`,
+     `.room-card`. This one hard-coded the slab below and so stayed the same
+     card at every setting the house offered.
+
+     Declared here rather than joining that list up at the tone rules, and this
+     is the cascade and not a preference: `.room-cell` and `.room-card` weigh
+     the same, and this block is further down the file, so a selector added up
+     there would be silently overwritten by the very line it was fixing. Same
+     trap the glass rules note for `.topbar-add`. */
+  background: var(--card-plain, rgba(26, 28, 34, 0.82));
+  border: 1px solid var(--card-edge, var(--edge));
   backdrop-filter: var(--frost);
   transition:
     transform 0.18s var(--ease),
@@ -7964,6 +8018,7 @@ select.input {
 }
 .room-cell:active {
   transform: scale(0.99);
+  background: var(--card-press, var(--surface-press));
 }
 .room-cell-still,
 .room-cell-art {
@@ -8013,7 +8068,7 @@ select.input {
   min-width: 0;
 }
 .room-cell-mark {
-  color: var(--ink-2);
+  color: var(--card-ink-2, var(--ink-2));
 }
 .room-cell.lit .room-cell-mark {
   color: rgba(255, 236, 200, 0.86);
@@ -8044,9 +8099,9 @@ select.input {
   height: 28px;
   padding: 0 11px;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--card-hi, rgba(0, 0, 0, 0.3));
   font-size: 13px;
-  color: var(--ink-2);
+  color: var(--card-ink-2, var(--ink-2));
   font-variant-numeric: tabular-nums;
 }
 .room-cell-chip.live {
@@ -8065,6 +8120,7 @@ select.input {
   font-weight: 500;
   letter-spacing: -0.012em;
   line-height: 1.15;
+  color: var(--card-ink, var(--ink));
 }
 .room-cell[data-size='half'] .room-cell-name {
   font-size: 23px;
@@ -8075,12 +8131,12 @@ select.input {
   letter-spacing: -0.018em;
 }
 .room-cell.empty .room-cell-name {
-  color: var(--ink-2);
+  color: var(--card-ink-2, var(--ink-2));
 }
 .room-cell-line {
   margin-top: 4px;
   font-size: 13.5px;
-  color: var(--ink-2);
+  color: var(--card-ink-2, var(--ink-2));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -8091,10 +8147,133 @@ select.input {
   margin-top: 5px;
 }
 .room-cell.waiting .room-cell-line {
-  color: var(--lamp);
+  color: var(--card-lamp-ink, var(--lamp));
 }
 .room-cell.empty .room-cell-line {
+  /* the card is already at .62 opacity; a second step down in a token that does
+     not follow the tone is how this line vanished on a pale one */
+  color: var(--card-ink-2, var(--muted));
+}
+
+/* A card that brings its own picture is never overpainted -- the tone rules say
+   so about the SURFACE, and it has to hold for the ink as well. Under a pale
+   tone `--card-ink` is near-black, which is right on a pale card and wrong on a
+   camera frame or an album cover, where it was 2.1:1 of dark grey on a dark
+   photograph. The veil under these words is dark whatever the hour, so the ink
+   that reads on it is the panel's own and not the card's. */
+.room-cell.shot .room-cell-name,
+.room-cell.shot .room-cell-cap,
+.room-cell.shot .room-cell-mark,
+.room-cell.shot .room-cell-chip,
+.room-cell.shot .room-cell-knob,
+.room-cell.shot .room-cell-pill {
+  color: var(--ink);
+}
+.room-cell.shot .room-cell-line,
+.room-cell.shot .room-cell-lamp {
+  color: var(--ink-2);
+}
+.room-cell.shot .room-cell-chip,
+.room-cell.shot .room-cell-knob,
+.room-cell.shot .room-cell-pill {
+  background: rgba(0, 0, 0, 0.32);
+}
+.room-cell.shot .room-cell-play {
+  background: var(--lamp);
+  color: #2a1c10;
+}
+
+/* ---------- the temperature, where a third has no corner to spare ----------
+   At the two big sizes it is a chip in the top corner, which is where a reading
+   goes when the card has a corner going spare. A third does not: the corner is
+   the only place the mark has, and a chip beside it is two small objects in a
+   row arguing about which one you were meant to read. It rides with the name
+   instead, which is also the truer statement -- 21 degrees is a fact about the
+   room, not a badge on it. */
+.room-cell-temp {
+  position: absolute;
+  top: -3px;
+  right: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 11px;
+  border-radius: 999px;
+  background: var(--card-hi, rgba(255, 255, 255, 0.07));
+  font-size: 13px;
+  color: var(--card-ink-2, var(--ink-2));
+  font-variant-numeric: tabular-nums;
+}
+.room-cell-temp svg {
   color: var(--muted);
+}
+.room-cell-foot:has(.room-cell-temp) .room-cell-name,
+.room-cell-foot:has(.room-cell-temp) .room-cell-line {
+  padding-right: 74px;
+}
+
+/* ---------- the row: the quiet end of the house ----------
+   Ten rooms with nothing on came to ten 300x186 cards, which is three times the
+   furniture one short sentence needs and ran the house off the right edge of a
+   wall panel -- so the three rooms that fell off were invisible, and the ten
+   that did not were a wall of empty rectangles. A row is the size of the
+   sentence it carries. See rooms.ts for when a room gets one, and
+   design/rooms/QuietIndex.dc.html for the board.
+
+   Everything below is the same card laid along instead of down: it keeps the
+   material, the tone, the way in underneath, and the name and the line in that
+   order. Nothing here is a different object, which is why it is `.room-cell`
+   with a fourth `data-size` and not a fifth surface. */
+.room-cell[data-size='row'] {
+  flex-direction: row;
+  align-items: center;
+  gap: 14px;
+  padding: 0 18px;
+  border-radius: 20px;
+}
+.room-cell[data-size='row'] > .room-cell-foot {
+  margin-top: 0;
+  flex: 1 1 auto;
+}
+.room-cell[data-size='row'] .room-cell-name {
+  font-size: 18px;
+}
+/* the mark, at the size a row can give it: the card wears it loose in a corner,
+   a row needs it to hold a column so ten names still start at one left edge */
+.room-cell-badge {
+  position: relative;
+  z-index: 2;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--card-hi, rgba(255, 255, 255, 0.06));
+  color: var(--card-ink-2, var(--ink-2));
+}
+.room-cell[data-size='row'] > .room-cell-chip {
+  position: relative;
+  z-index: 2;
+  flex: 0 0 auto;
+  margin-left: 0;
+}
+.room-cell[data-size='row'] > .room-cell-pill {
+  position: relative;
+  z-index: 2;
+  flex: 0 0 auto;
+  width: auto;
+  height: 36px;
+  margin-top: 0;
+  padding: 0 16px;
+  font-size: 14px;
+}
+/* the glow is sized to a card; at a row's height the same 70% is a lamp the
+   length of the whole thing, and the one row that has it is an invitation */
+.room-cell[data-size='row'] > .room-cell-glow {
+  inset: -110% -8% auto auto;
+  width: 34%;
 }
 
 /* ---------- what a full column buys: the rows a line cannot hold ---------- */
@@ -8186,8 +8365,8 @@ select.input {
   pointer-events: auto;
   border: 0;
   cursor: pointer;
-  color: var(--ink);
-  background: rgba(255, 255, 255, 0.12);
+  color: var(--card-ink, var(--ink));
+  background: var(--card-press, rgba(255, 255, 255, 0.12));
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -8221,7 +8400,7 @@ select.input {
   font-weight: 500;
 }
 .room-cell-pill.ghost {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--card-hi, rgba(255, 255, 255, 0.08));
 }
 .room-cell-knob:active,
 .room-cell-play:active,
@@ -8249,7 +8428,7 @@ select.input {
     grid-template-rows: none;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     grid-auto-columns: auto;
-    grid-auto-rows: minmax(150px, auto);
+    grid-auto-rows: auto;
     overflow-x: visible;
     overflow-y: visible;
     gap: 10px;
@@ -8260,6 +8439,14 @@ select.input {
   }
   .rooms-bento > .room-cell[data-size='full'] {
     grid-column: span 2;
+  }
+  /* The one size a phone does not have to shrink: a row is already a list, and
+     a list is what a phone wants. It takes the full width and keeps its own
+     height -- which is why the track above is `auto` and the 150px floor moved
+     onto the cards themselves, where a row can decline it. */
+  .rooms-bento > .room-cell[data-size='row'] {
+    grid-column: span 2;
+    min-height: 72px;
   }
   /* a half is 174px wide here, and the drawing lands under the power knob at
      that size. The name and the line are the whole card on a phone. */

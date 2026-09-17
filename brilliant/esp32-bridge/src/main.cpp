@@ -930,18 +930,39 @@ static void mqttCb(char *topic, uint8_t *payload, unsigned int len) {
     }
 }
 
+// Why this re-asserts the server every attempt: setServer() was called once in
+// setup() from the config as it stood at boot. A puck whose broker changes
+// afterwards (a cable write that does not restart, a field left blank at first
+// boot) would keep the stale address for ever and retry into nothing -- the
+// broker never sees a connection attempt at all, which reads as a dead puck
+// with healthy Wi-Fi. Re-asserting costs nothing and cannot go stale.
 static void mqttReconnect() {
     if (mqtt.connected()) return;
     static uint32_t last = 0;
     if (millis() - last < 5000) return;
     last = millis();
+
+    static uint32_t lastWhy = 0;        // say out loud why we are not on the broker, once a minute
+    bool moan = (millis() - lastWhy > 60000);
+    if (!cfg.mqttHost[0]) {
+        if (moan) { lastWhy = millis(); Serial.println("[mqtt] no broker configured -- waiting for the hub"); }
+        return;
+    }
+    mqtt.setServer(cfg.mqttHost, cfg.mqttPort);
+
     char id[40], will[80];
     snprintf(id, sizeof(id), "%s-bridge-%s", cfg.mqttBase, chipHex);
     bridgeTopic(will, sizeof(will), "status");
     bool ok = mqtt.connect(id, cfg.mqttUser[0] ? cfg.mqttUser : nullptr,
                            cfg.mqttUser[0] ? cfg.mqttPass : nullptr, will, 0, true, "offline");
     if (!ok) {
-        Serial.printf("[mqtt] connect failed (rc %d)\n", mqtt.state());
+        // Name the broker in the failure: "connect failed" against the wrong or
+        // an empty host looks identical to a broker that is refusing us.
+        if (moan) {
+            lastWhy = millis();
+            Serial.printf("[mqtt] connect failed (rc %d) to %s:%u as %s\n", mqtt.state(),
+                          cfg.mqttHost, (unsigned)cfg.mqttPort, id);
+        }
         return;
     }
     mqtt.publish(will, "online", true);
@@ -1091,6 +1112,11 @@ static uint8_t emptyScans = 0;
 
 void loop() {
     if (configBlank()) {   // waiting for the hub; the serial task is doing the work
+        static uint32_t saidBlank = 0;
+        if (millis() - saidBlank > 60000) {
+            saidBlank = millis();
+            Serial.println("[cfg] blank: no Wi-Fi/broker yet, so no MQTT and no mesh (cable only)");
+        }
         delay(200);
         return;
     }

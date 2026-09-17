@@ -165,11 +165,65 @@ export function activityParts(r: Room, withMedia = true): string[] {
   if (r.devices.some(d => cap(d) === 'camera' && d.state === 'recording')) parts.push('Recording')
   return parts
 }
-export function activity(r: Room): string {
+/*
+ * What a room is HOLDING, for a card that would otherwise say "Quiet".
+ *
+ * On a house of thirteen rooms, ten cards said the same word, which is the
+ * whole right-hand side of the Rooms tab saying nothing ten times over.
+ * design/rooms/Main.dc.html never drew that word: its quiet rooms said "Door
+ * closed · Camera idle", "Locked · Doorbell watching", "Mower docked". This is
+ * that line, and it was in the spec before it was a complaint.
+ *
+ * The grammar is activityParts' own, one state along. What is being KEPT --
+ * locked, shut, watched -- comes first, because that is what a person checks a
+ * quiet room for; what is merely off comes after it. Two parts at most: a third
+ * of a card is 260px wide and a third phrase is an ellipsis.
+ */
+export function restingParts(r: Room): string[] {
+  const parts: string[] = []
+  const locks = r.devices.filter(d => cap(d) === 'lock' && !isDead(d))
+  if (locks.length && locks.every(d => d.state === 'locked')) parts.push('Locked')
+  const shut = r.devices.filter(d => cap(d) === 'cover' && d.state === 'closed').length
+  if (shut) parts.push(shut === 1 ? 'Blind closed' : `${shut} blinds closed`)
+  /* A camera watching the porch is not the house doing something -- roomActive
+     says so, and that is why the porch is a quiet room at all. It is still the
+     truest thing a quiet porch has to say. */
+  const eyes = r.devices.filter(d => cap(d) === 'camera' && !isDead(d)).length
+  if (eyes) parts.push(eyes === 1 ? 'Camera watching' : `${eyes} cameras watching`)
+  const screens = r.devices.filter(d => cap(d) === 'media' && !isDead(d))
+  if (screens.length === 1) parts.push(`${shortName(screens[0], r)} off`)
+  else if (screens.length) parts.push(`${screens.length} screens off`)
+  const fans = r.devices.filter(d => cap(d) === 'fan' && !isDead(d))
+  if (fans.length === 1) parts.push(`${shortName(fans[0], r)} off`)
+  else if (fans.length) parts.push(`${fans.length} fans off`)
+  const lamps = r.devices.filter(d => cap(d) === 'light' && !isDead(d)).length
+  if (lamps) parts.push(lamps === 1 ? '1 light off' : `${lamps} lights off`)
+  const plugs = r.devices.filter(d => cap(d) === 'switch' && !isDead(d)).length
+  if (plugs) parts.push(plugs === 1 ? '1 plug off' : `${plugs} plugs off`)
+  return parts.slice(0, 2)
+}
+
+/*
+ * The line under a room's name, in two readings of the same sentence.
+ *
+ * `activity` is what the room is DOING, and it is what the three home layouts
+ * have always shown -- it still ends at "Quiet", because RoomGrid's card is
+ * one band among several and a band of resting states is a band of noise.
+ * `restingLine` is the Rooms tab's, where the card is the whole subject and
+ * "Quiet" is the absence of one. Only the two fallbacks differ, so the two
+ * readings can never disagree about a room that is actually doing something.
+ */
+export function activity(r: Room): string { return roomLine(r, false) }
+export function restingLine(r: Room): string { return roomLine(r, true) }
+function roomLine(r: Room, resting: boolean): string {
   const parts = activityParts(r)
   if (parts.length) return parts.join(' · ')
   if (r.id === 'unassigned') return r.devices.length === 1 ? '1 to place' : `${r.devices.length} to place`
   if (!r.devices.length) return 'Nothing here yet'
+  if (resting) {
+    const rest = restingParts(r)
+    if (rest.length) return rest.join(' · ')
+  }
   if (r.devices.every(d => cap(d) === 'camera')) return r.devices.length === 1 ? '1 camera' : `${r.devices.length} cameras`
   return 'Quiet'
 }

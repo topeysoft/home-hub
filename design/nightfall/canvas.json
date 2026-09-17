@@ -7,7 +7,8 @@
       "w": 1440,
       "h": 900,
       "title": "The shared screen \u2014 tap a card",
-      "is_interactive": true
+      "is_interactive": true,
+      "page": "page-1"
     },
     {
       "file": "Material.dc.html",
@@ -15,7 +16,8 @@
       "y": 0,
       "w": 1440,
       "h": 1800,
-      "title": "The material"
+      "title": "The material",
+      "page": "page-1"
     },
     {
       "file": "Motion.dc.html",
@@ -24,7 +26,44 @@
       "w": 1440,
       "h": 2110,
       "title": "How it moves",
-      "is_interactive": true
+      "is_interactive": true,
+      "page": "page-1"
+    },
+    {
+      "file": "ToneFollow.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Follow the light \u2014 today",
+      "page": "page-2"
+    },
+    {
+      "file": "ToneWarm.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Warm",
+      "page": "page-2"
+    },
+    {
+      "file": "ToneCool.dc.html",
+      "x": 3120,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Cool",
+      "page": "page-2"
+    },
+    {
+      "file": "TonePastel.dc.html",
+      "x": 4680,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Pastel",
+      "page": "page-2"
     }
   ],
   "annotations": [
@@ -33,42 +72,56 @@
       "x": -520,
       "y": 40,
       "w": 440,
-      "text": "The reference, rebuilt at 1440x900 on this house: the same composition (weather left and off-card, what is playing tall in the middle, two glance tiles stacked, the rail cut by the right edge, the orb and the family along the bottom) with your own rooms in it.\n\nFour things are live. Tap the Blinds card and the pane rises the way the video does it. Tap the field to replay the wake. Tap play. Tap the orb and it opens into the command box.\n\nThe chips above the frame: Sky swaps the condition, which drives the drawing, the words and whether there is rain on the glass. Rail runs the horizontal scroll at its three rates. Material drags the blur from 0 to 48. Motion stops everything for a still look."
+      "text": "The reference, rebuilt at 1440x900 on this house: the same composition (weather left and off-card, what is playing tall in the middle, two glance tiles stacked, the rail cut by the right edge, the orb and the family along the bottom) with your own rooms in it.\n\nFour things are live. Tap the Blinds card and the pane rises the way the video does it. Tap the field to replay the wake. Tap play. Tap the orb and it opens into the command box.\n\nThe chips above the frame: Sky swaps the condition, which drives the drawing, the words and whether there is rain on the glass. Rail runs the horizontal scroll at its three rates. Material drags the blur from 0 to 48. Motion stops everything for a still look.",
+      "page": "page-1"
     },
     {
       "id": "video",
       "x": -520,
       "y": 520,
       "w": 440,
-      "text": "Taken off the reference video frame by frame at 30fps, not from memory of it.\n\nTHE PANE. The card does NOT grow in place. Glass rises from the bottom edge and stops short of the top bar, so the row you came from is still there, dimmed, above it. It is at 55% after 100ms and home at 400 -- not an expo curve; expo would be over by 150ms and read as a cut. The object inside travels further and is still settling 700ms in. The bottom bar leaves 60ms BEFORE the pane starts. Closing is 300ms with no tail.\n\nTHE SWIPE. This one is not a motion blur, which is what it looks like at first. The rail has a FOCAL PLANE: what you have swiped past goes out of focus and dims, what is still in front of you stays sharp. Hold the settled scrolled frame against the resting one and the cloud and the music card are blurred while the camera, the thermostat and the next card are not.\n\nThe sky does not travel with the rail either -- about 24px against the cards' 460. It blurs in place, and the lozenge hung in front of it fades to nothing.\n\nOn top of both, small: a 2.5px velocity blur, 150ms in and 500ms off, which is why even the cards that end up sharp are soft in the middle of the move."
+      "text": "Taken off the reference video frame by frame at 30fps, not from memory of it.\n\nTHE PANE. The card does NOT grow in place. Glass rises from the bottom edge and stops short of the top bar, so the row you came from is still there, dimmed, above it. It is at 55% after 100ms and home at 400 -- not an expo curve; expo would be over by 150ms and read as a cut. The object inside travels further and is still settling 700ms in. The bottom bar leaves 60ms BEFORE the pane starts. Closing is 300ms with no tail.\n\nTHE SWIPE. This one is not a motion blur, which is what it looks like at first. The rail has a FOCAL PLANE: what you have swiped past goes out of focus and dims, what is still in front of you stays sharp. Hold the settled scrolled frame against the resting one and the cloud and the music card are blurred while the camera, the thermostat and the next card are not.\n\nThe sky does not travel with the rail either -- about 24px against the cards' 460. It blurs in place, and the lozenge hung in front of it fades to nothing.\n\nOn top of both, small: a 2.5px velocity blur, 150ms in and 500ms off, which is why even the cards that end up sharp are soft in the middle of the move.",
+      "page": "page-1"
     },
     {
       "id": "daylight",
       "x": -520,
       "y": 980,
       "w": 440,
-      "text": "DOES IT SURVIVE THE DAY? The Sky chip is the test, and the answer is yes.\n\nNothing on this screen is given a colour any more. The field IS the sky -- Sky.vue's own elevation ramp, weathered by the same {clouds, rain} the drawing reads, then veiled. The blooms Nightfall is built on are laid on top at low alpha: character, not lightness.\n\nEverything else holds a distance from that. The two painted cards sit ground L + .30 at hue 178 and 328, so they are mid-toned at night and pale at noon and never once stop being lighter than the sky. The glass sits ground L + .10, and its rim swaps ends as the day lightens -- at night you see the catch along the top, at noon the shadow under the foot, which is what glass actually does. A cover and a camera frame still bring their own picture and are never overpainted; the live green, the cooling blue and the lamp amber never move at all.\n\nTwo things worth knowing. Under heavy rain, midday and dusk look nearly the same -- correct, a rainy sky is a grey sky at any hour, so judge the direction on Clear. And at clear noon this is a bright blue panel: it holds up, but it is not called Nightfall any more. The indigo, the glow and the orb are an evening identity, and that is a naming question rather than a colour one."
+      "text": "DOES IT SURVIVE THE DAY? The Sky chip is the test, and the answer is yes.\n\nNothing on this screen is given a colour any more. The field IS the sky -- Sky.vue's own elevation ramp, weathered by the same {clouds, rain} the drawing reads, then veiled. The blooms Nightfall is built on are laid on top at low alpha: character, not lightness.\n\nEverything else holds a distance from that. The two painted cards sit ground L + .30 at hue 178 and 328, so they are mid-toned at night and pale at noon and never once stop being lighter than the sky. The glass sits ground L + .10, and its rim swaps ends as the day lightens -- at night you see the catch along the top, at noon the shadow under the foot, which is what glass actually does. A cover and a camera frame still bring their own picture and are never overpainted; the live green, the cooling blue and the lamp amber never move at all.\n\nTwo things worth knowing. Under heavy rain, midday and dusk look nearly the same -- correct, a rainy sky is a grey sky at any hour, so judge the direction on Clear. And at clear noon this is a bright blue panel: it holds up, but it is not called Nightfall any more. The indigo, the glow and the orb are an evening identity, and that is a naming question rather than a colour one.",
+      "page": "page-1"
     },
     {
       "id": "swaps",
       "x": -520,
       "y": 1180,
       "w": 440,
-      "text": "What is NOT the reference, deliberately:\n\nThe car card is your living-room blinds. It keeps the exact anatomy that made it work -- a name in two lines, round glass buttons, an object drawn rather than iconned, a bar and one number -- without carrying someone else's badge. The cover is drawn, not a record sleeve. The orb is its own thing rather than a copy of the one on the phone.\n\nEverything else is from mock/brain.mjs: Sonos with Blue in Green, the backyard camera, the thermostat cooling to 71, the blinds at 70%, the front door locked, Temi and Ade home and Sam out."
+      "text": "What is NOT the reference, deliberately:\n\nThe car card is your living-room blinds. It keeps the exact anatomy that made it work -- a name in two lines, round glass buttons, an object drawn rather than iconned, a bar and one number -- without carrying someone else's badge. The cover is drawn, not a record sleeve. The orb is its own thing rather than a copy of the one on the phone.\n\nEverything else is from mock/brain.mjs: Sonos with Blue in Green, the backyard camera, the thermostat cooling to 71, the blinds at 70%, the front door locked, Temi and Ade home and Sam out.",
+      "page": "page-1"
     },
     {
       "id": "material",
       "x": 3080,
       "y": 40,
       "w": 420,
-      "text": "The pane added up one layer at a time, over something worth refracting.\n\nThe layer that does the most work is 3, the rim: a 1.4px gradient border drawn with a mask so it follows whatever radius it is given, bright at the top and bright again at the foot. That double catch is the difference between glass and a translucent rectangle.\n\nThe four signal colours are lifted unchanged from panel.css, and the note under them is the rule the panel already holds itself to."
+      "text": "The pane added up one layer at a time, over something worth refracting.\n\nThe layer that does the most work is 3, the rim: a 1.4px gradient border drawn with a mask so it follows whatever radius it is given, bright at the top and bright again at the foot. That double catch is the difference between glass and a translucent rectangle.\n\nThe four signal colours are lifted unchanged from panel.css, and the note under them is the rule the panel already holds itself to.",
+      "page": "page-1"
     },
     {
       "id": "motion",
       "x": -520,
       "y": 1500,
       "w": 440,
-      "text": "Every demo here runs at its real duration -- the bars in the scale included, which is why 120ms flickers and 1200ms glides.\n\nTwo numbers worth arguing about. 64ms, the gap between cards arriving: below about 50 the stagger stops being legible, above about 90 the last card is late enough to feel like a second event. And 300 against 400 on the pane -- leaving deliberately shorter than arriving, because a drawer you are done with should not make you wait.\n\nEight moves, no ninth. If something on the panel wants a new one, that is usually a sign it wants to be one of these eight instead."
+      "text": "Every demo here runs at its real duration -- the bars in the scale included, which is why 120ms flickers and 1200ms glides.\n\nTwo numbers worth arguing about. 64ms, the gap between cards arriving: below about 50 the stagger stops being legible, above about 90 the last card is late enough to feel like a second event. And 300 against 400 on the pane -- leaving deliberately shorter than arriving, because a drawer you are done with should not make you wait.\n\nEight moves, no ninth. If something on the panel wants a new one, that is usually a sign it wants to be one of these eight instead.",
+      "page": "page-1"
+    },
+    {
+      "id": "glass-tone",
+      "x": -560,
+      "y": 0,
+      "w": 480,
+      "page": "page-2",
+      "text": "CAN NIGHTFALL BE WARMED?\n\nToday it cannot, and the Look page does not admit it. glassVars() takes an elevation and a condition and no tone at all, so on the glass face Warm, Cool and Pastel resolve to an identical pane -- measured: all three come out at oklch(0.573 ... 242). But LookPage renders all four tone rows unconditionally under a heading that says \"Cards\", with swatches built from toneVars() that ignore the face. So the swatches show four different colours, tapping one changes nothing, and the footer says \"the tone sets which way they lean\", which on this face is false.\n\nTHE PRINCIPLE THESE BOARDS ARE DRAWN ON\n\nThe tone leans the PANE, never the SKY. The sky is real -- it tracks the hour and the weather, and every card and pane in the system holds its distance from ground(). Warming it would make every distance in the system a lie, and it would be a lie about the weather. The glass is a made object, and what a made object is tinted with is a choice. So on all four boards the field, the house, the hour and the arrangement are identical, and the only thing that moves is what the pane is made of.\n\nWHAT MOVES, EXACTLY\n\nAt 7:40 pm the pane resolves to gL 0.327 at the sky's own hue, 281, with chroma .012-.014 -- near enough neutral. A tone rewrites the hue and raises the chroma to about .045, which is the least that reads as a tint rather than as a rendering artefact. Pastel does one thing more: on paper its whole character is a much lighter card (dL .335 against .135), so here it is a milkier pane -- lifted about .10 and carried at .48/.24/.40 rather than .34/.12/.24 -- and not merely a bluer one. The lamp, the live green and the danger red do not move on any board, because they are signals.\n\nTHE ONE OPEN QUESTION\n\nWhat should \"Follow the light\" do here? On paper it is pastel by day and warm after sunset. If it did that on glass too, every existing Nightfall house would look different after dark tomorrow -- a change to the default, not a repair of a dead control. The boards leave Follow exactly as it is: the pane takes the sky's own hue, and only the three named tones lean it. That way nobody's house changes unless they asked."
     }
   ],
   "launch": {
