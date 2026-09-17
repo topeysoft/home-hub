@@ -172,6 +172,17 @@ class TheJob(Knocking):
         self.assertEqual((s["state"], s["needs"]), ("failed", "wifi"))
         self.assertEqual(self.cable.written, [])
 
+    def test_told_the_wifi_once_the_job_carries_on(self):
+        self.hub = FakeHub(self.tmp.name, wifi=False); self.b = Bridges(self.hub, cable=self.cable, devdir=self.dev)
+        self.knock(); run(self.adopt_and_finish())
+        self.assertEqual(self.b.status()["needs"], "wifi")
+        async def tell():
+            await self.b.wifi("House", "hunter2"); await self.b._task
+        run(tell())
+        self.assertEqual(self.b.status()["state"], "placing")
+        self.assertEqual(self.cable.written[0][1]["ssid"], "House")
+        self.assertEqual(self.hub.settings.get("wifi"), {"ssid": "House", "pass": "hunter2"})   # kept for the next one
+
     def test_a_puck_that_does_not_come_back_is_a_failure_in_words(self):
         self.knock(); self.cable.write_fails = "it did not come back on the cable"
         run(self.adopt_and_finish())

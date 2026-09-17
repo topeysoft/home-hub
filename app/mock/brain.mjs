@@ -267,12 +267,13 @@ function job() {
   if (bridgePinned) return bridgePinned === 'ready'
     ? { state: 'ready', how: 'cable', switches: 11, unplaced: 8 }
     : { state: 'none' }
-  if (BRIDGE !== 'cable') {
+  if (BRIDGE !== 'cable' && !bridgeAt) {   // a pinned moment, until something moves it on
     return {
       knocking: { state: 'knocking', how: 'air' },
       working: { state: 'working', how: 'cable', step: 'keys' },
       placing: { state: 'placing', how: 'cable', switches: 11, signal: 'strong' },
       ready: { state: 'ready', how: 'cable', switches: 11, unplaced: 8 },
+      wifi: { state: 'failed', how: 'cable', needs: 'wifi' },
       failed: { state: 'failed', how: 'cable', text: 'The bridge stopped answering halfway through. Unplug it, plug it back into the hub, and it will pick up where it left off.' },
     }[BRIDGE] ?? { state: 'none' }
   }
@@ -363,6 +364,7 @@ const server = http.createServer((req, res) => {
     if (what === 'adopt') { bridgeAt = Date.now(); bridgePinned = null }       // yes, that one is mine: the job starts
     if (what === 'dismiss') { bridgePinned = 'none'; }
     if (what === 'placed') { bridgePinned = 'ready' }
+    if (what === 'wifi') { bridgeAt = Date.now(); bridgePinned = null }        // told: the job carries on
     return json(res, bridgeNow())
   }
   if (p === '/pair') return json(res, { state: 'idle' })

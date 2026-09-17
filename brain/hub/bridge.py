@@ -227,6 +227,18 @@ class Bridges:
             self.hub._broadcast(json.dumps({"type": "bridge", "bridge": self.status()}))
         return self.status()
 
+    async def wifi(self, ssid: str, password: str) -> dict:
+        """The house's Wi‑Fi, told once. Kept in the settings for every bridge after this one; a job
+        that stopped for want of it picks up where it left off, on the same cable."""
+        ssid, password = ssid.strip(), password
+        if not ssid: raise ValueError("Which Wi‑Fi? The name is needed.")
+        self.hub.settings.set(wifi={"ssid": ssid, "pass": password})
+        j = self.job
+        if j and j["state"] == "failed" and j.get("needs") == "wifi" and j.get("port") in self._seen:
+            j.pop("needs", None); j.pop("text", None)
+            self._task = asyncio.create_task(self._setup())
+        return self.status()
+
     async def placed(self) -> dict:
         if not self.job or self.job["state"] != "placing": raise ValueError("Nothing is being placed.")
         self._set("ready", unplaced=self._unplaced(self.job.get("net")))

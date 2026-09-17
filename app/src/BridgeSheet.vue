@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { store, notify, refreshBridge } from './store'
-import { adoptBridge, dismissBridge, placedBridge, BRIDGE_STEPS } from './api'
+import { adoptBridge, dismissBridge, placedBridge, bridgeWifi, BRIDGE_STEPS } from './api'
 import Icon from './Icon.vue'
 import BridgeArt from './BridgeArt.vue'
 
@@ -26,8 +26,9 @@ const TITLE: Record<string, string> = {
   placing: 'Now find it a home.',
   ready: 'It’s in.',
   failed: 'That did not work.',
+  wifi: 'One thing it needs.',
 }
-const title = computed(() => TITLE[b.value?.state ?? ''] ?? 'A bridge')
+const title = computed(() => b.value?.needs === 'wifi' ? TITLE.wifi : TITLE[b.value?.state ?? ''] ?? 'A bridge')
 
 /* the three things that go on it, in the order they go on. The brain names the one that is live and
    everything before it is done -- so the panel never has to keep its own idea of progress. */
@@ -57,6 +58,10 @@ async function run(fn: () => Promise<any>, after?: string) {
   busy.value = false
   refreshBridge()
 }
+/* The one thing a hub on a cable cannot know: the house's Wi-Fi. Asked here, once, and kept -- the
+   job picks up where it stopped, on the same cable, and no bridge after this one asks again. */
+const ssid = ref(''), password = ref('')
+const tell = () => { if (!ssid.value.trim()) return notify('Which Wi-Fi? The name is needed.', 'error'); run(() => bridgeWifi(ssid.value.trim(), password.value)) }
 const adopt = () => run(adoptBridge)
 const dismiss = () => run(dismissBridge)
 const placed = () => run(placedBridge)
@@ -151,6 +156,17 @@ onUnmounted(() => window.removeEventListener('keydown', key))
           <div class="flow-actions">
             <button class="button" v-if="b.unplaced" @click="close(); store.sheet = 'add'">Put them in rooms</button>
             <button class="button" :class="{ ghost: !!b.unplaced }" @click="close">Done</button>
+          </div>
+        </template>
+
+        <!-- it needs the one thing the hub cannot know on its own -->
+        <template v-else-if="b.needs === 'wifi'">
+          <p class="sheet-lede">The hub is on a cable, so it has never needed the house's Wi‑Fi. The bridge does. Tell it once; nothing after this asks again.</p>
+          <label class="field"><span class="field-label">Wi‑Fi name</span><input class="input" v-model="ssid" autocomplete="off" autocapitalize="off" spellcheck="false" @keydown.enter="tell" /></label>
+          <label class="field"><span class="field-label">Password</span><input class="input" type="password" v-model="password" autocomplete="off" @keydown.enter="tell" /></label>
+          <div class="flow-actions">
+            <button class="button" :class="{ busy }" @click="tell">Use it</button>
+            <button class="button ghost" @click="close">Not now</button>
           </div>
         </template>
 

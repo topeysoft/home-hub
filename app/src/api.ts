@@ -123,6 +123,8 @@ export async function getBridge(): Promise<Bridge> { const r = await request('/b
 export const adoptBridge = () => post<Bridge>('/bridge/adopt')
 /** Not mine: stop offering it. It knocks again if it is unplugged and plugged back in. */
 export const dismissBridge = () => post<Bridge>('/bridge/dismiss')
+/** The house's Wi-Fi, told once: a hub on a cable has no other way to know it. Kept for every bridge after. */
+export const bridgeWifi = (ssid: string, password: string) => post<Bridge>('/bridge/wifi', { ssid, password })
 /** Leave it here -- the placing is over, whatever the signal says. */
 export const placedBridge = () => post<Bridge>('/bridge/placed')
 export const retryEntry = (entry_id: string) => post<Status>(`/setup/retry/${encodeURIComponent(entry_id)}`)

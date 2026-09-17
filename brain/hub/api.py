@@ -1033,6 +1033,14 @@ async def bridge_adopt():
 async def bridge_dismiss(): return await hub.bridge.dismiss()
 
 
+@app.post("/bridge/wifi")
+async def bridge_wifi(body: dict):
+    """The house's Wi‑Fi, for bridges: asked once, on the wall, the first time a hub on a cable needs it."""
+    hub.ready()
+    try: return await hub.bridge.wifi(str(body.get("ssid") or ""), str(body.get("password") or ""))
+    except ValueError as e: raise HTTPException(400, str(e))
+
+
 @app.post("/bridge/placed")
 async def bridge_placed():
     try: return await hub.bridge.placed()
