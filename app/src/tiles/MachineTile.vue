@@ -13,7 +13,7 @@
  */
 import type { Device, Room } from '../api'
 import { iconFor, isDead, perform, store } from '../store'
-import { featureName, type Machine } from '../machines'
+import { asDevice, featureName, type Machine } from '../machines'
 import Icon from '../Icon.vue'
 
 defineProps<{ machine: Machine; room?: Room | null }>()
@@ -26,7 +26,9 @@ function tap(d: Device) {
 </script>
 
 <template>
-  <div class="tile plain machine">
+  <!-- held anywhere but on a row, the card opens the machine's own page (the rows open their own); hold.ts
+       keeps a press on a row for the row, so the two never fight -->
+  <div class="tile plain machine" v-hold="() => (store.opened = asDevice(machine))">
     <!-- rung four of the artwork ladder, the same as any plug: no drawing of a fridge, so the glyph, oversized and faint, is the art -->
     <span class="tile-art" aria-hidden="true"><Icon name="appliance" :size="150" /></span>
     <div class="tile-body">

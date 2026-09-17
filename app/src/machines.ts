@@ -15,7 +15,7 @@
  * that knew what a fridge was would be a card that did not know what a dryer was. docs/kinds.md.
  */
 import type { Device, Room } from './api'
-import { cap, shortName } from './store'
+import { cap, deviceById, shortName } from './store'
 
 export type Machine = { key: string; name: string; devices: Device[] }
 
@@ -58,3 +58,18 @@ export function featureName(d: Device, machine: string, room?: Room | null): str
   }
   return n
 }
+
+/* ---------- the machine, opened ----------
+   Holding the card opens the machine, the way holding any tile opens the thing on it. A machine is not a
+   device the brain knows, so the pane is handed one made here: named after the machine, in its room, on
+   its hardware, with its features under `attrs.parts`. Everything the pane says about it is read off
+   the features live (partsOfMachine), so the sheet stays true while somebody taps rows on it. Renaming
+   or moving it goes through its first feature, which the brain moves and renames as the hardware. */
+export const isMachine = (d: Device) => d.capability === 'machine'
+export function asDevice(m: Machine): Device {
+  const first = m.devices[0]
+  return { id: m.key, name: m.name, room_id: first.room_id, capability: 'machine', state: m.devices.some(d => d.state === 'on') ? 'on' : 'off',
+           attrs: { parts: m.devices.map(d => d.id) }, hw: first.hw, hw_name: m.name, maker: first.maker ?? null }
+}
+/** The machine's features, looked up fresh, so a row that was just tapped reads as it now is. */
+export const partsOfMachine = (d: Device): Device[] => ((d.attrs.parts as string[] | undefined) ?? []).map(id => deviceById(id)).filter((x): x is Device => !!x)

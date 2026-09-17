@@ -248,6 +248,12 @@ because "the fridge is on" is not a thing anybody at a wall panel needs telling.
 half. One feature on its own stays a tile. The grouping reads what a thing is SHOWN as, so a feature the owner has
 called a plug leaves the card, and two plugs on one strip never form one.
 
+**The card opens, too.** Held anywhere but on a row, the card opens the machine's own page -- the brain has no
+such device, so `asDevice()` in `machines.ts` hands the pane one: named after the machine, in its room, with its
+features as the instrument (`MachinePane.vue`), a reading that counts what is running, and a day made of its
+features' days. Rename or move from there goes through the first feature, which the brain carries as the
+hardware. A row held opens that feature's own page as before; `hold.ts` keeps a press on a row for the row.
+
 **Not built, and why.** The readings inside the machine -- the fridge and freezer temperatures -- are still not
 devices at all; `capability_for()` hides `APPLIANCE` sensors until there is an appliances view. The card is most of
 that view, and putting the temperatures on it is the next step, but it needs a capability the room strip and the

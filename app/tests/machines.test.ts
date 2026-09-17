@@ -48,3 +48,32 @@ describe('what it is called', () => {
     expect(featureName(feature('a', 'Refrigerator'), 'Refrigerator', kitchen)).toBe('Refrigerator')
   })
 })
+
+describe('the machine, opened', () => {
+  it('is handed to the pane as a thing named after the machine, in its room, with its features under it', async () => {
+    const { asDevice, isMachine, partsOfMachine } = await import('../src/machines')
+    const { store } = await import('../src/store')
+    const a = feature('switch.ice', 'Refrigerator Ice Maker'), b = feature('switch.bites', 'Refrigerator Ice Bites', { state: 'off' })
+    store.rooms = [{ ...kitchen, devices: [a, b] }]
+    const m = asDevice(machinesOf([a, b]).machines[0])
+    expect([m.id, m.name, m.room_id, m.capability, m.state, m.hw, m.hw_name]).toEqual(['machine:hw-fridge', 'Refrigerator', 'kitchen', 'machine', 'on', 'hw-fridge', 'Refrigerator'])
+    expect(isMachine(m)).toBe(true)
+    expect(partsOfMachine(m).map(d => d.id)).toEqual(['switch.ice', 'switch.bites'])
+  })
+  it('says how many features are running, offers no one switch, and leaves the features to the rows rather than repeating them as facts', async () => {
+    const { asDevice, machinesOf } = await import('../src/machines')
+    const { facts, paneKind, reading, verbs } = await import('../src/pane')
+    const { store } = await import('../src/store')
+    const a = feature('switch.ice', 'Refrigerator Ice Maker'), b = feature('switch.bites', 'Refrigerator Ice Bites', { state: 'off' })
+    store.rooms = [{ ...kitchen, devices: [a, b] }]
+    const m = asDevice(machinesOf([a, b]).machines[0])
+    expect(reading(m)).toBe('1 of 2 on')
+    b.state = 'on'
+    expect(reading(m)).toBe('All on')
+    a.state = 'off'; b.state = 'off'
+    expect(reading(m)).toBe('Nothing on')
+    expect(verbs(m).map(v => v.id)).toEqual(['why', 'edit'])
+    expect(paneKind(m)).toBe('machine')
+    expect(facts(m, kitchen).some(f => f.k === 'Ice Maker')).toBe(false)
+  })
+})

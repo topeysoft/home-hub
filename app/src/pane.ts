@@ -14,6 +14,7 @@
  */
 import type { Device, Event, Room } from './api'
 import { cap, isDead, shortName, deviceById, LABELS } from './store'
+import { partsOfMachine } from './machines'
 import { readingLabel } from './readings'
 import { whenText } from './why'
 
@@ -50,6 +51,10 @@ export function reading(d: Device, unit = '°'): string {
       return s !== 'on' ? 'Off' : b != null ? pct(b) : 'On'
     }
     case 'switch': case 'appliance': return s === 'on' ? 'On' : 'Off'
+    case 'machine': {   // a fridge says how many of its features are running, which is the one thing worth saying about it in large type
+      const parts = partsOfMachine(d), on = parts.filter(p => p.state === 'on').length
+      return !parts.length ? 'Nothing here' : !on ? 'Nothing on' : on === parts.length ? 'All on' : `${on} of ${parts.length} on`
+    }
     case 'alarm': return s === 'on' ? 'Sounding' : 'Silent'
     case 'media': return a.media_title || (s === 'playing' ? 'Playing' : s === 'paused' ? 'Paused' : s === 'off' || s === 'standby' ? 'Off' : 'Idle')
     case 'climate': return a.current_temperature != null ? `${Math.round(a.current_temperature)}${u}` : s === 'off' ? 'Off' : cap1(s)
@@ -71,7 +76,7 @@ export function reading(d: Device, unit = '°'): string {
 export function verbs(d: Device): Verb[] {
   const k = cap(d), out: Verb[] = []
   const on = d.state === 'on' || d.state === 'playing' || d.state === 'cleaning'
-  if (k === 'light' || k === 'switch' || k === 'media' || k === 'fan' || k === 'appliance')
+  if (k === 'light' || k === 'switch' || k === 'media' || k === 'fan' || k === 'appliance')   // never a machine: it has no one switch, its features are the instrument
     out.push({ id: 'power', icon: 'power', label: on ? 'Turn it off' : 'Turn it on', primary: true, on })
   /* Its own words, not "Turn it on". What this button does is make a noise the whole house hears,
      and a verb that says so is half of why the second tap is not a surprise. */
@@ -112,6 +117,7 @@ export function facts(d: Device, room?: Room | null, unit = '°', events: Event[
   if (k === 'cover') add('Open', a.current_position != null ? pct(a.current_position) : null)
   if (k === 'camera' && a.light) add('Floodlight', deviceById(String(a.light))?.state === 'on' ? 'On' : 'Off')
   if (a.motion) add('Motion sensor', deviceById(String(a.motion))?.state === 'on' ? 'Seeing motion' : 'Nobody about')   // built into the unit (units.ts)
+  /* a machine's features are its instrument, and the rows there already say On and Off: not again here */
   if (k === 'fan' && a.light) add('Its light', deviceById(String(a.light))?.state === 'on' ? 'On' : 'Off')
   if (k === 'light' && a.fan) { const f = deviceById(String(a.fan)); add('Its fan', f ? (f.state === 'on' ? (f.attrs.percentage ? `${f.attrs.percentage}%` : 'On') : 'Off') : null) }
 
