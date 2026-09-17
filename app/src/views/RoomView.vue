@@ -14,7 +14,7 @@ import ClimateTile from '../tiles/ClimateTile.vue'
 import MachineTile from '../tiles/MachineTile.vue'
 import SortView from '../SortView.vue'
 import { machinesOf } from '../machines'
-import { onATile, sensorName } from '../units'
+import { isCarried, onATile, sensorName } from '../units'
 
 const props = defineProps<{ room: Room }>()
 defineEmits<{ back: []; open: [id: string] }>()
@@ -28,7 +28,8 @@ const sorted = computed(() => [...props.room.devices].sort((a, b) => order.index
 const readings = computed(() => sorted.value.filter(d => isReading(d) && !onATile(d, props.room)))
 /* A machine's features are one card between them (machines.ts), so they come out of the device list
    here and go back in as a cell of their own below. */
-const grouped = computed(() => machinesOf(sorted.value.filter(d => !isReading(d))))
+/* ...and a fan's light, or a light's fan, rides on its partner's tile (units.ts) */
+const grouped = computed(() => machinesOf(sorted.value.filter(d => !isReading(d) && !isCarried(d, props.room))))
 const devices = computed(() => grouped.value.rest)
 const machines = computed(() => grouped.value.machines)
 const machineByKey = computed(() => new Map(machines.value.map(m => [m.key, m])))

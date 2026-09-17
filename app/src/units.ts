@@ -89,3 +89,31 @@ export const partsOf = (d: Device): Device[] => d.hw ? store.rooms.flatMap(r => 
     called "Walkway Pathlight Light" on hardware called "Walkway Pathlight" -- and only the thing otherwise:
     a fridge's "Ice Maker" is a feature, and renaming it must not rename the fridge. */
 export const renamesUnit = (d: Device) => unitNamed(d) && partsOf(d).length > 1
+
+/* ---------- a fan with a light in it ----------
+   One fixture on the ceiling, two devices to the driver. The brain tells each part the other (`attrs.light`
+   on the fan, `attrs.fan` on the light) and both which of them is the tile (`attrs.leads`): the fan unless
+   the owner says the light, from either part's pane. The other part is CARRIED -- a row on the lead's
+   tile, tap to switch, hold to open -- and has no tile of its own while its lead is in the room. It is
+   still a device: scenes, "lights off" and the room's line reach it as ever. */
+
+/** The other half of this thing's fixture, when it has one and it is in view. */
+export function partnerOf(d: Device): Device | undefined {
+  const k = cap(d)
+  const id = k === 'fan' ? d.attrs.light : k === 'light' ? d.attrs.fan : null
+  return id ? deviceById(String(id)) : undefined
+}
+/** This thing is the tile of its fixture. */
+export const leadsFixture = (d: Device) => !!partnerOf(d) && d.attrs.leads === cap(d)
+/** This thing rides on its partner's tile in this room, and so draws none of its own. */
+export const isCarried = (d: Device, room: Room) => {
+  const p = partnerOf(d)
+  return !!p && d.attrs.leads !== cap(d) && room.devices.some(x => x.id === p.id)
+}
+/** A fan's speed in a word: the three the pane offers, or On where it does not say. */
+export function speedWord(d: Device): string {
+  if (d.state !== 'on') return 'Off'
+  const pct = Number(d.attrs.percentage)
+  if (!Number.isFinite(pct) || !pct) return 'On'
+  return pct <= 40 ? 'Low' : pct <= 75 ? 'Medium' : 'High'
+}

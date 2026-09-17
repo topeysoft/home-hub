@@ -89,3 +89,61 @@ describe('what a rename from the pane renames', () => {
     expect(renamesUnit(l)).toBe(false)                                    // alone on its hardware: nothing else to carry
   })
 })
+
+describe('a fan with a light in it', () => {
+  const fan = (leads = 'fan', extra: Partial<Device> = {}): Device =>
+    ({ id: 'fan.bed', name: 'Bedroom Fan', room_id: 'bed', capability: 'fan', state: 'on', attrs: { percentage: 40, light: 'light.bed', leads }, hw: 'hw-fan', hw_name: 'Bedroom Fan', ...extra })
+  const lamp = (leads = 'fan', extra: Partial<Device> = {}): Device =>
+    ({ id: 'light.bed', name: 'Bedroom Fan Light', room_id: 'bed', capability: 'light', state: 'off', attrs: { fan: 'fan.bed', leads }, hw: 'hw-fan', hw_name: 'Bedroom Fan', ...extra })
+  const bed = (...devices: Device[]): Room => ({ id: 'bed', name: 'Bedroom', devices, intent: 'occupied' })
+
+  it('is one tile: the fan leads by default and the light rides on it', async () => {
+    const { isCarried, leadsFixture, partnerOf } = await import('../src/units')
+    const f = fan(), l = lamp()
+    store.rooms = [bed(f, l)]
+    expect(partnerOf(f)?.id).toBe('light.bed')
+    expect(partnerOf(l)?.id).toBe('fan.bed')
+    expect([leadsFixture(f), leadsFixture(l)]).toEqual([true, false])
+    expect([isCarried(f, store.rooms[0]), isCarried(l, store.rooms[0])]).toEqual([false, true])
+  })
+  it('swaps when the owner says the light leads', async () => {
+    const { isCarried, leadsFixture } = await import('../src/units')
+    const f = fan('light'), l = lamp('light')
+    store.rooms = [bed(f, l)]
+    expect([leadsFixture(f), leadsFixture(l)]).toEqual([false, true])
+    expect([isCarried(f, store.rooms[0]), isCarried(l, store.rooms[0])]).toEqual([true, false])
+  })
+  it('gives the carried part its own tile back when its lead is not in the room', async () => {
+    const { isCarried } = await import('../src/units')
+    const l = lamp()
+    store.rooms = [bed(l)]
+    expect(isCarried(l, store.rooms[0])).toBe(false)
+  })
+  it('is still a light to the room and to the house', async () => {
+    const { activityParts, whatsOn } = await import('../src/store')
+    const f = fan(), l = lamp('fan', { state: 'on' })
+    store.rooms = [bed(f, l)]
+    expect(activityParts(store.rooms[0])).toEqual(['1 light on', 'Fan on'])   // "Bedroom Fan" is "Fan" inside the Bedroom, as ever
+    expect(whatsOn().map(d => d.id).sort()).toEqual(['fan.bed', 'light.bed'])
+  })
+  it('keeps the light’s full name when it leads, so the tile under a lamp drawing does not say Fan', async () => {
+    const { shortName } = await import('../src/store')
+    expect(shortName(lamp('light'), bed())).toBe('Bedroom Fan Light')
+    expect(shortName(fan(), bed())).toBe('Fan')
+  })
+  it('says a fan’s speed in a word', async () => {
+    const { speedWord } = await import('../src/units')
+    expect(speedWord(fan())).toBe('Low')
+    expect(speedWord(fan('fan', { attrs: { percentage: 66 } }))).toBe('Medium')
+    expect(speedWord(fan('fan', { attrs: { percentage: 100 } }))).toBe('High')
+    expect(speedWord(fan('fan', { attrs: {} }))).toBe('On')
+    expect(speedWord(fan('fan', { state: 'off' }))).toBe('Off')
+  })
+  it('offers each part the other on its pane, whichever leads', async () => {
+    const { verbs } = await import('../src/pane')
+    const f = fan(), l = lamp()
+    store.rooms = [bed(f, l)]
+    expect(verbs(f).map(v => v.id)).toContain('lamp')
+    expect(verbs(l).map(v => v.id)).toContain('fan')
+  })
+})

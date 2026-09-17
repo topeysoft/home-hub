@@ -18,7 +18,7 @@ import { readingLabel } from './readings'
 import { whenText } from './why'
 
 export type Fact = { k: string; v: string }
-export type Verb = { id: 'power' | 'watch' | 'lamp' | 'why' | 'edit'; icon: string; label: string; primary?: boolean; on?: boolean }
+export type Verb = { id: 'power' | 'watch' | 'lamp' | 'fan' | 'why' | 'edit'; icon: string; label: string; primary?: boolean; on?: boolean }
 export type Moment = { when: string; text: string }
 
 const cap1 = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
@@ -83,6 +83,9 @@ export function verbs(d: Device): Verb[] {
     out.push({ id: 'watch', icon: 'camera', label: 'Watch it', primary: true, on: true })
     if (d.attrs.light && deviceById(String(d.attrs.light))) out.push({ id: 'lamp', icon: 'light', label: 'Its floodlight', on: deviceById(String(d.attrs.light))?.state === 'on' })
   }
+  /* a fan with a light in it: each part offers the other, whichever of them is the tile (units.ts) */
+  if (k === 'fan' && d.attrs.light && deviceById(String(d.attrs.light))) out.push({ id: 'lamp', icon: 'light', label: 'Its light', on: deviceById(String(d.attrs.light))?.state === 'on' })
+  if (k === 'light' && d.attrs.fan && deviceById(String(d.attrs.fan))) out.push({ id: 'fan', icon: 'fan', label: 'Its fan', on: deviceById(String(d.attrs.fan))?.state === 'on' })
   out.push({ id: 'why', icon: 'sparkle', label: 'Why is it like this' })
   out.push({ id: 'edit', icon: 'edit', label: 'Rename or move it' })
   return out
@@ -109,6 +112,8 @@ export function facts(d: Device, room?: Room | null, unit = '°', events: Event[
   if (k === 'cover') add('Open', a.current_position != null ? pct(a.current_position) : null)
   if (k === 'camera' && a.light) add('Floodlight', deviceById(String(a.light))?.state === 'on' ? 'On' : 'Off')
   if (a.motion) add('Motion sensor', deviceById(String(a.motion))?.state === 'on' ? 'Seeing motion' : 'Nobody about')   // built into the unit (units.ts)
+  if (k === 'fan' && a.light) add('Its light', deviceById(String(a.light))?.state === 'on' ? 'On' : 'Off')
+  if (k === 'light' && a.fan) { const f = deviceById(String(a.fan)); add('Its fan', f ? (f.state === 'on' ? (f.attrs.percentage ? `${f.attrs.percentage}%` : 'On') : 'Off') : null) }
 
   /* A plug, a door and a mower carry almost nothing in their attributes -- which is why their panes
      used to be empty. What they do have is a day, and the log already keeps it. */

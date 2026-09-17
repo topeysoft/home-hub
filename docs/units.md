@@ -64,6 +64,36 @@ feature and renames only itself (`renamesUnit()` in units.ts). The edit rows loo
 in a room's edit view a unit -- or a machine, which shares the hardware grouping -- is one row named after the unit,
 its parts under it; a single part is renamed from its own pane.
 
+## A fan with a light in it
+
+*Same week: "similar scenario with the fan: a fan with a light in it. I want to control them on the same card."
+And: "make it an option which leads, the fan by default."*
+
+The same shape a third time, and the precedent for it was already in the code: a floodlight camera is handed
+its lamp (`Home.lamps`) and the viewer offers the lamp beside the picture. A fan with a light is that with the
+fan in the camera's place. `Home.build()` pairs a `fan` with a `light` on the same hardware -- only that pair;
+two lights on a double switch are two lights -- and tells each part the other (`attrs.light` on the fan,
+`attrs.fan` on the light) and both which of them is the tile (`attrs.leads`), kept through state changes by
+`attrs_for()` like the lamp and the motion sensor are.
+
+**The fan leads by default.** It is the thing on the ceiling and the light is a part of it. The lead is the
+tile; the other part is CARRIED -- one row on the lead's tile, tap to switch, hold to open its own pane -- and
+has no tile of its own while its lead is in the room (`isCarried()` in units.ts, read by `RoomView.vue`). On
+the fan's tile the row says *Light · On*; on the light's, *Fan · Low*. Each part's pane offers the other as a
+verb (*Its light*, *Its fan*) and names it among the facts.
+
+**The owner may say the light leads.** *Lead with: Fan / Light* sits under *Show this as* on either part's
+pane, and the choice is the fixture's, not the part's: `POST /devices/{id}/lead` stores it by hardware in
+`settings.json` under `leads`, held on `Home.leads` so a rebuild keeps it, and both parts are told at once.
+Saying the fan again clears the record, the way the driver's own kind does. The trade-off the choice exists
+for: a lit fan light is often the brightest light in a bedroom, and as the lead it keeps the big lamp tile
+with the dimmer under the finger; as a row it is a switch. Somebody who dims that light more than they touch
+the fan says so once.
+
+**Still a light, still a fan.** Sleep and All off turn the light off, "bedroom lights off" reaches it, the
+room's line counts it, and "fan on" reaches the fan alone. Nothing here changes what the house does; it
+changes what is drawn.
+
 ## Kept apart from machines on purpose
 
 `machines.ts` groups by the same field for a different reason. A fridge's features are all of a kind and want one

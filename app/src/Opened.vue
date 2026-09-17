@@ -35,8 +35,8 @@
  * See design/device for the boards all of that was drawn on.
  */
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { getDeviceEvents, getDeviceKinds, moveDevice, renameDevice, setDeviceKind, type Event, type Kinds } from './api'
-import { partsOf, renameParts, renamesUnit } from './units'
+import { getDeviceEvents, getDeviceKinds, moveDevice, renameDevice, setDeviceKind, setDeviceLead, type Event, type Kinds } from './api'
+import { partnerOf, partsOf, renameParts, renamesUnit } from './units'
 import { cap, defaultKind, deviceById, isDead, notify, perform, roomOf, shownAs, store } from './store'
 import { facts as factsOf, moments as momentsOf, paneKind, reading, verbs as verbsOf, whyLine } from './pane'
 import { useArm } from './twice'
@@ -124,9 +124,9 @@ async function verb(id: string) {
   if (id === 'why') { store.whyRoom = d.room_id; store.sheet = 'why'; return }
   if (id === 'edit') { startEdit(); return }
   if (id === 'watch') { store.viewer = d; close(); return }
-  if (id === 'lamp') {
-    const lamp = deviceById(String(d.attrs.light))
-    if (lamp) await perform(lamp, lamp.state === 'on' ? 'off' : 'on', undefined, { state: lamp.state === 'on' ? 'off' : 'on' })
+  if (id === 'lamp' || id === 'fan') {
+    const other = deviceById(String(id === 'lamp' ? d.attrs.light : d.attrs.fan))
+    if (other) await perform(other, other.state === 'on' ? 'off' : 'on', undefined, { state: other.state === 'on' ? 'off' : 'on' })
     return
   }
   if (id === 'power') {
@@ -137,6 +137,19 @@ async function verb(id: string) {
       catch (e: any) { notify(e.message, 'error') }
     })
   }
+}
+
+/* A fan with a light in it: which part is the tile. Fan by default -- it is the thing on the ceiling and
+   the light is a part of it -- and the owner may say the light instead, from either part's pane, if that
+   is the half they reach for. The brain keeps it with the kinds (docs/units.md). */
+const partner = computed(() => dev.value ? partnerOf(dev.value) : undefined)
+const leads = computed(() => (dev.value?.attrs.leads as 'fan' | 'light' | undefined) ?? 'fan')
+async function leadWith(k: 'fan' | 'light') {
+  const d = dev.value, p = partner.value; if (!d || !p || k === leads.value) return
+  const was = leads.value
+  d.attrs.leads = k; p.attrs.leads = k
+  try { await setDeviceLead(d.id, k) }
+  catch (e: any) { d.attrs.leads = was; p.attrs.leads = was; notify(e.message, 'error') }
 }
 
 /* Rename or move it, HERE. The verb used to open the house's settings panel, which has no rename in it --
@@ -244,6 +257,17 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
                           :aria-pressed="k === offer.kind" @click="showAs(k)">{{ offer.words[k] }}</button>
                 </div>
                 <p class="opened-kind-why">{{ offer.why }}</p>
+              </div>
+            </div>
+            <!-- a fan with a light in it: which of the two is the tile. The same quiet row as the kind. -->
+            <div class="opened-kind opened-lead" v-if="partner">
+              <span class="opened-kind-say still">Lead with</span>
+              <div class="opened-kind-pick">
+                <div class="opened-kind-row">
+                  <button class="opened-kind-one" :class="{ on: leads === 'fan' }" :aria-pressed="leads === 'fan'" @click="leadWith('fan')">Fan</button>
+                  <button class="opened-kind-one" :class="{ on: leads === 'light' }" :aria-pressed="leads === 'light'" @click="leadWith('light')">Light</button>
+                </div>
+                <p class="opened-kind-why">One tile for the fan and its light. The one leading is the tile; the other is a row on it.</p>
               </div>
             </div>
           </div>

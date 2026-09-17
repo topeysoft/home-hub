@@ -1640,6 +1640,23 @@ input:focus-visible {
   align-self: end;
   margin-top: 8px;
 }
+/* a carried part on an ordinary tile -- a fan's light, a light's fan (units.ts): one row under the state */
+.tile-carry {
+  margin-top: 8px;
+}
+.tiles > .tile[data-size='third'] > .tile-body > .tile-carry {
+  grid-area: 3 / 1 / 4 / 3;
+  align-self: end;
+  margin-top: 6px;
+}
+.tiles > .tile[data-size='third'] > .tile-body > .tile-carry ~ .tile-state,
+.tiles > .tile[data-size='third'] > .tile-body:has(.tile-carry) > .tile-state {
+  grid-area: 2 / 1 / 3 / 3;
+}
+.tile.light .tile-carry {
+  position: relative;
+  z-index: 2;
+}
 /* at a third the rows fill the card, and a glyph behind them is a glyph through them */
 .tiles > .tile[data-size='third'].machine > .tile-art {
   display: none;
@@ -5739,6 +5756,10 @@ select.input {
   border-color: transparent;
   background: var(--lamp);
   color: var(--lamp-ink);
+}
+.opened-kind-say.still {
+  cursor: default;
+  text-decoration: none;
 }
 .opened-kind-why {
   margin: 10px 0 0;
