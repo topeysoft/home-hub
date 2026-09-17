@@ -182,7 +182,10 @@ watch(() => props.room.devices.length, (n, was) => { if (n > (was ?? 0)) think()
         <!-- the one that was just pressed: the rooms as chips, because the answer is one tap away
              and a dropdown would hide it behind two -->
         <div class="press-line" v-if="live === d.id && !editing">
-          <span class="press-said"><span class="pulse-dot"></span>This one just came on. {{ what(d) }}</span>
+          <!-- "you pressed" and not "it came on": the house knows the switch reported a change because a hand
+               was on it, and nothing more. A stairway's companion switch has no load wired to it at all, and
+               there is no way yet to tell one from the mesh -- so the row says what is true of both. -->
+          <span class="press-said"><span class="pulse-dot"></span>You just pressed this one. {{ what(d) }}</span>
           <div class="press-rooms">
             <button v-for="r in rooms" :key="r.id" class="chip-btn" @click="move(d, r.id)">{{ r.name }}</button>
             <button class="chip-btn ghost" @click="move(d, '__new')">Another room…</button>
