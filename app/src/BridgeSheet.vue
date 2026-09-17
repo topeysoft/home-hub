@@ -85,7 +85,7 @@ onUnmounted(() => window.removeEventListener('keydown', key))
 
         <!-- it arrived on its own and is blinking. Nothing of the house's has gone anywhere yet. -->
         <template v-if="b.state === 'knocking'">
-          <p class="sheet-lede">Something was plugged in nearby a moment ago. A bridge brings in the wall switches that have no Wi‑Fi of their own — the ones that came with the house.</p>
+          <p class="sheet-lede">Something was plugged in nearby a moment ago. A bridge brings in the wall switches that have no Wi‑Fi of their own — the ones already in your walls.</p>
           <div class="bridge-stage">
             <BridgeArt light="amber" />
             <span class="bridge-caption"><span class="pulse-dot"></span>It is blinking amber right now</span>

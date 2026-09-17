@@ -161,7 +161,7 @@ onUnmounted(() => clearTimeout(poll))
         <div class="radios">
           <button class="radio-btn" @click="switching = true">
             <span class="found-icon"><Icon name="switch" :size="18" /></span>
-            <span class="found-text"><span class="found-title">Wall switch</span><span class="found-kind">{{ store.bridge?.waiting ? `${store.bridge.waiting} waiting to be let in` : 'The ones that came with the house' }}</span></span>
+            <span class="found-text"><span class="found-title">Wall switch</span><span class="found-kind">{{ store.bridge?.waiting ? `${store.bridge.waiting} waiting to be let in` : 'The ones already in your walls' }}</span></span>
           </button>
         </div>
       </div>
