@@ -1560,6 +1560,22 @@ input:focus-visible {
     transform 0.15s var(--ease);
   touch-action: pan-y;
 }
+/* `pan-y` above is from when the tiles wrapped and the page under them scrolled down: it kept a
+   sideways drag on a dimmer as a drag. On the panel every one of these rows scrolls SIDEWAYS, and
+   the cards are the whole row, so a finger has nowhere to land but a card -- and `pan-y` told the
+   browser that finger may only pan up and down. A mouse never noticed (touch-action only speaks to
+   touch); the first real touch screen scrolled the rooms list, whose cells never had the rule, and
+   nothing else. Both directions, not just x: the stage scrolls down as well, and a finger that
+   starts on a card and moves down is scrolling the page. A dimmer's sideways drag gives way to the
+   scroll on touch, which is what hold.ts already promises -- a moving finger is a scroll, never
+   anything else -- and the pane still dims by its slider. The phone layouts below fold these rows
+   into columns and put `pan-y` back. */
+.bento .tile,
+.tiles > .tile,
+.camera-row .tile,
+.cameras-all > .tile {
+  touch-action: pan-x pan-y;
+}
 .tile.wide {
   grid-column: span 2;
 }
@@ -2174,6 +2190,9 @@ input:focus-visible {
     overflow-x: visible;
     overflow-y: visible;
     gap: 10px;
+  }
+  .tiles > .tile {
+    touch-action: pan-y; /* a column again: a sideways drag is the dimmer's, the page is the only scroll */
   }
   .tiles > .tile[data-size] {
     grid-row: auto;
@@ -7773,6 +7792,7 @@ select.input {
   .bento .tile {
     height: auto;
     min-height: 150px;
+    touch-action: pan-y; /* a column again: a sideways drag is the dimmer's, the page is the only scroll */
   }
   .bento .tile.light,
   .bento .tile.media,
