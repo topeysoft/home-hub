@@ -490,8 +490,8 @@ and not a radio in the hub: it works the same whether the hub is a Pi, a NUC or 
 
 **What it proved, against the Mac dev stack.** One `Generic OnOff Get` to the all-nodes address made every OnOff
 server answer: eleven switches (`0x0004 0x0005 0x0006 0x0008 0x000a 0x000b 0x000e 0x0010 0x0011 0x0014 0x0016`),
-three more than anyone had counted; `0x0010`/`0x0011` are most likely the live panel's own loads, since a
-Control panel replaces a one-to-four-gang switch itself. Their on/off and dim levels arrived as they were
+three more than anyone had counted; `0x0010`/`0x0011` were guessed to be the live panel's own loads, since a
+Control panel replaces a one-to-four-gang switch itself. **That guess is wrong for `0x0011`:** on 17 September it was blinked on command while a person watched, and identified as the stairway switch — the load half of the two-way pair whose companion we had reset. `0x0010` remains untested, so treat the same guess about it as unsupported rather than confirmed. Their on/off and dim levels arrived as they were
 touched. `brightness/set 128` over MQTT dimmed the hallway to half — the switch published `Level Status f401`
 (500/1000) to all-nodes on its own — and `255` brought it back; HA's brightness went 255 → 128 → 255 on the
 retained topic. The MQTT session then held for the whole soak, with commands still landing five minutes in. HA
