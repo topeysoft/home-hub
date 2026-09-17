@@ -167,7 +167,9 @@ watch(() => props.room.devices.length, (n, was) => { if (n > (was ?? 0)) think()
     <ul class="sort" v-if="room.devices.length">
       <li v-for="d in room.devices" :key="d.id" class="sort-row" :class="{ busy: busy[d.id], pressed: live === d.id }">
         <span class="sort-icon"><Icon :name="iconFor(d)" :size="20" /></span>
-        <input class="sort-name" :value="names[d.id] ?? d.name" @input="names[d.id] = ($event.target as HTMLInputElement).value" @change="rename(d)" @keydown.enter="($event.target as HTMLInputElement).blur()" spellcheck="false" aria-label="Name" />
+        <!-- on the pressed card the name is asked below, in words, so the header shows it and does not ask twice -->
+        <span class="sort-name still" v-if="live === d.id && !editing">{{ names[d.id] ?? d.name }}</span>
+        <input v-else class="sort-name" :value="names[d.id] ?? d.name" @input="names[d.id] = ($event.target as HTMLInputElement).value" @change="rename(d)" @keydown.enter="($event.target as HTMLInputElement).blur()" spellcheck="false" aria-label="Name" />
         <template v-if="adding === d.id">
           <input class="sort-name" v-model="newRoom" placeholder="Name the room" autofocus @keydown.enter="createAndMove(d)" @keydown.escape="adding = null" />
           <button class="button small" @click="createAndMove(d)">Add</button>
@@ -186,6 +188,13 @@ watch(() => props.room.devices.length, (n, was) => { if (n > (was ?? 0)) think()
                was on it, and nothing more. A stairway's companion switch has no load wired to it at all, and
                there is no way yet to tell one from the mesh -- so the row says what is true of both. -->
           <span class="press-said"><span class="pulse-dot"></span>You just pressed this one. {{ what(d) }}</span>
+          <!-- the name, asked in words at the one moment the person knows what the thing is. The same
+               field as the row's own (it saves when you leave it); the brain's suggestion fills it in. -->
+          <label class="press-name">
+            <span class="field-label">Call it</span>
+            <input class="input" :value="names[d.id] ?? suggestions[d.id]?.name ?? d.name" @input="names[d.id] = ($event.target as HTMLInputElement).value" @change="rename(d)" @keydown.enter="($event.target as HTMLInputElement).blur()" spellcheck="false" autocapitalize="words" aria-label="Name" />
+          </label>
+          <span class="field-label">Which room is it in?</span>
           <div class="press-rooms">
             <button v-for="r in rooms" :key="r.id" class="chip-btn" @click="move(d, r.id)">{{ r.name }}</button>
             <button class="chip-btn ghost" @click="move(d, '__new')">Another room…</button>

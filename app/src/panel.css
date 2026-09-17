@@ -3863,9 +3863,33 @@ select.input {
   -webkit-appearance: none;
   appearance: none;
 }
-.sort-name:focus {
+/* At rest it has to LOOK like a field, or nobody finds it: a name drawn as a label was read as "there is no
+   way to name a thing here", by the person who built the house. */
+.sort-name {
   background: var(--surface-hi);
+  border-color: var(--edge);
+}
+.sort-name:focus {
   border-color: var(--lamp);
+}
+.sort-name.still {
+  display: flex;
+  align-items: center;
+  background: transparent;
+  border-color: transparent;
+  font-weight: 500;
+}
+/* the pressed card asks in words: what to call it, then where it is */
+.press-name {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.press-name .input {
+  height: 44px;
+  max-width: 420px;
 }
 .sort-room {
   background: var(--surface-hi);
