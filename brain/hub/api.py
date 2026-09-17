@@ -11,7 +11,7 @@ from fastapi import Request
 from . import ha_setup
 from .ha_adapter import HAAdapter, AuthError
 from . import forecast as forecast_of
-from .model import CONTROLS, Home, kinds_for, kind_of
+from .model import CONTROLS, Home, kinds_for, kind_of, default_kind
 from .events import EventLog
 from .intents import RoomState, SERVICE, plan, rules_as_data, holds
 from .onboarding import Onboarding
@@ -82,6 +82,7 @@ class Hub:
         self.ha: HAAdapter | None = None
         self.home = Home()
         self.home.kinds = dict(self.settings.get("kinds") or {})   # what the owner said things are; kept in settings so a restore brings it back with the rest of the house
+        self.home.leads = dict(self.settings.get("leads") or {})   # which part of a fan-with-a-light is the tile, where the owner has said (docs/units.md)
         self.log = EventLog(DATA / "events.db")
         self.streams: set[WebSocket] = set()
         self.driver, self.reason = "down", ""
@@ -526,6 +527,22 @@ class Hub:
             self.log.add("action", dev.id, None, action, source=source, detail={**data, **({"said": said} if said else {})} or None)
         if dev.capability != "camera" and dev.room_id in self.home.rooms: self.hold(self.home.rooms[dev.room_id])
 
+    async def rename_unit(self, dev, name: str):
+        """Name the hardware a device is part of, and carry its parts along.
+
+        Two kinds of part. One HA names after the unit ("Garage Left Light" + "Motion"), and renaming the
+        unit renames it for free; giving that one a name of its own would make it "Garage Left Light
+        Garage Left Light Motion". The other carries its own name, and follows only where that name began
+        with the unit's -- a part somebody has already renamed by hand keeps what they called it."""
+        was = (dev.hw_name or "").strip()
+        await self.ha.send("config/device_registry/update", device_id=dev.hw, name_by_user=name)
+        for part in [d for d in self.home.devices.values() if d.hw == dev.hw]:
+            if part.named_by_unit or not was: continue
+            n = part.name.strip()
+            if n.lower() == was.lower(): await self.ha.send("config/entity_registry/update", entity_id=part.id, name=name)
+            elif n.lower().startswith(was.lower() + " "): await self.ha.send("config/entity_registry/update", entity_id=part.id, name=f"{name} {n[len(was) + 1:]}")
+        self.log.add("home", dev.id, was or None, name, source="user", detail={"renamed_unit": dev.hw})
+
     def show_as(self, dev, kind: str | None):
         """Say what a device IS. Presentation and grammar follow; the service call never does.
 
@@ -534,10 +551,12 @@ class Hub:
         offer = kinds_for(dev.capability)
         if kind and kind not in offer: raise ValueError(f"{dev.name} cannot be shown as a {KIND_WORD.get(kind, kind).lower()}.")
         was = kind_of(dev)
-        if kind and kind != dev.capability: self.home.kinds[dev.id] = kind
+        # Against what it would be shown as anyway, not the driver's word: on a switch the house took
+        # for an appliance, "plug" is a disagreement worth keeping, and "appliance" is the way back.
+        if kind and kind != default_kind(dev): self.home.kinds[dev.id] = kind
         else: self.home.kinds.pop(dev.id, None)
         self.settings.set(kinds=self.home.kinds)
-        dev.kind = self.home.shown_as(dev.id, dev.capability)
+        dev.kind = self.home.shown_as(dev.id, dev.capability, dev.guess)
         self.log.add("home", dev.id, was, kind_of(dev), source="user", detail={"shown_as": True})
         self._broadcast(json.dumps({"type": "device", "device": dev.__dict__}))
         return dev
@@ -789,12 +808,17 @@ async def move_device(device_id: str, body: dict):
 
 @app.post("/devices/{device_id}/rename")
 async def rename_device(device_id: str, body: dict):
+    """Call a thing something. `{"name": ...}` names this one device; `{"name": ..., "unit": true}` names the
+    hardware it is part of, and its parts follow -- "Garage Left Light" is one thing on the wall, and a person
+    renaming it did not mean to leave its motion sensor called after the old name. docs/units.md."""
     hub.ready()
     dev = hub.home.devices.get(device_id)
     if not dev: raise HTTPException(404, "unknown device")
     name = (body.get("name") or "").strip()
     if not name: raise HTTPException(400, "A name is needed.")
-    try: await hub.ha.send("config/entity_registry/update", entity_id=dev.id, name=name)
+    try:
+        if body.get("unit") and dev.hw: await hub.rename_unit(dev, name)
+        else: await hub.ha.send("config/entity_registry/update", entity_id=dev.id, name=name)
     except Exception as e: raise HTTPException(502, f"could not rename it: {e}")
     return {"ok": True}
 
@@ -805,11 +829,12 @@ async def rename_device(device_id: str, body: dict):
 # the person living there cares about, and until they can say so "kitchen lights off" does not touch it.
 
 # The panel's own words for a kind, because "capability" and "domain" are not words this panel uses.
-KIND_WORD = {"light": "Light", "switch": "Plug", "fan": "Fan", "alarm": "Alarm", "media": "Speaker",
+KIND_WORD = {"light": "Light", "switch": "Plug", "fan": "Fan", "alarm": "Alarm", "appliance": "Appliance", "media": "Speaker",
              "cover": "Blind", "climate": "Thermostat", "lock": "Lock", "camera": "Camera", "vacuum": "Vacuum"}
 # Why the list is short, said in the panel's own words rather than in HA's. One line per group of kinds
 # that share their controls; the offer is computed, and this only explains it.
 WHY = {("onoff",): "This can be switched on and off, so it can be shown as anything that switches on and off. "
+                  "A plug goes off with Everything off; an appliance is part of a machine and is left alone. "
                   "An alarm is the one that asks before it sounds."}
 
 
@@ -824,6 +849,22 @@ async def device_kinds(device_id: str):
     return {"capability": dev.capability, "kind": kind_of(dev), "offer": offer,
             "words": {k: KIND_WORD.get(k, k) for k in offer},
             "why": WHY.get(CONTROLS.get(dev.capability.split(".")[0], ()), "") if offer else ""}
+
+
+@app.post("/devices/{device_id}/lead")
+async def set_device_lead(device_id: str, body: dict):
+    """A fan with a light in it is one tile, and this says which part the tile is: `{"lead": "fan"}` (the default,
+    and saying it clears the record) or `{"lead": "light"}`. Either part of the fixture may be asked. docs/units.md."""
+    hub.ready()
+    dev = hub.home.devices.get(device_id)
+    if not dev: raise HTTPException(404, "unknown device")
+    lead = (body.get("lead") or "fan").strip()
+    try: parts = hub.home.set_lead(dev, lead)
+    except ValueError as e: raise HTTPException(400, str(e))
+    hub.settings.set(leads=hub.home.leads)
+    hub.log.add("home", dev.id, None, lead, source="user", detail={"leads": True})
+    for part in parts: hub._broadcast(json.dumps({"type": "device", "device": part.__dict__}))
+    return {"ok": True, "leads": lead}
 
 
 @app.post("/devices/{device_id}/kind")

@@ -14,11 +14,12 @@
  */
 import type { Device, Event, Room } from './api'
 import { cap, isDead, shortName, deviceById, LABELS } from './store'
+import { partsOfMachine } from './machines'
 import { readingLabel } from './readings'
 import { whenText } from './why'
 
 export type Fact = { k: string; v: string }
-export type Verb = { id: 'power' | 'watch' | 'lamp' | 'why' | 'edit'; icon: string; label: string; primary?: boolean; on?: boolean }
+export type Verb = { id: 'power' | 'watch' | 'lamp' | 'fan' | 'why' | 'edit'; icon: string; label: string; primary?: boolean; on?: boolean }
 export type Moment = { when: string; text: string }
 
 const cap1 = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
@@ -49,7 +50,11 @@ export function reading(d: Device, unit = '°'): string {
       const b = bright(d)
       return s !== 'on' ? 'Off' : b != null ? pct(b) : 'On'
     }
-    case 'switch': return s === 'on' ? 'On' : 'Off'
+    case 'switch': case 'appliance': return s === 'on' ? 'On' : 'Off'
+    case 'machine': {   // a fridge says how many of its features are running, which is the one thing worth saying about it in large type
+      const parts = partsOfMachine(d), on = parts.filter(p => p.state === 'on').length
+      return !parts.length ? 'Nothing here' : !on ? 'Nothing on' : on === parts.length ? 'All on' : `${on} of ${parts.length} on`
+    }
     case 'alarm': return s === 'on' ? 'Sounding' : 'Silent'
     case 'media': return a.media_title || (s === 'playing' ? 'Playing' : s === 'paused' ? 'Paused' : s === 'off' || s === 'standby' ? 'Off' : 'Idle')
     case 'climate': return a.current_temperature != null ? `${Math.round(a.current_temperature)}${u}` : s === 'off' ? 'Off' : cap1(s)
@@ -71,7 +76,7 @@ export function reading(d: Device, unit = '°'): string {
 export function verbs(d: Device): Verb[] {
   const k = cap(d), out: Verb[] = []
   const on = d.state === 'on' || d.state === 'playing' || d.state === 'cleaning'
-  if (k === 'light' || k === 'switch' || k === 'media' || k === 'fan')
+  if (k === 'light' || k === 'switch' || k === 'media' || k === 'fan' || k === 'appliance')   // never a machine: it has no one switch, its features are the instrument
     out.push({ id: 'power', icon: 'power', label: on ? 'Turn it off' : 'Turn it on', primary: true, on })
   /* Its own words, not "Turn it on". What this button does is make a noise the whole house hears,
      and a verb that says so is half of why the second tap is not a surprise. */
@@ -83,6 +88,9 @@ export function verbs(d: Device): Verb[] {
     out.push({ id: 'watch', icon: 'camera', label: 'Watch it', primary: true, on: true })
     if (d.attrs.light && deviceById(String(d.attrs.light))) out.push({ id: 'lamp', icon: 'light', label: 'Its floodlight', on: deviceById(String(d.attrs.light))?.state === 'on' })
   }
+  /* a fan with a light in it: each part offers the other, whichever of them is the tile (units.ts) */
+  if (k === 'fan' && d.attrs.light && deviceById(String(d.attrs.light))) out.push({ id: 'lamp', icon: 'light', label: 'Its light', on: deviceById(String(d.attrs.light))?.state === 'on' })
+  if (k === 'light' && d.attrs.fan && deviceById(String(d.attrs.fan))) out.push({ id: 'fan', icon: 'fan', label: 'Its fan', on: deviceById(String(d.attrs.fan))?.state === 'on' })
   out.push({ id: 'why', icon: 'sparkle', label: 'Why is it like this' })
   out.push({ id: 'edit', icon: 'edit', label: 'Rename or move it' })
   return out
@@ -108,13 +116,17 @@ export function facts(d: Device, room?: Room | null, unit = '°', events: Event[
   if (k === 'fan') add('Speed', a.percentage != null ? pct(a.percentage) : null)
   if (k === 'cover') add('Open', a.current_position != null ? pct(a.current_position) : null)
   if (k === 'camera' && a.light) add('Floodlight', deviceById(String(a.light))?.state === 'on' ? 'On' : 'Off')
+  if (a.motion) add('Motion sensor', deviceById(String(a.motion))?.state === 'on' ? 'Seeing motion' : 'Nobody about')   // built into the unit (units.ts)
+  /* a machine's features are its instrument, and the rows there already say On and Off: not again here */
+  if (k === 'fan' && a.light) add('Its light', deviceById(String(a.light))?.state === 'on' ? 'On' : 'Off')
+  if (k === 'light' && a.fan) { const f = deviceById(String(a.fan)); add('Its fan', f ? (f.state === 'on' ? (f.attrs.percentage ? `${f.attrs.percentage}%` : 'On') : 'Off') : null) }
 
   /* A plug, a door and a mower carry almost nothing in their attributes -- which is why their panes
      used to be empty. What they do have is a day, and the log already keeps it. */
   if (events.length) {
     const on = spans(events)
     const last = (match: (e: Event) => boolean) => { const e = events.find(match); return e ? whenText(e.ts) : null }
-    if (k === 'switch' || k === 'fan') {
+    if (k === 'switch' || k === 'fan' || k === 'appliance') {
       add('On today', on.length ? forLong(on) : null)
       add('Last on', last(e => e.kind === 'state' && e.new === 'on'))
     }

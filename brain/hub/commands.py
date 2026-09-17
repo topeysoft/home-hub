@@ -43,6 +43,9 @@ KINDS = (   # words for a kind of thing, in the order they are tried; the garage
     # Before the plugs, and the order is the point: a siren is a switch entity, so without its own word
     # here "turn on the plugs" would reach it. Shown as an alarm it leaves the plug bucket entirely.
     (r"alarms?|sirens?|klaxons?", "alarm", None),
+    # The same shape: a fridge's ice maker is a switch entity, and shown as an appliance it is out of the
+    # plug bucket. "Turn off the plugs" walks past it; "turn off the ice maker" reaches it by name.
+    (r"appliances?", "appliance", None),
     (r"plugs?|outlets?|sockets?|switch(es)?", "switch", None),
     (r"doors?|locks?|deadbolt", "lock", None),
     (r"thermostat|heat(ing|er)?|ac|a/c|air ?con(ditioning|ditioner)?|temperature|temp|furnace", "climate", None),
@@ -164,11 +167,11 @@ def _plural(n: int, one: str, many: str | None = None) -> str:
 # the voice is a second rendering of the same answer, never a different answer.
 
 NOUN = {"light": "light", "switch": "plug", "fan": "fan", "media": "screen", "climate": "thermostat",
-        "lock": "door", "cover": "blind", "alarm": "alarm"}
+        "lock": "door", "cover": "blind", "alarm": "alarm", "appliance": "appliance"}
 # Which half of a split set is worth saying. A person asking "are the lights off?" is asking to find
 # out about the ones that are ON; the others are not news. docs/voice.md's own worked example.
 NOTABLE = {"light": "on", "switch": "on", "fan": "on", "media": "playing", "lock": "unlocked",
-           "cover": "open", "contact": "open", "alarm": "on"}
+           "cover": "open", "contact": "open", "alarm": "on", "appliance": "on"}
 # A count somebody hears rather than reads. Small numbers only: past a dozen, "fourteen" is no clearer
 # than "14", and a set that big was never going to be read out as a list anyway.
 COUNT = ("no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve")
@@ -359,6 +362,12 @@ class Commands:
                     if names[0].startswith(rn + " "):
                         short = names[0][len(rn) + 1:]
                         if not any(re.fullmatch(pat, short) for pat, _, _ in KINDS): names.append(short)
+            # And the same again for the unit it is part of: a fridge names its features after itself,
+            # so "Refrigerator Ice Maker" is also "ice maker" -- and nobody at a panel says the first.
+            unit = norm(d.hw_name or "")
+            if unit and names[0].startswith(unit + " "):
+                short = names[0][len(unit) + 1:]
+                if not any(re.fullmatch(pat, short) for pat, _, _ in KINDS): names.append(short)
             for n in names:
                 if n and len(n) > 1 and _has(re.escape(n), t) and (best is None or len(n) > len(best[1])): best = (d, n)
         return best if best else (None, "")
@@ -392,7 +401,7 @@ class Commands:
             if _has("sound|trigger|set off|go off|panic", rest) or _has("on", rest):
                 return await self._do(targets, "on", {}, said, f"{who} sounding.")
             raise NotUnderstood(f"Say \"silence the {NOUN['alarm']}\" to stop it, or \"sound the {NOUN['alarm']}\" to set it off.")
-        if kind in ("light", "switch", "fan", "media", "climate"):
+        if kind in ("light", "switch", "fan", "media", "climate", "appliance"):
             pct = re.search(r"(\d+)\s*(%|percent)", rest)
             if kind == "light":
                 if pct: return await self._do(targets, "on", {"brightness_pct": max(1, min(100, int(pct.group(1))))}, said, f"{who} to {pct.group(1)}%.")

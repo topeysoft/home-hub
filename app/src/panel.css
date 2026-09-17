@@ -1634,6 +1634,120 @@ input:focus-visible {
 .tile.on .tile-state {
   color: var(--ink-2);
 }
+/* a switch seeing motion through its own sensor (units.ts): its one line says so, in the room's ink rather than muted */
+.tile.seeing .tile-state {
+  color: var(--ink);
+}
+
+/* a machine: one card, its features as rows (MachineTile.vue). The card has no on of its own;
+   a row that is on wears the lamp the way a lit tile's badge does. */
+.tile.machine {
+  cursor: default;
+}
+.machine-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-height: 0;
+  margin-top: 10px;
+}
+.tiles > .tile[data-size='third'].machine > .tile-body > .machine-rows {
+  grid-area: 2 / 1 / 4 / 3;
+  align-self: end;
+  margin-top: 8px;
+}
+/* a carried part on an ordinary tile -- a fan's light, a light's fan (units.ts): one row under the state */
+.tile-carry {
+  margin-top: 8px;
+}
+.tiles > .tile[data-size='third'] > .tile-body > .tile-carry {
+  grid-area: 3 / 1 / 4 / 3;
+  align-self: end;
+  margin-top: 6px;
+}
+.tiles > .tile[data-size='third'] > .tile-body > .tile-carry ~ .tile-state,
+.tiles > .tile[data-size='third'] > .tile-body:has(.tile-carry) > .tile-state {
+  grid-area: 2 / 1 / 3 / 3;
+}
+.tile.light .tile-carry {
+  position: relative;
+  z-index: 2;
+}
+/* at a third the rows fill the card, and a glyph behind them is a glyph through them */
+.tiles > .tile[data-size='third'].machine > .tile-art {
+  display: none;
+}
+.tiles > .tile[data-size='half'].machine .tile-body {
+  justify-content: flex-start;
+}
+.machine-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 34px;
+  padding: 6px 11px;
+  border: 1px solid var(--edge);
+  border-radius: 12px;
+  background: var(--surface-hi);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14.5px;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background 0.25s var(--ease),
+    color 0.25s var(--ease),
+    border-color 0.25s var(--ease);
+}
+.machine-row:active {
+  transform: scale(0.985);
+}
+.machine-row-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+.machine-row-state {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.machine-row.on {
+  background: var(--lamp);
+  color: var(--lamp-ink);
+  border-color: transparent;
+}
+.machine-row.on .machine-row-state {
+  color: inherit;
+  opacity: 0.8;
+}
+.machine-row.dead {
+  opacity: 0.5;
+  cursor: default;
+}
+.machine-row.pending {
+  opacity: 0.7;
+}
+/* the same rows as a pane's instrument (MachinePane.vue): the size of a control, not of a glance */
+.rig-machine {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 100%;
+}
+.machine-rows.big {
+  gap: 10px;
+  margin-top: 0;
+}
+.machine-rows.big .machine-row {
+  min-height: 60px;
+  padding: 10px 18px;
+  border-radius: 16px;
+  font-size: 17px;
+  gap: 12px;
+}
 
 /* light: the tile is the dimmer */
 .tile.light {
@@ -3838,6 +3952,21 @@ select.input {
 .sort-row.busy {
   opacity: 0.6;
 }
+/* the name and, for a unit, what is in it: one column of the row, so the parts sit under the name rather than pushing the room picker */
+.sort-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.sort-parts {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px 6px;
+  margin-top: -4px;
+  font-size: 13.5px;
+  color: var(--muted);
+}
 .sort-icon {
   width: 40px;
   height: 40px;
@@ -3863,8 +3992,8 @@ select.input {
   -webkit-appearance: none;
   appearance: none;
 }
-/* At rest it has to LOOK like a field, or nobody finds it: a name drawn as a label was read as "there is no
-   way to name a thing here", by the person who built the house. */
+/* A field that looks like one. It used to be plain text until touched, and on a wall with no cursor
+   nothing said the name could be changed at all -- "there doesn't seem to be any way to rename a device". */
 .sort-name {
   background: var(--surface-hi);
   border-color: var(--edge);
@@ -5590,6 +5719,47 @@ select.input {
   font-size: clamp(34px, 5vw, 56px);
   line-height: 1.04;
 }
+/* Rename or move it, on the pane itself: the room and the name, as a picker and a field where the
+   two lines were. The field is set in the name's own size so nothing jumps when it turns into one. */
+.opened-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 520px;
+}
+.opened-edit-room {
+  width: auto;
+  align-self: flex-start;
+  min-width: 200px;
+  height: 40px;
+  font-size: 15px;
+}
+.opened-edit-name {
+  width: 100%;
+  min-width: 0;
+  padding: 6px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--edge);
+  background: var(--surface-hi);
+  color: var(--ink);
+  font: inherit;
+  font-size: clamp(26px, 3.4vw, 36px);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  outline: 0;
+}
+.opened-edit-name:focus {
+  border-color: var(--lamp);
+}
+.opened-edit-note {
+  margin: 0;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.opened-edit-acts {
+  display: flex;
+  gap: 8px;
+}
 /* Show this as: what a thing IS, when the house has it wrong. Quiet under the name,
    because a plug that somebody has said is a lamp should stop looking unusual --
    and it is the only place this is ever said. docs/kinds.md. */
@@ -5642,6 +5812,10 @@ select.input {
   border-color: transparent;
   background: var(--lamp);
   color: var(--lamp-ink);
+}
+.opened-kind-say.still {
+  cursor: default;
+  text-decoration: none;
 }
 .opened-kind-why {
   margin: 10px 0 0;

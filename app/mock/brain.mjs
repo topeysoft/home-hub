@@ -14,7 +14,9 @@ const DIST = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'dist
 const PORT = Number(process.env.PORT || 8399)
 const now = Math.floor(Date.now() / 1000)
 
-const dev = (id, name, room_id, capability, state, attrs = {}, maker = null) => ({ id, name, room_id, capability, state, attrs, maker })   // maker: what the registry knows, often nothing
+const dev = (id, name, room_id, capability, state, attrs = {}, maker = null, more = {}) => ({ id, name, room_id, capability, state, attrs, maker, ...more })   // maker: what the registry knows, often nothing
+/* a feature of a machine: a switch the brain took for an appliance from the unit's name (docs/kinds.md), with the unit it belongs to */
+const feature = (id, name, room_id, state, hw, hw_name, maker = 'Samsung') => dev(id, name, room_id, 'switch', state, {}, maker, { guess: 'appliance', hw, hw_name })
 const rooms = [
   { id: 'living', name: 'Living room', intent: 'movie', set_by: 'rule:evening-lights', hold_until: null, devices: [
     dev('l1', 'Ceiling light', 'living', 'light', 'on', { brightness: 90, color_temp_kelvin: 2700, supported_color_modes: ['brightness', 'color_temp'] }, 'Philips Hue'),
@@ -31,6 +33,12 @@ const rooms = [
     dev('k1', 'Kitchen lights', 'kitchen', 'light', 'on', { brightness: 255, supported_color_modes: ['brightness'] }),
     dev('k2', 'Under-cabinet strip', 'kitchen', 'light', 'off', { brightness: 0, supported_color_modes: ['brightness'] }),
     dev('k3', 'Coffee maker', 'kitchen', 'switch', 'off', {}),
+    feature('k7', 'Refrigerator Ice Maker', 'kitchen', 'on', 'hw-fridge', 'Refrigerator'),
+    feature('k8', 'Refrigerator Ice Bites', 'kitchen', 'off', 'hw-fridge', 'Refrigerator'),
+    feature('k9', 'Refrigerator Power Cool', 'kitchen', 'off', 'hw-fridge', 'Refrigerator'),
+    feature('k10', 'Refrigerator Power Freeze', 'kitchen', 'on', 'hw-fridge', 'Refrigerator'),
+    feature('k11', 'Dishwasher Sanitize', 'kitchen', 'off', 'hw-dw', 'Dishwasher'),
+    feature('k12', 'Dishwasher Delay Start', 'kitchen', 'off', 'hw-dw', 'Dishwasher'),
     dev('k4', 'Kitchen speaker', 'kitchen', 'media', 'off', {}),
     dev('k5', 'Back door', 'kitchen', 'contact', 'off', {}),
     dev('k6', 'Humidity', 'kitchen', 'sensor.humidity', '51', { unit_of_measurement: '%' }),
@@ -38,7 +46,9 @@ const rooms = [
   { id: 'bedroom', name: 'Bedroom', intent: 'asleep', set_by: null, hold_until: null, devices: [
     dev('b1', 'Bedroom lamp', 'bedroom', 'light', 'off', { supported_color_modes: ['brightness'] }),
     dev('b2', 'Bedroom TV', 'bedroom', 'media', 'off', {}),
-    dev('b3', 'Ceiling fan', 'bedroom', 'fan', 'on', { percentage: 40 }),
+    /* a fan with a light in it: one fixture, the fan leading unless the owner says the light (docs/units.md) */
+    dev('b3', 'Bedroom Fan', 'bedroom', 'fan', 'on', { percentage: 40, light: 'b5', leads: 'fan' }, 'Hunter', { hw: 'hw-fan', hw_name: 'Bedroom Fan', named_by_unit: true }),
+    dev('b5', 'Bedroom Fan Light', 'bedroom', 'light', 'on', { brightness: 180, supported_color_modes: ['brightness'], fan: 'b3', leads: 'fan' }, 'Hunter', { hw: 'hw-fan', hw_name: 'Bedroom Fan', named_by_unit: true }),
     dev('b4', 'Bedroom blinds', 'bedroom', 'cover', 'closed', { current_position: 0 }),
   ] },
   { id: 'office', name: 'Office', intent: 'occupied', set_by: null, hold_until: null, devices: [
@@ -59,11 +69,16 @@ const rooms = [
     dev('y1', 'Backyard cam', 'backyard', 'camera', 'recording', { light: 'y1l' }),   // a floodlight cam: the viewer offers its lamp
     dev('y1l', 'Backyard cam Light', 'backyard', 'light', 'off', {}),
     dev('y2', 'Robot mower', 'backyard', 'vacuum', 'docked', {}),
+    dev('y3', 'Walkway Pathlight Light', 'backyard', 'light', 'on', { motion: 'y4' }, 'Ring', { hw: 'hw-ring-wp', hw_name: 'Walkway Pathlight', named_by_unit: true }),   // its motion sensor is on its tile, not the strip
+    dev('y4', 'Walkway Pathlight Motion', 'backyard', 'motion', 'on', {}, 'Ring', { hw: 'hw-ring-wp', hw_name: 'Walkway Pathlight', named_by_unit: true }),
   ] },
   { id: 'bath', name: 'Bathroom', intent: 'occupied', set_by: null, hold_until: null, devices: [] },
   { id: 'unassigned', name: 'New devices', intent: 'occupied', set_by: null, hold_until: null, devices: [
     dev('u1', 'Hue color lamp 1', 'unassigned', 'light', 'off', { supported_color_modes: ['hs'] }),
     dev('u2', 'Smart plug', 'unassigned', 'switch', 'off', {}),
+    /* a Ring pathlight: a light and its motion sensor on one piece of hardware, one row on New devices (docs/units.md) */
+    dev('u3', 'Garage Left Light Light', 'unassigned', 'light', 'off', { motion: 'u4' }, 'Ring', { hw: 'hw-ring-gl', hw_name: 'Garage Left Light', named_by_unit: true }),
+    dev('u4', 'Garage Left Light Motion', 'unassigned', 'motion', 'off', {}, 'Ring', { hw: 'hw-ring-gl', hw_name: 'Garage Left Light', named_by_unit: true }),
   ] },
 ]
 /* SWITCHES=11 fills New devices with a bridge's worth of look-alike wall switches -- the moment
@@ -86,6 +101,7 @@ function pressEvent() {
 
 const home = { name: "Temi's house", temp_unit: '°F', rooms }
 const status = { driver: process.env.ENGINE === 'down' ? 'down' : 'ready', reason: process.env.ENGINE === 'down' ? "The hub's engine is not answering yet." : '',
+  version: 'v0.3.0',   // the build this mock is: the panel reloads itself when a status answers with another (store.ts, newBuild)
   setup_done: process.env.FRESH !== '1', owner: 'Temi', home: "Temi's house", location: true, rooms: 8, devices: 30, locked: process.env.LOCKED === '1',
   drivers: [
     { id: 'mqtt', name: 'Messages', state: 'ready', text: 'Running', port: 1883 },
@@ -298,6 +314,9 @@ const server = http.createServer((req, res) => {
   const p = url.pathname
   if (p === '/setup/status') return json(res, status)
   if (p === '/update/notes') return json(res, { notes: releaseNotes[0], history: releaseNotes })
+  /* Install: on a hub the brain restarts and comes back as the next build, and the page follows it
+     (store.ts, newBuild). The mock only takes the request; the e2e speaks the new version itself. */
+  if (p === '/update' && req.method === 'POST') { if (status.update) status.update.requested = true; return json(res, status.update ?? {}) }
   if (p === '/update/check' && req.method === 'POST') { if (status.update) status.update.checked = Date.now() / 1000; return json(res, status.update ?? {}) }
   if (p === '/update/notes/seen' && req.method === 'POST') { if (status.update) status.update.whats_new = null; return json(res, status.update ?? {}) }
   if (p === '/home') return json(res, home)
@@ -373,6 +392,7 @@ const server = http.createServer((req, res) => {
   if (p === '/setup/advanced') return json(res, { url: 'http://hub.local:8123/', username: 'hub', password: 'secret' })
   if (/^\/rooms\/[^/]+\/why/.test(p)) return json(res, why)
   if (p === '/suggestions') return json(res, { items: [
+    { id: 'u3', name: 'Garage Left Light', room: 'backyard', why: 'the same unit as Walkway Pathlight Light', source: 'house' },
     { id: 'u1', name: 'Colour lamp', room: 'living', why: 'the same unit as the floor lamp', source: 'assistant' },
     { id: 'u2', name: 'Plug', room: '', why: 'a plainer name', source: 'house' }], assistant: true })
   if (p === '/phone') return json(res, { ip: '192.168.1.40' })
@@ -433,9 +453,9 @@ const server = http.createServer((req, res) => {
   /* Show this as: the same rule the brain computes, so the pane can be read without a house behind it.
      Kinds that share their controls may stand in for each other and no others -- a plug may be a lamp,
      and may not be a blind. docs/kinds.md. */
-  const kindOf = d => (d.kind || d.capability).split('.')[0]
-  const CONTROLS = { light: 'onoff', switch: 'onoff', fan: 'onoff', alarm: 'onoff', media: 'onoff+playing', climate: 'temperature', vacuum: 'errand', camera: 'picture' }
-  const WORD = { light: 'Light', switch: 'Plug', fan: 'Fan', alarm: 'Alarm', media: 'Speaker', climate: 'Thermostat', vacuum: 'Vacuum', camera: 'Camera' }
+  const kindOf = d => (d.kind || d.guess || d.capability).split('.')[0]
+  const CONTROLS = { light: 'onoff', switch: 'onoff', fan: 'onoff', alarm: 'onoff', appliance: 'onoff', media: 'onoff+playing', climate: 'temperature', vacuum: 'errand', camera: 'picture' }
+  const WORD = { light: 'Light', switch: 'Plug', fan: 'Fan', alarm: 'Alarm', appliance: 'Appliance', media: 'Speaker', climate: 'Thermostat', vacuum: 'Vacuum', camera: 'Camera' }
   const offerFor = d => {
     const wants = CONTROLS[d.capability.split('.')[0]]
     const offer = wants ? Object.keys(CONTROLS).filter(k => CONTROLS[k] === wants) : []
@@ -447,13 +467,20 @@ const server = http.createServer((req, res) => {
     if (!d) { res.writeHead(404, { 'Content-Type': 'application/json' }); return res.end('{"detail":"unknown device"}') }
     const offer = offerFor(d)
     return json(res, { capability: d.capability, kind: kindOf(d), offer, words: Object.fromEntries(offer.map(k => [k, WORD[k]])),
-                       why: offer.length ? 'This can be switched on and off, so it can be shown as anything that switches on and off. An alarm is the one that asks before it sounds.' : '' })
+                       why: offer.length ? 'This can be switched on and off, so it can be shown as anything that switches on and off. A plug goes off with Everything off; an appliance is part of a machine and is left alone. An alarm is the one that asks before it sounds.' : '' })
   }
+  const setLead = p.match(/^\/devices\/([^/]+)\/lead$/)
+  if (setLead && req.method === 'POST') { let b = ''; req.on('data', c => (b += c)); return req.on('end', () => {
+    let k = 'fan'; try { k = JSON.parse(b).lead || 'fan' } catch {}
+    const d = home.rooms.flatMap(r => r.devices).find(x => x.id === setLead[1])
+    for (const x of home.rooms.flatMap(r => r.devices)) if (d && x.hw && x.hw === d.hw) x.attrs.leads = k
+    json(res, { ok: true, leads: k })
+  }) }
   const setKind = p.match(/^\/devices\/([^/]+)\/kind$/)
   if (setKind && req.method === 'POST') { let b = ''; req.on('data', c => (b += c)); return req.on('end', () => {
     const d = home.rooms.flatMap(r => r.devices).find(x => x.id === setKind[1])
     let k = null; try { k = JSON.parse(b).kind || null } catch {}
-    if (d) d.kind = k && k !== d.capability ? k : null
+    if (d) d.kind = k && k !== (d.guess || d.capability) ? k : null   // the way back is what it would be shown as anyway
     json(res, { ok: true, kind: d ? kindOf(d) : k })
   }) }
   if (req.method === 'POST' || req.method === 'DELETE') return json(res, { ok: true })   // forgetting a thing, or a phone leaving, answer like every other change

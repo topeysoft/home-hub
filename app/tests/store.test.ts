@@ -3,8 +3,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Device, Room } from '../src/api'
 import {
-  activity, cap, capsOf, currentScene, doneLine, forgetDone, houseLine, isActive, isDead, justDone,
-  perform, roomActive, sceneHolds, scenesFor, shortName, store, updateReady, visibleRooms, whatsOn,
+  activity, cap, capsOf, currentScene, doneLine, forgetDone, houseLine, isActive, isDead, justDone, newBuild,
+  perform, reloadOnto, roomActive, sayUpdated, sceneHolds, scenesFor, shortName, store, updateReady, visibleRooms, whatsOn,
 } from '../src/store'
 
 const dev = (id: string, name: string, capability: string, state: string, attrs: Record<string, any> = {}): Device =>
@@ -284,5 +284,45 @@ describe('an update the hub should raise by itself', () => {
   it('says nothing at all when the hub cannot tell', () => {
     update({ available: null, offer: null, requested: false, state: null })
     expect(updateReady()).toBe(false)
+  })
+})
+
+describe('the page follows the hub onto a new build', () => {
+  /* Until it reloads, the page is the old build, however new the brain is. */
+  it('is a new build when the version the hub answers with changes', () => {
+    expect(newBuild('v0.3.0', 'v0.3.1')).toBe(true)
+    expect(newBuild('main-2cd5f50', 'main-411844d')).toBe(true)
+  })
+
+  it('is not one on the first answer, on the same answer, or on a working copy', () => {
+    expect(newBuild(undefined, 'v0.3.1')).toBe(false)     // the page just loaded: this is the build it is
+    expect(newBuild('v0.3.1', 'v0.3.1')).toBe(false)
+    expect(newBuild('dev', 'dev')).toBe(false)
+    expect(newBuild('v0.3.0', 'dev')).toBe(false)         // somebody started a working copy; vite reloads that itself
+    expect(newBuild('v0.3.0', undefined)).toBe(false)     // an older brain that does not say
+  })
+
+  it('reloads, and the page after it says what happened', () => {
+    const kept: Record<string, string> = {}
+    vi.stubGlobal('sessionStorage', { setItem: (k: string, v: string) => { kept[k] = v }, getItem: (k: string) => kept[k] ?? null, removeItem: (k: string) => { delete kept[k] } })
+    const reload = vi.fn(); vi.stubGlobal('location', { reload })
+    reloadOnto('v0.3.1')
+    expect(reload).toHaveBeenCalledTimes(1)
+    store.toast = null
+    sayUpdated()
+    expect(store.toast?.text).toBe('Updated to v0.3.1.')
+    store.toast = null
+    sayUpdated()                                            // once: the next load of the page is not an update
+    expect(store.toast).toBeNull()
+    vi.unstubAllGlobals()
+  })
+
+  it('still reloads where nothing can be kept', () => {
+    vi.stubGlobal('sessionStorage', { setItem: () => { throw new Error('private') }, getItem: () => { throw new Error('private') }, removeItem: () => {} })
+    const reload = vi.fn(); vi.stubGlobal('location', { reload })
+    reloadOnto('v0.3.1')
+    expect(reload).toHaveBeenCalledTimes(1)
+    expect(() => sayUpdated()).not.toThrow()
+    vi.unstubAllGlobals()
   })
 })

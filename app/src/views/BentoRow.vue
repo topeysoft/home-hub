@@ -17,6 +17,7 @@
  */
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { ago, cap, done, justDone, scenesFor, store, whatsOn } from '../store'
+import { leave } from '../leaving'
 import type { Device, Room } from '../api'
 import SceneBar from '../SceneBar.vue'
 import CameraTile from '../tiles/CameraTile.vue'
@@ -47,7 +48,6 @@ const climates = computed(() => props.rooms.flatMap(r => r.devices.filter(d => c
    another room. Nobody's hand is on the screen for that one, so it reads itself off and goes.
    Held rather than computed, because a card keeping its place is the whole point, and a row rebuilt
    from what is still on has no place to keep. */
-const SHOWN = 620, FADE = 340, SPARE = 90   // read the card off, fade it, and do not cut the fade short
 const live = computed(() => whatsOn().filter(d => cap(d) !== 'camera' && cap(d) !== 'climate'))
 const going = reactive<Record<string, true>>({})   // still in the row, on its way out
 const gone = reactive<Record<string, true>>({})    // and now faded
@@ -68,13 +68,9 @@ function close(now: Device[]) {
 }
 watch(live, (now, was) => {
   for (const d of was ?? []) {
-    if (!now.some(x => x.id === d.id) && !going[d.id] && !done[d.id]) {
-      going[d.id] = true                             // the class that arms the fade, with the card still at full strength
-      /* Two frames before it goes, the same way the row's own entrance arms itself above: a class that
-         both defines a transition and moves the value in one change cannot be relied on to animate. */
-      window.setTimeout(() => requestAnimationFrame(() => requestAnimationFrame(() => { gone[d.id] = true })), SHOWN)
-      window.setTimeout(() => { delete going[d.id]; delete gone[d.id]; close(live.value) }, SHOWN + FADE + SPARE)
-    }
+    /* leaving.ts has the beat, the fade and the sweep -- and the reason the fade must check the card
+       is still going, which is what a wall that rested with a speaker playing found out. */
+    if (!now.some(x => x.id === d.id) && !going[d.id] && !done[d.id]) leave(d.id, going, gone, () => close(live.value))
   }
   close(now)
 }, { immediate: true })

@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { Device } from '../api'
-import { cap, isActive, isDead, perform, shortName, roomOf, store } from '../store'
+import { cap, iconFor, isActive, isDead, perform, shortName, roomOf, store } from '../store'
 import { readingLabel } from '../readings'
 import Icon from '../Icon.vue'
 import DeviceArt from '../DeviceArt.vue'
 import { kindFor, type ArtState } from '../art'
 import { useArm } from '../twice'
+import { leadsFixture, partnerOf, seeing } from '../units'
 
 const props = defineProps<{ device: Device }>()
 const kind = computed(() => cap(props.device))
@@ -40,8 +41,16 @@ const label = computed(() => {
   if (k === 'cover') return d.attrs.current_position != null && d.state === 'open' ? `${d.attrs.current_position}% open` : d.state === 'open' ? 'Open' : 'Closed'
   if (k === 'fan') return d.state === 'on' ? (d.attrs.percentage ? `${d.attrs.percentage}%` : 'On') : 'Off'
   if (k === 'vacuum') return d.state === 'cleaning' ? 'Cleaning' : d.state === 'docked' ? 'Docked' : d.state
-  return d.state === 'on' ? 'On' : 'Off'
+  const base = d.state === 'on' ? 'On' : 'Off'
+  return eye.value ? `${base} · Motion` : base       // a switch with its own motion sensor (units.ts) says so on its one line
 })
+const eye = computed(() => seeing(props.device))
+/* a fan with a light in it, when the fan is the tile: the light is a row on it (units.ts) */
+const carried = computed(() => leadsFixture(props.device) ? partnerOf(props.device) : undefined)
+function tapCarried() {
+  const c = carried.value; if (!c || isDead(c)) return
+  perform(c, c.state === 'on' ? 'off' : 'on', undefined, { state: c.state === 'on' ? 'off' : 'on' })
+}
 const next = computed<[string, string]>(() => {
   const d = props.device, k = kind.value
   if (k === 'cover') return d.state === 'open' ? ['close', 'closed'] : ['open', 'open']
@@ -60,19 +69,26 @@ function tap() {
 </script>
 
 <template>
-  <button class="tile plain" :class="[kind, { on, dead, passive, pending, arming }]" :disabled="passive || dead" @click="tap" :aria-pressed="passive ? undefined : on">
+  <button class="tile plain" :class="[kind, { on, dead, passive, pending, arming, seeing: eye }]" :disabled="passive || dead" @click="tap" :aria-pressed="passive ? undefined : on">
     <!-- no artwork of its own, so the icon, oversized and faint, is the art: a shelf of no-name plugs reads composed rather than empty -->
     <DeviceArt v-if="shape" :kind="shape" :state="artState" />
     <!-- rung four: nothing drawn for this one, so the icon goes oversized and faint and becomes the art -->
-    <span class="tile-art" v-else aria-hidden="true"><Icon :name="kind" :size="150" /></span>
+    <span class="tile-art" v-else aria-hidden="true"><Icon :name="iconFor(device)" :size="150" /></span>
     <span class="tile-maker" v-if="device.maker">{{ device.maker }}</span>
     <div class="tile-body">
-      <span class="tile-icon"><Icon :name="kind" /></span>
+      <span class="tile-icon"><Icon :name="iconFor(device)" /></span>
       <span class="tile-name">{{ name }}</span>
       <span class="tile-state" :class="{ big: kind === 'sensor' }">{{ label }}</span>
       <!-- a cover says how far in a bar as well as in words: "70% open" is the
            number, the bar is the picture of it, and the board draws both -->
       <span class="tile-bar" v-if="kind === 'cover' && device.attrs.current_position != null" aria-hidden="true"><i :style="{ width: device.attrs.current_position + '%' }"></i></span>
+      <span class="machine-rows tile-carry" v-if="carried">
+        <span class="machine-row" role="button" tabindex="0" :class="{ on: carried.state === 'on', dead: isDead(carried), pending: !!store.pending[carried.id] }"
+              :aria-pressed="carried.state === 'on'" :title="`Hold to open ${carried.name}`"
+              @click.stop="tapCarried" @pointerdown.stop @pointerup.stop @keydown.enter.space.prevent.stop="tapCarried" v-hold="() => (store.opened = carried!)">
+          <Icon name="light" :size="15" /><span class="machine-row-name">Light</span><span class="machine-row-state">{{ isDead(carried) ? 'Not responding' : carried.state === 'on' ? 'On' : 'Off' }}</span>
+        </span>
+      </span>
     </div>
   </button>
 </template>
