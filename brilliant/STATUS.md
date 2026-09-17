@@ -223,6 +223,62 @@ Next on this track: diff the vendor store of the hallway dimmer (`0x000a`, panel
 find the load-type / motion-enable fields, replay them onto `0x0003`, and confirm dimming + `0x13` moving. Then the
 console can be unplugged for good, and switches can be adopted or re-keyed one at a time.
 
+## Two switches on one light: the hub carries the press (17 September, afternoon: brain/hub/relay.py)
+
+A Brilliant companion switch has no load. It is a radio node that reports its own touch and drives
+nothing, and the console was what heard it and drove the switch the light is actually wired to. So the
+moment the console goes, every companion in the house becomes a button that does nothing — which is
+why the hard rule below exists. The hub now takes that job.
+
+A link is nothing but a rule about topics, which is what makes the stairway possible at all: the
+companion is on the house's own network behind one puck, its load is still on the panel's network
+behind the other, and the broker is the only place the two meet.
+
+```
+mesh/<from-net>/<from-addr>/state       ->  mesh/<to-net>/<to-addr>/set
+mesh/<from-net>/<from-addr>/brightness  ->  mesh/<to-net>/<to-addr>/brightness/set
+```
+
+Links live in `/data/switch-links.json` behind `GET`/`POST`/`DELETE /bridge/links`, written by hand
+today; pairing in the product (the phone scanning both codes at setup, the one extra press on the wall)
+will write the same rows. It is fed from `hub/bridge.py`'s single `mesh/#` subscription, so there is one
+listener on the broker, not two. 18 tests in `brain/tests/test_relay.py`.
+
+**Four things a naive relay gets wrong, each one held by a test:**
+
+- **A retained message is not a press.** Every puck republishes all of its state, retained, on every
+  reconnect to the broker. Retained only ever sets the baseline here; it never acts. Without this the
+  house replays every press each time the broker blinks.
+- **A message is not a press either — a change is.** The puck resyncs every switch at link-up and again
+  every ten minutes, so the same value arrives over and over. This also means a press made while the hub
+  was away is still carried when it is next heard, which is correct.
+- **What we send comes back.** The puck publishes the state of everything it hears, our own commands
+  included; two links facing each other would volley for ever. Anything we just sent is ignored on the
+  way back for three seconds.
+- **A command can be dropped.** The acknowledgement is the load's own Status, so a send is confirmed by
+  the state arriving as asked within two seconds, tried three times, and then said plainly in the log
+  rather than counted as a success.
+
+**Proven on hardware, on both networks (17 September):** `mesh/7dcdd6f322c30af4/0004/set OFF` moved the
+loadless companion ON -> OFF with nothing visible in the house, and panel-net `0x0011` went OFF -> ON ->
+OFF on command, each confirmed by its own Status inside a second, with nothing else on either network
+moving. The bench that does this runs the real `Relay` class from a Mac against the live hub broker over
+ssh, so a press can be proven with nothing deployed.
+
+**Still open, and both are physical:** `0x0011` is only circumstantially the stairway load and wants a
+human at the lamp to confirm it; and `f4a9f3` sits at −90 dBm, below where BLE mesh GATT stops
+completing. A relay proven on a marginal link proves the wrong thing — move that puck into range of any
+one panel switch first, since they relay for each other.
+
+**A puck can go silently mute, and this is the signature:** `mqtt=down` with `rssi=0` and
+`light=looking`, Wi-Fi up with an IP, and *no connection attempt at all* in the broker's log. A puck
+that cannot find a proxy spends six seconds of every eight in a blocking active BLE scan and the TCP
+SYN never gets air. It only bites a puck out of range of its own mesh — exactly when you need it on the
+broker to say so — and it self-heals the instant a proxy is found, which makes it look like a reboot
+"fixed" it. Fixed by giving Wi-Fi the radio to itself before each scan while the broker is down;
+recovery is then about one connect attempt every twelve seconds. Both pucks carry the fix. NVS config
+survives a reflash of the ship image, so a desk reflash does not strand a configured puck.
+
 ## Known switch addresses (from the bridge's sweep)
 
 Answered `Generic OnOff Get` to all-nodes: `0x0004 0x0005 0x0006 0x0008 0x000a 0x000b 0x000e 0x0010 0x0011 0x0014
