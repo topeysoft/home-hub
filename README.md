@@ -161,6 +161,9 @@ container before the Pi's first start so the two do not fight over Ring's token.
   off", and the two fields that keep the fix from making it untouchable.
 - `docs/apps.md` — Phone, tablet and desktop apps: why the panel already is the app, the four things a native
   shell would carry, and the one fork (the hub's certificate, or a pinned one in a shell) to settle after the relay.
+- `docs/storage.md` — Storage: why the unit sold runs on eMMC and not NVMe (the finding, so it is not re-argued), and
+  the plan for the hub to say months ahead that its storage is wearing out: the host reads the wear once a day, the
+  brain turns it into one *Needs a look* line with *Back up* beside it, and *This hub* gets a Storage row.
 - `docs/shipping.md` — Shipping it: why the unit to sell is a Compute Module 5 and not a Pi 5, the staged hardware path
   (Pi 5 kit, CM5 in a partner box, a custom carrier only later), radios on the network rather than USB, and the list of
   what is open on the Wi‑Fi or missing from the appliance layer before a stranger pays, with what can be done today.

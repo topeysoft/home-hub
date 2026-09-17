@@ -58,7 +58,8 @@ that justifies it.
 **Memory.** 4 GB is the floor: Home Assistant Core, Zigbee2MQTT, Z-Wave JS UI, the Matter server, Mosquitto, Caddy and
 the brain fit with room; 2 GB does not. 8 GB is what the small voice tier in `docs/voice.md` wants.
 
-**What the unit must have, whichever stage.** eMMC or NVMe, never a card. An RTC with a battery, because a box that
+**What the unit must have, whichever stage.** eMMC or NVMe, never a card (which of the two, and how the hub will say
+when it is wearing out: `docs/storage.md`). An RTC with a battery, because a box that
 boots in 1970 cannot verify a certificate and the relay's certificate is the first thing it will need. A hardware
 watchdog, enabled, because an unattended box must reboot itself out of a hang. Active cooling inside a sealed
 enclosure, because a throttled Pi 5 looks like a slow panel. A certified supply. Ethernet. PoE as an option, because
