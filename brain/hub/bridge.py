@@ -309,8 +309,13 @@ class Bridges:
                 mm = re.search(r"rssi (-?\d+)", payload); p["rssi"] = int(mm.group(1)) if mm else None
             if self.job and self.job.get("chip") == chip and self.job["state"] in ("placing", "ready") and p.get("net"):
                 self.job["net"] = p["net"]
-        elif len(parts) == 4 and parts[3] == "state":
-            self.switches[(parts[1], parts[2])] = payload
+        elif len(parts) == 4 and parts[1] != "bridge":
+            if parts[3] == "state":
+                self.switches[(parts[1], parts[2])] = payload
+            # Two switches on one light: the same stream is where a companion's press is heard.
+            # One subscription for both, because there is only one thing to listen to (hub/relay.py).
+            if (relay := getattr(self.hub, "relay", None)):
+                relay.on_message(parts[1], parts[2], parts[3], payload, bool(m.get("retain")))
 
     def _count(self, net: str | None) -> int:
         return sum(1 for (n, _a) in self.switches if net is None or n == net)
