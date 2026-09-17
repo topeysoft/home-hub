@@ -32,6 +32,7 @@ from .settings import Settings, DATA, env_file
 from .lock import Lock, needs_code
 from .pairing import Pairing
 from .bridge import Bridges
+from .relay import Relay
 from .phones import Phones, COOKIE, holds_keys, open_to_strangers, from_away, away_refused, away_refusal
 from . import camera
 
@@ -98,6 +99,7 @@ class Hub:
         self.lock = Lock(self.settings)
         self.pair = Pairing(self)
         self.bridge = Bridges(self)        # a puck on the cable, and the ones the house has
+        self.relay = Relay(self)           # two switches on one light: the hub carries the press across
         self.phones = Phones(self)                     # which phones belong to the house, once it has a code
         self.engine = Engine(self)                     # rules: signals in, room intents out
         self.presence = Presence(self)                 # who is home, from HA's persons and the alarm's mode
@@ -1095,6 +1097,31 @@ async def bridge_switch(body: dict):
     to land rather than a 404 that reads as a broken house."""
     hub.ready()
     raise HTTPException(501, "This house cannot let a new switch in yet. The ones that came with it are all here; adding one is coming.")
+
+
+@app.get("/bridge/links")
+def bridge_links():
+    """Two switches wired to one light. The hub carries the press from the companion to the load."""
+    hub.ready()
+    return hub.relay.as_data()
+
+
+@app.post("/bridge/links")
+def bridge_link_add(body: dict):
+    hub.ready()
+    try:
+        return hub.relay.add(body.get("from") or {}, body.get("to") or {},
+                             str(body.get("name") or ""), bool(body.get("enabled", True)))
+    except (KeyError, TypeError, ValueError) as e:
+        raise HTTPException(400, str(e))
+
+
+@app.delete("/bridge/links/{link_id}")
+def bridge_link_remove(link_id: str):
+    hub.ready()
+    if not hub.relay.remove(link_id):
+        raise HTTPException(404, "No such link.")
+    return {"ok": True}
 
 
 # ---------- pairing radio devices ----------
