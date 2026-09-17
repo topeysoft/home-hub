@@ -82,6 +82,7 @@ const rooms = [
 ]
 const home = { name: "Temi's house", temp_unit: '°F', rooms }
 const status = { driver: process.env.ENGINE === 'down' ? 'down' : 'ready', reason: process.env.ENGINE === 'down' ? "The hub's engine is not answering yet." : '',
+  version: 'v0.3.0',   // the build this mock is: the panel reloads itself when a status answers with another (store.ts, newBuild)
   setup_done: process.env.FRESH !== '1', owner: 'Temi', home: "Temi's house", location: true, rooms: 8, devices: 30, locked: process.env.LOCKED === '1',
   drivers: [
     { id: 'mqtt', name: 'Messages', state: 'ready', text: 'Running', port: 1883 },
@@ -252,6 +253,9 @@ const server = http.createServer((req, res) => {
   const p = url.pathname
   if (p === '/setup/status') return json(res, status)
   if (p === '/update/notes') return json(res, { notes: releaseNotes[0], history: releaseNotes })
+  /* Install: on a hub the brain restarts and comes back as the next build, and the page follows it
+     (store.ts, newBuild). The mock only takes the request; the e2e speaks the new version itself. */
+  if (p === '/update' && req.method === 'POST') { if (status.update) status.update.requested = true; return json(res, status.update ?? {}) }
   if (p === '/update/check' && req.method === 'POST') { if (status.update) status.update.checked = Date.now() / 1000; return json(res, status.update ?? {}) }
   if (p === '/update/notes/seen' && req.method === 'POST') { if (status.update) status.update.whats_new = null; return json(res, status.update ?? {}) }
   if (p === '/home') return json(res, home)
