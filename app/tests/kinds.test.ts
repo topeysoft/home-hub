@@ -6,7 +6,7 @@
    raw field the brain picks a service from. */
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Device, Room } from '../src/api'
-import { activityParts, cap, capsOf, shownAs, store, whatsOn } from '../src/store'
+import { activityParts, cap, capsOf, iconFor, shownAs, store, whatsOn } from '../src/store'
 import { paneKind, reading, verbs } from '../src/pane'
 
 const plug = (kind?: string, state = 'on'): Device =>
@@ -89,5 +89,36 @@ describe('saying so', () => {
   it('says nothing at all where nobody has disagreed with the driver', () => {
     expect(shownAs(plug())).toBe('')
     expect(shownAs({ ...plug(), kind: 'switch' })).toBe('')
+  })
+})
+
+describe('an appliance, guessed from its name and said over', () => {
+  const ice = (kind?: string, state = 'on'): Device =>
+    ({ id: 'switch.ice', name: 'Refrigerator Ice Maker', room_id: 'living', capability: 'switch', state, attrs: {}, kind, guess: 'appliance', hw: 'hw-fridge', hw_name: 'Refrigerator' })
+
+  it('is shown as the house’s guess until somebody says otherwise', () => {
+    expect(cap(ice())).toBe('appliance')
+    expect(cap(ice('switch'))).toBe('switch')
+    expect(cap(ice('light'))).toBe('light')
+  })
+  it('says nothing under its name while it is only a guess, and “Shown as a plug” once somebody disagreed', () => {
+    expect(shownAs(ice())).toBe('')
+    expect(shownAs(ice('switch'))).toBe('Shown as a plug')
+  })
+  it('reads On and Off, and offers the one button', () => {
+    expect(reading(ice())).toBe('On')
+    expect(reading(ice(undefined, 'off'))).toBe('Off')
+    expect(verbs(ice()).some(v => v.id === 'power')).toBe(true)
+    expect(paneKind(ice())).toBe('appliance')
+  })
+  it('is not a plug the room counts, and not news the house puts under what is on', () => {
+    expect(activityParts(room(ice(), plug()))).toEqual(['Porch lamp on'])
+    store.rooms = [room(ice(), plug())]
+    expect(whatsOn().map(d => d.id)).toEqual(['switch.porch'])
+  })
+  it('wears the snowflake for ice, and the machine for anything else', () => {
+    expect(iconFor(ice())).toBe('snow')
+    expect(iconFor({ ...ice(), name: 'Dishwasher Delay Start' })).toBe('appliance')
+    expect(iconFor(plug())).toBe('switch')
   })
 })

@@ -281,3 +281,48 @@ class AccountTests(ApiTest):
     def test_removing_an_account_needs_the_code(self):
         self.assertTrue(needs_code("DELETE", "/accounts/e-hue"))
         self.assertFalse(needs_code("GET", "/accounts"))
+
+
+class UnitTests(ApiTest):
+    """A switch with a motion sensor built in is one thing on the wall: docs/units.md."""
+
+    def pathlight_house(self, has_entity_name=True):
+        from tests.apptest import entity, hardware, house, state
+        areas, devices, entities, states = house()
+        devices = devices + [hardware("hw-path", None, "Walkway Pathlight", manufacturer="Ring", model="Lighting Switch/Light")]
+        entities = entities + [entity("light.walkway_pathlight_light", "hw-path", has_entity_name=has_entity_name),
+                               entity("binary_sensor.walkway_pathlight_motion", "hw-path", original_device_class="motion", has_entity_name=has_entity_name)]
+        states = states + [state("light.walkway_pathlight_light", "off", friendly_name="Walkway Pathlight Light"),
+                           state("binary_sensor.walkway_pathlight_motion", "on", friendly_name="Walkway Pathlight Motion", device_class="motion")]
+        return areas, devices, entities, states
+
+    def test_a_light_knows_the_motion_sensor_built_into_it_and_the_sensor_is_still_its_own_device(self):
+        self.hub.home.build(*self.pathlight_house())
+        light = self.hub.home.devices["light.walkway_pathlight_light"]
+        self.assertEqual(light.attrs.get("motion"), "binary_sensor.walkway_pathlight_motion")
+        self.assertEqual(self.hub.home.devices["binary_sensor.walkway_pathlight_motion"].capability, "motion")
+        self.assertNotIn("motion", self.hub.home.devices["light.ceiling"].attrs)   # a bulb with no sensor on its hardware
+
+    def test_it_survives_a_state_change_the_way_a_cameras_lamp_does(self):
+        self.hub.home.build(*self.pathlight_house())
+        self.hub.home.apply_state("light.walkway_pathlight_light", {"state": "on", "attributes": {"friendly_name": "Walkway Pathlight Light"}})
+        self.assertEqual(self.hub.home.devices["light.walkway_pathlight_light"].attrs.get("motion"), "binary_sensor.walkway_pathlight_motion")
+
+    def test_renaming_the_unit_renames_the_hardware_and_leaves_parts_ha_names_after_it_alone(self):
+        self.hub.home.build(*self.pathlight_house(has_entity_name=True))
+        r = self.client.post("/devices/light.walkway_pathlight_light/rename", json={"name": "Path light", "unit": True})
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(("config/device_registry/update", {"device_id": "hw-path", "name_by_user": "Path light"}), self.ha.sent)
+        self.assertEqual([s for s in self.ha.sent if s[0] == "config/entity_registry/update"], [])
+
+    def test_parts_that_carry_their_own_name_follow_the_unit_where_that_name_began_with_it(self):
+        self.hub.home.build(*self.pathlight_house(has_entity_name=False))
+        self.hub.home.devices["binary_sensor.walkway_pathlight_motion"].name = "Steps"    # renamed by hand once already
+        self.client.post("/devices/light.walkway_pathlight_light/rename", json={"name": "Path light", "unit": True})
+        renamed = [(s[1]["entity_id"], s[1]["name"]) for s in self.ha.sent if s[0] == "config/entity_registry/update"]
+        self.assertEqual(renamed, [("light.walkway_pathlight_light", "Path light Light")])
+
+    def test_without_the_unit_flag_a_rename_is_the_one_device_as_before(self):
+        self.hub.home.build(*self.pathlight_house(has_entity_name=False))
+        self.client.post("/devices/light.walkway_pathlight_light/rename", json={"name": "Path light"})
+        self.assertNotIn("config/device_registry/update", [s[0] for s in self.ha.sent])

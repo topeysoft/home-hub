@@ -11,7 +11,10 @@ import MediaTile from '../tiles/MediaTile.vue'
 import CameraTile from '../tiles/CameraTile.vue'
 import PlainTile from '../tiles/PlainTile.vue'
 import ClimateTile from '../tiles/ClimateTile.vue'
+import MachineTile from '../tiles/MachineTile.vue'
 import SortView from '../SortView.vue'
+import { machinesOf } from '../machines'
+import { onATile, sensorName } from '../units'
 
 const props = defineProps<{ room: Room }>()
 defineEmits<{ back: []; open: [id: string] }>()
@@ -19,10 +22,16 @@ const editing = ref(false)
 /* an empty room is not a dead end: things waiting under New devices can be placed here, or something new added */
 const waiting = computed(() => store.rooms.find(r => r.id === 'unassigned')?.devices.length ?? 0)
 
-const order = ['media', 'light', 'cover', 'lock', 'fan', 'switch', 'vacuum', 'climate', 'camera', 'motion', 'contact', 'sensor']
+const order = ['media', 'light', 'cover', 'lock', 'fan', 'switch', 'appliance', 'vacuum', 'climate', 'camera', 'motion', 'contact', 'sensor']
 const sorted = computed(() => [...props.room.devices].sort((a, b) => order.indexOf(cap(a)) - order.indexOf(cap(b))))
-const readings = computed(() => sorted.value.filter(isReading))      // sensors say something; they are read, not tapped
-const devices = computed(() => sorted.value.filter(d => !isReading(d)))
+/* sensors say something; they are read, not tapped. A switch's own motion sensor is said on the switch's tile (units.ts), not here as well */
+const readings = computed(() => sorted.value.filter(d => isReading(d) && !onATile(d, props.room)))
+/* A machine's features are one card between them (machines.ts), so they come out of the device list
+   here and go back in as a cell of their own below. */
+const grouped = computed(() => machinesOf(sorted.value.filter(d => !isReading(d))))
+const devices = computed(() => grouped.value.rest)
+const machines = computed(() => grouped.value.machines)
+const machineByKey = computed(() => new Map(machines.value.map(m => [m.key, m])))
 
 /*
  * How much room a tile gets, and it is three heights and nothing else.
@@ -74,12 +83,15 @@ const doing = (d: Device) => !isDead(d) && d.state !== 'off' && d.state !== 'una
 type Cell = { key: string; size: Size }
 
 function arrange(): Cell[] {
-  const ds: Cell[] = [...devices.value]
-    .sort((a, b) =>
-      SIZES[sizeOf(b)] - SIZES[sizeOf(a)] ||
-      Number(doing(b)) - Number(doing(a)) ||
-      order.indexOf(cap(a)) - order.indexOf(cap(b)))
-    .map(d => ({ key: d.id, size: sizeOf(d) }))
+  /* A machine is never "doing" something: its ice maker being on is not news the way a lamp is, so
+     the card sorts with the things that are off. Three features fit a third; more want a half. */
+  const ranked = [
+    ...devices.value.map(d => ({ key: d.id, size: sizeOf(d), doing: doing(d), rank: order.indexOf(cap(d)) })),
+    ...machines.value.map(m => ({ key: m.key, size: (m.devices.length > 3 ? 'half' : 'third') as Size, doing: false, rank: order.indexOf('appliance') })),
+  ]
+  const ds: Cell[] = ranked
+    .sort((a, b) => SIZES[b.size] - SIZES[a.size] || Number(b.doing) - Number(a.doing) || a.rank - b.rank)
+    .map(c => ({ key: c.key, size: c.size }))
   if (!scenesFor(props.room).length) return ds
   /* The scenes are a CARD among the devices rather than a bar above them. A bar
      costs 62px off the top of every room in the house before anything in the
@@ -117,7 +129,7 @@ function arrange(): Cell[] {
 const plan = ref<Cell[]>([])
 const byId = computed(() => new Map(props.room.devices.map(d => [d.id, d])))
 watch(
-  () => `${props.room.id}|${devices.value.map(d => d.id).join()}`,
+  () => `${props.room.id}|${devices.value.map(d => d.id).join()}|${machines.value.map(m => m.key + m.devices.length).join()}`,
   () => (plan.value = arrange()),
   { immediate: true },
 )
@@ -155,19 +167,20 @@ onUnmounted(() => clearInterval(tick))
                room nothing, because the strip is already here. -->
           <button v-for="d in readings" :key="d.id" class="reading" :class="{ on: readingOn(d), dead: isDead(d) }"
                   v-hold="() => (store.opened = d)" :title="`Hold to open ${d.name}`">
-            <Icon :name="cap(d)" :size="15" /><span class="reading-name" v-if="readingName(d, room)">{{ readingName(d, room) }}</span><span class="reading-value">{{ readingLabel(d) }}</span>
+            <Icon :name="cap(d)" :size="15" /><span class="reading-name" v-if="readingName(d, room)">{{ sensorName(d, room) }}</span><span class="reading-value">{{ readingLabel(d) }}</span>
           </button>
         </div>
       </div>
       <button class="back room-edit" @click="editing = true" aria-label="Edit this room" title="Rename or move things"><Icon name="edit" :size="20" /></button>
     </header>
 
-    <div class="tiles" v-if="devices.length">
+    <div class="tiles" v-if="devices.length || machines.length">
       <template v-for="c in plan" :key="c.key">
         <div v-if="c.key === 'scenes'" class="tile room-scenes" :data-size="c.size">
           <span class="room-scenes-head">In the {{ room.name.toLowerCase() }}</span>
           <SceneBar :room="room" stacked />
         </div>
+        <MachineTile v-else-if="machineByKey.get(c.key)" :machine="machineByKey.get(c.key)!" :room="room" :data-size="c.size" />
         <component v-else-if="byId.get(c.key)" :is="tile(cap(byId.get(c.key)!))" :data-size="c.size" :device="byId.get(c.key)!" v-hold="() => (store.opened = byId.get(c.key)!)" />
       </template>
     </div>

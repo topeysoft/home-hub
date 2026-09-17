@@ -106,8 +106,10 @@ const heading = computed(() => props.device.state === 'returning')
       <button class="rig-big" :class="{ on }" :disabled="dead" @click="perform(device, on ? 'off' : 'on', undefined, { state: on ? 'off' : 'on' })">
         <Icon name="power" :size="24" /><span>{{ on ? 'Switch it off' : 'Switch it on' }}</span>
       </button>
-      <!-- and for a while: the same cards the board drew, one row of equal ones -->
-      <div class="rig-timer" v-if="left == null">
+      <!-- and for a while: the same cards the board drew, one row of equal ones. Not for an appliance:
+           "ice maker for 10 minutes" is a plug's sentence, and a fridge's feature is on until it is not -->
+      <div class="rig-timer" v-if="kind === 'appliance'"></div>
+      <div class="rig-timer" v-else-if="left == null">
         <button v-for="m in FOR" :key="m" class="rig-when" :disabled="dead || busy" @click="timer(m)">for {{ m < 60 ? `${m} min` : 'an hour' }}</button>
       </div>
       <div class="rig-timer one" v-else>

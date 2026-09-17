@@ -88,11 +88,17 @@ export const isDead = (d: Device) => d.state === 'unavailable' || d.state === 'u
 /* What the house treats a thing AS: the owner's answer where they have given one, the driver's otherwise.
    Every tile, pane, verb and room line reads this. Nothing that picks a service does -- that is the
    brain's job, from `capability`, and the panel never sees it. See docs/kinds.md. */
-export const cap = (d: Device) => (d.kind || d.capability).split('.')[0]
+export const cap = (d: Device) => (d.kind || d.guess || d.capability).split('.')[0]
+/** What it is shown as when nobody has said otherwise: the house's guess from its name where it made
+    one (a switch on a fridge is an appliance), the driver's word where it did not. */
+export const defaultKind = (d: Device) => d.guess || d.capability
 /** Said quietly under the name on a thing's own pane, and nowhere else: a tile is a glance, and the
     point of the override is that the thing stops looking unusual. Empty where nobody has said anything. */
-export const shownAs = (d: Device) => d.kind && d.kind !== d.capability ? `Shown as ${KIND_NOUN[cap(d)] ?? cap(d)}` : ''
-export const KIND_NOUN: Record<string, string> = { light: 'a light', switch: 'a plug', fan: 'a fan', alarm: 'an alarm', media: 'a speaker', cover: 'a blind', climate: 'a thermostat', lock: 'a lock', camera: 'a camera', vacuum: 'a vacuum' }
+export const shownAs = (d: Device) => d.kind && d.kind !== defaultKind(d) ? `Shown as ${KIND_NOUN[cap(d)] ?? cap(d)}` : ''
+export const KIND_NOUN: Record<string, string> = { light: 'a light', switch: 'a plug', fan: 'a fan', alarm: 'an alarm', appliance: 'an appliance', media: 'a speaker', cover: 'a blind', climate: 'a thermostat', lock: 'a lock', camera: 'a camera', vacuum: 'a vacuum' }
+/** The glyph for a thing, which for an appliance reads its name: a fridge's ice maker gets the snowflake
+    the weather already draws, and any other machine's feature the machine. Every other kind is its own icon. */
+export const iconFor = (d: Device) => cap(d) === 'appliance' && /\bice\b|freez/i.test(d.name) ? 'snow' : cap(d)
 export const PASSIVE = new Set(['sensor', 'motion', 'contact', 'camera'])
 export const visibleRooms = () => {
   const rs = store.rooms.filter(r => r.id !== 'unassigned' || r.devices.length)
@@ -104,8 +110,15 @@ export const deviceById = (id: string) => { for (const r of store.rooms) { const
 /* ---------- names: say "Speaker" inside the Bedroom, not "Bedroom speaker" ---------- */
 const GENERIC = /^((ceiling|floor|desk|table|main|left|right|wall|bedside|overhead|front|back|side) )?(speaker|tv|television|light|lights|lamp|fan|lock|door|blind|blinds|shade|shades|camera|plug|switch|thermostat|vacuum|window|motion|sensor|strip|doorbell|alarm|siren)$/i
 const norm = (s: string) => s.replace(/[’‘]/g, "'").toLowerCase().trim()
+/** A part named after its unit and its kind -- "Walkway Pathlight" + "Light", the way HA composes them -- IS the
+    unit, on the wall: its tile wears the unit's name, and renaming it renames the unit (units.ts, docs/units.md). */
+export function unitNamed(d: Device): boolean {
+  const unit = (d.hw_name ?? '').trim()
+  return !!unit && new RegExp(`^${unit.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s+(light|switch|fan|plug|dimmer)$`, 'i').test(d.name.trim())
+}
 export function shortName(d: Device, room?: Room | null): string {
   let n = d.name.trim()
+  if (unitNamed(d)) n = (d.hw_name ?? '').trim()
   if (room) {
     const r = norm(room.name), nn = norm(n)
     if (nn.startsWith(r + ' ')) {
@@ -154,10 +167,12 @@ export function activity(r: Room): string {
   if (r.devices.every(d => cap(d) === 'camera')) return r.devices.length === 1 ? '1 camera' : `${r.devices.length} cameras`
   return 'Quiet'
 }
-export function roomActive(r: Room) { return r.devices.some(d => isActive(d) && cap(d) !== 'camera') }
-/** Everything that is on across the house, cameras excluded: the "on right now" strip. */
+/* An appliance's feature being on is not the house doing anything: an ice maker is on all year, and a
+   card for it in "on right now" would be a card that never leaves. It is on its own tile, and that is where. */
+export function roomActive(r: Room) { return r.devices.some(d => isActive(d) && cap(d) !== 'camera' && cap(d) !== 'appliance') }
+/** Everything that is on across the house, cameras and appliances excluded: the "on right now" strip. */
 export function whatsOn(): Device[] {
-  return store.rooms.flatMap(r => r.devices.filter(d => isActive(d) && !PASSIVE.has(cap(d))))
+  return store.rooms.flatMap(r => r.devices.filter(d => isActive(d) && !PASSIVE.has(cap(d)) && cap(d) !== 'appliance'))
 }
 export function houseLine(): string {
   if (!store.loaded) return store.error || 'Finding the house…'
