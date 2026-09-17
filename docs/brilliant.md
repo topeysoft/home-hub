@@ -475,3 +475,148 @@ extending the provisionee into a **recorder**: implement enough proxy + Config S
 and log every vendor write the panel makes. That is the remaining step, and it delivers both the AppKey (to
 decode PIR/tap values) and the panel's load-type / motion-enable writes verbatim (to configure our own claimed
 switches for dimming and motion).
+
+## The always-on bridge: switches as Home Assistant devices
+
+*16 September 2026, evening. Everything above ran from a laptop over a one-off BLE connection. This makes it a
+fixture of the house.*
+
+`brilliant/esp32-bridge/` was rewritten from the own-network prototype into the **panel bridge**: an ESP32 on a
+USB charger that holds one mesh-proxy link into the panel network with the captured netkey + appkey, decodes what
+the switches say, polls what they will not volunteer, accepts commands, and describes every switch to Home
+Assistant over MQTT discovery. One link is enough because the switches relay for each other; the puck just needs
+to be within a good GATT range (about −80 dBm) of *any* one of them, which is why it is a puck on a wall charger
+and not a radio in the hub: it works the same whether the hub is a Pi, a NUC or a VM.
+
+**What it proved, against the Mac dev stack.** One `Generic OnOff Get` to the all-nodes address made every OnOff
+server answer: eleven switches (`0x0004 0x0005 0x0006 0x0008 0x000a 0x000b 0x000e 0x0010 0x0011 0x0014 0x0016`),
+three more than anyone had counted; `0x0010`/`0x0011` are most likely the live panel's own loads, since a
+Control panel replaces a one-to-four-gang switch itself. Their on/off and dim levels arrived as they were
+touched. `brightness/set 128` over MQTT dimmed the hallway to half — the switch published `Level Status f401`
+(500/1000) to all-nodes on its own — and `255` brought it back; HA's brightness went 255 → 128 → 255 on the
+retained topic. The MQTT session then held for the whole soak, with commands still landing five minutes in. HA
+created 11 lights, 11 motion sensors, 11 diagnostic levels and one bridge sensor from the discovery messages,
+and the brain's own classifier maps those domains straight onto *light* and *motion*.
+
+**Four things broke on the way, and each is now a line in the code.**
+
+- *WiFi and BLE share the radio.* Disabling WiFi modem sleep — the usual reflex for a stable TCP session —
+  makes the BT controller abort at boot (`Should enable WiFi modem sleep when both WiFi and Bluetooth are
+  enabled`), and doing it *after* the controller is up aborts too. Sleep stays on; instead the bridge asks the
+  switch for a 50–100 ms connection interval and prefers WiFi in the coexistence scheduler.
+- *The core's Bluedroid BLE library can hang the main loop for ever.* Its `writeValue` waits on a semaphore that
+  nothing releases if the link drops mid-write, and a −99 dBm link drops often. The broker saw the bridge fall
+  silent 29 s after connecting and published its last will. The BLE layer now runs on NimBLE, whose connects and
+  writes have timeouts, and the MQTT keepalive is 60 s so a stalled second on the radio is not a lost session.
+- *MTU negotiation fails on some links* and leaves the default 23, where a `Generic Level Set` no longer fits one
+  ATT write. Writes honour the real MTU and SAR-segment, as the laptop tools always did.
+- *A broadcast Get loses replies* when a dozen switches answer at once, so it is used for discovery only; state
+  is resynced with unicast Gets to each known switch, at link-up and every ten minutes.
+
+Two firmware bugs inherited from the prototype were also fixed: the proxy nonce carried `CTL|TTL` in octet 1 (the
+very bug that had blinded the laptop tools earlier — the panel's firmware rejects it silently), and the
+application nonce never set the ASZMIC bit for segmented messages with a 64-bit MIC. Segmented inbound messages
+are now reassembled and acknowledged, and Secure Network Beacons are authenticated with the beacon key so an IV
+Index change by the panel would be followed rather than turn every message into silence.
+
+**What the live mesh looked like from inside.** The panel elements `0x0002` and `0x0012` poll switches constantly
+(`Generic OnOff Get`, `Generic Level Get`, and vendor `11 <field list>` gets with up to fifteen fields in one
+message), so the panel is very much alive behind its dead screen. Brilliant's Gets carry a one-byte token that
+the Status echoes as a trailing byte, and every `Level Status` ends `04 00 29 00` regardless of switch — vendor
+extras after the SIG fields; only the leading present-value is used. Motion field `0x13` rests at a different
+level per switch (`0x000a` ~130, `0x0010` ~285, most 0–2, `0x000b` wandering 4–11), so the bridge learns each
+switch's floor and calls motion when the level sits 4 above it. Separately, switch `0x0016` publishes vendor
+field `0x0c = 1` to all-nodes on its own every twenty seconds or so, and the panel's poll list does not include
+`0x13` — so whatever the panel reacts to must arrive unsolicited, and `0x0c` is the candidate. The bridge treats
+both as motion and logs both; nobody walked past a switch during the build, so this is the one claim in this
+section that a person still has to confirm, with `tools/bridge_watch.py` open.
+
+**The arithmetic that shapes it.** Mesh sequence numbers are 24 bits and every poll spends one. At the default
+250 ms round-robin that is four a second, about seven weeks per address. Rather than exhaust one, the bridge
+steps to the next unicast (`BRIDGE_ADDR + n`, from `0x0100`) and starts its sequence again; the switches' replay
+lists are RAM and forget on any power cut, and a dozen extra entries over years is nothing to them.
+
+**What is left.** The hub's Mosquitto refuses the bridge, correctly: it takes only the password in the hub's own
+`driver-layer/.env`, which this laptop does not hold, so `secrets.h` currently names the Mac's broker. Putting
+the hub's `MQTT_USER`/`MQTT_PASSWORD` in that header and reflashing is the whole move. Getting WiFi, broker and
+keys onto a puck without a laptop at all is its own piece of work, and the right shape for it is the hub
+flashing the puck over USB the way it already adopts radio sticks.
+
+**A second puck, on our own network.** Later the same evening an ESP32-S3 took the same firmware with a header of its
+own, pointed at `mesh-net.json` and publishing under `mesh/` rather than `brilliant/`. It found the factory-reset
+switch (`0x0003`, the only node on that network) at −60 dBm, put it on the hub as `light.mesh_switch_0003` with a
+motion sensor, and had an `ON` acknowledged. Two things that proves: the migration off the panel's keys is "same
+firmware, different key file", and two pucks on two networks coexist in Home Assistant because every id carries the
+MQTT base. One thing it shows plainly: that switch's motion field reads a flat 32 since its reset, and its `Level Set`
+draws no `Level Status` — the dimmer/PIR configuration the console wrote is what a reset loses, and finding those
+fields by diffing a configured switch against this one is the next job.
+
+## The dimmer-mode diff, and what it turned up (16 September, night)
+
+With the panel appkey in hand, `tools/vendor_store.py` reads a switch's whole vendor store on either network,
+and `--diff` compares two reads. The hallway dimmer (`0x000a`, console-configured) against the factory-reset
+switch (`0x0003`, ours): 41 of 55 fields identical, 14 different. Identity and counters aside (`0x0d 0x0e 0x1d
+0x47`), the console had written `0x1a=2 0x1b=0 0x48=1 0x4f=1 0x56=3`, setpoints `0x03=200 0x07=500`, and
+`0x0b=0x37`. Mirroring them onto the reset switch, one group at a time, with an acknowledged `Generic Level Set`
+after each:
+
+- **`0x48`/`0x4f` turn on unsolicited reporting.** The moment they were set, the switch began publishing vendor
+  field `0x13` to its publish address five times a second. Field `0x13` had only ever answered a Get before.
+- **`0x03`/`0x07` are the thresholds for that reporting.** Writing 200 and 500 silenced the flood at once; the
+  switch now publishes only on a real change.
+- **`0x0c` is published on every on/off change** (`0` on off, `1` on on, and `1` when a command arrives). It is
+  a state notice, not motion, which retracts the guess that `0x0016`'s periodic `0c=1` was a PIR.
+- **`0x0b` is not the mode**; writing the dimmer's `0x37` only brought the flood back. Restored to `0xff`.
+- **Dimming stayed refused throughout.** The reset switch answers `Level Get` (present 1000) but never
+  acknowledges a `Level Set` in any shape: 0–1000 with the console's transition bytes, without them, or SIG-mapped.
+  The console-configured dimmer acknowledges all of them. So the selector is not among the 55 known fields as
+  written live; either it is read only at boot (a power cycle is the next test), or the dimmer carries fields
+  outside the swept list (a 256-id sweep of both is the test after that).
+
+**And a refinement the run forced.** Field `0x13` fell to 0 when the load switched off and climbed back after
+it came on, and its resting value differs per switch through the bridge (about 130 on the full-bright hallway,
+285 on `0x0010`, near zero on switches driving small loads). That does not undo the hallway walk-past, which was
+watched: still at ~2, 7–8 on a pass, settling on a timer. It says the value carries a *baseline that tracks the
+load* — a PIR element beside a warm triac would read exactly so — and motion is the rise of a few counts above
+whatever the baseline is. The bridge already learns a floor per switch and reports on the rise; it now re-learns
+the floor after every on/off, because the baseline jumps with the load. A walk-past with the lamp left alone,
+watched on `bridge_watch.py`, is the confirmation still owed for the bridge's own thresholds.
+
+### Solved: dimmer mode on a reset switch is the mirrored fields plus a reboot
+
+The missing ingredient was a power cycle. With `0x1a=2 0x1b=0 0x48=1 0x4f=1 0x56=3 0x03=200 0x07=500` written
+(`tools/setfields.py 1a=02 1b=00 48=01 4f=01 56=03 03=c800 07=f401`) and the switch's Safety Disconnect pulled
+and pushed back, the reset switch acknowledged the next `Generic Level Set`: `Level Status` present 1000, target
+300, remaining 0x05, then a publication of 300 — a real ramp, identical to the console-configured hallway
+dimmer — and the same on the way back to full. The firmware reads its mode at boot, which is why every live
+write looked inert. Which of the seven fields is the selector is not yet bisected; the set as a whole is the
+recipe, and it is what the console writes. In the same minute a walk past switch `0x000b` raised its `0x13`
+from a floor of ~5 to 8 and the bridge reported motion, with no lamp involved: the thresholds hold on a body.
+
+So a factory-reset Brilliant dimmer can be brought back to full function on our own network without the
+console: provision it, bind the models, write the seven fields, power-cycle. Nothing now depends on the panel.
+
+
+### Fully validated end to end on a re-provisioned dimmer (16 September, night)
+
+The recipe was proven on a real single-pole load with a person watching. The hallway dimmer (`0x000a` on the
+panel network) was captured (`tools/vendor_store.py`), factory-reset, provisioned onto our own network as
+`0x0005`, bound, given its own captured config, and power-cycled. Then over our network it dimmed on command
+and **the lamp visibly followed** — 30, 100, 10, 60, 100 percent, each a real ramp, confirmed by eye, not just
+by the `Level Status` on the wire.
+
+Two things this run also settled:
+
+- **The vendor model must be bound to our AppKey too.** `ensure_bound` in `tools/onoff.py` now binds
+  `0x0820/0x0001` alongside `0x1000` and `0x1002`; `Node.bind()` takes an optional company id and builds the
+  4-byte vendor model identifier. Without it, every `12 <field>` write is under a key the vendor model does not
+  hold and is silently dropped — which is exactly what the first attempt on `0x0004` showed (binds fine, every
+  config read comes back empty).
+- **A companion in a two-way pair has no load.** The first switch tried (`0x0004`, provisioned earlier) turned
+  out to be the companion end of a stairway two-way: it acknowledges on/off and dim on the mesh but drives no
+  lamp, because the load is wired to the main unit. It is a working loadless wall controller on our network now,
+  a candidate for a scene button once the puck provisions and the hub binds one.
+
+**So the console is retirable in full.** A factory-reset Brilliant dimmer becomes a working dimmer with motion
+on our own network by: provision, bind (`0x1000`, `0x1002`, `0x0820/0x0001`), write the load-type/config fields
+captured from a still-configured switch, power-cycle. Nothing Brilliant remains in the loop.

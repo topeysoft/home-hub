@@ -45,11 +45,27 @@ async def find_node(address, timeout=20.0):
 
 
 async def find_unprovisioned(timeout=20.0, strongest=True):
-    """Find a claimable node. Picks the nearest, not merely the first seen."""
+    """Find a claimable node. Picks the nearest, not merely the first seen.
+
+    Uses a detection callback rather than discover(): on macOS discover() keeps
+    only each device's latest advertisement, which for a Brilliant switch is as
+    often its 0xFEE4 DFU beacon as its unprovisioned 0x1827 beacon, so the node
+    that census.py plainly sees can be invisible to a discover() filter.
+    """
     print(f"  scanning {timeout:.0f}s for unprovisioned nodes...")
-    seen = await BleakScanner.discover(timeout=timeout, return_adv=True)
-    cands = [(d, a) for d, a in seen.values()
-             if PROV_SVC in [u.lower() for u in (a.service_uuids or [])]]
+    hits = {}
+
+    def cb(dev, adv):
+        uuids = [u.lower() for u in (adv.service_uuids or [])]
+        has_sd = any(str(u).lower().startswith("00001827") for u in (adv.service_data or {}))
+        if PROV_SVC in uuids or has_sd:
+            hits[dev.address] = (dev, adv)
+
+    scanner = BleakScanner(detection_callback=cb)
+    await scanner.start()
+    await asyncio.sleep(timeout)
+    await scanner.stop()
+    cands = list(hits.values())
     if not cands:
         print("  none advertising 0x1827.")
         return None

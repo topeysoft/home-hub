@@ -137,12 +137,16 @@ class Node:
         await self._tx(access, use_appkey=False)
         return await self.status(0x8003, "AppKey Add")
 
-    async def bind(self, model_id):
+    async def bind(self, model_id, company=None):
+        # SIG model: 2-byte model id. Vendor model: company id (LE) + model id (LE).
+        mid = (company.to_bytes(2, "little") + model_id.to_bytes(2, "little")
+               if company is not None else model_id.to_bytes(2, "little"))
         access = (bytes([0x80, 0x3D])
                   + self.dst.to_bytes(2, "little")
                   + (0).to_bytes(2, "little")
-                  + model_id.to_bytes(2, "little"))
-        print(f"  -> Config Model App Bind (model 0x{model_id:04x})")
+                  + mid)
+        label = f"0x{company:04x}/0x{model_id:04x}" if company is not None else f"0x{model_id:04x}"
+        print(f"  -> Config Model App Bind (model {label})")
         await self._tx(access, use_appkey=False)
         return await self.status(0x803E, "Model App Bind")
 
@@ -179,9 +183,10 @@ async def ensure_bound(n, net, node):
     print("  node has no AppKey yet -- adding and binding")
     await n.appkey_add()
     ok = True
-    for mid, name in ((0x1000, "Generic OnOff Server"),
-                      (0x1002, "Generic Level Server")):
-        r = await n.bind(mid)
+    for mid, name, company in ((0x1000, "Generic OnOff Server", None),
+                               (0x1002, "Generic Level Server", None),
+                               (0x0001, "vendor 0x0820/0x0001", 0x0820)):
+        r = await n.bind(mid, company)
         # Config Model App Status: opcode(2) status(1) ...
         st = r[2] if r and len(r) > 2 else None
         if st == 0x00:
