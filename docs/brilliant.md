@@ -722,3 +722,58 @@ and ramps; the lamp follows. A switch still in on/off mode echoes a level and th
 
 `tools/restore_switch.py adopt <captured.json>` / `verify <addr>` runs steps 1–4 and 6 from the laptop, and is
 the reference implementation of this sequence.
+
+
+## The multi-way pair protocol: switches talk to each other, and the console is not in it
+
+*17 September 2026. This supersedes an earlier conclusion of mine in this document that switches never address
+each other and that multi-way was probably mediated by the Control panel. Both were wrong, and the caveat I
+attached to them — that no intact pair had been pressed while anything was capturing — turned out to be the
+whole story.*
+
+An intact two-way pair on the panel network (`0x0005` the main with the load, `0x0006` its companion) was
+pressed by hand while everything on the mesh was captured. Three companion presses, then three main presses.
+
+**A companion press is a vendor message straight to the main:**
+
+    0x0006 -> 0x0005   C1 2008 04 03      the companion's press command
+    0x0005             (its load moves)
+    0x0005 -> 0xffff   Generic OnOff Status   the main announces its new state
+
+**A main press is the broadcast alone** — no `0403`, no exchange with the companion. Two distinguishable
+signatures, repeated three times each. Separately, when the main changes state it sends the companion a
+**zero-length** vendor message, which also appears as its reply to a `0403`; that reads as the ack.
+
+**The console never commands anything.** Across the 150-second capture and both controlled runs there is not a
+single `Generic OnOff Set` (`0x8202`/`0x8203`) from any source. The panel elements `0x0002` and `0x0012` appear
+only polling *other* switches with Gets. Multi-way on this pair is peer-to-peer and the panel is a bystander.
+
+### What this changes
+
+- **Pairing is discoverable on the wire.** `0403` from A to B names the pair outright, and because a companion
+  press and a main press have different signatures, a listener can tell which end was touched. Learning a
+  house's existing pairs by watching is back on the table; I had written it off.
+- **The hard rule looks retirable.** If the pairs do not go through the console, unplugging it should not kill
+  them. Not yet retired: one pair, and it deserves repeats before anyone pulls that plug.
+- **A relay must trigger on the press, not on the companion's state.** The companion holds its own independent
+  position: at one resync `0x0006` reported OnOff `ON` while `0x0005` reported `OFF`. Copying the companion's
+  state onto the load would drive the light to whatever arbitrary position the companion happened to hold.
+
+### Two of my own claims that this corrects
+
+- **`04` is not merely a "bare ack".** The opcode table above catalogues it that way from the old no-parameter
+  sweep. It takes an argument, and `04 03` is a press. The sweep found nothing because it sent commands with no
+  parameters, not because the command family was empty.
+- **Zero-length vendor messages are real and used.** The same sweep concluded a zero-length message is dropped
+  before dispatch. A zero-length vendor message is what the main sends its companion in a working exchange. The
+  sweep's silence meant "no reply warranted", not "not understood".
+
+**Caveats worth carrying.** Timestamps are arrival time at the Mac, not mesh time, so ordering *within* one
+second is soft; everything at second granularity and coarser is solid. One pair, one house. And one line in the
+first capture — a main-state change adjacent to the first companion press — cannot be attributed with
+confidence either way.
+
+**Field `0x0c` is not settled.** This document earlier called it an on/off notice, on the strength of it
+following commanded state on switch `0x0003`. In this capture it reads `01` while the main reports `OFF`, and
+falls to `00` only long after, which fits an activity or occupancy flag with a hold better than a load state.
+Treat both readings as unconfirmed; it was never the thing anything depended on.
