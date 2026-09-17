@@ -1,0 +1,135 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      /* the panel's own tokens, unchanged -- app/src/panel.css */
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp: #e9b872; --lamp-ink: #2a1c07; --live: #74c69d; --danger: #e08a8a;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    /* the sheet, as the panel builds it */
+    .sheet { width: 560px; border-radius: 26px; background: rgba(22,24,30,.92);
+             border: 1px solid var(--edge-hi); box-shadow: 0 40px 100px -30px rgba(0,0,0,.9); overflow: hidden; }
+    .sheet h2 { margin: 0; font-size: 36px; line-height: 1.05; font-weight: 400; letter-spacing: -.025em; }
+    .lede { margin: 0 0 20px; color: var(--ink-2); font-size: 15px; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 999px;
+           background: var(--ink); color: var(--bg); font-weight: 500; font-size: 17px; }
+    .btn.big { padding: 15px 28px; }
+    .btn.ghost { background: var(--surface-hi); color: var(--ink); border: 1px solid var(--edge); }
+    .btn.sm { padding: 8px 14px; font-size: 14px; }
+    /* a found thing, as the Add screen already draws one */
+    .found { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
+             padding: 12px 14px; border-radius: 16px; border: 1px solid rgba(233,184,114,.3);
+             background: linear-gradient(rgba(233,184,114,.1), rgba(233,184,114,.1)), var(--surface); }
+    .found .ic { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center;
+                 background: var(--lamp); color: var(--lamp-ink); }
+    .row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
+           padding: 12px 14px; border-radius: 16px; background: var(--surface); border: 1px solid var(--edge); }
+    .t1 { font-size: 15.5px; font-weight: 500; }
+    .t2 { font-size: 13px; color: var(--muted); }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--lamp); }
+    .field { height: 50px; padding: 0 14px; border-radius: 14px; background: var(--surface-hi);
+             border: 1px solid var(--edge); display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 17px; }
+    .bar { height: 6px; border-radius: 999px; background: rgba(255,255,255,.1); overflow: hidden; }
+    .bar i { display: block; height: 100%; border-radius: 999px; background: var(--lamp); }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: #0c0d10; color: var(--ink); font-size: 17px; line-height: 1.4;">
+  <div style="position: absolute; inset: 0; background: radial-gradient(64% 54% at 26% 22%, rgba(72,63,135,.22), transparent 70%), radial-gradient(56% 48% at 84% 84%, rgba(92,63,57,.2), transparent 72%);"></div>
+
+  <svg width="0" height="0" style="position: absolute;"><defs>
+    <radialGradient id="aPool" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#f6dcae" stop-opacity=".85"/><stop offset="55%" stop-color="#e9b872" stop-opacity=".26"/><stop offset="1" stop-color="#e9b872" stop-opacity="0"/></radialGradient>
+    <radialGradient id="gPool" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#bdf0d4" stop-opacity=".9"/><stop offset="55%" stop-color="#74c69d" stop-opacity=".3"/><stop offset="1" stop-color="#74c69d" stop-opacity="0"/></radialGradient>
+    <radialGradient id="rPool" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#f3bcbc" stop-opacity=".62"/><stop offset="55%" stop-color="#e08a8a" stop-opacity=".18"/><stop offset="1" stop-color="#e08a8a" stop-opacity="0"/></radialGradient>
+  </defs></svg>
+
+  <div style="position: absolute; top: 56px; left: 56px; right: 56px;">
+    <h1 class="dsp" style="margin: 0; font-size: 42px;">The instrument is the bridge itself.</h1>
+    <p style="margin: 12px 0 0; font-size: 17px; color: var(--ink-2); max-width: 92ch;">Both halves of setting one up end the same way: you unplug it, walk off with it in your hand, and find it a socket. The wall is on the wall and the phone is in your other hand &mdash; so the thing that has to answer &ldquo;is here good?&rdquo; is the object. One light, three things it can say. Nobody has to be told what they mean; you stand there until it goes green.</p>
+  </div>
+
+  <div class="cap" style="position: absolute; top: 224px; left: 56px;">What the light says</div>
+  <div style="position: absolute; top: 262px; left: 56px; display: flex; gap: 22px;">
+    <div style="width: 268px; height: 330px; border-radius: 22px; background: rgba(255,255,255,.03); border: 1px solid var(--edge); display: grid; place-items: center; align-content: center; gap: 4px; padding: 20px;">
+              <svg width="126" height="150" viewBox="0 0 160 190" fill="none">
+          <rect x="57" y="4" width="10" height="36" rx="2.5" fill="#8f939c"/>
+          <rect x="93" y="4" width="10" height="36" rx="2.5" fill="#8f939c"/>
+          <rect x="22" y="36" width="116" height="124" rx="31" fill="#32353d"/>
+          <rect x="22.8" y="36.8" width="114.4" height="122.4" rx="30.2" stroke="rgba(255,255,255,.14)" stroke-width="1.5"/>
+          <circle cx="80" cy="98" r="42" fill="url(#aPool)"/>
+          <circle cx="80" cy="98" r="8" fill="#f8e6c4"/>
+        </svg>
+      <span class="t1" style="margin-top: 10px;">Blinking amber</span>
+      <span class="t2" style="text-align: center;">Looking for your switches</span>
+    </div>
+    <div style="width: 268px; height: 330px; border-radius: 22px; background: rgba(116,198,157,.06); border: 1px solid rgba(116,198,157,.28); display: grid; place-items: center; align-content: center; gap: 4px; padding: 20px;">
+              <svg width="126" height="150" viewBox="0 0 160 190" fill="none">
+          <rect x="57" y="4" width="10" height="36" rx="2.5" fill="#8f939c"/>
+          <rect x="93" y="4" width="10" height="36" rx="2.5" fill="#8f939c"/>
+          <rect x="22" y="36" width="116" height="124" rx="31" fill="#32353d"/>
+          <rect x="22.8" y="36.8" width="114.4" height="122.4" rx="30.2" stroke="rgba(255,255,255,.14)" stroke-width="1.5"/>
+          <circle cx="80" cy="98" r="46" fill="url(#gPool)"/>
+          <circle cx="80" cy="98" r="8" fill="#d7f7e5"/>
+        </svg>
+      <span class="t1" style="margin-top: 10px;">Steady green</span>
+      <span class="t2" style="text-align: center;">It can hear them. Leave it here.</span>
+    </div>
+    <div style="width: 268px; height: 330px; border-radius: 22px; background: rgba(255,255,255,.03); border: 1px solid var(--edge); display: grid; place-items: center; align-content: center; gap: 4px; padding: 20px;">
+              <svg width="126" height="150" viewBox="0 0 160 190" fill="none">
+          <rect x="57" y="4" width="10" height="36" rx="2.5" fill="#8f939c"/>
+          <rect x="93" y="4" width="10" height="36" rx="2.5" fill="#8f939c"/>
+          <rect x="22" y="36" width="116" height="124" rx="31" fill="#32353d"/>
+          <rect x="22.8" y="36.8" width="114.4" height="122.4" rx="30.2" stroke="rgba(255,255,255,.14)" stroke-width="1.5"/>
+          <circle cx="80" cy="98" r="30" fill="url(#rPool)"/>
+          <circle cx="80" cy="98" r="8" fill="#e8b3b3"/>
+        </svg>
+      <span class="t1" style="margin-top: 10px;">Breathing red</span>
+      <span class="t2" style="text-align: center;">Too far. Try a socket nearer a switch.</span>
+    </div>
+  </div>
+
+  <!-- the phone says the same thing in words, for the person who wants a number -->
+  <div class="cap" style="position: absolute; top: 224px; left: 936px;">And on the phone, for anyone who wants the detail</div>
+  <div style="position: absolute; top: 262px; left: 936px; width: 390px; height: 330px; border-radius: 34px; background: #14161b; border: 1px solid var(--edge-hi); box-shadow: 0 40px 100px -30px rgba(0,0,0,.9); overflow: hidden; padding: 24px;">
+    <p class="cap" style="margin: 0 0 14px;">Finding it a home</p>
+    <h2 class="dsp" style="margin: 0 0 8px; font-size: 27px;">Nearly there.</h2>
+    <p style="margin: 0 0 18px; color: var(--ink-2); font-size: 14.5px;">Put it on any charger near one of your switches. This updates as you walk.</p>
+    <div class="row" style="margin-bottom: 10px; border-color: rgba(116,198,157,.3); background: rgba(116,198,157,.07);">
+      <span style="width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; background: var(--live); color: #0b2216;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 13l4 4L19 7"/></svg>
+      </span>
+      <span><span class="t1">Hears 11 switches</span><span class="t2" style="display: block;">Strong. This spot is good.</span></span>
+    </div>
+    <div style="display: flex; gap: 10px; margin-top: 16px;"><span class="btn" style="font-size: 15px;">Leave it here</span></div>
+  </div>
+
+  <div style="position: absolute; top: 646px; left: 56px; right: 56px; display: grid; grid-template-columns: 1fr 1fr; gap: 44px;">
+    <div>
+      <div class="cap" style="margin-bottom: 8px;">Why not on the wall</div>
+      <p style="margin: 0; color: var(--ink-2); font-size: 15px;">The wall panel is the one screen in the house that cannot follow you. Every other step of setting a bridge up belongs there &mdash; it is where the house talks &mdash; but this step is a walk down a corridor holding the thing. Put it on the wall and you have designed a screen nobody is standing in front of.</p>
+    </div>
+    <div>
+      <div class="cap" style="margin-bottom: 8px;">What it costs</div>
+      <p style="margin: 0; color: var(--ink-2); font-size: 15px;">Three light states have to survive the Wi&#8209;Fi being down, the broker being down, and the mesh being out of range &mdash; which is exactly the point: the light is the only thing that still works when all three are. It is also the one part of this design that is firmware, not panel, so it should be settled before anything is built.</p>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

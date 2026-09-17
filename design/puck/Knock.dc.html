@@ -1,0 +1,120 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      /* the panel's own tokens, unchanged -- app/src/panel.css */
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp: #e9b872; --lamp-ink: #2a1c07; --live: #74c69d; --danger: #e08a8a;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    /* the sheet, as the panel builds it */
+    .sheet { width: 560px; border-radius: 26px; background: rgba(22,24,30,.92);
+             border: 1px solid var(--edge-hi); box-shadow: 0 40px 100px -30px rgba(0,0,0,.9); overflow: hidden; }
+    .sheet h2 { margin: 0; font-size: 36px; line-height: 1.05; font-weight: 400; letter-spacing: -.025em; }
+    .lede { margin: 0 0 20px; color: var(--ink-2); font-size: 15px; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 999px;
+           background: var(--ink); color: var(--bg); font-weight: 500; font-size: 17px; }
+    .btn.big { padding: 15px 28px; }
+    .btn.ghost { background: var(--surface-hi); color: var(--ink); border: 1px solid var(--edge); }
+    .btn.sm { padding: 8px 14px; font-size: 14px; }
+    /* a found thing, as the Add screen already draws one */
+    .found { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
+             padding: 12px 14px; border-radius: 16px; border: 1px solid rgba(233,184,114,.3);
+             background: linear-gradient(rgba(233,184,114,.1), rgba(233,184,114,.1)), var(--surface); }
+    .found .ic { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center;
+                 background: var(--lamp); color: var(--lamp-ink); }
+    .row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
+           padding: 12px 14px; border-radius: 16px; background: var(--surface); border: 1px solid var(--edge); }
+    .t1 { font-size: 15.5px; font-weight: 500; }
+    .t2 { font-size: 13px; color: var(--muted); }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--lamp); }
+    .field { height: 50px; padding: 0 14px; border-radius: 14px; background: var(--surface-hi);
+             border: 1px solid var(--edge); display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 17px; }
+    .bar { height: 6px; border-radius: 999px; background: rgba(255,255,255,.1); overflow: hidden; }
+    .bar i { display: block; height: 100%; border-radius: 999px; background: var(--lamp); }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: var(--bg); color: var(--ink); font-size: 17px; line-height: 1.4;">
+
+  <!-- the field: the evening sky the panel is already sitting in -->
+  <div style="position: absolute; inset: 0; background: linear-gradient(rgb(29,33,46) 0%, rgb(41,42,63) 44%, rgb(92,63,57) 84%, rgb(62,44,42) 100%);"></div>
+  <div style="position: absolute; left: -222px; top: -135px; width: 1855px; height: 1156px; background: radial-gradient(58% 54% at 30% 64%, rgba(72,63,135,.4), transparent 68%), radial-gradient(62% 52% at 54% 110%, rgba(55,51,100,.44), transparent 72%);"></div>
+  <div style="position: absolute; inset: 0; background: linear-gradient(rgba(12,13,16,.14) 0%, rgba(12,13,16,.3) 45%, rgba(12,13,16,.58) 100%);"></div>
+
+  <!-- Home, still there underneath. The sheet never replaces the house, it sits on it. -->
+  <div style="position: absolute; left: 40px; top: 104px; display: flex; gap: 20px; filter: blur(9px); opacity: .8;">
+    <div style="width: 300px; height: 422px; border-radius: 26px; background: rgba(233,184,114,.16); border: 1px solid rgba(255,255,255,.12);"></div>
+    <div style="width: 300px; height: 422px; border-radius: 26px; background: rgba(26,28,34,.7); border: 1px solid rgba(255,255,255,.1);"></div>
+    <div style="width: 300px; height: 422px; border-radius: 26px; background: rgba(26,28,34,.7); border: 1px solid rgba(255,255,255,.1);"></div>
+    <div style="width: 300px; height: 422px; border-radius: 26px; background: rgba(26,28,34,.7); border: 1px solid rgba(255,255,255,.1);"></div>
+  </div>
+  <div style="position: absolute; left: 40px; top: 44px; font-size: 16px; color: rgba(255,255,255,.5); filter: blur(4px);">Fri, Sep 18 &nbsp;&middot;&nbsp; Home</div>
+
+  <!-- the veil under a sheet -->
+  <div style="position: absolute; inset: 0; background: rgba(6,7,9,.5);"></div>
+
+  <!-- ================================ the sheet ================================ -->
+  <div class="sheet" style="position: absolute; left: 440px; top: 156px;">
+    <div style="display: flex; align-items: flex-start; gap: 14px; padding: 26px 22px 6px 28px;">
+      <h2 class="dsp" style="flex: 1;">A bridge is here.</h2>
+      <div style="width: 38px; height: 38px; border-radius: 999px; background: var(--surface-hi); border: 1px solid var(--edge); display: grid; place-items: center;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-2)" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </div>
+    </div>
+    <div style="padding: 4px 28px 26px;">
+      <p class="lede">Something was plugged in nearby a moment ago. A bridge brings in the wall switches that have no Wi&#8209;Fi of their own &mdash; the ones that came with the house.</p>
+
+      <!-- the thing itself, drawn: it is blinking, and that is the whole identity check -->
+      <div style="position: relative; height: 252px; border-radius: 20px; background: rgba(255,255,255,.03); border: 1px solid var(--edge); display: grid; place-items: center; margin-bottom: 18px; overflow: hidden;">
+        <div style="position: absolute; left: 50%; top: 128px; width: 380px; height: 380px; transform: translate(-50%,-50%); background: radial-gradient(closest-side, rgba(233,184,114,.30), transparent 70%);"></div>
+        <svg width="150" height="178" viewBox="0 0 160 190" fill="none" style="position: relative;">
+          <defs>
+            <linearGradient id="kMetal" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#6d7079"/><stop offset="45%" stop-color="#b6bac4"/><stop offset="1" stop-color="#6d7079"/></linearGradient>
+            <linearGradient id="kMatte" x1="0" y1="0" x2=".25" y2="1"><stop offset="0" stop-color="#454954"/><stop offset="1" stop-color="#23262d"/></linearGradient>
+            <radialGradient id="kPool" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#f6dcae" stop-opacity=".9"/><stop offset="55%" stop-color="#e9b872" stop-opacity=".3"/><stop offset="1" stop-color="#e9b872" stop-opacity="0"/></radialGradient>
+          </defs>
+          <rect x="57" y="4" width="10" height="36" rx="2.5" fill="url(#kMetal)"/>
+          <rect x="93" y="4" width="10" height="36" rx="2.5" fill="url(#kMetal)"/>
+          <rect x="22" y="36" width="116" height="124" rx="31" fill="url(#kMatte)"/>
+          <rect x="22.8" y="36.8" width="114.4" height="122.4" rx="30.2" stroke="rgba(255,255,255,.16)" stroke-width="1.5"/>
+          <circle cx="80" cy="98" r="42" fill="url(#kPool)"/>
+          <circle cx="80" cy="98" r="8" fill="#f8e6c4"/>
+        </svg>
+        <div style="position: absolute; bottom: 16px; left: 0; right: 0; text-align: center;">
+          <span class="t2" style="display: inline-flex; align-items: center; gap: 8px;"><span class="dot"></span>It is blinking amber right now</span>
+        </div>
+      </div>
+
+      <div class="row" style="margin-bottom: 18px;">
+        <span style="width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; background: var(--surface-hi);">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink-2)" stroke-width="1.7" stroke-linecap="round"><path d="M12 3v7M8 10h8v4a4 4 0 0 1-8 0z"/><path d="M12 18v3"/></svg>
+        </span>
+        <span><span class="t1">Nothing has been let in yet</span><span class="t2" style="display: block;">Until you say yes it is only knocking. Nothing of yours is on it.</span></span>
+      </div>
+
+      <div style="display: flex; gap: 10px;">
+        <span class="btn">Yes, that&rsquo;s mine</span>
+        <span class="btn ghost">Not mine</span>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

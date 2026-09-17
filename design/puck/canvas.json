@@ -1,0 +1,106 @@
+{
+  "artboards": [
+    {
+      "file": "Knock.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "A — it knocks"
+    },
+    {
+      "file": "Cable.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "B — the cable, once"
+    },
+    {
+      "file": "Placing.dc.html",
+      "x": 3120,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Where both of them end"
+    },
+    {
+      "file": "Naming.dc.html",
+      "x": 0,
+      "y": 1080,
+      "w": 1440,
+      "h": 900,
+      "title": "Eleven switches, named by touch"
+    },
+    {
+      "file": "Switch.dc.html",
+      "x": 1560,
+      "y": 1080,
+      "w": 1440,
+      "h": 900,
+      "title": "A new switch — the wall hands it over"
+    },
+    {
+      "file": "Scan.dc.html",
+      "x": 3120,
+      "y": 1080,
+      "w": 1440,
+      "h": 900,
+      "title": "A new switch — the phone does it"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "why",
+      "x": -620,
+      "y": 0,
+      "w": 500,
+      "text": "WHY THIS EXISTS\n\nThe bridge works. Getting one does not. Today that means a laptop, a USB cable, PlatformIO, and a header file with the mesh keys pasted into it — a maker's step, in a product whose whole promise is that there is no maker's step.\n\nTwo halves, and they are not the same job:\n\n1. GETTING THE BRIDGE IN. It needs the Wi-Fi, the hub's broker, and the keys to the switches.\n\n2. GETTING A NEW SWITCH ONTO IT. A factory-fresh switch will not join without the 16-byte secret printed on its back, so this half has a camera in it.\n\nEverything below is drawn on surfaces the panel already has — the sheet, the Found nearby card, New devices, room chips. Nothing here invents a screen the house has no place for.\n\nBoards A and B are the same moment drawn two ways. They are the decision to make."
+    },
+    {
+      "id": "option-a",
+      "x": 0,
+      "y": 960,
+      "w": 700,
+      "text": "A — IT KNOCKS\n\nThe bridge arrives already knowing how to talk. Give it power anywhere in the house and it says hello over Bluetooth; the wall notices it the way it notices anything else on the network, and asks one question.\n\nThe identity check is the object, not a number. It is blinking, and you say whether the blinking thing is yours. No chip id, no serial, no \"Bridge 9f2a41\" on a screen in front of someone who has never seen a MAC address — and no list to pick the right one out of when two arrive at once.\n\nFOR: nothing is ever plugged into the hub, so the hub can stay in a cupboard. One tap, from a screen you were already standing at, in the same shape as every other Found nearby moment in the house. That sameness is most of the argument.\n\nAGAINST: it only works on a bridge that already has firmware on it. Someone put it there — either we ship them flashed, or the first one is still board B. It also needs Bluetooth on the hub: a Pi has it, most mini PCs have it, a VM may not. Which is awkward, because a hub with no Bluetooth is exactly the hub this bridge is most useful on."
+    },
+    {
+      "id": "option-b",
+      "x": 1560,
+      "y": 960,
+      "w": 700,
+      "text": "B — THE CABLE, ONCE\n\nA bare board, out of a bag, with nothing on it. Plug it into the hub's USB and the hub puts everything on it in one go: the software first, then the Wi-Fi, then the keys. The hub already reacts to a USB stick appearing and disappearing — driver-layer/radios.sh, on a udev rule — so the noticing half of this is built.\n\nThe sheet says three lines because three things happen, and none of them are words a person has to understand. \"Giving it its software\" is a flash. \"Handing it the keys to your switches\" is the part that is genuinely the house's secret, and it happens over a wire, into a thing you are holding — which is the right place for it.\n\nFOR: works on a board with nothing on it, which is the only route that works for a bridge we did not ship. No Bluetooth, no pairing, no range, no radio at all. Nothing to type, ever — the hub already knows the Wi-Fi, the broker password and the keys.\n\nAGAINST: a cable, and a trip to the hub. If the hub is behind the router in a cupboard, that is a real errand, and it is the only moment in this whole product that asks someone to know where the hub physically is.\n\nNOT ACTUALLY A FORK. A and B answer different starting conditions: B is the factory, A is the doorbell. If both exist, one person only ever meets one of them, and the wall says the same sentence either way. The question to settle is which gets built first — and the answer probably depends on whether we ship pucks or people buy boards."
+    },
+    {
+      "id": "shared",
+      "x": 3120,
+      "y": 960,
+      "w": 700,
+      "text": "WHERE BOTH OF THEM END\n\nIdentical after the tap: you unplug it and walk off with it. The wall is on the wall; the phone is in your other hand and you are looking at a socket. So the thing that answers \"is here good?\" is the object itself.\n\nThree states, one light. Amber blinking = looking. Green steady = it can hear your switches, leave it. Red breathing = too far. Nobody has to be taught that; you stand there until it goes green.\n\nThe phone card is for whoever wants the number, not the ritual. It is the same fact twice, and the light is the one that still works when the Wi-Fi is down — which, at that exact moment, it might be.\n\nTHE HONEST BIT: this is the only piece of half one that is firmware rather than panel, so it wants settling before anything is built. A classic ESP32 devkit has one blue LED and nothing else; the S3 has a colour one. Three colours assumes an RGB puck, or the three states become three blink rhythms on a single blue LED, which is worse and should be avoided by choosing the board."
+    },
+    {
+      "id": "naming",
+      "x": 0,
+      "y": 2040,
+      "w": 700,
+      "text": "ELEVEN SWITCHES, NAMED BY TOUCH\n\nThis is the moment the whole thing could still come out feeling like Home Assistant. Eleven rows called \"Switch 000a\" with a room dropdown on each is the failure mode, and it is exactly what the hub does today: all 34 entities landed under New devices in one go.\n\nBut the switches already announce themselves when a human presses them — that is proven, it is how the bridge reads state at all. So identification is free and needs no new firmware: press the switch, and the house says which row that was. You never read an address. You walk around your own house pressing things, which is a thing people already know how to do.\n\nFOR: no naming, no guessing, no mapping hex to hallways. It degrades gracefully — all eleven work from the moment the bridge is in, so stopping halfway costs nothing but names.\n\nAGAINST: it is a walk around the house and cannot be done from a chair. So it also has to be possible later, one switch at a time, from that switch's own tile: \"Which room is this? Press it.\" Same mechanism, one row instead of eleven.\n\nOPEN: what a switch is called once it has a room. \"Hallway — ceiling\" is drawn here, but the house has no second-switch-in-a-room rule yet, and two switches in a hallway is common."
+    },
+    {
+      "id": "handoff",
+      "x": 1560,
+      "y": 2040,
+      "w": 700,
+      "text": "THE WALL SHOWS, THE PHONE SCANS\n\nA factory-fresh switch will not be provisioned without the 16-byte Static OOB secret in the QR on its back. That is the mesh's own rule and it is not negotiable — it is why every No-OOB attempt failed before the QR was read (docs/brilliant.md).\n\nSo this half has a camera in it, and the wall panel does not have one. The rule that falls out of that is worth stating once and keeping: THE WALL SHOWS, THE PHONE SCANS. The wall's entire job here is the code that opens the phone on the right step, which is a pattern the panel already owns — it is how the house gets onto a phone at all (PhoneSteps.vue).\n\nThe phone then asks exactly one question, at the end: which room. Not what it is called, not whether it dims, not what kind of thing it is. The house already knows all of that from the switch itself.\n\nWHAT THE WALL MUST NOT DO: ask anyone to type the code. It is 32 hex characters. There is no version of that which is acceptable on a screen a family walks up to, and the temptation to add it \"as a fallback\" should be resisted — a fallback nobody can complete is not a fallback."
+    },
+    {
+      "id": "true",
+      "x": 3120,
+      "y": 2040,
+      "w": 700,
+      "text": "WHAT HAS TO BE TRUE FOR ANY OF THIS\n\nSo the drawing is not a promise nobody can keep. In rough order of how new each one is:\n\nBUILT ALREADY. The puck holds a proxy link and speaks the mesh with the captured keys; switches publish on touch; Home Assistant discovery makes entities without anyone naming anything. Identity is already chip id for the puck and net+addr for a switch — nothing in these boards needs a hand-typed name, which is why none of them has a text field in it.\n\nSMALL. Naming by touch needs the hub to remember which switch reported in the last few seconds, and the panel to show it. Nothing new on the puck.\n\nMEDIUM. Board A needs a provisioning service on the puck over BLE and something on the hub that writes to it. Board B needs esptool and a firmware image on the hub, plus the udev route radios.sh already uses for radio sticks. Either way the keys go over the wire or the link, and never onto a screen or into the panel's HTML.\n\nTHE GENUINELY NEW ONE. Half two needs the puck to act as a PROVISIONER. It is a proxy client today — it joins a network someone else made. Provisioning a switch means running the other side of the exchange the mesh-provisionee firmware currently plays the victim in, plus replaying the load-type and PIR configuration the Brilliant panel used to write (still unsolved: STATUS.md, \"Own keys later\"). Half one is a week of plumbing. Half two has a research question inside it, and it should not be scheduled as though it does not."
+    }
+  ],
+  "launch": {
+    "view": "canvas"
+  }
+}

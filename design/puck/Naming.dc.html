@@ -1,0 +1,135 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      /* the panel's own tokens, unchanged -- app/src/panel.css */
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp: #e9b872; --lamp-ink: #2a1c07; --live: #74c69d; --danger: #e08a8a;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    /* the sheet, as the panel builds it */
+    .sheet { width: 560px; border-radius: 26px; background: rgba(22,24,30,.92);
+             border: 1px solid var(--edge-hi); box-shadow: 0 40px 100px -30px rgba(0,0,0,.9); overflow: hidden; }
+    .sheet h2 { margin: 0; font-size: 36px; line-height: 1.05; font-weight: 400; letter-spacing: -.025em; }
+    .lede { margin: 0 0 20px; color: var(--ink-2); font-size: 15px; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 999px;
+           background: var(--ink); color: var(--bg); font-weight: 500; font-size: 17px; }
+    .btn.big { padding: 15px 28px; }
+    .btn.ghost { background: var(--surface-hi); color: var(--ink); border: 1px solid var(--edge); }
+    .btn.sm { padding: 8px 14px; font-size: 14px; }
+    /* a found thing, as the Add screen already draws one */
+    .found { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
+             padding: 12px 14px; border-radius: 16px; border: 1px solid rgba(233,184,114,.3);
+             background: linear-gradient(rgba(233,184,114,.1), rgba(233,184,114,.1)), var(--surface); }
+    .found .ic { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center;
+                 background: var(--lamp); color: var(--lamp-ink); }
+    .row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
+           padding: 12px 14px; border-radius: 16px; background: var(--surface); border: 1px solid var(--edge); }
+    .t1 { font-size: 15.5px; font-weight: 500; }
+    .t2 { font-size: 13px; color: var(--muted); }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--lamp); }
+    .field { height: 50px; padding: 0 14px; border-radius: 14px; background: var(--surface-hi);
+             border: 1px solid var(--edge); display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 17px; }
+    .bar { height: 6px; border-radius: 999px; background: rgba(255,255,255,.1); overflow: hidden; }
+    .bar i { display: block; height: 100%; border-radius: 999px; background: var(--lamp); }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: var(--bg); color: var(--ink); font-size: 17px; line-height: 1.4;">
+
+  <div style="position: absolute; inset: 0; background: linear-gradient(rgb(29,33,46) 0%, rgb(41,42,63) 44%, rgb(92,63,57) 84%, rgb(62,44,42) 100%);"></div>
+  <div style="position: absolute; left: -222px; top: -135px; width: 1855px; height: 1156px; background: radial-gradient(58% 54% at 30% 64%, rgba(72,63,135,.4), transparent 68%), radial-gradient(62% 52% at 54% 110%, rgba(55,51,100,.44), transparent 72%);"></div>
+  <div style="position: absolute; inset: 0; background: linear-gradient(rgba(12,13,16,.14) 0%, rgba(12,13,16,.3) 45%, rgba(12,13,16,.66) 100%);"></div>
+
+  <!-- top bar, as Home draws it -->
+  <div style="position: absolute; left: 0; top: 0; width: 1440px; height: 84px; display: flex; align-items: center; padding: 0 40px; gap: 18px;">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+    <span style="font-size: 16px; color: var(--ink-2);">Home</span>
+  </div>
+
+  <div style="position: absolute; left: 56px; top: 108px; width: 1328px;">
+    <h1 class="dsp" style="margin: 0; font-size: 44px;">Eleven switches came in with it.</h1>
+    <p style="margin: 12px 0 0; color: var(--ink-2); font-size: 16px; max-width: 76ch;">They already work &mdash; every one of them is on the house now. What nobody knows yet is which is which. <b style="color: var(--ink); font-weight: 500;">Go and press one.</b> The one you press will say so here, and you can tell the house where it lives.</p>
+  </div>
+
+  <!-- left: the instruction, drawn once, large. The drawing is doing the teaching. -->
+  <div style="position: absolute; left: 56px; top: 258px; width: 430px; height: 540px; border-radius: 26px; background: var(--surface); border: 1px solid var(--edge); overflow: hidden;">
+    <div style="position: absolute; left: 50%; top: 232px; width: 420px; height: 420px; transform: translate(-50%,-50%); background: radial-gradient(closest-side, rgba(233,184,114,.22), transparent 70%);"></div>
+    <svg width="264" height="300" viewBox="0 0 264 300" fill="none" style="position: absolute; left: 83px; top: 86px;">
+      <defs>
+        <linearGradient id="nPlate" x1="0" y1="0" x2=".3" y2="1"><stop offset="0" stop-color="#e7e3da"/><stop offset="1" stop-color="#b9b3a7"/></linearGradient>
+        <linearGradient id="nRock" x1="0" y1="0" x2=".2" y2="1"><stop offset="0" stop-color="#fbf8f2"/><stop offset="1" stop-color="#ded8cc"/></linearGradient>
+      </defs>
+      <!-- the wall plate: a switch, as a switch looks -->
+      <rect x="44" y="14" width="176" height="252" rx="18" fill="url(#nPlate)"/>
+      <rect x="66" y="42" width="132" height="196" rx="12" fill="url(#nRock)"/>
+      <rect x="66" y="42" width="132" height="196" rx="12" stroke="rgba(0,0,0,.14)" stroke-width="1.5"/>
+      <path d="M66 140h132" stroke="rgba(0,0,0,.1)" stroke-width="1.5"/>
+      <!-- the press: one ring, the way the panel says a thing was touched -->
+      <circle cx="132" cy="104" r="17" fill="rgba(233,184,114,.28)"/>
+      <circle cx="132" cy="104" r="34" stroke="rgba(233,184,114,.7)" stroke-width="2.5"/>
+      <circle cx="132" cy="104" r="57" stroke="rgba(233,184,114,.3)" stroke-width="2"/>
+      <circle cx="132" cy="104" r="80" stroke="rgba(233,184,114,.12)" stroke-width="2"/>
+    </svg>
+    <div style="position: absolute; left: 0; right: 0; bottom: 30px; text-align: center; padding: 0 34px;">
+      <div class="t1" style="font-size: 19px;">Press any of them</div>
+      <div class="t2" style="margin-top: 6px;">Top or bottom, it does not matter. Nothing will switch on that was not going to.</div>
+    </div>
+  </div>
+
+  <!-- right: the list, with the one that was just pressed at the top of it -->
+  <div style="position: absolute; left: 518px; top: 258px; width: 866px;">
+    <div class="cap" style="margin-bottom: 12px;">Just pressed</div>
+
+    <div class="found" style="grid-template-columns: auto 1fr; padding: 18px 20px; margin-bottom: 20px;">
+      <span class="ic" style="width: 44px; height: 44px; border-radius: 14px;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 3v3M19 12h3M2 12h3M17 7l2-2M5 19l2-2M17 17l2 2M5 5l2 2"/><circle cx="12" cy="12" r="3.4"/></svg>
+      </span>
+      <span>
+        <span class="t1" style="font-size: 18px;">This one just came on</span>
+        <span class="t2" style="display: block;">Bright, and it dims. It has a motion sensor in it too.</span>
+      </span>
+      <div style="grid-column: 1 / -1; margin-top: 18px;">
+        <div class="t2" style="margin-bottom: 10px;">Which room is it in?</div>
+        <div style="display: flex; flex-wrap: wrap; gap: 9px;">
+          <span style="display: inline-flex; align-items: center; gap: 8px; height: 42px; padding: 0 18px; border-radius: 999px; background: var(--lamp); color: var(--lamp-ink); font-size: 15px; font-weight: 500;">Hallway</span>
+          <span style="display: inline-flex; align-items: center; height: 42px; padding: 0 18px; border-radius: 999px; background: var(--surface-hi); border: 1px solid var(--edge); font-size: 15px;">Kitchen</span>
+          <span style="display: inline-flex; align-items: center; height: 42px; padding: 0 18px; border-radius: 999px; background: var(--surface-hi); border: 1px solid var(--edge); font-size: 15px;">Living room</span>
+          <span style="display: inline-flex; align-items: center; height: 42px; padding: 0 18px; border-radius: 999px; background: var(--surface-hi); border: 1px solid var(--edge); font-size: 15px;">Bedroom</span>
+          <span style="display: inline-flex; align-items: center; height: 42px; padding: 0 18px; border-radius: 999px; background: var(--surface-hi); border: 1px solid var(--edge); font-size: 15px;">Landing</span>
+          <span style="display: inline-flex; align-items: center; height: 42px; padding: 0 18px; border-radius: 999px; background: var(--surface-hi); border: 1px solid var(--edge); font-size: 15px; color: var(--ink-2);">Another room&hellip;</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="cap" style="margin-bottom: 12px;">Named so far &mdash; 3 of 11</div>
+    <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px;">
+      <div class="row"><span style="width: 30px; height: 30px; border-radius: 10px; background: var(--surface-hi); display: grid; place-items: center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--live)" stroke-width="2.4" stroke-linecap="round"><path d="M5 13l4 4L19 7"/></svg></span><span class="t1">Kitchen &mdash; ceiling</span><span class="t2">on, 60%</span></div>
+      <div class="row"><span style="width: 30px; height: 30px; border-radius: 10px; background: var(--surface-hi); display: grid; place-items: center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--live)" stroke-width="2.4" stroke-linecap="round"><path d="M5 13l4 4L19 7"/></svg></span><span class="t1">Living room &mdash; downlights</span><span class="t2">off</span></div>
+      <div class="row"><span style="width: 30px; height: 30px; border-radius: 10px; background: var(--surface-hi); display: grid; place-items: center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--live)" stroke-width="2.4" stroke-linecap="round"><path d="M5 13l4 4L19 7"/></svg></span><span class="t1">Bedroom &mdash; ceiling</span><span class="t2">off</span></div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 14px;">
+      <span class="t2">Seven still to go. They work either way &mdash; you can stop here and come back.</span>
+      <span class="btn ghost sm" style="margin-left: auto;">Leave the rest</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
