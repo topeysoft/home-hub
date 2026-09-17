@@ -23,9 +23,14 @@ at boot. So the order is capture, reset, adopt, power-cycle.
     BRILLIANT_MESH_STORE=~/.config/brilliant-mesh/mesh-net.json \\
         python3 tools/restore_switch.py verify 0005
 
-The vendor-model bind in step 3 is the part that is easy to miss: without
-binding 0x0820/0x0001 to our AppKey, every config write is silently dropped and
-the switch looks like it simply refuses to be configured.
+Two things in step 3 are easy to miss and both produce a switch that looks
+broken in a way that is nothing to do with the load:
+
+  - without binding the VENDOR model 0x0820/0x0001 to our AppKey, every config
+    write is silently dropped and the switch looks like it refuses configuring;
+  - without Config Model Publication Set, the switch announces NOTHING -- no
+    tap, no state change, no motion -- while still answering Gets and obeying
+    Sets. `ensure_bound` now does both; `publication.py` shows and repairs it.
 """
 import asyncio
 import json

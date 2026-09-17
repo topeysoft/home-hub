@@ -663,8 +663,27 @@ In this order:
 4. **Config Model App Bind** → **vendor `0x0820/0x0001`** → status `0x00`. The model identifier here is
    *company id LE ‖ model id LE* (4 bytes), not the 2-byte SIG form. **Without this bind, every step 4 write is
    dropped without a reply** — the symptom is a switch that binds fine and then answers no vendor Get at all.
+5. **Config Model Publication Set on all three models**, publish address **`0xffff`**, TTL 7, period 0,
+   retransmit 0 → status `0x00`. The Status comes back **segmented**, so a reader that ignores segmented
+   messages will report failure on a write that succeeded.
+
+**Binding is not publishing, and forgetting step 5 makes a SILENT SWITCH.** A model announces nothing unless
+it has a publish address; provisioning and binding leave it at `0x0000`. Such a node answers every Get, obeys
+every Set, and volunteers nothing — no tap, no state change, no motion — which reads as a dead switch that is
+somehow still reachable. This is exactly what happened to the first switches this house adopted: `0x0004` was
+pressed and swiped by hand and published *nothing*, while `0x0003` (same network, same provisioner, but which
+had `explore.py` point its models somewhere) published on its own. Reading it back settled it in one line:
+`0x0003` had all three models on `0x0001`, `0x0004` had all three on `0x0000`. `tools/publication.py <addr>`
+shows it and `--to 0xffff` sets it.
+
+`0xffff` is chosen because it is what the console itself does — a panel switch broadcasts its own touch as a
+`Generic OnOff Status` to all-nodes — and because it means any puck on the network hears the switch without
+depending on which address happens to be listening.
 
 ### 4. Write the load configuration (AppKey-encrypted)
+
+*(Numbering note: the publication step above is part of section 3's config sequence; the field writes below
+still come after all of it.)*
 
 Vendor access PDUs are `C1 20 08` (opcode ‖ company id LE), then:
 
