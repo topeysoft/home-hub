@@ -714,6 +714,16 @@ two candidates, on the evidence above. Fields deliberately **not** replayed: `0x
 Mains off and on. **The load type is read only at boot** — this is why every live write looked inert for a whole
 evening. There is no mesh message that applies it.
 
+**Model publication is read at boot too**, and this is the crueller one because its failure is silent and looks
+exactly like the fix not working. Set publication, read it back, and the readback confirms it — and the switch
+stays mute until it restarts. Anyone adopting a switch would reasonably conclude the write had failed and go
+looking for a different cause. Proven on `0x0004`: set to `0xffff` and verified on readback, it published
+nothing at all through a hand pressing it repeatedly; the moment power was cut and restored it broadcast its
+heartbeat on its own, the first unsolicited message it had ever sent.
+
+So the power cycle is not a step that applies the load type. **It is the step that applies everything written
+in sections 3 and 4**, and nothing written there can be assumed live until it has happened.
+
 ### 6. Verify
 
 `Generic Level Set` = `82 06 <level LE> <tid> <transition 0x05> <delay 0x00>`, level on a **0–1000 scale**, not
