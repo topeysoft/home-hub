@@ -81,6 +81,7 @@ class Hub:
         self.ha: HAAdapter | None = None
         self.home = Home()
         self.home.kinds = dict(self.settings.get("kinds") or {})   # what the owner said things are; kept in settings so a restore brings it back with the rest of the house
+        self.home.leads = dict(self.settings.get("leads") or {})   # which part of a fan-with-a-light is the tile, where the owner has said (docs/units.md)
         self.log = EventLog(DATA / "events.db")
         self.streams: set[WebSocket] = set()
         self.driver, self.reason = "down", ""
@@ -845,6 +846,22 @@ async def device_kinds(device_id: str):
     return {"capability": dev.capability, "kind": kind_of(dev), "offer": offer,
             "words": {k: KIND_WORD.get(k, k) for k in offer},
             "why": WHY.get(CONTROLS.get(dev.capability.split(".")[0], ()), "") if offer else ""}
+
+
+@app.post("/devices/{device_id}/lead")
+async def set_device_lead(device_id: str, body: dict):
+    """A fan with a light in it is one tile, and this says which part the tile is: `{"lead": "fan"}` (the default,
+    and saying it clears the record) or `{"lead": "light"}`. Either part of the fixture may be asked. docs/units.md."""
+    hub.ready()
+    dev = hub.home.devices.get(device_id)
+    if not dev: raise HTTPException(404, "unknown device")
+    lead = (body.get("lead") or "fan").strip()
+    try: parts = hub.home.set_lead(dev, lead)
+    except ValueError as e: raise HTTPException(400, str(e))
+    hub.settings.set(leads=hub.home.leads)
+    hub.log.add("home", dev.id, None, lead, source="user", detail={"leads": True})
+    for part in parts: hub._broadcast(json.dumps({"type": "device", "device": part.__dict__}))
+    return {"ok": True, "leads": lead}
 
 
 @app.post("/devices/{device_id}/kind")

@@ -114,6 +114,7 @@ const norm = (s: string) => s.replace(/[’‘]/g, "'").toLowerCase().trim()
     unit, on the wall: its tile wears the unit's name, and renaming it renames the unit (units.ts, docs/units.md). */
 export function unitNamed(d: Device): boolean {
   const unit = (d.hw_name ?? '').trim()
+  if (d.attrs.fan) return false   // the light of a fan-with-a-light is "Bedroom Fan Light", not the fan: under a lamp drawing, "Fan" reads as the wrong thing
   return !!unit && new RegExp(`^${unit.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s+(light|switch|fan|plug|dimmer)$`, 'i').test(d.name.trim())
 }
 export function shortName(d: Device, room?: Room | null): string {

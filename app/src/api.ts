@@ -99,6 +99,8 @@ export type Kinds = { capability: string; kind: string; offer: string[]; words: 
 export async function getDeviceKinds(id: string): Promise<Kinds> {
   const r = await request(`/devices/${encodeURIComponent(id)}/kinds`); if (!r.ok) await fail(r); return r.json()
 }
+/** A fan with a light in it: which part is the tile. 'fan' is the default and clears the record (docs/units.md). */
+export const setDeviceLead = (id: string, lead: 'fan' | 'light') => post<{ ok: boolean; leads: string }>(`/devices/${encodeURIComponent(id)}/lead`, { lead })
 /** Say what a thing is. The driver's own word puts it back. */
 export const setDeviceKind = (id: string, kind: string | null) => post<{ ok: boolean; kind: string }>(`/devices/${encodeURIComponent(id)}/kind`, { kind })
 /* Every service the house has signed into: how it stands, and how much of the house came in with it.

@@ -159,6 +159,8 @@ class Home:
         self.extras: dict[str, dict] = {}  # what the brain knows about a device that HA does not (a fan timer's end); shown with its attrs
         self.lamps: dict[str, str] = {}    # camera id -> the light built into the same unit (Ring floodlight and spotlight cams)
         self.eyes: dict[str, str] = {}     # light/switch/fan id -> the motion sensor built into the same unit (a Brilliant switch, a Ring pathlight): docs/units.md
+        self.fixtures: dict[str, dict] = {}   # device id -> what a fan-with-a-light's parts know about each other ({"light": id} on the fan, {"fan": id} on the light, "leads" on both): docs/units.md
+        self.leads: dict[str, str] = {}    # hardware id -> which part of a fixture is the tile ("fan" or "light"), where the owner has said; fan otherwise. Kept in settings with `kinds`
         self.hardware: dict[str, dict] = {}   # driver device id -> {"name", "manufacturer", "model"}: what the maker called the unit, for naming new things
         self.kinds: dict[str, str] = {}    # device id -> what the owner said it is. Kept here so a rebuild carries it; the hub loads and saves it with the rest of the settings
 
@@ -169,6 +171,7 @@ class Home:
         out = {**self._keep_attrs(cap, a), **extra}
         if cap == "camera" and eid in self.lamps: out["light"] = self.lamps[eid]
         if eid in self.eyes: out["motion"] = self.eyes[eid]
+        out.update(self.fixtures.get(eid, {}))
         if extra.get("fan_until", 0) > time.time(): out["fan_mode"] = "on"
         return out
 
@@ -237,7 +240,35 @@ class Home:
             if d.capability == "motion" and d.hw: eyes.setdefault(d.hw, d.id)
         self.eyes = {d.id: eyes[d.hw] for d in self.devices.values() if d.capability in ("light", "switch", "fan") and d.hw in eyes}
         for cid, mid in self.eyes.items(): self.devices[cid].attrs["motion"] = mid
+        # A fan with a light in it: one fixture on the ceiling, two devices to the driver. Each part is told
+        # the other, and both are told which of them is the tile -- the fan unless the owner says the light
+        # (`leads`). Only a fan and a light pair up: two lights on one double switch are two lights.
+        self.fixtures = {}
+        fans = {d.hw: d.id for d in self.devices.values() if d.capability == "fan" and d.hw}
+        for d in self.devices.values():
+            if d.capability == "light" and d.hw in fans and fans[d.hw] not in self.fixtures:
+                fid, lead = fans[d.hw], self.lead_for(d.hw)
+                self.fixtures[fid] = {"light": d.id, "leads": lead}
+                self.fixtures[d.id] = {"fan": fid, "leads": lead}
+        for eid, more in self.fixtures.items(): self.devices[eid].attrs.update(more)
         return self
+
+    def lead_for(self, hw: str | None) -> str:
+        """Which part of a fixture is the tile: the owner's word where they have given one, the fan otherwise --
+        it is the thing on the ceiling, and the light is a part of it."""
+        return self.leads.get(hw or "", "fan")
+
+    def set_lead(self, dev, lead: str) -> list:
+        """Say which part of this device's fixture is the tile. Returns the parts that changed, for the panel."""
+        if lead not in ("fan", "light"): raise ValueError("A fixture is led by its fan or by its light.")
+        parts = [d for d in self.devices.values() if d.id in self.fixtures and d.hw == dev.hw]
+        if dev.id not in self.fixtures or not parts: raise ValueError(f"{dev.name} is not a fan with a light in it.")
+        if lead == "fan": self.leads.pop(dev.hw or "", None)
+        else: self.leads[dev.hw or ""] = lead
+        for part in parts:
+            self.fixtures[part.id]["leads"] = lead
+            part.attrs["leads"] = lead
+        return parts
 
     def shown_as(self, eid: str, capability: str, guess: str | None = None) -> str | None:
         """The owner's kind for this device, or None where they have not given one or it no longer fits.

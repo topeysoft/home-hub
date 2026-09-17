@@ -326,3 +326,57 @@ class UnitTests(ApiTest):
         self.hub.home.build(*self.pathlight_house(has_entity_name=False))
         self.client.post("/devices/light.walkway_pathlight_light/rename", json={"name": "Path light"})
         self.assertNotIn("config/device_registry/update", [s[0] for s in self.ha.sent])
+
+
+class FixtureTests(ApiTest):
+    """A fan with a light in it: one fixture, two devices, and the owner says which is the tile. docs/units.md."""
+
+    def fan_house(self):
+        from tests.apptest import entity, hardware, house, state
+        areas, devices, entities, states = house()
+        devices = devices + [hardware("hw-fan", "living", "Bedroom Fan", manufacturer="Hunter", model="SIMPLEconnect")]
+        entities = entities + [entity("fan.bedroom_fan", "hw-fan", has_entity_name=True),
+                               entity("light.bedroom_fan_light", "hw-fan", has_entity_name=True)]
+        states = states + [state("fan.bedroom_fan", "on", friendly_name="Bedroom Fan", percentage=66),
+                           state("light.bedroom_fan_light", "off", friendly_name="Bedroom Fan Light", supported_color_modes=["brightness"])]
+        return areas, devices, entities, states
+
+    def parts(self):
+        return self.hub.home.devices["fan.bedroom_fan"], self.hub.home.devices["light.bedroom_fan_light"]
+
+    def test_each_part_is_told_the_other_and_the_fan_leads_unless_somebody_says_otherwise(self):
+        self.hub.home.build(*self.fan_house())
+        fan, light = self.parts()
+        self.assertEqual((fan.attrs.get("light"), fan.attrs.get("leads")), ("light.bedroom_fan_light", "fan"))
+        self.assertEqual((light.attrs.get("fan"), light.attrs.get("leads")), ("fan.bedroom_fan", "fan"))
+        self.assertNotIn("light", self.hub.home.devices["fan.ceiling_fan"].attrs)   # a fan with no light on its hardware
+
+    def test_it_survives_a_state_change(self):
+        self.hub.home.build(*self.fan_house())
+        self.hub.home.apply_state("light.bedroom_fan_light", {"state": "on", "attributes": {"friendly_name": "Bedroom Fan Light", "brightness": 120}})
+        self.assertEqual(self.parts()[1].attrs.get("fan"), "fan.bedroom_fan")
+
+    def test_the_owner_may_say_the_light_leads_from_either_part_and_it_is_kept_with_the_settings(self):
+        self.hub.home.build(*self.fan_house())
+        r = self.client.post("/devices/light.bedroom_fan_light/lead", json={"lead": "light"})
+        self.assertEqual((r.status_code, r.json()["leads"]), (200, "light"))
+        fan, light = self.parts()
+        self.assertEqual((fan.attrs["leads"], light.attrs["leads"]), ("light", "light"))
+        self.assertEqual(json.loads((self.data / "settings.json").read_text())["leads"], {"hw-fan": "light"})
+        self.assertEqual([m["device"]["id"] for m in self.sent("device")[-2:]], ["fan.bedroom_fan", "light.bedroom_fan_light"])
+        self.hub.home.build(*self.fan_house())        # a registry change: the whole model, made again
+        self.assertEqual(self.parts()[0].attrs["leads"], "light")
+
+    def test_saying_the_fan_again_puts_it_back_and_leaves_no_record(self):
+        self.hub.home.build(*self.fan_house())
+        self.client.post("/devices/fan.bedroom_fan/lead", json={"lead": "light"})
+        self.client.post("/devices/fan.bedroom_fan/lead", json={"lead": "fan"})
+        self.assertEqual(self.parts()[1].attrs["leads"], "fan")
+        self.assertEqual(json.loads((self.data / "settings.json").read_text())["leads"], {})
+
+    def test_a_thing_that_is_not_a_fixture_is_refused_in_the_houses_own_words(self):
+        self.hub.home.build(*self.fan_house())
+        r = self.client.post("/devices/light.ceiling/lead", json={"lead": "light"})
+        self.assertEqual(r.status_code, 400)
+        self.assertIn("not a fan with a light", r.json()["detail"])
+        self.assertEqual(self.client.post("/devices/fan.bedroom_fan/lead", json={"lead": "blinds"}).status_code, 400)

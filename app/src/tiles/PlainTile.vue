@@ -7,7 +7,7 @@ import Icon from '../Icon.vue'
 import DeviceArt from '../DeviceArt.vue'
 import { kindFor, type ArtState } from '../art'
 import { useArm } from '../twice'
-import { seeing } from '../units'
+import { leadsFixture, partnerOf, seeing } from '../units'
 
 const props = defineProps<{ device: Device }>()
 const kind = computed(() => cap(props.device))
@@ -45,6 +45,12 @@ const label = computed(() => {
   return eye.value ? `${base} · Motion` : base       // a switch with its own motion sensor (units.ts) says so on its one line
 })
 const eye = computed(() => seeing(props.device))
+/* a fan with a light in it, when the fan is the tile: the light is a row on it (units.ts) */
+const carried = computed(() => leadsFixture(props.device) ? partnerOf(props.device) : undefined)
+function tapCarried() {
+  const c = carried.value; if (!c || isDead(c)) return
+  perform(c, c.state === 'on' ? 'off' : 'on', undefined, { state: c.state === 'on' ? 'off' : 'on' })
+}
 const next = computed<[string, string]>(() => {
   const d = props.device, k = kind.value
   if (k === 'cover') return d.state === 'open' ? ['close', 'closed'] : ['open', 'open']
@@ -76,6 +82,13 @@ function tap() {
       <!-- a cover says how far in a bar as well as in words: "70% open" is the
            number, the bar is the picture of it, and the board draws both -->
       <span class="tile-bar" v-if="kind === 'cover' && device.attrs.current_position != null" aria-hidden="true"><i :style="{ width: device.attrs.current_position + '%' }"></i></span>
+      <span class="machine-rows tile-carry" v-if="carried">
+        <span class="machine-row" role="button" tabindex="0" :class="{ on: carried.state === 'on', dead: isDead(carried), pending: !!store.pending[carried.id] }"
+              :aria-pressed="carried.state === 'on'" :title="`Hold to open ${carried.name}`"
+              @click.stop="tapCarried" @pointerdown.stop @pointerup.stop @keydown.enter.space.prevent.stop="tapCarried" v-hold="() => (store.opened = carried!)">
+          <Icon name="light" :size="15" /><span class="machine-row-name">Light</span><span class="machine-row-state">{{ isDead(carried) ? 'Not responding' : carried.state === 'on' ? 'On' : 'Off' }}</span>
+        </span>
+      </span>
     </div>
   </button>
 </template>

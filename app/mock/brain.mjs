@@ -45,7 +45,9 @@ const rooms = [
   { id: 'bedroom', name: 'Bedroom', intent: 'asleep', set_by: null, hold_until: null, devices: [
     dev('b1', 'Bedroom lamp', 'bedroom', 'light', 'off', { supported_color_modes: ['brightness'] }),
     dev('b2', 'Bedroom TV', 'bedroom', 'media', 'off', {}),
-    dev('b3', 'Ceiling fan', 'bedroom', 'fan', 'on', { percentage: 40 }),
+    /* a fan with a light in it: one fixture, the fan leading unless the owner says the light (docs/units.md) */
+    dev('b3', 'Bedroom Fan', 'bedroom', 'fan', 'on', { percentage: 40, light: 'b5', leads: 'fan' }, 'Hunter', { hw: 'hw-fan', hw_name: 'Bedroom Fan', named_by_unit: true }),
+    dev('b5', 'Bedroom Fan Light', 'bedroom', 'light', 'on', { brightness: 180, supported_color_modes: ['brightness'], fan: 'b3', leads: 'fan' }, 'Hunter', { hw: 'hw-fan', hw_name: 'Bedroom Fan', named_by_unit: true }),
     dev('b4', 'Bedroom blinds', 'bedroom', 'cover', 'closed', { current_position: 0 }),
   ] },
   { id: 'office', name: 'Office', intent: 'occupied', set_by: null, hold_until: null, devices: [
@@ -358,6 +360,13 @@ const server = http.createServer((req, res) => {
     return json(res, { capability: d.capability, kind: kindOf(d), offer, words: Object.fromEntries(offer.map(k => [k, WORD[k]])),
                        why: offer.length ? 'This can be switched on and off, so it can be shown as anything that switches on and off. A plug goes off with Everything off; an appliance is part of a machine and is left alone. An alarm is the one that asks before it sounds.' : '' })
   }
+  const setLead = p.match(/^\/devices\/([^/]+)\/lead$/)
+  if (setLead && req.method === 'POST') { let b = ''; req.on('data', c => (b += c)); return req.on('end', () => {
+    let k = 'fan'; try { k = JSON.parse(b).lead || 'fan' } catch {}
+    const d = home.rooms.flatMap(r => r.devices).find(x => x.id === setLead[1])
+    for (const x of home.rooms.flatMap(r => r.devices)) if (d && x.hw && x.hw === d.hw) x.attrs.leads = k
+    json(res, { ok: true, leads: k })
+  }) }
   const setKind = p.match(/^\/devices\/([^/]+)\/kind$/)
   if (setKind && req.method === 'POST') { let b = ''; req.on('data', c => (b += c)); return req.on('end', () => {
     const d = home.rooms.flatMap(r => r.devices).find(x => x.id === setKind[1])
