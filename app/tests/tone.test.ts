@@ -147,12 +147,14 @@ describe('an unknown weather condition', () => {
 describe('the pane, at every hour', () => {
   const alphas = (rim: string) => rim.match(/[\d.]+(?=\))/g)!.map(Number)
 
-  it('never lets a pane fall to or below the sky it sits on', () => {
-    for (const condition of CONDITIONS) {
-      for (const el of ELEVATIONS) {
-        const field = oklch(ground(el, condition))
-        const pane = Number(glassVars(el, condition)['--glass'].match(/oklch\(([\d.]+)/)![1])
-        expect(pane, `${condition} / ${el}°`).toBeGreaterThan(field.L)
+  it('never lets a pane fall to or below the sky it sits on, under any tone', () => {
+    for (const name of NAMES) {
+      for (const condition of CONDITIONS) {
+        for (const el of ELEVATIONS) {
+          const field = oklch(ground(el, condition))
+          const pane = Number(glassVars(el, condition, name)['--glass'].match(/oklch\(([\d.]+)/)![1])
+          expect(pane, `${name} / ${condition} / ${el}°`).toBeGreaterThan(field.L)
+        }
       }
     }
   })
@@ -257,5 +259,66 @@ describe('the pane, at every hour', () => {
         }
       }
     }
+  })
+})
+
+
+/* The tone, on the other face. Until 17 Sep 2026 glassVars took no tone at all, so Warm, Cool and
+   Pastel resolved to the same pane while the Look page went on offering all three -- a control that
+   did nothing, with a swatch beside it that said otherwise. See design/nightfall page 2.
+
+   The rule these hold to: a tone leans the PANE, never the SKY. */
+describe('what a tone does to glass', () => {
+  const hue = (g: string) => Number(g.match(/oklch\([\d.]+ [\d.]+ ([\d.]+)/)![1])
+  const lightness = (g: string) => Number(g.match(/oklch\(([\d.]+)/)![1])
+  const chroma = (g: string) => Number(g.match(/oklch\([\d.]+ ([\d.]+)/)![1])
+  const solidity = (g: string) => Number(g.match(/\/ ([\d.]+)\)/)![1])
+  const glass = (name: ToneName) => glassVars(6, 'partlycloudy', name)['--glass']
+
+  it('is no longer a control that does nothing: the three named tones all differ', () => {
+    const [warm, cool, pastel] = ['warm', 'cool', 'pastel'].map(n => glass(n as ToneName))
+    expect(new Set([warm, cool, pastel]).size).toBe(3)
+  })
+
+  it('puts warmth and coolness where the paper face already puts them', () => {
+    expect(hue(glass('warm'))).toBeLessThan(180)         // the lamp side of the wheel
+    expect(hue(glass('cool'))).toBeGreaterThan(180)      // the sky side
+  })
+
+  it('leans the pane far enough to be seen as a tint rather than an artefact', () => {
+    /* .012 is where an unleaned pane sits, which is near enough neutral */
+    expect(chroma(glass('follow'))).toBeLessThan(0.02)
+    for (const name of ['warm', 'cool', 'pastel'] as ToneName[])
+      expect(chroma(glass(name)), name).toBeGreaterThan(0.03)
+  })
+
+  it('makes pastel a MILKIER pane and not merely a bluer one', () => {
+    /* on paper pastel's whole character is a much lighter card -- dL .335 against .135 -- so a
+       pastel that only moved its hue here would be a tone that means two different things */
+    expect(lightness(glass('pastel'))).toBeGreaterThan(lightness(glass('cool')))
+    expect(solidity(glass('pastel'))).toBeGreaterThan(solidity(glass('cool')))
+  })
+
+  it('leaves the SKY alone, whatever the tone: only the pane moves', () => {
+    const fields = NAMES.map(n => glassVars(6, 'partlycloudy', n)['--glass-field'])
+    expect(new Set(fields).size).toBe(1)
+  })
+
+  it('leaves Follow exactly where it was, so no house changes unless it asked', () => {
+    /* the one tone deliberately not in the table: it keeps the sky's own hue. Every existing
+       Nightfall house is on it, and repainting them after sunset is not a bug fix. */
+    for (const condition of CONDITIONS) {
+      for (const el of ELEVATIONS) {
+        const before = glassVars(el, condition)                      // the old two-argument call
+        expect(glassVars(el, condition, 'follow')).toEqual(before)
+        expect(hue(before['--glass']), `${condition} / ${el}°`).toBe(Math.round(oklch(ground(el, condition)).H))
+      }
+    }
+  })
+
+  it('trims a leaned pane in its own light rather than in white', () => {
+    /* a warm pane with a white rim reads as two materials stuck together */
+    expect(glassVars(6, 'partlycloudy', 'warm')['--glass-rim']).toContain('oklch(')
+    expect(glassVars(6, 'partlycloudy', 'follow')['--glass-rim']).toContain('rgba(255,255,255')
   })
 })

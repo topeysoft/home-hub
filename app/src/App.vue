@@ -88,9 +88,12 @@ const layout = computed<LayoutName>(() => isLayout(layoutParam) ? layoutParam : 
    and ?face=glass previews it for this tab alone. */
 const faceParam = params.get('face')
 const face = computed<FaceName>(() => isFace(faceParam) ? faceParam : (isFace(store.ambient.look?.face) ? store.ambient.look!.face as FaceName : feel.value.face))
-/* the pane's own properties, derived from the same sky the tone is: a face that
-   is not on costs nothing, because there is nothing to bind */
-const glass = computed(() => face.value === 'glass' ? glassVars(store.sky.elevation, store.sky.condition) : {})
+/* the pane's own properties, derived from the same sky the tone is -- and from
+   the tone itself, which it ignored until 17 Sep 2026, so that Warm and Cool
+   and Pastel did nothing at all on this face. A face that is not on costs
+   nothing, because there is nothing to bind. */
+const glass = computed(() => face.value === 'glass'
+  ? glassVars(store.sky.elevation, store.sky.condition, toneName.value) : {})
 /* Whether this screen can paint a pane at all. Asked once: it cannot change
    while the panel is open, and a host that cannot blur gets the face flattened
    rather than taken away -- panel.css says what that means. ?flat=1 previews

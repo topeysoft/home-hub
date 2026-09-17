@@ -4,7 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Device, Room } from '../src/api'
 import {
   activity, cap, capsOf, currentScene, doneLine, forgetDone, houseLine, isActive, isDead, justDone, newBuild,
-  perform, reloadOnto, roomActive, sayUpdated, sceneHolds, scenesFor, shortName, store, updateReady, visibleRooms, whatsOn,
+  perform, reloadOnto, restingLine, restingParts, roomActive, sayUpdated, sceneHolds, scenesFor, shortName, store,
+  updateReady, visibleRooms, whatsOn,
 } from '../src/store'
 
 const dev = (id: string, name: string, capability: string, state: string, attrs: Record<string, any> = {}): Device =>
@@ -103,6 +104,69 @@ describe('one line about a room', () => {
     const r = room('front', 'Front door', [dev('c', 'Doorbell', 'camera', 'streaming')])
     expect(roomActive(r)).toBe(false)
     expect(activity(r)).toBe('1 camera')
+  })
+})
+
+/* What a room says when it is doing nothing, which on a big house is most of
+   the Rooms tab. "Quiet" on ten cards is the absence of a sentence written out
+   ten times; design/rooms/Main.dc.html drew the room's resting state instead. */
+describe('what a room says at rest', () => {
+  it('says what the room is holding rather than that it is holding nothing', () => {
+    const r = room('front', 'Front door', [
+      dev('l', 'Front door', 'lock', 'locked'),
+      dev('c', 'Doorbell', 'camera', 'idle'),
+      dev('p', 'Porch light', 'light', 'off'),
+    ])
+    expect(activity(r)).toBe('Quiet')                                  // the three home layouts, unchanged
+    expect(restingLine(r)).toBe('Locked · Camera watching')
+  })
+
+  it('leads with what is being KEPT, because that is what a quiet room is checked for', () => {
+    const r = room('garage', 'Garage', [
+      dev('t', 'Garage TV', 'media', 'off'),
+      dev('d', 'Garage door', 'cover', 'closed'),
+      dev('c', 'Garage View', 'camera', 'idle'),
+    ])
+    expect(restingParts(r)).toEqual(['Blind closed', 'Camera watching'])
+  })
+
+  it('stops at two, because a third phrase on a third of a card is an ellipsis', () => {
+    const r = room('den', 'Den', [
+      dev('l', 'Den door', 'lock', 'locked'),
+      dev('c', 'Blind', 'cover', 'closed'),
+      dev('m', 'Den TV', 'media', 'off'),
+      dev('a', 'A', 'light', 'off'), dev('b', 'B', 'light', 'off'),
+    ])
+    expect(restingParts(r)).toHaveLength(2)
+    expect(restingLine(r)).toBe('Locked · Blind closed')
+  })
+
+  it('names the one screen and counts the rest', () => {
+    const one = room('den', 'Den', [dev('m', 'Den TV', 'media', 'off')])
+    expect(restingLine(one)).toBe('TV off')                            // shortName drops the room it is in
+    const two = room('den', 'Den', [dev('m', 'TV', 'media', 'off'), dev('n', 'Projector', 'media', 'off')])
+    expect(restingLine(two)).toBe('2 screens off')
+  })
+
+  it('never claims a door is locked when only some of them are', () => {
+    const r = room('side', 'Side', [
+      dev('a', 'Front', 'lock', 'locked'), dev('b', 'Back', 'lock', 'unlocked')])
+    expect(restingLine(r)).toBe('Unlocked')                            // and that is activity's word, not a resting one
+  })
+
+  it('leaves a room that is doing something exactly as it reads today', () => {
+    const r = room('living', 'Living room', [dev('a', 'A', 'light', 'on'), dev('c', 'Blind', 'cover', 'open')])
+    expect(restingLine(r)).toBe(activity(r))
+  })
+
+  it('has nothing to add to an empty room, or to the tray', () => {
+    expect(restingLine(room('bath', 'Bathroom'))).toBe('Nothing here yet')
+    expect(restingLine(room('unassigned', 'New devices', [dev('a', 'A', 'light', 'off')]))).toBe('1 to place')
+  })
+
+  it('falls back to the old word when the room has nothing it can describe', () => {
+    const r = room('hall', 'Hall', [dev('s', 'Back door', 'contact', 'off')])
+    expect(restingLine(r)).toBe('Quiet')
   })
 })
 

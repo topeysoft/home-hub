@@ -4,7 +4,7 @@
    where design/rooms/Main.dc.html drew it. */
 import { describe, expect, it } from 'vitest'
 import type { Device, Room } from '../src/api'
-import { arrangeRooms, leadLight, playingIn, rankRooms, temperature } from '../src/rooms'
+import { arrangeRooms, leadLight, playingIn, rankRooms, temperature, tracks } from '../src/rooms'
 
 const dev = (id: string, name: string, capability: string, state: string, attrs: Record<string, any> = {}): Device =>
   ({ id, name, room_id: '', capability, state, attrs })
@@ -104,11 +104,13 @@ describe('how much of the screen a room gets', () => {
     ])
   })
 
-  it('fills the wall exactly: nine rooms come to twelve slots, which is four flush columns', () => {
-    const slots = { full: 3, half: 2, third: 1 }
+  it('fills the wall exactly: nine rooms come to sixty tracks, which is four flush columns', () => {
+    /* the grid is fifteen tracks deep, and the four sizes are spans of it: a
+       third is five, which is what a third of a three-track column always was */
+    const slots = { full: 15, half: 10, third: 5, row: 3 }
     const total = arrangeRooms(house()).reduce((n, c) => n + slots[c.size], 0)
-    expect(total).toBe(12)
-    expect(total % 3).toBe(0)
+    expect(total).toBe(60)
+    expect(total % 15).toBe(0)
   })
 
   it('only goes full for a room with something playing in it', () => {
@@ -120,7 +122,91 @@ describe('how much of the screen a room gets', () => {
 
   it('hands out no lead at all when nothing in the house is on', () => {
     const asleep = house().map(r => ({ ...r, devices: r.devices.map(d => ({ ...d, state: 'off' })) }))
-    expect(arrangeRooms(asleep).every(c => c.size === 'third')).toBe(true)
+    expect(arrangeRooms(asleep).some(c => c.size === 'full' || c.size === 'half')).toBe(false)
+  })
+})
+
+/* The index: the quiet end of the house, which on a big one is most of it. The
+   rule these all circle is the same one -- whole columns or nothing -- because a
+   column with three rows and a hole under them reads as a bug, not a list.
+   design/rooms/QuietIndex.dc.html. */
+describe('the quiet end of the house', () => {
+  it('leaves a house with too few quiet rooms exactly as it was', () => {
+    /* four quiet rooms is less than a column, so there is no index to make and
+       the mock house lands where design/rooms/Main.dc.html drew it */
+    expect(arrangeRooms(house()).some(c => c.size === 'row')).toBe(false)
+  })
+
+  it('makes rows only in whole columns of five, and keeps the remainder as cards', () => {
+    const asleep = house().map(r => ({ ...r, devices: r.devices.map(d => ({ ...d, state: 'off' })) }))
+    const plan = arrangeRooms(asleep)
+    /* nine quiet rooms: one column of five rows, and the four highest-ranked
+       stay cards rather than leaving a hole at the bottom of a second column */
+    expect(plan.filter(c => c.size === 'row')).toHaveLength(5)
+    expect(plan.filter(c => c.size === 'third')).toHaveLength(4)
+    expect(plan.slice(4).every(c => c.size === 'row')).toBe(true)   // and they are the tail
+  })
+
+  it('gives the lead the full column when the index has made room for one', () => {
+    /* An evening where the television is paused and most of the house is off.
+       The old rule said half -- nothing is playing -- and it was right to,
+       because every card behind it wanted the width. With seven quiet rooms
+       gone to an index there is a column going spare, and the Living room has
+       two lamps, a blind and motion to spend it on. */
+    const evening = house().map(r =>
+      r.id === 'living' ? { ...r, devices: r.devices.map(d => d.id === 'm1' ? { ...d, state: 'paused' } : d) }
+      : ['kitchen', 'office', 'bedroom'].includes(r.id) ? { ...r, devices: r.devices.map(d => ({ ...d, state: 'off' })) }
+      : r)
+    const plan = arrangeRooms(evening)
+    expect(plan.filter(c => c.size === 'row')).toHaveLength(5)
+    expect(plan[0]).toEqual({ id: 'living', size: 'full' })
+  })
+
+  it('still refuses the lead a full column when it has one thing to say', () => {
+    /* one lamp in one room is one line, and one line does not want a poster --
+       the index makes room, it does not hand it out */
+    const oneLamp = house().map(r =>
+      r.id === 'living' ? { ...r, devices: [{ ...r.devices[0], state: 'on' }] }
+      : ['kitchen', 'office', 'bedroom', 'backyard'].includes(r.id) ? { ...r, devices: r.devices.map(d => ({ ...d, state: 'off' })) }
+      : r)
+    const plan = arrangeRooms(oneLamp)
+    expect(plan.filter(c => c.size === 'row').length).toBeGreaterThan(0)
+    expect(plan[0]).toEqual({ id: 'living', size: 'half' })
+  })
+
+  it('places every row on a track of its own so the columns cannot interleave', () => {
+    const asleep = house().map(r => ({ ...r, devices: r.devices.map(d => ({ ...d, state: 'off' })) }))
+    const at = tracks(arrangeRooms(asleep)).map(t => t.at)
+    expect(at.slice(0, 4)).toEqual([undefined, undefined, undefined, undefined])
+    expect(at.slice(4)).toEqual([1, 4, 7, 10, 13])                  // one column, top to bottom
+  })
+
+  it('starts the next column over rather than running past the foot of one', () => {
+    const many = Array.from({ length: 10 }, (_, i) => room(`q${i}`, `Room ${i}`, [dev(`d${i}`, 'Lamp', 'light', 'off')]))
+    const at = tracks(arrangeRooms(many)).map(t => t.at).filter(n => n !== undefined)
+    expect(at).toEqual([1, 4, 7, 10, 13, 1, 4, 7, 10, 13])
+  })
+
+  it('stretches the last card to the foot of its column, so no row can backfill the hole', () => {
+    /* three rooms on and twelve quiet: the cards come to fifty tracks, which is
+       three columns and five tracks of sky. That sky is where `column dense`
+       would put the index's first row, and the index would run short from there
+       to its end. The last card takes it instead. */
+    const big = [...house(), ...Array.from({ length: 6 }, (_, i) =>
+      room(`x${i}`, `Room ${i}`, [dev(`e${i}`, 'Lamp', 'light', 'off')]))]
+      .map(r => ['living', 'kitchen', 'backyard'].includes(r.id) ? r
+        : { ...r, devices: r.devices.map(d => ({ ...d, state: 'off' })) })
+    const plan = arrangeRooms(big)
+    const t = tracks(plan)
+    const cards = plan.filter(c => c.size !== 'row').length
+    const spans = t.slice(0, cards).reduce((n, x) => n + x.span, 0)
+    expect(spans % 15).toBe(0)                                      // whole columns, always
+    expect(t[cards - 1].span).toBeGreaterThan(5)                    // and the last card paid for it
+  })
+
+  it('leaves a flush wall alone rather than stretching a card that already fits', () => {
+    const t = tracks(arrangeRooms(house()))
+    expect(t.map(x => x.span)).toEqual([15, 10, 5, 5, 5, 5, 5, 5, 5])
   })
 
   it('survives a house of one room, and a house of none', () => {

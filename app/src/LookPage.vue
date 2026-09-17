@@ -24,8 +24,8 @@ import { computed, ref } from 'vue'
 import { setLook, type Look } from './api'
 import { notify, store } from './store'
 import { FACES, LAYOUTS, NAVS, isLayout, isNav } from './layout'
-import { TONES, glassVars, toneVars } from './tone'
-import { palette, rgb, wxOf } from './sky'
+import { TONES, glassVars, toneVars, type ToneName } from './tone'
+import { mix, palette, rgb, wxOf } from './sky'
 import { FEELS, adjusted, feelFrom, lookOf, placeOf, type Feel, type FeelName } from './look'
 import Icon from './Icon.vue'
 
@@ -55,7 +55,7 @@ function mini(f: Feel) {
   const [top, band, horizon] = palette(elevation, wxOf(condition))
   return {
     ...toneVars(elevation, condition, f.tone),
-    ...(f.face === 'glass' ? glassVars(elevation, condition) : {}),
+    ...(f.face === 'glass' ? glassVars(elevation, condition, f.tone) : {}),
     '--mini-sky': `linear-gradient(180deg, ${rgb(top)}, ${rgb(band)} 56%, ${rgb(horizon)})`,
   }
 }
@@ -99,10 +99,32 @@ function choose(key: 'tone' | 'layout' | 'nav' | 'face', value: string) {
   return write({ [key]: value }, key + value)
 }
 
-/* each swatch shows the tone as it is right now, under this sky: what you pick
-   is what you are looking at, not a sample from some other hour */
+/* Each swatch shows the tone as it is right now, under this sky: what you pick
+   is what you are looking at, not a sample from some other hour.
+   
+   And on the face you are looking at it on. These were built from toneVars
+   alone, which knows nothing about the face, so on glass they showed four
+   different colours for four tones that all came out identical -- the swatch
+   was the only part of the panel where the setting appeared to work. A pane is
+   one material rather than three cards, so it gets one chip. */
 function swatches(id: string) {
-  const v = toneVars(store.sky.elevation, store.sky.condition, id as any)
+  const { elevation, condition } = store.sky
+  if (face.value === 'glass') {
+    /* A pane over the sky it will actually be over. On its own it is a chip of
+       something 34% opaque laid on a dark row, which is very nearly nothing --
+       honest, and unreadable. A pane has no colour without a sky behind it;
+       that is the whole of what the face is, and it is what .look-mini already
+       does one section up. */
+    const [top, band, horizon] = palette(elevation, wxOf(condition))
+    /* the BAND, not the whole ramp: a card sits on the middle of the sky rather
+       than across all three of its bands, and squeezing the full ramp into 40px
+       gave every chip the same strong top-to-bottom contrast to look at instead
+       of the one thing that differs between them */
+    const sky = `linear-gradient(180deg, ${rgb(mix(top, band, 0.72))}, ${rgb(mix(band, horizon, 0.35))})`
+    const pane = glassVars(elevation, condition, id as ToneName)['--glass']
+    return [`${pane}, ${sky}`]
+  }
+  const v = toneVars(elevation, condition, id as ToneName)
   return [v['--card-light'], v['--card-lock'], v['--card-plain']].filter(Boolean)
 }
 
@@ -206,7 +228,7 @@ const AROUND = computed(() => place.value.nav === 'top' ? 'with tabs across the 
             <span class="look-name">{{ t.label }}<span class="look-tick" v-if="tone === t.id"><Icon name="check" :size="11" /></span></span>
             <span class="look-hint">{{ t.hint }}</span>
           </span>
-          <span class="look-swatch" aria-hidden="true"><i v-for="(s, i) in swatches(t.id)" :key="i" :style="{ background: s }"></i></span>
+          <span class="look-swatch" :class="{ one: face === 'glass' }" aria-hidden="true"><i v-for="(s, i) in swatches(t.id)" :key="i" :style="{ background: s }"></i></span>
         </button>
       </div>
 
