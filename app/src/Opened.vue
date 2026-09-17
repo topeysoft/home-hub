@@ -37,6 +37,8 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { getDeviceEvents, getDeviceKinds, moveDevice, renameDevice, setDeviceKind, setDeviceLead, type Event, type Kinds } from './api'
 import { partnerOf, partsOf, renameParts, renamesUnit } from './units'
+import { isMachine } from './machines'
+import MachinePane from './panes/MachinePane.vue'
 import { cap, defaultKind, deviceById, isDead, notify, perform, roomOf, shownAs, store } from './store'
 import { facts as factsOf, moments as momentsOf, paneKind, reading, verbs as verbsOf, whyLine } from './pane'
 import { useArm } from './twice'
@@ -58,7 +60,7 @@ const dead = computed(() => !!dev.value && isDead(dev.value))
 
 const INSTRUMENTS: Record<string, any> = {
   light: LightPane, media: MediaPane, climate: ClimatePane, cover: CoverPane,
-  lock: LockPane, camera: CameraPane, fan: SimplePane, switch: SimplePane, alarm: SimplePane, appliance: SimplePane, vacuum: SimplePane, sense: SensePane,
+  lock: LockPane, camera: CameraPane, fan: SimplePane, switch: SimplePane, alarm: SimplePane, appliance: SimplePane, vacuum: SimplePane, sense: SensePane, machine: MachinePane,
 }
 const instrument = computed(() => dev.value ? INSTRUMENTS[paneKind(dev.value)] ?? SimplePane : null)
 
@@ -67,7 +69,12 @@ const instrument = computed(() => dev.value ? INSTRUMENTS[paneKind(dev.value)] ?
 const events = ref<Event[]>([])
 async function look() {
   const d = dev.value; if (!d) return
-  try { events.value = await getDeviceEvents(d.id, 12) } catch { events.value = [] }
+  /* a machine's day is its features' days, together: the brain has no record under the machine's own name */
+  const ids = isMachine(d) ? (d.attrs.parts as string[]) : [d.id]
+  try {
+    const all = await Promise.all(ids.map(id => getDeviceEvents(id, 12).catch(() => [] as Event[])))
+    events.value = all.flat().sort((a, b) => b.ts - a.ts).slice(0, 12)
+  } catch { events.value = [] }
 }
 watch(() => dev.value?.id, look, { immediate: true })
 watch(() => [dev.value?.state, JSON.stringify(dev.value?.attrs ?? {})].join('|'), () => { if (dev.value) look() })
@@ -87,7 +94,7 @@ const offer = computed(() => kinds.value && kinds.value.offer.length > 1 ? kinds
 const said = computed(() => dev.value ? shownAs(dev.value) : '')
 watch(() => dev.value?.id, async id => {
   kinds.value = null; picking.value = false
-  if (!id) return
+  if (!id || (dev.value && isMachine(dev.value))) return     // a machine is not a thing to re-type; its features are, each on its own page
   try { const k = await getDeviceKinds(id); if (dev.value?.id === id) kinds.value = k } catch { kinds.value = null }
 }, { immediate: true })
 
@@ -162,7 +169,7 @@ async function leadWith(k: 'fan' | 'light') {
 const editing = ref(false), saving = ref(false)
 const newName = ref(''), newRoom = ref('')
 const rooms = computed(() => store.rooms.filter(r => r.id !== 'unassigned'))
-const asUnit = computed(() => !!dev.value && renamesUnit(dev.value))
+const asUnit = computed(() => !!dev.value && (isMachine(dev.value) || renamesUnit(dev.value)))   // a machine IS its unit: the fridge's name is the hardware's
 function startEdit() {
   const d = dev.value; if (!d) return
   newName.value = asUnit.value ? (d.hw_name ?? d.name) : d.name
@@ -176,12 +183,16 @@ async function saveEdit() {
   const room = newRoom.value
   saving.value = true
   try {
+    /* a machine has no id the brain knows: its first feature stands for it, and the brain renames and
+       moves the hardware through that one, which carries the rest */
+    const through = isMachine(d) ? partsOf(d)[0] ?? d : d
     if (name && name !== was) {
-      if (asUnit.value) { await renameDevice(d.id, name, true); renameParts(partsOf(d), was, name) }
+      if (asUnit.value) { await renameDevice(through.id, name, true); renameParts(partsOf(d), was, name); if (isMachine(d)) { d.name = name; d.hw_name = name } }
       else { await renameDevice(d.id, name); d.name = name }
     }
     if (room && room !== d.room_id) {
-      await moveDevice(d.id, room)
+      await moveDevice(through.id, room)
+      if (isMachine(d)) d.room_id = room
       /* the thing goes now, its parts with it; the house confirms with a rebuild */
       for (const part of partsOf(d)) {
         const from = store.rooms.find(r => r.id === part.room_id), to = store.rooms.find(r => r.id === room)

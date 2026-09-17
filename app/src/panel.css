@@ -1714,6 +1714,24 @@ input:focus-visible {
 .machine-row.pending {
   opacity: 0.7;
 }
+/* the same rows as a pane's instrument (MachinePane.vue): the size of a control, not of a glance */
+.rig-machine {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 100%;
+}
+.machine-rows.big {
+  gap: 10px;
+  margin-top: 0;
+}
+.machine-rows.big .machine-row {
+  min-height: 60px;
+  padding: 10px 18px;
+  border-radius: 16px;
+  font-size: 17px;
+  gap: 12px;
+}
 
 /* light: the tile is the dimmer */
 .tile.light {
