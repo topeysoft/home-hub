@@ -777,3 +777,39 @@ confidence either way.
 following commanded state on switch `0x0003`. In this capture it reads `01` while the main reports `OFF`, and
 falls to `00` only long after, which fits an activity or occupancy flag with a hold better than a load state.
 Treat both readings as unconfirmed; it was never the thing anything depended on.
+
+### Pairing is stored in the switch, in vendor field `0x08`
+
+The companion's press is a unicast to its partner, so the companion must know its partner's address — and it
+does. Reading the whole vendor store of a **pristine companion** (`0x0006`, panel network, never touched by us)
+against the switches already captured:
+
+| Switch | `0x08` | `0x1a` | what it is |
+|---|---|---|---|
+| `0x0006` | `0500` → **0x0005** | `03` | companion of `0x0005` |
+| `0x000a` | `0000` | `02` | single-pole dimmer |
+| `0x0011` | `0000` | `01` | main of a two-way pair |
+
+**`0x08` is the partner's unicast address**, little-endian, and it is exactly the address that companion sends
+its `0403` to. Every switch that is not a companion carries zero. `0x1a` looks like the role — 3 companion,
+1 two-way main, 2 single-pole — though that is one example of each.
+
+This is readable with the **AppKey alone**, which matters more than it sounds: Configuration Server state needs
+a device key we will never have for the console's switches, but the vendor store does not. **So the whole
+house's pairings can be read off switches we do not own**, without pressing anything, by reading field `0x08`
+from each switch on the panel network.
+
+It is writable too, so a provisioner can pair switches itself: write each companion's `0x08` with its partner's
+unicast (and `0x1a = 3`). That is the "both codes scanned, one job" flow, implemented.
+
+**And it explains the silent adopted companion.** Our `0x0004` was factory reset, which wiped `0x08` to nothing
+— so it had no one to send a press to, and setting model publication to `0xffff` did not help because a
+companion's press never goes out by publication at all. It has now been written with `0x08 = 0x0011` (its true
+partner, which lives on the panel network where nothing of ours holds that address, so the press goes out, no
+switch of ours acts on it, and the puck hears it) and `0x1a = 3`.
+
+**Unverified at the time of writing:** whether this takes effect without a power cycle. The load type is read
+only at boot, and pairing may be the same. The test is a power cycle followed by a press.
+
+**n = 1.** One pristine companion, one house. The `0x0005` match is exact and the zeroes are consistent, but a
+second pair would make this solid.
