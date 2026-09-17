@@ -320,7 +320,7 @@ def fridge_house():
     """The house above with a Samsung fridge in the kitchen. Its ice maker and its Ice Bites reach the hub
     as plain switches, named after the unit they are part of, and so does a plug HA has classed as an
     outlet whose owner happened to call it after the freezer it powers."""
-    from tests.apptest import area, entity, hardware, state
+    from tests.apptest import entity, hardware, state
     areas, devices, entities, states = house()
     devices = devices + [hardware("hw-fridge", "kitchen", "Refrigerator", manufacturer="Samsung", model="RF29"),
                          hardware("hw-plug", "kitchen", "Kasa plug", manufacturer="TP-Link", model="HS103")]
