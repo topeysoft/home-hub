@@ -279,6 +279,15 @@ broker to say so — and it self-heals the instant a proxy is found, which makes
 recovery is then about one connect attempt every twelve seconds. Both pucks carry the fix. NVS config
 survives a reflash of the ship image, so a desk reflash does not strand a configured puck.
 
+*Scope, so this does not harden into a fact it has not earned:* the signature above was observed, and
+the starvation mechanism explains every symptom — but the stuck puck was recovered before it could be
+caught in the act, and its serial log was on the cable that was not plugged in, so the mechanism is
+**inferred, not reproduced**. What supports it beyond the reasoning is one live observation after the
+fix: a puck reporting `status online` together with `proxy none`, a combination the old firmware could
+not produce, because starvation made "no proxy" and "on the broker" mutually exclusive. Treat it as
+plausible and well supported. If a puck is ever caught in that state again, the current build says which
+branch it is parked in.
+
 ## Known switch addresses (from the bridge's sweep)
 
 Answered `Generic OnOff Get` to all-nodes: `0x0004 0x0005 0x0006 0x0008 0x000a 0x000b 0x000e 0x0010 0x0011 0x0014
