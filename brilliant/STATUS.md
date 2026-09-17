@@ -1,6 +1,6 @@
 # Brilliant switches — state of play (start here)
 
-*Last updated 16 September 2026. This is the resume-from-here summary; the full chronological story and the
+*Last updated 16 September 2026 (night: config over the cable, firmware 0.2.0). This is the resume-from-here summary; the full chronological story and the
 "why" behind every step is in [`../docs/brilliant.md`](../docs/brilliant.md).*
 
 ## Where we got to (all proven on a real wall switch, no Brilliant app, no reset)
@@ -12,9 +12,10 @@ mesh keys and can now **read and control the real wall switches directly over BL
 |---|---|---|
 | Read on/off | `Generic OnOff Status` | ✅ |
 | Read dim level | `Generic Level Status` | ✅ |
-| Read motion (PIR) | vendor field **`0x13`** (analogue: ~2 at rest, 7–8 on walk-past) | ✅ |
+| Read motion (PIR) | vendor field **`0x13`**: a walk-past adds ~5 counts on top of a baseline that tracks the load (~2 lamp off, ~130 lamp full); the bridge learns the baseline per switch | ✅ |
 | Write on/off | `Generic OnOff Set` | ✅ light obeyed |
 | Write dimming | `Generic Level Set` on a **0–1000 scale** (not SIG −32768…32767) | ✅ full→2%→full, confirmed |
+| Restore a reset switch to a dimmer | provision + bind (incl. vendor `0x0820/0x0001`) + write config + power-cycle | ✅ visually confirmed on `0x0005` |
 
 ## The keys (the whole game)
 
@@ -46,13 +47,6 @@ $V panel_cmd.py 000a dim:20
 
 `PANEL_NODE=<ble-addr>` pins the proxy node (avoids weak-node roulette); otherwise the strongest is chosen.
 
-## Known switch addresses
-
-- **`0x000a`** — a hallway dimmer, the one we read+controlled end to end (PIR range ~5 ft)
-- `0x0012` — the panel's controller element (seen polling switches; it is *not* a light)
-- `0x0004`, `0x0008`, `0x000e` — other switches seen reporting
-- ~8 switches total on the network; discover the rest by watching `panel_sniff.py` output for source addresses
-
 ## Gotchas already solved (don't re-discover these)
 
 - **Proxy nonce**: octet 1 must be `0x00`, not `CTL|TTL` (fixed in `tools/mesh.py`). This is why the proxy
@@ -63,27 +57,159 @@ $V panel_cmd.py 000a dim:20
   switches — the panel set them to dimmer mode. Don't reset a wall switch; it strips that config and we can't
   yet fully rebuild it.
 - **One proxy connection per node**; the link is flaky below ~−80 dBm — reply drops are range, not logic.
+- **ESP32 firmware gotchas** (all fixed in `esp32-bridge/`): WiFi modem sleep must stay on or the BT controller
+  aborts at boot; the core's Bluedroid BLE library hangs the main loop when a weak link drops mid-write (NimBLE now);
+  MTU negotiation fails on some links, so writes honour the real MTU and SAR-segment; a broadcast Get loses replies
+  when 11 switches answer at once, so state is resynced per switch.
 - **Re-capturing keys** (only if the store is ever lost): the recorder firmware in `mesh-provisionee/` does it
   — flash it, scan a spare switch's QR in the app (QR = 16-byte UUID + 16-byte Static OOB), and it captures
   netkey + appkey. See `docs/brilliant.md` for the full recipe. The keys are already saved, so this is a
   fallback, not a needed step.
 
-## Next task: the always-on bridge
+## The always-on bridge: built and proven (16 September, evening)
 
-Everything above runs from the laptop over a one-off BLE connection. To make it hub-native:
+`esp32-bridge/` is now the **panel bridge**: an ESP32 puck on a USB charger that holds one proxy link into the
+panel mesh with the captured keys and turns every switch into Home Assistant entities over MQTT discovery. Proven
+against the Mac dev stack end to end: 11 switches discovered by one all-nodes Get, on/off and brightness read
+live as people touch them, `brightness/set 128` visibly dimmed the hallway to half and its Status came back, and
+the MQTT session held for the whole soak.
 
-- Take `esp32-bridge/` (already does mesh proxy → MQTT for our own network) and point it at the **panel keys**.
-- Decode `Generic OnOff Status`, `Generic Level Status`, and vendor field `0x13` (motion) → publish to MQTT.
-- Subscribe for commands → send `Generic OnOff Set` and `Generic Level Set` (0–1000 scale) with the appkey.
-- Result: three Home Assistant entities per switch (state, brightness, motion), controllable from the hub,
-  with no Brilliant app or cloud in the loop.
+| Per switch, in HA | From |
+|---|---|
+| `light.brilliant_switch_<addr>` with brightness | `Generic OnOff/Level Status`, published by the switch on touch and polled every 10 min |
+| `binary_sensor..._motion` (device class motion) | vendor field `0x13` polled round-robin every 250 ms, ON while it sits 4 above the switch's learned floor, 20 s hold; plus any switch's own publication of field `0x0c = 1` |
+| `sensor..._motion_level` (diagnostic) | the raw `0x13` value |
+| `sensor.brilliant_bridge_proxy_node` | which switch the puck is linked to, and its RSSI |
 
-Alternative host: the Pi with a USB BLE dongle running `bluez-meshd` (HA already owns `hci0`).
+```sh
+cd brilliant/esp32-bridge
+BRILLIANT_MESH_STORE=~/.config/brilliant-mesh/panel-net.json \
+  ../.venv/bin/python ../tools/make_secrets.py > /tmp/s.h && mv /tmp/s.h include/secrets.h   # keys; WiFi/MQTT carried over
+pio run -e esp32dev -t upload --upload-port /dev/cu.usbserial-0001
+../.venv/bin/python monitor.py /dev/cu.usbserial-0001 120        # serial log; --no-reset to attach quietly
+../.venv/bin/python ../tools/bridge_watch.py 192.168.86.42        # what the broker sees, per switch
+```
 
-## Uncommitted work (all on disk, nothing staged)
+Topics: `mesh/<net>/<addr>/{state,brightness,motion,motion_level,event}`, commands on `mesh/<net>/<addr>/set`
+(`ON|OFF|dim:<pct>`) and `.../brightness/set` (0-255); `mesh/bridge/<chip>/{status,proxy,iv}`. `<net>` is the
+network id (16 hex), `<chip>` six hex from the puck's factory MAC; entity ids are `light.mesh_<net4>_<addr>`.
+Full contract at the top of `esp32-bridge/src/main.cpp`; the story of building it is in `docs/brilliant.md`.
+
+**What is still open**
+
+- ~~Point it at the hub.~~ Done: `secrets.h` names the hub (`192.168.86.42`) with the password from the hub's
+  `/opt/home-hub/driver-layer/.env` (read over `ssh pi@hub.local`; the Mac's `.env` is a different broker). The hub's
+  HA registry holds all 34 entities; they surface under *New devices* on the panel.
+- ~~Dimmer mode on a reset switch.~~ **Solved and visually confirmed (16 Sep, night)** on the hallway dimmer,
+  re-provisioned as `0x0005` on our network: provision, bind (`0x1000`, `0x1002`, and the vendor model
+  `0x0820/0x0001` — the vendor bind is essential or config writes are dropped), write the switch's own captured
+  config (`tools/vendor_store.py` reads it), power-cycle. It then dimmed on command with the lamp following, 30→100→10→60→100%.
+- ~~Confirm motion with a body.~~ Done: a walk past `0x000b` raised `0x13` from ~5 to 8 and the bridge reported motion.
+- **Bisect the recipe** (optional): which of the seven fields is the selector; `0x48`/`0x4f` are the reporting enable,
+  `0x03`/`0x07` its thresholds, so `0x1a`/`0x1b`/`0x56` are the mode candidates. Nobody walked past a switch during the build. Field `0x13` rests at different
+  levels per switch (0x000a ~130, 0x0010 ~285, most 0-2, 0x000b 4-11), which is why the floor is learned rather than
+  fixed. Switch `0x0016` publishes vendor field `0x0c = 1` on its own every ~20 s; that is treated as motion too but is
+  a guess. Run `bridge_watch.py`, walk past a switch, and see which of the two moves.
+- **Puck UX** (Wi-Fi/broker/keys onto the puck without a laptop) is its own session; see memory
+  `project-brilliant-puck-ux`.
+- **Retire the console.** Nothing depends on it now: a reset switch can be re-provisioned and restored to a dimmer
+  with motion by the recipe above. Unplug it when ready; adopt the other switches on the captured keys, or re-key
+  them one at a time (the S3 puck bridges the new network while the classic puck bridges the old).
+
+## The puck takes its config over the cable (16 September, night: firmware 0.2.0)
+
+Until now everything a puck needed was compiled in from `include/secrets.h`, which is fine at a desk and useless
+in a bag: the hub had nothing it could write to. Now **the config lives in NVS and the header is only a
+fallback** -- both desk pucks keep working exactly as their headers say, and a board flashed from the shipped
+image with no header at all boots *blank* and waits on the cable to be told. This is half one of
+`design/puck/` (board B, the cable), on the firmware side, and it is proven on the S3:
+
+```sh
+cd brilliant/esp32-bridge
+pio run -e esp32s3-ship -t upload --upload-port /dev/cu.usbmodem101   # the image the hub ships: no secrets, boots blank
+cd .. && V=.venv/bin/python
+$V tools/puck_cable.py /dev/cu.usbmodem101 hello                        # {'chip': 'c8ebba', 'fw': '0.2.0', 'state': 'blank'}
+$V tools/puck_cable.py /dev/cu.usbmodem101 write --from esp32-bridge/include/secrets-s3.h   # wifi, mqtt, keys, base, label; apply; waits for it back
+$V tools/puck_cable.py /dev/cu.usbmodem101 status                       # {'wifi': '192.168.86.66', 'mqtt': 'up', 'rssi': '-75', 'sw': '2', 'light': 'heard'}
+```
+
+Verified: a blank S3 handed its own config back over the wire came up as a full bridge -- Wi-Fi at 3 s, MQTT up by
+10 s, proxy link by 35 s -- and the hub's broker sees it (`bridge/c8eb status online`) next to the classic board.
+**The S3 on the desk now runs the ship image with its config in NVS**, not `secrets-s3.h`; the classic board still
+runs a desk build (0.2.0 is a drop-in for it: same header, same behaviour).
+
+What is in it: `src/config.{h,cpp}` (the NVS store and the line protocol -- `hello`, `set wifi|mqtt|keys|base|label`,
+`status`, `apply`, `wipe`; free text goes hex-encoded so nothing needs quoting), `src/light.{h,cpp}` (the puck's
+one light: amber blinking = looking, steady green = a switch answered, breathing red = three empty scans, on the
+S3's WS2812 or as rhythms on a plain LED), the `[env:esp32s3-ship]` build, and `tools/puck_cable.py`, which is
+the hub's side of the protocol and what the hub will run when a puck appears on its USB.
+
+**Gotchas found on the way, all handled, all worth knowing:**
+
+- **Opening the S3's USB port reboots it** (`rst:0x15 USB_UART_CHIP_RESET`), DTR held low or not: the peripheral
+  does it on its own. So the first `hello` lands in the bootloader and is lost; the tool keeps asking for 12 s.
+  Consequence: `status` right after open is a fresh boot, not a settled bridge -- hold one connection open to watch it settle.
+- **The hardware CDC tears long writes.** The core's `HWCDC::write` drains only while its own guess that a host is
+  listening is true, and when that guess is wrong (it is, on a Mac after reopening the port) a longer line comes
+  out as head + tail with the middle dropped: `bridge c8ebbat`, `status wifi=192.168.8oking`. Replies now go out
+  in ≤60-byte pieces with a flush between, `status` was shortened to fit, and the tool retries any exchange that
+  does not come back whole. Ten reboots, 24 exchanges, zero torn lines after that.
+- **A serial task on 4 KB corrupts silently.** `status` formatting an `IPAddress::toString()` on a 4 K stack did not
+  panic, it produced `wifi=192.looking`. 8 K now, and no `String` temporaries on that task.
+- **The S3 clone's LED only has power when the UART-side USB port is plugged in.** The desk S3 is an AYWHP
+  N16R8 (the YD-ESP32-S3 design, CH343 bridge, WS2812 on GPIO48 as its manual says, "RGB" pad bridged). Powered
+  through the *native* port alone the chip runs and the LED is dead: that port feeds the 3.3 V regulator but not
+  the 5 V rail the LED hangs off, unless the board's IN-OUT pads are bridged. Three LED drivers, a solder-pad
+  theory and a 25-pin sweep were spent before a second cable in the UART port lit it. Consequences: the serial
+  task now listens on BOTH ports (`Serial` = native CDC, `Serial0` = UART) and answers whichever asked, and the
+  LED driver runs an RMT channel on GPIO48 and GPIO38 so the image never has to know the board revision. For a
+  puck we ship: the hub's cable goes in the **UART** port -- it powers the LED, and its bridge chip has the
+  auto-reset esptool wants. The hub tool works on either (`/dev/cu.wchusbserial*` here; `/dev/cu.usbmodem*` is
+  the native side).
+- **Both desk pucks run 0.2.0** (16 Sep, night): the S3 as the ship image with its config in NVS, the classic
+  (`f4a9f3`, 11 switches, the panel network) as the `esp32dev` desk build with `secrets.h` compiled in as its
+  fallback -- `hello` says `set` on both, and both reach `light=heard`.
+- The mesh keys sit in NVS in the clear, exactly as they sat in flash compiled in; nothing got worse, and flash
+  encryption is the answer if it ever has to get better.
+
+Not yet: the hub side (a udev rule like `driver-layer/radios.sh`, esptool + this image shipped in the release, the
+brain's `/bridge` state machine the panel already draws), and board A (the puck knocking over BLE). The light's
+colours have not been looked at with an eye yet -- `light=heard` above is the state, not the LED.
+
+## Two pucks, two networks (16 September, late)
+
+The same firmware now runs on an **ESP32-S3** (`/dev/cu.usbmodem2101`, `pio run -e esp32s3`) with its own header
+`include/secrets-s3.h`, pointed at **our own network** (`mesh-net.json`, node `0x0003` = the factory-reset switch)
+and publishing under the same `mesh/` base. Identity comes from the chip (puck) and the network id (switches), so
+both pucks live on the hub side by side with nothing hand-named (both boards carry this firmware). Verified: `mesh/0003` state/brightness on
+the hub broker, HA entities created, `ON` acknowledged by the switch. Its motion field `0x13` reads a flat 32:
+that switch has no PIR reporting since the reset, which is exactly the configuration gap to close next.
+
+```sh
+../.venv/bin/python ../tools/make_secrets.py --from include/secrets.h > /tmp/s3.h && mv /tmp/s3.h include/secrets-s3.h
+# then edit MQTT_BASE / SWITCH_SEED / SWITCH_EXCLUDE / DEVICE_LABEL in it
+pio run -e esp32s3 -t upload --upload-port /dev/cu.usbmodem2101
+```
+
+Next on this track: diff the vendor store of the hallway dimmer (`0x000a`, panel appkey) against `0x0003` (ours) to
+find the load-type / motion-enable fields, replay them onto `0x0003`, and confirm dimming + `0x13` moving. Then the
+console can be unplugged for good, and switches can be adopted or re-keyed one at a time.
+
+## Known switch addresses (from the bridge's sweep)
+
+Answered `Generic OnOff Get` to all-nodes: `0x0004 0x0005 0x0006 0x0008 0x000a 0x000b 0x000e 0x0010 0x0011 0x0014
+0x0016` (11). `0x0010`/`0x0011` are probably the live panel's own loads. `0x0002` and `0x0012` are panel elements
+that poll switches and are excluded; `0x0018` is polled by the panel and never answers.
+
+## Uncommitted work (all on disk, nothing staged by this pass)
 
 New tools: `ble.py dim.py state.py rawlog.py vendor.py snapshot.py poll.py writable.py setfields.py
-pubtest.py test_nonce.py panel_sniff.py panel_poll.py panel_cmd.py`.
-Modified: `mesh.py` (proxy-nonce fix), `census.py`, `explore.py`, `listen.py`, `onoff.py`, `provision.py`.
+pubtest.py test_nonce.py panel_sniff.py panel_poll.py panel_cmd.py bridge_watch.py`.
+Modified: `mesh.py` (proxy-nonce fix), `census.py`, `explore.py`, `listen.py`, `onoff.py`, `provision.py`,
+`make_secrets.py` (panel store, carries tunables).
 Recorder firmware: `mesh-provisionee/src/{main.cpp,recorder.cpp,recorder.h}`.
-Docs: `docs/brilliant.md`, this file. Commit when ready (secrets stay out — the keys are in `~/.config`).
+Bridge: `esp32-bridge/src/main.cpp` (rewritten: panel keys, NimBLE, discovery, motion, HA discovery),
+`esp32-bridge/src/mesh_crypto.{h,cpp}` (proxy nonce, ASZMIC, beacon auth), `platformio.ini` (NimBLE),
+`monitor.py`, `gen_native_test.py` + regenerated `test_cmac_native.c`.
+Docs: `docs/brilliant.md`, `README.md`, this file. Commit when ready (secrets stay out — the keys are in
+`~/.config`, and `esp32-bridge/include/secrets.h` is gitignored).

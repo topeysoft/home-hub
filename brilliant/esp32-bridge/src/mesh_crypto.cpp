@@ -109,6 +109,20 @@ uint8_t mesh_k4(const uint8_t appkey[16]) {
     return full[15] & 0x3F;
 }
 
+void mesh_beacon_key(const uint8_t netkey[16], uint8_t out[16]) {
+    uint8_t salt[16];
+    mesh_s1((const uint8_t *)"nkbk", 4, salt);
+    const uint8_t p[] = {'i', 'd', '1', '2', '8', 0x01};
+    mesh_k1(netkey, 16, salt, p, sizeof(p), out);
+}
+
+bool mesh_beacon_verify(const uint8_t netkey[16], const uint8_t beacon[21]) {
+    uint8_t bk[16], t[16];
+    mesh_beacon_key(netkey, bk);
+    mesh_cmac(bk, beacon, 13, t);       // flags || network id || iv index
+    return memcmp(t, beacon + 13, 8) == 0;
+}
+
 static void aes_ecb(const uint8_t key[16], const uint8_t in[16], uint8_t out[16]) {
     mbedtls_aes_context a;
     mbedtls_aes_init(&a);
@@ -158,7 +172,11 @@ size_t mesh_net_encrypt(const uint8_t netkey[16], uint32_t iv, uint8_t ctl,
 
     uint8_t nonce[13];
     nonce[0] = nonce_type;
-    nonce[1] = (uint8_t)((ctl << 7) | (ttl & 0x7F));
+    // The Proxy Nonce (type 0x03) carries a fixed 0x00 pad in octet 1, not
+    // CTL|TTL. Our own switches tolerated the wrong byte; the panel's real
+    // firmware does not, and a proxy-filter Set it cannot open means the proxy
+    // forwards nothing at all. Same fix as tools/mesh.py.
+    nonce[1] = (nonce_type == 0x03) ? 0x00 : (uint8_t)((ctl << 7) | (ttl & 0x7F));
     nonce[2] = (seq >> 16) & 0xFF;
     nonce[3] = (seq >> 8) & 0xFF;
     nonce[4] = seq & 0xFF;
@@ -260,10 +278,10 @@ bool mesh_net_decrypt(const uint8_t netkey[16], uint32_t iv, const uint8_t *pdu,
     return true;
 }
 
-static void app_nonce(bool is_devkey, uint32_t iv, uint32_t seq, uint16_t src,
-                      uint16_t dst, uint8_t nonce[13]) {
+static void app_nonce(bool is_devkey, bool szmic, uint32_t iv, uint32_t seq,
+                      uint16_t src, uint16_t dst, uint8_t nonce[13]) {
     nonce[0] = is_devkey ? 0x02 : 0x01;
-    nonce[1] = 0x00;
+    nonce[1] = szmic ? 0x80 : 0x00;     // ASZMIC: set when a segmented message carries a 64-bit MIC
     nonce[2] = (seq >> 16) & 0xFF;
     nonce[3] = (seq >> 8) & 0xFF;
     nonce[4] = seq & 0xFF;
@@ -281,7 +299,7 @@ size_t mesh_app_encrypt(const uint8_t key[16], bool is_devkey, uint32_t iv,
                         uint32_t seq, uint16_t src, uint16_t dst,
                         const uint8_t *access, size_t alen, uint8_t *out) {
     uint8_t nonce[13];
-    app_nonce(is_devkey, iv, seq, src, dst, nonce);
+    app_nonce(is_devkey, false, iv, seq, src, dst, nonce);
     if (!ccm_enc(key, nonce, 13, access, alen, 4, out)) return 0;
     return alen + 4;
 }
@@ -291,7 +309,7 @@ bool mesh_app_decrypt(const uint8_t key[16], bool is_devkey, uint32_t iv,
                       const uint8_t *ct, size_t clen, uint8_t tag_len,
                       uint8_t *out, size_t *olen) {
     uint8_t nonce[13];
-    app_nonce(is_devkey, iv, seq, src, dst, nonce);
+    app_nonce(is_devkey, tag_len == 8, iv, seq, src, dst, nonce);
     if (!ccm_dec(key, nonce, 13, ct, clen, tag_len, out)) return false;
     *olen = clen - tag_len;
     return true;
@@ -335,6 +353,19 @@ bool mesh_selftest(Stream &s) {
     uint8_t aid = mesh_k4(a);
     p = (aid == 0x38);
     s.printf("  k4  %s (aid 0x%02x)\n", p ? "PASS" : "FAIL", aid);
+    ok &= p;
+
+    // 8.4.3: beacon under netkey 7dd7364c...: flags 00, netid 3ecaff672f673370,
+    // iv 12345678, auth 8ea261582f364f6f
+    const uint8_t bn[16] = {0x7d, 0xd7, 0x36, 0x4c, 0xd8, 0x42, 0xad, 0x18,
+                            0xc1, 0x7c, 0x2b, 0x82, 0x0c, 0x84, 0xc3, 0xd6};
+    const uint8_t beacon[21] = {0x00, 0x3e, 0xca, 0xff, 0x67, 0x2f, 0x67, 0x33,
+                                0x70, 0x12, 0x34, 0x56, 0x78, 0x8e, 0xa2, 0x61,
+                                0x58, 0x2f, 0x36, 0x4f, 0x6f};
+    uint8_t bk[16];
+    mesh_beacon_key(bn, bk);
+    p = eq(bk, "5423d967da639a99cb02231a83f7d254", 16) && mesh_beacon_verify(bn, beacon);
+    s.printf("  beacon  %s\n", p ? "PASS" : "FAIL");
     ok &= p;
     return ok;
 }
