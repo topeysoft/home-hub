@@ -18,7 +18,7 @@ def needs_code(method: str, path: str) -> bool:
     if path.startswith("/setup/") and m == "POST": return path != "/setup/status"
     if path == "/rooms" and m == "POST": return True
     if path.startswith("/rooms/") and (m == "DELETE" or path.endswith("/rename")): return True
-    if path.startswith("/devices/") and path.endswith(("/move", "/rename")): return True
+    if path.startswith("/devices/") and path.endswith(("/move", "/rename", "/share")): return True   # what leaves the house is a change to it
     if path.startswith("/devices/") and m == "DELETE": return True           # forgetting one is a change to the house, not a tap
     if path.startswith(("/flows", "/credentials")): return True
     if path.startswith("/accounts") and m == "DELETE": return True   # everything it brought goes with it
@@ -30,6 +30,10 @@ def needs_code(method: str, path: str) -> bool:
     if path in ("/update", "/update/auto") and m == "POST": return True   # changing how the house updates itself is a setting
     if path == "/backup" or (path == "/restore" and m == "POST"): return True   # the archive carries the house's keys
     if path.startswith("/pair") and m != "GET": return True
+    # Sharing the house with Apple Home, Google Home or Alexa is a change to the house, not a tap on
+    # it. The bridge's own routes are not here: they never reach this function, because the service
+    # token answered for them before the gate. docs/matter.md.
+    if path.startswith("/share") and m == "POST": return True   # turning it on, and letting one more app in
     if path.startswith("/phones") and m != "GET": return path not in ("/phones/ask", "/phones/code")   # letting a phone in, or out, is a setting; asking is not
     return False
 

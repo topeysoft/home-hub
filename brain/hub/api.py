@@ -32,12 +32,14 @@ from .settings import Settings, DATA, env_file
 from .lock import Lock, needs_code
 from .pairing import Pairing
 from .bridge import Bridges
+from .share import Share
 from .relay import Relay
 from .phones import Phones, COOKIE, holds_keys, open_to_strangers, from_away, away_refused, away_refusal
 from . import camera
 
 log = logging.getLogger("hub")
 DEFAULT_HA = "http://localhost:8123"
+SERVICE_HEADER = "x-hub-service"   # how the Matter bridge says it is the Matter bridge: hub/share.py
 # How the panel looks. The keys are the whole vocabulary: anything else a screen
 # sends is dropped, so an old panel cannot teach the house a setting it will not
 # understand. Values are checked in the panel, which owns what they mean.
@@ -99,6 +101,8 @@ class Hub:
         self.lock = Lock(self.settings)
         self.pair = Pairing(self)
         self.bridge = Bridges(self)        # a puck on the cable, and the ones the house has
+        self.share = Share(self)           # what this house lets a Matter bridge publish: docs/matter.md
+        self.share_status: dict = {}       # what the bridge last said about itself (pairing codes, who holds it)
         self.relay = Relay(self)           # two switches on one light: the hub carries the press across
         self.phones = Phones(self)                     # which phones belong to the house, once it has a code
         self.engine = Engine(self)                     # rules: signals in, room intents out
@@ -611,6 +615,11 @@ async def settings_lock(request: Request, call_next):
     let_out = bool(phone and phone.get("remote"))
     if request.state.away and away_refused(m, path, let_out):
         return JSONResponse(away_refusal(phone, let_out), status_code=403)
+    # The Matter bridge is a container on this host, not a phone. It comes in on its own routes with
+    # the token install.sh gave both containers, and it gets nothing else: `open_to_strangers` is not
+    # widened for it, because that list is the front door for everything. docs/matter.md.
+    if path.startswith("/share/bridge/") and hub.share.is_bridge(request.headers.get(SERVICE_HEADER)):
+        return await call_next(request)
     if hub.lock.locked:
         if not open_to_strangers(m, path):
             if not phone: return JSONResponse({"detail": "phone"}, status_code=401)
@@ -1126,6 +1135,99 @@ def bridge_link_remove(link_id: str):
 
 
 # ---------- pairing radio devices ----------
+# ---------- sharing the house outward (docs/matter.md) ----------
+@app.get("/share")
+def get_share():
+    """What this house shares with Apple Home, Google Home and Alexa, and what it could."""
+    return hub.share.state()
+
+
+@app.post("/share")
+def set_share(body: dict):
+    """{"on": true, "kinds": ["light", "switch"], "locks": false}. Turning sharing on is a change to
+    the house, so it needs the code, like letting a phone in."""
+    if not hub.share.ready(): raise HTTPException(409, "This hub has no sharing key. It needs the installer run again.")
+    return hub.share.set(on=body.get("on"), kinds=body.get("kinds"), locks=body.get("locks"))
+
+
+@app.post("/share/window")
+def open_share_window():
+    """Let one more app in, for five minutes. Letting an ecosystem into the house is the same kind of
+    change as letting a phone in, so it needs the code and it shuts itself."""
+    if not hub.share.ready(): raise HTTPException(409, "This hub has no sharing key. It needs the installer run again.")
+    if not hub.share.settings.get("on"): raise HTTPException(409, "Nothing is shared yet.")
+    # A door needs something behind it. Without a bridge running there is nothing to open, and the
+    # cheerful answer this used to give was the worst kind of wrong on the one page about where a
+    # household's devices go: it said the door was open for five minutes and nothing had happened.
+    if not hub.share.running(): raise HTTPException(409, "The part of the hub that talks to other apps is not running, so there is nothing to open yet.")
+    return hub.share.ask_window()
+
+
+@app.get("/share/qr.svg")
+def share_qr():
+    """The bridge's own pairing code as a QR, for a phone's camera to read off the wall.
+
+    Its own route rather than /qr.svg with the payload passed in: that one takes an http address and
+    checks it is one, and a Matter payload is `MT:...`. Widening the general route to carry any text
+    would make it a way to put an arbitrary QR on somebody's wall panel."""
+    qr = (hub.share_status or {}).get("qr")
+    if not qr: raise HTTPException(404, "the bridge is not waiting to be scanned")
+    return Response(content=qr_svg_bytes(qr), media_type="image/svg+xml", headers={"Cache-Control": "no-store"})
+
+
+@app.post("/devices/{device_id}/share")
+def set_device_share(device_id: str, body: dict):
+    """{"shared": false} — keep this one thing out of the other apps, or put it back.
+
+    On the device's own pane rather than in a list on the Share page, the way docs/kinds.md puts
+    *Show this as* there: a person decides this standing in front of the lamp, and thirty-two rows of
+    lamps is the list that page exists to avoid drawing."""
+    hub.ready()
+    dev = hub.home.devices.get(device_id)
+    if not dev: raise HTTPException(404, "unknown device")
+    if not hub.share.shareable(dev): raise HTTPException(409, "This is not something the house is sharing.")
+    return hub.share.set_device(dev, bool(body.get("shared")))
+
+
+@app.get("/share/bridge/devices")
+def share_devices():
+    """The list the bridge publishes, and the whole of the decision: the bridge filters nothing.
+
+    The house comes with it. A Matter node needs a unique id of its own that survives restarts, and
+    the hub's own id is the right one: it is random, it says nothing about the house, and it rides
+    the backup -- so a restored hub is the same bridge to Apple Home rather than a new one."""
+    return {"home": {"name": hub.settings.get("home_name") or "Home", "id": hub.settings.hub_id()},
+            "window": hub.share.window(),
+            "devices": hub.share.devices()}
+
+
+@app.post("/share/bridge/status")
+def share_status(body: dict):
+    """The bridge saying what it is: its pairing codes while it waits, and who holds it once commissioned."""
+    hub.share_status = {k: body.get(k) for k in ("running", "commissioned", "fabrics", "manual", "qr", "error")}
+    hub.share_status["at"] = time.time()   # when it said so, so `Share.bridge()` can tell living from remembered
+    hub._broadcast(json.dumps({"type": "share", "share": hub.share.state()}))
+    return {"ok": True}
+
+
+@app.post("/share/bridge/act/{device_id}/{action}")
+async def share_act(device_id: str, action: str, data: dict | None = None):
+    """A command that arrived through somebody else's assistant. It goes the same way a tap does --
+    hub.act(), so the driver's own service is still chosen by `capability` and docs/kinds.md's trap
+    stays shut -- and it is logged as `matter`, so *Recent* can say a voice did it and which one."""
+    hub.ready()
+    dev = hub.home.devices.get(device_id)
+    if not dev: raise HTTPException(404, "unknown device")
+    # The gate again, at the moment of acting, and through the one predicate that knows every way a
+    # thing can be kept home: the kind, the lock switch, and the owner leaving this one lamp out. A
+    # household that changes its mind must not be obeyed on the strength of a list Apple Home fetched
+    # an hour ago and an endpoint it is still holding.
+    if not hub.share.may_act(dev): raise HTTPException(403, "not shared")
+    try: await hub.act(dev, action, data, source="matter")
+    except ValueError as e: raise HTTPException(400, str(e))
+    return {"ok": True}
+
+
 @app.get("/pair")
 def pair_status(): return hub.pair.status()
 
@@ -1710,7 +1812,10 @@ def dry_run(rule_id: str):
 
 @app.websocket("/stream")
 async def stream(ws: WebSocket):
-    if hub.lock.locked and not hub.phones.identify(ws.cookies.get(COOKIE)):
+    # The Matter bridge watches the same broadcasts the panels do, and identifies itself the same way
+    # it does on its own routes: it has no cookie because it is not a phone. docs/matter.md.
+    bridge = hub.share.is_bridge(ws.headers.get(SERVICE_HEADER))
+    if hub.lock.locked and not bridge and not hub.phones.identify(ws.cookies.get(COOKIE)):
         await ws.close(code=4401); return        # not one of the house's phones: the join screen is the way in
     await ws.accept(); hub.streams.add(ws)
     try:
