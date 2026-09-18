@@ -351,3 +351,21 @@ which moves the checkout to the newest tag on its channel, pulls the images and 
 - Setup is a conversation on the screen, never a file to edit.
 - Controlling the house never needs a code. Changing it does, once one is set.
 - Being on the Wi‑Fi gets a phone nothing once there is a code. The owner lets a phone in; only the owner lets it out of the house.
+
+## License
+
+[GNU Affero General Public License v3.0](LICENSE). Copyright 2026 Temitope Adeyeri.
+
+Free software, in the sense that matters: run it, read it, change it, share it, sell it. The one
+condition is that it stays that way — if you distribute this hub, or run a modified version as a
+service other people reach over a network, those people are entitled to your source under the same
+licence.
+
+The source is public on purpose, and the licence is the promise behind it. A box that claims to work
+with the internet down, and to keep a household's life off somebody else's servers, should be
+readable by the people it asks to trust it — and no household running this should ever be stranded
+by a maker who stops caring. That is the whole reason `docs/` carries a rescue guide for somebody
+else's panels.
+
+Commercial licences, for anyone who wants to build on this without the AGPL's obligations, are
+available separately — open an issue or get in touch.
