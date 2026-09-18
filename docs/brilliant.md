@@ -697,9 +697,10 @@ as a worked reference:
 
 | Field | Value | What it appears to be |
 |---|---|---|
-| `0x1b` | `00` | **load type candidate** — `00` on both dimmers seen, `03` on the unit stuck in on/off mode |
-| `0x56` | `03` | **NOT the load type** — see below; `03` reads on both a dimming and a non-dimming switch |
-| `0x1a` | `02` | not the load type: two working dimmers differed here (`02` and `01`) |
+| `0x1b` | `00` | **THE ROLE: `00` drives a load, `03` is a companion.** Replaying a main's `00` onto a companion is what silenced one for a whole evening — see *Replay a companion's config from a companion* below |
+| `0x56` | `03` | **not the load type** — `03` reads on both a dimming and a non-dimming switch |
+| `0x1a` | `02` | **not the role and not the load type** — `02` appears on a paired main *and* a single-pole, and two working dimmers differed here (`02`, `01`) |
+| — | — | **No field yet identified selects dimmer vs on/off.** `0x1a`, `0x1b` and `0x56` were each the leading candidate and each was disproved |
 | `0x48`, `0x4f` | `01`, `01` | **enable unsolicited reporting** of field `0x13`; setting them starts a ~5 Hz publication |
 | `0x03`, `0x07` | `c800` (200), `f401` (500) | thresholds for that reporting; leaving them at 0 floods the mesh |
 | `0x4c`, `0x4d`, `0x52` | `64`, `00`, `64` | dimming curve/limits, per switch |
