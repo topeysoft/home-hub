@@ -60,8 +60,11 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # Its own scope. An unscoped type=gha uses the default key `buildkit` for every
+          # build in the repository, so these two publishing workflows and the two proof
+          # builds in ci.yml were all overwriting one cache.
+          cache-from: type=gha,scope=bridge-publish
+          cache-to: type=gha,mode=max,scope=bridge-publish
 
       # Keyless, exactly as the brain's is: the signature binds "built by this workflow, in this
       # repository, from this commit". It is not what a hub checks -- a hub checks the maker's own
