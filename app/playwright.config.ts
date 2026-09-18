@@ -11,7 +11,12 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   workers: process.env.CI ? 2 : undefined,
-  reporter: process.env.CI ? [['github'], ['list']] : 'list',
+  // The html reporter is what actually writes playwright-report/. Without it that directory never
+  // exists, so ci.yml's `if: failure()` upload of it has always captured nothing -- a failing run
+  // left no trace to open, and the only evidence of why was whatever fitted in the log.
+  reporter: process.env.CI
+    ? [['github'], ['list'], ['html', { outputFolder: 'playwright-report', open: 'never' }]]
+    : 'list',
   use: {
     baseURL: process.env.BASE || 'http://localhost:8399',
     trace: 'retain-on-failure',
