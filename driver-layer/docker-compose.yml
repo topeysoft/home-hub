@@ -124,6 +124,33 @@ services:
       - VOICE_TTS_PORT=${VOICE_TTS_PORT:-10200}
       - VOICE_TTS_VOICE=${VOICE_TTS_VOICE:-}
 
+  matter-bridge:
+    # The house as Apple Home, Google Home and Alexa see it: one Matter bridge with an endpoint per
+    # shared thing. docs/matter.md. CI publishes this image beside the brain's; `build` is the fallback.
+    #
+    # NOT a profile, and that is deliberate. The switch is the one on the panel, and this container is
+    # silent until somebody throws it: with nothing shared it builds no endpoints and announces nothing
+    # to the network at all. A profile would put the switch in a shell on the host instead, which is
+    # the move the whole product is shaped to avoid.
+    image: ${HUB_BRIDGE_IMAGE:-ghcr.io/topeysoft/home-hub-matter-bridge:latest}
+    build:
+      context: ../matter-bridge
+    container_name: matter-bridge
+    restart: unless-stopped
+    network_mode: host      # Matter needs mDNS and IPv6 on the real LAN, the same reason matter-server does
+    depends_on: [brain]
+    volumes:
+      # Fabric credentials and the endpoint numbers each controller remembers a device by. Losing this
+      # is every ecosystem in the house starting again, so it is a volume and it rides the backup.
+      - ./matter-bridge-data:/data
+    environment:
+      - TZ=${TZ}
+      - HUB_URL=http://localhost:8300
+      # The key that gets it past the phone gate, from mqtt-auth.sh's neighbour in install.sh. Without
+      # one it exits at once and says so, rather than running as something the brain will not answer.
+      - HUB_SHARE_TOKEN=${HUB_SHARE_TOKEN:-}
+      - HUB_MATTER_PORT=${HUB_MATTER_PORT:-5540}
+
   caddy:
     # The front door: http://hub.local on :80 with no setup at all, https alongside for those who install the root certificate.
     image: ${HUB_IMG_CADDY:-caddy:2}
