@@ -17,6 +17,8 @@ driver-layer/caddy/data/
 driver-layer/host/pi-image/stage-hub/00-home-hub/files/
 driver-layer/ring-mqtt/*
 !driver-layer/ring-mqtt/config.template.json
+driver-layer/matter-bridge-data/
+matter-bridge/data/
 brain/sounds/
 
 # Brilliant mesh: secrets and build output

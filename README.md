@@ -77,12 +77,17 @@ container before the Pi's first start so the two do not fight over Ring's token.
   Z-Wave sticks and starts their containers; a udev rule runs it again whenever a stick is plugged in or pulled.
 - `driver-layer/` — Docker Compose for the whole hub: Home Assistant Core (headless), Mosquitto,
   Zigbee2MQTT and Z‑Wave JS UI (profiles, on only when a stick is found), python-matter-server,
-  the brain, and Caddy as the front door (`http://hub.local`, plus `https://` for those who install
+  the brain, the Matter bridge, and Caddy as the front door (`http://hub.local`, plus `https://` for those who install
   the root certificate).
 - `brain/` — Python/FastAPI service on :8300: semantic home model, room-state intent engine, event
   log, websocket stream, first-run setup, device discovery. Talks only to HA's websocket and REST.
   Serves `app/dist`. `brain/Dockerfile` packages it with the panel built in.
 - `app/` — Vue PWA for the wall kiosk and phone (`npm run build` → served by the brain).
+- `matter-bridge/` — the house as Apple Home, Google Home and Alexa see it: a Matter bridge (matter.js on Node)
+  with one endpoint per shared thing, so this house's lights and plugs become Matter devices in those apps. It
+  decides nothing — `brain/hub/share.py` hands it the list, and the rules about what may leave the house have tests
+  there. Nothing is shared until the panel's switch is thrown (*Share this house*, its own door), and until then it
+  announces nothing at all. `docs/matter.md`, `design/share/`, `matter-bridge/README.md`.
 - `kiosk/` — the wall's home screen: a small Android launcher that boots into the panel, stays awake and
   full screen, finds the hub over mDNS when `hub.local` will not resolve, and has one way out (the clock's
   corner, held). It draws no house of its own; the panel comes from the hub. `kiosk/README.md`.
@@ -157,10 +162,19 @@ container before the Pi's first start so the two do not fight over Ring's token.
 - `docs/away.md` — Away from home: why no VPN and no cloud tunnel, the three pieces (pairing, a relay the maker runs, a
   real certificate per hub), what has landed, and the build and open decisions for the two that have not.
 - `docs/voice.md` — The microphone: the shapes considered and what each waits on.
+- `docs/matter.md` — Sharing the house outward: why Matter and not three integrations, the bridge that reads the
+  brain rather than Home Assistant (so the owner's names and kinds travel), what may and may not be shared, the
+  two decisions locks and alarms force, and what Apple, Google and Alexa actually do with an uncertified bridge.
 - `docs/kinds.md` — Letting somebody correct a device's kind: why a lamp on a smart plug never hears "kitchen lights
   off", and the two fields that keep the fix from making it untouchable.
 - `docs/apps.md` — Phone, tablet and desktop apps: why the panel already is the app, the four things a native
   shell would carry, and the one fork (the hub's certificate, or a pinned one in a shell) to settle after the relay.
+- `docs/rescue.md` — Rescue and migration: somebody else's wall panel, either after its company goes or because
+  they want it local while it still works. The three destinations (join the panel's mesh, migrate off it, take
+  over its glass) and the one that has a deadline — key capture runs through Brilliant's cloud, so it stops
+  being possible the day the servers do. Why the answer is a takeover kit and not a custom Android, which layer
+  is actually hard (the loads, not the glass), and where Brilliant and the Wink Relay each land.
+  `docs/brilliant.md` is the same hardware from the worst starting position: both panels dead.
 - `docs/storage.md` — Storage: why the unit sold runs on eMMC and not NVMe (the finding, so it is not re-argued), and
   the plan for the hub to say months ahead that its storage is wearing out: the host reads the wear once a day, the
   brain turns it into one *Needs a look* line with *Back up* beside it, and *This hub* gets a Storage row.
