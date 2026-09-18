@@ -225,10 +225,17 @@ console can be unplugged for good, and switches can be adopted or re-keyed one a
 
 ## Two switches on one light: the hub carries the press (17 September, afternoon: brain/hub/relay.py)
 
-A Brilliant companion switch has no load. It is a radio node that reports its own touch and drives
-nothing, and the console was what heard it and drove the switch the light is actually wired to. So the
-moment the console goes, every companion in the house becomes a button that does nothing — which is
-why the hard rule below exists. The hub now takes that job.
+A Brilliant companion switch has no load. It is a radio node that drives nothing itself, and it makes
+its partner act by sending that partner a press directly — a vendor message to the unicast stored in
+its own field `0x08`. **The console is not in that path and never was**, which we established the hard
+way and which retired the "do not unplug the console" rule this section was originally written under.
+A pair looks after itself and keeps working with the hub switched off, which is the only acceptable
+behaviour for a light switch.
+
+So the relay below is **transitional**, not the mechanism. It earns its place in exactly one case: a
+pair whose two ends are on *different* networks during a migration, where no direct message can cross
+because the netkeys differ. The stairway was that case for one afternoon. It is not any more — both
+ends were migrated the same evening and the link was switched off.
 
 A link is nothing but a rule about topics, which is what makes the stairway possible at all: the
 companion is on the house's own network behind one puck, its load is still on the panel's network
