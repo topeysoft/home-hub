@@ -35,11 +35,11 @@
  * See design/device for the boards all of that was drawn on.
  */
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { getDeviceEvents, getDeviceKinds, moveDevice, renameDevice, setDeviceKind, setDeviceLead, type Event, type Kinds } from './api'
+import { getDeviceEvents, getDeviceKinds, moveDevice, renameDevice, setDeviceKind, setDeviceLead, setDeviceShared, type Event, type Kinds } from './api'
 import { partnerOf, partsOf, renameParts, renamesUnit } from './units'
 import { isMachine } from './machines'
 import MachinePane from './panes/MachinePane.vue'
-import { cap, defaultKind, deviceById, isDead, notify, perform, roomOf, shownAs, store } from './store'
+import { canShare, cap, defaultKind, deviceById, isDead, isShared, notify, perform, roomOf, shownAs, store } from './store'
 import { facts as factsOf, moments as momentsOf, paneKind, reading, verbs as verbsOf, whyLine } from './pane'
 import { useArm } from './twice'
 import Icon from './Icon.vue'
@@ -92,6 +92,21 @@ const kinds = ref<Kinds | null>(null)
 const picking = ref(false)
 const offer = computed(() => kinds.value && kinds.value.offer.length > 1 ? kinds.value : null)
 const said = computed(() => dev.value ? shownAs(dev.value) : '')
+
+/* Kept out of the other apps, or not. On the device's own pane and nowhere else, for the reason
+   *Show this as* is here: a person decides this standing in front of the lamp, and the Share page
+   would otherwise have to draw a row per light, which is the list it exists to avoid. */
+const shareable = computed(() => !!dev.value && canShare(dev.value))
+const shared = computed(() => !!dev.value && isShared(dev.value))
+const sharing = ref(false)
+async function shareIt(next: boolean) {
+  const d = dev.value
+  if (!d || sharing.value || next === shared.value) return
+  sharing.value = true
+  try { store.share = await setDeviceShared(d.id, next) }
+  catch (e: any) { notify(e.message, 'error') }
+  sharing.value = false
+}
 watch(() => dev.value?.id, async id => {
   kinds.value = null; picking.value = false
   if (!id || (dev.value && isMachine(dev.value))) return     // a machine is not a thing to re-type; its features are, each on its own page
@@ -268,6 +283,18 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
                           :aria-pressed="k === offer.kind" @click="showAs(k)">{{ offer.words[k] }}</button>
                 </div>
                 <p class="opened-kind-why">{{ offer.why }}</p>
+              </div>
+            </div>
+            <!-- whether the other apps can see this one. Only where the house is sharing this kind at
+                 all: a switch that cannot mean anything is worse than no switch. docs/matter.md. -->
+            <div class="opened-kind opened-share" v-if="shareable">
+              <span class="opened-kind-say still">{{ shared ? 'Shared with other apps' : 'Kept out of other apps' }}</span>
+              <div class="opened-kind-pick">
+                <div class="opened-kind-row">
+                  <button class="opened-kind-one" :class="{ on: shared, busy: sharing }" :aria-pressed="shared" @click="shareIt(true)">Shared</button>
+                  <button class="opened-kind-one" :class="{ on: !shared, busy: sharing }" :aria-pressed="!shared" @click="shareIt(false)">Kept home</button>
+                </div>
+                <p class="opened-kind-why">{{ shared ? 'Apple Home, Google Home and Alexa can see this one and ask their assistants for it.' : 'The rest of its kind still goes out; this one stays in the house.' }}</p>
               </div>
             </div>
             <!-- a fan with a light in it: which of the two is the tile. The same quiet row as the kind. -->

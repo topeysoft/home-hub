@@ -24,6 +24,7 @@ import RoutinesPage from './RoutinesPage.vue'
 import PeoplePage from './PeoplePage.vue'
 import AccountsPage from './AccountsPage.vue'
 import AddPage from './AddPage.vue'
+import SharePage from './SharePage.vue'
 import HubPage from './HubPage.vue'
 import CodePage from './CodePage.vue'
 import NotesPage from './NotesPage.vue'
@@ -31,7 +32,7 @@ import AdvancedLink from './AdvancedLink.vue'
 import { isPage, type PageId } from './pages'
 
 const page = computed<PageId>(() => isPage(store.sheet) ? store.sheet : 'house')
-const PAGE: Record<Exclude<PageId, 'house'>, Component> = { location: LocationPage, look: LookPage, routines: RoutinesPage, people: PeoplePage, accounts: AccountsPage, add: AddPage, hub: HubPage, code: CodePage, notes: NotesPage }
+const PAGE: Record<Exclude<PageId, 'house'>, Component> = { location: LocationPage, look: LookPage, routines: RoutinesPage, people: PeoplePage, accounts: AccountsPage, add: AddPage, share: SharePage, hub: HubPage, code: CodePage, notes: NotesPage }
 
 /* a conversation the house already has open (signing an account in again) is
    handed to the Add page on the way in, once, so the page reads as that one job */
@@ -42,7 +43,7 @@ const ready = computed(updateReady)
 const locked = computed(() => !!store.status?.locked)
 const title = computed(() => ({
   house: 'This house', location: 'Where is home?', look: 'How the house looks', routines: 'Routines', people: 'People', accounts: 'Accounts',
-  add: resume.value ? 'Sign in again' : 'Add to the house', hub: 'This hub', code: locked.value ? 'Change the code' : 'Lock the settings',
+  add: resume.value ? 'Sign in again' : 'Add to the house', share: 'Share this house', hub: 'This hub', code: locked.value ? 'Change the code' : 'Lock the settings',
   notes: 'Needs a look',
 }[page.value]))
 
@@ -70,6 +71,18 @@ const accounts = computed(() => {
   return want.length === 1 ? `${want[0].name} ${want[0].state === 'signin' ? 'needs signing in' : 'is not answering'}` : `${want.length} need a look`
 })
 const found = computed(() => store.found.length ? `${store.found.length === 1 ? '1 thing' : `${store.found.length} things`} found nearby` : 'Lights, plugs, cameras, locks')
+/* The one door that says what it WORKS WITH rather than how it stands, until it is on. Nobody knows
+   they can do this, so the hint is the advertisement: naming the apps is what makes somebody open it.
+   Once it is shared the hint becomes the state, which is what every other door does. */
+const share = computed(() => {
+  const s = store.share
+  /* Off, the hint is the three names and nothing else. The count belongs here too and does not fit:
+     a door's hint is one line that ellipsises, and "9 things ready · Apple Home, Google Ho…" loses
+     the third name, which is the one word that might be the reason somebody opens this. */
+  if (!s || !s.ready || !s.on) return 'Apple Home, Google Home, Alexa'
+  const things = s.shared === 1 ? '1 thing' : `${s.shared} things`
+  return s.holders.length ? `${things}, with ${s.holders.map(h => h.name).join(' and ')}` : `${things} ready to add`
+})
 const version = computed(() => { const v = store.status?.version; return !v || v === 'dev' ? 'Development build' : v })
 const hub = computed(() => ready.value ? `${version.value} · an update is ready` : version.value)
 const code = computed(() => locked.value ? 'Changing the house needs it' : 'Open to anyone on the Wi‑Fi')
@@ -81,6 +94,7 @@ const doors = computed(() => [
   { id: 'people' as const, icon: 'people', name: 'People and phones', hint: people.value },
   { id: 'accounts' as const, icon: 'lock', name: 'Accounts', hint: accounts.value, attention: store.accounts.some(a => a.state !== 'on') },
   { id: 'add' as const, icon: 'plus', name: 'Add a device', hint: found.value, attention: store.found.length > 0 },
+  { id: 'share' as const, icon: 'share', name: 'Share this house', hint: share.value },
   { id: 'hub' as const, icon: 'home', name: 'The hub', hint: hub.value, attention: ready.value },
   ...(store.status?.setup_done ? [{ id: 'code' as const, icon: 'lock', name: locked.value ? 'The code' : 'Lock the settings', hint: code.value }] : []),
   /* only while there is something behind it. A door that is always there saying "nothing is wrong"

@@ -101,6 +101,7 @@ const when = (ts?: number | null) => ts ? new Date(ts * 1000).toLocaleString([],
         <Restore small />
       </li>
     </ul>
+
     <AdvancedLink />
   </div>
 </template>

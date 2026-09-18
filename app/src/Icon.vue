@@ -48,6 +48,7 @@ const PATHS: Record<string, string> = {
   edit: 'M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3zM13.5 8.5l2 2',
   target: 'M12 19a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M12 13.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z',
   phone: 'M8 3.5h8a1.5 1.5 0 0 1 1.5 1.5v14A1.5 1.5 0 0 1 16 20.5H8A1.5 1.5 0 0 1 6.5 19V5A1.5 1.5 0 0 1 8 3.5zM10.5 17.5h3',
+  share: 'M8.5 12a2.5 2.5 0 1 0-5 0 2.5 2.5 0 0 0 5 0zM20.5 6a2.5 2.5 0 1 0-5 0 2.5 2.5 0 0 0 5 0zM20.5 18a2.5 2.5 0 1 0-5 0 2.5 2.5 0 0 0 5 0zM8.3 10.8l7-3.5M8.3 13.2l7 3.5',
 }
 const FILLED = new Set(['play', 'pause', 'next', 'prev'])
 defineProps<{ name: string; size?: number }>()

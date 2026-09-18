@@ -261,6 +261,42 @@ const started = Date.now()      // the mock's frames are as old as the mock, bar
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.json': 'application/json', '.woff2': 'font/woff2', '.webmanifest': 'application/manifest+json' }
 const json = (res, body) => { res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(body)) }
 
+/* What this house shares, and who holds it. The door is open while nothing holds it yet (a bridge
+   waiting to be scanned) or for five minutes after Add an app. */
+const share = {
+  on: !!process.env.SHARED,
+  kinds: ['light', 'switch', 'appliance'],
+  locks: false,
+  offer: ['light', 'switch', 'appliance'],
+  holders: process.env.SHARED === 'held' ? [{ index: 1, name: 'Apple Home' }] : [],
+  opened: 0,
+  left_out: [],
+  stopped: false,   // SHARED=stopped, or POST {stopped:true}: the bridge container is not there
+}
+/* Three of the house's own things for the map at the top of the Share page, with the ids the pane
+   posts so that keeping one home takes it out of the picture here too. */
+const SAMPLE = [
+  { id: 'k1', name: 'Kitchen lights', kind: 'light' },
+  { id: 'l1', name: 'Ceiling light', kind: 'light' },
+  { id: 'kettle', name: 'Kettle', kind: 'switch' },
+]
+function shareState() {
+  const left = share.opened ? Math.max(0, Math.round((share.opened + 300000 - Date.now()) / 1000)) : 0
+  const waiting = share.on && !share.stopped && !share.holders.length
+  return {
+    ready: true, on: share.on, kinds: share.kinds, locks: share.locks, offer: share.offer,
+    shared: share.on ? Math.max(0, share.kinds.length * 3 - share.left_out.length) : 0, candidates: share.kinds.length * 3,
+    left_out: share.left_out, left_out_now: share.on ? share.left_out.length : 0, holders: share.holders,
+    // Filtered by what is kept home, the way the brain's own preview is: it comes off candidates(),
+    // so a lamp left out is absent from the picture for the same reason it is absent from the list.
+    preview: SAMPLE.filter(d => !share.left_out.includes(d.id) && share.kinds.includes(d.kind))
+      .slice(0, 3).map(({ name, kind }) => ({ name, kind })),
+    open: share.on && !share.stopped && (waiting || left > 0),
+    seconds_left: share.holders.length ? left : null,
+    code: share.on && (waiting || left > 0) ? '0033-033-8072' : null,
+    bridge: { running: share.on && !share.stopped, commissioned: !!share.holders.length, stale: !!share.stopped, error: null },
+  }
+}
 const phones = { phones: [
   { id: 'w', name: 'This wall', kind: 'wall', joined: now - 86400 * 30, expires: null, remote: false, last_seen: now, how: 'setup', me: true },
   { id: 'p1', name: "Temi's iPhone", kind: 'phone', joined: now - 86400 * 20, expires: null, remote: false, last_seen: now - 3600, how: 'code', me: false },
@@ -406,6 +442,30 @@ const server = http.createServer((req, res) => {
     { id: 'e-hue', kind: 'Philips Hue', name: 'Philips Hue bridge', state: 'on', why: '', flow: null, things: 11 },
     { id: 'e-tesla', kind: 'Tesla', name: 'Tesla', state: 'on', why: '', flow: null, things: 1 },
   ] })
+  /* Sharing the house outward (docs/matter.md). Held in memory so the switches on This hub actually
+     move, the door opens, and a code appears -- SHARED=on starts with it already shared, and
+     SHARED=held with an app holding it, which is the state the screen is hardest to get right in. */
+  if (p === '/share' && req.method === 'GET') return json(res, shareState())
+  if (p === '/share' && req.method === 'POST') { let b = ''; req.on('data', c => (b += c)); return req.on('end', () => {
+    let body = {}; try { body = JSON.parse(b) } catch {}
+    if (body.on != null) share.on = !!body.on
+    if (body.kinds) share.kinds = body.kinds.filter(k => share.offer.includes(k))
+    if (body.locks != null) share.locks = !!body.locks
+    if (body.stopped != null) share.stopped = !!body.stopped
+    if (body.left_out) share.left_out = body.left_out
+    json(res, shareState())
+  }) }
+  if (/^\/devices\/[^/]+\/share$/.test(p) && req.method === 'POST') { let b = ''; req.on('data', c => (b += c)); return req.on('end', () => {
+    const id = decodeURIComponent(p.split('/')[2])
+    let wanted = false; try { wanted = !!JSON.parse(b).shared } catch {}
+    share.left_out = wanted ? share.left_out.filter(x => x !== id) : [...new Set([...share.left_out, id])]
+    json(res, shareState())
+  }) }
+  if (p === '/share/window' && req.method === 'POST') {
+    if (share.stopped) { res.writeHead(409, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify({ detail: 'The part of the hub that talks to other apps is not running, so there is nothing to open yet.' })) }
+    share.opened = Date.now(); return json(res, shareState())
+  }
+  if (p === '/share/qr.svg') { res.writeHead(200, { 'Content-Type': 'image/svg+xml' }); return res.end(FAKE_QR) }
   if (p === '/phones/ask' && req.method === 'POST') return json(res, { id: 'ask1', name: "Sam's iPhone", kind: 'phone', asked: now })
   if (p.startsWith('/phones/claim/')) return json(res, { state: 'waiting' })
   /* A real code where one can be drawn, and a picture of one where it cannot.

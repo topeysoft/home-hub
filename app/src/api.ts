@@ -280,7 +280,7 @@ export async function setHomeIntent(state: string) {
 export const imageUrl = (id: string) => `/devices/${encodeURIComponent(id)}/image?t=${Date.now()}`
 
 /** Live updates from the brain. Reconnects with backoff; reports link state. */
-export function connect(on: { device: (d: Device) => void; home: (h: Home) => void; ambient: (a: Ambient) => void; status: (s: Status) => void; intent: (i: Intent) => void; drafts: (d: Routine[]) => void; presence: (p: Presence) => void; phones: () => void; link: (up: boolean) => void }) {
+export function connect(on: { device: (d: Device) => void; home: (h: Home) => void; ambient: (a: Ambient) => void; status: (s: Status) => void; intent: (i: Intent) => void; drafts: (d: Routine[]) => void; presence: (p: Presence) => void; phones: () => void; share: () => void; link: (up: boolean) => void }) {
   let delay = 1000, ws: WebSocket | null = null, closed = false
   const open = () => {
     const proto = location.protocol === 'https:' ? 'wss' : 'ws'
@@ -296,6 +296,7 @@ export function connect(on: { device: (d: Device) => void; home: (h: Home) => vo
       else if (m.type === 'drafts') on.drafts(m.drafts)
       else if (m.type === 'presence') on.presence(m.presence)
       else if (m.type === 'phones') on.phones()   // a nudge, not the roster: what this phone may see is /phones' answer to ask for
+      else if (m.type === 'share') on.share()    // the same shape: what is shared, and who holds it, is /share's answer to give
     }
     ws.onclose = () => { on.link(false); if (!closed) setTimeout(open, delay = Math.min(delay * 2, 15000)) }
     ws.onerror = () => ws?.close()
@@ -337,3 +338,35 @@ export const joinWithCode = (code: string, name: string) => post<{ ok: boolean; 
 export const allowPhone = (id: string, span: 'day' | 'weekend' | 'keep') => post<Phone>(`/phones/asks/${encodeURIComponent(id)}/allow`, { span })
 export async function denyPhone(id: string) { const r = await request(`/phones/asks/${encodeURIComponent(id)}`, { method: 'DELETE' }); if (!r.ok) await fail(r) }
 export async function removePhone(id: string) { const r = await request(`/phones/${encodeURIComponent(id)}`, { method: 'DELETE' }); if (!r.ok) await fail(r) }
+
+/* Sharing the house outward, so Apple Home, Google Home and Alexa can see it: docs/matter.md.
+   `offer` is the list of kinds this hub can publish, computed there and never typed here -- a panel
+   that knows a kind the hub does not must not offer it, and one that does not know a kind the hub has
+   must not hide it. `locks` is its own switch for its own reason, and is not in `kinds`. */
+export type Holder = { index: number; name: string }
+export type Share = {
+  ready: boolean            // the installer left this hub a sharing key; without one there is nothing to switch on
+  on: boolean
+  kinds: string[]
+  locks: boolean
+  offer: string[]
+  shared: number
+  candidates: number       // what WOULD go out, so the off state can say something concrete
+  left_out: string[]       // the ids the owner has kept home; the panel tests one device against it
+  left_out_now: number     // how many of those are actually holding something back right now
+  preview: { name: string; kind: string }[]   // a few of them by name, for the map at the top of the page
+  holders: Holder[]
+  open: boolean             // the door is open for an app to be added right now
+  seconds_left: number | null
+  code: string | null       // the printed code beside the QR, while the door is open
+  bridge: { running?: boolean; commissioned?: boolean; stale?: boolean; error?: string | null } | null
+}
+export async function getShare(): Promise<Share> { const r = await request('/share'); if (!r.ok) await fail(r); return r.json() }
+export const setShare = (body: { on?: boolean; kinds?: string[]; locks?: boolean }) => post<Share>('/share', body)
+export const openShareWindow = () => post<Share>('/share/window', {})
+/* One thing in or out by hand, from its own pane. Leaving a lamp out of the other apps is a change
+   to the house, so it asks for the code the same way renaming and moving do. */
+export const setDeviceShared = (id: string, shared: boolean) => post<Share>(`/devices/${encodeURIComponent(id)}/share`, { shared })
+/* Its own route, not qrUrl(): that one carries an http address and checks it is one, and a Matter
+   payload is MT:… . The cache-buster is because the code changes every time the door opens again. */
+export const shareQrUrl = (n: number) => `/share/qr.svg?v=${n}`

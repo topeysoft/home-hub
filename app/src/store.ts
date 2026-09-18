@@ -1,5 +1,5 @@
 import { reactive } from 'vue'
-import { getBridge, type Bridge, getHome, getEvents, getAmbient, getScenes, getStatus, getDiscovered, getRoutines, getAssistant, getPresence, getHealth, getSounds, connect, act, setIntent, setHomeIntent, type Room, type Device, type Home, type Event, type Ambient, type Rules, type Status, type Found, type Intent, type Routine, type Assistant, type Presence, type Note, type Sound, requestUpdate, getPhones, type Phone, type Ask, getAccounts, type Account } from './api'
+import { getBridge, type Bridge, getHome, getEvents, getAmbient, getScenes, getStatus, getDiscovered, getRoutines, getAssistant, getPresence, getHealth, getSounds, connect, act, setIntent, setHomeIntent, type Room, type Device, type Home, type Event, type Ambient, type Rules, type Status, type Found, type Intent, type Routine, type Assistant, type Presence, type Note, type Sound, requestUpdate, getPhones, type Phone, type Ask, getAccounts, type Account, getShare, type Share } from './api'
 import { lock } from './code'
 import { sunPosition, sunGuess, moonPhase } from './sun'
 
@@ -18,7 +18,7 @@ export const store = reactive({
   ambient: { location: null, weather: null } as Ambient,
   ambientLoaded: false,
   rules: {} as Rules,                        // scene rules from the brain, to tell whether a room still matches its scene
-  sheet: (['location', 'add', 'code', 'why', 'routines', 'hub', 'look', 'house', 'people', 'accounts', 'notes'].includes(new URLSearchParams(location.search).get('sheet') ?? '') ? new URLSearchParams(location.search).get('sheet') : null) as null | 'location' | 'add' | 'code' | 'why' | 'routines' | 'hub' | 'look' | 'house' | 'people' | 'accounts' | 'notes',   // the few soft sheets the panel has; ?sheet=location previews one
+  sheet: (['location', 'add', 'code', 'why', 'routines', 'hub', 'look', 'house', 'people', 'accounts', 'share', 'notes'].includes(new URLSearchParams(location.search).get('sheet') ?? '') ? new URLSearchParams(location.search).get('sheet') : null) as null | 'location' | 'add' | 'code' | 'why' | 'routines' | 'hub' | 'look' | 'house' | 'people' | 'accounts' | 'share' | 'notes',   // the few soft sheets the panel has; ?sheet=location previews one
   whyRoom: new URLSearchParams(location.search).get('room') as string | null,   // the room the why sheet is about; ?sheet=why&room=kitchen previews it
   resume: new URLSearchParams(location.search).get('signin') as string | null,   // a conversation already open in the house (signing an account in again); the add sheet picks it up. ?sheet=add&signin=<flow> previews it
   routines: [] as Routine[],                 // the brain's rules, for the routines sheet and to name a rule on a room
@@ -29,12 +29,18 @@ export const store = reactive({
   presence: null as Presence | null,         // who is home, from the brain; null until it has said
   notes: [] as Note[],                       // what needs a look, in the brain's words
   accounts: [] as Account[],                 // the services the house has signed into, for the Accounts page and its door
+  /* What this house gives out to other apps as Matter devices: its own page, and its own door, which
+     says how things stand there without anybody opening it. Null until the hub has answered once. */
+  share: null as Share | null,
   sounds: [] as Sound[],                     // what a speaker can play: the hub's noises and the files in its sounds folder
   updating: false,                           // this screen asked for an update; cleared when a new build answers
   restoring: false,                          // this screen sent a backup back; cleared when the hub returns
   previewSetup: new URLSearchParams(location.search).get('setup') === '1',   // ?setup=1 previews first run; cleared by Open Home
   status: null as Status | null,            // where the hub is in its life: engine down, fresh, ready; and whether setup finished
   phones: [] as Phone[], asks: [] as Ask[],  // the phones that belong to the house, and the ones asking to
+  /* Sharing changed, or somebody scanned the code: a counter rather than the state itself, because
+     only This hub draws it and a page that is not open should not be kept up to date. */
+  shareTick: 0,
   /* a knock that has been put aside: the pane is down, the ask still stands, and the chip in the
      band carries it. A NEW knock clears this (App.vue), because putting one phone aside must not
      silence the next one. */
@@ -489,6 +495,21 @@ export async function refreshStatus() {
 export async function loadAccounts() {
   try { store.accounts = await getAccounts() } catch {}
 }
+/* Whether a thing is one the other apps can see, and whether it could be. The hub decides both --
+   the kind has to be one this house shares and one the bridge can carry -- and the panel only ever
+   asks about the device in front of somebody. docs/matter.md. */
+export const canShare = (d: Device) => {
+  const s = store.share
+  /* The WHOLE kind, not cap()'s first word: a reading is `sensor.temperature` to the hub and cap()
+     would hand it `sensor`, which is in nobody's list -- so every sensor would quietly say it cannot
+     be shared while the hub was busy sharing it. */
+  return !!s?.on && !!s.ready && s.kinds.includes(d.kind || d.guess || d.capability)
+}
+export const isShared = (d: Device) => canShare(d) && !(store.share?.left_out ?? []).includes(d.id)
+
+export async function loadShare() {
+  try { store.share = await getShare() } catch { /* an older hub: the door simply does not appear */ }
+}
 /* The phones this screen is allowed to know about, and the knocks it is allowed to answer -- which is
    not the same list on every phone in the house, so it is always the hub's answer to THIS phone rather
    than anything worked out here. A screen that holds no keys gets itself and no asks, and the pane that
@@ -546,7 +567,7 @@ export async function load() {
   await refreshStatus()
   if (lock.unpaired) return                    // the join screen is up; the house answers once this phone is in
   try { applyHome(await getHome()) } catch { store.error = 'The hub is not answering.' }
-  loadAmbient(); loadRules(); loadRoutines(); loadAssistant(); loadPresence(); loadHealth(); loadSounds(); loadPhones(); loadAccounts()
+  loadAmbient(); loadRules(); loadRoutines(); loadAssistant(); loadPresence(); loadHealth(); loadSounds(); loadPhones(); loadAccounts(); loadShare()
 }
 let foundPoll: number | undefined
 /* The hub came back on a different build from the one this page was reading. Until it reloads, the
@@ -578,7 +599,7 @@ export async function start() {
   updateSky(); clearInterval(skyTimer); skyTimer = window.setInterval(updateSky, 30000)
   clearInterval(foundPoll); foundPoll = window.setInterval(refreshFound, 60000)
   refreshBridge()
-  stop = connect({ device: applyDevice, home: applyHome, intent: applyIntent, drafts: d => { store.drafts = d; eventsSoon() }, presence: p => { store.presence = p; eventsSoon() }, phones: () => loadPhones(true), ambient: a => { store.ambient = a; updateSky() }, status: s => {
+  stop = connect({ device: applyDevice, home: applyHome, intent: applyIntent, drafts: d => { store.drafts = d; eventsSoon() }, presence: p => { store.presence = p; eventsSoon() }, phones: () => loadPhones(true), share: () => { store.shareTick++; loadShare() }, ambient: a => { store.ambient = a; updateSky() }, status: s => {
     const was = store.status?.driver, version = store.status?.version
     store.status = s
     if (newBuild(version, s.version)) { store.updating = false; reloadOnto(s.version!); return }
