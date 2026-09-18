@@ -137,8 +137,15 @@ class Cable:
                     log.debug("%s: not an ESP (exit %s)", port, e.code)
             except BaseException as e:      # esptool.FatalError, or a port that vanished
                 log.debug("%s: not an ESP (%s)", port, e)
-            m = _re.search(r"Chip is (ESP32[\w-]*)", buf.getvalue())
+            out = buf.getvalue()
+            m = _re.search(r"Chip is (ESP32[\w-]*)", out)
             if not m:
+                # A board that does not answer is the commonest way this whole feature looks
+                # broken from a hallway: nothing knocks and nothing is said. esptool's own
+                # account is the only evidence there is, so it does not get swallowed.
+                tail = " / ".join(l.strip() for l in out.splitlines() if l.strip())[-300:]
+                log.info("bridge: %s did not answer as an ESP -- esptool said: %s",
+                         port, tail or "(nothing at all)")
                 return None
             # "ESP32-S3 (revision v0.2)" -> esp32s3, the name esptool wants back as --chip
             return m.group(1).lower().replace("-", "")
