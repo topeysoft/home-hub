@@ -223,7 +223,7 @@ Next on this track: diff the vendor store of the hallway dimmer (`0x000a`, panel
 find the load-type / motion-enable fields, replay them onto `0x0003`, and confirm dimming + `0x13` moving. Then the
 console can be unplugged for good, and switches can be adopted or re-keyed one at a time.
 
-## Two switches on one light: the hub carries the press (17 September, afternoon: brain/hub/relay.py)
+## Two switches on one light: the pair carries itself, the hub only watches (17 September: brain/hub/relay.py)
 
 A Brilliant companion switch has no load. It is a radio node that drives nothing itself, and it makes
 its partner act by sending that partner a press directly — a vendor message to the unicast stored in
