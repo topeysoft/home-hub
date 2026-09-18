@@ -337,3 +337,70 @@ Bridge: `esp32-bridge/src/main.cpp` (rewritten: panel keys, NimBLE, discovery, m
 `monitor.py`, `gen_native_test.py` + regenerated `test_cmac_native.c`.
 Docs: `docs/brilliant.md`, `README.md`, this file. Commit when ready (secrets stay out — the keys are in
 `~/.config`, and `esp32-bridge/include/secrets.h` is gitignored).
+
+
+## Where the multi-way work got to (17 September, night)
+
+Everything below was proven against real lamps in this house, not inferred from captures.
+
+**The house has three multi-way lights, not one.** `tools/pairs.py` reads vendor field `0x08` from every
+switch over one proxy link, writes nothing and presses nothing, and found `0x0006 -> 0x0005` (the basement
+kitchen two-way), `0x0016 -> 0x0002` and `0x0014 -> 0x0012`. The last two name **panel elements** -- the
+console's own sliders, which are switch positions in a three-way and not brokers. `0x0002` answered none of
+its 55 vendor fields, which is what a panel element looks like and what a switch never does.
+
+**The migration premise is proven end to end.** `pairs.py` said `0x0006`'s partner was `0x0005` before
+anything was touched; a controlled four-press run on that pair then produced both documented signatures
+(companion sends `0403` and the lamp follows; the lamp end broadcasts with no `0403` at all) and confirmed
+it. Four presses, four lamp movements, none dropped -- so the dropped-press worry belongs to the kitchen's
+flaky install, not to the protocol.
+
+**Field `0x13` is a load detector and it is not subtle.** Measured on `0x0005` with the lamp switched by
+hand: dark 1-3, lit 92-97, settling within ~2 s in both directions. So a provisioner can find which of two
+new switches has the lamp by trying each and watching, and never has to ask anybody. Key it on the **jump**,
+never on an absolute threshold -- resting values differ per switch across this house.
+
+**`0x1b` is the ANNOUNCE flag, not a role.** Our stairway load `0x0006` was written to `0x1b = 03`, power
+cycled and pressed: the lamp came on. So `03` does not stop a switch driving its own load; it adds the
+`0403` to the partner in `0x08`. The old "00 drives a load, 03 is a companion" reading is retired, and the
+adopt spec's field table is corrected. Our stairway pair is `0x0004 -> 0x0006`; earlier notes saying
+`0x0003` are out of date.
+
+### New tools
+
+| | |
+|---|---|
+| `tools/pairs.py` | reads a whole network's pairings (`0x08`/`0x1b`) over one proxy link. Read-only. Two passes, and reports a silent switch as **unknown, never as unpaired** |
+| `tools/vendor_write.py` | writes one vendor field **through a proxy** rather than a direct connection, and reads it back. `setfields.py` needs the laptop beside that exact switch with nothing holding its link, which is true less often than you want |
+| `tools/migrate.py` | moves a whole **light**: `plan` (read the pairing while it still exists) → `adopt` per switch → `finish` (rewrite each companion's `0x08` to the main's NEW address) |
+
+**`migrate.py plan` is tested against the real pair** and correctly identified the lamp end; its guard for a
+switch whose partner is the console was tested too and refuses to proceed. **`adopt` and `finish` have not
+been run end to end** -- the pieces they call are proven, the joins between them are not. First real use
+wants a pair nobody minds fiddling with.
+
+**Why the ordering is the whole tool:** `0x08` is readable only while the switch is still on the console. A
+factory reset wipes it, and then the only record of which light a companion belonged to is gone with the
+hardware.
+
+### Hazards worth not re-learning
+
+- **A read reply is `<value> 00`.** The trailing byte is not part of the value; echoing a raw reply back
+  into a write sends one byte too many and the switch drops it **silently**. Two restore attempts on a live
+  light read back unchanged before this was spotted.
+- **A dropped read is indistinguishable from an absent field**, and here it turns a companion into a light.
+  It happened three separate times tonight on `0x0014` and `0x0004`; two passes caught every one.
+- **`0x7f30` is our own ESP32 bridge**, not the panel (`0x7000 | chip<<4`). It accounts for most of the
+  traffic in any panel-network sniff.
+- **Only one thing can hold a proxy link to a node.** Two captures running means one of them is listening to
+  nothing. Confirm a live reading before asking somebody to go and press a switch.
+
+### Next
+
+1. **The puck provisioner** -- the one genuinely new build, and what turns all of this into *Add a wall
+   switch* for somebody who is not us.
+2. **Does the Brilliant app still add a device with no internet?** Decides whether the keep-your-panel path
+   has a future or an expiry date set by somebody else.
+3. **Do the panel's two gangs serve one light or two?** Decides whether taking the panel down means one
+   orphan fix or two.
+4. A three-switch star, and what `0x1b` reads on a factory-fresh switch.
