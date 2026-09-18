@@ -125,6 +125,7 @@ static uint32_t lastRxAt = 0, lastFilterAt = 0, lastResyncAt = 0, lastPollAt = 0
 static uint32_t linkUpAt = 0;
 static uint8_t sweepsDone = 0;
 static uint8_t resyncIdx = 0xFF;         // walking the switch list with unicast Gets; 0xFF = idle
+static void lightRefresh();              // defined beside emptyScans, which it reads
 static uint32_t lastResyncStepAt = 0;
 
 static uint8_t ourNetId[8];
@@ -882,7 +883,7 @@ static bool connectToNode() {
     setProxyFilter();
     linkUp = true;
     linkUpAt = lastRxAt = millis();
-    lightSet(Light::Heard);
+    lightRefresh();   // green only if the broker is there too; the loop keeps it honest after this
     sweepsDone = 0;
     Serial.println("[ble] bridge up: filter opened");
     char t[80];
@@ -1121,6 +1122,24 @@ void setup() {
 // that they are still standing there.
 static uint8_t emptyScans = 0;
 
+// Green is a promise, so it has to mean the whole thing.
+//
+// The light answers one question -- "is here good?" -- asked by somebody standing at a socket with
+// the puck in their hand (design/puck/Placing.dc.html, and the panel says "It can hear them. Leave
+// it here."). Hearing a switch was never the whole answer: BLE and Wi-Fi are separate radios, so a
+// socket can carry the mesh and no Wi-Fi at all. A puck left there is green, contented, and invisible
+// to the hub -- and the person is standing between two of their own instruments saying opposite
+// things, having been told to trust the light. So green now needs the broker too, and a spot that
+// cannot reach it stays amber, which is the honest answer to the question being asked.
+//
+// Recomputed every pass rather than set at the moments things change, because Wi-Fi can go after the
+// link is up and a light that was only ever set on the way in would never say so.
+static void lightRefresh() {
+    if (linkUp && mqtt.connected())  lightSet(Light::Heard);
+    else if (emptyScans >= 3)        lightSet(Light::Far);
+    else                             lightSet(Light::Looking);
+}
+
 void loop() {
     if (configBlank()) {   // waiting for the hub; the serial task is doing the work
         static uint32_t saidBlank = 0;
@@ -1158,7 +1177,7 @@ void loop() {
         }
         if (!haveTarget && !findProxy()) {
             if (emptyScans < 3) emptyScans++;
-            lightSet(emptyScans >= 3 ? Light::Far : Light::Looking);
+            lightRefresh();
             delay(2000);
             return;
         }
@@ -1172,6 +1191,7 @@ void loop() {
 
     drainRx();
     expireMotion();
+    lightRefresh();     // every pass: the broker can go while the proxy link stays up
 
     if (!linkUp) {
         delay(20);

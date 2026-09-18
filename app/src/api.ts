@@ -107,6 +107,7 @@ export type Bridge = {
   text?: string
   switches?: number                        // how many it can hear from where it is
   signal?: 'strong' | 'weak' | 'none'
+  quiet?: true                             // placing, and it has not been heard from at all for a while: probably a socket with no Wi-Fi
   unplaced?: number                        // of those, how many have no room yet
   waiting?: number                         // switches nearby that have never been let in (see addSwitch)
   bridges?: number                         // how many are set up and working, job or no job

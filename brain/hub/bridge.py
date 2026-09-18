@@ -141,6 +141,7 @@ class Bridges:
         self._seen: set[str] = set()          # ports present at the last look
         self._dismissed: set[str] = set()     # "not mine": left alone until unplugged
         self._task: asyncio.Task | None = None
+        self._quiet: asyncio.Task | None = None   # the placing watch; see _placing_went_quiet
         self._sub: int | None = None
         # what the broker says: chip -> {"online", "net", "rssi"}; (net, addr) -> state
         self.pucks: dict[str, dict] = {}
@@ -156,6 +157,7 @@ class Bridges:
         if j["state"] == "working": out["step"] = j["step"]
         if j["state"] in ("placing", "ready"):
             out["switches"] = self._count(j.get("net")); out["signal"] = self._signal(j.get("chip"))
+        if j["state"] == "placing" and j.get("quiet"): out["quiet"] = True
         if j["state"] == "ready": out["unplaced"] = j.get("unplaced", 0)
         if j.get("text"): out["text"] = j["text"]
         if j.get("needs"): out["needs"] = j["needs"]
@@ -225,6 +227,7 @@ class Bridges:
 
     async def dismiss(self) -> dict:
         if self.job and self.job["state"] in ("knocking", "failed", "ready"):
+            self._stop_quiet_watch()
             if self.job.get("port"): self._dismissed.add(self.job["port"])
             self.job = None
             self.hub._broadcast(json.dumps({"type": "bridge", "bridge": self.status()}))
@@ -242,8 +245,34 @@ class Bridges:
             self._task = asyncio.create_task(self._setup())
         return self.status()
 
+    # How long a puck may say nothing during the placing before the panel stops implying it is a
+    # matter of time. Long enough to unplug it, carry it somewhere and let it boot; short enough that
+    # somebody is still standing there holding it.
+    QUIET_S = 90
+
+    async def _placing_went_quiet(self) -> None:
+        """A puck in somebody's hand and a puck in a socket with no Wi-Fi both say nothing at all.
+
+        They are the same silence to the broker, and the panel drew them the same way -- "still
+        listening" -- for ever, about a puck that was never coming back. The difference is only how
+        long it lasts, so that is what this measures. The light is unaffected: BLE does not need the
+        Wi-Fi, so a puck in a mesh-but-no-Wi-Fi socket is still telling the truth locally.
+        """
+        try:
+            await asyncio.sleep(self.QUIET_S)
+        except asyncio.CancelledError:
+            return
+        j = self.job
+        if j and j["state"] == "placing" and self._signal(j.get("chip")) == "none":
+            self._set("placing", quiet=True)
+
+    def _stop_quiet_watch(self) -> None:
+        if self._quiet and not self._quiet.done(): self._quiet.cancel()
+        self._quiet = None
+
     async def placed(self) -> dict:
         if not self.job or self.job["state"] != "placing": raise ValueError("Nothing is being placed.")
+        self._stop_quiet_watch()
         self._set("ready", unplaced=self._unplaced(self.job.get("net")))
         return self.status()
 
@@ -270,6 +299,7 @@ class Bridges:
             self.hub.settings.set(bridges={**(self.hub.settings.get("bridges") or {}), who["chip"]: {"since": time.time(), "fw": who["fw"]}})
             self.hub.log.add("bridge", who["chip"], None, "set up", source="user")
             self._set("placing")
+            self._quiet = asyncio.create_task(self._placing_went_quiet())
         except Exception as e:
             log.warning("bridge setup failed: %s", e)
             self._set("failed", text=f"{e}")
@@ -312,6 +342,10 @@ class Bridges:
                 mm = re.search(r"rssi (-?\d+)", payload); p["rssi"] = int(mm.group(1)) if mm else None
             if self.job and self.job.get("chip") == chip and self.job["state"] in ("placing", "ready") and p.get("net"):
                 self.job["net"] = p["net"]
+            # It turned up after all: stop saying it did not.
+            if self.job and self.job.get("chip") == chip and self.job.get("quiet") and p.get("online"):
+                self.job.pop("quiet", None)
+                self._set("placing")
         elif len(parts) == 4 and parts[1] != "bridge":
             if parts[3] == "state":
                 self.switches[(parts[1], parts[2])] = payload

@@ -152,6 +152,39 @@ class TheJob(Knocking):
         self.assertEqual(self.cable.flashed, [])          # it had software already
         self.assertIn("c8ebba", self.hub.settings.get("bridges"))
 
+    async def adopt_and_go_quiet(self):
+        await self.b.adopt()
+        await self.b._task
+        await self.b._quiet          # same loop: asyncio.run() closes the old one
+
+    def test_a_puck_that_never_comes_back_stops_being_called_still_listening(self):
+        """A puck in somebody's hand and a puck in a socket with no Wi-Fi are the same silence to the
+        broker. The panel drew them identically, for ever, about one that was never coming back."""
+        self.b.QUIET_S = 0.01
+        self.knock()
+        run(self.adopt_and_go_quiet())
+        self.assertEqual(self.b.status()["state"], "placing")
+        self.assertEqual(self.b.status()["signal"], "none")
+        self.assertTrue(self.b.status()["quiet"])
+
+    def test_turning_up_after_all_takes_the_words_back(self):
+        self.b.QUIET_S = 0.01
+        self.knock()
+        run(self.adopt_and_go_quiet())
+        self.assertTrue(self.b.status().get("quiet"))
+        self.b._on_mqtt({"topic": "mesh/bridge/c8ebba/status", "payload": "online"})
+        self.assertNotIn("quiet", self.b.status())
+
+    def test_a_good_socket_reads_strong_and_not_quiet(self):
+        """The other end of the same walk: it turns up, and what it hears is worth standing still for."""
+        self.b.QUIET_S = 0.01
+        self.knock()
+        run(self.adopt_and_go_quiet())
+        self.b._on_mqtt({"topic": "mesh/bridge/c8ebba/status", "payload": "online"})
+        self.b._on_mqtt({"topic": "mesh/bridge/c8ebba/proxy", "payload": "7c:10:15:04:de:a0 rssi -60"})
+        self.assertEqual(self.b.status()["signal"], "strong")
+        self.assertNotIn("quiet", self.b.status())
+
     def test_a_bare_board_gets_its_software_first(self):
         p = self.knock(bare=True)
         run(self.adopt_and_finish())
