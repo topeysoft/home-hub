@@ -891,6 +891,65 @@ async def set_device_kind(device_id: str, body: dict):
     return {"ok": True, "kind": kind_of(dev)}
 
 
+# What can be made to say where it is, and how the blink goes. A camera cannot blink, a lock must not,
+# and a blind takes half a minute to say anything -- what is offered is what a person can stand in a
+# doorway and watch. Three is enough to catch somebody looking the other way when the first one goes.
+CAN_BLINK = {"light", "switch", "fan"}
+BLINKS, BLINK_ON, BLINK_OFF = 3, 0.6, 0.45
+_blinking: set[str] = set()      # one blink per thing at a time: two overlapping runs would put it back wrong
+
+
+@app.post("/devices/{device_id}/identify")
+async def identify_device(device_id: str):
+    """Make a thing say which one it is, by doing the one thing a person can see from the doorway.
+
+    The other half of "go and press one" (SortView.vue). Pressing answers for the switches somebody can
+    reach; this answers for the eleven bulbs in a ceiling that nobody has ever touched and that arrive
+    called "Wiz RGBW Tunable ABC123" apiece. The house blinks one, the person watching sees which, and
+    the row it came from is the one to name. design/puck/Which.dc.html already makes this move when the
+    house cannot tell two switches apart; this is the same move offered to the person instead.
+
+    It puts the thing back exactly as it found it, brightness and speed with it: identifying a lamp at
+    3am must not leave it burning. Driving a device, so no code -- and deliberately not through hub.act,
+    which would log three taps a blink and tell the room somebody was in it.
+    """
+    hub.ready()
+    dev = hub.home.devices.get(device_id)
+    if not dev: raise HTTPException(404, "unknown device")
+    domain = dev.capability.split(".")[0]
+    if domain not in CAN_BLINK: raise HTTPException(400, f"{dev.name} has no way to show you where it is.")
+    if dev.state == "unavailable": raise HTTPException(409, f"{dev.name} is not answering, so there would be nothing to see.")
+    if device_id in _blinking: return {"ok": True, "text": f"{dev.name} is blinking now."}
+    # read before the first call: the blink's own state events land on this device a moment later
+    was, bright, pct = dev.state, dev.attrs.get("brightness"), dev.attrs.get("percentage")
+    # a brightness sent to a light that has none is refused outright, the same trap hub.act names
+    dims = domain == "light" and any(m not in ("onoff", "unknown") for m in (dev.attrs.get("supported_color_modes") or []))
+    _blinking.add(device_id)
+    try:
+        for i in range(BLINKS):
+            # all the way up on the way up, whatever it was sitting at: a lamp blinking between 4% and
+            # off is not visible from the door, which is the only place this is ever watched from
+            await hub.ha.call(domain, "turn_on", dev.id, **({"brightness_pct": 100} if dims else {}))
+            await asyncio.sleep(BLINK_ON)
+            await hub.ha.call(domain, "turn_off", dev.id)
+            if i < BLINKS - 1: await asyncio.sleep(BLINK_OFF)
+        if was == "on":
+            back = {"brightness": int(bright)} if dims and bright is not None else {"percentage": int(pct)} if domain == "fan" and pct else {}
+            await hub.ha.call(domain, "turn_on", dev.id, **back)
+    except Exception as e:
+        log.warning("could not blink %s: %s", device_id, e)
+        raise HTTPException(502, f"Could not make {dev.name} blink.")
+    finally:
+        _blinking.discard(device_id)
+    hub.log.add("action", dev.id, None, "identify", source="user")
+    # Short enough for one line under a name, because it is drawn on the row and a second line would
+    # shove every row below it down while somebody is still reaching for one. The name is not in it:
+    # the row it is written on is already wearing the name. The caveat is, though -- a companion
+    # switch with no load wired to it blinks nothing at all, and being told that plainly beats
+    # standing under the wrong lamp twice.
+    return {"ok": True, "text": "Blinked three times. If you saw nothing, it is in another room — or it has no lamp on it."}
+
+
 @app.post("/devices/{device_id}/check")
 async def check_device(device_id: str):
     """Ask a thing that has gone quiet whether it is there, now rather than whenever the driver next tries.

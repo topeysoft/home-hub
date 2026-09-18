@@ -150,6 +150,7 @@ class Device:
     own_room: bool = False         # room set on this entry itself rather than inherited from the hardware
     seen: float = field(default_factory=time.time)   # when the driver last heard from it; a stale sensor is not steered by
     maker: str | None = None       # who made the unit, from the driver's device registry; the one thing a tile can say about hardware it has no picture of
+    model: str | None = None       # what the maker calls this model ("Hue white A19"). Said beside the maker on New devices, where a thing is still called whatever the driver called it and the name alone tells nobody which bulb this is
     kind: str | None = None        # what the OWNER says this is, where they have said anything: a lamp on a plug is a light. Read it through kind_of(), never instead of capability
     guess: str | None = None       # what the HOUSE makes of it from its name, under the owner's word: a switch on a fridge is an appliance. guessed_kind() is the only thing that sets it
     hw_name: str | None = None     # what the unit it belongs to is called ("Refrigerator"), so the panel can show a machine's features as one thing
@@ -241,6 +242,7 @@ class Home:
             d = Device(eid, name, room, cap, s["state"], self.attrs_for(eid, cap, s["attributes"]), e.get("device_id"), bool(e.get("area_id")), seen_at(s), since=changed_at(s))
             d.entry = e.get("config_entry_id") or dev_entry.get(e.get("device_id") or "")
             d.maker = self.hardware.get(e.get("device_id") or "", {}).get("manufacturer") or None
+            d.model = self.hardware.get(e.get("device_id") or "", {}).get("model") or None
             d.hw_name = self.hardware.get(e.get("device_id") or "", {}).get("name") or None
             d.named_by_unit = bool(e.get("has_entity_name"))
             d.guess = guessed_kind(cap, s["attributes"].get("device_class") or e.get("original_device_class"), words)

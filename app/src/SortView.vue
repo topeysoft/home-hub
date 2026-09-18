@@ -4,11 +4,12 @@
 -->
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { addRoom, moveDevice, renameDevice, forgetDevice, getSuggestions, type Device, type Room, type Suggestion } from './api'
+import { addRoom, moveDevice, renameDevice, forgetDevice, getAccounts, getSuggestions, identifyDevice, type Account, type Device, type Room, type Suggestion } from './api'
 import { store, cap, notify } from './store'
 import { partWord, renameParts, unitsOf, type UnitRow } from './units'
 import Icon from './Icon.vue'
 import { pressedIn, snapshot, type Seen } from './pressed'
+import { blinkWord, canBlink, known, nowWord } from './telling'
 
 /* The "New devices" room: everything that has not been put in a room yet, each with a name to
    check and a room to pick. Once placed, a device leaves this list on its own. The same rows
@@ -28,12 +29,14 @@ const here = computed(() => props.editing ? props.room.id : '')
 const names = ref<Record<string, string>>({})
 const busy = ref<Record<string, string>>({})
 const adding = ref<string | null>(null), newRoom = ref('')
+const blinked = ref<{ key: string; text: string; at: number } | null>(null)   // the row the house was last asked to blink, and what came of it
 const iconFor = (d: Device) => cap(d) === 'media' && /\b(tv|television|roku)\b/i.test(d.name) ? 'tv' : cap(d)
 const roomName = (id: string) => store.rooms.find(r => r.id === id)?.name ?? 'room'
 const isUnit = (r: UnitRow) => r.parts.length > 1
 const partsLine = (r: UnitRow) => r.parts.map(d => partWord(d, r.name)).join(' · ')
 /* the placed unit leaves the list at once; the house confirms with a rebuild, and waiting for the round trip would leave it sitting there */
 function gone(r: UnitRow) {
+  if (blinked.value?.key === r.key) blinked.value = null    // its answer goes with it
   const ids = new Set(r.parts.map(d => d.id))
   // eslint-disable-next-line vue/no-mutating-props
   props.room.devices = props.room.devices.filter(x => !ids.has(x.id))
@@ -108,12 +111,18 @@ const live = computed(() => pressed.value && now.value - pressed.value.at < PRES
 const CAN_PRESS = ['light', 'switch', 'cover', 'lock']
 const pressable = computed(() => props.room.devices.filter(d => CAN_PRESS.includes(cap(d))))
 const teach = computed(() => !props.editing && rows.value.filter(r => CAN_PRESS.includes(cap(r.lead))).length > 1)
+/* A change this screen caused rather than a hand on a wall. The blink is six state changes in three
+   seconds and its last one -- putting the thing back the way it was found -- lands a moment AFTER the
+   request answers, so the guard outlives the busy flag or the row lights itself and says a person
+   pressed it. Declared here and filled below with the blink; see pressed.ts for what it is for. */
+const BLINK_TAIL = 2500
+const ours = (key: string) => !!busy.value[key] || (!!blinked.value && blinked.value.key === key && Date.now() - blinked.value.at < BLINK_TAIL)
 /* The press itself, in pressed.ts -- and it is the only thing this screen watches. */
 let seen: Seen = {}
 watch(() => props.room.devices.map(d => `${d.id}:${d.state}`).join(), () => {
   const was = seen
   seen = snapshot(props.room.devices)
-  const hit = pressedIn(was, pressable.value, id => !!busy.value[rowOf(id)])
+  const hit = pressedIn(was, pressable.value, id => ours(rowOf(id)))
   if (!hit) return
   pressed.value = { id: hit, at: Date.now() }
   now.value = Date.now()
@@ -133,6 +142,45 @@ function what(u: UnitRow) {
   if (u.parts.some(p => cap(p) === 'motion') || d.attrs?.has_motion || /motion/i.test(d.name)) bits.push('with a motion sensor in it')
   return bits.join(', ') + '.'
 }
+
+/* ---------- telling one row from another ----------
+
+   The press above is the half a wall switch can answer. This is the half the ceiling can: the house
+   blinks the thing and the person watching sees which one it was, which is the only way to tell eleven
+   bulbs called "Wiz RGBW Tunable ABC123" apart. Pressing and blinking are the same question asked from
+   the two ends -- one starts at the hardware, one starts at the row -- and a house has both because a
+   bulb cannot be pressed and a thing behind a cupboard door cannot be watched.
+
+   Under every name, quietly, what the house already knew and was not saying: the account that brought
+   it, who made it, which model, and whether it is on right now. telling.ts. */
+const accounts = ref<Record<string, Account>>({})
+const hint = (r: UnitRow) => known(r, accounts.value)
+/* It does not time out. A line that folds itself away twenty seconds later moves every row under it
+   while somebody is reading one, and what a person just touched is the last thing on this screen that
+   should move on its own -- the room grid learned that. It goes when another row is blinked, when this
+   one is placed, or when the screen is left. */
+async function blink(r: UnitRow) {
+  if (busy.value[r.key]) return
+  busy.value[r.key] = 'blink'
+  blinked.value = { key: r.key, text: 'Blinking now — go and look.', at: Date.now() }
+  try {
+    const out = await identifyDevice(r.lead.id)
+    blinked.value = { key: r.key, text: out.text, at: Date.now() }
+    // the answer is a line the row grew: on a wall showing eleven of these it can land under the fold,
+    // and the least scroll that brings it up is the same one a press does
+    setTimeout(() => document.querySelector('.sort-said')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 30)
+  } catch (e: any) {
+    blinked.value = null
+    notify(e.message, 'error')
+  }
+  delete busy.value[r.key]
+}
+/* the accounts are what /accounts already returns for the settings page; here they turn a device's
+   entry id into the name of the thing somebody actually signed into. A house with none is a house
+   whose rows say a little less, so this never blocks the screen. */
+onMounted(async () => {
+  try { const list = await getAccounts(); const by: Record<string, Account> = {}; for (const a of list) by[a.id] = a; accounts.value = by } catch {}
+})
 
 /* what the brain proposes for each new thing; a unit takes its lead part's proposal, and the brain's own
    reasoning already reads the parts together (suggest.py puts a unit's siblings in the words it looks at) */
@@ -189,7 +237,7 @@ watch(() => props.room.devices.length, (n, was) => { if (n > (was ?? 0)) think()
         <span class="press-icon"><Icon name="switch" :size="20" /></span>
         <span class="press-text">
           <span class="press-name">Go and press one</span>
-          <span class="press-sub">Top or bottom, it does not matter — the one you press says so here. Nothing will switch on that was not going to.</span>
+          <span class="press-sub">Either half of the rocker will do — the switch you press says so here. Nothing will switch on that was not going to. Or tap Blink it on a row and watch the room instead.</span>
         </span>
       </div>
 
@@ -207,6 +255,14 @@ watch(() => props.room.devices.length, (n, was) => { if (n > (was ?? 0)) think()
             <input v-else class="sort-name" :value="names[u.key] ?? u.name" @input="names[u.key] = ($event.target as HTMLInputElement).value" @change="rename(u)" @keydown.enter="($event.target as HTMLInputElement).blur()" spellcheck="false" aria-label="Name" />
             <!-- one thing on the wall with more than one part in it: say what the parts are, so nobody has to guess which sensor is which switch's -->
             <span class="sort-parts" v-if="isUnit(u)"><Icon name="motion" :size="13" v-if="u.parts.some(d => cap(d) === 'motion')" />{{ partsLine(u) }}</span>
+            <!-- What the house knew all along and was not saying, and beside it the way to settle it for
+                 good: blink the thing and go and look. A row that has just blinked says so here instead,
+                 in the same place, because that answer is about this row and belongs on it. -->
+            <span class="sort-hint" v-if="hint(u) || nowWord(u) || canBlink(u)">
+              <span class="sort-known" v-if="hint(u)">{{ hint(u) }}</span>
+              <span v-if="nowWord(u)" :class="nowWord(u)!.live ? 'sort-live' : 'sort-dead'">{{ nowWord(u)!.text }}</span>
+              <button v-if="canBlink(u) && !editing" class="chip-btn tiny" :class="{ busy: busy[u.key] === 'blink' }" @click="blink(u)"><Icon name="bolt" :size="13" />{{ blinkWord(u) }}</button>
+            </span>
           </div>
           <template v-if="adding === u.key">
             <input class="sort-name" v-model="newRoom" placeholder="Name the room" autofocus @keydown.enter="createAndMove(u)" @keydown.escape="adding = null" />
@@ -218,6 +274,11 @@ watch(() => props.room.devices.length, (n, was) => { if (n > (was ?? 0)) think()
             <option value="__new">A new room…</option>
           </select>
           <button v-if="editing && adding !== u.key" class="button small ghost sort-forget" :class="{ warn: forgetting === u.key }" @click="forget(u)">{{ forgetting === u.key ? 'Forget?' : 'Forget' }}</button>
+          <!-- What came of a blink, across the row rather than under the name: in the name's own column
+               the sentence wraps to three lines and drags the button that started it onto a fourth, so
+               the chip a person's finger is still on moves out from under it. Here the chip does not
+               move at all -- the answer appears under it, and rows below shift by the one line it is. -->
+          <p class="sort-said" v-if="blinked && blinked.key === u.key"><span class="pulse-dot" v-if="busy[u.key] === 'blink'"></span>{{ blinked.text }}</p>
           <p class="sort-forget-ask" v-if="forgetting === u.key"><b>{{ u.name }}</b>{{ isUnit(u) ? ', all of it,' : '' }} goes from the house, and from whatever brought it. Tap again to do it.</p>
           <!-- the one that was just pressed: the rooms as chips, because the answer is one tap away
                and a dropdown would hide it behind two -->

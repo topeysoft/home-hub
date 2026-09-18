@@ -3986,6 +3986,54 @@ select.input {
   font-size: 13.5px;
   color: var(--muted);
 }
+/* What the house knows about a thing besides the name it came with, and beside it the way to settle
+   it outright: blink it and go and look. Both on one line under the name, because they are one
+   question -- which of these is it -- asked quietly and then loudly. telling.ts.
+   It wraps rather than truncates: on a phone the maker and the model take a line each, and a name
+   cut off at "Signify Nether..." is the same nothing the row had before. */
+.sort-hint {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  padding: 0 12px;
+  margin-top: 5px;
+  font-size: 13.5px;
+  color: var(--muted);
+  min-width: 0;
+}
+.sort-known {
+  min-width: 0;
+}
+/* On right now: the one word on this line a person can act on without moving, because they can look
+   up and see which lamp is lit. Lit like the lamp it is describing. */
+.sort-live {
+  color: var(--lamp);
+}
+.sort-dead {
+  color: var(--danger);
+}
+/* What came of a blink: on the row it belongs to rather than in a toast over the list it came from,
+   and across the row for the same reason the forgetting question is -- in the name's own column this
+   sentence wraps three ways and takes the chip that started it with it. */
+.sort-said {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 0;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+/* the smallest a chip goes: it rides a 13.5px line under a name and must not set the row's height */
+.chip-btn.tiny {
+  padding: 5px 11px;
+  font-size: 13px;
+  gap: 5px;
+}
+.chip-btn.tiny.busy {
+  opacity: 0.5;
+}
 /* the middle of the name field, for the things beside it that are shorter than
    it: the icon at 40 and the small buttons at 36 */
 .sort-row > .sort-icon {

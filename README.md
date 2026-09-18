@@ -17,7 +17,11 @@ the exact address to paste and a copy button, and the maker's own steps follow o
 file Google hands out can be dropped or pasted straight onto that screen instead of copying its parts.
 Zigbee, Z‑Wave and Matter devices pair from the same screen: the hub opens its door and says what to press.
 Things that don't know their room wait under *New devices* until you place them; each arrives with a
-suggested name and room and one *Use* button. A box at the top of Home takes plain words: *kitchen lights off*,
+suggested name and room and one *Use* button. Names there are whatever the driver called them
+("Brilliant switch 000a", "Wiz RGBW Tunable ABC123"), so every row also says what account brought it
+in and which model it is, and offers to blink it: the house flashes that one thing three times and
+puts it back exactly as it found it, so you can stand in the room and see which row you are naming.
+Go the other way round for anything within reach — press a switch on the wall and its row says so. A box at the top of Home takes plain words: *kitchen lights off*,
 *movie in the den*, *is the front door locked?*. Simple sentences run at once, the way a tap does; anything else
 goes to the assistant, which proposes and waits for your tap. The Done screen and *This hub* show a code a
 phone's camera opens the house from, with the steps to put it on the phone's home screen. Once the house has a
@@ -97,7 +101,10 @@ container before the Pi's first start so the two do not fight over Ring's token.
   grammar grows from what people actually say. The microphone comes later: `docs/voice.md`.
 - New devices: `GET /suggestions` (`brain/hub/suggest.py`) proposes a plain name and a room for each unplaced thing, from
   the words in its name and its hardware first, then from the assistant for whatever is still unplaced. Nothing moves
-  until *Use*; that goes through the same guarded move and rename routes as doing it by hand.
+  until *Use*; that goes through the same guarded move and rename routes as doing it by hand. Telling one row from
+  another is two halves that meet in the middle: a press on a wall lights its row (`app/src/pressed.ts`), and
+  `POST /devices/{id}/identify` blinks a light, plug or fan three times and restores it, brightness and all, for
+  everything nobody can reach. What each row knows besides its name — the account, the model — is `app/src/telling.ts`.
 - Phones: once a code is set, every request needs a phone cookie (`brain/hub/phones.py`, `phones.json` in the data
   directory, hashes only). The screen that sets the first code is paired on the spot; a phone types the code
   (`POST /phones/code`) or asks (`POST /phones/ask`, polling `GET /phones/claim/{id}`) and a paired screen allows it

@@ -74,11 +74,13 @@ const rooms = [
   ] },
   { id: 'bath', name: 'Bathroom', intent: 'occupied', set_by: null, hold_until: null, devices: [] },
   { id: 'unassigned', name: 'New devices', intent: 'occupied', set_by: null, hold_until: null, devices: [
-    dev('u1', 'Hue color lamp 1', 'unassigned', 'light', 'off', { supported_color_modes: ['hs'] }),
-    dev('u2', 'Smart plug', 'unassigned', 'switch', 'off', {}),
+    /* The names are the ones a driver really gives, and the maker, the model and the account that
+       brought each one are what the row has to tell them apart with before a room is picked. */
+    dev('u1', 'Hue color lamp 1', 'unassigned', 'light', 'off', { supported_color_modes: ['hs'] }, 'Signify Netherlands B.V.', { model: 'Hue color lamp', entry: 'e-hue' }),
+    dev('u2', 'Smart plug', 'unassigned', 'switch', 'off', {}, 'TP-Link Corporation Limited', { model: 'HS100' }),
     /* a Ring pathlight: a light and its motion sensor on one piece of hardware, one row on New devices (docs/units.md) */
-    dev('u3', 'Garage Left Light Light', 'unassigned', 'light', 'off', { motion: 'u4' }, 'Ring', { hw: 'hw-ring-gl', hw_name: 'Garage Left Light', named_by_unit: true }),
-    dev('u4', 'Garage Left Light Motion', 'unassigned', 'motion', 'off', {}, 'Ring', { hw: 'hw-ring-gl', hw_name: 'Garage Left Light', named_by_unit: true }),
+    dev('u3', 'Garage Left Light Light', 'unassigned', 'light', 'off', { motion: 'u4' }, 'Ring', { hw: 'hw-ring-gl', hw_name: 'Garage Left Light', named_by_unit: true, model: 'Smart Lighting Pathlight', entry: 'e-ring' }),
+    dev('u4', 'Garage Left Light Motion', 'unassigned', 'motion', 'off', {}, 'Ring', { hw: 'hw-ring-gl', hw_name: 'Garage Left Light', named_by_unit: true, model: 'Smart Lighting Pathlight', entry: 'e-ring' }),
   ] },
 ]
 /* SWITCHES=11 fills New devices with a bridge's worth of look-alike wall switches -- the moment
@@ -87,7 +89,7 @@ const rooms = [
 const MESH = ['0004', '0005', '0006', '0008', '000a', '000b', '000e', '0010', '0011', '0014', '0016']
 const unassigned = rooms.find(r => r.id === 'unassigned')
 for (let i = 0; i < Number(process.env.SWITCHES || 0) && i < MESH.length; i++)
-  unassigned.devices.push(dev(`mesh${MESH[i]}`, `Brilliant switch ${MESH[i]}`, 'unassigned', 'light', 'off', { brightness: 0, has_motion: true }))
+  unassigned.devices.push(dev(`mesh${MESH[i]}`, `Brilliant switch ${MESH[i]}`, 'unassigned', 'light', 'off', { brightness: 0, has_motion: true }, 'Brilliant', { model: 'Brilliant Smart Dimmer Switch' }))
 
 /* A press, which is the whole mechanism: a switch announcing itself because a human touched it.
    POST /press or /press/<id> makes one happen; PRESS=1 rotates through them on its own so the
@@ -394,6 +396,27 @@ const server = http.createServer((req, res) => {
     const id = p.split('/')[2]
     const n = notes.find(x => x.subject === id)
     return json(res, { ok: true, answering: false, text: `${n?.name || 'It'} still is not answering.` })
+  }
+  /* Blinking a thing so the person in the room can see which row it is. The real brain drives the
+     driver three times over (api.py, identify_device); here it flips the state so the panel's own
+     tiles move, and answers with the same sentence the hub answers with. */
+  if (p.startsWith('/devices/') && p.endsWith('/identify') && req.method === 'POST') {
+    const id = decodeURIComponent(p.split('/')[2])
+    const d = rooms.flatMap(r => r.devices).find(x => x.id === id)
+    if (!d) return json(res, { detail: 'unknown device' }, 404)
+    const was = d.state, bright = d.attrs?.brightness
+    let n = 0
+    const step = () => {
+      d.state = n % 2 ? 'off' : 'on'
+      if (d.attrs && bright !== undefined) d.attrs.brightness = d.state === 'on' ? 254 : 0
+      push({ type: 'device', device: d })
+      if (++n < 6) return setTimeout(step, n % 2 ? 450 : 600)
+      d.state = was
+      if (d.attrs && bright !== undefined) d.attrs.brightness = bright
+      push({ type: 'device', device: d })
+    }
+    step()
+    return setTimeout(() => json(res, { ok: true, text: 'Blinked three times. If you saw nothing, it is in another room — or it has no lamp on it.' }), 3150)
   }
   if (p === '/drivers/zwave/retry' && req.method === 'POST') return json(res, { ok: true, drivers: status.drivers })
   if (p === '/flows/r1') {

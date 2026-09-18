@@ -70,9 +70,16 @@ test('the last device can be reached, and the way back stays where it was', asyn
   const before = await measure(page)
   expect(before.lastRowInWindow, 'this wall already shows them all, so it is not the case under test').toBe(false)
 
-  // the whole point: a finger on the list
+  // The whole point: a finger on the list, wound on until the list stops moving. It used to be twelve
+  // turns of the wheel, which is a distance and not a condition -- SWITCHES=11 and a row that grew a
+  // line both put the last device further down than 1440px, and the spec then failed for the length
+  // of the list rather than for anything it is about.
   await page.locator('.sort-scroll').hover()
-  for (let i = 0; i < 12; i++) await page.mouse.wheel(0, 120)
+  const atBottom = () => page.evaluate(() => {
+    const l = document.querySelector('.sort-scroll')!
+    return l.scrollTop >= l.scrollHeight - l.clientHeight - 1
+  })
+  for (let i = 0; i < 80 && !(await atBottom()); i++) { await page.mouse.wheel(0, 120); await page.waitForTimeout(30) }
   await page.waitForTimeout(400)
 
   const after = await measure(page)

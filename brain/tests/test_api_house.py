@@ -8,6 +8,7 @@ import json, unittest
 from unittest import mock
 
 from hub.lock import needs_code
+from hub import api
 from tests.apptest import ApiTest
 
 
@@ -19,6 +20,13 @@ class HouseTests(ApiTest):
         self.assertEqual([d["name"] for d in rooms["front"]["devices"]], ["Front door"])
         ceiling = next(d for d in rooms["living"]["devices"] if d["id"] == "light.ceiling")
         self.assertEqual((ceiling["capability"], ceiling["state"], ceiling["attrs"]["brightness"]), ("light", "on", 200))
+
+    def test_a_device_carries_what_it_is_besides_its_name_so_a_new_one_can_be_told_apart(self):
+        """A thing arrives called whatever the driver called it. Who made it, which model, and what
+        brought it in are what New devices has to go on before anybody picks a room for it."""
+        new = next(d for r in self.client.get("/home").json()["rooms"] if r["id"] == "unassigned" for d in r["devices"])
+        self.assertEqual((new["maker"], new["model"]), ("Acme", "Thing"))
+        self.assertEqual(new["entry"], "entry-hw-new")
 
     def test_a_diagnostic_entity_never_reaches_a_room(self):
         # HA calls the TV's signal strength a temperature sensor. A room's tiles must not offer it.
@@ -382,3 +390,77 @@ class FixtureTests(ApiTest):
         self.assertEqual(r.status_code, 400)
         self.assertIn("not a fan with a light", r.json()["detail"])
         self.assertEqual(self.client.post("/devices/fan.bedroom_fan/lead", json={"lead": "blinds"}).status_code, 400)
+
+
+class IdentifyTests(ApiTest):
+    """Blinking a thing so the person standing in the room can see which row it is.
+
+    The other half of "go and press one" on New devices: pressing answers for the switches a hand can
+    reach, this for the bulbs in a ceiling that arrive called "Wiz RGBW Tunable ABC123" apiece.
+    """
+    def setUp(self):
+        super().setUp()
+        for name in ("BLINK_ON", "BLINK_OFF"):       # the blink is watched on a wall, not in a test suite
+            p = mock.patch.object(api, name, 0); p.start(); self.addCleanup(p.stop)
+
+    def blinks(self, entity_id):
+        return [(service, data) for _, service, e, data in self.ha.calls if e == entity_id]
+
+    def test_a_light_blinks_three_times_all_the_way_up_so_it_can_be_seen_from_the_door(self):
+        r = self.client.post("/devices/light.kitchen/identify")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("Blinked three times", r.json()["text"])
+        # the line is drawn on the row itself, and a second line of it would shove every row below it down
+        self.assertLess(len(r.json()["text"]), 100)
+        self.assertNotIn("Kitchen lights", r.json()["text"])   # the row it lands on is already wearing the name
+        self.assertEqual([s for s, _ in self.blinks("light.kitchen")], ["turn_on", "turn_off"] * 3)
+        self.assertEqual(self.blinks("light.kitchen")[0][1], {"brightness_pct": 100})
+
+    def test_a_light_that_was_on_goes_back_to_the_brightness_it_was_found_at(self):
+        """Identifying a lamp at 3am must not leave it burning, and must not leave it at full either."""
+        self.client.post("/devices/light.ceiling/identify")      # on at 200
+        calls = self.blinks("light.ceiling")
+        self.assertEqual([s for s, _ in calls], ["turn_on", "turn_off"] * 3 + ["turn_on"])
+        self.assertEqual(calls[-1][1], {"brightness": 200})
+
+    def test_a_light_that_was_off_is_left_off(self):
+        self.assertEqual([s for s, _ in self.blinks("light.kitchen")], [])
+        self.client.post("/devices/light.kitchen/identify")
+        self.assertEqual([s for s, _ in self.blinks("light.kitchen")][-1], "turn_off")
+
+    def test_a_plug_is_blinked_through_its_own_domain_with_no_brightness_in_it(self):
+        """A brightness sent to switch.turn_on is refused outright: the driver's word decides the call."""
+        self.client.post("/devices/switch.kettle/identify")
+        self.assertEqual(self.blinks("switch.kettle"), [("turn_on", {}), ("turn_off", {})] * 3)
+
+    def test_a_light_with_no_dimming_is_never_sent_a_brightness(self):
+        self.hub.home.devices["light.kitchen"].attrs = {"supported_color_modes": ["onoff"]}
+        self.client.post("/devices/light.kitchen/identify")
+        self.assertEqual(self.blinks("light.kitchen"), [("turn_on", {}), ("turn_off", {})] * 3)
+
+    def test_a_camera_is_refused_rather_than_offered_a_blink_that_cannot_work(self):
+        r = self.client.post("/devices/lock.front/identify")
+        self.assertEqual(r.status_code, 400)
+        self.assertIn("no way to show you where it is", r.json()["detail"])
+        self.assertEqual(self.ha.calls, [])
+
+    def test_a_thing_that_is_not_answering_says_so_rather_than_blinking_at_nothing(self):
+        self.hub.home.devices["light.kitchen"].state = "unavailable"
+        r = self.client.post("/devices/light.kitchen/identify")
+        self.assertEqual(r.status_code, 409)
+        self.assertIn("not answering", r.json()["detail"])
+
+    def test_an_unknown_thing_is_a_404_and_not_a_blink_at_nothing(self):
+        self.assertEqual(self.client.post("/devices/light.nope/identify").status_code, 404)
+
+    def test_blinking_never_tells_the_room_somebody_was_in_it(self):
+        """Through the driver and not hub.act: three taps a blink in the log, and a room held awake
+        because the house switched a lamp on to answer a question, are both lies."""
+        self.hub.home.rooms["kitchen"].hold_until = None
+        self.client.post("/devices/light.kitchen/identify")
+        self.assertIsNone(self.hub.home.rooms["kitchen"].hold_until)
+        actions = [e for e in self.hub.log.recent(50) if e["kind"] == "action" and e["subject"] == "light.kitchen"]
+        self.assertEqual([e["new"] for e in actions], ["identify"])
+
+    def test_showing_a_thing_where_it_is_needs_no_code_because_it_is_a_tap_and_not_a_change(self):
+        self.assertFalse(needs_code("POST", "/devices/light.kitchen/identify"))

@@ -4,7 +4,7 @@ import { request } from './code'
 /* `capability` is the driver's word for what this is and it picks the Home Assistant service; `kind` is
    the owner's, where they have given one. Read the two together through cap() in store.ts, never the raw
    field: a lamp on a smart plug is a switch to the driver and a light to everybody who lives there. */
-export type Device = { id: string; name: string; room_id: string; capability: string; state: string; attrs: Record<string, any>; hw?: string | null; own_room?: boolean; maker?: string | null; kind?: string | null; guess?: string | null; hw_name?: string | null; named_by_unit?: boolean }
+export type Device = { id: string; name: string; room_id: string; capability: string; state: string; attrs: Record<string, any>; hw?: string | null; own_room?: boolean; maker?: string | null; model?: string | null; entry?: string | null; kind?: string | null; guess?: string | null; hw_name?: string | null; named_by_unit?: boolean }
 export type Room = { id: string; name: string; devices: Device[]; intent: string; set_by?: string | null; hold_until?: number | null; motion_at?: number | null }
 export type Intent = { room: string; intent: string; set_by: string | null; hold_until: number | null }
 export type Home = { name?: string | null; temp_unit?: string; entry?: string[]; rooms: Room[] }   // entry: the rooms people come in through
@@ -187,6 +187,9 @@ export const setSense = (id: string, sensor: string | null) => post(`/devices/${
 /* Ask a thing that has gone quiet whether it is there, and say what came back. A thing that is genuinely
    unplugged is still quiet afterwards, and saying so is the point: that is when removing it is the answer. */
 export const checkDevice = (id: string) => post<{ ok: boolean; answering: boolean; text: string }>(`/devices/${encodeURIComponent(id)}/check`)
+/** Make a thing blink so the person standing in the room can see which one the row is. The other half of
+    "go and press one": pressing answers for what a hand can reach, this for eleven bulbs in a ceiling. */
+export const identifyDevice = (id: string) => post<{ ok: boolean; text: string }>(`/devices/${encodeURIComponent(id)}/identify`)
 /* Try a part of the driver layer again now, rather than waiting out its five-minute backoff. */
 export const retryPart = (part_id: string) => post<{ ok: boolean; drivers: Part[] }>(`/drivers/${encodeURIComponent(part_id)}/retry`)
 export async function getDiscovered(): Promise<Found[]> {
