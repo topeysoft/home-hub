@@ -863,3 +863,38 @@ rather than a per-device calibration:
 
 **Untested at the time of writing:** `0x1b` has been set to `03` on `0x0004` and verified on readback, but it
 needs a power cycle and a press to confirm, since everything written during adoption is read only at boot.
+
+
+### It works: a pair we configured, talking switch to switch
+
+17 September, evening. `0x1b = 03` was the whole fix. The adopted companion `0x0004` was power cycled and
+pressed once, and `0x0003`'s load toggled — **switch to switch, on a pair we wrote, on our own network, with no
+hub, no console and no panel anywhere in the path.** That is the end state the house actually needs: a pair that
+keeps working when the hub is off, which is the only acceptable behaviour for a light switch.
+
+Everything needed to reproduce it is in the sections above: adopt, bind all three models *including the vendor
+model*, set publication, write `0x08` with the partner's unicast on the **companion end only**, replay a config
+captured **from a switch of the same role**, and power cycle — which is what applies all of it.
+
+### How the hub should learn a pair's state (and how it should not)
+
+The obvious idea is to overhear the companion's `0403` press. It works sometimes and it is the wrong thing to
+depend on:
+
+- A `0403` is a **directed unicast**. Mesh is managed flooding, so every transmission is heard by every node in
+  radio range and rebroadcast by relays until TTL expires — but a pair sitting next to each other in one room
+  may be satisfied by the first hop, with nothing carrying it to wherever a puck happens to be. Observed both
+  ways: the panel network's dense mesh delivered a pair's `0403` to a puck; our three-node network did not.
+- It reports a *press*, which is an inference about what will happen, rather than what did.
+
+**The main broadcasts its new state to all-nodes whenever it changes** — `0x0005 -> 0xffff Generic OnOff Status`
+in every capture of a working pair. That is a model publication, it floods by design, it is the truth rather
+than an inference, and it arrives whichever end was pressed. A hub should listen for that and ignore `0403`
+entirely for same-network pairs.
+
+This is also why our own first test looked like a failure when it was not: `0x0003`'s publication was still
+`0x0001`, pointed at the provisioner address by `explore.py` long before any of this, so when its load toggled
+it published to a unicast nobody was listening on. Set to `0xffff` now.
+
+**There is no latency floor for pairs we configure.** State arrives as it changes. Polling is only needed for
+switches still on the console's network, whose publication cannot be changed without device keys we do not have.
