@@ -25,11 +25,27 @@ MACHINE = re.compile(r"\b(fridge|refrigerator|freezer|ice ?maker|ice|dishwasher|
                      r"range|cooktop|stove|hob|hood|water heater|boiler|furnace|aquarium|pool|spa|hot tub|sauna|wine|humidor)\b", re.I)
 
 
+# A switch that is LOUD. Nothing in Home Assistant's domains says so -- a siren arrives as a `switch`
+# and is indistinguishable from a plug with a lamp on it -- so the only thing that can tell the house
+# is its name. Getting this wrong in the safe direction costs somebody a second tap on a plug; getting
+# it wrong the other way is a siren at 2am under a stray finger, which is the whole reason `alarm`
+# exists as a kind at all. docs/kinds.md, *An alarm, and the tap that woke the baby*.
+#
+# Narrower than it could be, deliberately. `bell` and `chime` are left out: a doorbell is not the
+# thing this rule is for, and every word here has to be one that only ever names something loud.
+SIREN = re.compile(r"\b(siren|klaxon|sounder|strobe|horn|alarm)\b", re.I)
+
+
 def guessed_kind(capability: str, device_class: str | None, words: str = "") -> str | None:
     """What the house makes of a thing from its name, under the owner's word and over the driver's.
-    Only one guess is made today: a switch inside a machine is an appliance. None where the driver's
-    word stands as it is."""
-    if capability == "switch" and device_class != "outlet" and MACHINE.search(words or ""): return "appliance"
+
+    Two guesses, and the loud one is asked first: a thing called an alarm siren is an alarm before it
+    is a machine's feature, and reading the words in the other order would put a siren in the group
+    that is quietly left out of Everything off rather than the group that asks before it sounds."""
+    if capability == "switch" and device_class != "outlet":
+        words = words or ""
+        if SIREN.search(words): return "alarm"
+        if MACHINE.search(words): return "appliance"
     return None
 
 
@@ -179,7 +195,11 @@ class Home:
     def _keep_attrs(cap, a):
         keys = {"light": ("brightness", "color_temp_kelvin", "rgb_color", "supported_color_modes"),
                 "media": ("volume_level", "media_title", "media_artist", "app_name", "source", "entity_picture"),
-                "cover": ("current_position",),
+                # device_class tells a blind from a garage door, and that is the whole of what decides
+                # whether a cover can leave the house with the ordinary kinds or needs the switch that
+                # locks need: a bedroom blind is not a way into the house and a garage door is.
+                # hub/share.py, WAYS_IN.
+                "cover": ("current_position", "device_class"),
                 "climate": ("temperature", "current_temperature", "hvac_modes", "hvac_action", "target_temp_low", "target_temp_high",
                             "min_temp", "max_temp", "current_humidity", "preset_mode", "preset_modes", "fan_mode", "fan_modes"),
                 "fan": ("percentage",), "sensor": ("unit_of_measurement",)}.get(cap.split(".")[0], ())

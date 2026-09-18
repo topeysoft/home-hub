@@ -15,8 +15,50 @@ import json, unittest
 
 from hub import intents
 from hub.intents import RoomState, plan
-from hub.model import Device, Room, kinds_for, kind_of
+from hub.model import Device, Room, guessed_kind, kinds_for, kind_of
 from tests.apptest import ApiTest, house
+
+
+class SirenGuessTests(unittest.TestCase):
+    """A siren reaches this house as a `switch` and nothing in HA's domains says it is loud. Until the
+    house guessed, it wore a plug's tile -- one tap, run at once -- which is the failure docs/kinds.md
+    was written about, still live in every house that had not re-typed its siren by hand.
+
+    The safe direction is a second tap on something that turned out to be a plug. The other direction
+    is a siren at 2am under a stray finger, so every word in SIREN has to be one that only ever names
+    something loud."""
+
+    def test_a_switch_that_names_itself_loud_is_an_alarm(self):
+        for words in ("Holts Summit Alarm Siren", "Garage siren", "Klaxon", "Outdoor strobe", "Burglar alarm"):
+            with self.subTest(words=words):
+                self.assertEqual(guessed_kind("switch", None, words), "alarm")
+
+    def test_a_plug_is_still_a_plug(self):
+        for words in ("Kitchen lamp", "Coffee maker", "Christmas tree", "Bedroom fan", "Doorbell chime"):
+            with self.subTest(words=words):
+                self.assertNotEqual(guessed_kind("switch", None, words), "alarm")
+
+    def test_the_loud_guess_is_asked_before_the_machine_one(self):
+        # A fridge alarm is an alarm before it is a fridge's feature: read the other way round it
+        # would land in the group that is quietly left out of Everything off rather than the group
+        # that asks before it sounds.
+        self.assertEqual(guessed_kind("switch", None, "Refrigerator door alarm"), "alarm")
+
+    def test_what_home_assistant_has_called_an_outlet_is_left_alone(self):
+        # The same escape hatch the appliance guess has: a driver that says "this is a socket" is
+        # saying something the words cannot overrule.
+        self.assertIsNone(guessed_kind("switch", "outlet", "Alarm siren"))
+
+    def test_only_a_switch_is_guessed_at(self):
+        for cap in ("light", "media", "climate", "lock", "cover"):
+            with self.subTest(cap=cap): self.assertIsNone(guessed_kind(cap, None, "Alarm siren"))
+
+    def test_the_guess_is_what_the_house_shows_and_the_owner_can_still_overrule_it(self):
+        dev = Device(id="switch.siren", name="Alarm Siren", room_id="hall", capability="switch",
+                     state="off", guess=guessed_kind("switch", None, "Alarm Siren"))
+        self.assertEqual(kind_of(dev), "alarm")
+        dev.kind = "switch"                      # "no, it really is a plug"
+        self.assertEqual(kind_of(dev), "switch")
 
 
 class OfferTests(unittest.TestCase):
