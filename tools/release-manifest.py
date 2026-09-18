@@ -24,6 +24,10 @@ from hub import notes as release_notes            # noqa: E402 -- the path above
 
 COMPOSE = "driver-layer/docker-compose.yml"
 BRAIN = "ghcr.io/topeysoft/home-hub-brain"
+# Ours too, and named by the release for the same reason the brain is: the two have a contract
+# between them -- the shape of what the bridge is handed per device, and how long a request to open
+# the door stays live -- so a hub must never be able to run a new one against an old one.
+BRIDGE = "ghcr.io/topeysoft/home-hub-matter-bridge"
 ACCEPT = ", ".join((
     "application/vnd.oci.image.index.v1+json",
     "application/vnd.docker.distribution.manifest.list.v2+json",
@@ -88,16 +92,18 @@ def rented() -> dict:
 
     Each line reads `image: ${HUB_IMG_THING:-thing:1.2}`: the tag inside is the record of what was
     tested and the default a hub falls back to, and the digest that tag means *here* is what a
-    verified release installs. The brain is left out -- it is named by the release, not by the file.
+    verified release installs. The two of ours -- the brain and the Matter bridge -- are left out: they
+    are named by the release, not by the file, and they have to move together.
 
     Reading the default out of the shell expansion is the fiddly part, and getting it wrong is silent:
     an empty result would sign a manifest that pins nothing at all and looks perfectly well formed.
     Hence the count check below.
     """
+    ours = ("brain", "matter-bridge")     # named by the release, not rented from anybody
     out, service = {}, None
     for line in open(COMPOSE):
         if m := re.match(r"^  ([a-z0-9-]+):\s*$", line): service = m.group(1)
-        elif (m := re.match(r"^    image: (\S+)\s*$", line)) and service and service != "brain":
+        elif (m := re.match(r"^    image: (\S+)\s*$", line)) and service and service not in ours:
             ref = m.group(1)
             if m2 := re.fullmatch(r"\$\{[A-Z0-9_]+:-(.+)\}", ref): ref = m2.group(1)
             if not ref.startswith("$"): out[service] = ref
@@ -161,6 +167,7 @@ def main() -> int:
         "commit": commit,
         "made": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "brain": digest(f"{BRAIN}:{version}"),
+        "bridge": digest(f"{BRIDGE}:{version}"),
         "images": images,
         # The oldest release that may move straight to this one. An upgrade path nobody tested is
         # better refused than discovered in somebody's house.

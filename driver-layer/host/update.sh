@@ -43,10 +43,12 @@ rm -f "$REQ"
 field() { sed -n "s/.*\"$1\": *\"\([^\"]*\)\".*/\1/p" "$2" 2>/dev/null | head -1; }
 
 running_image() {
-  # What the brain container is running right now, by digest where there is one. An image built on
-  # the hub itself has no digest; its id pins just as well.
+  # What a container is running right now, by digest where there is one. An image built on the hub
+  # itself has no digest; its id pins just as well. Defaults to the brain, because it is the one this
+  # script is mostly about; the Matter bridge is asked for by name, and a hub that has never started
+  # one simply answers nothing, which is what a rollback should then put back.
   local id ref
-  id="$(docker inspect --format '{{.Image}}' brain 2>/dev/null)"
+  id="$(docker inspect --format '{{.Image}}' "${1:-brain}" 2>/dev/null)"
   [ -n "$id" ] || return 0
   ref="$(docker image inspect --format '{{if .RepoDigests}}{{index .RepoDigests 0}}{{end}}' "$id" 2>/dev/null)"
   echo "${ref:-$id}"
@@ -69,8 +71,8 @@ came_back() {
 }
 
 put_back() {
-  local sha img
-  sha="$(field sha "$PREV")"; img="$(field image "$PREV")"
+  local sha img bridge
+  sha="$(field sha "$PREV")"; img="$(field image "$PREV")"; bridge="$(field bridge "$PREV")"
   [ -n "$sha" ] || return 1
   {
     echo "--- putting the hub back on $sha ${img:+($img)}"
@@ -82,13 +84,19 @@ put_back() {
       sed -i '/^HUB_BRAIN_IMAGE=/d' "$ENVF"
       echo "HUB_BRAIN_IMAGE=$img" >> "$ENVF"
     fi
+    # The bridge goes back with it. The two have a contract between them, so putting one back and
+    # leaving the other where it was is the skew this rollback exists to avoid. docs/matter.md.
+    if [ -n "$bridge" ] && [ -f "$ENVF" ]; then
+      sed -i '/^HUB_BRIDGE_IMAGE=/d' "$ENVF"
+      echo "HUB_BRIDGE_IMAGE=$bridge" >> "$ENVF"
+    fi
     (cd "$DIR/driver-layer" && docker compose up -d --remove-orphans)
   } >> "$LOG" 2>&1
 }
 
 STARTED="$(date +%s)"
-printf '{"sha":"%s","image":"%s","at":%s}\n' \
-  "$(git -C "$DIR" rev-parse HEAD 2>/dev/null)" "$(running_image)" "$STARTED" > "$PREV"
+printf '{"sha":"%s","image":"%s","bridge":"%s","at":%s}\n' \
+  "$(git -C "$DIR" rev-parse HEAD 2>/dev/null)" "$(running_image)" "$(running_image matter-bridge)" "$STARTED" > "$PREV"
 printf '{"state":"running","started":%s}\n' "$STARTED" > "$STATE"
 
 # Nothing is undone that cannot first be checked: without curl the hub cannot tell a house that came

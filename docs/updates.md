@@ -150,7 +150,8 @@ stolen token, a compromised Action or a bad afternoon at GitHub all reach every 
 transport less carefully — it is to stop trusting it at all.
 
 **A signed manifest per release.** CI publishes `release.json`: the version, the commit, the brain image **by digest**,
-every driver-layer image **by digest**, the oldest version that may upgrade straight to it, the rollout state piece 5
+the Matter bridge image **by digest** (added 18 September 2026 — it is ours and it has a contract with the brain, so
+the two are named by the release and move together; `docs/matter.md`), every driver-layer image **by digest**, the oldest version that may upgrade straight to it, the rollout state piece 5
 needs, and the notes piece 4 writes. It is signed with an ed25519 key **that does not live on GitHub**, and the public
 key is in the image and in the checkout. The hub verifies the signature before `install.sh` moves a byte, and pulls
 every image by digest. A tag that moves then changes nothing, because nothing reads a tag any more.

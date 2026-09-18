@@ -77,6 +77,25 @@ jobs:
       - name: the weather sheet still matches the panel
         run: cd app && npm run weather-sheet:check
 
+  # The Matter bridge. It is the one part of the hub whose bugs land in somebody ELSE's app, so the
+  # unit conversions are checked here: three of them are inversions -- a cover counted from the other
+  # end, a contact whose true means shut, a lock bitmap whose set bit means "not supported" -- and none
+  # of them shows up in a typecheck. matter-bridge/src/units.test.ts.
+  matter-bridge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: matter-bridge/package-lock.json
+      - run: cd matter-bridge && npm ci --no-audit --no-fund
+      - name: types
+        run: cd matter-bridge && npm run check
+      - name: tests
+        run: cd matter-bridge && npm test
+
   e2e:
     runs-on: ubuntu-latest
     steps:
@@ -165,5 +184,17 @@ jobs:
           file: brain/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: false                       # brain-image.yml publishes; this only proves it still builds
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      # The same proof for the bridge, and it earns its minutes on arm64 in particular: a Pi that
+      # cannot pull the image builds it, and a build that only ever worked on amd64 would be found
+      # by the household rather than here.
+      - name: the Matter bridge's image, for both kinds of host
+        uses: docker/build-push-action@v6
+        with:
+          context: ./matter-bridge
+          file: matter-bridge/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: false                       # bridge-image.yml publishes; this only proves it still builds
           cache-from: type=gha
           cache-to: type=gha,mode=max
