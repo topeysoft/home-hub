@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Two switches, one light: the hub carries the press across.
 
 A two-way switch is two switches wired to one light. In a Brilliant house the wiring is not in the

@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """The house, answering out loud.
 
 docs/voice.md settled on 14 September 2026 where a spoken answer comes out: the brain synthesises the

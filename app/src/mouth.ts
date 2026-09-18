@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* Where a spoken answer comes out -- and nothing whatever about what it means.
  *
  * `ear.ts`'s opposite number, and deliberately the same shape: the panel asks for a sentence to be

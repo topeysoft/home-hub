@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { defineConfig } from 'vitest/config'
 
 /* One clock for every machine. Sunrise, sunset and "tomorrow" are all answers in the local zone, so

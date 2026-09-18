@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* Wall: the weather large on the left, and what is on beside it.
 
    The arrangement is the whole of this layout, so that is what gets asserted -- where things are

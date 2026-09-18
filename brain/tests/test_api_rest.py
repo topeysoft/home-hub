@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """The rest of the surface the panel talks to: rules, the log a room's story is told from, sounds,
 health, updates, restore, and the stream every screen holds open.
 

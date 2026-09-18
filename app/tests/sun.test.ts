@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* Where the sun is. A port of brain/hub/sun.py, and the two must not drift apart:
    the panel paints dusk from this file and the brain fires after-dark routines from that one. */
 import { describe, expect, it } from 'vitest'

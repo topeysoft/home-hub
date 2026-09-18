@@ -1,3 +1,7 @@
+<!--
+  SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+  SPDX-License-Identifier: AGPL-3.0-or-later
+-->
 <script setup lang="ts">
 /*
  * The kinds whose whole instrument is one control: a plug, a fan, a mower, an alarm.

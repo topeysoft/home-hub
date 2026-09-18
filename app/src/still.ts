@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /*
  * The freshest picture we have of a camera, and when it was actually taken.
  *

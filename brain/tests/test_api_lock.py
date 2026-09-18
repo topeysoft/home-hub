@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """The door: what a code changes about who may do what, and how a phone gets in.
 
 The rule the whole product rests on is that driving the house never needs the code and changing it

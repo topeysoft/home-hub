@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* What a camera card is allowed to claim. The bug this holds shut: a Ring camera hands back the same
    frame for hours, and the panel dated the picture from the moment it fetched the bytes, so a dark 4am
    still wore a "Just now" chip at lunchtime. The age has to come off the frame, and a frame that is

@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """The scene table: what each room state means, and the one place capability actions become HA services.
 
 The table has two lives — the defaults compiled in, and ../scenes.json, which is what a hub actually

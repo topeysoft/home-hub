@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* What the house will do next on its own: the soonest routine that runs by the clock or the sun. Idle-based ones
    ("after 20 minutes of nothing") have no time until something happens, so they stay out. */
 import type { Routine } from './api'

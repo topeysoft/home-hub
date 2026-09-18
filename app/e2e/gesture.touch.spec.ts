@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* The same gesture, made with a finger. A touch long-press is also the browser's own gesture, and
    the wall panel is a touch screen, so a mouse-only pass proves less than it looks like. This
    dispatches touch through CDP, the path a real finger takes. */

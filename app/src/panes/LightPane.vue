@@ -1,3 +1,7 @@
+<!--
+  SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+  SPDX-License-Identifier: AGPL-3.0-or-later
+-->
 <script setup lang="ts">
 /*
  * A light, opened: the two things a lamp physically is, and the three it is used at.

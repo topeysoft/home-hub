@@ -1,3 +1,7 @@
+<!--
+  SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+  SPDX-License-Identifier: AGPL-3.0-or-later
+-->
 <script setup lang="ts">
 /*
  * One room on the Rooms tab, at one of four sizes. design/rooms/Main.dc.html,

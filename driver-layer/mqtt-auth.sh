@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 # Messages (Mosquitto) take a password. This makes one the first time and writes the broker's
 # password file from it, so every part that talks to the broker -- Zigbee2MQTT, Ring, the engine --
 # gets the same credential from .env and nothing on the Wi-Fi gets in without it.

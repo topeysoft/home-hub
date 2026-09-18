@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* The rail: cards resolve as they arrive. A card fully on the rail is crisp, one off it is faded and
    blurred, and the ramp between never runs backwards. This is a scroll-driven animation done in CSS,
    so nothing in the app's own code would notice it breaking. */

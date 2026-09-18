@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """The hub's own memory, and what belongs in it.
 
 Run from brain/: .venv/bin/python -m unittest -v

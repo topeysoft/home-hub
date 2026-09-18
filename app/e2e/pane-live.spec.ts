@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* The camera's bottom sheet plays, and what that is allowed to cost.
  *
  * Two properties, and the second is the one with a bill attached. The sheet shows the still at once

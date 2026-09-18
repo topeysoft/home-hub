@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Listen to everything a provisioned Brilliant switch reports, with timestamps.
 
 Assumes explore.py has already bound the AppKey and pointed the models'

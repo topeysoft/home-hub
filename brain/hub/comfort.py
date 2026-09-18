@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Sensing a room from somewhere other than the thermostat.
 
 A thermostat only knows the temperature where it hangs. Pick another sensor the house can see and the

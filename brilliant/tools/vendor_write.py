@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Write one vendor field to a switch, over a proxy, and read it back.
 
 `setfields.py` writes over a DIRECT BLE connection to the switch itself, which

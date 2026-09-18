@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* The panel resting with something left open in front of it.
  *
  * The resting screen is the sky, the clock, and three lines about the house — and it is drawn ABOVE

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Read (and set) a node's model publication -- why a switch never reports itself.
 
 Provisioning and binding are not enough to make a switch *announce* anything. A

@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """The command grammar: plain words become the same moves a tap makes, with no model in the way.
 Run from brain/: .venv/bin/python -m unittest -v"""
 import unittest

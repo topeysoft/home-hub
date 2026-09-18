@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Move a whole LIGHT off the console, pairing and all, in the right order.
 
 Adopting one switch is `restore_switch.py`. A light with two or three switches is

@@ -1,3 +1,7 @@
+<!--
+  SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+  SPDX-License-Identifier: AGPL-3.0-or-later
+-->
 <script setup lang="ts">
 /*
  * The band: what Home owes a person, whatever layout they have chosen, as one

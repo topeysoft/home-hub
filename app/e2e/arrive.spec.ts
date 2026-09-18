@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* The Rooms and Cameras tabs arrive, the way Home's row always has.
  *
  * Sampled every frame from inside the page, because the move is faster than a

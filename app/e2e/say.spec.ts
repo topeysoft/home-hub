@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* The command box, at rest and opened -- move 7 of the eight in design/nightfall.
 
    The claim under test is an ORDER, not a set of durations: width leads and the words follow, so

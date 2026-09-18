@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Which build this is, whether there is a newer one, and how the panel is told.
 
 Two channels. A hub in someone's house follows releases: nothing reaches it until somebody tags it.

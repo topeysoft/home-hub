@@ -1,3 +1,7 @@
+<!--
+  SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+  SPDX-License-Identifier: AGPL-3.0-or-later
+-->
 <script setup lang="ts">
 /*
  * One machine, its features as rows: a fridge with its ice maker, its Ice Bites and its power cool

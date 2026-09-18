@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """A bridge on the cable, without a bridge or a cable.
 
 The machine is what the panel draws (app/src/BridgeSheet.vue), so what these hold is the sequence

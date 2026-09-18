@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Run from brain/: .venv/bin/python -m unittest tests.test_provision -v"""
 import unittest
 from unittest.mock import patch

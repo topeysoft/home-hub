@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Census of Brilliant switches, sorted by signal and grouped by network.
 
 Tells you at a glance which switches are still captive to the dead Brilliant

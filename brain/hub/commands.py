@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Plain words into the house's own moves, with no model in the way.
 
 The command box on Home (and, later, a microphone) hands every sentence here first. A fixed grammar over the

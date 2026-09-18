@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Run from brain/: .venv/bin/python -m unittest -v. Which route answers which path; the app is imported, no server runs."""
 import unittest, warnings
 from starlette.routing import Match

@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* The face, in the browser that is actually served the panel.
 
    This file exists because of one specific way a face can be entirely correct in the source and

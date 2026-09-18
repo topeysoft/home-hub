@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /*
  * The conversions, and three of them are INVERSIONS -- the ways this bridge would most quietly ship a
  * blind that opens when it should close, a thermostat reading 22 when the house said 71, or a door

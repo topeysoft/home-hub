@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { proxyFor } from './dev-proxy.js'   // .js, not .ts: node16 resolution wants the emitted name

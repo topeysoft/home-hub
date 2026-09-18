@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* The code on the settings, and the one chance to type it.
 
    This is the loop between the panel and the door: a request goes out, the house says "code", the

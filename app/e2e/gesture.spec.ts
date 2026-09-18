@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* The gesture has two jobs and they must not collide: a tap controls the device, a hold opens it
    and controls nothing. The failure mode is silent — a lamp that switches off on its way into its
    detail — so nothing but a test in a real browser catches it. */

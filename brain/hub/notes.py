@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """What changed, in words a household reads.
 
 One file per release in `releases/`, written by hand, checked by `tools/release-manifest.py` and

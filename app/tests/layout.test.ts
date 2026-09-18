@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* How Home is arranged. The house keeps one answer; a screen running an older panel must not be
    able to put the house into an arrangement it has never heard of. */
 import { describe, expect, it } from 'vitest'

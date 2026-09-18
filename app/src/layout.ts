@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /*
  * How Home is arranged. A house picks one; adding another means adding an entry
  * here and a component for it, not editing the ones that already work.

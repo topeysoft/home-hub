@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 import logging, os, uvicorn
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")

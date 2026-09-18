@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /*
  * The house, ranked: what order the Rooms tab puts the rooms in, and how much
  * of the screen each one gets. Drawn first as design/rooms/Main.dc.html.

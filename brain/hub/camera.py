@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Live video for the viewer.
 
 Two ways, best first. WebRTC: the panel's offer and HA's answer cross here, then the browser and

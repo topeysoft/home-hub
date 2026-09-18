@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """What this house will and will not hand to somebody else's assistant: docs/matter.md.
 
 The bridge publishes the list it is handed, so this file is where the decisions of 17 September 2026

@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* The Rooms tab's arrangement: what order the house is read in, and which room
    is allowed to be big. These come out as the shape of a wall panel, so the
    first test is the one that matters -- the mock house has to land exactly

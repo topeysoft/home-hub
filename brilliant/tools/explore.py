@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Open up everything the Brilliant switch can tell us.
 
   1. bind our AppKey to the vendor model (0x0820 / 0x0001) and to OnOff + Level

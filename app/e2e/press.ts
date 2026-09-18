@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* Holding something, without betting on a wall clock.
  *
  * `hold.ts` opens a pane after HOLD = 420ms. A test that presses for 520 and expects a hold has

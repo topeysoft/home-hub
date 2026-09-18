@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* Words for what the house did on its own. Everything here is rendered from the event log and rules.json; no model. */
 import type { Event, Room, Routine } from './api'
 import { store, LABELS, deviceById, routineById, cap } from './store'

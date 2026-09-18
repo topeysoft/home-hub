@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* Holding a card open. The home behind it has to actually recede — that is what makes the opened
    device read as being in front of the house rather than on top of it. A settled screenshot cannot
    tell you whether it moved, only where it ended up, so this reads the transform as it happens. */

@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Append-only event log. The assistant explains from this; nothing executes from it."""
 import sqlite3, time, json, threading
 

@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* A phone at the door.
 
    The panel has always ranked this above everything else it can tell a person -- App.vue wakes the

@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """What is coming, turned into numbers.
 
 Two things worth keeping apart: the SHAPING, which is all the rules about HA's rows and takes no

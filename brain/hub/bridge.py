@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """A bridge puck on the hub's cable, and the bridges the house already has.
 
 A bridge is a small thing on a USB charger that brings in devices the hub has no radio of its own

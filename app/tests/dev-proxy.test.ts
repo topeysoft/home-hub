@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* The dev server has to split paths between the brain and the panel the same way production does.
    This list was maintained by hand and had gone stale: nine paths the panel calls fell through to
    Vite, which answered them with index.html, so those screens worked everywhere except in

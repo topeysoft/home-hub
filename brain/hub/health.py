@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Health in plain words. The facts are already in the house: which devices have gone quiet and since when
 (the event log), how full the hub's storage is, which driver parts want attention, whether the last update
 finished. This turns them into a short list for one quiet place on the panel.

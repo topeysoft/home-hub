@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 # The hub's first boot, for a box that was flashed rather than installed: the Home Hub image for a
 # Pi, or any machine where someone dropped this unit in. Runs once (home-hub-firstboot.service),
 # leaves a mark, and never runs again. Everything Pi-specific lives here, not in install.sh, so the

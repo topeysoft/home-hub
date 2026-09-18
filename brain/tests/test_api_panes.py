@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """The controls a device's own pane needs, which the room's tiles never asked for: a blind put where
 you want it and stopped on the way, a fan at a speed, a mower sent out and called back, and a plug
 that switches itself off again.

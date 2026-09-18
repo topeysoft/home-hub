@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Two switches, one light, with no mesh and no broker.
 
 What these hold is the behaviour a person at the bottom of the stairs would notice, and the four

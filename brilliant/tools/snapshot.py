@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Read every vendor field, twice, and diff -- to find the state that moves.
 
 We can now read the switch's whole configuration/state store over the vendor

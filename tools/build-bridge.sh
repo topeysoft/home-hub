@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 # The bridge puck's shipped image, as one file the hub can flash at 0x0.
 #
 #   tools/build-bridge.sh            build esp32s3-ship and merge it into releases/bridge/

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Poll a live panel switch's vendor fields and print what changes -- to find PIR.
 
 We hold the panel's netkey + appkey, and we watched the panel itself read this

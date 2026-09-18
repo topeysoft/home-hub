@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* The words the house uses for what it did on its own.
 
    Every string here ends up on a wall in someone's kitchen, so these tests read the sentences rather

@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Sharing the house outward: what a Matter bridge may publish, and what it is told about each thing.
 
 `docs/matter.md`. The rules live here and not in the bridge, because the bridge publishes the list it

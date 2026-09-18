@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* A card leaving the Home row, on the two clocks it actually runs on: timeouts that keep firing
    while the screen is off, and animation frames that do not. The frames here are a queue that is
    only ever flushed by hand, which is what a screen that is off looks like from the inside. */

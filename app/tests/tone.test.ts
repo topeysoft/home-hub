@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* What colour a card is, given what the sky is doing.
 
    tone.ts states its own law at the top of the file: a card is never given an absolute colour, only

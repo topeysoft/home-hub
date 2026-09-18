@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Where the sun is, from the clock and the home's location. A port of app/src/sun.ts: no network, no HA.
 
 HA's own sun.sun needs a location the engine may not have, and the panel already does this math

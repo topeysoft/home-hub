@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* New devices reaches every device it is listing.
  *
  * What made this a spec: this screen borrows `.room` for its shell, so it inherited the rule that

@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* The instrument in an opened device: what each kind is given to work with, and what the house is
    actually told when a hand uses it.
  *

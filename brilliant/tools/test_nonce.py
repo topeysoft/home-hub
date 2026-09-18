@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Prove the application nonce is built correctly, for the cases that used to fail.
 
 `explore.try_decrypt` once built the nonce with our own address as the

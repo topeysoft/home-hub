@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """A brain to make requests against, with no engine behind it and nothing on disk that outlives the test.
 
 The routes in hub/api.py reach for one module-level `hub`, so a test gets its own by building a Hub

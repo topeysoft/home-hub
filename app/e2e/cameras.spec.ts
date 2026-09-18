@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* The Cameras tab fits on the screen it is on.
  *
  * What made this a spec: the tab was a grid that wrapped downwards inside a stage that scrolled,

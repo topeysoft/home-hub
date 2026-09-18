@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """The forecast, which the weather state does not carry.
 
 Home Assistant took the `forecast` attribute off weather entities in 2024.4. What

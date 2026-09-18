@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Regenerate tests/sun-positions.json, the table both sun implementations are held to.
 
 Run from brain/: .venv/bin/python tests/make_sun_positions.py

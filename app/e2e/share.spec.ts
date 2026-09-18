@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* Share this house: what Apple Home, Google Home and Alexa are allowed to see. docs/matter.md.
  *
  * The screen is mostly one switch, and the tests are about what the switch is guarding rather than

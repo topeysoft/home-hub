@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* Where a spoken sentence comes from -- and nothing whatever about what it means.
  *
  * `docs/voice.md` settled on 14 September 2026 that the wall's words are recognised on the hub

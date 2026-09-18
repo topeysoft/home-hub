@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """A code on the settings.
 
 Controlling the house never needs it: lights, scenes, doors work from the wall for anyone. Changing

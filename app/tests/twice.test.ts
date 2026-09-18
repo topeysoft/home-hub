@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* The two things the panel asks twice about, and why there are only two.
 
    Almost everything here happens on one tap and that is the product: a tile is a switch on a wall,

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 # Applies an update the panel asked for, and undoes one that does not come back.
 #
 # home-hub-update.path starts this the moment brain-data/update.request appears. install.sh does the

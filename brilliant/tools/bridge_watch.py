@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Watch what the bridge tells the broker, one line per change, per switch.
 
     python3 tools/bridge_watch.py [broker-host] [seconds]

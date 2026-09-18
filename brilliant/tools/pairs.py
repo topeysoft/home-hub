@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Read the whole house's multi-way wiring off the mesh, without touching anything.
 
 A two-way switch stores its partner's unicast address in vendor field 0x08, and

@@ -1,3 +1,7 @@
+<!--
+  SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+  SPDX-License-Identifier: AGPL-3.0-or-later
+-->
 <script setup lang="ts">
 /* A phone on the Wi‑Fi asked to join. The deciding happens in AskPane.vue, which rises on its own
    the moment a knock arrives; this is what is left in the band once somebody has put that pane

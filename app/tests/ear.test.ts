@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* Where a spoken sentence comes from.
 
    Nothing in any house can listen yet -- docs/voice.md left the wall's words to the hub and a

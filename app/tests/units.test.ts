@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* A switch with a motion sensor built in is one thing on the wall: docs/units.md, units.ts. */
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Device, Room } from '../src/api'

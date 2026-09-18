@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """The assistant: it writes and explains, and never runs anything.
 
 Two jobs. Authoring turns a sentence ("when I leave, everything off") into a rule in the vocabulary of

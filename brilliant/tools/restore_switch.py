@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Move a Brilliant switch off the console onto our own network, dimming intact.
 
 Tonight's recipe, made repeatable. A factory reset strips the dimmer/motion

@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* Every instrument in an opened device, used with a finger.
  *
  * A mouse pass proves less than it looks like here: these controls are dragged, and a drag on a

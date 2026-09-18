@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Stream the bridge's serial output (no TTY required).
 
     monitor.py [port] [seconds] [--no-reset]

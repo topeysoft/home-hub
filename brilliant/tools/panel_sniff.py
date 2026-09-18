@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Listen to the live Brilliant panel mesh with the captured netkey.
 
 We provisioned an ESP32 into the panel's network and it handed over the netkey

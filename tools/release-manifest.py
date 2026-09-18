@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Build the signed record of what a release actually is.
 
 A hub's answer to "what may run as root in this house" used to be "whatever the newest v* tag points

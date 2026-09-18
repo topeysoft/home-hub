@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Updates that explain themselves.
 
 The brain knows which build it is (baked into its image by CI), asks GitHub now and then whether

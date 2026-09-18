@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 import asyncio, sys
 sys.path.insert(0, "/private/tmp/claude-501/-Users-temi-dev-home-hub/4218b043-2dd5-498e-8d59-3e2222904350/scratchpad")
 import onoff as O, mesh

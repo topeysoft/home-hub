@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """What a thing IS, when the house has it wrong: docs/kinds.md.
 
 A lamp on a smart plug is a switch as far as the driver is concerned, and Home Assistant is not wrong --

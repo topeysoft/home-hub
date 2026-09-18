@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Read the switch's state without changing it, before and after a hand touch.
 
 This exists because nothing else in `tools/` can read state without writing it.

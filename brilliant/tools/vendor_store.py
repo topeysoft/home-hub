@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Read a switch's whole vendor store (every field that answers) to a JSON file.
 
 Works on either network: point BRILLIANT_MESH_STORE at the panel keys to read

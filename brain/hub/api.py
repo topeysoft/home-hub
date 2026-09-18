@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 import asyncio, json, logging, shutil, time, urllib.parse, urllib.request
 from contextlib import asynccontextmanager
 from datetime import datetime

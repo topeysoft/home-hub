@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 # Signing a release, which is the step that decides what may run as root in somebody's house.
 #
 #   tools/release.sh --new-key        make the keypair, once, ever

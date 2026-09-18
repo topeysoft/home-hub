@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* What the house will do next on its own. The line reads "Next: Porch light, 7:12 PM", so being an
    hour out is worse than saying nothing. */
 import { beforeEach, describe, expect, it } from 'vitest'

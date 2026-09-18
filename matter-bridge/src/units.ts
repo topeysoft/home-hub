@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /**
  * EVERY conversion between the house's way of saying a thing and Matter's lives here, together, and
  * nothing above this line thinks in Matter's units. Each one of these is a way to ship a blind that

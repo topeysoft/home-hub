@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 # Put a recording into the repo's sounds folder in the shape the hub wants, and optionally onto a hub right now.
 #
 #   tools/add-sound.sh ~/Downloads/heavy-rain-loop.wav --name rain --from https://freesound.org/s/12345/ --license CC0 --by someone

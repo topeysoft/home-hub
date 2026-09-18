@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Bringing a fresh engine up without anyone seeing it.
 
 This is the out-of-the-box path: a person plugs the hub in, types their name, and everything HA

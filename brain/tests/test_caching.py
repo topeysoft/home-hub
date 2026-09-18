@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Run from brain/: .venv/bin/python -m unittest -v.
 
 What a phone is allowed to keep. A home screen app on iOS keeps its own copy, in its own store,

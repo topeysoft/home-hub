@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /** The JSON a maker's developer console hands out with an OAuth client. Google's is one object under
  *  "web" (a Web application client) or "installed" (a desktop one) holding the client ID, the secret,
  *  the Cloud project ID and the redirect addresses it was created with. Parsed in the browser only;

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 # One-line install on any fresh Linux box: a Raspberry Pi 5, an Intel NUC, a VM, anything running
 # Debian, Ubuntu, Raspberry Pi OS or Fedora with systemd:
 #   curl -fsSL https://raw.githubusercontent.com/topeysoft/home-hub/main/install.sh | sudo bash

@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* Every screen a person will see, opened at a fixed hour against the same house.
 
    Not a picture test — it asserts the things that are true of a screen whether or not it looks

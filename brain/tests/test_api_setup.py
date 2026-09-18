@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """First run: a hub out of its box, and the screens that bring the engine up.
 
 Nobody doing this has read anything. Every step has to say what happened in words, and a step that

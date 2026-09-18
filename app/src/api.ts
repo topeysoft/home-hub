@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { request } from './code'
 /* `capability` is the driver's word for what this is and it picks the Home Assistant service; `kind` is
    the owner's, where they have given one. Read the two together through cap() in store.ts, never the raw

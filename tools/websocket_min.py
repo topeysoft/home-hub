@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Minimal HA websocket client for one call, no third-party packages."""
 import base64, json, os, socket, struct, urllib.parse
 

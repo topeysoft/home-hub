@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Command a live panel switch with the captured keys: prove we can control it.
 
 We can read the panel's switches; this proves we can drive them too, over BLE

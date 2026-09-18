@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Bind an AppKey and drive a provisioned Brilliant switch with stock SIG models.
 
   Config AppKey Add      -> node learns our AppKey

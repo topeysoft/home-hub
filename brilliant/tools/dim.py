@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Why won't it dim? Ask the node instead of guessing.
 
 On/off works and this switch demonstrably dimmed on Brilliant's own network, so

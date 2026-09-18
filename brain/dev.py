@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """The hub, current: one command that always leaves you running the code you just wrote.
 
 `npm run brain` from the panel's directory, or `.venv/bin/python dev.py` from here.

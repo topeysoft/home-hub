@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* A camera whose picture is still on its way -- full screen, and in the sheet a hold opens on Home.
  *
  * The still is instant and a stream is not. `live.ts` gives an attempt WAIT = 12s before giving up on

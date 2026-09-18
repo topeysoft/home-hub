@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Saying something about releases right now, without cutting another one.
 
 A release manifest is signed once and never changes, which is right for "what is v0.3.1" and useless

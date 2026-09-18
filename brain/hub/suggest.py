@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Names and rooms for the things that have not been placed yet.
 
 New devices arrive called whatever their maker called them: "TP-LINK Kasa KL125 Bulb", "lumi.sensor_motion.aq2",

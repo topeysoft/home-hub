@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* The device drawings.
 
    art.ts states the rule at the top: what a device is made of takes the ambient, what it emits

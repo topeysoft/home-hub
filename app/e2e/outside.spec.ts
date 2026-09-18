@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* The weather, opened.
  *
  * The lozenge was scenery and is now the one piece of scenery that answers a finger, so most of

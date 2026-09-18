@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Bringing a fresh Home Assistant up without anyone seeing it.
 
 Plain HTTP against HA's onboarding and auth endpoints. The brain creates the owner account itself,

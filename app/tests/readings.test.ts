@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* Sensors are read, not tapped. One line above a room's tiles, so the words have to be short and right. */
 import { describe, expect, it } from 'vitest'
 import type { Device, Room } from '../src/api'

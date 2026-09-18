@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /*
  * A person's face on the panel: their initials on a colour of their own. The
  * colour goes by their place in the household, so the same person reads the

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Seed the device inventory from what the LAN advertises right now.
 
 Runs on macOS (uses /usr/bin/dns-sd) with no third-party packages.

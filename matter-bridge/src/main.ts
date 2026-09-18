@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /**
  * The house, published as one Matter bridge: docs/matter.md, piece 1.
  *

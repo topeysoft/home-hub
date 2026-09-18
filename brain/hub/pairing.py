@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Pairing a radio device from the panel.
 
 One session at a time. Zigbee opens Zigbee2MQTT's join window over MQTT and listens to its bridge

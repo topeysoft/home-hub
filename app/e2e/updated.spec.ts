@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* After an update the hub comes back on a new build, and the page has to come with it: until it
  * reloads, the wall is last week's panel talking to this week's brain, and nothing on the glass says
  * so. What is under test is that the page reloads by itself when the hub answers with a different

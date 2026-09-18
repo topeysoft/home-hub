@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Backup and restore: the house's settings and the driver layer's state as one file the panel can hand you,
 and take back.
 

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """The maker's public keys, as a header a puck can be built with.
 
     tools/puck-keys.py            regenerate brilliant/esp32-bridge/src/release_keys.h

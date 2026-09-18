@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* One feel, and a screen that arranges itself.
 
    Two rules carry this file, and both were learned the hard way.

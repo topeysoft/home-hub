@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Talk to a bridge puck over its USB cable: the hub's side of esp32-bridge/src/config.h.
 
     puck_cable.py <port> hello                       who is this, and is it blank

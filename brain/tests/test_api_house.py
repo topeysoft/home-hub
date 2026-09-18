@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """The routes the panel leans on every second it is open: what the house is, and what a tap does to it.
 
 Run from brain/: .venv/bin/python -m unittest -v

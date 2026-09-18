@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 # What the maker is saying about releases right now, as against what a release is.
 #
 # A release manifest is signed once and never changes, which is exactly right for "what is v0.3.1"
