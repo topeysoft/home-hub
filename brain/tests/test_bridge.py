@@ -10,6 +10,7 @@ have a sentence for the wall: unplugged halfway, a hub with no Wi‑Fi to give.
 import asyncio, json, tempfile, unittest
 from pathlib import Path
 
+from hub import bridge as bridge_mod
 from hub.bridge import Bridges
 from hub.settings import Settings
 
@@ -33,8 +34,16 @@ class FakeCable:
 
 
 class FakeHA:
-    def __init__(self): self.cb = None
+    def __init__(self): self.cb = None; self.published = []; self.answer = None
     async def subscribe(self, type_, cb, **kw): self.cb = cb; return 1
+    async def call(self, domain, service, target, **kw):
+        self.published.append((kw.get("topic"), kw.get("payload")))
+        # A puck that answers. `answer` is (leaf, payload); None is a puck that
+        # heard the command and said nothing, which is a real failure mode.
+        if self.answer and self.cb:
+            leaf, payload = self.answer
+            chip = kw["topic"].split("/")[2]
+            self.cb({"topic": f"mesh/bridge/{chip}/{leaf}", "payload": payload})
 
 
 class FakeLog:
@@ -251,3 +260,123 @@ class TheJob(Knocking):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class LettingASwitchIn(unittest.TestCase):
+    """The hub's half of claiming: which puck, which address, and what is said.
+
+    The radio work is the puck's (brilliant/esp32-bridge/src/claim.cpp) and is not
+    here. What is here is the part that can put a switch on the wrong network or
+    hand out an address twice, and the wording a person actually reads."""
+
+    def bridges(self, tmp, *, ours=True, online=True):
+        hub = FakeHub(tmp)
+        b = Bridges(hub, FakeCable())
+        hub.ha.cb = b._on_mqtt          # what listen() does in the real thing
+        b.pucks["c8ebba"] = {"online": online}
+        if ours:
+            hub.settings.set(bridges={"c8ebba": {"since": 0, "fw": "0.2.1"}})
+        return hub, b
+
+    def test_refuses_a_puck_the_hub_did_not_set_up(self):
+        """A puck the hub never gave keys to is very likely carrying somebody else's
+        mesh, and claiming into that is unrecoverable without a reset."""
+        with tempfile.TemporaryDirectory() as tmp:
+            hub, b = self.bridges(tmp, ours=False)
+            self.assertIsNone(b._our_puck())
+            with self.assertRaises(ValueError):
+                run(b._ask("survey", "nearby", 0.1))
+
+    def test_an_offline_puck_is_not_asked(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            hub, b = self.bridges(tmp, online=False)
+            self.assertIsNone(b._our_puck())
+
+    def test_addresses_are_never_handed_out_twice(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            hub, b = self.bridges(tmp)
+            got = [b._next_addr() for _ in range(3)]
+            self.assertEqual(len(set(got)), 3)
+            self.assertEqual(got, sorted(got))
+            # and it survives a restart, because the counter lives beside the keys
+            b2 = Bridges(hub, FakeCable())
+            self.assertGreater(b2._next_addr(), got[-1])
+
+    def test_it_keeps_clear_of_the_puck_and_the_laptop(self):
+        """0x7000 up is the puck's own block and the laptop tools sit at 0x0001 and
+        0x001a. Two senders on one address trip the switches' replay protection."""
+        with tempfile.TemporaryDirectory() as tmp:
+            hub, b = self.bridges(tmp)
+            a = b._next_addr()
+            self.assertGreater(a, 0x001a)
+            self.assertLess(a, 0x7000)
+
+    def test_a_waiting_switch_is_counted_in_words(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            hub, b = self.bridges(tmp)
+            hub.ha.answer = ("nearby", json.dumps([
+                {"state": "unclaimed", "rssi": -50, "addr": "aa", "uuid": "00" * 16},
+                {"state": "ours", "rssi": -60, "addr": "bb", "net": "11" * 8}]))
+            out = run(b.nearby())
+            self.assertEqual(out["state"], "done")
+            self.assertEqual(len(out["waiting"]), 1)
+            self.assertIn("One switch is waiting", out["text"])
+
+    def test_nothing_waiting_but_one_is_spoken_for(self):
+        """The case the Waiting board draws: a scan for claimable switches finds
+        nothing, which looks identical to an empty room and wants the opposite
+        thing said."""
+        with tempfile.TemporaryDirectory() as tmp:
+            hub, b = self.bridges(tmp)
+            hub.ha.answer = ("nearby", json.dumps([
+                {"state": "other", "rssi": -55, "addr": "cc", "net": "22" * 8}]))
+            out = run(b.nearby())
+            self.assertEqual(out["waiting"], [])
+            self.assertIn("started over", out["text"])
+
+    def test_an_empty_room_says_so_plainly(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            hub, b = self.bridges(tmp)
+            hub.ha.answer = ("nearby", json.dumps([]))
+            self.assertIn("Nothing nearby", run(b.nearby())["text"])
+
+    def test_a_puck_that_says_nothing_is_not_a_success(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            hub, b = self.bridges(tmp)
+            hub.ha.answer = None
+            was, bridge_mod.SURVEY_WAIT = bridge_mod.SURVEY_WAIT, 0.3
+            try: out = run(b.nearby())
+            finally: bridge_mod.SURVEY_WAIT = was
+            self.assertEqual(out["state"], "failed")
+            self.assertIn("did not answer", out["text"])
+
+    def test_the_code_travels_with_the_command(self):
+        """A QR add must carry the secret, or the switch is asked to prove nothing."""
+        with tempfile.TemporaryDirectory() as tmp:
+            hub, b = self.bridges(tmp)
+            hub.ha.answer = ("claimed", json.dumps({"ok": True, "unicast": "0020",
+                                                    "elements": 1, "devkey": "ab" * 16}))
+            out = run(b.let_in("aa" * 16, "bb" * 16))
+            self.assertEqual(out["state"], "done")
+            topic, payload = hub.ha.published[-1]
+            self.assertTrue(payload.startswith("add "))
+            self.assertTrue(payload.endswith("bb" * 16))
+            self.assertEqual(out["devkey"], "ab" * 16)
+
+    def test_a_codeless_add_carries_no_secret(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            hub, b = self.bridges(tmp)
+            hub.ha.answer = ("claimed", json.dumps({"ok": True, "unicast": "0020",
+                                                    "elements": 1, "devkey": "cd" * 16}))
+            run(b.let_in("aa" * 16))
+            _, payload = hub.ha.published[-1]
+            self.assertEqual(len(payload.split()), 3)      # add, uuid, address -- nothing else
+
+    def test_a_refusal_is_repeated_in_the_words_it_came_with(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            hub, b = self.bridges(tmp)
+            hub.ha.answer = ("claimed", json.dumps(
+                {"ok": False, "why": "it could not prove it holds that code"}))
+            out = run(b.let_in("aa" * 16, "bb" * 16))
+            self.assertEqual(out["state"], "failed")
+            self.assertIn("prove", out["text"])

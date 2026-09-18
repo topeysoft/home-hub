@@ -50,7 +50,7 @@ SERVICE_HEADER = "x-hub-service"   # how the Matter bridge says it is the Matter
 # are what a feel resolves to, written out beside it so a panel that predates
 # feels still finds a face and a tone it understands. "auto" means the screen
 # arranges itself, which is what a phone and a wall have always needed and never
-# had; any other value there is somebody's deliberate answer under Customise, so
+# had; any other value there is somebody's deliberate answer under Customize, so
 # a house that set its look by hand before feels existed keeps exactly what it
 # chose. "face" was missing from this list, which quietly dropped every Glass a
 # panel ever sent: the panel showed it, the house never kept it.
@@ -65,7 +65,7 @@ def unit_system_for(tz: str) -> str:
 
 
 def qr_svg_bytes(text: str) -> bytes:
-    """A QR code as SVG paths in the panel's colours; the panel puts it on a light card."""
+    """A QR code as SVG paths in the panel's colors; the panel puts it on a light card."""
     import io, qrcode
     from qrcode.image.svg import SvgPathImage
     q = qrcode.QRCode(box_size=10, border=2, error_correction=qrcode.constants.ERROR_CORRECT_M, image_factory=SvgPathImage)
@@ -1103,11 +1103,47 @@ async def bridge_placed():
 
 @app.post("/bridge/switches")
 async def bridge_switch(body: dict):
-    """Letting a factory-fresh switch in needs the puck to act as a provisioner, which it cannot yet
-    (brilliant/STATUS.md, "Own keys later"). The route exists so the phone's scan has somewhere honest
-    to land rather than a 404 that reads as a broken house."""
+    """Let a switch in, with the code from its back or without it.
+
+    `code` is the whole 32-hex QR: sixteen bytes of Device UUID then sixteen of the secret it must
+    prove it holds. `uuid` alone is the codeless route, for a switch already screwed to a wall with
+    its code facing the plasterboard -- the mesh never required the secret, and every switch on this
+    house's network was claimed without one. What the code buys is knowing WHICH switch, which is
+    why a codeless add should follow a blink somebody watched."""
     hub.ready()
-    raise HTTPException(501, "This house cannot let a new switch in yet. The ones that came with it are all here; adding one is coming.")
+    code = str(body.get("code") or "").strip().lower()
+    uuid = str(body.get("uuid") or "").strip().lower()
+    oob = None
+    if code:
+        if len(code) != 64 or any(c not in "0123456789abcdef" for c in code):
+            raise HTTPException(400, "That does not look like a switch's code.")
+        uuid, oob = code[:32], code[32:]
+    if len(uuid) != 32 or any(c not in "0123456789abcdef" for c in uuid):
+        raise HTTPException(400, "No switch was named.")
+    try:
+        return await hub.bridge.let_in(uuid, oob)
+    except ValueError as e:
+        raise HTTPException(409, str(e))
+
+
+@app.get("/bridge/nearby")
+async def bridge_nearby():
+    """What the bridge can hear that is not on the house yet, and what is nearby but spoken for."""
+    hub.ready()
+    try: return await hub.bridge.nearby()
+    except ValueError as e: raise HTTPException(409, str(e))
+
+
+@app.post("/bridge/blink")
+async def bridge_blink(body: dict):
+    """Make one waiting switch announce itself. Without a code this is the only thing that can tell
+    the switch somebody touched from any other unclaimed one in radio range."""
+    hub.ready()
+    uuid = str(body.get("uuid") or "").strip().lower()
+    if len(uuid) != 32:
+        raise HTTPException(400, "No switch was named.")
+    try: return await hub.bridge.blink(uuid, int(body.get("seconds") or 5))
+    except ValueError as e: raise HTTPException(409, str(e))
 
 
 @app.get("/bridge/links")
@@ -1373,7 +1409,7 @@ async def device_stream(device_id: str):
 
 @app.websocket("/devices/{device_id}/webrtc")
 async def device_webrtc(ws: WebSocket, device_id: str):
-    """WebRTC signalling for one viewer: see hub/camera.py for the messages."""
+    """WebRTC signaling for one viewer: see hub/camera.py for the messages."""
     await ws.accept()
     dev = hub.home.devices.get(device_id) if hub.driver == "ready" else None
     if not dev or dev.capability != "camera":
