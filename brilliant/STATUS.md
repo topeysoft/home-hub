@@ -265,10 +265,34 @@ OFF on command, each confirmed by its own Status inside a second, with nothing e
 moving. The bench that does this runs the real `Relay` class from a Mac against the live hub broker over
 ssh, so a press can be proven with nothing deployed.
 
-**Still open, and both are physical:** `0x0011` is only circumstantially the stairway load and wants a
-human at the lamp to confirm it; and `f4a9f3` sits at −90 dBm, below where BLE mesh GATT stops
-completing. A relay proven on a marginal link proves the wrong thing — move that puck into range of any
-one panel switch first, since they relay for each other.
+**And then the relay was switched off, which is the right ending.** Both of the things left open above
+were settled the same evening — a human at the lamp confirmed `0x0011` was the stairway load, and the
+puck was moved to −75 dBm — and the relay then carried a simulated press across both networks in under a
+second. But the user named the actual requirement: *a two-way pair must keep working with the hub off.*
+A relay cannot satisfy that, by construction. So the stairway load was migrated onto the house's own
+network (it is `0x0006` there now) and paired to its companion directly, and the hub's link was disabled
+rather than left firing at a switch that drives itself.
+
+```
+19:55:30  0x0004 -> 0x0006  vendor 0403          the companion presses
+19:55:30  0x0006 state ON                         the load turns on
+19:55:30  0x0006 -> 0xffff  sig 0x008204 "01"     the main announces to everyone
+```
+
+That is the shape to build on: **the pair talks to itself and the hub watches from the side.** The main
+broadcasts its state to all-nodes, so the hub learns the outcome without standing in the path — which is
+both more robust than overhearing a press and true whichever end was touched. `relay.py` keeps a real but
+narrow job: a pair split across two networks during migration, and pairs we cannot write. A same-network
+pair must never depend on it. The disabled link is kept in `/data/switch-links.json` as the record.
+
+**The hub's view of a mesh is one node wide, and that is a structural limit worth knowing.** The puck
+decodes only what its GATT proxy forwards: `handleNetworkPdu` has one caller, fed by a queue filled only
+from the proxy notify path, and the scan reads service data to *choose* a proxy and queues nothing. So a
+puck two feet from a switch hears none of it unless its proxy node does — observed exactly that way in
+the house. The fix is an advertising-bearer listener (mesh PDUs are AD type `0x2A`; the decoder already
+exists), with a low duty cycle, because that radio is shared with Wi-Fi and an aggressive scan is what
+starved MQTT above. `PANEL_NODE` pinning is a compile-time `#define`, not NVS config, so it needs a
+reflash — and nothing maps BLE addresses to unicasts, which makes pinning an expensive way to test this.
 
 **A puck can go silently mute, and this is the signature:** `mqtt=down` with `rssi=0` and
 `light=looking`, Wi-Fi up with an IP, and *no connection attempt at all* in the broker's log. A puck
