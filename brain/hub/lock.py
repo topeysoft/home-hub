@@ -32,6 +32,13 @@ def needs_code(method: str, path: str) -> bool:
     if path in ("/update", "/update/auto") and m == "POST": return True   # changing how the house updates itself is a setting
     if path == "/backup" or (path == "/restore" and m == "POST"): return True   # the archive carries the house's keys
     if path.startswith("/pair") and m != "GET": return True
+    # Adopting a bridge hands a thing somebody just plugged in the house's Wi-Fi, the broker and the
+    # keys to the switches. That is the largest single giveaway on this list -- larger than renaming
+    # a room, which is gated -- and /bridge/wifi is where those Wi-Fi credentials are typed in the
+    # first place. Saying "not mine" and "leave it here" are not here on purpose: refusing a thing
+    # and reporting where it ended up give nothing away, and a code to wave a knock off would leave
+    # one stuck on the screen for whoever could not remember it.
+    if path in ("/bridge/adopt", "/bridge/wifi") and m == "POST": return True
     # Sharing the house with Apple Home, Google Home or Alexa is a change to the house, not a tap on
     # it. The bridge's own routes are not here: they never reach this function, because the service
     # token answered for them before the gate. docs/matter.md.

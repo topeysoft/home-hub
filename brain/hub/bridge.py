@@ -13,7 +13,8 @@ One job at a time, because it is a person holding a thing.
 
     none      nothing to say
     knocking  a puck is on the cable and nobody has said it is theirs. Nothing of the house's has
-              gone anywhere: the code gate on /bridge/adopt is what "nothing has been let in" means
+              gone anywhere: the code gate on /bridge/adopt (hub/lock.py) is what "nothing has been
+              let in" means. Saying it is not yours needs no code -- refusing gives nothing away
     working   `step` is software | wifi | keys, in that order; everything before it is done
     placing   written and restarted; unplugged now, in somebody's hand, looking for a socket. What
               it hears comes back over the broker, which is the only link left
