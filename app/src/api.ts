@@ -113,13 +113,35 @@ export type Bridge = {
   bridges?: number                         // how many are set up and working, job or no job
   needs?: 'wifi'                           // failed because the hub has nothing to give: a hub on a cable does not know the house's Wi-Fi until told once
 }
-/* Letting a NEW switch in. A factory-fresh one will not join without the secret printed on its back,
-   which is the mesh's own rule and not ours -- so the code has to be read off the thing itself, with
-   a camera, and the wall panel has not got one. `code` is whatever the camera read, sent whole: the
-   panel does not parse it, because what is in it is the bridge's business and it changes per maker.
-   design/puck/Switch.dc.html (the wall hands over) and Scan.dc.html (the phone reads it). */
+/* Letting a NEW switch in, two ways, because a switch arrives in a hand or already screwed to a wall.
+
+   WITH THE CODE on its back: `code` is whatever the camera read, sent whole -- the panel does not parse
+   it, because what is in it is the bridge's business and changes per maker. A camera is the only way to
+   read one and the wall panel has not got one, which is the whole of design/puck/Switch.dc.html (the
+   wall hands over) and Scan.dc.html (the phone reads it).
+
+   WITHOUT IT, because the code is behind the plate: the mesh never required that secret -- it is offered
+   by these switches, not demanded. What the code really buys is knowing WHICH switch, so the codeless
+   route has to prove that another way: ask the house what is waiting, make one of them announce itself,
+   and let a person say whether the blinking one is the switch they just touched. No camera in any of it,
+   so the wall can run the whole job on its own (design/puck/Held.dc.html and Waiting.dc.html). */
 export type Letting = { state: 'working' | 'done' | 'failed'; text?: string; device_id?: string; name?: string }
 export const addSwitch = (code: string) => post<Letting>('/bridge/switches', { code })
+export const letSwitchIn = (uuid: string) => post<Letting>('/bridge/switches', { uuid })
+
+/* One switch the bridge can hear. `state` is whose side it is on, and it decides what can be said:
+     unclaimed  nobody owns it -- ready as it stands, whether it is fresh out of a box or just reset
+     ours       already on this house, living under its light; nothing to do here
+     other      on somebody else's network. THE one case where it has to be started over first */
+export type Waiting = { state: 'unclaimed' | 'ours' | 'other'; rssi: number; addr: string; uuid?: string; net?: string }
+export type Nearby = { state: 'done' | 'failed'; text?: string; waiting?: Waiting[]; claimed_elsewhere?: Waiting[] }
+export async function nearbySwitches(): Promise<Nearby> {
+  const r = await request('/bridge/nearby'); if (!r.ok) await fail(r); return r.json()
+}
+/* Make one announce itself. Without a code this is the ONLY thing that tells the switch somebody
+   touched from any other unclaimed one in radio range, so a failure here is not cosmetic: it means
+   the next question cannot honestly be asked. */
+export const blinkSwitch = (uuid: string, seconds = 5) => post<{ state: string; text?: string }>('/bridge/blink', { uuid, seconds })
 export const BRIDGE_STEPS = ['software', 'wifi', 'keys'] as const
 export async function getBridge(): Promise<Bridge> { const r = await request('/bridge'); if (!r.ok) await fail(r); return r.json() }
 /** Yes, that one is mine. The keys only go anywhere after this. */

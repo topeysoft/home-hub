@@ -7,6 +7,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { addSwitch, qrUrl, moveDevice, type Letting } from './api'
 import { store, notify } from './store'
 import Icon from './Icon.vue'
+import AddNearby from './AddNearby.vue'
 
 /*
  * Letting a new wall switch in.
@@ -28,6 +29,12 @@ import Icon from './Icon.vue'
  * design/puck/Switch.dc.html and design/puck/Scan.dc.html.
  */
 const emit = defineEmits<{ close: [] }>()
+
+/* Which way in. The code on the back is quicker when it can be reached, and it cannot when the switch
+   is already screwed to a wall -- so this is a fork and not a fallback, and the codeless side is the
+   one that needs no camera at all. A phone that can scan starts on the camera because it was almost
+   certainly opened by somebody holding a switch; the wall, which can do either, asks. */
+const mode = ref<'choose' | 'code' | 'nocode'>('choose')
 
 /* Can this thing read a code at all: a camera to point, something that can decode what it sees, and
    hands to hold it in. The first two are asked of the browser rather than assumed, because the answer
@@ -109,16 +116,42 @@ async function place(id: string) {
 }
 
 const waiting = computed(() => store.bridge?.waiting ?? 0)
-onMounted(async () => { canScan.value = await ableToScan(); if (canScan.value) look() })
+onMounted(async () => {
+  canScan.value = await ableToScan()
+  if (canScan.value) { mode.value = 'code'; look() }
+})
 onUnmounted(stop)
 </script>
 
 <template>
-  <div class="flow add-switch">
+  <!-- NO CODE TO READ MEANS NO CAMERA TO NEED: this half runs anywhere, wall included. It brings its
+       own flow and its own title, so it replaces this one rather than nesting inside it. -->
+  <AddNearby v-if="mode === 'nocode'" @close="emit('close')" @code="mode = 'code'" />
+
+  <div v-else class="flow add-switch">
     <h3 class="flow-title">Add a wall switch</h3>
 
-    <!-- THE WALL. It cannot read the code, so its whole job is getting the phone here. -->
-    <template v-if="!canScan">
+    <!-- THE WALL, asked which way first. It cannot read a code, but it can run the other half itself. -->
+    <template v-if="!canScan && mode === 'choose'">
+      <p class="flow-desc">A switch already on the wall has its code screwed to the back of itself. If you cannot reach it, the house can find the switch another way &mdash; and often there is nothing to do at all.</p>
+      <div class="bridge-row" style="margin-bottom: 10px; cursor: pointer" @click="mode = 'nocode'">
+        <span class="bridge-icon" style="background: var(--lamp); color: var(--lamp-ink)"><Icon name="switch" :size="18" /></span>
+        <span class="bridge-text">
+          <span class="bridge-name">It is already in the wall</span>
+          <span class="bridge-sub">The house listens for it. Nothing to scan, and no phone needed.</span>
+        </span>
+      </div>
+      <div class="bridge-row" style="margin-bottom: 18px; cursor: pointer" @click="mode = 'code'">
+        <span class="bridge-icon"><Icon name="switch" :size="18" /></span>
+        <span class="bridge-text">
+          <span class="bridge-name">I can reach the code</span>
+          <span class="bridge-sub">Quicker, when the switch is in your hand. It opens on your phone.</span>
+        </span>
+      </div>
+      <div class="flow-actions"><button class="button ghost" @click="emit('close')">Not now</button></div>
+    </template>
+
+    <template v-else-if="!canScan">
       <p class="flow-desc" v-if="waiting">The bridge can already see {{ waiting === 1 ? 'one it has never met' : `${waiting} it has never met` }}. Before it lets anything in, it wants the code printed on that switch — the little square of dots on its back, or on the card that came in the box.</p>
       <p class="flow-desc" v-else>A new switch carries a code printed on its back — a little square of dots. The house needs to see that code before it will let the switch in, and this screen has no camera.</p>
 
@@ -152,7 +185,10 @@ onUnmounted(stop)
           <path d="M22 66v8a4 4 0 0 0 4 4h8" /><path d="M78 66v8a4 4 0 0 1-4 4h-8" />
         </svg>
       </div>
-      <div class="flow-actions"><button class="button ghost" @click="stop(); emit('close')">Cancel</button></div>
+      <div class="flow-actions">
+        <button class="button ghost" @click="stop(); mode = 'nocode'">No code on the back?</button>
+        <button class="button ghost" @click="stop(); emit('close')">Cancel</button>
+      </div>
     </template>
 
     <template v-else-if="state === 'letting'">

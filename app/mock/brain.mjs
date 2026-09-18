@@ -406,7 +406,31 @@ const server = http.createServer((req, res) => {
      Wi-Fi, keys, then the walk to find it a socket -- so the sheet can be watched rather than
      described. BRIDGE=knocking|working|placing|ready|failed pins one moment instead. */
   if (p === '/bridge') return json(res, bridgeNow())
-  /* Letting a new switch in: the phone sends whatever its camera read, whole. */
+  /* What the bridge can hear, and whose side each one is on. NEARBY=n sets how many are unclaimed;
+     NEARBY=0 with SPOKEN=1 is the case the Waiting board draws -- nothing to let in, but something
+     nearby that has to be started over first, which looks identical to an empty room to a scan. */
+  if (p === '/bridge/nearby') {
+    const free = Number(process.env.NEARBY ?? 2), spoken = Number(process.env.SPOKEN ?? 0)
+    const one = (i, st) => ({ state: st, rssi: -45 - i * 12, addr: `AA:BB:${10 + i}`,
+                              ...(st === 'unclaimed' ? { uuid: String(i).repeat(32).slice(0, 32) } : { net: 'ab'.repeat(8) }) })
+    const waiting = Array.from({ length: free }, (_, i) => one(i, 'unclaimed'))
+    const other = Array.from({ length: spoken }, (_, i) => one(free + i, 'other'))
+    const text = free === 1 ? 'One switch is waiting to be let in.'
+      : free > 1 ? `${free} switches are waiting to be let in.`
+      : other.length ? 'Nothing is asking to be let in, but there is a switch nearby that is on another network. That one has to be started over first.'
+      : 'Nothing nearby is asking to be let in.'
+    return json(res, { state: 'done', waiting, claimed_elsewhere: other, text })
+  }
+  /* Blinking one of them. BLINK=fail is a switch that cannot be reached, which matters because the
+     blink IS the identity check when there is no code -- a failure means the next question cannot
+     honestly be asked. */
+  if (p === '/bridge/blink' && req.method === 'POST') {
+    return process.env.BLINK === 'fail'
+      ? json(res, { state: 'failed', text: 'The bridge could not reach that switch.' })
+      : json(res, { state: 'done' })
+  }
+  /* Letting a new switch in: the phone sends whatever its camera read, whole, or a bare uuid when
+     the code is behind the plate. */
   if (p === '/bridge/switches' && req.method === 'POST') {
     HAVE.waiting = Math.max(0, HAVE.waiting - 1)
     const d = dev('mesh-new', 'Brilliant switch 0019', 'unassigned', 'light', 'off', { brightness: 0, has_motion: true })
@@ -429,7 +453,7 @@ const server = http.createServer((req, res) => {
   if (/^\/rooms\/[^/]+\/why/.test(p)) return json(res, why)
   if (p === '/suggestions') return json(res, { items: [
     { id: 'u3', name: 'Garage Left Light', room: 'backyard', why: 'the same unit as Walkway Pathlight Light', source: 'house' },
-    { id: 'u1', name: 'Colour lamp', room: 'living', why: 'the same unit as the floor lamp', source: 'assistant' },
+    { id: 'u1', name: 'Color lamp', room: 'living', why: 'the same unit as the floor lamp', source: 'assistant' },
     { id: 'u2', name: 'Plug', room: '', why: 'a plainer name', source: 'house' }], assistant: true })
   if (p === '/phone') return json(res, { ip: '192.168.1.40' })
   if (p === '/phones/me') return json(res, { locked: !!process.env.LOCKED, paired: true, home: 'Main Palace', phone: null })
