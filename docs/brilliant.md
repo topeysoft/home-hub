@@ -912,3 +912,41 @@ it published to a unicast nobody was listening on. Set to `0xffff` now.
 
 **There is no latency floor for pairs we configure.** State arrives as it changes. Polling is only needed for
 switches still on the console's network, whose publication cannot be changed without device keys we do not have.
+
+
+### The companion's press protocol: tap, slide, and a boundary
+
+A companion does not merely report *that* it was touched. It reports *how*. Three commands, all under the
+vendor opcode (`C1 2008`), all unicast to the partner named in field `0x08`:
+
+| Payload | Meaning |
+|---|---|
+| `04 03` | **tap** — the toggle. One per press. |
+| `04 02` + 2 bytes | **slide** — streams continuously while the finger moves |
+| `04 05` | **boundary** — no payload, brackets each slide burst |
+
+**The slide payload is a SIGNED 16-bit little-endian DELTA, not an absolute level.** Captured while sliding
+down and then up: `55ff 5fff 48ff 7aff a1ff d6ff` are −171, −161, −184, −134, −95, −42; `c200 b800 5400 2200`
+are +194, +184, +84, +34. Read as absolute values those are incoherent — every downward one would be 65,000-odd
+on a scale that runs to 1000. Read as relative movement they are exactly a slider reporting how far the finger
+travelled, sign for direction and magnitude tapering as the movement slows.
+
+Thirteen samples, so not settled, but it is trivially falsifiable: a slow slide end to end should give same-sign
+deltas throughout, and reversing direction mid-slide should flip the sign inside one burst.
+
+`04 05` is unexplained. It appears at the start and end of each slide burst and carries nothing — touch-down and
+touch-up, or a gesture boundary. Position is the only evidence.
+
+**Why this matters beyond decoding.** A loadless companion is not a button, it is a controller. Tap, direction
+and travel are enough to run a scene on tap and adjust it on slide, or to dim a group that the switch is not
+wired to. That belongs in the pairing design rather than being discovered after it ships.
+
+### And the load type really does need the boot
+
+Throughout all of that sliding, the migrated load reported only `ON` or `OFF` and never published a brightness.
+It has not been power cycled since its config was written. So of the three settings, the boot requirement lands
+squarely and only on the load type:
+
+- **load type — boot required**, now attested twice;
+- **publication — took effect live** on a freshly provisioned node;
+- **partner address `0x08` — took effect live**.
