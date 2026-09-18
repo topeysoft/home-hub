@@ -698,7 +698,7 @@ as a worked reference:
 | Field | Value | What it appears to be |
 |---|---|---|
 | `0x1b` | `00` | **load type candidate** — `00` on both dimmers seen, `03` on the unit stuck in on/off mode |
-| `0x56` | `03` | **load type candidate** — `03` on the dimmer, `02` on the unit stuck in on/off mode |
+| `0x56` | `03` | **NOT the load type** — see below; `03` reads on both a dimming and a non-dimming switch |
 | `0x1a` | `02` | not the load type: two working dimmers differed here (`02` and `01`) |
 | `0x48`, `0x4f` | `01`, `01` | **enable unsolicited reporting** of field `0x13`; setting them starts a ~5 Hz publication |
 | `0x03`, `0x07` | `c800` (200), `f401` (500) | thresholds for that reporting; leaving them at 0 floods the mesh |
@@ -950,3 +950,30 @@ squarely and only on the load type:
 - **load type — boot required**, now attested twice;
 - **publication — took effect live** on a freshly provisioned node;
 - **partner address `0x08` — took effect live**.
+
+
+### `0x56` is not the dimmer flag, and a dropped read nearly proved it was
+
+`0x56` was the last surviving load-type candidate after `0x1a` and `0x1b` were resolved, and it looked
+compelling: the capture of the stairway load had no `0x56` at all, and that switch does not dim. One read
+settled it the other way. **Our `0x0005`, which dims, and our `0x0006`, which does not, both read `0x56 = 03`**,
+twice each. A field with the same value on both sides of the behaviour cannot be what selects it.
+
+The real answer came from the person who lives in the house: **the stairway was always wired and configured as a
+plain switch.** It never dimmed. There was no fault, the adopt replayed the switch faithfully, and the light
+behaves exactly as it always has.
+
+**But the near-miss is worth more than the finding.** The capture used for that adopt is missing `0x56` while
+the switch demonstrably has it, so the field was **dropped during the read** — and the adopt, whose allowlist
+skips anything absent from the capture, therefore silently did not replay it. `vendor_store.py` does not
+truncate on a failed read (it continues through the list; only a dropped GATT link stops it), so this was one
+lost reply in the middle, not a lost tail.
+
+That is a real hazard for any provisioner built on captures: **a dropped read is indistinguishable from a field
+that does not exist, and the consequence is a setting silently not restored.** Two defences, neither expensive:
+
+- **Read twice and merge.** The presence of a field is only trustworthy on a second confirming pass, which is
+  already documented above for comparisons and applies at least as strongly to captures meant to be replayed.
+- **Verify after adopting, not just after writing.** Reading the fields back confirms what was written; it says
+  nothing about what was never attempted. Comparing the adopted switch against its own capture would have
+  caught this in a second.
