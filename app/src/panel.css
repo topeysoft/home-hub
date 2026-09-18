@@ -2177,7 +2177,7 @@ input:focus-visible {
   }
   /* the stage is the scroller again here, so New devices gives the axis back
      rather than putting a second one inside the first */
-  .sort {
+  .sort-scroll {
     overflow-y: visible;
     min-height: auto;
   }
@@ -3899,11 +3899,23 @@ select.input {
    the rest of them simply out of reach, under the command box, with nothing to
    scroll. Fourteen found devices on a 1280x800 wall put the last one at y 1408.
 
-   So the scroll goes on the list rather than back on the stage, which keeps
-   what that rule was protecting: the head does not move, the way back stays
-   where a thumb left it, and the only thing that travels is the thing there is
-   more of. Below 860 the stage scrolls again (see the phone block) and the
-   list hands the axis back, so a phone keeps one scroll rather than two. */
+   So the scroll goes on everything under the head rather than back on the
+   stage, which keeps what that rule was protecting: the head does not move, the
+   way back stays where a thumb left it, and the only thing that travels is the
+   thing there is more of. Everything under the head and not the list alone,
+   because the bars that teach this screen stand between the two: fixed above a
+   scrolling list they ate a short wall, leaving a 69px window for a 135px row,
+   so no row could ever be read whole however far it was scrolled. Inside the
+   scroll they simply travel with it. Below 860 the stage scrolls again (see the
+   phone block) and this hands the axis back, so a phone keeps one scroll rather
+   than two. */
+.sort-scroll {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
 .sort {
   list-style: none;
   margin: 0;
@@ -3912,9 +3924,7 @@ select.input {
   flex-direction: column;
   gap: 10px;
   max-width: 760px;
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
+  flex: 0 0 auto;
 }
 .sort-row {
   display: grid;

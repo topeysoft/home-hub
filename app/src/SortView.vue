@@ -174,70 +174,77 @@ watch(() => props.room.devices.length, (n, was) => { if (n > (was ?? 0)) think()
       </div>
     </header>
 
-    <!-- how to tell them apart at all. Drawn from design/puck/Naming.dc.html. -->
-    <div class="press-bar" v-if="teach">
-      <span class="press-icon"><Icon name="switch" :size="20" /></span>
-      <span class="press-text">
-        <span class="press-name">Go and press one</span>
-        <span class="press-sub">Top or bottom, it does not matter — the one you press says so here. Nothing will switch on that was not going to.</span>
-      </span>
-    </div>
+    <!-- The scroll starts here and not at the stage: the head above it -- the way back with it --
+         must never travel, while everything below it has to be reachable on a panel of any height.
+         The teaching bars are inside it because they are not the way back: on a short wall they
+         scroll away and give the rows the screen, rather than standing over a window too small to
+         hold a single row. -->
+    <div class="sort-scroll">
+      <!-- how to tell them apart at all. Drawn from design/puck/Naming.dc.html. -->
+      <div class="press-bar" v-if="teach">
+        <span class="press-icon"><Icon name="switch" :size="20" /></span>
+        <span class="press-text">
+          <span class="press-name">Go and press one</span>
+          <span class="press-sub">Top or bottom, it does not matter — the one you press says so here. Nothing will switch on that was not going to.</span>
+        </span>
+      </div>
 
-    <div class="suggest-bar" v-if="!editing && room.devices.length && (thinking || placeable)">
-      <span class="suggest-lede"><Icon name="sparkle" :size="16" /><span>{{ thinking ? 'Working out where these go…' : placeable === 1 ? 'One of these looks like it has a home. Check it and tap Use.' : `${placeable} of these look like they have a home. Check them, or place them all.` }}</span></span>
-      <button class="button small" v-if="placeable > 1" :class="{ busy: applying }" @click="useAll">Place all {{ placeable }}</button>
-    </div>
+      <div class="suggest-bar" v-if="!editing && room.devices.length && (thinking || placeable)">
+        <span class="suggest-lede"><Icon name="sparkle" :size="16" /><span>{{ thinking ? 'Working out where these go…' : placeable === 1 ? 'One of these looks like it has a home. Check it and tap Use.' : `${placeable} of these look like they have a home. Check them, or place them all.` }}</span></span>
+        <button class="button small" v-if="placeable > 1" :class="{ busy: applying }" @click="useAll">Place all {{ placeable }}</button>
+      </div>
 
-    <ul class="sort" v-if="room.devices.length">
-      <li v-for="u in rows" :key="u.key" class="sort-row" :class="{ busy: busy[u.key], unit: isUnit(u), pressed: live === u.key }">
-        <span class="sort-icon"><Icon :name="iconFor(u.lead)" :size="20" /></span>
-        <div class="sort-main">
-          <!-- on the pressed card the name is asked below, in words, so the header shows it and does not ask twice -->
-          <span class="sort-name still" v-if="live === u.key && !editing">{{ names[u.key] ?? u.name }}</span>
-          <input v-else class="sort-name" :value="names[u.key] ?? u.name" @input="names[u.key] = ($event.target as HTMLInputElement).value" @change="rename(u)" @keydown.enter="($event.target as HTMLInputElement).blur()" spellcheck="false" aria-label="Name" />
-          <!-- one thing on the wall with more than one part in it: say what the parts are, so nobody has to guess which sensor is which switch's -->
-          <span class="sort-parts" v-if="isUnit(u)"><Icon name="motion" :size="13" v-if="u.parts.some(d => cap(d) === 'motion')" />{{ partsLine(u) }}</span>
-        </div>
-        <template v-if="adding === u.key">
-          <input class="sort-name" v-model="newRoom" placeholder="Name the room" autofocus @keydown.enter="createAndMove(u)" @keydown.escape="adding = null" />
-          <button class="button small" @click="createAndMove(u)">Add</button>
-        </template>
-        <select v-else-if="live !== u.key || editing" class="sort-room" :value="here" @change="move(u, ($event.target as HTMLSelectElement).value)" aria-label="Room">
-          <option value="" disabled>Which room?</option>
-          <option v-for="r in rooms" :key="r.id" :value="r.id">{{ r.name }}</option>
-          <option value="__new">A new room…</option>
-        </select>
-        <button v-if="editing && adding !== u.key" class="button small ghost sort-forget" :class="{ warn: forgetting === u.key }" @click="forget(u)">{{ forgetting === u.key ? 'Forget?' : 'Forget' }}</button>
-        <p class="sort-forget-ask" v-if="forgetting === u.key"><b>{{ u.name }}</b>{{ isUnit(u) ? ', all of it,' : '' }} goes from the house, and from whatever brought it. Tap again to do it.</p>
-        <!-- the one that was just pressed: the rooms as chips, because the answer is one tap away
-             and a dropdown would hide it behind two -->
-        <div class="press-line" v-if="live === u.key && !editing">
-          <!-- "you pressed" and not "it came on": the house knows the switch reported a change because a hand
-               was on it, and nothing more. A stairway's companion switch has no load wired to it at all, and
-               there is no way yet to tell one from the mesh -- so the row says what is true of both. -->
-          <span class="press-said"><span class="pulse-dot"></span>You just pressed this one. {{ what(u) }}</span>
-          <!-- the name, asked in words at the one moment the person knows what the thing is. The same
-               field as the row's own (it saves when you leave it); the brain's suggestion fills it in. -->
-          <label class="press-name">
-            <span class="field-label">Call it</span>
-            <input class="input" :value="names[u.key] ?? sug(u)?.name ?? u.name" @input="names[u.key] = ($event.target as HTMLInputElement).value" @change="rename(u)" @keydown.enter="($event.target as HTMLInputElement).blur()" spellcheck="false" autocapitalize="words" aria-label="Name" />
-          </label>
-          <span class="field-label">Which room is it in?</span>
-          <div class="press-rooms">
-            <button v-for="r in rooms" :key="r.id" class="chip-btn" @click="move(u, r.id)">{{ r.name }}</button>
-            <button class="chip-btn ghost" @click="move(u, '__new')">Another room…</button>
+      <ul class="sort" v-if="room.devices.length">
+        <li v-for="u in rows" :key="u.key" class="sort-row" :class="{ busy: busy[u.key], unit: isUnit(u), pressed: live === u.key }">
+          <span class="sort-icon"><Icon :name="iconFor(u.lead)" :size="20" /></span>
+          <div class="sort-main">
+            <!-- on the pressed card the name is asked below, in words, so the header shows it and does not ask twice -->
+            <span class="sort-name still" v-if="live === u.key && !editing">{{ names[u.key] ?? u.name }}</span>
+            <input v-else class="sort-name" :value="names[u.key] ?? u.name" @input="names[u.key] = ($event.target as HTMLInputElement).value" @change="rename(u)" @keydown.enter="($event.target as HTMLInputElement).blur()" spellcheck="false" aria-label="Name" />
+            <!-- one thing on the wall with more than one part in it: say what the parts are, so nobody has to guess which sensor is which switch's -->
+            <span class="sort-parts" v-if="isUnit(u)"><Icon name="motion" :size="13" v-if="u.parts.some(d => cap(d) === 'motion')" />{{ partsLine(u) }}</span>
           </div>
-        </div>
-        <div class="suggest-line" v-if="!editing && sug(u)">
-          <Icon name="sparkle" :size="14" />
-          <span>Looks like <b>{{ sug(u).name }}</b><template v-if="sug(u).room"> in the <b>{{ roomName(sug(u).room) }}</b></template><span class="suggest-why" v-if="sug(u).why"> · {{ sug(u).why }}</span></span>
-          <button class="button small" @click="use(u)">Use</button>
-        </div>
-      </li>
-    </ul>
-    <div v-else class="empty-room">
-      <p class="empty">{{ editing ? 'Nothing left in this room.' : 'Everything has a room.' }}</p>
-      <p class="empty-sub">{{ editing ? 'Everything moved elsewhere. Tap the tick to go back.' : 'Anything you add later that does not know where it lives will wait here.' }}</p>
+          <template v-if="adding === u.key">
+            <input class="sort-name" v-model="newRoom" placeholder="Name the room" autofocus @keydown.enter="createAndMove(u)" @keydown.escape="adding = null" />
+            <button class="button small" @click="createAndMove(u)">Add</button>
+          </template>
+          <select v-else-if="live !== u.key || editing" class="sort-room" :value="here" @change="move(u, ($event.target as HTMLSelectElement).value)" aria-label="Room">
+            <option value="" disabled>Which room?</option>
+            <option v-for="r in rooms" :key="r.id" :value="r.id">{{ r.name }}</option>
+            <option value="__new">A new room…</option>
+          </select>
+          <button v-if="editing && adding !== u.key" class="button small ghost sort-forget" :class="{ warn: forgetting === u.key }" @click="forget(u)">{{ forgetting === u.key ? 'Forget?' : 'Forget' }}</button>
+          <p class="sort-forget-ask" v-if="forgetting === u.key"><b>{{ u.name }}</b>{{ isUnit(u) ? ', all of it,' : '' }} goes from the house, and from whatever brought it. Tap again to do it.</p>
+          <!-- the one that was just pressed: the rooms as chips, because the answer is one tap away
+               and a dropdown would hide it behind two -->
+          <div class="press-line" v-if="live === u.key && !editing">
+            <!-- "you pressed" and not "it came on": the house knows the switch reported a change because a hand
+                 was on it, and nothing more. A stairway's companion switch has no load wired to it at all, and
+                 there is no way yet to tell one from the mesh -- so the row says what is true of both. -->
+            <span class="press-said"><span class="pulse-dot"></span>You just pressed this one. {{ what(u) }}</span>
+            <!-- the name, asked in words at the one moment the person knows what the thing is. The same
+                 field as the row's own (it saves when you leave it); the brain's suggestion fills it in. -->
+            <label class="press-name">
+              <span class="field-label">Call it</span>
+              <input class="input" :value="names[u.key] ?? sug(u)?.name ?? u.name" @input="names[u.key] = ($event.target as HTMLInputElement).value" @change="rename(u)" @keydown.enter="($event.target as HTMLInputElement).blur()" spellcheck="false" autocapitalize="words" aria-label="Name" />
+            </label>
+            <span class="field-label">Which room is it in?</span>
+            <div class="press-rooms">
+              <button v-for="r in rooms" :key="r.id" class="chip-btn" @click="move(u, r.id)">{{ r.name }}</button>
+              <button class="chip-btn ghost" @click="move(u, '__new')">Another room…</button>
+            </div>
+          </div>
+          <div class="suggest-line" v-if="!editing && sug(u)">
+            <Icon name="sparkle" :size="14" />
+            <span>Looks like <b>{{ sug(u).name }}</b><template v-if="sug(u).room"> in the <b>{{ roomName(sug(u).room) }}</b></template><span class="suggest-why" v-if="sug(u).why"> · {{ sug(u).why }}</span></span>
+            <button class="button small" @click="use(u)">Use</button>
+          </div>
+        </li>
+      </ul>
+      <div v-else class="empty-room">
+        <p class="empty">{{ editing ? 'Nothing left in this room.' : 'Everything has a room.' }}</p>
+        <p class="empty-sub">{{ editing ? 'Everything moved elsewhere. Tap the tick to go back.' : 'Anything you add later that does not know where it lives will wait here.' }}</p>
+      </div>
     </div>
   </section>
 </template>
