@@ -49,6 +49,7 @@
 
 #include "esp_coexist.h"
 #include "mesh_crypto.h"
+#include "claim.h"
 #include "config.h"
 #include "release_keys.h"
 #include "light.h"
@@ -904,11 +905,32 @@ static void dropLink(const char *why) {
 
 // ---------------------------------------------------------------- mqtt
 
+// Anything claim.cpp wants to say goes out under this puck's own bridge topic.
+static void claimSay(const char *leaf, const char *payload) {
+    char t[80];
+    bridgeTopic(t, sizeof(t), leaf);
+    mqtt.publish(t, payload, false);
+}
+
 static void mqttCb(char *topic, uint8_t *payload, unsigned int len) {
     char msg[32] = {0};
     memcpy(msg, payload, min((unsigned int)31, len));
     char t[128];
     strlcpy(t, topic, sizeof(t));
+
+    // Letting a switch in is a job for the puck rather than for one of the
+    // switches on it, so it arrives on the bridge's own topic and has to be
+    // matched before the per-switch parsing below throws it away.
+    char claimTopic[80];
+    bridgeTopic(claimTopic, sizeof(claimTopic), "claim");
+    if (!strcmp(t, claimTopic)) {
+        // Queue only. The radio work happens on the loop for the same reason the
+        // BLE notify path only queues: doing it inside this callback deadlocks.
+        if (!claim_queue((const char *)payload, len)) {
+            Serial.println("[claim] busy -- ignoring");
+        }
+        return;
+    }
 
     // <base>/<net>/<addr>/<leaf>, and only for our own network
     char prefix[40];
@@ -972,6 +994,8 @@ static void mqttReconnect() {
     snprintf(sub, sizeof(sub), "%s/%s/+/set", cfg.mqttBase, netHex);
     mqtt.subscribe(sub);
     snprintf(sub, sizeof(sub), "%s/%s/+/brightness/set", cfg.mqttBase, netHex);
+    mqtt.subscribe(sub);
+    bridgeTopic(sub, sizeof(sub), "claim");
     mqtt.subscribe(sub);
     Serial.printf("[mqtt] connected as %s, commands on %s\n", id, sub);
     announceBridge();
@@ -1043,6 +1067,10 @@ void setup() {
     prefs.putUInt("seq", txSeq);
     ivIndex = prefs.getUInt("iv", cfg.ivIndex);
     if (ivIndex < cfg.ivIndex) ivIndex = cfg.ivIndex;   // the config was rewritten with a newer IV
+    // A switch claimed by this puck joins the network this puck carries, on the
+    // keys it was given -- which is why the puck to send a claim to is the one
+    // bridging the house's own mesh and not the one bridging an old panel's.
+    claim_begin(cfg.netKey, ivIndex, claimSay);
 
     Serial.println("crypto self-test:");
     if (!mesh_selftest(Serial)) Serial.println("  !! CRYPTO BROKEN -- do not trust results");
@@ -1156,6 +1184,16 @@ void loop() {
     }
     if (!cfg.haveKeys) {   // on the Wi-Fi, nothing to say on the mesh yet
         delay(200);
+        return;
+    }
+
+    // Claiming takes the radio for tens of seconds, so it runs before the proxy
+    // work and the proxy stands down while it does. A puck cannot bridge and
+    // claim at once, and pretending otherwise would give us a half-dropped link
+    // in the middle of a handshake -- the one moment it is least recoverable.
+    if (claim_busy()) {
+        if (connected) dropLink("letting a switch in");
+        claim_tick();
         return;
     }
 
