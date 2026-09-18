@@ -1,0 +1,18 @@
+# Two app slots, so a puck can be updated without being visited. See docs/puck-updates.md.
+#
+# nvs is at 0x9000 size 0x5000 -- byte for byte where huge_app.csv put it, and that is the whole
+# point of this file. A puck's wifi, broker credentials, netkey, IV index and sequence number live
+# there. Re-partitioning rewrites the table, not the contents, so a puck moved onto this layout over
+# a cable comes back as itself instead of needing to be adopted again. Do not move nvs. Ever.
+#
+# The slots are 4 MB for a 981 KB image, which is absurd and deliberate: the board has 16 MB and was
+# using 4, and the alternative is discovering in two years that the slot is too small -- which costs
+# a cable visit to every puck in every house, the exact thing this layout exists to prevent.
+#
+# Name,     Type, SubType, Offset,    Size,      Flags
+nvs,        data, nvs,     0x9000,    0x5000,
+otadata,    data, ota,     0xe000,    0x2000,
+app0,       app,  ota_0,   0x10000,   0x400000,
+app1,       app,  ota_1,   0x410000,  0x400000,
+spiffs,     data, spiffs,  0x810000,  0x7E0000,
+coredump,   data, coredump,0xFF0000,  0x10000,

@@ -6,6 +6,7 @@
     puck_cable.py <port> write [--from secrets.h] [--wifi SSID PASS] [--mqtt HOST PORT USER PASS]
                                [--keys NETKEY APPKEY IV] [--base mesh] [--label Brilliant] [--no-apply]
     puck_cable.py <port> wipe                        back to blank
+    puck_cable.py <port> upgrade                     new firmware, keeping who it is
 
 `write` is what the hub does when a puck is on its cable (design/puck/Cable.dc.html): every value goes
 over hex-encoded, so nothing needs quoting, then `apply` restarts the puck on the new config and this
@@ -17,8 +18,15 @@ The port is opened with DTR and RTS held low: on macOS pyserial's defaults pulse
 ESP32 on open, and a puck that reboots every time the hub says hello is not one you can talk to.
 """
 import argparse
+import glob
+import hashlib
+import json
+import os
+import pathlib
 import re
+import subprocess
 import sys
+import tempfile
 import time
 
 import serial
@@ -150,10 +158,97 @@ def from_header(path: str) -> dict:
     return out
 
 
+# ---- upgrade: new firmware over a cable, without losing the puck ----------------------------------
+#
+# releases/bridge/esp32s3-ship.bin is a merged image starting at 0x0, and merge_bin pads the gaps
+# between the pieces with 0xff. One of those gaps is nvs, at 0x9000..0xe000 -- where a puck's wifi,
+# broker credentials, netkey, IV index and sequence number live. esptool erases before it writes, so
+# flashing that merged image at 0x0 onto a puck that is already somebody's wipes all of it and the
+# puck has to be adopted again. That is fine for the bare boards the hub flashes; it is wrong here.
+#
+# So the image goes down in two pieces with the nvs gap left alone: 0x0..0x9000 (bootloader and the
+# partition table) and 0xe000..end (otadata and the app). Both edges are 4 KiB aligned, which they
+# must be, because that is the erase granularity.
+NVS_START, NVS_END = 0x9000, 0xe000
+ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
+
+
+def _nvs_is_where_we_think() -> None:
+    """Refuse to flash if the partition table has moved nvs. Getting this wrong is not recoverable
+    by the person holding the cable -- it is discovered later, by a puck that has forgotten itself."""
+    csv = ROOT / "brilliant/esp32-bridge/partitions-ota.csv"
+    for line in csv.read_text().splitlines():
+        if line.strip().startswith("nvs,"):
+            f = [x.strip() for x in line.split(",")]
+            start, size = int(f[3], 16), int(f[4], 16)
+            if (start, start + size) != (NVS_START, NVS_END):
+                sys.exit(f"{csv.name} puts nvs at {start:#x}..{start + size:#x}, not "
+                         f"{NVS_START:#x}..{NVS_END:#x}; upgrading would wipe every puck's identity")
+            return
+    sys.exit(f"no nvs row in {csv.name}")
+
+
+def _esptool() -> str:
+    hits = glob.glob(os.path.expanduser("~/.platformio/packages/tool-esptoolpy/esptool.py"))
+    if not hits:
+        sys.exit("no esptool.py under ~/.platformio/packages/tool-esptoolpy")
+    return hits[0]
+
+
+def upgrade(port: str) -> None:
+    _nvs_is_where_we_think()
+    img = ROOT / "releases/bridge/esp32s3-ship.bin"
+    meta = json.loads((ROOT / "releases/bridge/esp32s3-ship.json").read_text())
+    data = img.read_bytes()
+    got = hashlib.sha256(data).hexdigest()
+    if got != meta["sha256"]:
+        sys.exit(f"{img.name} does not match its .json ({got[:12]} vs {meta['sha256'][:12]}); "
+                 "rebuild with tools/build-bridge.sh")
+
+    try:
+        who = Puck(port).hello()
+        print(f"puck {who['chip']} fw {who['fw']} ({who['state']}) -> fw {meta['fw']}")
+        was_set = who["state"] == "set"
+    except (TimeoutError, RuntimeError, serial.SerialException, OSError):
+        print(f"nothing answered on the cable; flashing anyway -> fw {meta['fw']}")
+        was_set = False
+
+    with tempfile.TemporaryDirectory() as tmp:
+        head, tail = pathlib.Path(tmp) / "head.bin", pathlib.Path(tmp) / "tail.bin"
+        head.write_bytes(data[:NVS_START])
+        tail.write_bytes(data[NVS_END:])
+        print(f"  0x0000 .. {NVS_START:#06x}  bootloader + partition table  ({head.stat().st_size} bytes)")
+        print(f"  {NVS_START:#06x} .. {NVS_END:#06x}  nvs -- LEFT ALONE")
+        print(f"  {NVS_END:#06x} ..          otadata + app                 ({tail.stat().st_size} bytes)")
+        subprocess.run([sys.executable, _esptool(), "--chip", "esp32s3", "--port", port,
+                        "--baud", "460800", "--before", "default-reset", "--after", "hard-reset",
+                        "write-flash", "-z", "--flash-mode", "dio", "--flash-freq", "80m",
+                        "--flash-size", "16MB", "0x0", str(head), hex(NVS_END), str(tail)],
+                       check=True)
+
+    print("  flashed; waiting for it to come back", end="", flush=True)
+    time.sleep(2)
+    for _ in range(30):
+        try:
+            who = Puck(port).hello()
+            print()
+            print(f"back: puck {who['chip']} fw {who['fw']} ({who['state']})")
+            if was_set and who["state"] != "set":
+                sys.exit("it came back blank: its config did not survive. Do not ship this.")
+            if was_set:
+                print("      it still knows who it is, which is the whole point of the two pieces")
+            return
+        except (TimeoutError, RuntimeError, serial.SerialException, OSError):
+            print(".", end="", flush=True)
+            time.sleep(1)
+    print()
+    sys.exit("it did not come back on the cable")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("port")
-    ap.add_argument("what", choices=["hello", "status", "write", "wipe"])
+    ap.add_argument("what", choices=["hello", "status", "write", "wipe", "upgrade"])
     ap.add_argument("--from", dest="header")
     ap.add_argument("--wifi", nargs=2, metavar=("SSID", "PASS"))
     ap.add_argument("--mqtt", nargs=4, metavar=("HOST", "PORT", "USER", "PASS"))
@@ -162,6 +257,10 @@ def main():
     ap.add_argument("--label")
     ap.add_argument("--no-apply", action="store_true", help="write, but leave the restart to the caller")
     a = ap.parse_args()
+
+    if a.what == "upgrade":
+        upgrade(a.port)
+        return
 
     p = Puck(a.port)
     if a.what == "hello":

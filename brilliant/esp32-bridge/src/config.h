@@ -35,7 +35,7 @@
 
 #include <Arduino.h>
 
-#define BRIDGE_FW "0.2.1"
+#define BRIDGE_FW "0.3.0"
 
 struct BridgeConfig {
     char ssid[33];

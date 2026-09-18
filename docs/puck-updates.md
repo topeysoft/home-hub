@@ -108,6 +108,11 @@ So both public keys — primary and spare, for the same reason `docs/updates.md`
 at the partition visit **even if not one line checks a signature yet**. They cost a few hundred bytes and they are
 the difference between *we can add this later* and *we can never add this*.
 
+Getting them into the image is less automatic than it sounds. A `const` array that nothing reads is folded away by
+the compiler and then collected by the linker, and the build succeeds either way — an image with no keys in it looks
+exactly like an image with keys. `tools/puck-keys.py` marks them `volatile` so every read is a real load, and the
+proof is not the build output but searching the built binary for the key bytes.
+
 The corollary is the unpleasant one, and it is the strongest argument against ever turning verification on:
 **losing the signing key is worse here than for a hub.** A hub that cannot verify an update still has a filesystem
 and an owner with a keyboard. A puck has neither, so a lost key means a cable visit to every puck ever shipped.
@@ -117,6 +122,18 @@ and an owner with a keyboard. A puck has neither, so a lost key means a cable vi
 **OTA cannot bootstrap itself.** Changing the partition table means writing from `0x0`, which is a cable job. So
 every puck that exists today — `c8ebba` and `f4a9f3` in this house — needs one more physical visit no matter how
 good the rest of this design is.
+
+**Keeping `nvs` where it is is necessary and not sufficient.** `releases/bridge/esp32s3-ship.bin` is a merged image
+starting at `0x0`, and `merge_bin` pads the gaps between the pieces with `0xff` — one of which is `nvs` at
+`0x9000..0xe000`. esptool erases before it writes, so flashing that image at `0x0` onto a puck that is already
+somebody's erases its Wi-Fi, broker credentials, netkey, IV index and sequence number, and it comes back blank.
+Harmless for the bare boards `brain/hub/bridge.py` flashes; wrong for every puck that already exists.
+
+So the visit uses `brilliant/tools/puck_cable.py <port> upgrade`, which puts the image down in two pieces and steps
+over the gap — `0x0..0x9000`, then `0xe000..end`, both edges 4 KiB aligned because that is the erase granularity.
+It refuses to run if the partition table has moved `nvs`, and afterwards it checks the puck came back `set` rather
+than blank. A puck that has forgotten itself is exactly what this guards against, and it should be found on a bench
+rather than in a hallway.
 
 That is worth saying plainly rather than engineering around, because the engineering around it is worse. It also
 sets a deadline that has nothing to do with software: **every puck flashed between now and the day this lands is

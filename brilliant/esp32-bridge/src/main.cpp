@@ -50,6 +50,7 @@
 #include "esp_coexist.h"
 #include "mesh_crypto.h"
 #include "config.h"
+#include "release_keys.h"
 #include "light.h"
 // The compiled-in fallback for everything in cfg, plus the tunables below. One
 // header per puck (-DSECRETS_FILE='"secrets-s3.h"' in platformio.ini), and
@@ -997,6 +998,16 @@ static void mqttReconnect() {
 // address is on MQTT already; only its signal strength is worth the bytes here.
 void bridgeStatusLine(char *out, size_t n) {
     static const char *LIGHTS[] = {"off", "looking", "heard", "far"};
+    // Which of the maker's keys this image carries, two bytes of each. Nothing verifies a signature
+    // yet (docs/puck-updates.md), but a key cannot be added to a puck after its cable visit, so they
+    // go in before anything needs them -- and a puck that cannot say which keys it holds is one
+    // nobody can check before it disappears behind a sofa. This is also what keeps them in the
+    // binary at all: an unused static const array in a header is not linked into the image.
+    char keys[8 * N_RELEASE_KEYS];
+    char *kp = keys;
+    for (int i = 0; i < N_RELEASE_KEYS; i++)
+        kp += snprintf(kp, sizeof(keys) - (kp - keys), i ? ",%02x%02x" : "%02x%02x",
+                       RELEASE_KEYS[i][0], RELEASE_KEYS[i][1]);
     // No String temporaries here: this runs on the serial task's stack.
     char ip[20] = "down";
     if (WiFi.status() == WL_CONNECTED) {
@@ -1005,8 +1016,8 @@ void bridgeStatusLine(char *out, size_t n) {
     }
     int rssi = 0;
     if (linkUp) { const char *r = strstr(proxyDesc, "rssi "); if (r) rssi = atoi(r + 5); }
-    snprintf(out, n, "status wifi=%s mqtt=%s rssi=%d sw=%u light=%s", ip,
-             mqtt.connected() ? "up" : "down", rssi, (unsigned)nSwitches, LIGHTS[(int)lightGet() & 3]);
+    snprintf(out, n, "status wifi=%s mqtt=%s rssi=%d sw=%u light=%s keys=%s", ip,
+             mqtt.connected() ? "up" : "down", rssi, (unsigned)nSwitches, LIGHTS[(int)lightGet() & 3], keys);
 }
 
 void setup() {
