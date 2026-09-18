@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* The gesture has two jobs and they must not collide: a tap controls the device, a hold opens it
    and controls nothing. The failure mode is silent — a lamp that switches off on its way into its
    detail — so nothing but a test in a real browser catches it. */
@@ -40,7 +42,7 @@ async function settled(page: Page, url: string) {
   await freeze(page)
 }
 
-async function centre(page: Page, selector: string) {
+async function center(page: Page, selector: string) {
   const el = page.locator(selector).first()
   await el.scrollIntoViewIfNeeded()
   await page.waitForTimeout(250)
@@ -74,7 +76,7 @@ test.describe('with a mouse', () => {
     const state = page.locator('.tile.light .tile-state').first()
     const before = await state.innerText()
 
-    const { x, y } = await centre(page, '.tile.light')
+    const { x, y } = await center(page, '.tile.light')
     await page.mouse.click(x, y)
     await expect(state).not.toHaveText(before, { timeout: 3000 })
 
@@ -86,7 +88,7 @@ test.describe('with a mouse', () => {
     await settled(page, ROOM)
     const before = await page.locator('.tile.light .tile-state').first().innerText()
 
-    const { x, y } = await centre(page, '.tile.light')
+    const { x, y } = await center(page, '.tile.light')
     await press(page, x, y, 520)         // past the hold threshold
 
     await expect(page.locator('.opened-panel')).toHaveCount(1)
@@ -103,7 +105,7 @@ test.describe('with a mouse', () => {
        move with no button held. */
     await settled(page, ROOM)
     const fill = page.locator('.tile.light.dimmable .fill').first()
-    const { x, y } = await centre(page, '.tile.light.dimmable')
+    const { x, y } = await center(page, '.tile.light.dimmable')
     const box = (await page.locator('.tile.light.dimmable').first().boundingBox())!
 
     await press(page, x, y, 650)                // past the hold
@@ -124,7 +126,7 @@ test.describe('with a mouse', () => {
     const state = page.locator('.tile.light .tile-state').first()
     const before = await state.innerText()
 
-    const { x, y } = await centre(page, '.tile.light')
+    const { x, y } = await center(page, '.tile.light')
     await press(page, x, y, 150)         // let go well before it
 
     await expect(page.locator('.opened-panel')).toHaveCount(0)
@@ -152,7 +154,7 @@ test.describe('with a mouse', () => {
   /* The card still opens: the control keeps its own tap, it does not take the card's gesture. */
   test('holding a card that has controls in it still opens the device', async ({ page }) => {
     await settled(page, HOME)
-    const { x, y } = await centre(page, '.bento .tile.climate')
+    const { x, y } = await center(page, '.bento .tile.climate')
     await press(page, x, y - 40, 520)         // the card, not one of its buttons
     await expect(page.locator('.opened-panel')).toHaveCount(1)
   })

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 # Put a recording into the repo's sounds folder in the shape the hub wants, and optionally onto a hub right now.
 #
 #   tools/add-sound.sh ~/Downloads/heavy-rain-loop.wav --name rain --from https://freesound.org/s/12345/ --license CC0 --by someone
@@ -46,8 +48,8 @@ echo "wrote sounds/$name.mp3  (${dur}s, $size) — shows on tiles as \"$shown\""
 CREDITS="$OUT_DIR/CREDITS.md"
 [ -f "$CREDITS" ] || printf '# Where each recording came from\n\n' > "$CREDITS"
 if ! grep -q "^- \`$name.mp3\`" "$CREDITS"; then
-  printf -- '- `%s.mp3` — %s — %s — %s\n' "$name" "${FROM:-source?}" "${LICENSE:-licence?}" "${BY:-author?}" >> "$CREDITS"
-  [ -n "$FROM$LICENSE$BY" ] || echo "note: add the source, licence and author to sounds/CREDITS.md"
+  printf -- '- `%s.mp3` — %s — %s — %s\n' "$name" "${FROM:-source?}" "${LICENSE:-license?}" "${BY:-author?}" >> "$CREDITS"
+  [ -n "$FROM$LICENSE$BY" ] || echo "note: add the source, license and author to sounds/CREDITS.md"
 fi
 # straight onto a hub, if asked
 if [ -n "$HUB" ]; then

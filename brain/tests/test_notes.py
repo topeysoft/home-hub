@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Release notes: the parser, what a hub shows, and when it stops showing it.
 
 The point of the whole piece is one sentence somebody reads on a wall, so these tests are mostly

@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """The door: what a code changes about who may do what, and how a phone gets in.
 
 The rule the whole product rests on is that driving the house never needs the code and changing it
@@ -223,6 +225,17 @@ class SettingTheCodeTests(ApiTest):
                 self.assertEqual(self.client.post("/setup/pin", json={"pin": bad}).status_code, 400)
         self.assertFalse(self.hub.lock.locked)
 
+    def test_adopting_a_bridge_needs_the_code(self):
+        """What a bridge is handed -- the Wi-Fi, the broker, the keys to the switches -- is the most
+        the house gives anything, and the panel offers it to whoever is standing there. 409 is the
+        pass: it means the request got past the door and found nothing knocking."""
+        self.client.post("/setup/pin", json={"pin": "4821"})
+        self.assertEqual(self.client.post("/bridge/adopt").status_code, 401)
+        self.assertEqual(self.client.post("/bridge/adopt", headers={"x-hub-code": "9999"}).status_code, 401)
+        self.assertNotEqual(self.client.post("/bridge/adopt", headers={"x-hub-code": "4821"}).status_code, 401)
+        # and refusing one never does: a code to wave a knock off leaves it stuck on the screen
+        self.assertNotEqual(self.client.post("/bridge/dismiss").status_code, 401)
+
     def test_changing_a_code_needs_the_old_one(self):
         self.client.post("/setup/pin", json={"pin": "4821"})
         self.assertEqual(self.client.post("/setup/pin", json={"pin": "9999"}).status_code, 401)
@@ -236,7 +249,8 @@ class WhichSideOfTheDoorTests(unittest.TestCase):
     def test_driving_the_house_never_needs_the_code(self):
         for method, path in [("POST", "/devices/light.kitchen/on"), ("POST", "/devices/climate.nest/set"),
                              ("POST", "/rooms/living/intent/movie"), ("POST", "/home/intent/asleep"),
-                             ("POST", "/say"), ("GET", "/home"), ("GET", "/events"), ("POST", "/drafts/suggest")]:
+                             ("POST", "/say"), ("GET", "/home"), ("GET", "/events"), ("POST", "/drafts/suggest"),
+                             ("POST", "/bridge/dismiss"), ("POST", "/bridge/placed")]:
             with self.subTest(path=path):
                 self.assertFalse(needs_code(method, path))
 
@@ -246,6 +260,7 @@ class WhichSideOfTheDoorTests(unittest.TestCase):
                              ("POST", "/location"), ("POST", "/home/entry"), ("GET", "/setup/advanced"),
                              ("POST", "/setup/pin"), ("POST", "/flows"), ("POST", "/credentials"),
                              ("POST", "/assistant/key"), ("GET", "/backup"), ("POST", "/restore"),
+                             ("POST", "/bridge/adopt"), ("POST", "/bridge/wifi"),
                              ("POST", "/pair"), ("DELETE", "/phones/abc"), ("POST", "/update"),
                              ("POST", "/update/auto")]:
             with self.subTest(path=path):

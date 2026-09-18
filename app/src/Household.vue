@@ -1,8 +1,12 @@
+<!--
+  SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+  SPDX-License-Identifier: AGPL-3.0-or-later
+-->
 <script setup lang="ts">
 /*
  * The bar along the bottom, under the Top navigation: the command box on the
  * left, and the household on the right -- who the house knows, and who is in.
- * Real presence from the brain, not decoration: a person keeps their colour and
+ * Real presence from the brain, not decoration: a person keeps their color and
  * their initial but goes quiet when they are out. The last circle is always the + that adds
  * one more, as drawn, so a house with nobody set up still shows where people
  * go. The box is always there, because telling the house things is what Home

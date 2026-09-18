@@ -1,3 +1,7 @@
+<!--
+  SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+  SPDX-License-Identifier: AGPL-3.0-or-later
+-->
 <script setup lang="ts">
 /*
  * A light, opened: the two things a lamp physically is, and the three it is used at.
@@ -20,7 +24,7 @@ const on = computed(() => props.device.state === 'on')
 const pct = computed(() => on.value && a.value.brightness != null ? Math.round((a.value.brightness / 255) * 100) : on.value ? 100 : 0)
 const dimmable = computed(() => 'brightness' in (a.value ?? {}) || (a.value.supported_color_modes ?? []).some((m: string) => m !== 'onoff'))
 
-/* Warmth only when the lamp has told us a colour temperature: a bulb that cannot change its white
+/* Warmth only when the lamp has told us a color temperature: a bulb that cannot change its white
    must not be given a column that does nothing. The ends are the ones a domestic bulb actually
    spans, because the brain does not keep this lamp's own limits. */
 const WARM = 2000, COOL = 6500

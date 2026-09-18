@@ -15,7 +15,7 @@ mesh keys and can now **read and control the real wall switches directly over BL
 | Read motion (PIR) | vendor field **`0x13`**: a walk-past adds ~5 counts on top of a baseline that tracks the load (~2 lamp off, ~130 lamp full); the bridge learns the baseline per switch | ✅ |
 | Write on/off | `Generic OnOff Set` | ✅ light obeyed |
 | Write dimming | `Generic Level Set` on a **0–1000 scale** (not SIG −32768…32767) | ✅ full→2%→full, confirmed |
-| Restore a reset switch to a dimmer | provision + bind (incl. vendor `0x0820/0x0001`) + write config + power-cycle | ✅ visually confirmed on `0x0005` |
+| Restore a reset switch to a dimmer | provision + bind (incl. vendor `0x0820/0x0001`) + write config; **power cycle only if it does not dim** | ✅ confirmed; two later adoptions needed no boot at all |
 
 ## The keys (the whole game)
 
@@ -59,7 +59,7 @@ $V panel_cmd.py 000a dim:20
 - **One proxy connection per node**; the link is flaky below ~−80 dBm — reply drops are range, not logic.
 - **ESP32 firmware gotchas** (all fixed in `esp32-bridge/`): WiFi modem sleep must stay on or the BT controller
   aborts at boot; the core's Bluedroid BLE library hangs the main loop when a weak link drops mid-write (NimBLE now);
-  MTU negotiation fails on some links, so writes honour the real MTU and SAR-segment; a broadcast Get loses replies
+  MTU negotiation fails on some links, so writes honor the real MTU and SAR-segment; a broadcast Get loses replies
   when 11 switches answer at once, so state is resynced per switch.
 - **Re-capturing keys** (only if the store is ever lost): the recorder firmware in `mesh-provisionee/` does it
   — flash it, scan a spare switch's QR in the app (QR = 16-byte UUID + 16-byte Static OOB), and it captures
@@ -139,7 +139,7 @@ $V tools/puck_cable.py /dev/cu.usbmodem101 status                       # {'wifi
 Verified: a blank S3 handed its own config back over the wire came up as a full bridge -- Wi-Fi at 3 s, MQTT up by
 10 s, proxy link by 35 s -- and the hub's broker sees it (`bridge/c8eb status online`) next to the classic board.
 **The S3 on the desk now runs the ship image with its config in NVS**, not `secrets-s3.h`; the classic board still
-runs a desk build (0.2.0 is a drop-in for it: same header, same behaviour).
+runs a desk build (0.2.0 is a drop-in for it: same header, same behavior).
 
 What is in it: `src/config.{h,cpp}` (the NVS store and the line protocol -- `hello`, `set wifi|mqtt|keys|base|label`,
 `status`, `apply`, `wipe`; free text goes hex-encoded so nothing needs quoting), `src/light.{h,cpp}` (the puck's
@@ -177,7 +177,23 @@ the hub's side of the protocol and what the hub will run when a puck appears on 
 
 Not yet: the hub side (a udev rule like `driver-layer/radios.sh`, esptool + this image shipped in the release, the
 brain's `/bridge` state machine the panel already draws), and board A (the puck knocking over BLE). The light's
-colours have not been looked at with an eye yet -- `light=heard` above is the state, not the LED.
+colors have not been looked at with an eye yet -- `light=heard` above is the state, not the LED.
+
+## The light after it is placed: the nightlight decision (18 September, designed, not built)
+
+The three states answer "is here good?" and that question is over a minute after the puck is plugged in. The
+shipped puck is meant to be a product -- a small relay object out in the open in a living space, meant to be nice
+to look at -- so what its light does for the other fourteen hours is a real decision, and it is taken in
+**`../docs/puck-light.md`** with the board at `../design/puck/Nightlight.dc.html` (next to `Placing`, because it
+is the same light).
+
+Short form: the light is an instrument until it has finished being one, then, opt-in and only once `POST
+/bridge/placed` has been sent, it becomes a warm unsaturated nightlight -- and **a fault takes it straight back**,
+because green is a promise about the mesh *and* the broker and a glow that outlives the bridge going down is
+furniture that lies. Control is not a firmware feature: one more HA discovery payload makes the puck itself a
+`light` in the house, and schedules, "good night" and all-off are then the house's. Three things it asks of the
+product board (the LED lit through either USB port, a driven data line so fades stop being the pale-green flicker
+bug, an emitter the enclosure can diffuse) are in the doc, with the open questions.
 
 ## The hub does the cable job itself (17 September, small hours: brain/hub/bridge.py)
 
@@ -223,12 +239,19 @@ Next on this track: diff the vendor store of the hallway dimmer (`0x000a`, panel
 find the load-type / motion-enable fields, replay them onto `0x0003`, and confirm dimming + `0x13` moving. Then the
 console can be unplugged for good, and switches can be adopted or re-keyed one at a time.
 
-## Two switches on one light: the hub carries the press (17 September, afternoon: brain/hub/relay.py)
+## Two switches on one light: the pair carries itself, the hub only watches (17 September: brain/hub/relay.py)
 
-A Brilliant companion switch has no load. It is a radio node that reports its own touch and drives
-nothing, and the console was what heard it and drove the switch the light is actually wired to. So the
-moment the console goes, every companion in the house becomes a button that does nothing — which is
-why the hard rule below exists. The hub now takes that job.
+A Brilliant companion switch has no load. It is a radio node that drives nothing itself, and it makes
+its partner act by sending that partner a press directly — a vendor message to the unicast stored in
+its own field `0x08`. **The console is not in that path and never was**, which we established the hard
+way and which retired the "do not unplug the console" rule this section was originally written under.
+A pair looks after itself and keeps working with the hub switched off, which is the only acceptable
+behavior for a light switch.
+
+So the relay below is **transitional**, not the mechanism. It earns its place in exactly one case: a
+pair whose two ends are on *different* networks during a migration, where no direct message can cross
+because the netkeys differ. The stairway was that case for one afternoon. It is not any more — both
+ends were migrated the same evening and the link was switched off.
 
 A link is nothing but a rule about topics, which is what makes the stairway possible at all: the
 companion is on the house's own network behind one puck, its load is still on the panel's network
@@ -265,10 +288,34 @@ OFF on command, each confirmed by its own Status inside a second, with nothing e
 moving. The bench that does this runs the real `Relay` class from a Mac against the live hub broker over
 ssh, so a press can be proven with nothing deployed.
 
-**Still open, and both are physical:** `0x0011` is only circumstantially the stairway load and wants a
-human at the lamp to confirm it; and `f4a9f3` sits at −90 dBm, below where BLE mesh GATT stops
-completing. A relay proven on a marginal link proves the wrong thing — move that puck into range of any
-one panel switch first, since they relay for each other.
+**And then the relay was switched off, which is the right ending.** Both of the things left open above
+were settled the same evening — a human at the lamp confirmed `0x0011` was the stairway load, and the
+puck was moved to −75 dBm — and the relay then carried a simulated press across both networks in under a
+second. But the user named the actual requirement: *a two-way pair must keep working with the hub off.*
+A relay cannot satisfy that, by construction. So the stairway load was migrated onto the house's own
+network (it is `0x0006` there now) and paired to its companion directly, and the hub's link was disabled
+rather than left firing at a switch that drives itself.
+
+```
+19:55:30  0x0004 -> 0x0006  vendor 0403          the companion presses
+19:55:30  0x0006 state ON                         the load turns on
+19:55:30  0x0006 -> 0xffff  sig 0x008204 "01"     the main announces to everyone
+```
+
+That is the shape to build on: **the pair talks to itself and the hub watches from the side.** The main
+broadcasts its state to all-nodes, so the hub learns the outcome without standing in the path — which is
+both more robust than overhearing a press and true whichever end was touched. `relay.py` keeps a real but
+narrow job: a pair split across two networks during migration, and pairs we cannot write. A same-network
+pair must never depend on it. The disabled link is kept in `/data/switch-links.json` as the record.
+
+**The hub's view of a mesh is one node wide, and that is a structural limit worth knowing.** The puck
+decodes only what its GATT proxy forwards: `handleNetworkPdu` has one caller, fed by a queue filled only
+from the proxy notify path, and the scan reads service data to *choose* a proxy and queues nothing. So a
+puck two feet from a switch hears none of it unless its proxy node does — observed exactly that way in
+the house. The fix is an advertising-bearer listener (mesh PDUs are AD type `0x2A`; the decoder already
+exists), with a low duty cycle, because that radio is shared with Wi-Fi and an aggressive scan is what
+starved MQTT above. `PANEL_NODE` pinning is a compile-time `#define`, not NVS config, so it needs a
+reflash — and nothing maps BLE addresses to unicasts, which makes pinning an expensive way to test this.
 
 **A puck can go silently mute, and this is the signature:** `mqtt=down` with `rssi=0` and
 `light=looking`, Wi-Fi up with an IP, and *no connection attempt at all* in the broker's log. A puck
@@ -306,3 +353,70 @@ Bridge: `esp32-bridge/src/main.cpp` (rewritten: panel keys, NimBLE, discovery, m
 `monitor.py`, `gen_native_test.py` + regenerated `test_cmac_native.c`.
 Docs: `docs/brilliant.md`, `README.md`, this file. Commit when ready (secrets stay out — the keys are in
 `~/.config`, and `esp32-bridge/include/secrets.h` is gitignored).
+
+
+## Where the multi-way work got to (17 September, night)
+
+Everything below was proven against real lamps in this house, not inferred from captures.
+
+**The house has three multi-way lights, not one.** `tools/pairs.py` reads vendor field `0x08` from every
+switch over one proxy link, writes nothing and presses nothing, and found `0x0006 -> 0x0005` (the basement
+kitchen two-way), `0x0016 -> 0x0002` and `0x0014 -> 0x0012`. The last two name **panel elements** -- the
+console's own sliders, which are switch positions in a three-way and not brokers. `0x0002` answered none of
+its 55 vendor fields, which is what a panel element looks like and what a switch never does.
+
+**The migration premise is proven end to end.** `pairs.py` said `0x0006`'s partner was `0x0005` before
+anything was touched; a controlled four-press run on that pair then produced both documented signatures
+(companion sends `0403` and the lamp follows; the lamp end broadcasts with no `0403` at all) and confirmed
+it. Four presses, four lamp movements, none dropped -- so the dropped-press worry belongs to the kitchen's
+flaky install, not to the protocol.
+
+**Field `0x13` is a load detector and it is not subtle.** Measured on `0x0005` with the lamp switched by
+hand: dark 1-3, lit 92-97, settling within ~2 s in both directions. So a provisioner can find which of two
+new switches has the lamp by trying each and watching, and never has to ask anybody. Key it on the **jump**,
+never on an absolute threshold -- resting values differ per switch across this house.
+
+**`0x1b` is the ANNOUNCE flag, not a role.** Our stairway load `0x0006` was written to `0x1b = 03`, power
+cycled and pressed: the lamp came on. So `03` does not stop a switch driving its own load; it adds the
+`0403` to the partner in `0x08`. The old "00 drives a load, 03 is a companion" reading is retired, and the
+adopt spec's field table is corrected. Our stairway pair is `0x0004 -> 0x0006`; earlier notes saying
+`0x0003` are out of date.
+
+### New tools
+
+| | |
+|---|---|
+| `tools/pairs.py` | reads a whole network's pairings (`0x08`/`0x1b`) over one proxy link. Read-only. Two passes, and reports a silent switch as **unknown, never as unpaired** |
+| `tools/vendor_write.py` | writes one vendor field **through a proxy** rather than a direct connection, and reads it back. `setfields.py` needs the laptop beside that exact switch with nothing holding its link, which is true less often than you want |
+| `tools/migrate.py` | moves a whole **light**: `plan` (read the pairing while it still exists) → `adopt` per switch → `finish` (rewrite each companion's `0x08` to the main's NEW address) |
+
+**`migrate.py plan` is tested against the real pair** and correctly identified the lamp end; its guard for a
+switch whose partner is the console was tested too and refuses to proceed. **`adopt` and `finish` have not
+been run end to end** -- the pieces they call are proven, the joins between them are not. First real use
+wants a pair nobody minds fiddling with.
+
+**Why the ordering is the whole tool:** `0x08` is readable only while the switch is still on the console. A
+factory reset wipes it, and then the only record of which light a companion belonged to is gone with the
+hardware.
+
+### Hazards worth not re-learning
+
+- **A read reply is `<value> 00`.** The trailing byte is not part of the value; echoing a raw reply back
+  into a write sends one byte too many and the switch drops it **silently**. Two restore attempts on a live
+  light read back unchanged before this was spotted.
+- **A dropped read is indistinguishable from an absent field**, and here it turns a companion into a light.
+  It happened three separate times tonight on `0x0014` and `0x0004`; two passes caught every one.
+- **`0x7f30` is our own ESP32 bridge**, not the panel (`0x7000 | chip<<4`). It accounts for most of the
+  traffic in any panel-network sniff.
+- **Only one thing can hold a proxy link to a node.** Two captures running means one of them is listening to
+  nothing. Confirm a live reading before asking somebody to go and press a switch.
+
+### Next
+
+1. **The puck provisioner** -- the one genuinely new build, and what turns all of this into *Add a wall
+   switch* for somebody who is not us.
+2. **Does the Brilliant app still add a device with no internet?** Decides whether the keep-your-panel path
+   has a future or an expiry date set by somebody else.
+3. **Do the panel's two gangs serve one light or two?** Decides whether taking the panel down means one
+   orphan fix or two.
+4. A three-switch star, and what `0x1b` reads on a factory-fresh switch.

@@ -49,7 +49,9 @@
 
 #include "esp_coexist.h"
 #include "mesh_crypto.h"
+#include "claim.h"
 #include "config.h"
+#include "release_keys.h"
 #include "light.h"
 // The compiled-in fallback for everything in cfg, plus the tunables below. One
 // header per puck (-DSECRETS_FILE='"secrets-s3.h"' in platformio.ini), and
@@ -124,6 +126,7 @@ static uint32_t lastRxAt = 0, lastFilterAt = 0, lastResyncAt = 0, lastPollAt = 0
 static uint32_t linkUpAt = 0;
 static uint8_t sweepsDone = 0;
 static uint8_t resyncIdx = 0xFF;         // walking the switch list with unicast Gets; 0xFF = idle
+static void lightRefresh();              // defined beside emptyScans, which it reads
 static uint32_t lastResyncStepAt = 0;
 
 static uint8_t ourNetId[8];
@@ -881,7 +884,7 @@ static bool connectToNode() {
     setProxyFilter();
     linkUp = true;
     linkUpAt = lastRxAt = millis();
-    lightSet(Light::Heard);
+    lightRefresh();   // green only if the broker is there too; the loop keeps it honest after this
     sweepsDone = 0;
     Serial.println("[ble] bridge up: filter opened");
     char t[80];
@@ -902,11 +905,32 @@ static void dropLink(const char *why) {
 
 // ---------------------------------------------------------------- mqtt
 
+// Anything claim.cpp wants to say goes out under this puck's own bridge topic.
+static void claimSay(const char *leaf, const char *payload) {
+    char t[80];
+    bridgeTopic(t, sizeof(t), leaf);
+    mqtt.publish(t, payload, false);
+}
+
 static void mqttCb(char *topic, uint8_t *payload, unsigned int len) {
     char msg[32] = {0};
     memcpy(msg, payload, min((unsigned int)31, len));
     char t[128];
     strlcpy(t, topic, sizeof(t));
+
+    // Letting a switch in is a job for the puck rather than for one of the
+    // switches on it, so it arrives on the bridge's own topic and has to be
+    // matched before the per-switch parsing below throws it away.
+    char claimTopic[80];
+    bridgeTopic(claimTopic, sizeof(claimTopic), "claim");
+    if (!strcmp(t, claimTopic)) {
+        // Queue only. The radio work happens on the loop for the same reason the
+        // BLE notify path only queues: doing it inside this callback deadlocks.
+        if (!claim_queue((const char *)payload, len)) {
+            Serial.println("[claim] busy -- ignoring");
+        }
+        return;
+    }
 
     // <base>/<net>/<addr>/<leaf>, and only for our own network
     char prefix[40];
@@ -971,6 +995,8 @@ static void mqttReconnect() {
     mqtt.subscribe(sub);
     snprintf(sub, sizeof(sub), "%s/%s/+/brightness/set", cfg.mqttBase, netHex);
     mqtt.subscribe(sub);
+    bridgeTopic(sub, sizeof(sub), "claim");
+    mqtt.subscribe(sub);
     Serial.printf("[mqtt] connected as %s, commands on %s\n", id, sub);
     announceBridge();
     char t[80], v[16];
@@ -997,6 +1023,16 @@ static void mqttReconnect() {
 // address is on MQTT already; only its signal strength is worth the bytes here.
 void bridgeStatusLine(char *out, size_t n) {
     static const char *LIGHTS[] = {"off", "looking", "heard", "far"};
+    // Which of the maker's keys this image carries, two bytes of each. Nothing verifies a signature
+    // yet (docs/puck-updates.md), but a key cannot be added to a puck after its cable visit, so they
+    // go in before anything needs them -- and a puck that cannot say which keys it holds is one
+    // nobody can check before it disappears behind a sofa. This is also what keeps them in the
+    // binary at all: an unused static const array in a header is not linked into the image.
+    char keys[8 * N_RELEASE_KEYS];
+    char *kp = keys;
+    for (int i = 0; i < N_RELEASE_KEYS; i++)
+        kp += snprintf(kp, sizeof(keys) - (kp - keys), i ? ",%02x%02x" : "%02x%02x",
+                       RELEASE_KEYS[i][0], RELEASE_KEYS[i][1]);
     // No String temporaries here: this runs on the serial task's stack.
     char ip[20] = "down";
     if (WiFi.status() == WL_CONNECTED) {
@@ -1005,8 +1041,8 @@ void bridgeStatusLine(char *out, size_t n) {
     }
     int rssi = 0;
     if (linkUp) { const char *r = strstr(proxyDesc, "rssi "); if (r) rssi = atoi(r + 5); }
-    snprintf(out, n, "status wifi=%s mqtt=%s rssi=%d sw=%u light=%s", ip,
-             mqtt.connected() ? "up" : "down", rssi, (unsigned)nSwitches, LIGHTS[(int)lightGet() & 3]);
+    snprintf(out, n, "status wifi=%s mqtt=%s rssi=%d sw=%u light=%s keys=%s", ip,
+             mqtt.connected() ? "up" : "down", rssi, (unsigned)nSwitches, LIGHTS[(int)lightGet() & 3], keys);
 }
 
 void setup() {
@@ -1031,6 +1067,10 @@ void setup() {
     prefs.putUInt("seq", txSeq);
     ivIndex = prefs.getUInt("iv", cfg.ivIndex);
     if (ivIndex < cfg.ivIndex) ivIndex = cfg.ivIndex;   // the config was rewritten with a newer IV
+    // A switch claimed by this puck joins the network this puck carries, on the
+    // keys it was given -- which is why the puck to send a claim to is the one
+    // bridging the house's own mesh and not the one bridging an old panel's.
+    claim_begin(cfg.netKey, ivIndex, claimSay);
 
     Serial.println("crypto self-test:");
     if (!mesh_selftest(Serial)) Serial.println("  !! CRYPTO BROKEN -- do not trust results");
@@ -1110,6 +1150,24 @@ void setup() {
 // that they are still standing there.
 static uint8_t emptyScans = 0;
 
+// Green is a promise, so it has to mean the whole thing.
+//
+// The light answers one question -- "is here good?" -- asked by somebody standing at a socket with
+// the puck in their hand (design/puck/Placing.dc.html, and the panel says "It can hear them. Leave
+// it here."). Hearing a switch was never the whole answer: BLE and Wi-Fi are separate radios, so a
+// socket can carry the mesh and no Wi-Fi at all. A puck left there is green, contented, and invisible
+// to the hub -- and the person is standing between two of their own instruments saying opposite
+// things, having been told to trust the light. So green now needs the broker too, and a spot that
+// cannot reach it stays amber, which is the honest answer to the question being asked.
+//
+// Recomputed every pass rather than set at the moments things change, because Wi-Fi can go after the
+// link is up and a light that was only ever set on the way in would never say so.
+static void lightRefresh() {
+    if (linkUp && mqtt.connected())  lightSet(Light::Heard);
+    else if (emptyScans >= 3)        lightSet(Light::Far);
+    else                             lightSet(Light::Looking);
+}
+
 void loop() {
     if (configBlank()) {   // waiting for the hub; the serial task is doing the work
         static uint32_t saidBlank = 0;
@@ -1126,6 +1184,16 @@ void loop() {
     }
     if (!cfg.haveKeys) {   // on the Wi-Fi, nothing to say on the mesh yet
         delay(200);
+        return;
+    }
+
+    // Claiming takes the radio for tens of seconds, so it runs before the proxy
+    // work and the proxy stands down while it does. A puck cannot bridge and
+    // claim at once, and pretending otherwise would give us a half-dropped link
+    // in the middle of a handshake -- the one moment it is least recoverable.
+    if (claim_busy()) {
+        if (connected) dropLink("letting a switch in");
+        claim_tick();
         return;
     }
 
@@ -1147,7 +1215,7 @@ void loop() {
         }
         if (!haveTarget && !findProxy()) {
             if (emptyScans < 3) emptyScans++;
-            lightSet(emptyScans >= 3 ? Light::Far : Light::Looking);
+            lightRefresh();
             delay(2000);
             return;
         }
@@ -1161,6 +1229,7 @@ void loop() {
 
     drainRx();
     expireMotion();
+    lightRefresh();     // every pass: the broker can go while the proxy link stays up
 
     if (!linkUp) {
         delay(20);

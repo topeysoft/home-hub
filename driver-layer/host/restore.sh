@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 # Puts a backup back. home-hub-restore.path starts this when brain-data/restore.request appears next to
 # restore.tar.gz (the brain parks the panel's upload there). Stops the house, unpacks data/ over brain-data
 # and driver/ over driver-layer (keeping this hub's own address in .env), starts everything again.

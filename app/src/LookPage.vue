@@ -1,3 +1,7 @@
+<!--
+  SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+  SPDX-License-Identifier: AGPL-3.0-or-later
+-->
 <script setup lang="ts">
 /*
  * How the house looks: one question, three answers.
@@ -16,7 +20,7 @@
  * its own, because a panel that quietly rearranges itself is worse than one that
  * asks.
  *
- * Nothing was taken away. Customise still holds all four, still writes them to
+ * Nothing was taken away. Customize still holds all four, still writes them to
  * the house, and a house that set its look by hand before feels existed opens
  * this page already showing them. It is a disclosure, not a downgrade.
  */
@@ -46,7 +50,7 @@ const face = computed(() => stored.value.face ?? feel.value.face)
 
 /* A look shown as itself. Not a drawing of one and not a screenshot either: the
    sky is this hour's own three bands under the panel's own veil, the cards are
-   the colours toneVars is handing the panel right now, and glass is the real
+   the colors toneVars is handing the panel right now, and glass is the real
    material — the rules in panel.css reach .look-mini-card the same way they
    reach a room card. What you are looking at IS the answer, at the hour you are
    looking at it, which is the only honest way to ask someone to choose. */
@@ -74,7 +78,7 @@ async function write(look: Record<string, string>, key: string): Promise<boolean
 
 /* Picking a feel is a reset as much as a choice: it writes the whole look, so
    the four dials go back to what this feel means and "adjusted" clears. That is
-   also the only way back from Customise, which is why the reset below is the
+   also the only way back from Customize, which is why the reset below is the
    same call and not a fifth thing to maintain.
    
    And then it checks. A hub older than this panel keeps what it understands and
@@ -104,7 +108,7 @@ function choose(key: 'tone' | 'layout' | 'nav' | 'face', value: string) {
    
    And on the face you are looking at it on. These were built from toneVars
    alone, which knows nothing about the face, so on glass they showed four
-   different colours for four tones that all came out identical -- the swatch
+   different colors for four tones that all came out identical -- the swatch
    was the only part of the panel where the setting appeared to work. A pane is
    one material rather than three cards, so it gets one chip. */
 function swatches(id: string) {
@@ -112,7 +116,7 @@ function swatches(id: string) {
   if (face.value === 'glass') {
     /* A pane over the sky it will actually be over. On its own it is a chip of
        something 34% opaque laid on a dark row, which is very nearly nothing --
-       honest, and unreadable. A pane has no colour without a sky behind it;
+       honest, and unreadable. A pane has no color without a sky behind it;
        that is the whole of what the face is, and it is what .look-mini already
        does one section up. */
     const [top, band, horizon] = palette(elevation, wxOf(condition))
@@ -168,7 +172,7 @@ const AROUND = computed(() => place.value.nav === 'top' ? 'with tabs across the 
     </button>
 
     <button class="look-more" :class="{ open: more }" @click="more = !more">
-      <span>Customise this look</span>
+      <span>Customize this look</span>
       <Icon name="back" :size="15" />
     </button>
 
@@ -232,7 +236,7 @@ const AROUND = computed(() => place.value.nav === 'top' ? 'with tabs across the 
         </button>
       </div>
 
-      <p class="page-foot">The cards take their colour from the sky, so all of these lighten through the morning and settle after sunset. The tone sets which way they lean.</p>
+      <p class="page-foot">The cards take their color from the sky, so all of these lighten through the morning and settle after sunset. The tone sets which way they lean.</p>
     </div>
   </div>
 </template>

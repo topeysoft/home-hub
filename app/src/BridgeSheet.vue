@@ -1,3 +1,7 @@
+<!--
+  SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+  SPDX-License-Identifier: AGPL-3.0-or-later
+-->
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { store, notify, refreshBridge } from './store'
@@ -139,7 +143,11 @@ onUnmounted(() => window.removeEventListener('keydown', key))
               <span class="bridge-name">{{ heard }}</span>
               <span class="bridge-sub" v-if="b.signal === 'strong'">Strong. Where it is now is good.</span>
               <span class="bridge-sub" v-else-if="b.signal === 'weak'">Faint. It will work, but a socket nearer a switch would be better.</span>
-              <span class="bridge-sub" v-else>Still listening. This updates as you walk.</span>
+              <!-- Not "updates as you walk": unplugged, it has no Wi-Fi and cannot say anything at
+                   all, so this only moves once it is on a charger somewhere. The light is what
+                   answers while it is in your hand (design/puck/Placing.dc.html). -->
+              <span class="bridge-sub" v-else-if="b.quiet">It has not come back. That socket may be out of Wi‑Fi reach — try one nearer the hub, or bring it back here.</span>
+              <span class="bridge-sub" v-else>Plug it in and this will say what it hears.</span>
             </span>
           </div>
           <div class="flow-actions"><button class="button" :class="{ busy }" @click="placed">Leave it here</button></div>

@@ -216,13 +216,13 @@ input:focus-visible {
 
 /* ---------- glass: what the panel is made of, when a house asks for it ----------
    Six layers, always in this order: the blur is what the pane is made of, the
-   rim is its edge catching the light, the sweep is that light travelling across
+   rim is its edge catching the light, the sweep is that light traveling across
    it, the inner shade is its thickness, the drop is the air underneath. None of
-   them is a colour -- every one is derived from the sky in tone.ts, which is why
+   them is a color -- every one is derived from the sky in tone.ts, which is why
    a pane at noon is carried by its shadow and a pane at midnight by its catch.
 
    Three surfaces, and no fourth. A pane is what the house has nothing better to
-   say with; a card that already means something with its colour keeps it and
+   say with; a card that already means something with its color keeps it and
    only gains the edge; and anything that brings its own picture -- artwork, a
    camera frame -- is never overpainted at all. */
 [data-face='glass'] .look-mini-card,
@@ -337,7 +337,7 @@ input:focus-visible {
 }
 /* ---------- the floor: glass without the lens ----------
    A host that cannot paint a backdrop-filter gets the face anyway, flattened.
-   Every colour here is the one its translucent twin composites to, so the rim,
+   Every color here is the one its translucent twin composites to, so the rim,
    the sweep and the shadow are untouched and only the depth is gone -- which is
    the right thing to lose, because an unblurred glass card is .34 alpha over
    the open sky and hardly a card at all.
@@ -960,7 +960,7 @@ input:focus-visible {
 }
 /* `.tile[data-size]` and not `[data-size]`, and the extra class is load-bearing.
    Several tiles place themselves in the grid they used to live in -- `.tile.wide`
-   spans two columns, `.tile.climate` spans two ROWS "so its neighbours keep
+   spans two columns, `.tile.climate` spans two ROWS "so its neighbors keep
    their size" -- and those are (0,2,0) selectors sitting later in this file than
    these. A bare `[data-size='half']` weighs the same and loses, so a thermostat
    marked half came out a third tall: the size table said one thing and the
@@ -994,8 +994,8 @@ input:focus-visible {
    light that is on; none of its weight."
 
    Scoped to the room grid on purpose. On Home a light tile is one of a handful
-   of things on the screen and its colour is how you find it; here there are
-   three of them side by side and its colour has to mean something else. */
+   of things on the screen and its color is how you find it; here there are
+   three of them side by side and its color has to mean something else. */
 .tiles > .tile.light:not(.on) {
   background: var(--card-plain, var(--surface));
 }
@@ -1058,7 +1058,7 @@ input:focus-visible {
   color: var(--muted);
   white-space: normal;
 }
-/* the scene the room is in is said in the icon, not in a second card colour:
+/* the scene the room is in is said in the icon, not in a second card color:
    four tinted rows and one plain one is a card with a hole in it */
 .scenes-stacked .scene.active {
   background: rgba(255, 255, 255, 0.055);
@@ -1403,7 +1403,7 @@ input:focus-visible {
     z-index: -2;
   }
   /* what keeps the words readable over someone else's artwork, which can be any
-     colour at all -- a title in white on a white album cover is not a design */
+     color at all -- a title in white on a white album cover is not a design */
   .tiles > .tile.media[data-size='full'] .media-veil {
     display: block;
     position: absolute;
@@ -2177,7 +2177,7 @@ input:focus-visible {
   }
   /* the stage is the scroller again here, so New devices gives the axis back
      rather than putting a second one inside the first */
-  .sort {
+  .sort-scroll {
     overflow-y: visible;
     min-height: auto;
   }
@@ -3629,7 +3629,7 @@ select.input {
   --tint: 233, 184, 114;
   min-height: 0;
   grid-row: span 2;
-} /* two rows tall, so its neighbours keep their size */
+} /* two rows tall, so its neighbors keep their size */
 .tile.climate.cool {
   --tint: 122, 176, 232;
 }
@@ -3716,7 +3716,7 @@ select.input {
    lines and the size picks one. Off by default, because a card that shows both
    says the reading twice -- and in the rail, where .clim-center is
    `display: contents`, the spare line lands in the grid's first column and
-   widens it past the step button, which walks the number off the card's centre.
+   widens it past the step button, which walks the number off the card's center.
    The third-width rule above turns it back on. */
 .clim-short {
   display: none;
@@ -3899,11 +3899,23 @@ select.input {
    the rest of them simply out of reach, under the command box, with nothing to
    scroll. Fourteen found devices on a 1280x800 wall put the last one at y 1408.
 
-   So the scroll goes on the list rather than back on the stage, which keeps
-   what that rule was protecting: the head does not move, the way back stays
-   where a thumb left it, and the only thing that travels is the thing there is
-   more of. Below 860 the stage scrolls again (see the phone block) and the
-   list hands the axis back, so a phone keeps one scroll rather than two. */
+   So the scroll goes on everything under the head rather than back on the
+   stage, which keeps what that rule was protecting: the head does not move, the
+   way back stays where a thumb left it, and the only thing that travels is the
+   thing there is more of. Everything under the head and not the list alone,
+   because the bars that teach this screen stand between the two: fixed above a
+   scrolling list they ate a short wall, leaving a 69px window for a 135px row,
+   so no row could ever be read whole however far it was scrolled. Inside the
+   scroll they simply travel with it. Below 860 the stage scrolls again (see the
+   phone block) and this hands the axis back, so a phone keeps one scroll rather
+   than two. */
+.sort-scroll {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
 .sort {
   list-style: none;
   margin: 0;
@@ -3912,16 +3924,14 @@ select.input {
   flex-direction: column;
   gap: 10px;
   max-width: 760px;
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
+  flex: 0 0 auto;
 }
 .sort-row {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) minmax(160px, 220px);
   gap: 12px;
   /* Lined up on the row's FIRST LINE -- the 44px name field -- and not on the
-     middle of the row. Centred, a unit with a parts line under its name made the
+     middle of the row. Centered, a unit with a parts line under its name made the
      middle column taller than the others, so the icon and the room picker sank
      10px below the name they belong to while every plain row beside them stayed
      level. Measured on New devices: the field's middle sat at 653 and its own
@@ -3975,6 +3985,54 @@ select.input {
   margin-top: 3px;
   font-size: 13.5px;
   color: var(--muted);
+}
+/* What the house knows about a thing besides the name it came with, and beside it the way to settle
+   it outright: blink it and go and look. Both on one line under the name, because they are one
+   question -- which of these is it -- asked quietly and then loudly. telling.ts.
+   It wraps rather than truncates: on a phone the maker and the model take a line each, and a name
+   cut off at "Signify Nether..." is the same nothing the row had before. */
+.sort-hint {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  padding: 0 12px;
+  margin-top: 5px;
+  font-size: 13.5px;
+  color: var(--muted);
+  min-width: 0;
+}
+.sort-known {
+  min-width: 0;
+}
+/* On right now: the one word on this line a person can act on without moving, because they can look
+   up and see which lamp is lit. Lit like the lamp it is describing. */
+.sort-live {
+  color: var(--lamp);
+}
+.sort-dead {
+  color: var(--danger);
+}
+/* What came of a blink: on the row it belongs to rather than in a toast over the list it came from,
+   and across the row for the same reason the forgetting question is -- in the name's own column this
+   sentence wraps three ways and takes the chip that started it with it. */
+.sort-said {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 0;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+/* the smallest a chip goes: it rides a 13.5px line under a name and must not set the row's height */
+.chip-btn.tiny {
+  padding: 5px 11px;
+  font-size: 13px;
+  gap: 5px;
+}
+.chip-btn.tiny.busy {
+  opacity: 0.5;
 }
 /* the middle of the name field, for the things beside it that are shorter than
    it: the icon at 40 and the small buttons at 36 */
@@ -4642,7 +4700,7 @@ select.input {
 /* The quiet half of a row. Two kinds, and they are not the same thing: a
    fragment qualifying the value -- "· checked Wed 2:44 PM" -- rides along on
    the value's own line, while a whole sentence gets .line and sits under it.
-   Run inline, a sentence turns the row into a two-colour paragraph whose break
+   Run inline, a sentence turns the row into a two-color paragraph whose break
    lands wherever the window puts it, so the row changes shape with its width
    and a reader cannot see where the fact ends and the caveat starts. */
 .hub-sub {
@@ -4893,8 +4951,8 @@ select.input {
    The chip left in the band once its pane has been put aside. Every nudge is
    already amber, because every nudge is the house asking for something, so this
    one cannot be told apart by hue -- and hue is the wrong instrument anyway:
-   Asks.vue has always said to lift this with elevation and never with colour,
-   so that it is recognised by shape rather than by a tint somebody could
+   Asks.vue has always said to lift this with elevation and never with color,
+   so that it is recognized by shape rather than by a tint somebody could
    imitate. It gets the lit edge and the air under it instead, which is the one
    thing in the band that looks like an object rather than a notice. */
 .nudge.ask {
@@ -4960,12 +5018,12 @@ select.input {
   color: var(--ink-2);
 }
 
-/* ---------- cards take their colour from the sky ----------
+/* ---------- cards take their color from the sky ----------
    tone.ts turns the sun's elevation and the weather into these properties and
    the shell sets them on .shell, so everything below inherits. Each falls back
    to the token it replaced, and a screen that never gets them still paints.
 
-   Only surfaces that carry no colour of their own take a tone: a light, a plain
+   Only surfaces that carry no color of their own take a tone: a light, a plain
    device, a room card. Media keeps its artwork and climate keeps --tint (blue
    cooling, orange heating) because those already mean something — as do the
    lamp, the live green and the danger red, which is why the lit icon and the
@@ -5273,8 +5331,8 @@ select.input {
 /* ---------- three looks, shown as themselves ----------
    A preview that is a drawing of a look can only ever be a promise. These are
    the look: the hour's own sky under the panel's own veil, the cards in the
-   colours toneVars is handing the panel behind this sheet, and — the point of
-   the selector work above — glass made of glass rather than of a grey rounded
+   colors toneVars is handing the panel behind this sheet, and — the point of
+   the selector work above — glass made of glass rather than of a gray rounded
    rectangle pretending. Three of them fit across a wall panel and stack down a
    phone, because this page has to answer on both. */
 .look-feels {
@@ -5363,7 +5421,7 @@ select.input {
    one card carrying the room, two stacked beside it, and the command box along
    the foot. Not the real components -- a mini does not need to know what a
    thermostat is -- but the real shape, because a preview made of two equal
-   rectangles previews nothing anyone will recognise when they close this sheet. */
+   rectangles previews nothing anyone will recognize when they close this sheet. */
 .look-mini-panel {
   position: absolute;
   inset: 0;
@@ -5551,7 +5609,7 @@ select.input {
   filter: none;
 }
 /* the scrim is the air from under the pane, so the room is dimmed by the pane's
-   own shadow rather than by a grey laid over it -- tone.ts derives it from the
+   own shadow rather than by a gray laid over it -- tone.ts derives it from the
    hour like everything else */
 [data-face='glass'] .opened-veil,
 [data-face='glass'] .house-veil {
@@ -5947,14 +6005,14 @@ select.input {
 /* ---------- a phone at the door, as a pane ----------
    It borrows the whole of the opened pane -- the rise, the fall, the room going
    quiet behind it, all measured in design/nightfall slice 5 -- and one thing it
-   must not borrow: the colour.
+   must not borrow: the color.
 
    Every other surface in this file holds a distance from the sky so that it
    tracks the hour, and tone.ts exists to make that true. This one is fixed, and
    the reason is not visual. It is the one place a person hands out a key to the
-   house, and recognising it instantly -- noticing when something about it is
-   off -- is the only defence they have against answering a prompt they should
-   not. A surface that looks different at every hour cannot be recognised.
+   house, and recognizing it instantly -- noticing when something about it is
+   off -- is the only defense they have against answering a prompt they should
+   not. A surface that looks different at every hour cannot be recognized.
 
    Which would normally be exactly the hole punched in the daylight that slice 5
    went to some trouble to close: a fixed near-black at noon. It is not, here,
@@ -5979,8 +6037,8 @@ select.input {
 /* The lit edge the card always carried, at the size a pane is. Drawn as a masked
    border the way the glass rim is, rather than as a gradient fading into the
    face: an edge is the shape of the thing, and a haze across the top is just a
-   colour. It is the one mark on this pane that is not type or a button, and it
-   has a job -- it is what a person is meant to recognise. */
+   color. It is the one mark on this pane that is not type or a button, and it
+   has a job -- it is what a person is meant to recognize. */
 .ask-pane .opened-panel::after {
   content: '';
   position: absolute;
@@ -6004,7 +6062,7 @@ select.input {
   mask-composite: exclude;
 }
 /* the hero stays on the pane's own clock -- it arrives with it and leaves with
-   it -- and only its colour is this pane's */
+   it -- and only its color is this pane's */
 .ask-pane .opened-hero {
   color: rgba(233, 184, 114, 0.34);
 }
@@ -6316,7 +6374,7 @@ select.input {
 
 /* without scroll-driven animations: the same fade, no blur, as a mask on the
    row; each end lifts when there is nothing beyond it, so the first card at
-   rest is never dimmed for a neighbour it does not have */
+   rest is never dimmed for a neighbor it does not have */
 @supports not (animation-timeline: view()) {
   .bento {
     --edge-l: rgba(0, 0, 0, 0.35);
@@ -6480,7 +6538,7 @@ select.input {
    than one line of house news, and a band of a known height can come out of the
    flow altogether.
 
-   So it hangs in the gap that is already there. The stage centres itself in
+   So it hangs in the gap that is already there. The stage centers itself in
    whatever height is left, which leaves 58px between the top bar and the row at
    1280x800, and a chip is 57. `--stage-top` is what lets the band start at the
    bar rather than at the stage's content box; the two are declared together for
@@ -6555,7 +6613,7 @@ select.input {
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  /* Centred, where the board it came from is flush left. The board's lozenge is
+  /* Centered, where the board it came from is flush left. The board's lozenge is
      460 of a 1440 screen and the numerals nearly fill it, so flush left costs
      it nothing; here the shape holds its share instead of a width, the content
      box is around 145px, and a two-digit temperature leaves a wedge of empty
@@ -6581,7 +6639,7 @@ select.input {
   z-index: 2;
   /* Paper's answer, and it has to be a real surface: --surface over a night sky
      at this size is a faint outline rather than a pane, and the numbers on it
-     have nothing to sit on. So it takes the house's own plain card colour, the
+     have nothing to sit on. So it takes the house's own plain card color, the
      one a room card uses -- under paper the panel is made of cards and a layout
      does not get to change that. Glass swaps in the pane recipe further up. */
   background: var(--card-plain, var(--surface));
@@ -6624,7 +6682,7 @@ select.input {
   margin: 6px 2px 26px;
 }
 /* The tall cards fill their whole span here. The Rail holds them 52px short and
-   centred, which is right when they sit under a greeting and the row is the
+   centered, which is right when they sit under a greeting and the row is the
    shorter half of the screen; on the board they are the full 548 and the glance
    column beside them adds up to exactly the same, which is what makes the row
    read as one block rather than as a row of things of different sizes. */
@@ -6821,7 +6879,7 @@ select.input {
    row takes 180ms to be there instead of appearing between two frames, because
    a fade is not vestibular motion and a pop is only abrupt.
 
-   The translate has to be cancelled rather than left to the dead transition:
+   The translate has to be canceled rather than left to the dead transition:
    `translate` is a plain property, not an animation, so .set would put every
    card 696px right for exactly one painted frame before .go snapped it back. */
 @media (prefers-reduced-motion: reduce) {
@@ -7262,7 +7320,7 @@ select.input {
 }
 [data-face='glass'] .bottombar .say.open .say-box {
   width: 100%;
-  /* the board lifts the pill about a fifth as it opens. A background-COLOUR and
+  /* the board lifts the pill about a fifth as it opens. A background-COLOR and
      not a filter: a filter here would form a backdrop root and take the box's
      own frost away at the instant it opened, which is the trap this file has
      already walked into twice -- on the rail and on the room behind a pane. */
@@ -7284,9 +7342,9 @@ select.input {
    against each other at 14s and 19s, which is what separates a thing that is
    listening from a button with a gradient on it.
 
-   It is the one place in the face carrying colours of its own instead of a
+   It is the one place in the face carrying colors of its own instead of a
    distance from the sky, and that is deliberate: a lit object is not a surface.
-   It is the licence the lamp glow and the weather drawing already have, and the
+   It is the license the lamp glow and the weather drawing already have, and the
    rule in layout.ts is about panes, which have to hold their distance at every
    hour or the daylight goes. What it does mean is that the orb is an EVENING
    identity, indigo at noon as much as at midnight -- which is exactly the open
@@ -7367,9 +7425,9 @@ select.input {
 .household-people {
   display: flex;
 }
-/* a face: the person's initial on a colour of their own -- the colour itself is
-   set on the element (people.ts). 34 across, 28 between centres, as drawn. The
-   initial sits centred on the whole disc, which leaves it clear of the bite the
+/* a face: the person's initial on a color of their own -- the color itself is
+   set on the element (people.ts). 34 across, 28 between centers, as drawn. The
+   initial sits centered on the whole disc, which leaves it clear of the bite the
    next face takes out of the right-hand side. */
 .person {
   width: 34px;
@@ -7388,7 +7446,7 @@ select.input {
   margin-left: 0;
 }
 /* Where two faces lap, the one behind is CUT rather than the one in front being
-   ringed: a disc the size of its neighbour plus a 2px hairline is taken out of
+   ringed: a disc the size of its neighbor plus a 2px hairline is taken out of
    it, so the line between them is whatever is actually behind the bar. A ring
    in a fixed near-black instead -- which is what this was -- reads as a dark
    halo the moment the bar floats over a lit sky, and the faces stop being a
@@ -7524,7 +7582,7 @@ select.input {
    Two rows that flow sideways, sized as the design was: a light, a film, a
    lock, the scenes take both rows at 340 tall, while a camera and a thermostat
    are glance cards small enough to stack, two to a column at 196 each. The
-   column is the taller of the two (410), and the tall cards sit centred on it,
+   column is the taller of the two (410), and the tall cards sit centered on it,
    which is what stops the row reading as a shelf of equal boxes.
 
    It scrolls under both edges of the screen: the stage's own padding is given
@@ -7962,7 +8020,7 @@ select.input {
   border-radius: 24px;
   /* The tone, which this surface went without. Warm, Cool and Pastel are
      `--card-plain` and the ink that has to sit on it, and every surface that
-     carries no colour of its own reads them -- `.tile.plain`, `.tile.light`,
+     carries no color of its own reads them -- `.tile.plain`, `.tile.light`,
      `.room-card`. This one hard-coded the slab below and so stayed the same
      card at every setting the house offered.
 
@@ -8158,7 +8216,7 @@ select.input {
 /* A card that brings its own picture is never overpainted -- the tone rules say
    so about the SURFACE, and it has to hold for the ink as well. Under a pale
    tone `--card-ink` is near-black, which is right on a pale card and wrong on a
-   camera frame or an album cover, where it was 2.1:1 of dark grey on a dark
+   camera frame or an album cover, where it was 2.1:1 of dark gray on a dark
    photograph. The veil under these words is dark whatever the hour, so the ink
    that reads on it is the panel's own and not the card's. */
 .room-cell.shot .room-cell-name,
@@ -8487,7 +8545,7 @@ select.input {
   transition: opacity 380ms var(--ease);
 }
 /* The house arrives from the RIGHT, because that is the way it runs off the
-   screen: the columns fill down and then go right, so a card travelling in from
+   screen: the columns fill down and then go right, so a card traveling in from
    there is the arrangement telling you where the rest of it is. Home's row says
    the same thing the same way. */
 .rooms-bento.set > .room-cell {
@@ -8527,7 +8585,7 @@ select.input {
    appearing between two frames, because a fade is not vestibular motion and a
    pop is only abrupt.
 
-   The travel is cancelled rather than left to a dead transition: `translate` is
+   The travel is canceled rather than left to a dead transition: `translate` is
    a plain property, not an animation, so `.set` would put every card off its
    place for exactly one painted frame before `.go` snapped it back -- which is
    a jump, and a jump is the one thing this is here to avoid. */
@@ -8626,14 +8684,14 @@ select.input {
    rather than controls -- the others are a dial, a slider, a ring.
 
    The rain marks take the panel's own cooling blue, the same 122,176,232 a
-   thermostat uses. A forecast is not the place to introduce a colour: the house
+   thermostat uses. A forecast is not the place to introduce a color: the house
    has three signals, they mean cold, alive and wrong, and rain is the first of
    those. */
 .wx-rig {
   flex-direction: column;
 }
 /* no forecast in this house: the drawing takes the half the rows would have had.
-   Centred rather than stretched -- it is a picture, and a picture pulled to the
+   Centered rather than stretched -- it is a picture, and a picture pulled to the
    corners of a box stops being one. */
 .wx-rig.art {
   align-items: center;
@@ -9294,7 +9352,7 @@ select.input {
   font: inherit;
   font-size: 15.5px;
   /* a chip, not a row: `button { text-align: left }` at the top of this file governs every button in
-     the panel, and these are the artboard's centred pills */
+     the panel, and these are the artboard's centered pills */
   text-align: center;
   cursor: pointer;
   transition: background 0.15s var(--ease);
@@ -10161,7 +10219,7 @@ button.reading[data-held] {
  * except the outcome.
  *
  * So the frame says it is working, in the plainest way a frame can: a hairline
- * travelling the top edge. Deliberately NOT on the picture itself -- dimming or
+ * traveling the top edge. Deliberately NOT on the picture itself -- dimming or
  * sweeping the photograph would be the panel obscuring the one thing somebody
  * opened a camera to look at, and a security picture is not a loading skeleton.
  *
@@ -10224,7 +10282,7 @@ button.reading[data-held] {
 /* ---------- Needs a look: a page of jobs ---------- */
 /* Every row now carries what to do about it, and a fault carries the things
    that went quiet behind it, so a row is two or three lines tall instead of
-   one. .recent centres its three columns, which is right for a one-line row
+   one. .recent centers its three columns, which is right for a one-line row
    and wrong the moment the middle column grows -- the icon would float to the
    middle of a paragraph and the buttons would sit halfway down it. Only here,
    everything hangs from the top. */

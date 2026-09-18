@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 # The host as an appliance. Three things a box in somebody else's house needs that a developer's box
 # does not, each one file, each written only when it differs from what is there:
 #   1. a hardware watchdog, so a hung kernel reboots itself instead of waiting for a person with ssh;

@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """The hub, current: one command that always leaves you running the code you just wrote.
 
 `npm run brain` from the panel's directory, or `.venv/bin/python dev.py` from here.
@@ -40,7 +42,7 @@ def about(pid):
 
     `-ww` is load-bearing: without it ps truncates the command to the terminal width, which on a
     normal window is about sixteen characters -- so every hub looked like `/opt/homebrew/Ce` and
-    nothing was ever recognised as ours. And etime comes FIRST because it is the fixed-width half;
+    nothing was ever recognized as ours. And etime comes FIRST because it is the fixed-width half;
     with the command last there is nothing after it to confuse a split with."""
     try:
         r = subprocess.run(["ps", "-ww", "-o", "etime=,command=", "-p", str(pid)],

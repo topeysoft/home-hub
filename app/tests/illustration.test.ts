@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* The weather illustration beside the greeting.
 
    sky.ts states the law at the top of its illustration section: night is not a condition. Home

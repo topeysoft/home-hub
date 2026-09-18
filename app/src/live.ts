@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* A moving picture from a camera, best way first. WebRTC: the brain relays our offer to HA's go2rtc and
    the video comes straight from it. Motion JPEG: the brain passes HA's stream through an <img>. Each
    attempt reports once, playing or failed; the viewer decides what to try next. */

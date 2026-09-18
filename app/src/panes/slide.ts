@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /*
  * Dragging a level with a finger, for the instruments that are a level: a lamp's brightness, its
  * warmth, a blind's height, a speaker's volume.

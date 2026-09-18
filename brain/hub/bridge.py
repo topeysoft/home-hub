@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """A bridge puck on the hub's cable, and the bridges the house already has.
 
 A bridge is a small thing on a USB charger that brings in devices the hub has no radio of its own
@@ -11,7 +13,8 @@ One job at a time, because it is a person holding a thing.
 
     none      nothing to say
     knocking  a puck is on the cable and nobody has said it is theirs. Nothing of the house's has
-              gone anywhere: the code gate on /bridge/adopt is what "nothing has been let in" means
+              gone anywhere: the code gate on /bridge/adopt (hub/lock.py) is what "nothing has been
+              let in" means. Saying it is not yours needs no code -- refusing gives nothing away
     working   `step` is software | wifi | keys, in that order; everything before it is done
     placing   written and restarted; unplugged now, in somebody's hand, looking for a socket. What
               it hears comes back over the broker, which is the only link left
@@ -34,8 +37,13 @@ log = logging.getLogger("hub.bridge")
 SHIP = Path(os.environ.get("HUB_NOTES") or Path(__file__).resolve().parent.parent.parent / "releases") / "bridge"
 DEV = Path("/dev/serial/by-id")
 SCAN_EVERY = 3
+# How long to wait on a puck for each kind of question. A survey is one BLE scan;
+# a claim is a whole handshake over a link that may be weak. Named so the tests
+# can shrink them -- a suite that waits out a real timeout teaches people to skip it.
+SURVEY_WAIT = 20
+CLAIM_WAIT = 90
 # a radio stick is never a bridge, and must never be probed: esptool's sync toggles DTR/RTS, which
-# resets it. The same names driver-layer/radios.sh recognises.
+# resets it. The same names driver-layer/radios.sh recognizes.
 RADIO = re.compile(r"skyconnect|zbt-|zbdongle|sonoff|mg24|cc2652|zigbee|efr32|nabu|zooz|z-wave|zwave|aeotec|pzg23|hubz", re.I)
 STEPS = ("software", "wifi", "keys")
 BASE = "mesh"
@@ -138,10 +146,13 @@ class Bridges:
         self._seen: set[str] = set()          # ports present at the last look
         self._dismissed: set[str] = set()     # "not mine": left alone until unplugged
         self._task: asyncio.Task | None = None
+        self._quiet: asyncio.Task | None = None   # the placing watch; see _placing_went_quiet
         self._sub: int | None = None
         # what the broker says: chip -> {"online", "net", "rssi"}; (net, addr) -> state
         self.pucks: dict[str, dict] = {}
         self.switches: dict[tuple, str] = {}
+        self._heard: dict[str, dict] = {}       # the last answer to a claim command, per leaf
+        self._woke: asyncio.Event | None = None  # made per question, inside the loop asking it
         self._first = True
 
     # ---- what the panel sees ----
@@ -153,6 +164,7 @@ class Bridges:
         if j["state"] == "working": out["step"] = j["step"]
         if j["state"] in ("placing", "ready"):
             out["switches"] = self._count(j.get("net")); out["signal"] = self._signal(j.get("chip"))
+        if j["state"] == "placing" and j.get("quiet"): out["quiet"] = True
         if j["state"] == "ready": out["unplaced"] = j.get("unplaced", 0)
         if j.get("text"): out["text"] = j["text"]
         if j.get("needs"): out["needs"] = j["needs"]
@@ -222,6 +234,7 @@ class Bridges:
 
     async def dismiss(self) -> dict:
         if self.job and self.job["state"] in ("knocking", "failed", "ready"):
+            self._stop_quiet_watch()
             if self.job.get("port"): self._dismissed.add(self.job["port"])
             self.job = None
             self.hub._broadcast(json.dumps({"type": "bridge", "bridge": self.status()}))
@@ -239,8 +252,34 @@ class Bridges:
             self._task = asyncio.create_task(self._setup())
         return self.status()
 
+    # How long a puck may say nothing during the placing before the panel stops implying it is a
+    # matter of time. Long enough to unplug it, carry it somewhere and let it boot; short enough that
+    # somebody is still standing there holding it.
+    QUIET_S = 90
+
+    async def _placing_went_quiet(self) -> None:
+        """A puck in somebody's hand and a puck in a socket with no Wi-Fi both say nothing at all.
+
+        They are the same silence to the broker, and the panel drew them the same way -- "still
+        listening" -- for ever, about a puck that was never coming back. The difference is only how
+        long it lasts, so that is what this measures. The light is unaffected: BLE does not need the
+        Wi-Fi, so a puck in a mesh-but-no-Wi-Fi socket is still telling the truth locally.
+        """
+        try:
+            await asyncio.sleep(self.QUIET_S)
+        except asyncio.CancelledError:
+            return
+        j = self.job
+        if j and j["state"] == "placing" and self._signal(j.get("chip")) == "none":
+            self._set("placing", quiet=True)
+
+    def _stop_quiet_watch(self) -> None:
+        if self._quiet and not self._quiet.done(): self._quiet.cancel()
+        self._quiet = None
+
     async def placed(self) -> dict:
         if not self.job or self.job["state"] != "placing": raise ValueError("Nothing is being placed.")
+        self._stop_quiet_watch()
         self._set("ready", unplaced=self._unplaced(self.job.get("net")))
         return self.status()
 
@@ -267,6 +306,7 @@ class Bridges:
             self.hub.settings.set(bridges={**(self.hub.settings.get("bridges") or {}), who["chip"]: {"since": time.time(), "fw": who["fw"]}})
             self.hub.log.add("bridge", who["chip"], None, "set up", source="user")
             self._set("placing")
+            self._quiet = asyncio.create_task(self._placing_went_quiet())
         except Exception as e:
             log.warning("bridge setup failed: %s", e)
             self._set("failed", text=f"{e}")
@@ -303,12 +343,24 @@ class Bridges:
         if len(parts) == 4 and parts[1] == "bridge":
             chip, leaf = parts[2], parts[3]
             p = self.pucks.setdefault(chip, {})
+            if leaf in ("nearby", "claimed"):
+                # An answer to something we asked. Keep the newest and wake whoever
+                # is waiting; the waiter checks what it got, because a stale reply
+                # from a previous question would otherwise look like an answer.
+                try: self._heard[leaf] = {"at": time.time(), "body": json.loads(payload), "chip": chip}
+                except Exception: self._heard[leaf] = {"at": time.time(), "body": None, "chip": chip}
+                if self._woke: self._woke.set()
+                return
             if leaf == "status": p["online"] = payload == "online"
             elif leaf == "net": p["net"] = payload
             elif leaf == "proxy":
                 mm = re.search(r"rssi (-?\d+)", payload); p["rssi"] = int(mm.group(1)) if mm else None
             if self.job and self.job.get("chip") == chip and self.job["state"] in ("placing", "ready") and p.get("net"):
                 self.job["net"] = p["net"]
+            # It turned up after all: stop saying it did not.
+            if self.job and self.job.get("chip") == chip and self.job.get("quiet") and p.get("online"):
+                self.job.pop("quiet", None)
+                self._set("placing")
         elif len(parts) == 4 and parts[1] != "bridge":
             if parts[3] == "state":
                 self.switches[(parts[1], parts[2])] = payload
@@ -316,6 +368,104 @@ class Bridges:
             # One subscription for both, because there is only one thing to listen to (hub/relay.py).
             if (relay := getattr(self.hub, "relay", None)):
                 relay.on_message(parts[1], parts[2], parts[3], payload, bool(m.get("retain")))
+
+    # ---- letting a switch in ----
+    #
+    # The puck does the radio work (brilliant/esp32-bridge/src/claim.cpp); this
+    # decides WHICH puck, WHICH address, and turns the answers back into words.
+    #
+    # Which puck matters more than it sounds. A switch is claimed into whatever
+    # network the puck it was asked carries, so asking a puck that bridges an old
+    # Brilliant panel would put a new switch on the PANEL's mesh -- somebody
+    # else's network, and unrecoverable without a reset. The pucks this hub set up
+    # are the ones it gave the house's own keys to, and it wrote them down.
+
+    def _our_puck(self) -> str | None:
+        mine = self.hub.settings.get("bridges") or {}
+        live = [c for c, p in self.pucks.items() if p.get("online")]
+        ours = [c for c in live if c in mine]
+        if ours: return ours[0]
+        # Nothing the hub set up is online. Refusing beats guessing: an unknown
+        # puck is very likely carrying somebody else's mesh.
+        return None
+
+    def _next_addr(self, elements: int = 1) -> int:
+        """The house's own address space, kept beside its keys.
+
+        Nothing else may hand these out. The puck reserves 0x7000 upward for
+        itself (0x7000 | chip << 4) and the laptop tools use 0x0001 and 0x001a, so
+        this starts above those and stays well clear of both."""
+        k = self.keys()
+        p = self.hub.settings.path.parent / "mesh-keys.json"
+        nxt = int(k.get("next_addr") or 0x0020)
+        k["next_addr"] = nxt + max(1, elements)
+        p.write_text(json.dumps(k, indent=1)); os.chmod(p, 0o600)
+        return nxt
+
+    async def _ask(self, cmd: str, leaf: str, timeout: float) -> dict | None:
+        chip = self._our_puck()
+        if not chip:
+            raise ValueError("No bridge of this house is on. Plug one in, or give it a moment.")
+        self._heard.pop(leaf, None)
+        # Made here rather than in __init__: an Event belongs to the loop it was
+        # created in, and one made outside a running loop never wakes a waiter
+        # inside it -- which reads exactly like a puck that did not answer.
+        self._woke = asyncio.Event()
+        await self.hub.ha.call("mqtt", "publish", None,
+                               topic=f"{BASE}/bridge/{chip}/claim", payload=cmd)
+        end = time.time() + timeout
+        while time.time() < end:
+            try: await asyncio.wait_for(self._woke.wait(), timeout=max(0.2, end - time.time()))
+            except asyncio.TimeoutError: break
+            self._woke.clear()
+            got = self._heard.get(leaf)
+            if got and got["chip"] == chip: return got["body"]
+        return None
+
+    async def nearby(self) -> dict:
+        """What the puck can hear, and whose side each one is on. Read-only."""
+        body = await self._ask("survey", "nearby", SURVEY_WAIT)
+        if body is None:
+            return {"state": "failed", "text": "The bridge did not answer. It may be out of range of the hub."}
+        free = [s for s in body if s.get("state") == "unclaimed"]
+        spoken = [s for s in body if s.get("state") == "other"]
+        return {"state": "done", "waiting": free, "claimed_elsewhere": spoken,
+                "text": self._nearby_words(len(free), len(spoken))}
+
+    @staticmethod
+    def _nearby_words(free: int, spoken: int) -> str:
+        if free == 1: return "One switch is waiting to be let in."
+        if free > 1: return f"{free} switches are waiting to be let in."
+        if spoken: return "Nothing is asking to be let in, but there is a switch nearby that is on another network. That one has to be started over first."
+        return "Nothing nearby is asking to be let in."
+
+    async def blink(self, uuid: str, seconds: int = 5) -> dict:
+        """Make one of them announce itself, so a person can say which is which.
+
+        This is the whole identity check when there is no code to scan, so a
+        failure here is not cosmetic -- it means the next question cannot be
+        asked honestly."""
+        body = await self._ask(f"blink {uuid} {int(seconds)}", "claimed", seconds + SURVEY_WAIT)
+        if not body or not body.get("ok"):
+            return {"state": "failed", "text": (body or {}).get("why") or "The bridge could not reach that switch."}
+        return {"state": "done"}
+
+    async def let_in(self, uuid: str, oob: str | None = None) -> dict:
+        """Claim it onto the house's own network.
+
+        `oob` is the second half of the QR when there is one. Without it this is
+        the codeless route, which the switches accept -- every switch on this
+        house's network was claimed that way."""
+        addr = self._next_addr()
+        cmd = f"add {uuid} {addr:04x}" + (f" {oob}" if oob else "")
+        body = await self._ask(cmd, "claimed", CLAIM_WAIT)
+        if body is None:
+            return {"state": "failed", "text": "The bridge stopped answering while it was letting the switch in."}
+        if not body.get("ok"):
+            return {"state": "failed", "text": body.get("why") or "That switch would not join."}
+        return {"state": "done", "unicast": body.get("unicast"), "devkey": body.get("devkey"),
+                "elements": body.get("elements", 1),
+                "text": "It is on the house now."}
 
     def _count(self, net: str | None) -> int:
         return sum(1 for (n, _a) in self.switches if net is None or n == net)

@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* Where a spoken sentence comes from.
 
    Nothing in any house can listen yet -- docs/voice.md left the wall's words to the hub and a
@@ -82,8 +84,8 @@ describe('the preview, which is what move 6 is drawn against', () => {
   })
 })
 
-/* The browser's own recogniser, which is shape 1's engine and is behind `?listen=browser` because
-   docs/voice.md will not have it shipped: a browser that recognises in a cloud breaks *works with
+/* The browser's own recognizer, which is shape 1's engine and is behind `?listen=browser` because
+   docs/voice.md will not have it shipped: a browser that recognizes in a cloud breaks *works with
    the internet down*. What is checked here is that it stays behind that flag, that it says WHY when
    it cannot listen rather than going quiet, and that a browser with no Web Speech API at all --
    which is the WebView on the wall, and the whole reason the wall's voice went to the hub -- is
@@ -220,7 +222,7 @@ describe('a browser that can hear, behind the flag', () => {
     expect(heard[0]).toMatch(/Allow the microphone/)
   })
 
-  it('names the cloud when a recogniser goes looking for one', () => {
+  it('names the cloud when a recognizer goes looking for one', () => {
     /* the error docs/voice.md cares about most: it means the audio was leaving the house */
     at('?listen=browser')
     listen(listener)

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 # Signing a release, which is the step that decides what may run as root in somebody's house.
 #
 #   tools/release.sh --new-key        make the keypair, once, ever
@@ -60,7 +62,7 @@ TAG="${1:-}"
 # `--check` stops here; a real run carries on only if nothing is missing.
 MISSING=0
 # Each check runs inside an `if`, because `set -e` at the top of this file would otherwise make the
-# first failing test the last one you hear about -- which is exactly the behaviour this replaces.
+# first failing test the last one you hear about -- which is exactly the behavior this replaces.
 check() {  # description, what to do about it, then the command to run
   local desc="$1" fix="$2"; shift 2
   if "$@" >/dev/null 2>&1; then printf '  \033[32m✓\033[0m %s\n' "$desc"
@@ -118,6 +120,7 @@ python3 tools/release-manifest.py "$TAG" > "$TMP/release.json"
 # lets hubs get away with holding no cosign and no Sigstore root: they trust one ed25519 key, and
 # that key is only ever put to a manifest whose image passed this. docs/updates.md, piece 2.
 BRAIN="$(sed -n 's/^ *"brain": "\([^"]*\)".*/\1/p' "$TMP/release.json")"
+BRIDGE="$(sed -n 's/^ *"bridge": "\([^"]*\)".*/\1/p' "$TMP/release.json")"
 if command -v cosign >/dev/null 2>&1; then
   echo "Checking $TAG built the image it claims..."
   # cosign reads docker's own credentials and knows nothing about gh, so a package that is not public
@@ -132,18 +135,24 @@ if command -v cosign >/dev/null 2>&1; then
   REG_PASS="${GITHUB_TOKEN:-${GH_TOKEN:-${CR_PAT:-$(gh auth token 2>/dev/null || true)}}}"
   REG_USER="$(gh api user -q .login 2>/dev/null || echo x)"
   SLUG="$(git remote get-url origin | sed -E 's#.*github.com[:/]([^/]+/[^/.]+).*#\1#')"
-  WHO="^https://github.com/$SLUG/\.github/workflows/brain-image\.yml@refs/tags/$TAG\$"
-  if ! cosign verify "$BRAIN" \
-      ${REG_PASS:+--registry-username "$REG_USER" --registry-password "$REG_PASS"} \
-      --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-      --certificate-identity-regexp "$WHO" > /dev/null; then
-    echo "That image was not built by this repository's workflow from $TAG. Not signing it."
-    exit 1
-  fi
+  # Both of ours, each against the workflow that is allowed to have built it. Checking only one of
+  # them would leave the other a way in, and they go out of here as one release.
+  for pair in "brain-image:$BRAIN" "bridge-image:$BRIDGE"; do
+    flow="${pair%%:*}"; img="${pair#*:}"
+    [ -n "$img" ] || { echo "The manifest names no $flow image. Not signing it."; exit 1; }
+    WHO="^https://github.com/$SLUG/\.github/workflows/$flow\.yml@refs/tags/$TAG\$"
+    if ! cosign verify "$img" \
+        ${REG_PASS:+--registry-username "$REG_USER" --registry-password "$REG_PASS"} \
+        --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+        --certificate-identity-regexp "$WHO" > /dev/null; then
+      echo "That image was not built by this repository's workflow from $TAG. Not signing it: $img"
+      exit 1
+    fi
+  done
 elif [ "${HOME_HUB_SKIP_COSIGN:-}" = 1 ]; then
   echo "cosign is not installed, and HOME_HUB_SKIP_COSIGN=1 says sign anyway. The image is going out unchecked."
 else
-  echo "cosign is not installed, so where $BRAIN came from cannot be checked."
+  echo "cosign is not installed, so where $BRAIN and $BRIDGE came from cannot be checked."
   echo "Install it (brew install cosign), or set HOME_HUB_SKIP_COSIGN=1 if you know why you are skipping it."
   exit 1
 fi

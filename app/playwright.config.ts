@@ -1,7 +1,9 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { defineConfig, devices } from '@playwright/test'
 
 /* The panel, driven in a real browser against the mock brain — the same house every time, with the
-   clock frozen by ?at=. These are behaviour tests, not pictures: they assert on what the panel does,
+   clock frozen by ?at=. These are behavior tests, not pictures: they assert on what the panel does,
    so they can fail a build without anyone having to look at a screenshot. */
 export default defineConfig({
   testDir: './e2e',
@@ -9,7 +11,12 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   workers: process.env.CI ? 2 : undefined,
-  reporter: process.env.CI ? [['github'], ['list']] : 'list',
+  // The html reporter is what actually writes playwright-report/. Without it that directory never
+  // exists, so ci.yml's `if: failure()` upload of it has always captured nothing -- a failing run
+  // left no trace to open, and the only evidence of why was whatever fitted in the log.
+  reporter: process.env.CI
+    ? [['github'], ['list'], ['html', { outputFolder: 'playwright-report', open: 'never' }]]
+    : 'list',
   use: {
     baseURL: process.env.BASE || 'http://localhost:8399',
     trace: 'retain-on-failure',

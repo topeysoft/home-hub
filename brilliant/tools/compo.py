@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Read Composition Data Page 0 from a node we provisioned.
 
 Connects to the node's Mesh Proxy service, opens the proxy filter (a fresh

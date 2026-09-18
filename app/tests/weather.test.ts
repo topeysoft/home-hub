@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* What the forecast means, which is the half the hub deliberately does not do.
  *
  * The rule under nearly every case here: a change is wet weather starting or stopping, and nothing

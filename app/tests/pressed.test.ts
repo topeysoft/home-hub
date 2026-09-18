@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* Naming eleven identical switches by pressing them.
 
    The rule is small and the ways it can go wrong are not: lighting a row nobody touched sends a

@@ -1,3 +1,7 @@
+<!--
+  SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+  SPDX-License-Identifier: AGPL-3.0-or-later
+-->
 <script setup lang="ts">
 /*
  * A phone on the Wi-Fi is asking to join, as a pane rather than as a card in a
@@ -8,7 +12,7 @@
  * -- it is the ONE event worth turning the screen back on for -- and the card
  * this replaces carried a comment saying it must look the same at every hour,
  * because it is the one place a person hands out keys to the house and
- * recognising it instantly is the only defence against answering a prompt they
+ * recognizing it instantly is the only defense against answering a prompt they
  * should not. Then it sat in a row underneath "An update is ready", in the same
  * shape, on the same ground.
  *
@@ -28,7 +32,7 @@
  * who wants to look at something else first must not have to choose between
  * denying a phone and being stuck. Only the two buttons decide anything.
  *
- * Its colour does not follow the sky, and panel.css says why at more length.
+ * Its color does not follow the sky, and panel.css says why at more length.
  * Everything else here -- the rise, the fall, the room going quiet -- is the
  * pane the face already measured in design/nightfall slice 5.
  */

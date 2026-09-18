@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """The controls a device's own pane needs, which the room's tiles never asked for: a blind put where
 you want it and stopped on the way, a fan at a speed, a mower sent out and called back, and a plug
 that switches itself off again.
@@ -55,7 +57,7 @@ class PaneControlTests(ApiTest):
         # every screen hears about it, and the thing itself carries the time
         self.assertEqual(self.sent("device")[-1]["device"]["attrs"]["off_at"], r.json()["off_at"])
 
-    def test_cancelling_a_timer_leaves_the_thing_on(self):
+    def test_canceling_a_timer_leaves_the_thing_on(self):
         self.client.post("/devices/switch.kettle/timer", json={"minutes": 30})
         self.ha.calls.clear()
         r = self.client.post("/devices/switch.kettle/timer", json={"minutes": 0})

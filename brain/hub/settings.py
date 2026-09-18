@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """The hub's own memory: a small JSON file the panel is allowed to fill in during setup.
 
 Lives in the data directory (HUB_DATA, or the brain folder), next to the event log. Holds the

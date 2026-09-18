@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 import asyncio, json, logging, shutil, time, urllib.parse, urllib.request
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -32,12 +34,14 @@ from .settings import Settings, DATA, env_file
 from .lock import Lock, needs_code
 from .pairing import Pairing
 from .bridge import Bridges
+from .share import Share
 from .relay import Relay
 from .phones import Phones, COOKIE, holds_keys, open_to_strangers, from_away, away_refused, away_refusal
 from . import camera
 
 log = logging.getLogger("hub")
 DEFAULT_HA = "http://localhost:8123"
+SERVICE_HEADER = "x-hub-service"   # how the Matter bridge says it is the Matter bridge: hub/share.py
 # How the panel looks. The keys are the whole vocabulary: anything else a screen
 # sends is dropped, so an old panel cannot teach the house a setting it will not
 # understand. Values are checked in the panel, which owns what they mean.
@@ -46,7 +50,7 @@ DEFAULT_HA = "http://localhost:8123"
 # are what a feel resolves to, written out beside it so a panel that predates
 # feels still finds a face and a tone it understands. "auto" means the screen
 # arranges itself, which is what a phone and a wall have always needed and never
-# had; any other value there is somebody's deliberate answer under Customise, so
+# had; any other value there is somebody's deliberate answer under Customize, so
 # a house that set its look by hand before feels existed keeps exactly what it
 # chose. "face" was missing from this list, which quietly dropped every Glass a
 # panel ever sent: the panel showed it, the house never kept it.
@@ -61,7 +65,7 @@ def unit_system_for(tz: str) -> str:
 
 
 def qr_svg_bytes(text: str) -> bytes:
-    """A QR code as SVG paths in the panel's colours; the panel puts it on a light card."""
+    """A QR code as SVG paths in the panel's colors; the panel puts it on a light card."""
     import io, qrcode
     from qrcode.image.svg import SvgPathImage
     q = qrcode.QRCode(box_size=10, border=2, error_correction=qrcode.constants.ERROR_CORRECT_M, image_factory=SvgPathImage)
@@ -99,6 +103,8 @@ class Hub:
         self.lock = Lock(self.settings)
         self.pair = Pairing(self)
         self.bridge = Bridges(self)        # a puck on the cable, and the ones the house has
+        self.share = Share(self)           # what this house lets a Matter bridge publish: docs/matter.md
+        self.share_status: dict = {}       # what the bridge last said about itself (pairing codes, who holds it)
         self.relay = Relay(self)           # two switches on one light: the hub carries the press across
         self.phones = Phones(self)                     # which phones belong to the house, once it has a code
         self.engine = Engine(self)                     # rules: signals in, room intents out
@@ -611,6 +617,11 @@ async def settings_lock(request: Request, call_next):
     let_out = bool(phone and phone.get("remote"))
     if request.state.away and away_refused(m, path, let_out):
         return JSONResponse(away_refusal(phone, let_out), status_code=403)
+    # The Matter bridge is a container on this host, not a phone. It comes in on its own routes with
+    # the token install.sh gave both containers, and it gets nothing else: `open_to_strangers` is not
+    # widened for it, because that list is the front door for everything. docs/matter.md.
+    if path.startswith("/share/bridge/") and hub.share.is_bridge(request.headers.get(SERVICE_HEADER)):
+        return await call_next(request)
     if hub.lock.locked:
         if not open_to_strangers(m, path):
             if not phone: return JSONResponse({"detail": "phone"}, status_code=401)
@@ -880,6 +891,65 @@ async def set_device_kind(device_id: str, body: dict):
     return {"ok": True, "kind": kind_of(dev)}
 
 
+# What can be made to say where it is, and how the blink goes. A camera cannot blink, a lock must not,
+# and a blind takes half a minute to say anything -- what is offered is what a person can stand in a
+# doorway and watch. Three is enough to catch somebody looking the other way when the first one goes.
+CAN_BLINK = {"light", "switch", "fan"}
+BLINKS, BLINK_ON, BLINK_OFF = 3, 0.6, 0.45
+_blinking: set[str] = set()      # one blink per thing at a time: two overlapping runs would put it back wrong
+
+
+@app.post("/devices/{device_id}/identify")
+async def identify_device(device_id: str):
+    """Make a thing say which one it is, by doing the one thing a person can see from the doorway.
+
+    The other half of "go and press one" (SortView.vue). Pressing answers for the switches somebody can
+    reach; this answers for the eleven bulbs in a ceiling that nobody has ever touched and that arrive
+    called "Wiz RGBW Tunable ABC123" apiece. The house blinks one, the person watching sees which, and
+    the row it came from is the one to name. design/puck/Which.dc.html already makes this move when the
+    house cannot tell two switches apart; this is the same move offered to the person instead.
+
+    It puts the thing back exactly as it found it, brightness and speed with it: identifying a lamp at
+    3am must not leave it burning. Driving a device, so no code -- and deliberately not through hub.act,
+    which would log three taps a blink and tell the room somebody was in it.
+    """
+    hub.ready()
+    dev = hub.home.devices.get(device_id)
+    if not dev: raise HTTPException(404, "unknown device")
+    domain = dev.capability.split(".")[0]
+    if domain not in CAN_BLINK: raise HTTPException(400, f"{dev.name} has no way to show you where it is.")
+    if dev.state == "unavailable": raise HTTPException(409, f"{dev.name} is not answering, so there would be nothing to see.")
+    if device_id in _blinking: return {"ok": True, "text": f"{dev.name} is blinking now."}
+    # read before the first call: the blink's own state events land on this device a moment later
+    was, bright, pct = dev.state, dev.attrs.get("brightness"), dev.attrs.get("percentage")
+    # a brightness sent to a light that has none is refused outright, the same trap hub.act names
+    dims = domain == "light" and any(m not in ("onoff", "unknown") for m in (dev.attrs.get("supported_color_modes") or []))
+    _blinking.add(device_id)
+    try:
+        for i in range(BLINKS):
+            # all the way up on the way up, whatever it was sitting at: a lamp blinking between 4% and
+            # off is not visible from the door, which is the only place this is ever watched from
+            await hub.ha.call(domain, "turn_on", dev.id, **({"brightness_pct": 100} if dims else {}))
+            await asyncio.sleep(BLINK_ON)
+            await hub.ha.call(domain, "turn_off", dev.id)
+            if i < BLINKS - 1: await asyncio.sleep(BLINK_OFF)
+        if was == "on":
+            back = {"brightness": int(bright)} if dims and bright is not None else {"percentage": int(pct)} if domain == "fan" and pct else {}
+            await hub.ha.call(domain, "turn_on", dev.id, **back)
+    except Exception as e:
+        log.warning("could not blink %s: %s", device_id, e)
+        raise HTTPException(502, f"Could not make {dev.name} blink.")
+    finally:
+        _blinking.discard(device_id)
+    hub.log.add("action", dev.id, None, "identify", source="user")
+    # Short enough for one line under a name, because it is drawn on the row and a second line would
+    # shove every row below it down while somebody is still reaching for one. The name is not in it:
+    # the row it is written on is already wearing the name. The caveat is, though -- a companion
+    # switch with no load wired to it blinks nothing at all, and being told that plainly beats
+    # standing under the wrong lamp twice.
+    return {"ok": True, "text": "Blinked three times. If you saw nothing, it is in another room — or it has no lamp on it."}
+
+
 @app.post("/devices/{device_id}/check")
 async def check_device(device_id: str):
     """Ask a thing that has gone quiet whether it is there, now rather than whenever the driver next tries.
@@ -1092,11 +1162,47 @@ async def bridge_placed():
 
 @app.post("/bridge/switches")
 async def bridge_switch(body: dict):
-    """Letting a factory-fresh switch in needs the puck to act as a provisioner, which it cannot yet
-    (brilliant/STATUS.md, "Own keys later"). The route exists so the phone's scan has somewhere honest
-    to land rather than a 404 that reads as a broken house."""
+    """Let a switch in, with the code from its back or without it.
+
+    `code` is the whole 32-hex QR: sixteen bytes of Device UUID then sixteen of the secret it must
+    prove it holds. `uuid` alone is the codeless route, for a switch already screwed to a wall with
+    its code facing the plasterboard -- the mesh never required the secret, and every switch on this
+    house's network was claimed without one. What the code buys is knowing WHICH switch, which is
+    why a codeless add should follow a blink somebody watched."""
     hub.ready()
-    raise HTTPException(501, "This house cannot let a new switch in yet. The ones that came with it are all here; adding one is coming.")
+    code = str(body.get("code") or "").strip().lower()
+    uuid = str(body.get("uuid") or "").strip().lower()
+    oob = None
+    if code:
+        if len(code) != 64 or any(c not in "0123456789abcdef" for c in code):
+            raise HTTPException(400, "That does not look like a switch's code.")
+        uuid, oob = code[:32], code[32:]
+    if len(uuid) != 32 or any(c not in "0123456789abcdef" for c in uuid):
+        raise HTTPException(400, "No switch was named.")
+    try:
+        return await hub.bridge.let_in(uuid, oob)
+    except ValueError as e:
+        raise HTTPException(409, str(e))
+
+
+@app.get("/bridge/nearby")
+async def bridge_nearby():
+    """What the bridge can hear that is not on the house yet, and what is nearby but spoken for."""
+    hub.ready()
+    try: return await hub.bridge.nearby()
+    except ValueError as e: raise HTTPException(409, str(e))
+
+
+@app.post("/bridge/blink")
+async def bridge_blink(body: dict):
+    """Make one waiting switch announce itself. Without a code this is the only thing that can tell
+    the switch somebody touched from any other unclaimed one in radio range."""
+    hub.ready()
+    uuid = str(body.get("uuid") or "").strip().lower()
+    if len(uuid) != 32:
+        raise HTTPException(400, "No switch was named.")
+    try: return await hub.bridge.blink(uuid, int(body.get("seconds") or 5))
+    except ValueError as e: raise HTTPException(409, str(e))
 
 
 @app.get("/bridge/links")
@@ -1126,6 +1232,99 @@ def bridge_link_remove(link_id: str):
 
 
 # ---------- pairing radio devices ----------
+# ---------- sharing the house outward (docs/matter.md) ----------
+@app.get("/share")
+def get_share():
+    """What this house shares with Apple Home, Google Home and Alexa, and what it could."""
+    return hub.share.state()
+
+
+@app.post("/share")
+def set_share(body: dict):
+    """{"on": true, "kinds": ["light", "switch"], "locks": false}. Turning sharing on is a change to
+    the house, so it needs the code, like letting a phone in."""
+    if not hub.share.ready(): raise HTTPException(409, "This hub has no sharing key. It needs the installer run again.")
+    return hub.share.set(on=body.get("on"), kinds=body.get("kinds"), locks=body.get("locks"))
+
+
+@app.post("/share/window")
+def open_share_window():
+    """Let one more app in, for five minutes. Letting an ecosystem into the house is the same kind of
+    change as letting a phone in, so it needs the code and it shuts itself."""
+    if not hub.share.ready(): raise HTTPException(409, "This hub has no sharing key. It needs the installer run again.")
+    if not hub.share.settings.get("on"): raise HTTPException(409, "Nothing is shared yet.")
+    # A door needs something behind it. Without a bridge running there is nothing to open, and the
+    # cheerful answer this used to give was the worst kind of wrong on the one page about where a
+    # household's devices go: it said the door was open for five minutes and nothing had happened.
+    if not hub.share.running(): raise HTTPException(409, "The part of the hub that talks to other apps is not running, so there is nothing to open yet.")
+    return hub.share.ask_window()
+
+
+@app.get("/share/qr.svg")
+def share_qr():
+    """The bridge's own pairing code as a QR, for a phone's camera to read off the wall.
+
+    Its own route rather than /qr.svg with the payload passed in: that one takes an http address and
+    checks it is one, and a Matter payload is `MT:...`. Widening the general route to carry any text
+    would make it a way to put an arbitrary QR on somebody's wall panel."""
+    qr = (hub.share_status or {}).get("qr")
+    if not qr: raise HTTPException(404, "the bridge is not waiting to be scanned")
+    return Response(content=qr_svg_bytes(qr), media_type="image/svg+xml", headers={"Cache-Control": "no-store"})
+
+
+@app.post("/devices/{device_id}/share")
+def set_device_share(device_id: str, body: dict):
+    """{"shared": false} — keep this one thing out of the other apps, or put it back.
+
+    On the device's own pane rather than in a list on the Share page, the way docs/kinds.md puts
+    *Show this as* there: a person decides this standing in front of the lamp, and thirty-two rows of
+    lamps is the list that page exists to avoid drawing."""
+    hub.ready()
+    dev = hub.home.devices.get(device_id)
+    if not dev: raise HTTPException(404, "unknown device")
+    if not hub.share.shareable(dev): raise HTTPException(409, "This is not something the house is sharing.")
+    return hub.share.set_device(dev, bool(body.get("shared")))
+
+
+@app.get("/share/bridge/devices")
+def share_devices():
+    """The list the bridge publishes, and the whole of the decision: the bridge filters nothing.
+
+    The house comes with it. A Matter node needs a unique id of its own that survives restarts, and
+    the hub's own id is the right one: it is random, it says nothing about the house, and it rides
+    the backup -- so a restored hub is the same bridge to Apple Home rather than a new one."""
+    return {"home": {"name": hub.settings.get("home_name") or "Home", "id": hub.settings.hub_id()},
+            "window": hub.share.window(),
+            "devices": hub.share.devices()}
+
+
+@app.post("/share/bridge/status")
+def share_status(body: dict):
+    """The bridge saying what it is: its pairing codes while it waits, and who holds it once commissioned."""
+    hub.share_status = {k: body.get(k) for k in ("running", "commissioned", "fabrics", "manual", "qr", "error")}
+    hub.share_status["at"] = time.time()   # when it said so, so `Share.bridge()` can tell living from remembered
+    hub._broadcast(json.dumps({"type": "share", "share": hub.share.state()}))
+    return {"ok": True}
+
+
+@app.post("/share/bridge/act/{device_id}/{action}")
+async def share_act(device_id: str, action: str, data: dict | None = None):
+    """A command that arrived through somebody else's assistant. It goes the same way a tap does --
+    hub.act(), so the driver's own service is still chosen by `capability` and docs/kinds.md's trap
+    stays shut -- and it is logged as `matter`, so *Recent* can say a voice did it and which one."""
+    hub.ready()
+    dev = hub.home.devices.get(device_id)
+    if not dev: raise HTTPException(404, "unknown device")
+    # The gate again, at the moment of acting, and through the one predicate that knows every way a
+    # thing can be kept home: the kind, the lock switch, and the owner leaving this one lamp out. A
+    # household that changes its mind must not be obeyed on the strength of a list Apple Home fetched
+    # an hour ago and an endpoint it is still holding.
+    if not hub.share.may_act(dev): raise HTTPException(403, "not shared")
+    try: await hub.act(dev, action, data, source="matter")
+    except ValueError as e: raise HTTPException(400, str(e))
+    return {"ok": True}
+
+
 @app.get("/pair")
 def pair_status(): return hub.pair.status()
 
@@ -1269,7 +1468,7 @@ async def device_stream(device_id: str):
 
 @app.websocket("/devices/{device_id}/webrtc")
 async def device_webrtc(ws: WebSocket, device_id: str):
-    """WebRTC signalling for one viewer: see hub/camera.py for the messages."""
+    """WebRTC signaling for one viewer: see hub/camera.py for the messages."""
     await ws.accept()
     dev = hub.home.devices.get(device_id) if hub.driver == "ready" else None
     if not dev or dev.capability != "camera":
@@ -1710,7 +1909,10 @@ def dry_run(rule_id: str):
 
 @app.websocket("/stream")
 async def stream(ws: WebSocket):
-    if hub.lock.locked and not hub.phones.identify(ws.cookies.get(COOKIE)):
+    # The Matter bridge watches the same broadcasts the panels do, and identifies itself the same way
+    # it does on its own routes: it has no cookie because it is not a phone. docs/matter.md.
+    bridge = hub.share.is_bridge(ws.headers.get(SERVICE_HEADER))
+    if hub.lock.locked and not bridge and not hub.phones.identify(ws.cookies.get(COOKIE)):
         await ws.close(code=4401); return        # not one of the house's phones: the join screen is the way in
     await ws.accept(); hub.streams.add(ws)
     try:

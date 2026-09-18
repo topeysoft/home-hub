@@ -1,0 +1,61 @@
+{
+ "network": "3deef9825e444955",
+ "read_at": 1789695975.316642,
+ "switches": {
+  "0003": {
+   "partner": null,
+   "mode": null,
+   "answered": 0
+  },
+  "0004": {
+   "partner": null,
+   "mode": "0000",
+   "answered": 2
+  },
+  "0005": {
+   "partner": null,
+   "mode": "0000",
+   "answered": 2
+  },
+  "0006": {
+   "partner": "0005",
+   "mode": "0300",
+   "answered": 2
+  },
+  "000a": {
+   "partner": null,
+   "mode": null,
+   "answered": 0
+  },
+  "000b": {
+   "partner": null,
+   "mode": "0000",
+   "answered": 1
+  },
+  "0010": {
+   "partner": null,
+   "mode": "0000",
+   "answered": 2
+  },
+  "0011": {
+   "partner": null,
+   "mode": null,
+   "answered": 0
+  },
+  "0012": {
+   "partner": null,
+   "mode": null,
+   "answered": 0
+  },
+  "0014": {
+   "partner": "0012",
+   "mode": "0300",
+   "answered": 1
+  },
+  "0016": {
+   "partner": "0002",
+   "mode": "0300",
+   "answered": 2
+  }
+ }
+}

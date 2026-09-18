@@ -119,8 +119,8 @@ damage, so the more urgent the thing, the more broken the arrangement looks.
 The panel already knew the ranking and drew it flat. `App.vue` wakes the wall
 when a phone asks to join and for nothing else, and `Asks.vue` carried a comment
 saying that surface must look the same at every hour, because it is the one
-place somebody hands out a key to the house and recognising it instantly is the
-only defence against answering a prompt they should not. Then it sat in a row
+place somebody hands out a key to the house and recognizing it instantly is the
+only defense against answering a prompt they should not. Then it sat in a row
 underneath "An update is ready".
 
 So urgency is carried by SURFACE, not by how much space something steals:
@@ -134,7 +134,7 @@ So urgency is carried by SURFACE, not by how much space something steals:
 With those two out of the band, nothing left in it is taller than one line of
 house news -- and a band of a known height need not take part in the layout at
 all. It comes out of the flow and hangs in the gap that is already there: the
-stage centres in whatever height is left, which leaves 58px between the top bar
+stage centers in whatever height is left, which leaves 58px between the top bar
 and the row at 1280x800, and a chip is 57. `--stage-top` is named where it is
 declared, because the band starts at the BAR rather than at the stage's content
 box and the two have to agree. It never grows: one line, no wrapping, one line
@@ -148,10 +148,10 @@ giving up `margin-block: auto`, and with it the thing that keeps this
 arrangement sane on a screen that is not 800 tall.
 
 Two notes on the ask pane, because both are the kind of thing someone will want
-to undo. Its colour does NOT track the sky, which is the only surface in the
+to undo. Its color does NOT track the sky, which is the only surface in the
 file that does not, and `e2e/ask.spec.ts` is the only test in the suite that
 wants two hours to come out identical -- a surface a person is meant to
-recognise cannot look different at every hour. That would normally be the hole
+recognize cannot look different at every hour. That would normally be the hole
 punched in the daylight slice 5 closed, except that the room behind a pane is
 already taken down by `--glass-scrim`, so a dark pane is not sitting in a bright
 room, it IS the room being out of the way. And the way out of it is *aside*
@@ -186,7 +186,7 @@ order -- reaching it is what opens the box, so a keyboard never meets a shut one
 must not have to work out for itself whether there is a sentence in flight or an
 answer nobody has read.
 
-The pill lifts as it opens with a background-COLOUR and not a filter, which
+The pill lifts as it opens with a background-COLOR and not a filter, which
 would form a backdrop root and take the box's own frost away at the instant it
 opened. Third time this file has had to say that, after the rail's blur and the
 room behind a pane.
@@ -220,7 +220,7 @@ before -- so an orb turning for ever costs nothing a swipe can see.
 already turns *what the sky is doing* into *the custom properties the panel
 paints with*, and the shell binds the result as a style so every card inherits
 it. That is the whole hook. Nightfall adds properties to that object; it does
-not add a second way of colouring anything.
+not add a second way of coloring anything.
 
 `LookPage.vue` already picks a tone, a layout and a nav, and each is a short
 table with an `is*()` guard and a test that every entry has a name and a line
@@ -308,7 +308,7 @@ gap, puts coverage at 50 -> 99 -> 130px through the exit.
 One thing that does NOT fix, and it is worth knowing before someone tries again:
 the overlap is a during-the-swipe effect, not a resting one. The row snaps to
 card boundaries, so once it settles nothing is mid-exit and the receded card
-sits entirely behind its neighbour. The reference rests mid-card, which is why
+sits entirely behind its neighbor. The reference rests mid-card, which is why
 the stack stands still in the drawing. Making it persist at rest means changing
 where the rail stops, which is a decision about the rail rather than the face.
 
@@ -318,7 +318,7 @@ slice 6 has measured the first one is backwards. It waits for a number.
 
 **5. The pane.** *(landed)*  `Opened.vue` already rose; it needed the measured timings.
 400ms up on `cubic-bezier(.12,.78,.24,1)`, 300ms down on
-`cubic-bezier(.4,0,.6,1)`, the object inside travelling further and still
+`cubic-bezier(.4,0,.6,1)`, the object inside traveling further and still
 settling at 700ms, the bottom bar leaving 60ms *before* the pane starts and
 coming back 180ms after it has gone. The pane stops short of the top bar so the
 row you came from is still there, dimmed, above it -- that is what makes it a
@@ -347,11 +347,11 @@ does to the scrimmed room -- each stop says how far it lifts what is behind it,
 and the painted lightness falls out of that and the stop's own alpha.
 
 The lifts are small, and it took measuring to find out how small. Lifted a
-card's distance, at noon the pane is a pale blue sheet with grey type on it: the
+card's distance, at noon the pane is a pale blue sheet with gray type on it: the
 muted ink came off the screen at 2.0:1 against paper's 4.4:1 at the same hour.
 Which is the other half -- the surface moved, so the ink has to move with it,
 the same as on a card. `--pane-ink-2` and `--pane-muted` hold a ratio against
-the pane's own foot rather than a colour, and never drop below what paper gives,
+the pane's own foot rather than a color, and never drop below what paper gives,
 so after dark nothing changes at all. Measured back off the screen at noon:
 6.1:1 and 4.7:1.
 
@@ -402,7 +402,7 @@ the canvas asks for a 180ms fade -- a fade is not vestibular motion, a pop is
 only abrupt. The rail now arms it either way and the stylesheet decides what
 arriving means, which is the point: a move and its reduced form drifting apart
 is what happens when that decision lives in two files. The travel has to be
-cancelled explicitly, because `translate` is a plain property and the blanket
+canceled explicitly, because `translate` is a plain property and the blanket
 block does nothing to it -- otherwise every card sits 696px right for one
 painted frame, which is the move this is supposed to remove.
 
@@ -420,9 +420,9 @@ repeatably. A radius bill, not a face bill.
 
 The floor itself is built regardless, because there is one state the face could
 not survive: a host with no `backdrop-filter` at all. An unblurred glass card is
-.34 of a colour over the open sky and hardly a card -- the face would not
+.34 of a color over the open sky and hardly a card -- the face would not
 degrade, it would vanish. `--glass-flat` and `--pane-flat` are not a second
-palette; each stop is the colour its translucent twin composites TO, so the rim,
+palette; each stop is the color its translucent twin composites TO, so the rim,
 the sweep and the shadow are all still drawn and only the depth is gone.
 `data-flat` carries it rather than `@supports`, for two reasons: a feature query
 cannot be switched on to look at, and this is a state the panel will spend its
@@ -442,7 +442,7 @@ lightness is a design decision nobody has made yet, and it does not block
 anything above.
 
 Slice 5 put a number on one corner of that. A pane at noon cannot be both lit
-glass and carry paper's greys: to give the muted ink paper's 4.4:1 it would have
+glass and carry paper's grays: to give the muted ink paper's 4.4:1 it would have
 to come down to a near-black sheet, which is the hole punched in the daylight
 all over again. The pane carries its own ink instead, which is the house's own
 rule and holds — but it is worth knowing that the day question is not only about
@@ -494,9 +494,9 @@ finished, the arrangement it was drawn as exists, and every one of those can be
 answered without touching either.
 
 Move 7 put one more thing under the day question rather than settling it. The
-orb carries colours of its own instead of a distance from the sky, which is the
+orb carries colors of its own instead of a distance from the sky, which is the
 one place in the face that does -- deliberately, because a lit object is not a
-surface, and it is the licence the lamp glow and the weather drawing already
+surface, and it is the license the lamp glow and the weather drawing already
 have. What it means is that the orb is an EVENING identity: indigo at noon as
 much as at midnight. The bottom band of the sky is dark enough at every hour
 that it reads, so nothing is broken; but if the day ever gets a face of its own,
@@ -515,7 +515,7 @@ panel is checked by driving the real thing at 1280x800 against `mock/brain.mjs`
 and reading computed styles, not by trusting that the CSS says what it means --
 the rail's 56px lag was confirmed by measuring an exiting card at x -294 under
 glass against -350 under paper. Slice 5 needed two instruments past that, and
-both are worth keeping. For colour, screenshot a clip of the pane and read the
+both are worth keeping. For color, screenshot a clip of the pane and read the
 pixels back, because a composite of a gradient over a blurred backdrop is not
 anywhere in the computed styles -- that is where 2.0:1 came from, and nothing
 else would have found it. For timing, listen for `transitionstart` and

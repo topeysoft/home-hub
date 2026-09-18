@@ -1,0 +1,77 @@
+# The Matter bridge -- the house as Apple Home, Google Home and Alexa see it -- as one image for both
+# kinds of hub host: amd64 (a NUC, any Linux box, a VM) and arm64 (Pi 5). install.sh pulls it and only
+# builds locally when the pull fails, which on a Pi means compiling Node's dependencies on the Pi.
+#
+# It is tagged exactly the way the brain is, and for a reason rather than for symmetry: the two have a
+# contract between them -- the shape of what the bridge is handed per device, and how long a request
+# to open the commissioning door stays live -- so a hub must never be able to run a new one against an
+# old one. tools/release-manifest.py names both by digest; tools/release.sh checks both signatures.
+name: bridge image
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+    paths: ["matter-bridge/**", ".github/workflows/bridge-image.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write      # cosign signs with the workflow's own OIDC identity; there is no key to keep
+
+jobs:
+  # Tags bypass branch protection, so a release is verified here before it is published. Pushes to
+  # main skip this: they arrived through a protected branch and were verified on the way in.
+  verify:
+    if: github.ref_type == 'tag'
+    uses: ./.github/workflows/ci.yml
+
+  build:
+    needs: verify
+    # `always()` so a push to main, where verify is skipped rather than run, still builds.
+    if: always() && needs.verify.result != 'failure' && needs.verify.result != 'cancelled'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/home-hub-matter-bridge
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable=${{ github.ref_type == 'tag' }}
+            type=raw,value=main,enable={{is_default_branch}}
+            type=sha
+      - uses: docker/build-push-action@v6
+        id: build
+        with:
+          context: ./matter-bridge
+          file: matter-bridge/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # Its own scope. An unscoped type=gha uses the default key `buildkit` for every
+          # build in the repository, so these two publishing workflows and the two proof
+          # builds in ci.yml were all overwriting one cache.
+          cache-from: type=gha,scope=bridge-publish
+          cache-to: type=gha,mode=max,scope=bridge-publish
+
+      # Keyless, exactly as the brain's is: the signature binds "built by this workflow, in this
+      # repository, from this commit". It is not what a hub checks -- a hub checks the maker's own
+      # signature over the release manifest -- but tools/release.sh checks this before signing that,
+      # so the maker's signature is only ever given to an image this workflow actually built.
+      - uses: sigstore/cosign-installer@v3
+        if: github.ref_type == 'tag'
+      - name: sign the image
+        if: github.ref_type == 'tag'
+        run: cosign sign --yes "ghcr.io/${{ github.repository_owner }}/home-hub-matter-bridge@${{ steps.build.outputs.digest }}"

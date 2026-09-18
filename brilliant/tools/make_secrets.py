@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Emit esp32-bridge/include/secrets.h from a mesh key store.
 
 The keys live outside the repo ($BRILLIANT_MESH_STORE, default

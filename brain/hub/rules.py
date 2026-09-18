@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Rules: signals in, room intents out.
 
 A rule is one row in ../rules.json: `when <trigger> [if <conditions>] then <outcome>`. The Engine

@@ -1,9 +1,11 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /*
- * What colour a card is, given what the sky is doing.
+ * What color a card is, given what the sky is doing.
  *
- * The rule that matters: a card is never given an absolute colour. It is given a
+ * The rule that matters: a card is never given an absolute color. It is given a
  * distance from the sky — always this much lighter, always this far around the
- * hue wheel. Fixed colours look right at one hour and wrong at another, because
+ * hue wheel. Fixed colors look right at one hour and wrong at another, because
  * the field moves a long way between them: the band behind the cards sits at
  * L 0.15 at midnight and L 0.49 at noon. A card fixed at L 0.30 is a lit surface
  * at night and a hole punched in the daylight by lunchtime. Holding the distance
@@ -11,11 +13,11 @@
  *
  * Two things follow from that on their own, and neither is special-cased:
  * cards dim through a storm, because the sky they track has dimmed; and their
- * colour strengthens under overcast, because a flat grey sky can carry colour
+ * color strengthens under overcast, because a flat gray sky can carry color
  * that a bright blue one drowns.
  *
  * What does NOT move: the lamp accent, the live green, the danger red. Those are
- * signals — "on", "watching", "unlocked" — and a signal that changes colour with
+ * signals — "on", "watching", "unlocked" — and a signal that changes color with
  * the weather is not a signal. They stay exactly as panel.css declares them.
  */
 
@@ -24,9 +26,9 @@ import { clamp, ground, mix, oklch, palette, rgb, wxOf } from './sky'
 export type ToneName = 'warm' | 'cool' | 'pastel' | 'follow'
 
 /* The surfaces that take a tone, and the hue each one leans to. Deliberately
-   short: a media tile is coloured by its artwork and a thermostat by --tint
+   short: a media tile is colored by its artwork and a thermostat by --tint
    (blue cooling, orange heating), so neither is listed — a card that already
-   means something with its colour does not get overpainted. Hues are absolute:
+   means something with its color does not get overpainted. Hues are absolute:
    warmth is a place on the wheel, not a relationship, and deriving it from the
    sky turns "warm" pink under a violet night. */
 const WARM_HUES = { light: 76, lock: 66 }
@@ -57,14 +59,14 @@ export type ToneVars = Record<string, string>
 /*
  * The CSS custom properties the panel paints with, for one moment of one day.
  * Returned as a plain object so the shell can bind it as a style and every card
- * inherits; nothing has to know the sky to be coloured by it.
+ * inherits; nothing has to know the sky to be colored by it.
  */
 export function toneVars(elevation: number, condition: string, name: ToneName = 'follow'): ToneVars {
   const field = oklch(ground(elevation, condition))
   const day = elevation > 3                                   // the sun is up, not merely lightening the horizon
   const tone = toneOf(name, day)
 
-  // a colourful sky needs quieter cards; a near-grey one can take the full chroma
+  // a colorful sky needs quieter cards; a near-gray one can take the full chroma
   const C = tone.C * (1 - 0.35 * Math.min(field.C / 0.09, 1))
   const L = clamp(field.L + tone.dL, 0.16, 0.92)
   const light = L > INK_FLIPS_AT
@@ -92,7 +94,7 @@ export function toneVars(elevation: number, condition: string, name: ToneName = 
 
   for (const [cap, hue] of Object.entries(tone.hues)) vars[`--card-${cap}`] = card(hue)
   // a room, a sensor, anything without a capability of its own: the same surface,
-  // near enough neutral that the coloured cards stay the ones you notice
+  // near enough neutral that the colored cards stay the ones you notice
   vars['--card-plain'] = card(tone.hues.lock, C * 0.22)
   return vars
 }
@@ -111,7 +113,7 @@ export function isTone(v: unknown): v is ToneName {
 
 /* ---------- glass ----------
  *
- * The other face. A pane is not given a colour either: it holds a distance from
+ * The other face. A pane is not given a color either: it holds a distance from
  * the field, the same way a card does, and the same reason applies -- a fixed
  * white film reads as a lit sheet at night and as nothing at all by lunchtime.
  *
@@ -138,9 +140,9 @@ export function isTone(v: unknown): v is ToneName {
 const PANE_SOLID = [0.3, 0.58, 0.78]
 const PANE_LIFT = [0.05, 0.0, -0.02]
 
-/* The lightness text has to reach to clear a surface by `ratio`. For a grey,
+/* The lightness text has to reach to clear a surface by `ratio`. For a gray,
    oklch L is exactly the cube root of relative luminance, which is what turns a
-   contrast ratio into one line of arithmetic instead of a colour library. */
+   contrast ratio into one line of arithmetic instead of a color library. */
 function reads(onL: number, ratio: number): number {
   return clamp(Math.cbrt(ratio * (onL ** 3 + 0.05) - 0.05), 0, 1)
 }
@@ -151,7 +153,7 @@ function reads(onL: number, ratio: number): number {
  * glassVars took an elevation and a condition and no tone, so on the glass face
  * Warm, Cool and Pastel all resolved to the same pane -- while the Look page
  * went on offering all four under a heading that says "Cards", with swatches
- * built from toneVars that ignore the face. Four different colours to choose
+ * built from toneVars that ignore the face. Four different colors to choose
  * between, and choosing did nothing. See design/nightfall page 2.
  *
  * THE RULE: a tone leans the PANE, never the SKY. The sky is real -- it tracks
@@ -170,7 +172,7 @@ function reads(onL: number, ratio: number): number {
  *
  * Chroma is the number that matters: the pane sits at .012 unleaned, which is
  * near enough neutral, and .045 is the least that reads as a tint rather than
- * as a rendering artefact. Pastel is the one tone that has to move more than
+ * as a rendering artifact. Pastel is the one tone that has to move more than
  * its hue -- on paper its whole character is a much lighter card, dL .335
  * against .135 -- so here it is a MILKIER pane rather than merely a bluer one,
  * lifted and carried at a higher solidity.
@@ -244,7 +246,7 @@ export function glassVars(elevation: number, condition: string, name: ToneName =
       + ` radial-gradient(74% 64% at 6% 2%, ${rgb(mix(top, [12, 13, 16], 0.45), 0.5)}, transparent 72%)`,
     /* A PANE -- a device opened in place, or This house.
 
-       Written as what it does to the room rather than as a colour: each stop
+       Written as what it does to the room rather than as a color: each stop
        says how far it LIFTS what is behind it, and the painted lightness falls
        out of that and the stop's own alpha. Head to foot a pane gets more solid
        and lifts less, so the room is a suggestion at the top and gone by the
@@ -254,7 +256,7 @@ export function glassVars(elevation: number, condition: string, name: ToneName =
        surface on the open sky and has to clear it by a good margin, while a
        pane is a sheet in front of a room that has already been taken down, and
        it carries a page of text. Lifted a card's distance it becomes, at noon,
-       a pale blue sheet with grey type on it -- measured off the screen, the
+       a pale blue sheet with gray type on it -- measured off the screen, the
        muted ink came out at 2.0:1 where paper gives 4.4:1 at the same hour.
        What makes a pane read as glass is the catch along its top, the blur it
        is made of and the sweep across it; not being the lightest thing in the
@@ -274,7 +276,7 @@ export function glassVars(elevation: number, condition: string, name: ToneName =
     /* A pane carries its own ink, exactly as a card does, and for the same
        reason: the surface moved, so what has to be read on it has to move too.
        A pane is translucent over a room that gets bright, and at noon paper's
-       muted grey came off the screen at 2.0:1 on it. These hold a ratio against
+       muted gray came off the screen at 2.0:1 on it. These hold a ratio against
        the pane's own foot instead -- and hold it: measured off the screen the
        small labels come back at 4.7:1 and the secondary line at 6.1:1, against
        paper's 4.4 and 8.9 at the same hour. They are asked for a little more
@@ -294,12 +296,12 @@ export function glassVars(elevation: number, condition: string, name: ToneName =
        as the day does, and that is not backwards: a dark room is already most of
        the way to being out of the way, while a bright one has to be taken down
        further before a pane reads as being in front of it rather than part of
-       it. The colour is the air from under the pane, so the room is dimmed by
-       the pane's own shadow rather than by a grey laid over it. */
+       it. The color is the air from under the pane, so the room is dimmed by
+       the pane's own shadow rather than by a gray laid over it. */
     '--glass-scrim': air(scrim),
     /* ---- the floor ----
        The same two surfaces with the lens taken out, for a machine that cannot
-       paint a backdrop-filter. Not a second palette: each stop is the colour
+       paint a backdrop-filter. Not a second palette: each stop is the color
        its translucent twin composites TO, at full alpha, so the face keeps its
        drawing -- rim, sweep, shadow, the lot -- and loses only its depth. That
        is the right thing to lose. The alternative is what an unblurred glass

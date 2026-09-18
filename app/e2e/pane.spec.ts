@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* The instrument in an opened device: what each kind is given to work with, and what the house is
    actually told when a hand uses it.
  *
@@ -16,7 +18,7 @@ test.describe.configure({ timeout: 60_000 })
 
 /** Hold a tile until ITS pane opens, then start listening to what the panel asks the house for.
     `instrument` is the rig that tile should have produced; a press measured a moment too early
-    lands on the neighbour and opens a perfectly good pane of the wrong kind, so press again. */
+    lands on the neighbor and opens a perfectly good pane of the wrong kind, so press again. */
 async function open(page: Page, room: string, selector: string, instrument: string) {
   const posts: string[] = []
   page.on('request', r => { if (r.method() === 'POST') posts.push(`${new URL(r.url()).pathname} ${r.postData() ?? ''}`.trim()) })

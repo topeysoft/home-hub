@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* What the forecast MEANS, which is where the words are.
  *
  * brain/hub/forecast.py is deliberately dumb: it turns HA's rows into numbers and stops, on the

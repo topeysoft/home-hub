@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Finding and adding devices, in the product's words.
 
 Home Assistant discovers things on the network and offers "config flows" for them: short forms.

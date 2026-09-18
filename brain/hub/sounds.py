@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Sounds on a speaker: white noise, rain, whatever is in the sounds folder, on any speaker the driver layer can
 hand a URL to (Google and other Cast speakers first of all). The hub hosts the file and asks the speaker to fetch
 it from the hub's LAN address, so it works with the internet down. A speaker plays a file once; the brain sees the

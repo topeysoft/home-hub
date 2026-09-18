@@ -74,11 +74,13 @@ const rooms = [
   ] },
   { id: 'bath', name: 'Bathroom', intent: 'occupied', set_by: null, hold_until: null, devices: [] },
   { id: 'unassigned', name: 'New devices', intent: 'occupied', set_by: null, hold_until: null, devices: [
-    dev('u1', 'Hue color lamp 1', 'unassigned', 'light', 'off', { supported_color_modes: ['hs'] }),
-    dev('u2', 'Smart plug', 'unassigned', 'switch', 'off', {}),
+    /* The names are the ones a driver really gives, and the maker, the model and the account that
+       brought each one are what the row has to tell them apart with before a room is picked. */
+    dev('u1', 'Hue color lamp 1', 'unassigned', 'light', 'off', { supported_color_modes: ['hs'] }, 'Signify Netherlands B.V.', { model: 'Hue color lamp', entry: 'e-hue' }),
+    dev('u2', 'Smart plug', 'unassigned', 'switch', 'off', {}, 'TP-Link Corporation Limited', { model: 'HS100' }),
     /* a Ring pathlight: a light and its motion sensor on one piece of hardware, one row on New devices (docs/units.md) */
-    dev('u3', 'Garage Left Light Light', 'unassigned', 'light', 'off', { motion: 'u4' }, 'Ring', { hw: 'hw-ring-gl', hw_name: 'Garage Left Light', named_by_unit: true }),
-    dev('u4', 'Garage Left Light Motion', 'unassigned', 'motion', 'off', {}, 'Ring', { hw: 'hw-ring-gl', hw_name: 'Garage Left Light', named_by_unit: true }),
+    dev('u3', 'Garage Left Light Light', 'unassigned', 'light', 'off', { motion: 'u4' }, 'Ring', { hw: 'hw-ring-gl', hw_name: 'Garage Left Light', named_by_unit: true, model: 'Smart Lighting Pathlight', entry: 'e-ring' }),
+    dev('u4', 'Garage Left Light Motion', 'unassigned', 'motion', 'off', {}, 'Ring', { hw: 'hw-ring-gl', hw_name: 'Garage Left Light', named_by_unit: true, model: 'Smart Lighting Pathlight', entry: 'e-ring' }),
   ] },
 ]
 /* SWITCHES=11 fills New devices with a bridge's worth of look-alike wall switches -- the moment
@@ -87,7 +89,7 @@ const rooms = [
 const MESH = ['0004', '0005', '0006', '0008', '000a', '000b', '000e', '0010', '0011', '0014', '0016']
 const unassigned = rooms.find(r => r.id === 'unassigned')
 for (let i = 0; i < Number(process.env.SWITCHES || 0) && i < MESH.length; i++)
-  unassigned.devices.push(dev(`mesh${MESH[i]}`, `Brilliant switch ${MESH[i]}`, 'unassigned', 'light', 'off', { brightness: 0, has_motion: true }))
+  unassigned.devices.push(dev(`mesh${MESH[i]}`, `Brilliant switch ${MESH[i]}`, 'unassigned', 'light', 'off', { brightness: 0, has_motion: true }, 'Brilliant', { model: 'Brilliant Smart Dimmer Switch' }))
 
 /* A press, which is the whole mechanism: a switch announcing itself because a human touched it.
    POST /press or /press/<id> makes one happen; PRESS=1 rotates through them on its own so the
@@ -261,6 +263,42 @@ const started = Date.now()      // the mock's frames are as old as the mock, bar
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.json': 'application/json', '.woff2': 'font/woff2', '.webmanifest': 'application/manifest+json' }
 const json = (res, body) => { res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(body)) }
 
+/* What this house shares, and who holds it. The door is open while nothing holds it yet (a bridge
+   waiting to be scanned) or for five minutes after Add an app. */
+const share = {
+  on: !!process.env.SHARED,
+  kinds: ['light', 'switch', 'appliance'],
+  locks: false,
+  offer: ['light', 'switch', 'appliance'],
+  holders: process.env.SHARED === 'held' ? [{ index: 1, name: 'Apple Home' }] : [],
+  opened: 0,
+  left_out: [],
+  stopped: false,   // SHARED=stopped, or POST {stopped:true}: the bridge container is not there
+}
+/* Three of the house's own things for the map at the top of the Share page, with the ids the pane
+   posts so that keeping one home takes it out of the picture here too. */
+const SAMPLE = [
+  { id: 'k1', name: 'Kitchen lights', kind: 'light' },
+  { id: 'l1', name: 'Ceiling light', kind: 'light' },
+  { id: 'kettle', name: 'Kettle', kind: 'switch' },
+]
+function shareState() {
+  const left = share.opened ? Math.max(0, Math.round((share.opened + 300000 - Date.now()) / 1000)) : 0
+  const waiting = share.on && !share.stopped && !share.holders.length
+  return {
+    ready: true, on: share.on, kinds: share.kinds, locks: share.locks, offer: share.offer,
+    shared: share.on ? Math.max(0, share.kinds.length * 3 - share.left_out.length) : 0, candidates: share.kinds.length * 3,
+    left_out: share.left_out, left_out_now: share.on ? share.left_out.length : 0, holders: share.holders,
+    // Filtered by what is kept home, the way the brain's own preview is: it comes off candidates(),
+    // so a lamp left out is absent from the picture for the same reason it is absent from the list.
+    preview: SAMPLE.filter(d => !share.left_out.includes(d.id) && share.kinds.includes(d.kind))
+      .slice(0, 3).map(({ name, kind }) => ({ name, kind })),
+    open: share.on && !share.stopped && (waiting || left > 0),
+    seconds_left: share.holders.length ? left : null,
+    code: share.on && (waiting || left > 0) ? '0033-033-8072' : null,
+    bridge: { running: share.on && !share.stopped, commissioned: !!share.holders.length, stale: !!share.stopped, error: null },
+  }
+}
 const phones = { phones: [
   { id: 'w', name: 'This wall', kind: 'wall', joined: now - 86400 * 30, expires: null, remote: false, last_seen: now, how: 'setup', me: true },
   { id: 'p1', name: "Temi's iPhone", kind: 'phone', joined: now - 86400 * 20, expires: null, remote: false, last_seen: now - 3600, how: 'code', me: false },
@@ -359,6 +397,27 @@ const server = http.createServer((req, res) => {
     const n = notes.find(x => x.subject === id)
     return json(res, { ok: true, answering: false, text: `${n?.name || 'It'} still is not answering.` })
   }
+  /* Blinking a thing so the person in the room can see which row it is. The real brain drives the
+     driver three times over (api.py, identify_device); here it flips the state so the panel's own
+     tiles move, and answers with the same sentence the hub answers with. */
+  if (p.startsWith('/devices/') && p.endsWith('/identify') && req.method === 'POST') {
+    const id = decodeURIComponent(p.split('/')[2])
+    const d = rooms.flatMap(r => r.devices).find(x => x.id === id)
+    if (!d) return json(res, { detail: 'unknown device' }, 404)
+    const was = d.state, bright = d.attrs?.brightness
+    let n = 0
+    const step = () => {
+      d.state = n % 2 ? 'off' : 'on'
+      if (d.attrs && bright !== undefined) d.attrs.brightness = d.state === 'on' ? 254 : 0
+      push({ type: 'device', device: d })
+      if (++n < 6) return setTimeout(step, n % 2 ? 450 : 600)
+      d.state = was
+      if (d.attrs && bright !== undefined) d.attrs.brightness = bright
+      push({ type: 'device', device: d })
+    }
+    step()
+    return setTimeout(() => json(res, { ok: true, text: 'Blinked three times. If you saw nothing, it is in another room — or it has no lamp on it.' }), 3150)
+  }
   if (p === '/drivers/zwave/retry' && req.method === 'POST') return json(res, { ok: true, drivers: status.drivers })
   if (p === '/flows/r1') {
     if (req.method !== 'POST') return json(res, signIn)
@@ -370,7 +429,31 @@ const server = http.createServer((req, res) => {
      Wi-Fi, keys, then the walk to find it a socket -- so the sheet can be watched rather than
      described. BRIDGE=knocking|working|placing|ready|failed pins one moment instead. */
   if (p === '/bridge') return json(res, bridgeNow())
-  /* Letting a new switch in: the phone sends whatever its camera read, whole. */
+  /* What the bridge can hear, and whose side each one is on. NEARBY=n sets how many are unclaimed;
+     NEARBY=0 with SPOKEN=1 is the case the Waiting board draws -- nothing to let in, but something
+     nearby that has to be started over first, which looks identical to an empty room to a scan. */
+  if (p === '/bridge/nearby') {
+    const free = Number(process.env.NEARBY ?? 2), spoken = Number(process.env.SPOKEN ?? 0)
+    const one = (i, st) => ({ state: st, rssi: -45 - i * 12, addr: `AA:BB:${10 + i}`,
+                              ...(st === 'unclaimed' ? { uuid: String(i).repeat(32).slice(0, 32) } : { net: 'ab'.repeat(8) }) })
+    const waiting = Array.from({ length: free }, (_, i) => one(i, 'unclaimed'))
+    const other = Array.from({ length: spoken }, (_, i) => one(free + i, 'other'))
+    const text = free === 1 ? 'One switch is waiting to be let in.'
+      : free > 1 ? `${free} switches are waiting to be let in.`
+      : other.length ? 'Nothing is asking to be let in, but there is a switch nearby that is on another network. That one has to be started over first.'
+      : 'Nothing nearby is asking to be let in.'
+    return json(res, { state: 'done', waiting, claimed_elsewhere: other, text })
+  }
+  /* Blinking one of them. BLINK=fail is a switch that cannot be reached, which matters because the
+     blink IS the identity check when there is no code -- a failure means the next question cannot
+     honestly be asked. */
+  if (p === '/bridge/blink' && req.method === 'POST') {
+    return process.env.BLINK === 'fail'
+      ? json(res, { state: 'failed', text: 'The bridge could not reach that switch.' })
+      : json(res, { state: 'done' })
+  }
+  /* Letting a new switch in: the phone sends whatever its camera read, whole, or a bare uuid when
+     the code is behind the plate. */
   if (p === '/bridge/switches' && req.method === 'POST') {
     HAVE.waiting = Math.max(0, HAVE.waiting - 1)
     const d = dev('mesh-new', 'Brilliant switch 0019', 'unassigned', 'light', 'off', { brightness: 0, has_motion: true })
@@ -393,7 +476,7 @@ const server = http.createServer((req, res) => {
   if (/^\/rooms\/[^/]+\/why/.test(p)) return json(res, why)
   if (p === '/suggestions') return json(res, { items: [
     { id: 'u3', name: 'Garage Left Light', room: 'backyard', why: 'the same unit as Walkway Pathlight Light', source: 'house' },
-    { id: 'u1', name: 'Colour lamp', room: 'living', why: 'the same unit as the floor lamp', source: 'assistant' },
+    { id: 'u1', name: 'Color lamp', room: 'living', why: 'the same unit as the floor lamp', source: 'assistant' },
     { id: 'u2', name: 'Plug', room: '', why: 'a plainer name', source: 'house' }], assistant: true })
   if (p === '/phone') return json(res, { ip: '192.168.1.40' })
   if (p === '/phones/me') return json(res, { locked: !!process.env.LOCKED, paired: true, home: 'Main Palace', phone: null })
@@ -406,6 +489,30 @@ const server = http.createServer((req, res) => {
     { id: 'e-hue', kind: 'Philips Hue', name: 'Philips Hue bridge', state: 'on', why: '', flow: null, things: 11 },
     { id: 'e-tesla', kind: 'Tesla', name: 'Tesla', state: 'on', why: '', flow: null, things: 1 },
   ] })
+  /* Sharing the house outward (docs/matter.md). Held in memory so the switches on This hub actually
+     move, the door opens, and a code appears -- SHARED=on starts with it already shared, and
+     SHARED=held with an app holding it, which is the state the screen is hardest to get right in. */
+  if (p === '/share' && req.method === 'GET') return json(res, shareState())
+  if (p === '/share' && req.method === 'POST') { let b = ''; req.on('data', c => (b += c)); return req.on('end', () => {
+    let body = {}; try { body = JSON.parse(b) } catch {}
+    if (body.on != null) share.on = !!body.on
+    if (body.kinds) share.kinds = body.kinds.filter(k => share.offer.includes(k))
+    if (body.locks != null) share.locks = !!body.locks
+    if (body.stopped != null) share.stopped = !!body.stopped
+    if (body.left_out) share.left_out = body.left_out
+    json(res, shareState())
+  }) }
+  if (/^\/devices\/[^/]+\/share$/.test(p) && req.method === 'POST') { let b = ''; req.on('data', c => (b += c)); return req.on('end', () => {
+    const id = decodeURIComponent(p.split('/')[2])
+    let wanted = false; try { wanted = !!JSON.parse(b).shared } catch {}
+    share.left_out = wanted ? share.left_out.filter(x => x !== id) : [...new Set([...share.left_out, id])]
+    json(res, shareState())
+  }) }
+  if (p === '/share/window' && req.method === 'POST') {
+    if (share.stopped) { res.writeHead(409, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify({ detail: 'The part of the hub that talks to other apps is not running, so there is nothing to open yet.' })) }
+    share.opened = Date.now(); return json(res, shareState())
+  }
+  if (p === '/share/qr.svg') { res.writeHead(200, { 'Content-Type': 'image/svg+xml' }); return res.end(FAKE_QR) }
   if (p === '/phones/ask' && req.method === 'POST') return json(res, { id: 'ask1', name: "Sam's iPhone", kind: 'phone', asked: now })
   if (p.startsWith('/phones/claim/')) return json(res, { state: 'waiting' })
   /* A real code where one can be drawn, and a picture of one where it cannot.

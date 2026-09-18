@@ -150,7 +150,8 @@ stolen token, a compromised Action or a bad afternoon at GitHub all reach every 
 transport less carefully — it is to stop trusting it at all.
 
 **A signed manifest per release.** CI publishes `release.json`: the version, the commit, the brain image **by digest**,
-every driver-layer image **by digest**, the oldest version that may upgrade straight to it, the rollout state piece 5
+the Matter bridge image **by digest** (added 18 September 2026 — it is ours and it has a contract with the brain, so
+the two are named by the release and move together; `docs/matter.md`), every driver-layer image **by digest**, the oldest version that may upgrade straight to it, the rollout state piece 5
 needs, and the notes piece 4 writes. It is signed with an ed25519 key **that does not live on GitHub**, and the public
 key is in the image and in the checkout. The hub verifies the signature before `install.sh` moves a byte, and pulls
 every image by digest. A tag that moves then changes nothing, because nothing reads a tag any more.
@@ -401,7 +402,7 @@ setup**, not a nudge that Home repeats.
   that has been off for a year, and refusing to start is the worst possible way to tell somebody.
 - **What the wall says while the engine is restarting.** For most updates only the brain moves and the panel blinks;
   for an update that bumps Home Assistant the house is genuinely deaf for half a minute, and the panel should say so
-  in advance rather than apologise afterwards.
+  in advance rather than apologize afterwards.
 - **Whether the driver layer can move without the hub moving.** Today it cannot, which is a good rule and also means a
   Home Assistant security fix waits for a hub release. Probably right; worth writing down that it was chosen.
 

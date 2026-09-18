@@ -1,4 +1,6 @@
 #!/bin/bash -e
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 # Runs on the build host with the image's root at ${ROOTFS_DIR}. Bakes in which code the image carries
 # (files/home-hub.conf, written by the workflow) so the chroot step can clone exactly that.
 if [ ! -f files/home-hub.conf ]; then

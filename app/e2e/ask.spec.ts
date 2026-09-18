@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* A phone at the door.
 
    The panel has always ranked this above everything else it can tell a person -- App.vue wakes the
@@ -33,9 +35,9 @@ test('a knock opens a pane of its own, not a card in the strip', async ({ page }
 })
 
 /* The reason this pane is fixed where every other surface tracks the sky: it is the one place a
-   person hands out a key to the house, and recognising it instantly -- noticing when something
-   about it is off -- is the only defence they have against answering a prompt they should not.
-   A surface that looks different at every hour cannot be recognised, so this is the one test in
+   person hands out a key to the house, and recognizing it instantly -- noticing when something
+   about it is off -- is the only defense they have against answering a prompt they should not.
+   A surface that looks different at every hour cannot be recognized, so this is the one test in
    the suite that WANTS two hours to come out identical. */
 test('it looks the same at every hour, which is the point of it', async ({ page }) => {
   const paint = async (at: string) => {
@@ -50,7 +52,7 @@ test('it looks the same at every hour, which is the point of it', async ({ page 
   await knocking(page)
   const night = await paint('21:30')
   const noon = await paint('12:30&wx=sunny')
-  expect(noon, 'the pane a person is meant to recognise changed with the hour').toBe(night)
+  expect(noon, 'the pane a person is meant to recognize changed with the hour').toBe(night)
 })
 
 test('putting it aside leaves the knock standing, and the chip brings it back', async ({ page }) => {

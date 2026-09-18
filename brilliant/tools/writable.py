@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Which vendor fields actually accept a write?
 
 We can read 55 fields and we know 0x12 writes one (proved on 0x04). Load type --

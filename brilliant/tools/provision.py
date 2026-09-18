@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Provision an unprovisioned SIG mesh node over PB-GATT, from macOS.
 
 Claims a factory-reset Brilliant switch into a mesh network we own. Keys are

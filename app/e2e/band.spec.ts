@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* The band, and the row that no longer moves for it.
 
    The row is the whole of what Wall buys: 548 of the board's 900, paid for with the greeting, the

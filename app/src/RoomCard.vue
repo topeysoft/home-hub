@@ -1,3 +1,7 @@
+<!--
+  SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+  SPDX-License-Identifier: AGPL-3.0-or-later
+-->
 <script setup lang="ts">
 /*
  * One room on the Rooms tab, at one of four sizes. design/rooms/Main.dc.html,
@@ -109,7 +113,7 @@ onMounted(() => { if (media.value?.attrs.entity_picture) art.value = imageUrl(me
     <img v-if="still" class="room-cell-still" :src="still" alt="" />
     <img v-else-if="art" class="room-cell-art" :src="art" alt="" @error="art = ''" />
     <!-- the lamp bleeding off the corner: `.room-card.active` already draws it,
-         and it is what says "on" without painting the room a different colour -->
+         and it is what says "on" without painting the room a different color -->
     <span class="room-cell-glow" v-if="lit || waiting" aria-hidden="true"></span>
     <span class="room-cell-veil" v-if="still || art" aria-hidden="true"></span>
 

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 # One-line install on any fresh Linux box: a Raspberry Pi 5, an Intel NUC, a VM, anything running
 # Debian, Ubuntu, Raspberry Pi OS or Fedora with systemd:
 #   curl -fsSL https://raw.githubusercontent.com/topeysoft/home-hub/main/install.sh | sudo bash
@@ -99,6 +101,15 @@ if [ -z "${HUB_BRAIN_IMAGE:-}" ]; then
   elif [ "$CHANNEL" = "main" ]; then export HUB_BRAIN_IMAGE="ghcr.io/topeysoft/home-hub-brain:main"
   fi
 fi
+# The Matter bridge is ours too, and it and the brain have a contract between them -- what the bridge
+# is handed for each device, and how long a request to open the door lasts. A hub running a new brain
+# against a bridge it had cached from a month ago is a version skew nobody would enjoy finding, so it
+# is named by the release exactly the way the brain is rather than left on :latest. docs/matter.md.
+if [ -z "${HUB_BRIDGE_IMAGE:-}" ]; then
+  if [ -n "$VERSION" ]; then export HUB_BRIDGE_IMAGE="ghcr.io/topeysoft/home-hub-matter-bridge:${VERSION}"
+  elif [ "$CHANNEL" = "main" ]; then export HUB_BRIDGE_IMAGE="ghcr.io/topeysoft/home-hub-matter-bridge:main"
+  fi
+fi
 export HUB_CHANNEL="$CHANNEL"
 
 say "3/5  A name on the network: $HOSTNAME_WANTED.local"
@@ -152,6 +163,11 @@ if [ ! -f .env ]; then
     echo "ZWAVE_SESSION_SECRET=$(head -c 32 /dev/urandom | base64 | tr -d '/+=' )"
   } > .env
 fi
+# The key the brain and the Matter bridge share, so the bridge gets past the phone gate without being
+# a phone. docs/matter.md. Added if it is missing rather than written with the block above, because a
+# hub installed before sharing existed needs one too -- and never rewritten, because rotating it would
+# cut a running bridge off mid-command for no reason anybody asked for.
+grep -q '^HUB_SHARE_TOKEN=' .env || echo "HUB_SHARE_TOKEN=$(head -c 32 /dev/urandom | base64 | tr -d '/+=' )" >> .env
 # Rewritten every run: the channel is a property of this hub, and re-running with a different one
 # is how it is changed.
 sed -i '/^HUB_CHANNEL=/d' .env 2>/dev/null || true
@@ -166,6 +182,8 @@ if ls "$KEYDIR"/*.pub >/dev/null 2>&1; then echo "HUB_VERIFIED=1" >> .env; fi
 # -- would otherwise resolve :latest and break the rule that code and container move together.
 sed -i '/^HUB_BRAIN_IMAGE=/d' .env 2>/dev/null || true
 if [ -n "${HUB_BRAIN_IMAGE:-}" ]; then echo "HUB_BRAIN_IMAGE=$HUB_BRAIN_IMAGE" >> .env; fi
+sed -i '/^HUB_BRIDGE_IMAGE=/d' .env 2>/dev/null || true
+if [ -n "${HUB_BRIDGE_IMAGE:-}" ]; then echo "HUB_BRIDGE_IMAGE=$HUB_BRIDGE_IMAGE" >> .env; fi
 # ...and the rented images the verified release pinned by digest. Written fresh every run and left
 # out entirely when there is nothing to pin, so the tags in docker-compose.yml are what a hub falls
 # back to rather than a digest from some release it is no longer on.

@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """The phones that belong to the house.
 
 Being on the Wi‑Fi gets a phone nothing on its own once the house has a code. A phone gets in one of

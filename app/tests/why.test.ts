@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* The words the house uses for what it did on its own.
 
    Every string here ends up on a wall in someone's kitchen, so these tests read the sentences rather
@@ -108,7 +110,7 @@ describe('a condition as words', () => {
 })
 
 describe('a whole routine in one line', () => {
-  it('reads as a sentence, capitalised, ending in a full stop', () => {
+  it('reads as a sentence, capitalized, ending in a full stop', () => {
     const line = routineWords(routine({ when: { motion: 'on' }, if: [['sun', 'below', 0]], then: { intent: 'occupied' } }))
     expect(line).toBe("When there's motion, after dark. Sets the room to In use.")
   })

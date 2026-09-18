@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* The camera's bottom sheet plays, and what that is allowed to cost.
  *
  * Two properties, and the second is the one with a bill attached. The sheet shows the still at once
@@ -18,11 +20,11 @@ const ROOM = '/?room=backyard&at=13:00'
 /** A motion-JPEG body a browser will actually play, drawn in the page it is served to. */
 async function mjpegBody(page: Page) {
   const frames = await page.evaluate(() =>
-    ['#2f6f4f', '#6f2f3f', '#2f4f6f'].map(colour => {
+    ['#2f6f4f', '#6f2f3f', '#2f4f6f'].map(color => {
       const c = document.createElement('canvas')
       c.width = 640; c.height = 360
       const x = c.getContext('2d')!
-      x.fillStyle = colour; x.fillRect(0, 0, 640, 360)
+      x.fillStyle = color; x.fillRect(0, 0, 640, 360)
       return c.toDataURL('image/jpeg', 0.8).split(',')[1]
     }))
   return Buffer.concat(frames.map(f => Buffer.from(f, 'base64')).flatMap(f => [

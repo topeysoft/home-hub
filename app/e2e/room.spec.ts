@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* A room, arranged.
 
    A room does not scroll DOWN. It fills in columns and runs off to the right when there is more of it

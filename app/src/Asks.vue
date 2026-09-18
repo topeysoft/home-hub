@@ -1,10 +1,14 @@
+<!--
+  SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+  SPDX-License-Identifier: AGPL-3.0-or-later
+-->
 <script setup lang="ts">
 /* A phone on the Wi‑Fi asked to join. The deciding happens in AskPane.vue, which rises on its own
    the moment a knock arrives; this is what is left in the band once somebody has put that pane
    aside, and its only job is to make sure the knock is never lost. Tapping it brings the pane back.
 
    So this is a chip and not a card, and it is the one chip in the band that wears the attention
-   colour, because the two things in the band are not the same kind of thing: an update is an offer
+   color, because the two things in the band are not the same kind of thing: an update is an offer
    and a phone at the door is a person waiting. It is still never the ONLY way to answer -- the pane
    opens itself -- which is what keeps it honest about the strand layout.ts says must be carried. */
 import { store } from './store'

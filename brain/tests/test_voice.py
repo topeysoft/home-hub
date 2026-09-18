@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """The house answering out loud.
 
 Four separate things, and they are worth keeping apart: which SENTENCE a reply is worth out loud, WHEN

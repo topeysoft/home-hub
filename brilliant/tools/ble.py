@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Finding a node, and saying out loud how well we can hear it.
 
 A mesh proxy link is a plain GATT connection, and GATT does not degrade

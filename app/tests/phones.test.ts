@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* Who this screen is, as far as the phones go.
 
    The house answers /phones with what THIS phone may see, so the panel works out nothing about who is

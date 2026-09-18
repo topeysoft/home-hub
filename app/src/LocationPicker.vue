@@ -1,3 +1,7 @@
+<!--
+  SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+  SPDX-License-Identifier: AGPL-3.0-or-later
+-->
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { searchPlaces, autoLocate, placeName, saveLocation, type Place } from './api'

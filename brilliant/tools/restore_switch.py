@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Move a Brilliant switch off the console onto our own network, dimming intact.
 
 Tonight's recipe, made repeatable. A factory reset strips the dimmer/motion
 setup the Control panel wrote, and that setup is NOT restored by provisioning
-alone: it lives in the vendor store, and the firmware reads the load type only
-at boot. So the order is capture, reset, adopt, power-cycle.
+alone: it lives in the vendor store. So the order is capture, reset, adopt --
+and then TRY IT, because the power cycle this used to demand turns out to be a
+fallback rather than a step (docs/brilliant.md, "The power cycle is a fallback").
 
     # 1. while the switch is still on the console's network
     BRILLIANT_MESH_STORE=~/.config/brilliant-mesh/panel-net.json \\
@@ -17,9 +20,7 @@ at boot. So the order is capture, reset, adopt, power-cycle.
     BRILLIANT_MESH_STORE=~/.config/brilliant-mesh/mesh-net.json \\
         python3 tools/restore_switch.py adopt ~/.config/brilliant-mesh/store-000a.json
 
-    # 4. power-cycle the switch again (the load type is read at boot)
-
-    # 5. prove it dims
+    # 4. prove it dims -- usually straight away, no power cycle needed
     BRILLIANT_MESH_STORE=~/.config/brilliant-mesh/mesh-net.json \\
         python3 tools/restore_switch.py verify 0005
 
@@ -132,8 +133,12 @@ async def adopt(store_path):
         print("0x0820/0x0001 is not bound to our AppKey -- rerun and watch the bind lines.")
         return
     print(f"\n{addr} adopted and configured.")
-    print("NOW POWER-CYCLE THE SWITCH (the load type is only read at boot),")
-    print(f"then: restore_switch.py verify {addr.replace('0x', '')}")
+    # The power cycle used to be step five here and is now a fallback: two
+    # adoptions since have dimmed straight away, and only 0x0003 ever needed the
+    # boot. Do not send somebody to a wall for a step usually not needed.
+    print("Try it now -- it will very likely dim already:")
+    print(f"    restore_switch.py verify {addr.replace('0x', '')}")
+    print("If it will NOT dim, pull its tab out and push it back, then try again.")
 
 
 async def verify(addr_hex):

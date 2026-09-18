@@ -1,8 +1,12 @@
+<!--
+  SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+  SPDX-License-Identifier: AGPL-3.0-or-later
+-->
 <script setup lang="ts">
 /*
  * The dial, which is the one instrument in the house that is a number you SET rather than a level
  * you drag — so it is the one place a ring earns its keep: the white handle is what was asked for,
- * the coloured arc is the gap the box is closing, and the number in the middle is the answer to
+ * the colored arc is the gap the box is closing, and the number in the middle is the answer to
  * "what did I set it to", which the old pane could not tell you at all.
  *
  * Every control here already existed in the brain (set, mode, the fan timer, sensing from another

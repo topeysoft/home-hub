@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Where the sun is. A port of app/src/sun.ts, so the panel's sky and the brain's rules agree.
 
 Checked against published times rather than against itself: a port that drifts is the failure worth

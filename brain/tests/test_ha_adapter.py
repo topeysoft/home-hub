@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """The only module that knows Home Assistant exists: the websocket protocol, and what happens when it drops.
 
 There is no HA here. A stand-in socket hands over the frames HA would send, so the awkward moments —

@@ -1,0 +1,66 @@
+{
+ "artboards": [
+  {
+   "file": "A.dc.html",
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "title": "A \u2014 a page of rows"
+  },
+  {
+   "file": "B.dc.html",
+   "x": 1560,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "title": "B \u2014 the badge at the top"
+  },
+  {
+   "file": "C.dc.html",
+   "x": 3120,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "title": "C \u2014 the mechanism, drawn"
+  }
+ ],
+ "annotations": [
+  {
+   "id": "why",
+   "text": "THE NOTE THIS ANSWERS\n\n\u201cEven when toggled on, it doesn\u2019t indicate that this is about making the house\u2019s devices available as Matter devices, to be shared with other Matter-compatible ecosystems. It\u2019s a good selling point \u2014 why should we be shy about showcasing it?\u201d\n\nThe screen that exists says Share, and says the house keeps working with the apps removed. Both true, and both written as if the feature were a risk to be reassured about. The word Matter never appears. Nothing says the lights BECOME something over there. A household that already owns a HomePod cannot tell from this page that it has just become useful.\n\nAll three boards below say the same true thing. They differ only in how much of the page they spend saying it."
+  },
+  {
+   "id": "a",
+   "text": "A \u2014 A PAGE OF ROWS\n\nThe page as it is, with the words fixed and nothing else. A lede that names Matter and says what happens; then the four rows.\n\nFOR: it is the same page as every other settings page, which is the whole argument of docs/settings.md \u2014 four nouns, no page of knobs. It reads quickly and it will never look dated.\n\nAGAINST: it showcases nothing. The lede is a paragraph, and paragraphs are the thing people skip. On a wall at head height this is a page somebody reads once and never again, which is fine for Backup and wrong for the one feature worth showing a visitor."
+  },
+  {
+   "id": "b",
+   "text": "B \u2014 THE BADGE AT THE TOP\n\nA hero: WORKS WITH MATTER, one large line, and four named cards \u2014 Apple Home, Google Home, Alexa, and SmartThings carrying \u201c\u2026and anything else that speaks Matter\u201d. The rows follow underneath, unchanged.\n\nFOR: it answers the question a person actually has \u2014 does this work with the thing I own \u2014 in one glance, by name. It is the shape every product on a shelf uses, because it works. And it stays true when the door is shut: the cards are what it works WITH, not what holds it, so they never go stale.\n\nAGAINST: it is the loudest thing in a panel that is quiet everywhere else, and the four cards are furniture that never changes. There is a risk it reads as an advertisement on somebody\u2019s own wall, which is the one place an advertisement is unwelcome."
+  },
+  {
+   "id": "c",
+   "text": "C \u2014 THE MECHANISM, DRAWN\n\nA diagram: three of the house\u2019s own things on the left, one Matter mark in the middle, the three apps on the right.\n\nFOR: it is the only one that explains what the feature IS rather than what it works with. \u201cYour things become Matter devices\u201d is an abstraction until you see a kettle on one side and Apple Home on the other. It also quietly sets the expectation that the hub is in the middle \u2014 which is what makes the rest of the page (what is shared, and the lock switch) make sense.\n\nAGAINST: a diagram earns its place once and then costs its space forever. Somebody who has understood it on Tuesday still scrolls past it on Friday, and the rows \u2014 which are the part you come back for \u2014 start halfway down the page."
+  },
+  {
+   "id": "ask",
+   "text": "WHAT IS COMMON TO ALL THREE\n\nThe word Matter, said plainly and early. The ecosystems named. A count of real things rather than an abstraction \u2014 14 things, not \u201cyour devices\u201d. Its own door in This house, so the feature is discoverable without opening The hub. And the lock switch kept exactly where it is, with the sentence that is the decision.\n\nONE THING NONE OF THEM DOES, DELIBERATELY: no Matter logo, and nowhere does it say Matter certified. That mark is the CSA\u2019s and using it needs certification this hub does not have \u2014 the bridge is on a test vendor id. Naming the standard in text is fine and is what these boards do. docs/matter.md, Certification."
+  },
+  {
+   "id": "decided",
+   "text": "DECIDED, 18 SEPTEMBER 2026 \u2014 C, WITH A BADGE OF OUR OWN\n\nC is built. The map is drawn from the house's own things \u2014 the brain hands the panel the first three by name, through the same gates the bridge is handed, so what is drawn on its way out is what would actually go out. A re-typed siren is not in the picture for the same reason it is not in the list.\n\nAnd the badge asked for is drawn rather than borrowed. The Connectivity Standards Alliance's own guidelines say their brands \u201cmay only be used on Products \u2026 that have been Certified with the Alliance\u201d, and this bridge runs on test vendor id 0xfff1. Wearing their mark now would breach that and would tell a household this hub is certified when it is not \u2014 which is the one lie a page about trust cannot afford.\n\nSo the badge is a hub with three things on it, in the panel's own gold, with the word Matter under it. It is ours, it is clearly a Matter badge, and it is one block in SharePage.vue: the day certification is earned, the certified mark replaces it there and nowhere else. An e2e test asserts the page never says \u201ccertified\u201d.\n\nNAMING THE STANDARD IN TEXT IS FINE AND IS NOT WHAT THIS IS ABOUT. \u201cWorks with Matter\u201d, \u201cbecomes a Matter device\u201d, and the three app names are ordinary nominative use, and the page leans on all of them."
+  }
+ ],
+ "launch": "A.dc.html",
+ "reading": [
+  "why",
+  "a",
+  "A.dc.html",
+  "b",
+  "B.dc.html",
+  "c",
+  "C.dc.html",
+  "ask",
+  "decided"
+ ]
+}

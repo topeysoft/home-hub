@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Write a batch of vendor fields, keeping a restore file.
 
-For bisecting a behaviour to a field: write half the candidates, see whether
+For bisecting a behavior to a field: write half the candidates, see whether
 the switch changes, restore, narrow. Originals go to a JSON file first, and
 `restore.py <file>` puts them back.
 

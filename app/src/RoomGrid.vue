@@ -1,3 +1,7 @@
+<!--
+  SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+  SPDX-License-Identifier: AGPL-3.0-or-later
+-->
 <script setup lang="ts">
 /* Every room as a card, one place rather than one per layout: the same grid on
    the Stack home, the Rail home, and the Rooms tab, so a room card looks and

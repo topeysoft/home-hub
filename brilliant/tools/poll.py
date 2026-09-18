@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Poll vendor fields fast and print every change, with timestamps.
 
 Field 0x13 moves when somebody works the switch by hand and stays put when

@@ -51,7 +51,7 @@ that justifies it.
 | Stage | Unit | What it needs | What it is honest as |
 |---|---|---|---|
 | **Now, tens** | Pi 5, 4 GB minimum, NVMe in an Argon ONE V3 style case or the official case plus M.2 HAT+, official 27 W supply, active cooler, RTC battery | Nothing new: the image and `firstboot.sh` already copy to an empty NVMe | An early-adopter kit, assembled by hand, and nothing more |
-| **v1, hundreds** | CM5 with 4 or 8 GB and 32 GB eMMC on a partner carrier and enclosure (Waveshare, EDATEC, Seeed and others sell CM5 boxes with RTC, metal case, often PoE) | The image built for eMMC rather than SD; the *Powered by Raspberry Pi* programme for the logo; a Part 15B test on the assembled unit | A product with a serial on it |
+| **v1, hundreds** | CM5 with 4 or 8 GB and 32 GB eMMC on a partner carrier and enclosure (Waveshare, EDATEC, Seeed and others sell CM5 boxes with RTC, metal case, often PoE) | The image built for eMMC rather than SD; the *Powered by Raspberry Pi* program for the logo; a Part 15B test on the assembled unit | A product with a serial on it |
 | **v2, if it takes off** | Custom carrier with an integrated Zigbee/Thread module | Board design, tooling, and the compliance that comes with a radio | Not before the numbers |
 | **Bring-your-own** | An Intel N100-class mini PC or NUC, as `install.sh` supports today | Nothing | The voice tier: faster-whisper *small* or *medium* on the hub itself |
 
@@ -162,7 +162,7 @@ was found:
 - **Supported integrations, in tiers.** Ring goes through an unofficial API that Ring can close on a Tuesday. Nest
   makes every household create its own Google project. Publish a short list tested on every release and call the
   rest best-effort, or the support load is the product.
-- **Licences and notices.** Home Assistant, the Matter server and Caddy are Apache-2.0; Zigbee2MQTT is GPL-3 and runs
+- **Licenses and notices.** Home Assistant, the Matter server and Caddy are Apache-2.0; Zigbee2MQTT is GPL-3 and runs
   as its own container, which is fine provided its source is offered; Z-Wave JS UI and ring-mqtt are MIT; Mosquitto
   is EPL/EDL. A notices page on *This hub* and a written offer of source is the whole of the obligation, and it is a
   day's work.

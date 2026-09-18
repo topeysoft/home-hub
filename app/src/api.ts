@@ -1,8 +1,10 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { request } from './code'
 /* `capability` is the driver's word for what this is and it picks the Home Assistant service; `kind` is
    the owner's, where they have given one. Read the two together through cap() in store.ts, never the raw
    field: a lamp on a smart plug is a switch to the driver and a light to everybody who lives there. */
-export type Device = { id: string; name: string; room_id: string; capability: string; state: string; attrs: Record<string, any>; hw?: string | null; own_room?: boolean; maker?: string | null; kind?: string | null; guess?: string | null; hw_name?: string | null; named_by_unit?: boolean }
+export type Device = { id: string; name: string; room_id: string; capability: string; state: string; attrs: Record<string, any>; hw?: string | null; own_room?: boolean; maker?: string | null; model?: string | null; entry?: string | null; kind?: string | null; guess?: string | null; hw_name?: string | null; named_by_unit?: boolean }
 export type Room = { id: string; name: string; devices: Device[]; intent: string; set_by?: string | null; hold_until?: number | null; motion_at?: number | null }
 export type Intent = { room: string; intent: string; set_by: string | null; hold_until: number | null }
 export type Home = { name?: string | null; temp_unit?: string; entry?: string[]; rooms: Room[] }   // entry: the rooms people come in through
@@ -105,18 +107,41 @@ export type Bridge = {
   text?: string
   switches?: number                        // how many it can hear from where it is
   signal?: 'strong' | 'weak' | 'none'
+  quiet?: true                             // placing, and it has not been heard from at all for a while: probably a socket with no Wi-Fi
   unplaced?: number                        // of those, how many have no room yet
   waiting?: number                         // switches nearby that have never been let in (see addSwitch)
   bridges?: number                         // how many are set up and working, job or no job
   needs?: 'wifi'                           // failed because the hub has nothing to give: a hub on a cable does not know the house's Wi-Fi until told once
 }
-/* Letting a NEW switch in. A factory-fresh one will not join without the secret printed on its back,
-   which is the mesh's own rule and not ours -- so the code has to be read off the thing itself, with
-   a camera, and the wall panel has not got one. `code` is whatever the camera read, sent whole: the
-   panel does not parse it, because what is in it is the bridge's business and it changes per maker.
-   design/puck/Switch.dc.html (the wall hands over) and Scan.dc.html (the phone reads it). */
+/* Letting a NEW switch in, two ways, because a switch arrives in a hand or already screwed to a wall.
+
+   WITH THE CODE on its back: `code` is whatever the camera read, sent whole -- the panel does not parse
+   it, because what is in it is the bridge's business and changes per maker. A camera is the only way to
+   read one and the wall panel has not got one, which is the whole of design/puck/Switch.dc.html (the
+   wall hands over) and Scan.dc.html (the phone reads it).
+
+   WITHOUT IT, because the code is behind the plate: the mesh never required that secret -- it is offered
+   by these switches, not demanded. What the code really buys is knowing WHICH switch, so the codeless
+   route has to prove that another way: ask the house what is waiting, make one of them announce itself,
+   and let a person say whether the blinking one is the switch they just touched. No camera in any of it,
+   so the wall can run the whole job on its own (design/puck/Held.dc.html and Waiting.dc.html). */
 export type Letting = { state: 'working' | 'done' | 'failed'; text?: string; device_id?: string; name?: string }
 export const addSwitch = (code: string) => post<Letting>('/bridge/switches', { code })
+export const letSwitchIn = (uuid: string) => post<Letting>('/bridge/switches', { uuid })
+
+/* One switch the bridge can hear. `state` is whose side it is on, and it decides what can be said:
+     unclaimed  nobody owns it -- ready as it stands, whether it is fresh out of a box or just reset
+     ours       already on this house, living under its light; nothing to do here
+     other      on somebody else's network. THE one case where it has to be started over first */
+export type Waiting = { state: 'unclaimed' | 'ours' | 'other'; rssi: number; addr: string; uuid?: string; net?: string }
+export type Nearby = { state: 'done' | 'failed'; text?: string; waiting?: Waiting[]; claimed_elsewhere?: Waiting[] }
+export async function nearbySwitches(): Promise<Nearby> {
+  const r = await request('/bridge/nearby'); if (!r.ok) await fail(r); return r.json()
+}
+/* Make one announce itself. Without a code this is the ONLY thing that tells the switch somebody
+   touched from any other unclaimed one in radio range, so a failure here is not cosmetic: it means
+   the next question cannot honestly be asked. */
+export const blinkSwitch = (uuid: string, seconds = 5) => post<{ state: string; text?: string }>('/bridge/blink', { uuid, seconds })
 export const BRIDGE_STEPS = ['software', 'wifi', 'keys'] as const
 export async function getBridge(): Promise<Bridge> { const r = await request('/bridge'); if (!r.ok) await fail(r); return r.json() }
 /** Yes, that one is mine. The keys only go anywhere after this. */
@@ -162,6 +187,9 @@ export const setSense = (id: string, sensor: string | null) => post(`/devices/${
 /* Ask a thing that has gone quiet whether it is there, and say what came back. A thing that is genuinely
    unplugged is still quiet afterwards, and saying so is the point: that is when removing it is the answer. */
 export const checkDevice = (id: string) => post<{ ok: boolean; answering: boolean; text: string }>(`/devices/${encodeURIComponent(id)}/check`)
+/** Make a thing blink so the person standing in the room can see which one the row is. The other half of
+    "go and press one": pressing answers for what a hand can reach, this for eleven bulbs in a ceiling. */
+export const identifyDevice = (id: string) => post<{ ok: boolean; text: string }>(`/devices/${encodeURIComponent(id)}/identify`)
 /* Try a part of the driver layer again now, rather than waiting out its five-minute backoff. */
 export const retryPart = (part_id: string) => post<{ ok: boolean; drivers: Part[] }>(`/drivers/${encodeURIComponent(part_id)}/retry`)
 export async function getDiscovered(): Promise<Found[]> {
@@ -280,7 +308,7 @@ export async function setHomeIntent(state: string) {
 export const imageUrl = (id: string) => `/devices/${encodeURIComponent(id)}/image?t=${Date.now()}`
 
 /** Live updates from the brain. Reconnects with backoff; reports link state. */
-export function connect(on: { device: (d: Device) => void; home: (h: Home) => void; ambient: (a: Ambient) => void; status: (s: Status) => void; intent: (i: Intent) => void; drafts: (d: Routine[]) => void; presence: (p: Presence) => void; phones: () => void; link: (up: boolean) => void }) {
+export function connect(on: { device: (d: Device) => void; home: (h: Home) => void; ambient: (a: Ambient) => void; status: (s: Status) => void; intent: (i: Intent) => void; drafts: (d: Routine[]) => void; presence: (p: Presence) => void; phones: () => void; share: () => void; link: (up: boolean) => void }) {
   let delay = 1000, ws: WebSocket | null = null, closed = false
   const open = () => {
     const proto = location.protocol === 'https:' ? 'wss' : 'ws'
@@ -296,6 +324,7 @@ export function connect(on: { device: (d: Device) => void; home: (h: Home) => vo
       else if (m.type === 'drafts') on.drafts(m.drafts)
       else if (m.type === 'presence') on.presence(m.presence)
       else if (m.type === 'phones') on.phones()   // a nudge, not the roster: what this phone may see is /phones' answer to ask for
+      else if (m.type === 'share') on.share()    // the same shape: what is shared, and who holds it, is /share's answer to give
     }
     ws.onclose = () => { on.link(false); if (!closed) setTimeout(open, delay = Math.min(delay * 2, 15000)) }
     ws.onerror = () => ws?.close()
@@ -337,3 +366,35 @@ export const joinWithCode = (code: string, name: string) => post<{ ok: boolean; 
 export const allowPhone = (id: string, span: 'day' | 'weekend' | 'keep') => post<Phone>(`/phones/asks/${encodeURIComponent(id)}/allow`, { span })
 export async function denyPhone(id: string) { const r = await request(`/phones/asks/${encodeURIComponent(id)}`, { method: 'DELETE' }); if (!r.ok) await fail(r) }
 export async function removePhone(id: string) { const r = await request(`/phones/${encodeURIComponent(id)}`, { method: 'DELETE' }); if (!r.ok) await fail(r) }
+
+/* Sharing the house outward, so Apple Home, Google Home and Alexa can see it: docs/matter.md.
+   `offer` is the list of kinds this hub can publish, computed there and never typed here -- a panel
+   that knows a kind the hub does not must not offer it, and one that does not know a kind the hub has
+   must not hide it. `locks` is its own switch for its own reason, and is not in `kinds`. */
+export type Holder = { index: number; name: string }
+export type Share = {
+  ready: boolean            // the installer left this hub a sharing key; without one there is nothing to switch on
+  on: boolean
+  kinds: string[]
+  locks: boolean
+  offer: string[]
+  shared: number
+  candidates: number       // what WOULD go out, so the off state can say something concrete
+  left_out: string[]       // the ids the owner has kept home; the panel tests one device against it
+  left_out_now: number     // how many of those are actually holding something back right now
+  preview: { name: string; kind: string }[]   // a few of them by name, for the map at the top of the page
+  holders: Holder[]
+  open: boolean             // the door is open for an app to be added right now
+  seconds_left: number | null
+  code: string | null       // the printed code beside the QR, while the door is open
+  bridge: { running?: boolean; commissioned?: boolean; stale?: boolean; error?: string | null } | null
+}
+export async function getShare(): Promise<Share> { const r = await request('/share'); if (!r.ok) await fail(r); return r.json() }
+export const setShare = (body: { on?: boolean; kinds?: string[]; locks?: boolean }) => post<Share>('/share', body)
+export const openShareWindow = () => post<Share>('/share/window', {})
+/* One thing in or out by hand, from its own pane. Leaving a lamp out of the other apps is a change
+   to the house, so it asks for the code the same way renaming and moving do. */
+export const setDeviceShared = (id: string, shared: boolean) => post<Share>(`/devices/${encodeURIComponent(id)}/share`, { shared })
+/* Its own route, not qrUrl(): that one carries an http address and checks it is one, and a Matter
+   payload is MT:… . The cache-buster is because the code changes every time the door opens again. */
+export const shareQrUrl = (n: number) => `/share/qr.svg?v=${n}`

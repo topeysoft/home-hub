@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Run from brain/: .venv/bin/python -m unittest -v. Who made a device, from the driver's device registry to the panel."""
 import unittest
 from hub.model import Home

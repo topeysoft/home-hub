@@ -1,6 +1,8 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Two switches, one light, with no mesh and no broker.
 
-What these hold is the behaviour a person at the bottom of the stairs would notice, and the four
+What these hold is the behavior a person at the bottom of the stairs would notice, and the four
 ways a naive relay would misbehave: replaying every press when the broker reconnects, treating a
 ten-minute resync as a touch, volleying with itself, and calling a dropped command a success.
 

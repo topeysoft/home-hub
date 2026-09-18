@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /*
  * Which paths belong to the brain rather than to the panel.
  *
@@ -14,18 +16,18 @@ export const BRAIN_PATHS = [
   '/accounts', '/ambient', '/assistant', '/backup', '/bridge', '/catalog', '/credentials', '/devices', '/discovered',
   '/drafts', '/events', '/flows', '/geo', '/health', '/home', '/location', '/look', '/pair',
   '/phone', '/phones', '/presence', '/qr.svg', '/restore', '/rooms', '/rules', '/say', '/scenes',
-  '/setup', '/sounds', '/suggestions', '/update',
+  '/setup', '/share', '/sounds', '/suggestions', '/update',
   '/docs', '/openapi.json', '/redoc',        // FastAPI's own, handy when the panel is not the thing being debugged
 ] as const
 
-/** The paths that carry a websocket: the live stream, and a camera's WebRTC signalling. */
+/** The paths that carry a websocket: the live stream, and a camera's WebRTC signaling. */
 export const BRAIN_SOCKETS = ['/stream', '/devices'] as const
 
 export function proxyFor(brain: string) {
   const http = Object.fromEntries(BRAIN_PATHS.map(p => [p, brain]))
   return {
     ...http,
-    // A camera's signalling socket lives under /devices too, so that one is both.
+    // A camera's signaling socket lives under /devices too, so that one is both.
     '/devices': { target: brain, ws: true },
     '/stream': { target: brain.replace('http', 'ws'), ws: true },
   }

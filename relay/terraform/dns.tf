@@ -26,7 +26,7 @@ resource "cloudflare_dns_record" "houses_v4" {
   content = var.relay_ipv4
   ttl     = 300
   proxied = false
-  comment = "Every house. Grey cloud on purpose: proxying would terminate TLS at Cloudflare."
+  comment = "Every house. Gray cloud on purpose: proxying would terminate TLS at Cloudflare."
 }
 
 resource "cloudflare_dns_record" "houses_v6" {
@@ -38,7 +38,7 @@ resource "cloudflare_dns_record" "houses_v6" {
   content = var.relay_ipv6
   ttl     = 300
   proxied = false
-  comment = "Every house, over IPv6. Grey cloud for the same reason as the A record."
+  comment = "Every house, over IPv6. Gray cloud for the same reason as the A record."
 }
 
 # Only Let's Encrypt may issue for anything under this domain. Each house asks for its own

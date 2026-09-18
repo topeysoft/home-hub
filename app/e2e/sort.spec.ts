@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* New devices reaches every device it is listing.
  *
  * What made this a spec: this screen borrows `.room` for its shell, so it inherited the rule that
@@ -8,9 +10,12 @@
  * fourteen found devices on a 1280x800 wall put the last one at y 1408, under the command box,
  * with nothing on the screen that could be scrolled to get to it.
  *
- * So the scroll goes on the LIST rather than back on the stage, which keeps both things true at
- * once: every device is reachable, and the head -- the way back with it -- never moves. Measured
- * from inside the page, because what is being asserted is what a finger can reach.
+ * So the scroll goes on everything UNDER THE HEAD rather than back on the stage, which keeps both
+ * things true at once: every device is reachable, and the head -- the way back with it -- never
+ * moves. Everything under the head and not the list alone: the bars that teach this screen stand
+ * between the two, and held fixed above a scrolling list they ate a short wall themselves, leaving
+ * a 69px window for a 135px row -- so no row could be read whole however far it was scrolled.
+ * Measured from inside the page, because what is being asserted is what a finger can reach.
  */
 import { expect, test, type Page } from '@playwright/test'
 
@@ -31,7 +36,7 @@ async function openNewDevices(page: Page) {
 const measure = (page: Page) =>
   page.evaluate(() => {
     const stage = document.querySelector('.stage')!
-    const list = document.querySelector('.sort')!
+    const list = document.querySelector('.sort-scroll')!
     const back = document.querySelector('.back')!.getBoundingClientRect()
     const rows = [...document.querySelectorAll('.sort-row')]
     const last = rows[rows.length - 1].getBoundingClientRect()
@@ -65,9 +70,16 @@ test('the last device can be reached, and the way back stays where it was', asyn
   const before = await measure(page)
   expect(before.lastRowInWindow, 'this wall already shows them all, so it is not the case under test').toBe(false)
 
-  // the whole point: a finger on the list
-  await page.locator('.sort').hover()
-  for (let i = 0; i < 12; i++) await page.mouse.wheel(0, 120)
+  // The whole point: a finger on the list, wound on until the list stops moving. It used to be twelve
+  // turns of the wheel, which is a distance and not a condition -- SWITCHES=11 and a row that grew a
+  // line both put the last device further down than 1440px, and the spec then failed for the length
+  // of the list rather than for anything it is about.
+  await page.locator('.sort-scroll').hover()
+  const atBottom = () => page.evaluate(() => {
+    const l = document.querySelector('.sort-scroll')!
+    return l.scrollTop >= l.scrollHeight - l.clientHeight - 1
+  })
+  for (let i = 0; i < 80 && !(await atBottom()); i++) { await page.mouse.wheel(0, 120); await page.waitForTimeout(30) }
   await page.waitForTimeout(400)
 
   const after = await measure(page)

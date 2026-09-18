@@ -1,8 +1,10 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Regenerate tests/sun-positions.json, the table both sun implementations are held to.
 
 Run from brain/: .venv/bin/python tests/make_sun_positions.py
 
-Only run this when the maths is meant to change. The point of the file is that it does not move on
+Only run this when the math is meant to change. The point of the file is that it does not move on
 its own: brain/hub/sun.py and app/src/sun.ts are the same calculation written twice, and the panel's
 sky and the brain's after-dark rules disagreeing is the bug it exists to catch.
 """
@@ -31,6 +33,6 @@ if __name__ == "__main__":
     OUT.write_text(json.dumps({
         "_comment": "Where the sun is, computed by brain/hub/sun.py. app/src/sun.ts is a port of it and must agree "
                     "to within a thousandth of a degree; app/tests/sun.test.ts reads this same file. Regenerate with "
-                    "brain/tests/make_sun_positions.py only when the maths is deliberately changed.",
+                    "brain/tests/make_sun_positions.py only when the math is deliberately changed.",
         "rows": list(rows())}, indent=1) + "\n")
     print(f"wrote {OUT}")

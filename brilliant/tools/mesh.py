@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Bluetooth SIG Mesh crypto + PB-GATT primitives (Mesh Profile 1.0.1, s3.8).
 
 Enough of the stack to provision a node and talk to it. No BlueZ needed --

@@ -1,3 +1,7 @@
+<!--
+  SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+  SPDX-License-Identifier: AGPL-3.0-or-later
+-->
 <script setup lang="ts">
 /*
  * A device, drawn.
@@ -7,9 +11,9 @@
  * it, lives in art.ts where it can be tested without a browser -- which is how
  * the light pool that ran two pixels past its box got caught.
  *
- * Cropped into the corner rather than centred, because that is where it goes on
+ * Cropped into the corner rather than centered, because that is where it goes on
  * a real tile: the name and the state own the bottom left, and a device sitting
- * in the middle of a card is a catalogue photograph, not a room.
+ * in the middle of a card is a catalog photograph, not a room.
  */
 import { computed } from 'vue'
 import { BOX, device, materials, type ArtState, type Kind } from './art'
@@ -18,12 +22,12 @@ import { store } from './store'
 /* corner: cropped into the bottom right of a tile, where the name and state own
    the other half. slot: filling a box that exists to hold a picture -- the
    album-art square, which is rung one's home and so is rung two's as well.
-   face: the device's own face alone, centred, for the one tile that is built
+   face: the device's own face alone, centered, for the one tile that is built
    around the thing it draws rather than beside it. */
 const props = withDefaults(defineProps<{ kind: Kind; state: ArtState; fit?: 'corner' | 'slot' | 'face' }>(), { fit: 'corner' })
 
 /* the same materials ArtDefs paints into the gradients, for the handful of marks
-   that take a flat colour rather than one of them */
+   that take a flat color rather than one of them */
 const art = computed(() => device(props.kind, props.state, materials(store.sky.elevation, store.sky.condition)))
 
 /* A face crops to the box art.ts drew it in; asking for one where there is none

@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* Every instrument in an opened device, used with a finger.
  *
  * A mouse pass proves less than it looks like here: these controls are dragged, and a drag on a
@@ -15,7 +17,7 @@ import { expect, test, type Page } from '@playwright/test'
 async function boxOf(page: Page, selector: string) {
   const el = page.locator(selector).first()
   await expect(el).toBeVisible({ timeout: 10000 })
-  /* centred, not merely "in view": a control level with the bottom edge is reachable by the letter
+  /* centered, not merely "in view": a control level with the bottom edge is reachable by the letter
      of scrollIntoViewIfNeeded and awkward for a finger, and the pane is still settling under it */
   await el.evaluate(e => e.scrollIntoView({ block: 'center' }))
   await page.waitForTimeout(400)
@@ -39,7 +41,7 @@ async function finger(page: Page) {
 
 /** Hold a tile with a finger until ITS pane opens, then start watching what the house is told.
     `instrument` is the rig the tile should have produced: a room scrolls sideways, and a press
-    measured a moment too early lands on the neighbour, which opens a perfectly good pane of the
+    measured a moment too early lands on the neighbor, which opens a perfectly good pane of the
     wrong kind. Rather than assert on a race, press again. */
 async function open(page: Page, room: string, selector: string, instrument: string) {
   const posts: string[] = []

@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* Sensors are read, not tapped: a room shows them as one line of readings above its tiles. */
 import type { Device, Room } from './api'
 import { cap, isDead, shortName } from './store'

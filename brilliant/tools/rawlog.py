@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Log every mesh PDU the node gives us, decoded or not.
 
 `explore.py` and `listen.py` only ever print messages they could decrypt at the

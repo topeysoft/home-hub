@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* The rail: cards resolve as they arrive. A card fully on the rail is crisp, one off it is faded and
    blurred, and the ramp between never runs backwards. This is a scroll-driven animation done in CSS,
    so nothing in the app's own code would notice it breaking. */
@@ -57,7 +59,7 @@ test('a card still off the rail is faded and blurred rather than half-drawn', as
 })
 
 test('a card only becomes crisp once it is all the way in', async ({ page }) => {
-  /* The behaviour the rail was tuned to: nearly in is still not in. Swept rather than sampled at one
+  /* The behavior the rail was tuned to: nearly in is still not in. Swept rather than sampled at one
      scroll position, because where a card lands depends on how wide the cards are, and a test that
      quietly finds nothing to look at is a test that passes without asking anything. */
   const nearly: Card[] = []

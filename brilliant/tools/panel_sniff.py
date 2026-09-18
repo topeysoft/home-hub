@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Listen to the live Brilliant panel mesh with the captured netkey.
 
 We provisioned an ESP32 into the panel's network and it handed over the netkey
@@ -98,7 +100,7 @@ async def main():
 
     async def open_filter(cli, mtu):
         # Reject-list (0x01), no entries = forward everything. A well-behaved
-        # proxy answers with a Filter Status; some are lax and honour it silently.
+        # proxy answers with a Filter Status; some are lax and honor it silently.
         seq = mesh.next_seq(net)
         cfg = mesh.net_encrypt(netkey, iv, ctl=1, ttl=0, seq=seq, src=us,
                                dst=0x0000, transport_pdu=bytes([0x00, 0x01]),
@@ -233,7 +235,7 @@ async def main():
         print("\n  Only beacons -- no mesh PDUs. The netkey is proven (the beacon")
         print("  authenticates under it), but the proxy forwarded no traffic:")
         print("  either the network was idle (nobody interacting) or the filter")
-        print("  was not honoured. Re-run WHILE working a switch by hand.")
+        print("  was not honored. Re-run WHILE working a switch by hand.")
 
 
 if __name__ == "__main__":

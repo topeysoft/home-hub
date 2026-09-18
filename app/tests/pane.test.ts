@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* What an opened device says about itself: the one reading, the verbs it really has, the facts the
    house actually holds, and the day it has had. The words on a pane somebody reads from a doorway. */
 import { beforeEach, describe, expect, it } from 'vitest'

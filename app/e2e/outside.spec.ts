@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* The weather, opened.
  *
  * The lozenge was scenery and is now the one piece of scenery that answers a finger, so most of
@@ -30,7 +32,7 @@ test('the lozenge opens, through the row that lies over it', async ({ page }) =>
     const el = document.elementFromPoint(x, y)
     return el?.closest('.wall-loz') !== null
   }, [box.x + box.width / 2, box.y + box.height / 2])
-  expect(on, 'something else is over the lozenge at its own centre').toBe(true)
+  expect(on, 'something else is over the lozenge at its own center').toBe(true)
 
   await loz.click()
   await expect(page.locator('.opened.outside')).toBeVisible()

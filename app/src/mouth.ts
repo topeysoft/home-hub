@@ -1,8 +1,10 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* Where a spoken answer comes out -- and nothing whatever about what it means.
  *
  * `ear.ts`'s opposite number, and deliberately the same shape: the panel asks for a sentence to be
  * said and never asks who says it. `docs/voice.md` settled on 14 September 2026 that the PANEL plays
- * the answer, as audio in the page, from a clip the hub synthesised and hosts on its own LAN address
+ * the answer, as audio in the page, from a clip the hub synthesized and hosts on its own LAN address
  * -- the arrangement `sounds.py` already has with a Cast speaker, so *works with the internet down*
  * is inherited rather than argued for again. Not natively in the kiosk (`docs/apps.md`: nothing lives
  * only in the app, and the wall contributes a loudspeaker rather than a feature), and not on the
@@ -49,7 +51,7 @@ function play(url: string): boolean {
   mouth = a
   a.addEventListener('ended', () => { if (mouth === a) mouth = null })
   /* A clip that will not play is not worth a word to anybody: the sentence is already on the screen,
-     and a house that interrupts itself to apologise for its loudspeaker is worse than a quiet one. */
+     and a house that interrupts itself to apologize for its loudspeaker is worse than a quiet one. */
   a.play().catch((e) => { if (mouth === a) mouth = null; console.warn('[mouth] could not play the answer', e) })
   return true
 }

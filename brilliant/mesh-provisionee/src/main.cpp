@@ -273,7 +273,7 @@ static void aes_ecb(const uint8_t key[16], const uint8_t in[16], uint8_t out[16]
 }
 
 // Advertise the Mesh Proxy Service with a NODE IDENTITY beacon, so the app can
-// recognise THIS node as the one it just provisioned and reconnect promptly.
+// recognize THIS node as the one it just provisioned and reconnect promptly.
 // A Network ID beacon (what we sent before) only says "some node on this net",
 // so the app could not match it to the node it provisioned -- it timed out
 // after ~60s and reconnected in cleanup mode (Config Node Reset). Node Identity

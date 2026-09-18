@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Probe the Brilliant vendor model 0x0820/0x0001 with parameters.
 
 The earlier sweep sent all 64 opcodes with an EMPTY payload and concluded that

@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Names and rooms for the things that have not been placed yet.
 
 New devices arrive called whatever their maker called them: "TP-LINK Kasa KL125 Bulb", "lumi.sensor_motion.aq2",
@@ -5,7 +7,7 @@ New devices arrive called whatever their maker called them: "TP-LINK Kasa KL125 
 and a room for each one. First the house's own reasoning: a room's name (or one of its usual other names) inside
 the device's name or its hardware's name places it; maker and model words come out of the name and a kind word
 goes in when nothing else says what it is. Then, when the assistant is connected, one call asks the model about
-whatever is still unplaced, with the rooms, the device's neighbours on the same hardware and its kind. The model
+whatever is still unplaced, with the rooms, the device's neighbors on the same hardware and its kind. The model
 only ever proposes; a person taps Use, and the move and rename go through the same guarded routes as by hand.
 """
 import json, logging, re

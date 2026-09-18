@@ -1,0 +1,137 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      /* the panel's own tokens, unchanged -- app/src/panel.css */
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp: #e9b872; --lamp-ink: #2a1c07; --live: #74c69d; --danger: #e08a8a;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .phone { position: absolute; top: 244px; width: 366px; height: 596px; border-radius: 40px;
+             background: #14161b; border: 1px solid var(--edge-hi);
+             box-shadow: 0 40px 100px -30px rgba(0,0,0,.9); overflow: hidden; padding: 30px 26px; }
+    .row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
+           padding: 12px 14px; border-radius: 16px; background: var(--surface); border: 1px solid var(--edge); }
+    .row.lit { border-color: rgba(233,184,114,.35);
+               background: linear-gradient(rgba(233,184,114,.1), rgba(233,184,114,.1)), var(--surface); }
+    .row.big { padding: 15px 16px; }
+    .ic { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center;
+          background: var(--surface-hi); color: var(--ink-2); }
+    .ic.on { background: var(--lamp); color: var(--lamp-ink); }
+    .t1 { font-size: 15.5px; font-weight: 500; }
+    .t2 { font-size: 13px; color: var(--muted); }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 999px;
+           background: var(--ink); color: var(--bg); font-weight: 500; font-size: 17px; }
+    .btn.big { padding: 15px 28px; }
+    .btn.ghost { background: var(--surface-hi); color: var(--ink); border: 1px solid var(--edge); }
+    .bar { height: 6px; border-radius: 999px; background: rgba(255,255,255,.1); overflow: hidden; }
+    .bar i { display: block; height: 100%; border-radius: 999px; background: var(--lamp); }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: #0c0d10; color: var(--ink); font-size: 17px; line-height: 1.4;">
+  <div style="position: absolute; inset: 0; background: radial-gradient(64% 54% at 22% 18%, rgba(72,63,135,.22), transparent 70%), radial-gradient(56% 48% at 86% 88%, rgba(92,63,57,.2), transparent 72%);"></div>
+
+  <div style="position: absolute; top: 52px; left: 56px; right: 56px;">
+    <h1 class="dsp" style="margin: 0; font-size: 42px;">Which one has the light?</h1>
+    <p style="margin: 10px 0 0; font-size: 17px; color: var(--ink-2); max-width: 96ch;">Two switches on one light are not the same as each other: one is wired to the lamp and the other is wired to nothing at all, and the house has to write that down before it can pair them. Coming across from the old panel it can be read. Out of a box it cannot &mdash; so the house finds out by trying it, and only asks if trying it was inconclusive. The words &ldquo;load&rdquo; and &ldquo;companion&rdquo; never appear.</p>
+  </div>
+
+  <!-- ============ 1 ============ -->
+  <div class="cap" style="position: absolute; top: 208px; left: 96px;">1 &middot; usually nobody is asked anything</div>
+  <div class="phone" style="left: 96px;">
+    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 26px;">
+      <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--live);"></span>
+      <span class="t2">Both codes read</span>
+    </div>
+    <div style="display: grid; place-items: center; margin: 71px 0 26px;">
+      <svg width="175" height="140" viewBox="0 0 140 112" fill="none">
+        <rect x="2" y="26" width="48" height="58" rx="9" fill="#ded8cc" stroke="rgba(0,0,0,.22)" stroke-width="2"/>
+        <rect x="10" y="34" width="32" height="28" rx="6" fill="#fbf8f2" stroke="rgba(0,0,0,.12)" stroke-width="1.4"/>
+        <rect x="90" y="26" width="48" height="58" rx="9" fill="#ded8cc" stroke="rgba(0,0,0,.22)" stroke-width="2"/>
+        <rect x="98" y="34" width="32" height="28" rx="6" fill="#fbf8f2" stroke="rgba(0,0,0,.12)" stroke-width="1.4"/>
+        <circle cx="70" cy="55" r="17" fill="rgba(233,184,114,.22)"/>
+        <circle cx="70" cy="55" r="9" fill="var(--lamp)"/>
+        <path d="M70 26v6M70 78v6M41 55h6M93 55h6M50 35l4 4M90 71l-4-4M50 75l4-4M90 39l-4 4" stroke="var(--lamp)" stroke-width="2.4" stroke-linecap="round" opacity=".7"/>
+      </svg>
+    </div>
+    <h2 class="dsp" style="margin: 0 0 10px; font-size: 26px; text-align: center;">Making them one light.</h2>
+    <p style="margin: 0 0 20px; color: var(--ink-2); font-size: 15px; text-align: center;">A few seconds. Then it will ask which room they are in, and that is the last of it.</p>
+    <div class="bar"><i style="width: 64%"></i></div>
+    <div style="position: absolute; left: 26px; right: 26px; bottom: 28px; padding: 14px 16px 15px; border-radius: 18px; background: var(--surface); border: 1px solid var(--edge);">
+      <div class="t1" style="margin-bottom: 5px;">A light may blink</div>
+      <div class="t2">That is the house trying each switch to see which one the lamp is on. Nothing is wrong.</div>
+    </div>
+  </div>
+
+  <!-- ============ 2 ============ -->
+  <div class="cap" style="position: absolute; top: 208px; left: 537px;">2 &middot; and when it cannot tell, one question</div>
+  <div class="phone" style="left: 537px;">
+    <div style="display: grid; place-items: center; margin: 4px 0 22px;">
+      <span style="width: 56px; height: 56px; border-radius: 18px; background: var(--lamp); color: var(--lamp-ink); display: grid; place-items: center;">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9V15h7v-1.1A6 6 0 0 0 12 3z"/></svg>
+      </span>
+    </div>
+    <h2 class="dsp" style="margin: 0 0 10px; font-size: 27px; text-align: center;">Did a light just come on?</h2>
+    <p style="margin: 0 0 24px; color: var(--ink-2); font-size: 15px; text-align: center;">We switched the first one you scanned. Whichever of the two has the lamp on it is the one the other will talk to.</p>
+    <div style="display: grid; gap: 10px;">
+      <div class="row big lit">
+        <span class="ic on"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></span>
+        <span><span class="t1">Yes, it did</span><span class="t2" style="display: block;">Then that one is the one with the lamp.</span></span>
+      </div>
+      <div class="row big">
+        <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 7l10 10M17 7L7 17"/></svg></span>
+        <span><span class="t1">No, nothing happened</span><span class="t2" style="display: block;">Then it is the other one. Same result.</span></span>
+      </div>
+    </div>
+    <div style="position: absolute; left: 26px; right: 26px; bottom: 28px; display: grid; place-items: center; gap: 12px;">
+      <span class="btn ghost" style="font-size: 15px;">Do that again, I missed it</span>
+      <span class="t2" style="text-align: center;">Either answer finishes the job. There is no wrong one to pick first.</span>
+    </div>
+  </div>
+
+  <!-- ============ 3 ============ -->
+  <div class="cap" style="position: absolute; top: 208px; left: 978px;">3 &middot; the mistake it catches for free</div>
+  <div class="phone" style="left: 978px;">
+    <div style="display: grid; place-items: center; margin: 4px 0 20px;">
+      <span style="width: 56px; height: 56px; border-radius: 18px; background: rgba(224,138,138,.18); border: 1px solid rgba(224,138,138,.4); color: var(--danger); display: grid; place-items: center;">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 8v5M12 16.5v.5"/><circle cx="12" cy="12" r="9"/></svg>
+      </span>
+    </div>
+    <h2 class="dsp" style="margin: 0 0 10px; font-size: 26px; text-align: center;">These are two lights.</h2>
+    <p style="margin: 0 0 22px; color: var(--ink-2); font-size: 15px; text-align: center;">Both of them turned a lamp on, so each has one of its own. Two switches on one light share a single lamp between them.</p>
+    <div style="display: grid; gap: 8px; margin-bottom: 20px;">
+      <div class="row">
+        <span class="ic on"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9V15h7v-1.1A6 6 0 0 0 12 3z"/></svg></span>
+        <span><span class="t1">The first one</span><span class="t2" style="display: block;">Has a lamp &middot; dims</span></span>
+      </div>
+      <div class="row">
+        <span class="ic on"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9V15h7v-1.1A6 6 0 0 0 12 3z"/></svg></span>
+        <span><span class="t1">The second one</span><span class="t2" style="display: block;">Has a lamp &middot; dims</span></span>
+      </div>
+    </div>
+    <div style="position: absolute; left: 26px; right: 26px; bottom: 28px; display: grid; place-items: center; gap: 10px;">
+      <span class="btn big">Keep them separate</span>
+      <span class="btn ghost" style="font-size: 15px;">No &mdash; they are one light</span>
+      <span class="t2" style="text-align: center;">Nothing is lost either way: both are already in.</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

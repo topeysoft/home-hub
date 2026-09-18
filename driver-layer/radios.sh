@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 # Radios come and go. Finds the Zigbee and Z-Wave sticks, records them in .env, and starts or stops
 # their containers. install.sh runs this once; a udev rule runs it again whenever a USB serial device
 # appears or disappears, so plugging a stick in is all anyone has to do.

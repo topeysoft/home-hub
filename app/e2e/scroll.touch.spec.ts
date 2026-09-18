@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* A row that scrolls sideways has to scroll under a finger that lands on a card, because on the
    panel there is nowhere else for a finger to land: the cards ARE the row. A mouse pass cannot
    catch this -- `touch-action` only speaks to touch -- and the first real touch screen this ran on

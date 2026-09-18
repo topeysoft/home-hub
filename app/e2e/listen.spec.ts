@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* Move 6 of the eight -- the house listening -- and the first of them that is a STATE rather than a
    passage. That is the whole of what is checked here.
 

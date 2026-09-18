@@ -1,4 +1,6 @@
 #!/bin/bash -e
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 # Runs inside the image. The code, Docker and the first-boot unit go in now; containers are pulled on the
 # first boot, when there is a network and a running Docker daemon.
 # shellcheck disable=SC1091

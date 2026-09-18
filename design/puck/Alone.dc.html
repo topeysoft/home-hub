@@ -1,0 +1,145 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      /* the panel's own tokens, unchanged -- app/src/panel.css */
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp: #e9b872; --lamp-ink: #2a1c07; --live: #74c69d; --danger: #e08a8a;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .phone { position: absolute; top: 244px; width: 366px; height: 596px; border-radius: 40px;
+             background: #14161b; border: 1px solid var(--edge-hi);
+             box-shadow: 0 40px 100px -30px rgba(0,0,0,.9); overflow: hidden; padding: 30px 26px; }
+    .row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
+           padding: 12px 14px; border-radius: 16px; background: var(--surface); border: 1px solid var(--edge); }
+    .row.warn { border-color: rgba(233,184,114,.4);
+                background: linear-gradient(rgba(233,184,114,.12), rgba(233,184,114,.12)), var(--surface); }
+    .ic { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center;
+          background: var(--surface-hi); color: var(--ink-2); }
+    .ic.on { background: var(--lamp); color: var(--lamp-ink); }
+    .t1 { font-size: 15.5px; font-weight: 500; }
+    .t2 { font-size: 13px; color: var(--muted); }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 999px;
+           background: var(--ink); color: var(--bg); font-weight: 500; font-size: 17px; }
+    .btn.big { padding: 15px 28px; }
+    .btn.ghost { background: var(--surface-hi); color: var(--ink); border: 1px solid var(--edge); }
+    .sw { fill: #ded8cc; stroke: rgba(0,0,0,.22); stroke-width: 2; }
+    .swf { fill: #fbf8f2; stroke: rgba(0,0,0,.12); stroke-width: 1.4; }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: #0c0d10; color: var(--ink); font-size: 17px; line-height: 1.4;">
+  <div style="position: absolute; inset: 0; background: radial-gradient(64% 54% at 22% 18%, rgba(72,63,135,.22), transparent 70%), radial-gradient(56% 48% at 86% 88%, rgba(92,63,57,.2), transparent 72%);"></div>
+
+  <div style="position: absolute; top: 52px; left: 56px; right: 56px;">
+    <h1 class="dsp" style="margin: 0; font-size: 42px;">One end moved. The other one didn&rsquo;t.</h1>
+    <p style="margin: 10px 0 0; font-size: 17px; color: var(--ink-2); max-width: 96ch;">Somebody will be called away halfway up the stairs, and a pair split across two networks is a pair that has stopped working. This is the moment the house is most tempted to be clever &mdash; it could carry the press itself, in software, and nobody would see the difference until the night it reboots. It must not. It says what is wrong, in the room it is wrong in, and asks for the walk to be finished.</p>
+  </div>
+
+  <!-- ============ 1 ============ -->
+  <div class="cap" style="position: absolute; top: 208px; left: 96px;">1 &middot; said on the light, not in a log</div>
+  <div class="phone" style="left: 96px;">
+    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
+      <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--lamp);"></span>
+      <span class="t2">Stairs</span>
+    </div>
+    <div class="row warn" style="margin-bottom: 16px;">
+      <span class="ic on"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9V15h7v-1.1A6 6 0 0 0 12 3z"/></svg></span>
+      <span><span class="t1">Stairs &mdash; light</span><span class="t2" style="display: block;">Only answers at the bottom</span></span>
+      <span class="t2">&#8942;</span>
+    </div>
+    <p style="margin: 0 0 20px; color: var(--ink-2); font-size: 15px;">The switch on the landing has not come across yet, so it is not talking to this light any more. It will be a dead plate on the wall until it does.</p>
+    <div style="display: grid; gap: 10px;">
+      <div class="row">
+        <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v9M8.5 8.5L12 5l3.5 3.5"/><path d="M5 19h14"/></svg></span>
+        <span><span class="t1">Bottom of the stairs</span><span class="t2" style="display: block;">Moved &middot; works</span></span>
+        <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--live);"></span>
+      </div>
+      <div class="row">
+        <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 19v-9M8.5 15.5L12 19l3.5-3.5"/><path d="M5 5h14"/></svg></span>
+        <span><span class="t1">Landing</span><span class="t2" style="display: block;">Still on the old panel</span></span>
+        <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--lamp);"></span>
+      </div>
+    </div>
+    <p class="t2" style="margin: 18px 2px 0;">Until then the light still answers from the bottom of the stairs, and from here.</p>
+    <div style="position: absolute; left: 26px; right: 26px; bottom: 28px; display: grid; place-items: center; gap: 10px;">
+      <span class="btn big">Finish the stairs</span>
+      <span class="t2" style="text-align: center;">Two minutes, on the landing.</span>
+    </div>
+  </div>
+
+  <!-- ============ 2 ============ -->
+  <div class="cap" style="position: absolute; top: 208px; left: 537px;">2 &middot; the shortcut, and why it is not taken</div>
+  <div style="position: absolute; top: 244px; left: 537px; width: 366px; height: 596px; border-radius: 40px; background: #101217; border: 1px solid var(--edge-hi); box-shadow: 0 40px 100px -30px rgba(0,0,0,.9); overflow: hidden; padding: 34px 28px;">
+    <!-- the tempting way -->
+    <div class="cap" style="margin-bottom: 12px;">what the hub could do</div>
+    <svg width="310" height="98" viewBox="0 0 310 120" fill="none" style="margin-bottom: 4px;">
+      <rect x="2" y="30" width="56" height="64" rx="9" class="sw"/><rect x="11" y="39" width="38" height="34" rx="6" class="swf"/>
+      <rect x="252" y="30" width="56" height="64" rx="9" class="sw"/><rect x="261" y="39" width="38" height="34" rx="6" class="swf"/>
+      <rect x="121" y="34" width="68" height="44" rx="12" fill="var(--surface)" stroke="var(--edge)" stroke-width="1.5"/>
+      <text x="155" y="61" text-anchor="middle" fill="#b9b5ad" font-family="Instrument Sans, sans-serif" font-size="13">hub</text>
+      <path d="M62 62h52M196 62h52" stroke="#e08a8a" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="1 7"/>
+      <g stroke="#e08a8a" stroke-width="3" stroke-linecap="round"><path d="M144 104l22-22M166 104l-22-22"/></g>
+    </svg>
+    <p style="margin: 0 0 20px; color: var(--ink-2); font-size: 14.5px;">Hear the landing switch being pressed, and command the light. It works &mdash; and it makes a light switch that stops being one when the hub reboots, loses Wi&#8209;Fi, or is unplugged by whoever is hoovering.</p>
+
+    <div style="height: 1px; background: var(--edge); margin: 0 -28px 20px;"></div>
+
+    <!-- the real way -->
+    <div class="cap" style="margin-bottom: 12px;">what it does instead</div>
+    <svg width="310" height="98" viewBox="0 0 310 120" fill="none" style="margin-bottom: 4px;">
+      <rect x="2" y="30" width="56" height="64" rx="9" class="sw"/><rect x="11" y="39" width="38" height="34" rx="6" class="swf"/>
+      <rect x="252" y="30" width="56" height="64" rx="9" class="sw"/><rect x="261" y="39" width="38" height="34" rx="6" class="swf"/>
+      <path d="M64 62h180" stroke="var(--live)" stroke-width="2.6" stroke-linecap="round"/>
+      <path d="M236 55l9 7-9 7" stroke="var(--live)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M130 104l14 13 26-30" stroke="var(--live)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <p style="margin: 0; color: var(--ink-2); font-size: 14.5px;">One switch tells the other directly, as it did before any of this. The house writes that once, at the end of the walk, and has nothing to do with it again.</p>
+  </div>
+
+  <!-- ============ 3 ============ -->
+  <div class="cap" style="position: absolute; top: 208px; left: 978px;">3 &middot; picked up where it was left</div>
+  <div class="phone" style="left: 978px;">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+      <span class="t2">Stairs &mdash; light</span>
+      <span class="t2" style="padding: 3px 10px; border-radius: 999px; border: 1px solid var(--edge);">2 of 2</span>
+    </div>
+    <h2 class="dsp" style="margin: 0 0 10px; font-size: 26px;">The one on the landing.</h2>
+    <p style="margin: 0 0 22px; color: var(--ink-2); font-size: 15px;">Pull its little tab out and push it back, hold a finger on it until it blinks, then the square of dots on the back.</p>
+    <div style="display: grid; place-items: center; margin-bottom: 22px;">
+      <svg width="128" height="143" viewBox="0 0 150 168" fill="none">
+        <rect x="14" y="8" width="122" height="142" rx="14" class="sw"/>
+        <rect x="29" y="23" width="92" height="84" rx="9" class="swf"/>
+        <path d="M29 65h92" stroke="rgba(0,0,0,.08)" stroke-width="1.4"/>
+        <rect x="55" y="122" width="40" height="10" rx="5" fill="#c8c1b3"/>
+        <circle cx="75" cy="65" r="30" fill="none" stroke="var(--lamp)" stroke-width="2" stroke-dasharray="4 8" opacity=".8"/>
+      </svg>
+    </div>
+    <div class="row">
+      <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 8h3v3H8zM13 8h3v3h-3zM8 13h3v3H8zM13 13h3v3h-3z"/></svg></span>
+      <span><span class="t1">Open the camera</span><span class="t2" style="display: block;">It knows this one is the stairs.</span></span>
+    </div>
+    <div style="position: absolute; left: 26px; right: 26px; bottom: 28px; display: grid; place-items: center; gap: 12px;">
+      <span class="btn ghost" style="font-size: 15px;">Not now &mdash; remind me tonight</span>
+      <span class="t2" style="text-align: center;">An unfinished light is the one thing the house will bring up again on its own.</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

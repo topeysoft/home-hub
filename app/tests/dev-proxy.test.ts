@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* The dev server has to split paths between the brain and the panel the same way production does.
    This list was maintained by hand and had gone stale: nine paths the panel calls fell through to
    Vite, which answered them with index.html, so those screens worked everywhere except in
@@ -33,7 +35,7 @@ describe('what the dev server sends to the brain', () => {
     expect(called).toContain('/home')
   })
 
-  it('sends the live stream and camera signalling over a websocket, not as plain http', () => {
+  it('sends the live stream and camera signaling over a websocket, not as plain http', () => {
     const proxy = proxyFor('http://localhost:8399') as Record<string, any>
     for (const p of BRAIN_SOCKETS) expect(proxy[p]?.ws, p).toBe(true)
     expect(proxy['/stream'].target).toMatch(/^ws:/)

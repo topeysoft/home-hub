@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Classify nearby BLE devices as SIG Bluetooth Mesh or proprietary.
 
 Decisive test for the Brilliant BHS120US dimmers (Nordic nRF52832):

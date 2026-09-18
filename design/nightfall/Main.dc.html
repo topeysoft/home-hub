@@ -25,7 +25,7 @@
     /* ---------- the material ----------
        Six layers, always in this order. Take any one away and the glass stops
        reading as glass: the blur is what it is made of, the rim is its edge
-       catching light, the sweep is the light travelling across it, the inner
+       catching light, the sweep is the light traveling across it, the inner
        shade is its thickness, the drop is the air under it. */
     .gl {
       position: relative;
@@ -337,7 +337,7 @@
       <circle cx="75" cy="70" r="53" fill="url(#face)"/>
       <circle cx="75" cy="70" r="53" fill="none" stroke="rgba(255,255,255,.16)" stroke-width="1"/>
       <!-- cooling, in the blue the panel already uses for it, and it never
-           takes the ambient: a signal that changes colour is not a signal -->
+           takes the ambient: a signal that changes color is not a signal -->
       <circle cx="75" cy="70" r="58" fill="none" stroke="#7fb4e8" stroke-width="4" stroke-linecap="round" stroke-dasharray="106 258" transform="rotate(128 75 70)" opacity=".92"/>
       <path d="M75 20v10" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round" opacity=".9"/>
       <text x="75" y="70" text-anchor="middle" dominant-baseline="central" fill="#ffffff" font-family="Plus Jakarta Sans, system-ui, sans-serif" font-size="46" font-weight="300" letter-spacing="-2">71</text>
@@ -674,7 +674,7 @@ class Component extends DCLogic {
     /* The sky's own elevation keyframes and veil, lifted from Sky.vue. Three
        hours is enough to know whether a direction survives the day: the band a
        card sits on runs L .15 at night to L .49 at noon, and anything specified
-       in absolute colour crosses over somewhere in between. */
+       in absolute color crosses over somewhere in between. */
     const SKY = {
       night: { stops: [[4, 5, 10], [7, 9, 16], [12, 14, 26]], at: 55, a: .36, night: 1, day: false,
                veil: 'linear-gradient(180deg, rgba(12,13,16,.20) 0%, rgba(12,13,16,.36) 45%, rgba(12,13,16,.66) 100%)' },
@@ -776,7 +776,7 @@ class Component extends DCLogic {
        this drawing is a lit sky rather than a black one. */
     const night = sk.night * .3
 
-    // the cloud greys and swells as cover thickens; by night the moon is the
+    // the cloud grays and swells as cover thickens; by night the moon is the
     // only light on it, but a thin wisp still catches that light
     const BODY = [[[255,255,255],[195,201,212]], [[216,220,230],[154,161,173]], [[154,163,180],[109,116,128]]]
     const MOONLIT = [74, 77, 88]

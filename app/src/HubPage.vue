@@ -1,3 +1,7 @@
+<!--
+  SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+  SPDX-License-Identifier: AGPL-3.0-or-later
+-->
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { store, notify } from './store'
@@ -101,6 +105,7 @@ const when = (ts?: number | null) => ts ? new Date(ts * 1000).toLocaleString([],
         <Restore small />
       </li>
     </ul>
+
     <AdvancedLink />
   </div>
 </template>

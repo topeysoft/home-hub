@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Names and rooms for things under New devices. Run from brain/: .venv/bin/python -m unittest -v"""
 import json, unittest
 from hub.suggest import Suggestions, clean_name

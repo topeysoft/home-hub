@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* The two things the panel asks twice about, and why there are only two.
 
    Almost everything here happens on one tap and that is the product: a tile is a switch on a wall,
@@ -72,7 +74,7 @@ describe('one armed control', () => {
     expect(armed.value).toBeNull()
   })
 
-  it('arms the door the same way, which is the behaviour this was lifted out of', () => {
+  it('arms the door the same way, which is the behavior this was lifted out of', () => {
     const { tap, go } = arm()
     expect(tap('lock', 'unlock', go)).toBe(false)
     expect(tap('lock', 'unlock', go)).toBe(true)

@@ -83,11 +83,11 @@ It is optional. Everything above works without it; the pinning is the only diffe
   `docs/apps.md` has been broken and the plan is wrong.
 - **No certificate, no relay, no store.** The wall is a device the hub's owner controls, on plain
   `http` on their own Wi-Fi. None of `docs/away.md` applies to it.
-- **No microphone yet — and when it grows one it will recognise nothing.** A WebView has no Web
+- **No microphone yet — and when it grows one it will recognize nothing.** A WebView has no Web
   Speech API — `SpeechRecognition` simply does not exist in it — so `docs/voice.md`'s shape 1 cannot
   run on this wall as written. Settled 14 September 2026: the wall does **not** get Android's own
-  recogniser. On-device recognition arrived in API 31 and still waits on a model the tablet has to
-  fetch; anything older is a round trip to a cloud; and a recogniser of any kind wants a recognition
+  recognizer. On-device recognition arrived in API 31 and still waits on a model the tablet has to
+  fetch; anything older is a round trip to a cloud; and a recognizer of any kind wants a recognition
   service on the device, which in practice means Play services. `minSdk` here is 23, and a wall
   tablet is usually the oldest thing in the house. It gets `AudioRecord` and a bridge that hands the
   panel an audio stream, and the hub does the listening — `docs/voice.md`, *The wall's microphone is

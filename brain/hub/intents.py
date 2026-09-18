@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Room intents: the product's unit of control. Deterministic; the assistant may author these, never run them."""
 import json, logging, shutil
 from enum import Enum

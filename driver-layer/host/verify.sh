@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 # Whether a release is what the maker says it is. Sourced by install.sh; defines verify_release.
 #
 # The problem this exists for: install.sh used to move the checkout to whatever the newest v* tag

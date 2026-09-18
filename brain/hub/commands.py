@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Plain words into the house's own moves, with no model in the way.
 
 The command box on Home (and, later, a microphone) hands every sentence here first. A fixed grammar over the
@@ -321,9 +323,9 @@ class Commands:
                     if not found: raise NotUnderstood(f"There is no {dict(cover='blind or door', lock='lock', climate='thermostat')[kind]} in the {room.name}.")
                     return await self._device(found, t, kind, None, said, room, False)
         # a thing, or a kind of thing, and what to do with it
-        target, rest, kind, flavour = self._target(t, devices, room)
+        target, rest, kind, flavor = self._target(t, devices, room)
         if target is not None:
-            return await self._device(target, rest, kind, flavour, said, room, everywhere or (room is None and len(scope) > 1))
+            return await self._device(target, rest, kind, flavor, said, room, everywhere or (room is None and len(scope) > 1))
         if room and not t:
             raise NotUnderstood(f"What should the {room.name} do? Try \"{room.name} lights off\" or \"movie in the {room.name}\".")
         return None
@@ -373,22 +375,22 @@ class Commands:
         return best if best else (None, "")
 
     def _target(self, t: str, devices: list, room):
-        """A device by name, else a kind of thing by its word. (devices, the rest of the sentence, kind, flavour)."""
+        """A device by name, else a kind of thing by its word. (devices, the rest of the sentence, kind, flavor)."""
         d, n = self._by_name(t, devices)
         if d: return [d], _cut(re.escape(n), t), kind_of(d).split(".")[0], None
-        for pat, kind, flavour in KINDS:
+        for pat, kind, flavor in KINDS:
             m = re.search(rf"(?<![\w'])(?:{pat})(?![\w'])", t)
             if not m: continue
             found = [d for d in devices if kind_of(d).split(".")[0] == kind and d.room_id != "unassigned"]
-            if flavour == "tv": found = [d for d in found if TV.search(d.name)] or found
-            elif flavour == "speaker": found = [d for d in found if not TV.search(d.name)] or found
+            if flavor == "tv": found = [d for d in found if TV.search(d.name)] or found
+            elif flavor == "speaker": found = [d for d in found if not TV.search(d.name)] or found
             if not found:
                 where = f" in the {room.name}" if room else ""
                 raise NotUnderstood(f"There is no {m.group(0).rstrip('s') if kind != 'media' else 'screen or speaker'}{where}.")
-            return found, _cut(re.escape(m.group(0)), t), kind, flavour
+            return found, _cut(re.escape(m.group(0)), t), kind, flavor
         return None, t, None, None
 
-    async def _device(self, targets, rest, kind, flavour, said, room, spread):
+    async def _device(self, targets, rest, kind, flavor, said, room, spread):
         """What to do with the thing named. `rest` is the sentence with the thing taken out."""
         first = targets[0]
         who = self._who(targets, kind, room, spread)

@@ -1,13 +1,13 @@
-# Messages: the catalogue, and the way one reaches a phone
+# Messages: the catalog, and the way one reaches a phone
 
-*Written 13 September 2026, from the question asked of the app: what does it take to catalogue the house's messages
-properly? The catalogue in this file is not invented — it is the house's whole vocabulary read out of the code as it
+*Written 13 September 2026, from the question asked of the app: what does it take to catalog the house's messages
+properly? The catalog in this file is not invented — it is the house's whole vocabulary read out of the code as it
 stands today, 65 call sites in the panel and 15 kinds in the log. The plan is what to do with it. Delivery to a phone
 that is not in the house waits on `docs/away.md` step 5; everything before that is work the browser path wants anyway.*
 
 ## The question, and the short answer
 
-**One catalogue, in the brain, where every message has an id and a class — and the class, not the call site, decides
+**One catalog, in the brain, where every message has an id and a class — and the class, not the call site, decides
 where it goes.** Three channels: a receipt on the screen that asked, a chip in the band on every screen, and a push.
 Two libraries for the whole thing: `pywebpush` on the hub, and nothing at all in the panel — the service worker is
 sixty lines and hand-written, for a reason given below. No i18n library, no toast library, no notification framework.
@@ -16,13 +16,13 @@ Three answers were hiding in the one:
 
 | | Answer | Why |
 |---|---|---|
-| **Where the catalogue lives** | The brain | *The words come from the brain* is already the rule (`docs/settings.md`, README). A native shell must not reimplement them, and the panel ships with the hub so they version together |
+| **Where the catalog lives** | The brain | *The words come from the brain* is already the rule (`docs/settings.md`, README). A native shell must not reimplement them, and the panel ships with the hub so they version together |
 | **What a message is** | An id, a class, a template and its subject | Today a message is a string built at the call site. Nothing can count them, route them, hold them back, or read them all in one place |
 | **How one leaves the house** | Web push behind a service worker, after a trusted origin | `docs/apps.md` already has this as step 2 of *what to do now*, and `docs/away.md` step 6. Nothing here moves that order |
 
 ## What a message is here today
 
-Six families, and they have almost nothing in common with each other. This is the catalogue as it stands.
+Six families, and they have almost nothing in common with each other. This is the catalog as it stands.
 
 | Family | Written in | Who ever sees it | Survives the screen? | Reaches a phone away? |
 |---|---|---|---|---|
@@ -44,10 +44,10 @@ This is five lines and a test, it needs nothing from this plan, and it should be
 
 **Nineteen of the 65 receipts are the brain's sentence in the panel's clothing** — `notify(e.message, 'error')`, or
 worse, `` notify(`Couldn't move it: ${e.message}`, 'error') ``, which glues a panel phrase onto a brain phrase and
-produces a sentence neither of them wrote. That is the seam a catalogue exists to remove.
+produces a sentence neither of them wrote. That is the seam a catalog exists to remove.
 
 **Nothing here has an identity.** Not one of those 65 strings can be counted, suppressed, repeated, deduplicated,
-translated, tested for tone, or looked up from a log line. The catalogue's first value is not delivery. It is that the
+translated, tested for tone, or looked up from a log line. The catalog's first value is not delivery. It is that the
 house's vocabulary becomes a thing you can read in one sitting.
 
 **The wall is not a phone.** Every family above assumes somebody is looking at a screen. That assumption is the whole
@@ -56,7 +56,7 @@ gap: it is fine for a receipt, and it is wrong for a door that unlocked at 2am.
 ## Rules that do not change
 
 - **The class decides the channel, never the call site.** No code anywhere says "and push this". It says what happened;
-  the catalogue says what that is worth. This is the rule that keeps a future shell honest and keeps push rare.
+  the catalog says what that is worth. This is the rule that keeps a future shell honest and keeps push rare.
 - **The words come from the brain, except for the ones that only describe a tap.** *Copied.* and *Renamed to X.* are
   the panel narrating its own hand and stay in the panel forever. Anything the house knows — a device offline, a phone
   at the door, a rule that fired, an account signed out — is the brain's sentence, and the panel only carries it.
@@ -70,7 +70,7 @@ gap: it is fine for a receipt, and it is wrong for a door that unlocked at 2am.
   push that rule is kept by the encryption and broken by the metadata, and *This hub* should say so in plain words the
   way it says it about the relay.
 
-## The catalogue
+## The catalog
 
 A new `brain/hub/messages.py`: one table, one class, no dependencies. A message is five things.
 
@@ -155,15 +155,15 @@ at a time. *This hub* should say this in the same plain words it uses for the re
 ### Two libraries explicitly not taken
 
 - **No i18n library.** Nothing in the docs asks for a second language and adding `vue-i18n` now would be a framework
-  bought for a requirement that does not exist. But note what the catalogue gives away for nothing: an id, a template
-  and named parameters *is* a message catalogue in the gettext sense. The day a second language is wanted, the work is
+  bought for a requirement that does not exist. But note what the catalog gives away for nothing: an id, a template
+  and named parameters *is* a message catalog in the gettext sense. The day a second language is wanted, the work is
   a second table and a lookup — not 65 call sites. That option is worth having, and it is free here.
 - **No toast library.** `notify()` and `dismissToast()` in `store.ts` are eight lines and already correct, including
-  the Undo affordance. The catalogue changes what is passed to it, not it.
+  the Undo affordance. The catalog changes what is passed to it, not it.
 
 ### And the shell, when it comes
 
-The catalogue is what makes the native shell in `docs/apps.md` small. APNs replaces the transport; `id`, `class`,
+The catalog is what makes the native shell in `docs/apps.md` small. APNs replaces the transport; `id`, `class`,
 `subject` and *way back* cross unchanged, and the shell's push registration is one route the browser also calls.
 Critical alerts — the 2am door, the one capability a browser genuinely cannot have — become a property of the `alert`
 class on one transport, not a feature anybody writes twice. That is the four-item list in that document staying four.
@@ -177,7 +177,7 @@ The first two are today's work and depend on nothing.
 2. **`brain/hub/messages.py` and the classes.** Move the 19 `e.message` receipts and everything in `health.py` onto
    ids. The panel keeps the receipts that describe its own hand and loses the rest. No delivery work at all in this
    step — it is a refactor whose output is a file you can read the house's whole voice out of.
-3. **The band and the log read the catalogue** rather than each assembling its own sentence. *Recent* can then say
+3. **The band and the log read the catalog** rather than each assembling its own sentence. *Recent* can then say
    what a message was, not just that one happened.
 4. **The service worker**, with the offline shell only. This is `docs/apps.md` step 2 and it lands as soon as there is
    a trusted origin — `docs/away.md` step 5 — and not before, because a service worker on the wall's plain `http://hub.local` is inert, and on the hub's own CA it is only as trusted as the certificate a phone was made to install.
@@ -202,7 +202,7 @@ The first two are today's work and depend on nothing.
 - **Is a rule's note ever an `alert`?** The rule's author is a person writing a sentence, which means the class would
   have to be theirs to choose — a switch on the routine. Probably yes, probably not in the first cut.
 - **Rate limits.** Push services throttle, and iOS holds a budget per home-screen app that a chatty house will spend.
-  The `receipt` class never leaving the screen is most of the defence; a floor on how often one `id` may repeat for
+  The `receipt` class never leaving the screen is most of the defense; a floor on how often one `id` may repeat for
   one `subject` is the rest.
 - **How much history a message keeps.** The log already holds it, and *Recent* already renders it, so probably none of
   its own — but a phone that was off for a day and comes back should perhaps see what it missed, and that is a list

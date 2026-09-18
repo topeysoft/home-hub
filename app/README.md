@@ -25,7 +25,7 @@ cannot happen again quietly.
 ## Tests
 
 ```sh
-npm test                 # the pure logic: the sun, the words, the colours, the store, the code prompt
+npm test                 # the pure logic: the sun, the words, the colors, the store, the code prompt
 npm run test:watch       # the same, as you type
 npm run lint             # the linter CI runs
 npm run typecheck        # vue-tsc, the same pass `npm run build` makes first
@@ -34,7 +34,7 @@ npm run e2e:watch        # the same in Playwright's UI: pick a test, watch it ru
 ```
 
 `npm run e2e` needs the panel built (`npm run build`) and Chromium once (`npx playwright install
-chromium`); it starts `mock/brain.mjs` itself. The specs in `e2e/` assert on behaviour rather than
+chromium`); it starts `mock/brain.mjs` itself. The specs in `e2e/` assert on behavior rather than
 on pictures — that a hold opens a device without also switching it, that a rail card is crisp only
 once it is fully in, that the house recedes behind an opened card and comes back exactly as it was,
 and that every screen draws, logs nothing, and never scrolls sideways. `*.touch.spec.ts` runs the
@@ -101,12 +101,12 @@ and the sheet with `?sheet=location`.
 - `src/tiles/` — one tile per capability. The light tile is the dimmer (tap toggles, drag dims).
   Media shows artwork, transport and volume. Cameras open full screen in `src/Viewer.vue`.
 - `src/Viewer.vue`, `src/live.ts` — one camera, full screen. A still comes up at once; behind it the
-  viewer tries WebRTC (signalling over `/devices/{id}/webrtc`, video straight from HA's go2rtc), then
+  viewer tries WebRTC (signaling over `/devices/{id}/webrtc`, video straight from HA's go2rtc), then
   motion JPEG (`/devices/{id}/stream`), and settles for refreshing stills if neither can be had. The
   chip says Live only while a picture is moving; a speaker button turns the sound on when WebRTC brings
   some, and a light button works the lamp built into a floodlight or spotlight cam (`attrs.light` names
   it). Tiles stay stills, so a strip of cameras costs nothing.
-- `src/Sky.vue`, `src/sun.ts` — the sky canvas and the solar maths behind it.
+- `src/Sky.vue`, `src/sun.ts` — the sky canvas and the solar math behind it.
 - `src/panel.css` — the whole look: tokens, the veil over the sky, layouts down to phone width.
 
 Nothing in the app names a Home Assistant entity or shows a setting; that is the Advanced door.

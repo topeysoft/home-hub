@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* Where a spoken answer comes out.
 
    `ear.test.ts`'s opposite number, and it starts the same way: with the DEGRADATION. No house has a
@@ -48,7 +50,7 @@ describe('a house with no voice, which is every house today', () => {
   })
 })
 
-describe('a hub that has synthesised the answer', () => {
+describe('a hub that has synthesized the answer', () => {
   it('plays the clip the brain minted, and nothing else', () => {
     at('')
     vi.stubGlobal('Audio', FakeAudio)

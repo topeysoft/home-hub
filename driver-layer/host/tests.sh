@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 # The update path, exercised rather than read.
 #
 # Everything under host/ is the safety net for a hub in somebody's house: the undo that puts a build

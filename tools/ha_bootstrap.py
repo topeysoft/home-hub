@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """First-run bootstrap for a fresh Home Assistant: owner account, long-lived token, core integrations.
 
 Idempotent-ish: if onboarding is already done it only (re)uses the token in driver-layer/.env.

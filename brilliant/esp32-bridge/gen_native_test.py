@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Regenerate test_cmac_native.c from the live text of src/mesh_crypto.cpp.
 
 The firmware's AES-CMAC and key-derivation functions (k1..k4, the beacon key)

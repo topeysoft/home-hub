@@ -13,8 +13,14 @@ name: ci
 
 on:
   push:
-    branches: ["**"]          # every branch, not only main: a long-lived one like panel-bento is
-                              # exactly where a regression has time to settle in unnoticed
+    # Every branch, not only main: a long-lived one like panel-bento is exactly where a regression
+    # has time to settle in unnoticed. `development` is the exception, and only because it always
+    # has an open pull request to main -- a push there fired BOTH this and the pull_request trigger,
+    # two full runs of the same commit, and the concurrency group below cannot collapse them because
+    # github.ref differs between the two events. The pull_request run is the one worth keeping: it
+    # tests refs/pull/N/merge, development merged INTO main, which is the thing being decided.
+    # If that PR is ever closed, development stops being covered -- put it back here if so.
+    branches-ignore: ["development"]
   pull_request:
   workflow_call:              # the release workflows run this against a tag before they publish
 
@@ -77,6 +83,25 @@ jobs:
       - name: the weather sheet still matches the panel
         run: cd app && npm run weather-sheet:check
 
+  # The Matter bridge. It is the one part of the hub whose bugs land in somebody ELSE's app, so the
+  # unit conversions are checked here: three of them are inversions -- a cover counted from the other
+  # end, a contact whose true means shut, a lock bitmap whose set bit means "not supported" -- and none
+  # of them shows up in a typecheck. matter-bridge/src/units.test.ts.
+  matter-bridge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: matter-bridge/package-lock.json
+      - run: cd matter-bridge && npm ci --no-audit --no-fund
+      - name: types
+        run: cd matter-bridge && npm run check
+      - name: tests
+        run: cd matter-bridge && npm test
+
   e2e:
     runs-on: ubuntu-latest
     steps:
@@ -97,7 +122,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
-          path: app/playwright-report/
+          # Both: the report is the readable one, test-results/ carries the raw traces that
+          # `npx playwright show-trace` opens.
+          path: |
+            app/playwright-report/
+            app/test-results/
           retention-days: 7
 
   shell:
@@ -152,18 +181,58 @@ jobs:
       - name: the wall still builds
         run: cd kiosk && ./gradlew assembleDebug
 
-  image:
-    runs-on: ubuntu-latest
+  # Built natively on each architecture rather than once under QEMU. Emulating arm64 on an x86
+  # runner cost most of this job's time -- npm ci, npm run build and pip install are exactly the
+  # CPU-bound work emulation is worst at -- and arm64 runners are free for public repositories, the
+  # same ones pi-image.yml already uses. The two now run in parallel, so the job costs the slower
+  # one rather than the sum.
+  #
+  # Every cache needs its own scope. Both builds used to write `type=gha` with no scope, which means
+  # the default key `buildkit` for both: the bridge evicted the brain's cache on every single run and
+  # neither was ever warm. Scope is per image AND per architecture, because the layers differ.
+  image-build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { runner: ubuntu-latest,    platform: linux/amd64, arch: amd64 }
+          - { runner: ubuntu-24.04-arm, platform: linux/arm64, arch: arm64 }
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
-      - uses: docker/setup-qemu-action@v3
-      - uses: docker/setup-buildx-action@v3
-      - name: the brain's image, for both kinds of host
+      - uses: docker/setup-buildx-action@v3      # no setup-qemu-action: the runner IS this architecture
+      - name: the brain's image
         uses: docker/build-push-action@v6
         with:
           context: .
           file: brain/Dockerfile
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ matrix.platform }}
           push: false                       # brain-image.yml publishes; this only proves it still builds
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=brain-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=brain-${{ matrix.arch }}
+      # The same proof for the bridge, and it earns its minutes on arm64 in particular: a Pi that
+      # cannot pull the image builds it, and a build that only ever worked on amd64 would be found
+      # by the household rather than here.
+      - name: the Matter bridge's image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./matter-bridge
+          file: matter-bridge/Dockerfile
+          platforms: ${{ matrix.platform }}
+          push: false                       # bridge-image.yml publishes; this only proves it still builds
+          cache-from: type=gha,scope=bridge-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=bridge-${{ matrix.arch }}
+
+  # `image` is a required status check on main. A matrix job reports as `image-build (amd64)` and
+  # `image-build (arm64)`, names branch protection has never heard of, so a pull request would wait
+  # for an `image` that never arrives. This keeps that one name, green only if both architectures
+  # built. Change the matrix freely; leave this job's name alone.
+  image:
+    needs: image-build
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: both architectures built
+        run: |
+          echo "image-build: ${{ needs.image-build.result }}"
+          [ "${{ needs.image-build.result }}" = "success" ]

@@ -45,7 +45,7 @@ out loud. Good night misses it. So does Everything off.
 **It is exactly the wrongness the panel exists to absorb.** `docs/apps.md` and the product direction both hold that
 the panel must never require Home Assistant's own UI. Re-typing a device is, today, something you can only fix by
 leaving the panel and editing an entity in HA — which is the one move the whole box is shaped to avoid. A name and
-a room can be fixed from the panel. A kind cannot, and it is the one that changes behaviour.
+a room can be fixed from the panel. A kind cannot, and it is the one that changes behavior.
 
 **The failure is silent.** A light that shows as a plug still turns on and off, so nothing looks broken. It simply
 never joins in — not in a scene, not in a sentence, not in Everything off. Nobody reports it as a bug; they just
@@ -176,7 +176,7 @@ is the only way the panel can know: a person tells the house which of the two th
 instrument under it -- decides what waits. Only ONE direction of each pair is in that table. Silencing,
 like locking, is always one tap: a house made quieter should never be made to wait.
 
-Three things went with it, and each is a place the plug's own behaviour would have been wrong:
+Three things went with it, and each is a place the plug's own behavior would have been wrong:
 
 - **No scene names an alarm, in either direction,** and the omission in `intents.py` is the decision
   rather than an oversight. A siren shown as a plug used to go off with the plugs at Everything off,
@@ -206,8 +206,8 @@ device -- it is the house being told what the thing in the hall is for.
 be shown as what it is?" -- and, once it was being built, "keep it generic: the stove, the dishwasher, the washer
 and the dryer arrive the same way."*
 
-**The problem is behaviour before it is looks.** A fridge's ice maker reaches the hub as `switch.refrigerator_ice_maker`,
-and HA is not wrong: it is a switch. Shown as a plug it gets a plug's behaviour, and a plug makes one promise a fridge's
+**The problem is behavior before it is looks.** A fridge's ice maker reaches the hub as `switch.refrigerator_ice_maker`,
+and HA is not wrong: it is a switch. Shown as a plug it gets a plug's behavior, and a plug makes one promise a fridge's
 feature must not keep -- it goes off when the house empties. Everything off sweeps `("switch", "off")`, so leaving the
 house switched the ice maker off, and "turn off the plugs" reached it through the plug bucket. That is the siren story
 again, with the opposite sign: nothing about an ice maker needs a second tap, and nothing about it should be swept up.
@@ -218,7 +218,7 @@ stays a plug, on purpose. Nothing in `intents.py` changed to make this true -- `
 appliance is not a `switch` -- but it is held down by a test, because it is the reason the kind exists.
 
 **One kind, not one per feature.** Ice maker, Ice Bites, power cool, sabbath mode, a dishwasher's delay start, a
-dryer's steam: they all behave the same way, and a catalogue of feature kinds would never end and would bloat *Show
+dryer's steam: they all behave the same way, and a catalog of feature kinds would never end and would bloat *Show
 this as*. What tells them apart is their name, and the panel reads it -- a feature with ice in its name wears the
 snowflake the weather already draws, anything else its machine.
 

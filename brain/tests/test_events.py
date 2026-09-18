@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Run from brain/: .venv/bin/python -m unittest -v"""
 import unittest
 from hub.events import EventLog

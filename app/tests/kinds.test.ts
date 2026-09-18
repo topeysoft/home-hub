@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* What a thing IS, when the house has it wrong: docs/kinds.md.
 
    A lamp on a smart plug is a `switch` to the driver -- and Home Assistant is not wrong, it IS a switch.
@@ -8,6 +10,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import type { Device, Room } from '../src/api'
 import { activityParts, cap, capsOf, iconFor, shownAs, store, whatsOn } from '../src/store'
 import { paneKind, reading, verbs } from '../src/pane'
+import { asksTwice } from '../src/twice'
 
 const plug = (kind?: string, state = 'on'): Device =>
   ({ id: 'switch.porch', name: 'Porch lamp', room_id: 'living', capability: 'switch', state, attrs: {}, kind })
@@ -89,6 +92,31 @@ describe('saying so', () => {
   it('says nothing at all where nobody has disagreed with the driver', () => {
     expect(shownAs(plug())).toBe('')
     expect(shownAs({ ...plug(), kind: 'switch' })).toBe('')
+  })
+})
+
+describe('a siren, guessed from its name', () => {
+  /* The house guesses this one because nothing else can: a siren arrives as a `switch` and is
+     indistinguishable from a plug with a lamp on it. Until it did, the tile fired on one tap -- which
+     is the failure docs/kinds.md added the second tap for, still live in any house whose siren nobody
+     had re-typed by hand. What is asserted here is that the GUESS is enough to arm it. */
+  const siren = (kind?: string): Device =>
+    ({ id: 'switch.siren', name: 'Holts Summit Alarm Siren', room_id: 'hall', capability: 'switch', state: 'off', attrs: {}, kind, guess: 'alarm' })
+
+  it('is shown as an alarm without anybody having said so', () => {
+    expect(cap(siren())).toBe('alarm')
+  })
+  it('asks twice before it sounds, and never before it stops', () => {
+    expect(asksTwice(cap(siren()), 'on')).toBe('Tap again to sound')
+    expect(asksTwice(cap(siren()), 'off')).toBeNull()
+  })
+  it('goes back to one tap where somebody has said it really is a plug', () => {
+    expect(cap(siren('switch'))).toBe('switch')
+    expect(asksTwice(cap(siren('switch')), 'on')).toBeNull()
+    expect(shownAs(siren('switch'))).toBe('Shown as a plug')
+  })
+  it('says nothing under its name while it is only a guess', () => {
+    expect(shownAs(siren())).toBe('')
   })
 })
 

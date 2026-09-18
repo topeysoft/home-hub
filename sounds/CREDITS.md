@@ -1,6 +1,6 @@
 # Where each recording came from
 
-One line per file, written by `tools/add-sound.sh`: file, source, licence, author.
+One line per file, written by `tools/add-sound.sh`: file, source, license, author.
 
 - `rain-with-thunder.mp3` — https://freesound.org/s/39890/ — CC BY 4.0 — aesqe
 - `fireplace.mp3` — https://freesound.org/s/81801/ — CC0 — silencyo

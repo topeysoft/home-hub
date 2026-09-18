@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Finishing the driver layer without anyone opening Home Assistant.
 
 docker-compose.yml puts each rented part at a fixed address. When a part answers, the brain adds its

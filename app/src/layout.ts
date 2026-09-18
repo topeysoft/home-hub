@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /*
  * How Home is arranged. A house picks one; adding another means adding an entry
  * here and a component for it, not editing the ones that already work.
@@ -64,7 +66,7 @@ export function isNav(v: unknown): v is NavName {
  * Glass reached the cards, the panes, the lozenge and the orb, and stopped. The
  * result was a screen made of two materials -- glass where a card was, paper
  * everywhere else -- because nobody was sure a face was allowed to touch a tab
- * bar, a chip, or the inside of This house. It is: re-materialising a control
+ * bar, a chip, or the inside of This house. It is: re-materializing a control
  * is not moving one. The tabs stay where they are, in the same order, reaching
  * the same three screens; what changes is what they are made of and how they
  * answer a finger. A face that may only dress a card is not a face, it is a

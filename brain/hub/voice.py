@@ -1,6 +1,8 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """The house, answering out loud.
 
-docs/voice.md settled on 14 September 2026 where a spoken answer comes out: the brain synthesises the
+docs/voice.md settled on 14 September 2026 where a spoken answer comes out: the brain synthesizes the
 sentence and the PANEL plays it, as audio in the page, from a URL on the hub's own LAN address. That is
 the arrangement `sounds.py` already has with a Cast speaker -- the hub hosts the audio, the thing with
 the loudspeaker fetches it from the hub -- so *works with the internet down* is inherited rather than

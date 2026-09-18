@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Who is home. Read from HA's person entities and the alarm's mode; the house has no other way to know.
 
 People decide when there are any: somebody is home if any person is, nobody if every person is away. The

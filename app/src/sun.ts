@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /** Where the sun and moon are, from the clock and the home's location. No network, no model. */
 const rad = Math.PI / 180
 

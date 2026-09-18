@@ -1,10 +1,15 @@
+<!--
+  SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+  SPDX-License-Identifier: AGPL-3.0-or-later
+-->
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { addRoom, moveDevice, renameDevice, forgetDevice, getSuggestions, type Device, type Room, type Suggestion } from './api'
+import { addRoom, moveDevice, renameDevice, forgetDevice, getAccounts, getSuggestions, identifyDevice, type Account, type Device, type Room, type Suggestion } from './api'
 import { store, cap, notify } from './store'
 import { partWord, renameParts, unitsOf, type UnitRow } from './units'
 import Icon from './Icon.vue'
 import { pressedIn, snapshot, type Seen } from './pressed'
+import { blinkWord, canBlink, known, nowWord } from './telling'
 
 /* The "New devices" room: everything that has not been put in a room yet, each with a name to
    check and a room to pick. Once placed, a device leaves this list on its own. The same rows
@@ -24,12 +29,14 @@ const here = computed(() => props.editing ? props.room.id : '')
 const names = ref<Record<string, string>>({})
 const busy = ref<Record<string, string>>({})
 const adding = ref<string | null>(null), newRoom = ref('')
+const blinked = ref<{ key: string; text: string; at: number } | null>(null)   // the row the house was last asked to blink, and what came of it
 const iconFor = (d: Device) => cap(d) === 'media' && /\b(tv|television|roku)\b/i.test(d.name) ? 'tv' : cap(d)
 const roomName = (id: string) => store.rooms.find(r => r.id === id)?.name ?? 'room'
 const isUnit = (r: UnitRow) => r.parts.length > 1
 const partsLine = (r: UnitRow) => r.parts.map(d => partWord(d, r.name)).join(' · ')
 /* the placed unit leaves the list at once; the house confirms with a rebuild, and waiting for the round trip would leave it sitting there */
 function gone(r: UnitRow) {
+  if (blinked.value?.key === r.key) blinked.value = null    // its answer goes with it
   const ids = new Set(r.parts.map(d => d.id))
   // eslint-disable-next-line vue/no-mutating-props
   props.room.devices = props.room.devices.filter(x => !ids.has(x.id))
@@ -104,12 +111,18 @@ const live = computed(() => pressed.value && now.value - pressed.value.at < PRES
 const CAN_PRESS = ['light', 'switch', 'cover', 'lock']
 const pressable = computed(() => props.room.devices.filter(d => CAN_PRESS.includes(cap(d))))
 const teach = computed(() => !props.editing && rows.value.filter(r => CAN_PRESS.includes(cap(r.lead))).length > 1)
+/* A change this screen caused rather than a hand on a wall. The blink is six state changes in three
+   seconds and its last one -- putting the thing back the way it was found -- lands a moment AFTER the
+   request answers, so the guard outlives the busy flag or the row lights itself and says a person
+   pressed it. Declared here and filled below with the blink; see pressed.ts for what it is for. */
+const BLINK_TAIL = 2500
+const ours = (key: string) => !!busy.value[key] || (!!blinked.value && blinked.value.key === key && Date.now() - blinked.value.at < BLINK_TAIL)
 /* The press itself, in pressed.ts -- and it is the only thing this screen watches. */
 let seen: Seen = {}
 watch(() => props.room.devices.map(d => `${d.id}:${d.state}`).join(), () => {
   const was = seen
   seen = snapshot(props.room.devices)
-  const hit = pressedIn(was, pressable.value, id => !!busy.value[rowOf(id)])
+  const hit = pressedIn(was, pressable.value, id => ours(rowOf(id)))
   if (!hit) return
   pressed.value = { id: hit, at: Date.now() }
   now.value = Date.now()
@@ -129,6 +142,45 @@ function what(u: UnitRow) {
   if (u.parts.some(p => cap(p) === 'motion') || d.attrs?.has_motion || /motion/i.test(d.name)) bits.push('with a motion sensor in it')
   return bits.join(', ') + '.'
 }
+
+/* ---------- telling one row from another ----------
+
+   The press above is the half a wall switch can answer. This is the half the ceiling can: the house
+   blinks the thing and the person watching sees which one it was, which is the only way to tell eleven
+   bulbs called "Wiz RGBW Tunable ABC123" apart. Pressing and blinking are the same question asked from
+   the two ends -- one starts at the hardware, one starts at the row -- and a house has both because a
+   bulb cannot be pressed and a thing behind a cupboard door cannot be watched.
+
+   Under every name, quietly, what the house already knew and was not saying: the account that brought
+   it, who made it, which model, and whether it is on right now. telling.ts. */
+const accounts = ref<Record<string, Account>>({})
+const hint = (r: UnitRow) => known(r, accounts.value)
+/* It does not time out. A line that folds itself away twenty seconds later moves every row under it
+   while somebody is reading one, and what a person just touched is the last thing on this screen that
+   should move on its own -- the room grid learned that. It goes when another row is blinked, when this
+   one is placed, or when the screen is left. */
+async function blink(r: UnitRow) {
+  if (busy.value[r.key]) return
+  busy.value[r.key] = 'blink'
+  blinked.value = { key: r.key, text: 'Blinking now — go and look.', at: Date.now() }
+  try {
+    const out = await identifyDevice(r.lead.id)
+    blinked.value = { key: r.key, text: out.text, at: Date.now() }
+    // the answer is a line the row grew: on a wall showing eleven of these it can land under the fold,
+    // and the least scroll that brings it up is the same one a press does
+    setTimeout(() => document.querySelector('.sort-said')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 30)
+  } catch (e: any) {
+    blinked.value = null
+    notify(e.message, 'error')
+  }
+  delete busy.value[r.key]
+}
+/* the accounts are what /accounts already returns for the settings page; here they turn a device's
+   entry id into the name of the thing somebody actually signed into. A house with none is a house
+   whose rows say a little less, so this never blocks the screen. */
+onMounted(async () => {
+  try { const list = await getAccounts(); const by: Record<string, Account> = {}; for (const a of list) by[a.id] = a; accounts.value = by } catch {}
+})
 
 /* what the brain proposes for each new thing; a unit takes its lead part's proposal, and the brain's own
    reasoning already reads the parts together (suggest.py puts a unit's siblings in the words it looks at) */
@@ -174,70 +226,90 @@ watch(() => props.room.devices.length, (n, was) => { if (n > (was ?? 0)) think()
       </div>
     </header>
 
-    <!-- how to tell them apart at all. Drawn from design/puck/Naming.dc.html. -->
-    <div class="press-bar" v-if="teach">
-      <span class="press-icon"><Icon name="switch" :size="20" /></span>
-      <span class="press-text">
-        <span class="press-name">Go and press one</span>
-        <span class="press-sub">Top or bottom, it does not matter — the one you press says so here. Nothing will switch on that was not going to.</span>
-      </span>
-    </div>
+    <!-- The scroll starts here and not at the stage: the head above it -- the way back with it --
+         must never travel, while everything below it has to be reachable on a panel of any height.
+         The teaching bars are inside it because they are not the way back: on a short wall they
+         scroll away and give the rows the screen, rather than standing over a window too small to
+         hold a single row. -->
+    <div class="sort-scroll">
+      <!-- how to tell them apart at all. Drawn from design/puck/Naming.dc.html. -->
+      <div class="press-bar" v-if="teach">
+        <span class="press-icon"><Icon name="switch" :size="20" /></span>
+        <span class="press-text">
+          <span class="press-name">Go and press one</span>
+          <span class="press-sub">Either half of the rocker will do — the switch you press says so here. Nothing will switch on that was not going to. Or tap Blink it on a row and watch the room instead.</span>
+        </span>
+      </div>
 
-    <div class="suggest-bar" v-if="!editing && room.devices.length && (thinking || placeable)">
-      <span class="suggest-lede"><Icon name="sparkle" :size="16" /><span>{{ thinking ? 'Working out where these go…' : placeable === 1 ? 'One of these looks like it has a home. Check it and tap Use.' : `${placeable} of these look like they have a home. Check them, or place them all.` }}</span></span>
-      <button class="button small" v-if="placeable > 1" :class="{ busy: applying }" @click="useAll">Place all {{ placeable }}</button>
-    </div>
+      <div class="suggest-bar" v-if="!editing && room.devices.length && (thinking || placeable)">
+        <span class="suggest-lede"><Icon name="sparkle" :size="16" /><span>{{ thinking ? 'Working out where these go…' : placeable === 1 ? 'One of these looks like it has a home. Check it and tap Use.' : `${placeable} of these look like they have a home. Check them, or place them all.` }}</span></span>
+        <button class="button small" v-if="placeable > 1" :class="{ busy: applying }" @click="useAll">Place all {{ placeable }}</button>
+      </div>
 
-    <ul class="sort" v-if="room.devices.length">
-      <li v-for="u in rows" :key="u.key" class="sort-row" :class="{ busy: busy[u.key], unit: isUnit(u), pressed: live === u.key }">
-        <span class="sort-icon"><Icon :name="iconFor(u.lead)" :size="20" /></span>
-        <div class="sort-main">
-          <!-- on the pressed card the name is asked below, in words, so the header shows it and does not ask twice -->
-          <span class="sort-name still" v-if="live === u.key && !editing">{{ names[u.key] ?? u.name }}</span>
-          <input v-else class="sort-name" :value="names[u.key] ?? u.name" @input="names[u.key] = ($event.target as HTMLInputElement).value" @change="rename(u)" @keydown.enter="($event.target as HTMLInputElement).blur()" spellcheck="false" aria-label="Name" />
-          <!-- one thing on the wall with more than one part in it: say what the parts are, so nobody has to guess which sensor is which switch's -->
-          <span class="sort-parts" v-if="isUnit(u)"><Icon name="motion" :size="13" v-if="u.parts.some(d => cap(d) === 'motion')" />{{ partsLine(u) }}</span>
-        </div>
-        <template v-if="adding === u.key">
-          <input class="sort-name" v-model="newRoom" placeholder="Name the room" autofocus @keydown.enter="createAndMove(u)" @keydown.escape="adding = null" />
-          <button class="button small" @click="createAndMove(u)">Add</button>
-        </template>
-        <select v-else-if="live !== u.key || editing" class="sort-room" :value="here" @change="move(u, ($event.target as HTMLSelectElement).value)" aria-label="Room">
-          <option value="" disabled>Which room?</option>
-          <option v-for="r in rooms" :key="r.id" :value="r.id">{{ r.name }}</option>
-          <option value="__new">A new room…</option>
-        </select>
-        <button v-if="editing && adding !== u.key" class="button small ghost sort-forget" :class="{ warn: forgetting === u.key }" @click="forget(u)">{{ forgetting === u.key ? 'Forget?' : 'Forget' }}</button>
-        <p class="sort-forget-ask" v-if="forgetting === u.key"><b>{{ u.name }}</b>{{ isUnit(u) ? ', all of it,' : '' }} goes from the house, and from whatever brought it. Tap again to do it.</p>
-        <!-- the one that was just pressed: the rooms as chips, because the answer is one tap away
-             and a dropdown would hide it behind two -->
-        <div class="press-line" v-if="live === u.key && !editing">
-          <!-- "you pressed" and not "it came on": the house knows the switch reported a change because a hand
-               was on it, and nothing more. A stairway's companion switch has no load wired to it at all, and
-               there is no way yet to tell one from the mesh -- so the row says what is true of both. -->
-          <span class="press-said"><span class="pulse-dot"></span>You just pressed this one. {{ what(u) }}</span>
-          <!-- the name, asked in words at the one moment the person knows what the thing is. The same
-               field as the row's own (it saves when you leave it); the brain's suggestion fills it in. -->
-          <label class="press-name">
-            <span class="field-label">Call it</span>
-            <input class="input" :value="names[u.key] ?? sug(u)?.name ?? u.name" @input="names[u.key] = ($event.target as HTMLInputElement).value" @change="rename(u)" @keydown.enter="($event.target as HTMLInputElement).blur()" spellcheck="false" autocapitalize="words" aria-label="Name" />
-          </label>
-          <span class="field-label">Which room is it in?</span>
-          <div class="press-rooms">
-            <button v-for="r in rooms" :key="r.id" class="chip-btn" @click="move(u, r.id)">{{ r.name }}</button>
-            <button class="chip-btn ghost" @click="move(u, '__new')">Another room…</button>
+      <ul class="sort" v-if="room.devices.length">
+        <li v-for="u in rows" :key="u.key" class="sort-row" :class="{ busy: busy[u.key], unit: isUnit(u), pressed: live === u.key }">
+          <span class="sort-icon"><Icon :name="iconFor(u.lead)" :size="20" /></span>
+          <div class="sort-main">
+            <!-- on the pressed card the name is asked below, in words, so the header shows it and does not ask twice -->
+            <span class="sort-name still" v-if="live === u.key && !editing">{{ names[u.key] ?? u.name }}</span>
+            <input v-else class="sort-name" :value="names[u.key] ?? u.name" @input="names[u.key] = ($event.target as HTMLInputElement).value" @change="rename(u)" @keydown.enter="($event.target as HTMLInputElement).blur()" spellcheck="false" aria-label="Name" />
+            <!-- one thing on the wall with more than one part in it: say what the parts are, so nobody has to guess which sensor is which switch's -->
+            <span class="sort-parts" v-if="isUnit(u)"><Icon name="motion" :size="13" v-if="u.parts.some(d => cap(d) === 'motion')" />{{ partsLine(u) }}</span>
+            <!-- What the house knew all along and was not saying, and beside it the way to settle it for
+                 good: blink the thing and go and look. A row that has just blinked says so here instead,
+                 in the same place, because that answer is about this row and belongs on it. -->
+            <span class="sort-hint" v-if="hint(u) || nowWord(u) || canBlink(u)">
+              <span class="sort-known" v-if="hint(u)">{{ hint(u) }}</span>
+              <span v-if="nowWord(u)" :class="nowWord(u)!.live ? 'sort-live' : 'sort-dead'">{{ nowWord(u)!.text }}</span>
+              <button v-if="canBlink(u) && !editing" class="chip-btn tiny" :class="{ busy: busy[u.key] === 'blink' }" @click="blink(u)"><Icon name="bolt" :size="13" />{{ blinkWord(u) }}</button>
+            </span>
           </div>
-        </div>
-        <div class="suggest-line" v-if="!editing && sug(u)">
-          <Icon name="sparkle" :size="14" />
-          <span>Looks like <b>{{ sug(u).name }}</b><template v-if="sug(u).room"> in the <b>{{ roomName(sug(u).room) }}</b></template><span class="suggest-why" v-if="sug(u).why"> · {{ sug(u).why }}</span></span>
-          <button class="button small" @click="use(u)">Use</button>
-        </div>
-      </li>
-    </ul>
-    <div v-else class="empty-room">
-      <p class="empty">{{ editing ? 'Nothing left in this room.' : 'Everything has a room.' }}</p>
-      <p class="empty-sub">{{ editing ? 'Everything moved elsewhere. Tap the tick to go back.' : 'Anything you add later that does not know where it lives will wait here.' }}</p>
+          <template v-if="adding === u.key">
+            <input class="sort-name" v-model="newRoom" placeholder="Name the room" autofocus @keydown.enter="createAndMove(u)" @keydown.escape="adding = null" />
+            <button class="button small" @click="createAndMove(u)">Add</button>
+          </template>
+          <select v-else-if="live !== u.key || editing" class="sort-room" :value="here" @change="move(u, ($event.target as HTMLSelectElement).value)" aria-label="Room">
+            <option value="" disabled>Which room?</option>
+            <option v-for="r in rooms" :key="r.id" :value="r.id">{{ r.name }}</option>
+            <option value="__new">A new room…</option>
+          </select>
+          <button v-if="editing && adding !== u.key" class="button small ghost sort-forget" :class="{ warn: forgetting === u.key }" @click="forget(u)">{{ forgetting === u.key ? 'Forget?' : 'Forget' }}</button>
+          <!-- What came of a blink, across the row rather than under the name: in the name's own column
+               the sentence wraps to three lines and drags the button that started it onto a fourth, so
+               the chip a person's finger is still on moves out from under it. Here the chip does not
+               move at all -- the answer appears under it, and rows below shift by the one line it is. -->
+          <p class="sort-said" v-if="blinked && blinked.key === u.key"><span class="pulse-dot" v-if="busy[u.key] === 'blink'"></span>{{ blinked.text }}</p>
+          <p class="sort-forget-ask" v-if="forgetting === u.key"><b>{{ u.name }}</b>{{ isUnit(u) ? ', all of it,' : '' }} goes from the house, and from whatever brought it. Tap again to do it.</p>
+          <!-- the one that was just pressed: the rooms as chips, because the answer is one tap away
+               and a dropdown would hide it behind two -->
+          <div class="press-line" v-if="live === u.key && !editing">
+            <!-- "you pressed" and not "it came on": the house knows the switch reported a change because a hand
+                 was on it, and nothing more. A stairway's companion switch has no load wired to it at all, and
+                 there is no way yet to tell one from the mesh -- so the row says what is true of both. -->
+            <span class="press-said"><span class="pulse-dot"></span>You just pressed this one. {{ what(u) }}</span>
+            <!-- the name, asked in words at the one moment the person knows what the thing is. The same
+                 field as the row's own (it saves when you leave it); the brain's suggestion fills it in. -->
+            <label class="press-name">
+              <span class="field-label">Call it</span>
+              <input class="input" :value="names[u.key] ?? sug(u)?.name ?? u.name" @input="names[u.key] = ($event.target as HTMLInputElement).value" @change="rename(u)" @keydown.enter="($event.target as HTMLInputElement).blur()" spellcheck="false" autocapitalize="words" aria-label="Name" />
+            </label>
+            <span class="field-label">Which room is it in?</span>
+            <div class="press-rooms">
+              <button v-for="r in rooms" :key="r.id" class="chip-btn" @click="move(u, r.id)">{{ r.name }}</button>
+              <button class="chip-btn ghost" @click="move(u, '__new')">Another room…</button>
+            </div>
+          </div>
+          <div class="suggest-line" v-if="!editing && sug(u)">
+            <Icon name="sparkle" :size="14" />
+            <span>Looks like <b>{{ sug(u).name }}</b><template v-if="sug(u).room"> in the <b>{{ roomName(sug(u).room) }}</b></template><span class="suggest-why" v-if="sug(u).why"> · {{ sug(u).why }}</span></span>
+            <button class="button small" @click="use(u)">Use</button>
+          </div>
+        </li>
+      </ul>
+      <div v-else class="empty-room">
+        <p class="empty">{{ editing ? 'Nothing left in this room.' : 'Everything has a room.' }}</p>
+        <p class="empty-sub">{{ editing ? 'Everything moved elsewhere. Tap the tick to go back.' : 'Anything you add later that does not know where it lives will wait here.' }}</p>
+      </div>
     </div>
   </section>
 </template>

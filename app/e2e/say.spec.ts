@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* The command box, at rest and opened -- move 7 of the eight in design/nightfall.
 
    The claim under test is an ORDER, not a set of durations: width leads and the words follow, so
@@ -49,7 +51,7 @@ test('at rest the box is only its orb', async ({ page }) => {
   // a circle: the pill is the orb and its collar, nothing else
   expect(Math.abs(box.width - box.height), 'the resting box is not round').toBeLessThan(2)
   expect(orb.width).toBeGreaterThan(box.width * 0.7)
-  // and the orb is centred in it, which is what says the collar is even
+  // and the orb is centered in it, which is what says the collar is even
   expect(Math.abs(orb.x - box.x - (box.x + box.width - orb.x - orb.width))).toBeLessThan(2)
 })
 
@@ -119,6 +121,6 @@ test('paper keeps the whole box', async ({ page }) => {
   await expect(page.locator('.say-box')).toBeVisible()
   await page.waitForTimeout(400)
   const box = (await page.locator('.say-box').boundingBox())!
-  expect(box.width, 'paper has learnt the move').toBeGreaterThan(box.height * 4)
+  expect(box.width, 'paper has learned the move').toBeGreaterThan(box.height * 4)
   expect(await page.locator('.say-box input').evaluate((e) => getComputedStyle(e).opacity)).toBe('1')
 })

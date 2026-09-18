@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """The files the product ships, checked as product rather than as code.
 
 rules.json and scenes.json are copied into a new hub's data volume on first run and are what a family

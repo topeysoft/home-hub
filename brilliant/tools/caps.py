@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Read the Provisioning Capabilities PDU from an unprovisioned SIG mesh node.
 
 Non-destructive: sends Provisioning Invite (attention=0) over PB-GATT and decodes

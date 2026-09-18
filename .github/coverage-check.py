@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Coverage may go up. It may not go down.
 
 There is no target to reach and nothing to game: the only rule is that a change does not leave the

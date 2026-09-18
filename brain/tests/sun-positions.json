@@ -1,5 +1,5 @@
 {
- "_comment": "Where the sun is, computed by brain/hub/sun.py. app/src/sun.ts is a port of it and must agree to within a thousandth of a degree; app/tests/sun.test.ts reads this same file. Regenerate with brain/tests/make_sun_positions.py only when the maths is deliberately changed.",
+ "_comment": "Where the sun is, computed by brain/hub/sun.py. app/src/sun.ts is a port of it and must agree to within a thousandth of a degree; app/tests/sun.test.ts reads this same file. Regenerate with brain/tests/make_sun_positions.py only when the math is deliberately changed.",
  "rows": [
   {
    "place": "Chicago",

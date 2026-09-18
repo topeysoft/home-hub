@@ -63,7 +63,7 @@ repo and gitignored. Losing that file means factory-resetting every switch and s
 ## The fallback nobody needed
 
 The FCC filing for the dimmer (`2APQV-BHS120US`) includes internal photographs. The radio daughterboard is a
-**Nordic nRF52832**, and it carries a labelled debug header — `3.3V / TDIO / TCK / TXO / RXD / SWDCLK / SWDIO /
+**Nordic nRF52832**, and it carries a labeled debug header — `3.3V / TDIO / TCK / TXO / RXD / SWDCLK / SWDIO /
 P0.21 / P0.16 / GND` — with the pogo contacts to the mains board silkscreened `DIM`, `ZC`, `GND`, `Curr Sense`,
 `PIR`, `VSENSE`, `3.3V`. If the vendor model ever proves undecodable, these are reflashable devices with a
 documented toolchain and a known pinout. Worth remembering; not currently needed. (nRF52832 is BLE-only — no
@@ -146,7 +146,7 @@ provisionee work below is already the route to.
 hub's broker. What is lost is feedback — when somebody uses the switch by hand, Home Assistant will not know,
 and its state drifts until the next command. Treat these as optimistic-state lights.
 
-**The way to full function** is the nRF52832 and its labelled SWD header, described above. Own firmware would
+**The way to full function** is the nRF52832 and its labeled SWD header, described above. Own firmware would
 expose the PIR as a `Sensor Server` and taps as a real `Generic OnOff Server`. That began as a curiosity in
 the FCC photographs; it is now the only route to motion and gestures.
 
@@ -291,7 +291,7 @@ the factory reset wiped the panel's setup, and the mode selector was not found b
   value and report it back, and **none of them drives the triac.** Ramping them bright/dim/bright with the
   lamp watched produced no visible change. They are stored setpoints, not the live output.
 - Eight boolean/enum fields (`0x0c 0x1a 0x1b 0x1c 0x28 0x49 0x50 0x56`) were flipped, singly and together,
-  with no effect on the load and no visible behaviour change.
+  with no effect on the load and no visible behavior change.
 - The structured tables `0x2e`/`0x2f` (shaped like load/dimming profiles) were left untouched: mutating a
   15-byte table blind is the riskiest write available and the least likely to read cleanly against a
   human lamp-watch oracle. If the mode lives anywhere in the store, this is the remaining candidate — but it
@@ -353,7 +353,7 @@ and node `0x0012` (the panel's controller element) was seen polling a switch's v
 **This is the thing the top of this document called lost.** The switches *do* publish their real physical
 state -- on/off and dim level -- and with the panel's netkey + appkey (+ IV 7, + the proxy-nonce fix) we read
 it in real time, exactly as Brilliant's own panel does. The earlier "local touch bypasses the mesh" finding was
-an artefact of testing an *unconfigured* switch on our own network without the panel's keys; a panel-configured
+an artifact of testing an *unconfigured* switch on our own network without the panel's keys; a panel-configured
 switch reports everything. PIR is the remaining item: it is one of the vendor fields the panel polls in that
 list, readable now by getting those fields from a configured switch with the panel appkey.
 
@@ -509,7 +509,7 @@ and the brain's own classifier maps those domains straight onto *light* and *mot
   silent 29 s after connecting and published its last will. The BLE layer now runs on NimBLE, whose connects and
   writes have timeouts, and the MQTT keepalive is 60 s so a stalled second on the radio is not a lost session.
 - *MTU negotiation fails on some links* and leaves the default 23, where a `Generic Level Set` no longer fits one
-  ATT write. Writes honour the real MTU and SAR-segment, as the laptop tools always did.
+  ATT write. Writes honor the real MTU and SAR-segment, as the laptop tools always did.
 - *A broadcast Get loses replies* when a dozen switches answer at once, so it is used for discovery only; state
   is resynced with unicast Gets to each known switch, at link-up and every ten minutes.
 
@@ -697,9 +697,10 @@ as a worked reference:
 
 | Field | Value | What it appears to be |
 |---|---|---|
-| `0x1b` | `00` | **load type candidate** — `00` on both dimmers seen, `03` on the unit stuck in on/off mode |
-| `0x56` | `03` | **load type candidate** — `03` on the dimmer, `02` on the unit stuck in on/off mode |
-| `0x1a` | `02` | not the load type: two working dimmers differed here (`02` and `01`) |
+| `0x1b` | `00` | **THE ANNOUNCE FLAG: `03` tells the partner in `0x08` about every press, `00` says nothing.** It is *not* a role and does not decide whether a load is driven — see *`0x1b` announces; it does not choose a role* at the foot. Replaying a main's `00` onto a companion is still what silenced one for a whole evening, because a companion that announces nothing is wired to nothing |
+| `0x56` | `03` | **not the load type** — `03` reads on both a dimming and a non-dimming switch |
+| `0x1a` | `02` | **not the role and not the load type** — `02` appears on a paired main *and* a single-pole, and two working dimmers differed here (`02`, `01`) |
+| — | — | **No field yet identified selects dimmer vs on/off.** `0x1a`, `0x1b` and `0x56` were each the leading candidate and each was disproved |
 | `0x48`, `0x4f` | `01`, `01` | **enable unsolicited reporting** of field `0x13`; setting them starts a ~5 Hz publication |
 | `0x03`, `0x07` | `c800` (200), `f401` (500) | thresholds for that reporting; leaving them at 0 floods the mesh |
 | `0x4c`, `0x4d`, `0x52` | `64`, `00`, `64` | dimming curve/limits, per switch |
@@ -713,6 +714,30 @@ two candidates, on the evidence above. Fields deliberately **not** replayed: `0x
 
 Mains off and on. **The load type is read only at boot** — this is why every live write looked inert for a whole
 evening. There is no mesh message that applies it.
+
+**Model publication is read at boot too**, and this is the crueller one because its failure is silent and looks
+exactly like the fix not working. Set publication, read it back, and the readback confirms it — and the switch
+stays mute until it restarts. Anyone adopting a switch would reasonably conclude the write had failed and go
+looking for a different cause. Proven on `0x0004`: set to `0xffff` and verified on readback, it published
+nothing at all through a hand pressing it repeatedly; the moment power was cut and restored it broadcast its
+heartbeat on its own, the first unsolicited message it had ever sent.
+
+**But it is NOT required for everything, and an earlier version of this section said it was.** Migrating the
+stairway load, its publication was set during adoption and it published immediately, with no power cycle at all
+— and the companion's rewritten `0x08` took effect live too. So the honest rule is narrower than "boot applies
+everything":
+
+| Setting | Needs a boot? | Evidence |
+|---|---|---|
+| Load type (dimming) | **Usually not** — see below | `0x0003` needed one; two later adoptions did not |
+| Model publication | **Sometimes** | `0x0004`, an already-established node: silent until power was cut. `0x0006`, freshly provisioned: published at once |
+| Partner address `0x08` | **No**, on the evidence | rewritten on `0x0004` and the press reached its new partner with no boot |
+
+The difference between the two publication cases may be *fresh join versus reconfiguring an established node* —
+that is the only structural difference we can point at — or the `0x0004` case may have had a cause never
+isolated. Treat a boot as **cheap insurance that costs one trip to the switch**, not as a step whose omission
+means the write failed: readback tells you the value is stored, and this table tells you when stored is not yet
+live.
 
 ### 6. Verify
 
@@ -761,7 +786,7 @@ only polling *other* switches with Gets. Multi-way on this pair is peer-to-peer 
 
 ### Two of my own claims that this corrects
 
-- **`04` is not merely a "bare ack".** The opcode table above catalogues it that way from the old no-parameter
+- **`04` is not merely a "bare ack".** The opcode table above catalogs it that way from the old no-parameter
   sweep. It takes an argument, and `04 03` is a press. The sweep found nothing because it sent commands with no
   parameters, not because the command family was empty.
 - **Zero-length vendor messages are real and used.** The same sweep concluded a zero-length message is dropped
@@ -777,3 +802,400 @@ confidence either way.
 following commanded state on switch `0x0003`. In this capture it reads `01` while the main reports `OFF`, and
 falls to `00` only long after, which fits an activity or occupancy flag with a hold better than a load state.
 Treat both readings as unconfirmed; it was never the thing anything depended on.
+
+### Pairing is stored in the switch, in vendor field `0x08`
+
+The companion's press is a unicast to its partner, so the companion must know its partner's address — and it
+does. Reading the whole vendor store of a **pristine companion** (`0x0006`, panel network, never touched by us)
+against the switches already captured:
+
+| Switch | `0x08` | `0x1a` | what it is |
+|---|---|---|---|
+| `0x0006` | `0500` → **0x0005** | `03` | companion of `0x0005` |
+| `0x0005` | `0000` | `02` | **the main of that same pair** |
+| `0x000a` | `0000` | `02` | single-pole dimmer |
+| `0x0011` | `0000` | `01` | main whose companion we reset |
+
+**`0x08` is the partner's unicast address**, little-endian, and it is exactly the address that companion sends
+its `0403` to.
+
+**Only the companion stores it — pairing is ONE write, not two.** The main of the intact pair carries zero in
+`0x08`, the same as a switch with no companion at all. That is worth knowing before building a provisioner
+around writing both ends. It leaves a question: the main sends the companion a zero-length vendor message
+*unprompted* when its own state changes, so it knows the companion's address from somewhere. Not from `0x08`.
+The likeliest reading is that it answers and remembers whoever last sent it a `0403`, which would be runtime
+state rather than stored configuration — and would mean a freshly booted main may not notify its companion
+until that companion has pressed once. Untested.
+
+**`0x1a` is NOT the role, and an earlier version of this section said it was.** That claim rested on one example
+each. With the pair's main added, `02` appears on both a paired main and a single-pole, so it does not separate
+them. All that survives is that the companion reads `03` where nothing else does.
+
+This is readable with the **AppKey alone**, which matters more than it sounds: Configuration Server state needs
+a device key we will never have for the console's switches, but the vendor store does not. **So the whole
+house's pairings can be read off switches we do not own**, without pressing anything, by reading field `0x08`
+from each switch on the panel network.
+
+It is writable too, so a provisioner can pair switches itself: write each companion's `0x08` with its partner's
+unicast (and `0x1a = 3`). That is the "both codes scanned, one job" flow, implemented.
+
+**And it explains the silent adopted companion.** Our `0x0004` was factory reset, which wiped `0x08` to nothing
+— so it had no one to send a press to, and setting model publication to `0xffff` did not help because a
+companion's press never goes out by publication at all. It has now been written with `0x08 = 0x0011` (its true
+partner, which lives on the panel network where nothing of ours holds that address, so the press goes out, no
+switch of ours acts on it, and the puck hears it) and `0x1a = 3`.
+
+**Unverified at the time of writing:** whether this takes effect without a power cycle. The load type is read
+only at boot, and pairing may be the same. The test is a power cycle followed by a press.
+
+**n = 1.** One pristine companion, one house. The `0x0005` match is exact and the zeroes are consistent, but a
+second pair would make this solid.
+
+
+### Replay a companion's config from a companion, not from a main
+
+The adopt recipe above says to capture a configured switch's vendor store and replay it. That is right, but it
+needs a qualifier learned the hard way: **the capture must come from a switch of the same role.**
+
+Adopting the stairway companion, its config was replayed from `0x0011`, a *main*. That set carried `0x1b = 00`.
+A pristine working companion carries **`0x1b = 03`**. The adopted switch was, in effect, told it was not a
+companion — and behaved accordingly: it registered a press and applied it to its own OnOff state, and emitted no
+`0403` to anyone, through every other part of the recipe being correct (bound, published, partner address set,
+power cycled). Everything worked except the one emission that makes a companion a companion.
+
+That fits the observed behavior of a real pair. A switch that believes it is a main applies a press to its own
+load; a switch that knows it is a companion routes the press outward. `0x1b` looks like the flag that chooses
+between those two paths, and it is the only field in the diff of working-against-silent that reads like a mode
+rather than a per-device calibration:
+
+| Field | working companion `0x0006` | our silent `0x0004` | reading |
+|---|---|---|---|
+| `0x1b` | `03` | `00` (ours, replayed from a main) | **mode: companion vs load-driving** |
+| `0x4c` / `0x4d` / `0x52` | `64` / `00` / `64` | `e803` / `0807` / `e803` | dimming curve — a companion drives nothing |
+| `0x06` | `4600` | `5900` | per-device calibration |
+
+38 of the fields both answer are identical, so the store is otherwise a faithful adoption.
+
+**Untested at the time of writing:** `0x1b` has been set to `03` on `0x0004` and verified on readback, but it
+needs a power cycle and a press to confirm, since everything written during adoption is read only at boot.
+
+
+### It works: a pair we configured, talking switch to switch
+
+17 September, evening. `0x1b = 03` was the whole fix. The adopted companion `0x0004` was power cycled and
+pressed once, and `0x0003`'s load toggled — **switch to switch, on a pair we wrote, on our own network, with no
+hub, no console and no panel anywhere in the path.** That is the end state the house actually needs: a pair that
+keeps working when the hub is off, which is the only acceptable behavior for a light switch.
+
+Everything needed to reproduce it is in the sections above: adopt, bind all three models *including the vendor
+model*, set publication, write `0x08` with the partner's unicast on the **companion end only**, replay a config
+captured **from a switch of the same role**, and power cycle — which is what applies all of it.
+
+### How the hub should learn a pair's state (and how it should not)
+
+The obvious idea is to overhear the companion's `0403` press. It works sometimes and it is the wrong thing to
+depend on:
+
+- A `0403` is a **directed unicast**. Mesh is managed flooding, so every transmission is heard by every node in
+  radio range and rebroadcast by relays until TTL expires — but a pair sitting next to each other in one room
+  may be satisfied by the first hop, with nothing carrying it to wherever a puck happens to be. Observed both
+  ways: the panel network's dense mesh delivered a pair's `0403` to a puck; our three-node network did not.
+- It reports a *press*, which is an inference about what will happen, rather than what did.
+
+**The main broadcasts its new state to all-nodes whenever it changes** — `0x0005 -> 0xffff Generic OnOff Status`
+in every capture of a working pair. That is a model publication, it floods by design, it is the truth rather
+than an inference, and it arrives whichever end was pressed. A hub should listen for that and ignore `0403`
+entirely for same-network pairs.
+
+This is also why our own first test looked like a failure when it was not: `0x0003`'s publication was still
+`0x0001`, pointed at the provisioner address by `explore.py` long before any of this, so when its load toggled
+it published to a unicast nobody was listening on. Set to `0xffff` now.
+
+**There is no latency floor for pairs we configure.** State arrives as it changes. Polling is only needed for
+switches still on the console's network, whose publication cannot be changed without device keys we do not have.
+
+
+### The companion's press protocol: tap, slide, and a boundary
+
+A companion does not merely report *that* it was touched. It reports *how*. Three commands, all under the
+vendor opcode (`C1 2008`), all unicast to the partner named in field `0x08`:
+
+| Payload | Meaning |
+|---|---|
+| `04 03` | **tap** — the toggle. One per press. |
+| `04 02` + 2 bytes | **slide** — streams continuously while the finger moves |
+| `04 05` | **boundary** — no payload, brackets each slide burst |
+
+**The slide payload is a SIGNED 16-bit little-endian DELTA, not an absolute level.** Captured while sliding
+down and then up: `55ff 5fff 48ff 7aff a1ff d6ff` are −171, −161, −184, −134, −95, −42; `c200 b800 5400 2200`
+are +194, +184, +84, +34. Read as absolute values those are incoherent — every downward one would be 65,000-odd
+on a scale that runs to 1000. Read as relative movement they are exactly a slider reporting how far the finger
+traveled, sign for direction and magnitude tapering as the movement slows.
+
+Thirteen samples, so not settled, but it is trivially falsifiable: a slow slide end to end should give same-sign
+deltas throughout, and reversing direction mid-slide should flip the sign inside one burst.
+
+`04 05` is unexplained. It appears at the start and end of each slide burst and carries nothing — touch-down and
+touch-up, or a gesture boundary. Position is the only evidence.
+
+**Why this matters beyond decoding.** A loadless companion is not a button, it is a controller. Tap, direction
+and travel are enough to run a scene on tap and adjust it on slide, or to dim a group that the switch is not
+wired to. That belongs in the pairing design rather than being discovered after it ships.
+
+### And the load type really does need the boot
+
+Throughout all of that sliding, the migrated load reported only `ON` or `OFF` and never published a brightness.
+It has not been power cycled since its config was written. So of the three settings, the boot requirement lands
+squarely and only on the load type:
+
+- **load type — boot required**, now attested twice;
+- **publication — took effect live** on a freshly provisioned node;
+- **partner address `0x08` — took effect live**.
+
+
+### `0x56` is not the dimmer flag, and a dropped read nearly proved it was
+
+`0x56` was the last surviving load-type candidate after `0x1a` and `0x1b` were resolved, and it looked
+compelling: the capture of the stairway load had no `0x56` at all, and that switch does not dim. One read
+settled it the other way. **Our `0x0005`, which dims, and our `0x0006`, which does not, both read `0x56 = 03`**,
+twice each. A field with the same value on both sides of the behavior cannot be what selects it.
+
+The real answer came from the person who lives in the house: **the stairway was always wired and configured as a
+plain switch.** It never dimmed. There was no fault, the adopt replayed the switch faithfully, and the light
+behaves exactly as it always has.
+
+**But the near-miss is worth more than the finding.** The capture used for that adopt is missing `0x56` while
+the switch demonstrably has it, so the field was **dropped during the read** — and the adopt, whose allowlist
+skips anything absent from the capture, therefore silently did not replay it. `vendor_store.py` does not
+truncate on a failed read (it continues through the list; only a dropped GATT link stops it), so this was one
+lost reply in the middle, not a lost tail.
+
+That is a real hazard for any provisioner built on captures: **a dropped read is indistinguishable from a field
+that does not exist, and the consequence is a setting silently not restored.** Two defenses, neither expensive:
+
+- **Read twice and merge.** The presence of a field is only trustworthy on a second confirming pass, which is
+  already documented above for comparisons and applies at least as strongly to captures meant to be replayed.
+- **Verify after adopting, not just after writing.** Reading the fields back confirms what was written; it says
+  nothing about what was never attempted. Comparing the adopted switch against its own capture would have
+  caught this in a second.
+
+### The house has three multi-way lights, and the panel is an END of one of them
+
+*17 September, evening. `tools/pairs.py` reads vendor field `0x08` (and `0x1b`) from every switch on a
+network over one proxy link and prints the arrangement. It writes nothing and presses nothing; the only
+messages it sends are an all-nodes `Generic OnOff Get` to find who is out there and vendor field reads.*
+
+Run against the console's network, eleven switches answered:
+
+| Companion | `0x08` | `0x1b` | |
+|---|---|---|---|
+| `0x0006` | `0x0005` | `03` | the stairway pair — switch to switch, as documented above |
+| `0x0016` | **`0x0002`** | `03` | partner is a **panel element** |
+| `0x0014` | **`0x0012`** | `03` | partner is a **panel element** |
+
+Three multi-way lights, where this document had one. Two of them name a **panel element** rather than a
+plate on a wall. `0x0002` was asked for all 55 known vendor fields and answered none of them, where every
+real switch answers dozens — it has no vendor store, so it is not a Brilliant *switch*.
+
+**And the first reading of that was wrong, corrected by the person who lives here.** I took it to mean the
+console was *mediating* those two — the model this document disproved for the stairway pair, creeping back
+in. It is not. The kitchen table light is a genuine **three-way**: a wall plate, a third switch with the
+lamp wired to it, and **the right-hand slider of the Brilliant panel as the third position**. `0x0012` is
+that slider. So `0x0014` stores it in `0x08` for exactly the reason the stairway companion stores its main:
+it *is* the other end. The panel is a switch here, not a broker, and `0x0002` is almost certainly the other
+slider on the same glass.
+
+So there are not two arrangements after all. It is switch-to-switch throughout, and one of the ends happens
+to live behind a screen.
+
+**The consequence for the product changes shape with it.** The pairing *can* be carried — `0x08` names a
+real position. What cannot be carried is the position itself: **when the panel comes off the wall, that end
+of the kitchen three-way goes with it**, and the light drops from three switches to two. That is not a
+migration question ("which light does this work?"), it is a thing to tell somebody before they unscrew
+anything, and to offer a plate for.
+
+### Pressing one: the console is alive, and does nothing with the press
+
+A capture was running while `0x0014` was pressed by hand:
+
+    198–201s   0x0014 -> 0xffff   field 0x0c = 01        (somebody walking up to it)
+    205.0s     0x0014 -> 0x0012   VENDOR 0403            the press
+    205–216s   nothing
+
+No acknowledgement, no `Generic OnOff Set` to any load, no state change from anything. Compare the working
+pair above, where the main answers inside a fraction of a second and broadcasts its new state to all-nodes.
+
+**But the lamp says otherwise, and the lamp wins.** Asked what actually happened, the person pressing it
+reported that the first press did nothing *and a second press turned the kitchen table light on*. The
+capture only ever saw the first. So this is not a dead plate: it is a switch that **drops presses**, and the
+wire-level silence above is the record of a lost one rather than of a broken arrangement. Two candidates,
+and they are distinguishable by catching a working press beside a failed one:
+
+- a `0403` is a **directed unicast with nothing retrying it**, so a press that is not picked up on the first
+  hop is simply gone — the same fragility already written up as the reason the hub must never take a `0403`
+  as its signal;
+- or the first press wakes something which then serves the second.
+
+**And the console is not dead, which is what makes this worth writing down.** Across the same capture
+`0x0012` transmitted 21 times and `0x0002` twice — `Generic OnOff Get` polls and batched vendor reads
+(`11 03 04 05 06 0c 1a 4b 51 55 56`) aimed at their own switches. The panel is powered, on the mesh, and
+working it. It received a companion press and did not act on it. So the comfortable explanation — that
+these would come back if something were powered — is ruled out: it **is** powered. Whatever handled
+multi-way went with the screen, while the polling underneath kept running.
+
+**What is still missing is a working press on the wire.** The failed one is captured; its successful twin
+is not, and the difference between them is the whole answer. Worth carrying: a negative taken from a
+capture said "dead plate", and one sentence from the person in the kitchen turned it into "drops presses".
+The instrument was never going to catch what it was not pointed at.
+
+**Two things the same capture handed over for free.**
+
+- **Field `0x0c` tracks a person, and is not a load state.** `0x0014` published `0c = 01` while somebody
+  stood at it and `00` after they moved off, repeatedly, through a press that changed nothing. This
+  document calls `0x0c` unsettled and leans toward "activity flag rather than load state"; that is what it
+  was seen doing, and the load reading can now be dropped.
+
+  **But the hold is not a fixed interval, and an earlier draft of this paragraph said it was.** The first
+  clearing looked like a clean ~25 s hold after departure. A later stretch of the same capture flips
+  `01 → 00 → 01 → 00` inside ten seconds while somebody moves about near the switch. So it follows presence
+  closely and re-arms fast; whatever smoothing the bridge wants, it will have to add itself rather than
+  assume a hold that is already there.
+- **The census is partial and must be treated so.** `0x0012` polls `0x0018`, a switch `pairs.py` never
+  found, and `0x0003`, `0x000a` and `0x0011` answered nothing from where the proxy sat. `pairs.py` reports
+  those as *unknown*, never as *single*, because an unread `0x08` is indistinguishable from no partner —
+  the same hazard as the dropped `0x56` read. Anything built on this has to walk the proxy around the
+  house, or run from a puck already in the middle of it.
+- **Read twice, and here is why.** On pass one `0x0014` did not answer `0x08` and would have been recorded
+  as a main with no partner. On pass two it answered `0x0012`. A single-pass read would have silently
+  turned a companion into a light.
+
+*(`0x7f30` in any capture of this network is **our own ESP32 bridge**, not the panel: the puck names itself
+`0x7000 | chip<<4`. It accounts for most of the traffic in a panel-network sniff and is easy to mistake for
+the console.)*
+
+
+### A controlled run on a healthy pair, and the load detector measured
+
+*17 September, late. The kitchen three-way above is, by the account of the person who lives here, a
+flaky install -- turning it off at the panel has been known to upset the other two positions. Three of
+my wrong turns this evening came from reasoning hard about single observations taken from it. So the
+rest of the night was run against the basement kitchen two-way, which is on the console's network and
+behaves exactly as a two-way should.*
+
+**Four presses, and both signatures came out as written.** Bottom of the stairs, twice, fifteen seconds
+apart; then the garage-door end, twice.
+
+    442.8s   0x0006 -> 0x0005   VENDOR 0403              bottom of the stairs
+    442.8s   0x0005 -> 0xffff   Generic OnOff Status 01  the load, announcing itself
+    458.1s   0x0006 -> 0x0005   VENDOR 0403
+    458.1s   0x0005 -> 0xffff   Generic OnOff Status 00
+    474.5s   0x0005 -> 0xffff   Generic OnOff Status 01  the other end -- NO 0403 at all
+    492.8s   0x0005 -> 0xffff   Generic OnOff Status 00
+
+So the companion is the stairwell end and the lamp is wired to the garage-door end, and a listener can
+tell which end was touched from the shape of the traffic alone. Everything this document says about the
+two signatures is confirmed on a second pair, by hand, against a lamp somebody was watching.
+
+**The migration read is proven end to end.** Hours earlier `pairs.py` had said `0x0006`'s partner is
+`0x0005`, read from field `0x08` with nobody pressing anything. The lamp has now agreed. That is the whole
+premise of reading a house's wiring before touching it, and it is no longer an argument.
+
+**And the dropped-press worry does not generalize.** Four presses, four lamp movements, none lost. An
+earlier paragraph in this document took the kitchen's misbehavior as evidence that a `0403` is inherently
+unreliable and that any "press the far end to confirm" step must tolerate silence. On a healthy pair it is
+four for four. The kitchen's flakiness is that installation. **A confirm-by-press step is sound.**
+
+### Field `0x13` is a load detector, and it is not subtle
+
+The open question behind "which of these two new switches has the lamp" was whether `0x13` moves enough to
+answer it silently. Measured on `0x0005`, with the lamp switched by hand and its own `OnOff Status`
+broadcasts marking the transitions in the same log:
+
+| | samples | range | mean |
+|---|---|---|---|
+| dark | 13 | 1 – 3 | 1.8 |
+| **lit** | **21** | **2 – 97** | **92.0** |
+| dark again | 2 | 2 – 4 | 3.0 |
+
+Across the switch-off: `97, 97, 97` up to one second before, then `4` at two seconds after and `2` at five.
+A ~50x separation, settling within about two seconds in both directions, with nothing anywhere near the
+middle. The one `2` inside the lit window is the sample caught mid-transition.
+
+**So the silent probe works.** A provisioner can turn each candidate on, watch `0x13`, and know which one
+the lamp is wired to without asking a person anything. `"Did a light just come on?"` becomes a rare
+fallback rather than a step in the flow.
+
+**Key it on the jump, never on the number.** Resting values differ per switch across this house -- about
+130 on the full-bright hallway, 285 on `0x0010`, 1-3 here. What identifies the load is *this switch's own
+reading changed fiftyfold when I switched it*, and never *this switch reads above some threshold*. The
+bridge already learns a floor per switch for motion; this is the same discipline applied to a different
+question.
+
+### And one claim from the kitchen, held loosely
+
+Pressing `0x0016` moved its lamp while the only mesh traffic was a `0403` to the panel that nothing
+answered. Taken at face value that means the switch **drives its own load locally**, with no mesh message
+involved, and that `0x1b = 03` therefore does not mean "drives nothing" -- the flag makes a switch announce
+its press, and whether a lamp moves depends on whether one is wired to it. That would explain our `0x0004`
+neatly: it moves no lamp because it has no lamp, not because the flag forbids it.
+
+It is recorded here as evidence and not as a finding, because it comes from the one installation in this
+house known to misbehave. The clean version of the test is a switch with `0x1b = 03` and a lamp wired to
+it, on a pair that behaves -- which is a thing to arrange rather than a thing to conclude.
+
+
+### `0x1b` announces; it does not choose a role
+
+*17 September, latest. The clean test this document asked for, run on our own stairway pair.*
+
+`0x0006` is the load end of our stairway: a lamp wired to it, `0x1b = 00`. It was written to `0x1b = 03`
+through the mesh (`tools/vendor_write.py`), power cycled by hand, and pressed. **The lamp came on.**
+
+So a switch carrying `03` drives its own load perfectly well, and the reading this document has carried
+since the adopt spec — `00` drives a load, `03` is a companion — is wrong. What `0x1b` selects is whether
+the switch **announces** its press:
+
+- every switch toggles whatever lamp is wired to it, locally, always, with no mesh traffic at all;
+- `0x1b = 03` additionally sends `0403` to the address in `0x08`;
+- whatever receives that toggles *its* own load, if it has one.
+
+**The old evidence still fits, with a different cause.** Our adopted companion `0x0004` went silent when a
+main's `0x1b = 00` was replayed onto it — not because it was told to drive a load it has not got, but
+because it was told **not to announce**, and a companion that announces nothing is a plate wired to
+nothing. The symptom and the fix are unchanged; the explanation is.
+
+**And it makes the kitchen ordinary rather than strange.** The middle switch there drives its own lamp
+*and* announces to the panel. Under the old reading that combination was impossible, which is part of why
+that installation looked like it was misbehaving on the wire when it was doing exactly what it should.
+
+**One hazard, learned by tripping it on a live light.** A vendor Status is `13 <field> <value> 00`, so a
+read reply carries a trailing byte that is *not* part of the value. `vendor_write.py` printed that raw
+reply as the restore hint, and writing it back sent one byte too many — which the switch dropped in
+silence, exactly as the spec warns a malformed write will. Two restore attempts read back unchanged before
+the cause was spotted. The tool now strips the trailing byte and shows both forms.
+
+
+### The power cycle is a fallback, not a step
+
+*18 September. Corrected by the person who lives here, twice over, and it removes a step from the
+product rather than adding one.*
+
+This document has said since the recipe was written that the load type is read only at boot, so an
+adopted switch cannot dim until it is power cycled. Every flow built on it — `restore_switch.py`, the
+STATUS summary, the migration boards — ends by telling somebody to go and pull a tab.
+
+**Two adoptions since have dimmed immediately, with no power cycle at all.** The bedroom switch
+claimed today (`0x0007`, config replayed from `capture-0005`) took brightness commands by hand
+straight after adoption, and the same was true of an adoption the day before.
+
+So the claim is not retired, it is demoted. `0x0003` genuinely did need a boot: the config was written
+repeatedly and `Level Set` stayed inert through all of it until power was cut. Something separates
+that case from these two and nobody has isolated what — the difference may be the same
+fresh-join-versus-reconfigure split that the model publication shows in the table above, or it may be
+something else entirely.
+
+**What the recipe should say, and what the tools now say:** adopt, then try it. If it dims, it is
+done, and nobody is sent to a wall. If it does not, pull the tab out and push it back, and try again.
+That is the correct shape for a step that is *sometimes* needed and cheap when it is — and it is how
+the person with the lamp in front of them described it, unprompted, which is the second time tonight
+that has beaten an instrument.

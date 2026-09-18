@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """The rest of the surface the panel talks to: rules, the log a room's story is told from, sounds,
 health, updates, restore, and the stream every screen holds open.
 
@@ -92,7 +94,7 @@ class HealthTests(ApiTest):
 
 
 class SoundsTests(ApiTest):
-    def test_the_catalogue_says_what_can_be_played_and_what_is_playing(self):
+    def test_the_catalog_says_what_can_be_played_and_what_is_playing(self):
         d = self.client.get("/sounds").json()
         self.assertIn("sounds", d)
         self.assertIn("playing", d)

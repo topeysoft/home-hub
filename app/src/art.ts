@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /*
  * What a device looks like, in one place.
  *
@@ -18,7 +20,7 @@
  * light it throws the same way and a lamp turns blue at noon -- and a tile that
  * has stopped looking warm has stopped meaning "on". Emitted light sits with the
  * lamp accent, the live green and the danger red: signals, and a signal that
- * changes colour is not a signal.
+ * changes color is not a signal.
  */
 
 import { ground, mix, rgb, type RGB } from './sky'
@@ -32,7 +34,7 @@ export const BOX = { w: 150, h: 130 }
 
 /*
  * The panel paints these into one set of gradient defs and every mark refers to
- * them by name, so a tile carries no colour of its own. Two stops make a plate,
+ * them by name, so a tile carries no color of its own. Two stops make a plate,
  * three make a cylinder; that is the whole vocabulary.
  */
 export type Materials = {
@@ -44,7 +46,7 @@ export type Materials = {
   screenHi: string; screenLo: string
 }
 
-/* the base colour of each surface, before the room gets to it */
+/* the base color of each surface, before the room gets to it */
 const BASE: Record<keyof Materials, RGB> = {
   metalLo: [74, 70, 64], metalMid: [179, 170, 156],
   matteHi: [242, 239, 232], matteLo: [201, 196, 184],
@@ -54,9 +56,9 @@ const BASE: Record<keyof Materials, RGB> = {
   screenHi: [42, 45, 51], screenLo: [15, 17, 20],
 }
 
-/* How far a surface takes the colour of the room it stands in. Gentle on
+/* How far a surface takes the color of the room it stands in. Gentle on
    purpose: at 0 the shelf looks like stickers pasted on the sky, and past about
-   a third every device turns the same colour as every other and the library
+   a third every device turns the same color as every other and the library
    stops being a library. */
 const AMBIENT = 0.22
 
@@ -399,7 +401,7 @@ function thing(kind: Kind, s: ArtState, m: Materials): Art {
     const spinning = s.on === true
     /* Four blades, spaced in round space and squashed afterwards, which is the
        projection of a flat disc tilted toward you. Rotating a symmetric shape
-       about its OWN centre gives two blades for every one -- that is how this
+       about its OWN center gives two blades for every one -- that is how this
        first came out with six. */
     const disc = 'translate(90 46) scale(1 0.46)'
     const blades = [24, 114, 204, 294].map((a) =>

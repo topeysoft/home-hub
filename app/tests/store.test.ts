@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* The house as the panel understands it: what a room is doing, what a scene means, and the names
    people read off tiles. These all end up as words on a wall. */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'

@@ -1,3 +1,7 @@
+<!--
+  SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+  SPDX-License-Identifier: AGPL-3.0-or-later
+-->
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { getCatalog, startFlow, getFlow, submitFlow, cancelFlow, setCredentials, type CatalogItem, type Step, type Field } from './api'
@@ -102,7 +106,7 @@ async function retry() {
 async function back(cancel = true) {
   clearTimeout(poll)
   /* A handed-over conversation is the house's, not this screen's: walking away leaves it open, so the line on
-     Home still offers it. Only a flow this screen started is cancelled on the way out. */
+     Home still offers it. Only a flow this screen started is canceled on the way out. */
   const own = step.value?.flow_id !== props.resume
   if (cancel && own && step.value?.flow_id && (step.value.type === 'form' || step.value.type === 'menu' || step.value.type === 'external')) cancelFlow(step.value.flow_id)
   if (props.resume) return void (store.sheet = null)

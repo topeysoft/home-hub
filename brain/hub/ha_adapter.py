@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """The only module that knows Home Assistant exists.
 
 Talks to HA over its websocket API. Everything above this file speaks in the semantic model.

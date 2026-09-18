@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """index.html from canvas.json: every board at 1440x900, scaled to fit, with the annotation that argues it.
 canvas.json is the source; run this after changing it, so the two cannot drift."""
 import html, json, pathlib

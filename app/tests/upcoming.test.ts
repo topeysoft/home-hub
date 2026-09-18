@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* What the house will do next on its own. The line reads "Next: Porch light, 7:12 PM", so being an
    hour out is worse than saying nothing. */
 import { beforeEach, describe, expect, it } from 'vitest'
@@ -36,7 +38,7 @@ describe('a routine that runs by the clock', () => {
     expect(at.getDate()).toBe(12)
   })
 
-  it('honours a single day and an excluded one', () => {
+  it('honors a single day and an excluded one', () => {
     expect(nextRun(routine({ when: { time: '08:00' }, if: [['weekday', 'is', 'mon'] ] }), friday)!.getDay()).toBe(1)
     expect(nextRun(routine({ when: { time: '08:00' }, if: [['weekday', 'not', 'sat'] ] }), friday)!.getDay()).not.toBe(6)
   })

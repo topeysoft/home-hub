@@ -1,3 +1,7 @@
+<!--
+  SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+  SPDX-License-Identifier: AGPL-3.0-or-later
+-->
 <script setup lang="ts">
 /*
  * The one set of materials every device drawing paints with.
@@ -23,7 +27,7 @@ const m = computed(() => materials(store.sky.elevation, store.sky.condition))
   <svg width="0" height="0" aria-hidden="true" focusable="false" class="art-defs"
        style="position: absolute; width: 0; height: 0; overflow: hidden;">
     <defs>
-      <!-- a cylinder: dark edge, light centre, dark edge -->
+      <!-- a cylinder: dark edge, light center, dark edge -->
       <linearGradient id="mMetal" x1="0" y1="0" x2="1" y2="0">
         <stop offset="0" :stop-color="m.metalLo" /><stop offset="45%" :stop-color="m.metalMid" /><stop offset="100%" :stop-color="m.metalLo" />
       </linearGradient>

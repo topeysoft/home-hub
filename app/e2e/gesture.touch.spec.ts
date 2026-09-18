@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /* The same gesture, made with a finger. A touch long-press is also the browser's own gesture, and
    the wall panel is a touch screen, so a mouse-only pass proves less than it looks like. This
    dispatches touch through CDP, the path a real finger takes. */
@@ -38,7 +40,7 @@ async function settled(page: Page, url: string) {
   await freeze(page)
 }
 
-async function centre(page: Page, selector: string) {
+async function center(page: Page, selector: string) {
   const el = page.locator(selector).first()
   await el.scrollIntoViewIfNeeded()          // a finger cannot press what is below the fold
   await page.waitForTimeout(250)
@@ -76,7 +78,7 @@ test.describe('with a finger', () => {
       const line = tile.locator('.tile-state, .onnow-name').first()
       const before = await line.innerText({ timeout: 1500 }).catch(() => '')
 
-      const { x, y } = await centre(page, selector)
+      const { x, y } = await center(page, selector)
       await press(page, x, y, 560)
 
       await expect(page.locator('.opened-panel')).toHaveCount(1)
