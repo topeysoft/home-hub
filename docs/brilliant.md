@@ -978,3 +978,167 @@ that does not exist, and the consequence is a setting silently not restored.** T
 - **Verify after adopting, not just after writing.** Reading the fields back confirms what was written; it says
   nothing about what was never attempted. Comparing the adopted switch against its own capture would have
   caught this in a second.
+
+### The house has three multi-way lights, and the panel is an END of one of them
+
+*17 September, evening. `tools/pairs.py` reads vendor field `0x08` (and `0x1b`) from every switch on a
+network over one proxy link and prints the arrangement. It writes nothing and presses nothing; the only
+messages it sends are an all-nodes `Generic OnOff Get` to find who is out there and vendor field reads.*
+
+Run against the console's network, eleven switches answered:
+
+| Companion | `0x08` | `0x1b` | |
+|---|---|---|---|
+| `0x0006` | `0x0005` | `03` | the stairway pair — switch to switch, as documented above |
+| `0x0016` | **`0x0002`** | `03` | partner is a **panel element** |
+| `0x0014` | **`0x0012`** | `03` | partner is a **panel element** |
+
+Three multi-way lights, where this document had one. Two of them name a **panel element** rather than a
+plate on a wall. `0x0002` was asked for all 55 known vendor fields and answered none of them, where every
+real switch answers dozens — it has no vendor store, so it is not a Brilliant *switch*.
+
+**And the first reading of that was wrong, corrected by the person who lives here.** I took it to mean the
+console was *mediating* those two — the model this document disproved for the stairway pair, creeping back
+in. It is not. The kitchen table light is a genuine **three-way**: a wall plate, a third switch with the
+lamp wired to it, and **the right-hand slider of the Brilliant panel as the third position**. `0x0012` is
+that slider. So `0x0014` stores it in `0x08` for exactly the reason the stairway companion stores its main:
+it *is* the other end. The panel is a switch here, not a broker, and `0x0002` is almost certainly the other
+slider on the same glass.
+
+So there are not two arrangements after all. It is switch-to-switch throughout, and one of the ends happens
+to live behind a screen.
+
+**The consequence for the product changes shape with it.** The pairing *can* be carried — `0x08` names a
+real position. What cannot be carried is the position itself: **when the panel comes off the wall, that end
+of the kitchen three-way goes with it**, and the light drops from three switches to two. That is not a
+migration question ("which light does this work?"), it is a thing to tell somebody before they unscrew
+anything, and to offer a plate for.
+
+### Pressing one: the console is alive, and does nothing with the press
+
+A capture was running while `0x0014` was pressed by hand:
+
+    198–201s   0x0014 -> 0xffff   field 0x0c = 01        (somebody walking up to it)
+    205.0s     0x0014 -> 0x0012   VENDOR 0403            the press
+    205–216s   nothing
+
+No acknowledgement, no `Generic OnOff Set` to any load, no state change from anything. Compare the working
+pair above, where the main answers inside a fraction of a second and broadcasts its new state to all-nodes.
+
+**But the lamp says otherwise, and the lamp wins.** Asked what actually happened, the person pressing it
+reported that the first press did nothing *and a second press turned the kitchen table light on*. The
+capture only ever saw the first. So this is not a dead plate: it is a switch that **drops presses**, and the
+wire-level silence above is the record of a lost one rather than of a broken arrangement. Two candidates,
+and they are distinguishable by catching a working press beside a failed one:
+
+- a `0403` is a **directed unicast with nothing retrying it**, so a press that is not picked up on the first
+  hop is simply gone — the same fragility already written up as the reason the hub must never take a `0403`
+  as its signal;
+- or the first press wakes something which then serves the second.
+
+**And the console is not dead, which is what makes this worth writing down.** Across the same capture
+`0x0012` transmitted 21 times and `0x0002` twice — `Generic OnOff Get` polls and batched vendor reads
+(`11 03 04 05 06 0c 1a 4b 51 55 56`) aimed at their own switches. The panel is powered, on the mesh, and
+working it. It received a companion press and did not act on it. So the comfortable explanation — that
+these would come back if something were powered — is ruled out: it **is** powered. Whatever handled
+multi-way went with the screen, while the polling underneath kept running.
+
+**What is still missing is a working press on the wire.** The failed one is captured; its successful twin
+is not, and the difference between them is the whole answer. Worth carrying: a negative taken from a
+capture said "dead plate", and one sentence from the person in the kitchen turned it into "drops presses".
+The instrument was never going to catch what it was not pointed at.
+
+**Two things the same capture handed over for free.**
+
+- **Field `0x0c` tracks a person, and is not a load state.** `0x0014` published `0c = 01` while somebody
+  stood at it and `00` after they moved off, repeatedly, through a press that changed nothing. This
+  document calls `0x0c` unsettled and leans toward "activity flag rather than load state"; that is what it
+  was seen doing, and the load reading can now be dropped.
+
+  **But the hold is not a fixed interval, and an earlier draft of this paragraph said it was.** The first
+  clearing looked like a clean ~25 s hold after departure. A later stretch of the same capture flips
+  `01 → 00 → 01 → 00` inside ten seconds while somebody moves about near the switch. So it follows presence
+  closely and re-arms fast; whatever smoothing the bridge wants, it will have to add itself rather than
+  assume a hold that is already there.
+- **The census is partial and must be treated so.** `0x0012` polls `0x0018`, a switch `pairs.py` never
+  found, and `0x0003`, `0x000a` and `0x0011` answered nothing from where the proxy sat. `pairs.py` reports
+  those as *unknown*, never as *single*, because an unread `0x08` is indistinguishable from no partner —
+  the same hazard as the dropped `0x56` read. Anything built on this has to walk the proxy around the
+  house, or run from a puck already in the middle of it.
+- **Read twice, and here is why.** On pass one `0x0014` did not answer `0x08` and would have been recorded
+  as a main with no partner. On pass two it answered `0x0012`. A single-pass read would have silently
+  turned a companion into a light.
+
+*(`0x7f30` in any capture of this network is **our own ESP32 bridge**, not the panel: the puck names itself
+`0x7000 | chip<<4`. It accounts for most of the traffic in a panel-network sniff and is easy to mistake for
+the console.)*
+
+
+### A controlled run on a healthy pair, and the load detector measured
+
+*17 September, late. The kitchen three-way above is, by the account of the person who lives here, a
+flaky install -- turning it off at the panel has been known to upset the other two positions. Three of
+my wrong turns this evening came from reasoning hard about single observations taken from it. So the
+rest of the night was run against the basement kitchen two-way, which is on the console's network and
+behaves exactly as a two-way should.*
+
+**Four presses, and both signatures came out as written.** Bottom of the stairs, twice, fifteen seconds
+apart; then the garage-door end, twice.
+
+    442.8s   0x0006 -> 0x0005   VENDOR 0403              bottom of the stairs
+    442.8s   0x0005 -> 0xffff   Generic OnOff Status 01  the load, announcing itself
+    458.1s   0x0006 -> 0x0005   VENDOR 0403
+    458.1s   0x0005 -> 0xffff   Generic OnOff Status 00
+    474.5s   0x0005 -> 0xffff   Generic OnOff Status 01  the other end -- NO 0403 at all
+    492.8s   0x0005 -> 0xffff   Generic OnOff Status 00
+
+So the companion is the stairwell end and the lamp is wired to the garage-door end, and a listener can
+tell which end was touched from the shape of the traffic alone. Everything this document says about the
+two signatures is confirmed on a second pair, by hand, against a lamp somebody was watching.
+
+**The migration read is proven end to end.** Hours earlier `pairs.py` had said `0x0006`'s partner is
+`0x0005`, read from field `0x08` with nobody pressing anything. The lamp has now agreed. That is the whole
+premise of reading a house's wiring before touching it, and it is no longer an argument.
+
+**And the dropped-press worry does not generalise.** Four presses, four lamp movements, none lost. An
+earlier paragraph in this document took the kitchen's misbehaviour as evidence that a `0403` is inherently
+unreliable and that any "press the far end to confirm" step must tolerate silence. On a healthy pair it is
+four for four. The kitchen's flakiness is that installation. **A confirm-by-press step is sound.**
+
+### Field `0x13` is a load detector, and it is not subtle
+
+The open question behind "which of these two new switches has the lamp" was whether `0x13` moves enough to
+answer it silently. Measured on `0x0005`, with the lamp switched by hand and its own `OnOff Status`
+broadcasts marking the transitions in the same log:
+
+| | samples | range | mean |
+|---|---|---|---|
+| dark | 13 | 1 – 3 | 1.8 |
+| **lit** | **21** | **2 – 97** | **92.0** |
+| dark again | 2 | 2 – 4 | 3.0 |
+
+Across the switch-off: `97, 97, 97` up to one second before, then `4` at two seconds after and `2` at five.
+A ~50x separation, settling within about two seconds in both directions, with nothing anywhere near the
+middle. The one `2` inside the lit window is the sample caught mid-transition.
+
+**So the silent probe works.** A provisioner can turn each candidate on, watch `0x13`, and know which one
+the lamp is wired to without asking a person anything. `"Did a light just come on?"` becomes a rare
+fallback rather than a step in the flow.
+
+**Key it on the jump, never on the number.** Resting values differ per switch across this house -- about
+130 on the full-bright hallway, 285 on `0x0010`, 1-3 here. What identifies the load is *this switch's own
+reading changed fiftyfold when I switched it*, and never *this switch reads above some threshold*. The
+bridge already learns a floor per switch for motion; this is the same discipline applied to a different
+question.
+
+### And one claim from the kitchen, held loosely
+
+Pressing `0x0016` moved its lamp while the only mesh traffic was a `0403` to the panel that nothing
+answered. Taken at face value that means the switch **drives its own load locally**, with no mesh message
+involved, and that `0x1b = 03` therefore does not mean "drives nothing" -- the flag makes a switch announce
+its press, and whether a lamp moves depends on whether one is wired to it. That would explain our `0x0004`
+neatly: it moves no lamp because it has no lamp, not because the flag forbids it.
+
+It is recorded here as evidence and not as a finding, because it comes from the one installation in this
+house known to misbehave. The clean version of the test is a switch with `0x1b = 03` and a lamp wired to
+it, on a pair that behaves -- which is a thing to arrange rather than a thing to conclude.
