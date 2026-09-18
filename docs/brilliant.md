@@ -697,7 +697,7 @@ as a worked reference:
 
 | Field | Value | What it appears to be |
 |---|---|---|
-| `0x1b` | `00` | **THE ROLE: `00` drives a load, `03` is a companion.** Replaying a main's `00` onto a companion is what silenced one for a whole evening — see *Replay a companion's config from a companion* below |
+| `0x1b` | `00` | **THE ANNOUNCE FLAG: `03` tells the partner in `0x08` about every press, `00` says nothing.** It is *not* a role and does not decide whether a load is driven — see *`0x1b` announces; it does not choose a role* at the foot. Replaying a main's `00` onto a companion is still what silenced one for a whole evening, because a companion that announces nothing is wired to nothing |
 | `0x56` | `03` | **not the load type** — `03` reads on both a dimming and a non-dimming switch |
 | `0x1a` | `02` | **not the role and not the load type** — `02` appears on a paired main *and* a single-pole, and two working dimmers differed here (`02`, `01`) |
 | — | — | **No field yet identified selects dimmer vs on/off.** `0x1a`, `0x1b` and `0x56` were each the leading candidate and each was disproved |
@@ -1142,3 +1142,34 @@ neatly: it moves no lamp because it has no lamp, not because the flag forbids it
 It is recorded here as evidence and not as a finding, because it comes from the one installation in this
 house known to misbehave. The clean version of the test is a switch with `0x1b = 03` and a lamp wired to
 it, on a pair that behaves -- which is a thing to arrange rather than a thing to conclude.
+
+
+### `0x1b` announces; it does not choose a role
+
+*17 September, latest. The clean test this document asked for, run on our own stairway pair.*
+
+`0x0006` is the load end of our stairway: a lamp wired to it, `0x1b = 00`. It was written to `0x1b = 03`
+through the mesh (`tools/vendor_write.py`), power cycled by hand, and pressed. **The lamp came on.**
+
+So a switch carrying `03` drives its own load perfectly well, and the reading this document has carried
+since the adopt spec — `00` drives a load, `03` is a companion — is wrong. What `0x1b` selects is whether
+the switch **announces** its press:
+
+- every switch toggles whatever lamp is wired to it, locally, always, with no mesh traffic at all;
+- `0x1b = 03` additionally sends `0403` to the address in `0x08`;
+- whatever receives that toggles *its* own load, if it has one.
+
+**The old evidence still fits, with a different cause.** Our adopted companion `0x0004` went silent when a
+main's `0x1b = 00` was replayed onto it — not because it was told to drive a load it has not got, but
+because it was told **not to announce**, and a companion that announces nothing is a plate wired to
+nothing. The symptom and the fix are unchanged; the explanation is.
+
+**And it makes the kitchen ordinary rather than strange.** The middle switch there drives its own lamp
+*and* announces to the panel. Under the old reading that combination was impossible, which is part of why
+that installation looked like it was misbehaving on the wire when it was doing exactly what it should.
+
+**One hazard, learned by tripping it on a live light.** A vendor Status is `13 <field> <value> 00`, so a
+read reply carries a trailing byte that is *not* part of the value. `vendor_write.py` printed that raw
+reply as the restore hint, and writing it back sent one byte too many — which the switch dropped in
+silence, exactly as the spec warns a malformed write will. Two restore attempts read back unchanged before
+the cause was spotted. The tool now strips the trailing byte and shows both forms.
