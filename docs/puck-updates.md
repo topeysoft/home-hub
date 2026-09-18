@@ -56,10 +56,15 @@ somebody's house. Restated only where a puck changes what they mean.
 - **A refusal is not a failure.** A puck that will not take an image because the hash is wrong is a puck working
   correctly, and must not be drawn as a broken one.
 
-## The decision that cannot be taken twice: the partition table
+## Two decisions that cannot be taken twice
 
-Everything else here can be rewritten later. This cannot, because a puck flashed under the wrong layout needs
-another cable visit to correct — which is the exact cost this whole document exists to remove.
+Everything else here can be rewritten later. These two cannot, because both are fixed at the moment a puck is
+flashed over a cable, and correcting either costs another visit to every puck in every house — which is the exact
+cost this whole document exists to remove.
+
+### The partition table
+
+A puck flashed under the wrong layout needs a cable to correct.
 
 **For the 16 MB S3 board, which is what ships:**
 
@@ -89,6 +94,24 @@ sitting unused. Take it.
 correctly — same `nvs` offset, `app0`/`app1` at `0x1E0000` each. The 981 KB image fits with room. No custom
 table needed; just stop using `huge_app.csv`.
 
+### The keys, whether or not anything checks them yet
+
+`docs/updates.md`'s rule is that a hub never adds a signing key after its first install, because a key arriving
+afterwards is exactly the push the signature exists to catch. On a puck the same rule bites harder: there is no
+filesystem anyone can reach and no ssh, so a key that is not in the image at the cable visit can never be in it.
+
+That gives this whole question an asymmetry worth its own line:
+
+> The verification **code** can ship whenever. The **keys** cannot.
+
+So both public keys — primary and spare, for the same reason `docs/updates.md` insists on two — go into the image
+at the partition visit **even if not one line checks a signature yet**. They cost a few hundred bytes and they are
+the difference between *we can add this later* and *we can never add this*.
+
+The corollary is the unpleasant one, and it is the strongest argument against ever turning verification on:
+**losing the signing key is worse here than for a hub.** A hub that cannot verify an update still has a filesystem
+and an owner with a keyboard. A puck has neither, so a lost key means a cable visit to every puck ever shipped.
+
 ## The cable visit that cannot be avoided
 
 **OTA cannot bootstrap itself.** Changing the partition table means writing from `0x0`, which is a cable job. So
@@ -114,13 +137,30 @@ covers the firmware, and the hub serves the verified result at a LAN route.
 and `sha256` against its own, and if they differ, download, verify the hash while writing, and reboot into the
 new slot. A puck that cannot reach the hub does nothing, which is the correct behaviour and needs no code.
 
+**Older is not an upgrade.** A hash proves a file arrived whole; a signature proves the maker made it. Neither
+proves it is *current*. Nothing else here stops a hub — or something wearing a hub's address — from serving an
+older image that was genuinely signed, with whatever was wrong with it still in it. So the puck keeps the highest
+version it has ever run in NVS and refuses anything below that. A floor, not a comparison against the running
+image: a puck that has just rolled back must not be walked down a second time. A deliberate downgrade becomes a
+cable job, which is the right price for something that should be rare and deliberate.
+
 **Where the signature is checked, and the honest limit.** The hub verifies the maker's signature, as it already
 does for its own release. The puck verifies the SHA-256 of what it downloaded. That means the puck trusts the
 hub — anyone who can impersonate the hub on the LAN and hold the broker credentials can put firmware on a puck.
 That boundary is already where it sits today: the hub writes a puck's Wi-Fi and netkey over a cable, so a hub
-that is not the hub is already the end of the story. Worth writing down as chosen rather than overlooked, and
-worth revisiting: mbedtls on the S3 can check ed25519, so the puck holding the public key too is a stretch goal,
-not an impossibility.
+that is not the hub is already the end of the story. Worth writing down as chosen rather than overlooked.
+
+**But the hash travels on the authenticated channel, not the anonymous one.** The puck already holds broker
+credentials the hub wrote at adoption, so the expected `fw` and `sha256` are published to it over MQTT and only
+the image itself is fetched over plain HTTP. Something impersonating the hub on the LAN then needs those
+credentials before it can name a hash the puck will accept — which closes the cheap attack for no crypto at all.
+What it does not close is a hub that has genuinely been taken. That is what a signature is for, and the reason
+the keys go in at the first flash even if the checking does not.
+
+On which: it is cheaper than it sounds. **mbedtls does not implement ed25519** — the shipped headers carry
+the PSA identifiers (`PSA_ALG_PURE_EDDSA`) and no implementation — but `liblibsodium.a` is already bundled in the
+S3 SDK with `crypto_sign_ed25519`, so verification is a link, not a dependency. The cost of this option is not
+code. It is the key, and the key is the part that cannot be added later (see *Open decisions*).
 
 ## Coming back is the whole feature
 
@@ -174,8 +214,9 @@ a deaf mesh, which at 7pm is a light that did not come on when someone walked in
 
 ## Open decisions
 
-- **Does the puck check a signature itself?** Recommended no for the first version, with the trust boundary
-  written down, and revisited once it works.
+- **Does the puck check a signature itself?** Recommended: not in the first version — the MQTT-delivered hash
+  covers the attack that is actually likely — but **the keys go in at the first flash regardless**, because that
+  is the half that cannot be deferred. Deferring the code is cheap and reversible. Deferring the keys is neither.
 - **How often does a puck ask?** On boot, and then — six hours matches the hub. There is no reason for them to
   differ and a mild reason to match: one number in one place.
 - **Does a puck ever refuse to run an old image?** `docs/updates.md` leaves the same question open for the hub.
