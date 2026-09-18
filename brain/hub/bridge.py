@@ -37,6 +37,11 @@ log = logging.getLogger("hub.bridge")
 SHIP = Path(os.environ.get("HUB_NOTES") or Path(__file__).resolve().parent.parent.parent / "releases") / "bridge"
 DEV = Path("/dev/serial/by-id")
 SCAN_EVERY = 3
+# Probing a board resets it, and a board being reset drops off the USB and comes back a
+# moment later. That is OUR doing, not a person's, and must not be read as an unplug --
+# otherwise a dismissal never sticks: the board vanishes, is forgiven, reappears as a fresh
+# arrival, and knocks again faster than anybody can dismiss it. Observed on a bare C3:
+# knock, refuse, dismiss, knock again, for as long as somebody kept pressing OK.
 # How long to wait on a puck for each kind of question. A survey is one BLE scan;
 # a claim is a whole handshake over a link that may be weak. Named so the tests
 # can shrink them -- a suite that waits out a real timeout teaches people to skip it.
@@ -47,6 +52,23 @@ CLAIM_WAIT = 90
 RADIO = re.compile(r"skyconnect|zbt-|zbdongle|sonoff|mg24|cc2652|zigbee|efr32|nabu|zooz|z-wave|zwave|aeotec|pzg23|hubz", re.I)
 STEPS = ("software", "wifi", "keys")
 BASE = "mesh"
+
+
+def network_id(netkey: bytes) -> str:
+    """k3(netkey): the eight bytes a puck publishes to say which mesh it carries.
+
+    Mesh Profile 1.0.1 section 3.8.2.6. The hub needs it for one question only -- is that
+    puck out there on MY network or somebody else's -- and the answer decides whether a
+    working bridge gets adopted or offered a rebuild it does not need."""
+    from cryptography.hazmat.primitives.cmac import CMAC
+    from cryptography.hazmat.primitives.ciphers import algorithms
+
+    def cmac(key: bytes, msg: bytes) -> bytes:
+        c = CMAC(algorithms.AES(key)); c.update(msg); return c.finalize()
+
+    salt = cmac(b"\x00" * 16, b"smk3")          # s1("smk3")
+    t = cmac(salt, netkey)
+    return cmac(t, b"id64" + b"\x01")[-8:].hex()
 
 
 def lan_ip() -> str:
@@ -94,23 +116,53 @@ class Cable:
         return await self._in_thread(go)
 
     async def is_esp(self, port: str) -> bool:
-        """A board with no firmware answers nothing, but esptool can still tell it is an ESP32."""
+        return await self.esp_chip(port) is not None
+
+    async def esp_chip(self, port: str) -> str | None:
+        """Which ESP this is -- "esp32s3", "esp32c3" -- or None if it is not one at all.
+
+        It used to answer yes/no, and the hub then flashed an ESP32-S3 image at whatever
+        had said yes. Plug in a C3 and esptool refuses with "This chip is ESP32-C3, not
+        ESP32-S3. Wrong chip argument?", which is a developer's sentence arriving on a wall
+        panel. The chip is right there in the same probe, so there is no reason to guess."""
         def go():
+            import io, contextlib, re as _re
+            buf = io.StringIO()
             try:
                 import esptool
-                esptool.main(["--port", port, "--connect-attempts", "2", "chip-id"])   # raises on anything that is not an ESP
-                return True
+                with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
+                    esptool.main(["--port", port, "--connect-attempts", "2", "chip-id"])
             except SystemExit as e:
-                return e.code in (0, None)
+                if e.code not in (0, None):
+                    log.debug("%s: not an ESP (exit %s)", port, e.code)
             except BaseException as e:      # esptool.FatalError, or a port that vanished
-                log.debug("%s: not an ESP (%s)", port, e); return False
+                log.debug("%s: not an ESP (%s)", port, e)
+            m = _re.search(r"Chip is (ESP32[\w-]*)", buf.getvalue())
+            if not m:
+                return None
+            # "ESP32-S3 (revision v0.2)" -> esp32s3, the name esptool wants back as --chip
+            return m.group(1).lower().replace("-", "")
         return await self._in_thread(go)
 
-    async def flash(self, port: str):
+    def image_for(self, chip: str | None) -> Path | None:
+        """The shipped image for this chip, if the house has one.
+
+        Releases are named per chip (esp32s3-ship.bin). A board the house has no image for is
+        not a failure of the board, and saying so is the difference between "that did not work"
+        and a sentence somebody can act on."""
+        if not chip:
+            return None
+        want = self.image.parent / f"{chip}-ship.bin"
+        return want if want.exists() else None
+
+    async def flash(self, port: str, chip: str = "esp32s3"):
+        image = self.image_for(chip)
+        if not image:
+            raise RuntimeError(f"no {chip} image")
         def go():
             import esptool
-            esptool.main(["--chip", "esp32s3", "--port", port, "--baud", "460800", "--before", "default-reset", "--after", "hard-reset",
-                          "write-flash", "-z", "--flash-mode", "dio", "--flash-freq", "80m", "--flash-size", "16MB", "0x0", str(self.image)])
+            esptool.main(["--chip", chip, "--port", port, "--baud", "460800", "--before", "default-reset", "--after", "hard-reset",
+                          "write-flash", "-z", "--flash-mode", "dio", "--flash-freq", "80m", "--flash-size", "16MB", "0x0", str(image)])
         await self._in_thread(go)
 
     async def write(self, port: str, cfg: dict) -> dict:
@@ -144,7 +196,8 @@ class Bridges:
         self.devdir = devdir
         self.job: dict | None = None
         self._seen: set[str] = set()          # ports present at the last look
-        self._dismissed: set[str] = set()     # "not mine": left alone until unplugged
+        self._dismissed: set[str] = set()     # "not mine": left alone until a person unplugs it
+        self._probing: set[str] = set()       # ports we are resetting right now, by asking
         self._task: asyncio.Task | None = None
         self._quiet: asyncio.Task | None = None   # the placing watch; see _placing_went_quiet
         self._sub: int | None = None
@@ -204,7 +257,9 @@ class Bridges:
         now = self._ports()
         new, gone = now - self._seen, self._seen - now
         self._seen = now
-        self._dismissed -= gone
+        # A port that went while we were resetting it did not really go: forgive only the
+        # ones a person actually pulled out.
+        self._dismissed -= (gone - self._probing)
         if self.job and self.job.get("port") in gone and self.job["state"] in ("knocking", "working"):
             # unplugged under us. Knocking: the offer is withdrawn. Working: that is a failure worth a sentence.
             if self.job["state"] == "knocking": self.job = None; self.hub._broadcast(json.dumps({"type": "bridge", "bridge": self.status()}))
@@ -216,15 +271,88 @@ class Bridges:
             asyncio.create_task(self._arrived(port))
 
     async def _arrived(self, port: str):
+        self._probing.add(port)               # anything its USB does until we are done is ours
+        try:
+            await self._probe(port)
+        finally:
+            self._probing.discard(port)
+
+    async def _probe(self, port: str):
         who = await self.cable.hello(port)
         if who:
-            if who["state"] == "set" and who["chip"] in self.pucks: return    # one of ours, visiting; nothing to do
+            if who["state"] == "set" and who["chip"] in self.pucks:
+                # A set-up puck the hub has seen before. Two quite different things wear that
+                # shape, and the difference is which mesh it carries.
+                #
+                # ON OUR OWN MESH it is one of ours, visiting, and there is nothing to set up
+                # -- but it may be one this hub never wrote down, which is how a hand-built
+                # puck stays invisible: the only way into `bridges` was the cable flow, and
+                # the cable flow skips exactly the pucks that do not need it.
+                if self._adopt_on_sight(who["chip"], who.get("fw"), plugged=True) \
+                        or self._on_our_mesh(who["chip"]) \
+                        or not (self.pucks.get(who["chip"]) or {}).get("net"):
+                    # ...and a puck that has not said which mesh it carries is UNKNOWN, not
+                    # foreign. One of ours that has simply not published yet would otherwise
+                    # be offered a rebuild it does not need, which is worse than waiting.
+                    return
+                # ON SOMEBODY ELSE'S MESH it is a working bridge for another network, and
+                # taking it over is not something to do because we can see it -- that would
+                # be acting on a puck a neighbour has on a shelf. Being plugged INTO THIS HUB
+                # is the one unambiguous way a person says "bring this one over", so that,
+                # and only that, is when it is offered.
+                log.info("bridge: %s carries another mesh and is on our cable -- offering it", who["chip"])
             self.job = {"state": "knocking", "port": port, "bare": False, "chip": who["chip"], "fw": who["fw"]}
-        elif await self.cable.is_esp(port):
-            self.job = {"state": "knocking", "port": port, "bare": True, "chip": None}
+        elif (silicon := await self.cable.esp_chip(port)):
+            if not self.cable.image_for(silicon):
+                # Knocking would be a lie: there is nothing to give it. Said once, named, and
+                # then left alone -- a board the house cannot use should not keep asking.
+                # The job exists only to carry the sentence: _set is a no-op without one.
+                self._dismiss_port(port)
+                self.job = {"state": "failed", "port": port, "bare": True, "chip": None, "silicon": silicon}
+                self._set("failed", text=f"That board is an {self._chip_words(silicon)}, and this house only has "
+                                         f"software for the bridge it ships. Nothing was written to it.")
+                return
+            self.job = {"state": "knocking", "port": port, "bare": True, "chip": None, "silicon": silicon}
         else:
             return
         if self.job: self._set("knocking")
+
+    @staticmethod
+    def _chip_words(silicon: str) -> str:
+        """esp32c3 -> ESP32-C3. The chip is the one piece of jargon worth keeping: it is
+        printed on the board, so a person can match it with their eyes."""
+        return silicon.upper().replace("ESP32", "ESP32-", 1).rstrip("-")
+
+    def _on_our_mesh(self, chip: str) -> bool:
+        p = self.pucks.get(chip) or {}
+        try: return bool(p.get("net")) and p["net"] == network_id(bytes.fromhex(self.keys()["netkey"]))
+        except Exception: return False
+
+    def _adopt_on_sight(self, chip: str, fw: str | None, plugged: bool = False) -> bool:
+        """Write down a working puck the hub can already see on its own network.
+
+        The test is evidence, not trust: it is online on this hub's broker, and the mesh it
+        says it carries is this hub's mesh. A puck on somebody ELSE's network fails that and
+        is left alone -- adopting one would be how a new switch ends up claimed onto a
+        neighbour's mesh, which is the thing _our_puck() exists to prevent."""
+        known = self.hub.settings.get("bridges") or {}
+        if chip in known:
+            return False
+        p = self.pucks.get(chip) or {}
+        # Online is the usual evidence that it is real and reachable. Sitting on this hub's
+        # own USB is stronger evidence than that, so it counts too.
+        if not (p.get("online") or plugged):
+            return False
+        try: ours = network_id(bytes.fromhex(self.keys()["netkey"]))
+        except Exception as e:
+            log.warning("bridge: cannot work out our own network id (%s)", e); return False
+        if p.get("net") != ours:
+            log.info("bridge: %s carries %s, not this house's %s -- left alone", chip, p.get("net"), ours)
+            return False
+        self.hub.settings.set(bridges={**known, chip: {"since": time.time(), "fw": fw, "seen": "broker"}})
+        self.hub.log.add("bridge", chip, None, "recognised", source="hub")
+        log.info("bridge: %s is on this house's mesh and working -- written down", chip)
+        return True
 
     # ---- the person's two answers ----
     async def adopt(self) -> dict:
@@ -232,10 +360,13 @@ class Bridges:
         self._task = asyncio.create_task(self._setup())
         return self.status()
 
+    def _dismiss_port(self, port: str) -> None:
+        self._dismissed.add(port)
+
     async def dismiss(self) -> dict:
         if self.job and self.job["state"] in ("knocking", "failed", "ready"):
             self._stop_quiet_watch()
-            if self.job.get("port"): self._dismissed.add(self.job["port"])
+            if self.job.get("port"): self._dismiss_port(self.job["port"])
             self.job = None
             self.hub._broadcast(json.dumps({"type": "bridge", "bridge": self.status()}))
         return self.status()
@@ -289,7 +420,7 @@ class Bridges:
         try:
             self._set("working", step="software")
             if j["bare"]:
-                await self.cable.flash(j["port"])
+                await self.cable.flash(j["port"], j.get("silicon") or "esp32s3")
                 who = await self.cable.hello(j["port"])
                 if not who: raise RuntimeError("It took the software but did not answer afterwards.")
                 j["chip"], j["fw"] = who["chip"], who["fw"]
@@ -353,6 +484,9 @@ class Bridges:
                 return
             if leaf == "status": p["online"] = payload == "online"
             elif leaf == "net": p["net"] = payload
+            # A puck does not have to be on the cable to be recognised -- the usual place for
+            # one is a charger behind a sofa. Both facts arrive here, so check as each lands.
+            if leaf in ("status", "net"): self._adopt_on_sight(chip, p.get("fw"))
             elif leaf == "proxy":
                 mm = re.search(r"rssi (-?\d+)", payload); p["rssi"] = int(mm.group(1)) if mm else None
             if self.job and self.job.get("chip") == chip and self.job["state"] in ("placing", "ready") and p.get("net"):

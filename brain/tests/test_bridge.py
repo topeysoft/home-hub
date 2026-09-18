@@ -11,7 +11,7 @@ import asyncio, json, tempfile, unittest
 from pathlib import Path
 
 from hub import bridge as bridge_mod
-from hub.bridge import Bridges
+from hub.bridge import Bridges, network_id
 from hub.settings import Settings
 
 
@@ -19,14 +19,23 @@ class FakeCable:
     """Scripted answers: what `hello` says per port, whether a silent port is an ESP, what write returns."""
     def __init__(self):
         self.hello_says = {}         # port -> dict | None
-        self.esp = set()
+        self.esp = set()             # ports that are a bare ESP the house has an image for
+        self.silicon = {}            # port -> chip name; anything in `esp` defaults to esp32s3
+        self.no_image_for = set()    # chips the house ships no software for
         self.flashed, self.written = [], []
         self.write_says = {"chip": "c8ebba", "fw": "0.2.0", "state": "set"}
         self.write_fails = None
 
     async def hello(self, port): return self.hello_says.get(port)
-    async def is_esp(self, port): return port in self.esp
-    async def flash(self, port): self.flashed.append(port); self.hello_says[port] = {"chip": "c8ebba", "fw": "0.2.0", "state": "blank"}
+    async def is_esp(self, port): return await self.esp_chip(port) is not None
+    async def esp_chip(self, port):
+        if port in self.silicon: return self.silicon[port]
+        return "esp32s3" if port in self.esp else None
+    def image_for(self, chip):
+        return None if (chip is None or chip in self.no_image_for) else f"/ship/{chip}-ship.bin"
+    async def flash(self, port, chip="esp32s3"):
+        self.flashed.append((port, chip))
+        self.hello_says[port] = {"chip": "c8ebba", "fw": "0.2.0", "state": "blank"}
     async def write(self, port, cfg):
         self.written.append((port, cfg))
         if self.write_fails: raise RuntimeError(self.write_fails)
@@ -197,7 +206,9 @@ class TheJob(Knocking):
     def test_a_bare_board_gets_its_software_first(self):
         p = self.knock(bare=True)
         run(self.adopt_and_finish())
-        self.assertEqual(self.cable.flashed, [p])
+        # the port AND the chip: flashing an S3 image at whatever turned up is the bug
+        # that put "This chip is ESP32-C3, not ESP32-S3" on somebody's wall panel
+        self.assertEqual(self.cable.flashed, [(p, "esp32s3")])
         self.assertEqual(self.b.status()["state"], "placing")
 
     def test_the_keys_are_made_once_and_kept(self):
@@ -380,3 +391,200 @@ class LettingASwitchIn(unittest.TestCase):
             out = run(b.let_in("aa" * 16, "bb" * 16))
             self.assertEqual(out["state"], "failed")
             self.assertIn("prove", out["text"])
+
+
+class ABoardTheHouseCannotUse(unittest.TestCase):
+    """Plugging in a bare ESP32-C3 when the house only ships an S3 image.
+
+    Both of these were found by plugging one in. The house said "That did not work. This chip
+    is ESP32-C3, not ESP32-S3. Wrong chip argument?" -- esptool's sentence, on a wall panel --
+    and then said it again every few seconds however many times it was dismissed."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.dev = Path(self.tmp.name) / "by-id"; self.dev.mkdir()
+        self.hub = FakeHub(self.tmp.name)
+        self.cable = FakeCable()
+        self.b = Bridges(self.hub, self.cable, devdir=self.dev)
+
+    def tearDown(self): self.tmp.cleanup()
+
+    def plug(self, name):
+        (self.dev / name).touch(); return str(self.dev / name)
+
+    async def settle(self):
+        await self.b.scan()
+        for _ in range(6): await asyncio.sleep(0)
+
+    def arrive_c3(self):
+        run(self.settle())                      # the first scan is the boot baseline
+        port = self.plug("usb-c3-board")
+        self.cable.hello_says[port] = None      # bare: nothing answers over the cable
+        self.cable.silicon[port] = "esp32c3"
+        self.cable.no_image_for.add("esp32c3")
+        run(self.settle())
+        return port
+
+    def test_it_does_not_offer_what_it_cannot_deliver(self):
+        """Knocking would be a lie -- there is nothing to give it."""
+        self.arrive_c3()
+        self.assertEqual(self.b.status()["state"], "failed")
+        self.assertEqual(self.cable.flashed, [])
+
+    def test_it_names_the_chip_in_words_a_person_can_check(self):
+        """The chip is printed on the board, so it is the one piece of jargon worth keeping.
+        esptool's own phrasing is not."""
+        self.arrive_c3()
+        said = self.b.status()["text"]
+        self.assertIn("ESP32-C3", said)
+        self.assertNotIn("argument", said.lower())
+        self.assertIn("Nothing was written to it", said)
+
+    def test_it_says_so_once_and_then_leaves_it_alone(self):
+        """The bug that made it unbearable: dismissing it did not stick, because probing a
+        board re-enumerates its USB, the port looked unplugged, and the dismissal was
+        forgiven -- so it knocked again faster than anybody could say no."""
+        port = self.arrive_c3()
+        run(self.b.dismiss())
+        self.assertEqual(self.b.status()["state"], "none")
+        (self.dev / "usb-c3-board").unlink()     # the re-enumeration, mid-probe
+        self.b._probing.add(port)
+        run(self.settle())
+        self.plug("usb-c3-board"); self.b._probing.discard(port)
+        run(self.settle())
+        self.assertEqual(self.b.status()["state"], "none")
+
+    def test_but_a_person_pulling_it_out_is_still_a_fresh_offer(self):
+        """The other half: a dismissal that outlives an actual unplug is a board nobody can
+        ever offer again."""
+        self.arrive_c3()
+        run(self.b.dismiss())
+        (self.dev / "usb-c3-board").unlink(); run(self.settle())   # no probe in flight
+        self.cable.no_image_for.clear()                            # ...and this time we can use it
+        port = self.plug("usb-c3-board")
+        self.cable.hello_says[port] = None
+        self.cable.silicon[port] = "esp32c3"
+        run(self.settle())
+        self.assertEqual(self.b.status()["state"], "knocking")
+
+
+class RecognisingAPuckItCanSee(unittest.TestCase):
+    """A working bridge the hub never wrote down.
+
+    The only way into `bridges` was the cable flow -- and the cable flow deliberately skips a
+    puck that is already set up. So a puck built by hand stayed invisible for ever: the panel's
+    Add a wall switch refused with "No bridge of this house is on" while the bridge sat there
+    on the broker doing its job. This is the way in that was missing."""
+
+    def make(self, tmp, *, net=None, online=True):
+        hub = FakeHub(tmp)
+        b = Bridges(hub, FakeCable())
+        hub.ha.cb = b._on_mqtt
+        ours = network_id(bytes.fromhex(b.keys()["netkey"]))
+        b.pucks["c8ebba"] = {"online": online, "net": net if net is not None else ours}
+        return hub, b, ours
+
+    def test_the_network_id_is_the_one_the_puck_publishes(self):
+        """k3(netkey), the same eight bytes a puck puts on .../net. Checked against a real
+        one: the house's own keys derive 7dcdd6f322c30af4, which is what the puck says."""
+        key = bytes.fromhex("7dd7364cbf17c7fc9f6c9c4b6d8a5b9e")
+        self.assertEqual(len(network_id(key)), 16)
+        self.assertEqual(network_id(key), network_id(key))          # stable
+        self.assertNotEqual(network_id(key), network_id(bytes(16)))  # and key-dependent
+
+    def test_a_working_puck_on_our_mesh_is_written_down(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            hub, b, _ = self.make(tmp)
+            self.assertTrue(b._adopt_on_sight("c8ebba", "0.3.1"))
+            self.assertIn("c8ebba", hub.settings.get("bridges"))
+            self.assertIsNotNone(b._our_puck())      # which is what unblocks the panel
+
+    def test_a_puck_on_somebody_elses_mesh_is_left_alone(self):
+        """The whole reason _our_puck exists: adopting this one is how a new switch ends up
+        claimed onto a neighbour's network."""
+        with tempfile.TemporaryDirectory() as tmp:
+            hub, b, _ = self.make(tmp, net="3deef9825e444955")
+            self.assertFalse(b._adopt_on_sight("c8ebba", "0.3.1"))
+            self.assertEqual(hub.settings.get("bridges") or {}, {})
+            self.assertIsNone(b._our_puck())
+
+    def test_an_offline_puck_is_not_evidence(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            hub, b, _ = self.make(tmp, online=False)
+            self.assertFalse(b._adopt_on_sight("c8ebba", "0.3.1"))
+
+    def test_it_happens_off_the_broker_with_no_cable_in_it(self):
+        """The usual place for a puck is a charger behind a sofa, not the hub's USB."""
+        with tempfile.TemporaryDirectory() as tmp:
+            hub = FakeHub(tmp)
+            b = Bridges(hub, FakeCable())
+            hub.ha.cb = b._on_mqtt
+            ours = network_id(bytes.fromhex(b.keys()["netkey"]))
+            b._on_mqtt({"topic": "mesh/bridge/aa11bb/net", "payload": ours})
+            b._on_mqtt({"topic": "mesh/bridge/aa11bb/status", "payload": "online"})
+            self.assertIn("aa11bb", hub.settings.get("bridges") or {})
+
+    def test_it_is_written_down_once(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            hub, b, _ = self.make(tmp)
+            self.assertTrue(b._adopt_on_sight("c8ebba", "0.3.1"))
+            self.assertFalse(b._adopt_on_sight("c8ebba", "0.3.1"))
+            self.assertEqual(len([r for r in hub.log.rows if "recognised" in str(r)]), 1)
+
+
+class WhoseMeshAndWhereItIs(unittest.TestCase):
+    """The rule, stated once: being SEEN is not consent, being PLUGGED IN is.
+
+    On our own mesh, a working puck is recognised wherever it happens to be -- that is
+    evidence and nothing is taken over. On somebody else's mesh it is a working bridge for
+    another house, and the only thing that makes claiming it intentional is a person putting
+    it on this hub's cable."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.dev = Path(self.tmp.name) / "by-id"; self.dev.mkdir()
+        self.hub = FakeHub(self.tmp.name)
+        self.cable = FakeCable()
+        self.b = Bridges(self.hub, self.cable, devdir=self.dev)
+        self.hub.ha.cb = self.b._on_mqtt
+        self.ours = network_id(bytes.fromhex(self.b.keys()["netkey"]))
+        self.theirs = "3deef9825e444955"
+
+    def tearDown(self): self.tmp.cleanup()
+
+    async def settle(self):
+        await self.b.scan()
+        for _ in range(6): await asyncio.sleep(0)
+
+    def plug_in(self, chip):
+        run(self.settle())
+        port = str(self.dev / "usb-visitor"); (self.dev / "usb-visitor").touch()
+        self.cable.hello_says[port] = {"chip": chip, "fw": "0.3.1", "state": "set"}
+        run(self.settle())
+
+    def test_a_foreign_puck_on_the_cable_is_offered(self):
+        """Somebody carried it to the hub and plugged it in. That is the ask."""
+        self.b.pucks["ff00ee"] = {"online": True, "net": self.theirs}
+        self.plug_in("ff00ee")
+        self.assertEqual(self.b.status()["state"], "knocking")
+
+    def test_a_foreign_puck_nobody_touched_is_left_entirely_alone(self):
+        """Seen on the broker, on another mesh, no cable. Taking it over here would be acting
+        on a puck a neighbour has on a shelf."""
+        self.b._on_mqtt({"topic": "mesh/bridge/ff00ee/net", "payload": self.theirs})
+        self.b._on_mqtt({"topic": "mesh/bridge/ff00ee/status", "payload": "online"})
+        self.assertEqual(self.b.status()["state"], "none")
+        self.assertEqual(self.hub.settings.get("bridges") or {}, {})
+
+    def test_our_own_puck_on_the_cable_is_recognised_not_rebuilt(self):
+        self.b.pucks["c8ebba"] = {"online": True, "net": self.ours}
+        self.plug_in("c8ebba")
+        self.assertEqual(self.b.status()["state"], "none")      # nothing to set up
+        self.assertIn("c8ebba", self.hub.settings.get("bridges"))
+
+    def test_a_puck_that_has_not_said_which_mesh_is_unknown_not_foreign(self):
+        """One of ours that has simply not published yet must not be offered a rebuild."""
+        self.b.pucks["c8ebba"] = {"online": True}               # no net yet
+        self.plug_in("c8ebba")
+        self.assertEqual(self.b.status()["state"], "none")
+        self.assertEqual(self.hub.settings.get("bridges") or {}, {})
