@@ -15,7 +15,7 @@ mesh keys and can now **read and control the real wall switches directly over BL
 | Read motion (PIR) | vendor field **`0x13`**: a walk-past adds ~5 counts on top of a baseline that tracks the load (~2 lamp off, ~130 lamp full); the bridge learns the baseline per switch | ✅ |
 | Write on/off | `Generic OnOff Set` | ✅ light obeyed |
 | Write dimming | `Generic Level Set` on a **0–1000 scale** (not SIG −32768…32767) | ✅ full→2%→full, confirmed |
-| Restore a reset switch to a dimmer | provision + bind (incl. vendor `0x0820/0x0001`) + write config + power-cycle | ✅ visually confirmed on `0x0005` |
+| Restore a reset switch to a dimmer | provision + bind (incl. vendor `0x0820/0x0001`) + write config; **power cycle only if it does not dim** | ✅ confirmed; two later adoptions needed no boot at all |
 
 ## The keys (the whole game)
 

@@ -729,7 +729,7 @@ everything":
 
 | Setting | Needs a boot? | Evidence |
 |---|---|---|
-| Load type (dimming) | **Yes**, well attested | `0x0003`: config written repeatedly, `Level Set` stayed inert through all of it, worked after a power cycle |
+| Load type (dimming) | **Usually not** — see below | `0x0003` needed one; two later adoptions did not |
 | Model publication | **Sometimes** | `0x0004`, an already-established node: silent until power was cut. `0x0006`, freshly provisioned: published at once |
 | Partner address `0x08` | **No**, on the evidence | rewritten on `0x0004` and the press reached its new partner with no boot |
 
@@ -1173,3 +1173,29 @@ read reply carries a trailing byte that is *not* part of the value. `vendor_writ
 reply as the restore hint, and writing it back sent one byte too many — which the switch dropped in
 silence, exactly as the spec warns a malformed write will. Two restore attempts read back unchanged before
 the cause was spotted. The tool now strips the trailing byte and shows both forms.
+
+
+### The power cycle is a fallback, not a step
+
+*18 September. Corrected by the person who lives here, twice over, and it removes a step from the
+product rather than adding one.*
+
+This document has said since the recipe was written that the load type is read only at boot, so an
+adopted switch cannot dim until it is power cycled. Every flow built on it — `restore_switch.py`, the
+STATUS summary, the migration boards — ends by telling somebody to go and pull a tab.
+
+**Two adoptions since have dimmed immediately, with no power cycle at all.** The bedroom switch
+claimed today (`0x0007`, config replayed from `capture-0005`) took brightness commands by hand
+straight after adoption, and the same was true of an adoption the day before.
+
+So the claim is not retired, it is demoted. `0x0003` genuinely did need a boot: the config was written
+repeatedly and `Level Set` stayed inert through all of it until power was cut. Something separates
+that case from these two and nobody has isolated what — the difference may be the same
+fresh-join-versus-reconfigure split that the model publication shows in the table above, or it may be
+something else entirely.
+
+**What the recipe should say, and what the tools now say:** adopt, then try it. If it dims, it is
+done, and nobody is sent to a wall. If it does not, pull the tab out and push it back, and try again.
+That is the correct shape for a step that is *sometimes* needed and cheap when it is — and it is how
+the person with the lamp in front of them described it, unprompted, which is the second time tonight
+that has beaten an instrument.
