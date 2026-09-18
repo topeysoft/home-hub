@@ -95,6 +95,22 @@
       "w": 1440,
       "h": 900,
       "title": "Afterwards \u2014 adding a third, and undoing a pair"
+    },
+    {
+      "file": "Down.dc.html",
+      "x": 3120,
+      "y": 5400,
+      "w": 1440,
+      "h": 900,
+      "title": "Taking the panel down \u2014 what it was also doing"
+    },
+    {
+      "file": "Choose.dc.html",
+      "x": 0,
+      "y": 6480,
+      "w": 1440,
+      "h": 900,
+      "title": "Keep the panel, or leave it \u2014 the first question"
     }
   ],
   "annotations": [
@@ -181,6 +197,20 @@
       "y": 5280,
       "w": 700,
       "text": "AFTERWARDS -- FROM THE LIGHT ITSELF\n\nSetup catches the one moment somebody is holding two switches. Everything else happens later: a third switch added when a back door is fitted, a pair undone because it was wrong, a switch replaced when it dies. All of it belongs on the light's own screen, because the light is what a person goes looking for. There is no list of switches in this product and there should not be one -- a loadless companion shown as a device is a light on the wall that does nothing.\n\nTHREE AND FOUR ARE THE SAME SHAPE. Pairing is one write on the companion, naming the main's address, so a multi-way is a star: every extra switch points at the one with the lamp. Nothing about the main changes when a third is added, which is why board 2 can honestly say a fourth changes nothing either.\n\nUNTESTED, AND IT MATTERS HERE MORE THAN ANYWHERE. We have proven one pair. The main appears to notify only whoever last pressed it, which is runtime state rather than stored configuration -- so in a four-way the other companions may hold a stale idea of the light, and if their own plate indicates state, two of the three ends would show the wrong thing. The hub does not care (it reads the main's broadcast), but a person standing at the back door does. A three-switch test is one afternoon and it should happen before this board becomes code.\n\nTAKING ONE OFF HAS TO SAY WHAT BECOMES OF IT. Unpair a companion and it is a plate that does nothing -- so the sheet offers it a job in the same breath. \"Make it a button\" is not speculative: a companion reports tap (0403), slide as a signed delta, and a touch boundary, which is enough to run a scene on a tap and dim a group on a slide. It is decoded and unbuilt, and it is the reason a freed companion is worth keeping rather than forgetting.\n\nREPLACING A DEAD ONE is the same flow with the removal and the add run back to back, and it is the case this house will hit first, since two panels have already died."
+    },
+    {
+      "id": "down",
+      "x": 3120,
+      "y": 5280,
+      "w": 700,
+      "text": "TAKING THE PANEL DOWN -- WHAT IT WAS ALSO DOING\n\nEvery other board here treats the console as a thing to be replaced. It is also a switch on a wall. The kitchen table light in this house is a three-way whose third position is the panel's right-hand slider -- confirmed by the person who lives here after a capture pointed at it. Nothing in the product knew that, and the first anyone would learn of it is a light that has quietly lost an end.\n\nTWO LOSSES, AND ONLY ONE IS RECOVERABLE. The slider itself goes: that is physical and no software fixes it, so board 1 says it plainly, before the screwdriver rather than after. But a SECOND switch dies with it -- the wall plate whose 0x08 names a panel element has nothing to announce to once the panel is off, and a switch that announces nothing is wired to nothing. That one is one write to fix: point it at the switch the lamp is wired to, and the pair then works switch-to-switch with the house out of the path.\n\nWHICH IS WHY THIS IS A SCREEN AND NOT A RELEASE NOTE. The fix has to happen BEFORE the panel comes off, because afterwards the house cannot tell which light that orphaned switch belonged to -- its only record of the association is a partner address that no longer answers. Do it in the wrong order and the information needed to repair it is gone with the hardware.\n\nAND THE HOLE IS NOT A HOLE -- IT IS TWO GANGS. The panel occupies a two-gang box, and the plan for this house is to fit two ordinary Brilliant switches in its place. That is a better ending than the blank plate this board first drew: every position the panel held comes back as a real switch, on our own network, and each one is added through the flow that already exists. The kitchen ends up a genuine three-way -- one switch with the lamp, two companions pointing at it -- with no panel and no hub anywhere in the path. Strictly better than it is today.\n\nWHICH MAKES THE ORDERING EVEN MORE LOAD-BEARING. The orphan fix still has to be written before the panel comes off, because the association is only recorded in a partner address that stops answering. But the new switches then arrive into a light the house still understands, and 'add another switch' does the rest.\n\nWHAT IS NOT KNOWN, AND IT DECIDES WHETHER THE FIX RUNS ONCE OR TWICE. Whether the two gangs serve ONE light or TWO. 0x0014 announces to 0x0012 and 0x0016 announces to 0x0002 -- two different panel elements. If each gang is its own light, then there are two orphan fixes and two replacement switches to pair, and this screen must enumerate them. The census says it has no vendor store, like 0x0012, which is what a panel element looks like. Worth one read before this ships, because the screen has to enumerate every light the panel takes part in, not just the one we stumbled into."
+    },
+    {
+      "id": "choose",
+      "x": 0,
+      "y": 6360,
+      "w": 900,
+      "text": "KEEP THE PANEL, OR LEAVE IT -- AND WHY IT IS NOT A FORK\n\nTwo customers arrive at this product. One wants off Brilliant entirely and does not mind the panel coming out of the wall. The other has a panel whose screen still works, likes it, and wants the house to know about their switches without anything being disturbed. Every other board here was drawn for the first one.\n\nTHE SECOND IS EASIER THAN IT LOOKS, BECAUSE NOTHING HAS TO MOVE. The hub does not need a switch on ITS network to control it. With the panel network's keys a puck joins that network as one more controller, alongside the panel, and every switch appears in the house exactly as it is -- nothing reset, nothing rewired, nothing to undo. That is what the bridge in this repo already does; it was built as a stopgap and it is actually a product.\n\nSO THE FORK IS REALLY AN ORDER. Joining is reversible and costs nothing; migrating is the better end state and can happen later, a light at a time. Only someone whose panel has already died has a single road -- and they are not asked to choose, because the question they CAN answer ('does your screen still come on?') routes them without their ever seeing a choice. That is why board 1 asks about a screen and not about networks.\n\nWHAT KEEPING IT COSTS, SAID ON THE SCREEN RATHER THAN IN A FOOTNOTE:\n  * STATE ARRIVES BY POLLING. Changing what a switch publishes needs its device key, which the panel holds and we will never have. A hand press shows up when we next ask. Switches already publishing to all-nodes are immediate; the rest lag.\n  * PAIRING CAN STILL BE CHANGED. 0x08 and 0x1b are vendor fields and answer to the AppKey alone, so multi-way can be rearranged even on their network. That was a surprise and it is worth leaning on.\n  * YOU ARE A GUEST. It rests on that panel staying alive. Two have died in this house already.\n\nAND ONE COMBINATION NOBODY CAN HAVE: keep the panel AND move a switch over. A node cannot be evicted from the panel's mesh and still be in it, so every light that comes across DISAPPEARS from the panel's screen. Board 3 says exactly that, because it is the thing a person would otherwise discover by finding a hole in a screen they liked.\n\nTHE OPEN QUESTION THAT DECIDES WHETHER ANY OF THIS SHIPS. The keys were captured here by flashing a recorder and adding it through THE BRILLIANT APP. Scenario two's whole premise is a customer whose panel still works -- so does that provisioning still succeed with Brilliant's servers unreachable? If it needs their cloud, this path has a shelf life set by somebody else's decisions, and that belongs in the decision before anybody builds it."
     }
   ],
   "launch": {
@@ -210,6 +240,10 @@
     "which",
     "Which.dc.html",
     "Later.dc.html",
-    "later"
+    "later",
+    "down",
+    "Down.dc.html",
+    "choose",
+    "Choose.dc.html"
   ]
 }
