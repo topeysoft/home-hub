@@ -530,3 +530,61 @@ class RecognisingAPuckItCanSee(unittest.TestCase):
             self.assertTrue(b._adopt_on_sight("c8ebba", "0.3.1"))
             self.assertFalse(b._adopt_on_sight("c8ebba", "0.3.1"))
             self.assertEqual(len([r for r in hub.log.rows if "recognised" in str(r)]), 1)
+
+
+class WhoseMeshAndWhereItIs(unittest.TestCase):
+    """The rule, stated once: being SEEN is not consent, being PLUGGED IN is.
+
+    On our own mesh, a working puck is recognised wherever it happens to be -- that is
+    evidence and nothing is taken over. On somebody else's mesh it is a working bridge for
+    another house, and the only thing that makes claiming it intentional is a person putting
+    it on this hub's cable."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.dev = Path(self.tmp.name) / "by-id"; self.dev.mkdir()
+        self.hub = FakeHub(self.tmp.name)
+        self.cable = FakeCable()
+        self.b = Bridges(self.hub, self.cable, devdir=self.dev)
+        self.hub.ha.cb = self.b._on_mqtt
+        self.ours = network_id(bytes.fromhex(self.b.keys()["netkey"]))
+        self.theirs = "3deef9825e444955"
+
+    def tearDown(self): self.tmp.cleanup()
+
+    async def settle(self):
+        await self.b.scan()
+        for _ in range(6): await asyncio.sleep(0)
+
+    def plug_in(self, chip):
+        run(self.settle())
+        port = str(self.dev / "usb-visitor"); (self.dev / "usb-visitor").touch()
+        self.cable.hello_says[port] = {"chip": chip, "fw": "0.3.1", "state": "set"}
+        run(self.settle())
+
+    def test_a_foreign_puck_on_the_cable_is_offered(self):
+        """Somebody carried it to the hub and plugged it in. That is the ask."""
+        self.b.pucks["ff00ee"] = {"online": True, "net": self.theirs}
+        self.plug_in("ff00ee")
+        self.assertEqual(self.b.status()["state"], "knocking")
+
+    def test_a_foreign_puck_nobody_touched_is_left_entirely_alone(self):
+        """Seen on the broker, on another mesh, no cable. Taking it over here would be acting
+        on a puck a neighbour has on a shelf."""
+        self.b._on_mqtt({"topic": "mesh/bridge/ff00ee/net", "payload": self.theirs})
+        self.b._on_mqtt({"topic": "mesh/bridge/ff00ee/status", "payload": "online"})
+        self.assertEqual(self.b.status()["state"], "none")
+        self.assertEqual(self.hub.settings.get("bridges") or {}, {})
+
+    def test_our_own_puck_on_the_cable_is_recognised_not_rebuilt(self):
+        self.b.pucks["c8ebba"] = {"online": True, "net": self.ours}
+        self.plug_in("c8ebba")
+        self.assertEqual(self.b.status()["state"], "none")      # nothing to set up
+        self.assertIn("c8ebba", self.hub.settings.get("bridges"))
+
+    def test_a_puck_that_has_not_said_which_mesh_is_unknown_not_foreign(self):
+        """One of ours that has simply not published yet must not be offered a rebuild."""
+        self.b.pucks["c8ebba"] = {"online": True}               # no net yet
+        self.plug_in("c8ebba")
+        self.assertEqual(self.b.status()["state"], "none")
+        self.assertEqual(self.hub.settings.get("bridges") or {}, {})

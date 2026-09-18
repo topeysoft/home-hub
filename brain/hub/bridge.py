@@ -281,12 +281,26 @@ class Bridges:
         who = await self.cable.hello(port)
         if who:
             if who["state"] == "set" and who["chip"] in self.pucks:
-                # One of ours, visiting. Nothing to set up -- but it may be a puck this hub
-                # has never written down, which is how a hand-built one stays invisible: the
-                # only way into `bridges` used to be the cable flow, and the cable flow skips
-                # exactly the pucks that do not need it. Adopt it on the evidence instead.
-                self._adopt_on_sight(who["chip"], who.get("fw"))
-                return
+                # A set-up puck the hub has seen before. Two quite different things wear that
+                # shape, and the difference is which mesh it carries.
+                #
+                # ON OUR OWN MESH it is one of ours, visiting, and there is nothing to set up
+                # -- but it may be one this hub never wrote down, which is how a hand-built
+                # puck stays invisible: the only way into `bridges` was the cable flow, and
+                # the cable flow skips exactly the pucks that do not need it.
+                if self._adopt_on_sight(who["chip"], who.get("fw"), plugged=True) \
+                        or self._on_our_mesh(who["chip"]) \
+                        or not (self.pucks.get(who["chip"]) or {}).get("net"):
+                    # ...and a puck that has not said which mesh it carries is UNKNOWN, not
+                    # foreign. One of ours that has simply not published yet would otherwise
+                    # be offered a rebuild it does not need, which is worse than waiting.
+                    return
+                # ON SOMEBODY ELSE'S MESH it is a working bridge for another network, and
+                # taking it over is not something to do because we can see it -- that would
+                # be acting on a puck a neighbour has on a shelf. Being plugged INTO THIS HUB
+                # is the one unambiguous way a person says "bring this one over", so that,
+                # and only that, is when it is offered.
+                log.info("bridge: %s carries another mesh and is on our cable -- offering it", who["chip"])
             self.job = {"state": "knocking", "port": port, "bare": False, "chip": who["chip"], "fw": who["fw"]}
         elif (silicon := await self.cable.esp_chip(port)):
             if not self.cable.image_for(silicon):
@@ -309,7 +323,12 @@ class Bridges:
         printed on the board, so a person can match it with their eyes."""
         return silicon.upper().replace("ESP32", "ESP32-", 1).rstrip("-")
 
-    def _adopt_on_sight(self, chip: str, fw: str | None) -> bool:
+    def _on_our_mesh(self, chip: str) -> bool:
+        p = self.pucks.get(chip) or {}
+        try: return bool(p.get("net")) and p["net"] == network_id(bytes.fromhex(self.keys()["netkey"]))
+        except Exception: return False
+
+    def _adopt_on_sight(self, chip: str, fw: str | None, plugged: bool = False) -> bool:
         """Write down a working puck the hub can already see on its own network.
 
         The test is evidence, not trust: it is online on this hub's broker, and the mesh it
@@ -320,7 +339,9 @@ class Bridges:
         if chip in known:
             return False
         p = self.pucks.get(chip) or {}
-        if not p.get("online"):
+        # Online is the usual evidence that it is real and reachable. Sitting on this hub's
+        # own USB is stronger evidence than that, so it counts too.
+        if not (p.get("online") or plugged):
             return False
         try: ours = network_id(bytes.fromhex(self.keys()["netkey"]))
         except Exception as e:
