@@ -1,6 +1,7 @@
 #include "pb_gatt.h"
 
 static NimBLEUUID SVC_PROV((uint16_t)0x1827);
+static NimBLEUUID SVC_PROXY((uint16_t)0x1828);
 static NimBLEUUID CH_PROV_IN("00002adb-0000-1000-8000-00805f9b34fb");
 static NimBLEUUID CH_PROV_OUT("00002adc-0000-1000-8000-00805f9b34fb");
 
@@ -72,10 +73,13 @@ static bool send_pdu(NimBLERemoteCharacteristic *in, uint16_t mtu,
     return true;
 }
 
-// One scan, every unclaimed switch it heard, sorted strongest first. Both the
-// list and the by-UUID lookup come from here so there is one place that knows
-// what the service data looks like.
-static size_t scan_unclaimed(uint32_t ms, Unclaimed *out, size_t max) {
+// One scan, everything it heard, sorted strongest first. Every lookup in this
+// file comes through here so there is exactly one place that knows what a
+// Brilliant switch's advertisement looks like.
+//
+// `our_netid` may be null when the caller only wants claimable switches, in
+// which case a claimed one is reported as Foreign rather than wrongly as Ours.
+static size_t scan_nearby(uint32_t ms, const uint8_t *our_netid, Nearby *out, size_t max) {
     NimBLEScan *scan = NimBLEDevice::getScan();
     scan->setActiveScan(true);
     NimBLEScanResults found = scan->start(ms / 1000, false);
@@ -84,30 +88,43 @@ static size_t scan_unclaimed(uint32_t ms, Unclaimed *out, size_t max) {
         NimBLEAdvertisedDevice d = found.getDevice(i);
         if (!d.haveServiceData()) continue;
 
-        // The Device UUID is the first 16 bytes of the Mesh Provisioning Service
-        // Data; the two after it are OOB info, which we do not need because the
-        // QR -- when there is one -- already told us the secret.
-        std::string sd;
+        Nearby row;
         bool got = false;
         for (int k = 0; k < (int)d.getServiceDataCount(); k++) {
-            if (d.getServiceDataUUID(k).equals(SVC_PROV)) {
-                sd = d.getServiceData(k);
+            const NimBLEUUID u = d.getServiceDataUUID(k);
+            const std::string sd = d.getServiceData(k);
+
+            // Unprovisioned: the Device UUID is the first 16 bytes, and the two
+            // after it are OOB info we do not need -- the QR, when there is one,
+            // already told us the secret.
+            if (u.equals(SVC_PROV) && sd.size() >= 16) {
+                row.state = Nearby::Unclaimed;
+                memcpy(row.uuid, sd.data(), 16);
+                got = true;
+                break;
+            }
+            // Provisioned: a Network ID beacon, type 0x00, then eight bytes of
+            // k3(netkey). Anything else under 0x1828 is a Node Identity beacon,
+            // which is per-node and says nothing about whose network it is on.
+            if (u.equals(SVC_PROXY) && sd.size() >= 9 && sd[0] == 0x00) {
+                memcpy(row.netid, sd.data() + 1, 8);
+                row.state = (our_netid && memcmp(row.netid, our_netid, 8) == 0)
+                                ? Nearby::Ours : Nearby::Foreign;
                 got = true;
                 break;
             }
         }
-        if (!got || sd.size() < 16) continue;
+        if (!got) continue;
 
-        out[n].addr = d.getAddress();
-        memcpy(out[n].uuid, sd.data(), 16);
-        out[n].rssi = d.getRSSI();
-        out[n].found = true;
-        n++;
+        row.addr = d.getAddress();
+        row.rssi = d.getRSSI();
+        row.found = true;
+        out[n++] = row;
     }
     scan->clearResults();
 
     for (size_t i = 1; i < n; i++) {         // strongest first: the one nearest the
-        Unclaimed key = out[i];              // panel is the likeliest to be theirs,
+        Nearby key = out[i];                 // panel is the likeliest to be theirs,
         size_t j = i;                        // and it is only an ordering, not a choice
         while (j > 0 && out[j - 1].rssi < key.rssi) { out[j] = out[j - 1]; j--; }
         out[j] = key;
@@ -115,22 +132,32 @@ static size_t scan_unclaimed(uint32_t ms, Unclaimed *out, size_t max) {
     return n;
 }
 
-size_t pb_gatt_find_all(uint32_t ms, Unclaimed *out, size_t max) {
-    return scan_unclaimed(ms, out, max);
+size_t pb_gatt_survey(uint32_t ms, const uint8_t our_netid[8], Nearby *out, size_t max) {
+    return scan_nearby(ms, our_netid, out, max);
 }
 
-Unclaimed pb_gatt_find(uint32_t ms, const uint8_t *want_uuid) {
-    Unclaimed all[8];
-    const size_t n = scan_unclaimed(ms, all, 8);
-    if (!want_uuid) return n ? all[0] : Unclaimed();
+size_t pb_gatt_find_all(uint32_t ms, Nearby *out, size_t max) {
+    Nearby all[12];
+    const size_t seen = scan_nearby(ms, nullptr, all, 12);
+    size_t n = 0;
+    for (size_t i = 0; i < seen && n < max; i++) {
+        if (all[i].state == Nearby::Unclaimed) out[n++] = all[i];
+    }
+    return n;
+}
+
+Nearby pb_gatt_find(uint32_t ms, const uint8_t *want_uuid) {
+    Nearby all[12];
+    const size_t n = pb_gatt_find_all(ms, all, 12);
+    if (!want_uuid) return n ? all[0] : Nearby();
     for (size_t i = 0; i < n; i++) {
         if (memcmp(all[i].uuid, want_uuid, 16) == 0) return all[i];
     }
-    return Unclaimed();                       // the code named a switch we cannot hear
+    return Nearby();                          // the code named a switch we cannot hear
 }
 
-bool pb_gatt_blink(const Unclaimed &who, uint8_t seconds) {
-    if (!who.found || seconds == 0) return false;
+bool pb_gatt_blink(const Nearby &who, uint8_t seconds) {
+    if (!who.found || who.state != Nearby::Unclaimed || seconds == 0) return false;
     NimBLEClient *cli = NimBLEDevice::createClient();
     bool ok = false;
     do {
@@ -153,8 +180,10 @@ bool pb_gatt_blink(const Unclaimed &who, uint8_t seconds) {
     return ok;
 }
 
-bool pb_gatt_provision(const Unclaimed &who, Provisioner &p, uint32_t timeout_ms) {
-    if (!who.found) return false;
+bool pb_gatt_provision(const Nearby &who, Provisioner &p, uint32_t timeout_ms) {
+    // A claimed switch has no provisioning service to talk to; refusing here is
+    // clearer than a connection that succeeds and then finds nothing.
+    if (!who.found || who.state != Nearby::Unclaimed) return false;
     rx_ready = false;
     rx_len = 0;
     sar_len = 0;
