@@ -31,3 +31,6 @@ brilliant/dfu-probe/.pio
 brilliant/mesh-provisionee/.pio/
 brilliant/tools/snapshot-*.json
 brilliant/tools/originals-*.json
+brilliant/tools/capture-*.json
+brilliant/tools/pairs-*.json
+brilliant/tools/plan-*.json
