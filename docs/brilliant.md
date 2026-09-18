@@ -721,8 +721,22 @@ looking for a different cause. Proven on `0x0004`: set to `0xffff` and verified 
 nothing at all through a hand pressing it repeatedly; the moment power was cut and restored it broadcast its
 heartbeat on its own, the first unsolicited message it had ever sent.
 
-So the power cycle is not a step that applies the load type. **It is the step that applies everything written
-in sections 3 and 4**, and nothing written there can be assumed live until it has happened.
+**But it is NOT required for everything, and an earlier version of this section said it was.** Migrating the
+stairway load, its publication was set during adoption and it published immediately, with no power cycle at all
+— and the companion's rewritten `0x08` took effect live too. So the honest rule is narrower than "boot applies
+everything":
+
+| Setting | Needs a boot? | Evidence |
+|---|---|---|
+| Load type (dimming) | **Yes**, well attested | `0x0003`: config written repeatedly, `Level Set` stayed inert through all of it, worked after a power cycle |
+| Model publication | **Sometimes** | `0x0004`, an already-established node: silent until power was cut. `0x0006`, freshly provisioned: published at once |
+| Partner address `0x08` | **No**, on the evidence | rewritten on `0x0004` and the press reached its new partner with no boot |
+
+The difference between the two publication cases may be *fresh join versus reconfiguring an established node* —
+that is the only structural difference we can point at — or the `0x0004` case may have had a cause never
+isolated. Treat a boot as **cheap insurance that costs one trip to the switch**, not as a step whose omission
+means the write failed: readback tells you the value is stored, and this table tells you when stored is not yet
+live.
 
 ### 6. Verify
 
