@@ -61,6 +61,14 @@ class Puck:
         self.s = open_port(port)
         self.s.reset_input_buffer()
 
+    def close(self) -> None:
+        """Let go of the port. esptool wants it exclusively, and a Puck left open is why the first
+        upgrade attempt died with "multiple access on port"."""
+        try:
+            self.s.close()
+        except Exception:
+            pass
+
     def ask(self, line: str, wait: float = 3.0) -> str:
         """Send one line, return the first line back that is an answer (the firmware's own log is noise)."""
         self.s.write((line + "\n").encode())
@@ -205,13 +213,25 @@ def upgrade(port: str) -> None:
         sys.exit(f"{img.name} does not match its .json ({got[:12]} vs {meta['sha256'][:12]}); "
                  "rebuild with tools/build-bridge.sh")
 
-    try:
-        who = Puck(port).hello()
-        print(f"puck {who['chip']} fw {who['fw']} ({who['state']}) -> fw {meta['fw']}")
-        was_set = who["state"] == "set"
-    except (TimeoutError, RuntimeError, serial.SerialException, OSError):
-        print(f"nothing answered on the cable; flashing anyway -> fw {meta['fw']}")
-        was_set = False
+    # Ask more than once. A puck that was just reset by something else is briefly deaf, and treating
+    # that as "blank" would quietly skip the check that its config survived -- which is the one thing
+    # this command exists to get right.
+    was_set = False
+    for attempt in range(3):
+        try:
+            probe = Puck(port)
+            who = probe.hello()
+            probe.close()
+            print(f"puck {who['chip']} fw {who['fw']} ({who['state']}) -> fw {meta['fw']}")
+            was_set = who["state"] == "set"
+            break
+        except (TimeoutError, RuntimeError, serial.SerialException, OSError):
+            if attempt < 2:
+                time.sleep(2)
+                continue
+            print(f"nothing answered on the cable after 3 tries; flashing anyway -> fw {meta['fw']}")
+
+    time.sleep(1.5)     # the board re-enumerates after that probe; esptool cannot open it mid-flight
 
     with tempfile.TemporaryDirectory() as tmp:
         head, tail = pathlib.Path(tmp) / "head.bin", pathlib.Path(tmp) / "tail.bin"
@@ -220,17 +240,21 @@ def upgrade(port: str) -> None:
         print(f"  0x0000 .. {NVS_START:#06x}  bootloader + partition table  ({head.stat().st_size} bytes)")
         print(f"  {NVS_START:#06x} .. {NVS_END:#06x}  nvs -- LEFT ALONE")
         print(f"  {NVS_END:#06x} ..          otadata + app                 ({tail.stat().st_size} bytes)")
+        # Underscores, not hyphens: esptool v4 only accepts write_flash/default_reset, and v5 still
+        # takes them as aliases. brain/hub/bridge.py spells these with hyphens and so needs v5.
         subprocess.run([sys.executable, _esptool(), "--chip", "esp32s3", "--port", port,
-                        "--baud", "460800", "--before", "default-reset", "--after", "hard-reset",
-                        "write-flash", "-z", "--flash-mode", "dio", "--flash-freq", "80m",
-                        "--flash-size", "16MB", "0x0", str(head), hex(NVS_END), str(tail)],
+                        "--baud", "460800", "--before", "default_reset", "--after", "hard_reset",
+                        "write_flash", "-z", "--flash_mode", "dio", "--flash_freq", "80m",
+                        "--flash_size", "16MB", "0x0", str(head), hex(NVS_END), str(tail)],
                        check=True)
 
     print("  flashed; waiting for it to come back", end="", flush=True)
     time.sleep(2)
     for _ in range(30):
         try:
-            who = Puck(port).hello()
+            back = Puck(port)
+            who = back.hello()
+            back.close()
             print()
             print(f"back: puck {who['chip']} fw {who['fw']} ({who['state']})")
             if was_set and who["state"] != "set":
