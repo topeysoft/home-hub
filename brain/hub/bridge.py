@@ -121,34 +121,32 @@ class Cable:
     async def esp_chip(self, port: str) -> str | None:
         """Which ESP this is -- "esp32s3", "esp32c3" -- or None if it is not one at all.
 
-        It used to answer yes/no, and the hub then flashed an ESP32-S3 image at whatever
-        had said yes. Plug in a C3 and esptool refuses with "This chip is ESP32-C3, not
-        ESP32-S3. Wrong chip argument?", which is a developer's sentence arriving on a wall
-        panel. The chip is right there in the same probe, so there is no reason to guess."""
+        It used to answer yes/no, and the hub then flashed an ESP32-S3 image at whatever had
+        said yes. Plug in a C3 and esptool refuses with "This chip is ESP32-C3, not ESP32-S3.
+        Wrong chip argument?", which is a developer's sentence arriving on a wall panel. The
+        chip is right there in the same probe, so there is no reason to guess.
+
+        ASK ESPTOOL, DO NOT READ ITS SCREEN. A first version of this ran esptool.main() and
+        looked for "Chip is ..." in captured stdout. esptool 5.x prints through rich, which
+        binds the real stdout when it is imported, so redirect_stdout never sees a word of it
+        -- the capture came back with the banner and nothing else, every board came back
+        None, and a feature that had been working stopped. detect_chip() hands back the
+        loader, which knows its own name.
+        """
         def go():
-            import io, contextlib, re as _re
-            buf = io.StringIO()
+            import esptool
             try:
-                import esptool
-                with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
-                    esptool.main(["--port", port, "--connect-attempts", "2", "chip-id"])
-            except SystemExit as e:
-                if e.code not in (0, None):
-                    log.debug("%s: not an ESP (exit %s)", port, e.code)
-            except BaseException as e:      # esptool.FatalError, or a port that vanished
-                log.debug("%s: not an ESP (%s)", port, e)
-            out = buf.getvalue()
-            m = _re.search(r"Chip is (ESP32[\w-]*)", out)
-            if not m:
-                # A board that does not answer is the commonest way this whole feature looks
-                # broken from a hallway: nothing knocks and nothing is said. esptool's own
-                # account is the only evidence there is, so it does not get swallowed.
-                tail = " / ".join(l.strip() for l in out.splitlines() if l.strip())[-300:]
-                log.info("bridge: %s did not answer as an ESP -- esptool said: %s",
-                         port, tail or "(nothing at all)")
+                dev = esptool.detect_chip(port, connect_attempts=2)
+            except BaseException as e:      # FatalError, a port that vanished, a board asleep
+                log.info("bridge: %s did not answer as an ESP (%s)", port, e)
                 return None
-            # "ESP32-S3 (revision v0.2)" -> esp32s3, the name esptool wants back as --chip
-            return m.group(1).lower().replace("-", "")
+            try:
+                # "ESP32-S3" -> esp32s3, which is the name esptool wants back as --chip
+                return dev.CHIP_NAME.lower().replace("-", "").replace(" ", "")
+            finally:
+                try: dev._port.close()
+                except Exception: pass
+
         return await self._in_thread(go)
 
     def image_for(self, chip: str | None) -> Path | None:
