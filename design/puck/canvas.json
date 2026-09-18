@@ -111,6 +111,22 @@
       "w": 1440,
       "h": 900,
       "title": "Keep the panel, or leave it \u2014 the first question"
+    },
+    {
+      "file": "Held.dc.html",
+      "x": 1560,
+      "y": 6480,
+      "w": 1440,
+      "h": 900,
+      "title": "No code to scan \u2014 claiming a switch already in the wall"
+    },
+    {
+      "file": "Waiting.dc.html",
+      "x": 3120,
+      "y": 6480,
+      "w": 1440,
+      "h": 900,
+      "title": "No code to read \u2014 the wall can do it alone"
     }
   ],
   "annotations": [
@@ -154,7 +170,7 @@
       "x": 1560,
       "y": 2040,
       "w": 700,
-      "text": "THE WALL SHOWS, THE PHONE SCANS\n\nA factory-fresh switch will not be provisioned without the 16-byte Static OOB secret in the QR on its back. That is the mesh's own rule and it is not negotiable \u2014 it is why every No-OOB attempt failed before the QR was read (docs/brilliant.md).\n\nSo this half has a camera in it, and the wall panel does not have one. The rule that falls out of that is worth stating once and keeping: THE WALL SHOWS, THE PHONE SCANS. The wall's entire job here is the code that opens the phone on the right step, which is a pattern the panel already owns \u2014 it is how the house gets onto a phone at all (PhoneSteps.vue).\n\nThe phone then asks exactly one question, at the end: which room. Not what it is called, not whether it dims, not what kind of thing it is. The house already knows all of that from the switch itself.\n\nWHAT THE WALL MUST NOT DO: ask anyone to type the code. It is 32 hex characters. There is no version of that which is acceptable on a screen a family walks up to, and the temptation to add it \"as a fallback\" should be resisted \u2014 a fallback nobody can complete is not a fallback."
+      "text": "THE WALL SHOWS, THE PHONE SCANS\n\nCORRECTED 18 Sep. This note used to say a factory-fresh switch cannot be provisioned without the 16-byte Static OOB from the QR -- that it is the mesh's own rule, not negotiable, and that every No-OOB attempt had failed. Wrong twice over. The earlier No-OOB attempts died AT DISCOVERY, where the scan never found the device, and never reached the key exchange at all; and the refusal that did happen was BRILLIANT'S APP rejecting a No-OOB device, which is their product rule and not the protocol's. Every switch on our own network was claimed with auth method 0x00 by tools/provision.py. No OOB is not merely allowed -- it is the only route we have ever completed.\n\nWHAT THE QR IS ACTUALLY FOR is proving that the switch being claimed is the one the person is holding. That is worth having, and it is why the scan can hold out for the Device UUID in the QR's first sixteen bytes. But it is an IDENTITY check rather than an access check, and when the plate is on the wall with the code behind it, the same proof has to come from somewhere else. See the Held board.\n\nSo this half has a camera in it, and the wall panel does not have one. The rule that falls out of that is worth stating once and keeping: THE WALL SHOWS, THE PHONE SCANS. The wall's entire job here is the code that opens the phone on the right step, which is a pattern the panel already owns \u2014 it is how the house gets onto a phone at all (PhoneSteps.vue).\n\nThe phone then asks exactly one question, at the end: which room. Not what it is called, not whether it dims, not what kind of thing it is. The house already knows all of that from the switch itself.\n\nWHAT THE WALL MUST NOT DO: ask anyone to type the code. It is 32 hex characters. There is no version of that which is acceptable on a screen a family walks up to, and the temptation to add it \"as a fallback\" should be resisted \u2014 a fallback nobody can complete is not a fallback."
     },
     {
       "id": "true",
@@ -211,6 +227,20 @@
       "y": 6360,
       "w": 900,
       "text": "KEEP THE PANEL, OR LEAVE IT -- AND WHY IT IS NOT A FORK\n\nTwo customers arrive at this product. One wants off Brilliant entirely and does not mind the panel coming out of the wall. The other has a panel whose screen still works, likes it, and wants the house to know about their switches without anything being disturbed. Every other board here was drawn for the first one.\n\nTHE SECOND IS EASIER THAN IT LOOKS, BECAUSE NOTHING HAS TO MOVE. The hub does not need a switch on ITS network to control it. With the panel network's keys a puck joins that network as one more controller, alongside the panel, and every switch appears in the house exactly as it is -- nothing reset, nothing rewired, nothing to undo. That is what the bridge in this repo already does; it was built as a stopgap and it is actually a product.\n\nSO THE FORK IS REALLY AN ORDER. Joining is reversible and costs nothing; migrating is the better end state and can happen later, a light at a time. Only someone whose panel has already died has a single road -- and they are not asked to choose, because the question they CAN answer ('does your screen still come on?') routes them without their ever seeing a choice. That is why board 1 asks about a screen and not about networks.\n\nWHAT KEEPING IT COSTS, SAID ON THE SCREEN RATHER THAN IN A FOOTNOTE:\n  * STATE ARRIVES BY POLLING. Changing what a switch publishes needs its device key, which the panel holds and we will never have. A hand press shows up when we next ask. Switches already publishing to all-nodes are immediate; the rest lag.\n  * PAIRING CAN STILL BE CHANGED. 0x08 and 0x1b are vendor fields and answer to the AppKey alone, so multi-way can be rearranged even on their network. That was a surprise and it is worth leaning on.\n  * YOU ARE A GUEST. It rests on that panel staying alive. Two have died in this house already.\n\nAND ONE COMBINATION NOBODY CAN HAVE: keep the panel AND move a switch over. A node cannot be evicted from the panel's mesh and still be in it, so every light that comes across DISAPPEARS from the panel's screen. Board 3 says exactly that, because it is the thing a person would otherwise discover by finding a hole in a screen they liked.\n\nTHE OPEN QUESTION THAT DECIDES WHETHER ANY OF THIS SHIPS. The keys were captured here by flashing a recorder and adding it through THE BRILLIANT APP. Scenario two's whole premise is a customer whose panel still works -- so does that provisioning still succeed with Brilliant's servers unreachable? If it needs their cloud, this path has a shelf life set by somebody else's decisions, and that belongs in the decision before anybody builds it."
+    },
+    {
+      "id": "held",
+      "x": 1560,
+      "y": 6360,
+      "w": 900,
+      "text": "NO CODE TO SCAN -- THE SWITCH ALREADY IN THE WALL\n\nBrilliant's own app offers both: scan the code, or listen for a switch that has just been reset. Ours had only ever been drawn with the code, which quietly assumes every switch arrives in somebody's hand. Most do not. They are screwed to a wall with the code facing the plasterboard, and a person adding one to the house is not going to take the plate off.\n\nTHE MESH NEVER REQUIRED THE CODE. The Static OOB in the QR is offered by these switches, not demanded -- the provisioner picks the authentication method. Every switch on this house's own network was claimed with auth method 0x00 (No OOB) by tools/provision.py, so the codeless route is not a fallback we are hoping works; it is the only one we have ever completed. The handoff annotation above said the opposite until 18 Sep and has been corrected: the earlier No-OOB failures died at DISCOVERY, and the refusal that did happen was Brilliant's app, not the protocol.\n\nSO WHAT IS THE CODE ACTUALLY FOR? Identity, not access. It says WHICH switch, not whether you may. Scanning it lets the puck hold out for that exact Device UUID, which matters the moment two switches are being fitted at once, or a neighbour's reset switch is in range. Take the code away and that question is still there and still has to be answered.\n\nTHE PROTOCOL ALREADY ANSWERS IT, AND WE WERE THROWING IT AWAY. The Invite PDU carries one parameter: an attention timer. Non-zero, and the switch announces itself physically. The provisioner hardcodes it to zero, correctly, for a QR add -- the person is holding the thing. For a codeless add it is the whole identity check: the house makes the candidate blink and asks whether the blinking one is the switch whose plate you just had your finger on. Same idiom as the Knock board: the identity check is the object, not a number. Board 2 is that question.\n\nAND IF THEY SAY NO, it moves to the next waiting switch and blinks that one instead -- which is why the scan must collect every unclaimed switch in the window rather than the strongest, and why 'no' has to be a real answer rather than a retry of the same guess.\n\nWHAT THIS COSTS IN CODE: a `useAttention(seconds)` on Provisioner (one byte, already in the Invite), a list rather than a single result out of pb_gatt_find, and a way for the flow to say blink-the-next-one. None of it is hard. It was simply never drawn, so it was never going to be built.\n\nTHE HONEST LIMIT. With a code, the house knows what it is talking to before it says anything. Without one, it is trusting a person's eyes in a room -- which is a good deal weaker, and is why this path asks a question the QR path does not have to."
+    },
+    {
+      "id": "waiting",
+      "x": 3120,
+      "y": 6360,
+      "w": 800,
+      "text": "NO CODE TO READ MEANS NO CAMERA TO NEED\n\nTHE PRODUCT RULE QUIETLY CHANGES HERE. 'The wall shows, the phone scans' exists because a wall panel has no camera and a QR must be read -- it is why AddSwitch.vue has two faces and a handoff between them. Take the code away and the rule has nothing left to do. A person holds a finger on a switch, the house blinks what it can hear, they say which one: no camera anywhere in it. So for a switch already in the wall, THE WALL CAN RUN THE WHOLE JOB, and the phone handoff becomes an option for the hand-held case rather than the only road. That is a simplification of the product, arrived at by removing a requirement rather than adding a feature.\n\nBLINK ONE AT A TIME, NEVER ALL OF THEM. Three unclaimed switches in a house is not far-fetched -- a room being redone, or somebody resetting a few before starting. A room with two blinking switches in it answers nothing, so the house offers candidates in turn and 'not that one' steps to the next. Which means the scan must return EVERY unclaimed switch in the window, not the strongest; taking the loudest is only safe when there is provably one, and there is not.\n\n'NOTHING IS WAITING' IS A REAL SCREEN, not an error. The likeliest cause is a reset that did not take -- the tab not pulled fully out, or the finger lifted early -- and the second likeliest is a switch that is already on the house, where the answer is that it lives under its light rather than here. Both are said in the room they happen in, with the thing to try next.\n\nWHAT THE BLINK COSTS: the Invite PDU's one parameter, an attention timer, which the provisioner currently hardcodes to zero. To blink a candidate you connect, send Invite with a non-zero attention, and disconnect if the person says it is not theirs -- the device drops back to advertising on its own. Two connections rather than one, for a question that could not otherwise be asked.\n\nUNVERIFIED, AND IT IS THE WHOLE BOARD: that a Brilliant switch actually DOES anything visible when the attention timer is set. The spec says a device should attract human attention; what these switches do about it is unknown, and if the answer is nothing, the codeless path needs a different proof of identity and this board is wrong. One switch, one reset, one Invite -- and it should be checked before any of this is built."
     }
   ],
   "launch": {
@@ -244,6 +274,10 @@
     "down",
     "Down.dc.html",
     "choose",
-    "Choose.dc.html"
+    "Choose.dc.html",
+    "held",
+    "Held.dc.html",
+    "waiting",
+    "Waiting.dc.html"
   ]
 }
