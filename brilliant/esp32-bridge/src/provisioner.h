@@ -15,10 +15,11 @@
 // chip -- can be run and checked on a workstation against known-good values.
 // The GATT link, its SAR and its notifications are the caller's business.
 //
-// Usage:
+// Usage -- SETTINGS FIRST, then begin(), which queues the Invite and starts it:
 //     Provisioner p;
-//     p.begin(netkey, 0, 0, iv, unicast);
 //     p.useStaticOOB(oob);          // from the QR; omit for a switch we reset
+//     p.useAttention(5);            // blink it; omit when the QR named it
+//     p.begin(netkey, 0, 0, iv, unicast);
 //     while (size_t n = p.next(buf)) send(buf, n);
 //     ... on each notification: p.feed(pdu, len); then drain next() again
 //     if (p.state() == Provisioner::DONE) { p.devkey(); p.elements(); }
@@ -35,6 +36,10 @@ class Provisioner {
     // actually happened. 66 leaves room and the length is checked besides.
     static const size_t MAX_PDU = 66;
 
+    // Call the use*() setters BEFORE this. begin() builds and queues the Invite,
+    // so an attention timer set afterwards is set for a PDU already sent -- and
+    // it would go unnoticed, because the handshake still completes, just without
+    // the blink that was the whole point of asking for it.
     void begin(const uint8_t netkey[16], uint16_t key_index, uint8_t flags,
                uint32_t iv_index, uint16_t unicast);
 
@@ -44,6 +49,13 @@ class Provisioner {
     // is the mesh's own proof that somebody is holding the switch. Without it we
     // fall back to No OOB, which only a switch WE factory-reset will accept.
     void useStaticOOB(const uint8_t oob[16]);
+
+    // Seconds of Attention Timer in the Invite: the device is asked to make
+    // itself known to a person. Zero for a QR add, where they are already
+    // holding the switch. Non-zero is the entire identity check when there is no
+    // code to scan -- the house blinks a candidate and asks whether the blinking
+    // one is the switch whose plate they just had a finger on.
+    void useAttention(uint8_t seconds);
 
     // Deterministic randomness, for the native test. Production leaves it alone.
     void useRandom(void (*fn)(uint8_t *out, size_t len));
@@ -67,6 +79,7 @@ class Provisioner {
     uint16_t key_index_ = 0, unicast_ = 0;
     uint32_t iv_index_ = 0;
 
+    uint8_t attention_ = 0;
     bool have_oob_ = false;
     uint8_t oob_[16];
     void (*rand_)(uint8_t *, size_t) = nullptr;

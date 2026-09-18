@@ -241,6 +241,23 @@ int main(void) {
     expect("  ...as Confirmation Failed", bad.reason() == 0x05);
     expect("  ...and nothing more is sent", bad.next(buf) == 0);
 
+    printf("\nthe attention timer, which is the codeless identity check:\n");
+    Provisioner blink;
+    uint8_t b[Provisioner::MAX_PDU];
+    blink.useAttention(5);
+    blink.begin(NETKEY, 0, 0, 7, 0x0007);
+    size_t bn = blink.next(b);
+    expect("invite carries the attention", bn == 2 && b[0] == 0x00 && b[1] == 5);
+
+    // The trap this guards: begin() builds the Invite, so a setter called after
+    // it is set for a PDU already queued -- and the handshake still completes,
+    // just without the blink that was the entire reason for asking.
+    Provisioner late;
+    late.begin(NETKEY, 0, 0, 7, 0x0007);
+    late.useAttention(5);
+    bn = late.next(b);
+    expect("...and is ignored if set late", bn == 2 && b[1] == 0x00);
+
     printf("\n%s\n", fails ? "FAILURES" : "all good");
     return fails ? 1 : 0;
 }

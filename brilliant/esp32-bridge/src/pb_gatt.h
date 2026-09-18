@@ -26,16 +26,29 @@ struct Unclaimed {
     bool found = false;
 };
 
-// Scan for one. With `want_uuid` (the first 16 bytes of the QR) it holds out for
-// that exact switch, which is what makes "the code you scanned" mean the switch
-// in front of you rather than the loudest one in the house. Without it, the
-// strongest -- only safe when there is provably one, which there is not, in a
-// house where somebody may be fitting two at once.
+// Every unclaimed switch heard in the window, strongest first, and how many were
+// written. EVERY one, not the loudest: taking the loudest is only safe when there
+// is provably one, and in a house where somebody is redoing a room there is not.
+// A codeless add has to offer them in turn, so it needs the whole list.
 //
 // Collects across the whole window rather than taking the first or the latest:
 // these switches interleave a 0xFEE4 DFU beacon with the 0x1827 one, so a scan
 // that keeps only the most recent advertisement misses them about half the time.
+size_t pb_gatt_find_all(uint32_t ms, Unclaimed *out, size_t max);
+
+// One switch, by the Device UUID in the QR's first sixteen bytes. This is what
+// makes "the code you scanned" mean the switch in front of you rather than
+// whichever unclaimed one is loudest.
 Unclaimed pb_gatt_find(uint32_t ms, const uint8_t *want_uuid = nullptr);
+
+// Ask a candidate to make itself known to a person, and say nothing else to it.
+// Connect, send an Invite carrying an attention timer, hold the link while it
+// runs, disconnect. The switch drops back to advertising unclaimed on its own,
+// so a candidate that turns out to be the wrong one is left exactly as it was.
+//
+// It costs a second connection -- blink, ask, then provision the one they picked
+// -- which is the price of a question that cannot otherwise be asked.
+bool pb_gatt_blink(const Unclaimed &who, uint8_t seconds);
 
 // Run the whole handshake against `who`. Returns true only on Complete, with
 // the device key and element count left in `p`. Every other outcome -- refused

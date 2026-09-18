@@ -37,10 +37,12 @@ void Provisioner::begin(const uint8_t netkey[16], uint16_t key_index,
     out_head_ = out_tail_ = 0;
     if (!rand_) rand_ = default_random;
 
-    // Invite, attention timer 0. The attention timer makes the switch announce
-    // itself physically; zero because the person is already holding the thing
-    // whose QR they just scanned and does not need it to blink at them.
-    invite_[0] = 0x00;
+    // Invite. Its one parameter is the attention timer, and it defaults to zero
+    // because a QR add has the person holding the switch already. useAttention()
+    // is what a codeless add sets, and it is not decoration there: it is the only
+    // thing that distinguishes the switch they touched from any other unclaimed
+    // one within radio range.
+    invite_[0] = attention_;
     queue(T_INVITE, invite_, 1);
     st_ = INVITED;
 }
@@ -49,6 +51,8 @@ void Provisioner::useStaticOOB(const uint8_t oob[16]) {
     memcpy(oob_, oob, 16);
     have_oob_ = true;
 }
+
+void Provisioner::useAttention(uint8_t seconds) { attention_ = seconds; }
 
 void Provisioner::useRandom(void (*fn)(uint8_t *, size_t)) { rand_ = fn; }
 

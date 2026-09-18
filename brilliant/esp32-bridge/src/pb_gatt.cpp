@@ -72,36 +72,85 @@ static bool send_pdu(NimBLERemoteCharacteristic *in, uint16_t mtu,
     return true;
 }
 
-Unclaimed pb_gatt_find(uint32_t ms, const uint8_t *want_uuid) {
-    Unclaimed best;
+// One scan, every unclaimed switch it heard, sorted strongest first. Both the
+// list and the by-UUID lookup come from here so there is one place that knows
+// what the service data looks like.
+static size_t scan_unclaimed(uint32_t ms, Unclaimed *out, size_t max) {
     NimBLEScan *scan = NimBLEDevice::getScan();
     scan->setActiveScan(true);
     NimBLEScanResults found = scan->start(ms / 1000, false);
-    for (int i = 0; i < found.getCount(); i++) {
+    size_t n = 0;
+    for (int i = 0; i < found.getCount() && n < max; i++) {
         NimBLEAdvertisedDevice d = found.getDevice(i);
         if (!d.haveServiceData()) continue;
 
         // The Device UUID is the first 16 bytes of the Mesh Provisioning Service
         // Data; the two after it are OOB info, which we do not need because the
-        // QR already told us the secret.
+        // QR -- when there is one -- already told us the secret.
         std::string sd;
         bool got = false;
         for (int k = 0; k < (int)d.getServiceDataCount(); k++) {
-            if (d.getServiceDataUUID(k).equals(SVC_PROV)) { sd = d.getServiceData(k); got = true; break; }
+            if (d.getServiceDataUUID(k).equals(SVC_PROV)) {
+                sd = d.getServiceData(k);
+                got = true;
+                break;
+            }
         }
         if (!got || sd.size() < 16) continue;
 
-        if (want_uuid && memcmp(sd.data(), want_uuid, 16) != 0) continue;
-        if (best.found && d.getRSSI() <= best.rssi) continue;
-
-        best.addr = d.getAddress();
-        memcpy(best.uuid, sd.data(), 16);
-        best.rssi = d.getRSSI();
-        best.found = true;
-        if (want_uuid) break;                 // the one we were told to want
+        out[n].addr = d.getAddress();
+        memcpy(out[n].uuid, sd.data(), 16);
+        out[n].rssi = d.getRSSI();
+        out[n].found = true;
+        n++;
     }
     scan->clearResults();
-    return best;
+
+    for (size_t i = 1; i < n; i++) {         // strongest first: the one nearest the
+        Unclaimed key = out[i];              // panel is the likeliest to be theirs,
+        size_t j = i;                        // and it is only an ordering, not a choice
+        while (j > 0 && out[j - 1].rssi < key.rssi) { out[j] = out[j - 1]; j--; }
+        out[j] = key;
+    }
+    return n;
+}
+
+size_t pb_gatt_find_all(uint32_t ms, Unclaimed *out, size_t max) {
+    return scan_unclaimed(ms, out, max);
+}
+
+Unclaimed pb_gatt_find(uint32_t ms, const uint8_t *want_uuid) {
+    Unclaimed all[8];
+    const size_t n = scan_unclaimed(ms, all, 8);
+    if (!want_uuid) return n ? all[0] : Unclaimed();
+    for (size_t i = 0; i < n; i++) {
+        if (memcmp(all[i].uuid, want_uuid, 16) == 0) return all[i];
+    }
+    return Unclaimed();                       // the code named a switch we cannot hear
+}
+
+bool pb_gatt_blink(const Unclaimed &who, uint8_t seconds) {
+    if (!who.found || seconds == 0) return false;
+    NimBLEClient *cli = NimBLEDevice::createClient();
+    bool ok = false;
+    do {
+        if (!cli->connect(who.addr)) break;
+        NimBLERemoteService *svc = cli->getService(SVC_PROV);
+        if (!svc) break;
+        NimBLERemoteCharacteristic *in = svc->getCharacteristic(CH_PROV_IN);
+        if (!in) break;
+
+        // An Invite and nothing else. The device starts its attention timer and
+        // waits for a Start it will never get; dropping the link leaves it to
+        // time out and go back to advertising unclaimed, which is exactly the
+        // state we found it in. Nothing about it is changed by being asked.
+        const uint8_t pdu[2] = {0x00, seconds};
+        ok = send_pdu(in, cli->getMTU(), pdu, 2);
+        if (ok) delay((uint32_t)seconds * 1000);
+    } while (0);
+    cli->disconnect();
+    NimBLEDevice::deleteClient(cli);
+    return ok;
 }
 
 bool pb_gatt_provision(const Unclaimed &who, Provisioner &p, uint32_t timeout_ms) {
