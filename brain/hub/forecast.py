@@ -16,7 +16,7 @@ a weather entity reports a new temperature every few minutes and the rows behind
 it move far more slowly than that -- refetching on each one would be a service
 call a minute for a payload that changed once.
 
-WHAT IS NOT HERE, deliberately: any judgement about what the forecast MEANS.
+WHAT IS NOT HERE, deliberately: any judgment about what the forecast MEANS.
 "Rain from 4 PM" is a sentence, and sentences belong to the panel -- it already
 owns the condition words, the clock and the locale, the same way it owns sunrise
 from the location rather than asking the hub for it. This module's job is to turn

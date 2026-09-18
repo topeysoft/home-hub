@@ -16,7 +16,7 @@
  * thing came on, its card arrived wearing it -- not faded, because the row's own edge animation
  * outranks the fade, but shifted down and shrunk by the transform that goes with it, until a
  * reload forgot everything. A wall that had rested with a speaker playing came back with the
- * speaker's card a step below its neighbours.
+ * speaker's card a step below its neighbors.
  *
  * So the fade only lands on a card that is still on its way out. A frame that arrives after the
  * sweep finds no `going` mark and does nothing.

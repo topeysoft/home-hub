@@ -1,0 +1,112 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      /* the panel's own tokens, unchanged -- app/src/panel.css */
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp: #e9b872; --lamp-ink: #2a1c07; --live: #74c69d; --danger: #e08a8a;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 999px;
+           background: var(--ink); color: var(--bg); font-weight: 500; font-size: 17px; }
+    .btn.ghost { background: var(--surface-hi); color: var(--ink); border: 1px solid var(--edge); }
+    .row { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 14px;
+           padding: 14px 16px; border-radius: 16px; background: var(--surface); border: 1px solid var(--edge); }
+    .t1 { font-size: 15.5px; font-weight: 500; }
+    .t2 { font-size: 13px; color: var(--muted); }
+    .rank { width: 26px; height: 26px; border-radius: 9px; display: grid; place-items: center;
+            font-size: 12px; font-weight: 600; background: var(--surface-hi); color: var(--ink-2); }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: #0c0d10; color: var(--ink); font-size: 17px; line-height: 1.4;">
+  <div style="position: absolute; inset: 0; background: radial-gradient(64% 54% at 26% 22%, rgba(72,63,135,.22), transparent 70%), radial-gradient(56% 48% at 84% 84%, rgba(92,63,57,.2), transparent 72%);"></div>
+
+  <svg width="0" height="0" style="position: absolute;"><defs>
+    <radialGradient id="nPool" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#fff1d8" stop-opacity=".9"/><stop offset="55%" stop-color="#f0c98d" stop-opacity=".32"/><stop offset="1" stop-color="#f0c98d" stop-opacity="0"/></radialGradient>
+  </defs></svg>
+
+  <div style="position: absolute; top: 56px; left: 56px; right: 56px;">
+    <h1 class="dsp" style="margin: 0; font-size: 42px;">When the instrument has finished, the light can just be a light.</h1>
+    <p style="margin: 12px 0 0; font-size: 17px; color: var(--ink-2); max-width: 92ch;">The bridge is not a devkit on a shelf: it is a small object on a socket in a living room, and its light is the only expressive surface it has. <em style="font-style: normal; color: var(--ink);">Placing</em> spends that light on one question &mdash; &ldquo;is here good?&rdquo; &mdash; and the question is answered within a minute of plugging it in. What it does for the other fourteen hours is a decision nobody has taken. Taking it: once it is home, and only if you say so, the light becomes a nightlight &mdash; and gives itself straight back the moment anything is wrong.</p>
+  </div>
+
+  <div class="cap" style="position: absolute; top: 250px; left: 56px;">The order it obeys</div>
+  <div style="position: absolute; top: 288px; left: 56px; width: 520px; display: flex; flex-direction: column; gap: 10px;">
+    <div class="row" style="border-color: rgba(224,138,138,.34); background: rgba(224,138,138,.07);">
+      <span class="rank" style="background: rgba(224,138,138,.2); color: #f0b9b9;">1</span>
+      <span><span class="t1">Anything is wrong</span><span class="t2" style="display: block;">Amber, or breathing red. Always, and it outranks everything under it.</span></span>
+    </div>
+    <div class="row" style="border-color: rgba(116,198,157,.3); background: rgba(116,198,157,.06);">
+      <span class="rank" style="background: rgba(116,198,157,.18); color: #a6e3c5;">2</span>
+      <span><span class="t1">Still being placed</span><span class="t2" style="display: block;">Steady green, until somebody says it is home.</span></span>
+    </div>
+    <div class="row" style="border-color: rgba(233,184,114,.32); background: rgba(233,184,114,.07);">
+      <span class="rank" style="background: rgba(233,184,114,.2); color: #f0cf9c;">3</span>
+      <span><span class="t1">Settled, and you said yes</span><span class="t2" style="display: block;">A warm glow. Dim, steady, and not one of the three.</span></span>
+    </div>
+    <div class="row">
+      <span class="rank">4</span>
+      <span><span class="t1">Settled, and you did not</span><span class="t2" style="display: block;">Dark &mdash; which is what it does today, and stays the default.</span></span>
+    </div>
+  </div>
+
+  <div class="cap" style="position: absolute; top: 250px; left: 608px;">Row three</div>
+  <div style="position: absolute; top: 288px; left: 608px; width: 268px; height: 302px; border-radius: 22px; background: rgba(240,201,141,.05); border: 1px solid rgba(240,201,141,.24); display: grid; place-items: center; align-content: center; gap: 4px; padding: 20px;">
+    <svg width="126" height="150" viewBox="0 0 160 190" fill="none">
+      <rect x="57" y="4" width="10" height="36" rx="2.5" fill="#8f939c"/>
+      <rect x="93" y="4" width="10" height="36" rx="2.5" fill="#8f939c"/>
+      <rect x="22" y="36" width="116" height="124" rx="31" fill="#32353d"/>
+      <rect x="22.8" y="36.8" width="114.4" height="122.4" rx="30.2" stroke="rgba(255,255,255,.14)" stroke-width="1.5"/>
+      <circle cx="80" cy="98" r="54" fill="url(#nPool)"/>
+      <circle cx="80" cy="98" r="8" fill="#fff4e2"/>
+    </svg>
+    <span class="t1" style="margin-top: 10px;">Warm, and still</span>
+    <span class="t2" style="text-align: center;">Unsaturated on purpose &mdash; this one is lighting a floor, not signaling &mdash; and diffused, not a point.</span>
+  </div>
+
+  <div class="cap" style="position: absolute; top: 250px; left: 908px;">Asked once, and never in a settings page</div>
+  <div style="position: absolute; top: 288px; left: 908px; width: 476px; border-radius: 26px; background: rgba(22,24,30,.92); border: 1px solid var(--edge-hi); box-shadow: 0 40px 100px -30px rgba(0,0,0,.9); padding: 26px;">
+    <p class="cap" style="margin: 0 0 14px;">It can hear them &middot; left here</p>
+    <h2 class="dsp" style="margin: 0 0 8px; font-size: 30px;">Leave its light on?</h2>
+    <p style="margin: 0 0 18px; color: var(--ink-2); font-size: 14.5px;">It will glow warm through the night, and go straight back to telling you if something goes wrong.</p>
+    <div class="row" style="margin-bottom: 16px; border-color: rgba(233,184,114,.3); background: rgba(233,184,114,.08);">
+      <span style="width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; background: radial-gradient(circle, #fff1d8, #e9b872); box-shadow: 0 0 22px rgba(233,184,114,.5);"></span>
+      <span><span class="t1">Hallway bridge</span><span class="t2" style="display: block;">Appears in Hallway. Turn it off, dim it, put it on a schedule.</span></span>
+    </div>
+    <div style="display: flex; gap: 10px;"><span class="btn">Leave it on</span><span class="btn ghost">No, dark</span></div>
+  </div>
+
+  <div style="position: absolute; top: 646px; left: 56px; right: 56px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 40px;">
+    <div>
+      <div class="cap" style="margin-bottom: 8px;">Why it has to be able to stop</div>
+      <p style="margin: 0; color: var(--ink-2); font-size: 15px;">Green is a promise: mesh <em style="font-style: normal; color: var(--ink);">and</em> broker, both up. A glow that carries on while the bridge is down is furniture that lies, and nobody checks furniture. So a fault takes the light back &mdash; and that is the feature, not the price. A nightlight that has turned amber is the most legible fault report in the house, read at 2am by somebody who was only walking past.</p>
+    </div>
+    <div>
+      <div class="cap" style="margin-bottom: 8px;">It never outranks the radio</div>
+      <p style="margin: 0; color: var(--ink-2); font-size: 15px;">The real risk is that people start choosing sockets for where a nightlight looks good rather than where the mesh needs one. Precedence settles it without a word: move it somewhere thin and it stops being a nightlight and goes back to breathing red. The placement instrument stays in charge of its own argument.</p>
+    </div>
+    <div>
+      <div class="cap" style="margin-bottom: 8px;">What it asks of the board</div>
+      <p style="margin: 0; color: var(--ink-2); font-size: 15px;">Three things the product board owes it, each the fix for something the devkit got wrong. The LED lit however the thing is plugged in &mdash; on the clone S3 only the UART-side port feeds its rail. A data line that is actually driven, so a slow fade stops being the pale-green flicker bug and becomes a sunset ramp. And an emitter the enclosure can diffuse: one pixel behind a pinhole is a maker&rsquo;s nightlight, not a thing you want in a living room.</p>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

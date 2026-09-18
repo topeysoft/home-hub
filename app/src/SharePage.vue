@@ -350,7 +350,7 @@ onUnmounted(() => clearInterval(poll))
 @media (min-width: 861px) {
   .share-mid {
     grid-template-columns: 56px auto 56px;
-    /* The dashes belong on the badge's own row, not spanning all three: centred over mark+word+note
+    /* The dashes belong on the badge's own row, not spanning all three: centered over mark+word+note
        they sit below the badge and read as two loose ticks rather than a wire into it. */
     grid-template-areas: "in mark out" ". word ." ". note .";
     align-items: center;

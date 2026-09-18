@@ -66,7 +66,7 @@ containers, cannot pass multicast (so no mDNS discovery), and needs someone logg
 4. `sudo apt update && sudo apt full-upgrade -y && sudo rpi-eeprom-update -a && sudo reboot`, then
    the one line above.
 
-Sticks go in the USB 2 ports on a short extension cable; USB 3 and the NVMe are noisy neighbours for
+Sticks go in the USB 2 ports on a short extension cable; USB 3 and the NVMe are noisy neighbors for
 Zigbee in particular. Moving from a Mac that ran the stack: copy `driver-layer/ring-mqtt/` across
 first to skip Ring's sign-in, do not copy `driver-layer/homeassistant/`, and stop the Mac's ring-mqtt
 container before the Pi's first start so the two do not fight over Ring's token.
@@ -273,7 +273,7 @@ Coverage may go up and may not go down: `.github/coverage-check.py` compares eac
 it. There is no target to reach, and the floor is raised by hand in the change that earns it.
 
 Two things are checked that nothing else would notice. `brain/tests/sun-positions.json` holds both
-sun implementations — `brain/hub/sun.py` and `app/src/sun.ts`, the same maths written twice — to one
+sun implementations — `brain/hub/sun.py` and `app/src/sun.ts`, the same math written twice — to one
 table, so the panel's dusk and an after-dark routine cannot drift apart. And `brain/tests/test_shipped.py`
 holds `rules.json` and `scenes.json` to what a house that has just been plugged in can actually run:
 a starter rule may only name `home` or `entry`, because any other room is one only somebody's
@@ -359,13 +359,13 @@ which moves the checkout to the newest tag on its channel, pulls the images and 
 Free software, in the sense that matters: run it, read it, change it, share it, sell it. The one
 condition is that it stays that way — if you distribute this hub, or run a modified version as a
 service other people reach over a network, those people are entitled to your source under the same
-licence.
+license.
 
-The source is public on purpose, and the licence is the promise behind it. A box that claims to work
+The source is public on purpose, and the license is the promise behind it. A box that claims to work
 with the internet down, and to keep a household's life off somebody else's servers, should be
 readable by the people it asks to trust it — and no household running this should ever be stranded
 by a maker who stops caring. That is the whole reason `docs/` carries a rescue guide for somebody
 else's panels.
 
-Commercial licences, for anyone who wants to build on this without the AGPL's obligations, are
+Commercial licenses, for anyone who wants to build on this without the AGPL's obligations, are
 available separately — open an issue or get in touch.

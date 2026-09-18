@@ -22,7 +22,7 @@ await page.screenshot({ path: path.join(OUT, 'look-sheet-picked.png') })
 console.log('look-sheet-picked')
 
 // and the four dials are still all there, one row down
-await page.getByText('Customise this look', { exact: true }).click()
+await page.getByText('Customize this look', { exact: true }).click()
 await page.waitForTimeout(400)
 await page.screenshot({ path: path.join(OUT, 'look-sheet-custom.png'), fullPage: true })
 console.log('look-sheet-custom')

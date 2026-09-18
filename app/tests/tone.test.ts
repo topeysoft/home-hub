@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Temitope Adeyeri
 // SPDX-License-Identifier: AGPL-3.0-or-later
-/* What colour a card is, given what the sky is doing.
+/* What color a card is, given what the sky is doing.
 
-   tone.ts states its own law at the top of the file: a card is never given an absolute colour, only
+   tone.ts states its own law at the top of the file: a card is never given an absolute color, only
    a distance from the sky, so the relationship can never invert. Nothing in the type system holds
    anyone to that. These tests do — they sweep the whole day, every condition and every tone, and
    check the law still holds at each step. */
@@ -30,7 +30,7 @@ describe('the law the file is built on', () => {
     }
   })
 
-  it('holds roughly the same distance from the sky rather than a fixed colour', () => {
+  it('holds roughly the same distance from the sky rather than a fixed color', () => {
     // Midnight and midday are a long way apart. A card that tracked nothing would sit at one value
     // for both; a card that tracks the sky moves with it and keeps its distance.
     const night = toneVars(-30, 'clear-night', 'warm')
@@ -46,7 +46,7 @@ describe('the law the file is built on', () => {
     expect(L(toneVars(20, 'pouring'))).toBeLessThan(L(toneVars(20, 'sunny')))
   })
 
-  it('lets colour strengthen under a flat grey sky that can carry it', () => {
+  it('lets color strengthen under a flat gray sky that can carry it', () => {
     expect(C(toneVars(20, 'cloudy'))).toBeGreaterThan(C(toneVars(20, 'sunny')))
   })
 })
@@ -77,7 +77,7 @@ describe('text that has to stay readable on the card', () => {
 })
 
 describe('the tones a house can pick', () => {
-  it('gives every surface a colour, whichever tone is chosen', () => {
+  it('gives every surface a color, whichever tone is chosen', () => {
     for (const name of NAMES) {
       const vars = toneVars(10, 'sunny', name)
       for (const key of ['--card-light', '--card-lock', '--card-plain', '--tint-light', '--tint-lock']) {
@@ -202,7 +202,7 @@ describe('the pane, at every hour', () => {
   })
 
   /* The other half of the same move. A card gets this from toneVars; a pane is translucent over a
-     room that gets bright, so paper's fixed greys came off the screen at 2.0:1 on it at noon. */
+     room that gets bright, so paper's fixed grays came off the screen at 2.0:1 on it at noon. */
   it('lifts the ink on a pane as the room behind it brightens, and never below what paper gives', () => {
     const L = (v: string) => Number(v.match(/oklch\(([\d.]+)/)![1])
     expect(L(glassVars(40, 'sunny')['--pane-muted']))
@@ -222,14 +222,14 @@ describe('the pane, at every hour', () => {
   })
 
   /* The floor: the same face on a host that cannot paint a backdrop-filter. Not a second palette --
-     each stop is the colour its translucent twin composites to, so the only thing lost is depth. */
+     each stop is the color its translucent twin composites to, so the only thing lost is depth. */
   it('gives the flat face no transparency to fall through', () => {
     for (const condition of CONDITIONS) {
       for (const el of ELEVATIONS) {
         const v = glassVars(el, condition)
         for (const k of ['--glass-flat', '--pane-flat']) {
           // an oklch() with a slash in it carries an alpha, and an unblurred card with an alpha is
-          // the thing this exists to avoid: .34 of a colour over the open sky is hardly a card
+          // the thing this exists to avoid: .34 of a color over the open sky is hardly a card
           expect(v[k], `${k} / ${condition} / ${el}°`).not.toMatch(/\//)
           expect(v[k]).toMatch(/^linear-gradient\(/)
         }
@@ -287,7 +287,7 @@ describe('what a tone does to glass', () => {
     expect(hue(glass('cool'))).toBeGreaterThan(180)      // the sky side
   })
 
-  it('leans the pane far enough to be seen as a tint rather than an artefact', () => {
+  it('leans the pane far enough to be seen as a tint rather than an artifact', () => {
     /* .012 is where an unleaned pane sits, which is near enough neutral */
     expect(chroma(glass('follow'))).toBeLessThan(0.02)
     for (const name of ['warm', 'cool', 'pastel'] as ToneName[])

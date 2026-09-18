@@ -94,7 +94,7 @@ class HealthTests(ApiTest):
 
 
 class SoundsTests(ApiTest):
-    def test_the_catalogue_says_what_can_be_played_and_what_is_playing(self):
+    def test_the_catalog_says_what_can_be_played_and_what_is_playing(self):
         d = self.client.get("/sounds").json()
         self.assertIn("sounds", d)
         self.assertIn("playing", d)

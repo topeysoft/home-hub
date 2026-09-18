@@ -74,7 +74,7 @@ describe('one armed control', () => {
     expect(armed.value).toBeNull()
   })
 
-  it('arms the door the same way, which is the behaviour this was lifted out of', () => {
+  it('arms the door the same way, which is the behavior this was lifted out of', () => {
     const { tap, go } = arm()
     expect(tap('lock', 'unlock', go)).toBe(false)
     expect(tap('lock', 'unlock', go)).toBe(true)

@@ -384,7 +384,7 @@ class Share:
             "candidates": len(cands),   # what would go out, so the off state can be concrete
             # The exceptions, as ids for the panel to test one device against, and a count of the ones
             # that are actually holding something back right now. A lamp left out of a kind nobody
-            # shares is not "left out" in any sense a person would recognise, so it is not counted.
+            # shares is not "left out" in any sense a person would recognize, so it is not counted.
             "left_out": list(s.get("left_out") or []),
             "left_out_now": max(0, len(self._matching(exceptions=False)) - len(cands)),
             # A few of them by name. The panel draws what becomes a Matter device on the way out, and a

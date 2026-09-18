@@ -6,8 +6,8 @@
 /**
  * The sky behind the panel. One canvas, a few hundred cheap draws a frame: a gradient that follows the
  * sun's elevation, sun or moon with its phase, stars, drifting clouds, rain, snow, fog, the odd flash
- * of lightning, and a landscape the interface sits on: rolling ground in the colours of the season, lit by the sun,
- * grey under cloud, white under snow, and a dark silhouette at night. Weather comes from the house; the sun from
+ * of lightning, and a landscape the interface sits on: rolling ground in the colors of the season, lit by the sun,
+ * gray under cloud, white under snow, and a dark silhouette at night. Weather comes from the house; the sun from
  * the clock. Everything is deterministic from `store.sky`, so it looks the same on every screen.
  */
 import { onMounted, onUnmounted, ref, watch } from 'vue'
@@ -20,7 +20,7 @@ const props = defineProps<{ quiet?: boolean }>()
 
 const canvas = ref<HTMLCanvasElement | null>(null)
 
-/* the sky's tables live in sky.ts, so tone.ts colours the panel from the very
+/* the sky's tables live in sky.ts, so tone.ts colors the panel from the very
    same numbers this canvas paints with — see the note at the top of tone.ts */
 /* scene state, generated once and reused */
 type Cloud = { x: number; y: number; s: number; v: number; puffs: { dx: number; dy: number; r: number }[] }
@@ -216,13 +216,13 @@ const GROUND: [number, RGB][] = [                              // keyframes by s
   [10, [182, 140, 70]],                                        // autumn: ochre
   [11.5, [154, 136, 100]],                                     // the year closing down
 ]
-function groundColour(month: number, wx: Wx): RGB {
+function groundColor(month: number, wx: Wx): RGB {
   const m = ((month - .5) % 12 + 12) % 12 + .5                 // wrap so mid-January sits at .5 and December runs into it
   let i = 0; while (i < GROUND.length - 2 && m > GROUND[i + 1][0]) i++
   const [m0, a] = GROUND[i], [m1, b] = GROUND[i + 1]
   let c = m > GROUND[GROUND.length - 1][0] ? mix(GROUND[GROUND.length - 1][1], GROUND[0][1], (m - 11.5)) : mix(a, b, clamp((m - m0) / (m1 - m0)))
   c = mix(c, [232, 236, 242], clamp(wx.snow * 1.3))            // snow cover
-  c = mix(c, [118, 122, 118], wx.clouds * .3)                  // overcast leaches the colour out
+  c = mix(c, [118, 122, 118], wx.clouds * .3)                  // overcast leaches the color out
   c = mix(c, [56, 62, 62], wx.rain * .35)                      // wet ground is dark
   return c
 }
@@ -232,12 +232,12 @@ function land(el: number, sx: number, month: number, wx: Wx, hor: RGB) {
   const day = clamp((el + 6) / 18)                             // how much daylight reaches the ground
   const night: RGB = [9, 10, 13]
   const warm = clamp(1 - el / 22) * clamp((el + 4) / 6)        // low sun gilds the land
-  let base = groundColour(month, wx)
+  let base = groundColor(month, wx)
   base = mix(base, [255, 168, 88], warm * .22)
   base = mix(night, base, day)
   const flat = 1 - wx.clouds * .8 - wx.fog * .9                // cloud flattens the light; no lit side, no shadow side
   const hazeCol = mix(hor, [150, 156, 164], wx.fog * .6)
-  /* three ridges, far to near: the far ones fade into the sky, the near one is the truest colour */
+  /* three ridges, far to near: the far ones fade into the sky, the near one is the truest color */
   const ridges: [number, number, number, number, number, number][] = [
     /* base offset, amplitude, frequency, phase, atmospheric fade, brightness */
     [-.032, .05, .45, .8, .55 * (.35 + day * .65), .92],

@@ -62,7 +62,7 @@ function move(e: PointerEvent) {
    (hold.ts says why). The cost is that this tile is never told the pointer has gone, and a tile that still
    believes a finger is down goes on dimming to a mouse that is only passing over it. Losing the capture is
    the one signal that arrives either way, and it ends the gesture without doing anything -- a hold asked to
-   open the panel, it did not ask for a new brightness. A cancelled pointer means the same thing: the gesture
+   open the panel, it did not ask for a new brightness. A canceled pointer means the same thing: the gesture
    stopped, so nothing was asked for. */
 function release() { el = null; dragging = false; preview.value = null }
 

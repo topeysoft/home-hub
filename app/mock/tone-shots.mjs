@@ -33,7 +33,7 @@ const browser = await chromium.launch()
 for (const [name, url, size] of SHOTS) {
   const page = await browser.newPage({ viewport: size, deviceScaleFactor: 1 })
   await page.goto(BASE + url, { waitUntil: 'networkidle' })
-  await page.waitForTimeout(900)                       // the sky settles, the cards take their colour
+  await page.waitForTimeout(900)                       // the sky settles, the cards take their color
   await page.screenshot({ path: path.join(OUT, name + '.png') })
   await page.close()
   console.log(name)

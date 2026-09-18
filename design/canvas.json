@@ -96,7 +96,7 @@
       "x": -540,
       "y": 1120,
       "w": 440,
-      "text": "Why the midday tiles felt off, and what changed.\n\nShort version: the tiles were specified in fixed colour while the field moves across the whole day, so somewhere between dusk and noon a tile stops being lighter than the sky and starts being darker. Now lightness is relative and the crossing can't happen."
+      "text": "Why the midday tiles felt off, and what changed.\n\nShort version: the tiles were specified in fixed color while the field moves across the whole day, so somewhere between dusk and noon a tile stops being lighter than the sky and starts being darker. Now lightness is relative and the crossing can't happen."
     },
     {
       "id": "tone-note",
@@ -131,7 +131,7 @@
       "x": -540,
       "y": 4120,
       "w": 440,
-      "text": "Rung two of When there is no artwork — specified there, never built. Every tile in the app today is at rung four: Icon at size 150, nine per cent opacity, for a floor lamp and a doorbell alike. That is why the cards read plain.\n\nSixteen drawings, one vocabulary — a cylinder is a three-stop gradient, anything round seen at an angle is an ellipse, thickness is two ellipses offset, emitted light is a radial.\n\nThe rule that keeps it honest: what a device is MADE OF takes the ambient, what it EMITS does not. A white shade goes cool at midday and creamy at dusk, because that is what a white thing in a room does. Mix the light it throws the same way and a lamp turns blue at noon — and the tile stops meaning 'on'. Emitted light sits with the lamp accent, the live green and the danger red: signals, and a signal that changes colour is not a signal.\n\nOne drawing per device, not one per state. The lamp's shade, floor pool and halo are all driven by the one brightness number, so the render IS the readout — which is the job the progress bar under the name was standing in for.\n\nRung four is still there, at the end of row three, on purpose. Most houses will mostly see it, and a library is only worth having if the floor it stands on still holds."
+      "text": "Rung two of When there is no artwork — specified there, never built. Every tile in the app today is at rung four: Icon at size 150, nine per cent opacity, for a floor lamp and a doorbell alike. That is why the cards read plain.\n\nSixteen drawings, one vocabulary — a cylinder is a three-stop gradient, anything round seen at an angle is an ellipse, thickness is two ellipses offset, emitted light is a radial.\n\nThe rule that keeps it honest: what a device is MADE OF takes the ambient, what it EMITS does not. A white shade goes cool at midday and creamy at dusk, because that is what a white thing in a room does. Mix the light it throws the same way and a lamp turns blue at noon — and the tile stops meaning 'on'. Emitted light sits with the lamp accent, the live green and the danger red: signals, and a signal that changes color is not a signal.\n\nOne drawing per device, not one per state. The lamp's shade, floor pool and halo are all driven by the one brightness number, so the render IS the readout — which is the job the progress bar under the name was standing in for.\n\nRung four is still there, at the end of row three, on purpose. Most houses will mostly see it, and a library is only worth having if the floor it stands on still holds."
     }
   ],
   "launch": {

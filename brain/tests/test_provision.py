@@ -9,7 +9,7 @@ from hub import provision
 class FakeAdd:
     """A config flow as HA would run it: a script of steps, and a record of what was submitted."""
     def __init__(self, script, waiting=()):
-        self.script, self.submitted, self.cancelled, self.waiting = list(script), [], [], list(waiting)
+        self.script, self.submitted, self.canceled, self.waiting = list(script), [], [], list(waiting)
     async def sign_ins(self): return list(self.waiting)
     async def start(self, handler): return self.script.pop(0)
     async def reconfigure(self, handler, entry_id):
@@ -18,7 +18,7 @@ class FakeAdd:
     async def step(self, flow_id): return self.script.pop(0)
     async def submit(self, flow_id, data):
         self.submitted.append(data); return self.script.pop(0)
-    async def cancel(self, flow_id): self.cancelled.append(flow_id)
+    async def cancel(self, flow_id): self.canceled.append(flow_id)
     def _rest(self, method, path, data=None): self.rested.append((method, path)); return {}
     rested: list = []
 
@@ -64,7 +64,7 @@ class AddTests(unittest.IsolatedAsyncioTestCase):
         hub = FakeHub(add); p = provision.Provision(hub)
         await p.add("zwave_js", {"url": "ws://hub:3000"})
         self.assertEqual(add.submitted, [{"url": "ws://hub:3000", "extra": True}])
-        self.assertEqual(add.cancelled, [])
+        self.assertEqual(add.canceled, [])
 
     async def test_takes_the_manual_path_through_a_menu(self):
         add = FakeAdd([{"type": "menu", "flow_id": "f1", "options": [{"id": "on_supervisor"}, {"id": "manual"}]},
@@ -76,14 +76,14 @@ class AddTests(unittest.IsolatedAsyncioTestCase):
     async def test_already_configured_counts_as_done(self):
         add = FakeAdd([{"type": "abort", "flow_id": "f1", "reason": "Already configured"}])
         await provision.Provision(FakeHub(add)).add("mqtt", {})
-        self.assertEqual(add.cancelled, [])
+        self.assertEqual(add.canceled, [])
 
     async def test_form_errors_fail_and_cancel(self):
         add = FakeAdd([form([("broker", None)]), form([("broker", None)], errors={"base": "Cannot connect"})])
         with self.assertRaises(RuntimeError) as cm:
             await provision.Provision(FakeHub(add)).add("mqtt", {"broker": "x"})
         self.assertIn("Cannot connect", str(cm.exception))
-        self.assertEqual(add.cancelled, ["f1"])
+        self.assertEqual(add.canceled, ["f1"])
 
 
 def _only(port_open):
@@ -123,7 +123,7 @@ class MessagesPasswordTests(unittest.IsolatedAsyncioTestCase):
             await p.refresh()
         self.assertEqual(add.reconfigured, [("mqtt", "e-mqtt")])
         self.assertEqual(add.submitted, [{"broker": "localhost", "username": "hub", "password": "s3cret"}])
-        self.assertEqual(add.cancelled, [])
+        self.assertEqual(add.canceled, [])
         self.assertEqual(hub.settings.get("mqtt_auth"), p._mqtt_fp())
         self.assertEqual(p.parts["mqtt"]["state"], "ready")
         self.assertIn("Messages signed in", [a[3] for a, _ in hub.log.rows])
@@ -145,7 +145,7 @@ class MessagesPasswordTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(p.parts["mqtt"]["state"], "failed")
         self.assertIn("Cannot connect", p.parts["mqtt"]["text"])
         self.assertIsNone(hub.settings.get("mqtt_auth"))
-        self.assertEqual(add.cancelled, ["f1"])
+        self.assertEqual(add.canceled, ["f1"])
         with patch.object(provision, "probe", _only({1883})):
             await p.refresh()                      # inside RETRY_AFTER: not asked again
         self.assertEqual(len(add.reconfigured), 1)
@@ -199,7 +199,7 @@ class RefreshTests(unittest.IsolatedAsyncioTestCase):
             await p.refresh(); await p.refresh()
         self.assertEqual(p.parts["matter"]["state"], "failed")
         self.assertEqual(add.script, [])                              # only one attempt was made
-        self.assertEqual(add.cancelled, ["f1"])
+        self.assertEqual(add.canceled, ["f1"])
 
     async def test_ring_is_ready_once_its_devices_exist(self):
         async def fake_probe(host, port, timeout=1.5): return port == 55123

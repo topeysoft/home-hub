@@ -118,16 +118,16 @@ test('it rests in the typeface it woke in', async ({ page }) => {
     .toBe('Instrument Sans Variable')
 })
 
-/* Centred, where design/nightfall draws it flush left, and panel.css says why: the board's pane is
+/* Centered, where design/nightfall draws it flush left, and panel.css says why: the board's pane is
    nearly filled by its numerals and this one is not, so flush left leaves a wedge of empty glass
    down one side of a shape that has no sides.
 
    The axis rather than the rule. text-align is a property and a property is not a promise; what
-   has to hold is that the lines and the 100px radius around them share a centre, which stays true
+   has to hold is that the lines and the 100px radius around them share a center, which stays true
    however the pane is later made to fill. */
 test('the weather reads on the pane\'s own axis', async ({ page }) => {
   // the INK, not the box. Each line is a block that fills the pane's content box whichever way it
-  // is aligned, so a bounding box here reads the same flush left as centred and asserts nothing.
+  // is aligned, so a bounding box here reads the same flush left as centered and asserts nothing.
   // A range over the text measures where the glyphs actually land.
   const off = await page.evaluate(() => {
     const ink = (sel: string) => {
@@ -141,7 +141,7 @@ test('the weather reads on the pane\'s own axis', async ({ page }) => {
     return ['.wall-temp', '.wall-says', '.wall-sub'].map(s => [s, ink(s) - axis] as const)
   })
   for (const [line, d] of off)
-    expect(Math.abs(d), `${line} sits ${d.toFixed(1)}px off the pane's centre line`).toBeLessThan(2)
+    expect(Math.abs(d), `${line} sits ${d.toFixed(1)}px off the pane's center line`).toBeLessThan(2)
 })
 
 /* Wider than the board it was drawn on, which is where this one used to go wrong and where no other
@@ -242,9 +242,9 @@ test('the sky is drawn from its own materials, not a hidden copy of them', async
    twice -- once at a card's width and once short enough for a third -- and the size picks which,
    so a card showing both is a card saying the same thing twice. It cost more than a repeat: in
    this row .clim-center is `display: contents`, so the spare line becomes a grid item of its own
-   in the first column, widens it past the step button, and walks the number off the centre of the
+   in the first column, widens it past the step button, and walks the number off the center of the
    card it is the subject of. */
-test('a thermostat in the row says what it is doing once, under a centred number', async ({ page }) => {
+test('a thermostat in the row says what it is doing once, under a centered number', async ({ page }) => {
   const card = page.locator('.bento .tile.climate').first()
   await expect(card).toBeVisible()
 
@@ -256,7 +256,7 @@ test('a thermostat in the row says what it is doing once, under a centred number
     const mid = (e: Element) => { const r = e.getBoundingClientRect(); return (r.left + r.right) / 2 }
     return Math.abs(mid(el.querySelector('.clim-face')!) - mid(el.querySelector('.tile-body')!))
   })
-  expect(off, 'the number is not on the card\'s centre line').toBeLessThan(1)
+  expect(off, 'the number is not on the card\'s center line').toBeLessThan(1)
 })
 
 /* The weather recedes with the row. It is not in the rail -- it is not in the house -- so it does

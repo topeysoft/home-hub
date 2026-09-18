@@ -4,7 +4,7 @@
 
    art.ts states the rule at the top: what a device is made of takes the ambient, what it emits
    does not. Neither half is enforced by the type system, and the first pass of the sheet in
-   design/ broke the second one in the most visible way available -- a strip labelled Off with its
+   design/ broke the second one in the most visible way available -- a strip labeled Off with its
    LEDs lit and a light cone under it. These tests sweep every kind against every state instead of
    trusting an eye that has already looked at the picture fifty times. */
 import { describe, expect, it } from 'vitest'
@@ -244,7 +244,7 @@ describe('materials', () => {
     }
   })
 
-  it('emitted light is the same colour whatever the sky is doing', () => {
+  it('emitted light is the same color whatever the sky is doing', () => {
     const pool = (el: number, c: string) => device('floor-lamp', { on: true }, materials(el, c))
       .marks.filter(emitting).map((m) => m.at.fill)
     expect(pool(DAY, 'sunny')).toEqual(pool(NIGHT, 'clear-night'))
@@ -260,7 +260,7 @@ describe('which shape a light is', () => {
     expect(lightKind('Floor lamp')).toBe('floor-lamp')
   })
 
-  /* a guess has to have a floor: anything unrecognised is still a light on a ceiling */
+  /* a guess has to have a floor: anything unrecognized is still a light on a ceiling */
   it('falls back to the one most houses have most of', () => {
     expect(lightKind('Kitchen lights')).toBe('ceiling')
     expect(lightKind('')).toBe('ceiling')
@@ -297,7 +297,7 @@ describe('the thermostat, drawn round its own number', () => {
   })
 
   /* idle draws no arc at all, which is the point: a thermostat that is holding says so by the
-     ring being plain, and the two that are doing something each get their own colour */
+     ring being plain, and the two that are doing something each get their own color */
   for (const st of [{ label: 'cooling', s: { cooling: true } }, { label: 'heating', s: { heating: true } },
                     { label: 'holding', s: {} }] as { label: string; s: ArtState }[]) {
     it(`keeps the whole dial inside the crop while ${st.label}`, () => {

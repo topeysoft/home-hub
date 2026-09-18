@@ -236,10 +236,10 @@ test.describe('asked not to move', () => {
     // it arrived rather than simply being there
     expect(seen.some((r) => r.o === '0.00'), 'the row never faded in; it was just suddenly there').toBe(true)
     expect(seen[seen.length - 1].o, 'the row never finished arriving').toBe('1.00')
-    // and nothing travelled on the way. A card held 696px right for even one painted frame is the
+    // and nothing traveled on the way. A card held 696px right for even one painted frame is the
     // move this was meant to remove, whether or not a transition was carrying it there.
-    const travelled = seen.filter((r) => r.translate && r.translate !== 'none' && !/^0px( 0px)?$/.test(r.translate))
-    expect(travelled.length, `a card travelled: ${travelled[0]?.translate}`).toBe(0)
+    const traveled = seen.filter((r) => r.translate && r.translate !== 'none' && !/^0px( 0px)?$/.test(r.translate))
+    expect(traveled.length, `a card traveled: ${traveled[0]?.translate}`).toBe(0)
   })
 })
 
@@ -338,7 +338,7 @@ test('glass takes the ink with the surface, and leaves paper to flip as it alway
    2.1:1 for its name and 1.2:1 for the line under it, while the one label the glass ink never
    reached was the only thing on the card still readable.
 
-   Asserted as parity with paper rather than as a colour, because that is the actual rule: where a
+   Asserted as parity with paper rather than as a color, because that is the actual rule: where a
    surface declines the glass ground it declines the glass ink, so it must ink exactly as paper
    does. */
 test('a scene chip on a card inks like paper, because that is what it is sitting on', async ({ page }) => {
@@ -388,7 +388,7 @@ test('a scene chip on a card inks like paper, because that is what it is sitting
    what it is made of, which is the whole point of the widening: the seam this face had was a glass
    card sitting under a paper pill, and deleting the pill was never the answer to it. This test is
    what stops someone reading move 5 on the board and taking it off again. */
-test('glass re-materialises the tab pill instead of taking it away', async ({ page }) => {
+test('glass re-materializes the tab pill instead of taking it away', async ({ page }) => {
   const bar = () => page.evaluate(() => {
     const nav = getComputedStyle(document.querySelector('.tabs')!)
     const tabs = [...document.querySelectorAll('.tab')].map((t) => {

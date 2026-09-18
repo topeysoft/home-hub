@@ -86,6 +86,13 @@ open with a short prose comment explaining what the thing is *for* and why it ex
 rather than in API terms. Comments explain the reason, not the mechanism. Follow that and your change
 will look like it belongs.
 
+**American spelling**, in code, comments, tests, docs and commit messages alike: color, behavior,
+center, recognize, gray, license, canceled, catalog, artifact. Two things keep the British form on
+purpose and should be left alone: words the house has to *match* rather than write — the device-name
+vocabulary in `brain/hub/suggest.py`, the room aliases in `brain/hub/commands.py`, the mock's
+`/cosy|cozy/` — and spellings that belong to somebody else's API, such as `aria-labelledby`,
+`asyncio.CancelledError`, GitHub Actions' `cancelled`, and the AGPL text in `LICENSE`.
+
 ## Reporting a security problem
 
 Do not open a public issue. See [`SECURITY.md`](SECURITY.md) if it exists, or email the maintainer

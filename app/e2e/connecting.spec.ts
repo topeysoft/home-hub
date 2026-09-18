@@ -33,7 +33,7 @@ test('a picture on its way says so, rather than sitting there looking broken', a
   await expect(frame).toHaveClass(/connecting/)
   await expect(page.locator('.viewer-live')).toHaveText(/Connecting/i)
 
-  // and the frame is visibly working: a hairline travelling the top edge, not on the picture itself
+  // and the frame is visibly working: a hairline traveling the top edge, not on the picture itself
   const bar = await frame.evaluate((el) => {
     const cs = getComputedStyle(el, '::after')
     return { height: cs.height, animation: cs.animationName, display: cs.display }

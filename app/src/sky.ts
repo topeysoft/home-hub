@@ -3,7 +3,7 @@
 /*
  * What the sky is made of, in one place.
  *
- * Sky.vue draws it and tone.ts colours the interface from it. Both read these
+ * Sky.vue draws it and tone.ts colors the interface from it. Both read these
  * tables, so the picture and the palette cannot drift apart: add a condition
  * here and the sky, the weather illustration and the tiles all learn it at once.
  */
@@ -43,7 +43,7 @@ export function palette(el: number, wx: Wx): RGB[] {
   const t = clamp((el - e0) / (e1 - e0))
   return a.map((c, k) => {
     let out = mix(c, b[k], t)
-    out = mix(out, [58, 64, 72], wx.clouds * .55)             // overcast greys the sky
+    out = mix(out, [58, 64, 72], wx.clouds * .55)             // overcast grays the sky
     out = mix(out, [22, 24, 30], wx.rain * .3)                // rain darkens it
     out = mix(out, [116, 122, 128], wx.fog * .3)              // fog flattens it
     return out
@@ -103,7 +103,7 @@ export const starAlpha = (el: number, wx: Wx) =>
 
 const SUN: RGB = [246, 220, 168]
 const MOON: RGB = [223, 228, 238]
-/* what the cloud is made of at each end of its range: thin and bright, thick and grey */
+/* what the cloud is made of at each end of its range: thin and bright, thick and gray */
 const BODY: [RGB, RGB][] = [[[255, 255, 255], [195, 201, 212]], [[216, 220, 230], [154, 161, 173]], [[154, 163, 180], [109, 116, 128]]]
 const MOONLIT: RGB = [66, 74, 96]
 /* precipitation keeps its shape and loses its light; each is [by day, by night] */
@@ -141,7 +141,7 @@ export function illustration(el: number, condition: string): Illustration {
   const wx = wxOf(condition)
   const night = nightness(el)
   const cover = wx.clouds
-  /* the cloud greys and swells as cover thickens, and by night the moon is the only light on it --
+  /* the cloud grays and swells as cover thickens, and by night the moon is the only light on it --
      but a thin wisp still catches that light, so only a full deck goes to a dark mass */
   const thick = clamp((cover - 0.35) / 0.65)
   const lit = 0.44 + thick * 0.32

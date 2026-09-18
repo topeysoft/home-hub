@@ -11,13 +11,13 @@
  * somebody decides whether to let it in. It does take the house's materials, so
  * it relights with the shelf -- what a thing is MADE OF takes the ambient (see the
  * rule at the top of art.ts); the light it EMITS does not, which is why the three
- * pools below are fixed colours and not mixed with the sky.
+ * pools below are fixed colors and not mixed with the sky.
  *
  * The drawing is design/puck/Knock.dc.html and design/puck/Cable.dc.html.
  */
 defineProps<{
   /* what its one light is saying. Blinking is the firmware's word for "still looking"; the panel
-     only ever shows the colour, because a screen cannot be trusted to blink in step with a thing
+     only ever shows the color, because a screen cannot be trusted to blink in step with a thing
      across the room. */
   light?: 'amber' | 'green' | 'red' | 'off'
   /* alone: the bridge on its own, the size of a decision. cable: it and the hub, with the lead

@@ -8,7 +8,7 @@
    aside, and its only job is to make sure the knock is never lost. Tapping it brings the pane back.
 
    So this is a chip and not a card, and it is the one chip in the band that wears the attention
-   colour, because the two things in the band are not the same kind of thing: an update is an offer
+   color, because the two things in the band are not the same kind of thing: an update is an offer
    and a phone at the door is a person waiting. It is still never the ONLY way to answer -- the pane
    opens itself -- which is what keeps it honest about the strand layout.ts says must be carried. */
 import { store } from './store'

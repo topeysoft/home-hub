@@ -9,7 +9,7 @@
  *   node mock/art-sheet.mjs          writes ../design/Devices.dc.html
  *   node mock/art-sheet.mjs --check  fails if the file on disk is out of date
  *
- * The trick that makes it work: art.ts takes its flat colours from a Materials
+ * The trick that makes it work: art.ts takes its flat colors from a Materials
  * object, so handing it one whose values are the literal text "{{mat.metalLo}}"
  * produces marks whose fills are canvas holes. Geometry comes out literal and in
  * order, gradients keep relighting through the defs, and the Sky chip still
@@ -220,7 +220,7 @@ ${strip('blind', BLIND_STATES, 10)}
 
 <script data-dc-script data-props='{"field":{"editor":"enum","options":["Dusk","Night","Midday"],"default":"Dusk","section":"Sky"},"tone":{"editor":"enum","options":["Warm","Cool","Pastel","Follow the light"],"default":"Follow the light","section":"Tiles"}}'>
 /*
- * Only the colours live here. Every shape on this sheet was written out by
+ * Only the colors live here. Every shape on this sheet was written out by
  * app/mock/art-sheet.mjs straight from the panel's own art.ts, so the two
  * cannot disagree: there is nothing left to keep in step by hand.
  *

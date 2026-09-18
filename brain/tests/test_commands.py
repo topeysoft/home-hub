@@ -165,7 +165,7 @@ class Say(unittest.IsolatedAsyncioTestCase):
         from hub.commands import _number
         self.assertEqual(_number("seventy two degrees"), 72.0)
         self.assertEqual(_number("sixty five"), 65.0)
-        self.assertEqual(_number("seventy-two"), 72.0)          # however the recogniser punctuates it
+        self.assertEqual(_number("seventy-two"), 72.0)          # however the recognizer punctuates it
         self.assertEqual(_number("a hundred percent"), 100.0)
         self.assertEqual(_number("72 degrees"), 72.0)           # a typed one still wins outright
         self.assertIsNone(_number("make the den warmer"))
@@ -206,15 +206,15 @@ class Say(unittest.IsolatedAsyncioTestCase):
         self.assertIn("can't tell", (await self.say("is anyone home?"))["text"])
 
     async def test_without_the_assistant_the_grammar_says_so(self):
-        with self.assertRaises(NotUnderstood) as c: await self.say("make it cosy in here")
+        with self.assertRaises(NotUnderstood) as c: await self.say("make it cozy in here")
         self.assertIn("Connect the assistant", str(c.exception))
         self.assertFalse(self.hub.log.of("said")[-1]["detail"]["understood"])
 
     async def test_with_the_assistant_the_rest_is_a_proposal_or_an_explanation(self):
         self.hub.assistant.configured = True
-        out = await self.say("make it cosy in here")
-        self.assertEqual((out["kind"], out["said"]), ("action", "make it cosy in here"))
-        self.assertEqual(self.hub.assistant.asked[-1], ("draft", "make it cosy in here"))
+        out = await self.say("make it cozy in here")
+        self.assertEqual((out["kind"], out["said"]), ("action", "make it cozy in here"))
+        self.assertEqual(self.hub.assistant.asked[-1], ("draft", "make it cozy in here"))
         self.assertEqual(self.hub.acts, [])                                  # a proposal runs nothing
         out = await self.say("why did the hall light come on?")
         self.assertEqual((out["kind"], out["answer"]), ("explain", "Because the evening routine ran."))

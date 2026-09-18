@@ -66,7 +66,7 @@ const toneParam = params.get('tone'), layoutParam = params.get('layout')
 
 /* The house's feel, which is what the Look page actually writes: one of three,
    and it supplies the face and the tone unless somebody has been under
-   Customise and set one by hand. Falls back to Calm, so a hub that has never
+   Customize and set one by hand. Falls back to Calm, so a hub that has never
    been asked and an old one that has no feel stored both land somewhere real. */
 const feel = computed(() => feelFrom(store.ambient.look))
 
@@ -110,7 +110,7 @@ const nav = computed<NavName>(() => isNav(navParam) ? navParam : (isNav(store.am
 const tab = ref<'home' | 'rooms' | 'cameras'>('home')
 function go(t: 'home' | 'rooms' | 'cameras') { tab.value = t; open(null) }
 
-/* an opened device lends the room its colour: a warm lamp pushes the field
+/* an opened device lends the room its color: a warm lamp pushes the field
    amber, a lock or a camera cools it. Falls back to the lamp, which is what a
    house at rest is lit by anyway. */
 const openTint = computed(() => {

@@ -79,7 +79,7 @@ for (const [name, size, url] of SCREENS) {
        the rule; what made it a test is the sky's cloud, which went missing from Home the day the
        top bar started carrying its own copy of the weather for a phone. The bar's copy is hidden
        at this width and comes first, and a paint server inside a `display: none` subtree is not
-       reliably referenceable: the cloud was asking a hidden twin for its colour and got nothing. */
+       reliably referenceable: the cloud was asking a hidden twin for its color and got nothing. */
     const twice = await page.evaluate(() => {
       const seen = new Map<string, number>()
       for (const el of document.querySelectorAll('[id]')) seen.set(el.id, (seen.get(el.id) ?? 0) + 1)

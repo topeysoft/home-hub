@@ -50,7 +50,7 @@ function measure() {
   const cell = first.getBoundingClientRect().width || 340       // the column width CSS chose for this screen
   const across = Math.max(1, Math.floor((el.clientWidth + GAP_X) / (cell + GAP_X)))
   const r = cameras.value.length <= across ? 1 : 2
-  // Exact heights rather than fractions: a row that is capped must not be able to push its neighbour
+  // Exact heights rather than fractions: a row that is capped must not be able to push its neighbor
   // past the bottom of a stage that no longer scrolls.
   const share = Math.floor((el.clientHeight - (r - 1) * GAP_Y) / r)
   rows.value = r

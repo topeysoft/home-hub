@@ -202,7 +202,7 @@ class Updates:
         Two ways a version gets here, and they are not the same thing. It was installed, would not
         come back, and was put back -- a rollback followed six hours later by the same install is a
         loop, not a safety net. Or the host would not vouch for it at all: no signed record of what
-        it is, or one this hub's key does not recognise (docs/updates.md, piece 2), in which case
+        it is, or one this hub's key does not recognize (docs/updates.md, piece 2), in which case
         nothing moved and nothing about the house is different.
         """
         st = self.state() or {}

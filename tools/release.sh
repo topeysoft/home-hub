@@ -62,7 +62,7 @@ TAG="${1:-}"
 # `--check` stops here; a real run carries on only if nothing is missing.
 MISSING=0
 # Each check runs inside an `if`, because `set -e` at the top of this file would otherwise make the
-# first failing test the last one you hear about -- which is exactly the behaviour this replaces.
+# first failing test the last one you hear about -- which is exactly the behavior this replaces.
 check() {  # description, what to do about it, then the command to run
   local desc="$1" fix="$2"; shift 2
   if "$@" >/dev/null 2>&1; then printf '  \033[32m✓\033[0m %s\n' "$desc"

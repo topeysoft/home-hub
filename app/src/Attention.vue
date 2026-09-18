@@ -68,7 +68,7 @@ defineExpose({ updateReady })
   <Say v-if="say" />
 
   <!-- One row for the nudges: a column under the side list, a strip of chips under the tabs. A
-       phone at the door is first in it and wears the attention colour, but it is a chip like the
+       phone at the door is first in it and wears the attention color, but it is a chip like the
        rest -- the deciding is a pane that opens itself (AskPane.vue), so nothing in this band is
        ever taller than one line of house news. That is what lets a layout give the band a fixed
        height and stop the row moving when something wants you. -->

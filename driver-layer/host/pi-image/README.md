@@ -13,7 +13,7 @@ What the image carries beyond stock Raspberry Pi OS Lite:
   PCIe on a Pi 5, the copy to an empty NVMe, then `install.sh` exactly as a hand install would run it.
 
 The first boot still needs the internet: it pulls the engine and the brain images. Raspberry Pi Imager's
-own customisation (Wi‑Fi, a user and password, an SSH key, the time zone) works on this image as on any
+own customization (Wi‑Fi, a user and password, an SSH key, the time zone) works on this image as on any
 Raspberry Pi OS image; nothing here needs it, but it is how you get a shell if you ever want one. The
 image ships with no password and SSH off; with a screen and keyboard attached, Raspberry Pi OS's own first-boot
 user setup appears on the console, and headless nothing waits on it.

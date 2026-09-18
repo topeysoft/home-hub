@@ -146,7 +146,7 @@ services:
     environment:
       - TZ=${TZ}
       - HUB_URL=http://localhost:8300
-      # The key that gets it past the phone gate, from mqtt-auth.sh's neighbour in install.sh. Without
+      # The key that gets it past the phone gate, from mqtt-auth.sh's neighbor in install.sh. Without
       # one it exits at once and says so, rather than running as something the brain will not answer.
       - HUB_SHARE_TOKEN=${HUB_SHARE_TOKEN:-}
       - HUB_MATTER_PORT=${HUB_MATTER_PORT:-5540}
@@ -186,7 +186,7 @@ services:
       - ./ring-mqtt:/data
 
   wyoming-piper:
-    # The house's own voice. docs/voice.md, *Where the voice comes out*: the brain synthesises an answer
+    # The house's own voice. docs/voice.md, *Where the voice comes out*: the brain synthesizes an answer
     # here and the PANEL plays it, as audio in the page, from a URL on the hub's own LAN address — the
     # same arrangement sounds.py has with a Cast speaker, so it keeps working with the internet down.
     #

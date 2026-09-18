@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Temitope Adeyeri
 // SPDX-License-Identifier: AGPL-3.0-or-later
 /*
- * A person's face on the panel: their initials on a colour of their own. The
- * colour goes by their place in the household, so the same person reads the
+ * A person's face on the panel: their initials on a color of their own. The
+ * color goes by their place in the household, so the same person reads the
  * same on the bar along the bottom and on the People page, and a house of two
  * never has two of the same. Warm first, as drawn.
  */

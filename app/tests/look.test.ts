@@ -29,8 +29,8 @@ describe('the three looks', () => {
 
   /* The picker shows all three live, side by side, at whatever hour it is opened.
      Two feels that resolve to the same face and tone are the same picture twice,
-     and that is what retired Cosy: `follow` is warm after sunset, so from dusk to
-     dawn Cosy and Calm were indistinguishable. */
+     and that is what retired Cozy: `follow` is warm after sunset, so from dusk to
+     dawn Cozy and Calm were indistinguishable. */
   it('never offers the same look under two names', () => {
     const made = FEELS.map(f => `${f.face}/${f.tone}`)
     expect(new Set(made).size).toBe(FEELS.length)

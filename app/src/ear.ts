@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 /* Where a spoken sentence comes from -- and nothing whatever about what it means.
  *
- * `docs/voice.md` settled on 14 September 2026 that the wall's words are recognised on the hub
- * (shape 2) and that a phone browser's own recogniser is shape 1, behind the certificate in
+ * `docs/voice.md` settled on 14 September 2026 that the wall's words are recognized on the hub
+ * (shape 2) and that a phone browser's own recognizer is shape 1, behind the certificate in
  * `docs/away.md`. Neither exists yet, so `canListen()` is false in every house and the orb keeps
  * the only job it has ever had: a tap opens the box to type in. That is the degradation the gesture
  * was chosen for -- there is no control to hide, and no second path through `Say.vue` for the
@@ -43,7 +43,7 @@ const browserMode = () => mode() === 'browser' || mode() === 'browser-local'
 
 /** Whether anything in this panel can listen at all. False in every house today. */
 export function canListen(): boolean {
-  return previewing() || (browserMode() && !!recogniser.Ctor)
+  return previewing() || (browserMode() && !!recognizer.Ctor)
 }
 
 /** Start a turn of listening, or answer null where nothing can hear. */
@@ -66,11 +66,11 @@ export function listen(to: Listener): Ear | null {
   return { stop() { shut() } }
 }
 
-/* ---------- a browser's own recogniser, for looking at this on your own machine ----------
+/* ---------- a browser's own recognizer, for looking at this on your own machine ----------
  *
  * `?listen=browser`, and never without it. This is shape 1's engine and `docs/voice.md` has not let
  * it ship: Chrome's `SpeechRecognition` has historically sent the audio away to Google to be
- * recognised, and a panel that did that by default would break *works with the internet down* and
+ * recognized, and a panel that did that by default would break *works with the internet down* and
  * *no vendor account* in one move. So it stays behind a flag, `canListen()` is still false in every
  * house, and what this is for is the two things the plan actually asks for -- somewhere to watch
  * move 6 with a real voice, and somewhere to answer *whether the browser's recognition really runs
@@ -80,7 +80,7 @@ export function listen(to: Listener): Ear | null {
  * so is `127.0.0.1`. A phone pointed at this Mac over the LAN is not one, and that is the only case
  * a local certificate is for.
  */
-const recogniser = {
+const recognizer = {
   get Ctor() {
     const w = window as unknown as Record<string, unknown>
     return (w.SpeechRecognition ?? w.webkitSpeechRecognition) as (new () => SpeechLike) | undefined
@@ -123,13 +123,13 @@ const OPENING = 6000
 
 /* What a browser says when it cannot listen, said the way the panel says everything else: what
    happened, and what the person can do about it. `network` is the one worth reading twice -- it
-   means the recogniser went looking for a cloud, which is the thing this plan will not ship. */
+   means the recognizer went looking for a cloud, which is the thing this plan will not ship. */
 const WHY: Record<string, string> = {
   'not-allowed': 'This browser is not letting the panel hear. Allow the microphone and try again.',
   'service-not-allowed': 'This browser is not letting the panel hear. Allow the microphone and try again.',
   'audio-capture': 'No microphone on this machine.',
   'no-speech': "Didn't catch that.",
-  network: 'That browser sends speech away to be recognised, and it could not reach the service.',
+  network: 'That browser sends speech away to be recognized, and it could not reach the service.',
   aborted: '',
   'language-not-supported':
     'This browser has no on-device model for this language, and was told not to use a cloud.',
@@ -140,11 +140,11 @@ const WHY: Record<string, string> = {
 const NO_MODEL = 'language-not-supported'
 
 function browserEar(to: Listener): Ear | null {
-  const Ctor = recogniser.Ctor
+  const Ctor = recognizer.Ctor
   if (!Ctor) return null
   /* `?listen=browser-local` refuses the cloud outright. That is the strict half of the measurement
      docs/voice.md is waiting on: if this starts and hears you, on-device recognition is really
-     there; if it will not start, it is not, and shape 1 cannot honour *works with the internet
+     there; if it will not start, it is not, and shape 1 cannot honor *works with the internet
      down* on this browser however well it performs. Plain `?listen=browser` asks for on-device
      first and falls back once, loudly, so the move can still be looked at on any machine. */
   const strict = mode() === 'browser-local'
@@ -178,7 +178,7 @@ function browserEar(to: Listener): Ear | null {
     if (local && offered) r.processLocally = true
 
     /* The sentence is over when the house says so. `stop()` rather than `abort()`, so whatever was
-       being recognised at the moment of silence still arrives. */
+       being recognized at the moment of silence still arrives. */
     const done = () => {
       rest()
       const said = sofar.trim()

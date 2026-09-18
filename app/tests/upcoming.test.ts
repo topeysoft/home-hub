@@ -38,7 +38,7 @@ describe('a routine that runs by the clock', () => {
     expect(at.getDate()).toBe(12)
   })
 
-  it('honours a single day and an excluded one', () => {
+  it('honors a single day and an excluded one', () => {
     expect(nextRun(routine({ when: { time: '08:00' }, if: [['weekday', 'is', 'mon'] ] }), friday)!.getDay()).toBe(1)
     expect(nextRun(routine({ when: { time: '08:00' }, if: [['weekday', 'not', 'sat'] ] }), friday)!.getDay()).not.toBe(6)
   })

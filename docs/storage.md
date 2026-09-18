@@ -10,8 +10,8 @@ says what has landed. `docs/shipping.md` is the wider plan this belongs to.*
 **What the hub writes.** The engine's recorder is the heavy writer: a SQLite database committed every second by
 default and kept for ten days. Behind it come the brain's event log, Zigbee2MQTT's and Mosquitto's state, and the
 image layers an update pulls. A busy house lands somewhere between one and five gigabytes a day. The failure people
-associate with "flash on a Pi" is the microSD card: a weak controller and little wear levelling. eMMC is a different
-class of part, a managed controller with real wear levelling, rated for hundreds to a few thousand program cycles per
+associate with "flash on a Pi" is the microSD card: a weak controller and little wear leveling. eMMC is a different
+class of part, a managed controller with real wear leveling, rated for hundreds to a few thousand program cycles per
 cell. A 32 GB part at a conservative rating outlasts the product at that write rate by a wide margin. The strongest
 evidence is that Home Assistant's own hardware, Green and Yellow, ships on eMMC and runs this same stack.
 
@@ -84,7 +84,7 @@ it does for the channel. The script never fails the timer: anything it cannot re
 **Which device.** The data directory's filesystem, from `findmnt`, walked up to its whole-disk parent through `lsblk`.
 Then its kind, from the kernel:
 
-| Kind | How it is recognised | What it can say about wear |
+| Kind | How it is recognized | What it can say about wear |
 |---|---|---|
 | eMMC | `mmcblk*` whose `/sys/block/<dev>/device/type` is `MMC` | `life_time` and `pre_eol_info` in the same sysfs directory |
 | memory card | `mmcblk*` whose type is `SD` | Nothing |

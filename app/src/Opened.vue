@@ -17,7 +17,7 @@
  * is. The one exception is `closing` below, which exists because CSS cannot see
  * the difference between a pane that has not risen yet and one on its way out.
  *
- * The field takes the device's own colour while it is open: a warm lamp pushes
+ * The field takes the device's own color while it is open: a warm lamp pushes
  * the whole room amber, a camera cools it.
  *
  * WHAT THIS PANE IS, since it used to be one layout for everything. Six slots,

@@ -59,7 +59,7 @@ $V panel_cmd.py 000a dim:20
 - **One proxy connection per node**; the link is flaky below ~−80 dBm — reply drops are range, not logic.
 - **ESP32 firmware gotchas** (all fixed in `esp32-bridge/`): WiFi modem sleep must stay on or the BT controller
   aborts at boot; the core's Bluedroid BLE library hangs the main loop when a weak link drops mid-write (NimBLE now);
-  MTU negotiation fails on some links, so writes honour the real MTU and SAR-segment; a broadcast Get loses replies
+  MTU negotiation fails on some links, so writes honor the real MTU and SAR-segment; a broadcast Get loses replies
   when 11 switches answer at once, so state is resynced per switch.
 - **Re-capturing keys** (only if the store is ever lost): the recorder firmware in `mesh-provisionee/` does it
   — flash it, scan a spare switch's QR in the app (QR = 16-byte UUID + 16-byte Static OOB), and it captures
@@ -139,7 +139,7 @@ $V tools/puck_cable.py /dev/cu.usbmodem101 status                       # {'wifi
 Verified: a blank S3 handed its own config back over the wire came up as a full bridge -- Wi-Fi at 3 s, MQTT up by
 10 s, proxy link by 35 s -- and the hub's broker sees it (`bridge/c8eb status online`) next to the classic board.
 **The S3 on the desk now runs the ship image with its config in NVS**, not `secrets-s3.h`; the classic board still
-runs a desk build (0.2.0 is a drop-in for it: same header, same behaviour).
+runs a desk build (0.2.0 is a drop-in for it: same header, same behavior).
 
 What is in it: `src/config.{h,cpp}` (the NVS store and the line protocol -- `hello`, `set wifi|mqtt|keys|base|label`,
 `status`, `apply`, `wipe`; free text goes hex-encoded so nothing needs quoting), `src/light.{h,cpp}` (the puck's
@@ -177,7 +177,23 @@ the hub's side of the protocol and what the hub will run when a puck appears on 
 
 Not yet: the hub side (a udev rule like `driver-layer/radios.sh`, esptool + this image shipped in the release, the
 brain's `/bridge` state machine the panel already draws), and board A (the puck knocking over BLE). The light's
-colours have not been looked at with an eye yet -- `light=heard` above is the state, not the LED.
+colors have not been looked at with an eye yet -- `light=heard` above is the state, not the LED.
+
+## The light after it is placed: the nightlight decision (18 September, designed, not built)
+
+The three states answer "is here good?" and that question is over a minute after the puck is plugged in. The
+shipped puck is meant to be a product -- a small relay object out in the open in a living space, meant to be nice
+to look at -- so what its light does for the other fourteen hours is a real decision, and it is taken in
+**`../docs/puck-light.md`** with the board at `../design/puck/Nightlight.dc.html` (next to `Placing`, because it
+is the same light).
+
+Short form: the light is an instrument until it has finished being one, then, opt-in and only once `POST
+/bridge/placed` has been sent, it becomes a warm unsaturated nightlight -- and **a fault takes it straight back**,
+because green is a promise about the mesh *and* the broker and a glow that outlives the bridge going down is
+furniture that lies. Control is not a firmware feature: one more HA discovery payload makes the puck itself a
+`light` in the house, and schedules, "good night" and all-off are then the house's. Three things it asks of the
+product board (the LED lit through either USB port, a driven data line so fades stop being the pale-green flicker
+bug, an emitter the enclosure can diffuse) are in the doc, with the open questions.
 
 ## The hub does the cable job itself (17 September, small hours: brain/hub/bridge.py)
 
@@ -230,7 +246,7 @@ its partner act by sending that partner a press directly — a vendor message to
 its own field `0x08`. **The console is not in that path and never was**, which we established the hard
 way and which retired the "do not unplug the console" rule this section was originally written under.
 A pair looks after itself and keeps working with the hub switched off, which is the only acceptable
-behaviour for a light switch.
+behavior for a light switch.
 
 So the relay below is **transitional**, not the mechanism. It earns its place in exactly one case: a
 pair whose two ends are on *different* networks during a migration, where no direct message can cross

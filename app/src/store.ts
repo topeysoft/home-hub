@@ -342,7 +342,7 @@ export function dismissToast() { store.toast = null; clearTimeout(toastTimer) }
  * of Home reads the same map, so a layout cannot disagree about it.
  *
  * A scene is not in here. "Everything off" means the row to empty, and that
- * emptying is the confirmation; ten grey cards would argue with it.
+ * emptying is the confirmation; ten gray cards would argue with it.
  */
 export const done = reactive<Record<string, { verb: string; at: number }>>({})
 const QUIETED: Record<string, string> = { off: 'Off', close: 'Closed', lock: 'Locked', pause: 'Paused' }

@@ -3,7 +3,7 @@
  *
  * The same removal art-sheet.mjs did for the devices, for the same reason. This
  * sheet used to re-implement the illustration in its own JS -- the condition
- * table, the cloud body, the precipitation colours, the starfield -- and a copy
+ * table, the cloud body, the precipitation colors, the starfield -- and a copy
  * kept by hand is a copy that drifts. It had: rain at night was rgb(105,133,165)
  * on the sheet and rgb(110,140,176) in the panel, and the starfield came out at
  * 0.851 against the panel's 0.946, because those were corrected in sky.ts and
@@ -173,7 +173,7 @@ const page = `<!doctype html>
 
     <h1 class="dsp" style="margin: 0; font-size: 38px;">One cloud, every condition, both lights</h1>
     <p style="margin: 8px 0 0; font-size: 17px; color: #b9b5ad; max-width: 100ch;">Not thirty drawings &mdash; one illustration built from parts, driven by the same <span style="font-variant-numeric: tabular-nums;">{clouds, rain, snow, fog, lightning, wind}</span> that <span style="font-variant-numeric: tabular-nums;">wxOf()</span> already hands the sky. Night is not one of those parts, and it is not a condition: the house reports the weather, the sun&rsquo;s elevation says which light it is in. So every condition has to hold up twice. <b style="color:#e4e0d8; font-weight:500;">Day on the left of each pair, night on the right.</b> Only the clear sky carries two names.</p>
-    <p style="margin: 7px 0 0; font-size: 13px; color: #8a877f; max-width: 116ch;">Every mark below is <span style="font-variant-numeric: tabular-nums;">illustration()</span>&rsquo;s, and every sky is <span style="font-variant-numeric: tabular-nums;">palette()</span>&rsquo;s, read out of <span style="font-variant-numeric: tabular-nums;">src/sky.ts</span> at ${DAY}&deg; and ${NIGHT}&deg; of sun &mdash; not drawn again here. What changes between a pair: the sky, greyed by cloud, darkened by rain, flattened by fog, in either light; the disc, a gold sun and a bitten silver moon crossfading in one place; the stars a thin enough sky lets through; and the cloud body, lit white by day, only moonlit by night. Nothing else moves. The bolt is the same colour in both, because lightning brings its own light.</p>
+    <p style="margin: 7px 0 0; font-size: 13px; color: #8a877f; max-width: 116ch;">Every mark below is <span style="font-variant-numeric: tabular-nums;">illustration()</span>&rsquo;s, and every sky is <span style="font-variant-numeric: tabular-nums;">palette()</span>&rsquo;s, read out of <span style="font-variant-numeric: tabular-nums;">src/sky.ts</span> at ${DAY}&deg; and ${NIGHT}&deg; of sun &mdash; not drawn again here. What changes between a pair: the sky, grayed by cloud, darkened by rain, flattened by fog, in either light; the disc, a gold sun and a bitten silver moon crossfading in one place; the stars a thin enough sky lets through; and the cloud body, lit white by day, only moonlit by night. Nothing else moves. The bolt is the same color in both, because lightning brings its own light.</p>
 
     <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 24px 18px; margin-top: 24px;">
       <sc-for list="{{cells}}" as="c" hint-placeholder-count="${cells.length}">
@@ -196,7 +196,7 @@ ${half('nite')}
 
 <script data-dc-script>
 /* Baked by mock/weather-sheet.mjs out of src/sky.ts -- do not edit by hand, and
-   do not compute anything here. The moment this file works out a colour of its
+   do not compute anything here. The moment this file works out a color of its
    own it is a second implementation again, which is the bug it was written to
    remove. Run \`npm run weather-sheet\` after touching sky.ts; CI checks it. */
 class Component extends DCLogic {

@@ -152,7 +152,7 @@ covers the firmware, and the hub serves the verified result at a LAN route.
 
 **The puck compares and decides.** On boot and every few hours: fetch the manifest from the hub, compare `fw`
 and `sha256` against its own, and if they differ, download, verify the hash while writing, and reboot into the
-new slot. A puck that cannot reach the hub does nothing, which is the correct behaviour and needs no code.
+new slot. A puck that cannot reach the hub does nothing, which is the correct behavior and needs no code.
 
 **Older is not an upgrade.** A hash proves a file arrived whole; a signature proves the maker made it. Neither
 proves it is *current*. Nothing else here stops a hub — or something wearing a hub's address — from serving an

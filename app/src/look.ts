@@ -47,15 +47,15 @@ export type Feel = {
  * setting. What decided this particular three was the picker itself: these are
  * shown live, side by side, at whatever hour you happen to open the page, so any
  * two that can ever look the same are a bad pair no matter how well they read on
- * paper. Cosy -- warm on paper -- was the obvious third and had to go for exactly
- * that reason: `follow` IS warm after sunset, so from dusk to dawn Cosy and Calm
+ * paper. Cozy -- warm on paper -- was the obvious third and had to go for exactly
+ * that reason: `follow` IS warm after sunset, so from dusk to dawn Cozy and Calm
  * were the same picture twice and the page was asking people to choose between
  * two identical things. Pastel cannot collide with either: it holds dL .335 off
  * the sky where the others hold .135, so it is visibly the lighter one at
  * midnight as well as at noon.
  *
  * So: two ends of the light on paper, and the other material. `warm` and `cool`
- * are still there under Customise, which is the honest place for a tone whose
+ * are still there under Customize, which is the honest place for a tone whose
  * whole character is that it ignores the hour.
  */
 export const FEELS: Feel[] = [
@@ -79,7 +79,7 @@ export function feelOf(v: unknown): Feel {
  * key that names it.
  *
  * The naming key is the fragile one. A hub drops what it has never heard of --
- * that is the whole point of LOOK in api.py, and it is the right behaviour --
+ * that is the whole point of LOOK in api.py, and it is the right behavior --
  * so a panel from this branch talking to a hub that has not been updated yet
  * sends "feel" and gets back a look with no feel in it. Read only that key and
  * every pick on the Look page snaps straight back to Calm, for no reason anybody
@@ -102,7 +102,7 @@ export function feelFrom(look: { feel?: string; face?: string; tone?: string } |
 /*
  * Where this screen is, read off how wide it is, because that is the only thing
  * a browser will tell us about the room it is in. The seam at 861 is the panel's
- * one real breakpoint -- panel.css turns on the whole of its wall behaviour
+ * one real breakpoint -- panel.css turns on the whole of its wall behavior
  * there -- and 1280 is where a screen stops being something you stand in front
  * of and starts being something you read from the sofa.
  *
@@ -130,7 +130,7 @@ export function lookOf(feel: FeelName): { feel: FeelName; face: FaceName; tone: 
 }
 
 /*
- * Has someone been under Customise? Only worth asking so the page can say
+ * Has someone been under Customize? Only worth asking so the page can say
  * "Calm, adjusted" instead of quietly showing Calm as chosen while the panel
  * looks like something else. A house that set its look by hand before feels
  * existed lands here too, and that is right: it IS adjusted, and nothing it

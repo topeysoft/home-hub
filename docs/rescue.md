@@ -202,7 +202,7 @@ the rest is the box doing its job. If the kit ever needs a terminal in a custome
 ## Rules
 
 - **Never redistribute a vendor's binaries.** We ship our launcher and our bridge. Their firmware, their APKs and
-  their keys stay on their device, where the owner already has a licence to them.
+  their keys stay on their device, where the owner already has a license to them.
 - **Loads first, on every device.** See above. A dark room is a failed rescue however good the screen looks.
 - **One launcher, no second client.** `docs/apps.md`. A device that needs its own UI is a device we decline.
 - **Decide the posture deliberately.** Wink is abandoned; rescuing it is repair and nobody objects. Brilliant is

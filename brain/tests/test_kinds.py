@@ -310,7 +310,7 @@ class AlarmTests(ApiTest):
                 self.assertEqual([c for c in plan(room, state) if c[2] == "switch.kettle"], [])
 
     def test_a_plug_that_is_left_a_plug_is_still_swept_up_by_everything_off(self):
-        # The sweep is not weakened for everything else: this is the very behaviour being stepped over.
+        # The sweep is not weakened for everything else: this is the very behavior being stepped over.
         intents._rules.update(mtime=object(), actions=intents.DEFAULT_ACTIONS, hold=intents.DEFAULT_HOLD)
         self.addCleanup(intents._rules.update, {"mtime": None})
         kettle = Device("switch.kettle2", "Kettle", "kitchen", "switch", "on")

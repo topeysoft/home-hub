@@ -402,7 +402,7 @@ setup**, not a nudge that Home repeats.
   that has been off for a year, and refusing to start is the worst possible way to tell somebody.
 - **What the wall says while the engine is restarting.** For most updates only the brain moves and the panel blinks;
   for an update that bumps Home Assistant the house is genuinely deaf for half a minute, and the panel should say so
-  in advance rather than apologise afterwards.
+  in advance rather than apologize afterwards.
 - **Whether the driver layer can move without the hub moving.** Today it cannot, which is a good rule and also means a
   Home Assistant security fix waits for a hub release. Probably right; worth writing down that it was chosen.
 

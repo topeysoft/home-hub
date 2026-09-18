@@ -40,7 +40,7 @@ async function settled(page: Page, url: string) {
   await freeze(page)
 }
 
-async function centre(page: Page, selector: string) {
+async function center(page: Page, selector: string) {
   const el = page.locator(selector).first()
   await el.scrollIntoViewIfNeeded()          // a finger cannot press what is below the fold
   await page.waitForTimeout(250)
@@ -78,7 +78,7 @@ test.describe('with a finger', () => {
       const line = tile.locator('.tile-state, .onnow-name').first()
       const before = await line.innerText({ timeout: 1500 }).catch(() => '')
 
-      const { x, y } = await centre(page, selector)
+      const { x, y } = await center(page, selector)
       await press(page, x, y, 560)
 
       await expect(page.locator('.opened-panel')).toHaveCount(1)

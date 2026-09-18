@@ -80,11 +80,11 @@ house's name for it and a stable UniqueID.
 
 | The house's kind | Matter device type | Notes |
 |---|---|---|
-| `light` | On/Off, Dimmable, Colour Temperature or Extended Colour Light | picked from `supported_color_modes`, which `_keep_attrs` already keeps |
+| `light` | On/Off, Dimmable, Color Temperature or Extended Color Light | picked from `supported_color_modes`, which `_keep_attrs` already keeps |
 | `switch`, `appliance` | On/Off Plug-in Unit | the kind matters to the hub, not to Apple Home |
 | `fan` | Fan | `percentage` is already kept |
 | `cover` | Window Covering | `current_position` is already kept |
-| `climate` | Thermostat | the richest mapping and the one most likely to disagree; Matter 1.6 spent effort on thermostat behaviour |
+| `climate` | Thermostat | the richest mapping and the one most likely to disagree; Matter 1.6 spent effort on thermostat behavior |
 | `motion` | Occupancy Sensor | |
 | `contact` | Contact Sensor | |
 | `sensor.temperature` / `.humidity` / `.illuminance` | Temperature / Humidity / Light Sensor | |
@@ -369,7 +369,7 @@ thirty-two of them is precisely what the kind switches exist to avoid. This foll
   between a household and anything working at all.
 - The Share page **counts** them — *1 kept home* — and never names them. The count ignores exceptions whose kind is
   not shared anyway, because a lamp left out of something nobody shares is not being held back in any sense a person
-  would recognise.
+  would recognize.
 - It is a change to the house, so it needs the code, the way renaming and moving from the same pane already do.
 
 **And it turned up a hole in the acting gate.** The route that runs a command from somebody else's assistant checked

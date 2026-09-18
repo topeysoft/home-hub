@@ -2,7 +2,7 @@
 
 #include <math.h>
 
-// Which LED this board has. A colour one (WS2812) on the pins the S3 devkits put it on -- GPIO48 on
+// Which LED this board has. A color one (WS2812) on the pins the S3 devkits put it on -- GPIO48 on
 // the v1.0 board and on the clones, GPIO38 on v1.1 -- and the shipped image cannot know which it
 // landed on, so it drives both; each is a free pin on the other revision. -DBRIDGE_RGB_PIN=n names a
 // single other pin. A board with none of that gets the plain LED_BUILTIN; nothing at all stays silent.
@@ -71,23 +71,23 @@ static void rgbBegin() {
 // board that ties them together (a solder bridge, a jumper, or a clone that simply routes both to
 // the LED) two channels started a few microseconds apart put two push-pull outputs on one wire.
 // The high pulses merge, a 0 bit's 0.4 us stretches past the threshold that separates it from a 1,
-// and the LED reads ones all the way across: full white, with the real colour surfacing only on
+// and the LED reads ones all the way across: full white, with the real color surfacing only on
 // the frames where the skew happens to line up. That is the fault this replaces.
 //
-// Serialised, a one-LED board sees exactly what it saw before, and a board that bridges the pins
-// sees the same frame written twice with a gap -- which is just the same colour, latched twice.
-// A WS2812 latches what it is given and holds it until the next frame, so a colour that has not
+// Serialized, a one-LED board sees exactly what it saw before, and a board that bridges the pins
+// sees the same frame written twice with a gap -- which is just the same color, latched twice.
+// A WS2812 latches what it is given and holds it until the next frame, so a color that has not
 // changed does not need sending again -- and on a board whose data line is marginal (3.3 V logic
 // into an LED powered from 5 V wants 3.5 V to read a 1) every frame sent is another chance to be
-// misread. Rewriting a steady colour 25 times a second turns one dice roll into 25 per second,
+// misread. Rewriting a steady color 25 times a second turns one dice roll into 25 per second,
 // which is what made the steady green flicker between green and a paler, whiter green. Heard is
 // now a single write that stands; Looking is two a second; only the breathing red still writes
 // every frame, and that one is genuinely changing.
 //
 // ...but "never write again" is too far. A frame that is misread then stands for ever, because the
-// code believes it already sent the right colour -- which is how a stuck pale green appeared after
+// code believes it already sent the right color -- which is how a stuck pale green appeared after
 // a spell out of range, where the radio scans six seconds in every eight and the supply is at its
-// noisiest. So an unchanged colour is still resent, just slowly: often enough that a bad latch is
+// noisiest. So an unchanged color is still resent, just slowly: often enough that a bad latch is
 // measured in seconds rather than being permanent, rarely enough that it cannot read as flicker.
 #define REFRESH_MS 2000
 
@@ -130,13 +130,13 @@ static volatile Light want = Light::Off;
 #define BREATH_MS 4000
 #endif
 
-// The three colours, as an emitter -- NOT as the panel draws them.
+// The three colors, as an emitter -- NOT as the panel draws them.
 //
 // These started as the panel's own tokens (--lamp #e9b872, --live #6fcf97, --danger #e08a8a),
 // scaled down. That was a category error and it is why the light looked washed out. Those tokens
 // are pastel tints, picked to stay legible as ink on a dark surface, and on a screen they read as
 // amber, green and red because the dark field around them hands the eye a white reference. A bare
-// LED hands it nothing: the eye normalises to the brightest thing in the room, which is the LED,
+// LED hands it nothing: the eye normalizes to the brightest thing in the room, which is the LED,
 // so a pastel emitter reads as white. #e08a8a is a pink, and at arm's length it looked like one.
 //
 // So the off-channels go to (near) zero and the peak stays exactly where it was -- 58, 52, 56 --
@@ -191,7 +191,7 @@ static void lightTask(void *) {
         case Light::Far: {                       // red, breathing
 #if defined(HAVE_RGB)
             // Time is quantised to the step before the fade is computed, so every frame inside a
-            // step produces byte-identical colour and rgbWrite() drops it. That is what turns the
+            // step produces byte-identical color and rgbWrite() drops it. That is what turns the
             // rate down -- the task still runs at 40 ms, it just stops resending what it just sent.
             uint32_t tq = (t / breathStep) * breathStep;
             float k = 0.5f + 0.5f * sinf((tq % breathMs) / (float)breathMs * 6.2831853f);

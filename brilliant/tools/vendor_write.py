@@ -19,7 +19,7 @@ It always prints the value BEFORE it writes, so there is a restore value in the
 log even when nobody thought to save one, and reads back after to show what took.
 A field read only at boot (the load type, and on the evidence `0x1b`) will read
 back as written and still not be live until the switch is power cycled -- the
-readback is not the proof, the behaviour is.
+readback is not the proof, the behavior is.
 
     BRILLIANT_MESH_STORE=~/.config/brilliant-mesh/mesh-net.json \\
         python3 vendor_write.py 0006 1b 03

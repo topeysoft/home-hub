@@ -17,7 +17,7 @@ CHUNK = 64 * 1024
 
 
 async def relay(ha, entity_id: str, ws):
-    """One viewer's WebRTC signalling, panel on one side and HA on the other. Returns when the panel hangs up.
+    """One viewer's WebRTC signaling, panel on one side and HA on the other. Returns when the panel hangs up.
 
     Panel → brain: {"type": "offer", "offer": sdp} once, then {"type": "candidate", "candidate": {…}} as ICE finds routes.
     Brain → panel: {"type": "config", "configuration": {"iceServers": […]}} first, then HA's own messages as

@@ -48,8 +48,8 @@ echo "wrote sounds/$name.mp3  (${dur}s, $size) — shows on tiles as \"$shown\""
 CREDITS="$OUT_DIR/CREDITS.md"
 [ -f "$CREDITS" ] || printf '# Where each recording came from\n\n' > "$CREDITS"
 if ! grep -q "^- \`$name.mp3\`" "$CREDITS"; then
-  printf -- '- `%s.mp3` — %s — %s — %s\n' "$name" "${FROM:-source?}" "${LICENSE:-licence?}" "${BY:-author?}" >> "$CREDITS"
-  [ -n "$FROM$LICENSE$BY" ] || echo "note: add the source, licence and author to sounds/CREDITS.md"
+  printf -- '- `%s.mp3` — %s — %s — %s\n' "$name" "${FROM:-source?}" "${LICENSE:-license?}" "${BY:-author?}" >> "$CREDITS"
+  [ -n "$FROM$LICENSE$BY" ] || echo "note: add the source, license and author to sounds/CREDITS.md"
 fi
 # straight onto a hub, if asked
 if [ -n "$HUB" ]; then

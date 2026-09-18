@@ -35,7 +35,7 @@ describe('what the dev server sends to the brain', () => {
     expect(called).toContain('/home')
   })
 
-  it('sends the live stream and camera signalling over a websocket, not as plain http', () => {
+  it('sends the live stream and camera signaling over a websocket, not as plain http', () => {
     const proxy = proxyFor('http://localhost:8399') as Record<string, any>
     for (const p of BRAIN_SOCKETS) expect(proxy[p]?.ws, p).toBe(true)
     expect(proxy['/stream'].target).toMatch(/^ws:/)

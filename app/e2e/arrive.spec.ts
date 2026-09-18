@@ -53,7 +53,7 @@ test('the house arrives from the side it runs off, one card after another', asyn
   expect(seen.some((f) => f.op === '0.00'), 'the tab never faded in; it was just suddenly there').toBe(true)
   expect(seen[seen.length - 1].op, 'the tab never finished arriving').toBe('1.00')
   // in from the right, which is the way the columns run off the screen
-  expect(Math.max(...seen.map((f) => px(f.tr[0]))), 'no card ever travelled').toBeGreaterThan(100)
+  expect(Math.max(...seen.map((f) => px(f.tr[0]))), 'no card ever traveled').toBeGreaterThan(100)
   // and one after another rather than all together
   expect(homeAt(seen, 3) - homeAt(seen, 0), 'the cards arrived as one block, not staggered').toBeGreaterThan(80)
   // nothing is left on a card once it is home: a held card and a press must behave
@@ -71,8 +71,8 @@ test('the cameras come up from below, because nothing on that tab sweeps', async
   expect(seen[seen.length - 1].op, 'the tab never finished arriving').toBe('1.00')
   // a lift, not a sweep: a grid that wraps downwards has no sideways gesture to teach
   const worst = Math.max(...seen.map((f) => px(f.tr[0])))
-  expect(worst, 'no camera ever travelled').toBeGreaterThan(8)
-  expect(worst, 'a camera travelled a sweep worth of distance, on a tab that does not sweep').toBeLessThan(200)
+  expect(worst, 'no camera ever traveled').toBeGreaterThan(8)
+  expect(worst, 'a camera traveled a sweep worth of distance, on a tab that does not sweep').toBeLessThan(200)
   expect(homeAt(seen, 2) - homeAt(seen, 0), 'the cameras arrived as one block, not staggered').toBeGreaterThan(40)
 })
 
@@ -104,10 +104,10 @@ test.describe('asked not to move', () => {
       // it still arrives rather than appearing between two frames
       expect(seen.some((f) => f.op === '0.00'), `${box} was just suddenly there`).toBe(true)
       expect(seen[seen.length - 1].op, `${box} never finished arriving`).toBe('1.00')
-      // and nothing travelled on the way. One painted frame off its place is the move
+      // and nothing traveled on the way. One painted frame off its place is the move
       // this is here to remove, whether or not a transition was carrying it.
-      const travelled = seen.filter((f) => f.tr.some((v) => px(v) > 0.5))
-      expect(travelled.length, `${box} travelled: ${travelled[0]?.tr.join()}`).toBe(0)
+      const traveled = seen.filter((f) => f.tr.some((v) => px(v) > 0.5))
+      expect(traveled.length, `${box} traveled: ${traveled[0]?.tr.join()}`).toBe(0)
       await ctx.close()
     }
   })
@@ -121,7 +121,7 @@ test.describe('on a phone', () => {
     await openTab(page, /^Rooms$/)
 
     expect(seen.some((f) => f.op === '0.00'), 'the tab never faded in').toBe(true)
-    const travelled = seen.filter((f) => f.tr.some((v) => px(v) > 0.5))
-    expect(travelled.length, `a card swept in on a phone: ${travelled[0]?.tr.join()}`).toBe(0)
+    const traveled = seen.filter((f) => f.tr.some((v) => px(v) > 0.5))
+    expect(traveled.length, `a card swept in on a phone: ${traveled[0]?.tr.join()}`).toBe(0)
   })
 })

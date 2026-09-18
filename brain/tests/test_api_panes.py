@@ -57,7 +57,7 @@ class PaneControlTests(ApiTest):
         # every screen hears about it, and the thing itself carries the time
         self.assertEqual(self.sent("device")[-1]["device"]["attrs"]["off_at"], r.json()["off_at"])
 
-    def test_cancelling_a_timer_leaves_the_thing_on(self):
+    def test_canceling_a_timer_leaves_the_thing_on(self):
         self.client.post("/devices/switch.kettle/timer", json={"minutes": 30})
         self.ha.calls.clear()
         r = self.client.post("/devices/switch.kettle/timer", json={"minutes": 0})

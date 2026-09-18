@@ -186,7 +186,7 @@
       </div>
     </div>
 
-    <!-- a media tile with nothing playing has no artwork to be coloured by -->
+    <!-- a media tile with nothing playing has no artwork to be colored by -->
     <div style="position: relative; flex: 0 0 auto; width: 262px; border-radius: 26px; overflow: hidden; background: {{t.plain}}; border: 1px solid {{t.edge}}; color: {{t.ink}}; padding: 20px 18px;">
       <svg width="212" height="184" viewBox="0 0 150 130" style="position: absolute; right: -14px; bottom: -8px;">
         <ellipse cx="96" cy="122" rx="34" ry="7" fill="{{mat.metalLo}}" opacity=".4"/>
@@ -229,7 +229,7 @@
 </x-dc>
 
 <script data-dc-script data-props='{"field":{"editor":"enum","options":["Dusk","Night","Midday"],"default":"Dusk","section":"Sky"},"tone":{"editor":"enum","options":["Warm","Cool","Pastel","Follow the light"],"default":"Follow the light","section":"Tiles"}}'>
-/* The same colour rules as Home, copied rather than invented: a room is not a
+/* The same color rules as Home, copied rather than invented: a room is not a
    different place, and a tile that means "on" must mean it in every room.
    Tiles are specified RELATIVE to the sky -- always this much lighter, always
    this far around the hue wheel -- so nothing inverts between dusk and noon. */
@@ -318,7 +318,7 @@ class Component extends DCLogic {
     const t = {
       light: tile(tn.h.light, C),
       scene: tile(tn.h.scene, C),
-      // a tile with nothing of its own to say takes the quietest colour there is
+      // a tile with nothing of its own to say takes the quietest color there is
       plain: tile(tn.h.lock, C * 0.22),
       ink: light ? '#1e1b24' : '#f1eee8',
       sub: light ? 'rgba(30,27,36,.62)' : '#b9b5ad',

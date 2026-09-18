@@ -42,7 +42,7 @@ def about(pid):
 
     `-ww` is load-bearing: without it ps truncates the command to the terminal width, which on a
     normal window is about sixteen characters -- so every hub looked like `/opt/homebrew/Ce` and
-    nothing was ever recognised as ours. And etime comes FIRST because it is the fixed-width half;
+    nothing was ever recognized as ours. And etime comes FIRST because it is the fixed-width half;
     with the command last there is nothing after it to confuse a split with."""
     try:
         r = subprocess.run(["ps", "-ww", "-o", "etime=,command=", "-p", str(pid)],

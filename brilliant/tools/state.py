@@ -136,7 +136,7 @@ async def main():
             print("  The model DOES track the physical switch.")
             print(f"  {before} -> {after}")
             print("  So state is readable by polling, and the earlier")
-            print("  'local touch bypasses the mesh' finding was an artefact")
+            print("  'local touch bypasses the mesh' finding was an artifact")
             print("  of reading with an acknowledged Set.")
         else:
             print("  Unchanged across a hand operation -- the model really does")

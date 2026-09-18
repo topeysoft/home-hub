@@ -10,7 +10,7 @@
  * Each row is its own switch and its own way in: a tap flips the feature, a hold opens it, and the
  * card itself is nothing but the frame around them -- it has no state of its own to be on or off,
  * because "the fridge is on" is not a thing anybody at a wall panel needs telling. A row that is on
- * wears the lamp colour the way a lit tile does, so what is running reads from across the room.
+ * wears the lamp color the way a lit tile does, so what is running reads from across the room.
  *
  * The card is a plain tile in the grid's eyes (`data-size`, the same body grid), so it packs the
  * column the way any other third or half does.

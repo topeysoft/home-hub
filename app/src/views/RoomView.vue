@@ -118,7 +118,7 @@ function arrange(): Cell[] {
 /*
  * The arrangement is decided when you walk into the room, and then HELD.
  *
- * This is not an optimisation, it is the whole difference between a panel you
+ * This is not an optimization, it is the whole difference between a panel you
  * can use and one you cannot. Ranked live, turning the main lamp off promoted
  * the next-brightest one, resized both, and reflowed every column -- so on a
  * wall panel the tiles moved under the finger that had just tapped, and a

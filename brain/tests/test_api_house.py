@@ -263,7 +263,7 @@ class AccountTests(ApiTest):
         self.assertEqual(r.status_code, 200)
         self.assertEqual(sent, [("DELETE", "/api/config/config_entries/entry/e-hue")])
 
-    def test_it_is_written_down_with_the_name_a_person_would_recognise(self):
+    def test_it_is_written_down_with_the_name_a_person_would_recognize(self):
         with mock.patch.object(self.hub.add, "_rest", lambda m, p, d=None: {}):
             self.client.delete("/accounts/e-hue")
         row = self.hub.log.recent(1, subject="e-hue")[0]

@@ -142,7 +142,7 @@ it: `nadine.elyir.app`. Three things follow from the choice of domain rather tha
   outside happens over a certificate somebody accepts once. Piece 3 is a prerequisite of step 3, not a step after it.
 - **The record is DNS-only, never proxied.** Cloudflare's orange cloud terminates TLS at Cloudflare, which is the
   cloud this document ruled out on its first page, and it would quietly undo the pass-through the relay was chosen
-  for. Grey cloud, and a line in the health list if a hub ever finds itself behind one.
+  for. Gray cloud, and a line in the health list if a hub ever finds itself behind one.
 - **No house ever holds a Cloudflare credential.** Cloudflare's API tokens scope to a zone, not to a record, so the
   narrow per-house credential imagined below cannot be minted: a token letting one hub write its own
   `_acme-challenge` lets it write every other house's too. Piece 3 is what removes the need for one.
@@ -153,7 +153,7 @@ the repository, which matters more here than it would elsewhere, because this is
 household cannot fix for itself.
 
 **And it is one record.** The relay routes by SNI and the certificate is proved over TLS, so **DNS never has to learn
-a house's name**: a single grey-cloud wildcard `*.elyir.app` pointing at the relay covers every house that will ever
+a house's name**: a single gray-cloud wildcard `*.elyir.app` pointing at the relay covers every house that will ever
 register, and registering one writes nothing to DNS at all. The registration service hands out names and keys; it does
 not touch the zone. A zone that never changes at runtime is a zone Terraform can own completely.
 

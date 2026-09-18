@@ -3,7 +3,7 @@
 import { defineConfig, devices } from '@playwright/test'
 
 /* The panel, driven in a real browser against the mock brain — the same house every time, with the
-   clock frozen by ?at=. These are behaviour tests, not pictures: they assert on what the panel does,
+   clock frozen by ?at=. These are behavior tests, not pictures: they assert on what the panel does,
    so they can fail a build without anyone having to look at a screenshot. */
 export default defineConfig({
   testDir: './e2e',

@@ -55,7 +55,7 @@ developer's own house.
 `tests/sun-positions.json` is one table of sun positions that both `hub/sun.py` and the panel's
 `app/src/sun.ts` are checked against, because they are the same calculation written twice and
 nothing else would notice them drifting apart. Regenerate it with `tests/make_sun_positions.py`
-only when the maths is meant to change.
+only when the math is meant to change.
 
 Docker: `docker build -f brain/Dockerfile -t home-hub/brain .` from the repo root builds the panel
 in. CI (`.github/workflows/brain-image.yml`) publishes the same image for amd64 and arm64 as
@@ -93,7 +93,7 @@ endpoints just nudge it along.
   `POST /setup/drivers` looks now instead of at the next half-minute. `HUB_DRIVER_HOST` in `.env`
   is where HA reaches the other containers (`localhost` with host networking, a container name on the Mac).
 - `hub/comfort.py` — a thermostat sensing its room from another sensor (`POST /devices/{id}/sense`).
-- `hub/camera.py` — live video for the viewer: WebRTC signalling relayed to HA over the
+- `hub/camera.py` — live video for the viewer: WebRTC signaling relayed to HA over the
   `/devices/{id}/webrtc` socket (the frames never touch the brain), and HA's motion JPEG passed
   through at `/devices/{id}/stream` for cameras or browsers that cannot do WebRTC.
   The number on the card becomes what that room should reach; the brain keeps the thermostat's

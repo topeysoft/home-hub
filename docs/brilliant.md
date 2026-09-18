@@ -63,7 +63,7 @@ repo and gitignored. Losing that file means factory-resetting every switch and s
 ## The fallback nobody needed
 
 The FCC filing for the dimmer (`2APQV-BHS120US`) includes internal photographs. The radio daughterboard is a
-**Nordic nRF52832**, and it carries a labelled debug header — `3.3V / TDIO / TCK / TXO / RXD / SWDCLK / SWDIO /
+**Nordic nRF52832**, and it carries a labeled debug header — `3.3V / TDIO / TCK / TXO / RXD / SWDCLK / SWDIO /
 P0.21 / P0.16 / GND` — with the pogo contacts to the mains board silkscreened `DIM`, `ZC`, `GND`, `Curr Sense`,
 `PIR`, `VSENSE`, `3.3V`. If the vendor model ever proves undecodable, these are reflashable devices with a
 documented toolchain and a known pinout. Worth remembering; not currently needed. (nRF52832 is BLE-only — no
@@ -146,7 +146,7 @@ provisionee work below is already the route to.
 hub's broker. What is lost is feedback — when somebody uses the switch by hand, Home Assistant will not know,
 and its state drifts until the next command. Treat these as optimistic-state lights.
 
-**The way to full function** is the nRF52832 and its labelled SWD header, described above. Own firmware would
+**The way to full function** is the nRF52832 and its labeled SWD header, described above. Own firmware would
 expose the PIR as a `Sensor Server` and taps as a real `Generic OnOff Server`. That began as a curiosity in
 the FCC photographs; it is now the only route to motion and gestures.
 
@@ -291,7 +291,7 @@ the factory reset wiped the panel's setup, and the mode selector was not found b
   value and report it back, and **none of them drives the triac.** Ramping them bright/dim/bright with the
   lamp watched produced no visible change. They are stored setpoints, not the live output.
 - Eight boolean/enum fields (`0x0c 0x1a 0x1b 0x1c 0x28 0x49 0x50 0x56`) were flipped, singly and together,
-  with no effect on the load and no visible behaviour change.
+  with no effect on the load and no visible behavior change.
 - The structured tables `0x2e`/`0x2f` (shaped like load/dimming profiles) were left untouched: mutating a
   15-byte table blind is the riskiest write available and the least likely to read cleanly against a
   human lamp-watch oracle. If the mode lives anywhere in the store, this is the remaining candidate — but it
@@ -353,7 +353,7 @@ and node `0x0012` (the panel's controller element) was seen polling a switch's v
 **This is the thing the top of this document called lost.** The switches *do* publish their real physical
 state -- on/off and dim level -- and with the panel's netkey + appkey (+ IV 7, + the proxy-nonce fix) we read
 it in real time, exactly as Brilliant's own panel does. The earlier "local touch bypasses the mesh" finding was
-an artefact of testing an *unconfigured* switch on our own network without the panel's keys; a panel-configured
+an artifact of testing an *unconfigured* switch on our own network without the panel's keys; a panel-configured
 switch reports everything. PIR is the remaining item: it is one of the vendor fields the panel polls in that
 list, readable now by getting those fields from a configured switch with the panel appkey.
 
@@ -509,7 +509,7 @@ and the brain's own classifier maps those domains straight onto *light* and *mot
   silent 29 s after connecting and published its last will. The BLE layer now runs on NimBLE, whose connects and
   writes have timeouts, and the MQTT keepalive is 60 s so a stalled second on the radio is not a lost session.
 - *MTU negotiation fails on some links* and leaves the default 23, where a `Generic Level Set` no longer fits one
-  ATT write. Writes honour the real MTU and SAR-segment, as the laptop tools always did.
+  ATT write. Writes honor the real MTU and SAR-segment, as the laptop tools always did.
 - *A broadcast Get loses replies* when a dozen switches answer at once, so it is used for discovery only; state
   is resynced with unicast Gets to each known switch, at link-up and every ten minutes.
 
@@ -786,7 +786,7 @@ only polling *other* switches with Gets. Multi-way on this pair is peer-to-peer 
 
 ### Two of my own claims that this corrects
 
-- **`04` is not merely a "bare ack".** The opcode table above catalogues it that way from the old no-parameter
+- **`04` is not merely a "bare ack".** The opcode table above catalogs it that way from the old no-parameter
   sweep. It takes an argument, and `04 03` is a press. The sweep found nothing because it sent commands with no
   parameters, not because the command family was empty.
 - **Zero-length vendor messages are real and used.** The same sweep concluded a zero-length message is dropped
@@ -863,7 +863,7 @@ companion — and behaved accordingly: it registered a press and applied it to i
 `0403` to anyone, through every other part of the recipe being correct (bound, published, partner address set,
 power cycled). Everything worked except the one emission that makes a companion a companion.
 
-That fits the observed behaviour of a real pair. A switch that believes it is a main applies a press to its own
+That fits the observed behavior of a real pair. A switch that believes it is a main applies a press to its own
 load; a switch that knows it is a companion routes the press outward. `0x1b` looks like the flag that chooses
 between those two paths, and it is the only field in the diff of working-against-silent that reads like a mode
 rather than a per-device calibration:
@@ -885,7 +885,7 @@ needs a power cycle and a press to confirm, since everything written during adop
 17 September, evening. `0x1b = 03` was the whole fix. The adopted companion `0x0004` was power cycled and
 pressed once, and `0x0003`'s load toggled — **switch to switch, on a pair we wrote, on our own network, with no
 hub, no console and no panel anywhere in the path.** That is the end state the house actually needs: a pair that
-keeps working when the hub is off, which is the only acceptable behaviour for a light switch.
+keeps working when the hub is off, which is the only acceptable behavior for a light switch.
 
 Everything needed to reproduce it is in the sections above: adopt, bind all three models *including the vendor
 model*, set publication, write `0x08` with the partner's unicast on the **companion end only**, replay a config
@@ -930,7 +930,7 @@ vendor opcode (`C1 2008`), all unicast to the partner named in field `0x08`:
 down and then up: `55ff 5fff 48ff 7aff a1ff d6ff` are −171, −161, −184, −134, −95, −42; `c200 b800 5400 2200`
 are +194, +184, +84, +34. Read as absolute values those are incoherent — every downward one would be 65,000-odd
 on a scale that runs to 1000. Read as relative movement they are exactly a slider reporting how far the finger
-travelled, sign for direction and magnitude tapering as the movement slows.
+traveled, sign for direction and magnitude tapering as the movement slows.
 
 Thirteen samples, so not settled, but it is trivially falsifiable: a slow slide end to end should give same-sign
 deltas throughout, and reversing direction mid-slide should flip the sign inside one burst.
@@ -958,7 +958,7 @@ squarely and only on the load type:
 `0x56` was the last surviving load-type candidate after `0x1a` and `0x1b` were resolved, and it looked
 compelling: the capture of the stairway load had no `0x56` at all, and that switch does not dim. One read
 settled it the other way. **Our `0x0005`, which dims, and our `0x0006`, which does not, both read `0x56 = 03`**,
-twice each. A field with the same value on both sides of the behaviour cannot be what selects it.
+twice each. A field with the same value on both sides of the behavior cannot be what selects it.
 
 The real answer came from the person who lives in the house: **the stairway was always wired and configured as a
 plain switch.** It never dimmed. There was no fault, the adopt replayed the switch faithfully, and the light
@@ -971,7 +971,7 @@ truncate on a failed read (it continues through the list; only a dropped GATT li
 lost reply in the middle, not a lost tail.
 
 That is a real hazard for any provisioner built on captures: **a dropped read is indistinguishable from a field
-that does not exist, and the consequence is a setting silently not restored.** Two defences, neither expensive:
+that does not exist, and the consequence is a setting silently not restored.** Two defenses, neither expensive:
 
 - **Read twice and merge.** The presence of a field is only trustworthy on a second confirming pass, which is
   already documented above for comparisons and applies at least as strongly to captures meant to be replayed.
@@ -1100,8 +1100,8 @@ two signatures is confirmed on a second pair, by hand, against a lamp somebody w
 `0x0005`, read from field `0x08` with nobody pressing anything. The lamp has now agreed. That is the whole
 premise of reading a house's wiring before touching it, and it is no longer an argument.
 
-**And the dropped-press worry does not generalise.** Four presses, four lamp movements, none lost. An
-earlier paragraph in this document took the kitchen's misbehaviour as evidence that a `0403` is inherently
+**And the dropped-press worry does not generalize.** Four presses, four lamp movements, none lost. An
+earlier paragraph in this document took the kitchen's misbehavior as evidence that a `0403` is inherently
 unreliable and that any "press the far end to confirm" step must tolerate silence. On a healthy pair it is
 four for four. The kitchen's flakiness is that installation. **A confirm-by-press step is sound.**
 

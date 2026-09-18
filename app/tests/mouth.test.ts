@@ -50,7 +50,7 @@ describe('a house with no voice, which is every house today', () => {
   })
 })
 
-describe('a hub that has synthesised the answer', () => {
+describe('a hub that has synthesized the answer', () => {
   it('plays the clip the brain minted, and nothing else', () => {
     at('')
     vi.stubGlobal('Audio', FakeAudio)
