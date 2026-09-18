@@ -29,7 +29,7 @@ Bridges the house already has are learned from the broker, not from the cable: e
 `.../proxy` (the switch it is linked to, and how strongly); the switches under `<base>/<net>/<addr>/`
 are counted per net. This subscribes through the engine's own MQTT link, the way pairing.py does.
 """
-import asyncio, json, logging, os, re, secrets, socket, time
+import asyncio, json, logging, os, re, secrets, socket, sys, time
 from pathlib import Path
 
 log = logging.getLogger("hub.bridge")
@@ -37,6 +37,9 @@ log = logging.getLogger("hub.bridge")
 SHIP = Path(os.environ.get("HUB_NOTES") or Path(__file__).resolve().parent.parent.parent / "releases") / "bridge"
 DEV = Path("/dev/serial/by-id")
 SCAN_EVERY = 3
+# Long enough for two connect attempts on a sleepy board, short enough that a board which
+# will never answer does not hold the one job slot for a minute.
+PROBE_SECONDS = 45
 # Probing a board resets it, and a board being reset drops off the USB and comes back a
 # moment later. That is OUR doing, not a person's, and must not be read as an unplug --
 # otherwise a dismissal never sticks: the board vanishes, is forgiven, reappears as a fresh
@@ -121,33 +124,45 @@ class Cable:
     async def esp_chip(self, port: str) -> str | None:
         """Which ESP this is -- "esp32s3", "esp32c3" -- or None if it is not one at all.
 
-        It used to answer yes/no, and the hub then flashed an ESP32-S3 image at whatever had
-        said yes. Plug in a C3 and esptool refuses with "This chip is ESP32-C3, not ESP32-S3.
-        Wrong chip argument?", which is a developer's sentence arriving on a wall panel. The
-        chip is right there in the same probe, so there is no reason to guess.
+        Two things had to be got right here and both were got wrong first.
 
-        ASK ESPTOOL, DO NOT READ ITS SCREEN. A first version of this ran esptool.main() and
-        looked for "Chip is ..." in captured stdout. esptool 5.x prints through rich, which
-        binds the real stdout when it is imported, so redirect_stdout never sees a word of it
-        -- the capture came back with the banner and nothing else, every board came back
-        None, and a feature that had been working stopped. detect_chip() hands back the
-        loader, which knows its own name.
+        ASK ESPTOOL, DO NOT READ ITS SCREEN. Running esptool.main() and looking for "Chip is
+        ..." in captured stdout fails silently on esptool 5.x, which prints through rich --
+        rich binds the real stdout when it is imported, so redirect_stdout sees nothing.
+        detect_chip() hands back the loader and the loader knows its own name.
+
+        AND RUN IT WHERE ITS CHILDREN CANNOT OUTLIVE IT. esptool spawns a multiprocessing
+        helper, and that helper can be left holding the serial port after the call returns.
+        In a brain that never restarts, one probe then poisons every probe after it: the
+        first board is identified, and every board after it -- for days -- comes back "the
+        port is busy" and never knocks. That is exactly what a hub did, and from a hallway it
+        looks like the feature simply does not work. A subprocess we wait on takes its whole
+        family with it when it goes.
         """
-        def go():
-            import esptool
+        code = ("import sys, esptool\n"
+                "d = esptool.detect_chip(sys.argv[1], connect_attempts=2)\n"
+                "print('CHIP=' + d.CHIP_NAME)\n")
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                sys.executable, "-c", code, port,
+                stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT)
             try:
-                dev = esptool.detect_chip(port, connect_attempts=2)
-            except BaseException as e:      # FatalError, a port that vanished, a board asleep
-                log.info("bridge: %s did not answer as an ESP (%s)", port, e)
+                out, _ = await asyncio.wait_for(proc.communicate(), timeout=PROBE_SECONDS)
+            except asyncio.TimeoutError:
+                proc.kill(); await proc.wait()
+                log.info("bridge: %s did not answer as an ESP (gave up after %ss)", port, PROBE_SECONDS)
                 return None
-            try:
-                # "ESP32-S3" -> esp32s3, which is the name esptool wants back as --chip
-                return dev.CHIP_NAME.lower().replace("-", "").replace(" ", "")
-            finally:
-                try: dev._port.close()
-                except Exception: pass
-
-        return await self._in_thread(go)
+        except Exception as e:
+            log.warning("bridge: could not probe %s (%s)", port, e)
+            return None
+        said = out.decode(errors="replace")
+        for line in said.splitlines():
+            if line.startswith("CHIP="):
+                # "ESP32-S3" -> esp32s3, the name esptool wants back as --chip
+                return line[5:].strip().lower().replace("-", "").replace(" ", "")
+        tail = " / ".join(l.strip() for l in said.splitlines() if l.strip())[-300:]
+        log.info("bridge: %s did not answer as an ESP -- %s", port, tail or "(it said nothing)")
+        return None
 
     def image_for(self, chip: str | None) -> Path | None:
         """The shipped image for this chip, if the house has one.
