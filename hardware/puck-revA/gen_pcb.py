@@ -120,6 +120,31 @@ def courtyard_r(fp):
         pts = [(p[0], p[1]) for p in pts]
     return max(math.hypot(*p) for p in pts)
 
+def routing_count(text):
+    """Top-level segments, arcs, vias and zones -- i.e. hand routing.
+
+    Depth has to be tracked properly. Substring counting caught the keepout zone inside U1's own
+    footprint, and indentation is no help either because footprint bodies are spliced in at their
+    original depth. Only the nesting level says what is routing and what is part of a part.
+    """
+    n = depth = 0; i = 0
+    while i < len(text):
+        c = text[i]
+        if c == '"':                                  # skip strings; they contain brackets
+            i += 1
+            while i < len(text) and text[i] != '"':
+                i += 2 if text[i] == "\\" else 1
+        elif c == "(":
+            depth += 1
+            if depth == 2:
+                tag = re.match(r"\(([a-z_]+)", text[i:])
+                if tag and tag.group(1) in ("segment", "arc", "via", "zone"): n += 1
+        elif c == ")":
+            depth -= 1
+        i += 1
+    return n
+
+
 def uid(): return str(uuid.uuid4())
 def mm(v): return f"{v:.4f}".rstrip("0").rstrip(".")
 
@@ -237,7 +262,7 @@ def main():
     # tracks or vias in it, regenerating is almost certainly a mistake -- say so and stop.
     if p.exists() and not FORCE:
         old = p.read_text()
-        laid = old.count("(segment") + old.count("(via") + old.count("(zone")
+        laid = routing_count(old)
         if laid:
             sys.exit(f"{p.name} already has {laid} tracks/vias/zones in it -- regenerating would "
                      f"throw that away.\n  Re-run with --force if you really mean to start over, "
