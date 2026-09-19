@@ -129,7 +129,8 @@ export type Bridge = {
   unplaced?: number                        // of those, how many have no room yet
   waiting?: number                         // switches nearby that have never been let in (see addSwitch)
   bridges?: number                         // how many are set up and working, job or no job
-  needs?: 'wifi'                           // failed because the hub has nothing to give: a hub on a cable does not know the house's Wi-Fi until told once
+  needs?: 'wifi'                           // failed because the hub has nothing to give: usually the password, since the host never hands a PSK back up
+  ssid?: string                            // ...and the network the hub is standing on, when that is the one it wants the password for
   moving?: NetMove                         // every bridge being handed a new Wi-Fi at once (docs/network.md)
 }
 /* THE NETWORK the house runs on -- the hub's own connection, and the Wi-Fi the bridges are given.

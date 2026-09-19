@@ -357,6 +357,9 @@ class Bridges:
         if j["state"] == "ready": out["unplaced"] = j.get("unplaced", 0)
         if j.get("text"): out["text"] = j["text"]
         if j.get("needs"): out["needs"] = j["needs"]
+        # The network the hub is standing on, when that is what it is asking the password for. The
+        # panel shows it rather than asking for it again.
+        if j.get("ssid"): out["ssid"] = j["ssid"]
         return out
 
     def _set(self, state, **more):
@@ -536,7 +539,13 @@ class Bridges:
     async def wifi(self, ssid: str, password: str) -> dict:
         """The house's Wi‑Fi, told once. Kept in the settings for every bridge after this one; a job
         that stopped for want of it picks up where it left off, on the same cable."""
-        ssid, password = ssid.strip(), password
+        ssid = (ssid or "").strip()
+        # Nothing typed means the panel showed the hub's own network and asked only for the password.
+        # Its own connection is the name, and that one cannot be stale: a hub that were wrong about it
+        # would not be on the network to say so.
+        if not ssid:
+            mine = self.wifi_for_pucks()
+            ssid = mine["ssid"] if mine["checked"] else ""
         if not ssid: raise ValueError("Which Wi‑Fi? The name is needed.")
         self.hub.settings.set(wifi={"ssid": ssid, "pass": password})
         j = self.job
@@ -588,7 +597,19 @@ class Bridges:
                 j["chip"], j["fw"] = who["chip"], who["fw"]
             cfg = self.config()
             if not cfg.get("ssid"):
-                self._set("failed", needs="wifi", text="The hub does not know the house's Wi‑Fi yet — it is on a cable itself. Tell it once, under This hub, and every bridge after this one just works.")
+                # It is missing the PASSWORD far more often than the name: the host never hands a PSK
+                # back up, so a hub sitting on the house Wi‑Fi knows exactly which network it is on
+                # and nothing about how to join it. Asking for both is how somebody types the name
+                # wrong and ends up with a puck on a network that does not exist -- which looks
+                # exactly like a puck that does not work. So the name goes with the question when the
+                # hub is standing on it, and only a hub on a cable is asked the whole thing.
+                wifi = self.wifi_for_pucks()
+                mine = wifi["ssid"] if wifi["checked"] else ""
+                self._set("failed", needs="wifi", ssid=mine or None,
+                          text=(f"The hub is on {mine}. It needs the password for it once — then this bridge, "
+                                "and every one after it, just works.") if mine else
+                               "The hub does not know the house's Wi‑Fi yet — it is on a cable itself. Tell it once, "
+                               "under This hub, and every bridge after this one just works.")
                 return
             self._set("working", step="wifi")
             await asyncio.sleep(0)            # the step is drawn before the write starts

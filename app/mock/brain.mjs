@@ -360,7 +360,13 @@ function job() {
       working: { state: 'working', how: 'cable', step: 'keys' },
       placing: { state: 'placing', how: 'cable', switches: 11, signal: 'strong' },
       ready: { state: 'ready', how: 'cable', switches: 11, unplaced: 8 },
-      wifi: { state: 'failed', how: 'cable', needs: 'wifi' },
+      // The two shapes of the same question. BRIDGE=wifi is a hub on a cable, which has to be told
+      // the whole thing; BRIDGE=wifi-known is a hub standing on the network, which knows the name and
+      // wants only the password -- the common case, and the one that used to ask for both.
+      wifi: { state: 'failed', how: 'cable', needs: 'wifi',
+              text: 'The hub does not know the house\u2019s Wi\u2011Fi yet \u2014 it is on a cable itself. Tell it once, under This hub, and every bridge after this one just works.' },
+      'wifi-known': { state: 'failed', how: 'cable', needs: 'wifi', ssid: 'VirusBroadcast',
+                      text: 'The hub is on VirusBroadcast. It needs the password for it once \u2014 then this bridge, and every one after it, just works.' },
       failed: { state: 'failed', how: 'cable', text: 'The bridge stopped answering halfway through. Unplug it, plug it back into the hub, and it will pick up where it left off.' },
     }[BRIDGE] ?? { state: 'none' }
   }

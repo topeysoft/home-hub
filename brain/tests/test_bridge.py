@@ -766,3 +766,69 @@ class WhatAFailedWriteSays(unittest.TestCase):
         said = self.why("Traceback (most recent call last): RuntimeError: chip stopped responding")
         self.assertTrue(said.endswith("try again."))
         self.assertNotIn("Traceback", said)
+
+
+class FakeNet:
+    """The hub's own connection, the shape network.py reports it in."""
+    def __init__(self, how="wifi", ssid="VirusBroadcast"): self.how, self.ssid = how, ssid
+    def state(self): return {"how": self.how, "ssid": self.ssid} if self.ssid else {"how": self.how}
+
+
+class TheWifiItIsAlreadyStandingOn(Knocking):
+    """A hub on the house Wi-Fi is asked for a password, not for a name it can read off itself.
+
+    The host never hands a PSK back up, so a hub plainly sitting on the network still has `known`
+    false -- and what that produced was a question with a "Wi-Fi name" box in it, under a lede that
+    told every household "the hub is on a cable", including the ones whose hub is on the Wi-Fi.
+    Retyping a name the hub can read is the only way to get it wrong, and a puck on a network that
+    does not exist looks exactly like a puck that does not work. Reported from a real setup.
+    """
+    def setUp(self):
+        super().setUp()
+        self.hub = FakeHub(self.tmp.name, wifi=False)      # a name it can see, a password it has not got
+        self.hub.net = FakeNet()
+        self.b = Bridges(self.hub, cable=self.cable, devdir=self.dev)
+
+    knock = TheJob.knock                                   # the same plug-and-be-noticed as the job above
+    adopt_and_finish = TheJob.adopt_and_finish
+
+    def ask(self):
+        self.knock(); run(self.adopt_and_finish()); return self.b.status()
+
+    def test_the_question_names_the_network_rather_than_asking_for_it(self):
+        s = self.ask()
+        self.assertEqual((s["state"], s["needs"]), ("failed", "wifi"))
+        self.assertEqual(s["ssid"], "VirusBroadcast")
+        self.assertIn("VirusBroadcast", s["text"])
+        self.assertNotIn("cable", s["text"])          # it is not on one, and saying so is the bug
+
+    def test_a_password_on_its_own_is_enough(self):
+        self.ask()
+        async def tell():
+            await self.b.wifi("", "hunter2"); await self.b._task
+        run(tell())
+        self.assertEqual(self.cable.written[0][1]["ssid"], "VirusBroadcast")
+        self.assertEqual(self.b.status()["state"], "placing")
+
+    def test_the_hub_hands_out_what_the_hub_is_using_whatever_it_is_told(self):
+        """docs/network.md's rule, and the reason the panel offers no box to type another name into:
+        a name typed here is overruled by the connection the hub is standing on, so a field for it
+        would be a choice that quietly does not happen."""
+        self.ask()
+        run(self.b.wifi("Garage", "hunter2"))
+        self.assertEqual(self.b.status()["needs"], "wifi")            # asked again, not written
+        self.assertEqual(self.cable.written, [])
+
+    def test_a_hub_on_a_cable_is_still_asked_the_whole_thing(self):
+        self.hub.net = FakeNet(how="cable", ssid="")
+        self.b = Bridges(self.hub, cable=self.cable, devdir=self.dev)
+        s = self.ask()
+        self.assertEqual(s["needs"], "wifi")
+        self.assertNotIn("ssid", s)                   # nothing to show, so nothing is claimed
+        self.assertIn("cable", s["text"])
+
+    def test_a_hub_with_nothing_to_offer_still_refuses_an_empty_name(self):
+        self.hub.net = FakeNet(how="cable", ssid="")
+        self.b = Bridges(self.hub, cable=self.cable, devdir=self.dev)
+        self.ask()
+        with self.assertRaises(ValueError): run(self.b.wifi("", "hunter2"))
