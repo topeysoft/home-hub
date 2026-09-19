@@ -26,6 +26,14 @@
 //   mesh/bridge/<chip>/proxy           "<ble addr> rssi <n>"    (retained)
 //   mesh/bridge/<chip>/iv              iv index in use          (retained)
 //   mesh/bridge/<chip>/net             network id it carries    (retained)
+//   mesh/bridge/<chip>/light           looking|heard|night|off  (retained)
+//   mesh/bridge/<chip>/night           ON | OFF                 (retained)
+//   mesh/bridge/<chip>/night/brightness  0-255                  (retained)
+//   mesh/bridge/<chip>/settled         yes | no                 (retained)
+//   mesh/bridge/<chip>/night/set       ON | OFF
+//   mesh/bridge/<chip>/night/brightness/set  0-255
+//   mesh/bridge/<chip>/night/lift/set  0-255, transient: see below
+//   mesh/bridge/<chip>/settled/set     1 | 0
 //   mesh/<net>/<addr>/state            ON | OFF                 (retained)
 //   mesh/<net>/<addr>/brightness       0-255                    (retained)
 //   mesh/<net>/<addr>/motion           ON | OFF                 (retained)
@@ -36,6 +44,10 @@
 //   mesh/<net>/<addr>/brightness/set   0-255
 // HA discovery: homeassistant/<component>/mesh_<net>_<addr>[_motion|_motion_level]/config,
 // entity ids mesh_<net4>_<addr>, device "<label> switch <addr>", via mesh_bridge_<chip>.
+// The puck's own device mesh_bridge_<chip> carries three: the proxy node it is
+// linked to, its Nightlight (a light with brightness -- docs/puck-light.md), and
+// a diagnostic saying what its LED is actually doing, which is a different
+// question from what the nightlight is set to.
 //
 // Everything mesh-side runs on the Arduino loop task. The BLE notify callback
 // only queues bytes: writing to the proxy from inside a GATT callback deadlocks
@@ -339,18 +351,86 @@ static void announce(Switch &s) {
     publishState(s);
 }
 
+// The puck's own device in Home Assistant, and everything hanging off it.
+//
+// Three entities now, and the second is the point of docs/puck-light.md: the puck IS a light in the
+// house, so the schedule, the "good night", the all-off and the room tile are all the house's own
+// machinery and none of it has to be built here. Firmware holds one setting and the precedence.
+//
+// WHAT THE `night` ENTITY REPORTS IS THE SETTING, NOT THE LED. The two differ whenever the puck is
+// unwell or unplaced -- lightRefresh() puts a fault above the nightlight -- and the setting is the
+// honest thing to put on a switch somebody flips: report the LED instead and a puck that lost its
+// broker would show its nightlight as "off", which is an invitation for an automation to turn it
+// back "on" and for the household to wonder why nothing happens. What the LED is actually doing is
+// the third entity, a diagnostic, which is also how you ask a settled puck whether it is well once
+// green has stopped being the answer.
+// The names the light's states go out under, on the broker and on the cable's `status` line. Indexed
+// with & 7 and padded to eight: this was & 3 with four entries, and a fifth state would have masked
+// itself silently onto "off".
+static const char *LIGHT_NAMES[] = {"off", "looking", "heard", "far", "night", "?", "?", "?"};
+
 static void announceBridge() {
-    char topic[128], payload[420], st[80], px[80];
+    char topic[128], payload[640], st[80], px[80], devj[260];   // worst case: a 16-char base and a 24-char label
     bridgeTopic(st, sizeof(st), "status");
     bridgeTopic(px, sizeof(px), "proxy");
+    snprintf(devj, sizeof(devj),
+             "\"dev\":{\"ids\":[\"%s_bridge_%s\"],\"name\":\"%s bridge %s\","
+             "\"mf\":\"home-hub\",\"mdl\":\"ESP32 mesh proxy client\",\"sw\":\"net %s\"}",
+             cfg.mqttBase, chipHex, cfg.label, chipHex, netHex);
+
     snprintf(topic, sizeof(topic), "%s/sensor/%s_bridge_%s_proxy/config", HA_PREFIX, cfg.mqttBase, chipHex);
     snprintf(payload, sizeof(payload),
              "{\"name\":\"Proxy node\",\"uniq_id\":\"%s_bridge_%s_proxy\",\"obj_id\":\"%s_bridge_%s_proxy\","
-             "\"ent_cat\":\"diagnostic\",\"stat_t\":\"%s\",\"avty_t\":\"%s\","
-             "\"dev\":{\"ids\":[\"%s_bridge_%s\"],\"name\":\"%s bridge %s\","
-             "\"mf\":\"home-hub\",\"mdl\":\"ESP32 mesh proxy client\",\"sw\":\"net %s\"}}",
-             cfg.mqttBase, chipHex, cfg.mqttBase, chipHex, px, st, cfg.mqttBase, chipHex, cfg.label, chipHex, netHex);
+             "\"ent_cat\":\"diagnostic\",\"stat_t\":\"%s\",\"avty_t\":\"%s\",%s}",
+             cfg.mqttBase, chipHex, cfg.mqttBase, chipHex, px, st, devj);
     mqtt.publish(topic, payload, true);
+
+    char base[80];
+    bridgeTopic(base, sizeof(base), "night");
+    snprintf(topic, sizeof(topic), "%s/light/%s_bridge_%s_night/config", HA_PREFIX, cfg.mqttBase, chipHex);
+    snprintf(payload, sizeof(payload),
+             "{\"name\":\"Nightlight\",\"uniq_id\":\"%s_bridge_%s_night\",\"obj_id\":\"%s_bridge_%s_night\","
+             "\"~\":\"%s\",\"stat_t\":\"~\",\"cmd_t\":\"~/set\","
+             "\"bri_stat_t\":\"~/brightness\",\"bri_cmd_t\":\"~/brightness/set\",\"bri_scl\":255,"
+             "\"on_cmd_type\":\"first\",\"ic\":\"mdi:weather-night\",\"avty_t\":\"%s\",%s}",
+             cfg.mqttBase, chipHex, cfg.mqttBase, chipHex, base, st, devj);
+    mqtt.publish(topic, payload, true);
+
+    bridgeTopic(base, sizeof(base), "light");
+    snprintf(topic, sizeof(topic), "%s/sensor/%s_bridge_%s_light/config", HA_PREFIX, cfg.mqttBase, chipHex);
+    snprintf(payload, sizeof(payload),
+             "{\"name\":\"Light\",\"uniq_id\":\"%s_bridge_%s_light\",\"obj_id\":\"%s_bridge_%s_light\","
+             "\"ent_cat\":\"diagnostic\",\"stat_t\":\"%s\",\"avty_t\":\"%s\",%s}",
+             cfg.mqttBase, chipHex, cfg.mqttBase, chipHex, base, st, devj);
+    mqtt.publish(topic, payload, true);
+}
+
+// The setting, retained, so a hub that restarts finds it without asking. Cheap enough to call on any
+// change: configSetNight() has already dropped the ones that changed nothing.
+static void publishNight() {
+    if (!mqtt.connected()) return;
+    char t[80], v[8];
+    bridgeTopic(t, sizeof(t), "night");
+    mqtt.publish(t, cfg.night ? "ON" : "OFF", true);
+    bridgeTopic(t, sizeof(t), "night/brightness");
+    snprintf(v, sizeof(v), "%u", (unsigned)cfg.nightLevel);
+    mqtt.publish(t, v, true);
+    bridgeTopic(t, sizeof(t), "settled");
+    mqtt.publish(t, cfg.settled ? "yes" : "no", true);
+}
+
+// And what the LED is doing, whenever that changes -- which is not the same question.
+static void publishLight(bool force) {
+    static Light last = Light::Off;
+    static bool ever = false;
+    Light now = lightGet();
+    if (!mqtt.connected()) { ever = false; return; }
+    if (ever && !force && now == last) return;
+    char t[80];
+    bridgeTopic(t, sizeof(t), "light");
+    mqtt.publish(t, LIGHT_NAMES[(int)now & 7], true);
+    last = now;
+    ever = true;
 }
 
 static void setMotion(Switch &s, int level) {
@@ -1078,20 +1158,60 @@ static void mqttCb(char *topic, uint8_t *payload, unsigned int len) {
     // Letting a switch in is a job for the puck rather than for one of the
     // switches on it, so it arrives on the bridge's own topic and has to be
     // matched before the per-switch parsing below throws it away.
-    char claimTopic[80];
-    bridgeTopic(claimTopic, sizeof(claimTopic), "cfg");
-    if (!strcmp(t, claimTopic)) {
+    char own[80];   // the puck's own topics, matched before the per-switch parsing
+    bridgeTopic(own, sizeof(own), "cfg");
+    if (!strcmp(t, own)) {
         strlcpy(cfgLine, (const char *)msg, sizeof(cfgLine));
         cfgWaiting = true;              // acted on from the loop; see cfgApply()
         return;
     }
-    bridgeTopic(claimTopic, sizeof(claimTopic), "claim");
-    if (!strcmp(t, claimTopic)) {
+    bridgeTopic(own, sizeof(own), "claim");
+    if (!strcmp(t, own)) {
         // Queue only. The radio work happens on the loop for the same reason the
         // BLE notify path only queues: doing it inside this callback deadlocks.
         if (!claim_queue((const char *)payload, len)) {
             Serial.println("[claim] busy -- ignoring");
         }
+        return;
+    }
+
+    // The nightlight is the puck's own, so it arrives on the bridge's topic like claim and cfg.
+    // Acting here rather than queueing is safe in a way the two above are not: this touches no radio
+    // and no NVS that is not already guarded, and the publish that answers it is three bytes.
+    bridgeTopic(own, sizeof(own), "night/set");
+    if (!strcmp(t, own)) {
+        configSetNight(!strcasecmp(msg, "on") || !strcasecmp(msg, "1"), cfg.nightLevel);
+        publishNight();
+        return;
+    }
+    bridgeTopic(own, sizeof(own), "night/brightness/set");
+    if (!strcmp(t, own)) {
+        int bri = constrain(atoi(msg), 0, 255);
+        // A brightness of zero from HA is an "off" in all but name; treat it as one rather than
+        // leaving a nightlight that is on and invisible, which nobody can explain.
+        configSetNight(bri > 0, (uint8_t)(bri > 0 ? bri : cfg.nightLevel));
+        publishNight();
+        return;
+    }
+    // A LIFT IS NOT A BRIGHTNESS, and the difference is the whole reason this topic exists.
+    //
+    // The brain swells the nightlight when somebody walks past the switch beside it and lets it
+    // settle afterwards (docs/puck-light.md). Sent on night/brightness/set that would be two NVS
+    // writes per walk-past, for ever, on a part with a finite number of erases -- and it would drag
+    // the household's own brightness setting up and down in Home Assistant, where what they set is
+    // supposed to be what it says. So a lift touches the LIGHT and nothing else: no NVS, no retained
+    // state, no entity moved. 0 (or anything that is not a number) means "back to what they chose",
+    // which is also what a reboot means, so a brain that dies mid-swell cannot leave it bright.
+    bridgeTopic(own, sizeof(own), "night/lift/set");
+    if (!strcmp(t, own)) {
+        int lvl = constrain(atoi(msg), 0, 255);
+        lightNightLevel(lvl > 0 ? (uint8_t)lvl : cfg.nightLevel);
+        return;
+    }
+    bridgeTopic(own, sizeof(own), "settled/set");
+    if (!strcmp(t, own)) {
+        configSetSettled(msg[0] == '1' || msg[0] == 'y' || msg[0] == 'Y');
+        publishNight();
         return;
     }
 
@@ -1166,6 +1286,14 @@ static void mqttReconnect() {
     mqtt.subscribe(sub);
     bridgeTopic(sub, sizeof(sub), "cfg");
     mqtt.subscribe(sub);
+    bridgeTopic(sub, sizeof(sub), "night/set");
+    mqtt.subscribe(sub);
+    bridgeTopic(sub, sizeof(sub), "night/brightness/set");
+    mqtt.subscribe(sub);
+    bridgeTopic(sub, sizeof(sub), "night/lift/set");
+    mqtt.subscribe(sub);
+    bridgeTopic(sub, sizeof(sub), "settled/set");
+    mqtt.subscribe(sub);
     cfgAck();
     Serial.printf("[mqtt] connected as %s, commands on %s\n", id, sub);
     announceBridge();
@@ -1179,6 +1307,8 @@ static void mqttReconnect() {
     // another's (brain/hub/bridge.py reads it off the broker while the puck is being placed).
     bridgeTopic(t, sizeof(t), "net");
     mqtt.publish(t, netHex, true);
+    publishNight();
+    publishLight(true);   // forced: a fresh session has nothing retained from this boot
     for (uint8_t i = 0; i < nSwitches; i++) {
         switches[i].announced = false;
         announce(switches[i]);
@@ -1196,7 +1326,6 @@ void bridgeStatusLine(char *out, size_t n) {
     // somebody holding it on a cable cannot see. The SSID itself is deliberately NOT here: this line
     // is parsed on spaces (tools/puck_cable.py) and a network called "Flat 3 guest" would tear it in
     // half. The hub learns the name from cfgack, over the broker, where it is quoted properly.
-    static const char *LIGHTS[] = {"off", "looking", "heard", "far"};
     // Which of the maker's keys this image carries, two bytes of each. Nothing verifies a signature
     // yet (docs/puck-updates.md), but a key cannot be added to a puck after its cable visit, so they
     // go in before anything needs them -- and a puck that cannot say which keys it holds is one
@@ -1215,9 +1344,10 @@ void bridgeStatusLine(char *out, size_t n) {
     }
     int rssi = 0;
     if (linkUp) { const char *r = strstr(proxyDesc, "rssi "); if (r) rssi = atoi(r + 5); }
-    snprintf(out, n, "status wifi=%s mqtt=%s rssi=%d sw=%u light=%s spare=%s keys=%s", ip,
-             mqtt.connected() ? "up" : "down", rssi, (unsigned)nSwitches, LIGHTS[(int)lightGet() & 3],
-             cfg.ssid2[0] ? "yes" : "no", keys);
+    snprintf(out, n, "status wifi=%s mqtt=%s rssi=%d sw=%u light=%s spare=%s night=%s keys=%s", ip,
+             mqtt.connected() ? "up" : "down", rssi, (unsigned)nSwitches, LIGHT_NAMES[(int)lightGet() & 7],
+             cfg.ssid2[0] ? "yes" : "no",
+             !cfg.settled ? "unplaced" : cfg.night ? "on" : "off", keys);
 }
 
 void setup() {
@@ -1234,6 +1364,7 @@ void setup() {
     // Who we are and what we were told, before anything else looks at either.
     configLoad();
     lightBegin();
+    lightNightLevel(cfg.nightLevel);   // before anything can reach Light::Night
     lightSet(Light::Looking);
 
     prefs.begin("meshbridge", false);
@@ -1340,10 +1471,27 @@ static uint8_t emptyScans = 0;
 //
 // Recomputed every pass rather than set at the moments things change, because Wi-Fi can go after the
 // link is up and a light that was only ever set on the way in would never say so.
+// ...and once it is placed, green has said everything it had to say.
+//
+// The order below is the whole of the nightlight design (docs/puck-light.md, and the board at
+// design/puck/Nightlight.dc.html), and it is here rather than in light.cpp because this is the
+// function that already knows whether the puck is well. Four rows, strictly ordered:
+//
+//   1  anything wrong            the instrument, exactly as before. Outranks everything under it
+//   2  well, not yet placed      green, until somebody taps "Leave it here"
+//   3  placed, and asked for it  the nightlight
+//   4  placed, and did not       dark, which is what a puck does today and stays the default
+//
+// Row one is absolute, and that is the point of the feature rather than a concession to it: a glow
+// that outlives the bridge going down is furniture that lies, and nobody checks furniture. It also
+// means the light keeps its hold over where the puck lives -- move a settled puck somewhere the mesh
+// is thin and it stops being a nightlight and goes back to breathing red, which is the one argument
+// about placement that needs no words.
 static void lightRefresh() {
-    if (linkUp && mqtt.connected())  lightSet(Light::Heard);
-    else if (emptyScans >= 3)        lightSet(Light::Far);
-    else                             lightSet(Light::Looking);
+    if (!(linkUp && mqtt.connected()))  lightSet(emptyScans >= 3 ? Light::Far : Light::Looking);
+    else if (!cfg.settled)              lightSet(Light::Heard);
+    else if (cfg.night)                 lightSet(Light::Night);
+    else                                lightSet(Light::Off);
 }
 
 void loop() {
@@ -1412,6 +1560,7 @@ void loop() {
     drainRx();
     expireMotion();
     lightRefresh();     // every pass: the broker can go while the proxy link stays up
+    publishLight(false); // ...and say so, but only when it really moved
 
     if (!linkUp) {
         delay(20);

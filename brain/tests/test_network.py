@@ -311,6 +311,17 @@ class TheOnesThatNeverCameBack(unittest.TestCase):
         self.status("aa", "offline")
         self.assertEqual(self.rec()["gone"], first)
 
+    def test_coming_back_does_not_clobber_how_it_was_recognised(self):
+        """`seen` is _adopt_on_sight's word for HOW a bridge was found -- on the broker, or on the
+        cable. A timestamp written over it would make one key mean two things, and the live hub's
+        settings already held one bridge with a string there and one with a float."""
+        self.hub.settings.set(bridges={"aa": {"since": 1, "fw": "0.4.0", "seen": "broker"}})
+        self.status("aa", "offline")
+        self.status("aa", "online")
+        rec = self.rec()
+        self.assertEqual(rec["seen"], "broker")
+        self.assertIsInstance(rec["heard"], float)
+
     def test_nothing_is_written_down_about_somebody_elses_puck(self):
         self.b.pucks["zz"] = {"online": True, "net": "n9"}
         self.status("zz", "offline")

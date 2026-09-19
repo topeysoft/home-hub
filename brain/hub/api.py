@@ -37,6 +37,7 @@ from .lock import Lock, needs_code
 from .pairing import Pairing
 from .bridge import Bridges
 from .share import Share
+from .nightlight import Nightlight
 from .relay import Relay
 from .phones import Phones, COOKIE, holds_keys, open_to_strangers, from_away, away_refused, away_refusal
 from . import camera
@@ -109,6 +110,7 @@ class Hub:
         self.share = Share(self)           # what this house lets a Matter bridge publish: docs/matter.md
         self.share_status: dict = {}       # what the bridge last said about itself (pairing codes, who holds it)
         self.relay = Relay(self)           # two switches on one light: the hub carries the press across
+        self.nightlight = Nightlight(self)  # a bridge's own light, lifted when somebody walks past it
         self.phones = Phones(self)                     # which phones belong to the house, once it has a code
         self.engine = Engine(self)                     # rules: signals in, room intents out
         self.presence = Presence(self)                 # who is home, from HA's persons and the alarm's mode
@@ -405,6 +407,7 @@ class Hub:
         self._broadcast(json.dumps({"type": "device", "device": dev.__dict__}))
         self.engine.on_state(dev, old)
         self.sounds.on_state(dev, old)
+        self.nightlight.on_state(dev, old)
         if dev.capability in ("climate", "sensor.temperature"): asyncio.create_task(self.comfort.on_state(dev))
 
     async def _comfort_loop(self):
@@ -1221,6 +1224,36 @@ async def network_done():
     return await hub.bridge.clear_move()
 
 
+@app.get("/bridge/list")
+def bridge_list():
+    """Every bridge the hub set up, so This hub has somewhere to look at one that is FINE.
+
+    Separate from GET /bridge, which is the setting-up machine the sheet draws and is polled hard
+    while a job runs. This is a standing list, read when somebody opens the page."""
+    return {"bridges": hub.bridge.each()}
+
+
+@app.post("/bridge/light")
+async def bridge_light(body: dict):
+    """A bridge's own light: on or off, how bright, and whether it lifts when somebody passes.
+
+    Open, like every other route that drives the house rather than changing it -- turning a
+    nightlight down is a tap, not a setting, and the lock's own line is that driving never asks for
+    the code (hub/lock.py)."""
+    hub.ready()
+    level = body.get("level")
+    if level is not None:
+        try: level = int(level)
+        except (TypeError, ValueError): raise HTTPException(400, "A brightness is 0 to 255.")
+    try:
+        return {"bridges": await hub.bridge.light(
+            str(body.get("chip") or ""),
+            night=None if body.get("night") is None else bool(body["night"]),
+            level=level,
+            lift=None if body.get("lift") is None else bool(body["lift"]))}
+    except ValueError as e: raise HTTPException(400, str(e))
+
+
 @app.post("/bridge/forget")
 async def bridge_forget(body: dict):
     """Take a bridge off the house: the last thing offered about one that is never coming back.
@@ -1233,8 +1266,18 @@ async def bridge_forget(body: dict):
 
 
 @app.post("/bridge/placed")
-async def bridge_placed():
-    try: return await hub.bridge.placed()
+async def bridge_placed(body: dict | None = None):
+    """"Leave it here", and with it the answer to "leave its light on?" if the sheet asked.
+
+    The body is optional on purpose: a panel that does not ask the question still places a bridge,
+    and a bridge placed without an answer is simply a bridge with no nightlight."""
+    body = body or {}
+    night, level = body.get("night"), body.get("level")
+    if level is not None:
+        try: level = int(level)
+        except (TypeError, ValueError): raise HTTPException(400, "A brightness is 0 to 255.")
+        if not 0 <= level <= 255: raise HTTPException(400, "A brightness is 0 to 255.")
+    try: return await hub.bridge.placed(night=None if night is None else bool(night), level=level)
     except ValueError as e: raise HTTPException(409, str(e))
 
 
@@ -1837,7 +1880,17 @@ def health():
 # ---------- backup and restore ----------
 @app.get("/backup")
 def backup():
-    """The house as one .tar.gz. Behind the settings code: it holds the engine's key and the code's hash."""
+    """The house as one .tar.gz. Behind the settings code: it holds the engine's key and the code's hash.
+
+    And on a hub that has NO code, behind having one. Every other gated route is a change to the
+    house, which a household can undo; this one is a copy of it walking out of the door -- the
+    radios' network keys, the accounts' sign-ins and the hub's own certificate authority, in one
+    file, to anybody who can reach the hub. Setup requires a code now, so this is the hub that was
+    set up before it did, and the answer is a sentence naming the fix rather than a file.
+    """
+    if not hub.lock.locked:
+        raise HTTPException(403, "Set a code first. This file holds the keys to the house, and "
+                                 "without a code anyone on your Wi‑Fi could ask for it too.")
     path = hub.backup.make()
     return FileResponse(path, media_type="application/gzip", filename=path.name, background=BackgroundTask(shutil.rmtree, path.parent, True))
 

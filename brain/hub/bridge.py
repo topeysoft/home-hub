@@ -354,6 +354,9 @@ class Bridges:
     def status(self) -> dict:
         base = {"bridges": sum(1 for p in self.pucks.values() if p.get("online")), "waiting": 0}
         if (mv := self.move_status()): base["moving"] = mv
+        # Said whether or not a job is running: it is a standing fact about the house, not a step in
+        # setting anything up, and This hub is where somebody goes to look at standing facts.
+        if (old := self.behind()): base["behind"] = old
         if not self.job: return {**base, "state": "none"}
         j = self.job
         out = {**base, "state": j["state"], "how": "cable"}
@@ -586,10 +589,52 @@ class Bridges:
         if self._quiet and not self._quiet.done(): self._quiet.cancel()
         self._quiet = None
 
-    async def placed(self) -> dict:
+    async def _tell(self, chip: str, leaf: str, payload: str, retain: bool = False) -> None:
+        """One line to one puck. Failures are logged, never raised: none of these are the reason
+        somebody tapped the button, and a puck that missed one is in a safe state by design."""
+        with contextlib.suppress(Exception):
+            await self.hub.ha.call("mqtt", "publish", None,
+                                   topic=f"{BASE}/bridge/{chip}/{leaf}", payload=payload, retain=retain)
+
+    async def placed(self, night: bool | None = None, level: int | None = None) -> dict:
+        """"Leave it here" -- and the answer to the one question asked in the same breath.
+
+        Two things go to the puck, and they are NOT sent the same way, which is the whole of this
+        method (docs/puck-light.md):
+
+        `settled` is the hub's to own. It says the thing has a home, it never changes afterwards, and
+        until the puck has it the light stays an instrument -- green, still asking "is here good?".
+        So it goes RETAINED: a puck that was offline at this exact moment, or that is wiped and
+        flashed again in the same corner, picks it up on its next connect. Replaying it is harmless
+        because it is idempotent, and `forget()` clears it, which is what stops a bridge that was
+        sent away coming back believing it is still placed.
+
+        `night` is the HOUSEHOLD's, the moment after they answer. It goes once, NOT retained, and the
+        hub never says it again. The puck keeps it in NVS and Home Assistant owns it from here -- so
+        somebody turning the nightlight off in February is not overruled by a placement answer from
+        September the next time the puck reboots. That failure would be invisible and maddening, and
+        not retaining is the whole fix.
+
+        A puck that is offline right now therefore keeps its green and loses only the nightlight,
+        which is the right way round: the instrument survives, the decoration does not.
+        """
         if not self.job or self.job["state"] != "placing": raise ValueError("Nothing is being placed.")
+        if level is not None and not 0 <= int(level) <= 255:
+            raise ValueError("A brightness is 0 to 255.")
+        chip = self.job.get("chip")
         self._stop_quiet_watch()
         self._set("ready", unplaced=self._unplaced(self.job.get("net")))
+        if chip:
+            await self._tell(chip, "settled/set", "1", retain=True)
+            if night is not None:
+                await self._tell(chip, "night/set", "ON" if night else "OFF")
+                if night and level is not None:
+                    await self._tell(chip, "night/brightness/set", str(int(level)))
+                self.hub.log.add("bridge", chip, None,
+                                 "nightlight on" if night else "nightlight off", source="user")
+            nl = getattr(self.hub, "nightlight", None)
+            if nl:
+                with contextlib.suppress(Exception): await nl.announce(chip)
         return self.status()
 
     # ---- the job itself ----
@@ -680,9 +725,60 @@ class Bridges:
         anything is missing.
         """
         if online == was: return
-        if online: self._remember(chip, gone=None, missed=None, seen=time.time())
+        # `heard`, not `seen`: _adopt_on_sight already writes seen="broker" to record HOW a bridge was
+        # recognised, and a timestamp written over it makes one key mean two things. Nothing reads it
+        # yet, which is exactly when this is cheap to put right -- the settings on the live hub
+        # already hold one bridge with seen="broker" and one with a float.
+        if online: self._remember(chip, gone=None, missed=None, heard=time.time())
         elif not ((self.hub.settings.get("bridges") or {}).get(chip) or {}).get("gone"):
             self._remember(chip, gone=time.time())
+
+    # ---- which of them are behind the software the house ships now ----
+    @staticmethod
+    def _older(a: str, b: str) -> bool:
+        """Is `a` an earlier version than `b`? Numeric, part by part, so 0.10.0 beats 0.9.0.
+
+        Anything that is not a version at all -- a hand-built puck calling itself "dev" -- is never
+        older than anything. A line telling somebody their bench board is out of date is noise.
+        """
+        def parts(v):
+            out = []
+            for piece in str(v or "").split("."):
+                if not piece.isdigit(): return None
+                out.append(int(piece))
+            return tuple(out) or None
+        pa, pb = parts(a), parts(b)
+        return bool(pa and pb and pa < pb)
+
+    def shipped(self) -> str:
+        """The version of the image this house would flash a bare board with, or "".
+
+        Read from the manifest beside the image rather than from anything remembered: the two move
+        together, and a version kept anywhere else is a version that can disagree with the file.
+        """
+        try:
+            return str(json.loads(self.cable.image.with_suffix(".json").read_text()).get("fw") or "")
+        except (OSError, ValueError):
+            return ""
+
+    def behind(self) -> list:
+        """The bridges this hub set up that are running something older than it ships.
+
+        Nothing about this is urgent and the panel must not draw it as though it were: a bridge a
+        version behind is a bridge doing its whole job. It is here because a household that is told
+        nothing has no way to find out, and because the count is the thing that matters once a fix
+        does need to reach every one of them -- see docs/puck-updates.md.
+        """
+        latest = self.shipped()
+        if not latest: return []
+        out = []
+        for chip, rec in (self.hub.settings.get("bridges") or {}).items():
+            fw = str(rec.get("fw") or "")
+            if not self._older(fw, latest): continue
+            out.append({"chip": chip, "room": self.room_of(chip), "fw": fw, "latest": latest,
+                        "online": bool((self.pucks.get(chip) or {}).get("online"))})
+        out.sort(key=lambda b: (b["room"] or "\uffff", b["chip"]))
+        return out
 
     def room_of(self, chip: str) -> str | None:
         """The room a bridge serves, or None when the hub cannot honestly say.
@@ -734,7 +830,12 @@ class Bridges:
         mine.pop(chip)
         self.hub.settings.set(bridges=mine)
         self.pucks.pop(chip, None)
-        for leaf in ("status", "net", "proxy", "iv", "cfg", "cfgack"):
+        with contextlib.suppress(Exception):
+            await self.hub.ha.call("mqtt", "publish", None,
+                                   topic=f"homeassistant/switch/{BASE}_bridge_{chip}_motion/config",
+                                   payload="", retain=True)
+        for leaf in ("status", "net", "proxy", "iv", "cfg", "cfgack",
+                     "settled", "settled/set", "night", "night/brightness", "light", "motion"):
             with contextlib.suppress(Exception):
                 await self.hub.ha.call("mqtt", "publish", None,
                                        topic=f"{BASE}/bridge/{chip}/{leaf}", payload="", retain=True)
@@ -748,6 +849,56 @@ class Bridges:
         thinking otherwise. `A bridge` is what honesty looks like when the room cannot be worked out;
         room_of() is the same question where the caller would rather have the None."""
         return self.room_of(chip) or "A bridge"
+
+    def each(self) -> list[dict]:
+        """Every bridge this hub set up, in the words a household has for one.
+
+        THE PANEL HAD NOWHERE TO LOOK AT A BRIDGE THAT IS FINE. Until this, a puck surfaced only when
+        something was wrong with it -- a note when it went quiet, a line on This hub when it was a
+        version behind -- so the one place a household could act on one was a problem report. That is
+        the wrong shape for an object that mostly just works, and it is what left the nightlight with
+        a switch nobody could reach without Home Assistant (docs/puck-light.md).
+
+        Ordered by the room's name, with the ones the hub cannot place last: a list that reorders
+        itself as signal moves would be unreadable on a wall."""
+        behind = {b["chip"] for b in self.behind()}
+        out = []
+        for chip, rec in (self.hub.settings.get("bridges") or {}).items():
+            p = self.pucks.get(chip) or {}
+            room = self.room_of(chip)
+            out.append({
+                "chip": chip, "room": room, "where": self.where(chip),
+                "online": bool(p.get("online")), "signal": self._signal(chip),
+                "switches": self._count(p.get("net")) if p.get("net") else 0,
+                "fw": rec.get("fw"), "behind": chip in behind,
+                # None rather than false when the puck has never said: "off" is a claim about a thing
+                # we have heard from, and a puck that has not spoken is not a puck with its light off.
+                "night": p.get("night"), "level": p.get("level"),
+                "lift": bool(rec.get("lift")),
+            })
+        out.sort(key=lambda b: (b["room"] is None, (b["room"] or "").lower(), b["chip"]))
+        return out
+
+    async def light(self, chip: str, night: bool | None = None,
+                    level: int | None = None, lift: bool | None = None) -> list[dict]:
+        """Change a bridge's own light from the panel.
+
+        The household's, not the placement answer's, so these go once and are not retained -- the
+        puck holds them in NVS and says so back on its own topics. `lift` is the brain's and is
+        written to settings instead; see hub/nightlight.py."""
+        if chip not in (self.hub.settings.get("bridges") or {}):
+            raise ValueError("The hub does not know that bridge.")
+        if level is not None and not 0 <= int(level) <= 255:
+            raise ValueError("A brightness is 0 to 255.")
+        if night is not None:
+            await self._tell(chip, "night/set", "ON" if night else "OFF")
+        if level is not None and (night is None or night):
+            await self._tell(chip, "night/brightness/set", str(int(level)))
+        if lift is not None:
+            nl = getattr(self.hub, "nightlight", None)
+            if nl: nl.on_command(chip, "ON" if lift else "OFF")
+        self.hub.log.add("bridge", chip, None, "light changed", source="user")
+        return self.each()
 
     def move_status(self) -> dict | None:
         """What the panel draws while a move is on, and after it. None when nothing has happened."""
@@ -924,6 +1075,9 @@ class Bridges:
                 p["online"] = payload == "online"
                 self._saw(chip, p["online"], was)
             elif leaf == "net": p["net"] = payload
+            # The nightlight's own setting, retained by the puck. Kept because a bridge whose light
+            # is off has nothing to lift, and lifting it would turn it on -- which nobody asked for.
+            elif leaf == "night": p["night"] = payload == "ON"
             # A puck does not have to be on the cable to be recognised -- the usual place for
             # one is a charger behind a sofa. Both facts arrive here, so check as each lands.
             if leaf in ("status", "net"): self._adopt_on_sight(chip, p.get("fw"))
@@ -935,6 +1089,15 @@ class Bridges:
             if self.job and self.job.get("chip") == chip and self.job.get("quiet") and p.get("online"):
                 self.job.pop("quiet", None)
                 self._set("placing")
+        elif len(parts) == 5 and parts[1] == "bridge" and parts[3:] == ["night", "brightness"]:
+            with contextlib.suppress(ValueError):
+                self.pucks.setdefault(parts[2], {})["level"] = max(0, min(255, int(payload)))
+        elif len(parts) == 5 and parts[1] == "bridge" and parts[3:] == ["motion", "set"]:
+            # "Lift on motion" is a switch the BRAIN owns (hub/nightlight.py) -- the puck neither
+            # stores it nor reads it -- but it rides the puck's topics so it sits on the puck's own
+            # device in Home Assistant, and so this one subscription hears it.
+            nl = getattr(self.hub, "nightlight", None)
+            if nl: nl.on_command(parts[2], payload)
         elif len(parts) == 4 and parts[1] != "bridge":
             if parts[3] == "state":
                 self.switches[(parts[1], parts[2])] = payload

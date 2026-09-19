@@ -5,10 +5,11 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { store, notify, installUpdate, restartHub } from './store'
-import { askRestart, askUpdate, checkForUpdate, downloadBackup, getNetwork, getUpdateNotes, markNotesRead, setAutoUpdate, type NetState, type RestartAsk, type Rung, type UpdateAsk, type UpdateNotes } from './api'
+import { askRestart, askUpdate, checkForUpdate, downloadBackup, getNetwork, getUpdateNotes, listBridges, markNotesRead, setAutoUpdate, type BridgeRow, type NetState, type RestartAsk, type Rung, type UpdateAsk, type UpdateNotes } from './api'
 import Restore from './Restore.vue'
 import AdvancedLink from './AdvancedLink.vue'
 import NetworkSheet from './NetworkSheet.vue'
+import BridgeCard from './BridgeCard.vue'
 
 /* This hub: which build it is, whether a newer one exists, a backup to take away and a way to put one back.
    The phones that belong to the house are on the People page: they are about who, not about this computer. */
@@ -72,6 +73,43 @@ async function flipAuto() {
   catch (e: any) { notify(e.message, 'error') }
   autoBusy.value = false
 }
+/* The bridges running older software than the house ships.
+ *
+ * Said here and nowhere louder, deliberately. A bridge a version behind is doing its whole job, so
+ * this is not a fault and must not be drawn as one -- but a household told nothing has no way to
+ * find out, and the COUNT is the thing that matters the day a fix has to reach every one of them
+ * (docs/puck-updates.md). Named by the room each one serves, because that is the only word a
+ * household has for a puck; where the hub cannot honestly say which room, it does not guess.
+ */
+const behind = computed(() => store.bridge?.behind ?? [])
+
+/* THE BRIDGES THEMSELVES, and not only the ones something is wrong with.
+ *
+ * The row above this one has always been a count of the bridges running older software -- which is
+ * to say a puck appeared on this page only when it was a problem. A household had nowhere to look at
+ * one that is fine, and so nowhere to turn its nightlight on (docs/puck-light.md). The list is read
+ * when the page opens rather than polled: a bridge is a standing fact, not a moving one. */
+const bridges = ref<BridgeRow[]>([])
+const open = ref<string | null>(null)
+const opened = computed(() => bridges.value.find(b => b.chip === open.value) ?? null)
+async function loadBridges() {
+  try { bridges.value = (await listBridges()).bridges } catch { /* the page is worth drawing without it */ }
+}
+function changed(rows: BridgeRow[]) { bridges.value = rows }
+const line = (b: BridgeRow) =>
+  !b.online ? 'Quiet' : b.signal === 'weak' ? 'Faint' : b.night ? 'Working, light on' : 'Working'
+const behindLine = computed(() => {
+  const named = behind.value.map(b => b.room).filter(Boolean) as string[]
+  const are = behind.value.length === 1 ? 'is' : 'are'
+  if (named.length === behind.value.length) {
+    const list = named.length === 1 ? named[0]
+      : named.slice(0, -1).join(', ') + ' and ' + named[named.length - 1]
+    return `The ${list} bridge${behind.value.length === 1 ? '' : 's'} ${are} on older software.`
+  }
+  const n = behind.value.length === 1 ? 'One' : behind.value.length === 2 ? 'Two' : String(behind.value.length)
+  return `${n} of your bridges ${are} on older software.`
+})
+
 /* What changed. Opening this page is what marks the morning-after card read: nothing vanishes under
    a tap on Home, and somebody who came here to look has, by definition, looked. */
 const notes = ref<UpdateNotes | null>(null)
@@ -79,6 +117,7 @@ const earlier = ref(false)
 const earlierReleases = computed(() => (notes.value?.history ?? []).filter(r => r.version !== notes.value?.notes?.version && r.what.length))
 onMounted(async () => {
   loadNet()     // not awaited: the Network row is a fact the hub already holds, and nothing below needs it
+  loadBridges()
   try { notes.value = await getUpdateNotes() } catch { /* an older hub, or no notes in this build */ }
   if (store.status?.update?.whats_new) { try { await markNotesRead() } catch { /* it will come back tomorrow */ } }
   /* Opening this page is also the check for an update: no button to explain, "checked just now" under
@@ -218,6 +257,20 @@ const when = (ts?: number | null) => ts ? new Date(ts * 1000).toLocaleString([],
         <span class="hub-v">{{ update?.auto ? 'Installed overnight, on their own.' : 'Installed when you tap, and not before.' }}<span class="hub-sub line">{{ update?.verified ? 'Only ones this hub can check, and it puts back any that won’t start.' : 'This hub can’t check an update yet, so it waits to be asked.' }}</span></span>
         <button class="toggle" role="switch" :aria-checked="!!update?.auto" aria-label="Install updates overnight" :class="{ on: update?.auto, busy: autoBusy }" @click="flipAuto"><span class="knob"></span></button>
       </li>
+      <li v-if="bridges.length || behind.length">
+        <span class="hub-k">Bridges</span>
+        <span class="hub-v">
+          <span v-if="behind.length">{{ behindLine }}<span class="hub-sub line">They keep working, and nothing they do is affected. Catching one up needs a cable for now — the hub can’t do it over the air yet.</span></span>
+          <span v-else>They bring in the switches that have no Wi‑Fi of their own.</span>
+          <span class="hub-bridges" v-if="bridges.length">
+            <button v-for="b in bridges" :key="b.chip" class="hub-bridge" @click="open = b.chip">
+              <span class="hub-bridge-name">{{ b.where }}</span>
+              <span class="hub-bridge-state" :class="{ quiet: !b.online }">{{ line(b) }}</span>
+            </button>
+          </span>
+        </span>
+        <span></span>
+      </li>
       <li>
         <span class="hub-k">Backup</span>
         <span class="hub-v">Everything the house knows, in one file.<span class="hub-sub line">Settings, rooms, routines, the engine's setup and the radios' keys. It holds the house's keys, so keep the file private.</span></span>
@@ -261,6 +314,7 @@ const when = (ts?: number | null) => ts ? new Date(ts * 1000).toLocaleString([],
 
     <AdvancedLink />
     <NetworkSheet v-if="netOpen" @close="closeNet" />
+    <BridgeCard v-if="opened" :bridge="opened" @close="open = null; loadBridges()" @changed="changed" />
   </div>
 </template>
 

@@ -1,6 +1,8 @@
 #include "config.h"
 
 #include <Preferences.h>
+
+#include "light.h"
 #include <string.h>
 
 // The compiled fallback. Optional: a shipped image is built with no secrets
@@ -47,6 +49,9 @@ static void loadRing() {
     str(cfg.mqttName, sizeof(cfg.mqttName), "mname", "");
     str(cfg.lastIp, sizeof(cfg.lastIp), "lastip", "");
     cfg.cfgAt = store.getUInt("cfgat", 0);
+    cfg.settled = store.getBool("settled", false);
+    cfg.night = store.getBool("night", false);
+    cfg.nightLevel = store.getUChar("nightlvl", 110);
 }
 
 
@@ -209,6 +214,17 @@ static void handle(char *line) {
     } else if (!strcmp(w[1], "label") && nw == 3) {
         ok = unhexStr(w[2], a, 25) && a[0];
         if (ok) store.putString("label", a);
+    // Plain decimal, like `port` and the IV: these are numbers, not free text, so there is nothing
+    // for the hex encoding to protect. They are also the only two `set`s that take effect WITHOUT an
+    // `apply` -- somebody on the cable changing the brightness wants to see it change, and a restart
+    // in the middle of that would drop the link they are watching it on.
+    } else if (!strcmp(w[1], "night") && nw == 4) {
+        long lvl = atol(w[3]);
+        ok = (!strcmp(w[2], "0") || !strcmp(w[2], "1")) && lvl >= 0 && lvl <= 255 && w[3][0];
+        if (ok) { store.end(); configSetNight(w[2][0] == '1', (uint8_t)lvl); store.begin(NS, false); }
+    } else if (!strcmp(w[1], "settled") && nw == 3) {
+        ok = !strcmp(w[2], "0") || !strcmp(w[2], "1");
+        if (ok) { store.end(); configSetSettled(w[2][0] == '1'); store.begin(NS, false); }
     } else {
         store.end();
         return reply("err what");
@@ -249,6 +265,30 @@ static void serialTask(void *) {
 }
 
 // ---------------------------------------------------------------- what the bridge writes back
+
+// The household's answer about the light, and the moment the puck was placed. Both go to `cfg` and
+// to NVS together: the light has to respond while somebody is standing there, and still be right
+// after a power cut with the hub down. Unchanged values spend no erase, exactly as above -- a
+// brightness slider dragged across a room would otherwise be a few hundred of them.
+void configSetNight(bool on, uint8_t level) {
+    if (cfg.night == on && cfg.nightLevel == level) return;
+    cfg.night = on;
+    cfg.nightLevel = level;
+    lightNightLevel(level);
+    store.begin(NS, false);
+    store.putBool("night", on);
+    store.putUChar("nightlvl", level);
+    store.end();
+}
+
+// Set once, by "Leave it here". Until it is, the puck keeps its instrument -- see lightRefresh().
+void configSetSettled(bool settled) {
+    if (cfg.settled == settled) return;
+    cfg.settled = settled;
+    store.begin(NS, false);
+    store.putBool("settled", settled);
+    store.end();
+}
 
 void configRemember(const char *ip) {
     if (!ip || !ip[0] || !strcmp(cfg.lastIp, ip)) return;   // unchanged: do not spend an erase on it

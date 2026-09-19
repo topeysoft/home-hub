@@ -12,6 +12,7 @@ from pathlib import Path
 
 from hub import bridge as bridge_mod
 from hub.bridge import Bridges, Cable, network_id
+from hub.nightlight import Nightlight
 from hub.settings import Settings
 
 
@@ -25,6 +26,12 @@ class FakeCable:
         self.flashed, self.written = [], []
         self.write_says = {"chip": "c8ebba", "fw": "0.2.0", "state": "set"}
         self.write_fails = None
+        # The image the hub would write, and the manifest beside it. `ships()` puts a version in it;
+        # a cable with no manifest is a house that cannot say what it ships, which is its own case.
+        self.image = Path(tempfile.mkdtemp()) / "esp32s3-ship.bin"
+
+    def ships(self, fw):
+        self.image.with_suffix(".json").write_text(json.dumps({"chip": "esp32s3", "fw": fw}))
 
     async def hello(self, port): return self.hello_says.get(port)
     async def is_esp(self, port): return await self.esp_chip(port) is not None
@@ -43,10 +50,11 @@ class FakeCable:
 
 
 class FakeHA:
-    def __init__(self): self.cb = None; self.published = []; self.answer = None
+    def __init__(self): self.cb = None; self.published = []; self.calls = []; self.answer = None
     async def subscribe(self, type_, cb, **kw): self.cb = cb; return 1
     async def call(self, domain, service, target, **kw):
         self.published.append((kw.get("topic"), kw.get("payload")))
+        self.calls.append(kw)
         # A puck that answers. `answer` is (leaf, payload); None is a puck that
         # heard the command and said nothing, which is a real failure mode.
         if self.answer and self.cb:
@@ -284,6 +292,131 @@ class TheJob(Knocking):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TheLightAfterItIsPlaced(TheJob):
+    """docs/puck-light.md: what "Leave it here" sends, and the difference between the two halves.
+
+    `settled` is the hub's and is retained, so a puck that missed the moment still gets it. `night`
+    is the household's from the instant they answer, so it goes once and is never repeated -- a
+    retained placement answer would quietly overrule somebody turning the thing off months later.
+    """
+    def place(self, **kw):
+        self.knock(); run(self.adopt_and_finish())
+        self.hub.ha.calls.clear()
+        run(self.b.placed(**kw))
+        return {c["topic"]: c for c in self.hub.ha.calls}
+
+    def test_it_is_settled_and_that_one_is_retained(self):
+        sent = self.place()
+        self.assertEqual(sent["mesh/bridge/c8ebba/settled/set"]["payload"], "1")
+        self.assertTrue(sent["mesh/bridge/c8ebba/settled/set"]["retain"])
+
+    def test_no_answer_says_nothing_at_all_about_the_light(self):
+        sent = self.place()
+        self.assertEqual([t for t in sent if "night" in t], [])
+
+    def test_the_answer_is_carried_once_and_never_retained(self):
+        sent = self.place(night=True, level=200)
+        self.assertEqual(sent["mesh/bridge/c8ebba/night/set"]["payload"], "ON")
+        self.assertFalse(sent["mesh/bridge/c8ebba/night/set"].get("retain"))
+        self.assertEqual(sent["mesh/bridge/c8ebba/night/brightness/set"]["payload"], "200")
+        self.assertFalse(sent["mesh/bridge/c8ebba/night/brightness/set"].get("retain"))
+
+    def test_no_is_an_answer_too_and_carries_no_brightness(self):
+        sent = self.place(night=False, level=200)
+        self.assertEqual(sent["mesh/bridge/c8ebba/night/set"]["payload"], "OFF")
+        self.assertNotIn("mesh/bridge/c8ebba/night/brightness/set", sent)
+
+    def test_the_answer_is_written_down_where_a_household_can_read_it(self):
+        self.place(night=True)
+        self.assertIn("nightlight on", [a[3] for a, _ in self.hub.log.rows if len(a) > 3])
+
+    def test_a_brightness_that_is_not_one_is_refused_before_anything_is_sent(self):
+        self.knock(); run(self.adopt_and_finish())
+        self.hub.ha.calls.clear()
+        with self.assertRaises(ValueError): run(self.b.placed(night=True, level=999))
+        self.assertEqual(self.hub.ha.calls, [])
+        self.assertEqual(self.b.status()["state"], "placing")   # and the job is untouched
+
+    def test_a_puck_that_cannot_be_told_is_still_placed(self):
+        """The publish is not why somebody tapped the button. A broker that refuses must not leave
+        the sheet stuck on a step the person has already finished."""
+        self.knock(); run(self.adopt_and_finish())
+        async def boom(*a, **k): raise RuntimeError("broker gone")
+        self.hub.ha.call = boom
+        run(self.b.placed(night=True))
+        self.assertEqual(self.b.status()["state"], "ready")
+
+
+class LookingAtABridgeThatIsFine(unittest.TestCase):
+    """This hub's Bridges section: the list, and changing a bridge's own light from the panel.
+
+    What made this worth building: until now a puck surfaced on the panel only when something was
+    WRONG with it -- a note when it went quiet, a line when it was a version behind -- so the one
+    place a household could act on one was a problem report. That left hub/nightlight.py's switch
+    reachable only through Home Assistant, which product-direction-out-of-the-box forbids.
+    """
+    def setUp(self):
+        self.tmpdir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmpdir.cleanup)
+        self.hub = FakeHub(self.tmpdir.name)
+        self.b = Bridges(self.hub, FakeCable())
+        self.hub.ha.cb = self.b._on_mqtt
+        self.hub.bridge = self.b
+        self.hub.settings.set(bridges={"c8ebba": {"since": 1, "fw": "0.5.0"},
+                                       "f4a9f3": {"since": 2, "fw": "0.5.0"}})
+        self.b.pucks = {"c8ebba": {"online": True, "rssi": -53, "night": True, "level": 110},
+                        "f4a9f3": {"online": False}}
+
+    def each(self): return {x["chip"]: x for x in self.b.each()}
+
+    def test_every_bridge_is_listed_whether_or_not_anything_is_wrong_with_it(self):
+        self.assertEqual(set(self.each()), {"c8ebba", "f4a9f3"})
+
+    def test_it_says_what_it_honestly_knows_about_each(self):
+        one = self.each()["c8ebba"]
+        self.assertEqual((one["online"], one["signal"], one["night"], one["level"], one["lift"]),
+                         (True, "strong", True, 110, False))
+
+    def test_a_puck_that_has_never_spoken_has_no_opinion_about_its_light(self):
+        """None, not False: "off" is a claim about a thing we have heard from."""
+        self.assertIsNone(self.each()["f4a9f3"]["night"])
+
+    def test_one_the_hub_cannot_place_is_named_honestly_and_sorted_last(self):
+        self.assertEqual([x["where"] for x in self.b.each()], ["A bridge", "A bridge"])
+        self.assertEqual([x["room"] for x in self.b.each()], [None, None])
+
+    def test_turning_the_nightlight_down_is_said_once_and_not_retained(self):
+        """Retained would overrule the household the next time the puck reconnected -- the same
+        trap placed() avoids for the placement answer."""
+        run(self.b.light("c8ebba", night=True, level=40))
+        sent = {c["topic"]: c for c in self.hub.ha.calls}
+        self.assertEqual(sent["mesh/bridge/c8ebba/night/set"]["payload"], "ON")
+        self.assertEqual(sent["mesh/bridge/c8ebba/night/brightness/set"]["payload"], "40")
+        self.assertFalse(any(c.get("retain") for c in self.hub.ha.calls))
+
+    def test_turning_it_off_does_not_also_send_a_brightness(self):
+        """A brightness would turn it back on: the firmware reads any level above zero as an on."""
+        run(self.b.light("c8ebba", night=False, level=40))
+        self.assertNotIn("mesh/bridge/c8ebba/night/brightness/set", [c["topic"] for c in self.hub.ha.calls])
+
+    def test_lift_is_the_brains_and_is_written_down_rather_than_published_at_the_puck(self):
+        self.hub.nightlight = Nightlight(self.hub)
+        run(self.b.light("c8ebba", lift=True))
+        self.assertTrue((self.hub.settings.get("bridges")["c8ebba"]).get("lift"))
+        self.assertTrue(self.each()["c8ebba"]["lift"])
+
+    def test_a_bridge_the_hub_does_not_know_is_refused(self):
+        with self.assertRaises(ValueError): run(self.b.light("ffffff", night=True))
+
+    def test_a_brightness_that_is_not_one_is_refused_before_anything_is_sent(self):
+        with self.assertRaises(ValueError): run(self.b.light("c8ebba", night=True, level=999))
+        self.assertEqual(self.hub.ha.calls, [])
+
+    def test_the_brightness_a_household_chose_is_learned_from_the_puck(self):
+        self.b._on_mqtt({"topic": "mesh/bridge/f4a9f3/night/brightness", "payload": "200"})
+        self.assertEqual(self.each()["f4a9f3"]["level"], 200)
 
 
 class LettingASwitchIn(unittest.TestCase):
@@ -832,3 +965,74 @@ class TheWifiItIsAlreadyStandingOn(Knocking):
         self.b = Bridges(self.hub, cable=self.cable, devdir=self.dev)
         self.ask()
         with self.assertRaises(ValueError): run(self.b.wifi("", "hunter2"))
+
+
+class WhichOnesAreBehind(unittest.TestCase):
+    """A fix reaches new pucks and no others, and the house can at least say which.
+
+    docs/puck-updates.md: a puck has no update path of any kind yet, so the version a bridge is on is
+    the version it was flashed with. That is a fact worth being able to see -- and once a fix DOES
+    have to reach every puck, the count is the whole feature, because the failure that costs a
+    household is a house that believes every one has it when one does not.
+    """
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.dev = Path(self.tmp.name) / "by-id"; self.dev.mkdir()
+        self.hub = FakeHub(self.tmp.name)
+        self.cable = FakeCable(); self.cable.ships("0.3.1")
+        self.b = Bridges(self.hub, cable=self.cable, devdir=self.dev)
+
+    def tearDown(self): self.tmp.cleanup()
+
+    def have(self, **pucks):
+        self.hub.settings.set(bridges={c: {"since": 1, "fw": fw} for c, fw in pucks.items()})
+
+    def test_a_bridge_on_an_older_version_is_named(self):
+        self.have(c8ebba="0.2.0")
+        b = self.b.behind()
+        self.assertEqual([(x["chip"], x["fw"], x["latest"]) for x in b], [("c8ebba", "0.2.0", "0.3.1")])
+
+    def test_a_bridge_on_what_the_house_ships_is_not(self):
+        self.have(c8ebba="0.3.1")
+        self.assertEqual(self.b.behind(), [])
+
+    def test_a_bridge_ahead_of_the_house_is_left_alone(self):
+        """A bench puck flashed from a working copy. Telling somebody it is out of date is noise."""
+        self.have(c8ebba="0.4.0")
+        self.assertEqual(self.b.behind(), [])
+
+    def test_versions_are_compared_as_numbers_and_not_as_words(self):
+        self.cable.ships("0.10.0")
+        self.have(c8ebba="0.9.0")
+        self.assertEqual(len(self.b.behind()), 1)          # 0.9.0 is older than 0.10.0
+
+    def test_a_build_that_is_not_a_version_is_never_behind(self):
+        self.have(c8ebba="dev", f4a9f3="")
+        self.assertEqual(self.b.behind(), [])
+
+    def test_a_house_that_cannot_say_what_it_ships_says_nothing(self):
+        self.cable.image.with_suffix(".json").unlink()
+        self.have(c8ebba="0.2.0")
+        self.assertEqual(self.b.behind(), [])
+
+    def test_a_mangled_manifest_does_not_take_the_panel_down(self):
+        self.cable.image.with_suffix(".json").write_text("{not json")
+        self.have(c8ebba="0.2.0")
+        self.assertEqual(self.b.behind(), [])
+
+    def test_the_panel_is_told_without_a_job_running(self):
+        """It is a standing fact about the house, not a step in setting anything up."""
+        self.have(c8ebba="0.2.0")
+        s = self.b.status()
+        self.assertEqual(s["state"], "none")
+        self.assertEqual([x["chip"] for x in s["behind"]], ["c8ebba"])
+
+    def test_nothing_behind_says_nothing_at_all(self):
+        self.have(c8ebba="0.3.1")
+        self.assertNotIn("behind", self.b.status())
+
+    def test_it_counts_every_one_the_hub_set_up_whether_or_not_it_is_awake(self):
+        """The one that is asleep behind a sofa is exactly the one worth counting."""
+        self.have(c8ebba="0.2.0", f4a9f3="0.2.0")
+        self.assertEqual(len(self.b.behind()), 2)
+        self.assertEqual([x["online"] for x in self.b.behind()], [False, False])

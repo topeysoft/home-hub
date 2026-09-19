@@ -132,6 +132,9 @@ export type Bridge = {
   needs?: 'wifi'                           // failed because the hub has nothing to give: usually the password, since the host never hands a PSK back up
   ssid?: string                            // ...and the network the hub is standing on, when that is the one it wants the password for
   moving?: NetMove                         // every bridge being handed a new Wi-Fi at once (docs/network.md)
+  /* The ones running older software than the house ships. A standing fact, not a job and not a
+     fault: a bridge a version behind is a bridge doing its whole work. docs/puck-updates.md. */
+  behind?: { chip: string; room: string | null; fw: string; latest: string; online: boolean }[]
 }
 /* THE NETWORK the house runs on -- the hub's own connection, and the Wi-Fi the bridges are given.
    Two questions, and on most hubs the answer is different: the hub is on a cable and the bridges are
@@ -216,6 +219,15 @@ export async function nearbySwitches(): Promise<Nearby> {
    the next question cannot honestly be asked. */
 export const blinkSwitch = (uuid: string, seconds = 5) => post<{ state: string; text?: string }>('/bridge/blink', { uuid, seconds })
 export const BRIDGE_STEPS = ['software', 'wifi', 'keys'] as const
+/* The states that have nothing left to say once somebody has read them.
+ *
+ * The brain keeps reporting one until it is told, so a sheet that closes only its own copy goes away
+ * and the very next poll brings it straight back. That was fixed for `failed` and the same bug then
+ * sat in `ready` -- "It's in." reappeared every minute after a bridge was set up, and pressing Done
+ * did nothing the hub could hear. The list lives here rather than in the sheet so the next state that
+ * ends a job is added where the rest of the bridge's vocabulary is. */
+export const BRIDGE_READ_ONCE = ['ready', 'failed'] as const
+export const readOnce = (state?: string) => (BRIDGE_READ_ONCE as readonly string[]).includes(state ?? '')
 export async function getBridge(): Promise<Bridge> { const r = await request('/bridge'); if (!r.ok) await fail(r); return r.json() }
 /** Yes, that one is mine. The keys only go anywhere after this. */
 export const adoptBridge = () => post<Bridge>('/bridge/adopt')
@@ -225,9 +237,32 @@ export const dismissBridge = () => post<Bridge>('/bridge/dismiss')
 export const bridgeWifi = (ssid: string, password: string) => post<Bridge>('/bridge/wifi', { ssid, password })
 /* Take a bridge off the house. Offered only from the *Needs a look* line about one that has not come
    back, because it is the answer to a question the house asked first -- never a thing to go and find. */
+/* ONE BRIDGE, as This hub lists it. Separate from `Bridge` above, which is the setting-up machine
+   the sheet draws: this is the standing fact about a puck that is already in and working.
+   `night` is null, not false, for a puck the hub has never heard speak -- "off" is a claim about a
+   thing that has answered, and the card says "not heard from yet" instead of drawing a switch in a
+   position nobody can vouch for. */
+export type BridgeRow = {
+  chip: string; room: string | null; where: string
+  online: boolean; signal: 'strong' | 'weak' | 'none'
+  switches: number; fw: string | null; behind: boolean
+  night: boolean | null; level: number | null; lift: boolean
+}
+export async function listBridges(): Promise<{ bridges: BridgeRow[] }> {
+  const r = await request('/bridge/list'); if (!r.ok) await fail(r); return r.json()
+}
+/* A bridge's own light. Leaving a field out means "do not touch it", which is what lets the card
+   send one change at a time rather than restating the whole state on every tap. */
+export const setBridgeLight = (chip: string, what: { night?: boolean; level?: number; lift?: boolean }) =>
+  post<{ bridges: BridgeRow[] }>('/bridge/light', { chip, ...what })
 export const forgetBridge = (chip: string) => post<{ forgotten: string }>('/bridge/forget', { chip })
 /** Leave it here -- the placing is over, whatever the signal says. */
-export const placedBridge = () => post<Bridge>('/bridge/placed')
+/* "Leave it here" -- and, when the sheet asked it, the answer to "leave its light on?" in the same
+   call (docs/puck-light.md). Left out entirely rather than sent as false when nothing was asked: a
+   bridge placed without an answer is a bridge with no nightlight, which is not the same thing as one
+   whose household said no, and only the brain should be deciding what to do with the difference. */
+export const placedBridge = (night?: boolean) =>
+  post<Bridge>('/bridge/placed', night === undefined ? undefined : { night })
 export const retryEntry = (entry_id: string) => post<Status>(`/setup/retry/${encodeURIComponent(entry_id)}`)
 export const setCredentials = (handler: string, client_id: string, client_secret: string, hints?: Record<string, string>) => post<Step>('/credentials', { handler, client_id, client_secret, hints })
 export const addRoom = (name: string) => post<{ id: string; name: string }>('/rooms', { name })

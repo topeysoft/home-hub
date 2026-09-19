@@ -537,13 +537,32 @@ established by the host during the run, which means the *ask*, before the tap, s
 about to move: the sheet says what is true of every update and the running screen says the rest. Closing that needs
 the next release's manifest in the data volume the way `channel.sh` already puts the channel there.
 
-## One thing to fix regardless of all of the above
+## One thing to fix regardless of all of the above *(landed 19 September 2026)*
 
 `brain/hub/lock.py` only bites when a code is set, and setup *nudges* rather than requires. On a hub with no code,
 anyone on the Wi‑Fi can trigger an update, **download the backup** — which carries the radios' network keys, Ring's
 sign-in and the hub's own certificate authority — or restore one over the top. That is a defensible choice for a hub
 on the builder's own bench and not one for a hub that was handed to somebody. **A code becomes a required step of
 setup**, not a nudge that Home repeats.
+
+**What landed.** The *No code for now* button is gone from `app/src/Setup.vue`, and the step says why it is the one
+that cannot wait rather than leaving somebody to guess it. Every other step there is still skippable and still
+finishable from Home, because nothing else on that list is worse for having waited.
+
+**And the hub that was set up before it was required.** Requiring it at setup does nothing for a house that already
+skipped it, which is every hub built so far including the one here. So `GET /backup` refuses on a hub with no code
+at all, with a sentence naming the fix instead of a file. That route is singled out on purpose: every other gated
+thing is a *change* to the house, which a household can undo, and this one is a *copy* of the house walking out of
+the door — the radios' network keys, the accounts' sign-ins and the hub's own certificate authority, to anybody who
+can reach it.
+
+**`POST /restore` is deliberately not gated the same way.** A fresh hub somebody is restoring onto has no code yet,
+and never will if the restore carrying it is the thing being refused. Recovery must not require the thing it is
+recovering, and a test says so.
+
+**What was verified.** Four tests over the route: a house with no code is told to set one rather than handed the
+keys; one that has a code behaves exactly as it did; the code is still asked for on a house that has one, so the new
+gate sits in front of the old one rather than instead of it; and putting a backup back is untouched.
 
 ## Open decisions
 

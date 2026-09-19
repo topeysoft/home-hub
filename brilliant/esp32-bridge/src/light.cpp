@@ -146,6 +146,22 @@ static const uint8_t AMBER[3] = {58, 20, 0};
 static const uint8_t GREEN[3] = {0, 52, 10};
 static const uint8_t RED[3] = {56, 0, 0};
 
+// And the one color that breaks the rule above, on purpose.
+//
+// The three constants are saturated because they are SIGNALS: the eye normalises to the brightest
+// thing in the room, so an emitter with its off-channels lit reads as white and says nothing. The
+// nightlight is not a signal. It is lighting a floor, and warm white is exactly what it should be --
+// so here the off-channels are wanted, and "reads as white" is the goal rather than the failure.
+//
+// Roughly 2000 K, which is the warm end of a domestic bulb: no cold light in a corridor at 3am, and
+// far enough from AMBER's hue and behaviour (this one never blinks) that the two cannot be confused.
+// The peak is deliberately higher than the instrument's 58 -- it is meant to be seen by, not read --
+// and lightNightLevel() scales it, so the household's brightness is the only thing that moves.
+static const uint8_t WARM[3] = {255, 140, 45};
+
+// 0-255, scaling WARM. The default is a glow to find a doorway by, not a lamp; the house changes it.
+static volatile uint8_t nightK = 110;
+
 static void paint(const uint8_t *c, float k) {
 #if defined(HAVE_RGB)
     rgbWrite((uint8_t)(c[0] * k), (uint8_t)(c[1] * k), (uint8_t)(c[2] * k));
@@ -188,6 +204,17 @@ static void lightTask(void *) {
         case Light::Heard:                       // green, and still
             paint(GREEN, 1.f);
             break;
+        case Light::Night:                       // warm, still, and only ever on a color LED
+#if defined(HAVE_RGB)
+            // Static between transitions: rgbWrite() drops the unchanged frames, so this costs one
+            // write every REFRESH_MS all night. Anything that FADES writes every frame and walks
+            // straight back into the misread-frame fault -- see the comment on rgbWrite(). A sunset
+            // ramp waits for a board whose data line is actually driven (docs/puck-light.md).
+            paint(WARM, nightK / 255.f);
+#else
+            paint(WARM, 0.f);                    // one plain LED cannot be a nightlight; stay dark
+#endif
+            break;
         case Light::Far: {                       // red, breathing
 #if defined(HAVE_RGB)
             // Time is quantised to the step before the fade is computed, so every frame inside a
@@ -219,4 +246,5 @@ void lightBegin() {
 }
 
 void lightSet(Light what) { want = what; }
+void lightNightLevel(uint8_t level) { nightK = level; }
 Light lightGet() { return want; }

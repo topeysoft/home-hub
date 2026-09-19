@@ -348,6 +348,14 @@ const phones = { phones: [
    The real brain watches a thing on a cable; this walks a clock, so the sheet can be seen moving.
    BRIDGE=cable starts at the knock and runs the whole way; the other values pin one moment. */
 const BRIDGE = process.env.BRIDGE || ''
+/* Bridges running older software than the house ships (docs/puck-updates.md). BEHIND=1 is one the hub
+   can name by its room, BEHIND=2 two of them, BEHIND=anon one it cannot honestly place. */
+const BEHIND = {
+  '1': [{ chip: 'c8ebba', room: 'Hallway', fw: '0.2.0', latest: '0.3.1', online: true }],
+  '2': [{ chip: 'c8ebba', room: 'Hallway', fw: '0.2.0', latest: '0.3.1', online: true },
+        { chip: 'f4a9f3', room: 'Landing', fw: '0.2.0', latest: '0.3.1', online: false }],
+  anon: [{ chip: 'c8ebba', room: null, fw: '0.2.0', latest: '0.3.1', online: true }],
+}[process.env.BEHIND || ''] || []
 /* BRIDGES=1 is a house that already HAS a bridge and is not busy -- which is the normal case, and the
    one that puts the Wall switch door on the Add screen. WAITING=1 is a new switch sitting there
    unprovisioned, which is what that door then has something to say about. */
@@ -457,6 +465,26 @@ const server = http.createServer((req, res) => {
   }
   if (p === '/rules') return json(res, rules)
   if (p === '/discovered') return json(res, discovered)
+/* The bridges This hub lists, and what a household can change about one (docs/puck-light.md).
+   BRIDGES=none empties the list, so the page can be seen without one. */
+const bridgeRows = process.env.BRIDGES === 'none' ? [] : [
+  { chip: 'c8ebba', room: 'hall', where: 'Hallway', online: true, signal: 'strong', switches: 11,
+    fw: '0.5.0', behind: false, night: true, level: 110, lift: false },
+  { chip: 'f4a9f3', room: 'landing', where: 'Landing', online: true, signal: 'weak', switches: 4,
+    fw: '0.4.0', behind: true, night: false, level: 110, lift: false },
+  { chip: '9a01cc', room: null, where: 'A bridge', online: false, signal: 'none', switches: 0,
+    fw: '0.5.0', behind: false, night: null, level: null, lift: false },
+]
+  if (p === '/bridge/list') return json(res, { bridges: bridgeRows })
+  if (p === '/bridge/light' && req.method === 'POST') { let raw = ''; req.on('data', c => (raw += c)); return req.on('end', () => {
+    let b = {}; try { b = JSON.parse(raw) } catch {}
+    const row = bridgeRows.find(x => x.chip === b.chip)
+    if (!row) return json(res, { error: 'The hub does not know that bridge.' }, 400)
+    if (b.night !== undefined) row.night = !!b.night
+    if (b.level !== undefined && row.night) row.level = b.level
+    if (b.lift !== undefined) row.lift = !!b.lift
+    json(res, { bridges: bridgeRows })
+  }) }
   if (p === '/bridge/forget') return json(res, { forgotten: 'The Hallway bridge' })
   if (p === '/health') return json(res, { notes })
   // What a speaker can play. The real brain generates the noises and lists the sounds folder; here it is
@@ -518,7 +546,7 @@ const server = http.createServer((req, res) => {
   /* A bridge being set up. BRIDGE=cable walks the whole job the way a real one does -- software,
      Wi-Fi, keys, then the walk to find it a socket -- so the sheet can be watched rather than
      described. BRIDGE=knocking|working|placing|ready|failed pins one moment instead. */
-  if (p === '/bridge') return json(res, { ...bridgeNow(), ...(netMove ? { moving: netMove } : {}) })
+  if (p === '/bridge') return json(res, { ...bridgeNow(), ...(netMove ? { moving: netMove } : {}) , ...(BEHIND.length ? { behind: BEHIND } : {}) })
   /* What the bridge can hear, and whose side each one is on. NEARBY=n sets how many are unclaimed;
      NEARBY=0 with SPOKEN=1 is the case the Waiting board draws -- nothing to let in, but something
      nearby that has to be started over first, which looks identical to an empty room to a scan. */
