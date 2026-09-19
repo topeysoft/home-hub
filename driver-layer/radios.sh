@@ -15,8 +15,51 @@
 # The Nortek/GoControl HUSBZB-1 ("HubZ Smart Home Controller") is two radios on one plug: -if00 is its
 # Z-Wave 500-series port, which works as is; -if01 is an old EM3581 Zigbee chip whose stock firmware
 # Zigbee2MQTT cannot drive, so it is left alone and Zigbee waits for an MG24-class stick.
+#   radios.sh which <by-id name>   say what one name would be taken for, and change nothing
 set -euo pipefail
 cd "$(dirname "$0")"
+
+# ---- what a stick is taken for -------------------------------------------------------------
+#
+# MATCHED AGAINST THE VENDOR AND PRODUCT ONLY, NEVER THE SERIAL NUMBER. A by-id name is
+# usb-<vendor>_<product>_<serial>-if<NN>[-port<N>], and the serial is an arbitrary string the maker
+# chose. Matching the whole line meant `800` -- which is there for an 800-series Z-Wave stick --
+# claimed an ESP32 bridge puck whose serial happened to read 5A46080020. zwave-js-ui was handed it as
+# /dev/zwave, held it open, and retried every fifteen seconds for as long as it was plugged in; the
+# hub could then never talk to its own puck, and every attempt to set one up died with "multiple
+# access on port". One substring in one pattern, and the house could not adopt a bridge.
+#
+# The trailing token is only taken for a serial when it looks like one (four or more alphanumerics),
+# so a product that simply ends in a word keeps it.
+product() { printf '%s' "$1" | sed -E 's/-if[0-9]+(-port[0-9]+)?$//; s/_[A-Za-z0-9]{4,}$//'; }
+
+is_zigbee() {
+  # The HubZ's Zigbee half is an EM3581 that Zigbee2MQTT cannot drive (see the note above), so it is
+  # never the answer here even though it says Zigbee on the tin.
+  case "$(product "$1")" in *[Hh][Uu][Bb][Zz]*) return 1 ;; esac
+  product "$1" | grep -qiE 'skyconnect|zbt-|zbdongle|sonoff|mg24|cc2652|zigbee|efr32|nabu'
+}
+
+is_zwave() {
+  # ...and its Z-Wave half is -if00, which is the one that works as is. The interface is the only
+  # part of the name outside the product that is ever read, and only for this one device.
+  case "$(product "$1")" in
+    *[Hh][Uu][Bb][Zz]*) case "$1" in *-if00*) return 0 ;; *) return 1 ;; esac ;;
+  esac
+  product "$1" | grep -qiE 'zooz|z-?wave|aeotec|800|pzg23'
+}
+
+# Say what one name would be taken for and stop. For the tests, and for anybody on a hub asking the
+# question this script got wrong: `./radios.sh which usb-1a86_USB_Single_Serial_5A46080020-if00`.
+if [ "${1:-}" = "which" ]; then
+  n="${2:-}"
+  if [ -z "$n" ]; then echo "usage: radios.sh which <by-id name>" >&2; exit 2; fi
+  if is_zigbee "$n"; then echo zigbee
+  elif is_zwave "$n"; then echo zwave
+  else echo none; fi
+  exit 0
+fi
+
 [ "${1:-}" = "detect" ] || sleep "${RADIOS_SETTLE:-2}"    # udev's by-id links land a moment after the device
 touch .env
 ZB_NET="$(grep '^ZIGBEE_NET=' .env | cut -d= -f2- || true)"
@@ -36,8 +79,11 @@ radio_state() { grep -E '^(ZIGBEE_SERIAL|ZIGBEE_PORT|ZWAVE_SERIAL|COMPOSE_PROFIL
 BEFORE="$(radio_state)"
 
 sticks() { find /dev/serial/by-id -maxdepth 1 -mindepth 1 -printf '%f\n' 2>/dev/null || true; }
-ZB="$(sticks | grep -i -E 'skyconnect|zbt-|zbdongle|sonoff|mg24|cc2652|zigbee|efr32|nabu' | grep -v -i hubz | head -1 || true)"
-ZW="$(sticks | grep -i -E 'zooz|z-wave|zwave|aeotec|800|pzg23|hubz.*if00' | head -1 || true)"
+ZB=""; ZW=""
+for s in $(sticks); do
+  [ -n "$ZB" ] || ! is_zigbee "$s" || ZB="$s"
+  [ -n "$ZW" ] || ! is_zwave "$s" || ZW="$s"
+done
 
 set_env() { if grep -q "^$1=" .env; then sed -i "s|^$1=.*|$1=$2|" .env; else echo "$1=$2" >> .env; fi; }
 del_env() { sed -i "/^$1=/d" .env; }
