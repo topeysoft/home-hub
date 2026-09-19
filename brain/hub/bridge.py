@@ -234,6 +234,7 @@ class Bridges:
         self._seen: set[str] = set()          # ports present at the last look
         self._dismissed: set[str] = set()     # "not mine": left alone until a person unplugs it
         self._probing: set[str] = set()       # ports we are resetting right now, by asking
+        self._pending: list[str] = []         # seen, not yet probed: probing is one at a time
         self._task: asyncio.Task | None = None
         self._quiet: asyncio.Task | None = None   # the placing watch; see _placing_went_quiet
         self._sub: int | None = None
@@ -303,15 +304,23 @@ class Bridges:
         if self._first:
             self._first = False; return       # what was there at boot is not something that just arrived
         for port in sorted(new):
-            # `self.job` is not set until a probe FINISHES, so it cannot stop a second probe
-            # of the port already being probed -- and probing is exactly what makes a port
-            # churn, because it resets the board and its USB re-enumerates. The returning
-            # port reads as a fresh arrival, a second probe starts on it, and the two fight:
-            # "device reports readiness to read but returned no data (multiple access on
-            # port?)". That is a probe losing a race with itself.
-            if RADIO.search(port) or port in self._dismissed or port in self._probing or self.job:
-                continue
-            asyncio.create_task(self._arrived(port))
+            if RADIO.search(port) or port in self._dismissed: continue
+            if port not in self._pending: self._pending.append(port)
+        # ONE PROBE AT A TIME, ACROSS ALL PORTS. Two reasons, and the second one is why a
+        # hub behaved differently from a Mac all evening:
+        #
+        #   * probing resets the board, so its USB re-enumerates and the port churns; the
+        #     returning port reads as a fresh arrival and would be probed again underneath
+        #     the probe still running;
+        #   * and ONE BOARD CAN BE TWO PORTS. An ESP32-S3 on Linux shows up as both its
+        #     USB-serial bridge and the chip's own USB-JTAG unit. Probing "each port" then
+        #     means two probes on one chip, fighting: "device reports readiness to read but
+        #     returned no data (multiple access on port?)". macOS shows only the one port,
+        #     which is why this never reproduced on a desk.
+        #
+        # Ports wait their turn rather than being dropped, so nothing is lost by queueing.
+        if self._pending and not self._probing and not self.job:
+            asyncio.create_task(self._arrived(self._pending.pop(0)))
 
     async def _arrived(self, port: str):
         self._probing.add(port)               # anything its USB does until we are done is ours
