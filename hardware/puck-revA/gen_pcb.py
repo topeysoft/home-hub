@@ -65,36 +65,53 @@ for n, (ref, th) in enumerate(zip(LED_ORDER, LED_ANGLES), 1):
 # SOT-23s. The user button is pinned at 180, the front of the shelf variant, where you would tap it,
 # with its actuator (local +Y) pointing out through the wall. Passives are left to the packer: it
 # only ever failed on big parts, and where a 0603 lands is a routing convenience, not a decision.
-OUTER_ARCS = [                 # (start, end, refs in order)
-    (52.0, 158.0, ["J3", "J2", "U2", "U3", "U4", "SW1"]),   # between the holes at 45 and 165
-    (202.0, 278.0, ["SW2", "U5"]),                          # starts at 202, not 189: any closer to
-                                                            # SW3 at 180 and RST collides with USR
-]
-OUTER_R = {"J3": 21.6, "J2": 21.6}            # inside the skirt (23.15), outside the LEDs (19.75)
-PINNED = {"SW3": (22.2, 180.0)}
-GAP_MM = 0.4
+# The outer ring, assigned by CIRCUIT rather than packed by index. The first version packed parts
+# in list order and put the USB ESD diode 39 mm from the connector it protects and the 22 uF bulk
+# 43 mm from the regulator it feeds -- both useless there, and no amount of routing fixes it. What
+# is adjacent here is adjacent for a reason:
+#
+#   R1 R2 U4 hug J1     CC pulldowns and the ESD clamp belong at the port, not near it
+#   C1 sits on U2       input bulk, on the regulator's own VIN
+#   U3 sits near D1     the level shifter's 5 V output runs straight into the chain's first LED
+#
+# Holes at 45/165/285 and J1 spanning 346..14 are the fixed obstacles; everything below is checked
+# against them and against its neighbours at generation time.
+OUTER = {
+    "R2": 337.0, "R1": 22.0,                     # CC pulldowns, either side of J1
+    "U3": 60.0,                                  # level shifter -> D1 at 30 deg
+    "U2": 78.0, "C1": 90.0,                      # regulator and its input bulk
+    "J2": 105.0, "J3": 122.0,                    # UART, then EXP
+    "SW1": 141.0, "SW3": 180.0, "SW2": 210.0,    # BOOT, USER (front), RST
+    "U5": 234.0,                                 # ambient light, DNP
+}
+OUTER_R = {"J2": 21.6, "J3": 21.6}            # 4.3 mm tall: inside the skirt; the rest ride at 22.2
 
-# SILKSCREEN. Two rules, both about a person holding a bare board at 2am during bring-up.
+# Inboard, at r=12, each near what it serves. U1's 3V3 pin is at ~157 deg, its EN at ~150.
+INNER_R = 12.0
+
+# U4 is pinned, not preferred. It is the ESD clamp and it only does its job at the port: the outer
+# ring pushed it past the mounting hole at 45 deg to 21 mm away, which is a diode that protects
+# nothing. There is no LED at 0 deg -- that slot is the connector -- so it sits in the ring itself,
+# directly inboard of J1 and 7 mm from it, with the D+/D- pair running straight out to the pads.
+PINNED_POLAR = {"U4": (14.2, 0.0)}
+INNER_PREF = {"C3": 157, "C2": 78, "R3": 145, "C7": 133, "R4": 45, "R5": 300, "R6": 312}
+
+# SILKSCREEN. Function labels beat reference designators: BOOT is what you need to read, SW1 is what
+# you look up. The switches and headers get a deliberate label on the free annulus between the
+# module and the LED ring -- the one place with room for text -- each on the same radial line as the
+# part it names, which is what makes it unambiguous nine millimetres away.
 #
-# Function labels beat reference designators: BOOT is what you need to read, SW1 is what you need
-# to look up. So the three switches and the two headers get a deliberate label on the free annulus
-# between the module and the LED ring -- the one place on this board with room for text -- each on
-# the same radial line as the part it names, which is what makes it unambiguous nine millimetres
-# away. Their own Value fields are hidden, because the label now says it.
-#
-# And EVERY Value is hidden. "SK6812-RGBW" printed eleven times around the ring, plus AP2112K-3.3,
+# And EVERY Value is hidden. "SK6812-RGBW" eleven times around the ring, plus AP2112K-3.3,
 # 74AHCT1G125, USBLC6-2SC6 and a part number long enough to run off the board, was almost the whole
-# of the silkscreen and none of the information -- the values live in the BOM and the schematic.
-# What stays is the reference designators, which is what you need when reworking one part.
+# silkscreen and none of the information -- values live in the BOM and the schematic.
 SILK_LABEL = {"SW1": "BOOT", "SW2": "RST", "SW3": "USR", "J2": "UART", "J3": "EXP"}
 SILK_R = 13.3
 SILK_SIZE = 1.2
 
-# Reference designators for the LEDs and the passives move to F.Fab. That is where assembly
-# documentation expects them and it is what dense boards do: D1..D11 and C101..C104 auto-placed
-# around a 34 mm ring collide with each other and with the labels above, and none of them is
-# something a person needs to read off the silkscreen. The parts you DO hunt for by eye -- the
-# switches, the headers, the connector, the ICs, the mounting holes -- keep theirs.
+# LED and passive reference designators move to F.Fab, where assembly documentation expects them.
+# D1..D11 and C101..C104 auto-placed around a 34 mm ring collide with each other and with the
+# labels above, and none of them is something a person reads off a silkscreen. The parts you DO
+# hunt for by eye -- switches, headers, connector, ICs, mounting holes -- keep theirs.
 FAB_REF_PREFIX = ("D", "C", "R")
 
 def tangential(fp, th):
@@ -348,21 +365,53 @@ def main():
         return all(math.hypot(x + sx * w / 2 - CX, y + sy * h / 2 - CY) <= BOARD_R - 0.4
                    for sx in (-1, 1) for sy in (-1, 1))
 
-    for ref, (r, th) in PINNED.items():
+    # Preferred angles say what should be NEAR what; this makes them fit. Parts are laid out in
+    # angular order from just past the connector, each pushed to the first place it clears its
+    # neighbour and the mounting holes. Hand-picked angles alone gave seven shorts and ten mask
+    # bridges -- the grouping was right and the arithmetic was not.
+    for ref, (r, th) in PINNED_POLAR.items():
         x, y = polar(th, r); FIXED[ref] = (x, y, tangential(real[ref][3], th))
-    for a0, a1, refs in OUTER_ARCS:
-        cursor = a0
-        for ref in refs:
-            r = OUTER_R.get(ref, 22.2)
-            w, h = courtyard_wh(real[ref][3])
-            half = math.degrees((max(w, h) / 2 + GAP_MM) / r)
-            th = cursor + half
-            assert th + half <= a1 + 1e-6, f"{ref} overruns the arc {a0}-{a1}: ends at {th + half:.1f}"
-            x, y = polar(th, r); FIXED[ref] = (x, y, tangential(real[ref][3], th))
-            cursor = th + half
 
-    for ref, (x, y, rot) in list(FIXED.items()):
-        FIXED[ref] = (*origin_for(real[ref][3], x, y, rot), rot)
+    span = {ref: math.degrees((max(courtyard_wh(real[ref][3])) / 2 + 0.7) / OUTER_R.get(ref, 22.2))
+            for ref in OUTER}
+    j1_half = math.degrees((max(courtyard_wh(real["J1"][3])) / 2 + 0.7) / 21.6)
+    blocked = [(a - 5.9, a + 5.9) for a in BOLT_ANGLES] + [(360 - j1_half, 360 + j1_half)]
+    def hits(a0, a1):
+        return any(a0 < hi and a1 > lo for lo, hi in blocked) or \
+               any(a0 < hi - 360 and a1 > lo - 360 for lo, hi in blocked)
+    cursor = j1_half
+    for ref in sorted(OUTER, key=lambda r: (OUTER[r] - j1_half) % 360):
+        th = max(OUTER[ref], cursor + span[ref])
+        while hits(th - span[ref], th + span[ref]):
+            th += 0.5
+        assert th + span[ref] < 360 - j1_half, f"{ref} runs past the connector at {th:.1f} deg"
+        r = OUTER_R.get(ref, 22.2)
+        x, y = polar(th, r); FIXED[ref] = (x, y, tangential(real[ref][3], th))
+        cursor = th + span[ref]
+    # Inboard, the annulus is not an annulus. The module's courtyard reaches r=10.1 off its flat
+    # faces but 14.0 at its corners, and the LED ring's inner edge is 14.25 -- so there is room near
+    # 0/90/180/270 and none at all diagonally. Preferences here say what each part wants to be near;
+    # this walks outward from that angle to the first slot that actually clears.
+    mhx, mhy = [v / 2 for v in courtyard_wh(real["U1"][3])]
+    inner_boxes = []
+    for ref, pref in INNER_PREF.items():
+        w, h = courtyard_wh(real[ref][3])
+        hw, hh = max(w, h) / 2 + 0.3, min(w, h) / 2 + 0.3
+        for d in [0] + [s_ * k for k in range(1, 120) for s_ in (1, -1)]:
+            th = (pref + d) % 360
+            for r in (INNER_R, INNER_R + 0.6, INNER_R + 1.1):
+                x, y = polar(th, r)
+                # hw, not hh: a tangential part's long axis still reaches toward the module on the
+                # diagonals, and checking only the short side let four resistors clip its courtyard.
+                if abs(x - CX) - hw < mhx and abs(y - CY) - hw < mhy: continue   # into the module
+                if r + hh > 14.25 - 0.3: continue                                # into the LED ring
+                if any(math.hypot(x - bx, y - by) < hw + bw for bx, by, bw in inner_boxes): continue
+                FIXED[ref] = (x, y, (th + 90) % 360); inner_boxes.append((x, y, hw)); break
+            else:
+                continue
+            break
+        else:
+            sys.exit(f"nowhere inboard for {ref}")
 
     placed, boxes = dict(FIXED), []
     for ref, (x, y, rot) in FIXED.items():
