@@ -234,8 +234,18 @@ onUnmounted(() => {
         <div class="banner" v-if="store.loaded && store.linkLost"><Icon name="refresh" :size="16" /> Reconnecting to the hub. What you see may be a little behind.</div>
       </Transition>
 
-      <div class="offline" v-if="!store.loaded || store.status?.driver !== 'ready'">
-        <template v-if="store.loaded && store.status && store.status.driver !== 'ready'">
+      <div class="offline" v-if="!store.loaded || store.restarting || store.status?.driver !== 'ready'">
+        <!-- A restart is the one thing this panel does that destroys the thing doing it, and it is
+             short enough to count. So it gets the overlay from the moment it is asked for rather than
+             when the hub next answers, and a number that runs out rather than a spinner: a spinner
+             says "this may never end". The figure is the hub's own last restart at this rung. -->
+        <template v-if="store.restarting">
+          <span class="offline-icon pulse"><Icon name="refresh" :size="28" /></span>
+          <h1 class="display">{{ store.restarting.rung === 'machine' ? 'Restarting the little computer' : store.restarting.rung === 'everything' ? 'Restarting everything' : 'Restarting the hub' }}</h1>
+          <p>{{ store.restarting.left > 0 ? `Back in about ${store.restarting.left} seconds.` : 'Taking longer than usual. Still trying.' }}</p>
+          <p class="keeps">{{ store.restarting.rung === 'hub' ? 'Lights and switches keep working.' : 'Switches on the wall keep working.' }}</p>
+        </template>
+        <template v-else-if="store.loaded && store.status && store.status.driver !== 'ready'">
           <span class="offline-icon pulse"><Icon name="home" :size="28" /></span>
           <h1 class="display">{{ store.restoring ? 'Restoring your house' : store.updating ? 'Updating the hub' : store.status.driver === 'down' ? 'The engine is starting' : 'Reconnecting' }}</h1>
           <p>{{ store.restoring || store.updating ? 'A few minutes. The lights and switches keep working; this screen comes back on its own.' : store.status.reason || 'The house will be back in a moment. Nothing needs doing.' }}</p>
@@ -244,6 +254,9 @@ onUnmounted(() => {
           <span class="offline-icon"><Icon name="home" :size="28" /></span>
           <h1 class="display">Can't reach the hub</h1>
           <p>Make sure the hub is powered on and this screen is on the same network. It will reconnect on its own.</p>
+          <!-- No Restart here on purpose: there is nobody listening to ask. This is the floor of the
+               ladder, and the physical answer is the only one left. docs/restart.md, piece 5. -->
+          <p class="keeps">If this lasts a few minutes, unplug the hub for ten seconds and plug it back in.</p>
           <button class="button" @click="load()"><Icon name="refresh" :size="18" /> Try again</button>
         </template>
         <template v-else>

@@ -11,7 +11,9 @@ from tests.test_rules import FakeHub, TZ
 
 
 class FakeProvision:
-    def __init__(self): self.parts, self.problems, self.sign_ins, self.domains = [], [], [], {}
+    def __init__(self):
+        self.parts, self.problems, self.sign_ins, self.domains = [], [], [], {}
+        self.retried_at = {}     # pid -> when somebody last asked it to try again; health offers the next rung after that
     def summary(self): return self.parts
 
 
@@ -173,7 +175,7 @@ class GroupingTests(unittest.TestCase):
         self.assertEqual(len(notes), 1)                      # one job, not seven lines
         self.assertEqual(len(notes[0]["with"]), 6)
         self.assertEqual(notes[0]["with"][0]["where"], "Hallway · a light")
-        self.assertEqual(notes[0]["acts"], [{"do": "Try again", "act": "part", "to": "zwave"}])
+        self.assertEqual(notes[0]["acts"], [{"do": "Restart Z-Wave radio", "act": "part", "to": "zwave"}])
 
     def test_a_part_that_is_simply_absent_is_only_news_when_something_waits_on_it(self):
         self.hub.provision.parts = [{"id": "zwave", "name": "Z-Wave radio", "state": "off", "text": "No Z-Wave stick found."}]
@@ -204,3 +206,42 @@ class GroupingTests(unittest.TestCase):
         with self.free_disk(): notes = self.h.notes()
         self.assertEqual([len(n["with"]) for n in notes], [4, 0])   # the sign-in got there first
         self.assertEqual(len(notes), 2)
+
+
+class RestartNotes(unittest.TestCase):
+    """Restarting that has stopped being a repair, and restarting nobody asked for."""
+    def setUp(self):
+        self.hub = FakeHub(); self.hub.provision = FakeProvision()
+        with mock.patch.dict(os.environ, {"HUB_VERSION": "v1", "HUB_COMMIT": "a" * 40}): self.hub.updates = updates.Updates(self.hub)
+        self.h = health.Health(self.hub)
+
+    def notes(self):
+        with mock.patch("hub.health.shutil.disk_usage", return_value=namedtuple("u", "total used free")(100 * 1024 ** 3, 10 * 1024 ** 3, 90 * 1024 ** 3)):
+            return self.h.notes()
+
+    def test_one_restart_is_not_news(self):
+        self.hub.log.add("home", "restart", "hub", "asked", source="user")
+        self.assertEqual(self.notes(), [])
+
+    def test_three_in_an_hour_says_restarting_is_not_the_answer(self):
+        for _ in range(3): self.hub.log.add("home", "restart", "hub", "asked", source="user")
+        n = self.notes()[0]
+        self.assertEqual(n["kind"], "restart")
+        self.assertIn("restarting is not fixing", n["text"])
+        self.assertEqual([(a["act"], a["to"]) for a in n["acts"]], [("restart", "everything")])
+
+    def test_a_hub_that_restarted_itself_says_so(self):
+        """Silent self-healing is how a household runs on a dying card for a year."""
+        self.hub.log.add("home", "restart", "everything", "back", source="watchdog", detail={"took": 90})
+        n = self.notes()[0]
+        self.assertIn("started itself again", n["text"])
+        self.assertEqual(n["acts"], [])
+
+    def test_a_part_that_was_already_asked_offers_the_next_rung(self):
+        self.hub.provision.parts = [{"id": "zwave", "name": "Z-Wave radio", "state": "failed", "text": "the stick vanished"}]
+        self.assertEqual([a["act"] for a in self.notes()[0]["acts"]], ["part"])
+        self.hub.provision.retried_at["zwave"] = time.time()
+        acts = self.notes()[0]["acts"]
+        self.assertEqual([a["act"] for a in acts], ["part", "restart"])
+        self.assertEqual(acts[1]["to"], "hub")
+        self.assertIn("did not come back", acts[1]["ask"])

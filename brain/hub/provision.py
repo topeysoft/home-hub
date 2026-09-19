@@ -67,6 +67,7 @@ class Provision:
         self.host = hub.env.get("HUB_DRIVER_HOST") or os.environ.get("HUB_DRIVER_HOST") or "localhost"
         self.probe_host = hub.env.get("HUB_PROBE_HOST") or os.environ.get("HUB_PROBE_HOST") or "localhost"
         self.parts = {pid: {"id": pid, "name": name, "state": "unknown", "text": "Looking…", "port": port} for pid, name, port, _, _ in PARTS}
+        self.retried_at: dict[str, float] = {}   # pid -> when somebody last asked it to try again
         self._failed_at: dict[str, float] = {}
         self.problems: list[dict] = []     # integrations HA has but could not set up, with HA's reason
         self.domains: dict[str, str] = {}  # config entry -> what integration it is. A device carries its entry (model.Device.entry); this is how health.py turns that into "the Z-Wave radio" and gathers everything that went quiet with it
@@ -185,6 +186,10 @@ class Provision:
         the stick back in, so Needs a look offers this and it forgets the backoff."""
         if pid not in self.parts: raise KeyError(pid)
         self._failed_at.pop(pid, None)
+        # When it was last asked, so Needs a look can tell "nobody has tried this yet" from "this has
+        # been tried and is still not answering" -- which is the whole difference between offering the
+        # same button again and offering the next rung of docs/restart.md.
+        self.retried_at[pid] = time.time()
         await self.refresh()
 
     async def retry(self, entry_id: str):

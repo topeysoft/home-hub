@@ -34,4 +34,49 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="10dp"
         android:textSize="13sp" />
+
+    <!-- The plug. The one true sentence for a wall that cannot reach the hub at all: there is nobody
+         listening to ask for a restart, so this is the floor of the ladder and there is no shame in
+         printing it. Hidden while the house is showing. docs/restart.md, piece 5. -->
+    <TextView
+        android:id="@+id/plug"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:text="@string/plug"
+        android:textSize="13sp"
+        android:visibility="gone" />
+
+    <!-- This screen, and never the house. The panel's Restart is about the hub; these two are about
+         this box, and keeping the words apart is what stops somebody fixing a frozen screen by taking
+         the heating schedule down with it. -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="22dp"
+        android:text="@string/this_screen"
+        android:textSize="20sp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:text="@string/this_screen_sub"
+        android:textSize="14sp" />
+
+    <Button
+        android:id="@+id/restart_app"
+        style="?android:attr/buttonBarButtonStyle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="@string/restart_app" />
+
+    <Button
+        android:id="@+id/restart_tablet"
+        style="?android:attr/buttonBarButtonStyle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/restart_tablet"
+        android:visibility="gone" />
 </LinearLayout>

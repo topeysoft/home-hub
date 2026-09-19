@@ -25,6 +25,11 @@ change lands on the wall the moment the hub updates — no store, no second clie
 - **Has one way out:** the top left corner — the clock's corner, where the panel has no control —
   held for three seconds. That opens a small sheet: the hub's address, *Reload*, and *Leave kiosk*.
   Nobody finds it by accident and a guest does not find it at all.
+- **Restarts itself, and says nothing about the house.** The same sheet carries *Restart the wall app*
+  and, where the kiosk is device owner, *Restart the tablet* — the ladder for the glass, which is a
+  different thing from the panel's *Restart* and never says the same words. Somebody fixing a frozen
+  screen must not take the heating schedule down with it. When the hub cannot be reached at all the
+  sheet also says the one thing left: unplug it for ten seconds. See `docs/restart.md`, pieces 5 and 7.
 
 The corner is watched, never taken: a tap there still reaches the panel underneath. A kiosk that
 swallowed a corner would swallow whatever the panel later puts in it.

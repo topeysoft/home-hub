@@ -25,9 +25,11 @@ import shutil, time
 from datetime import datetime
 from .model import kind_of
 from .provision import PARTS
+from .restart import DEEPER, HOUR, WEARY
 from .settings import DATA
 
 LOW_FREE = 2 * 1024 ** 3     # bytes; below this, or below a tenth of the disk, storage is "nearly full"
+RETRIED = 10 * 60            # seconds a part counts as "already asked", so the next rung is offered instead
 
 # Which integration each part the hub runs itself is, so the things on it can be gathered under it when it
 # stops. The parts with no integration of their own (Zigbee, Ring) arrive over Messages and group under that.
@@ -61,7 +63,7 @@ class Health:
         gone.sort(key=lambda d: since.get(d.id, float("inf")))
         faults = self.drivers(gone)
         claimed = {w["id"] for f in faults for w in f.get("with", ())}
-        return faults + self.offline([d for d in gone if d.id not in claimed], since) + self.storage() + self.update()
+        return faults + self.offline([d for d in gone if d.id not in claimed], since) + self.storage() + self.restarts() + self.update()
 
     def where(self, d) -> str:
         """Which room, and what sort of thing -- the two facts somebody needs to go and look at it. A name
@@ -138,13 +140,13 @@ class Health:
             elif p.get("state") == "failed":
                 out.append({"kind": "driver", "subject": p["id"], "since": None, "with": mine,
                             "text": f"{p['name']} is not running: {p.get('text') or 'it stopped'}",
-                            "acts": [{"do": "Try again", "act": "part", "to": p["id"]}]})
+                            "acts": self.part_acts(p)})
             elif p.get("state") == "off" and mine:
                 # A part that is simply not there is only news when something was depending on it. A Zigbee
                 # stick nobody has plugged in is not a fault; a Zigbee stick six devices are waiting on is.
                 out.append({"kind": "driver", "subject": p["id"], "since": None, "with": mine,
                             "text": p.get("text") or f"{p['name']} is not running.",
-                            "acts": [{"do": "Try again", "act": "part", "to": p["id"]}]})
+                            "acts": self.part_acts(p)})
             else:
                 claimed.difference_update(w["id"] for w in mine)   # a part that is fine explains nothing
         # something HA has but could not start. `retry` is the entry to ask again, once whatever it complained about is fixed.
@@ -152,6 +154,51 @@ class Health:
             out.append({"kind": "driver", "subject": q.get("entry_id"), "since": None, "with": took(entry=q.get("entry_id")),
                         "text": f"{q.get('title')} could not connect{': ' + q['reason'] if q.get('reason') else '.'}",
                         "acts": [{"do": "Try again", "act": "entry", "to": q.get("entry_id")}]})
+        return out
+
+    def part_acts(self, p: dict) -> list:
+        """What to offer for a part that is not running, and when to offer the next rung.
+
+        *Try again* was the only word here, and it is the right one exactly once: the first time, when
+        somebody has just plugged the stick back in and the part is still inside its backoff. After
+        that it is a restart and saying so is more honest -- and once the restart has been asked for
+        and the part is still not answering, the button that did not work is not the button to offer
+        again. That is the ladder in docs/restart.md, revealed at the point it is earned rather than
+        drawn as a menu nobody can choose from.
+        """
+        tried = self.hub.provision.retried_at.get(p["id"], 0)
+        acts = [{"do": f"Restart {p['name']}", "act": "part", "to": p["id"]}]
+        if time.time() - tried < RETRIED:
+            acts.append({"do": "Restart the hub", "act": "restart", "to": "hub",
+                         "ask": f"{p['name']} did not come back. Restart the hub? Lights and switches keep working.",
+                         "yes": "Restart the hub", "no": "Not now"})
+        return acts
+
+    def restarts(self) -> list:
+        """Restarting that has stopped being a repair, and restarting nobody asked for.
+
+        Two different lines and both matter. A hub that has been restarted three times in an hour has
+        a fault that restarting is not fixing, and offering a fourth restart would be the panel
+        joining in. A hub that restarted ITSELF is the one that must never be quiet about it: silent
+        self-healing is how a household runs on a dying card for a year.
+        """
+        out, now = [], time.time()
+        events = [e for e in self.hub.log.recent(limit=50, subject="restart", kinds=("home",)) if now - e["ts"] < HOUR]
+        asked = [e for e in events if e["new"] == "asked"]
+        if len(asked) >= WEARY:
+            rung = asked[0]["old"]
+            deeper = DEEPER.get(rung)
+            out.append({"kind": "restart", "subject": None, "since": asked[-1]["ts"],
+                        "text": f"The hub has restarted {len(asked)} times in the past hour. Something is wrong that restarting is not fixing.",
+                        "acts": ([{"do": f"Restart {'everything' if deeper == 'everything' else 'the little computer'}", "act": "restart", "to": deeper,
+                                   "ask": f"Restarting {rung} has not helped. Try the next one up?",
+                                   "yes": "Yes, try that", "no": "Not now"}] if deeper else [])})
+        # One that came back on its own. `source` is the host's watchdog rather than a person, and the
+        # line says the time because that is the fact a household can act on.
+        alone = next((e for e in events if e["new"] == "back" and e["source"] == "watchdog"), None)
+        if alone:
+            out.append({"kind": "restart", "subject": None, "since": alone["ts"], "acts": [],
+                        "text": f"The hub stopped answering at {when(alone['ts'], self.hub.tz)} and started itself again. Nobody asked it to."})
         return out
 
     def update(self) -> list:

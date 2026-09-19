@@ -2602,6 +2602,14 @@ input:focus-visible {
   margin: 0;
   color: var(--ink-2);
 }
+/* The line under the countdown: what is still true while the hub is away, and on the screen that
+   cannot reach it at all, where the plug is. Quieter than the sentence above it -- it is reassurance,
+   not news. */
+.offline .keeps {
+  color: var(--ink-2);
+  opacity: 0.7;
+  font-size: 0.95em;
+}
 .offline-icon {
   width: 60px;
   height: 60px;

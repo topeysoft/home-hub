@@ -1,0 +1,11 @@
+# Every two minutes, starting well after boot: a hub that has just been powered on is allowed to take
+# its time, and the script itself waits out three misses a minute apart before it does anything.
+[Unit]
+Description=Home Hub: watch that the house is answering
+
+[Timer]
+OnBootSec=8min
+OnUnitActiveSec=2min
+
+[Install]
+WantedBy=timers.target

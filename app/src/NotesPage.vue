@@ -36,11 +36,11 @@
  * it, the second does it. Nothing vanishes under one tap.
  */
 import { computed, ref } from 'vue'
-import { installUpdate, loadHealth, notify, openFlow, store } from './store'
-import { checkDevice, forgetDevice, retryEntry, retryPart, type Act, type Note } from './api'
+import { installUpdate, loadHealth, notify, openFlow, restartHub, store } from './store'
+import { checkDevice, forgetDevice, retryEntry, retryPart, type Act, type Note, type Rung } from './api'
 import Icon from './Icon.vue'
 
-const noteIcon = (k: string) => k === 'offline' ? 'refresh' : k === 'storage' ? 'home' : k === 'driver' ? 'switch' : 'sparkle'
+const noteIcon = (k: string) => k === 'offline' || k === 'restart' ? 'refresh' : k === 'storage' ? 'home' : k === 'driver' ? 'switch' : 'sparkle'
 
 /* A long list of quiet things folds, because five is enough to see the shape of it -- but the fold opens.
    The old list stopped at five in the BRAIN and ended with "And 3 more things are offline", a sentence
@@ -69,6 +69,10 @@ async function run(n: Note, a: Act, id: string) {
   asking.value = ''
   if (a.act === 'flow') return openFlow(a.to!)
   if (a.act === 'update') return installUpdate()
+  /* A restart takes this page away with it, so there is nothing to refresh afterwards and nothing to
+     mark busy: the overlay is up before the tap has finished. The rung is the brain's -- this page
+     offers whichever one it was given, and the question above it came from there too. */
+  if (a.act === 'restart') return void restartHub(a.to as Rung)
   if (busy.value) return
   busy.value = id
   try {
@@ -118,7 +122,7 @@ async function run(n: Note, a: Act, id: string) {
             <span class="note-ask" v-if="a.ask && asking === `${key(n, i)}:${j}`">
               {{ a.ask }}
               <button class="button small" :class="{ busy: busy === `${key(n, i)}:${j}` }" @click="run(n, a, `${key(n, i)}:${j}`)">{{ a.yes || a.do }}</button>
-              <button class="button small ghost" @click="asking = ''">Keep it</button>
+              <button class="button small ghost" @click="asking = ''">{{ a.no || 'Keep it' }}</button>
             </span>
             <button v-else-if="!asking.startsWith(key(n, i) + ':')" class="button small" :class="{ ghost: j > 0, busy: busy === `${key(n, i)}:${j}` }"
                     :disabled="!!busy" @click="run(n, a, `${key(n, i)}:${j}`)">{{ a.do }}</button>

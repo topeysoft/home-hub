@@ -15,7 +15,7 @@
 export const BRAIN_PATHS = [
   '/accounts', '/ambient', '/assistant', '/backup', '/bridge', '/catalog', '/credentials', '/devices', '/discovered',
   '/drafts', '/events', '/flows', '/geo', '/health', '/home', '/location', '/look', '/pair',
-  '/phone', '/phones', '/presence', '/qr.svg', '/restore', '/rooms', '/rules', '/say', '/scenes',
+  '/phone', '/phones', '/presence', '/qr.svg', '/restart', '/restore', '/rooms', '/rules', '/say', '/scenes',
   '/setup', '/share', '/sounds', '/suggestions', '/update',
   '/docs', '/openapi.json', '/redoc',        // FastAPI's own, handy when the panel is not the thing being debugged
 ] as const
