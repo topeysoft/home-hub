@@ -57,45 +57,63 @@ One layout consequence worth knowing before pin assignment: **the `R8` suffix is
 GPIO35/36/37 inside the module.** Nothing here uses PSRAM, so plain `-N16` is the better part and frees three pins.
 `-N16R8` is the more reliably stocked one. Check LCSC at order time and take `-N16` if it is there.
 
-### The antenna keepout, which is the one rule that cannot be negotiated
 
-Get this wrong and you do not get a board that works slightly worse. You get FAR breathing red in rooms where a
-devkit was fine, and you will spend a week blaming the firmware.
+**The `-1U`, decided later on 19 September, once the board was laid out.** Same module, same 41 pins, same
+16 MB — but a U.FL connector where the `-1` has a trace antenna. The trace antenna needs a board edge and a
+48 × 41 mm keepout, and on a 50 mm disc that blocked a third of every LED ring radius permanently; it is what
+forced four LEDs instead of three and every asymmetry in the first layout. With the `-1U` the module sits at the
+board's center, a 2.4 GHz flex antenna adheres to the inside of the diffuser roof, and the ring goes all the way
+round. Cost: one FPC antenna and a U.FL press at assembly. Modular certification later depends on using an
+antenna from Espressif's approved list; for five units it does not matter, and it is written down here so it
+is not discovered when it does. KiCad 10 ships the `-1U` footprint but not its symbol; the `-1` symbol is
+pin-identical (checked pad for pad) and pairs with it.
 
-- The module's antenna end **overhangs the board edge**. Zero copper on every layer beneath it — no ground pour, no
-  traces, no silkscreen that hides a via.
-- Nothing metal within about 15 mm in the radiating direction.
-- **The antenna points away from the connector.** A USB cube and its cable are metal and are the nearest metal this
-  object will ever have. On a round board that means the module at the top with its antenna over the top edge, and
-  the USB-C receptacle at the bottom edge.
-- The shell over the antenna stays plain plastic. No inserts, no screws, no paint with metal in it.
+### The antenna, and the rule that replaced the keepout
 
-### The light: SK6812-RGBW, four of them, chained
+With the `-1` the rule was a keepout: the antenna end overhanging the board edge, no copper beneath, nothing
+metal within 15 mm, and the whole thing pointed away from the connector. Getting that wrong did not produce a
+board that worked slightly worse — it produced FAR breathing red in rooms where a devkit was fine.
 
-The change that most improves the actual light, and it is a part choice rather than a circuit.
+With the `-1U` the antenna is a flex on the inside of the diffuser roof, centered over the module, and the rule
+becomes simpler: **nothing metal above the board.** The roof is plastic. The screws sit 12 mm below it and the
+magnets further still. The LEDs are 9 mm below and 17 mm off-axis. If a later variant ever puts anything metal
+in the roof — a button cap, a badge, a heat spreader — that is the moment to think about this again. Rev A's
+placement of the flex is an assembly step and therefore a variable; the first five boards are how it gets
+measured.
 
-`emitter-colors-are-not-screen-colors` says a pastel emitter reads as white — which is the problem, stated from the
-other side, at the one moment the design genuinely wants white. **SK6812-RGBW carries a dedicated warm-white die**
-instead of faking white by mixing R+G+B. Row three of the precedence table gets a real warm white, and rows one and
-two keep R/G/B free and fully saturated for the instrument, which is exactly the inversion `docs/puck-light.md`
-describes. Mixing white out of three colored dice behind a diffuser is also how you get a glow that shifts hue
-across the face.
+### The light: SK6812-RGBW, eleven of them, chained — and why not a ring at the rim
 
-**Four**, chained DOUT→DIN on **one** data line and one RMT channel. Four rather than the three this document
-first said, and not for optical reasons: **three cannot be placed.** The module lies across the board from the
-180° edge and the connector holds the 0° edge, and between them they block every ring angle an equilateral triple
-could use — proven by exhaustive search over every angle and every ring radius that keeps the emitters 8–10 mm
-off the diffuser (`hardware/puck-revA/gen_pcb.py`). Growing the ring until a symmetric quad fits drops the radial
-standoff to 6.4 mm and the rim hotspots, so that cure is worse. Four at {43°, 128°, 232°, 317°} keeps the ring at
-17 mm and spreads them with a smallest gap of 85° where 90° would be perfect; the two wide gaps fall at 0° and
-180°, which are the connector notch and the antenna side.
+The change that most improves the actual light is still the part choice: `emitter-colors-are-not-screen-colors`
+says a pastel emitter reads as white, which is the problem stated from the other side, at the one moment the
+design genuinely wants white. **SK6812-RGBW carries a dedicated warm-white die** instead of faking white by mixing
+R+G+B. Row three of the precedence table gets a real warm white, and rows one and two keep R/G/B free and fully
+saturated for the instrument — exactly the inversion `docs/puck-light.md` describes.
+
+**Eleven, chained DOUT→DIN on one data line, on a Ø34 ring at 30° spacing.** Eleven rather than twelve because
+the twelfth slot is where the USB-C is. This was three, then four, then briefly twenty-one at the rim; the
+history is in the commits and the reason it landed here is worth keeping:
+
+- Three could not be placed at all with the `-1` module across the board. Four could, asymmetrically. Both of
+  those constraints dissolved with the `-1U`, and the ring became placeable in full for the first time.
+- **A ring of light at the rim was considered and rejected on aesthetics.** Twenty-one small LEDs 3.9 mm inside
+  the wall would read as a *light ring* — an Echo-Dot signifier, a gadget with a status band — and would bead
+  visibly at the base of the band where the wall is only 4.6 mm from the emitters. Every board and doc here
+  describes something else: *warm, and still*; a *small, plain relay object*; not *a hard point source you can
+  see the die in*. That is an object that **glows evenly from within**, and you get it with fewer LEDs further
+  from the wall, not more LEDs closer to it.
+- At Ø34 the emitters are 9.0 mm from the roof and 8.4 mm from the wall — deliberately close to equal, so the
+  glow is the same from the top and from the side of a body whose orientation nobody can predict — and at
+  8.9 mm pitch eleven dice blur into one.
+
+Each LED gets its own 100 nF just inside it on Ø28.6, which is the datasheet's recommendation and costs nothing
+as a JLC basic part.
+
+**Current, so nobody is surprised.** Eleven × four dice × ~15 mA is ~0.66 A with every die at full, on top of the
+module's ~0.3 A Wi-Fi bursts — right at a 1 A cube's limit. The nightlight runs the W die alone at ~110/255,
+about 70 mA, and the three instrument states are single colors. Firmware caps the total; the cube does not get
+to find out.
 
 Availability is the risk: WS2812B is the fallback and shares the land pattern.
-
-**What the custom board retires.** `light.cpp` currently drives GPIO48 *and* GPIO38 because the shipped image cannot
-know which devkit revision it landed on, with `detectBridge()` to catch boards that tie them together. On a board we
-draw, that is over: put the data line on **GPIO38**, build with `-DBRIDGE_RGB_PIN=38`, and the dual-drive and the
-bridge detection become dead code on the product target. Keep them for the devkit environments.
 
 ### The data line, actually driven
 
@@ -134,6 +152,13 @@ The LEDs run from 5 V directly, not from the 3.3 V rail.
 - **One user button**, on a free GPIO with the internal pull-up. This is `docs/puck-light.md`'s open question —
   *"does the object want a button?"* — turned into something you can find out. A tap for "dark until morning" is the
   obvious gesture, and adoption and factory reset may want it anyway.
+
+  The three switches are C&K KMR2 side-actuated tacts (4.2 × 2.8 × 1.4 mm), not the 5.7 mm-deep SKQG first
+  specified: once the ring was on the board there was nowhere the bigger part would go. The user button sits at
+  the board edge at 180° — the front of the shelf variant, where a person would tap — and is reached through a
+  **printed plunger** dropped into the shell's button hole, because a side switch at the board edge sits 2.4 mm
+  behind the base wall and a fingertip cannot get there. `enclosure/puck.scad` prints the plunger
+  (`show = "plunger"`). BOOT and RESET are the same part and are reached with the shell off.
 - **A 4-pin UART header**: GND, GPIO43 (TX), GPIO44 (RX), 3V3. Native USB is not a debug path when native USB is the
   fault.
 - **A 6-pad expansion header** at the board edge, inside the shell: 3V3, 5 V, GND and three spare GPIOs, one pair of
@@ -194,9 +219,9 @@ matter, it is a separate object that gets to be mounted and aimed properly, not 
 - **Extended parts carry a per-part setup fee.** The module, the LEDs and the level shifter will all be extended;
   budget for a handful of those on top of the boards.
 - 2-layer, 1.6 mm, and a round outline of roughly 50 mm so a 55 mm shell has wall to be made of.
-- **Three M2 mounting holes on a 42 mm bolt circle at {24°, 144°, 264°}, identical in every shell.** This is the
-  part that makes "one board, several shells" real rather than aspirational. 42 rather than 40 because at 40 no
-  equilateral trio clears the LEDs, the module and the connector at once. Now it is frozen.
+- **Three M2 mounting holes on a 44.8 mm bolt circle at {45°, 165°, 285°}, identical in every shell.** Outside
+  the ring, 7.4 mm from the nearest LED, and their heads land below the opaque base rim so they cast no shadow
+  on the glow. Solved against the real board by `hardware/puck-revA/gen_pcb.py` rather than chosen. Frozen.
 
 ## The enclosure: FDM is an advantage here, not a compromise
 

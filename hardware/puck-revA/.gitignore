@@ -4,3 +4,5 @@ erc.rpt
 *-backups/
 drc.rpt
 *.kicad_prl
+.history/
+*.lck

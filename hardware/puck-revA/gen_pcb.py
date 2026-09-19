@@ -10,40 +10,36 @@ needs is in the file rather than in somebody's head, and so the ratsnest is righ
 WHAT IS FIXED HERE, and must not be nudged without changing enclosure/puck.scad to match:
 
   * BOARD is 50 mm. The 54.8 mm in puck.scad is the SHELL; board_d there is 50.
-  * U1's antenna end sits flush with the board edge at 180 deg, pointing away from the connector,
-    because a USB cube and its cable are the nearest metal this object ever has. The footprint
-    carries Espressif's own keepout zone, so placing it correctly brings the keepout with it.
+  * U1 sits at the CENTRE. It is the -1U: a U.FL instead of a trace antenna, so the antenna is a
+    flex adhered inside the diffuser roof and nothing about the module wants a board edge. That
+    one change is what made the ring placeable at all -- the -1's edge antenna and its keepout
+    blocked a third of every ring radius, permanently, and forced every asymmetry before this.
   * J1's mouth sits at the board edge at 0 deg, under the enclosure's notch.
-  * THREE M2 holes at r=21 on {24, 144, 264}: a 42 mm bolt circle, not the 40 mm first drawn.
-    At 40 mm no equilateral trio clears the LEDs, the module and the connector at once. This is the
-    circle every shell shares -- enclosure/puck.scad must agree, and then it is frozen.
-  * FOUR LEDs at r=17, not three. See below -- this is the one thing here that contradicts the docs.
-
-WHY FOUR LEDS. docs/puck-hardware.md says three, and three does not fit. The module is 18x25.5 and
-lies across the board from the 180 deg edge; the connector occupies the 0 deg edge. Between them they
-block every ring angle in (129,231) and (328,32), and an equilateral triple always lands one LED in
-one of those -- proven by exhaustive search over every angle AND every ring radius that keeps the
-emitters 8-10 mm off the diffuser. Growing the ring to r>=19 does admit a symmetric quad, but then
-the radial standoff falls to 6.4 mm and the rim hotspots, so that cure is worse than the disease.
-
-Four at {43, 128, 232, 317} keeps r=17 and therefore the 8.4 mm radial standoff, and spreads them
-with a smallest gap of 85 deg where 90 would be perfect. The two wider gaps fall at 0 and 180: the
-connector notch, which is already a hole in the glow, and the antenna side.
+  * THE RING: N_LEDS SK6812-RGBW on r=17 at 30 deg spacing, 30..330, with the twelfth slot empty
+    because it is where the connector is. r=17 and not the rim ON PURPOSE: this object glows, it
+    does not wear a light ring, and ~9 mm from emitter to roof AND to wall is what blurs eleven
+    dice into one warm body. The four 100 nF are packed with the other passives; see gen_sch.py for why four.
+  * THREE M2 holes at r=22.4 on {45, 165, 285}, OUTSIDE the ring and 7.4 mm from the nearest LED.
+    The screw heads land at z 7.2-9, below the opaque base rim at 11.2, so they cast no shadow on
+    the visible band. This is the circle every shell shares. Freeze it.
 """
 import argparse, math, pathlib, re, sys, uuid
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
-from gen_sch import PARTS, PROJECT
+from gen_sch import PARTS, PROJECT, N_LEDS
 
 # Footprints whose F.CrtYd is not a courtyard but a keepout, and so must be packed by body+pads.
-BODY_BOX = {"RF_Module:ESP32-S3-WROOM-1"}
+# Empty now: the -1U's courtyard is a courtyard. The -1's was Espressif's antenna keepout, 48 x 41
+# mm, which is how this mechanism came to exist -- see courtyard_wh.
+BODY_BOX = set()
 
 FPDIR = pathlib.Path("/Applications/KiCad/KiCad.app/Contents/SharedSupport/footprints")
 HERE = pathlib.Path(__file__).parent
 CX = CY = 100.0
 BOARD_R = 25.0
-BOLT_R, BOLT_ANGLES = 21.0, [24, 144, 264]
-LED_R,  LED_ANGLES  = 17.0, [43, 128, 232, 317]
-LED_ORDER = ["D1", "D2", "D3", "D4"]
+BOLT_R, BOLT_ANGLES = 22.4, [45, 165, 285]
+LED_R = 17.0
+LED_ANGLES = [30 * (i + 1) for i in range(N_LEDS)]          # 30..330; 0 is the connector
+LED_ORDER = [f"D{i}" for i in range(1, N_LEDS + 1)]
 
 def polar(theta, r):
     """Board angle -> sheet xy, using the enclosure's convention: angles run counter-clockwise as
@@ -51,12 +47,37 @@ def polar(theta, r):
     return (CX + r * math.cos(math.radians(theta)), CY - r * math.sin(math.radians(theta)))
 
 FIXED = {
-    "U1": (CX - (BOARD_R - 12.75), CY, 90),      # antenna end flush with the 180 deg edge
+    "U1": (CX, CY, 0),                            # centre: nothing about a U.FL wants an edge
     "J1": (CX + (BOARD_R - 3.67), CY, 90),       # mouth at the 0 deg edge
 }
-for ref, th in zip(LED_ORDER, LED_ANGLES):
-    x, y = polar(th, LED_R)
-    FIXED[ref] = (x, y, th)
+# LED rotation is th+270, not th: that lays the 5050's SHORT axis radially (courtyard out to 19.75,
+# not 20.45, which is the difference between the outer ring fitting and J2's pin 4 shorting to an LED
+# pad), and it points each DOUT (local -X) at the next LED around the ring instead of the previous.
+for n, (ref, th) in enumerate(zip(LED_ORDER, LED_ANGLES), 1):
+    x, y = polar(th, LED_R); FIXED[ref] = (x, y, (th + 270) % 360)
+
+
+
+# The rest of the big parts go on an outer ring, packed along two arcs from their REAL courtyard
+# widths with a 0.4 mm gap -- hand-estimated half-angles overlapped the headers, measured ones do
+# not. The outer band is under the diffuser's skirt, which starts 1.6 mm above the board: the 4.3 mm
+# headers must stay inside r=23.15, so they ride a smaller radius than the 1.4 mm switches and the
+# SOT-23s. The user button is pinned at 180, the front of the shelf variant, where you would tap it,
+# with its actuator (local +Y) pointing out through the wall. Passives are left to the packer: it
+# only ever failed on big parts, and where a 0603 lands is a routing convenience, not a decision.
+OUTER_ARCS = [                 # (start, end, refs in order)
+    (52.0, 158.0, ["J3", "J2", "U2", "U3", "U4", "SW1"]),   # between the holes at 45 and 165
+    (189.0, 278.0, ["SW2", "U5"]),                          # after the button, before the hole at 285
+]
+OUTER_R = {"J3": 21.6, "J2": 21.6}            # inside the skirt (23.15), outside the LEDs (19.75)
+PINNED = {"SW3": (22.2, 180.0)}
+GAP_MM = 0.4
+
+def tangential(fp, th):
+    """Rotation that lays a part's long axis along the ring at angle th. A footprint's local +X ends
+    up at board angle rot, and its local +Y at rot+270."""
+    w, h = courtyard_wh(fp)
+    return (th + 90) % 360 if w >= h else (th + 180) % 360
 
 def sexp(text, tag, start=0):
     for m in re.finditer(r'\(' + tag + r'[\s\n]', text[start:]):
@@ -99,6 +120,32 @@ def courtyard_wh(fp):
     if not pts: pts = [(0, 0)]
     xs = [q[0] for q in pts]; ys = [q[1] for q in pts]
     return (max(xs) - min(xs), max(ys) - min(ys))
+
+
+def courtyard_center(fp):
+    """Where the courtyard's centre sits relative to the footprint origin, in local mm.
+
+    Pin-header footprints are anchored at pin 1, not at the part's centre: a 1x06 at 1.27 mm runs
+    6.35 mm to one side of its origin. Placing the ORIGIN on the ring put the header's end there and
+    its body across the neighbour, and DRC called J2's pin a short, which it was."""
+    layer = "F.Fab" if fp in BODY_BOX else "F.CrtYd"
+    t = mod_text(fp); pts = []
+    for tag in ("fp_line", "fp_poly", "fp_rect", "fp_circle"):
+        for b, _i, _j in sexp(t, tag):
+            if f'"{layer}"' not in b: continue
+            pts += [(float(x), float(y)) for x, y in
+                    re.findall(r'\((?:start|end|xy|center) ([-\d.]+) ([-\d.]+)\)', b)]
+    if not pts: return (0.0, 0.0)
+    xs = [q[0] for q in pts]; ys = [q[1] for q in pts]
+    return ((max(xs) + min(xs)) / 2, (max(ys) + min(ys)) / 2)
+
+
+def origin_for(fp, cx, cy, rot):
+    """The footprint origin that puts its courtyard CENTRE at screen (cx, cy) under rotation rot.
+    Screen y runs down and KiCad turns footprints counter-clockwise as displayed, so a local vector
+    (x, y) lands at (x cos a + y sin a, -x sin a + y cos a)."""
+    ox, oy = courtyard_center(fp); a = math.radians(rot)
+    return (cx - (ox * math.cos(a) + oy * math.sin(a)), cy - (-ox * math.sin(a) + oy * math.cos(a)))
 
 
 def rot_wh(wh, rot):
@@ -217,6 +264,22 @@ def main():
         return all(math.hypot(x + sx * w / 2 - CX, y + sy * h / 2 - CY) <= BOARD_R - 0.4
                    for sx in (-1, 1) for sy in (-1, 1))
 
+    for ref, (r, th) in PINNED.items():
+        x, y = polar(th, r); FIXED[ref] = (x, y, tangential(real[ref][3], th))
+    for a0, a1, refs in OUTER_ARCS:
+        cursor = a0
+        for ref in refs:
+            r = OUTER_R.get(ref, 22.2)
+            w, h = courtyard_wh(real[ref][3])
+            half = math.degrees((max(w, h) / 2 + GAP_MM) / r)
+            th = cursor + half
+            assert th + half <= a1 + 1e-6, f"{ref} overruns the arc {a0}-{a1}: ends at {th + half:.1f}"
+            x, y = polar(th, r); FIXED[ref] = (x, y, tangential(real[ref][3], th))
+            cursor = th + half
+
+    for ref, (x, y, rot) in list(FIXED.items()):
+        FIXED[ref] = (*origin_for(real[ref][3], x, y, rot), rot)
+
     placed, boxes = dict(FIXED), []
     for ref, (x, y, rot) in FIXED.items():
         w, h = rot_wh(size[ref], rot); boxes.append((x, y, w, h))
@@ -270,7 +333,7 @@ def main():
     p.write_text(out)
     print(f"{p.name}: {len(real)} parts + {len(BOLT_ANGLES)} holes, {len(nets) - 1} nets, "
           f"board {BOARD_R * 2:.1f} mm")
-    print(f"  U1 antenna edge at x={mm(CX - BOARD_R)} (180 deg), J1 mouth at x={mm(CX + BOARD_R)} (0 deg)")
+    print(f"  U1 at the centre; J1 mouth at x={mm(CX + BOARD_R)} (0 deg); user button at 180 deg")
     print(f"  LEDs r={LED_R} at {LED_ANGLES}; M2 r={BOLT_R} at {BOLT_ANGLES}")
 
 FORCE = False
