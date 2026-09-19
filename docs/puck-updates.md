@@ -229,6 +229,116 @@ a deaf mesh, which at 7pm is a light that did not come on when someone walked in
 | New image is healthy but subtly wrong | Nothing automatic catches it | The same as today: somebody notices. Rollout-one-first bounds it to one puck |
 | Partition table wrong at flash time | Nothing, until an update is needed | A cable visit to every puck. This is the one to get right |
 
+## When it cannot wait: a fix that has to reach a puck already in a hallway
+
+*Added 19 September 2026, from the question this document did not answer: everything above describes a puck
+quietly catching up at three in the morning. What happens when a fix cannot wait for three in the morning, and
+the puck it is for is behind somebody's sofa?*
+
+The honest starting point is that **a household does not have pucks.** They have switches in a hallway that work.
+The word "puck" appears nowhere on the panel today and should not start appearing because the maker has a
+firmware problem. Everything below follows from that: what the house says is about the hallway, never about a
+version number, and the only time a person is interrupted is the one case where a person is the only thing that
+can help.
+
+### Three tiers, and only one of them is allowed to interrupt
+
+**Urgent is a property of the release, not a guess by the hub** — `docs/updates.md`'s rule, and the same field.
+A release either says `urgent: true` about its puck image or it does not.
+
+| | When it goes | What the household sees |
+|---|---|---|
+| **Routine** | The night window, one puck at a time | Nothing. At most a line in the morning's *What's new*, if the fix changed something they would notice |
+| **Important** | The next quiet moment, not the next window | Nothing at the time. A line under *This hub* for whoever goes looking |
+| **Critical** | Now, quiet moment or not | Said before, and said again when it is done |
+
+Two rules hold across all three and are worth stating because they are what stops "critical" becoming a habit.
+**Even a critical fix goes to one puck first** — a bad image that bricks one puck is a dark corner, and the same
+image on all five is a dead mesh, which is a worse outcome than the bug being fixed. The wait shrinks; it does
+not vanish. And **the household's switch still wins**: a house that turned automatic updates off is nudged
+harder and told why, not overruled. A maker who can overrule that switch does not really offer it.
+
+### What it says while it is happening
+
+The answer to the open decision above, which asked whether the panel says anything at all: **nothing for a
+routine one, and for a critical one the words a restart already uses**, because it is the same event — thirty
+seconds of a deaf mesh — and a household reading two different accounts of it learns that the panel guesses.
+`restart.py`'s vocabulary, unchanged:
+
+- **Keeps:** *The switches on the wall keep working.* Always true, and the first thing said. Multi-way in this
+  house is switch to switch with the hub out of the path (`docs/brilliant.md`), so a puck rebooting costs the
+  house its view of those switches and not the use of them.
+- **Stops:** *Motion and the panel's view of those switches pause for about a minute.* Said because it is true,
+  and because a household whose panel has stopped showing the hallway lights will otherwise assume the hallway
+  lights are broken — the mistake `health.bridges()` already exists to prevent.
+- **How long:** measured, not guessed. `restart.py` learns `restart_took` per rung from the house it is actually
+  in; a puck's reboot is the same number wanted for the same reason.
+
+### The case this section exists for: it cannot reach the puck
+
+This is the interesting failure and the one a good design is judged on. A critical fix is published, the hub has
+it, and one puck is unplugged, moved, on a socket somebody switched off at the wall, or out of range since the
+Wi‑Fi changed. The fix cannot land, and **nothing in the mechanism above will ever make it land**, because the
+recovery is a walk to a socket with a puck in your hand.
+
+`health.bridges()` already says exactly this shape of thing, and its comment is the design rule verbatim:
+
+> THE RECOVERY IS IN THE TEXT AND NOT IN A BUTTON, because it is a walk to a socket with a puck in your hand and
+> there is no tap that performs it.
+
+So a critical fix that has not reached every puck becomes a *Needs a look* line built the same way, with the
+same three parts in the same order:
+
+1. **The name a household has for it** — `bridge.room_of()`, already written: *The hallway bridge*. Never a chip
+   id, and never "a puck". Where the hub cannot honestly name the room it says *A bridge*, and does not guess.
+2. **The reassurance, first** — *Its switches still work on the wall.*
+3. **What is actually missing, in effect** — *It is missing a fix for <the release's own sentence>.* The notes
+   already exist (`releases/*.md`, `what:`); a puck fix writes its line in the same file and this reads it. No
+   second notes system, and nothing that mentions firmware.
+4. **The walk** — *Plug it into the hub for a minute and it will catch up.* In the text. The only button is the
+   one `health.bridges()` already offers: agree the thing is gone for good.
+
+### The counting is the feature
+
+The failure that actually costs a household is not an update that fails loudly. It is **a house that believes
+every puck has the fix when one does not.** So the house counts, out loud:
+
+> *Two of your three bridges have the fix. The hallway one hasn't been heard from since Tuesday.*
+
+And the line **stays** until the count is whole. It does not clear on a tap, it does not clear because somebody
+read it, and it does not clear at midnight — the rule the rest of the panel already keeps: nothing vanishes
+under a tap, and only the fact changing clears the line about the fact. A critical fix that reached three of
+four pucks is not a finished job, and a panel that says nothing about the fourth is a panel that lied by
+omission.
+
+### Coming back, and saying so afterwards rather than during
+
+A puck that takes the image and cannot get back on the network rolls itself back inside two minutes, by the
+bootloader, with nobody watching. The panel should say **nothing while that is happening**: a fault reported at
+3:01am and self-healed at 3:03am is a fault the household reads about over breakfast and walks to a hallway to
+investigate, finding it fine. That is how a panel earns the reputation of crying wolf.
+
+What is worth saying is the pattern. **A puck that rolled back twice has stopped being a puck that was unlucky**,
+and that is a *Needs a look* line naming the room — the same escalation `restart.py` makes when the same rung
+has been tried three times in an hour and has stopped being the answer.
+
+### The morning after
+
+The hub's own updates land overnight and are read the next morning on one dismissible card (`docs/updates.md`
+piece 4). A puck fix belongs on the **same card**, in the same sentence about the house, and not on one of its
+own. *What's new* is a thing a household reads; it is not a changelog per component, and a second card about a
+part of the system they have never heard of is how the first card stops being read.
+
+### What this adds to the mechanism above
+
+Nothing structural. It needs `urgent` carried from the signed release to the puck manifest (the field
+`docs/updates.md` piece 3 wrote down and did not build), each puck's running version compared against the
+shipped one — which the hub already has, in `settings["bridges"][chip]["fw"]` and
+`releases/bridge/esp32s3-ship.json` — and `health.py` to grow a second bridge line beside the one it has. The
+detection half is buildable today, before one line of OTA exists, and is worth having on its own: a hub that can
+say *the hallway bridge is behind, and here is what it is missing* is more useful than one that cannot, even
+while the only cure is a cable.
+
 ## Open decisions
 
 - **Does the puck check a signature itself?** Recommended: not in the first version — the MQTT-delivered hash
@@ -240,8 +350,10 @@ a deaf mesh, which at 7pm is a light that did not come on when someone walked in
   The answer should be the same for both.
 - **Where the LAN route lives**, and whether it is the brain's FastAPI or caddy. Uninteresting, and deliberately
   so — the signature is what makes the path not matter.
-- **What the panel says while a puck is updating.** Probably nothing, which is the correct amount for a
-  30-second reboot at 3am, but it should be a decision rather than an oversight.
+- ~~**What the panel says while a puck is updating.**~~ **Decided, 19 September 2026** — see *When it cannot
+  wait* above. Nothing for a routine one; a restart's own words for a critical one; and the only line that
+  interrupts anybody is the one naming a puck the fix could not reach, because that is the only one a person can
+  do anything about.
 
 ## What this does not change
 
