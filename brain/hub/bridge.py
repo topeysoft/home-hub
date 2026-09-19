@@ -683,7 +683,11 @@ class Bridges:
         anything is missing.
         """
         if online == was: return
-        if online: self._remember(chip, gone=None, missed=None, seen=time.time())
+        # `heard`, not `seen`: _adopt_on_sight already writes seen="broker" to record HOW a bridge was
+        # recognised, and a timestamp written over it makes one key mean two things. Nothing reads it
+        # yet, which is exactly when this is cheap to put right -- the settings on the live hub
+        # already hold one bridge with seen="broker" and one with a float.
+        if online: self._remember(chip, gone=None, missed=None, heard=time.time())
         elif not ((self.hub.settings.get("bridges") or {}).get(chip) or {}).get("gone"):
             self._remember(chip, gone=time.time())
 
