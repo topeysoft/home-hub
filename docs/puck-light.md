@@ -5,10 +5,11 @@ already worked as a nightlight, by accident, and it was pleasant. Two, and it is
 puck is meant to be **a product** — a small, plain relay object sitting out in the open in a living space — not an
 ESP32 devkit on a shelf, and part of the job is that it is nice to look at. Its light is the only expressive
 surface it has. The design is settled; what it asks of the hardware, and the questions that are genuinely open,
-are at the foot and marked as such. **Steps 1 to 4 of the build order are written** (18–19 September):
+are at the foot and marked as such. **Steps 1 to 5 of the build order are written** (18–19 September):
 the state, the precedence, the NVS setting, the MQTT topics, the Home Assistant entity, the hub side and the question
 on the sheet all exist; both firmware targets compile, the brain's 936 tests and the panel's 415 pass, and the
-question has been walked through in the real panel against the mock. Nothing has run on a puck yet — there has been none on the cable — so every
+question has been walked through in the real panel against the mock. Step 5's behaviour is built and
+tested but its switch is not yet reachable from the panel, which is named at the foot. Nothing has run on a puck yet — there has been none on the cable — so every
 claim below about how it *behaves on hardware* is still a claim.*
 
 ## What the light does today, and for how long
@@ -189,12 +190,40 @@ shipping.
    should decide what to do with the difference. `BridgeArt` gains a fourth light, `warm`, its four states now a
    lookup rather than a ternary per attribute. Three e2e cases hold it: the question is asked and nothing is sent
    until it is answered, both answers place the bridge, and walking away places nothing.
-5. **Motion**, as a brain rule over `0x13` from the switch beside it. Optional, and last, because it is the only
-   part that can be wrong in a way that wakes somebody up.
+5. ~~**Motion.**~~ **Built and tested (19 September), with one thing still owed — see below.**
+   `brain/hub/nightlight.py`: motion arriving in a bridge's room swells its glow to something you can walk by,
+   and it settles once the room has been quiet. Three decisions, each of which was nearly made the other way:
+
+   - **Not two rules in `rules.json`.** The engine can express it — `motion on → device on with brightness`,
+     then `idle 60 → device on with brightness` — and it was nearly built that way. But two rules can be
+     half-approved, half-edited and half-deleted, and every one of those halves leaves a bedroom corridor at
+     full brightness until somebody works out why. A swell and its settle are one behaviour and belong to one
+     object that cannot be taken apart.
+   - **A lift is not a brightness.** It goes out on a new firmware topic, `night/lift/set`, which moves the
+     light and touches neither NVS nor the retained state. As an ordinary brightness this would be two flash
+     erases per walk-past for the life of the puck, and it would drag the household's own setting up and down
+     in Home Assistant, where what they set is supposed to be what it says. It also means **the puck settles
+     itself**: a lift is forgotten on reboot, so a brain that dies mid-swell cannot leave a light bright all
+     night. `0` means "back to what they chose", which the puck holds and the brain deliberately does not.
+   - **Off until a person turns it on.** This is the part that can be wrong in a way that wakes somebody, so
+     nothing enables it but a deliberate act. Four things must all be true before a lift goes out: the puck is
+     online, its nightlight is on, the household asked for this, and the motion is in that puck's room.
+
+   The switch is published by the brain rather than the puck — the motion sensors, the rooms and the timer are
+   all brain-side, and a flag the firmware would only store and never read is a flag in the wrong place — but it
+   rides the puck's topics, so it lands on the puck's own device beside its Nightlight. 14 tests; 954 brain
+   tests green.
 6. **Hardware.** The three requirements above into the product board spec, alongside the enclosure's diffusing
    face.
 
 Steps 1–4 are the feature. Step 5 is the one that makes people like it.
+
+**Step 5 is not finished, and this is the piece:** its switch exists only as a Home Assistant entity. That is
+enough to build and test against and not enough to ship, because `product-direction-out-of-the-box` says the
+panel must never send anybody to Home Assistant's UI. There is no per-bridge surface on the panel today — the
+hub page talks about bridges in the plural and lists none — so this needs somewhere for one bridge to be looked
+at, which is a piece of panel design rather than a toggle to drop in. Until then the behaviour is reachable only
+by somebody who already knows their way around HA, which is not who this is for.
 
 **What steps 1 to 4 still owe:** a puck on a cable. `set settled 1` then `set night 1 <level>` should put a settled,
 healthy puck into a warm glow; pulling the broker should take it straight back to amber; a reboot should come

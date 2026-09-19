@@ -37,6 +37,7 @@ from .lock import Lock, needs_code
 from .pairing import Pairing
 from .bridge import Bridges
 from .share import Share
+from .nightlight import Nightlight
 from .relay import Relay
 from .phones import Phones, COOKIE, holds_keys, open_to_strangers, from_away, away_refused, away_refusal
 from . import camera
@@ -109,6 +110,7 @@ class Hub:
         self.share = Share(self)           # what this house lets a Matter bridge publish: docs/matter.md
         self.share_status: dict = {}       # what the bridge last said about itself (pairing codes, who holds it)
         self.relay = Relay(self)           # two switches on one light: the hub carries the press across
+        self.nightlight = Nightlight(self)  # a bridge's own light, lifted when somebody walks past it
         self.phones = Phones(self)                     # which phones belong to the house, once it has a code
         self.engine = Engine(self)                     # rules: signals in, room intents out
         self.presence = Presence(self)                 # who is home, from HA's persons and the alarm's mode
@@ -405,6 +407,7 @@ class Hub:
         self._broadcast(json.dumps({"type": "device", "device": dev.__dict__}))
         self.engine.on_state(dev, old)
         self.sounds.on_state(dev, old)
+        self.nightlight.on_state(dev, old)
         if dev.capability in ("climate", "sensor.temperature"): asyncio.create_task(self.comfort.on_state(dev))
 
     async def _comfort_loop(self):

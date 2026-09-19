@@ -632,6 +632,9 @@ class Bridges:
                     await self._tell(chip, "night/brightness/set", str(int(level)))
                 self.hub.log.add("bridge", chip, None,
                                  "nightlight on" if night else "nightlight off", source="user")
+            nl = getattr(self.hub, "nightlight", None)
+            if nl:
+                with contextlib.suppress(Exception): await nl.announce(chip)
         return self.status()
 
     # ---- the job itself ----
@@ -827,8 +830,12 @@ class Bridges:
         mine.pop(chip)
         self.hub.settings.set(bridges=mine)
         self.pucks.pop(chip, None)
+        with contextlib.suppress(Exception):
+            await self.hub.ha.call("mqtt", "publish", None,
+                                   topic=f"homeassistant/switch/{BASE}_bridge_{chip}_motion/config",
+                                   payload="", retain=True)
         for leaf in ("status", "net", "proxy", "iv", "cfg", "cfgack",
-                     "settled", "settled/set", "night", "night/brightness", "light"):
+                     "settled", "settled/set", "night", "night/brightness", "light", "motion"):
             with contextlib.suppress(Exception):
                 await self.hub.ha.call("mqtt", "publish", None,
                                        topic=f"{BASE}/bridge/{chip}/{leaf}", payload="", retain=True)
@@ -1018,6 +1025,9 @@ class Bridges:
                 p["online"] = payload == "online"
                 self._saw(chip, p["online"], was)
             elif leaf == "net": p["net"] = payload
+            # The nightlight's own setting, retained by the puck. Kept because a bridge whose light
+            # is off has nothing to lift, and lifting it would turn it on -- which nobody asked for.
+            elif leaf == "night": p["night"] = payload == "ON"
             # A puck does not have to be on the cable to be recognised -- the usual place for
             # one is a charger behind a sofa. Both facts arrive here, so check as each lands.
             if leaf in ("status", "net"): self._adopt_on_sight(chip, p.get("fw"))
@@ -1029,6 +1039,12 @@ class Bridges:
             if self.job and self.job.get("chip") == chip and self.job.get("quiet") and p.get("online"):
                 self.job.pop("quiet", None)
                 self._set("placing")
+        elif len(parts) == 5 and parts[1] == "bridge" and parts[3:] == ["motion", "set"]:
+            # "Lift on motion" is a switch the BRAIN owns (hub/nightlight.py) -- the puck neither
+            # stores it nor reads it -- but it rides the puck's topics so it sits on the puck's own
+            # device in Home Assistant, and so this one subscription hears it.
+            nl = getattr(self.hub, "nightlight", None)
+            if nl: nl.on_command(parts[2], payload)
         elif len(parts) == 4 and parts[1] != "bridge":
             if parts[3] == "state":
                 self.switches[(parts[1], parts[2])] = payload

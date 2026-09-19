@@ -32,6 +32,7 @@
 //   mesh/bridge/<chip>/settled         yes | no                 (retained)
 //   mesh/bridge/<chip>/night/set       ON | OFF
 //   mesh/bridge/<chip>/night/brightness/set  0-255
+//   mesh/bridge/<chip>/night/lift/set  0-255, transient: see below
 //   mesh/bridge/<chip>/settled/set     1 | 0
 //   mesh/<net>/<addr>/state            ON | OFF                 (retained)
 //   mesh/<net>/<addr>/brightness       0-255                    (retained)
@@ -1192,6 +1193,21 @@ static void mqttCb(char *topic, uint8_t *payload, unsigned int len) {
         publishNight();
         return;
     }
+    // A LIFT IS NOT A BRIGHTNESS, and the difference is the whole reason this topic exists.
+    //
+    // The brain swells the nightlight when somebody walks past the switch beside it and lets it
+    // settle afterwards (docs/puck-light.md). Sent on night/brightness/set that would be two NVS
+    // writes per walk-past, for ever, on a part with a finite number of erases -- and it would drag
+    // the household's own brightness setting up and down in Home Assistant, where what they set is
+    // supposed to be what it says. So a lift touches the LIGHT and nothing else: no NVS, no retained
+    // state, no entity moved. 0 (or anything that is not a number) means "back to what they chose",
+    // which is also what a reboot means, so a brain that dies mid-swell cannot leave it bright.
+    bridgeTopic(own, sizeof(own), "night/lift/set");
+    if (!strcmp(t, own)) {
+        int lvl = constrain(atoi(msg), 0, 255);
+        lightNightLevel(lvl > 0 ? (uint8_t)lvl : cfg.nightLevel);
+        return;
+    }
     bridgeTopic(own, sizeof(own), "settled/set");
     if (!strcmp(t, own)) {
         configSetSettled(msg[0] == '1' || msg[0] == 'y' || msg[0] == 'Y');
@@ -1273,6 +1289,8 @@ static void mqttReconnect() {
     bridgeTopic(sub, sizeof(sub), "night/set");
     mqtt.subscribe(sub);
     bridgeTopic(sub, sizeof(sub), "night/brightness/set");
+    mqtt.subscribe(sub);
+    bridgeTopic(sub, sizeof(sub), "night/lift/set");
     mqtt.subscribe(sub);
     bridgeTopic(sub, sizeof(sub), "settled/set");
     mqtt.subscribe(sub);
