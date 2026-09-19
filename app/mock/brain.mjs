@@ -269,6 +269,12 @@ const notes = process.env.NEEDSLOOK ? [
     acts: [{ do: 'Check again', act: 'check', to: 'l1' },
            { do: "It's gone, remove it", act: 'forget', to: 'l1', yes: 'Yes, remove Bedroom TV',
              ask: 'Remove Bedroom TV from the house? It comes off the account that brought it.' }] },
+  // A bridge that never came back (docs/network.md, piece 6). The recovery is a walk to a socket, so
+  // it is in the sentence; the one button is the only thing the panel can actually perform.
+  { kind: 'bridge', subject: 'c8ebba', name: 'The Hallway bridge', where: 'Hallway', since: now - 86400,
+    text: 'The Hallway bridge hasn’t been heard from since the Wi‑Fi changed to Downstairs. Its switches still work on the wall — the hub just can’t see them. Plug it into the hub for a minute to set it right.',
+    acts: [{ do: 'It’s gone, remove it', act: 'bridge', to: 'c8ebba', yes: 'Yes, remove it', no: 'Keep it',
+             ask: 'Remove the Hallway bridge? Its switches stop appearing on the panel; they keep working on the wall.' }] },
   { kind: 'storage', subject: null, since: null, acts: [], text: "The hub's storage is nearly full: 35.5 GB left." },
 ] : []
 // NEEDSLOOK=many: a house where a lot has gone quiet with nothing in common, for the fold on the page.
@@ -451,6 +457,7 @@ const server = http.createServer((req, res) => {
   }
   if (p === '/rules') return json(res, rules)
   if (p === '/discovered') return json(res, discovered)
+  if (p === '/bridge/forget') return json(res, { forgotten: 'The Hallway bridge' })
   if (p === '/health') return json(res, { notes })
   // What a speaker can play. The real brain generates the noises and lists the sounds folder; here it is
   // a fixed shelf, so the sounds sheet has something to draw without a hub or a speaker in the room.

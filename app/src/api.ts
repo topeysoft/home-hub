@@ -41,12 +41,12 @@ export type Status = { driver: Driver; reason: string; setup_done: boolean; lock
    panel does not know what it is looking at, so it draws `acts` and invents nothing. `with` is what went
    quiet behind this one fault -- fix the fault and they all come back, which is why they are not lines of
    their own. See brain/hub/health.py. */
-export type Act = { do: string; act: 'flow' | 'entry' | 'part' | 'check' | 'forget' | 'update' | 'restart'; to: string | null
+export type Act = { do: string; act: 'flow' | 'entry' | 'part' | 'check' | 'forget' | 'update' | 'restart' | 'bridge'; to: string | null
   ask?: string        // a question to answer first, where the doing is worth a second's thought
   yes?: string        // the words that answer it, with the name in them
   no?: string }       // ...and the ones that decline, where "Keep it" is not what is being kept
 export type Quiet = { id: string; name: string; where: string }
-export type Note = { kind: 'offline' | 'storage' | 'driver' | 'update' | 'restart'; text: string; since: number | null; subject: string | null
+export type Note = { kind: 'offline' | 'storage' | 'driver' | 'update' | 'restart' | 'bridge'; text: string; since: number | null; subject: string | null
   where?: string      // an offline thing: which room, and what sort of thing it is -- enough to go and look at it
   name?: string       // an offline thing: what it is called, apart from the sentence it is in
   with?: Quiet[]      // what went quiet with this fault
@@ -223,6 +223,9 @@ export const adoptBridge = () => post<Bridge>('/bridge/adopt')
 export const dismissBridge = () => post<Bridge>('/bridge/dismiss')
 /** The house's Wi-Fi, told once: a hub on a cable has no other way to know it. Kept for every bridge after. */
 export const bridgeWifi = (ssid: string, password: string) => post<Bridge>('/bridge/wifi', { ssid, password })
+/* Take a bridge off the house. Offered only from the *Needs a look* line about one that has not come
+   back, because it is the answer to a question the house asked first -- never a thing to go and find. */
+export const forgetBridge = (chip: string) => post<{ forgotten: string }>('/bridge/forget', { chip })
 /** Leave it here -- the placing is over, whatever the signal says. */
 export const placedBridge = () => post<Bridge>('/bridge/placed')
 export const retryEntry = (entry_id: string) => post<Status>(`/setup/retry/${encodeURIComponent(entry_id)}`)

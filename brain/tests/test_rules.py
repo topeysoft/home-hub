@@ -35,6 +35,12 @@ class FakeSettings:
         return self.data["hub_id"]
 
 
+class FakeBridges:
+    """Just enough of hub.bridge for anything that asks the house about its bridges."""
+    def __init__(self, quiet=()): self.gone = list(quiet)
+    def quiet(self): return self.gone
+
+
 class FakeHub:
     def __init__(self):
         self.tz, self.location, self.driver, self.entry = TZ, LOC, "ready", []
@@ -47,6 +53,9 @@ class FakeHub:
         self.home.devices = {d.id: d for d in self.home.rooms["hall"].devices}
         self.presence = Presence(self)
         self.engine = rules.Engine(self)
+        # The real Hub always has one (api.Hub.__init__), and health.notes() asks it which bridges
+        # have gone quiet. A house with none answers with an empty list, which is this.
+        self.bridge = FakeBridges()
     def _broadcast(self, msg): self.sent.append(msg)
     async def set_intent(self, room, state, source="user", detail=None, depth=0):
         room.intent = state.value; room.set_by = f"rule:{detail['rule']}"

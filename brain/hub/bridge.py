@@ -640,30 +640,107 @@ class Bridges:
     MOVE_WAIT = 210            # how long a puck has to come back before the panel calls it late
     MOVE_SETTLE = 4            # ...and how often we look while it does
 
+    # How long a bridge may be gone before it is worth a line on Home. Two numbers, because there are
+    # two situations and only one of them has a known cause.
+    #
+    #   QUIET   a bridge that simply is not there. A day: long enough that a household unplugging a
+    #           charger to hoover is not reported, short enough to notice before the week is out.
+    #   MISSED  one that did not follow a move. The cause IS known, so the wait is only long enough
+    #           for the design's own self-healing to have had its go -- two keys on the ring, a
+    #           retained command waiting on its topic, and a puck alternating every two minutes.
+    QUIET = 24 * 3600
+    MISSED = 2 * 3600
+
+    def _remember(self, chip: str, **fields) -> None:
+        """Write something down about one bridge, without disturbing the others."""
+        mine = dict(self.hub.settings.get("bridges") or {})
+        if chip not in mine: return              # not one of ours; nothing here is its business
+        rec = {**mine[chip], **fields}
+        for k in [k for k, v in rec.items() if v is None]: rec.pop(k)
+        mine[chip] = rec
+        self.hub.settings.set(bridges=mine)
+
+    def _saw(self, chip: str, online: bool, was: bool | None) -> None:
+        """Stamp the moment a bridge went quiet, and rub it out when it comes back.
+
+        On disk rather than in memory, because the question this answers is "how long" and the brain
+        restarts. Written only on a change of state -- a puck publishes its status retained and rarely,
+        and settings.json is rewritten whole every time this is called.
+
+        A brain that starts up and finds a puck already offline has no idea when that began, so it
+        says now and does not correct itself later: "gone since at least this" is the honest claim,
+        and overwriting it on every restart would mean a hub that reboots nightly never notices
+        anything is missing.
+        """
+        if online == was: return
+        if online: self._remember(chip, gone=None, missed=None, seen=time.time())
+        elif not ((self.hub.settings.get("bridges") or {}).get(chip) or {}).get("gone"):
+            self._remember(chip, gone=time.time())
+
+    def room_of(self, chip: str) -> str | None:
+        """The room a bridge serves, or None when the hub cannot honestly say.
+
+        A puck that is the only one carrying its mesh is fairly described by the room most of its
+        switches are in. Two pucks on one mesh cannot be told apart this way, so they are not:
+        guessing would put a name on the wrong object, which is worse than having none."""
+        mine = (self.hub.settings.get("bridges") or {}).get(chip) or {}
+        if mine.get("where"): return str(mine["where"])
+        net = (self.pucks.get(chip) or {}).get("net")
+        home = getattr(self.hub, "home", None)
+        if not (net and home) or sum(1 for c, p in self.pucks.items() if p.get("net") == net) != 1:
+            return None
+        tag = f"light.{BASE}_{net[:4]}_"
+        rooms: dict[str, int] = {}
+        for d in home.devices.values():
+            if d.id.startswith(tag) and d.room_id and d.room_id != "unassigned":
+                rooms[d.room_id] = rooms.get(d.room_id, 0) + 1
+        if not rooms: return None
+        room = home.rooms.get(max(rooms, key=lambda r: rooms[r]))
+        return room.name if room else None
+
+    def quiet(self) -> list:
+        """The bridges that have been gone long enough to be worth saying out loud.
+
+        Only ones this hub set up: a neighbour's puck on the same broker is not this house's problem,
+        and a line about it would be a line nobody can act on."""
+        out, now = [], time.time()
+        for chip, rec in (self.hub.settings.get("bridges") or {}).items():
+            if (self.pucks.get(chip) or {}).get("online"): continue
+            gone = rec.get("gone")
+            if not gone: continue
+            missed = (rec.get("missed") or {}).get("ssid")
+            if now - gone < (self.MISSED if missed else self.QUIET): continue
+            out.append({"chip": chip, "room": self.room_of(chip), "since": gone, "missed": missed})
+        out.sort(key=lambda b: b["since"])
+        return out
+
+    async def forget(self, chip: str) -> dict:
+        """Take a bridge off the house. The last thing offered about one that is never coming back.
+
+        Its retained topics go with it. They outlive the puck by design -- that is what makes a
+        bridge recognisable after the brain restarts -- so leaving them would mean a bridge that is
+        forgotten on Monday and back in the list on Tuesday, with nothing a household could do
+        about it."""
+        mine = dict(self.hub.settings.get("bridges") or {})
+        if chip not in mine: raise ValueError("The hub does not know that bridge.")
+        where = self.room_of(chip)
+        mine.pop(chip)
+        self.hub.settings.set(bridges=mine)
+        self.pucks.pop(chip, None)
+        for leaf in ("status", "net", "proxy", "iv", "cfg", "cfgack"):
+            with contextlib.suppress(Exception):
+                await self.hub.ha.call("mqtt", "publish", None,
+                                       topic=f"{BASE}/bridge/{chip}/{leaf}", payload="", retain=True)
+        self.hub.log.add("bridge", chip, None, "forgotten", source="user")
+        return {"forgotten": where or "The bridge"}
+
     def where(self, chip: str) -> str:
         """A bridge in the words a household has for it: the room it serves.
 
         A chip id tells nobody anything, and this is the one list where a panel would be forgiven for
-        thinking otherwise. Somebody may have named it (the placing step is where that will land);
-        failing that, a puck that is the only one carrying its mesh is fairly described by the room
-        most of its switches are in. Two pucks on one mesh cannot be told apart this way, so they are
-        not: guessing would put a name on the wrong object, which is worse than a plain one."""
-        mine = (self.hub.settings.get("bridges") or {}).get(chip) or {}
-        if mine.get("where"):
-            return str(mine["where"])
-        net = (self.pucks.get(chip) or {}).get("net")
-        home = getattr(self.hub, "home", None)
-        if net and home and sum(1 for c, p in self.pucks.items() if p.get("net") == net) == 1:
-            tag = f"light.{BASE}_{net[:4]}_"
-            rooms: dict[str, int] = {}
-            for d in home.devices.values():
-                if d.id.startswith(tag) and d.room_id and d.room_id != "unassigned":
-                    rooms[d.room_id] = rooms.get(d.room_id, 0) + 1
-            if rooms:
-                best = max(rooms, key=lambda r: rooms[r])
-                room = home.rooms.get(best)
-                if room: return room.name
-        return "A bridge"
+        thinking otherwise. `A bridge` is what honesty looks like when the room cannot be worked out;
+        room_of() is the same question where the caller would rather have the None."""
+        return self.room_of(chip) or "A bridge"
 
     def move_status(self) -> dict | None:
         """What the panel draws while a move is on, and after it. None when nothing has happened."""
@@ -724,7 +801,12 @@ class Bridges:
         if j and j["at"] == at:
             j["state"] = "done"
             late = [c for c in j["asked"] if c not in j["followed"]]
-            if late: log.info("bridge: %d did not follow to %s", len(late), j["ssid"])
+            if late:
+                log.info("bridge: %d did not follow to %s", len(late), j["ssid"])
+                # Kept, because the move's own screen is read once and dismissed. Without this the
+                # house forgets by morning that it moved without two of its bridges.
+                for chip in late:
+                    self._remember(chip, missed={"ssid": j["ssid"], "at": j["at"]})
             # Everybody came: the spare is no longer worth the room it takes on them. Told once,
             # and only now -- a puck that is online cannot tell whether the HUB can see it.
             # Only the ones that followed are told to drop the spare, and only their retained command
@@ -830,7 +912,10 @@ class Bridges:
                     log.info("bridge: %s followed to %s", chip, j["ssid"])
                     self.hub._broadcast(json.dumps({"type": "bridge", "bridge": self.status()}))
                 return
-            if leaf == "status": p["online"] = payload == "online"
+            if leaf == "status":
+                was = p.get("online")
+                p["online"] = payload == "online"
+                self._saw(chip, p["online"], was)
             elif leaf == "net": p["net"] = payload
             # A puck does not have to be on the cable to be recognised -- the usual place for
             # one is a charger behind a sofa. Both facts arrive here, so check as each lands.

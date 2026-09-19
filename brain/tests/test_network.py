@@ -11,7 +11,7 @@ These hold the two bugs docs/network.md was written for, so that neither can com
 And the property the whole design rests on: a bridge is only counted as having followed when it says
 so from the broker, because that is the only thing a puck cannot say from the wrong network.
 """
-import asyncio, json, tempfile, unittest
+import asyncio, json, tempfile, time, unittest
 from pathlib import Path
 
 from hub.bridge import Bridges
@@ -221,6 +221,100 @@ class MovingThemOver(unittest.TestCase):
     def test_which_wifi_is_asked_for(self):
         with self.assertRaises(ValueError):
             run(self.b.move("   ", "sekrit"))
+
+
+class TheOnesThatNeverCameBack(unittest.TestCase):
+    """docs/network.md, piece 6: the move's screen is read once, and the house has to remember."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.hub = FakeHub(self.tmp.name)
+        self.hub.net = Network(self.hub, state=Path(self.tmp.name) / "none.json",
+                               request=Path(self.tmp.name) / "network.request")
+        self.b = Bridges(self.hub, cable=None, devdir=Path(self.tmp.name))
+        self.hub.settings.set(bridges={"aa": {"since": 1, "fw": "0.4.0"}})
+        self.b.pucks = {"aa": {"online": True, "net": "n1"}}
+
+    def tearDown(self): self.tmp.cleanup()
+
+    def status(self, chip, payload):
+        self.b._on_mqtt({"topic": f"mesh/bridge/{chip}/status", "payload": payload})
+
+    def rec(self, chip="aa"):
+        return (self.hub.settings.get("bridges") or {}).get(chip) or {}
+
+    def test_going_quiet_is_written_down_and_coming_back_rubs_it_out(self):
+        self.status("aa", "offline")
+        self.assertTrue(self.rec()["gone"])
+        self.status("aa", "online")
+        self.assertNotIn("gone", self.rec())
+
+    def test_the_moment_it_went_is_not_reset_by_hearing_it_again(self):
+        """A brain that restarts nightly must not keep forgetting that something is missing."""
+        self.status("aa", "offline")
+        first = self.rec()["gone"]
+        self.b.pucks["aa"]["online"] = None          # as if the brain had just started
+        self.status("aa", "offline")
+        self.assertEqual(self.rec()["gone"], first)
+
+    def test_nothing_is_written_down_about_somebody_elses_puck(self):
+        self.b.pucks["zz"] = {"online": True, "net": "n9"}
+        self.status("zz", "offline")
+        self.assertNotIn("zz", self.hub.settings.get("bridges"))
+
+    def test_a_bridge_gone_an_hour_is_not_yet_a_job(self):
+        self.status("aa", "offline")
+        self.assertEqual(self.b.quiet(), [])
+
+    def test_a_bridge_gone_a_day_is(self):
+        self.status("aa", "offline")
+        self.hub.settings.set(bridges={"aa": {**self.rec(), "gone": time.time() - self.b.QUIET - 1}})
+        self.b.pucks["aa"]["online"] = False
+        gone = self.b.quiet()
+        self.assertEqual([g["chip"] for g in gone], ["aa"])
+        self.assertIsNone(gone[0]["missed"])
+
+    def test_one_that_missed_a_move_is_a_job_much_sooner(self):
+        """The cause is known, so the only wait worth having is the one the self-healing needs."""
+        self.b.pucks["aa"]["online"] = False
+        self.hub.settings.set(bridges={"aa": {"gone": time.time() - self.b.MISSED - 1,
+                                              "missed": {"ssid": "Downstairs", "at": 1}}})
+        gone = self.b.quiet()
+        self.assertEqual(gone[0]["missed"], "Downstairs")
+        # ...and the same age with no missed move is still too soon to say anything.
+        self.hub.settings.set(bridges={"aa": {"gone": time.time() - self.b.MISSED - 1}})
+        self.assertEqual(self.b.quiet(), [])
+
+    def test_a_bridge_that_is_online_is_never_a_job(self):
+        self.hub.settings.set(bridges={"aa": {"gone": 1}})
+        self.b.pucks["aa"]["online"] = True
+        self.assertEqual(self.b.quiet(), [])
+
+    def test_the_ones_that_did_not_follow_are_remembered(self):
+        """Without this the house forgets by morning that it moved without two of its bridges."""
+        self.b.pucks = {"aa": {"online": True, "net": "n1"}}
+        run(self.b.move("Downstairs", "sekrit"))
+        self.b.MOVE_WAIT, self.b.MOVE_SETTLE = 0, 0
+        run(self.b._move_watch(self.b.moving["at"]))
+        self.assertEqual(self.rec()["missed"]["ssid"], "Downstairs")
+
+    def test_forgetting_one_clears_the_topics_that_would_bring_it_back(self):
+        """Retained topics outlive the puck by design. Left behind, a bridge forgotten on Monday is
+        back in the list on Tuesday with nothing a household could do about it."""
+        run(self.b.forget("aa"))
+        self.assertNotIn("aa", self.hub.settings.get("bridges"))
+        self.assertNotIn("aa", self.b.pucks)
+        cleared = {t.split("/")[-1] for t, pay, retain in self.hub.ha.published if pay == "" and retain}
+        self.assertTrue({"status", "cfg", "cfgack"} <= cleared)
+
+    def test_forgetting_one_the_hub_never_knew_says_so(self):
+        with self.assertRaises(ValueError):
+            run(self.b.forget("zz"))
+
+    def test_a_room_is_only_claimed_when_one_puck_carries_that_mesh(self):
+        self.b.pucks["bb"] = {"online": True, "net": "n1"}
+        self.assertIsNone(self.b.room_of("aa"))
+        self.assertEqual(self.b.where("aa"), "A bridge")
 
 
 if __name__ == "__main__":

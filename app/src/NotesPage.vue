@@ -37,10 +37,10 @@
  */
 import { computed, ref } from 'vue'
 import { installUpdate, loadHealth, notify, openFlow, restartHub, store } from './store'
-import { checkDevice, forgetDevice, retryEntry, retryPart, type Act, type Note, type Rung } from './api'
+import { checkDevice, forgetBridge, forgetDevice, retryEntry, retryPart, type Act, type Note, type Rung } from './api'
 import Icon from './Icon.vue'
 
-const noteIcon = (k: string) => k === 'offline' || k === 'restart' ? 'refresh' : k === 'storage' ? 'home' : k === 'driver' ? 'switch' : 'sparkle'
+const noteIcon = (k: string) => k === 'offline' || k === 'restart' ? 'refresh' : k === 'storage' ? 'home' : k === 'driver' ? 'switch' : k === 'bridge' ? 'wifi' : 'sparkle'
 
 /* A long list of quiet things folds, because five is enough to see the shape of it -- but the fold opens.
    The old list stopped at five in the BRAIN and ended with "And 3 more things are offline", a sentence
@@ -83,6 +83,14 @@ async function run(n: Note, a: Act, id: string) {
       await forgetDevice(a.to!)
       notify(n.name ? `${n.name} is forgotten.` : 'It is forgotten.')
       store.notes = store.notes.filter(x => x.subject !== a.to)   // it goes now; the next rebuild agrees
+    }
+    /* A bridge, not a device: it was never in the house's device list to remove from. What goes with
+       it is its retained topics, which is the brain's job -- without that it would be back in the
+       list the next time the brain starts. */
+    else if (a.act === 'bridge') {
+      const r = await forgetBridge(a.to!)
+      notify(`${r.forgotten} is forgotten.`)
+      store.notes = store.notes.filter(x => x.subject !== a.to)
     }
     await loadHealth()
   } catch (e: any) { notify(e.message, 'error') }

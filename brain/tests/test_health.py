@@ -7,7 +7,7 @@ from pathlib import Path
 from unittest import mock
 from hub import health, updates
 from hub.model import Device
-from tests.test_rules import FakeHub, TZ
+from tests.test_rules import FakeBridges, FakeHub, TZ
 
 
 class FakeProvision:
@@ -206,6 +206,48 @@ class GroupingTests(unittest.TestCase):
         with self.free_disk(): notes = self.h.notes()
         self.assertEqual([len(n["with"]) for n in notes], [4, 0])   # the sign-in got there first
         self.assertEqual(len(notes), 2)
+
+
+class BridgeNotes(unittest.TestCase):
+    """A bridge that never came back. docs/network.md, piece 6."""
+
+    def setUp(self):
+        self.hub = FakeHub(); self.hub.provision = FakeProvision()
+        with mock.patch.dict(os.environ, {"HUB_VERSION": "v1", "HUB_COMMIT": "a" * 40}): self.hub.updates = updates.Updates(self.hub)
+        self.h = health.Health(self.hub)
+
+    def note(self, **b):
+        self.hub.bridge = FakeBridges([{"chip": "c8ebba", "room": None, "since": None, "missed": None, **b}])
+        return self.h.bridges()[0]
+
+    def test_it_names_the_room_when_the_hub_can_honestly_say_one(self):
+        n = self.note(room="Hallway")
+        self.assertTrue(n["text"].startswith("The Hallway bridge"))
+        self.assertEqual(n["where"], "Hallway")
+
+    def test_it_does_not_invent_one_when_it_cannot(self):
+        n = self.note()
+        self.assertTrue(n["text"].startswith("A bridge"))
+        self.assertIsNone(n["where"])
+
+    def test_a_missed_move_says_which_network_it_missed(self):
+        self.assertIn("since the Wi‑Fi changed to Downstairs", self.note(missed="Downstairs")["text"])
+
+    def test_the_lights_still_working_is_said_before_anything_else_to_do(self):
+        """A household whose panel stopped showing the hallway will walk to the switch, find it works,
+        and distrust the panel rather than the bridge. Saying it first is the whole line."""
+        text = self.note(room="Hallway")["text"]
+        self.assertLess(text.index("still work"), text.index("Plug it into the hub"))
+
+    def test_the_only_button_is_the_one_the_panel_can_actually_perform(self):
+        """The recovery is a walk to a socket. A button that claimed to do it would be a lie."""
+        acts = self.note(room="Hallway")["acts"]
+        self.assertEqual([a["act"] for a in acts], ["bridge"])
+        self.assertEqual(acts[0]["to"], "c8ebba")
+        self.assertIn("the Hallway bridge", acts[0]["ask"])       # the name is in the question
+
+    def test_a_house_with_nothing_missing_says_nothing(self):
+        self.assertEqual(self.h.bridges(), [])
 
 
 class RestartNotes(unittest.TestCase):
