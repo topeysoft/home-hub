@@ -5,7 +5,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { store, notify, refreshBridge } from './store'
-import { adoptBridge, dismissBridge, placedBridge, bridgeWifi, BRIDGE_STEPS } from './api'
+import { adoptBridge, dismissBridge, placedBridge, bridgeWifi, readOnce, BRIDGE_STEPS } from './api'
 import Icon from './Icon.vue'
 import BridgeArt from './BridgeArt.vue'
 
@@ -83,14 +83,20 @@ const placed = () => run(placedBridge)
    own cable and will finish whatever this screen does. Closing only puts the sheet away; it comes
    back on the next poll while there is still something to say.
 
-   A FAILURE HAS NOTHING LEFT TO SAY once it has been read, and until the brain is told so it keeps
-   reporting it: the sheet goes away and the very next poll brings it straight back. Somebody with a
-   board the hub cannot use sits there pressing OK at a dialog that will not die. So acknowledging a
-   failure is a thing the brain hears, not a thing this screen does to its own copy. */
+   A FINISHED JOB HAS NOTHING LEFT TO SAY once it has been read, and until the brain is told so it
+   keeps reporting it: the sheet goes away and the very next poll brings it straight back. Somebody
+   with a board the hub cannot use sits there pressing OK at a dialog that will not die. So
+   acknowledging one is a thing the brain hears, not a thing this screen does to its own copy.
+
+   THAT IS TRUE OF SUCCESS AS WELL AS FAILURE, and it was only written down for failure: a bridge
+   that went in fine left "It's in." reappearing every minute, with Done doing nothing the hub could
+   hear. Which states end a job is api.ts's to say (readOnce), because it is a fact about the brain's
+   machine rather than about this screen. `placing` is deliberately not one of them -- that job is
+   still running and should come back. */
 function close() {
   const was = b.value?.state
   if (store.bridge) store.bridge = { ...store.bridge, state: 'none' }
-  if (was === 'failed') run(dismissBridge)
+  if (readOnce(was)) run(dismissBridge)
 }
 function key(e: KeyboardEvent) { if (e.key === 'Escape' && b.value?.state !== 'working') close() }
 onMounted(() => window.addEventListener('keydown', key))

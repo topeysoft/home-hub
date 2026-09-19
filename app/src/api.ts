@@ -216,6 +216,15 @@ export async function nearbySwitches(): Promise<Nearby> {
    the next question cannot honestly be asked. */
 export const blinkSwitch = (uuid: string, seconds = 5) => post<{ state: string; text?: string }>('/bridge/blink', { uuid, seconds })
 export const BRIDGE_STEPS = ['software', 'wifi', 'keys'] as const
+/* The states that have nothing left to say once somebody has read them.
+ *
+ * The brain keeps reporting one until it is told, so a sheet that closes only its own copy goes away
+ * and the very next poll brings it straight back. That was fixed for `failed` and the same bug then
+ * sat in `ready` -- "It's in." reappeared every minute after a bridge was set up, and pressing Done
+ * did nothing the hub could hear. The list lives here rather than in the sheet so the next state that
+ * ends a job is added where the rest of the bridge's vocabulary is. */
+export const BRIDGE_READ_ONCE = ['ready', 'failed'] as const
+export const readOnce = (state?: string) => (BRIDGE_READ_ONCE as readonly string[]).includes(state ?? '')
 export async function getBridge(): Promise<Bridge> { const r = await request('/bridge'); if (!r.ok) await fail(r); return r.json() }
 /** Yes, that one is mine. The keys only go anywhere after this. */
 export const adoptBridge = () => post<Bridge>('/bridge/adopt')
