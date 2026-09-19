@@ -302,7 +302,14 @@ class Cable:
             # The hub's NAME as well as its address, so this puck survives the house's DHCP pool
             # being reshuffled -- which used to strand every puck without anybody touching the
             # Wi-Fi at all. docs/network.md, piece 1.
-            p.set("name", hx(cfg["name"]))
+            #
+            # OPTIONAL, because a puck is always older than the hub setting it up. `set name` arrived
+            # in firmware 0.4.0 and the hub does not reflash a puck that still answers, so every puck
+            # already in a house refuses this verb -- and refusing one field must not fail an
+            # adoption that is otherwise fine. Without the name it uses the address, exactly as it
+            # did before any of this existed.
+            if not p.set("name", hx(cfg["name"]), required=False):
+                log.info("bridge: %s is too old for a hub name; it will use the address", port)
             p.set("mqtt", hx(cfg["host"]), str(cfg["port"]), hx(cfg["user"]), hx(cfg["mqtt_pass"]))
             p.set("keys", cfg["netkey"], cfg["appkey"], str(cfg["iv"]))
             p.set("base", hx(cfg["base"]))

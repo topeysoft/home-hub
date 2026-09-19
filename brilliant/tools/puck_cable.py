@@ -123,14 +123,30 @@ class Puck:
                 return d
         raise RuntimeError(f"no clean status from {self.port}")
 
-    def set(self, what: str, *args: str, tries: int = 4):
+    def set(self, what: str, *args: str, tries: int = 4, required: bool = True) -> bool:
+        """One value onto the puck. True if it took, False if this puck is too old to know the verb.
+
+        A PUCK IS OLDER THAN THE HUB TALKING TO IT, always and for ever. The hub updates itself
+        overnight; a puck is flashed once over a cable and then lives behind a sofa, and the hub
+        deliberately does not reflash one that still answers (docs/puck-updates.md). So every verb
+        added after a puck was made is one that puck will refuse, and a hub that treats a refusal as
+        a failure cannot set up any of the pucks already in the house -- which is exactly what
+        happened: `set name` arrived in firmware 0.4.0 and every 0.3.1 puck answered `err what`,
+        failing the whole adoption over a field it does not need.
+
+        The firmware says which kind of no it is, and the difference is the whole point:
+          err what   this puck has never heard of that verb. A version gap, not a fault.
+          err bad    it knows the verb and your argument is wrong. A fault, at any version.
+        So `required=False` tolerates the first and never the second."""
         for _ in range(tries):
             try:
                 r = self.ask(f"set {what} " + " ".join(args), wait=2.0)
             except TimeoutError:
                 continue
             if r == f"ok {what}":
-                return
+                return True
+            if r == "err what" and not required:
+                return False
             if r.startswith("err "):
                 raise RuntimeError(f"puck refused {what}: {r}")
         raise RuntimeError(f"no clean answer to set {what} from {self.port}")
@@ -318,7 +334,8 @@ def main():
     p.set("wifi", hx(wifi[0]), hx(wifi[1]));            print(f"  wifi   {wifi[0]}")
     # docs/network.md: a name outlives a DHCP lease, and a spare outlives a changed password.
     if a.name:
-        p.set("name", hx(a.name));                      print(f"  name   {a.name}")
+        took = p.set("name", hx(a.name), required=False)
+        print(f"  name   {a.name}" if took else f"  name   -- this puck is too old to know it ({who['fw']}); it will use the address")
     if a.wifi2:
         p.set("wifi2", hx(a.wifi2[0]), hx(a.wifi2[1]));  print(f"  wifi2  {a.wifi2[0]}")
     if mqtt:

@@ -11,7 +11,7 @@ These hold the two bugs docs/network.md was written for, so that neither can com
 And the property the whole design rests on: a bridge is only counted as having followed when it says
 so from the broker, because that is the only thing a puck cannot say from the wrong network.
 """
-import asyncio, json, tempfile, time, unittest
+import asyncio, json, pathlib, tempfile, time, unittest
 from pathlib import Path
 
 from hub.bridge import Bridges
@@ -221,6 +221,60 @@ class MovingThemOver(unittest.TestCase):
     def test_which_wifi_is_asked_for(self):
         with self.assertRaises(ValueError):
             run(self.b.move("   ", "sekrit"))
+
+
+class APuckIsAlwaysOlderThanTheHub(unittest.TestCase):
+    """The hub updates itself overnight; a puck is flashed once and lives behind a sofa, and the hub
+    deliberately does not reflash one that still answers. So every verb added after a puck was made is
+    one that puck will refuse, and the hub has to carry on.
+
+    This is not hypothetical: `set name` shipped in firmware 0.4.0, and every 0.3.1 puck in the house
+    answered `err what` and failed the whole adoption over a field it does not need."""
+
+    class Old:
+        """A 0.3.1 puck: it knows wifi, mqtt, keys, base and label, and nothing added since."""
+        KNOWS = {"wifi", "mqtt", "keys", "base", "label"}
+
+        def __init__(self): self.port, self.told = "/dev/fake", []
+
+        def ask(self, line, wait=2.0):
+            verb = line.split()[1]
+            if verb not in self.KNOWS: return "err what"
+            self.told.append(verb)
+            return f"ok {verb}"
+
+    def puck(self):
+        import importlib.util
+        src = pathlib.Path(__file__).resolve().parent.parent.parent / "brilliant" / "tools" / "puck_cable.py"
+        spec = importlib.util.spec_from_file_location("tools_puck_test", src)
+        mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
+        old = self.Old()
+        old.set = mod.Puck.set.__get__(old)      # the real method, on a puck that only knows the old verbs
+        return old
+
+    def test_an_old_puck_refusing_a_new_verb_is_not_a_failure(self):
+        p = self.puck()
+        self.assertFalse(p.set("name", "687562", required=False))
+        self.assertEqual(p.told, [])
+
+    def test_the_verbs_it_does_know_still_have_to_work(self):
+        p = self.puck()
+        self.assertTrue(p.set("wifi", "6162", "6364"))
+        self.assertEqual(p.told, ["wifi"])
+
+    def test_a_verb_it_must_understand_still_fails_loudly(self):
+        """Tolerance is for version gaps, never for the Wi-Fi not going on."""
+        p = self.puck()
+        with self.assertRaises(RuntimeError):
+            p.set("name", "687562")              # required, which is the default
+
+    def test_a_bad_argument_is_a_fault_at_any_version(self):
+        """`err what` is "never heard of it"; `err bad` is "I know it and you are wrong". Only the
+        first is a version gap, and tolerating the second would hide a real misconfiguration."""
+        p = self.puck()
+        p.ask = lambda line, wait=2.0: "err bad"
+        with self.assertRaises(RuntimeError):
+            p.set("wifi", "6162", "6364", required=False)
 
 
 class TheOnesThatNeverCameBack(unittest.TestCase):

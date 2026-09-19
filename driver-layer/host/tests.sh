@@ -248,9 +248,38 @@ I
 }
 
 
+# What a stick is taken for. One substring in one pattern decided that an ESP32 bridge puck was a
+# Z-Wave controller -- zwave-js-ui held its port open for as long as it was plugged in, and the hub
+# could never talk to its own puck. The matching is pure and radios.sh can be asked about one name
+# without touching anything, so there is no reason for it not to be held here.
+radios() {
+  group "which radio is which"
+  local r="$HERE/../radios.sh"
+  taken() { "$r" which "$1"; }
+
+  is "an ESP32 bridge puck is not a radio, whatever its serial number reads" \
+     "$(taken usb-1a86_USB_Single_Serial_5A46080020-if00)" none
+  is "...and neither is one on its native USB port" \
+     "$(taken usb-Espressif_USB_JTAG_serial_debug_unit_34:85:18:AB-if00)" none
+  # The pattern the puck collided with. It is there for a real stick and has to keep finding it.
+  is "an 800-series Z-Wave stick still is one" \
+     "$(taken usb-ZOOZ_800_Z-Wave_Stick_533D004242-if00)" zwave
+  # Two radios on one plug: -if00 is the Z-Wave side and -if01 an EM3581 Zigbee2MQTT cannot drive.
+  is "the HubZ is Z-Wave on -if00" \
+     "$(taken usb-Silicon_Labs_HubZ_Smart_Home_Controller_C1301AAC-if00-port0)" zwave
+  is "...and nothing on -if01, rather than Zigbee it cannot use" \
+     "$(taken usb-Silicon_Labs_HubZ_Smart_Home_Controller_C1301AAC-if01-port0)" none
+  is "a SkyConnect is Zigbee" "$(taken usb-Nabu_Casa_SkyConnect_v1.0_9e2a4f-if00)" zigbee
+  is "a Sonoff dongle is Zigbee" "$(taken usb-ITead_Sonoff_Zigbee_3.0_USB_Dongle_Plus_abc123-if00)" zigbee
+  # A product that simply ends in a word must keep it, or the stripping eats the name.
+  is "a stick with no serial in its name is still read by its product" \
+     "$(taken usb-dresden_elektronik_ingenieurtechnik_GmbH_ConBee_II-if00)" none
+}
+
+
 for need in git openssl curl python3; do
   command -v "$need" >/dev/null 2>&1 || { echo "these tests need $need"; exit 2; }
 done
-signatures; holds; undo
+signatures; holds; undo; radios
 printf '\n%s passed, %s failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
