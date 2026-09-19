@@ -135,7 +135,7 @@ onUnmounted(() => window.removeEventListener('keydown', key))
           </p>
           <!-- A hub whose machine has no network script. Its own connection is somebody else's
                business and this sheet must not imply it is about to touch it. -->
-          <p class="sheet-lede" v-else>
+          <p class="sheet-lede" v-else-if="net?.how === 'none'">
             This hub’s own connection is looked after by the machine it runs on. What this changes is the Wi‑Fi {{ them }} use — change it here and they all move over together.
           </p>
           <p class="sheet-lede" v-else>
