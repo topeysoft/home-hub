@@ -5,9 +5,10 @@ already worked as a nightlight, by accident, and it was pleasant. Two, and it is
 puck is meant to be **a product** — a small, plain relay object sitting out in the open in a living space — not an
 ESP32 devkit on a shelf, and part of the job is that it is nice to look at. Its light is the only expressive
 surface it has. The design is settled; what it asks of the hardware, and the questions that are genuinely open,
-are at the foot and marked as such. **Step 1 of the build order is written** (18 September, firmware): the state,
-the precedence and the NVS setting exist and both build targets compile. Nothing has run on a puck yet — there
-was none on the cable — so every claim below about how it *behaves* is still a claim.*
+are at the foot and marked as such. **Steps 1 and 2 of the build order are written** (18–19 September,
+firmware): the state, the precedence, the NVS setting, the MQTT topics and the Home Assistant entity all exist,
+and both build targets compile. Nothing has run on a puck yet — there has been none on the cable — so every
+claim below about how it *behaves* is still a claim.*
 
 ## What the light does today, and for how long
 
@@ -134,9 +135,25 @@ shipping.
    wants to see it change. `status` gains `night=unplaced|on|off`, and `LIGHTS[]` in `bridgeStatusLine()` was
    masked `& 3` — a fifth state does not fit in two bits, and that mask is the one trap in this step.
    `esp32s3-ship` and `esp32dev` (the `#else` path, no RGB) both compile.
-2. **Firmware, the entity.** `mesh/bridge/<chip>/nightlight` (retained) and `.../nightlight/set`, plus an HA
-   discovery payload making the puck's own device a `light` with brightness. Nothing else changes about the
-   contract.
+2. ~~**Firmware, the entity.**~~ **Written, not yet run on hardware (19 September).** The puck's own HA device
+   `mesh_bridge_<chip>` gains a **Nightlight** (`light`, with brightness, `bri_scl` 255) alongside the proxy
+   sensor it already had. Retained state on `mesh/bridge/<chip>/night` and `.../night/brightness`, commands on
+   `.../night/set` and `.../night/brightness/set`, and `.../settled` + `.../settled/set` for step 3 to use.
+   Discovery, the subscriptions and the retained publishes all happen in the existing on-connect block, so a
+   broker restart restores the lot. Two decisions worth keeping:
+
+   - **The entity reports the SETTING, not the LED.** They differ whenever the puck is unwell or unplaced,
+     because precedence puts a fault above the nightlight. Reporting the LED would show the nightlight as "off"
+     the moment a puck lost its broker — an invitation for an automation to turn it back "on" and for the
+     household to wonder why nothing happens. What the LED is *actually* doing is a third entity, a diagnostic
+     `sensor` on `mesh/bridge/<chip>/light` carrying `looking|heard|night|off`.
+   - **Brightness zero is an off.** HA can send a brightness of 0, which would otherwise leave a nightlight that
+     is on and invisible — a state nobody can explain. It turns it off and keeps the old level, so turning it
+     back on restores the brightness rather than coming up black.
+
+   That diagnostic sensor also answers one of the open questions below — how you ask a settled puck whether it
+   is well once green has stopped being the answer — at least for anyone looking at the house rather than at the
+   object. The 2am version of that question is still open.
 3. **Hub.** `brain/hub/bridge.py` marks settled on `POST /bridge/placed` and carries the household's answer
    through to the puck. No new endpoint if the answer rides the existing one.
 4. **Panel.** The one question in `BridgeSheet.vue` at `ready`; after that it is an ordinary light on its room's
@@ -148,7 +165,7 @@ shipping.
 
 Steps 1–4 are the feature. Step 5 is the one that makes people like it.
 
-**What step 1 still owes:** a puck on a cable. `set settled 1` then `set night 1 <level>` should put a settled,
+**What steps 1 and 2 still owe:** a puck on a cable. `set settled 1` then `set night 1 <level>` should put a settled,
 healthy puck into a warm glow; pulling the broker should take it straight back to amber; a reboot should come
 back glowing without the hub. None of that has been watched happen, and the default brightness (110) was chosen
 on a screen, which `emitter-colours-are-not-screen-colours` is a standing warning about.
