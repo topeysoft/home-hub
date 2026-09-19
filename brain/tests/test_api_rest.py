@@ -173,3 +173,33 @@ class PresenceTests(ApiTest):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PlacingABridgeCarriesTheAnswer(ApiTest):
+    """POST /bridge/placed grew a body: the answer to "leave its light on?", asked on the sheet at
+    the one moment somebody is standing in front of the thing. docs/puck-light.md."""
+    def setUp(self):
+        super().setUp()
+        self.seen = []
+        async def placed(night=None, level=None):
+            self.seen.append((night, level))
+            return {"state": "ready"}
+        self.hub.bridge.placed = placed
+
+    def test_a_bridge_can_still_be_placed_with_no_body_at_all(self):
+        self.assertEqual(self.client.post("/bridge/placed").status_code, 200)
+        self.assertEqual(self.seen, [(None, None)])
+
+    def test_the_answer_and_the_brightness_are_passed_through(self):
+        self.assertEqual(self.client.post("/bridge/placed", json={"night": True, "level": 200}).status_code, 200)
+        self.assertEqual(self.seen, [(True, 200)])
+
+    def test_no_is_carried_as_an_answer_rather_than_as_silence(self):
+        self.client.post("/bridge/placed", json={"night": False})
+        self.assertEqual(self.seen, [(False, None)])
+
+    def test_a_brightness_that_is_not_one_is_a_400_and_nothing_is_placed(self):
+        for bad in (999, -1, "bright"):
+            r = self.client.post("/bridge/placed", json={"night": True, "level": bad})
+            self.assertEqual(r.status_code, 400, bad)
+        self.assertEqual(self.seen, [])

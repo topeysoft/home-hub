@@ -5,10 +5,10 @@ already worked as a nightlight, by accident, and it was pleasant. Two, and it is
 puck is meant to be **a product** — a small, plain relay object sitting out in the open in a living space — not an
 ESP32 devkit on a shelf, and part of the job is that it is nice to look at. Its light is the only expressive
 surface it has. The design is settled; what it asks of the hardware, and the questions that are genuinely open,
-are at the foot and marked as such. **Steps 1 and 2 of the build order are written** (18–19 September,
-firmware): the state, the precedence, the NVS setting, the MQTT topics and the Home Assistant entity all exist,
-and both build targets compile. Nothing has run on a puck yet — there has been none on the cable — so every
-claim below about how it *behaves* is still a claim.*
+are at the foot and marked as such. **Steps 1 to 3 of the build order are written** (18–19 September):
+the state, the precedence, the NVS setting, the MQTT topics, the Home Assistant entity and the hub side all exist;
+both firmware targets compile and the brain's 936 tests pass. Nothing has run on a puck yet — there has been none on the cable — so every
+claim below about how it *behaves on hardware* is still a claim.*
 
 ## What the light does today, and for how long
 
@@ -154,8 +154,25 @@ shipping.
    That diagnostic sensor also answers one of the open questions below — how you ask a settled puck whether it
    is well once green has stopped being the answer — at least for anyone looking at the house rather than at the
    object. The 2am version of that question is still open.
-3. **Hub.** `brain/hub/bridge.py` marks settled on `POST /bridge/placed` and carries the household's answer
-   through to the puck. No new endpoint if the answer rides the existing one.
+3. ~~**Hub.**~~ **Written and tested (19 September).** `POST /bridge/placed` grew an optional body —
+   `{"night": bool, "level": 0-255}` — so the answer rides the existing endpoint and a panel that does not ask
+   the question still places a bridge. `Bridges.placed()` then sends the two halves **differently, and that
+   difference is the whole of it**:
+
+   - **`settled/set` is retained.** It is the hub's to own, it never changes after placement, and until the puck
+     has it the light stays an instrument. Retaining it means a puck that was offline at that exact moment — or
+     wiped and flashed again in the same corner — picks it up on its next connect. Replaying it is harmless
+     because it is idempotent, and `forget()` now clears it along with `night`, `night/brightness` and `light`,
+     which is what stops a bridge that was sent away coming back believing it is still placed.
+   - **`night/set` is not retained, and is said exactly once.** From the instant they answer, the setting is the
+     household's: the puck holds it in NVS and Home Assistant owns it. A retained placement answer would
+     silently overrule somebody turning the nightlight off in February the next time the puck rebooted — a
+     failure that would be invisible and maddening, and not retaining is the entire fix.
+
+   A puck that is offline at that moment therefore keeps its green and loses only the nightlight, which is the
+   right way round: the instrument survives, the decoration does not. Publishing failures are suppressed rather
+   than raised — the broker is not why somebody tapped the button, and a sheet stuck on a step the person has
+   already finished is worse than a bridge with no glow.
 4. **Panel.** The one question in `BridgeSheet.vue` at `ready`; after that it is an ordinary light on its room's
    tile, with no special-casing.
 5. **Motion**, as a brain rule over `0x13` from the switch beside it. Optional, and last, because it is the only
@@ -165,7 +182,7 @@ shipping.
 
 Steps 1–4 are the feature. Step 5 is the one that makes people like it.
 
-**What steps 1 and 2 still owe:** a puck on a cable. `set settled 1` then `set night 1 <level>` should put a settled,
+**What steps 1 to 3 still owe:** a puck on a cable. `set settled 1` then `set night 1 <level>` should put a settled,
 healthy puck into a warm glow; pulling the broker should take it straight back to amber; a reboot should come
 back glowing without the hub. None of that has been watched happen, and the default brightness (110) was chosen
 on a screen, which `emitter-colours-are-not-screen-colours` is a standing warning about.

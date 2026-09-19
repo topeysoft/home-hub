@@ -589,10 +589,49 @@ class Bridges:
         if self._quiet and not self._quiet.done(): self._quiet.cancel()
         self._quiet = None
 
-    async def placed(self) -> dict:
+    async def _tell(self, chip: str, leaf: str, payload: str, retain: bool = False) -> None:
+        """One line to one puck. Failures are logged, never raised: none of these are the reason
+        somebody tapped the button, and a puck that missed one is in a safe state by design."""
+        with contextlib.suppress(Exception):
+            await self.hub.ha.call("mqtt", "publish", None,
+                                   topic=f"{BASE}/bridge/{chip}/{leaf}", payload=payload, retain=retain)
+
+    async def placed(self, night: bool | None = None, level: int | None = None) -> dict:
+        """"Leave it here" -- and the answer to the one question asked in the same breath.
+
+        Two things go to the puck, and they are NOT sent the same way, which is the whole of this
+        method (docs/puck-light.md):
+
+        `settled` is the hub's to own. It says the thing has a home, it never changes afterwards, and
+        until the puck has it the light stays an instrument -- green, still asking "is here good?".
+        So it goes RETAINED: a puck that was offline at this exact moment, or that is wiped and
+        flashed again in the same corner, picks it up on its next connect. Replaying it is harmless
+        because it is idempotent, and `forget()` clears it, which is what stops a bridge that was
+        sent away coming back believing it is still placed.
+
+        `night` is the HOUSEHOLD's, the moment after they answer. It goes once, NOT retained, and the
+        hub never says it again. The puck keeps it in NVS and Home Assistant owns it from here -- so
+        somebody turning the nightlight off in February is not overruled by a placement answer from
+        September the next time the puck reboots. That failure would be invisible and maddening, and
+        not retaining is the whole fix.
+
+        A puck that is offline right now therefore keeps its green and loses only the nightlight,
+        which is the right way round: the instrument survives, the decoration does not.
+        """
         if not self.job or self.job["state"] != "placing": raise ValueError("Nothing is being placed.")
+        if level is not None and not 0 <= int(level) <= 255:
+            raise ValueError("A brightness is 0 to 255.")
+        chip = self.job.get("chip")
         self._stop_quiet_watch()
         self._set("ready", unplaced=self._unplaced(self.job.get("net")))
+        if chip:
+            await self._tell(chip, "settled/set", "1", retain=True)
+            if night is not None:
+                await self._tell(chip, "night/set", "ON" if night else "OFF")
+                if night and level is not None:
+                    await self._tell(chip, "night/brightness/set", str(int(level)))
+                self.hub.log.add("bridge", chip, None,
+                                 "nightlight on" if night else "nightlight off", source="user")
         return self.status()
 
     # ---- the job itself ----
@@ -788,7 +827,8 @@ class Bridges:
         mine.pop(chip)
         self.hub.settings.set(bridges=mine)
         self.pucks.pop(chip, None)
-        for leaf in ("status", "net", "proxy", "iv", "cfg", "cfgack"):
+        for leaf in ("status", "net", "proxy", "iv", "cfg", "cfgack",
+                     "settled", "settled/set", "night", "night/brightness", "light"):
             with contextlib.suppress(Exception):
                 await self.hub.ha.call("mqtt", "publish", None,
                                        topic=f"{BASE}/bridge/{chip}/{leaf}", payload="", retain=True)

@@ -1233,8 +1233,18 @@ async def bridge_forget(body: dict):
 
 
 @app.post("/bridge/placed")
-async def bridge_placed():
-    try: return await hub.bridge.placed()
+async def bridge_placed(body: dict | None = None):
+    """"Leave it here", and with it the answer to "leave its light on?" if the sheet asked.
+
+    The body is optional on purpose: a panel that does not ask the question still places a bridge,
+    and a bridge placed without an answer is simply a bridge with no nightlight."""
+    body = body or {}
+    night, level = body.get("night"), body.get("level")
+    if level is not None:
+        try: level = int(level)
+        except (TypeError, ValueError): raise HTTPException(400, "A brightness is 0 to 255.")
+        if not 0 <= level <= 255: raise HTTPException(400, "A brightness is 0 to 255.")
+    try: return await hub.bridge.placed(night=None if night is None else bool(night), level=level)
     except ValueError as e: raise HTTPException(409, str(e))
 
 

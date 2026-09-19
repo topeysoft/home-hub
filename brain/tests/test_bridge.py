@@ -49,10 +49,11 @@ class FakeCable:
 
 
 class FakeHA:
-    def __init__(self): self.cb = None; self.published = []; self.answer = None
+    def __init__(self): self.cb = None; self.published = []; self.calls = []; self.answer = None
     async def subscribe(self, type_, cb, **kw): self.cb = cb; return 1
     async def call(self, domain, service, target, **kw):
         self.published.append((kw.get("topic"), kw.get("payload")))
+        self.calls.append(kw)
         # A puck that answers. `answer` is (leaf, payload); None is a puck that
         # heard the command and said nothing, which is a real failure mode.
         if self.answer and self.cb:
@@ -290,6 +291,61 @@ class TheJob(Knocking):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TheLightAfterItIsPlaced(TheJob):
+    """docs/puck-light.md: what "Leave it here" sends, and the difference between the two halves.
+
+    `settled` is the hub's and is retained, so a puck that missed the moment still gets it. `night`
+    is the household's from the instant they answer, so it goes once and is never repeated -- a
+    retained placement answer would quietly overrule somebody turning the thing off months later.
+    """
+    def place(self, **kw):
+        self.knock(); run(self.adopt_and_finish())
+        self.hub.ha.calls.clear()
+        run(self.b.placed(**kw))
+        return {c["topic"]: c for c in self.hub.ha.calls}
+
+    def test_it_is_settled_and_that_one_is_retained(self):
+        sent = self.place()
+        self.assertEqual(sent["mesh/bridge/c8ebba/settled/set"]["payload"], "1")
+        self.assertTrue(sent["mesh/bridge/c8ebba/settled/set"]["retain"])
+
+    def test_no_answer_says_nothing_at_all_about_the_light(self):
+        sent = self.place()
+        self.assertEqual([t for t in sent if "night" in t], [])
+
+    def test_the_answer_is_carried_once_and_never_retained(self):
+        sent = self.place(night=True, level=200)
+        self.assertEqual(sent["mesh/bridge/c8ebba/night/set"]["payload"], "ON")
+        self.assertFalse(sent["mesh/bridge/c8ebba/night/set"].get("retain"))
+        self.assertEqual(sent["mesh/bridge/c8ebba/night/brightness/set"]["payload"], "200")
+        self.assertFalse(sent["mesh/bridge/c8ebba/night/brightness/set"].get("retain"))
+
+    def test_no_is_an_answer_too_and_carries_no_brightness(self):
+        sent = self.place(night=False, level=200)
+        self.assertEqual(sent["mesh/bridge/c8ebba/night/set"]["payload"], "OFF")
+        self.assertNotIn("mesh/bridge/c8ebba/night/brightness/set", sent)
+
+    def test_the_answer_is_written_down_where_a_household_can_read_it(self):
+        self.place(night=True)
+        self.assertIn("nightlight on", [a[3] for a, _ in self.hub.log.rows if len(a) > 3])
+
+    def test_a_brightness_that_is_not_one_is_refused_before_anything_is_sent(self):
+        self.knock(); run(self.adopt_and_finish())
+        self.hub.ha.calls.clear()
+        with self.assertRaises(ValueError): run(self.b.placed(night=True, level=999))
+        self.assertEqual(self.hub.ha.calls, [])
+        self.assertEqual(self.b.status()["state"], "placing")   # and the job is untouched
+
+    def test_a_puck_that_cannot_be_told_is_still_placed(self):
+        """The publish is not why somebody tapped the button. A broker that refuses must not leave
+        the sheet stuck on a step the person has already finished."""
+        self.knock(); run(self.adopt_and_finish())
+        async def boom(*a, **k): raise RuntimeError("broker gone")
+        self.hub.ha.call = boom
+        run(self.b.placed(night=True))
+        self.assertEqual(self.b.status()["state"], "ready")
 
 
 class LettingASwitchIn(unittest.TestCase):
