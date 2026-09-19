@@ -165,9 +165,13 @@ antenna flush to the 180° edge, J1's mouth at the 0° edge. Everything else is 
 over and is meant to be moved.
 
 ```sh
-python3 gen_pcb.py
+python3 gen_pcb.py        # refuses to run once the board has routing in it
 kicad-cli pcb drc --output drc.rpt --severity-error --severity-warning puck-revA.kicad_pcb
 ```
+
+**Once you start routing, the generator stops being the source for the board.** Tracks are hand work and
+re-running would erase them, so `gen_pcb.py` checks for segments, vias and zones and refuses unless you pass
+`--force`. The schematic has no such hazard — it is labels and symbols, and regenerating is always safe.
 
 DRC on an unrouted board is mostly ratsnest: ~92 `unconnected_items` is the whole netlist waiting to be routed.
 What matters is that there are **no shorts and no solder-mask bridges**. The silk overlaps are cosmetic and get

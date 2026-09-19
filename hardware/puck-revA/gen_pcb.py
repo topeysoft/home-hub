@@ -30,7 +30,7 @@ Four at {43, 128, 232, 317} keeps r=17 and therefore the 8.4 mm radial standoff,
 with a smallest gap of 85 deg where 90 would be perfect. The two wider gaps fall at 0 and 180: the
 connector notch, which is already a hole in the glow, and the antenna side.
 """
-import math, pathlib, re, sys, uuid
+import argparse, math, pathlib, re, sys, uuid
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 from gen_sch import PARTS, PROJECT
 
@@ -233,11 +233,26 @@ def main():
     d = sum(1 if c == "(" else -1 if c == ")" else 0 for c in out)
     assert d == 0, f"unbalanced s-expression: {d}"
     p = HERE / f"{PROJECT}.kicad_pcb"
+    # Routing is hand work and this generator would erase it without noticing. Once the board has
+    # tracks or vias in it, regenerating is almost certainly a mistake -- say so and stop.
+    if p.exists() and not FORCE:
+        old = p.read_text()
+        laid = old.count("(segment") + old.count("(via") + old.count("(zone")
+        if laid:
+            sys.exit(f"{p.name} already has {laid} tracks/vias/zones in it -- regenerating would "
+                     f"throw that away.\n  Re-run with --force if you really mean to start over, "
+                     f"or edit the board in KiCad from here.")
     p.write_text(out)
     print(f"{p.name}: {len(real)} parts + {len(BOLT_ANGLES)} holes, {len(nets) - 1} nets, "
           f"board {BOARD_R * 2:.1f} mm")
     print(f"  U1 antenna edge at x={mm(CX - BOARD_R)} (180 deg), J1 mouth at x={mm(CX + BOARD_R)} (0 deg)")
     print(f"  LEDs r={LED_R} at {LED_ANGLES}; M2 r={BOLT_R} at {BOLT_ANGLES}")
 
+FORCE = False
+
 if __name__ == "__main__":
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("--force", action="store_true",
+                    help="overwrite a board that already has routing in it")
+    FORCE = ap.parse_args().force
     main()
