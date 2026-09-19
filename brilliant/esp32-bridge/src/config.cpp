@@ -39,6 +39,17 @@ static void str(char *dst, size_t n, const char *key, const char *fallback) {
     strlcpy(dst, v.c_str(), n);
 }
 
+// The fields that have no compiled fallback at all: they only ever come from NVS, because nothing
+// before 0.4.0 knew to write them and a header cannot know a hub's name.
+static void loadRing() {
+    str(cfg.ssid2, sizeof(cfg.ssid2), "ssid2", "");
+    str(cfg.pass2, sizeof(cfg.pass2), "pass2", "");
+    str(cfg.mqttName, sizeof(cfg.mqttName), "mname", "");
+    str(cfg.lastIp, sizeof(cfg.lastIp), "lastip", "");
+    cfg.cfgAt = store.getUInt("cfgat", 0);
+}
+
+
 void configLoad() {
     memset(&cfg, 0, sizeof(cfg));
     store.begin(NS, true);
@@ -53,6 +64,7 @@ void configLoad() {
     str(cfg.mqttPass, sizeof(cfg.mqttPass), "mpass", MQTT_PASS);
     str(cfg.mqttBase, sizeof(cfg.mqttBase), "mbase", MQTT_BASE);
     str(cfg.label, sizeof(cfg.label), "label", DEVICE_LABEL);
+    loadRing();
     if (store.getBytes("netkey", cfg.netKey, 16) == 16 && store.getBytes("appkey", cfg.appKey, 16) == 16) {
         cfg.ivIndex = store.getUInt("iv", 0);
     } else {
@@ -70,6 +82,7 @@ void configLoad() {
     str(cfg.mqttPass, sizeof(cfg.mqttPass), "mpass", "");
     str(cfg.mqttBase, sizeof(cfg.mqttBase), "mbase", "mesh");
     str(cfg.label, sizeof(cfg.label), "label", "Brilliant");
+    loadRing();
     cfg.haveKeys = store.getBytes("netkey", cfg.netKey, 16) == 16 && store.getBytes("appkey", cfg.appKey, 16) == 16;
     cfg.ivIndex = store.getUInt("iv", 0);
 #endif
@@ -184,6 +197,12 @@ static void handle(char *line) {
         uint8_t nk[16], ak[16];
         ok = unhex(w[2], nk, 16) == 16 && unhex(w[3], ak, 16) == 16;
         if (ok) { store.putBytes("netkey", nk, 16); store.putBytes("appkey", ak, 16); store.putUInt("iv", (uint32_t)atol(w[4])); }
+    } else if (!strcmp(w[1], "wifi2") && nw == 4) {
+        ok = unhexStr(w[2], a, 33) && unhexStr(w[3], b, 65);
+        if (ok) { store.putString("ssid2", a); store.putString("pass2", b); }
+    } else if (!strcmp(w[1], "name") && nw == 3) {
+        ok = unhexStr(w[2], a, 33) && a[0];
+        if (ok) store.putString("mname", a);
     } else if (!strcmp(w[1], "base") && nw == 3) {
         ok = unhexStr(w[2], a, 17) && a[0];
         if (ok) store.putString("mbase", a);
@@ -227,6 +246,82 @@ static void serialTask(void *) {
         for (int i = 0; i < n; i++) pump(ports[i]);
         vTaskDelay(pdMS_TO_TICKS(20));
     }
+}
+
+// ---------------------------------------------------------------- what the bridge writes back
+
+void configRemember(const char *ip) {
+    if (!ip || !ip[0] || !strcmp(cfg.lastIp, ip)) return;   // unchanged: do not spend an erase on it
+    strlcpy(cfg.lastIp, ip, sizeof(cfg.lastIp));
+    store.begin(NS, false);
+    store.putString("lastip", ip);
+    store.end();
+    Serial.printf("[net] remembering %s\n", ip);
+}
+
+bool configNewWifi(const char *ssid, const char *pass, const char *name, const char *ip, uint32_t at) {
+    if (!ssid || !ssid[0]) return false;
+    if (at && at <= cfg.cfgAt) return false;          // a retained command we have already acted on
+    // Already on it, and the hub is only repeating itself: take the timestamp so the retained
+    // command stops being news, and leave the ring alone. Rotating here would push the REAL spare
+    // off the end and cost us the only way back.
+    bool same = !strcmp(cfg.ssid, ssid) && !strcmp(cfg.pass, pass ? pass : "");
+    store.begin(NS, false);
+    if (!same) {
+        // The one in use becomes the spare. This is the whole safety net: if the new credentials do
+        // not work, the alternation below walks back onto these within minutes.
+        strlcpy(cfg.ssid2, cfg.ssid, sizeof(cfg.ssid2));
+        strlcpy(cfg.pass2, cfg.pass, sizeof(cfg.pass2));
+        strlcpy(cfg.ssid, ssid, sizeof(cfg.ssid));
+        strlcpy(cfg.pass, pass ? pass : "", sizeof(cfg.pass));
+        store.putString("ssid2", cfg.ssid2); store.putString("pass2", cfg.pass2);
+        store.putString("ssid", cfg.ssid);   store.putString("pass", cfg.pass);
+    }
+    if (name && name[0] && strcmp(cfg.mqttName, name)) {
+        strlcpy(cfg.mqttName, name, sizeof(cfg.mqttName));
+        store.putString("mname", cfg.mqttName);
+    }
+    if (ip && ip[0] && strcmp(cfg.mqttHost, ip)) {
+        strlcpy(cfg.mqttHost, ip, sizeof(cfg.mqttHost));
+        store.putString("mhost", cfg.mqttHost);
+    }
+    if (at) { cfg.cfgAt = at; store.putUInt("cfgat", at); }
+    store.end();
+    Serial.printf("[net] told about %s (spare: %s)\n", cfg.ssid, cfg.ssid2[0] ? cfg.ssid2 : "none");
+    return !same;
+}
+
+void configForgetSpare(uint32_t at) {
+    if (at && at <= cfg.cfgAt) return;
+    cfg.ssid2[0] = cfg.pass2[0] = 0;
+    store.begin(NS, false);
+    store.remove("ssid2"); store.remove("pass2");
+    if (at) { cfg.cfgAt = at; store.putUInt("cfgat", at); }
+    store.end();
+    Serial.println("[net] spare Wi-Fi forgotten; the hub says it is sure");
+}
+
+void configConfirmWifi() {
+    store.begin(NS, true);
+    String on = store.getString("ssid", "");
+    store.end();
+    if (on == cfg.ssid) return;                       // the order on disk is already right
+    store.begin(NS, false);
+    store.putString("ssid", cfg.ssid);   store.putString("pass", cfg.pass);
+    store.putString("ssid2", cfg.ssid2); store.putString("pass2", cfg.pass2);
+    store.end();
+    Serial.printf("[net] %s is the one that works; written down\n", cfg.ssid);
+}
+
+void configSwapWifi() {
+    if (!cfg.ssid2[0]) return;
+    char s[33], p[65];
+    strlcpy(s, cfg.ssid, sizeof(s));  strlcpy(p, cfg.pass, sizeof(p));
+    strlcpy(cfg.ssid, cfg.ssid2, sizeof(cfg.ssid));  strlcpy(cfg.pass, cfg.pass2, sizeof(cfg.pass));
+    strlcpy(cfg.ssid2, s, sizeof(cfg.ssid2));        strlcpy(cfg.pass2, p, sizeof(cfg.pass2));
+    // Deliberately not written. Whichever one works gets written down by the code that succeeds on
+    // it; a puck flapping between two dead networks must not spend an NVS erase on every flap.
+    Serial.printf("[net] trying the other one: %s\n", cfg.ssid);
 }
 
 void configSerialBegin(const char *chip) {

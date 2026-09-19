@@ -52,6 +52,12 @@ const PATHS: Record<string, string> = {
   edit: 'M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3zM13.5 8.5l2 2',
   target: 'M12 19a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M12 13.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z',
   phone: 'M8 3.5h8a1.5 1.5 0 0 1 1.5 1.5v14A1.5 1.5 0 0 1 16 20.5H8A1.5 1.5 0 0 1 6.5 19V5A1.5 1.5 0 0 1 8 3.5zM10.5 17.5h3',
+  wifi: 'M2.6 8.7a15 15 0 0 1 18.8 0M6.1 12.5a10 10 0 0 1 11.8 0M9.5 16.3a5 5 0 0 1 5 0M12 19.9h.01',
+  /* The same aerial with its outer arcs missing. A list of networks where every row wears a full
+     signal is a list that has quietly stopped answering the question it is there to answer. */
+  'wifi-mid': 'M6.1 12.5a10 10 0 0 1 11.8 0M9.5 16.3a5 5 0 0 1 5 0M12 19.9h.01',
+  'wifi-low': 'M9.5 16.3a5 5 0 0 1 5 0M12 19.9h.01',
+  alert: 'M12 20.5a8.5 8.5 0 1 0 0-17 8.5 8.5 0 0 0 0 17zM12 7.8v5M12 16.2h.01',
   share: 'M8.5 12a2.5 2.5 0 1 0-5 0 2.5 2.5 0 0 0 5 0zM20.5 6a2.5 2.5 0 1 0-5 0 2.5 2.5 0 0 0 5 0zM20.5 18a2.5 2.5 0 1 0-5 0 2.5 2.5 0 0 0 5 0zM8.3 10.8l7-3.5M8.3 13.2l7 3.5',
 }
 const FILLED = new Set(['play', 'pause', 'next', 'prev'])

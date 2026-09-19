@@ -46,6 +46,7 @@
 #include <Preferences.h>
 #include <PubSubClient.h>
 #include <WiFi.h>
+#include <ESPmDNS.h>
 
 #include "esp_coexist.h"
 #include "mesh_crypto.h"
@@ -903,6 +904,162 @@ static void dropLink(const char *why) {
     haveTarget = false;
 }
 
+// ---------------------------------------------------------------- finding the hub
+//
+// docs/network.md, piece 1. The address written into a puck at setup is a DHCP lease, and a router
+// reboot that reshuffles the pool used to strand every puck in the house without anybody touching
+// the Wi-Fi at all. So there are three ways to find the hub and they are tried in turn:
+//
+//   the name, over mDNS   -- survives the lease changing
+//   the last address that answered -- survives mDNS being filtered, which some mesh routers do
+//   the address it was given -- survives a puck that has never connected
+//
+// `hubTry` moves on after every failed attempt, so a name that resolves to something stale cannot
+// pin the puck to a dead address for ever. Whatever works is written down.
+static uint8_t hubTry = 0;
+
+static const char *hubAddress() {
+    static char out[64];
+    for (int i = 0; i < 3; i++) {
+        switch ((hubTry + i) % 3) {
+        case 0:
+            if (cfg.mqttName[0]) {
+                IPAddress a = MDNS.queryHost(cfg.mqttName, 2000);
+                if ((uint32_t)a != 0) { strlcpy(out, a.toString().c_str(), sizeof(out)); return out; }
+            }
+            break;
+        case 1:
+            if (cfg.lastIp[0]) { strlcpy(out, cfg.lastIp, sizeof(out)); return out; }
+            break;
+        case 2:
+            if (cfg.mqttHost[0]) { strlcpy(out, cfg.mqttHost, sizeof(out)); return out; }
+            break;
+        }
+    }
+    strlcpy(out, cfg.mqttHost, sizeof(out));
+    return out;
+}
+
+// ---------------------------------------------------------------- two keys on the ring
+//
+// docs/network.md, piece 3. When neither network can be reached the puck alternates between the one
+// it is on and the one it was on before, every couple of minutes, for ever. That is what makes a
+// mistyped password a four-minute inconvenience rather than a walk around the house with a USB lead,
+// and what makes it not matter whether the hub or the pucks move first.
+#define WIFI_SWAP_MS 120000
+
+static void wifiTick() {
+    static uint32_t downSince = 0;
+    if (WiFi.status() == WL_CONNECTED) {
+        if (downSince) {
+            downSince = 0;
+            // This pair is the one that works. If the alternation had put the spare in front, write
+            // the ring down in its new order so a reboot does not start on the dead one.
+            configConfirmWifi();
+        }
+        return;
+    }
+    if (!downSince) { downSince = millis(); return; }
+    if (!cfg.ssid2[0] || millis() - downSince < WIFI_SWAP_MS) return;
+    configSwapWifi();
+    WiFi.disconnect();
+    WiFi.begin(cfg.ssid, cfg.pass);
+    downSince = millis();
+}
+
+// ---------------------------------------------------------------- what the hub tells us
+//
+// One command topic per puck, in the same shape as `claim`: words, not JSON, hex-encoded so nothing
+// needs quoting, queued here and acted on from the loop. Doing it in the callback would mean tearing
+// down Wi-Fi from inside the MQTT client's own stack.
+//
+//   wifi <at> <ssid-hex> <pass-hex> <name-hex> <ip> <port>
+//   spare forget <at>
+//
+// The command is RETAINED, so a puck that was switched off during a move gets it when it comes back.
+// `at` is what stops a retained command being obeyed for ever: the newest one already applied is
+// kept in NVS and anything at or before it is ignored.
+static char cfgLine[400];
+static volatile bool cfgWaiting = false;
+
+static int unhexTo(const char *s, char *out, size_t max) {
+    size_t n = strlen(s);
+    if ((n & 1) || n / 2 >= max) return -1;
+    for (size_t i = 0; i < n; i += 2) {
+        auto v = [](char c) -> int {
+            if (c >= '0' && c <= '9') return c - '0';
+            if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+            if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+            return -1;
+        };
+        int a = v(s[i]), b = v(s[i + 1]);
+        if (a < 0 || b < 0) return -1;
+        out[i / 2] = (char)((a << 4) | b);
+    }
+    out[n / 2] = 0;
+    return (int)(n / 2);
+}
+
+static void cfgAck();
+
+static void cfgApply() {
+    cfgWaiting = false;
+    char line[400];
+    strlcpy(line, cfgLine, sizeof(line));
+    char *w[8] = {0};
+    int nw = 0;
+    for (char *q = strtok(line, " \t"); q && nw < 8; q = strtok(nullptr, " \t")) w[nw++] = q;
+    if (nw < 2) return;
+
+    if (!strcmp(w[0], "spare") && !strcmp(w[1], "forget") && nw == 3) {
+        configForgetSpare((uint32_t)strtoul(w[2], nullptr, 10));
+        cfgAck();
+        return;
+    }
+    if (strcmp(w[0], "wifi") || nw < 5) { Serial.printf("[cfg] not understood: %s\n", w[0]); return; }
+    uint32_t at = (uint32_t)strtoul(w[1], nullptr, 10);
+    char ssid[33], pass[65], name[33];
+    if (unhexTo(w[2], ssid, sizeof(ssid)) < 0 || unhexTo(w[3], pass, sizeof(pass)) < 0) { Serial.println("[cfg] bad hex"); return; }
+    name[0] = 0;
+    if (nw >= 5) unhexTo(w[4], name, sizeof(name));
+    const char *ip = nw >= 6 ? w[5] : "";
+    if (!configNewWifi(ssid, pass, name, ip, at)) {
+        // Nothing changed -- we are already on it, or this is a replay. Still worth answering: the
+        // hub is waiting to hear that this puck is where it should be, and silence would put it on
+        // the "did not follow" list while it sits there perfectly connected.
+        cfgAck();
+        return;
+    }
+    Serial.printf("[cfg] moving to %s\n", cfg.ssid);
+    // The ack cannot be sent from the new network until we are on it, and we may never get there --
+    // in which case wifiTick() walks us back onto the spare and the ack goes out from there.
+    WiFi.disconnect();
+    WiFi.begin(cfg.ssid, cfg.pass);
+}
+
+
+// What the hub is waiting to hear. Retained, so it survives the hub restarting mid-move, and sent on
+// every broker connect rather than once after a change: an ack can only be published from a network
+// the puck actually joined, which is what makes it proof rather than a promise.
+static void cfgAck() {
+    if (!mqtt.connected()) return;
+    char t[80], body[160], s1[70], s2[70];
+    auto esc = [](const char *in, char *out, size_t max) {
+        size_t j = 0;
+        for (size_t i = 0; in[i] && j + 2 < max; i++) {
+            if (in[i] == '"' || in[i] == '\\') out[j++] = '\\';
+            out[j++] = in[i];
+        }
+        out[j] = 0;
+    };
+    esc(cfg.ssid, s1, sizeof(s1));
+    esc(cfg.ssid2, s2, sizeof(s2));
+    snprintf(body, sizeof(body), "{\"at\":%lu,\"ssid\":\"%s\",\"spare\":\"%s\"}",
+             (unsigned long)cfg.cfgAt, s1, s2);
+    bridgeTopic(t, sizeof(t), "cfgack");
+    mqtt.publish(t, body, true);
+}
+
 // ---------------------------------------------------------------- mqtt
 
 // Anything claim.cpp wants to say goes out under this puck's own bridge topic.
@@ -922,6 +1079,12 @@ static void mqttCb(char *topic, uint8_t *payload, unsigned int len) {
     // switches on it, so it arrives on the bridge's own topic and has to be
     // matched before the per-switch parsing below throws it away.
     char claimTopic[80];
+    bridgeTopic(claimTopic, sizeof(claimTopic), "cfg");
+    if (!strcmp(t, claimTopic)) {
+        strlcpy(cfgLine, (const char *)msg, sizeof(cfgLine));
+        cfgWaiting = true;              // acted on from the loop; see cfgApply()
+        return;
+    }
     bridgeTopic(claimTopic, sizeof(claimTopic), "claim");
     if (!strcmp(t, claimTopic)) {
         // Queue only. The radio work happens on the loop for the same reason the
@@ -972,7 +1135,8 @@ static void mqttReconnect() {
         if (moan) { lastWhy = millis(); Serial.println("[mqtt] no broker configured -- waiting for the hub"); }
         return;
     }
-    mqtt.setServer(cfg.mqttHost, cfg.mqttPort);
+    const char *addr = hubAddress();
+    mqtt.setServer(addr, cfg.mqttPort);
 
     char id[40], will[80];
     snprintf(id, sizeof(id), "%s-bridge-%s", cfg.mqttBase, chipHex);
@@ -985,10 +1149,13 @@ static void mqttReconnect() {
         if (moan) {
             lastWhy = millis();
             Serial.printf("[mqtt] connect failed (rc %d) to %s:%u as %s\n", mqtt.state(),
-                          cfg.mqttHost, (unsigned)cfg.mqttPort, id);
+                          addr, (unsigned)cfg.mqttPort, id);
         }
+        hubTry++;      // that way of finding the hub did not work; try the next one
         return;
     }
+    // It answered. Whatever found it is worth keeping, whichever of the three it was.
+    configRemember(addr);
     mqtt.publish(will, "online", true);
     char sub[80];
     snprintf(sub, sizeof(sub), "%s/%s/+/set", cfg.mqttBase, netHex);
@@ -997,6 +1164,9 @@ static void mqttReconnect() {
     mqtt.subscribe(sub);
     bridgeTopic(sub, sizeof(sub), "claim");
     mqtt.subscribe(sub);
+    bridgeTopic(sub, sizeof(sub), "cfg");
+    mqtt.subscribe(sub);
+    cfgAck();
     Serial.printf("[mqtt] connected as %s, commands on %s\n", id, sub);
     announceBridge();
     char t[80], v[16];
@@ -1022,6 +1192,10 @@ static void mqttReconnect() {
 // short: the CDC link drops the middle of long lines (see reply() in config.cpp). The proxy's
 // address is on MQTT already; only its signal strength is worth the bytes here.
 void bridgeStatusLine(char *out, size_t n) {
+    // `spare` says whether this puck has a way back if the Wi-Fi changes under it -- the one thing
+    // somebody holding it on a cable cannot see. The SSID itself is deliberately NOT here: this line
+    // is parsed on spaces (tools/puck_cable.py) and a network called "Flat 3 guest" would tear it in
+    // half. The hub learns the name from cfgack, over the broker, where it is quoted properly.
     static const char *LIGHTS[] = {"off", "looking", "heard", "far"};
     // Which of the maker's keys this image carries, two bytes of each. Nothing verifies a signature
     // yet (docs/puck-updates.md), but a key cannot be added to a puck after its cable visit, so they
@@ -1041,8 +1215,9 @@ void bridgeStatusLine(char *out, size_t n) {
     }
     int rssi = 0;
     if (linkUp) { const char *r = strstr(proxyDesc, "rssi "); if (r) rssi = atoi(r + 5); }
-    snprintf(out, n, "status wifi=%s mqtt=%s rssi=%d sw=%u light=%s keys=%s", ip,
-             mqtt.connected() ? "up" : "down", rssi, (unsigned)nSwitches, LIGHTS[(int)lightGet() & 3], keys);
+    snprintf(out, n, "status wifi=%s mqtt=%s rssi=%d sw=%u light=%s spare=%s keys=%s", ip,
+             mqtt.connected() ? "up" : "down", rssi, (unsigned)nSwitches, LIGHTS[(int)lightGet() & 3],
+             cfg.ssid2[0] ? "yes" : "no", keys);
 }
 
 void setup() {
@@ -1125,6 +1300,9 @@ void setup() {
         Serial.printf("[wifi] %s\n", WiFi.localIP().toString().c_str());
     else
         Serial.println("[wifi] not yet connected; will keep trying");
+    // So the hub can be found by name rather than by a DHCP lease that will change. Starting this
+    // needs no network of its own -- it is answered and asked for over whatever link comes up.
+    MDNS.begin(chipHex);
 
     mqtt.setServer(cfg.mqttHost, cfg.mqttPort);
     mqtt.setBufferSize(1024);   // discovery payloads are bigger than the 256-byte default
@@ -1178,6 +1356,10 @@ void loop() {
         delay(200);
         return;
     }
+    // Both of these before anything on the radio: one decides which Wi-Fi we are even trying, and
+    // the other may be about to change it. Neither can run inside the MQTT callback that queued it.
+    wifiTick();
+    if (cfgWaiting) cfgApply();
     if (WiFi.status() == WL_CONNECTED) {
         mqttReconnect();
         mqtt.loop();

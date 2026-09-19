@@ -14,6 +14,8 @@
 //
 //   hello                              -> bridge <chip> <fw> blank|set
 //   set wifi <ssid> <pass>             -> ok wifi
+//   set wifi2 <ssid> <pass>            -> ok wifi2     the OTHER key on the ring; see below
+//   set name <hostname>                -> ok name      the hub's name, resolved before any number
 //   set mqtt <host> <port> <user> <pass>  -> ok mqtt
 //   set keys <netkey> <appkey> <iv>    -> ok keys      (32 hex, 32 hex, decimal)
 //   set base <base>                    -> ok base      (MQTT base, default "mesh")
@@ -35,11 +37,32 @@
 
 #include <Arduino.h>
 
-#define BRIDGE_FW "0.3.1"
+#define BRIDGE_FW "0.4.0"
+
+// TWO KEYS ON THE RING, AND A NAME RATHER THAN A NUMBER (docs/network.md, pieces 1 and 3).
+//
+// A puck used to hold one Wi-Fi and one broker address, both written once over a cable. Both went
+// stale the day the house changed anything: a new router password made the puck deaf for ever, and
+// a DHCP reshuffle did the same without anybody touching the Wi-Fi at all. Neither had a way back
+// that was not a walk around the house with a USB lead.
+//
+// So the puck now holds the credentials it is using AND the ones it used before, and when it can
+// reach neither it alternates between them every couple of minutes, for ever. That one change makes
+// the order of a move stop mattering -- whoever arrives second finds the other already there -- and
+// makes a mistyped password repair itself within minutes instead of stranding the house.
+//
+// The broker is found by name first (mDNS), then by the last address that actually answered, then
+// by the address it was given. Any success is remembered. A house whose router filters multicast is
+// caught by the second; a house that reshuffles its leases is caught by the first.
 
 struct BridgeConfig {
     char ssid[33];
     char pass[65];
+    char ssid2[33];     // the other key on the ring; empty until the house has moved once
+    char pass2[65];
+    char mqttName[33];  // the hub's name ("hub"), resolved over mDNS before mqttHost is tried
+    char lastIp[16];    // the last address that actually answered, whatever it was found by
+    uint32_t cfgAt;     // the newest cfg command already applied: a retained one must not replay
     char mqttHost[65];
     uint16_t mqttPort;
     char mqttUser[33];
@@ -60,6 +83,30 @@ void configLoad();
 bool configBlank();
 // The line protocol above, on its own task. `chip` is this puck's id for `hello`.
 void configSerialBegin(const char *chip);
+
+// ---- what the running bridge writes back ----
+
+// An address that answered. Cheap to call: it writes only when the value actually changed, because
+// NVS has a finite number of erases in it and a broker reconnect loop is not a rare event.
+void configRemember(const char *ip);
+
+// A new Wi-Fi arrived over the air. The one in use becomes the spare, the new one takes its place,
+// and `at` is remembered so the retained command that carried it is not applied a second time.
+// Returns false if this command has already been applied, or is not usable.
+bool configNewWifi(const char *ssid, const char *pass, const char *name, const char *ip, uint32_t at);
+
+// Everybody made it: the spare is no longer worth keeping. Only the hub may decide this -- a puck
+// that is online cannot tell whether the hub can see it.
+void configForgetSpare(uint32_t at);
+
+// One of the two actually worked. If that was the spare (configSwapWifi put it in front), write the
+// ring down in its new order, so a puck that reboots does not spend two minutes on the dead one
+// first. Does nothing when the order on disk is already right.
+void configConfirmWifi();
+
+// Swap the two keys on the ring, in memory only. Called when neither network can be reached, so the
+// next attempt tries the other one; nothing is written until one of them actually works.
+void configSwapWifi();
 
 // One line about how the bridge is doing right now, for `status`. Lives in
 // main.cpp, which is where the state is.

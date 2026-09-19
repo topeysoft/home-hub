@@ -43,6 +43,15 @@ def needs_code(method: str, path: str) -> bool:
     # and reporting where it ended up give nothing away, and a code to wave a knock off would leave
     # one stuck on the screen for whoever could not remember it.
     if path in ("/bridge/adopt", "/bridge/wifi") and m == "POST": return True
+    # Changing the network the house runs on is the same giveaway again, and worse in one way: it can
+    # leave the hub somewhere nothing can reach it. Looking at what the hub is connected to is not
+    # gated -- a household should be able to read its own situation without typing anything -- and
+    # neither is a scan, which finds only what any phone in the room already sees. docs/network.md.
+    # /network/scan and /network/done are not here, for the reason "not mine" and "leave it here" are
+    # not on the bridge line above: a scan finds only what any phone in the room already sees, and
+    # reading how a move went changes nothing. A code in front of either would be a code in front of
+    # a household finding out what happened to their own house.
+    if path.startswith("/network") and m == "POST" and path not in ("/network/scan", "/network/done"): return True
     # Sharing the house with Apple Home, Google Home or Alexa is a change to the house, not a tap on
     # it. The bridge's own routes are not here: they never reach this function, because the service
     # token answered for them before the gate. docs/matter.md.

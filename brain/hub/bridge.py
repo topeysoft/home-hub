@@ -610,10 +610,15 @@ class Bridges:
         # so a network called "Flat 3 guest" needs no quoting rules on either side, and the puck
         # needs no JSON parser it does not already have.
         body = f"wifi {int(at)} {_hx(ssid)} {_hx(password)} {_hx(cfg['name'])} {cfg['host']} {cfg['port']}"
-        asked = sorted(c for c, p in self.pucks.items() if p.get("online"))
-        for chip in asked:
+        # EVERY puck the house knows is told, not only the ones listening. The command is retained, so
+        # one that was switched off during the move collects it the moment it next reaches the broker
+        # and joins by itself -- which is most of the "did not follow" list, handled without anybody
+        # fetching anything. Only the ones that ARE listening are counted, because only they can be
+        # expected back inside the few minutes somebody is standing at the wall for.
+        for chip in sorted(self.pucks):
             await self.hub.ha.call("mqtt", "publish", None,
                                    topic=f"{BASE}/bridge/{chip}/cfg", payload=body, retain=True)
+        asked = sorted(c for c, p in self.pucks.items() if p.get("online"))
         self.moving = {"state": "moving" if asked else "done", "ssid": ssid, "at": at,
                        "asked": asked, "followed": []}
         self.hub.log.add("home", "network", None, f"bridges moving to {ssid}", source="user")
@@ -643,6 +648,9 @@ class Bridges:
             if late: log.info("bridge: %d did not follow to %s", len(late), j["ssid"])
             # Everybody came: the spare is no longer worth the room it takes on them. Told once,
             # and only now -- a puck that is online cannot tell whether the HUB can see it.
+            # Only the ones that followed are told to drop the spare, and only their retained command
+            # is overwritten -- a puck that has still not been seen keeps the `wifi` command waiting
+            # for it on its own topic.
             if not late:
                 for chip in j["asked"]:
                     with contextlib.suppress(Exception):
