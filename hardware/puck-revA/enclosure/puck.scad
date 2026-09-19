@@ -9,10 +9,10 @@
 //
 //   * standoff (9 mm), measured from the EMITTER FACE and not from the PCB -- the LED body is
 //     1.6 mm of that and leaving it out costs you most of the tolerance. docs/puck-hardware.md:
-//     closer than 8-10 mm and you see three distinct hotspots through the wall. At the default
-//     led_ring_d the emitters also sit 8.4 mm in from the side wall, so the vertical and radial
-//     path lengths come out deliberately close -- a glow that is even from the top AND from the
-//     side is the whole point of a body whose orientation nobody can predict.
+//     closer than 8-10 mm and you see distinct hotspots through the wall. At led_ring_d = 34 the
+//     emitters also sit 8.4 mm in from the side wall, so vertical and radial path lengths come out
+//     deliberately close, and at 8.9 mm pitch eleven dice blur into one body -- which is the whole
+//     point: this object GLOWS, it does not wear a light ring. That was considered and rejected.
 //   * diff_wall (2.0 mm). The doc allows 1.2-2.0. Uniform 2.0 rather than a thin top and a thick
 //     skirt, because a step in wall thickness is a step in brightness, and it shows.
 //   * The joint sits above the connector, not at the PCB plane, and the skirt belongs to the
@@ -20,7 +20,7 @@
 //     so anything the base sticks up would have to be wider than the bore it is standing in --
 //     which cannot be built. Putting the skirt on the diffuser costs a few millimeters of glowing
 //     band and buys a connector opening that is a notch in an opaque rim: no bridging, no supports.
-//   * boss_angles avoid the antenna. Non-negotiable, and asserted below rather than commented.
+//   * bolt_circle and boss_angles are solved by gen_pcb.py against the real board, not chosen here.
 //
 // PRINTING. Base: any color, 0.4 mm nozzle, 0.2 mm layers, 3 perimeters, 20% infill.
 //
@@ -36,16 +36,16 @@
 
 /* [Which shell] */
 variant = "shelf";      // [shelf, tail, dock]
-show    = "assembly";   // [assembly, base, diffuser, board, section]
+show    = "assembly";   // [assembly, base, diffuser, board, plunger, section]
 
 /* [The board it holds] */
 board_d     = 50;    // PCB outside diameter
 board_t     = 1.6;
-bolt_circle = 42;    // 3x M2, frozen with the board outline; see gen_pcb.py for why 42 not 40
+bolt_circle = 44.8;  // 3x M2 at r=22.4, outside the LED ring; gen_pcb.py solved it, now frozen
 board_clear = 0.4;   // radial slop around the PCB
 
 /* [Light] */
-led_ring_d = 34;     // circle the FOUR SK6812s sit on -- four, because three will not place
+led_ring_d = 34;     // 11 SK6812-RGBW at r=17 -- a glowing body, not a light ring
 led_h      = 1.6;    // SK6812 5050 body height -- the emitter face, not the PCB, is the datum
 standoff   = 9;      // emitter face to the inner surface of the diffuser's top
 diff_wall  = 2.0;
@@ -63,17 +63,15 @@ lip_h     = 4.0;
 usb_w     = 9.6;
 usb_h     = 3.8;
 btn_d     = 3.6;
-btn_angle = 75;
+btn_angle = 180;     // the front of the shelf variant: where you would tap it
 
 /* [Angles] */
 conn_angle      = 0;    // USB-C, and the cable exit on the tail variant
-antenna_angle   = 180;  // the module's antenna overhangs the board edge here
-antenna_keepout = 30;   // +/- degrees that must stay free of bosses, magnets, metal
 
 /* [Dock variant] */
 magnet_d = 6.2;
 magnet_t = 3.2;
-magnet_angles = [110, 290];
+magnet_angles = [105, 225, 345];  // three, each 60 deg off a boss
 
 /* [Tail variant] */
 tie_tab_w   = 12.0;    // tangential width of the strain-relief tab
@@ -94,31 +92,26 @@ pcb_top   = pcb_z + board_t;           // the joint plane, and the datum for eve
 diff_top  = pcb_top + led_h + standoff; // inner face of the diffuser's roof
 total_h   = diff_top + diff_wall;
 base_h    = pcb_top + lip_h;           // joint plane, deliberately above the connector
-skirt_z   = pcb_top + 0.8;             // skirt starts clear of board-edge components
+skirt_z   = pcb_top + 1.6;             // clears the 1.4 mm KMR2 switches and SOT-23s under it
 skirt_od  = inner_d - 2 * fit_clear;   // the diffuser's skirt drops INSIDE the base
 skirt_id  = skirt_od - 2 * diff_wall;
 
-boss_angles = [24, 144, 264];   // solved against the board, not chosen
+boss_angles = [45, 165, 285];   // solved against the board, not chosen
 
-// The one rule that cannot be negotiated, checked rather than trusted. Anything solid and
-// especially anything metal within the keepout detunes the antenna, and the symptom is FAR
-// breathing red in rooms where a devkit was fine.
-module keepout_check(angles, what) {
-    for (a = angles) {
-        d = abs(((a - antenna_angle + 180) % 360) - 180);
-        assert(d > antenna_keepout, str(what, " at ", a, " deg is ", d,
-               " deg from the antenna; needs more than ", antenna_keepout));
-    }
-}
-keepout_check(boss_angles, "mounting boss");
-keepout_check(magnet_angles, "magnet");
+// THE ANTENNA IS ON THE ROOF, NOT ON THE BOARD. The module is a -1U with a U.FL, and a 2.4 GHz flex
+// antenna adheres to the inside of the diffuser roof, centred over the module. That is why there is
+// no keepout angle in this file any more: the old rule kept bosses and magnets away from a trace
+// antenna at the board edge, and that antenna is gone. What replaces it is simpler -- the roof is
+// plastic, the screws sit 12 mm below it and the magnets further still, and nothing metal is added
+// above the board. If a later variant puts anything metal in the roof, that is the moment to think
+// about it again.
 
 // Bosses and magnet pockets share a floor and are solved on different circles, so their angles alone
 // do not tell you whether they touch. Check the actual distance.
 module spacing_check() {
     for (b = boss_angles) for (m = magnet_angles) {
         bx = (bolt_circle/2) * cos(b); by = (bolt_circle/2) * sin(b);
-        mx = (bolt_circle/2 - 4) * cos(m); my = (bolt_circle/2 - 4) * sin(m);
+        mx = (bolt_circle/2 - 2) * cos(m); my = (bolt_circle/2 - 2) * sin(m);   // where base_dock puts them
         d = sqrt(pow(bx-mx,2) + pow(by-my,2));
         need = boss_d/2 + magnet_d/2 + wall + 0.6;
         assert(d > need, str("boss ", b, " and magnet ", m, " are ", d, " mm apart; need ", need));
@@ -221,17 +214,28 @@ module diffuser() {
         translate([0, 0, base_h - 0.01]) cylinder(d = inner_d, h = diff_top - base_h + 0.01);
         translate([0, 0, skirt_z - 0.01]) cylinder(d = skirt_id, h = base_h - skirt_z + 0.02);
         usb_cut();
+        button_cut();       // through the skirt too, or the plunger has nothing to reach through
     }
+}
+
+// THE PLUNGER. A side-actuated switch at the board edge sits 2.4 mm inside the base wall's inner
+// face, behind the diffuser's skirt; a fingertip cannot reach it through a 3.6 mm hole. This pin
+// can. It drops into the button hole from outside, its head stops it falling in, and the shaft
+// rests on the switch actuator. Print it standing on its head, one per shell, in the base colour.
+plunger_d   = btn_d - 0.5;                 // slides in the hole
+plunger_l   = wall + 2.0 + 1.6;            // base wall + skirt gap + reach to the actuator
+module plunger() {
+    cylinder(d = btn_d + 2.0, h = 1.0);                    // the head, outside the wall
+    translate([0, 0, 1.0]) cylinder(d = plunger_d, h = plunger_l);
 }
 
 module board_mock() {
     color("#2d6a4f") translate([0, 0, pcb_z]) cylinder(d = board_d, h = board_t);
-    // the four emitters, where the standoff is measured from (gen_pcb.py solves the angles)
-    for (a = [43, 128, 232, 317])
+    // eleven emitters on r=17 at 30 deg; the twelfth slot is the connector (gen_pcb.py places them)
+    for (a = [30 : 30 : 330])
         color("#fff1d8") at(a, led_ring_d/2, pcb_top) cylinder(d = 5, h = 1.6);
-    // the module, lying with its antenna end over the board edge
-    color("#1b1d23") at(antenna_angle, board_d/2 - 12.75, pcb_top + 1.55)
-        cube([25.5, 18, 3.1], center = true);
+    // the -1U module at the centre; its antenna is a flex on the roof, not on the board
+    color("#1b1d23") translate([0, 0, pcb_top + 1.55]) cube([19.2, 18, 3.1], center = true);
 }
 
 // ---- what to render --------------------------------------------------------------------------
@@ -239,6 +243,7 @@ module board_mock() {
 if (show == "base")          base();
 else if (show == "diffuser") diffuser();
 else if (show == "board")    board_mock();
+else if (show == "plunger")  plunger();
 else if (show == "section")  difference() {
     union() { color("#8f939c") base(); color("#f0e6d2", 0.75) diffuser(); board_mock(); }
     translate([0, -outer_d, -1]) cube([outer_d, outer_d * 2, total_h + 2]);

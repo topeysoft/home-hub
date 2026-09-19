@@ -55,7 +55,7 @@ const tabs = computed(() => [
         <span class="topbar-temp">{{ temp }}</span>
       </span>
       <span class="link" :class="{ up: store.linkUp }">{{ store.linkUp ? 'Connected' : 'Reconnecting' }}</span>
-      <button class="topbar-add" :class="{ attention: store.found.length }" @click="store.sheet = 'add'" :aria-label="store.found.length ? `Add a device, ${store.found.length} found nearby` : 'Add a device'">
+      <button class="topbar-add" :class="{ attention: store.found.length }" @click="store.sheet = 'add'" :aria-label="store.found.length ? `Add to the house, ${store.found.length} found nearby` : 'Add to the house'">
         <Icon name="plus" :size="18" />
       </button>
       <button class="topbar-add topbar-house" :class="{ attention: updateReady() }" @click="store.sheet = 'house'" :aria-label="updateReady() ? 'This house, an update is ready' : 'This house'">

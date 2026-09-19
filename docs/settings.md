@@ -17,7 +17,7 @@ sent to Home Assistant's own UI at `:8123`. It was the right shortcut for a firs
 configuration surface is enormous and reproducing all of it is a losing game. But every Advanced link is a place the
 product admits it stops, and there are five of them: the bottom of the Add sheet ("for anything this page cannot
 add"), the Code sheet, *This hub*, the setup screen ("Stuck? Open Home Assistant to reset the password"), and the raw
-address `AddPanel.vue` hands a maker's page that asks for it.
+address `prove/SignIn.vue` hands a maker's page that asks for it.
 
 ## What still needs another interface
 

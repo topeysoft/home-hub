@@ -25,9 +25,17 @@ export const store = reactive({
   ambient: { location: null, weather: null } as Ambient,
   ambientLoaded: false,
   rules: {} as Rules,                        // scene rules from the brain, to tell whether a room still matches its scene
-  sheet: (['location', 'add', 'code', 'why', 'routines', 'hub', 'look', 'house', 'people', 'accounts', 'share', 'notes'].includes(new URLSearchParams(location.search).get('sheet') ?? '') ? new URLSearchParams(location.search).get('sheet') : null) as Sheet,   // ?sheet=location previews one
+  /* ?sheet=location previews one. ?add=switch is not a preview but the wall's own handoff: the code
+     on the wall opens the house on a phone, and it promised to land ON the step with the camera --
+     which it never did, because nothing here opened the page it lives on. Now it does. */
+  sheet: (new URLSearchParams(location.search).has('add') ? 'add'
+    : ['location', 'add', 'code', 'why', 'routines', 'hub', 'look', 'house', 'people', 'accounts', 'share', 'notes'].includes(new URLSearchParams(location.search).get('sheet') ?? '') ? new URLSearchParams(location.search).get('sheet') : null) as Sheet,
   whyRoom: new URLSearchParams(location.search).get('room') as string | null,   // the room the why sheet is about; ?sheet=why&room=kitchen previews it
   resume: new URLSearchParams(location.search).get('signin') as string | null,   // a conversation already open in the house (signing an account in again); the add sheet picks it up. ?sheet=add&signin=<flow> previews it
+  /* ...and what it is about, when whoever handed it over knows. The screen it lands on is headed by
+     the thing being signed in to -- "Google Nest" -- rather than by the job, which the panel's own
+     title already says. Empty when a note handed it over and only the flow was known. */
+  resumeName: '' as string,
   routines: [] as Routine[],                 // the brain's rules, for the routines sheet and to name a rule on a room
   routineErrors: [] as string[],             // rules the brain could not read, in its own words
   drafts: [] as Routine[],                   // routines the assistant wrote that wait for a person's OK
@@ -71,6 +79,9 @@ export const store = reactive({
      all, which is most of them. `state: 'none'` is a hub that has them and is not busy, which is not
      the same thing and is why this is not cleared to null -- see refreshBridge(). */
   bridge: null as Bridge | null,
+  /* A room the panel has been asked to open from somewhere else -- New devices, after an account
+     brought in six things at once. App.vue takes it and clears it; nothing else reads it. */
+  goRoom: null as string | null,
   sky: { elevation: -20, azimuth: 0, phase: 0, hour: 0, month: 6, condition: 'clear-night', guessed: true },   // what the sky draws; month is seasonal (0 midwinter → 6 midsummer, either hemisphere)
 })
 
@@ -569,7 +580,7 @@ export function restartLink(up: boolean): boolean {
 
 export function openWhy(roomId: string) { store.whyRoom = roomId; store.sheet = 'why' }
 /** Pick up a conversation the house already has open, on the sheet that draws every other one. */
-export function openFlow(flowId: string) { store.resume = flowId; store.sheet = 'add' }
+export function openFlow(flowId: string, name = '') { store.resume = flowId; store.resumeName = name; store.sheet = 'add' }
 
 /* ---------- setup and things found nearby ---------- */
 /** True while the panel should show the setup flow instead of the house. */
@@ -652,6 +663,11 @@ function applyDevice(d: Device) {
   }
 }
 let stop: (() => void) | undefined, lostTimer: number | undefined, skyTimer: number | undefined
+/* The house again, on its own: the rooms and what is in them. Something that has just joined a radio
+   lands in the house a second or two later under no room at all, and this is how the screen that let
+   it in gets to see it -- so it can ask which room while somebody is still standing next to it. */
+export async function reloadHome() { try { applyHome(await getHome()) } catch {} }
+
 export async function load() {
   await refreshStatus()
   if (lock.unpaired) return                    // the join screen is up; the house answers once this phone is in

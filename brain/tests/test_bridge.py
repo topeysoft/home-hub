@@ -414,6 +414,17 @@ class LookingAtABridgeThatIsFine(unittest.TestCase):
         with self.assertRaises(ValueError): run(self.b.light("c8ebba", night=True, level=999))
         self.assertEqual(self.hub.ha.calls, [])
 
+    def test_a_hub_with_no_manifest_says_it_cannot_tell_rather_than_current(self):
+        """shipped() is "" with no manifest beside the image, and behind() is then empty for EVERY
+        puck -- so "not behind" and "nobody knows" were the same answer, and the panel drew a puck
+        three versions old as current."""
+        self.assertIsNone(self.each()["c8ebba"]["shipped"])
+        self.assertFalse(self.each()["c8ebba"]["behind"])
+
+    def test_when_the_house_does_know_what_it_ships_it_says_so(self):
+        self.b.cable.ships("0.5.0")
+        self.assertEqual(self.each()["c8ebba"]["shipped"], "0.5.0")
+
     def test_the_brightness_a_household_chose_is_learned_from_the_puck(self):
         self.b._on_mqtt({"topic": "mesh/bridge/f4a9f3/night/brightness", "payload": "200"})
         self.assertEqual(self.each()["f4a9f3"]["level"], 200)

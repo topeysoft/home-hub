@@ -1,0 +1,124 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      /* the panel's own tokens, unchanged -- app/src/panel.css */
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp: #e9b872; --lamp-ink: #2a1c07; --live: #74c69d; --danger: #e08a8a;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
+           padding: 12px 14px; border-radius: 16px; background: var(--surface); border: 1px solid var(--edge); }
+    .row.lit { border-color: rgba(233,184,114,.35);
+               background: linear-gradient(rgba(233,184,114,.1), rgba(233,184,114,.1)), var(--surface); }
+    .ic { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center;
+          background: var(--surface-hi); color: var(--ink-2); }
+    .ic.on { background: var(--lamp); color: var(--lamp-ink); }
+    .t1 { font-size: 15.5px; font-weight: 500; }
+    .t2 { font-size: 13px; color: var(--muted); }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 13px 24px; border-radius: 999px;
+           background: var(--ink); color: var(--bg); font-weight: 500; font-size: 16px; }
+    .btn.ghost { background: var(--surface-hi); color: var(--ink); border: 1px solid var(--edge);
+                 padding: 12px 20px; font-size: 15px; }
+    .btn.sm { padding: 9px 17px; font-size: 14px; }
+    .sheet { border-radius: 26px; background: rgba(22,24,30,.94); border: 1px solid var(--edge-hi);
+             box-shadow: 0 40px 100px -30px rgba(0,0,0,.9); overflow: hidden; }
+    .bar { height: 6px; border-radius: 999px; background: rgba(255,255,255,.1); overflow: hidden; }
+    .bar i { display: block; height: 100%; border-radius: 999px; background: var(--lamp); }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--lamp); }
+    .note { padding: 13px 16px 14px; border-radius: 18px; background: var(--surface); border: 1px solid var(--edge); }
+    .chip { display: inline-flex; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--edge);
+            background: var(--surface-hi); font-size: 14px; }
+    .bad { color: var(--danger); }
+    .sw { fill: #ded8cc; stroke: rgba(0,0,0,.22); stroke-width: 2; }
+    .swf { fill: #fbf8f2; stroke: rgba(0,0,0,.12); stroke-width: 1.4; }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: #0c0d10; color: var(--ink); font-size: 17px; line-height: 1.4;">
+  <div style="position: absolute; inset: 0; background: linear-gradient(rgb(29,33,46) 0%, rgb(41,42,63) 44%, rgb(50,45,60) 100%);"></div>
+  <div style="position: absolute; left: -222px; top: -135px; width: 1855px; height: 1156px; background: radial-gradient(58% 54% at 30% 64%, rgba(72,63,135,.36), transparent 68%), radial-gradient(62% 52% at 54% 110%, rgba(55,51,100,.4), transparent 72%);"></div>
+
+  <!-- the page header, as the panel draws a page -->
+  <div style="position: absolute; top: 0; left: 0; right: 0; height: 92px; border-bottom: 1px solid var(--edge); background: rgba(12,13,16,.28);">
+    <div style="position: absolute; left: 56px; top: 26px; display: flex; align-items: center; gap: 14px;">
+      <span style="width: 38px; height: 38px; border-radius: 999px; background: var(--surface-hi); border: 1px solid var(--edge); display: grid; place-items: center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink-2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></span>
+      <span class="dsp" style="font-size: 30px;">Add to the house</span>
+    </div>
+  </div>
+
+  <div style="position: absolute; top: 132px; left: 56px; width: 828px;">
+    <h1 class="dsp" style="margin: 0 0 10px; font-size: 40px;">What are you adding?</h1>
+    <p style="margin: 0; color: var(--ink-2); font-size: 16.5px; max-width: 62ch;">Plug the new thing in first. If it came with its own app, put it on the Wi&#8209;Fi there &mdash; then it turns up here on its own.</p>
+  </div>
+
+  <!-- already waiting: an arrival is beat two with beat one answered -->
+  <div style="position: absolute; top: 268px; left: 56px; width: 828px;">
+    <div class="cap" style="margin-bottom: 11px;">Already waiting</div>
+    <div class="row lit" style="padding: 15px 16px;">
+      <span class="ic on"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg></span>
+      <span><span class="t1" style="font-size: 16px;">Something was plugged in nearby</span><span class="t2" style="display: block; font-size: 13.5px;">It is blinking amber. Nothing of yours is on it yet.</span></span>
+      <span class="btn sm">Have a look</span>
+    </div>
+  </div>
+
+  <!-- the four doors -->
+  <div style="position: absolute; top: 400px; left: 56px; width: 828px;">
+    <div class="cap" style="margin-bottom: 11px;">Or start it yourself</div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+      <div class="row" style="padding: 24px 20px; grid-template-columns: auto 1fr;">
+        <span class="ic" style="width: 44px; height: 44px; border-radius: 14px;"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="5" y="3" width="14" height="18" rx="3"/><circle cx="12" cy="9" r="2.4"/></svg></span>
+        <span><span class="t1" style="font-size: 17px;">A switch on the wall</span><span class="t2" style="display: block; font-size: 13.5px;">A switch or dimmer, new or already up</span></span>
+      </div>
+      <div class="row" style="padding: 24px 20px; grid-template-columns: auto 1fr;">
+        <span class="ic" style="width: 44px; height: 44px; border-radius: 14px;"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M9 3v5M15 3v5M6 8h12v3.5a6 6 0 0 1-12 0z"/><path d="M12 17.5V21"/></svg></span>
+        <span><span class="t1" style="font-size: 17px;">A plug, bulb or sensor</span><span class="t2" style="display: block; font-size: 13.5px;">Something out of a box, in your hand</span></span>
+      </div>
+      <div class="row" style="padding: 24px 20px; grid-template-columns: auto 1fr;">
+        <span class="ic" style="width: 44px; height: 44px; border-radius: 14px;"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="4" y="4" width="16" height="16" rx="4.5"/><path d="M9.5 12h5M12 9.5v5"/></svg></span>
+        <span><span class="t1" style="font-size: 17px;">Something with its own app</span><span class="t2" style="display: block; font-size: 13.5px;">Hue, Sonos, Ring, a thermostat&hellip;</span></span>
+      </div>
+      <div class="row" style="padding: 24px 20px; grid-template-columns: auto 1fr;">
+        <span class="ic" style="width: 44px; height: 44px; border-radius: 14px;"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 10.5 12 4l8 6.5"/><path d="M6 10v9h12v-9"/><circle cx="12" cy="14" r="2"/></svg></span>
+        <span><span class="t1" style="font-size: 17px;">A part of the house</span><span class="t2" style="display: block; font-size: 13.5px;">Another panel, or a bridge for your switches</span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- the quiet footer: wiring lives here now -->
+  <div style="position: absolute; bottom: 46px; left: 56px; width: 828px;">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-radius: 16px; border: 1px dashed var(--edge); color: var(--ink-2); font-size: 14.5px;">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg>
+      <span>Radios, the bridge and anything not working are under <b style="color: var(--ink); font-weight: 500;">Behind the scenes</b>, on the hub&rsquo;s own page.</span>
+    </div>
+  </div>
+
+  <!-- the argument, in the margin -->
+  <div style="position: absolute; top: 268px; left: 928px; width: 412px;">
+    <div class="cap" style="margin-bottom: 14px; color: var(--lamp);">variant A &mdash; four answers</div>
+    <div style="border-left: 2px solid rgba(233,184,114,.4); padding-left: 18px; display: grid; gap: 16px;">
+      <div><div class="t1" style="margin-bottom: 5px;">Every door is a thing, not a wire</div><div class="t2">&ldquo;A plug, bulb or sensor&rdquo; is answerable while holding one. &ldquo;Over the hub&rsquo;s radios&rdquo; never was. The hub works out whether that is Zigbee or Z&#8209;Wave, because that is the hub&rsquo;s job.</div></div>
+      <div><div class="t1" style="margin-bottom: 5px;">Four is the whole catalogue</div><div class="t2">Wall, loose thing, brand, house part. Nothing else has ever been added to one of these houses, and a fifth door would mean the taxonomy is wrong rather than incomplete.</div></div>
+      <div><div class="t1" style="margin-bottom: 5px;">No keyboard on the way in</div><div class="t2">On a wall panel, typing is the expensive move. Searching by brand sits behind the door that needs it, where a phone is usually already in hand.</div></div>
+      <div><div class="t1" style="margin-bottom: 5px;">What is waiting comes first</div><div class="t2">Most of the time the house already noticed. The top card is the whole job; the four doors are the fallback, not the headline.</div></div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

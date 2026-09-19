@@ -1,0 +1,153 @@
+{
+  "artboards": [
+    {
+      "file": "Today.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Today — four ways to do one thing"
+    },
+    {
+      "file": "Under.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Today — the page underneath"
+    },
+    {
+      "file": "Spine.dc.html",
+      "x": 3120,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "The spine — four beats"
+    },
+    {
+      "file": "ChooseA.dc.html",
+      "x": 0,
+      "y": 1080,
+      "w": 1440,
+      "h": 900,
+      "title": "Beat one, A — four answers"
+    },
+    {
+      "file": "ChooseB.dc.html",
+      "x": 1560,
+      "y": 1080,
+      "w": 1440,
+      "h": 900,
+      "title": "Beat one, B — one field"
+    },
+    {
+      "file": "Proving.dc.html",
+      "x": 3120,
+      "y": 1080,
+      "w": 1440,
+      "h": 900,
+      "title": "Beat two — four proofs, one shell"
+    },
+    {
+      "file": "Ending.dc.html",
+      "x": 0,
+      "y": 2160,
+      "w": 1440,
+      "h": 900,
+      "title": "Beats three and four"
+    },
+    {
+      "file": "Words.dc.html",
+      "x": 1560,
+      "y": 2160,
+      "w": 1440,
+      "h": 900,
+      "title": "The word list"
+    },
+    {
+      "file": "Shell.dc.html",
+      "x": 3120,
+      "y": 2160,
+      "w": 1440,
+      "h": 900,
+      "title": "What it costs to build"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "why",
+      "x": -620,
+      "y": 0,
+      "w": 500,
+      "text": "WHY THIS EXISTS\n\nThere is one sentence the house has to say over and over — something new is joining — and it currently says it in five components with five vocabularies: AddPanel, PairPanel, AddSwitch, AddNearby, BridgeSheet.\n\nA person cannot tell that a wall switch and a smart plug are the same job, because the house does not tell them: different headings, different buttons, different words for stopping, and only half of them ask which room the thing is in.\n\nThe first two boards are the receipts. The rest is one flow that every route wears.\n\nNothing here asks the brain to change. The flows, the discovery, the pairing, the bridge — all of that stays exactly as it is. This is about what a person sees and what the buttons say."
+    },
+    {
+      "id": "audit",
+      "x": -620,
+      "y": 1080,
+      "w": 500,
+      "text": "THE PART THAT IS A BUG, NOT A TASTE\n\nOne of these is not a design opinion: opening a door on the Add page does not close the page. The diagnostics list goes on sitting underneath a half-finished question — visible in the second screenshot, where BEHIND THE SCENES follows 'Not now'.\n\nThat is AddPanel swapping its own middle while AddPage keeps drawing its furniture. It is fixed by hiding the furniture whenever a conversation is open, and nothing else depends on it."
+    },
+    {
+      "id": "spine",
+      "x": -620,
+      "y": 2160,
+      "w": 500,
+      "text": "THE SHAPE\n\nFour beats, in order, every time: what have you got, which one is yours, letting it in, it's in — which room.\n\nOnly beat two is allowed to differ, and it differs by the OBJECT, never by the protocol: some things blink, some have a button to press, some have a printed code, some want signing in to. A person can see which of those they are holding. Nobody can see which radio it uses.\n\nThings that turn up on their own — a puck knocking, a switch asking, a Hue bridge noticed — join at beat two with beat one already answered. So an arrival is not a second vocabulary; it is the same flow, started further along."
+    },
+    {
+      "id": "choose",
+      "x": -620,
+      "y": 3240,
+      "w": 500,
+      "text": "BEAT ONE, TWO WAYS — THE DECISION TO MAKE\n\nA: four doors, named after what a person is holding. Answerable without knowing anything about the house's wiring, and needs no keyboard.\n\nB: one field, everything is an answer to it. Scales to a catalogue of thousands and never grows a fifth door — but it puts typing first, on a screen screwed to a wall, for the one job people do with their hands full.\n\nBoth keep 'Already waiting' at the top, because most of the time the house has already noticed and there is nothing to choose at all.\n\nDECIDED 19 Sep 2026: A. Four doors, with the brand search living behind 'Something with its own app' — which is where a phone is usually in hand anyway. B is kept here as the argument that was had, not as an option still open."
+    },
+    {
+      "id": "prove",
+      "x": -620,
+      "y": 4320,
+      "w": 500,
+      "text": "BEAT TWO\n\nFour proofs, identical chrome. The middle is different because the object is; the heading size, the single-sentence lede, the live line, the one dark button and the trailing 'Not now' are the same pixels in all four.\n\n'Not now' being in the same place in every route is most of the consistency by itself. Today it is six different words in four different positions."
+    },
+    {
+      "id": "end",
+      "x": -620,
+      "y": 5400,
+      "w": 500,
+      "text": "BEATS THREE AND FOUR\n\nThe ending is the biggest behavior change: EVERY route asks which room, while somebody is still standing next to the thing. Today only switches do, and a plug added on the wall panel goes and sits in New devices until somebody notices it.\n\nWhat it turned out to be is said in objects — 'a light that dims, and a motion sensor' — never in protocols and never as a count of entities.\n\nNew devices stays, for things that arrive while nobody is watching: four lamps off one account, a sensor that wakes up late."
+    },
+    {
+      "id": "words",
+      "x": -620,
+      "y": 6480,
+      "w": 500,
+      "text": "THE WORD LIST\n\nSeven buttons for the whole of adding. If a route wants an eighth, the route is asking for a special case.\n\nThe banned list matters as much: no wiring words in a heading or a door, no second dark button, no 'device' in anything a person taps.\n\nWhat this costs in code: one shell component that renders a beat, four small pieces that fill beat two, and the five existing components reduced to those pieces. The API, the brain, and every flow underneath stay where they are."
+    },
+    {
+      "id": "build",
+      "x": -620,
+      "y": 7560,
+      "w": 500,
+      "text": "WHAT IT COSTS\n\nOne shell component that owns the four beats and every button on them, and four small pieces that fill beat two — each lifted almost intact out of the component that already does that job.\n\nAddPanel, PairPanel, AddSwitch, AddNearby and BridgeSheet stop being five screens and become four middles. The API, the brain, the flows, the discovery and the bridge are untouched.\n\nThe one behavior change worth calling out separately: every route now asks which room, at the end, while somebody is standing there. That is the difference between a house that has your plug in the kitchen and a house that has it in a list called New devices."
+    }
+  ],
+  "reading": [
+    "why",
+    "Today.dc.html",
+    "audit",
+    "Under.dc.html",
+    "spine",
+    "Spine.dc.html",
+    "choose",
+    "ChooseA.dc.html",
+    "ChooseB.dc.html",
+    "prove",
+    "Proving.dc.html",
+    "end",
+    "Ending.dc.html",
+    "words",
+    "Words.dc.html",
+    "build",
+    "Shell.dc.html"
+  ]
+}

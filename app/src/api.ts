@@ -245,7 +245,7 @@ export const bridgeWifi = (ssid: string, password: string) => post<Bridge>('/bri
 export type BridgeRow = {
   chip: string; room: string | null; where: string
   online: boolean; signal: 'strong' | 'weak' | 'none'
-  switches: number; fw: string | null; behind: boolean
+  switches: number; fw: string | null; behind: boolean; shipped: string | null
   night: boolean | null; level: number | null; lift: boolean
 }
 export async function listBridges(): Promise<{ bridges: BridgeRow[] }> {

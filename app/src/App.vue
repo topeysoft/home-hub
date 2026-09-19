@@ -39,6 +39,10 @@ const selected = ref<string | null>(new URLSearchParams(location.search).get('ro
 function safeGet(k: string) { try { return localStorage.getItem(k) } catch { return null } }
 function open(id: string | null) { selected.value = id; try { id ? localStorage.setItem('room', id) : localStorage.removeItem('room') } catch {} }
 
+/* Somewhere else asked for a room to be opened -- New devices, after an account brought in several
+   things at once and beat four had no single room to ask about. Taken once, then cleared. */
+watch(() => store.goRoom, r => { if (r) { open(r); store.goRoom = null } })
+
 const rooms = computed(visibleRooms)
 /* the rail keeps the current room in view: on a wall it scrolls the list, on a phone the chip strip */
 watch(selected, () => nextTick(() => document.querySelector('.rail-item.active')?.scrollIntoView({ block: 'nearest', inline: 'nearest' })))
@@ -216,7 +220,7 @@ onUnmounted(() => {
       </nav>
       <div class="rail-tail">
         <button class="rail-item rail-add" :class="{ attention: store.found.length }" @click="store.sheet = 'add'">
-          <Icon name="plus" :size="16" /><span class="rail-name">Add a device</span>
+          <Icon name="plus" :size="16" /><span class="rail-name">Add to the house</span>
           <span class="rail-sub" v-if="store.found.length">{{ store.found.length }} found nearby</span>
         </button>
         <button class="rail-item rail-house" :class="{ attention: updateReady() }" @click="store.sheet = 'house'">

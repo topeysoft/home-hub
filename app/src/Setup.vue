@@ -9,7 +9,7 @@ import { remember } from './code'
 import { store, load } from './store'
 import Icon from './Icon.vue'
 import LocationPicker from './LocationPicker.vue'
-import AddPanel from './AddPanel.vue'
+import Adding from './Adding.vue'
 import Drivers from './Drivers.vue'
 import Restore from './Restore.vue'
 import PhoneSteps from './PhoneSteps.vue'
@@ -25,6 +25,9 @@ const status = computed(() => store.status)
 const driver = computed(() => status.value?.driver ?? 'down')
 const engineReady = computed(() => ['fresh', 'needs-login', 'connecting', 'ready'].includes(driver.value))
 const busy = ref(false), error = ref(''), fromBackup = ref(false)
+/* Something is being added right now: this step gets out of its way, the same as the Add page does.
+   One surface per conversation, and Continue is not a thing to offer mid-question. */
+const adding = ref(false)
 const name = ref(''), home = ref(''), username = ref(''), password = ref('')
 const advanced = `${location.protocol}//${location.hostname}:8123/`
 
@@ -196,9 +199,9 @@ async function saveCode() {
         <p class="setup-step">Step {{ idx + 1 }} of 4</p>
         <h1 class="display">What's in the house?</h1>
         <p class="setup-lede">Things already on your Wi‑Fi show up here on their own. Add what you like now; the rest can wait.</p>
-        <AddPanel />
-        <div class="setup-actions"><button class="button big" @click="next('devices')">{{ status?.devices ? 'Continue' : 'Skip for now' }}</button></div>
-        <div class="add-block setup-behind">
+        <Adding @busy="adding = $event" />
+        <div class="setup-actions" v-if="!adding"><button class="button big" @click="next('devices')">{{ status?.devices ? 'Continue' : 'Skip for now' }}</button></div>
+        <div class="add-block setup-behind" v-if="!adding">
           <h3 class="label">Behind the scenes</h3>
           <Drivers />
         </div>

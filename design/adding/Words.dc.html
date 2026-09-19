@@ -1,0 +1,115 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      /* the panel's own tokens, unchanged -- app/src/panel.css */
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp: #e9b872; --lamp-ink: #2a1c07; --live: #74c69d; --danger: #e08a8a;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
+           padding: 12px 14px; border-radius: 16px; background: var(--surface); border: 1px solid var(--edge); }
+    .row.lit { border-color: rgba(233,184,114,.35);
+               background: linear-gradient(rgba(233,184,114,.1), rgba(233,184,114,.1)), var(--surface); }
+    .ic { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center;
+          background: var(--surface-hi); color: var(--ink-2); }
+    .ic.on { background: var(--lamp); color: var(--lamp-ink); }
+    .t1 { font-size: 15.5px; font-weight: 500; }
+    .t2 { font-size: 13px; color: var(--muted); }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 13px 24px; border-radius: 999px;
+           background: var(--ink); color: var(--bg); font-weight: 500; font-size: 16px; }
+    .btn.ghost { background: var(--surface-hi); color: var(--ink); border: 1px solid var(--edge);
+                 padding: 12px 20px; font-size: 15px; }
+    .btn.sm { padding: 9px 17px; font-size: 14px; }
+    .sheet { border-radius: 26px; background: rgba(22,24,30,.94); border: 1px solid var(--edge-hi);
+             box-shadow: 0 40px 100px -30px rgba(0,0,0,.9); overflow: hidden; }
+    .bar { height: 6px; border-radius: 999px; background: rgba(255,255,255,.1); overflow: hidden; }
+    .bar i { display: block; height: 100%; border-radius: 999px; background: var(--lamp); }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--lamp); }
+    .note { padding: 13px 16px 14px; border-radius: 18px; background: var(--surface); border: 1px solid var(--edge); }
+    .chip { display: inline-flex; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--edge);
+            background: var(--surface-hi); font-size: 14px; }
+    .bad { color: var(--danger); }
+    .sw { fill: #ded8cc; stroke: rgba(0,0,0,.22); stroke-width: 2; }
+    .swf { fill: #fbf8f2; stroke: rgba(0,0,0,.12); stroke-width: 1.4; }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: #0c0d10; color: var(--ink); font-size: 17px; line-height: 1.4;">
+  <div style="position: absolute; inset: 0; background: radial-gradient(64% 54% at 22% 18%, rgba(72,63,135,.22), transparent 70%), radial-gradient(56% 48% at 86% 88%, rgba(92,63,57,.2), transparent 72%);"></div>
+
+  <div style="position: absolute; top: 44px; left: 56px; right: 56px;">
+    <h1 class="dsp" style="margin: 0; font-size: 42px;">Seven words, and none of the others.</h1>
+    <p style="margin: 10px 0 0; font-size: 17px; color: var(--ink-2); max-width: 106ch;">The whole of adding, said in seven buttons. Anything a route wants to say that is not on this list is the route asking for a special case, and the answer is no.</p>
+  </div>
+
+  <div class="cap" style="position: absolute; top: 190px; left: 56px;">the words that stay</div>
+  <div style="position: absolute; top: 222px; left: 56px; width: 760px; display: grid; gap: 9px;">
+    <div class="row" style="grid-template-columns: 170px 1fr 1fr; padding: 13px 16px; background: none; border-color: transparent;">
+      <span class="cap" style="font-size: 10.5px;">button</span><span class="cap" style="font-size: 10.5px;">what it does</span><span class="cap" style="font-size: 10.5px;">retires</span>
+    </div>
+    <div class="row" style="grid-template-columns: 170px 1fr 1fr; padding: 13px 16px;">
+      <span><span class="btn sm">Add</span></span><span class="t2" style="color: var(--ink-2);">Starts anything, from beat one</span><span class="t2">Open the door &middot; Yes, add it &middot; Let it in</span>
+    </div>
+    <div class="row" style="grid-template-columns: 170px 1fr 1fr; padding: 13px 16px;">
+      <span><span class="btn sm">Have a look</span></span><span class="t2" style="color: var(--ink-2);">Opens something already waiting</span><span class="t2">Add, on a found row &middot; the bare row tap</span>
+    </div>
+    <div class="row" style="grid-template-columns: 170px 1fr 1fr; padding: 13px 16px;">
+      <span><span class="btn sm">That&rsquo;s the one</span></span><span class="t2" style="color: var(--ink-2);">Says which object is yours</span><span class="t2">Yes, that is it &middot; Yes, it&rsquo;s mine</span>
+    </div>
+    <div class="row" style="grid-template-columns: 170px 1fr 1fr; padding: 13px 16px;">
+      <span><span class="btn sm">Try again</span></span><span class="t2" style="color: var(--ink-2);">After something did not work</span><span class="t2">Look again &middot; Retry</span>
+    </div>
+    <div class="row" style="grid-template-columns: 170px 1fr 1fr; padding: 13px 16px;">
+      <span><span class="btn sm">Done</span></span><span class="t2" style="color: var(--ink-2);">Ends beat four, thing placed</span><span class="t2">OK &middot; Later &middot; Leave it here</span>
+    </div>
+    <div class="row" style="grid-template-columns: 170px 1fr 1fr; padding: 13px 16px;">
+      <span><span class="btn ghost sm">Add another</span></span><span class="t2" style="color: var(--ink-2);">Goes back to beat one, ghost, beside Done</span><span class="t2">&mdash;</span>
+    </div>
+    <div class="row lit" style="grid-template-columns: 170px 1fr 1fr; padding: 13px 16px;">
+      <span><span class="btn ghost sm">Not now</span></span><span class="t2" style="color: var(--ink-2);">Leaves. Last on every screen, every route</span><span class="t2 bad">Cancel &middot; Back &middot; Stop &middot; Later &middot; OK &middot; a cross on its own</span>
+    </div>
+  </div>
+
+  <div class="cap" style="position: absolute; top: 190px; left: 872px;">never on the way in</div>
+  <div style="position: absolute; top: 222px; left: 872px; width: 512px; display: grid; gap: 12px;">
+    <div class="note" style="border-color: rgba(224,138,138,.3);">
+      <div class="t1" style="margin-bottom: 5px;">Wiring words in a heading or a door</div>
+      <div class="t2">Zigbee &middot; Z&#8209;Wave &middot; Matter &middot; mesh &middot; bridge &middot; radio &middot; pairing &middot; node &middot; integration &middot; entity. They are true, and they are the hub&rsquo;s business. Behind the scenes is where they live.</div>
+    </div>
+    <div class="note" style="border-color: rgba(224,138,138,.3);">
+      <div class="t1" style="margin-bottom: 5px;">Two dark buttons on one screen</div>
+      <div class="t2">There is one thing you came to do. Everything else is a ghost, and &ldquo;Not now&rdquo; is the last of them.</div>
+    </div>
+    <div class="note" style="border-color: rgba(224,138,138,.3);">
+      <div class="t1" style="margin-bottom: 5px;">The word &ldquo;device&rdquo; in anything a person taps</div>
+      <div class="t2">A plug, a bulb, a switch, a sensor, a doorbell. &ldquo;Device&rdquo; survives only where the house genuinely does not know yet.</div>
+    </div>
+    <div class="note" style="border-color: rgba(224,138,138,.3);">
+      <div class="t1" style="margin-bottom: 5px;">A second paragraph of lede</div>
+      <div class="t2">One sentence under the heading. If a screen needs three facts, two of them belong in a quiet row beneath, not in the opening.</div>
+    </div>
+    <div class="note" style="border-color: rgba(224,138,138,.3);">
+      <div class="t1" style="margin-bottom: 5px;">A route inventing an eighth word</div>
+      <div class="t2">If adding a thermostat wants its own verb, the thermostat is not the problem &mdash; the beat it is in has been drawn wrong.</div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

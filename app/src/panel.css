@@ -4420,6 +4420,97 @@ select.input {
 }
 
 /* ---------- pairing over the radios ---------- */
+/* ADDING: one shell, four beats, and the same furniture on every one of them.
+   design/adding/Proving.dc.html. */
+.adding .flow-title {
+  font-size: 26px;
+  margin-bottom: 10px;
+}
+.adding .flow-title.landed {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 12px;
+}
+.adding .label {
+  margin-top: 22px;
+}
+.adding .press-rooms {
+  margin-bottom: 4px;
+}
+.adding .field {
+  margin-top: 10px;
+}
+
+/* Where the wiring went. A dashed, quiet line rather than a link: nobody adding a lamp is looking
+   for it, and the one person who is needs only to be told the room it is in. */
+.add-elsewhere {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 26px 0 0;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px dashed var(--edge);
+  color: var(--ink-2);
+  font-size: 14.5px;
+}
+.add-elsewhere b {
+  color: var(--ink);
+  font-weight: 500;
+}
+.add-elsewhere svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+/* THE DOORS of beat one: four things a person can be holding, not four wires. Two up on a wall, one
+   up on a phone -- a door is a sentence and it does not want breaking over three lines.
+   design/adding/ChooseA.dc.html. */
+.doors {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 10px;
+}
+.doors.one {
+  grid-template-columns: 1fr;
+}
+.door {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 18px;
+  border-radius: 18px;
+  background: var(--surface);
+  border: 1px solid var(--edge);
+  text-align: left;
+}
+.door:active {
+  background: var(--surface-press);
+}
+.door-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: var(--surface-hi);
+  color: var(--ink-2);
+}
+.door-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.door-title {
+  font-size: 17px;
+  font-weight: 500;
+}
+.door-sub {
+  font-size: 13.5px;
+  color: var(--muted);
+}
 .radios {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -10723,6 +10814,13 @@ button.reading[data-held] {
 }
 .press-rooms .chip-btn.ghost {
   color: var(--muted);
+}
+/* The room that was picked. This row sets its own `color`, which quietly beat .chip-btn.on's -- so a
+   chosen chip was the ink color on an ink background, and its name vanished. Nothing noticed while
+   the screen shut the instant a room was tapped; beat four keeps it up, because what you just
+   touched is the undo. */
+.press-rooms .chip-btn.on {
+  color: var(--bg);
 }
 
 /* ---------- letting a new switch in ----------

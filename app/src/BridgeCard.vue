@@ -38,15 +38,34 @@ const nearest = computed(() => {
   return LEVELS.reduce((best, l) => Math.abs(l.to - n) < Math.abs(best.to - n) ? l : best, LEVELS[1]).id
 })
 
+/* SAY ONLY WHAT THE HOUSE ACTUALLY KNOWS -- pane.ts's rule, and this line broke it twice.
+ *
+ * `signal: 'none'` is not a weak signal, it is NO ANSWER: the brain returns it for a puck that is
+ * offline AND for one that is on the broker but has not said which node it is linked to, which is
+ * every puck in the seconds after it connects and any puck that cannot find a switch at all. Falling
+ * through to the last branch made that read "Strong", which is a claim the hub cannot make about a
+ * link it has never seen. And "hears 0 switches" was arithmetic where a sentence was wanted. */
 const state = computed(() => {
-  if (!b.value.online) return 'Not answering. It may be unplugged, or out of Wi‑Fi reach.'
-  const hears = b.value.switches === 1 ? 'hears 1 switch' : `hears ${b.value.switches} switches`
-  if (b.value.signal === 'weak') return `Faint, and ${hears}. A socket nearer a switch would be better.`
+  const { online, signal, switches } = b.value
+  if (!online) return 'Not answering. It may be unplugged, or out of Wi‑Fi reach.'
+  // Nothing to bridge is the more useful thing to say than how loud the link to nothing is.
+  if (!switches) return 'It has not heard a switch yet. A socket nearer one would give it something to bridge.'
+  const hears = switches === 1 ? 'hears 1 switch' : `hears ${switches} switches`
+  if (signal === 'weak') return `Faint, and ${hears}. A socket nearer a switch would be better.`
+  if (signal === 'none') return `It ${hears}, and has not said how strong the link is.`
   return `Strong, and ${hears}.`
 })
+/* ...and the word above it. A puck on the broker that is bridging nothing is not "Working"; it is
+   here, and that is all that can be said for it. */
+const word = computed(() =>
+  !b.value.online ? 'Quiet' : b.value.switches ? 'Working' : 'On the house')
+/* "Current" is a comparison, and a hub with no manifest beside its image has nothing to compare to:
+   `behind` is then false for every puck in the house, including one three versions old. Saying
+   "current" off the back of that is the same mistake as calling an unseen link strong. */
 const software = computed(() =>
   !b.value.fw ? 'The hub has not been told which software it runs.'
   : b.value.behind ? `${b.value.fw} — older than the house ships. It keeps working; catching it up needs a cable for now.`
+  : !b.value.shipped ? `${b.value.fw}. The hub can’t say whether that is the latest.`
   : `${b.value.fw} — current.`)
 
 async function change(what: { night?: boolean; level?: number; lift?: boolean }, tag: string) {
@@ -86,7 +105,7 @@ onUnmounted(() => window.removeEventListener('keydown', key))
             <Icon :name="b.online ? 'check' : 'sparkle'" :size="18" />
           </span>
           <span class="bridge-text">
-            <span class="bridge-name">{{ b.online ? 'Working' : 'Quiet' }}</span>
+            <span class="bridge-name">{{ word }}</span>
             <span class="bridge-sub">{{ state }}</span>
           </span>
         </div>
@@ -94,7 +113,7 @@ onUnmounted(() => window.removeEventListener('keydown', key))
         <ul class="hub-rows bridge-settings">
           <li v-if="!heard">
             <span class="hub-k">Its light</span>
-            <span class="hub-v">Not heard from yet.<span class="hub-sub line">Once it is on the broker this is where its nightlight lives.</span></span>
+            <span class="hub-v">Nothing said about a light yet.<span class="hub-sub line">{{ b.online ? 'This one has never offered one. Older software does not have a nightlight, and catching a bridge up needs a cable for now.' : 'Once it is back, this is where its nightlight lives.' }}</span></span>
             <span></span>
           </li>
           <template v-else>

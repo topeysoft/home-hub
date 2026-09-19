@@ -1,0 +1,143 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      /* the panel's own tokens, unchanged -- app/src/panel.css */
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp: #e9b872; --lamp-ink: #2a1c07; --live: #74c69d; --danger: #e08a8a;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
+           padding: 12px 14px; border-radius: 16px; background: var(--surface); border: 1px solid var(--edge); }
+    .row.lit { border-color: rgba(233,184,114,.35);
+               background: linear-gradient(rgba(233,184,114,.1), rgba(233,184,114,.1)), var(--surface); }
+    .ic { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center;
+          background: var(--surface-hi); color: var(--ink-2); }
+    .ic.on { background: var(--lamp); color: var(--lamp-ink); }
+    .t1 { font-size: 15.5px; font-weight: 500; }
+    .t2 { font-size: 13px; color: var(--muted); }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 13px 24px; border-radius: 999px;
+           background: var(--ink); color: var(--bg); font-weight: 500; font-size: 16px; }
+    .btn.ghost { background: var(--surface-hi); color: var(--ink); border: 1px solid var(--edge);
+                 padding: 12px 20px; font-size: 15px; }
+    .btn.sm { padding: 9px 17px; font-size: 14px; }
+    .sheet { border-radius: 26px; background: rgba(22,24,30,.94); border: 1px solid var(--edge-hi);
+             box-shadow: 0 40px 100px -30px rgba(0,0,0,.9); overflow: hidden; }
+    .bar { height: 6px; border-radius: 999px; background: rgba(255,255,255,.1); overflow: hidden; }
+    .bar i { display: block; height: 100%; border-radius: 999px; background: var(--lamp); }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--lamp); }
+    .note { padding: 13px 16px 14px; border-radius: 18px; background: var(--surface); border: 1px solid var(--edge); }
+    .chip { display: inline-flex; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--edge);
+            background: var(--surface-hi); font-size: 14px; }
+    .bad { color: var(--danger); }
+    .sw { fill: #ded8cc; stroke: rgba(0,0,0,.22); stroke-width: 2; }
+    .swf { fill: #fbf8f2; stroke: rgba(0,0,0,.12); stroke-width: 1.4; }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: #0c0d10; color: var(--ink); font-size: 17px; line-height: 1.4;">
+  <div style="position: absolute; inset: 0; background: radial-gradient(64% 54% at 22% 18%, rgba(72,63,135,.22), transparent 70%), radial-gradient(56% 48% at 86% 88%, rgba(92,63,57,.2), transparent 72%);"></div>
+
+  <div style="position: absolute; top: 44px; left: 56px; right: 56px;">
+    <h1 class="dsp" style="margin: 0; font-size: 42px;">Beats three and four, which never vary.</h1>
+    <p style="margin: 10px 0 0; font-size: 17px; color: var(--ink-2); max-width: 106ch;">However it got in &mdash; blinked at, pressed, scanned, signed in to &mdash; this is the same screen. What it turned out to be, said in objects rather than protocols; then the room, asked once, while somebody is still standing next to the thing.</p>
+  </div>
+
+  <!-- letting in -->
+  <div class="cap" style="position: absolute; top: 198px; left: 78px;">beat three &middot; letting it in</div>
+  <div class="sheet" style="position: absolute; top: 230px; left: 78px; width: 316px; height: 396px; padding: 22px 20px;">
+    <div class="dsp" style="font-size: 26px; margin-bottom: 8px;">Letting it in&hellip;</div>
+    <p style="margin: 0 0 18px; color: var(--ink-2); font-size: 14.5px;">It is learning the house&rsquo;s keys, then saying hello.</p>
+    <div class="bar" style="margin-bottom: 10px;"><i style="width: 52%"></i></div>
+    <div class="t2" style="margin-bottom: 20px;">About half a minute. You can put your phone down.</div>
+    <div class="note" style="padding: 12px 14px 13px;">
+      <div class="t1" style="font-size: 14px; margin-bottom: 4px;">Walking away does not break it</div>
+      <div class="t2" style="font-size: 12.5px;">The hub finishes on its own and the thing turns up in the house. Nothing here needs watching.</div>
+    </div>
+    <div style="position: absolute; left: 20px; right: 20px; bottom: 20px;">
+      <span class="btn ghost" style="justify-content: center; width: 100%;">Not now</span>
+    </div>
+  </div>
+
+  <!-- it's in -->
+  <div class="cap" style="position: absolute; top: 198px; left: 420px; color: var(--lamp);">beat four &middot; the one ending</div>
+  <div class="sheet" style="position: absolute; top: 230px; left: 420px; width: 600px; height: 560px; padding: 26px 26px;">
+    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 14px;">
+      <span style="width: 40px; height: 40px; border-radius: 999px; background: rgba(116,198,157,.16); border: 1px solid rgba(116,198,157,.4); color: var(--live); display: grid; place-items: center;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>
+      </span>
+      <span class="dsp" style="font-size: 32px;">It&rsquo;s in.</span>
+    </div>
+    <p style="margin: 0 0 20px; color: var(--ink-2); font-size: 16px;">It turned out to be <b style="color: var(--ink); font-weight: 500;">a light that dims, and a motion sensor</b>.</p>
+
+    <div class="cap" style="margin-bottom: 10px;">Which room is it in?</div>
+    <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 22px;">
+      <span class="chip">Kitchen</span><span class="chip">Hall</span><span class="chip" style="background: var(--ink); color: var(--bg); border-color: var(--ink);">Landing</span><span class="chip">Study</span><span class="chip">Bedroom</span><span class="chip">Sitting room</span><span class="chip">Somewhere else&hellip;</span>
+    </div>
+
+    <div class="cap" style="margin-bottom: 10px;">And what do you call it?</div>
+    <div style="height: 52px; padding: 0 16px; border-radius: 16px; background: var(--surface-hi); border: 1px solid var(--edge); display: flex; align-items: center; gap: 10px; font-size: 16px; margin-bottom: 10px;">
+      <span style="color: var(--ink);">Landing light</span>
+      <span style="margin-left: auto;" class="t2">the house&rsquo;s guess</span>
+    </div>
+    <div class="t2" style="margin-bottom: 22px;">Named from the room, so most of the time this needs no typing at all.</div>
+
+    <div style="position: absolute; left: 26px; right: 26px; bottom: 24px; display: flex; gap: 10px;">
+      <span class="btn" style="flex: 1; justify-content: center;">Done</span>
+      <span class="btn ghost" style="justify-content: center;">Add another</span>
+    </div>
+  </div>
+
+  <!-- it did not work -->
+  <div class="cap" style="position: absolute; top: 198px; left: 1046px;">and when it does not</div>
+  <div class="sheet" style="position: absolute; top: 230px; left: 1046px; width: 316px; height: 396px; padding: 22px 20px;">
+    <div class="dsp" style="font-size: 26px; margin-bottom: 8px;">It would not join.</div>
+    <p style="margin: 0 0 16px; color: var(--ink-2); font-size: 14.5px;">It stopped answering halfway through. Nothing of yours went onto it, and nothing changed in the house.</p>
+    <div class="note" style="padding: 12px 14px 13px; margin-bottom: 10px;">
+      <div class="t1" style="font-size: 14px; margin-bottom: 4px;">Usually it is distance</div>
+      <div class="t2" style="font-size: 12.5px;">Try it in a socket nearer the hub first; it can be moved once it is in.</div>
+    </div>
+    <div style="position: absolute; left: 20px; right: 20px; bottom: 20px; display: grid; gap: 9px;">
+      <span class="btn" style="justify-content: center;">Try again</span>
+      <span class="btn ghost" style="justify-content: center;">Not now</span>
+    </div>
+  </div>
+
+  <div style="position: absolute; top: 656px; left: 78px; width: 316px;">
+    <div style="border-left: 2px solid rgba(233,184,114,.4); padding-left: 16px;">
+      <div class="t1" style="margin-bottom: 5px;">No protocol reaches this screen</div>
+      <div class="t2">Not &ldquo;Z&#8209;Wave node 14 added&rdquo;. A light that dims. A plug. A door sensor. If the house cannot say what it is in those words, it says &ldquo;something new&rdquo; and asks.</div>
+    </div>
+  </div>
+  <div style="position: absolute; top: 656px; left: 1046px; width: 316px;">
+    <div style="border-left: 2px solid rgba(233,184,114,.4); padding-left: 16px;">
+      <div class="t1" style="margin-bottom: 5px;">A failure is never a dead end</div>
+      <div class="t2">One reason, one thing to try, and the way out. Never a code, never a log line, and never an apology with nothing after it.</div>
+    </div>
+  </div>
+
+  <div style="position: absolute; top: 806px; left: 420px; width: 600px;">
+    <div class="note" style="border-color: rgba(233,184,114,.3);">
+      <div class="t1" style="margin-bottom: 5px;">New devices becomes the exception, not the rule</div>
+      <div class="t2">It stays for things that arrive unwatched &mdash; four lamps off one account, a sensor that wakes late. Anything added by a person standing there is in a room by the time they walk off.</div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

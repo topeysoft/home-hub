@@ -870,7 +870,11 @@ class Bridges:
                 "chip": chip, "room": room, "where": self.where(chip),
                 "online": bool(p.get("online")), "signal": self._signal(chip),
                 "switches": self._count(p.get("net")) if p.get("net") else 0,
-                "fw": rec.get("fw"), "behind": chip in behind,
+                # What the house ships, or None when it cannot say -- shipped() returns "" with no
+                # manifest beside the image, and behind() is then empty for every puck. Without this
+                # the panel cannot tell "not behind" from "nobody knows", and it drew a puck three
+                # versions old as "current".
+                "fw": rec.get("fw"), "behind": chip in behind, "shipped": self.shipped() or None,
                 # None rather than false when the puck has never said: "off" is a claim about a thing
                 # we have heard from, and a puck that has not spoken is not a puck with its light off.
                 "night": p.get("night"), "level": p.get("level"),

@@ -30,8 +30,11 @@ PROJECT = "puck-revA"
 # name that silently matches the wrong pin is exactly the fault this file exists to make impossible.
 
 PARTS = {
- "U1": ("RF_Module", "ESP32-S3-WROOM-1", "ESP32-S3-WROOM-1-N16",
-        "RF_Module:ESP32-S3-WROOM-1", {
+ # The -1U: the same module with a U.FL where the -1 has a trace antenna, so the antenna becomes a
+ # flex stuck inside the shell and the module no longer has to sit at a board edge. KiCad 10 ships
+ # the -1U footprint but not its symbol; the -1 symbol is pin-identical (checked pad for pad).
+ "U1": ("RF_Module", "ESP32-S3-WROOM-1", "ESP32-S3-WROOM-1U-N16",
+        "RF_Module:ESP32-S3-WROOM-1U", {
         "1":"GND", "40":"GND", "41":"GND", "2":"+3V3", "3":"EN", "27":"IO0",
         "4":"USER_BTN", "12":"SDA", "17":"SCL",
         "9":"EXP_C", "10":"EXP_A", "11":"EXP_B",
@@ -62,21 +65,14 @@ PARTS = {
         "Connector_PinHeader_1.27mm:PinHeader_1x06_P1.27mm_Vertical",
         {"1":"+3V3", "2":"VBUS", "3":"GND", "4":"EXP_A", "5":"EXP_B", "6":"EXP_C"}),
 
- "D1": ("LED","WS2812B","SK6812-RGBW","LED_SMD:LED_SK6812_PLCC4_5.0x5.0mm_P3.2mm",
-        {"1":"VBUS","3":"GND","4":"LED_D1_IN","2":"LED_D1_OUT"}),
- "D2": ("LED","WS2812B","SK6812-RGBW","LED_SMD:LED_SK6812_PLCC4_5.0x5.0mm_P3.2mm",
-        {"1":"VBUS","3":"GND","4":"LED_D1_OUT","2":"LED_D2_OUT"}),
- "D3": ("LED","WS2812B","SK6812-RGBW","LED_SMD:LED_SK6812_PLCC4_5.0x5.0mm_P3.2mm",
-        {"1":"VBUS","3":"GND","4":"LED_D2_OUT","2":"LED_D3_OUT"}),
- # FOUR, not three. Three cannot be placed: the module lies across the board from the 180 deg edge
- # and the connector holds the 0 deg edge, and between them they block every ring angle an
- # equilateral triple could use -- see the header of gen_pcb.py for the search that proves it.
- "D4": ("LED","WS2812B","SK6812-RGBW","LED_SMD:LED_SK6812_PLCC4_5.0x5.0mm_P3.2mm",
-        {"1":"VBUS","3":"GND","4":"LED_D3_OUT"}),                 # DOUT left open
+ # LEDs: generated below, N_LEDS of them in a chain. See gen_pcb.py for the ring.
 
- "SW1": ("Switch","SW_Push","BOOT","Button_Switch_SMD:SW_SPST_SKQG_WithoutStem",   {"1":"IO0","2":"GND"}),
- "SW2": ("Switch","SW_Push","RESET","Button_Switch_SMD:SW_SPST_SKQG_WithoutStem",  {"1":"EN","2":"GND"}),
- "SW3": ("Switch","SW_Push","USER","Button_Switch_SMD:SW_SPST_SKQG_WithoutStem",   {"1":"USER_BTN","2":"GND"}),
+ # KMR2 side-actuated, 4.2 x 2.8 x 1.4: the SKQG it replaces is 5.7 mm deep and fits nowhere once the
+ # ring is on the board. Its SH pad is a mechanical ground tab the SW_Push symbol has no pin for; it is
+ # left floating, which the datasheet allows.
+ "SW1": ("Switch","SW_Push","BOOT","Button_Switch_SMD:SW_Push_1P1T-SH_NO_CK_KMR2xxG",   {"1":"IO0","2":"GND"}),
+ "SW2": ("Switch","SW_Push","RESET","Button_Switch_SMD:SW_Push_1P1T-SH_NO_CK_KMR2xxG",  {"1":"EN","2":"GND"}),
+ "SW3": ("Switch","SW_Push","USER","Button_Switch_SMD:SW_Push_1P1T-SH_NO_CK_KMR2xxG",   {"1":"USER_BTN","2":"GND"}),
 
  "R1": ("Device","R","5k1","Resistor_SMD:R_0603_1608Metric", {"1":"CC1","2":"GND"}),
  "R2": ("Device","R","5k1","Resistor_SMD:R_0603_1608Metric", {"1":"CC2","2":"GND"}),
@@ -88,10 +84,6 @@ PARTS = {
  "C1": ("Device","C","22u","Capacitor_SMD:C_0805_2012Metric", {"1":"VBUS","2":"GND"}),
  "C2": ("Device","C","10u","Capacitor_SMD:C_0603_1608Metric", {"1":"+3V3","2":"GND"}),
  "C3": ("Device","C","100n","Capacitor_SMD:C_0603_1608Metric",{"1":"+3V3","2":"GND"}),
- "C4": ("Device","C","100n","Capacitor_SMD:C_0603_1608Metric",{"1":"VBUS","2":"GND"}),
- "C5": ("Device","C","100n","Capacitor_SMD:C_0603_1608Metric",{"1":"VBUS","2":"GND"}),
- "C6": ("Device","C","100n","Capacitor_SMD:C_0603_1608Metric",{"1":"VBUS","2":"GND"}),
- "C8": ("Device","C","100n","Capacitor_SMD:C_0603_1608Metric",{"1":"VBUS","2":"GND"}),   # D4
  "C7": ("Device","C","1u",  "Capacitor_SMD:C_0603_1608Metric",{"1":"EN","2":"GND"}),
 
  # VBUS and GND arrive on a connector, whose pins are passive, so nothing on the sheet tells ERC
@@ -99,6 +91,37 @@ PARTS = {
  "#FLG1": ("power","PWR_FLAG","","", {"1":"VBUS"}),
  "#FLG2": ("power","PWR_FLAG","","", {"1":"GND"}),
 }
+
+# The ring: 11 SK6812-RGBW 5050 on r=17 at 30 deg spacing, one chain, one 100 nF each. Eleven
+# rather than twelve because the twelfth would sit in the USB-C, and it is at r=17 rather than the
+# rim because the object is meant to GLOW, not to wear a light ring: ~9 mm from emitter to roof
+# and to wall blurs eleven dice into one warm body. gen_pcb.py fixes the angles.
+#
+# Current, so nobody is surprised: 11 x 4 dice x ~15 mA is ~0.66 A at full white on every die, on
+# top of the module's ~0.3 A Wi-Fi bursts -- right at a 1 A cube's limit. The nightlight runs the W
+# die alone at ~110/255 (~70 mA) and the instrument states are single colours; firmware caps the
+# total rather than the cube browning out.
+N_LEDS = 11
+for _i in range(1, N_LEDS + 1):
+    _nets = {"1": "VBUS", "3": "GND", "4": "LED_D1_IN" if _i == 1 else f"LED_D{_i-1}_OUT"}
+    if _i < N_LEDS: _nets["2"] = f"LED_D{_i}_OUT"          # the last DOUT is left open
+    PARTS[f"D{_i}"] = ("LED", "WS2812B", "SK6812-RGBW",
+                       "LED_SMD:LED_SK6812_PLCC4_5.0x5.0mm_P3.2mm", _nets)
+
+# Decoupling: FOUR 100 nF around the ring, not one per LED, and this is a decision rather than a
+# saving. There is nowhere on a single-sided 50 mm board for eleven of them. Inboard of the ring is
+# out -- the module's courtyard corners reach r=14.02 and the ring's inner edge is 14.25. Outboard
+# is where the switches and headers live. And the ring's own gaps are 2.0 mm wide against an 0603
+# courtyard of 3.0 mm, so "between the LEDs" does not fit either; all three were tried and measured.
+#
+# Four is defensible on its own terms: one per ~3 LEDs is ordinary practice for a ring this size,
+# the chain's peak is ~0.66 A across 34 mm of ring, C1's 22 uF sits on the same rail, and the board
+# gets a solid GND pour. If the first five boards show LED noise, the fix is a cap on the BACK under
+# each LED with two vias -- electrically better than anything on this side, at the cost of the
+# second-side assembly that docs/puck-hardware.md deliberately avoided.
+for _i in range(1, 5):
+    PARTS[f"C{100 + _i}"] = ("Device", "C", "100n", "Capacitor_SMD:C_0603_1608Metric",
+                             {"1": "VBUS", "2": "GND"})
 
 # ---- reading the installed libraries ----------------------------------------------------------
 
