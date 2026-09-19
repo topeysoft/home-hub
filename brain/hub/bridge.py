@@ -229,6 +229,30 @@ class Cable:
         want = self.image.parent / f"{chip}-ship.bin"
         return want if want.exists() else None
 
+    @staticmethod
+    def _why(out: str, rc: int) -> str:
+        """What a write that did not finish means to somebody holding the board.
+
+        esptool's own sentence on a wall panel is a bug this file has already fixed once, for the
+        wrong chip (tests/test_bridge.py, ABoardTheHouseCannotUse). This is the same leak on the
+        write: a household got "No more data to read from the serial port" and a link to somebody's
+        developer documentation. The raw text stays in the log for whoever is debugging; what reaches
+        the screen is the thing they can actually do about it.
+        """
+        s = (out or "").lower()
+        if rc == -1:
+            return "Writing its software took too long and stopped. Unplug it, plug it back in, and try again."
+        if "no more data to read" in s or "serial data stream stopped" in s:
+            # Both speeds have already been tried by the time this is raised, so the line itself is
+            # the suspect rather than how fast it was being driven.
+            return ("Writing its software kept stopping part way. A different cable usually fixes it, "
+                    "or plugging it straight into the hub rather than through anything in between.")
+        if "failed to connect" in s or "wrong boot mode" in s or "no serial data received" in s:
+            return "It stopped answering while the hub was writing to it. Unplug it, plug it back in, and try again."
+        if "permission denied" in s or "could not open" in s:
+            return "The hub could not reach it over the cable."
+        return "Its software could not be written. Unplug it, plug it back in, and try again."
+
     async def flash(self, port: str, chip: str = "esp32s3"):
         """Write the image, dropping to a slower line if a fast one does not hold.
 
@@ -255,7 +279,7 @@ class Cable:
             try:
                 out, _ = await asyncio.wait_for(proc.communicate(), timeout=FLASH_SECONDS)
                 rc = proc.returncode
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 out, rc = b"", -1
             finally:
                 try: os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
@@ -266,7 +290,8 @@ class Cable:
             last = " / ".join(l.strip() for l in out.decode(errors="replace").splitlines()
                               if l.strip() and "Writing at" not in l)[-300:]
             log.info("bridge: %s baud did not hold (%s)", baud, last or f"exit {rc}")
-        raise RuntimeError(last or "the write did not finish")
+        log.warning("bridge: the write did not finish on %s: %s", port, last or f"exit {rc}")
+        raise RuntimeError(self._why(last, rc))
 
     async def write(self, port: str, cfg: dict) -> dict:
         """Everything in cfg, then apply, then wait for it back. Returns its hello afterwards."""
