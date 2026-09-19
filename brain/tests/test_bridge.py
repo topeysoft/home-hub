@@ -11,7 +11,7 @@ import asyncio, json, tempfile, unittest
 from pathlib import Path
 
 from hub import bridge as bridge_mod
-from hub.bridge import Bridges, network_id
+from hub.bridge import Bridges, Cable, network_id
 from hub.settings import Settings
 
 
@@ -670,3 +670,47 @@ class ReadingTheProbesAnswer(unittest.TestCase):
         """--chip takes esp32s3, not ESP32-S3."""
         self.assertEqual(self.parse("CHIP=ESP32-S3"), "esp32s3")
         self.assertEqual(self.parse("CHIP=ESP32"), "esp32")
+
+
+class ABadSyncIsNotAVerdict(unittest.TestCase):
+    """A board that has just enumerated can answer badly once.
+
+    "Unexpected chip magic value 0x00000009" is a half-synced connection, and the same board
+    on the same hub answers every time when asked by hand. One bad sync used to end it: the
+    board was written off and, because a port only looks new once, never looked at again."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.cable = Cable()
+        self.tries = []
+
+    def tearDown(self): self.tmp.cleanup()
+
+    def answers(self, *results):
+        """Stand in for the one-shot probe, handing back a scripted result each time."""
+        async def once(port):
+            self.tries.append(port)
+            return results[min(len(self.tries) - 1, len(results) - 1)]
+        self.cable._esp_chip_once = once
+
+    def test_a_second_ask_is_made_when_the_first_says_nothing(self):
+        self.answers(None, "esp32s3")
+        import hub.bridge as m
+        was, m.PROBE_RETRY = m.PROBE_RETRY, 0
+        try: got = run(self.cable.esp_chip("/dev/whatever"))
+        finally: m.PROBE_RETRY = was
+        self.assertEqual(got, "esp32s3")
+        self.assertEqual(len(self.tries), 2)
+
+    def test_a_good_first_answer_is_not_asked_twice(self):
+        self.answers("esp32c3")
+        self.assertEqual(run(self.cable.esp_chip("/dev/whatever")), "esp32c3")
+        self.assertEqual(len(self.tries), 1)
+
+    def test_a_board_that_never_answers_is_still_None(self):
+        self.answers(None)
+        import hub.bridge as m
+        was, m.PROBE_RETRY = m.PROBE_RETRY, 0
+        try: self.assertIsNone(run(self.cable.esp_chip("/dev/whatever")))
+        finally: m.PROBE_RETRY = was
+        self.assertEqual(len(self.tries), 2)

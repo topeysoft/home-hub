@@ -7,7 +7,7 @@ the house does: adding devices, renaming, moving rooms, the location, the rules,
 own sign-in behind the Advanced door. No code set means nothing is locked, which is how a hub
 starts; setup offers one, and Home nudges until there is one.
 """
-import hashlib, hmac, os, time
+import hashlib, hmac, json, os, time
 
 ROUNDS = 200_000
 TRIES, WINDOW = 5, 60.0     # five wrong codes in a minute and that address waits the minute out
@@ -31,6 +31,10 @@ def needs_code(method: str, path: str) -> bool:
     if path == "/assistant/key": return True
     if path in ("/update", "/update/auto") and m == "POST": return True   # changing how the house updates itself is a setting
     if path == "/backup" or (path == "/restore" and m == "POST"): return True   # the archive carries the house's keys
+    # Taking the house down for a minute is a change to it, not a tap on it -- and it is the one change
+    # whose whole effect is that nothing works. Asking what a restart would cost is not: a sheet that
+    # demanded the code before it would tell you what the button does is a sheet nobody reads.
+    if path == "/restart" and m == "POST": return True
     if path.startswith("/pair") and m != "GET": return True
     # Adopting a bridge hands a thing somebody just plugged in the house's Wi-Fi, the broker and the
     # keys to the switches. That is the largest single giveaway on this list -- larger than renaming
@@ -48,9 +52,37 @@ def needs_code(method: str, path: str) -> bool:
 
 
 class Lock:
+    """The code, and the short memory of who has been getting it wrong.
+
+    That memory is on disk, and it is on disk because of the restart button. Five wrong codes make an
+    address wait the minute out, and while the count lived only in this process anybody who could make
+    the brain start again got five fresh guesses -- which used to mean somebody at the plug, and now
+    means one tap on a phone (docs/restart.md, piece 9). The file is written only when a code is
+    wrong, so a house where nobody is guessing never touches it.
+    """
     def __init__(self, settings):
         self.settings = settings
+        self.tries = settings.path.parent / "tries.json"
         self._fails: dict[str, list[float]] = {}
+        self._load()
+
+    def _load(self):
+        try: kept = json.loads(self.tries.read_text())
+        except (OSError, ValueError): return
+        now = time.time()
+        # Anything already outside the window is not worth carrying, and a clock that went backwards
+        # over the restart (a Pi with no battery, reading the epoch until NTP answers) would otherwise
+        # leave a wait nothing could run down.
+        self._fails = {who: [t for t in ts if 0 < now - t < WINDOW] for who, ts in (kept or {}).items() if isinstance(ts, list)}
+        self._fails = {who: ts for who, ts in self._fails.items() if ts}
+
+    def _save(self):
+        try:
+            self.tries.parent.mkdir(parents=True, exist_ok=True)
+            tmp = self.tries.with_suffix(".tmp")
+            tmp.write_text(json.dumps(self._fails))
+            os.replace(tmp, self.tries)
+        except OSError: pass     # a full or read-only disk must not turn into a house that cannot be typed into
 
     @property
     def locked(self) -> bool:
@@ -71,7 +103,10 @@ class Lock:
         """Seconds this address still has to wait, or 0."""
         now = time.time()
         fails = [t for t in self._fails.get(who, []) if now - t < WINDOW]
-        self._fails[who] = fails
+        # Kept only while there is something to keep. An empty list left behind here would make every
+        # correct code look like a state change and write the file on the ordinary path.
+        if fails: self._fails[who] = fails
+        else: self._fails.pop(who, None)
         return (fails[0] + WINDOW - now) if len(fails) >= TRIES else 0.0
 
     def check(self, code: str | None, who: str = "") -> bool:
@@ -80,5 +115,7 @@ class Lock:
         p = self.settings.get("pin")
         ok = bool(code) and hmac.compare_digest(self._digest(code, bytes.fromhex(p["salt"])), p["hash"])
         if not ok: self._fails.setdefault(who, []).append(time.time())
+        elif who not in self._fails: return ok      # the ordinary path writes nothing
         else: self._fails.pop(who, None)
+        self._save()
         return ok

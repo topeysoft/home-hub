@@ -24,11 +24,12 @@ export type Status = { driver: Driver; reason: string; setup_done: boolean; lock
    panel does not know what it is looking at, so it draws `acts` and invents nothing. `with` is what went
    quiet behind this one fault -- fix the fault and they all come back, which is why they are not lines of
    their own. See brain/hub/health.py. */
-export type Act = { do: string; act: 'flow' | 'entry' | 'part' | 'check' | 'forget' | 'update'; to: string | null
+export type Act = { do: string; act: 'flow' | 'entry' | 'part' | 'check' | 'forget' | 'update' | 'restart'; to: string | null
   ask?: string        // a question to answer first, where the doing is worth a second's thought
-  yes?: string }      // the words that answer it, with the name in them
+  yes?: string        // the words that answer it, with the name in them
+  no?: string }       // ...and the ones that decline, where "Keep it" is not what is being kept
 export type Quiet = { id: string; name: string; where: string }
-export type Note = { kind: 'offline' | 'storage' | 'driver' | 'update'; text: string; since: number | null; subject: string | null
+export type Note = { kind: 'offline' | 'storage' | 'driver' | 'update' | 'restart'; text: string; since: number | null; subject: string | null
   where?: string      // an offline thing: which room, and what sort of thing it is -- enough to go and look at it
   name?: string       // an offline thing: what it is called, apart from the sentence it is in
   with?: Quiet[]      // what went quiet with this fault
@@ -253,6 +254,35 @@ export const requestUpdate = () => post<Update>('/update')
 export const checkForUpdate = () => post<Update>('/update/check')
 /** Whether the hub installs updates in the night on its own. */
 export const setAutoUpdate = (auto: boolean) => post<Update>('/update/auto', { auto })
+/* Turning it off and on again. Every word of the sheet is the brain's, the same way Needs a look's
+   buttons are: what stops, what keeps working and how long it takes are all facts about THIS house
+   and this hub, and a panel that wrote them itself would be guessing at all three. `rung` is the
+   ladder in docs/restart.md -- the panel never picks one, it draws the one the hub chose and, once
+   the hub says the same rung has stopped helping, the harder one underneath. */
+export type Rung = 'hub' | 'everything' | 'machine'
+export type RestartAsk = {
+  rung: Rung; title: string; yes: string
+  keeps: string          // what is still true while it is away -- the first line, and the one people are asking about
+  stops: string[]        // ...and what is not, said only where it is true of this house
+  flight: string[]       // what is half-done right now and will not survive
+  seconds: number; how_long: string
+  blocked: string | null // an update or a restore is running: no button, and this is why
+  busy: boolean          // one is already going
+  lately: number         // how many restarts somebody has asked for in the past hour
+  harder: Rung | null    // the next rung up, once this one has stopped being the answer
+  weary: string | null
+  warn: string | null    // away, and about to restart the machine nobody is there to unplug
+  may: boolean           // whether THIS phone may go through with it
+}
+/** What a restart at this rung would cost, in this house, right now. Open: a sheet that wanted the
+    code before it would say what the button does is a sheet nobody reads. */
+export async function askRestart(rung: Rung = 'hub'): Promise<RestartAsk> {
+  const r = await request(`/restart?rung=${rung}`); if (!r.ok) await fail(r); return r.json()
+}
+/** Go. `understood` answers the one extra question an away phone is asked before the machine. */
+export const doRestart = (rung: Rung, understood = false) =>
+  post<{ rung: Rung; seconds: number; how_long: string }>('/restart', { rung, understood })
+
 /** This build's notes and every release before it the image carries. */
 export async function getUpdateNotes(): Promise<UpdateNotes> {
   const r = await request('/update/notes'); if (!r.ok) await fail(r); return r.json()

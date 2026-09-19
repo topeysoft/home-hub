@@ -1,9 +1,14 @@
 // SPDX-FileCopyrightText: 2026 Temitope Adeyeri
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { reactive } from 'vue'
-import { getBridge, type Bridge, getHome, getEvents, getAmbient, getScenes, getStatus, getDiscovered, getRoutines, getAssistant, getPresence, getHealth, getSounds, connect, act, setIntent, setHomeIntent, type Room, type Device, type Home, type Event, type Ambient, type Rules, type Status, type Found, type Intent, type Routine, type Assistant, type Presence, type Note, type Sound, requestUpdate, getPhones, type Phone, type Ask, getAccounts, type Account, getShare, type Share } from './api'
+import { doRestart, type Rung, getBridge, type Bridge, getHome, getEvents, getAmbient, getScenes, getStatus, getDiscovered, getRoutines, getAssistant, getPresence, getHealth, getSounds, connect, act, setIntent, setHomeIntent, type Room, type Device, type Home, type Event, type Ambient, type Rules, type Status, type Found, type Intent, type Routine, type Assistant, type Presence, type Note, type Sound, requestUpdate, getPhones, type Phone, type Ask, getAccounts, type Account, getShare, type Share } from './api'
 import { lock } from './code'
 import { sunPosition, sunGuess, moonPhase } from './sun'
+
+/* The few soft sheets the panel has. Named rather than written out twice: the restart keeps the one
+   it closed so it can come back to it, and `typeof store.sheet` there would make the store's own type
+   circular -- which typescript answers by quietly making the whole store `any`. */
+export type Sheet = null | 'location' | 'add' | 'code' | 'why' | 'routines' | 'hub' | 'look' | 'house' | 'people' | 'accounts' | 'share' | 'notes'
 
 export const store = reactive({
   rooms: [] as Room[], linkUp: false, linkLost: false, error: '', loaded: false,   // linkLost: down long enough to be worth mentioning
@@ -20,7 +25,7 @@ export const store = reactive({
   ambient: { location: null, weather: null } as Ambient,
   ambientLoaded: false,
   rules: {} as Rules,                        // scene rules from the brain, to tell whether a room still matches its scene
-  sheet: (['location', 'add', 'code', 'why', 'routines', 'hub', 'look', 'house', 'people', 'accounts', 'share', 'notes'].includes(new URLSearchParams(location.search).get('sheet') ?? '') ? new URLSearchParams(location.search).get('sheet') : null) as null | 'location' | 'add' | 'code' | 'why' | 'routines' | 'hub' | 'look' | 'house' | 'people' | 'accounts' | 'share' | 'notes',   // the few soft sheets the panel has; ?sheet=location previews one
+  sheet: (['location', 'add', 'code', 'why', 'routines', 'hub', 'look', 'house', 'people', 'accounts', 'share', 'notes'].includes(new URLSearchParams(location.search).get('sheet') ?? '') ? new URLSearchParams(location.search).get('sheet') : null) as Sheet,   // ?sheet=location previews one
   whyRoom: new URLSearchParams(location.search).get('room') as string | null,   // the room the why sheet is about; ?sheet=why&room=kitchen previews it
   resume: new URLSearchParams(location.search).get('signin') as string | null,   // a conversation already open in the house (signing an account in again); the add sheet picks it up. ?sheet=add&signin=<flow> previews it
   routines: [] as Routine[],                 // the brain's rules, for the routines sheet and to name a rule on a room
@@ -37,6 +42,12 @@ export const store = reactive({
   sounds: [] as Sound[],                     // what a speaker can play: the hub's noises and the files in its sounds folder
   updating: false,                           // this screen asked for an update; cleared when a new build answers
   restoring: false,                          // this screen sent a backup back; cleared when the hub returns
+  /* This screen asked the hub to restart. `left` is the countdown the overlay draws, from the figure
+     the HUB measured on its own last restart -- a spinner says "this may never end", a number that
+     runs out says the house knows what it is doing. `lost` is the guard that makes coming back
+     mean something: the link is still up for the second between the answer and the brain going, so
+     nothing counts as back until it has first gone away. */
+  restarting: null as null | { rung: Rung; at: number; seconds: number; left: number; lost: boolean; from: Sheet },
   previewSetup: new URLSearchParams(location.search).get('setup') === '1',   // ?setup=1 previews first run; cleared by Open Home
   status: null as Status | null,            // where the hub is in its life: engine down, fresh, ready; and whether setup finished
   phones: [] as Phone[], asks: [] as Ask[],  // the phones that belong to the house, and the ones asking to
@@ -484,6 +495,45 @@ export async function installUpdate() {
   try { await requestUpdate(); store.updating = true; notify('Updating. The lights keep working; this screen comes back on its own.') }
   catch (e: any) { notify(e.message, 'error') }
 }
+/* ---------- turning it off and on again ---------- */
+let restartTick: number | undefined
+/** Restart, at the rung the hub chose. The panel keeps its own stopwatch rather than asking the hub
+    how long it was gone: the hub cannot answer that question while it is the thing that is away. */
+export async function restartHub(rung: Rung = 'hub', understood = false): Promise<boolean> {
+  try {
+    const r = await doRestart(rung, understood)
+    /* The sheet that asked closes, because the waiting screen IS the answer to the tap and a page
+       about the hub is not a thing to read while the hub is leaving. Where it was is kept, and the
+       panel comes back to it: the person was on This hub, so that is where they are when it returns. */
+    store.restarting = { rung, at: Date.now(), seconds: r.seconds, left: r.seconds, lost: false, from: store.sheet }
+    store.sheet = null
+    clearInterval(restartTick)
+    restartTick = window.setInterval(() => { if (store.restarting) store.restarting.left = Math.max(0, store.restarting.left - 1) }, 1000)
+    return true
+  } catch (e: any) { notify(e.message, 'error'); return false }
+}
+/** The live stream going down and coming back, while a restart is in the air. Returns true when that
+    was the hub RETURNING, so the caller knows this link event has been spoken for.
+
+    The guard is the whole of it: the brain answers the request and then waits a beat before it goes,
+    so the link is still up when the tap finishes. Nothing counts as coming back until it has first
+    gone away, or the overlay clears while the hub is still on its way down. */
+export function restartLink(up: boolean): boolean {
+  if (!store.restarting) return false
+  if (!up) { store.restarting.lost = true; return false }
+  if (!store.restarting.lost) return false
+  /* Says how long it took, once and quietly: nobody should have to guess whether the restart they
+     asked for actually happened, and a household that watches it take three minutes twice has
+     learned something about their hardware. */
+  const took = Math.max(1, Math.round((Date.now() - store.restarting.at) / 1000))
+  const from = store.restarting.from
+  store.restarting = null
+  store.sheet = from
+  clearInterval(restartTick)
+  notify(took < 90 ? `Back. That took ${took} seconds.` : `Back. That took ${Math.round(took / 60)} minutes.`)
+  return true
+}
+
 export function openWhy(roomId: string) { store.whyRoom = roomId; store.sheet = 'why' }
 /** Pick up a conversation the house already has open, on the sheet that draws every other one. */
 export function openFlow(flowId: string) { store.resume = flowId; store.sheet = 'add' }
@@ -609,7 +659,13 @@ export async function start() {
   }, link: v => {
     store.linkUp = v
     clearTimeout(lostTimer)
-    if (v) { store.linkLost = false; if (store.restoring && store.linkLost === false && store.loaded) { store.restoring = false; notify('Restored. Welcome back.'); load() } else if (!store.loaded) load() }
+    const back = restartLink(v)     // a restart this screen asked for, going or coming back
+    if (v) {
+      store.linkLost = false
+      if (back) load()
+      else if (store.restoring && store.linkLost === false && store.loaded) { store.restoring = false; notify('Restored. Welcome back.'); load() }
+      else if (!store.loaded) load()
+    }
     else lostTimer = window.setTimeout(() => (store.linkLost = true), 4000)   // a blink on startup is not worth a banner
   } })
 }

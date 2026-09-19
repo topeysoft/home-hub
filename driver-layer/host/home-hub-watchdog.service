@@ -1,0 +1,11 @@
+# One look at whether the house is answering. Started by home-hub-watchdog.timer.
+[Unit]
+Description=Home Hub: check the house is still answering
+After=network-online.target docker.service
+
+[Service]
+Type=oneshot
+Environment=HOME_HUB_DIR=/opt/home-hub
+ExecStart=/opt/home-hub/driver-layer/host/watchdog.sh
+StandardOutput=journal
+TimeoutStartSec=600

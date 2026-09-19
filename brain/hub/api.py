@@ -26,6 +26,7 @@ from . import notes as notes_mod
 from .updates import Updates
 from .health import Health
 from .backup import Backup
+from .restart import Restart
 from .sounds import Sounds, DIR as SOUNDS_DIR
 from .commands import Commands, NotUnderstood, refusal_aloud
 from .voice import Voice
@@ -113,6 +114,7 @@ class Hub:
         self.updates = Updates(self)                   # which build this is, whether a newer one exists, and the panel's ask
         self.health = Health(self)                     # what needs a look, as sentences
         self.backup = Backup(self)                     # the house as one file, and back
+        self.restart = Restart(self)                   # turning it off and on again, at the smallest rung that could help
         self.sounds = Sounds(self)                     # noise and rain on a speaker, looped here, with a sleep timer
         self.commands = Commands(self)                 # plain words into moves, by a fixed grammar first and the assistant after
         self.voice = Voice(self)                       # the same answers, said out loud -- inert until a hub has an engine
@@ -1793,10 +1795,21 @@ async def update_check():
     return await hub.updates.check_now()
 
 
+@app.get("/update/ask")
+def update_ask(request: Request):
+    """What installing this update would cost, in this house, right now.
+
+    Open, exactly like /restart's sheet and for the same reason: one that demanded the code before it
+    would say what the button does is a sheet nobody reads. Every word of it is written in the brain,
+    because what keeps working, what stops and how long it takes are facts about THIS house.
+    """
+    return hub.updates.ask(away=request.state.away)
+
+
 @app.post("/update")
-def update_request():
+def update_request(request: Request):
     """Install the update: the host does it, the panel watches. Behind the settings code."""
-    try: return hub.updates.request()
+    try: return hub.updates.request(who=_who(request))
     except ValueError as e: raise HTTPException(409, str(e))
 
 
@@ -1816,6 +1829,49 @@ def update_notes_seen():
 def update_auto(body: dict):
     """{"auto": true|false}: whether this hub installs updates in the night without being asked."""
     return hub.updates.set_auto(bool(body.get("auto")))
+
+
+# ---------- turning it off and on again ----------
+@app.get("/restart")
+def restart_ask(request: Request, rung: str = "hub"):
+    """What a restart at this rung would cost, in this house, right now.
+
+    Every word of the sheet is written here rather than in the panel, the way Needs a look's buttons
+    are: the panel does not know what it is looking at. `may` is whether THIS phone may go through
+    with it, so a guest's sheet can say so instead of offering a button that answers 401.
+    """
+    return {**hub.restart.ask(rung, away=request.state.away), "may": _may_restart(request)}
+
+
+@app.post("/restart")
+def restart_go(body: dict, request: Request):
+    """Restart, at the rung the body names. Behind the settings code, and behind more than the code."""
+    if not _may_restart(request):
+        raise HTTPException(403, "Restarting the house is for the screens that keep it. Someone at the wall can do it.")
+    try:
+        return hub.restart.go(str(body.get("rung") or "hub"), _who(request),
+                              away=request.state.away, understood=bool(body.get("understood")))
+    except ValueError as e: raise HTTPException(409, str(e))
+
+
+def _may_restart(request: Request) -> bool:
+    """Who may take the house down.
+
+    The code is not enough. It is one secret the whole house shares and it gets read out in kitchens,
+    which is the argument phones.holds_keys() already makes about handing out keys -- and a restart is
+    the same size of thing: a phone let in at a wall for the weekend runs the house and may not take
+    it down. The wall itself may, and refusing it would be theater: whoever is standing at it can
+    reach the plug. A house with no code has no phones and locks nothing, which is how a hub starts.
+    """
+    if not hub.lock.locked: return True
+    return holds_keys(request.state.phone)
+
+
+def _who(request: Request) -> str:
+    """Whose tap it was, for the line in the log. A household should be able to see that the hub went
+    down at three in the morning and that nobody in the house asked it to."""
+    p = request.state.phone or {}
+    return p.get("name") or ("a phone" if p else "the wall")
 
 
 # ---------- the assistant: writes and explains, never runs ----------

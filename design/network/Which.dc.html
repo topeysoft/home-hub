@@ -1,0 +1,126 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp: #e9b872; --lamp-ink: #2a1c07; --live: #74c69d; --danger: #e08a8a;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .sheet { width: 560px; border-radius: 26px; background: rgba(22,24,30,.92);
+             border: 1px solid var(--edge-hi); box-shadow: 0 40px 100px -30px rgba(0,0,0,.9); overflow: hidden; }
+    .sheet h2 { margin: 0; font-size: 36px; line-height: 1.05; font-weight: 400; letter-spacing: -.025em; }
+    .lede { margin: 0 0 20px; color: var(--ink-2); font-size: 15px; line-height: 1.5; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 999px;
+           background: var(--ink); color: var(--bg); font-weight: 500; font-size: 17px; }
+    .btn.ghost { background: var(--surface-hi); color: var(--ink); border: 1px solid var(--edge); }
+    .t1 { font-size: 15.5px; font-weight: 500; }
+    .t2 { font-size: 13px; color: var(--muted); }
+    /* one network found. The chosen one opens into its own password field rather than
+       throwing a second screen at somebody who has already made the only decision here. */
+    .net { display: grid; grid-template-columns: 26px 1fr auto; align-items: center; gap: 14px;
+           padding: 13px 16px; border-radius: 16px; background: var(--surface); border: 1px solid var(--edge); }
+    .net.pick { border-color: rgba(233,184,114,.45); background: linear-gradient(rgba(233,184,114,.11), rgba(233,184,114,.11)), var(--surface); }
+    .net.here { opacity: .55; }
+    .field { height: 50px; padding: 0 14px; border-radius: 14px; background: var(--surface-hi);
+             border: 1px solid var(--edge); display: flex; align-items: center; gap: 10px; color: var(--ink); font-size: 17px; }
+    .row { display: grid; grid-template-columns: auto 1fr; align-items: start; gap: 12px;
+           padding: 13px 15px; border-radius: 16px; background: var(--surface); border: 1px solid var(--edge); }
+    .ic { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; background: var(--surface-hi); }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: var(--bg); color: var(--ink); font-size: 17px; line-height: 1.4;">
+
+  <div style="position: absolute; inset: 0; background: linear-gradient(rgb(29,33,46) 0%, rgb(41,42,63) 44%, rgb(92,63,57) 84%, rgb(62,44,42) 100%);"></div>
+  <div style="position: absolute; left: -222px; top: -135px; width: 1855px; height: 1156px; background: radial-gradient(58% 54% at 30% 64%, rgba(72,63,135,.4), transparent 68%), radial-gradient(62% 52% at 54% 110%, rgba(55,51,100,.44), transparent 72%);"></div>
+  <!-- This hub, behind: the sheet is over the page you were on, never a place you navigated to -->
+  <div style="position: absolute; left: 56px; top: 108px; width: 1080px; filter: blur(10px); opacity: .5;">
+    <div style="height: 48px; width: 300px; border-radius: 12px; background: rgba(255,255,255,.1); margin-bottom: 40px;"></div>
+    <div style="height: 70px; border-top: 1px solid rgba(255,255,255,.12);"></div>
+    <div style="height: 88px; border-top: 1px solid rgba(255,255,255,.12); background: rgba(233,184,114,.08);"></div>
+    <div style="height: 82px; border-top: 1px solid rgba(255,255,255,.12);"></div>
+    <div style="height: 82px; border-top: 1px solid rgba(255,255,255,.12);"></div>
+  </div>
+  <div style="position: absolute; inset: 0; background: rgba(6,7,9,.56);"></div>
+
+  <!-- ================================ the sheet ================================ -->
+  <div class="sheet" style="position: absolute; left: 440px; top: 66px;">
+    <div style="display: flex; align-items: flex-start; gap: 14px; padding: 26px 22px 6px 28px;">
+      <h2 class="dsp" style="flex: 1;">Which Wi&#8209;Fi?</h2>
+      <span style="width: 34px; height: 34px; border-radius: 999px; background: var(--surface-hi); border: 1px solid var(--edge); display: grid; place-items: center;">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink-2)" stroke-width="1.9" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </span>
+    </div>
+    <div style="padding: 4px 28px 26px;">
+      <!-- The lede names the consequence BEFORE the choice, because the consequence is the
+           surprising part: this is not a setting on the hub, it is a change to twelve things. -->
+      <p class="lede">The hub is on a cable and stays on it. This is the Wi&#8209;Fi your eleven bridges use &mdash; change it here and they all move over together.</p>
+
+      <div style="display: flex; flex-direction: column; gap: 9px; margin-bottom: 18px;">
+
+        <div class="net here">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--ink-2)" stroke-width="1.8" stroke-linecap="round"><path d="M2 8.5a16 16 0 0 1 20 0"/><path d="M5.5 12.5a11 11 0 0 1 13 0"/><path d="M9 16.5a6 6 0 0 1 6 0"/><circle cx="12" cy="20" r="1" fill="var(--ink-2)"/></svg>
+          <span><span class="t1">Upstairs</span><span class="t2" style="display: block;">What they use now</span></span>
+          <span class="t2">In use</span>
+        </div>
+
+        <div class="net pick">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--lamp)" stroke-width="1.8" stroke-linecap="round"><path d="M2 8.5a16 16 0 0 1 20 0"/><path d="M5.5 12.5a11 11 0 0 1 13 0"/><path d="M9 16.5a6 6 0 0 1 6 0"/><circle cx="12" cy="20" r="1" fill="var(--lamp)"/></svg>
+          <span><span class="t1">Downstairs</span><span class="t2" style="display: block;">Strong &middot; 5 GHz</span></span>
+          <span style="width: 22px; height: 22px; border-radius: 999px; background: var(--lamp); display: grid; place-items: center;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#2a1c07" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>
+          </span>
+        </div>
+
+        <!-- the chosen one's password, in place. No second screen. -->
+        <div class="field" style="margin: 3px 0 3px;">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.7" stroke-linecap="round"><rect x="4" y="10.5" width="16" height="10" rx="3"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/></svg>
+          <span style="letter-spacing: .18em;">&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;</span>
+        </div>
+
+        <div class="net">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--ink-2)" stroke-width="1.8" stroke-linecap="round" opacity=".7"><path d="M5.5 12.5a11 11 0 0 1 13 0"/><path d="M9 16.5a6 6 0 0 1 6 0"/><circle cx="12" cy="20" r="1" fill="var(--ink-2)"/></svg>
+          <span><span class="t1">BT-HUB-9QK2</span><span class="t2" style="display: block;">Faint from here</span></span>
+          <span></span>
+        </div>
+        <div class="net">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--ink-2)" stroke-width="1.8" stroke-linecap="round" opacity=".7"><path d="M9 16.5a6 6 0 0 1 6 0"/><circle cx="12" cy="20" r="1" fill="var(--ink-2)"/></svg>
+          <span><span class="t1">Flat 3 guest</span><span class="t2" style="display: block;">Faint from here</span></span>
+          <span></span>
+        </div>
+      </div>
+
+      <!-- The promise that makes the button safe to press. It is not reassurance: it is a
+           description of what the bridges will actually do, and it is why two keys exist. -->
+      <div class="row" style="margin-bottom: 20px;">
+        <span class="ic">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--live)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg>
+        </span>
+        <span><span class="t1">If it&rsquo;s the wrong password, nothing breaks</span><span class="t2" style="display: block; margin-top: 3px;">Every bridge keeps the old one as well. Anything that can&rsquo;t get on <b style="color: var(--ink-2);">Downstairs</b> is back on <b style="color: var(--ink-2);">Upstairs</b> within a few minutes, by itself.</span></span>
+      </div>
+
+      <div style="display: flex; gap: 10px;">
+        <span class="btn">Move them over</span>
+        <span class="btn ghost">Not now</span>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

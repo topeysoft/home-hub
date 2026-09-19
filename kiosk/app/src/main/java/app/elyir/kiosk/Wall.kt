@@ -27,6 +27,7 @@ import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import androidx.core.view.WindowCompat
@@ -344,6 +345,21 @@ class Wall : Activity() {
         address.setText(Prefs.raw(this) ?: "")
         view.findViewById<TextView>(R.id.showing).text =
             showing?.let { "Showing ${it.removePrefix("http://")}" } ?: "Not showing the house yet"
+        // The plug, only where it is the answer: a wall that is showing the house has a Restart on the
+        // panel itself, and telling somebody to pull a cable in front of a working hub is nonsense.
+        view.findViewById<TextView>(R.id.plug).visibility = if (showing == null) View.VISIBLE else View.GONE
+
+        // This screen's own ladder. Reload is the dialog's middle button and is the rung below these.
+        var close: (() -> Unit)? = null
+        view.findViewById<Button>(R.id.restart_app).setOnClickListener { close?.invoke(); restartApp() }
+        val reboot = view.findViewById<Button>(R.id.restart_tablet)
+        // Offered only where it can actually happen. Rebooting Android is a device owner's to do, and
+        // a button that quietly does nothing is worse than no button: somebody presses it, the screen
+        // stays frozen, and they learn that nothing here means anything.
+        if (canReboot()) {
+            reboot.visibility = View.VISIBLE
+            reboot.setOnClickListener { close?.invoke(); rebootTablet() }
+        }
 
         val dialog = AlertDialog.Builder(this)
             .setView(view)
@@ -363,6 +379,7 @@ class Wall : Activity() {
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
         )
         dialog.setOnDismissListener { fullScreen() }
+        close = { dialog.dismiss() }
         dialog.show()
         dialog.window?.let { w ->
             WindowInsetsControllerCompat(w, w.decorView).apply {
@@ -371,6 +388,31 @@ class Wall : Activity() {
             }
             w.clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
         }
+    }
+
+    /**
+     * Restarting the wall app: the rung above Reload, for a WebView that has wedged rather than a
+     * page that has gone stale. The process goes and the system starts this activity again, because
+     * it is the home screen — which is the same thing that brings the wall back after a power cut.
+     */
+    private fun restartApp() {
+        val again = Intent(this, Wall::class.java)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+        try { if (isInLockTask()) stopLockTask() } catch (_: Exception) {}
+        startActivity(again)
+        finishAffinity()
+        ui.postDelayed({ Runtime.getRuntime().exit(0) }, 200)
+    }
+
+    /** Only a device owner may reboot Android, which is why the button is hidden without one. */
+    private fun canReboot(): Boolean {
+        val dpm = getSystemService(Context.DEVICE_POLICY_SERVICE) as? DevicePolicyManager ?: return false
+        return dpm.isDeviceOwnerApp(packageName)
+    }
+
+    private fun rebootTablet() {
+        val dpm = getSystemService(Context.DEVICE_POLICY_SERVICE) as? DevicePolicyManager ?: return
+        try { dpm.reboot(ComponentName(this, Admin::class.java)) } catch (_: Exception) {}
     }
 
     private fun leave() {

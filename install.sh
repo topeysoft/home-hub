@@ -201,14 +201,18 @@ ACTION=="add", SUBSYSTEM=="tty", SUBSYSTEMS=="usb", RUN+="/usr/bin/systemd-run -
 ACTION=="remove", SUBSYSTEM=="tty", KERNEL=="ttyUSB*|ttyACM*", RUN+="/usr/bin/systemd-run --no-block --collect $DIR/driver-layer/radios.sh"
 RULES
 udevadm control --reload 2>/dev/null || true
-# updates and restores: the panel writes brain-data/update.request or restore.request; these units see it and act
-chmod +x host/update.sh host/restore.sh host/channel.sh
+# updates, restores and restarts: the panel writes brain-data/<thing>.request; these units see it and act.
+# The watchdog is the one with no request behind it: it runs on its own clock and catches a house that
+# stopped answering when nobody is there to notice (docs/restart.md, piece 5).
+chmod +x host/update.sh host/restore.sh host/channel.sh host/restart.sh host/watchdog.sh
 for u in home-hub-update.service home-hub-update.path home-hub-restore.service home-hub-restore.path \
+         home-hub-restart.service home-hub-restart.path home-hub-watchdog.service home-hub-watchdog.timer \
          home-hub-channel.service home-hub-channel.timer; do
   sed "s#/opt/home-hub#$DIR#g" "host/$u" > "/etc/systemd/system/$u"
 done
 systemctl daemon-reload 2>/dev/null || true
-systemctl enable --now home-hub-update.path home-hub-restore.path home-hub-channel.timer >/dev/null 2>&1 || true
+systemctl enable --now home-hub-update.path home-hub-restore.path home-hub-restart.path \
+                       home-hub-watchdog.timer home-hub-channel.timer >/dev/null 2>&1 || true
 # ...and ask once now, so a hub coming up after a hold was published knows about it before its first night.
 HOME_HUB_DIR="$DIR" ./host/channel.sh >/dev/null 2>&1 || true
 

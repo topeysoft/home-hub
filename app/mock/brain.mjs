@@ -357,6 +357,26 @@ const server = http.createServer((req, res) => {
   if (p === '/update' && req.method === 'POST') { if (status.update) status.update.requested = true; return json(res, status.update ?? {}) }
   if (p === '/update/check' && req.method === 'POST') { if (status.update) status.update.checked = Date.now() / 1000; return json(res, status.update ?? {}) }
   if (p === '/update/notes/seen' && req.method === 'POST') { if (status.update) status.update.whats_new = null; return json(res, status.update ?? {}) }
+  /* Turning it off and on again. The sheet's every word is the brain's, so the mock has to speak them
+     or This hub previews a blank question. RESTART=weary shows the rung that has stopped helping, and
+     the POST answers and does nothing: the panel's overlay is the thing being looked at here. */
+  if (p === '/restart' && req.method !== 'POST') {
+    const rung = url.searchParams.get('rung') || 'hub'
+    const secs = { hub: 30, everything: 120, machine: 180 }[rung] ?? 30
+    const weary = process.env.RESTART === 'weary'
+    return json(res, {
+      rung, title: { hub: 'Restart the hub?', everything: 'Restart everything?', machine: 'Restart the little computer?' }[rung],
+      yes: { hub: 'Restart the hub', everything: 'Restart everything', machine: 'Restart the little computer' }[rung],
+      keeps: rung === 'hub' ? 'Lights and switches keep working.' : 'Switches on the wall keep working.',
+      stops: rung === 'hub' ? ['Motion lights and schedules pause.'] : ['Everything the hub talks to goes quiet until it\u2019s back \u2014 lights, sensors and the radios.'],
+      flight: [], seconds: secs, how_long: secs < 90 ? `about ${secs} seconds` : `about ${Math.round(secs / 60)} minutes`,
+      blocked: null, busy: false, lately: weary ? 3 : 0,
+      harder: weary ? (rung === 'hub' ? 'everything' : 'machine') : null,
+      weary: weary ? 'The hub has restarted 3 times in the past hour. Something is wrong that restarting isn\u2019t fixing.' : null,
+      warn: null, may: true,
+    })
+  }
+  if (p === '/restart' && req.method === 'POST') return json(res, { rung: 'hub', seconds: 30, how_long: 'about 30 seconds' })
   if (p === '/home') return json(res, home)
   if (p === '/ambient') return json(res, ambient)
   if (p === '/presence') return json(res, presence)
