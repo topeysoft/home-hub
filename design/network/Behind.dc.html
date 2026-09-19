@@ -1,0 +1,93 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp: #e9b872; --lamp-ink: #2a1c07; --live: #74c69d; --danger: #e08a8a;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .sheet { width: 560px; border-radius: 26px; background: rgba(22,24,30,.92);
+             border: 1px solid var(--edge-hi); box-shadow: 0 40px 100px -30px rgba(0,0,0,.9); overflow: hidden; }
+    .sheet h2 { margin: 0; font-size: 36px; line-height: 1.05; font-weight: 400; letter-spacing: -.025em; }
+    .lede { margin: 0 0 18px; color: var(--ink-2); font-size: 15px; line-height: 1.5; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 999px;
+           background: var(--ink); color: var(--bg); font-weight: 500; font-size: 17px; }
+    .btn.ghost { background: var(--surface-hi); color: var(--ink); border: 1px solid var(--edge); }
+    .t1 { font-size: 15.5px; font-weight: 500; }
+    .t2 { font-size: 13px; color: var(--muted); }
+    .row { display: grid; grid-template-columns: auto 1fr; align-items: start; gap: 12px;
+           padding: 13px 15px; border-radius: 16px; background: var(--surface); border: 1px solid var(--edge); }
+    .ic { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; background: var(--surface-hi); }
+    /* the two that are behind, named by where they are. Amber, not red: nothing is broken and the
+       lights in those rooms still work -- what is missing is the hub's view of them. */
+    .late { display: grid; grid-template-columns: 26px 1fr; align-items: center; gap: 13px; padding: 12px 15px;
+            border-radius: 15px; border: 1px solid rgba(233,184,114,.32);
+            background: linear-gradient(rgba(233,184,114,.09), rgba(233,184,114,.09)), var(--surface); }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: var(--bg); color: var(--ink); font-size: 17px; line-height: 1.4;">
+
+  <div style="position: absolute; inset: 0; background: linear-gradient(rgb(29,33,46) 0%, rgb(41,42,63) 44%, rgb(92,63,57) 84%, rgb(62,44,42) 100%);"></div>
+  <div style="position: absolute; left: -222px; top: -135px; width: 1855px; height: 1156px; background: radial-gradient(58% 54% at 30% 64%, rgba(72,63,135,.4), transparent 68%), radial-gradient(62% 52% at 54% 110%, rgba(55,51,100,.44), transparent 72%);"></div>
+  <div style="position: absolute; inset: 0; background: rgba(6,7,9,.6);"></div>
+
+  <div class="sheet" style="position: absolute; left: 440px; top: 120px;">
+    <div style="padding: 30px 28px 6px;">
+      <!-- Nine first. The house did its job nine times and failed twice, and a headline that leads
+           with the failure teaches a household to be afraid of a button that mostly works. -->
+      <h2 class="dsp">Nine followed. Two didn&rsquo;t.</h2>
+    </div>
+    <div style="padding: 8px 28px 28px;">
+      <p class="lede">These two were not switched on when the others moved, so they are still looking for the old Wi&#8209;Fi:</p>
+
+      <div style="display: flex; flex-direction: column; gap: 9px; margin-bottom: 18px;">
+        <div class="late">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--lamp)" stroke-width="1.8" stroke-linecap="round"><path d="M12 8v5"/><circle cx="12" cy="16.5" r="1" fill="var(--lamp)"/><circle cx="12" cy="12" r="9"/></svg>
+          <span><span class="t1">The hallway</span><span class="t2" style="display: block;">Last heard from 11 minutes ago</span></span>
+        </div>
+        <div class="late">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--lamp)" stroke-width="1.8" stroke-linecap="round"><path d="M12 8v5"/><circle cx="12" cy="16.5" r="1" fill="var(--lamp)"/><circle cx="12" cy="12" r="9"/></svg>
+          <span><span class="t1">The back bedroom</span><span class="t2" style="display: block;">Last heard from yesterday</span></span>
+        </div>
+      </div>
+
+      <div class="row" style="margin-bottom: 10px;">
+        <span class="ic" style="background: rgba(116,198,157,.16);">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--live)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.5.4.8 1 .8 1.6v.5h5.4v-.5c0-.6.3-1.2.8-1.6A6 6 0 0 0 12 3z"/></svg>
+        </span>
+        <span><span class="t1">The lights in those rooms still work</span><span class="t2" style="display: block; margin-top: 3px;">Those switches don&rsquo;t need the bridge to turn each other on. What the house has lost is being able to see them from here.</span></span>
+      </div>
+
+      <!-- The recovery, in one sentence, with no apology and no support article. -->
+      <div class="row" style="margin-bottom: 22px;">
+        <span class="ic">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink-2)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3v6M15 3v6"/><rect x="6" y="9" width="12" height="7" rx="3"/><path d="M12 16v5"/></svg>
+        </span>
+        <span><span class="t1">Bring each one to the hub and plug it in</span><span class="t2" style="display: block; margin-top: 3px;">A minute each, and they go straight back where they were. The house will remind you on Home until they&rsquo;re back.</span></span>
+      </div>
+
+      <div style="display: flex; gap: 10px;">
+        <span class="btn">OK</span>
+        <span class="btn ghost">Try them again</span>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
