@@ -1,7 +1,7 @@
 # The network the house runs on
 
-*Written 18 September 2026. **Pieces 1 to 5 were built the same day** — see *What landed* at the foot;
-pieces 6 and 7 are still a plan. It covers one thing — how the hub is connected, and what
+*Written 18 September 2026. **Pieces 1 to 5 and 7 were built the same day** — see *What landed* at the
+foot; piece 6 is still a plan. It covers one thing — how the hub is connected, and what
 follows it when that changes. The goal it serves is the same as every other document here: nobody who receives a
 hub ever opens Home Assistant, a terminal, or a support article. A household that changes its Wi‑Fi password
 should not have to go around the house collecting hardware.*
@@ -187,7 +187,7 @@ bridges followed* is the sentence that teaches a household this is safe to do.
 
 ## What landed, 18 September 2026
 
-Pieces 1 to 5, in the order above.
+Pieces 1 to 5 and 7, in the order above.
 
 - **The name.** A puck is given the hub's hostname alongside its address (`Bridges.config`,
   `puck_cable.py --name`) and resolves mDNS first, the last address that answered second, the one it
@@ -209,14 +209,23 @@ Pieces 1 to 5, in the order above.
 - **The hub's own move.** `POST /network/hub` tells the bridges first and the host second;
   `network.sh` watches the new connection reach its gateway for three minutes and puts the old one
   back otherwise. Gated by `needs_code()` and refused from away.
+- **The ones that never came back.** `Bridges._saw()` stamps the moment a bridge goes quiet into
+  settings, `Bridges.quiet()` decides when that is worth saying — a day for one simply gone, two
+  hours for one that missed a move, which is as long as the self-healing needs — and
+  `Health.bridges()` turns it into a line on Home. The line says the switches still work before it
+  says anything else, because a household whose panel has stopped showing the hallway will walk to
+  the switch, find it works, and distrust the panel. The recovery is a walk to a socket, so it is in
+  the sentence and not in a button; the one act is `POST /bridge/forget`, which clears the retained
+  topics too, or a bridge forgotten on Monday is back in the list on Tuesday.
 
 ### Still a plan
 
 - **Piece 6, the setup AP.** Needed the day a hub ships without an ethernet port. A Wi‑Fi-only hub
   with no network is, until then, a hub somebody flashed a card for.
-- **Piece 7's health job.** A bridge that never came back is visible on the move's own screen and
-  nowhere else. It should become a *Needs a look* line on Home the next day, carrying the same
-  sentence about the cable. `health.py` already has the shape.
+- **What went quiet with it.** A bridge's line does not yet gather its own switches into `with`, the
+  way a dead radio gathers the devices behind it. Whether a mesh light actually goes `unavailable`
+  when its bridge stops publishing has not been checked, and claiming it without checking would put
+  a fault's name on devices that are fine.
 - **Naming a bridge.** `Bridges.where()` uses a room only when one puck carries a mesh on its own,
   and says *A bridge* otherwise rather than putting a name on the wrong object. The real fix is for
   the placing step to record where somebody just put it — one question, on a screen that already
