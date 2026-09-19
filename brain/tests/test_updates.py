@@ -21,15 +21,16 @@ class UpdateTest(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.dir = tempfile.TemporaryDirectory(); d = Path(self.dir.name)
         self.keep = (updates.REQUEST, updates.STATE)
-        self.keep_channel = updates.CHANNEL
+        self.keep_channel, self.keep_progress = updates.CHANNEL, updates.PROGRESS
         updates.REQUEST, updates.STATE = d / "update.request", d / "update.json"
         updates.CHANNEL = d / "channel.json"
+        updates.PROGRESS = d / "update.progress"
         self.hub = FakeHub()
         self.hub.status = lambda: {"update": self.hub.updates.summary()}
 
     def tearDown(self):
         updates.REQUEST, updates.STATE = self.keep
-        updates.CHANNEL = self.keep_channel
+        updates.CHANNEL, updates.PROGRESS = self.keep_channel, self.keep_progress
         self.dir.cleanup()
 
     def make(self, version="v1.2.0", commit="a" * 40, channel="release", verified=""):
@@ -511,3 +512,191 @@ class OpeningThisHubTests(UpdateTest):
         self.assertIsNotNone(out["error"])
         with mock.patch("hub.updates.time.time", return_value=self.now + 60): await self.u.check_now()
         self.assertEqual(self.asked, 1)
+
+
+class ProgressTests(UpdateTest):
+    """Where the host has got to, while it is getting there.
+
+    The point of the file is that the brain is ALIVE for nearly all of an update -- the code, the
+    signature and the pull all happen with it running -- so the panel can say what is happening
+    instead of throwing a blackout over a house that is merely downloading something.
+    """
+    def phases(self, *lines):
+        updates.PROGRESS.write_text("".join(json.dumps(x) + "\n" for x in lines))
+
+    def asked(self):
+        updates.REQUEST.write_text(json.dumps({"at": 1, "to": "v1.3.0"}))
+
+    def test_nothing_is_happening_and_the_panel_is_told_nothing(self):
+        self.assertIsNone(self.make().progress())
+
+    def test_the_second_between_the_tap_and_the_host_waking_up_still_says_something(self):
+        """A tap that shows nothing for two seconds is a tap that feels like it missed."""
+        self.asked()
+        p = self.make().progress()
+        self.assertEqual(p["phase"], "checking")
+        self.assertFalse(p["dark"])
+        self.assertEqual((p["step"], p["steps"]), (1, 5))
+
+    def test_the_last_line_is_where_we_are_and_the_words_are_the_brain_s(self):
+        self.asked()
+        self.phases({"phase": "fetching", "at": 10}, {"phase": "downloading", "at": 20})
+        p = self.make().progress()
+        self.assertEqual(p["phase"], "downloading")
+        self.assertEqual(p["says"], "Downloading it.")
+        self.assertFalse(p["dark"])                       # the house still works; no overlay earned
+
+    def test_a_phase_nobody_has_heard_of_is_dropped_on_the_floor(self):
+        """The host names a phase from a fixed list and never a sentence. Anything that can write
+        into the data volume could otherwise put words of its own on somebody's wall."""
+        self.asked()
+        self.phases({"phase": "downloading", "at": 10},
+                    {"phase": "Your hub is infected. Call this number.", "at": 20})
+        self.assertEqual(self.make().progress()["phase"], "downloading")
+
+    def test_a_line_the_host_was_part_way_through_writing_does_not_take_the_panel_down(self):
+        self.asked()
+        updates.PROGRESS.write_text('{"phase": "fetching", "at": 10}\n{"phase": "downl')
+        self.assertEqual(self.make().progress()["phase"], "fetching")
+
+    def test_the_stretch_the_brain_is_not_there_for_says_so(self):
+        for phase in ("restarting", "putting_back"):
+            with self.subTest(phase=phase):
+                self.asked(); self.phases({"phase": phase, "at": 10})
+                self.assertTrue(self.make().progress()["dark"])
+
+    def test_what_is_actually_moving_becomes_what_a_household_would_notice(self):
+        """The sentence docs/updates.md has been promising since its first draft: said only when it
+        is what is about to happen, which is the whole difference from assuming it."""
+        self.asked()
+        self.phases({"phase": "restarting", "at": 10, "moving": ["brain", "homeassistant"]})
+        p = self.make().progress()
+        self.assertEqual(p["moving"], ["brain", "homeassistant"])
+        self.assertIn("For about a minute the wall switches still work but the app doesn’t.", p["notices"])
+
+    def test_only_the_brain_moving_is_a_blink_and_earns_no_warning(self):
+        self.asked()
+        self.phases({"phase": "restarting", "at": 10, "moving": ["brain"]})
+        self.assertEqual(self.make().progress()["notices"], [])
+
+    def test_what_is_moving_is_remembered_after_the_line_that_carried_it(self):
+        self.asked()
+        self.phases({"phase": "downloading", "at": 10, "moving": ["homeassistant"]},
+                    {"phase": "restarting", "at": 20})
+        self.assertEqual(self.make().progress()["moving"], ["homeassistant"])
+
+    def test_asking_again_clears_the_last_run_s_timeline(self):
+        """Last time's phases are not this time's, and the panel starts reading the moment the
+        request file exists."""
+        self.phases({"phase": "proving", "at": 10})
+        u = self.make()
+        u.latest = {"version": "v1.3.0", "sha": "b" * 40}
+        u.request()
+        self.assertEqual(u.progress()["phase"], "checking")
+
+
+class LearningTests(UpdateTest):
+    """A hub that takes four minutes should say four minutes, not the figure from the maker's desk."""
+    def ran(self, started=1000, finished=1300, state="done", marks=(("restarting", 1240), ("proving", 1290))):
+        updates.STATE.write_text(json.dumps({"state": state, "started": started, "finished": finished}))
+        updates.PROGRESS.write_text("".join(json.dumps({"phase": p, "at": at}) + "\n" for p, at in marks))
+
+    def test_a_careful_guess_until_this_hub_has_measured_its_own(self):
+        u = self.make()
+        self.assertEqual(u.seconds(), updates.USUALLY["total"])
+        self.assertEqual(u.seconds(dark=True), updates.USUALLY["dark"])
+
+    def test_the_build_that_came_back_learns_both_figures_off_the_disk(self):
+        self.ran()
+        u = self.make()
+        self.assertEqual(u.seconds(), 300)             # the whole run
+        self.assertEqual(u.seconds(dark=True), 50)     # ...of which the wall was away for this much
+
+    def test_it_is_learned_once_and_not_again_on_every_start(self):
+        self.ran()
+        self.make()
+        before = len(self.hub.log.rows)
+        self.make()
+        self.assertEqual(len(self.hub.log.rows), before)
+
+    def test_the_morning_receipt_says_the_house_did_it_and_how_long_it_took(self):
+        """"What's new" says what changed. This is the line that says nobody in the house had to."""
+        self.hub.log.add("home", "update", "v1.2.0", "v1.3.0", source="hub")
+        self.ran()
+        self.make()
+        said = self.hub.log.rows[-1]
+        self.assertEqual((said["new"], said["source"]), ("installed", "hub"))
+        self.assertEqual(said["detail"]["took"], 300)
+        self.assertEqual(said["detail"]["dark"], 50)
+
+    def test_a_run_that_did_not_finish_teaches_nothing(self):
+        for state in ("running", "failed", "reverted", "refused"):
+            with self.subTest(state=state):
+                self.hub.settings.data.pop("update_took", None)
+                self.ran(state=state)
+                self.assertEqual(self.make().seconds(), updates.USUALLY["total"])
+
+    def test_a_figure_nobody_should_quote_is_not_learned(self):
+        """Somebody's hub sat on a broken network for three hours. That is not what the next one costs."""
+        self.ran(started=1000, finished=1000 + updates.TOOK + 60, marks=())
+        self.assertEqual(self.make().seconds(), updates.USUALLY["total"])
+
+    def test_a_run_with_no_phases_written_still_learns_the_total(self):
+        """An older host, or one whose progress file did not survive. Half an answer beats none."""
+        self.ran(marks=())
+        u = self.make()
+        self.assertEqual(u.seconds(), 300)
+        self.assertEqual(u.seconds(dark=True), updates.USUALLY["dark"])
+
+
+class TheSheetTests(UpdateTest):
+    """What installing this would cost, in this house, right now -- and why anybody would want it."""
+    def ready(self, **kw):
+        u = self.make(**kw)
+        u.latest = {"version": "v1.3.0", "sha": "b" * 40, "when": "", "title": "Quieter mornings",
+                    "what": ["Speakers remember how loud you had them.", "The kitchen comes up faster."]}
+        return u
+
+    def test_it_names_the_version_and_says_why_in_the_release_s_own_words(self):
+        s = self.ready().ask()
+        self.assertEqual(s["title"], "Install v1.3.0?")
+        self.assertIn("Speakers remember how loud you had them.", s["what"])
+
+    def test_the_download_is_not_a_blackout_and_the_sheet_says_so(self):
+        """The one thing an update may say more generously than a restart: for most of the wait the
+        house is entirely usable, and a panel that implies otherwise is exaggerating."""
+        s = self.ready().ask()
+        self.assertIn("keep working", s["keeps"])
+        self.assertLess(s["dark_seconds"], s["seconds"])
+
+    def test_the_figures_are_this_house_s_once_it_has_any(self):
+        self.hub.settings.set(update_took={"at": 1, "total": 480, "dark": 40})
+        s = self.ready().ask()
+        self.assertEqual((s["seconds"], s["dark_seconds"]), (480, 40))
+        self.assertEqual(s["how_long"], "about 8 minutes")
+        self.assertEqual(s["dark_how_long"], "about 40 seconds")
+
+    def test_a_phone_that_is_not_in_the_house_is_told_what_it_is_risking(self):
+        self.assertIsNone(self.ready().ask()["warn"])
+        self.assertIn("Nobody is home", self.ready().ask(away=True)["warn"])
+
+    def test_a_held_release_is_blocked_with_the_reason_rather_than_a_tap_that_goes_nowhere(self):
+        u = self.ready()
+        updates.CHANNEL.write_text(json.dumps({"made": 1, "hold": ["1.3.0"]}))
+        self.assertIn("paused by the people who make the hub", u.ask()["blocked"])
+        with self.assertRaises(ValueError): u.request()
+
+    def test_one_at_a_time(self):
+        u = self.ready()
+        updates.STATE.write_text(json.dumps({"state": "running", "started": 1}))
+        self.assertEqual(u.ask()["blocked"], "This hub is already installing an update.")
+        with self.assertRaises(ValueError): u.request()
+
+
+class TheDoorTests(unittest.TestCase):
+    def test_asking_is_open_and_doing_is_not(self):
+        """The same shape as /restart's, for the same reason: a sheet that demanded the code before
+        it would say what the button does is a sheet nobody reads."""
+        from hub.lock import needs_code
+        self.assertFalse(needs_code("GET", "/update/ask"))
+        self.assertTrue(needs_code("POST", "/update"))

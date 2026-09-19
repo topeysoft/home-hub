@@ -201,6 +201,7 @@ S
     cat > "$dir/install.sh" <<I
 #!/usr/bin/env bash
 git -C "$dir" reset -q --hard "$new"
+printf '{"phase":"restarting","at":%s}\\n' "\$(date +%s)" >> "\$HUB_PROGRESS"
 [ "$1" = ok ] && { [ "$2" = ok ] && touch "\$FAKE/answering"; exit 0; }
 exit 1
 I
@@ -211,14 +212,24 @@ I
   run() { PATH="$bin:$PATH" FAKE="$fake" HOME_HUB_DIR="$dir" HOME_HUB_UPDATE_WAIT=4 HOME_HUB_UPDATE_SETTLE=1 \
           "$HERE/update.sh" >/dev/null 2>&1; }
   state() { sed -n 's/.*"state":"\([a-z]*\)".*/\1/p' "$data/update.json"; }
+  # The phases, in the order they were written. This is the panel's only clock and the only place the
+  # dark stretch is measurable, so what is checked here is that the two scripts write to the SAME file
+  # -- update.sh's own phases and the ones install.sh adds from inside its run.
+  phases() { sed -n 's/.*"phase": *"\([a-z_]*\)".*/\1/p' "$data/update.progress" 2>/dev/null | tr '\n' ' ' | sed 's/ $//'; }
   at() { git -C "$dir" rev-parse HEAD; }
 
-  start ok ok; run
+  start ok ok
+  printf '{"phase":"proving","at":1}\n' > "$data/update.progress"   # last time's, and not this time's
+  run
   is "it installed and came back: done" "$(state)" 'done'
   is "...and the hub is on the new build" "$(at)" "$new"
+  is "...and left a timeline, the installer's phases in it too" "$(phases)" 'checking restarting proving'
 
   start ok no; run
   is "it installed and did not come back: reverted" "$(state)" reverted
+  # The six minutes this piece exists for. A panel cannot hear this phase -- the brain is not there to
+  # be asked -- but the hub that comes back can, which is how "that one did not start" gets said at all.
+  is "...and the putting back is on the record" "$(phases)" 'checking restarting putting_back proving'
   is "...and the hub is back where it was" "$(at)" "$old"
   case "$(cat "$dir/driver-layer/.env")" in
     *"HUB_BRAIN_IMAGE=ghcr.io/topeysoft/home-hub-brain@sha256:olddigest"*)

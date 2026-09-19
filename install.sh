@@ -22,6 +22,12 @@ CHANNEL="${HOME_HUB_CHANNEL:-release}"
 [ "$CHANNEL" = "main" ] || CHANNEL="release"
 
 say() { printf '\n\033[1m%s\033[0m\n' "$*"; }
+# Where this has got to, for the panel to draw. Only when update.sh asks for it: somebody running
+# this by hand is reading the output and needs no file. It writes A PHASE FROM A FIXED LIST and never
+# a sentence — brain/hub/updates.py owns the words, which is what stops anything that can write into
+# the data volume from putting a sentence on somebody's wall. Second argument is extra JSON.
+phase() { [ -n "${HUB_PROGRESS:-}" ] || return 0
+  printf '{"phase":"%s","at":%s%s}\n' "$1" "$(date +%s)" "${2:-}" >> "$HUB_PROGRESS" 2>/dev/null || true; }
 [ "$(id -u)" -eq 0 ] || { echo "Run me with sudo."; exit 1; }
 if command -v apt-get >/dev/null 2>&1; then
   pkg() { DEBIAN_FRONTEND=noninteractive apt-get install -y "$@" >/dev/null; }; AVAHI=avahi-daemon
@@ -40,6 +46,7 @@ docker compose version >/dev/null 2>&1 || pkg docker-compose-plugin
 systemctl enable --now docker >/dev/null 2>&1 || true
 
 say "2/5  The code"
+phase fetching
 # $DIR is a deployment, not a place anyone edits: it ends up exactly where the channel points.
 HERE="$(cd "$(dirname "$0")" && pwd)"
 VERSION=""
@@ -254,8 +261,41 @@ else
       echo "HUB_BRAIN_IMAGE=$HUB_BRAIN_IMAGE" >> .env
       echo "  built here, so it is $HUB_BRAIN_IMAGE rather than the digest the release named" ;;
   esac
+  phase building
   docker compose build -q --build-arg "HUB_VERSION=$BUILT_VERSION" --build-arg "HUB_COMMIT=$BUILT_COMMIT" brain
 fi
+# Which containers this is actually about to recreate. It is the difference between "a few minutes"
+# for every update and the one sentence docs/updates.md has been promising since its first draft: the
+# brain alone is a blink, the engine moving is a minute where the wall switches still work and the
+# app does not. A service moves when the image it is about to run is not the image its container is
+# running now, which catches a release that pinned a new digest and a tag that moved under an
+# unchanged name alike. Anything this cannot work out is simply not said.
+moving() {
+  docker compose config --format json 2>/dev/null | python3 -c '
+import json, subprocess, sys
+def ask(*a):
+    try: return subprocess.run(a, capture_output=True, text=True, timeout=15).stdout.strip()
+    except Exception: return ""
+try: cfg = json.load(sys.stdin)
+except Exception: sys.exit(0)
+out = []
+for name, svc in sorted((cfg.get("services") or {}).items()):
+    want = svc.get("image") or ""
+    if not want: continue
+    c = svc.get("container_name") or name
+    ref = ask("docker", "inspect", "--format", "{{.Config.Image}}", c)
+    if not ref: continue                       # not running: it starts, and nobody notices a start
+    if ref != want: out.append(name); continue
+    a, b = ask("docker", "inspect", "--format", "{{.Image}}", c), ask("docker", "image", "inspect", "--format", "{{.Id}}", want)
+    if a and b and a != b: out.append(name)
+print(json.dumps(out))
+' 2>/dev/null
+}
+MOVING=""
+# An `if`, not a `&&`: this script runs under `set -e`, and a plain test that comes out false on
+# every ordinary first install would take the installer down with it.
+if [ -n "${HUB_PROGRESS:-}" ]; then MOVING="$(moving || true)"; fi
+case "$MOVING" in \[*\]) phase restarting ",\"moving\":$MOVING" ;; *) phase restarting ;; esac
 # shellcheck disable=SC2086
 docker compose up -d --remove-orphans $RECREATE
 

@@ -4,8 +4,8 @@
 -->
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { store, notify, restartHub } from './store'
-import { askRestart, checkForUpdate, downloadBackup, getUpdateNotes, markNotesRead, requestUpdate, setAutoUpdate, type RestartAsk, type Rung, type UpdateNotes } from './api'
+import { store, notify, installUpdate, restartHub } from './store'
+import { askRestart, askUpdate, checkForUpdate, downloadBackup, getUpdateNotes, markNotesRead, setAutoUpdate, type RestartAsk, type Rung, type UpdateAsk, type UpdateNotes } from './api'
 import Restore from './Restore.vue'
 import AdvancedLink from './AdvancedLink.vue'
 
@@ -20,10 +20,32 @@ async function backup() {
   catch (e: any) { notify(e.message, 'error') }
   busy.value = false
 }
-async function install() {
-  try { await requestUpdate(); store.updating = true; notify('Updating. The lights keep working; this screen comes back on its own.') }
-  catch (e: any) { notify(e.message, 'error') }
+/* Installing, and the question in front of it.
+ *
+ * The same shape as the restart below, and deliberately so: an update is a restart with a download
+ * in front of it, and half the sheet is the same brain's answer to the same question. What it adds
+ * is the half a restart has no use for -- why this update exists, in the release's own words, and
+ * the fact that the download is not a blackout. Home keeps its one-tap nudge; this is the page
+ * somebody came to in order to find out more, so this is where the more lives.
+ */
+const uask = ref<UpdateAsk | null>(null)
+const installBusy = ref(false)
+async function openInstall() {
+  try { uask.value = await askUpdate() } catch (e: any) { notify(e.message, 'error') }
 }
+async function goInstall() {
+  if (installBusy.value) return
+  installBusy.value = true
+  /* Nothing is closed until the hub has taken it: a refusal -- a restore that started a second ago,
+     a release pulled since this page loaded -- leaves the question up with the reason under it. */
+  if (await installUpdate()) uask.value = null
+  else await openInstall()
+  installBusy.value = false
+}
+/* Where the host has got to. The brain is up for nearly all of an update, so this is a real answer
+   for most of the wait rather than three dots. */
+const phase = computed(() => update.value?.progress ?? null)
+const busyUpdating = computed(() => !!store.updating || !!update.value?.requested || update.value?.state?.state === 'running')
 /* A version that was installed, would not start, and was put back by the host (docs/updates.md,
    piece 1). Home stops nudging for it; here it is still one tap, because this page is where a person
    is the one choosing, and trying it a second time is often what fixes it. */
@@ -96,14 +118,39 @@ const when = (ts?: number | null) => ts ? new Date(ts * 1000).toLocaleString([],
     <p class="page-lede">The little computer running the house. It looks after itself; this is where you check on it.</p>
 
     <ul class="hub-rows">
-      <li>
+      <li :class="{ asking: !!uask }">
         <span class="hub-k">Software</span>
-        <span class="hub-v">{{ !store.status?.version || store.status.version === 'dev' ? 'Development build' : store.status.version }}<span class="hub-sub" v-if="held"> · {{ update?.latest?.version }} was paused by the people who make the hub</span><span class="hub-sub" v-else-if="refused"> · {{ refused }} couldn’t be checked, so it wasn’t installed</span><span class="hub-sub" v-else-if="rolledBack"> · {{ rolledBack }} didn’t start, so this one was put back</span><span class="hub-sub" v-else-if="update?.checked"> · checked {{ when(update.checked) }}</span></span>
-        <button class="button small" v-if="update?.available && !refused && !held && !store.updating && !update.requested" @click="install">{{ rolledBack ? 'Try again' : 'Install the update' }}</button>
-        <span class="hub-sub" v-else-if="store.updating || update?.requested || update?.state?.state === 'running'">Updating…</span>
+        <template v-if="uask">
+          <span class="hub-v">
+            <b>{{ uask.title }}</b>
+            <!-- Why this one, in the release's own words. The wait is the one moment somebody is
+                 both captive and curious, and these were fetched and drawn nowhere until now. One
+                 line, like the What's new row: split into a list they stop reading as the reason and
+                 start reading as another column of costs. -->
+            <span class="hub-sub line" v-if="uask.what.length">{{ uask.what.join(' ') }}</span>
+            <span class="hub-sub line">{{ uask.keeps }} It takes {{ uask.how_long }}, and the screen is away for {{ uask.dark_how_long }} of that.</span>
+            <span class="hub-sub line" v-for="(l, i) in uask.stops" :key="'s' + i">{{ l }}</span>
+            <span class="hub-sub line warn" v-for="(l, i) in uask.flight" :key="'f' + i">{{ l }}</span>
+            <span class="hub-sub line warn" v-if="uask.warn">{{ uask.warn }}</span>
+            <span class="hub-sub line warn" v-if="uask.blocked">{{ uask.blocked }}</span>
+          </span>
+          <span class="note-ask">
+            <button class="button small" v-if="!uask.blocked" :class="{ busy: installBusy }" @click="goInstall">{{ uask.yes }}</button>
+            <button class="button small ghost" @click="uask = null">Not now</button>
+          </span>
+        </template>
+        <template v-else>
+        <span class="hub-v">{{ !store.status?.version || store.status.version === 'dev' ? 'Development build' : store.status.version }}<span class="hub-sub" v-if="held"> · {{ update?.latest?.version }} was paused by the people who make the hub</span><span class="hub-sub" v-else-if="refused"> · {{ refused }} couldn’t be checked, so it wasn’t installed</span><span class="hub-sub" v-else-if="rolledBack"> · {{ rolledBack }} didn’t start, so this one was put back</span><span class="hub-sub" v-else-if="update?.checked"> · checked {{ when(update.checked) }}</span>
+          <!-- What the hub is doing right now, said in its own words rather than three dots. It is a
+               line here and not a screen over the panel because the house still works: for all of
+               this but the last stretch the brain is up and every light still answers. -->
+          <span class="hub-sub line" v-if="busyUpdating">{{ phase?.says || 'Starting.' }} {{ (phase?.notices ?? []).join(' ') }}</span></span>
+        <button class="button small" v-if="update?.available && !refused && !held && !busyUpdating" @click="openInstall">{{ rolledBack ? 'Try again' : 'Install the update' }}</button>
+        <span class="hub-sub" v-else-if="busyUpdating">{{ phase?.step ? `Step ${phase.step} of ${phase.steps}` : 'Updating…' }}</span>
         <span class="hub-sub" v-else-if="update?.available === false">Up to date</span>
         <span class="hub-sub" v-else-if="update?.error">Couldn't check: no internet?</span>
         <span v-else></span>
+        </template>
       </li>
       <li v-if="notes?.notes?.what?.length || earlierReleases.length">
         <span class="hub-k">What's new</span>

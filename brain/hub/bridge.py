@@ -78,6 +78,11 @@ def network_id(netkey: bytes) -> str:
     return cmac(t, b"id64" + b"\x01")[-8:].hex()
 
 
+def _hx(s: str) -> str:
+    """A free-text argument as hex, the way the cable protocol already sends one (config.h)."""
+    return (s or "").encode("utf-8").hex()
+
+
 def _hostname() -> str:
     """The name this hub answers to, for a puck to resolve instead of remembering a number.
 
@@ -236,6 +241,10 @@ class Cable:
             m = _puck(); Puck, hx = m.Puck, m.hx
             p = Puck(port); p.hello(patience=10.0)
             p.set("wifi", hx(cfg["ssid"]), hx(cfg["pass"]))
+            # The hub's NAME as well as its address, so this puck survives the house's DHCP pool
+            # being reshuffled -- which used to strand every puck without anybody touching the
+            # Wi-Fi at all. docs/network.md, piece 1.
+            p.set("name", hx(cfg["name"]))
             p.set("mqtt", hx(cfg["host"]), str(cfg["port"]), hx(cfg["user"]), hx(cfg["mqtt_pass"]))
             p.set("keys", cfg["netkey"], cfg["appkey"], str(cfg["iv"]))
             p.set("base", hx(cfg["base"]))
@@ -334,7 +343,18 @@ class Bridges:
             if self.job["state"] == "knocking": self.job = None; self.hub._broadcast(json.dumps({"type": "bridge", "bridge": self.status()}))
             else: self._set("failed", text="The bridge was unplugged before the hub had finished. Plug it back into the hub and it starts again from the beginning.")
         if self._first:
-            self._first = False; return       # what was there at boot is not something that just arrived
+            # What was there at boot did not "just arrive", and treating it as an arrival
+            # would have the hub offering to set up things it has offered before. But it has
+            # never been LOOKED AT either, and a board sitting on the cable when the brain
+            # starts is not a rare case -- it is what happens on every deploy, every reboot,
+            # and every time anything restarts this container. That board was invisible for
+            # ever: it is not new on any later scan, so it was never probed at all.
+            #
+            # So it is queued like anything else. A puck already set up answers hello and is
+            # recognised in silence; a radio stick is filtered; only a board with nothing to
+            # say gets offered, which is the right outcome for a board on the cable.
+            self._first = False
+            new = now
         for port in sorted(new):
             if RADIO.search(port) or port in self._dismissed: continue
             if port not in self._pending: self._pending.append(port)
@@ -586,8 +606,10 @@ class Bridges:
         self.hub.settings.set(wifi={"ssid": ssid, "pass": password})
         at = time.time()
         cfg = self.config()
-        body = json.dumps({"at": int(at), "ssid": ssid, "pass": password,
-                           "name": cfg["name"], "ip": cfg["host"], "port": cfg["port"]})
+        # Words, hex-encoded, in the same shape as the `claim` topic and the cable's own protocol --
+        # so a network called "Flat 3 guest" needs no quoting rules on either side, and the puck
+        # needs no JSON parser it does not already have.
+        body = f"wifi {int(at)} {_hx(ssid)} {_hx(password)} {_hx(cfg['name'])} {cfg['host']} {cfg['port']}"
         asked = sorted(c for c, p in self.pucks.items() if p.get("online"))
         for chip in asked:
             await self.hub.ha.call("mqtt", "publish", None,
@@ -626,7 +648,7 @@ class Bridges:
                     with contextlib.suppress(Exception):
                         await self.hub.ha.call("mqtt", "publish", None,
                                                topic=f"{BASE}/bridge/{chip}/cfg",
-                                               payload=json.dumps({"at": int(time.time()), "forget_spare": True}),
+                                               payload=f"spare forget {int(time.time())}",
                                                retain=True)
             self.hub._broadcast(json.dumps({"type": "bridge", "bridge": self.status()}))
 

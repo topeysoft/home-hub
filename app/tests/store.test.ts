@@ -326,7 +326,7 @@ describe('what you have just done', () => {
 })
 
 describe('an update the hub should raise by itself', () => {
-  const update = (u: Record<string, any>) => { store.status = { update: u } as any; store.updating = false }
+  const update = (u: Record<string, any>) => { store.status = { update: u } as any; store.updating = null }
 
   it('is offered when there is one and nothing is already installing it', () => {
     update({ available: true, offer: true, requested: false, state: null })

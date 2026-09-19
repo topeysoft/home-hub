@@ -26,6 +26,15 @@ ZW_NET="$(grep '^ZWAVE_NET=' .env | cut -d= -f2- || true)"
 # unplugged must not switch off the hub's voice, which is what rewriting the whole line would do.
 KEPT="$(grep '^COMPOSE_PROFILES=' .env | cut -d= -f2- | tr ',' '\n' | grep -vx -e zigbee -e zwave -e none | paste -sd, - || true)"
 
+# What this script actually decides. If none of it moves, nothing wants restarting -- and
+# restarting things that did not need it is not free: `docker compose up -d` re-creates the
+# brain, and a brain that restarts forgets which USB devices were already there. Plugging in
+# a bare ESP32 therefore bounced the brain, which then treated the new board as part of the
+# scenery it woke up to and never offered it. A board that could not be added, because of a
+# line in a shell script about radios.
+radio_state() { grep -E '^(ZIGBEE_SERIAL|ZIGBEE_PORT|ZWAVE_SERIAL|COMPOSE_PROFILES)=' .env 2>/dev/null | sort || true; }
+BEFORE="$(radio_state)"
+
 sticks() { find /dev/serial/by-id -maxdepth 1 -mindepth 1 -printf '%f\n' 2>/dev/null || true; }
 ZB="$(sticks | grep -i -E 'skyconnect|zbt-|zbdongle|sonoff|mg24|cc2652|zigbee|efr32|nabu' | grep -v -i hubz | head -1 || true)"
 ZW="$(sticks | grep -i -E 'zooz|z-wave|zwave|aeotec|800|pzg23|hubz.*if00' | head -1 || true)"
@@ -66,6 +75,11 @@ set_env COMPOSE_PROFILES "${ALL:-none}"
 echo "  Zigbee: ${ZB_NET:-${ZB:-none found}}"
 echo "  Z-Wave: ${ZW_NET:-${ZW:-none found}}"
 [ "${1:-}" = "detect" ] && exit 0
+
+if [ "$BEFORE" = "$(radio_state)" ]; then
+  echo "  no radio changed -- leaving the containers alone"
+  exit 0
+fi
 
 [ -n "$ZB$ZB_NET" ] || docker stop zigbee2mqtt >/dev/null 2>&1 || true
 [ -n "$ZW$ZW_NET" ] || docker stop zwave-js-ui >/dev/null 2>&1 || true

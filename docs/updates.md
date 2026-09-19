@@ -384,6 +384,159 @@ a genuine hold replayed from a year ago is ignored as stale, and a maker who sto
 That harness earned itself twice over — the first run passed every case while `channel.sh` was silently failing to
 find `verify.sh`, so nothing was being checked at all, and the guard that now catches that came out of it.
 
+### 6. Saying what is happening *(landed 18 September 2026)*
+
+Pieces 1 to 5 made updating safe. Nothing in them made it *legible*. The panel's whole account of an update
+is the word `Updating…` and an overlay reading *A few minutes. The lights and switches keep working* — the
+same sentence for a ninety-second brain swap and for a six-minute install that fails and rolls back. Two
+fields already arrive and are drawn nowhere: `latest.what`, the release's own words about what it changes,
+and `state.started`, the only clock anybody has.
+
+The vocabulary for fixing this was written the day before, for restarting. `restart.py` has an `ask()` that
+says what **keeps** working, what **stops**, what is **in flight** and about to be lost, **how long** —
+measured from this house's own last restart rather than guessed — whether it is **blocked**, and a **warn**
+for a phone that is not in the house. An update is a restart with a download in front of it. It should
+borrow that sheet rather than grow a second vocabulary for the same act.
+
+**The good news is where the time goes.** The brain is alive for nearly all of an update. `install.sh` fetches
+the code, verifies the release and pulls the images — minutes, on a Pi over domestic broadband — and the brain
+only dies at the final `compose up -d`. So for most of the wait the hub can say exactly where it is, over the
+live connection it already has. It goes dark for the last stretch, and that stretch is short enough to count
+down.
+
+**Phases, from a fixed set, and never a command.** `install.sh` and `update.sh` append a line to
+`brain-data/update.progress` as they go: `{"phase":"downloading","at":...,"detail":"..."}`. Append-only
+NDJSON, last line wins, so reading the current phase is a `tail -1` and the timings are the same file read
+end to end. The same rule as `restart.request` holds — the file names a phase from a list the reader owns, not
+work for anybody to do.
+
+| phase | what the household is told | the brain |
+|---|---|---|
+| `checking` | Checking this update is really ours | up |
+| `fetching` | Fetching the new version | up |
+| `downloading` | Downloading it | up |
+| `building` | Building it here — this one takes a while | up |
+| `restarting` | Restarting the house | **down** |
+| `proving` | Making sure it came back | coming up |
+| `putting_back` | That version didn't start. Putting the old one back | down, then up |
+
+`putting_back` is the one that earns this piece on its own. `WAIT=300` plus `SETTLE=45` and then a revert is
+the most frightening six minutes the product has, and today it is spelled *A few minutes*.
+
+**How much longer, measured rather than estimated.** `restart.py` learns `restart_took` per rung from
+`restart.json`; updates learn `update_took` the same way, from the phase timeline the run leaves behind. Two
+numbers, because they fail differently: the **download**, which moves with the release and the house's
+broadband, and the **dark**, which is a property of the box. A household on a slow line stops being read the
+maker's figure.
+
+**Two whys, both already in the data.** *Why now* is in the log already — `source: "hub"` against `"user"` —
+and somebody who finds the wall mid-update at twenty to three should read that nobody in the house started it.
+*Why this one* is `latest.what`, the two to four plain sentences piece 4 made mandatory, which are fetched,
+typed all the way into the panel, and rendered nowhere. The wait is the one moment a person is both captive and
+curious; it is the right place for them.
+
+**What keeps working, earned rather than assumed.** This document has said since the first draft that
+*the lights keep working* is true of an ordinary update and not of the one that moves the engine. Now it can
+be checked: piece 2's manifest names every image by digest, so `install.sh` can compare each pin against what
+the container is actually running and write the services that will really be recreated —
+`{"moving":["brain","homeassistant"]}` — into the same progress file. Brain alone: the wall blinks. The engine
+too: a minute where the wall switches still work and the app does not, said only when that is what is about
+to happen.
+
+**And the half that is not about updating at all** comes straight from `restart.py`, because it is the same
+half: motion lights and schedules pause, the assistant cannot answer, Apple Home and the rest say *no
+response*, an away phone loses the house — each asked of this house before it is offered. A pairing or a
+bridge setup half-done is named before it is lost, the rule that holds everywhere else on the panel.
+
+**One thing the ask must say that a restart's does not.** Everything keeps working *while it downloads*. The
+panel should not throw up a blackout screen the moment somebody taps: for the first several minutes the house
+is entirely usable and the update is a line at the top, not a wall. Only `restarting` earns the overlay.
+
+**Away.** `restart.ask(away=True)` warns that nobody is home to reach the plug. An update from a phone three
+hundred miles away carries that risk plus a rollback, and today says nothing at all.
+
+**The morning receipt.** The what's-new card says what changed. It does not say *installed itself at 2:41 last
+night and took four minutes*, which is the line that makes an automatic update feel like something the house
+did for the household rather than something that happened to them.
+
+**What landed.** `brain-data/update.progress` is the file, append-only NDJSON, written by `update.sh` (`checking`,
+`proving`, `putting_back`) and by `install.sh` from inside its own run (`fetching`, `downloading`, `building`,
+`restarting`) through one exported `HUB_PROGRESS`. `Updates.progress()` reads the last line and `Updates.timeline()`
+the whole of it; `Updates.seconds()` answers in this house's own figures and `Updates._learn()` puts them there, at
+start, from the run that brought this build — the same move `restart.py` makes with `restart.json`, and for the same
+reason: the brain that asked for an update is not the brain that comes back. `Updates.ask()` is the sheet and
+`GET /update/ask` serves it, open like `/restart`'s and for the same reason. `Updates.blocked()` is the refusals, and
+`request()` now goes through it rather than checking only the hold. The loop in `run()` shortens its stride to two
+seconds while an update is in the air and broadcasts on every phase change, so the wall is never five minutes behind
+what the hub is doing.
+
+On the panel: `store.updating` stopped being a boolean and became the wait itself, and `updateLink()` is what tells it
+the brain has actually gone — before that nothing counts down, because nothing is wrong. `App.vue` grew an update
+branch beside the restart one, and the branch under it stopped speaking for updates at all. `HubPage.vue`'s Software
+row turns into the question the way the Restart row does, and carries the phase underneath the version while one is
+happening. `Attention.vue`'s busy nudge says which phase and whether the house is working. The mock has `UPDATE=ready`,
+`UPDATE=running` and `UPDATE=away`, and pushes a status frame on every phase so the preview moves rather than being
+described.
+
+**The half that is restart.py's is literally restart.py's.** `ask()` calls `restart.stops("hub", away)` and
+`restart.flight("hub")` rather than writing its own, and `plainly()` moved out of `restart.py` so both quote the same
+rounding at people. A household reading two different accounts of what happens when the hub goes quiet is a household
+learning that the panel guesses.
+
+**Two corrections to what this piece said above before it was built.**
+
+- **The dark stretch is measured from `restarting` to `proving`, and that meant moving `proving`.** It used to be
+  written when the installer returned, which is before the brain has answered anything; it is now written the moment
+  `/alive` first answers, which is both a truer sentence and the only place the end of the dark stretch is knowable.
+- **The `moving` list is best effort and says nothing when it cannot tell.** It compares each service's about-to-run
+  image against the one its container is running, which catches a release pinning a new digest and a tag moving under
+  an unchanged name — but a service that is not running yet, or a daemon that answers nothing, produces no line and
+  therefore no sentence. That is the right way to fail: the base claim (*lights and switches keep working*) is true of
+  every update, and the extra sentence is only ever added when the hub has actually established it.
+
+**What was verified.** Twenty-four tests in `brain/tests/test_updates.py`: the progress file (nothing running says
+nothing; the second between the tap and the host waking up still says something; the last line wins; **a phase nobody
+has heard of is dropped on the floor**, which is the rule that stops anything able to write into the data volume
+putting a sentence on somebody's wall; a half-written line; the two dark phases; what is moving becoming what a
+household would notice, only the brain moving earning no warning, and the list being remembered after the line that
+carried it; a new request clearing the last run's timeline), the learning (a careful guess until there is a
+measurement; both figures off the disk; learned once and not on every start; the morning receipt naming the house
+rather than a person; a run that did not finish teaching nothing; an absurd figure not quoted back; a run with no
+phases still learning the total), and the sheet (the version and the release's own words; the download not being a
+blackout; this house's figures once it has any; the away warning; a held release and an update already running both
+blocking with the sentence rather than a tap that goes nowhere). Plus the door: asking is open, doing is not.
+
+Nine in `app/tests/updating.test.ts`, and the one they exist for is *does not start counting down while the house still
+works* — running the clock during the download would have it reach nought minutes before anything had restarted. Also
+that an update nobody on this screen asked for can be picked up mid-flight from the status, and that the status coming
+round again does not restart its own clock.
+
+Two more in `driver-layer/host/tests.sh`, which is where the two scripts are proved to be writing to the **same** file:
+a successful run leaves `checking restarting proving` with the fake installer's phase in the middle of it, and a
+reverted one leaves `checking restarting putting_back proving`. The seeded line from "last time" is gone in both, so a
+stale timeline cannot be read as the current phase.
+
+**Checked on the glass, not only in tests.** `UPDATE=ready` for the sheet, `UPDATE=running` traced frame by frame
+through the phases (the panel stays entirely usable, and the *the app doesn't* sentence appears only on the phase that
+carries `moving`), and then the mock killed mid-update to see what a household actually sees when the brain goes:
+*Back in about 39 seconds*, and once that runs out, *Taking longer than usual. If it doesn't come back, the hub puts
+the old version back by itself*. The first attempt put the release notes on the sheet as one line per sentence and
+they stopped reading as the reason and started reading as another column of costs; they are one line of prose now,
+like the What's new row above them.
+
+**A real bug this turned up.** `install.sh`'s `moving()` was written as `docker compose config | python3 - <<EOF`,
+where the heredoc takes stdin and the pipe is silently thrown away — the script would have read its own source as the
+compose file. It is `python3 -c` now. Nothing in the test harness could have caught it (there is no docker in there on
+purpose); shellcheck did, which is an argument for the lint job that already exists.
+
+**What is not covered.** The download has no byte count — the phase says *Downloading it* and not *312 of 480 MB*.
+`compose pull -q` does not offer one, and parsing the unquiet form is a fragile thing to put between a household and
+the truth. The dark countdown is the panel's own stopwatch, so a phone that was asleep for the whole update sees no
+count at all — it sees the house come back, which is the right outcome by a different route. And `moving` is
+established by the host during the run, which means the *ask*, before the tap, still cannot say whether the engine is
+about to move: the sheet says what is true of every update and the running screen says the rest. Closing that needs
+the next release's manifest in the data volume the way `channel.sh` already puts the channel there.
+
 ## One thing to fix regardless of all of the above
 
 `brain/hub/lock.py` only bites when a code is set, and setup *nudges* rather than requires. On a hub with no code,

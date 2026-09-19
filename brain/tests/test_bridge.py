@@ -90,9 +90,22 @@ class Knocking(unittest.TestCase):
         await self.b.scan()
         for _ in range(20): await asyncio.sleep(0)   # let the _arrived task run
 
-    def test_nothing_at_boot_is_a_knock(self):
-        """A puck that was already there when the brain started did not just arrive."""
+    def test_a_board_on_the_cable_at_boot_is_still_looked_at(self):
+        """It did not "just arrive", but it has never been looked at either -- and a board
+        sitting on the cable when the brain starts is not a rare case. It is what happens on
+        every deploy and every restart of this container, and on a hub where plugging
+        anything in restarts the brain, it was EVERY time: the board was invisible for ever,
+        because it is not new on any later scan and so was never probed at all."""
         p = self.plug("usb-bridge-1"); self.cable.hello_says[p] = {"chip": "aa", "fw": "0.2.0", "state": "blank"}
+        run(self.settle())
+        self.assertEqual(self.b.status()["state"], "knocking")
+
+    def test_but_a_puck_already_set_up_still_says_nothing(self):
+        """The half of the old rule worth keeping: a working puck on the cable at boot is
+        recognised in silence, not offered a rebuild it does not need."""
+        p = self.plug("usb-bridge-1")
+        self.cable.hello_says[p] = {"chip": "aa", "fw": "0.3.1", "state": "set"}
+        self.b.pucks["aa"] = {"online": True}
         run(self.settle())
         self.assertEqual(self.b.status()["state"], "none")
 

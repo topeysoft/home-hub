@@ -24,6 +24,7 @@ DIR="${HOME_HUB_DIR:-/opt/home-hub}"
 DATA="$DIR/driver-layer/brain-data"
 ENVF="$DIR/driver-layer/.env"
 REQ="$DATA/update.request"; STATE="$DATA/update.json"; LOG="$DATA/update.log"; PREV="$DATA/update.prev"
+PROGRESS="$DATA/update.progress"  # where this has got to, a line at a time, for the panel to draw
 REFUSED="$DATA/update.refused"   # install.sh writes the tag here when it would not vouch for a release
 # The brain is on host networking, so the host reaches it directly. /alive is open on purpose and
 # carries nothing about the house: see docs/updates.md, piece 1.
@@ -43,6 +44,13 @@ WANT="$(sed -n 's/.*"to": *"\([^"]*\)".*/\1/p' "$REQ" | head -1)"
 rm -f "$REQ"
 
 field() { sed -n "s/.*\"$1\": *\"\([^\"]*\)\".*/\1/p" "$2" 2>/dev/null | head -1; }
+
+# The panel's only clock. install.sh writes the finer phases inside its own run, under the same rule:
+# A PHASE FROM A FIXED LIST and never a sentence, because brain/hub/updates.py owns the words. The
+# file is append-only, so the last line is where we are and the whole of it is how long each part
+# took -- which is how the hub learns to say "about four minutes" in the house it is actually in.
+phase() { printf '{"phase":"%s","at":%s}\n' "$1" "$(date +%s)" >> "$PROGRESS" 2>/dev/null || true; }
+export HUB_PROGRESS="$PROGRESS"
 
 running_image() {
   # What a container is running right now, by digest where there is one. An image built on the hub
@@ -68,6 +76,7 @@ came_back() {
     sleep 5
   done
   alive || return 1
+  phase proving
   sleep "$SETTLE"
   alive
 }
@@ -76,6 +85,7 @@ put_back() {
   local sha img bridge
   sha="$(field sha "$PREV")"; img="$(field image "$PREV")"; bridge="$(field bridge "$PREV")"
   [ -n "$sha" ] || return 1
+  phase putting_back
   {
     echo "--- putting the hub back on $sha ${img:+($img)}"
     git -C "$DIR" reset -q --hard "$sha" || return 1
@@ -97,6 +107,8 @@ put_back() {
 }
 
 STARTED="$(date +%s)"
+: > "$PROGRESS" 2>/dev/null || true
+phase checking
 printf '{"sha":"%s","image":"%s","bridge":"%s","at":%s}\n' \
   "$(git -C "$DIR" rev-parse HEAD 2>/dev/null)" "$(running_image)" "$(running_image matter-bridge)" "$STARTED" > "$PREV"
 printf '{"state":"running","started":%s}\n' "$STARTED" > "$STATE"

@@ -132,8 +132,7 @@ class Restart:
     def blocked(self) -> str | None:
         """The one refusal, in the words the row shows. The panel hides the button too; this is what
         answers a phone whose page is an hour old and still has it."""
-        st = self.hub.updates.state() or {}
-        if st.get("state") == "running" or self.hub.updates.summary().get("requested"):
+        if self.hub.updates.running():
             return "The hub is installing an update. It restarts itself when that's done."
         if (self.hub.backup.state() or {}).get("state") == "running" or backup_mod.REQUEST.exists():
             return "The hub is putting a backup back. It restarts itself when that's done."
