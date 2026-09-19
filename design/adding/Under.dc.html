@@ -1,0 +1,122 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      /* the panel's own tokens, unchanged -- app/src/panel.css */
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp: #e9b872; --lamp-ink: #2a1c07; --live: #74c69d; --danger: #e08a8a;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
+           padding: 12px 14px; border-radius: 16px; background: var(--surface); border: 1px solid var(--edge); }
+    .row.lit { border-color: rgba(233,184,114,.35);
+               background: linear-gradient(rgba(233,184,114,.1), rgba(233,184,114,.1)), var(--surface); }
+    .ic { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center;
+          background: var(--surface-hi); color: var(--ink-2); }
+    .ic.on { background: var(--lamp); color: var(--lamp-ink); }
+    .t1 { font-size: 15.5px; font-weight: 500; }
+    .t2 { font-size: 13px; color: var(--muted); }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 13px 24px; border-radius: 999px;
+           background: var(--ink); color: var(--bg); font-weight: 500; font-size: 16px; }
+    .btn.ghost { background: var(--surface-hi); color: var(--ink); border: 1px solid var(--edge);
+                 padding: 12px 20px; font-size: 15px; }
+    .btn.sm { padding: 9px 17px; font-size: 14px; }
+    .sheet { border-radius: 26px; background: rgba(22,24,30,.94); border: 1px solid var(--edge-hi);
+             box-shadow: 0 40px 100px -30px rgba(0,0,0,.9); overflow: hidden; }
+    .bar { height: 6px; border-radius: 999px; background: rgba(255,255,255,.1); overflow: hidden; }
+    .bar i { display: block; height: 100%; border-radius: 999px; background: var(--lamp); }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--lamp); }
+    .note { padding: 13px 16px 14px; border-radius: 18px; background: var(--surface); border: 1px solid var(--edge); }
+    .chip { display: inline-flex; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--edge);
+            background: var(--surface-hi); font-size: 14px; }
+    .bad { color: var(--danger); }
+    .sw { fill: #ded8cc; stroke: rgba(0,0,0,.22); stroke-width: 2; }
+    .swf { fill: #fbf8f2; stroke: rgba(0,0,0,.12); stroke-width: 1.4; }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: #0c0d10; color: var(--ink); font-size: 17px; line-height: 1.4;">
+  <div style="position: absolute; inset: 0; background: radial-gradient(64% 54% at 22% 18%, rgba(72,63,135,.22), transparent 70%), radial-gradient(56% 48% at 86% 88%, rgba(92,63,57,.2), transparent 72%);"></div>
+
+  <div style="position: absolute; top: 48px; left: 56px; right: 56px;">
+    <h1 class="dsp" style="margin: 0; font-size: 42px;">And the page goes on talking underneath.</h1>
+    <p style="margin: 10px 0 0; font-size: 17px; color: var(--ink-2); max-width: 104ch;">Two faults on one screen. The doors are named after radios, which is a question only the hub can answer; and opening one does not close the page &mdash; a diagnostics list sits under a half&#8209;finished conversation, offering its own opinions.</p>
+  </div>
+
+  <!-- ===== left: the chooser as it reads today ===== -->
+  <div class="cap" style="position: absolute; top: 200px; left: 56px;">today &middot; the doors</div>
+  <div class="sheet" style="position: absolute; top: 232px; left: 56px; width: 600px; height: 596px; padding: 24px 24px;">
+    <div class="cap" style="margin-bottom: 10px;">Through the bridge</div>
+    <div class="row" style="margin-bottom: 20px;"><span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="5" y="3" width="14" height="18" rx="3"/><circle cx="12" cy="9" r="2.4"/></svg></span><span><span class="t1">Wall switch</span><span class="t2" style="display: block;">The ones already in your walls</span></span><span></span></div>
+
+    <div class="cap" style="margin-bottom: 10px;">Over the hub&rsquo;s radios</div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
+      <div class="row"><span class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span><span><span class="t1" style="font-size: 14.5px;">Z&#8209;Wave device</span><span class="t2" style="display: block; font-size: 12.5px;">Switches, locks, sensors</span></span><span></span></div>
+      <div class="row"><span class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span><span><span class="t1" style="font-size: 14.5px;">Matter device</span><span class="t2" style="display: block; font-size: 12.5px;">With a QR code on it</span></span><span></span></div>
+    </div>
+
+    <div class="cap" style="margin-bottom: 10px;">Add something else</div>
+    <div style="height: 52px; padding: 0 16px; border-radius: 16px; background: var(--surface-hi); border: 1px solid var(--edge); display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 16px; margin-bottom: 20px;">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+      Search by brand: Hue, Nest, Roku, Ring, Sonos&hellip;
+    </div>
+
+    <div class="cap" style="margin-bottom: 10px;">Behind the scenes</div>
+    <div style="display: grid; gap: 8px;">
+      <div class="row" style="padding: 10px 14px;"><span style="width: 8px; height: 8px; border-radius: 50%; background: var(--live);"></span><span><span class="t1" style="font-size: 14.5px;">Messages</span><span class="t2" style="display: block; font-size: 12.5px;">Running</span></span><span></span></div>
+      <div class="row" style="padding: 10px 14px;"><span style="width: 8px; height: 8px; border-radius: 50%; background: var(--live);"></span><span><span class="t1" style="font-size: 14.5px;">Z&#8209;Wave radio</span><span class="t2" style="display: block; font-size: 12.5px;">Running</span></span><span></span></div>
+    </div>
+  </div>
+
+  <div style="position: absolute; top: 300px; left: 676px; width: 260px;">
+    <div style="border-left: 2px solid rgba(224,138,138,.5); padding-left: 16px;">
+      <div class="t1 bad" style="margin-bottom: 6px;">Two of the three headings are wiring</div>
+      <div class="t2">Somebody standing there with a plug in their hand cannot tell you whether it goes <i>through the bridge</i> or <i>over the hub&rsquo;s radios</i>. The hub knows. Ask them something they can answer.</div>
+    </div>
+  </div>
+
+  <!-- ===== right: the flow, with the page still underneath ===== -->
+  <div class="cap" style="position: absolute; top: 200px; left: 960px;">today &middot; one door opened</div>
+  <div class="sheet" style="position: absolute; top: 232px; left: 960px; width: 424px; height: 596px; padding: 24px 22px;">
+    <div style="font-size: 26px; margin-bottom: 8px;" class="dsp">Add a wall switch</div>
+    <p style="margin: 0 0 16px; color: var(--ink-2); font-size: 14.5px;">A switch already on the wall has its code screwed to the back of itself. If you cannot reach it, the house can find the switch another way.</p>
+    <div class="row lit" style="margin-bottom: 9px;"><span class="ic on"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="5" y="3" width="14" height="18" rx="3"/><circle cx="12" cy="9" r="2.2"/></svg></span><span><span class="t1" style="font-size: 14.5px;">It is already in the wall</span><span class="t2" style="display: block; font-size: 12.5px;">Nothing to scan, no phone needed.</span></span><span></span></div>
+    <div class="row" style="margin-bottom: 16px;"><span class="ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="5" y="3" width="14" height="18" rx="3"/></svg></span><span><span class="t1" style="font-size: 14.5px;">I can reach the code</span><span class="t2" style="display: block; font-size: 12.5px;">Quicker, when it is in your hand.</span></span><span></span></div>
+    <div style="margin-bottom: 20px;"><span class="btn ghost" style="padding: 9px 18px; font-size: 14px;">Not now</span></div>
+
+    <!-- what should not be here -->
+    <div style="border-radius: 16px; outline: 2px dashed rgba(224,138,138,.55); outline-offset: 6px; padding: 2px;">
+      <div class="cap" style="margin-bottom: 9px;">Behind the scenes</div>
+      <div style="display: grid; gap: 8px;">
+        <div class="row" style="padding: 10px 14px;"><span style="width: 8px; height: 8px; border-radius: 50%; background: var(--live);"></span><span><span class="t1" style="font-size: 14.5px;">Messages</span><span class="t2" style="display: block; font-size: 12.5px;">Running</span></span><span></span></div>
+        <div class="row" style="padding: 10px 14px;"><span style="width: 8px; height: 8px; border-radius: 50%; background: var(--live);"></span><span><span class="t1" style="font-size: 14.5px;">Z&#8209;Wave radio</span><span class="t2" style="display: block; font-size: 12.5px;">Running</span></span><span></span></div>
+        <div class="row" style="padding: 10px 14px;"><span style="width: 8px; height: 8px; border-radius: 50%; background: var(--muted);"></span><span><span class="t1" style="font-size: 14.5px;">Zigbee radio</span><span class="t2" style="display: block; font-size: 12.5px;">No Zigbee stick found.</span></span><span></span></div>
+      </div>
+    </div>
+  </div>
+
+  <div style="position: absolute; top: 700px; left: 660px; width: 276px;">
+    <div style="border-left: 2px solid rgba(224,138,138,.5); padding-left: 16px;">
+      <div class="t1 bad" style="margin-bottom: 6px;">The flow is a swap, not a screen</div>
+      <div class="t2">AddPanel replaces its own middle and leaves the page&rsquo;s furniture below. So a question in progress is followed by the hub&rsquo;s health, and &ldquo;Not now&rdquo; is not the last thing on the screen.</div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

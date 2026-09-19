@@ -1,0 +1,132 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      /* the panel's own tokens, unchanged -- app/src/panel.css */
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp: #e9b872; --lamp-ink: #2a1c07; --live: #74c69d; --danger: #e08a8a;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
+           padding: 12px 14px; border-radius: 16px; background: var(--surface); border: 1px solid var(--edge); }
+    .row.lit { border-color: rgba(233,184,114,.35);
+               background: linear-gradient(rgba(233,184,114,.1), rgba(233,184,114,.1)), var(--surface); }
+    .ic { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center;
+          background: var(--surface-hi); color: var(--ink-2); }
+    .ic.on { background: var(--lamp); color: var(--lamp-ink); }
+    .t1 { font-size: 15.5px; font-weight: 500; }
+    .t2 { font-size: 13px; color: var(--muted); }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 13px 24px; border-radius: 999px;
+           background: var(--ink); color: var(--bg); font-weight: 500; font-size: 16px; }
+    .btn.ghost { background: var(--surface-hi); color: var(--ink); border: 1px solid var(--edge);
+                 padding: 12px 20px; font-size: 15px; }
+    .btn.sm { padding: 9px 17px; font-size: 14px; }
+    .sheet { border-radius: 26px; background: rgba(22,24,30,.94); border: 1px solid var(--edge-hi);
+             box-shadow: 0 40px 100px -30px rgba(0,0,0,.9); overflow: hidden; }
+    .bar { height: 6px; border-radius: 999px; background: rgba(255,255,255,.1); overflow: hidden; }
+    .bar i { display: block; height: 100%; border-radius: 999px; background: var(--lamp); }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--lamp); }
+    .note { padding: 13px 16px 14px; border-radius: 18px; background: var(--surface); border: 1px solid var(--edge); }
+    .chip { display: inline-flex; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--edge);
+            background: var(--surface-hi); font-size: 14px; }
+    .bad { color: var(--danger); }
+    .sw { fill: #ded8cc; stroke: rgba(0,0,0,.22); stroke-width: 2; }
+    .swf { fill: #fbf8f2; stroke: rgba(0,0,0,.12); stroke-width: 1.4; }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: #0c0d10; color: var(--ink); font-size: 17px; line-height: 1.4;">
+  <div style="position: absolute; inset: 0; background: radial-gradient(64% 54% at 22% 18%, rgba(72,63,135,.22), transparent 70%), radial-gradient(56% 48% at 86% 88%, rgba(92,63,57,.2), transparent 72%);"></div>
+
+  <div style="position: absolute; top: 44px; left: 56px; right: 56px;">
+    <h1 class="dsp" style="margin: 0; font-size: 42px;">Five shells become one, and the brain does not move.</h1>
+    <p style="margin: 10px 0 0; font-size: 17px; color: var(--ink-2); max-width: 106ch;">Nothing below the panel changes: the flows, the discovery, the pairing, the bridge and every endpoint stay exactly as they are. What changes is that five components stop each having their own idea of what a screen looks like.</p>
+  </div>
+
+  <!-- today -->
+  <div class="cap" style="position: absolute; top: 198px; left: 56px;">today &middot; five vocabularies</div>
+  <div style="position: absolute; top: 230px; left: 56px; width: 380px; display: grid; gap: 10px;">
+    <div class="row" style="padding: 14px 16px;"><span></span><span><span class="t1">AddPanel.vue</span><span class="t2" style="display: block;">Doors, the search, and every maker&rsquo;s form</span></span><span class="t2">285</span></div>
+    <div class="row" style="padding: 14px 16px;"><span></span><span><span class="t1">PairPanel.vue</span><span class="t2" style="display: block;">Zigbee, Z&#8209;Wave, Matter &mdash; opens a door</span></span><span class="t2">72</span></div>
+    <div class="row" style="padding: 14px 16px;"><span></span><span><span class="t1">AddSwitch.vue</span><span class="t2" style="display: block;">The fork, the handoff, the camera</span></span><span class="t2">220</span></div>
+    <div class="row" style="padding: 14px 16px;"><span></span><span><span class="t1">AddNearby.vue</span><span class="t2" style="display: block;">Blink one, ask, let it in</span></span><span class="t2">169</span></div>
+    <div class="row" style="padding: 14px 16px;"><span></span><span><span class="t1">BridgeSheet.vue</span><span class="t2" style="display: block;">The puck, arriving on its own</span></span><span class="t2">~200</span></div>
+  </div>
+  <div style="position: absolute; top: 652px; left: 56px; width: 380px;">
+    <div style="border-left: 2px solid rgba(224,138,138,.5); padding-left: 16px;">
+      <div class="t1 bad" style="margin-bottom: 5px;">Each one owns its own chrome</div>
+      <div class="t2">Every one of these draws its own title, its own buttons, its own progress and its own ending &mdash; which is exactly why no two of them agree.</div>
+    </div>
+  </div>
+
+  <!-- the arrow -->
+  <div style="position: absolute; top: 420px; left: 452px; width: 96px; display: grid; place-items: center; gap: 8px;">
+    <svg width="72" height="24" viewBox="0 0 72 24" fill="none" stroke="var(--lamp)" stroke-width="2" stroke-linecap="round"><path d="M2 12h64M56 4l10 8-10 8"/></svg>
+  </div>
+
+  <!-- tomorrow -->
+  <div class="cap" style="position: absolute; top: 198px; left: 564px;">after &middot; one shell, four fillings</div>
+  <div class="sheet" style="position: absolute; top: 230px; left: 564px; width: 480px; padding: 18px 20px;">
+    <div class="dsp" style="font-size: 24px; margin-bottom: 6px;">Adding.vue</div>
+    <div class="t2" style="margin-bottom: 16px;">Owns the four beats, the words, and every button on every screen. Knows nothing about radios.</div>
+    <div style="display: grid; gap: 8px;">
+      <div class="row lit" style="padding: 11px 14px;"><span class="ic on" style="width: 28px; height: 28px; border-radius: 9px; font-size: 13px; font-weight: 500;">1</span><span><span class="t1" style="font-size: 14.5px;">Choose</span><span class="t2" style="display: block; font-size: 12.5px;">Four doors, and whatever is already waiting</span></span><span></span></div>
+      <div class="row" style="padding: 11px 14px;"><span class="ic" style="width: 28px; height: 28px; border-radius: 9px; font-size: 13px; font-weight: 500;">2</span><span><span class="t1" style="font-size: 14.5px;">Prove</span><span class="t2" style="display: block; font-size: 12.5px;">Renders one of the four pieces below</span></span><span></span></div>
+      <div class="row" style="padding: 11px 14px;"><span class="ic" style="width: 28px; height: 28px; border-radius: 9px; font-size: 13px; font-weight: 500;">3</span><span><span class="t1" style="font-size: 14.5px;">Letting in</span><span class="t2" style="display: block; font-size: 12.5px;">One bar, one sentence, one how&#8209;long</span></span><span></span></div>
+      <div class="row" style="padding: 11px 14px;"><span class="ic" style="width: 28px; height: 28px; border-radius: 9px; font-size: 13px; font-weight: 500;">4</span><span><span class="t1" style="font-size: 14.5px;">In &middot; which room</span><span class="t2" style="display: block; font-size: 12.5px;">The same ending for every route</span></span><span></span></div>
+    </div>
+  </div>
+
+  <div style="position: absolute; top: 658px; left: 564px; width: 480px;">
+    <div class="cap" style="margin-bottom: 11px;">and four small pieces that fill beat two</div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 9px;">
+      <div class="row" style="padding: 11px 13px;"><span></span><span><span class="t1" style="font-size: 14px;">ProveBlink</span><span class="t2" style="display: block; font-size: 12px;">from AddNearby</span></span><span></span></div>
+      <div class="row" style="padding: 11px 13px;"><span></span><span><span class="t1" style="font-size: 14px;">ProvePress</span><span class="t2" style="display: block; font-size: 12px;">from PairPanel</span></span><span></span></div>
+      <div class="row" style="padding: 11px 13px;"><span></span><span><span class="t1" style="font-size: 14px;">ProveCode</span><span class="t2" style="display: block; font-size: 12px;">from AddSwitch</span></span><span></span></div>
+      <div class="row" style="padding: 11px 13px;"><span></span><span><span class="t1" style="font-size: 14px;">ProveSignIn</span><span class="t2" style="display: block; font-size: 12px;">from AddPanel</span></span><span></span></div>
+    </div>
+    <div style="margin-top: 12px; border-left: 2px solid rgba(233,184,114,.4); padding-left: 16px;">
+      <div class="t1" style="margin-bottom: 5px;">A piece draws its middle and nothing else</div>
+      <div class="t2">No titles, no buttons, no progress of its own &mdash; it asks its one question and hands back the answer.</div>
+    </div>
+  </div>
+
+  <!-- the surfaces -->
+  <div class="cap" style="position: absolute; top: 198px; left: 1076px;">the surface rules</div>
+  <div style="position: absolute; top: 230px; left: 1076px; width: 308px; display: grid; gap: 11px;">
+    <div class="note">
+      <div class="t1" style="margin-bottom: 5px;">Nothing draws underneath</div>
+      <div class="t2">While a conversation is open, the page&rsquo;s furniture &mdash; Behind the scenes, the advanced link, the search &mdash; is not on screen. That is the second screenshot&rsquo;s bug, and it is one line.</div>
+    </div>
+    <div class="note">
+      <div class="t1" style="margin-bottom: 5px;">Chosen in the page, arrivals as a sheet</div>
+      <div class="t2">What you went looking for lives on the Add page. What just happened in the room comes up over whatever you were doing, because it is news. Both wear the four beats.</div>
+    </div>
+    <div class="note">
+      <div class="t1" style="margin-bottom: 5px;">What you touched stays put</div>
+      <div class="t2">A door stays as the heading of the screen it opened, and &ldquo;Not now&rdquo; returns to exactly where it was.</div>
+    </div>
+    <div class="note">
+      <div class="t1" style="margin-bottom: 5px;">The wall and the phone are one design</div>
+      <div class="t2">One physical exception: reading a printed code needs a camera, so the wall hands that job to a phone. Everything else is identical at both widths.</div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

@@ -1,0 +1,125 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      /* the panel's own tokens, unchanged -- app/src/panel.css */
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp: #e9b872; --lamp-ink: #2a1c07; --live: #74c69d; --danger: #e08a8a;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
+           padding: 12px 14px; border-radius: 16px; background: var(--surface); border: 1px solid var(--edge); }
+    .row.lit { border-color: rgba(233,184,114,.35);
+               background: linear-gradient(rgba(233,184,114,.1), rgba(233,184,114,.1)), var(--surface); }
+    .ic { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center;
+          background: var(--surface-hi); color: var(--ink-2); }
+    .ic.on { background: var(--lamp); color: var(--lamp-ink); }
+    .t1 { font-size: 15.5px; font-weight: 500; }
+    .t2 { font-size: 13px; color: var(--muted); }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 13px 24px; border-radius: 999px;
+           background: var(--ink); color: var(--bg); font-weight: 500; font-size: 16px; }
+    .btn.ghost { background: var(--surface-hi); color: var(--ink); border: 1px solid var(--edge);
+                 padding: 12px 20px; font-size: 15px; }
+    .btn.sm { padding: 9px 17px; font-size: 14px; }
+    .sheet { border-radius: 26px; background: rgba(22,24,30,.94); border: 1px solid var(--edge-hi);
+             box-shadow: 0 40px 100px -30px rgba(0,0,0,.9); overflow: hidden; }
+    .bar { height: 6px; border-radius: 999px; background: rgba(255,255,255,.1); overflow: hidden; }
+    .bar i { display: block; height: 100%; border-radius: 999px; background: var(--lamp); }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--lamp); }
+    .note { padding: 13px 16px 14px; border-radius: 18px; background: var(--surface); border: 1px solid var(--edge); }
+    .chip { display: inline-flex; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--edge);
+            background: var(--surface-hi); font-size: 14px; }
+    .bad { color: var(--danger); }
+    .sw { fill: #ded8cc; stroke: rgba(0,0,0,.22); stroke-width: 2; }
+    .swf { fill: #fbf8f2; stroke: rgba(0,0,0,.12); stroke-width: 1.4; }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: #0c0d10; color: var(--ink); font-size: 17px; line-height: 1.4;">
+  <div style="position: absolute; inset: 0; background: radial-gradient(64% 54% at 22% 18%, rgba(72,63,135,.22), transparent 70%), radial-gradient(56% 48% at 86% 88%, rgba(92,63,57,.2), transparent 72%);"></div>
+
+  <div style="position: absolute; top: 44px; left: 56px; right: 56px;">
+    <h1 class="dsp" style="margin: 0; font-size: 42px;">One way in, four beats, every time.</h1>
+    <p style="margin: 10px 0 0; font-size: 17px; color: var(--ink-2); max-width: 106ch;">Adding a thing is always the same four screens in the same order, with the same words on the buttons. Only the second beat differs, and it differs because the <i>object</i> differs &mdash; some things blink, some have a code, some want signing in to. That is the only variation the house is allowed.</p>
+  </div>
+
+  <!-- the four beats -->
+  <div class="sheet" style="position: absolute; top: 186px; left: 56px; width: 316px; height: 186px; padding: 18px 18px;">
+    <div class="cap" style="color: var(--lamp); margin-bottom: 10px;">beat one</div>
+    <div class="dsp" style="font-size: 24px; margin-bottom: 8px;">What have you got?</div>
+    <div class="t2">Four answers a person can give without knowing a single thing about radios. Anything already waiting sits above them.</div>
+  </div>
+  <div class="sheet" style="position: absolute; top: 186px; left: 392px; width: 316px; height: 186px; padding: 18px 18px;">
+    <div class="cap" style="color: var(--lamp); margin-bottom: 10px;">beat two</div>
+    <div class="dsp" style="font-size: 24px; margin-bottom: 8px;">Which one is yours?</div>
+    <div class="t2">The only beat that changes shape. Never a protocol on screen &mdash; the proof is the object: it blinks, it is held, it is signed in to.</div>
+  </div>
+  <div class="sheet" style="position: absolute; top: 186px; left: 728px; width: 316px; height: 186px; padding: 18px 18px;">
+    <div class="cap" style="color: var(--lamp); margin-bottom: 10px;">beat three</div>
+    <div class="dsp" style="font-size: 24px; margin-bottom: 8px;">Letting it in.</div>
+    <div class="t2">One bar, one plain sentence about what is happening, one honest how&#8209;long. Walking away never breaks it.</div>
+  </div>
+  <div class="sheet" style="position: absolute; top: 186px; left: 1064px; width: 316px; height: 186px; padding: 18px 18px;">
+    <div class="cap" style="color: var(--lamp); margin-bottom: 10px;">beat four</div>
+    <div class="dsp" style="font-size: 24px; margin-bottom: 8px;">It&rsquo;s in. Which room?</div>
+    <div class="t2">What it turned out to be, in objects. Then the room, asked once, every route, while somebody is still standing there.</div>
+  </div>
+
+  <!-- the spine line -->
+  <div style="position: absolute; top: 392px; left: 56px; width: 1324px; height: 1px; background: linear-gradient(90deg, rgba(233,184,114,.5), rgba(233,184,114,.18));"></div>
+
+  <div class="cap" style="position: absolute; top: 404px; left: 56px;">and the routes, all wearing it</div>
+
+  <!-- rows -->
+  <div style="position: absolute; top: 436px; left: 56px; display: grid; grid-template-columns: 316px 316px 316px 316px; gap: 20px; row-gap: 12px;">
+
+    <div class="row lit" style="padding: 13px 14px;"><span class="ic on"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="5" y="3" width="14" height="18" rx="3"/><circle cx="12" cy="9" r="2.2"/></svg></span><span><span class="t1" style="font-size: 14.5px;">A switch in the wall</span><span class="t2" style="display: block; font-size: 12.5px;">Or a dimmer, or a two&#8209;way pair</span></span><span></span></div>
+    <div class="row" style="padding: 13px 14px;"><span></span><span><span class="t1" style="font-size: 14.5px;">It blinks. Is that the one?</span><span class="t2" style="display: block; font-size: 12.5px;">One at a time &middot; or read its code on a phone</span></span><span></span></div>
+    <div class="row" style="padding: 13px 14px;"><span></span><span><span class="t1" style="font-size: 14.5px;">Learning the house&rsquo;s keys</span><span class="t2" style="display: block; font-size: 12.5px;">About half a minute</span></span><span></span></div>
+    <div class="row" style="padding: 13px 14px;"><span></span><span><span class="t1" style="font-size: 14.5px;">A light that dims, and motion</span><span class="t2" style="display: block; font-size: 12.5px;">Which room?</span></span><span></span></div>
+
+    <div class="row lit" style="padding: 13px 14px;"><span class="ic on"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 3v5M15 3v5M6 8h12v4a6 6 0 0 1-12 0z"/><path d="M12 18v3"/></svg></span><span><span class="t1" style="font-size: 14.5px;">A plug, bulb or sensor</span><span class="t2" style="display: block; font-size: 12.5px;">Out of a box, in your hand</span></span><span></span></div>
+    <div class="row" style="padding: 13px 14px;"><span></span><span><span class="t1" style="font-size: 14.5px;">Press its button now</span><span class="t2" style="display: block; font-size: 12.5px;">The house is listening &middot; 2:00 left</span></span><span></span></div>
+    <div class="row" style="padding: 13px 14px;"><span></span><span><span class="t1" style="font-size: 14.5px;">Joining your house</span><span class="t2" style="display: block; font-size: 12.5px;">A few seconds</span></span><span></span></div>
+    <div class="row" style="padding: 13px 14px;"><span></span><span><span class="t1" style="font-size: 14.5px;">A plug that switches</span><span class="t2" style="display: block; font-size: 12.5px;">Which room?</span></span><span></span></div>
+
+    <div class="row lit" style="padding: 13px 14px;"><span class="ic on"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M9 12h6M12 9v6"/></svg></span><span><span class="t1" style="font-size: 14.5px;">Something with its own app</span><span class="t2" style="display: block; font-size: 12.5px;">Hue, Sonos, a doorbell</span></span><span></span></div>
+    <div class="row" style="padding: 13px 14px;"><span></span><span><span class="t1" style="font-size: 14.5px;">Sign in on their page</span><span class="t2" style="display: block; font-size: 12.5px;">It comes back here on its own</span></span><span></span></div>
+    <div class="row" style="padding: 13px 14px;"><span></span><span><span class="t1" style="font-size: 14.5px;">Asking them for your things</span><span class="t2" style="display: block; font-size: 12.5px;">A few seconds</span></span><span></span></div>
+    <div class="row" style="padding: 13px 14px;"><span></span><span><span class="t1" style="font-size: 14.5px;">Four lights and a speaker</span><span class="t2" style="display: block; font-size: 12.5px;">Which rooms?</span></span><span></span></div>
+
+    <div class="row lit" style="padding: 13px 14px;"><span class="ic on"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg></span><span><span class="t1" style="font-size: 14.5px;">A part of the house</span><span class="t2" style="display: block; font-size: 12.5px;">A bridge puck, another panel</span></span><span></span></div>
+    <div class="row" style="padding: 13px 14px;"><span></span><span><span class="t1" style="font-size: 14.5px;">It is blinking amber now</span><span class="t2" style="display: block; font-size: 12.5px;">Nothing of yours is on it yet</span></span><span></span></div>
+    <div class="row" style="padding: 13px 14px;"><span></span><span><span class="t1" style="font-size: 14.5px;">Software, Wi&#8209;Fi, then keys</span><span class="t2" style="display: block; font-size: 12.5px;">About two minutes</span></span><span></span></div>
+    <div class="row" style="padding: 13px 14px;"><span></span><span><span class="t1" style="font-size: 14.5px;">It can hear nine switches</span><span class="t2" style="display: block; font-size: 12.5px;">Which room is it plugged into?</span></span><span></span></div>
+  </div>
+
+  <div style="position: absolute; top: 790px; left: 56px; right: 56px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+    <div class="note">
+      <div class="t1" style="margin-bottom: 5px;">Things that turn up on their own join at beat two</div>
+      <div class="t2">A puck knocking, a switch asking to be let in, a Hue bridge noticed on the network &mdash; an arrival is beat two with beat one already answered. Same screens from there on, so there is no second vocabulary to learn.</div>
+    </div>
+    <div class="note">
+      <div class="t1" style="margin-bottom: 5px;">The radios do not disappear &mdash; they stop being the question</div>
+      <div class="t2">Zigbee, Z&#8209;Wave, Matter and the bridge are still exactly what they were. They move to <b>Behind the scenes</b>, where a hub&rsquo;s wiring belongs, and stop being four of the six doors on the way in.</div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
