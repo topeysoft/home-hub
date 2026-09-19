@@ -1,0 +1,4 @@
+# Verification artifacts: regenerate with gen_sch.py and kicad-cli, see README.md
+*.net
+erc.rpt
+*-backups/

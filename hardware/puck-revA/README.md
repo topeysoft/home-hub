@@ -4,7 +4,31 @@ The electrical design for `docs/puck-hardware.md`, at the level where drawing it
 decided. Nothing here has been fabricated. Part numbers need confirming against LCSC stock on the day you order,
 and every KiCad library id below wants checking against your installed version rather than trusted.
 
-KiCad project files land in this directory when they exist.
+`gen_sch.py` is the netlist below in machine-readable form, and it generates `puck-revA.kicad_sch`.
+The generator is the source; the schematic is a build product, the same deal `design/puck/make-index.py`
+has with `canvas.json`. **Change a net in `PARTS`, not in Eeschema** — moving symbols around in the GUI
+is free and cannot break connectivity, but a wire drawn by hand will be lost on the next regeneration.
+
+Connectivity is by global label rather than by wire routing: every pin gets a stub and a label with its
+net name. That is not how a person drafts a schematic, and it is on purpose — no crossings, no
+junctions, nothing that can be subtly wrong while looking right. Prettify it when the design stops
+moving.
+
+Regenerate and verify:
+
+```sh
+python3 gen_sch.py
+kicad-cli sch export netlist --output puck-revA.net puck-revA.kicad_sch
+python3 gen_sch.py --check puck-revA.net      # every net, against PARTS
+kicad-cli sch erc --output erc.rpt --severity-error --severity-warning puck-revA.kicad_sch
+```
+
+`--check` is the one that matters: it re-reads what KiCad itself thinks the nets are and compares them
+pin by pin against the table below. As of 19 September it reports 22 nets, 0 wrong, and ERC finds no
+unconnected pins and no power conflicts. The `lib_symbol_issues` and `footprint_link_issues` warnings
+ERC does report are the headless CLI having no library table configured — every symbol is embedded in
+the schematic, so it opens and renders correctly regardless, and those go away once the KiCad GUI has
+been run once and written its global tables.
 
 ## The GPIO map
 
