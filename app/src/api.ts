@@ -239,7 +239,12 @@ export const bridgeWifi = (ssid: string, password: string) => post<Bridge>('/bri
    back, because it is the answer to a question the house asked first -- never a thing to go and find. */
 export const forgetBridge = (chip: string) => post<{ forgotten: string }>('/bridge/forget', { chip })
 /** Leave it here -- the placing is over, whatever the signal says. */
-export const placedBridge = () => post<Bridge>('/bridge/placed')
+/* "Leave it here" -- and, when the sheet asked it, the answer to "leave its light on?" in the same
+   call (docs/puck-light.md). Left out entirely rather than sent as false when nothing was asked: a
+   bridge placed without an answer is a bridge with no nightlight, which is not the same thing as one
+   whose household said no, and only the brain should be deciding what to do with the difference. */
+export const placedBridge = (night?: boolean) =>
+  post<Bridge>('/bridge/placed', night === undefined ? undefined : { night })
 export const retryEntry = (entry_id: string) => post<Status>(`/setup/retry/${encodeURIComponent(entry_id)}`)
 export const setCredentials = (handler: string, client_id: string, client_secret: string, hints?: Record<string, string>) => post<Step>('/credentials', { handler, client_id, client_secret, hints })
 export const addRoom = (name: string) => post<{ id: string; name: string }>('/rooms', { name })

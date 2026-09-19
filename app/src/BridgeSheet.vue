@@ -23,6 +23,15 @@ import BridgeArt from './BridgeArt.vue'
  */
 const b = computed(() => store.bridge)
 const busy = ref(false)
+/* THE ONE LOCAL STEP ON THIS SHEET, and the only one there should ever be.
+ *
+ * "Leave its light on?" is asked between tapping "Leave it here" and the brain being told -- because
+ * the answer travels WITH that message (docs/puck-light.md), and because this is the one moment
+ * somebody is standing in front of the thing in the place it is going to live. It is not a state of
+ * the brain's machine and must not become one: nothing has been decided about the bridge here, the
+ * job is still `placing`, and walking away leaves it exactly where it was, to come back on the next
+ * poll. That is also the answer to "what if they never answer" -- nothing is lost. */
+const asking = ref(false)
 
 const TITLE: Record<string, string> = {
   knocking: 'A bridge is here.',
@@ -32,7 +41,9 @@ const TITLE: Record<string, string> = {
   failed: 'That did not work.',
   wifi: 'One thing it needs.',
 }
-const title = computed(() => b.value?.needs === 'wifi' ? TITLE.wifi : TITLE[b.value?.state ?? ''] ?? 'A bridge')
+const title = computed(() =>
+  asking.value && b.value?.state === 'placing' ? 'Leave its light on?'
+  : b.value?.needs === 'wifi' ? TITLE.wifi : TITLE[b.value?.state ?? ''] ?? 'A bridge')
 
 /* the three things that go on it, in the order they go on. The brain names the one that is live and
    everything before it is done -- so the panel never has to keep its own idea of progress. */
@@ -78,7 +89,10 @@ const tell = () => {
 }
 const adopt = () => run(adoptBridge)
 const dismiss = () => run(dismissBridge)
-const placed = () => run(placedBridge)
+/* Tapping "Leave it here" no longer finishes the job -- it asks the question. The answer is what
+   finishes it, and it goes in the same call. */
+const leaveItHere = () => { if (!busy.value) asking.value = true }
+const place = (night: boolean) => { asking.value = false; run(() => placedBridge(night)) }
 /* Walking away from a bridge that is mid-job does not stop it -- the hub is writing to a thing on its
    own cable and will finish whatever this screen does. Closing only puts the sheet away; it comes
    back on the next poll while there is still something to say.
@@ -94,6 +108,7 @@ const placed = () => run(placedBridge)
    machine rather than about this screen. `placing` is deliberately not one of them -- that job is
    still running and should come back. */
 function close() {
+  asking.value = false
   const was = b.value?.state
   if (store.bridge) store.bridge = { ...store.bridge, state: 'none' }
   if (readOnce(was)) run(dismissBridge)
@@ -152,6 +167,30 @@ onUnmounted(() => window.removeEventListener('keydown', key))
           </div>
         </template>
 
+        <!-- the one question, asked in the place it is going to live and nowhere else.
+             design/puck/Nightlight.dc.html -->
+        <template v-else-if="b.state === 'placing' && asking">
+          <p class="sheet-lede">It will glow warm through the night — enough to find a doorway by — and go straight back to telling you if something goes wrong.</p>
+          <ul class="bridge-lights one">
+            <li class="warm">
+              <BridgeArt light="warm" />
+              <span class="bridge-name">Warm, and still</span>
+              <span class="bridge-sub">Dim, steady, and none of the three it has been showing you.</span>
+            </li>
+          </ul>
+          <div class="bridge-row">
+            <span class="bridge-icon"><Icon name="sparkle" :size="18" /></span>
+            <span class="bridge-text">
+              <span class="bridge-name">It joins your lights</span>
+              <span class="bridge-sub">Turn it off, dim it or put it on a schedule afterwards, the same as anything else in the house.</span>
+            </span>
+          </div>
+          <div class="flow-actions">
+            <button class="button" :class="{ busy }" @click="place(true)">Leave it on</button>
+            <button class="button ghost" :class="{ busy }" @click="place(false)">No, dark</button>
+          </div>
+        </template>
+
         <!-- the walk. The wall cannot follow, so what it hands over is how to read the thing itself. -->
         <template v-else-if="b.state === 'placing'">
           <p class="sheet-lede">Unplug it and put it on any charger near one of your switches. It says where it is up to on its own light, so you do not have to come back here to find out.</p>
@@ -175,7 +214,7 @@ onUnmounted(() => window.removeEventListener('keydown', key))
               <span class="bridge-sub" v-else>Plug it in and this will say what it hears.</span>
             </span>
           </div>
-          <div class="flow-actions"><button class="button" :class="{ busy }" @click="placed">Leave it here</button></div>
+          <div class="flow-actions"><button class="button" :class="{ busy }" @click="leaveItHere">Leave it here</button></div>
         </template>
 
         <!-- it is somewhere, and a pile of switches came in with it -->

@@ -5,9 +5,10 @@ already worked as a nightlight, by accident, and it was pleasant. Two, and it is
 puck is meant to be **a product** — a small, plain relay object sitting out in the open in a living space — not an
 ESP32 devkit on a shelf, and part of the job is that it is nice to look at. Its light is the only expressive
 surface it has. The design is settled; what it asks of the hardware, and the questions that are genuinely open,
-are at the foot and marked as such. **Steps 1 to 3 of the build order are written** (18–19 September):
-the state, the precedence, the NVS setting, the MQTT topics, the Home Assistant entity and the hub side all exist;
-both firmware targets compile and the brain's 936 tests pass. Nothing has run on a puck yet — there has been none on the cable — so every
+are at the foot and marked as such. **Steps 1 to 4 of the build order are written** (18–19 September):
+the state, the precedence, the NVS setting, the MQTT topics, the Home Assistant entity, the hub side and the question
+on the sheet all exist; both firmware targets compile, the brain's 936 tests and the panel's 415 pass, and the
+question has been walked through in the real panel against the mock. Nothing has run on a puck yet — there has been none on the cable — so every
 claim below about how it *behaves on hardware* is still a claim.*
 
 ## What the light does today, and for how long
@@ -118,6 +119,11 @@ rather than buy:
    is a maker's nightlight — a hard point source you can see the die in. This is an argument for the enclosure
    having a diffusing face, which is a thing it wants for its own sake.
 
+`docs/puck-hardware.md` (rev A) takes all three of these as requirements and answers them: a level shifter for
+2, three emitters behind a printed diffuser for 3, and it carries the button from the open questions below as a
+footprint. Whether 1.5 mm of white PLA reads as one glow or as three dots is its open question, and it is the
+same question as this document's default brightness — both want an eye in a dark hallway rather than a build.
+
 None of these are blockers for building the *software* — the precedence, the entity and the question can all be
 built and tested on the desk pucks today. They are what the hardware has to be for the feature to be worth
 shipping.
@@ -173,8 +179,16 @@ shipping.
    right way round: the instrument survives, the decoration does not. Publishing failures are suppressed rather
    than raised — the broker is not why somebody tapped the button, and a sheet stuck on a step the person has
    already finished is worse than a bridge with no glow.
-4. **Panel.** The one question in `BridgeSheet.vue` at `ready`; after that it is an ordinary light on its room's
-   tile, with no special-casing.
+4. ~~**Panel.**~~ **Built and walked through (19 September).** The question sits between "Leave it here" and the
+   brain being told, because the answer travels *with* that message. `BridgeSheet.vue` gains exactly one local
+   step, `asking` — and it must stay the only one: nothing about the bridge is decided there, the job is still
+   `placing`, and walking away from the question leaves it exactly where it was, to come back on the next poll.
+   That is also the answer to "what if nobody answers": nothing is lost and nothing is assumed.
+   `placedBridge(night?)` leaves the field out entirely rather than sending `false` when the question was never
+   asked — a bridge placed without an answer is not the same as one whose household said no, and only the brain
+   should decide what to do with the difference. `BridgeArt` gains a fourth light, `warm`, its four states now a
+   lookup rather than a ternary per attribute. Three e2e cases hold it: the question is asked and nothing is sent
+   until it is answered, both answers place the bridge, and walking away places nothing.
 5. **Motion**, as a brain rule over `0x13` from the switch beside it. Optional, and last, because it is the only
    part that can be wrong in a way that wakes somebody up.
 6. **Hardware.** The three requirements above into the product board spec, alongside the enclosure's diffusing
@@ -182,7 +196,7 @@ shipping.
 
 Steps 1–4 are the feature. Step 5 is the one that makes people like it.
 
-**What steps 1 to 3 still owe:** a puck on a cable. `set settled 1` then `set night 1 <level>` should put a settled,
+**What steps 1 to 4 still owe:** a puck on a cable. `set settled 1` then `set night 1 <level>` should put a settled,
 healthy puck into a warm glow; pulling the broker should take it straight back to amber; a reboot should come
 back glowing without the hub. None of that has been watched happen, and the default brightness (110) was chosen
 on a screen, which `emitter-colours-are-not-screen-colours` is a standing warning about.

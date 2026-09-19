@@ -19,11 +19,22 @@ defineProps<{
   /* what its one light is saying. Blinking is the firmware's word for "still looking"; the panel
      only ever shows the color, because a screen cannot be trusted to blink in step with a thing
      across the room. */
-  light?: 'amber' | 'green' | 'red' | 'off'
+  light?: 'amber' | 'green' | 'red' | 'warm' | 'off'
   /* alone: the bridge on its own, the size of a decision. cable: it and the hub, with the lead
      between them -- the picture IS the instruction on that one, so it is not decoration. */
   scene?: 'alone' | 'cable'
 }>()
+
+/* One row per thing the light can be, rather than a ternary per attribute: there are four of them
+   now and the fourth is not an indicator at all. `warm` is the nightlight (docs/puck-light.md) --
+   wider, softer and unsaturated, because it is lighting a floor rather than signalling, which is the
+   one place the emitter rule inverts. */
+const POOL = {
+  amber: { r: 42, fill: 'url(#bAmber)', core: '#f8e6c4' },
+  green: { r: 46, fill: 'url(#bGreen)', core: '#d7f7e5' },
+  red: { r: 30, fill: 'url(#bRed)', core: '#e8b3b3' },
+  warm: { r: 54, fill: 'url(#bWarm)', core: '#fff4e2' },
+} as const
 </script>
 
 <template>
@@ -60,15 +71,17 @@ defineProps<{
       <radialGradient id="bRed" cx="50%" cy="50%" r="50%">
         <stop offset="0" stop-color="#f3bcbc" stop-opacity=".62" /><stop offset="55%" stop-color="#e08a8a" stop-opacity=".18" /><stop offset="100%" stop-color="#e08a8a" stop-opacity="0" />
       </radialGradient>
+      <radialGradient id="bWarm" cx="50%" cy="50%" r="50%">
+        <stop offset="0" stop-color="#fff1d8" stop-opacity=".9" /><stop offset="55%" stop-color="#f0c98d" stop-opacity=".32" /><stop offset="100%" stop-color="#f0c98d" stop-opacity="0" />
+      </radialGradient>
     </defs>
     <rect x="57" y="4" width="10" height="36" rx="2.5" fill="url(#mMetal)" />
     <rect x="93" y="4" width="10" height="36" rx="2.5" fill="url(#mMetal)" />
     <rect x="22" y="36" width="116" height="124" rx="31" fill="url(#mDark)" />
     <rect x="22.8" y="36.8" width="114.4" height="122.4" rx="30.2" stroke="rgba(255,255,255,.16)" stroke-width="1.5" />
     <template v-if="light !== 'off'">
-      <circle cx="80" cy="98" :r="light === 'green' ? 46 : light === 'red' ? 30 : 42"
-              :fill="light === 'green' ? 'url(#bGreen)' : light === 'red' ? 'url(#bRed)' : 'url(#bAmber)'" />
-      <circle cx="80" cy="98" r="8" :fill="light === 'green' ? '#d7f7e5' : light === 'red' ? '#e8b3b3' : '#f8e6c4'" />
+      <circle cx="80" cy="98" :r="(POOL[light ?? 'amber'] ?? POOL.amber).r" :fill="(POOL[light ?? 'amber'] ?? POOL.amber).fill" />
+      <circle cx="80" cy="98" r="8" :fill="(POOL[light ?? 'amber'] ?? POOL.amber).core" />
     </template>
     <circle v-else cx="80" cy="98" r="8" fill="rgba(255,255,255,.12)" />
   </svg>
