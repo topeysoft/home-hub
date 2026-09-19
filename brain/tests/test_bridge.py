@@ -628,3 +628,33 @@ class OnePortOneProbe(unittest.TestCase):
         (self.dev / "usb-board").unlink(); run(self.b.scan())
         (self.dev / "usb-board").touch(); run(self.b.scan())
         self.assertEqual(probes, [port])
+
+
+class ReadingTheProbesAnswer(unittest.TestCase):
+    """The probe prints a marker and the hub reads it back. Three times now that reading has
+    been the thing that broke, so the parsing is pinned here rather than trusted.
+
+    The one that cost an evening: esptool prints "Detecting chip type..." through rich with
+    no trailing newline, so the marker landed glued to the end of it -- the hub logged
+    "did not answer as an ESP -- Detecting chip type...CHIP=ESP32-S3", throwing away the
+    answer that was sitting in the same sentence."""
+
+    def parse(self, said: str):
+        import re
+        m = re.search(r"CHIP=([\w-]+)", said)
+        return m.group(1).strip().lower().replace("-", "").replace(" ", "") if m else None
+
+    def test_a_marker_glued_to_esptools_progress_is_still_read(self):
+        self.assertEqual(self.parse("Connecting.........\nDetecting chip type...CHIP=ESP32-S3\n"),
+                         "esp32s3")
+
+    def test_a_marker_on_its_own_line_is_read(self):
+        self.assertEqual(self.parse("Connecting....\nCHIP=ESP32-C3\n"), "esp32c3")
+
+    def test_no_marker_is_no_chip(self):
+        self.assertIsNone(self.parse("Connecting......\nFailed to connect: No serial data received.\n"))
+
+    def test_the_name_comes_back_as_esptool_wants_it(self):
+        """--chip takes esp32s3, not ESP32-S3."""
+        self.assertEqual(self.parse("CHIP=ESP32-S3"), "esp32s3")
+        self.assertEqual(self.parse("CHIP=ESP32"), "esp32")

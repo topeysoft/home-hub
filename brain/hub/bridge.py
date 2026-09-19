@@ -139,9 +139,14 @@ class Cable:
         looks like the feature simply does not work. A subprocess we wait on takes its whole
         family with it when it goes.
         """
+        # The marker goes on a line of its OWN: esptool's progress ("Detecting chip type...")
+        # is printed by rich without a trailing newline, so a bare print lands glued to the
+        # end of it. Starting with a newline, and matching anywhere below rather than at the
+        # start of a line, are belt and braces for the same mistake -- which cost an evening
+        # once already, with the answer sitting in the log being thrown away.
         code = ("import sys, esptool\n"
                 "d = esptool.detect_chip(sys.argv[1], connect_attempts=2)\n"
-                "print('CHIP=' + d.CHIP_NAME)\n")
+                "print('\\nCHIP=' + d.CHIP_NAME, flush=True)\n")
         try:
             # Its own session, so the whole family can be killed by group. Reaping the child
             # alone is not enough: esptool's multiprocessing helpers are GRANDchildren and
@@ -168,10 +173,9 @@ class Cable:
             log.info("bridge: %s did not answer as an ESP (gave up after %ss)", port, PROBE_SECONDS)
             return None
         said = out.decode(errors="replace")
-        for line in said.splitlines():
-            if line.startswith("CHIP="):
-                # "ESP32-S3" -> esp32s3, the name esptool wants back as --chip
-                return line[5:].strip().lower().replace("-", "").replace(" ", "")
+        if (m := re.search(r"CHIP=([\w-]+)", said)):
+            # "ESP32-S3" -> esp32s3, the name esptool wants back as --chip
+            return m.group(1).strip().lower().replace("-", "").replace(" ", "")
         tail = " / ".join(l.strip() for l in said.splitlines() if l.strip())[-300:]
         log.info("bridge: %s did not answer as an ESP -- %s", port, tail or "(it said nothing)")
         return None
