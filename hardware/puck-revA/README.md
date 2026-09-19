@@ -24,11 +24,12 @@ kicad-cli sch erc --output erc.rpt --severity-error --severity-warning puck-revA
 ```
 
 `--check` is the one that matters: it re-reads what KiCad itself thinks the nets are and compares them
-pin by pin against the table below. As of 19 September it reports 22 nets, 0 wrong, and ERC finds no
-unconnected pins and no power conflicts. The `lib_symbol_issues` and `footprint_link_issues` warnings
-ERC does report are the headless CLI having no library table configured — every symbol is embedded in
-the schematic, so it opens and renders correctly regardless, and those go away once the KiCad GUI has
-been run once and written its global tables.
+pin by pin against the table below. As of 19 September it reports **22 nets, 0 wrong, and ERC is clean —
+zero violations**, with every symbol and footprint resolving against the stock KiCad 10 libraries.
+
+ERC needs KiCad's global library tables to exist, which it writes the first time the GUI is launched.
+Before that it reports a wall of `lib_symbol_issues` and `footprint_link_issues` that mean nothing —
+the symbols are embedded in the schematic, so it opens and renders either way.
 
 ## The GPIO map
 
@@ -128,10 +129,10 @@ I²C pins rather than sharing these, so an experiment on the header cannot wedge
 | U2 | AP2112K-3.3, 600 mA | `Regulator_Linear:AP2112K-3.3` | `Package_TO_SOT_SMD:SOT-23-5` |
 | U3 | 74AHCT1G125 | `74xGxx:74AHCT1G125` | `Package_TO_SOT_SMD:SOT-23-5` |
 | U4 | USBLC6-2SC6 | `Power_Protection:USBLC6-2SC6` | `Package_TO_SOT_SMD:SOT-23-6` |
-| U5 | VEML7700 — ambient light, DNP option | likely needs drawing | per datasheet |
-| J1 | USB-C receptacle, 16-pin, USB 2.0 | `Connector:USB_C_Receptacle_USB2.0_16P` | per chosen MPN |
-| D1–D3 | SK6812-RGBW, 5050 | likely needs drawing | `LED:LED_SK6812_PLCC6_5.0x5.0mm` |
-| SW1–SW3 | BOOT, RESET, USER | `Switch:SW_Push` | side-actuated SMD |
+| U5 | ambient light, DNP option — **part not chosen** | `Sensor_Optical:LTR-303ALS-01` | `OptoDevice:Lite-On_LTR-303ALS-01` |
+| J1 | USB-C receptacle, 16-pin, USB 2.0 | `Connector:USB_C_Receptacle_USB2.0_16P` | `Connector_USB:USB_C_Receptacle_GCT_USB4105-xx-A_16P_TopMnt_Horizontal` |
+| D1–D3 | SK6812-RGBW, 5050 | `LED:WS2812B` (same 4 pins) | `LED_SMD:LED_SK6812_PLCC4_5.0x5.0mm_P3.2mm` |
+| SW1–SW3 | BOOT, RESET, USER | `Switch:SW_Push` | `Button_Switch_SMD:SW_SPST_SKQG_WithoutStem` |
 | C1 | 22 µF, 10 V | | 0805 |
 | C2 | 10 µF | | 0603 |
 | C3–C6 | 100 nF | | 0603 |
@@ -141,10 +142,15 @@ I²C pins rather than sharing these, so an experiment on the header cannot wedge
 | R4 | 300 Ω | | 0603 |
 | R5, R6 | 4.7 kΩ | | 0603 |
 
-**On the two that need drawing.** SK6812-RGBW and VEML7700 are not reliably in the stock libraries. SK6812-RGBW is
-close enough to WS2812B to share a land pattern if you draw the symbol for it — but check the pin order on the
-datasheet you are actually buying against, because the 5050 addressables disagree with each other about which
-corner is pin 1, and getting it wrong bricks the chain silently.
+**Nothing needs drawing after all** — KiCad 10 has every symbol and footprint above. Two notes on the ones that
+are not what they first look like:
+
+- **SK6812-RGBW uses `LED:WS2812B` and a PLCC4 land.** RGBW is a fourth die, not a fifth pin: the part is still
+  VDD / DOUT / VSS / DIN, which is exactly the WS2812B symbol. **Check the pin order against the datasheet for the
+  part you actually buy** — the 5050 addressables disagree with each other about which corner is pin 1, and getting
+  it wrong kills the chain silently.
+- **The ambient light sensor is a stand-in.** KiCad 10 ships no VEML7700, so `LTR-303ALS-01` is placed — same bus,
+  same job, still DNP. The part was never actually chosen; choose it rather than inheriting this.
 
 **0603 throughout**, not 0402. JLC places either, but five boards and a soldering iron in the room means the ability
 to rework matters more than the millimeter, and nothing here is space-constrained on a 50 mm disc.

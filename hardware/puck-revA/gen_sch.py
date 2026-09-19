@@ -31,7 +31,7 @@ PROJECT = "puck-revA"
 
 PARTS = {
  "U1": ("RF_Module", "ESP32-S3-WROOM-1", "ESP32-S3-WROOM-1-N16",
-        "RF_Module:ESP32-S2-WROOM", {
+        "RF_Module:ESP32-S3-WROOM-1", {
         "1":"GND", "40":"GND", "41":"GND", "2":"+3V3", "3":"EN", "27":"IO0",
         "4":"USER_BTN", "12":"SDA", "17":"SCL",
         "9":"EXP_C", "10":"EXP_A", "11":"EXP_B",
@@ -47,29 +47,31 @@ PARTS = {
  "U4": ("Power_Protection", "USBLC6-2SC6", "USBLC6-2SC6", "Package_TO_SOT_SMD:SOT-23-6",
         {"1":"USB_DM", "6":"USB_DM", "3":"USB_DP", "4":"USB_DP", "2":"GND", "5":"VBUS"}),
 
- "U5": ("Sensor_Optical", "LTR-303ALS-01", "ambient light, DNP", "",
+ "U5": ("Sensor_Optical", "LTR-303ALS-01", "ambient light, DNP", "OptoDevice:Lite-On_LTR-303ALS-01",
         {"1":"+3V3", "3":"GND", "4":"SCL", "6":"SDA"}),
 
- "J1": ("Connector", "USB_C_Receptacle_USB2.0_16P", "USB-C 16P", "",
+ "J1": ("Connector", "USB_C_Receptacle_USB2.0_16P", "USB-C 16P",
+        "Connector_USB:USB_C_Receptacle_GCT_USB4105-xx-A_16P_TopMnt_Horizontal",
         {"A1":"GND","A12":"GND","B1":"GND","B12":"GND","SH":"GND",
          "A4":"VBUS","A9":"VBUS","B4":"VBUS","B9":"VBUS",
          "A5":"CC1","B5":"CC2","A6":"USB_DP","B6":"USB_DP","A7":"USB_DM","B7":"USB_DM"}),
 
- "J2": ("Connector_Generic", "Conn_01x04", "UART", "",
+ "J2": ("Connector_Generic", "Conn_01x04", "UART", "Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical",
         {"1":"GND", "2":"UART0_TX", "3":"UART0_RX", "4":"+3V3"}),
- "J3": ("Connector_Generic", "Conn_01x06", "EXP (DNP on the product)", "",
+ "J3": ("Connector_Generic", "Conn_01x06", "EXP (DNP on the product)",
+        "Connector_PinHeader_2.54mm:PinHeader_1x06_P2.54mm_Vertical",
         {"1":"+3V3", "2":"VBUS", "3":"GND", "4":"EXP_A", "5":"EXP_B", "6":"EXP_C"}),
 
- "D1": ("LED","WS2812B","SK6812-RGBW","LED:LED_SK6812_PLCC6_5.0x5.0mm",
+ "D1": ("LED","WS2812B","SK6812-RGBW","LED_SMD:LED_SK6812_PLCC4_5.0x5.0mm_P3.2mm",
         {"1":"VBUS","3":"GND","4":"LED_D1_IN","2":"LED_D1_OUT"}),
- "D2": ("LED","WS2812B","SK6812-RGBW","LED:LED_SK6812_PLCC6_5.0x5.0mm",
+ "D2": ("LED","WS2812B","SK6812-RGBW","LED_SMD:LED_SK6812_PLCC4_5.0x5.0mm_P3.2mm",
         {"1":"VBUS","3":"GND","4":"LED_D1_OUT","2":"LED_D2_OUT"}),
- "D3": ("LED","WS2812B","SK6812-RGBW","LED:LED_SK6812_PLCC6_5.0x5.0mm",
+ "D3": ("LED","WS2812B","SK6812-RGBW","LED_SMD:LED_SK6812_PLCC4_5.0x5.0mm_P3.2mm",
         {"1":"VBUS","3":"GND","4":"LED_D2_OUT"}),                 # DOUT left open
 
- "SW1": ("Switch","SW_Push","BOOT","",   {"1":"IO0","2":"GND"}),
- "SW2": ("Switch","SW_Push","RESET","",  {"1":"EN","2":"GND"}),
- "SW3": ("Switch","SW_Push","USER","",   {"1":"USER_BTN","2":"GND"}),
+ "SW1": ("Switch","SW_Push","BOOT","Button_Switch_SMD:SW_SPST_SKQG_WithoutStem",   {"1":"IO0","2":"GND"}),
+ "SW2": ("Switch","SW_Push","RESET","Button_Switch_SMD:SW_SPST_SKQG_WithoutStem",  {"1":"EN","2":"GND"}),
+ "SW3": ("Switch","SW_Push","USER","Button_Switch_SMD:SW_SPST_SKQG_WithoutStem",   {"1":"USER_BTN","2":"GND"}),
 
  "R1": ("Device","R","5k1","Resistor_SMD:R_0603_1608Metric", {"1":"CC1","2":"GND"}),
  "R2": ("Device","R","5k1","Resistor_SMD:R_0603_1608Metric", {"1":"CC2","2":"GND"}),
@@ -227,14 +229,39 @@ def embed(key, lib, name):
     wholesale and rename it, inner unit sub-symbols included. Same pins, same graphics, right name."""
     blk = raw_symbol(lib, name)
     m = re.search(r'\(extends "([^"]+)"', blk)
-    if m:
-        parent = m.group(1)
-        blk = raw_symbol(lib, parent)
-        blk = blk.replace(f'(symbol "{parent}_', f'(symbol "{name}_')   # unit sub-symbols first
-        blk = blk.replace(f'\t(symbol "{parent}"', f'\t(symbol "{key}"', 1)
-    else:
-        blk = blk.replace(f'(symbol "{name}"', f'(symbol "{key}"', 1)
-    return blk
+    if not m:
+        return blk.replace(f'(symbol "{name}"', f'(symbol "{key}"', 1)
+    parent = m.group(1)
+    out = raw_symbol(lib, parent)
+    out = out.replace(f'(symbol "{parent}_', f'(symbol "{name}_')       # unit sub-symbols first
+    out = out.replace(f'\t(symbol "{parent}"', f'\t(symbol "{key}"', 1)
+    # The parent supplies geometry and NOTHING ELSE. Its properties describe the parent -- taking
+    # them wholesale made the embedded AP2112K-3.3 claim to be an AP2204K-1.5, a 150 mA part rather
+    # than a 600 mA one, which is a wrong Value on its way to a BOM. Overlay the child's.
+    for pname, ptext in top_properties(blk).items():
+        out = replace_property(out, pname, ptext)
+    return out
+
+
+def top_properties(block):
+    """Direct-child (property ...) forms of a symbol, by name."""
+    out, depth, start = {}, 0, None
+    for i, ch in enumerate(block):
+        if ch == "(":
+            if depth == 1 and block.startswith("(property ", i): start = i
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+            if depth == 1 and start is not None:
+                frag = block[start:i + 1]
+                out[re.match(r'\(property "([^"]+)"', frag).group(1)] = frag
+                start = None
+    return out
+
+
+def replace_property(block, pname, ptext):
+    cur = top_properties(block).get(pname)
+    return block.replace(cur, ptext, 1) if cur else block
 
 
 SHEET_UUID = uid()
