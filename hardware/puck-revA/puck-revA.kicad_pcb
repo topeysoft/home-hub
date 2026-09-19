@@ -65,7 +65,7 @@
 	(net 30 "LED_DATA_3V3")
 	(footprint "Capacitor_SMD:C_0805_2012Metric"
 		(layer "F.Cu")
-		(uuid "26d22ee8-98fb-466c-9ca4-2b317e6c583c")
+		(uuid "6a09eb53-8c55-4ba2-942d-385ae4af082f")
 		(at 117 115 0)
 
 	
@@ -75,7 +75,7 @@
 	(tags "capacitor")
 	(property "Reference" "C1"
 		(at 0 -1.68 0)
-		(layer "F.SilkS")
+		(layer "F.Fab")
 		(effects
 			(font
 				(size 1 1)
@@ -91,6 +91,8 @@
 				(size 1 1)
 				(thickness 0.15)
 			)
+		
+			(hide yes)
 		)
 	)
 	(property "KiLib_Generator" "SMD_2terminal_chip_molded"
@@ -186,7 +188,7 @@
 	)
 	(footprint "Capacitor_SMD:C_0603_1608Metric"
 		(layer "F.Cu")
-		(uuid "7c7f5813-6176-4ecc-b95b-d05df01d6bab")
+		(uuid "e2241be1-cd03-4f85-a453-3531944b58db")
 		(at 97 121.5 0)
 
 	
@@ -196,7 +198,7 @@
 	(tags "capacitor")
 	(property "Reference" "C101"
 		(at 0 -1.43 0)
-		(layer "F.SilkS")
+		(layer "F.Fab")
 		(effects
 			(font
 				(size 1 1)
@@ -212,6 +214,8 @@
 				(size 1 1)
 				(thickness 0.15)
 			)
+		
+			(hide yes)
 		)
 	)
 	(property "KiLib_Generator" "SMD_2terminal_chip_molded"
@@ -307,7 +311,7 @@
 	)
 	(footprint "Capacitor_SMD:C_0603_1608Metric"
 		(layer "F.Cu")
-		(uuid "8dc68258-759f-4fc0-a885-def678cc171b")
+		(uuid "27555f67-cf28-489c-8658-d0481d047f3f")
 		(at 93 120.5 0)
 
 	
@@ -317,7 +321,7 @@
 	(tags "capacitor")
 	(property "Reference" "C102"
 		(at 0 -1.43 0)
-		(layer "F.SilkS")
+		(layer "F.Fab")
 		(effects
 			(font
 				(size 1 1)
@@ -333,6 +337,8 @@
 				(size 1 1)
 				(thickness 0.15)
 			)
+		
+			(hide yes)
 		)
 	)
 	(property "KiLib_Generator" "SMD_2terminal_chip_molded"
@@ -428,8 +434,8 @@
 	)
 	(footprint "Capacitor_SMD:C_0603_1608Metric"
 		(layer "F.Cu")
-		(uuid "ae600a6c-1df2-49cd-9f25-f950381ded99")
-		(at 84.5 115 0)
+		(uuid "ad5f0e00-799b-4d21-95e6-0b173416a25b")
+		(at 78.5 105.5 0)
 
 	
 	
@@ -438,7 +444,7 @@
 	(tags "capacitor")
 	(property "Reference" "C103"
 		(at 0 -1.43 0)
-		(layer "F.SilkS")
+		(layer "F.Fab")
 		(effects
 			(font
 				(size 1 1)
@@ -454,6 +460,8 @@
 				(size 1 1)
 				(thickness 0.15)
 			)
+		
+			(hide yes)
 		)
 	)
 	(property "KiLib_Generator" "SMD_2terminal_chip_molded"
@@ -549,7 +557,7 @@
 	)
 	(footprint "Capacitor_SMD:C_0603_1608Metric"
 		(layer "F.Cu")
-		(uuid "c18b9469-ed17-477d-ac34-45852d029e34")
+		(uuid "a47c5210-de36-4b14-a3d7-7de7ce3fe286")
 		(at 120.5 110.5 90)
 
 	
@@ -559,7 +567,7 @@
 	(tags "capacitor")
 	(property "Reference" "C104"
 		(at 0 -1.43 0)
-		(layer "F.SilkS")
+		(layer "F.Fab")
 		(effects
 			(font
 				(size 1 1)
@@ -575,6 +583,8 @@
 				(size 1 1)
 				(thickness 0.15)
 			)
+		
+			(hide yes)
 		)
 	)
 	(property "KiLib_Generator" "SMD_2terminal_chip_molded"
@@ -670,7 +680,7 @@
 	)
 	(footprint "Capacitor_SMD:C_0603_1608Metric"
 		(layer "F.Cu")
-		(uuid "dec43a6a-b708-48b7-948c-1db31c6943af")
+		(uuid "8353de09-6ffc-4e1c-9ac2-9b55b9eba0d7")
 		(at 101.5 87.5 0)
 
 	
@@ -680,7 +690,7 @@
 	(tags "capacitor")
 	(property "Reference" "C2"
 		(at 0 -1.43 0)
-		(layer "F.SilkS")
+		(layer "F.Fab")
 		(effects
 			(font
 				(size 1 1)
@@ -696,6 +706,8 @@
 				(size 1 1)
 				(thickness 0.15)
 			)
+		
+			(hide yes)
 		)
 	)
 	(property "KiLib_Generator" "SMD_2terminal_chip_molded"
@@ -791,7 +803,7 @@
 	)
 	(footprint "Capacitor_SMD:C_0603_1608Metric"
 		(layer "F.Cu")
-		(uuid "bba96b20-0d74-4d9c-8257-7bd57c4b308d")
+		(uuid "9a02bf28-9828-4fed-b4f1-021330631ee5")
 		(at 101.5 111.5 0)
 
 	
@@ -801,7 +813,7 @@
 	(tags "capacitor")
 	(property "Reference" "C3"
 		(at 0 -1.43 0)
-		(layer "F.SilkS")
+		(layer "F.Fab")
 		(effects
 			(font
 				(size 1 1)
@@ -817,6 +829,8 @@
 				(size 1 1)
 				(thickness 0.15)
 			)
+		
+			(hide yes)
 		)
 	)
 	(property "KiLib_Generator" "SMD_2terminal_chip_molded"
@@ -912,7 +926,7 @@
 	)
 	(footprint "Capacitor_SMD:C_0603_1608Metric"
 		(layer "F.Cu")
-		(uuid "16c688b1-311b-42ec-a07b-63d34e53fecc")
+		(uuid "f6ab56f0-12cf-420a-834f-e2a2f301bad6")
 		(at 101 121.5 0)
 
 	
@@ -922,7 +936,7 @@
 	(tags "capacitor")
 	(property "Reference" "C7"
 		(at 0 -1.43 0)
-		(layer "F.SilkS")
+		(layer "F.Fab")
 		(effects
 			(font
 				(size 1 1)
@@ -938,6 +952,8 @@
 				(size 1 1)
 				(thickness 0.15)
 			)
+		
+			(hide yes)
 		)
 	)
 	(property "KiLib_Generator" "SMD_2terminal_chip_molded"
@@ -1033,7 +1049,7 @@
 	)
 	(footprint "LED_SMD:LED_SK6812_PLCC4_5.0x5.0mm_P3.2mm"
 		(layer "F.Cu")
-		(uuid "ba2f5580-c8ca-4d48-9b9f-43cb21268878")
+		(uuid "87d9c8bc-af03-4d25-adef-5e83760bccd6")
 		(at 114.7224 91.5 300)
 
 	
@@ -1044,7 +1060,7 @@
 	(tags "LED RGB NeoPixel PLCC-4 5050")
 	(property "Reference" "D1"
 		(at 0 -3.5 0)
-		(layer "F.SilkS")
+		(layer "F.Fab")
 		(uuid "45e3fb6a-2e92-4643-9161-1c13a8e2a1e7")
 		(effects
 			(font
@@ -1062,6 +1078,8 @@
 				(size 1 1)
 				(thickness 0.15)
 			)
+		
+			(hide yes)
 		)
 	)
 	(property "Datasheet" ""
@@ -1322,7 +1340,7 @@
 	)
 	(footprint "LED_SMD:LED_SK6812_PLCC4_5.0x5.0mm_P3.2mm"
 		(layer "F.Cu")
-		(uuid "d9c888ec-850c-4084-9f26-5654253c759d")
+		(uuid "478dd094-12b9-4383-a281-be4636e5cc16")
 		(at 108.5 114.7224 210)
 
 	
@@ -1333,7 +1351,7 @@
 	(tags "LED RGB NeoPixel PLCC-4 5050")
 	(property "Reference" "D10"
 		(at 0 -3.5 0)
-		(layer "F.SilkS")
+		(layer "F.Fab")
 		(uuid "45e3fb6a-2e92-4643-9161-1c13a8e2a1e7")
 		(effects
 			(font
@@ -1351,6 +1369,8 @@
 				(size 1 1)
 				(thickness 0.15)
 			)
+		
+			(hide yes)
 		)
 	)
 	(property "Datasheet" ""
@@ -1611,7 +1631,7 @@
 	)
 	(footprint "LED_SMD:LED_SK6812_PLCC4_5.0x5.0mm_P3.2mm"
 		(layer "F.Cu")
-		(uuid "6ea1b16c-0442-405b-8cf9-e3f1b2d8fd68")
+		(uuid "68a09d4a-5682-4f59-a996-41209fd346d4")
 		(at 114.7224 108.5 240)
 
 	
@@ -1622,7 +1642,7 @@
 	(tags "LED RGB NeoPixel PLCC-4 5050")
 	(property "Reference" "D11"
 		(at 0 -3.5 0)
-		(layer "F.SilkS")
+		(layer "F.Fab")
 		(uuid "45e3fb6a-2e92-4643-9161-1c13a8e2a1e7")
 		(effects
 			(font
@@ -1640,6 +1660,8 @@
 				(size 1 1)
 				(thickness 0.15)
 			)
+		
+			(hide yes)
 		)
 	)
 	(property "Datasheet" ""
@@ -1898,7 +1920,7 @@
 	)
 	(footprint "LED_SMD:LED_SK6812_PLCC4_5.0x5.0mm_P3.2mm"
 		(layer "F.Cu")
-		(uuid "342131c7-f2a0-449d-846b-fc57a77971ea")
+		(uuid "8797e59d-5a9d-4d60-98c2-8fa92da19786")
 		(at 108.5 85.2776 330)
 
 	
@@ -1909,7 +1931,7 @@
 	(tags "LED RGB NeoPixel PLCC-4 5050")
 	(property "Reference" "D2"
 		(at 0 -3.5 0)
-		(layer "F.SilkS")
+		(layer "F.Fab")
 		(uuid "45e3fb6a-2e92-4643-9161-1c13a8e2a1e7")
 		(effects
 			(font
@@ -1927,6 +1949,8 @@
 				(size 1 1)
 				(thickness 0.15)
 			)
+		
+			(hide yes)
 		)
 	)
 	(property "Datasheet" ""
@@ -2187,7 +2211,7 @@
 	)
 	(footprint "LED_SMD:LED_SK6812_PLCC4_5.0x5.0mm_P3.2mm"
 		(layer "F.Cu")
-		(uuid "f71d460e-2803-4821-9b9e-a252111e9957")
+		(uuid "148ebe9d-2582-4c3d-9614-8115714250c7")
 		(at 100 83 0)
 
 	
@@ -2198,7 +2222,7 @@
 	(tags "LED RGB NeoPixel PLCC-4 5050")
 	(property "Reference" "D3"
 		(at 0 -3.5 0)
-		(layer "F.SilkS")
+		(layer "F.Fab")
 		(uuid "45e3fb6a-2e92-4643-9161-1c13a8e2a1e7")
 		(effects
 			(font
@@ -2216,6 +2240,8 @@
 				(size 1 1)
 				(thickness 0.15)
 			)
+		
+			(hide yes)
 		)
 	)
 	(property "Datasheet" ""
@@ -2476,7 +2502,7 @@
 	)
 	(footprint "LED_SMD:LED_SK6812_PLCC4_5.0x5.0mm_P3.2mm"
 		(layer "F.Cu")
-		(uuid "c67bca12-8d4a-4b9d-bd6d-b52a7178abcd")
+		(uuid "804da7a7-adc1-4806-b4bc-473c370982e1")
 		(at 91.5 85.2776 30)
 
 	
@@ -2487,7 +2513,7 @@
 	(tags "LED RGB NeoPixel PLCC-4 5050")
 	(property "Reference" "D4"
 		(at 0 -3.5 0)
-		(layer "F.SilkS")
+		(layer "F.Fab")
 		(uuid "45e3fb6a-2e92-4643-9161-1c13a8e2a1e7")
 		(effects
 			(font
@@ -2505,6 +2531,8 @@
 				(size 1 1)
 				(thickness 0.15)
 			)
+		
+			(hide yes)
 		)
 	)
 	(property "Datasheet" ""
@@ -2765,7 +2793,7 @@
 	)
 	(footprint "LED_SMD:LED_SK6812_PLCC4_5.0x5.0mm_P3.2mm"
 		(layer "F.Cu")
-		(uuid "b19e0779-9797-402f-87e9-0f8f1e7f2ebc")
+		(uuid "3df77ffe-c584-40d2-9ba3-0185ae6f3699")
 		(at 85.2776 91.5 60)
 
 	
@@ -2776,7 +2804,7 @@
 	(tags "LED RGB NeoPixel PLCC-4 5050")
 	(property "Reference" "D5"
 		(at 0 -3.5 0)
-		(layer "F.SilkS")
+		(layer "F.Fab")
 		(uuid "45e3fb6a-2e92-4643-9161-1c13a8e2a1e7")
 		(effects
 			(font
@@ -2794,6 +2822,8 @@
 				(size 1 1)
 				(thickness 0.15)
 			)
+		
+			(hide yes)
 		)
 	)
 	(property "Datasheet" ""
@@ -3054,7 +3084,7 @@
 	)
 	(footprint "LED_SMD:LED_SK6812_PLCC4_5.0x5.0mm_P3.2mm"
 		(layer "F.Cu")
-		(uuid "06cdc68f-8798-42aa-bf88-03f078f91c48")
+		(uuid "c88728b0-6bea-45bf-9be2-44db32a05077")
 		(at 83 100 90)
 
 	
@@ -3065,7 +3095,7 @@
 	(tags "LED RGB NeoPixel PLCC-4 5050")
 	(property "Reference" "D6"
 		(at 0 -3.5 0)
-		(layer "F.SilkS")
+		(layer "F.Fab")
 		(uuid "45e3fb6a-2e92-4643-9161-1c13a8e2a1e7")
 		(effects
 			(font
@@ -3083,6 +3113,8 @@
 				(size 1 1)
 				(thickness 0.15)
 			)
+		
+			(hide yes)
 		)
 	)
 	(property "Datasheet" ""
@@ -3343,7 +3375,7 @@
 	)
 	(footprint "LED_SMD:LED_SK6812_PLCC4_5.0x5.0mm_P3.2mm"
 		(layer "F.Cu")
-		(uuid "dc3fbf68-9352-4699-9545-bab320af125f")
+		(uuid "8c4803b6-99a2-4d06-8e3d-78602f229ca4")
 		(at 85.2776 108.5 120)
 
 	
@@ -3354,7 +3386,7 @@
 	(tags "LED RGB NeoPixel PLCC-4 5050")
 	(property "Reference" "D7"
 		(at 0 -3.5 0)
-		(layer "F.SilkS")
+		(layer "F.Fab")
 		(uuid "45e3fb6a-2e92-4643-9161-1c13a8e2a1e7")
 		(effects
 			(font
@@ -3372,6 +3404,8 @@
 				(size 1 1)
 				(thickness 0.15)
 			)
+		
+			(hide yes)
 		)
 	)
 	(property "Datasheet" ""
@@ -3632,7 +3666,7 @@
 	)
 	(footprint "LED_SMD:LED_SK6812_PLCC4_5.0x5.0mm_P3.2mm"
 		(layer "F.Cu")
-		(uuid "f6a7f112-8706-440a-bb13-481b05e45aed")
+		(uuid "ac117a6f-c425-45b2-a035-17f87a48f1e4")
 		(at 91.5 114.7224 150)
 
 	
@@ -3643,7 +3677,7 @@
 	(tags "LED RGB NeoPixel PLCC-4 5050")
 	(property "Reference" "D8"
 		(at 0 -3.5 0)
-		(layer "F.SilkS")
+		(layer "F.Fab")
 		(uuid "45e3fb6a-2e92-4643-9161-1c13a8e2a1e7")
 		(effects
 			(font
@@ -3661,6 +3695,8 @@
 				(size 1 1)
 				(thickness 0.15)
 			)
+		
+			(hide yes)
 		)
 	)
 	(property "Datasheet" ""
@@ -3921,7 +3957,7 @@
 	)
 	(footprint "LED_SMD:LED_SK6812_PLCC4_5.0x5.0mm_P3.2mm"
 		(layer "F.Cu")
-		(uuid "6ef9d4e7-386b-495b-b574-7f9191f93c3d")
+		(uuid "4379a312-9028-4627-8924-180c11364082")
 		(at 100 117 180)
 
 	
@@ -3932,7 +3968,7 @@
 	(tags "LED RGB NeoPixel PLCC-4 5050")
 	(property "Reference" "D9"
 		(at 0 -3.5 0)
-		(layer "F.SilkS")
+		(layer "F.Fab")
 		(uuid "45e3fb6a-2e92-4643-9161-1c13a8e2a1e7")
 		(effects
 			(font
@@ -3950,6 +3986,8 @@
 				(size 1 1)
 				(thickness 0.15)
 			)
+		
+			(hide yes)
 		)
 	)
 	(property "Datasheet" ""
@@ -4210,7 +4248,7 @@
 	)
 	(footprint "Connector_USB:USB_C_Receptacle_GCT_USB4105-xx-A_16P_TopMnt_Horizontal"
 		(layer "F.Cu")
-		(uuid "0afae330-010b-4f8d-b027-4125565f74e2")
+		(uuid "198cfa02-ae62-4bd3-b294-2734b25cec83")
 		(at 121.62 100 90)
 
 	
@@ -4241,6 +4279,8 @@
 				(size 1 1)
 				(thickness 0.15)
 			)
+		
+			(hide yes)
 		)
 	)
 	(property "Datasheet" ""
@@ -4561,7 +4601,7 @@
 	)
 	(footprint "Connector_PinHeader_1.27mm:PinHeader_1x04_P1.27mm_Vertical"
 		(layer "F.Cu")
-		(uuid "10c003d0-a276-483f-9cc0-7a9185e951af")
+		(uuid "8bfd18d1-0704-4f28-b81a-0bd9e97333f1")
 		(at 103.3503 78.5765 266.152)
 
 	
@@ -4587,6 +4627,8 @@
 				(size 1 1)
 				(thickness 0.15)
 			)
+		
+			(hide yes)
 		)
 	)
 	(property "KiLib_Generator" "connector/pin_header_socket"
@@ -4791,7 +4833,7 @@
 	)
 	(footprint "Connector_PinHeader_1.27mm:PinHeader_1x06_P1.27mm_Vertical"
 		(layer "F.Cu")
-		(uuid "1709cc34-4523-4771-a739-9a75dbe800f6")
+		(uuid "764c439e-0286-48b5-bf28-debf5da03724")
 		(at 112.1626 81.8696 244.5069)
 
 	
@@ -4817,6 +4859,8 @@
 				(size 1 1)
 				(thickness 0.15)
 			)
+		
+			(hide yes)
 		)
 	)
 	(property "KiLib_Generator" "connector/pin_header_socket"
@@ -5039,7 +5083,7 @@
 	)
 	(footprint "Resistor_SMD:R_0603_1608Metric"
 		(layer "F.Cu")
-		(uuid "e5a26031-61bf-44c0-961c-45022622c247")
+		(uuid "4b61d430-2e22-4f7f-9732-b1cab14e1bff")
 		(at 121.5 92 0)
 
 	
@@ -5049,7 +5093,7 @@
 	(tags "resistor")
 	(property "Reference" "R1"
 		(at 0 -1.43 0)
-		(layer "F.SilkS")
+		(layer "F.Fab")
 		(effects
 			(font
 				(size 1 1)
@@ -5065,6 +5109,8 @@
 				(size 1 1)
 				(thickness 0.15)
 			)
+		
+			(hide yes)
 		)
 	)
 	(property "KiLib_Generator" "SMD_2terminal_chip_molded"
@@ -5160,7 +5206,7 @@
 	)
 	(footprint "Resistor_SMD:R_0603_1608Metric"
 		(layer "F.Cu")
-		(uuid "c23e833f-dc67-4c29-985e-3010051a4300")
+		(uuid "e89cfc9b-9684-449f-b03e-f53f64fdc718")
 		(at 121.5 107 0)
 
 	
@@ -5170,7 +5216,7 @@
 	(tags "resistor")
 	(property "Reference" "R2"
 		(at 0 -1.43 0)
-		(layer "F.SilkS")
+		(layer "F.Fab")
 		(effects
 			(font
 				(size 1 1)
@@ -5186,6 +5232,8 @@
 				(size 1 1)
 				(thickness 0.15)
 			)
+		
+			(hide yes)
 		)
 	)
 	(property "KiLib_Generator" "SMD_2terminal_chip_molded"
@@ -5281,7 +5329,7 @@
 	)
 	(footprint "Resistor_SMD:R_0603_1608Metric"
 		(layer "F.Cu")
-		(uuid "45d64ca1-4e01-4255-85e2-47fb13792089")
+		(uuid "333dfb47-1cc0-4fd7-8e7c-6c393ab2ba25")
 		(at 114.5 97.5 0)
 
 	
@@ -5291,7 +5339,7 @@
 	(tags "resistor")
 	(property "Reference" "R3"
 		(at 0 -1.43 0)
-		(layer "F.SilkS")
+		(layer "F.Fab")
 		(effects
 			(font
 				(size 1 1)
@@ -5307,6 +5355,8 @@
 				(size 1 1)
 				(thickness 0.15)
 			)
+		
+			(hide yes)
 		)
 	)
 	(property "KiLib_Generator" "SMD_2terminal_chip_molded"
@@ -5402,7 +5452,7 @@
 	)
 	(footprint "Resistor_SMD:R_0603_1608Metric"
 		(layer "F.Cu")
-		(uuid "3b17bea1-33c7-47df-9ec7-09b6f777fcbe")
+		(uuid "920aa084-f474-4cec-80b8-f3f3512c0d28")
 		(at 114.5 100 0)
 
 	
@@ -5412,7 +5462,7 @@
 	(tags "resistor")
 	(property "Reference" "R4"
 		(at 0 -1.43 0)
-		(layer "F.SilkS")
+		(layer "F.Fab")
 		(effects
 			(font
 				(size 1 1)
@@ -5428,6 +5478,8 @@
 				(size 1 1)
 				(thickness 0.15)
 			)
+		
+			(hide yes)
 		)
 	)
 	(property "KiLib_Generator" "SMD_2terminal_chip_molded"
@@ -5523,7 +5575,7 @@
 	)
 	(footprint "Resistor_SMD:R_0603_1608Metric"
 		(layer "F.Cu")
-		(uuid "491d9236-e1fa-479b-8624-c6e0e6a3c95c")
+		(uuid "7deac82c-3ce0-4808-9aea-1f344708d5c7")
 		(at 114.5 102.5 0)
 
 	
@@ -5533,7 +5585,7 @@
 	(tags "resistor")
 	(property "Reference" "R5"
 		(at 0 -1.43 0)
-		(layer "F.SilkS")
+		(layer "F.Fab")
 		(effects
 			(font
 				(size 1 1)
@@ -5549,6 +5601,8 @@
 				(size 1 1)
 				(thickness 0.15)
 			)
+		
+			(hide yes)
 		)
 	)
 	(property "KiLib_Generator" "SMD_2terminal_chip_molded"
@@ -5644,7 +5698,7 @@
 	)
 	(footprint "Resistor_SMD:R_0603_1608Metric"
 		(layer "F.Cu")
-		(uuid "01b8a741-c9d9-4563-9999-19c536547af2")
+		(uuid "ccdbc104-93c7-4246-a7ac-0434c1a0880e")
 		(at 110.5 120.5 0)
 
 	
@@ -5654,7 +5708,7 @@
 	(tags "resistor")
 	(property "Reference" "R6"
 		(at 0 -1.43 0)
-		(layer "F.SilkS")
+		(layer "F.Fab")
 		(effects
 			(font
 				(size 1 1)
@@ -5670,6 +5724,8 @@
 				(size 1 1)
 				(thickness 0.15)
 			)
+		
+			(hide yes)
 		)
 	)
 	(property "KiLib_Generator" "SMD_2terminal_chip_molded"
@@ -5765,7 +5821,7 @@
 	)
 	(footprint "Button_Switch_SMD:SW_Push_1P1T-SH_NO_CK_KMR2xxG"
 		(layer "F.Cu")
-		(uuid "043d0c4e-c7f3-408d-8c69-374cd6cec4a7")
+		(uuid "872c67b8-bd11-4441-a933-81a522e6be7e")
 		(at 82.629 86.1766 231.4881)
 
 	
@@ -5794,6 +5850,8 @@
 				(size 1 1)
 				(thickness 0.15)
 			)
+		
+			(hide yes)
 		)
 	)
 	(property "Datasheet" ""
@@ -6030,8 +6088,8 @@
 	)
 	(footprint "Button_Switch_SMD:SW_Push_1P1T-SH_NO_CK_KMR2xxG"
 		(layer "F.Cu")
-		(uuid "46a37c27-3604-4a28-9be9-fbfeb3693d72")
-		(at 78.7996 106.5865 287.2589)
+		(uuid "26792b6d-45e2-4126-ab5d-e721279e10cb")
+		(at 80.8246 111.1867 300.2589)
 
 	
 	
@@ -6059,6 +6117,8 @@
 				(size 1 1)
 				(thickness 0.15)
 			)
+		
+			(hide yes)
 		)
 	)
 	(property "Datasheet" ""
@@ -6242,7 +6302,7 @@
 		)
 	)
 	(pad "1" smd rect
-		(at -2.05 -0.8 287.259)
+		(at -2.05 -0.8 300.259)
 		(size 0.9 1)
 		(layers "F.Cu" "F.Mask" "F.Paste")
 		(uuid "d68fc201-8cd1-4bf2-9571-76ec4cf02495")
@@ -6250,7 +6310,7 @@
 		(net 4 "EN")
 	)
 	(pad "1" smd rect
-		(at 2.05 -0.8 287.259)
+		(at 2.05 -0.8 300.259)
 		(size 0.9 1)
 		(layers "F.Cu" "F.Mask" "F.Paste")
 		(uuid "04b3de0b-ba65-48f4-aa77-8d750d33c3a7")
@@ -6258,7 +6318,7 @@
 		(net 4 "EN")
 	)
 	(pad "2" smd rect
-		(at -2.05 0.8 287.259)
+		(at -2.05 0.8 300.259)
 		(size 0.9 1)
 		(layers "F.Cu" "F.Mask" "F.Paste")
 		(uuid "774998d7-a32b-4788-81d7-d47b9b92db5f")
@@ -6266,7 +6326,7 @@
 		(net 2 "GND")
 	)
 	(pad "2" smd rect
-		(at 2.05 0.8 287.259)
+		(at 2.05 0.8 300.259)
 		(size 0.9 1)
 		(layers "F.Cu" "F.Mask" "F.Paste")
 		(uuid "50f4197b-c050-46e9-8647-6c2139ba6d26")
@@ -6274,7 +6334,7 @@
 		(net 2 "GND")
 	)
 	(pad "SH" smd rect
-		(at 0 -1.425 287.259)
+		(at 0 -1.425 300.259)
 		(size 1.7 0.55)
 		(layers "F.Cu" "F.Mask" "F.Paste")
 		(uuid "87e5ac79-64c0-4760-8241-3301d5b73750")
@@ -6295,7 +6355,7 @@
 	)
 	(footprint "Button_Switch_SMD:SW_Push_1P1T-SH_NO_CK_KMR2xxG"
 		(layer "F.Cu")
-		(uuid "cb373025-bbe9-4c38-b95a-97257f0e10a1")
+		(uuid "7ce4d0cf-bdcd-4825-ae94-634869bcf3b9")
 		(at 77.8 100 270)
 
 	
@@ -6324,6 +6384,8 @@
 				(size 1 1)
 				(thickness 0.15)
 			)
+		
+			(hide yes)
 		)
 	)
 	(property "Datasheet" ""
@@ -6560,7 +6622,7 @@
 	)
 	(footprint "RF_Module:ESP32-S3-WROOM-1U"
 		(layer "F.Cu")
-		(uuid "cca0c9ee-715c-4850-92a5-9ff54a7bfc77")
+		(uuid "d2a4179e-9a1d-4d05-878c-9a9fe2a78f4a")
 		(at 100 99.775 0)
 
 	
@@ -6591,6 +6653,8 @@
 				(size 1 1)
 				(thickness 0.15)
 			)
+		
+			(hide yes)
 		)
 	)
 	(property "Datasheet" ""
@@ -7343,7 +7407,7 @@
 	)
 	(footprint "Package_TO_SOT_SMD:SOT-23-5"
 		(layer "F.Cu")
-		(uuid "3d800e08-681d-4604-b912-012c1fb6c522")
+		(uuid "e0ad32df-5e22-4d68-87f4-b72f2997a773")
 		(at 95.531 78.2545 191.6133)
 
 	
@@ -7369,6 +7433,8 @@
 				(size 1 1)
 				(thickness 0.15)
 			)
+		
+			(hide yes)
 		)
 	)
 	(property "KiLib_Generator" "package/gullwing"
@@ -7683,7 +7749,7 @@
 	)
 	(footprint "Package_TO_SOT_SMD:SOT-23-5"
 		(layer "F.Cu")
-		(uuid "470396af-4a62-4304-9423-caf92752978f")
+		(uuid "f49f8469-a216-446d-b3bd-0688cd3518bd")
 		(at 90.8786 79.7604 204.2597)
 
 	
@@ -7709,6 +7775,8 @@
 				(size 1 1)
 				(thickness 0.15)
 			)
+		
+			(hide yes)
 		)
 	)
 	(property "KiLib_Generator" "package/gullwing"
@@ -8025,7 +8093,7 @@
 	)
 	(footprint "Package_TO_SOT_SMD:SOT-23-6"
 		(layer "F.Cu")
-		(uuid "08c1ad94-7b42-4e07-8ae1-27aec8b4840b")
+		(uuid "8bd47cac-140c-4892-bb79-1fedf25220c8")
 		(at 86.6688 82.2484 216.9061)
 
 	
@@ -8051,6 +8119,8 @@
 				(size 1 1)
 				(thickness 0.15)
 			)
+		
+			(hide yes)
 		)
 	)
 	(property "KiLib_Generator" "package/gullwing"
@@ -8330,8 +8400,8 @@
 	)
 	(footprint "OptoDevice:Lite-On_LTR-303ALS-01"
 		(layer "F.Cu")
-		(uuid "ff4bf2e6-a4cc-4d99-8ed2-6e1cce42e11e")
-		(at 80.8463 111.2238 300.3698)
+		(uuid "220f70aa-79d0-4904-bd54-8c4ade07fb26")
+		(at 83.862 115.2448 313.3698)
 
 	
 	
@@ -8359,6 +8429,8 @@
 				(size 1 1)
 				(thickness 0.15)
 			)
+		
+			(hide yes)
 		)
 	)
 	(property "Datasheet" ""
@@ -8523,7 +8595,7 @@
 		)
 	)
 	(pad "1" smd roundrect
-		(at -0.9 -0.65 300.37)
+		(at -0.9 -0.65 313.37)
 		(size 0.65 0.3)
 		(layers "F.Cu" "F.Mask" "F.Paste")
 		(roundrect_rratio 0.25)
@@ -8532,14 +8604,14 @@
 		(net 3 "+3V3")
 	)
 	(pad "2" smd roundrect
-		(at -0.9 0 300.37)
+		(at -0.9 0 313.37)
 		(size 0.65 0.3)
 		(layers "F.Cu" "F.Mask" "F.Paste")
 		(roundrect_rratio 0.25)
 		(uuid "6ed42848-5d22-40f8-bebe-5a9ba9adca86")
 	)
 	(pad "3" smd roundrect
-		(at -0.9 0.65 300.37)
+		(at -0.9 0.65 313.37)
 		(size 0.65 0.3)
 		(layers "F.Cu" "F.Mask" "F.Paste")
 		(roundrect_rratio 0.25)
@@ -8548,7 +8620,7 @@
 		(net 2 "GND")
 	)
 	(pad "4" smd roundrect
-		(at 0.9 0.65 300.37)
+		(at 0.9 0.65 313.37)
 		(size 0.65 0.3)
 		(layers "F.Cu" "F.Mask" "F.Paste")
 		(roundrect_rratio 0.25)
@@ -8557,14 +8629,14 @@
 		(net 27 "SCL")
 	)
 	(pad "5" smd roundrect
-		(at 0.9 0 300.37)
+		(at 0.9 0 313.37)
 		(size 0.65 0.3)
 		(layers "F.Cu" "F.Mask" "F.Paste")
 		(roundrect_rratio 0.25)
 		(uuid "f67b5992-6361-40cf-9968-ac6412f19b7a")
 	)
 	(pad "6" smd roundrect
-		(at 0.9 -0.65 300.37)
+		(at 0.9 -0.65 313.37)
 		(size 0.65 0.3)
 		(layers "F.Cu" "F.Mask" "F.Paste")
 		(roundrect_rratio 0.25)
@@ -8588,7 +8660,7 @@
 	)
 	(footprint "MountingHole:MountingHole_2.2mm_M2"
 		(layer "F.Cu")
-		(uuid "6291d790-56c6-47f2-884f-4d86ddccaa86")
+		(uuid "4cfc7462-85ad-48aa-9378-d73bc7d95c5a")
 		(at 115.8392 84.1608 0)
 
 	
@@ -8614,6 +8686,8 @@
 				(size 1 1)
 				(thickness 0.15)
 			)
+		
+			(hide yes)
 		)
 	)
 	(property "KiLib_Generator" "mounting_hardware/mounting_hole"
@@ -8670,7 +8744,7 @@
 	)
 	(footprint "MountingHole:MountingHole_2.2mm_M2"
 		(layer "F.Cu")
-		(uuid "f1772653-65d8-4ca4-a2da-17ea11526b61")
+		(uuid "33e98bee-c770-4fb2-a658-8a0088a73604")
 		(at 78.3633 94.2025 0)
 
 	
@@ -8696,6 +8770,8 @@
 				(size 1 1)
 				(thickness 0.15)
 			)
+		
+			(hide yes)
 		)
 	)
 	(property "KiLib_Generator" "mounting_hardware/mounting_hole"
@@ -8752,7 +8828,7 @@
 	)
 	(footprint "MountingHole:MountingHole_2.2mm_M2"
 		(layer "F.Cu")
-		(uuid "3c5f618d-2fca-49ea-b712-8a78a04ede80")
+		(uuid "e26d0e0c-2f03-4403-871e-d14887857ade")
 		(at 105.7975 121.6367 0)
 
 	
@@ -8778,6 +8854,8 @@
 				(size 1 1)
 				(thickness 0.15)
 			)
+		
+			(hide yes)
 		)
 	)
 	(property "KiLib_Generator" "mounting_hardware/mounting_hole"
@@ -8832,12 +8910,67 @@
 	(embedded_fonts no)
 
 	)
+	(gr_text "BOOT"
+		(at 89.593 91.7184 51.4881)
+		(layer "F.SilkS")
+		(uuid "4debb60c-ab31-483c-a6b5-b4c2674997aa")
+		(effects
+			(font
+				(size 1.2 1.2)
+				(thickness 0.15)
+			)
+		)
+	)
+	(gr_text "RST"
+		(at 88.512 106.702 300.2589)
+		(layer "F.SilkS")
+		(uuid "5855366a-54fa-415c-945c-848c057a5d0e")
+		(effects
+			(font
+				(size 1.2 1.2)
+				(thickness 0.15)
+			)
+		)
+	)
+	(gr_text "USR"
+		(at 86.7 100 270)
+		(layer "F.SilkS")
+		(uuid "542a3709-c26c-46b3-a140-416259381a34")
+		(effects
+			(font
+				(size 1.2 1.2)
+				(thickness 0.15)
+			)
+		)
+	)
+	(gr_text "UART"
+		(at 102.0549 86.8597 351.1119)
+		(layer "F.SilkS")
+		(uuid "f681d8c7-10cb-44de-ae53-01897a77fd29")
+		(effects
+			(font
+				(size 1.2 1.2)
+				(thickness 0.15)
+			)
+		)
+	)
+	(gr_text "EXP"
+		(at 107.4094 88.955 326.1449)
+		(layer "F.SilkS")
+		(uuid "5b8ed0a2-78e9-4117-a49a-47b829a87a9e")
+		(effects
+			(font
+				(size 1.2 1.2)
+				(thickness 0.15)
+			)
+		)
+	)
 	(gr_circle
 		(center 100 100)
 		(end 125 100)
 		(stroke (width 0.1) (type default))
 		(fill none)
 		(layer "Edge.Cuts")
-		(uuid "21b29b50-b588-4313-9a07-b17805534c3b")
+		(uuid "d24a8381-daab-4a02-8e86-8089df24225e")
 	)
 )

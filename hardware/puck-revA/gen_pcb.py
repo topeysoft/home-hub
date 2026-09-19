@@ -67,11 +67,35 @@ for n, (ref, th) in enumerate(zip(LED_ORDER, LED_ANGLES), 1):
 # only ever failed on big parts, and where a 0603 lands is a routing convenience, not a decision.
 OUTER_ARCS = [                 # (start, end, refs in order)
     (52.0, 158.0, ["J3", "J2", "U2", "U3", "U4", "SW1"]),   # between the holes at 45 and 165
-    (189.0, 278.0, ["SW2", "U5"]),                          # after the button, before the hole at 285
+    (202.0, 278.0, ["SW2", "U5"]),                          # starts at 202, not 189: any closer to
+                                                            # SW3 at 180 and RST collides with USR
 ]
 OUTER_R = {"J3": 21.6, "J2": 21.6}            # inside the skirt (23.15), outside the LEDs (19.75)
 PINNED = {"SW3": (22.2, 180.0)}
 GAP_MM = 0.4
+
+# SILKSCREEN. Two rules, both about a person holding a bare board at 2am during bring-up.
+#
+# Function labels beat reference designators: BOOT is what you need to read, SW1 is what you need
+# to look up. So the three switches and the two headers get a deliberate label on the free annulus
+# between the module and the LED ring -- the one place on this board with room for text -- each on
+# the same radial line as the part it names, which is what makes it unambiguous nine millimetres
+# away. Their own Value fields are hidden, because the label now says it.
+#
+# And EVERY Value is hidden. "SK6812-RGBW" printed eleven times around the ring, plus AP2112K-3.3,
+# 74AHCT1G125, USBLC6-2SC6 and a part number long enough to run off the board, was almost the whole
+# of the silkscreen and none of the information -- the values live in the BOM and the schematic.
+# What stays is the reference designators, which is what you need when reworking one part.
+SILK_LABEL = {"SW1": "BOOT", "SW2": "RST", "SW3": "USR", "J2": "UART", "J3": "EXP"}
+SILK_R = 13.3
+SILK_SIZE = 1.2
+
+# Reference designators for the LEDs and the passives move to F.Fab. That is where assembly
+# documentation expects them and it is what dense boards do: D1..D11 and C101..C104 auto-placed
+# around a 34 mm ring collide with each other and with the labels above, and none of them is
+# something a person needs to read off the silkscreen. The parts you DO hunt for by eye -- the
+# switches, the headers, the connector, the ICs, the mounting holes -- keep theirs.
+FAB_REF_PREFIX = ("D", "C", "R")
 
 def tangential(fp, th):
     """Rotation that lays a part's long axis along the ring at angle th. A footprint's local +X ends
@@ -195,6 +219,63 @@ def routing_count(text):
 def uid(): return str(uuid.uuid4())
 def mm(v): return f"{v:.4f}".rstrip("0").rstrip(".")
 
+def top_properties(block, level=0):
+    """Direct-child (property ...) forms, by name.
+
+    `level` is the nesting depth they sit at: 0 for a footprint's spliced-out CONTENTS, 1 for a
+    whole (footprint ...) or (symbol ...) block. Getting it wrong finds nothing and hides nothing,
+    silently, which is exactly what it did.
+    """
+    out, depth, start = {}, 0, None
+    for i, ch in enumerate(block):
+        if ch == "(":
+            if depth == level and block.startswith("(property ", i): start = i
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+            if depth == level and start is not None:
+                frag = block[start:i + 1]
+                out[re.match(r'\(property "([^"]+)"', frag).group(1)] = frag
+                start = None
+    return out
+
+
+def hide_property(block, name):
+    """Add (hide yes) to one property's effects, leaving the text itself in the file so the value is
+    still there for the BOM and one click away in the GUI."""
+    cur = top_properties(block).get(name)
+    if not cur or "(hide yes)" in cur: return block
+    if "(effects" in cur:
+        i = cur.index("(effects"); d = 0
+        for k in range(i, len(cur)):
+            if cur[k] == "(": d += 1
+            elif cur[k] == ")":
+                d -= 1
+                if d == 0:
+                    new = cur[:k] + "\n\t\t\t(hide yes)\n\t\t" + cur[k:]
+                    return block.replace(cur, new, 1)
+    return block.replace(cur, cur[:cur.rindex(")")] + "\n\t\t(effects\n\t\t\t(hide yes)\n\t\t)\n\t)", 1)
+
+
+def move_property(block, name, layer):
+    cur = top_properties(block).get(name)
+    if not cur: return block
+    if "(layer " in cur:
+        return block.replace(cur, re.sub(r'\(layer "[^"]+"\)', f'(layer "{layer}")', cur, count=1), 1)
+    return block.replace(cur, cur[:cur.rindex(")")] + f'\n\t\t(layer "{layer}")\n\t)', 1)
+
+
+def silk_text(label, th, r=SILK_R, size=SILK_SIZE):
+    """A label on the free annulus, turned to read along it (and flipped on the left-hand side so it
+    never reads upside down)."""
+    x, y = polar(th, r)
+    ang = (th + 90) % 360
+    if 90 < ang < 270: ang = (ang + 180) % 360
+    return (f'\t(gr_text "{label}"\n\t\t(at {mm(x)} {mm(y)} {mm(ang)})\n\t\t(layer "F.SilkS")\n'
+            f'\t\t(uuid "{uid()}")\n\t\t(effects\n\t\t\t(font\n\t\t\t\t(size {size} {size})\n'
+            f'\t\t\t\t(thickness 0.15)\n\t\t\t)\n\t\t)\n\t)')
+
+
 def board_footprint(ref, fp, value, x, y, rot, netmap, nets):
     t = mod_text(fp)
     body, i, j = next(sexp(t, "footprint"))
@@ -223,6 +304,9 @@ def board_footprint(ref, fp, value, x, y, rot, netmap, nets):
     # references and values, so the board reads like the schematic
     inner = re.sub(r'(\(property "Reference" )"[^"]*"', r'\1"' + ref + '"', inner, count=1)
     inner = re.sub(r'(\(property "Value" )"[^"]*"', r'\1"' + value.replace('"', "'") + '"', inner, count=1)
+    inner = hide_property(inner, "Value")
+    if ref[:1] in FAB_REF_PREFIX and ref[1:2].isdigit():
+        inner = move_property(inner, "Reference", "F.Fab")
     return (f'\t(footprint "{fp}"\n\t\t(layer "F.Cu")\n\t\t(uuid "{uid()}")\n'
             f'\t\t(at {mm(x)} {mm(y)} {mm(rot)})\n' + inner + "\n\t)")
 
@@ -309,6 +393,11 @@ def main():
         fps.append(board_footprint(f"H{n+1}", "MountingHole:MountingHole_2.2mm_M2", "M2",
                                    x, y, 0, {}, nets))
 
+    labels = []
+    for ref, text in SILK_LABEL.items():
+        px, py, _r = placed[ref]
+        labels.append(silk_text(text, math.degrees(math.atan2(-(py - CY), px - CX)) % 360))
+
     edge = (f'\t(gr_circle\n\t\t(center {mm(CX)} {mm(CY)})\n\t\t(end {mm(CX + BOARD_R)} {mm(CY)})\n'
             f'\t\t(stroke (width 0.1) (type default))\n\t\t(fill none)\n\t\t(layer "Edge.Cuts")\n'
             f'\t\t(uuid "{uid()}")\n\t)')
@@ -317,7 +406,7 @@ def main():
            f'\t(generator_version "8.0")\n'
            f'\t(general\n\t\t(thickness 1.6)\n\t\t(legacy_teardrops no)\n\t)\n\t(paper "A4")\n'
            + LAYERS + "\n\t(setup\n\t\t(pad_to_mask_clearance 0)\n\t)\n"
-           + netdefs + "\n" + "\n".join(fps) + "\n" + edge + "\n)\n")
+           + netdefs + "\n" + "\n".join(fps) + "\n" + "\n".join(labels) + "\n" + edge + "\n)\n")
     d = sum(1 if c == "(" else -1 if c == ")" else 0 for c in out)
     assert d == 0, f"unbalanced s-expression: {d}"
     p = HERE / f"{PROJECT}.kicad_pcb"
