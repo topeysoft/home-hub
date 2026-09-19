@@ -115,9 +115,13 @@ test('walking away from the question places nothing at all', async ({ page }) =>
  */
 const ROWS = [
   { chip: 'c8ebba', room: 'hall', where: 'Hallway', online: true, signal: 'strong', switches: 11,
-    fw: '0.5.0', behind: false, night: true, level: 110, lift: false },
+    fw: '0.5.0', behind: false, shipped: '0.5.0', night: true, level: 110, lift: false },
   { chip: '9a01cc', room: null, where: 'A bridge', online: false, signal: 'none', switches: 0,
-    fw: null, behind: false, night: null, level: null, lift: false },
+    fw: null, behind: false, shipped: '0.5.0', night: null, level: null, lift: false },
+  // On the broker, no proxy link, software too old to have a light. A real hub produced this and the
+  // card called it "Strong, and hears 0 switches" -- a claim about a link it had never seen.
+  { chip: 'd21e04', room: 'kitchen', where: 'Kitchen', online: true, signal: 'none', switches: 0,
+    fw: '0.3.1', behind: false, shipped: null, night: null, level: null, lift: false },
 ]
 
 async function toTheHub(page: any, sent: any[]) {
@@ -153,7 +157,26 @@ test('a bridge that has never spoken is not drawn with its light off', async ({ 
   await page.getByRole('button', { name: /A bridge/ }).click()
 
   const card = page.getByRole('dialog', { name: 'A bridge bridge' })
-  await expect(card.getByText('Not heard from yet.')).toBeVisible()
+  await expect(card.getByText('Nothing said about a light yet.')).toBeVisible()
   await expect(card.getByRole('switch', { name: 'Nightlight' })).toBeHidden()
   expect(sent, 'nothing can be changed about a puck the hub has not heard').toHaveLength(0)
+})
+
+test('a bridge with no link yet is not called strong', async ({ page }) => {
+  await toTheHub(page, [])
+  await page.getByRole('button', { name: /Kitchen/ }).click()
+
+  const card = page.getByRole('dialog', { name: 'Kitchen bridge' })
+  await expect(card).toBeVisible()
+  await expect(card.getByText(/Strong/)).toBeHidden()
+  await expect(card.getByText(/hears 0 switches/)).toBeHidden()
+  await expect(card.getByText(/has not heard a switch yet/)).toBeVisible()
+})
+
+test('a hub that cannot say what it ships does not call a puck current', async ({ page }) => {
+  await toTheHub(page, [])
+  await page.getByRole('button', { name: /Kitchen/ }).click()
+  const card = page.getByRole('dialog', { name: 'Kitchen bridge' })
+  await expect(card.getByText(/current/)).toBeHidden()
+  await expect(card.getByText(/can.t say whether that is the latest/)).toBeVisible()
 })

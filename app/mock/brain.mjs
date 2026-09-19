@@ -469,11 +469,13 @@ const server = http.createServer((req, res) => {
    BRIDGES=none empties the list, so the page can be seen without one. */
 const bridgeRows = process.env.BRIDGES === 'none' ? [] : [
   { chip: 'c8ebba', room: 'hall', where: 'Hallway', online: true, signal: 'strong', switches: 11,
-    fw: '0.5.0', behind: false, night: true, level: 110, lift: false },
+    fw: '0.5.0', behind: false, shipped: '0.5.0', night: true, level: 110, lift: false },
   { chip: 'f4a9f3', room: 'landing', where: 'Landing', online: true, signal: 'weak', switches: 4,
-    fw: '0.4.0', behind: true, night: false, level: 110, lift: false },
-  { chip: '9a01cc', room: null, where: 'A bridge', online: false, signal: 'none', switches: 0,
-    fw: '0.5.0', behind: false, night: null, level: null, lift: false },
+    fw: '0.4.0', behind: true, shipped: '0.5.0', night: false, level: 110, lift: false },
+  { chip: '9a01cc', room: null, where: 'A bridge', online: true, signal: 'none', switches: 0,
+    fw: '0.3.1', behind: false, shipped: null, night: null, level: null, lift: false },
+  { chip: 'd21e04', room: null, where: 'A bridge', online: false, signal: 'none', switches: 0,
+    fw: '0.5.0', behind: false, shipped: '0.5.0', night: null, level: null, lift: false },
 ]
   if (p === '/bridge/list') return json(res, { bridges: bridgeRows })
   if (p === '/bridge/light' && req.method === 'POST') { let raw = ''; req.on('data', c => (raw += c)); return req.on('end', () => {
