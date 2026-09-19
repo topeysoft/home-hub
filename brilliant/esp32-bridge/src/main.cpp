@@ -1196,7 +1196,7 @@ void bridgeStatusLine(char *out, size_t n) {
     // somebody holding it on a cable cannot see. The SSID itself is deliberately NOT here: this line
     // is parsed on spaces (tools/puck_cable.py) and a network called "Flat 3 guest" would tear it in
     // half. The hub learns the name from cfgack, over the broker, where it is quoted properly.
-    static const char *LIGHTS[] = {"off", "looking", "heard", "far"};
+    static const char *LIGHTS[] = {"off", "looking", "heard", "far", "night", "?", "?", "?"};
     // Which of the maker's keys this image carries, two bytes of each. Nothing verifies a signature
     // yet (docs/puck-updates.md), but a key cannot be added to a puck after its cable visit, so they
     // go in before anything needs them -- and a puck that cannot say which keys it holds is one
@@ -1215,9 +1215,10 @@ void bridgeStatusLine(char *out, size_t n) {
     }
     int rssi = 0;
     if (linkUp) { const char *r = strstr(proxyDesc, "rssi "); if (r) rssi = atoi(r + 5); }
-    snprintf(out, n, "status wifi=%s mqtt=%s rssi=%d sw=%u light=%s spare=%s keys=%s", ip,
-             mqtt.connected() ? "up" : "down", rssi, (unsigned)nSwitches, LIGHTS[(int)lightGet() & 3],
-             cfg.ssid2[0] ? "yes" : "no", keys);
+    snprintf(out, n, "status wifi=%s mqtt=%s rssi=%d sw=%u light=%s spare=%s night=%s keys=%s", ip,
+             mqtt.connected() ? "up" : "down", rssi, (unsigned)nSwitches, LIGHTS[(int)lightGet() & 7],
+             cfg.ssid2[0] ? "yes" : "no",
+             !cfg.settled ? "unplaced" : cfg.night ? "on" : "off", keys);
 }
 
 void setup() {
@@ -1234,6 +1235,7 @@ void setup() {
     // Who we are and what we were told, before anything else looks at either.
     configLoad();
     lightBegin();
+    lightNightLevel(cfg.nightLevel);   // before anything can reach Light::Night
     lightSet(Light::Looking);
 
     prefs.begin("meshbridge", false);
@@ -1340,10 +1342,27 @@ static uint8_t emptyScans = 0;
 //
 // Recomputed every pass rather than set at the moments things change, because Wi-Fi can go after the
 // link is up and a light that was only ever set on the way in would never say so.
+// ...and once it is placed, green has said everything it had to say.
+//
+// The order below is the whole of the nightlight design (docs/puck-light.md, and the board at
+// design/puck/Nightlight.dc.html), and it is here rather than in light.cpp because this is the
+// function that already knows whether the puck is well. Four rows, strictly ordered:
+//
+//   1  anything wrong            the instrument, exactly as before. Outranks everything under it
+//   2  well, not yet placed      green, until somebody taps "Leave it here"
+//   3  placed, and asked for it  the nightlight
+//   4  placed, and did not       dark, which is what a puck does today and stays the default
+//
+// Row one is absolute, and that is the point of the feature rather than a concession to it: a glow
+// that outlives the bridge going down is furniture that lies, and nobody checks furniture. It also
+// means the light keeps its hold over where the puck lives -- move a settled puck somewhere the mesh
+// is thin and it stops being a nightlight and goes back to breathing red, which is the one argument
+// about placement that needs no words.
 static void lightRefresh() {
-    if (linkUp && mqtt.connected())  lightSet(Light::Heard);
-    else if (emptyScans >= 3)        lightSet(Light::Far);
-    else                             lightSet(Light::Looking);
+    if (!(linkUp && mqtt.connected()))  lightSet(emptyScans >= 3 ? Light::Far : Light::Looking);
+    else if (!cfg.settled)              lightSet(Light::Heard);
+    else if (cfg.night)                 lightSet(Light::Night);
+    else                                lightSet(Light::Off);
 }
 
 void loop() {

@@ -20,6 +20,8 @@
 //   set keys <netkey> <appkey> <iv>    -> ok keys      (32 hex, 32 hex, decimal)
 //   set base <base>                    -> ok base      (MQTT base, default "mesh")
 //   set label <label>                  -> ok label     (the maker's word, "Brilliant")
+//   set night <0|1> <0-255>            -> ok night     the nightlight, and how bright
+//   set settled <0|1>                  -> ok settled   it has been placed; the instrument retires
 //   status                             -> status wifi=<ip|down> mqtt=up|down proxy=<desc> switches=<n>
 //   apply                              -> ok apply, then the puck restarts on the new config
 //   wipe                               -> ok wipe, then it restarts blank
@@ -73,6 +75,20 @@ struct BridgeConfig {
     uint8_t appKey[16];
     uint32_t ivIndex;
     bool haveKeys;      // false on a blank puck: it can join Wi-Fi but has no mesh to speak
+
+    // WHAT THE LIGHT DOES ONCE IT HAS FINISHED BEING AN INSTRUMENT (docs/puck-light.md).
+    //
+    // `settled` is set when the household taps "Leave it here" (POST /bridge/placed), and it is an
+    // EVENT rather than a timer on purpose: a puck that has never been told it is home is still
+    // being carried around, and must keep its green. `night` and `nightLevel` are the answer to the
+    // one question the sheet asks at that moment. Both live here rather than in light.cpp because
+    // they have to survive a reboot with the hub down -- a nightlight that goes out in a power cut
+    // and needs the broker back before it returns is not a nightlight.
+    //
+    // Neither of these can make the light lie: lightRefresh() puts a fault above both of them.
+    bool settled;
+    bool night;         // off by default. Nobody gets a glowing object they did not ask for
+    uint8_t nightLevel; // 0-255, scaling WARM in light.cpp
 };
 
 extern BridgeConfig cfg;
@@ -103,6 +119,13 @@ void configForgetSpare(uint32_t at);
 // ring down in its new order, so a puck that reboots does not spend two minutes on the dead one
 // first. Does nothing when the order on disk is already right.
 void configConfirmWifi();
+
+// The household's answer about the light, and the moment it was placed. Written through to NVS and
+// to `cfg` at once, so the light responds now and still knows after a power cut. Like configRemember
+// these write only when the value actually changed: NVS has a finite number of erases in it, and a
+// brightness slider dragged across a room is not a rare event.
+void configSetNight(bool on, uint8_t level);
+void configSetSettled(bool settled);
 
 // Swap the two keys on the ring, in memory only. Called when neither network can be reached, so the
 // next attempt tries the other one; nothing is written until one of them actually works.

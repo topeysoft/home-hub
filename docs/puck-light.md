@@ -4,8 +4,10 @@
 already worked as a nightlight, by accident, and it was pleasant. Two, and it is the load-bearing one: the shipped
 puck is meant to be **a product** — a small, plain relay object sitting out in the open in a living space — not an
 ESP32 devkit on a shelf, and part of the job is that it is nice to look at. Its light is the only expressive
-surface it has. Nothing in this document is built. The design is settled; what it asks of the hardware, and the
-questions that are genuinely open, are at the foot and marked as such.*
+surface it has. The design is settled; what it asks of the hardware, and the questions that are genuinely open,
+are at the foot and marked as such. **Step 1 of the build order is written** (18 September, firmware): the state,
+the precedence and the NVS setting exist and both build targets compile. Nothing has run on a puck yet — there
+was none on the cable — so every claim below about how it *behaves* is still a claim.*
 
 ## What the light does today, and for how long
 
@@ -121,9 +123,17 @@ shipping.
 
 ## The build order
 
-1. **Firmware, the state.** A fourth `Light::Night` in `light.{h,cpp}`, warm and unsaturated, static; the
-   precedence table in `lightRefresh()`; a `settled` flag and a `night` setting (on/off + brightness) in
-   `BridgeConfig`, in NVS, so it survives a reboot with the hub down.
+1. ~~**Firmware, the state.**~~ **Written, not yet run on hardware (18 September).** `Light::Night` in
+   `light.{h,cpp}` painting `WARM` (255/140/45, roughly 2000 K) scaled by `lightNightLevel()`, static between
+   transitions and simply dark on a board with only a plain LED. The precedence table is `lightRefresh()` in
+   `main.cpp` and lives in that one function. `settled`, `night` and `nightLevel` are in `BridgeConfig`, loaded
+   in `loadRing()` (NVS only, no compiled fallback) and written by `configSetNight()` / `configSetSettled()`,
+   which write through to both `cfg` and NVS and skip unchanged values — a brightness slider dragged across a
+   room would otherwise cost a few hundred erases. Two new cable commands, `set night <0|1> <0-255>` and
+   `set settled <0|1>`, take effect **without** an `apply`, because somebody changing the brightness on a cable
+   wants to see it change. `status` gains `night=unplaced|on|off`, and `LIGHTS[]` in `bridgeStatusLine()` was
+   masked `& 3` — a fifth state does not fit in two bits, and that mask is the one trap in this step.
+   `esp32s3-ship` and `esp32dev` (the `#else` path, no RGB) both compile.
 2. **Firmware, the entity.** `mesh/bridge/<chip>/nightlight` (retained) and `.../nightlight/set`, plus an HA
    discovery payload making the puck's own device a `light` with brightness. Nothing else changes about the
    contract.
@@ -137,6 +147,11 @@ shipping.
    face.
 
 Steps 1–4 are the feature. Step 5 is the one that makes people like it.
+
+**What step 1 still owes:** a puck on a cable. `set settled 1` then `set night 1 <level>` should put a settled,
+healthy puck into a warm glow; pulling the broker should take it straight back to amber; a reboot should come
+back glowing without the hub. None of that has been watched happen, and the default brightness (110) was chosen
+on a screen, which `emitter-colours-are-not-screen-colours` is a standing warning about.
 
 ## Open
 
