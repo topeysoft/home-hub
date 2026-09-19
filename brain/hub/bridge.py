@@ -354,6 +354,9 @@ class Bridges:
     def status(self) -> dict:
         base = {"bridges": sum(1 for p in self.pucks.values() if p.get("online")), "waiting": 0}
         if (mv := self.move_status()): base["moving"] = mv
+        # Said whether or not a job is running: it is a standing fact about the house, not a step in
+        # setting anything up, and This hub is where somebody goes to look at standing facts.
+        if (old := self.behind()): base["behind"] = old
         if not self.job: return {**base, "state": "none"}
         j = self.job
         out = {**base, "state": j["state"], "how": "cable"}
@@ -683,6 +686,53 @@ class Bridges:
         if online: self._remember(chip, gone=None, missed=None, seen=time.time())
         elif not ((self.hub.settings.get("bridges") or {}).get(chip) or {}).get("gone"):
             self._remember(chip, gone=time.time())
+
+    # ---- which of them are behind the software the house ships now ----
+    @staticmethod
+    def _older(a: str, b: str) -> bool:
+        """Is `a` an earlier version than `b`? Numeric, part by part, so 0.10.0 beats 0.9.0.
+
+        Anything that is not a version at all -- a hand-built puck calling itself "dev" -- is never
+        older than anything. A line telling somebody their bench board is out of date is noise.
+        """
+        def parts(v):
+            out = []
+            for piece in str(v or "").split("."):
+                if not piece.isdigit(): return None
+                out.append(int(piece))
+            return tuple(out) or None
+        pa, pb = parts(a), parts(b)
+        return bool(pa and pb and pa < pb)
+
+    def shipped(self) -> str:
+        """The version of the image this house would flash a bare board with, or "".
+
+        Read from the manifest beside the image rather than from anything remembered: the two move
+        together, and a version kept anywhere else is a version that can disagree with the file.
+        """
+        try:
+            return str(json.loads(self.cable.image.with_suffix(".json").read_text()).get("fw") or "")
+        except (OSError, ValueError):
+            return ""
+
+    def behind(self) -> list:
+        """The bridges this hub set up that are running something older than it ships.
+
+        Nothing about this is urgent and the panel must not draw it as though it were: a bridge a
+        version behind is a bridge doing its whole job. It is here because a household that is told
+        nothing has no way to find out, and because the count is the thing that matters once a fix
+        does need to reach every one of them -- see docs/puck-updates.md.
+        """
+        latest = self.shipped()
+        if not latest: return []
+        out = []
+        for chip, rec in (self.hub.settings.get("bridges") or {}).items():
+            fw = str(rec.get("fw") or "")
+            if not self._older(fw, latest): continue
+            out.append({"chip": chip, "room": self.room_of(chip), "fw": fw, "latest": latest,
+                        "online": bool((self.pucks.get(chip) or {}).get("online"))})
+        out.sort(key=lambda b: (b["room"] or "\uffff", b["chip"]))
+        return out
 
     def room_of(self, chip: str) -> str | None:
         """The room a bridge serves, or None when the hub cannot honestly say.

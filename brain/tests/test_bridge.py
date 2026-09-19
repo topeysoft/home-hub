@@ -25,6 +25,12 @@ class FakeCable:
         self.flashed, self.written = [], []
         self.write_says = {"chip": "c8ebba", "fw": "0.2.0", "state": "set"}
         self.write_fails = None
+        # The image the hub would write, and the manifest beside it. `ships()` puts a version in it;
+        # a cable with no manifest is a house that cannot say what it ships, which is its own case.
+        self.image = Path(tempfile.mkdtemp()) / "esp32s3-ship.bin"
+
+    def ships(self, fw):
+        self.image.with_suffix(".json").write_text(json.dumps({"chip": "esp32s3", "fw": fw}))
 
     async def hello(self, port): return self.hello_says.get(port)
     async def is_esp(self, port): return await self.esp_chip(port) is not None
@@ -832,3 +838,74 @@ class TheWifiItIsAlreadyStandingOn(Knocking):
         self.b = Bridges(self.hub, cable=self.cable, devdir=self.dev)
         self.ask()
         with self.assertRaises(ValueError): run(self.b.wifi("", "hunter2"))
+
+
+class WhichOnesAreBehind(unittest.TestCase):
+    """A fix reaches new pucks and no others, and the house can at least say which.
+
+    docs/puck-updates.md: a puck has no update path of any kind yet, so the version a bridge is on is
+    the version it was flashed with. That is a fact worth being able to see -- and once a fix DOES
+    have to reach every puck, the count is the whole feature, because the failure that costs a
+    household is a house that believes every one has it when one does not.
+    """
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.dev = Path(self.tmp.name) / "by-id"; self.dev.mkdir()
+        self.hub = FakeHub(self.tmp.name)
+        self.cable = FakeCable(); self.cable.ships("0.3.1")
+        self.b = Bridges(self.hub, cable=self.cable, devdir=self.dev)
+
+    def tearDown(self): self.tmp.cleanup()
+
+    def have(self, **pucks):
+        self.hub.settings.set(bridges={c: {"since": 1, "fw": fw} for c, fw in pucks.items()})
+
+    def test_a_bridge_on_an_older_version_is_named(self):
+        self.have(c8ebba="0.2.0")
+        b = self.b.behind()
+        self.assertEqual([(x["chip"], x["fw"], x["latest"]) for x in b], [("c8ebba", "0.2.0", "0.3.1")])
+
+    def test_a_bridge_on_what_the_house_ships_is_not(self):
+        self.have(c8ebba="0.3.1")
+        self.assertEqual(self.b.behind(), [])
+
+    def test_a_bridge_ahead_of_the_house_is_left_alone(self):
+        """A bench puck flashed from a working copy. Telling somebody it is out of date is noise."""
+        self.have(c8ebba="0.4.0")
+        self.assertEqual(self.b.behind(), [])
+
+    def test_versions_are_compared_as_numbers_and_not_as_words(self):
+        self.cable.ships("0.10.0")
+        self.have(c8ebba="0.9.0")
+        self.assertEqual(len(self.b.behind()), 1)          # 0.9.0 is older than 0.10.0
+
+    def test_a_build_that_is_not_a_version_is_never_behind(self):
+        self.have(c8ebba="dev", f4a9f3="")
+        self.assertEqual(self.b.behind(), [])
+
+    def test_a_house_that_cannot_say_what_it_ships_says_nothing(self):
+        self.cable.image.with_suffix(".json").unlink()
+        self.have(c8ebba="0.2.0")
+        self.assertEqual(self.b.behind(), [])
+
+    def test_a_mangled_manifest_does_not_take_the_panel_down(self):
+        self.cable.image.with_suffix(".json").write_text("{not json")
+        self.have(c8ebba="0.2.0")
+        self.assertEqual(self.b.behind(), [])
+
+    def test_the_panel_is_told_without_a_job_running(self):
+        """It is a standing fact about the house, not a step in setting anything up."""
+        self.have(c8ebba="0.2.0")
+        s = self.b.status()
+        self.assertEqual(s["state"], "none")
+        self.assertEqual([x["chip"] for x in s["behind"]], ["c8ebba"])
+
+    def test_nothing_behind_says_nothing_at_all(self):
+        self.have(c8ebba="0.3.1")
+        self.assertNotIn("behind", self.b.status())
+
+    def test_it_counts_every_one_the_hub_set_up_whether_or_not_it_is_awake(self):
+        """The one that is asleep behind a sofa is exactly the one worth counting."""
+        self.have(c8ebba="0.2.0", f4a9f3="0.2.0")
+        self.assertEqual(len(self.b.behind()), 2)
+        self.assertEqual([x["online"] for x in self.b.behind()], [False, False])

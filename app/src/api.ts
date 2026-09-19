@@ -132,6 +132,9 @@ export type Bridge = {
   needs?: 'wifi'                           // failed because the hub has nothing to give: usually the password, since the host never hands a PSK back up
   ssid?: string                            // ...and the network the hub is standing on, when that is the one it wants the password for
   moving?: NetMove                         // every bridge being handed a new Wi-Fi at once (docs/network.md)
+  /* The ones running older software than the house ships. A standing fact, not a job and not a
+     fault: a bridge a version behind is a bridge doing its whole work. docs/puck-updates.md. */
+  behind?: { chip: string; room: string | null; fw: string; latest: string; online: boolean }[]
 }
 /* THE NETWORK the house runs on -- the hub's own connection, and the Wi-Fi the bridges are given.
    Two questions, and on most hubs the answer is different: the hub is on a cable and the bridges are

@@ -72,6 +72,27 @@ async function flipAuto() {
   catch (e: any) { notify(e.message, 'error') }
   autoBusy.value = false
 }
+/* The bridges running older software than the house ships.
+ *
+ * Said here and nowhere louder, deliberately. A bridge a version behind is doing its whole job, so
+ * this is not a fault and must not be drawn as one -- but a household told nothing has no way to
+ * find out, and the COUNT is the thing that matters the day a fix has to reach every one of them
+ * (docs/puck-updates.md). Named by the room each one serves, because that is the only word a
+ * household has for a puck; where the hub cannot honestly say which room, it does not guess.
+ */
+const behind = computed(() => store.bridge?.behind ?? [])
+const behindLine = computed(() => {
+  const named = behind.value.map(b => b.room).filter(Boolean) as string[]
+  const are = behind.value.length === 1 ? 'is' : 'are'
+  if (named.length === behind.value.length) {
+    const list = named.length === 1 ? named[0]
+      : named.slice(0, -1).join(', ') + ' and ' + named[named.length - 1]
+    return `The ${list} bridge${behind.value.length === 1 ? '' : 's'} ${are} on older software.`
+  }
+  const n = behind.value.length === 1 ? 'One' : behind.value.length === 2 ? 'Two' : String(behind.value.length)
+  return `${n} of your bridges ${are} on older software.`
+})
+
 /* What changed. Opening this page is what marks the morning-after card read: nothing vanishes under
    a tap on Home, and somebody who came here to look has, by definition, looked. */
 const notes = ref<UpdateNotes | null>(null)
@@ -217,6 +238,11 @@ const when = (ts?: number | null) => ts ? new Date(ts * 1000).toLocaleString([],
         <span class="hub-k">Updates</span>
         <span class="hub-v">{{ update?.auto ? 'Installed overnight, on their own.' : 'Installed when you tap, and not before.' }}<span class="hub-sub line">{{ update?.verified ? 'Only ones this hub can check, and it puts back any that won’t start.' : 'This hub can’t check an update yet, so it waits to be asked.' }}</span></span>
         <button class="toggle" role="switch" :aria-checked="!!update?.auto" aria-label="Install updates overnight" :class="{ on: update?.auto, busy: autoBusy }" @click="flipAuto"><span class="knob"></span></button>
+      </li>
+      <li v-if="behind.length">
+        <span class="hub-k">Bridges</span>
+        <span class="hub-v">{{ behindLine }}<span class="hub-sub line">They keep working, and nothing they do is affected. Catching one up needs a cable for now — the hub can’t do it over the air yet.</span></span>
+        <span></span>
       </li>
       <li>
         <span class="hub-k">Backup</span>
