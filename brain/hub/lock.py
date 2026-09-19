@@ -42,7 +42,9 @@ def needs_code(method: str, path: str) -> bool:
     # first place. Saying "not mine" and "leave it here" are not here on purpose: refusing a thing
     # and reporting where it ended up give nothing away, and a code to wave a knock off would leave
     # one stuck on the screen for whoever could not remember it.
-    if path in ("/bridge/adopt", "/bridge/wifi") and m == "POST": return True
+    # ...and taking one off the house is the same size of decision as letting it on: its switches
+    # stop appearing on the panel, and getting them back is the cable again.
+    if path in ("/bridge/adopt", "/bridge/wifi", "/bridge/forget") and m == "POST": return True
     # Changing the network the house runs on is the same giveaway again, and worse in one way: it can
     # leave the hub somewhere nothing can reach it. Looking at what the hub is connected to is not
     # gated -- a household should be able to read its own situation without typing anything -- and

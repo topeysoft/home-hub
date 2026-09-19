@@ -63,7 +63,8 @@ class Health:
         gone.sort(key=lambda d: since.get(d.id, float("inf")))
         faults = self.drivers(gone)
         claimed = {w["id"] for f in faults for w in f.get("with", ())}
-        return faults + self.offline([d for d in gone if d.id not in claimed], since) + self.storage() + self.restarts() + self.update()
+        return (faults + self.offline([d for d in gone if d.id not in claimed], since)
+                + self.bridges() + self.storage() + self.restarts() + self.update())
 
     def where(self, d) -> str:
         """Which room, and what sort of thing -- the two facts somebody needs to go and look at it. A name
@@ -89,6 +90,38 @@ class Health:
                         "acts": [{"do": "Check again", "act": "check", "to": d.id},
                                  {"do": "It's gone, remove it", "act": "forget", "to": d.id, "yes": f"Yes, remove {d.name}",
                                   "ask": f"Remove {d.name} from the house? It comes off the account that brought it."}]})
+        return out
+
+    def bridges(self) -> list:
+        """A bridge that never came back, and what to do with it.
+
+        The move's own screen says this once and is then dismissed, which is right for a screen and
+        wrong for the house: by morning nothing remembers that the Wi-Fi changed without two of the
+        bridges. This is the remembering. docs/network.md, piece 6.
+
+        The second sentence of each line is not decoration. A household whose panel has stopped
+        showing the hallway lights will assume the hallway lights are broken, walk to the switch, and
+        find that it works -- and now they distrust the panel rather than the bridge. Saying it first
+        is the difference between a fault and a mystery.
+
+        THE RECOVERY IS IN THE TEXT AND NOT IN A BUTTON, because it is a walk to a socket with a puck
+        in your hand and there is no tap that performs it. What the panel can actually do is the one
+        act here: agree the thing is gone for good.
+        """
+        out = []
+        for b in self.hub.bridge.quiet():
+            it = f"The {b['room']} bridge" if b["room"] else "A bridge"
+            since = f" since the Wi‑Fi changed to {b['missed']}" if b["missed"] else \
+                    (f" since {when(b['since'], self.hub.tz)}" if b["since"] else "")
+            out.append({
+                "kind": "bridge", "subject": b["chip"], "since": b["since"], "where": b["room"],
+                "name": it,
+                "text": (f"{it} hasn’t been heard from{since}. Its switches still work on the wall — the hub "
+                         "just can’t see them. Plug it into the hub for a minute to set it right."),
+                "acts": [{"do": "It’s gone, remove it", "act": "bridge", "to": b["chip"],
+                          "yes": "Yes, remove it", "no": "Keep it",
+                          "ask": f"Remove {it[0].lower() + it[1:]}? Its switches stop appearing on the panel; they keep working on the wall."}],
+            })
         return out
 
     def storage(self) -> list:

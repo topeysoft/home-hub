@@ -1221,6 +1221,17 @@ async def network_done():
     return await hub.bridge.clear_move()
 
 
+@app.post("/bridge/forget")
+async def bridge_forget(body: dict):
+    """Take a bridge off the house: the last thing offered about one that is never coming back.
+
+    Offered from the *Needs a look* line rather than from anywhere somebody browses, because this is
+    not a thing to go and find -- it is the answer to a question the house asked first."""
+    hub.ready()
+    try: return await hub.bridge.forget(str(body.get("chip") or ""))
+    except ValueError as e: raise HTTPException(404, str(e))
+
+
 @app.post("/bridge/placed")
 async def bridge_placed():
     try: return await hub.bridge.placed()

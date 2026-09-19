@@ -41,12 +41,12 @@ export type Status = { driver: Driver; reason: string; setup_done: boolean; lock
    panel does not know what it is looking at, so it draws `acts` and invents nothing. `with` is what went
    quiet behind this one fault -- fix the fault and they all come back, which is why they are not lines of
    their own. See brain/hub/health.py. */
-export type Act = { do: string; act: 'flow' | 'entry' | 'part' | 'check' | 'forget' | 'update' | 'restart'; to: string | null
+export type Act = { do: string; act: 'flow' | 'entry' | 'part' | 'check' | 'forget' | 'update' | 'restart' | 'bridge'; to: string | null
   ask?: string        // a question to answer first, where the doing is worth a second's thought
   yes?: string        // the words that answer it, with the name in them
   no?: string }       // ...and the ones that decline, where "Keep it" is not what is being kept
 export type Quiet = { id: string; name: string; where: string }
-export type Note = { kind: 'offline' | 'storage' | 'driver' | 'update' | 'restart'; text: string; since: number | null; subject: string | null
+export type Note = { kind: 'offline' | 'storage' | 'driver' | 'update' | 'restart' | 'bridge'; text: string; since: number | null; subject: string | null
   where?: string      // an offline thing: which room, and what sort of thing it is -- enough to go and look at it
   name?: string       // an offline thing: what it is called, apart from the sentence it is in
   with?: Quiet[]      // what went quiet with this fault
@@ -129,7 +129,8 @@ export type Bridge = {
   unplaced?: number                        // of those, how many have no room yet
   waiting?: number                         // switches nearby that have never been let in (see addSwitch)
   bridges?: number                         // how many are set up and working, job or no job
-  needs?: 'wifi'                           // failed because the hub has nothing to give: a hub on a cable does not know the house's Wi-Fi until told once
+  needs?: 'wifi'                           // failed because the hub has nothing to give: usually the password, since the host never hands a PSK back up
+  ssid?: string                            // ...and the network the hub is standing on, when that is the one it wants the password for
   moving?: NetMove                         // every bridge being handed a new Wi-Fi at once (docs/network.md)
 }
 /* THE NETWORK the house runs on -- the hub's own connection, and the Wi-Fi the bridges are given.
@@ -222,6 +223,9 @@ export const adoptBridge = () => post<Bridge>('/bridge/adopt')
 export const dismissBridge = () => post<Bridge>('/bridge/dismiss')
 /** The house's Wi-Fi, told once: a hub on a cable has no other way to know it. Kept for every bridge after. */
 export const bridgeWifi = (ssid: string, password: string) => post<Bridge>('/bridge/wifi', { ssid, password })
+/* Take a bridge off the house. Offered only from the *Needs a look* line about one that has not come
+   back, because it is the answer to a question the house asked first -- never a thing to go and find. */
+export const forgetBridge = (chip: string) => post<{ forgotten: string }>('/bridge/forget', { chip })
 /** Leave it here -- the placing is over, whatever the signal says. */
 export const placedBridge = () => post<Bridge>('/bridge/placed')
 export const retryEntry = (entry_id: string) => post<Status>(`/setup/retry/${encodeURIComponent(entry_id)}`)

@@ -65,7 +65,17 @@ async function run(fn: () => Promise<any>, after?: string) {
 /* The one thing a hub on a cable cannot know: the house's Wi-Fi. Asked here, once, and kept -- the
    job picks up where it stopped, on the same cable, and no bridge after this one asks again. */
 const ssid = ref(''), password = ref('')
-const tell = () => { if (!ssid.value.trim()) return notify('Which Wi-Fi? The name is needed.', 'error'); run(() => bridgeWifi(ssid.value.trim(), password.value)) }
+/* An empty name means "the one you just showed me", which the brain resolves from its own connection
+   rather than from anything typed here. There is deliberately no box to type a different one into on
+   a hub that is standing on a network: the hub hands a puck what the hub is USING (docs/network.md),
+   so a box here would be a choice the hub then quietly overrules. A hub on a cable has no such
+   opinion, and that is the one case that is asked. */
+const tell = () => {
+  const mine = !!b.value?.ssid
+  const name = mine ? '' : ssid.value.trim()
+  if (!mine && !name) return notify('Which Wi\u2011Fi? The name is needed.', 'error')
+  run(() => bridgeWifi(name, password.value))
+}
 const adopt = () => run(adoptBridge)
 const dismiss = () => run(dismissBridge)
 const placed = () => run(placedBridge)
@@ -178,8 +188,15 @@ onUnmounted(() => window.removeEventListener('keydown', key))
 
         <!-- it needs the one thing the hub cannot know on its own -->
         <template v-else-if="b.needs === 'wifi'">
-          <p class="sheet-lede">The hub is on a cable, so it has never needed the house's Wi‑Fi. The bridge does. Tell it once; nothing after this asks again.</p>
-          <label class="field"><span class="field-label">Wi‑Fi name</span><input class="input" v-model="ssid" autocomplete="off" autocapitalize="off" spellcheck="false" @keydown.enter="tell" /></label>
+          <!-- The brain's sentence, not one written here: which of the two questions this is depends
+               on what the hub is standing on, and the panel does not know that. It used to say "the
+               hub is on a cable" to every household, including the ones whose hub is on the Wi‑Fi. -->
+          <p class="sheet-lede">{{ b.text || 'The bridge needs the house\u2019s Wi‑Fi. Tell it once; nothing after this asks again.' }}</p>
+          <!-- A name the hub is standing on is a fact, so it is shown rather than asked. Typing it
+               again is only a chance to get it wrong, and a puck on a network that does not exist
+               looks exactly like a puck that does not work. -->
+          <div class="field" v-if="b.ssid"><span class="field-label">Wi‑Fi</span><span class="field-fixed">{{ b.ssid }}</span></div>
+          <label class="field" v-else><span class="field-label">Wi‑Fi name</span><input class="input" v-model="ssid" autocomplete="off" autocapitalize="off" spellcheck="false" @keydown.enter="tell" /></label>
           <label class="field"><span class="field-label">Password</span><input class="input" type="password" v-model="password" autocomplete="off" @keydown.enter="tell" /></label>
           <div class="flow-actions">
             <button class="button" :class="{ busy }" @click="tell">Use it</button>

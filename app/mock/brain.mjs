@@ -269,6 +269,12 @@ const notes = process.env.NEEDSLOOK ? [
     acts: [{ do: 'Check again', act: 'check', to: 'l1' },
            { do: "It's gone, remove it", act: 'forget', to: 'l1', yes: 'Yes, remove Bedroom TV',
              ask: 'Remove Bedroom TV from the house? It comes off the account that brought it.' }] },
+  // A bridge that never came back (docs/network.md, piece 6). The recovery is a walk to a socket, so
+  // it is in the sentence; the one button is the only thing the panel can actually perform.
+  { kind: 'bridge', subject: 'c8ebba', name: 'The Hallway bridge', where: 'Hallway', since: now - 86400,
+    text: 'The Hallway bridge hasn’t been heard from since the Wi‑Fi changed to Downstairs. Its switches still work on the wall — the hub just can’t see them. Plug it into the hub for a minute to set it right.',
+    acts: [{ do: 'It’s gone, remove it', act: 'bridge', to: 'c8ebba', yes: 'Yes, remove it', no: 'Keep it',
+             ask: 'Remove the Hallway bridge? Its switches stop appearing on the panel; they keep working on the wall.' }] },
   { kind: 'storage', subject: null, since: null, acts: [], text: "The hub's storage is nearly full: 35.5 GB left." },
 ] : []
 // NEEDSLOOK=many: a house where a lot has gone quiet with nothing in common, for the fold on the page.
@@ -360,7 +366,13 @@ function job() {
       working: { state: 'working', how: 'cable', step: 'keys' },
       placing: { state: 'placing', how: 'cable', switches: 11, signal: 'strong' },
       ready: { state: 'ready', how: 'cable', switches: 11, unplaced: 8 },
-      wifi: { state: 'failed', how: 'cable', needs: 'wifi' },
+      // The two shapes of the same question. BRIDGE=wifi is a hub on a cable, which has to be told
+      // the whole thing; BRIDGE=wifi-known is a hub standing on the network, which knows the name and
+      // wants only the password -- the common case, and the one that used to ask for both.
+      wifi: { state: 'failed', how: 'cable', needs: 'wifi',
+              text: 'The hub does not know the house\u2019s Wi\u2011Fi yet \u2014 it is on a cable itself. Tell it once, under This hub, and every bridge after this one just works.' },
+      'wifi-known': { state: 'failed', how: 'cable', needs: 'wifi', ssid: 'VirusBroadcast',
+                      text: 'The hub is on VirusBroadcast. It needs the password for it once \u2014 then this bridge, and every one after it, just works.' },
       failed: { state: 'failed', how: 'cable', text: 'The bridge stopped answering halfway through. Unplug it, plug it back into the hub, and it will pick up where it left off.' },
     }[BRIDGE] ?? { state: 'none' }
   }
@@ -445,6 +457,7 @@ const server = http.createServer((req, res) => {
   }
   if (p === '/rules') return json(res, rules)
   if (p === '/discovered') return json(res, discovered)
+  if (p === '/bridge/forget') return json(res, { forgotten: 'The Hallway bridge' })
   if (p === '/health') return json(res, { notes })
   // What a speaker can play. The real brain generates the noises and lists the sounds folder; here it is
   // a fixed shelf, so the sounds sheet has something to draw without a hub or a speaker in the room.
@@ -497,7 +510,9 @@ const server = http.createServer((req, res) => {
        NET=cable    the hub is on ethernet and eleven bridges are on a Wi-Fi it was told about
        NET=wifi     the hub is on the Wi-Fi too, and a change takes it with them
        NET=moved    the hub has moved and the password it holds is for somewhere else
-       NET=none     no host script at all: the row says so and offers two typed fields
+       NET=none     no host script at all ('unknown'): the row says so and offers two typed fields
+       NET=off      a managed hub with a radio and nothing connected. Looks like 'none' and is the
+                    opposite case: this one IS the hub that should be moved
      MOVE=moving|done|late pins a moment of the move instead of walking it. */
   if (p.startsWith('/network')) return network(p, req, res)
   /* A bridge being set up. BRIDGE=cable walks the whole job the way a real one does -- software,
@@ -715,6 +730,7 @@ function netState() {
   const bridges = { ssid: moved ? 'Downstairs' : netSsid, checked: NET === 'wifi' || moved, known: !moved, count: 11 }
   if (NET === 'wifi') return { how: 'wifi', ssid: netSsid, signal: 'strong', band: '5', ip: '192.168.1.30', name: 'hub', can_change: true, managed: true, bridges, bridges_moving: netMove }
   if (NET === 'moved') return { how: 'wifi', ssid: 'Downstairs', signal: 'ok', ip: '192.168.1.30', name: 'hub', can_change: true, managed: true, bridges, bridges_moving: netMove }
+  if (NET === 'off') return { how: 'none', ip: '127.0.0.1', name: 'hub', can_change: true, managed: true, bridges, bridges_moving: netMove }
   if (NET === 'none') return { how: 'unknown', ip: '192.168.1.9', name: 'hub', can_change: false, managed: false, bridges, bridges_moving: netMove }
   return { how: 'cable', ip: '192.168.1.9', name: 'hub', can_change: true, spare: null, managed: true, bridges, bridges_moving: netMove }
 }

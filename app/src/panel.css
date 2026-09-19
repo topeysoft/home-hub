@@ -3335,6 +3335,17 @@ a.button {
   font-size: 13px;
   color: var(--danger);
 }
+/* A field the house already knows the answer to. It sits where the input would, at the input's own
+   height so the row below does not jump, and is deliberately not drawn as a box: a settled fact, not
+   something still waiting to be typed. */
+.field-fixed {
+  display: flex;
+  align-items: center;
+  min-height: 50px;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--ink);
+}
 .input {
   height: 50px;
   padding: 0 14px;
