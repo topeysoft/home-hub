@@ -5,9 +5,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { store, notify, installUpdate, restartHub } from './store'
-import { askRestart, askUpdate, checkForUpdate, downloadBackup, getUpdateNotes, markNotesRead, setAutoUpdate, type RestartAsk, type Rung, type UpdateAsk, type UpdateNotes } from './api'
+import { askRestart, askUpdate, checkForUpdate, downloadBackup, getNetwork, getUpdateNotes, markNotesRead, setAutoUpdate, type NetState, type RestartAsk, type Rung, type UpdateAsk, type UpdateNotes } from './api'
 import Restore from './Restore.vue'
 import AdvancedLink from './AdvancedLink.vue'
+import NetworkSheet from './NetworkSheet.vue'
 
 /* This hub: which build it is, whether a newer one exists, a backup to take away and a way to put one back.
    The phones that belong to the house are on the People page: they are about who, not about this computer. */
@@ -77,6 +78,7 @@ const notes = ref<UpdateNotes | null>(null)
 const earlier = ref(false)
 const earlierReleases = computed(() => (notes.value?.history ?? []).filter(r => r.version !== notes.value?.notes?.version && r.what.length))
 onMounted(async () => {
+  loadNet()     // not awaited: the Network row is a fact the hub already holds, and nothing below needs it
   try { notes.value = await getUpdateNotes() } catch { /* an older hub, or no notes in this build */ }
   if (store.status?.update?.whats_new) { try { await markNotesRead() } catch { /* it will come back tomorrow */ } }
   /* Opening this page is also the check for an update: no button to explain, "checked just now" under
@@ -110,6 +112,49 @@ async function goRestart(understood = false) {
   else await openRestart(rung.value)
   restartBusy.value = false
 }
+/* The network the house runs on.
+ *
+ * One row, because that is what the rest of this page is, and because a household does not have two
+ * questions here. The hub's own connection and the Wi-Fi its bridges are given are different facts
+ * on most hubs -- the hub is on a cable and the bridges cannot be -- and the row says both in one
+ * sentence rather than making somebody choose which of two settings they meant. docs/network.md.
+ *
+ * The sub-line is where the honesty lives. A hub on Wi-Fi READ that name off its own connection; a
+ * hub on a cable was TOLD it and cannot check it. Those are not the same kind of sentence and this
+ * row must not write them as though they were -- everything that went wrong here went wrong because
+ * something the hub had been told once was treated as a fact for ever.
+ */
+const net = ref<NetState | null>(null)
+const netOpen = ref(false)
+const netLine = computed(() => {
+  const n = net.value
+  if (!n) return ''
+  if (n.moving) return `Moving to ${n.moving.ssid}…`
+  if (n.how === 'cable') return 'On a cable.'
+  if (n.how === 'wifi') return `On ${n.ssid}.${n.signal === 'strong' ? ' Strong.' : n.signal === 'faint' ? ' Faint.' : ''}`
+  if (n.how === 'none') return 'Not on anything.'
+  return 'Looked after by the machine this runs on.'
+})
+const netSub = computed(() => {
+  const n = net.value
+  if (!n) return ''
+  if (n.reverted) return `${n.reverted} didn’t answer, so the one that was working was put back.`
+  const b = n.bridges
+  if (!b.count && !b.ssid) return 'No bridges yet. The first one set up will be given this.'
+  /* `bridges.ssid` is the network the hub WOULD GIVE a bridge -- which is not the same claim as
+     where the bridges are, and the hub cannot honestly make the second one about a puck it has not
+     heard from. So the past tense: they were given this. */
+  const them = b.count === 1 ? 'Your bridge was' : b.count ? `Your ${b.count} bridges were` : 'Bridges are'
+  if (n.how === 'wifi' && b.known) return `${b.count ? `Your ${b.count === 1 ? 'bridge is' : `${b.count} bridges are`} on it too. ` : ''}Change it here and they come with it.`
+  if (!b.known) return `The hub has moved to ${n.ssid} and hasn’t got the password for it. Setting up a bridge will ask you once.`
+  // Why it cannot check is not always the cable: a hub whose machine has no network script cannot
+  // check anything, and telling that household about a cable they may not have is a small nonsense.
+  if (!b.checked) return `${them} given ${b.ssid}. ${n.how === 'cable' ? 'The hub can’t check that one from a cable' : 'Nothing here can check that one'}, so it takes your word for it.`
+  return `${them} given ${b.ssid}.`
+})
+async function loadNet() { try { net.value = await getNetwork() } catch { /* an older hub: the row stays away */ } }
+function closeNet() { netOpen.value = false; loadNet() }
+
 const when = (ts?: number | null) => ts ? new Date(ts * 1000).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' }) : ''
 </script>
 
@@ -162,6 +207,12 @@ const when = (ts?: number | null) => ts ? new Date(ts * 1000).toLocaleString([],
         <button class="button small" v-if="earlierReleases.length" @click="earlier = !earlier">{{ earlier ? 'Hide' : 'Earlier' }}</button>
         <span v-else></span>
       </li>
+      <li v-if="net">
+        <span class="hub-k">Network</span>
+        <span class="hub-v">{{ netLine }}<span class="hub-sub line">{{ netSub }}</span></span>
+        <button class="button small" v-if="!net.moving" @click="netOpen = true">Change</button>
+        <span class="hub-sub" v-else>Moving…</span>
+      </li>
       <li>
         <span class="hub-k">Updates</span>
         <span class="hub-v">{{ update?.auto ? 'Installed overnight, on their own.' : 'Installed when you tap, and not before.' }}<span class="hub-sub line">{{ update?.verified ? 'Only ones this hub can check, and it puts back any that won’t start.' : 'This hub can’t check an update yet, so it waits to be asked.' }}</span></span>
@@ -209,6 +260,7 @@ const when = (ts?: number | null) => ts ? new Date(ts * 1000).toLocaleString([],
     </ul>
 
     <AdvancedLink />
+    <NetworkSheet v-if="netOpen" @close="closeNet" />
   </div>
 </template>
 

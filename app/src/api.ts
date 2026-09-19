@@ -130,7 +130,61 @@ export type Bridge = {
   waiting?: number                         // switches nearby that have never been let in (see addSwitch)
   bridges?: number                         // how many are set up and working, job or no job
   needs?: 'wifi'                           // failed because the hub has nothing to give: a hub on a cable does not know the house's Wi-Fi until told once
+  moving?: NetMove                         // every bridge being handed a new Wi-Fi at once (docs/network.md)
 }
+/* THE NETWORK the house runs on -- the hub's own connection, and the Wi-Fi the bridges are given.
+   Two questions, and on most hubs the answer is different: the hub is on a cable and the bridges are
+   on the Wi-Fi, because they have no cable to be on. docs/network.md, drawn in design/network/.
+
+   `how` is the hub itself:
+     cable    on ethernet. The steadier way round, and the one the product recommends
+     wifi     on `ssid`, at `signal`
+     none     it has a radio and is on nothing
+     unknown  nobody here can tell -- a hub whose machine has no network script (a laptop, a NAS)
+
+   `bridges.checked` is the difference between a fact and a memory, and the panel must not blur it:
+   true means the hub read that name off its own connection, false means somebody typed it once and
+   nothing has verified it since. `known` false means the hub has the name and not the password --
+   which happens the moment the hub moves and is exactly the bug this was built for. */
+export type NetState = {
+  how: 'cable' | 'wifi' | 'none' | 'unknown'
+  ip: string
+  name: string                             // the hub's own hostname, which is what a puck resolves
+  ssid?: string
+  signal?: 'strong' | 'ok' | 'faint'
+  band?: string
+  spare?: string                           // on a cable, but a Wi-Fi is configured behind it
+  can_change: boolean                      // there is a radio AND something on the host that can drive it
+  managed: boolean
+  stale?: true                             // the host's picture has not been refreshed lately
+  moving?: { ssid: string; since: number }  // the hub is being moved right now, and the host is watching it
+  reverted?: string                        // ...and one did not take, so this is the name that failed
+  bridges: { ssid: string; checked: boolean; known: boolean; count: number }
+  bridges_moving?: NetMove | null          // the pucks' journey; `moving` above is the hub's own
+}
+/* A move, while it happens and after it. Rooms, never chip ids: a household knows where the hallway
+   is and has never heard of c8ebba. `late` only appears once the hub has stopped waiting. */
+export type NetMove = {
+  state: 'moving' | 'done'
+  ssid: string
+  total: number
+  followed: string[]
+  waiting?: string[]
+  late?: string[]
+}
+export type SeenNetwork = { ssid: string; signal?: 'strong' | 'ok' | 'faint'; band?: string | null; secure: boolean }
+export async function getNetwork(): Promise<NetState> {
+  const r = await request('/network'); if (!r.ok) await fail(r); return r.json()
+}
+export const scanNetworks = () => post<{ networks: SeenNetwork[]; can_change: boolean }>('/network/scan')
+/* Move the bridges and leave the hub where it is -- the common case, and the safe one. */
+export const moveBridges = (ssid: string, password: string) => post<NetMove>('/network/bridges', { ssid, password })
+/* Move the hub as well. The brain tells the bridges FIRST and only then moves itself, so whichever
+   arrives second finds the other already there; the host puts the old connection back if this hub
+   never turns up on the new one. */
+export const moveHub = (ssid: string, password: string) => post<NetState>('/network/hub', { ssid, password })
+export const networkDone = () => post<Bridge>('/network/done')
+
 /* Letting a NEW switch in, two ways, because a switch arrives in a hand or already screwed to a wall.
 
    WITH THE CODE on its back: `code` is whatever the camera read, sent whole -- the panel does not parse

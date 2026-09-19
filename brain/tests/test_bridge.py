@@ -727,3 +727,42 @@ class ABadSyncIsNotAVerdict(unittest.TestCase):
         try: self.assertIsNone(run(self.cable.esp_chip("/dev/whatever")))
         finally: m.PROBE_RETRY = was
         self.assertEqual(len(self.tries), 2)
+
+
+class WhatAFailedWriteSays(unittest.TestCase):
+    """esptool's sentence on a wall panel, again.
+
+    ABoardTheHouseCannotUse above is the same bug on the chip check, found by plugging one in. This
+    is it on the write: on 18 Sep 2026 a household watching a bare S3 being set up got "No more data
+    to read from the serial port. This can have many causes, for troubleshooting steps visit:
+    https://docs.espressif.com/..." -- a link to somebody's developer documentation, on the wall.
+    """
+    def why(self, out, rc=1):
+        return Cable._why(out, rc)
+
+    def test_a_line_that_kept_dropping_names_the_cable_and_not_the_serial_port(self):
+        said = self.why("Writing at 0x000af96c / No more data to read from the serial port. This can "
+                        "have many causes, for troubleshooting steps visit: https://docs.espressif.com/x")
+        self.assertIn("cable", said)
+        for leak in ("serial port", "esptool", "http", "espressif"):
+            self.assertNotIn(leak, said.lower())
+
+    def test_a_board_that_stopped_answering_is_told_what_to_do_with_it(self):
+        for out in ("A fatal error occurred: Failed to connect to ESP32-S3",
+                    "Wrong boot mode detected (0x13)!",
+                    "No serial data received."):
+            with self.subTest(out=out):
+                said = self.why(out)
+                self.assertIn("Unplug it", said)
+                self.assertNotIn("esp32", said.lower())
+
+    def test_a_write_that_ran_out_of_time_says_so_rather_than_nothing(self):
+        self.assertIn("too long", self.why("", rc=-1))
+
+    def test_a_port_the_hub_could_not_open(self):
+        self.assertIn("could not reach it", self.why("could not open port /dev/ttyACM0: Permission denied"))
+
+    def test_anything_else_is_still_a_sentence_and_never_a_stack(self):
+        said = self.why("Traceback (most recent call last): RuntimeError: chip stopped responding")
+        self.assertTrue(said.endswith("try again."))
+        self.assertNotIn("Traceback", said)

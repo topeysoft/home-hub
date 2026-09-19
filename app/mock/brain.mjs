@@ -493,10 +493,17 @@ const server = http.createServer((req, res) => {
     return json(res, { type: 'create_entry', flow_id: 'r1', handler: 'nest', kind: 'Google Nest', entry_title: 'home-hub' })
   }
   if (p === '/catalog') return json(res, catalog)
+  /* The network the house runs on (docs/network.md, design/network/).
+       NET=cable    the hub is on ethernet and eleven bridges are on a Wi-Fi it was told about
+       NET=wifi     the hub is on the Wi-Fi too, and a change takes it with them
+       NET=moved    the hub has moved and the password it holds is for somewhere else
+       NET=none     no host script at all: the row says so and offers two typed fields
+     MOVE=moving|done|late pins a moment of the move instead of walking it. */
+  if (p.startsWith('/network')) return network(p, req, res)
   /* A bridge being set up. BRIDGE=cable walks the whole job the way a real one does -- software,
      Wi-Fi, keys, then the walk to find it a socket -- so the sheet can be watched rather than
      described. BRIDGE=knocking|working|placing|ready|failed pins one moment instead. */
-  if (p === '/bridge') return json(res, bridgeNow())
+  if (p === '/bridge') return json(res, { ...bridgeNow(), ...(netMove ? { moving: netMove } : {}) })
   /* What the bridge can hear, and whose side each one is on. NEARBY=n sets how many are unclaimed;
      NEARBY=0 with SPOKEN=1 is the case the Waiting board draws -- nothing to let in, but something
      nearby that has to be started over first, which looks identical to an empty room to a scan. */
@@ -687,3 +694,58 @@ server.on('upgrade', (req, socket) => {
   socket.on('error', () => { live.delete(socket); })
 })
 server.listen(PORT, () => console.log(`mock brain on http://localhost:${PORT}/`))
+
+/* ---- the network, and eleven bridges following it ---------------------------------------- */
+const NET = process.env.NET ?? 'cable'
+const ROOMS = ['Kitchen', 'Living room', 'Landing', 'Hallway', 'Back bedroom', 'Study',
+               'Bathroom', 'Porch', 'Garage', 'Dining room', 'Spare room']
+let netMove = process.env.MOVE ? seedMove(process.env.MOVE) : null
+let netSsid = 'Upstairs'
+
+function seedMove(which) {
+  if (which === 'moving') return { state: 'moving', ssid: 'Downstairs', total: 11, followed: ROOMS.slice(0, 3), waiting: ROOMS.slice(3) }
+  if (which === 'late') return { state: 'done', ssid: 'Downstairs', total: 11, followed: ROOMS.slice(0, 9), late: ['The hallway', 'The back bedroom'] }
+  return { state: 'done', ssid: 'Downstairs', total: 11, followed: ROOMS }
+}
+
+function netState() {
+  // Mirrors bridge.wifi_for_pucks(): a hub on Wi-Fi hands out the network it is ON, and when that is
+  // not the one it holds a password for, `known` goes false and the name is the hub's, not the old one.
+  const moved = NET === 'moved'
+  const bridges = { ssid: moved ? 'Downstairs' : netSsid, checked: NET === 'wifi' || moved, known: !moved, count: 11 }
+  if (NET === 'wifi') return { how: 'wifi', ssid: netSsid, signal: 'strong', band: '5', ip: '192.168.1.30', name: 'hub', can_change: true, managed: true, bridges, bridges_moving: netMove }
+  if (NET === 'moved') return { how: 'wifi', ssid: 'Downstairs', signal: 'ok', ip: '192.168.1.30', name: 'hub', can_change: true, managed: true, bridges, bridges_moving: netMove }
+  if (NET === 'none') return { how: 'unknown', ip: '192.168.1.9', name: 'hub', can_change: false, managed: false, bridges, bridges_moving: netMove }
+  return { how: 'cable', ip: '192.168.1.9', name: 'hub', can_change: true, spare: null, managed: true, bridges, bridges_moving: netMove }
+}
+
+function network(p, req, res) {
+  if (p === '/network') return json(res, netState())
+  if (p === '/network/scan') return json(res, { can_change: NET !== 'none', networks: [
+    { ssid: 'Downstairs', signal: 'strong', band: '5', secure: true },
+    { ssid: 'BT-HUB-9QK2', signal: 'faint', band: '2.4', secure: true },
+    { ssid: 'Flat 3 guest', signal: 'faint', band: '2.4', secure: false },
+  ] })
+  if (p === '/network/done') { netMove = null; return json(res, bridgeNow()) }
+  // Moving them over, one every second and a half, so the sheet can be watched rather than described.
+  let raw = ''
+  req.on('data', c => (raw += c))
+  return req.on('end', () => {
+    let b = {}
+    try { b = JSON.parse(raw) } catch {}
+    netSsid = b.ssid || 'Downstairs'
+    netMove = { state: 'moving', ssid: netSsid, total: 11, followed: [], waiting: [...ROOMS] }
+    const late = process.env.MOVE === 'late'
+    const tick = setInterval(() => {
+      if (!netMove || netMove.state === 'done') return clearInterval(tick)
+      const left = late ? 2 : 0
+      if (netMove.waiting.length > left) netMove.followed.push(netMove.waiting.shift())
+      else {
+        netMove = { state: 'done', ssid: netSsid, total: 11, followed: netMove.followed,
+                    ...(left ? { late: ['The hallway', 'The back bedroom'] } : {}) }
+        clearInterval(tick)
+      }
+    }, 1500)
+    json(res, netMove)
+  })
+}

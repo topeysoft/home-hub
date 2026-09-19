@@ -5,7 +5,8 @@
 
     puck_cable.py <port> hello                       who is this, and is it blank
     puck_cable.py <port> status                      wifi / mqtt / proxy / light, one line
-    puck_cable.py <port> write [--from secrets.h] [--wifi SSID PASS] [--mqtt HOST PORT USER PASS]
+    puck_cable.py <port> write [--from secrets.h] [--wifi SSID PASS] [--wifi2 SSID PASS] [--name hub]
+                               [--mqtt HOST PORT USER PASS]
                                [--keys NETKEY APPKEY IV] [--base mesh] [--label Brilliant] [--no-apply]
     puck_cable.py <port> wipe                        back to blank
     puck_cable.py <port> upgrade                     new firmware, keeping who it is
@@ -279,6 +280,8 @@ def main():
     ap.add_argument("--wifi", nargs=2, metavar=("SSID", "PASS"))
     ap.add_argument("--mqtt", nargs=4, metavar=("HOST", "PORT", "USER", "PASS"))
     ap.add_argument("--keys", nargs=3, metavar=("NETKEY", "APPKEY", "IV"))
+    ap.add_argument("--name", help="the hub's hostname, resolved over mDNS before the address is tried")
+    ap.add_argument("--wifi2", nargs=2, metavar=("SSID", "PASS"), help="the other key on the ring: what to fall back to")
     ap.add_argument("--base")
     ap.add_argument("--label")
     ap.add_argument("--no-apply", action="store_true", help="write, but leave the restart to the caller")
@@ -313,6 +316,11 @@ def main():
     who = p.hello()
     print(f"puck {who['chip']} fw {who['fw']} ({who['state']})")
     p.set("wifi", hx(wifi[0]), hx(wifi[1]));            print(f"  wifi   {wifi[0]}")
+    # docs/network.md: a name outlives a DHCP lease, and a spare outlives a changed password.
+    if a.name:
+        p.set("name", hx(a.name));                      print(f"  name   {a.name}")
+    if a.wifi2:
+        p.set("wifi2", hx(a.wifi2[0]), hx(a.wifi2[1]));  print(f"  wifi2  {a.wifi2[0]}")
     if mqtt:
         p.set("mqtt", hx(mqtt[0]), str(mqtt[1]), hx(mqtt[2]), hx(mqtt[3])); print(f"  mqtt   {mqtt[0]}:{mqtt[1]}" + (f" as {mqtt[2]}" if mqtt[2] else ""))
     if keys:

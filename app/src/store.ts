@@ -623,7 +623,11 @@ export async function refreshBridge() {
   try {
     store.bridge = await getBridge()
   } catch { store.bridge = null }
-  const live = !!store.bridge && !['none', 'ready'].includes(store.bridge.state)
+  /* A move is a job too, and it is one nobody is holding a puck for -- it happens while eleven of
+     them restart in eleven rooms. Without it here the sheet asks once a minute and draws a progress
+     bar that does not move, which is worse than no progress bar. docs/network.md, piece 3. */
+  const moving = store.bridge?.moving?.state === 'moving'
+  const live = !!store.bridge && (moving || !['none', 'ready'].includes(store.bridge.state))
   bridgeTimer = window.setTimeout(refreshBridge, live ? 2000 : 60000)
 }
 

@@ -44,6 +44,10 @@ PROBE_SECONDS = 45
 # a moment and asking again costs nothing and is the difference between a board being seen
 # and a board being written off.
 PROBE_RETRY = 2
+# Fast first, then a speed that holds on hardware where the fast one does not. A minute
+# longer on a job somebody does once is a fair price for it finishing.
+FLASH_BAUDS = (460800, 115200)
+FLASH_SECONDS = 300
 # Probing a board resets it, and a board being reset drops off the USB and comes back a
 # moment later. That is OUR doing, not a person's, and must not be read as an unplug --
 # otherwise a dismissal never sticks: the board vanishes, is forgiven, reappears as a fresh
@@ -195,7 +199,7 @@ class Cable:
         timed_out = False
         try:
             out, _ = await asyncio.wait_for(proc.communicate(), timeout=PROBE_SECONDS)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             timed_out, out = True, b""
         finally:
             # Always, not only on timeout: a probe that answered perfectly well can still
@@ -225,15 +229,69 @@ class Cable:
         want = self.image.parent / f"{chip}-ship.bin"
         return want if want.exists() else None
 
+    @staticmethod
+    def _why(out: str, rc: int) -> str:
+        """What a write that did not finish means to somebody holding the board.
+
+        esptool's own sentence on a wall panel is a bug this file has already fixed once, for the
+        wrong chip (tests/test_bridge.py, ABoardTheHouseCannotUse). This is the same leak on the
+        write: a household got "No more data to read from the serial port" and a link to somebody's
+        developer documentation. The raw text stays in the log for whoever is debugging; what reaches
+        the screen is the thing they can actually do about it.
+        """
+        s = (out or "").lower()
+        if rc == -1:
+            return "Writing its software took too long and stopped. Unplug it, plug it back in, and try again."
+        if "no more data to read" in s or "serial data stream stopped" in s:
+            # Both speeds have already been tried by the time this is raised, so the line itself is
+            # the suspect rather than how fast it was being driven.
+            return ("Writing its software kept stopping part way. A different cable usually fixes it, "
+                    "or plugging it straight into the hub rather than through anything in between.")
+        if "failed to connect" in s or "wrong boot mode" in s or "no serial data received" in s:
+            return "It stopped answering while the hub was writing to it. Unplug it, plug it back in, and try again."
+        if "permission denied" in s or "could not open" in s:
+            return "The hub could not reach it over the cable."
+        return "Its software could not be written. Unplug it, plug it back in, and try again."
+
     async def flash(self, port: str, chip: str = "esp32s3"):
+        """Write the image, dropping to a slower line if a fast one does not hold.
+
+        460800 is fine over a Mac's USB and marginal over a Pi's: a real write got to 65% of
+        634kB and then "No more data to read from the serial port", which is what a line that
+        cannot keep up looks like. Falling back costs a minute on a job somebody does once,
+        and the alternative is a bridge that cannot be set up on the hardware it ships on.
+
+        In a subprocess for the same reason the probe is: esptool leaves multiprocessing
+        helpers behind, and one of those holding the port poisons everything after it."""
         image = self.image_for(chip)
         if not image:
             raise RuntimeError(f"no {chip} image")
-        def go():
-            import esptool
-            esptool.main(["--chip", chip, "--port", port, "--baud", "460800", "--before", "default-reset", "--after", "hard-reset",
-                          "write-flash", "-z", "--flash-mode", "dio", "--flash-freq", "80m", "--flash-size", "16MB", "0x0", str(image)])
-        await self._in_thread(go)
+        last = ""
+        for baud in FLASH_BAUDS:
+            log.info("bridge: writing %s to %s at %s baud", image.name, port, baud)
+            proc = await asyncio.create_subprocess_exec(
+                sys.executable, "-m", "esptool", "--chip", chip, "--port", port,
+                "--baud", str(baud), "--before", "default-reset", "--after", "hard-reset",
+                "write-flash", "-z", "--flash-mode", "dio", "--flash-freq", "80m",
+                "--flash-size", "16MB", "0x0", str(image),
+                stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT,
+                start_new_session=True)
+            try:
+                out, _ = await asyncio.wait_for(proc.communicate(), timeout=FLASH_SECONDS)
+                rc = proc.returncode
+            except TimeoutError:
+                out, rc = b"", -1
+            finally:
+                try: os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+                except (ProcessLookupError, PermissionError): pass
+                with contextlib.suppress(Exception): await proc.wait()
+            if rc == 0:
+                return
+            last = " / ".join(l.strip() for l in out.decode(errors="replace").splitlines()
+                              if l.strip() and "Writing at" not in l)[-300:]
+            log.info("bridge: %s baud did not hold (%s)", baud, last or f"exit {rc}")
+        log.warning("bridge: the write did not finish on %s: %s", port, last or f"exit {rc}")
+        raise RuntimeError(self._why(last, rc))
 
     async def write(self, port: str, cfg: dict) -> dict:
         """Everything in cfg, then apply, then wait for it back. Returns its hello afterwards."""
@@ -610,10 +668,15 @@ class Bridges:
         # so a network called "Flat 3 guest" needs no quoting rules on either side, and the puck
         # needs no JSON parser it does not already have.
         body = f"wifi {int(at)} {_hx(ssid)} {_hx(password)} {_hx(cfg['name'])} {cfg['host']} {cfg['port']}"
-        asked = sorted(c for c, p in self.pucks.items() if p.get("online"))
-        for chip in asked:
+        # EVERY puck the house knows is told, not only the ones listening. The command is retained, so
+        # one that was switched off during the move collects it the moment it next reaches the broker
+        # and joins by itself -- which is most of the "did not follow" list, handled without anybody
+        # fetching anything. Only the ones that ARE listening are counted, because only they can be
+        # expected back inside the few minutes somebody is standing at the wall for.
+        for chip in sorted(self.pucks):
             await self.hub.ha.call("mqtt", "publish", None,
                                    topic=f"{BASE}/bridge/{chip}/cfg", payload=body, retain=True)
+        asked = sorted(c for c, p in self.pucks.items() if p.get("online"))
         self.moving = {"state": "moving" if asked else "done", "ssid": ssid, "at": at,
                        "asked": asked, "followed": []}
         self.hub.log.add("home", "network", None, f"bridges moving to {ssid}", source="user")
@@ -643,6 +706,9 @@ class Bridges:
             if late: log.info("bridge: %d did not follow to %s", len(late), j["ssid"])
             # Everybody came: the spare is no longer worth the room it takes on them. Told once,
             # and only now -- a puck that is online cannot tell whether the HUB can see it.
+            # Only the ones that followed are told to drop the spare, and only their retained command
+            # is overwritten -- a puck that has still not been seen keeps the `wifi` command waiting
+            # for it on its own topic.
             if not late:
                 for chip in j["asked"]:
                     with contextlib.suppress(Exception):
@@ -811,7 +877,7 @@ class Bridges:
         end = time.time() + timeout
         while time.time() < end:
             try: await asyncio.wait_for(self._woke.wait(), timeout=max(0.2, end - time.time()))
-            except asyncio.TimeoutError: break
+            except TimeoutError: break
             self._woke.clear()
             got = self._heard.get(leaf)
             if got and got["chip"] == chip: return got["body"]

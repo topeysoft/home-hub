@@ -211,19 +211,25 @@ udevadm control --reload 2>/dev/null || true
 # updates, restores and restarts: the panel writes brain-data/<thing>.request; these units see it and act.
 # The watchdog is the one with no request behind it: it runs on its own clock and catches a house that
 # stopped answering when nobody is there to notice (docs/restart.md, piece 5).
-chmod +x host/update.sh host/restore.sh host/channel.sh host/restart.sh host/watchdog.sh
+chmod +x host/update.sh host/restore.sh host/channel.sh host/restart.sh host/watchdog.sh host/network.sh
 for u in home-hub-update.service home-hub-update.path home-hub-restore.service home-hub-restore.path \
          home-hub-restart.service home-hub-restart.path home-hub-watchdog.service home-hub-watchdog.timer \
-         home-hub-channel.service home-hub-channel.timer; do
+         home-hub-channel.service home-hub-channel.timer \
+         home-hub-network.service home-hub-network.path home-hub-network.timer; do
   sed "s#/opt/home-hub#$DIR#g" "host/$u" > "/etc/systemd/system/$u"
 done
 systemctl daemon-reload 2>/dev/null || true
 systemctl enable --now home-hub-update.path home-hub-restore.path home-hub-restart.path \
-                       home-hub-watchdog.timer home-hub-channel.timer >/dev/null 2>&1 || true
+                       home-hub-watchdog.timer home-hub-channel.timer \
+                       home-hub-network.path home-hub-network.timer >/dev/null 2>&1 || true
+# ...and write the first picture of this hub's network now, so the panel's Network row is a fact
+# from the first minute rather than blank until the timer's first tick (docs/network.md, piece 2).
+HOME_HUB_DIR="$DIR" ./host/network.sh >/dev/null 2>&1 || true
 # ...and ask once now, so a hub coming up after a hold was published knows about it before its first night.
 HOME_HUB_DIR="$DIR" ./host/channel.sh >/dev/null 2>&1 || true
 
 say "5/5  Starting the house"
+phase downloading
 # Pre-pull everything the compose file pins. A tag that no longer exists on the registry would
 # otherwise surface as a wall of daemon errors from `up`, with none of the other images fetched and
 # nothing started, so say which reference is missing in one line instead.

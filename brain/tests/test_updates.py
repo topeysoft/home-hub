@@ -9,7 +9,7 @@ somebody acts on.
 
 Run from brain/: .venv/bin/python -m unittest -v
 """
-import json, os, tempfile, unittest
+import json, os, tempfile, time, unittest
 from pathlib import Path
 from unittest import mock
 
@@ -597,8 +597,12 @@ class ProgressTests(UpdateTest):
 
 class LearningTests(UpdateTest):
     """A hub that takes four minutes should say four minutes, not the figure from the maker's desk."""
-    def ran(self, started=1000, finished=1300, state="done", marks=(("restarting", 1240), ("proving", 1290))):
-        updates.STATE.write_text(json.dumps({"state": state, "started": started, "finished": finished}))
+    def ran(self, total=300, dark=50, state="done", ago=0.0, phases=True):
+        """A finished run on the disk, `ago` seconds back. Relative to now on purpose: whether the
+        receipt is still news is part of what is being tested."""
+        fin = time.time() - ago
+        updates.STATE.write_text(json.dumps({"state": state, "started": fin - total, "finished": fin}))
+        marks = (("restarting", fin - dark), ("proving", fin)) if phases else ()
         updates.PROGRESS.write_text("".join(json.dumps({"phase": p, "at": at}) + "\n" for p, at in marks))
 
     def test_a_careful_guess_until_this_hub_has_measured_its_own(self):
@@ -638,12 +642,12 @@ class LearningTests(UpdateTest):
 
     def test_a_figure_nobody_should_quote_is_not_learned(self):
         """Somebody's hub sat on a broken network for three hours. That is not what the next one costs."""
-        self.ran(started=1000, finished=1000 + updates.TOOK + 60, marks=())
+        self.ran(total=updates.TOOK + 60, phases=False)
         self.assertEqual(self.make().seconds(), updates.USUALLY["total"])
 
     def test_a_run_with_no_phases_written_still_learns_the_total(self):
         """An older host, or one whose progress file did not survive. Half an answer beats none."""
-        self.ran(marks=())
+        self.ran(phases=False)
         u = self.make()
         self.assertEqual(u.seconds(), 300)
         self.assertEqual(u.seconds(dark=True), updates.USUALLY["dark"])
@@ -700,3 +704,45 @@ class TheDoorTests(unittest.TestCase):
         from hub.lock import needs_code
         self.assertFalse(needs_code("GET", "/update/ask"))
         self.assertTrue(needs_code("POST", "/update"))
+
+
+class LearnsAfterTheFactTests(UpdateTest):
+    """The host marks a run finished AFTER the brain it installed is already up.
+
+    `update.sh` proves the house came back before it writes `done`, and the proof includes a settle --
+    so the new brain has been running this code for a good minute by the time the run it came from is
+    marked finished. Learning only at startup means a hub files every update's figures at the NEXT
+    restart, which on a working house is days later. Found on a real hub, whose settings.json had no
+    update_took in it at all a minute after a successful update.
+    """
+    def setUp(self):
+        super().setUp()
+        updates.STATE.write_text(json.dumps({"state": "running", "started": time.time() - 60}))
+
+    def finished(self, ago=0.0):
+        fin = time.time() - ago
+        updates.STATE.write_text(json.dumps({"state": "done", "started": fin - 300, "finished": fin}))
+        updates.PROGRESS.write_text("".join(json.dumps({"phase": p, "at": at}) + "\n"
+                                            for p, at in (("restarting", fin - 50), ("proving", fin))))
+
+    def test_a_brain_that_started_before_the_run_was_marked_done_still_learns(self):
+        u = self.make()                                   # comes up while the host is still proving
+        self.assertEqual(u.seconds(), updates.USUALLY["total"])
+        self.finished()                                   # ...and the host finishes a minute later
+        u._learn()                                        # which is what the tick is for
+        self.assertEqual(u.seconds(), 300)
+        self.assertEqual(u.seconds(dark=True), 50)
+
+    def test_and_files_the_receipt_once_however_many_ticks_go_by(self):
+        u = self.make()
+        self.finished()
+        for _ in range(5): u._learn()
+        self.assertEqual(sum(1 for r in self.hub.log.rows if r["new"] == "installed"), 1)
+
+    def test_a_run_that_finished_last_week_is_worth_keeping_and_not_worth_announcing(self):
+        """A hub switched off for a week. The figures still stand; a line under Recent saying the
+        house updated itself just now would be the one entry there that did not happen when it says."""
+        self.finished(ago=updates.STALE + 60)
+        u = self.make()
+        self.assertEqual(u.seconds(), 300)                             # kept
+        self.assertFalse([r for r in self.hub.log.rows if r["new"] == "installed"])   # not announced

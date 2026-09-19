@@ -44,6 +44,7 @@ CHANNEL = DATA / "channel.json"       # written by the host's channel.sh, after 
 RELEASE = re.compile(r"^v?\d+\.\d+")  # what a version tag looks like, next to "dev" and "main-1a2b3c4"
 PROGRESS = DATA / "update.progress"   # the host says where it has got to, a line at a time
 TOOK = 3600                           # a run longer than this taught us nothing worth keeping
+STALE = 3600                          # ...and a run that finished longer ago than this is not news
 USUALLY = {"total": 300, "dark": 60}  # seconds, until this hub has measured its own
 
 # What the host is doing, in the words the wall shows. The host appends **a phase from this list and
@@ -251,11 +252,18 @@ class Updates:
         return n if 5 <= n < TOOK else USUALLY[key]
 
     def _learn(self):
-        """Read what the last run left behind, and learn from it. Only ever called at start.
+        """Read what the last run left behind, and learn from it.
 
         It is the *new* build doing the reading: the brain that asked for an update is not the brain
         that comes back, which is exactly why the figures have to be on the disk rather than in
         anybody's memory. restart.py makes the same move with restart.json.
+
+        Called at start AND on every tick, which is not belt and braces -- it is the only way it works
+        at all. The host proves the house came back before it writes `done`, and that proof includes a
+        settle: the new brain is up and running this code a good minute BEFORE the run it came from is
+        marked finished. Called only at start, a hub would learn each update's figures at the *next*
+        restart and file the receipt for it days late. The guard below makes it idempotent, so the
+        tick costs two small file reads and writes once.
         """
         st = self.state() or {}
         if st.get("state") != "done": return
@@ -270,14 +278,20 @@ class Updates:
         if 5 <= total < TOOK: learned["total"] = total
         if 5 <= dark < TOOK: learned["dark"] = dark
         self.hub.settings.set(update_took={**kept, **learned})
+        log.info("came back on %s: %ds in all, %ds of it away", self.version, total, dark)
         # The morning receipt. "What's new" says what changed; this is the line that says the house
         # did it for them at twenty to three and was away for a minute, which is the difference
         # between an update that happened FOR a household and one that happened TO them.
+        #
+        # Only while it is still news. A hub that was switched off for a week comes back and reads a
+        # finished run from last Tuesday: the figures are still worth keeping, and a line under Recent
+        # saying the house updated itself just now is not -- it would be the one thing in that list
+        # that did not happen when it says it did.
+        if time.time() - fin > STALE: return
         was = next((e for e in self.hub.log.recent(limit=20, subject="update", kinds=("home",))
                     if e["new"] not in ("installed",)), {})
         self.hub.log.add("home", "update", was.get("old") or None, "installed", source=was.get("source") or "hub",
                          detail={"took": total, "dark": dark or None, "to": self.version})
-        log.info("came back on %s: %ds in all, %ds of it away", self.version, total, dark)
 
     # ---- whether it may happen at all ----
     def blocked(self) -> str | None:
@@ -441,6 +455,7 @@ class Updates:
                     log.info("installing %s without being asked: the house has been quiet and it is this hub's minute",
                              (self.latest or {}).get("version"))
                     self.request(source="hub")
+                self._learn()          # the run this build came from is marked finished after we started
             except Exception: log.exception("update tick")
             # While an update is happening the panel wants the phase the moment it changes, and five
             # minutes late is no answer at all -- so the loop shortens its stride, and only then. The

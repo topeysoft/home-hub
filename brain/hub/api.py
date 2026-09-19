@@ -26,6 +26,7 @@ from . import notes as notes_mod
 from .updates import Updates
 from .health import Health
 from .backup import Backup
+from .network import Network
 from .restart import Restart
 from .sounds import Sounds, DIR as SOUNDS_DIR
 from .commands import Commands, NotUnderstood, refusal_aloud
@@ -104,6 +105,7 @@ class Hub:
         self.lock = Lock(self.settings)
         self.pair = Pairing(self)
         self.bridge = Bridges(self)        # a puck on the cable, and the ones the house has
+        self.net = Network(self)           # how this hub is connected, and what it hands out: docs/network.md
         self.share = Share(self)           # what this house lets a Matter bridge publish: docs/matter.md
         self.share_status: dict = {}       # what the bridge last said about itself (pairing codes, who holds it)
         self.relay = Relay(self)           # two switches on one light: the hub carries the press across
@@ -1154,6 +1156,69 @@ async def bridge_wifi(body: dict):
     hub.ready()
     try: return await hub.bridge.wifi(str(body.get("ssid") or ""), str(body.get("password") or ""))
     except ValueError as e: raise HTTPException(400, str(e))
+
+
+# ---------------------------------------------------------------- the network the house runs on
+#
+# docs/network.md. Three verbs and one of them is a read. Reading is open: a household should be able
+# to see what its own hub is connected to without typing a code, and a scan finds only what any phone
+# in the room already sees. Changing anything is gated in lock.py, like every other change.
+
+
+@app.get("/network")
+def network_state():
+    """What the hub is on, and what the bridges are on. Two different questions on most hubs."""
+    wifi = hub.bridge.wifi_for_pucks()
+    return {**hub.net.state(),
+            "bridges": {"ssid": wifi["ssid"], "checked": wifi["checked"], "known": wifi["known"],
+                        "count": sum(1 for p in hub.bridge.pucks.values() if p.get("online"))},
+            # Two different journeys, and they must not share a key: `moving` is this hub changing
+            # network (the host is watching it), `bridges_moving` is the pucks doing the same.
+            "bridges_moving": hub.bridge.move_status()}
+
+
+@app.post("/network/scan")
+async def network_scan():
+    """What is in the air around the hub. Finds nothing a phone in the same room could not."""
+    return await hub.net.scan()
+
+
+@app.post("/network/bridges")
+async def network_bridges(body: dict):
+    """Move every bridge onto another Wi‑Fi. The hub stays where it is."""
+    hub.ready()
+    try: return await hub.bridge.move(str(body.get("ssid") or ""), str(body.get("password") or ""))
+    except ValueError as e: raise HTTPException(400, str(e))
+
+
+@app.post("/network/hub")
+async def network_hub(body: dict, request: Request):
+    """Move the hub itself, and take the bridges with it.
+
+    THE BRIDGES ARE TOLD FIRST, and the order is the whole design. Each one keeps the network it is
+    on as a spare, so whichever of them arrives second finds the other already there -- and if this
+    hub never arrives at all, the host puts it back and nothing has moved anywhere it cannot be
+    reached. Doing it the other way round would mean the hub changing networks and only then
+    discovering it can no longer tell anybody.
+    """
+    hub.ready()
+    if request.state.away:
+        # The one refusal this design makes that restarting does not. A restart away from home is
+        # caught by a watchdog on the machine; a wrong network away from home can be right and still
+        # leave nobody in the building able to confirm it.
+        raise HTTPException(403, "Changing the network has to be done in the house.")
+    ssid, password = str(body.get("ssid") or ""), str(body.get("password") or "")
+    try:
+        if sum(1 for p in hub.bridge.pucks.values() if p.get("online")):
+            await hub.bridge.move(ssid, password)
+        return hub.net.join(ssid, password)
+    except ValueError as e: raise HTTPException(400, str(e))
+
+
+@app.post("/network/done")
+async def network_done():
+    """The person has read how it went. Nothing vanishes under a tap until it has been."""
+    return await hub.bridge.clear_move()
 
 
 @app.post("/bridge/placed")

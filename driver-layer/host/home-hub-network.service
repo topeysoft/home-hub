@@ -1,0 +1,16 @@
+# Runs network.sh: once per request from the panel, and once a minute from the timer to keep
+# brain-data/network.json current. Started by home-hub-network.path or .timer; never on its own.
+#
+# TimeoutStartSec is generous because a join watches the new connection for three minutes before it
+# decides to put the old one back, and being killed in the middle of that is the one outcome this
+# whole path exists to prevent.
+[Unit]
+Description=Home Hub: read or change the network this hub is on
+After=network-online.target NetworkManager.service
+
+[Service]
+Type=oneshot
+Environment=HOME_HUB_DIR=/opt/home-hub
+ExecStart=/opt/home-hub/driver-layer/host/network.sh
+StandardOutput=journal
+TimeoutStartSec=600

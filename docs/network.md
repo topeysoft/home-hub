@@ -1,13 +1,15 @@
 # The network the house runs on
 
-*Written 18 September 2026. This is a plan, not a build. It covers one thing — how the hub is connected, and what
+*Written 18 September 2026. **Pieces 1 to 5 were built the same day** — see *What landed* at the foot;
+pieces 6 and 7 are still a plan. It covers one thing — how the hub is connected, and what
 follows it when that changes. The goal it serves is the same as every other document here: nobody who receives a
 hub ever opens Home Assistant, a terminal, or a support article. A household that changes its Wi‑Fi password
 should not have to go around the house collecting hardware.*
 
-## What is true today
+## What was true before this (18 September 2026)
 
-The hub was designed on a cable, and the cable hid four things.
+The hub was designed on a cable, and the cable hid four things. All four are fixed; they are left
+written down here because the argument for the shape below is made of them.
 
 - **The hub has no network configuration path at all.** `install.sh` names the machine and starts avahi so
   `hub.local` resolves; nothing anywhere configures `wlan0`. Whatever the image was flashed with is what the
@@ -182,3 +184,40 @@ bridges followed* is the sentence that teaches a household this is safe to do.
    catches it.
 6. **Piece 5, the setup AP.** Needed the day a hub ships without an ethernet port; not before.
 7. **Piece 6's health job.** A bridge that never came back becomes a line on Home with the cable sentence on it.
+
+## What landed, 18 September 2026
+
+Pieces 1 to 5, in the order above.
+
+- **The name.** A puck is given the hub's hostname alongside its address (`Bridges.config`,
+  `puck_cable.py --name`) and resolves mDNS first, the last address that answered second, the one it
+  was given third — `hubAddress()` in `main.cpp`, with whatever works written to NVS by
+  `configRemember()`. `hubTry` moves on after each failed attempt, so a name that resolves to
+  something stale cannot pin a puck to a dead address.
+- **The hub reading itself.** `hub/network.py` from `network.json`; `driver-layer/host/network.sh`
+  and its path unit, service and one-minute timer; the *Network* row on *This hub*.
+  `Bridges.wifi_for_pucks()` is where the original bug dies: a hub on Wi‑Fi hands out the network it
+  is on, and a password held for a different network is not handed out at all.
+- **Two keys on the ring.** `cfg.ssid2`/`pass2` in NVS, `wifiTick()` alternating every two minutes,
+  `configConfirmWifi()` writing down whichever won. The command topic is `<base>/bridge/<chip>/cfg`
+  (hex-encoded words like `claim`, queued onto the loop, retained) answered on `.../cfgack`, which is
+  proof rather than a promise: a puck cannot publish from a network it never joined.
+- **The bridges' move, from the panel.** `POST /network/bridges`, `Bridges.move()`, and
+  `app/src/NetworkSheet.vue` drawn from `design/network/`. Every known puck is told, because the
+  command is retained and one that was switched off collects it when it comes back; only the ones
+  listening are counted while somebody stands at the wall.
+- **The hub's own move.** `POST /network/hub` tells the bridges first and the host second;
+  `network.sh` watches the new connection reach its gateway for three minutes and puts the old one
+  back otherwise. Gated by `needs_code()` and refused from away.
+
+### Still a plan
+
+- **Piece 6, the setup AP.** Needed the day a hub ships without an ethernet port. A Wi‑Fi-only hub
+  with no network is, until then, a hub somebody flashed a card for.
+- **Piece 7's health job.** A bridge that never came back is visible on the move's own screen and
+  nowhere else. It should become a *Needs a look* line on Home the next day, carrying the same
+  sentence about the cable. `health.py` already has the shape.
+- **Naming a bridge.** `Bridges.where()` uses a room only when one puck carries a mesh on its own,
+  and says *A bridge* otherwise rather than putting a name on the wrong object. The real fix is for
+  the placing step to record where somebody just put it — one question, on a screen that already
+  exists, and it wants its own board.
