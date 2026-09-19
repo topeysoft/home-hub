@@ -70,7 +70,7 @@ devkit was fine, and you will spend a week blaming the firmware.
   the USB-C receptacle at the bottom edge.
 - The shell over the antenna stays plain plastic. No inserts, no screws, no paint with metal in it.
 
-### The light: SK6812-RGBW, three of them, chained
+### The light: SK6812-RGBW, four of them, chained
 
 The change that most improves the actual light, and it is a part choice rather than a circuit.
 
@@ -81,8 +81,16 @@ two keep R/G/B free and fully saturated for the instrument, which is exactly the
 describes. Mixing white out of three colored dice behind a diffuser is also how you get a glow that shifts hue
 across the face.
 
-Three, chained DOUT→DIN on **one** data line and one RMT channel. Availability is the risk: WS2812B is the fallback
-and the footprints are close enough to share a land pattern if the library is drawn for it.
+**Four**, chained DOUT→DIN on **one** data line and one RMT channel. Four rather than the three this document
+first said, and not for optical reasons: **three cannot be placed.** The module lies across the board from the
+180° edge and the connector holds the 0° edge, and between them they block every ring angle an equilateral triple
+could use — proven by exhaustive search over every angle and every ring radius that keeps the emitters 8–10 mm
+off the diffuser (`hardware/puck-revA/gen_pcb.py`). Growing the ring until a symmetric quad fits drops the radial
+standoff to 6.4 mm and the rim hotspots, so that cure is worse. Four at {43°, 128°, 232°, 317°} keeps the ring at
+17 mm and spreads them with a smallest gap of 85° where 90° would be perfect; the two wide gaps fall at 0° and
+180°, which are the connector notch and the antenna side.
+
+Availability is the risk: WS2812B is the fallback and shares the land pattern.
 
 **What the custom board retires.** `light.cpp` currently drives GPIO48 *and* GPIO38 because the shipped image cannot
 know which devkit revision it landed on, with `detectBridge()` to catch boards that tie them together. On a board we
@@ -186,8 +194,9 @@ matter, it is a separate object that gets to be mounted and aimed properly, not 
 - **Extended parts carry a per-part setup fee.** The module, the LEDs and the level shifter will all be extended;
   budget for a handful of those on top of the boards.
 - 2-layer, 1.6 mm, and a round outline of roughly 50 mm so a 55 mm shell has wall to be made of.
-- **Three M2 mounting holes on one bolt circle, identical in every shell.** This is the part that makes "one board,
-  several shells" real rather than aspirational. Pick the circle now and never move it.
+- **Three M2 mounting holes on a 42 mm bolt circle at {24°, 144°, 264°}, identical in every shell.** This is the
+  part that makes "one board, several shells" real rather than aspirational. 42 rather than 40 because at 40 no
+  equilateral trio clears the LEDs, the module and the connector at once. Now it is frozen.
 
 ## The enclosure: FDM is an advantage here, not a compromise
 

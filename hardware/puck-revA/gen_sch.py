@@ -56,10 +56,10 @@ PARTS = {
          "A4":"VBUS","A9":"VBUS","B4":"VBUS","B9":"VBUS",
          "A5":"CC1","B5":"CC2","A6":"USB_DP","B6":"USB_DP","A7":"USB_DM","B7":"USB_DM"}),
 
- "J2": ("Connector_Generic", "Conn_01x04", "UART", "Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical",
+ "J2": ("Connector_Generic", "Conn_01x04", "UART", "Connector_PinHeader_1.27mm:PinHeader_1x04_P1.27mm_Vertical",
         {"1":"GND", "2":"UART0_TX", "3":"UART0_RX", "4":"+3V3"}),
  "J3": ("Connector_Generic", "Conn_01x06", "EXP (DNP on the product)",
-        "Connector_PinHeader_2.54mm:PinHeader_1x06_P2.54mm_Vertical",
+        "Connector_PinHeader_1.27mm:PinHeader_1x06_P1.27mm_Vertical",
         {"1":"+3V3", "2":"VBUS", "3":"GND", "4":"EXP_A", "5":"EXP_B", "6":"EXP_C"}),
 
  "D1": ("LED","WS2812B","SK6812-RGBW","LED_SMD:LED_SK6812_PLCC4_5.0x5.0mm_P3.2mm",
@@ -67,7 +67,12 @@ PARTS = {
  "D2": ("LED","WS2812B","SK6812-RGBW","LED_SMD:LED_SK6812_PLCC4_5.0x5.0mm_P3.2mm",
         {"1":"VBUS","3":"GND","4":"LED_D1_OUT","2":"LED_D2_OUT"}),
  "D3": ("LED","WS2812B","SK6812-RGBW","LED_SMD:LED_SK6812_PLCC4_5.0x5.0mm_P3.2mm",
-        {"1":"VBUS","3":"GND","4":"LED_D2_OUT"}),                 # DOUT left open
+        {"1":"VBUS","3":"GND","4":"LED_D2_OUT","2":"LED_D3_OUT"}),
+ # FOUR, not three. Three cannot be placed: the module lies across the board from the 180 deg edge
+ # and the connector holds the 0 deg edge, and between them they block every ring angle an
+ # equilateral triple could use -- see the header of gen_pcb.py for the search that proves it.
+ "D4": ("LED","WS2812B","SK6812-RGBW","LED_SMD:LED_SK6812_PLCC4_5.0x5.0mm_P3.2mm",
+        {"1":"VBUS","3":"GND","4":"LED_D3_OUT"}),                 # DOUT left open
 
  "SW1": ("Switch","SW_Push","BOOT","Button_Switch_SMD:SW_SPST_SKQG_WithoutStem",   {"1":"IO0","2":"GND"}),
  "SW2": ("Switch","SW_Push","RESET","Button_Switch_SMD:SW_SPST_SKQG_WithoutStem",  {"1":"EN","2":"GND"}),
@@ -86,6 +91,7 @@ PARTS = {
  "C4": ("Device","C","100n","Capacitor_SMD:C_0603_1608Metric",{"1":"VBUS","2":"GND"}),
  "C5": ("Device","C","100n","Capacitor_SMD:C_0603_1608Metric",{"1":"VBUS","2":"GND"}),
  "C6": ("Device","C","100n","Capacitor_SMD:C_0603_1608Metric",{"1":"VBUS","2":"GND"}),
+ "C8": ("Device","C","100n","Capacitor_SMD:C_0603_1608Metric",{"1":"VBUS","2":"GND"}),   # D4
  "C7": ("Device","C","1u",  "Capacitor_SMD:C_0603_1608Metric",{"1":"EN","2":"GND"}),
 
  # VBUS and GND arrive on a connector, whose pins are passive, so nothing on the sheet tells ERC

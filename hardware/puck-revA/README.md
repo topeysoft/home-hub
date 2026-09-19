@@ -102,7 +102,8 @@ each CC pin gets its own.
 | `LED_DATA_5V` | U3 pin 4 (Y) · R4 (300 Ω) · D1 DIN |
 | `D1_DOUT` | D1 DOUT · D2 DIN |
 | `D2_DOUT` | D2 DOUT · D3 DIN |
-| — | D3 DOUT left unconnected |
+| `D3_DOUT` | D3 DOUT · D4 DIN |
+| — | D4 DOUT left unconnected |
 
 U3's `OE` (pin 1) ties to GND so the buffer is always enabled. 100 nF across each LED's VDD/GND, each one placed at
 its own part rather than pooled.
@@ -131,11 +132,11 @@ I²C pins rather than sharing these, so an experiment on the header cannot wedge
 | U4 | USBLC6-2SC6 | `Power_Protection:USBLC6-2SC6` | `Package_TO_SOT_SMD:SOT-23-6` |
 | U5 | ambient light, DNP option — **part not chosen** | `Sensor_Optical:LTR-303ALS-01` | `OptoDevice:Lite-On_LTR-303ALS-01` |
 | J1 | USB-C receptacle, 16-pin, USB 2.0 | `Connector:USB_C_Receptacle_USB2.0_16P` | `Connector_USB:USB_C_Receptacle_GCT_USB4105-xx-A_16P_TopMnt_Horizontal` |
-| D1–D3 | SK6812-RGBW, 5050 | `LED:WS2812B` (same 4 pins) | `LED_SMD:LED_SK6812_PLCC4_5.0x5.0mm_P3.2mm` |
+| D1–D4 | SK6812-RGBW, 5050 | `LED:WS2812B` (same 4 pins) | `LED_SMD:LED_SK6812_PLCC4_5.0x5.0mm_P3.2mm` |
 | SW1–SW3 | BOOT, RESET, USER | `Switch:SW_Push` | `Button_Switch_SMD:SW_SPST_SKQG_WithoutStem` |
 | C1 | 22 µF, 10 V | | 0805 |
 | C2 | 10 µF | | 0603 |
-| C3–C6 | 100 nF | | 0603 |
+| C3–C6, C8 | 100 nF | | 0603 |
 | C7 | 1 µF | | 0603 |
 | R1, R2 | 5.1 kΩ | | 0603 |
 | R3 | 10 kΩ | | 0603 |
@@ -155,13 +156,34 @@ are not what they first look like:
 **0603 throughout**, not 0402. JLC places either, but five boards and a soldering iron in the room means the ability
 to rework matters more than the millimeter, and nothing here is space-constrained on a 50 mm disc.
 
+## The board file
+
+`gen_pcb.py` generates `puck-revA.kicad_pcb` from the same `PARTS` table as the schematic, so the two cannot
+disagree about what is on the board. **It places; it does not route, and it never will.** What it fixes is the
+geometry the enclosure depends on — the Ø50 outline, the three M2 holes, the four LEDs on their ring, U1 with its
+antenna flush to the 180° edge, J1's mouth at the 0° edge. Everything else is auto-packed into the space left
+over and is meant to be moved.
+
+```sh
+python3 gen_pcb.py
+kicad-cli pcb drc --output drc.rpt --severity-error --severity-warning puck-revA.kicad_pcb
+```
+
+DRC on an unrouted board is mostly ratsnest: ~92 `unconnected_items` is the whole netlist waiting to be routed.
+What matters is that there are **no shorts and no solder-mask bridges**. The silk overlaps are cosmetic and get
+tidied during layout.
+
+**One finding to deal with before ordering.** `drill_out_of_range` ×12 is real: KiCad's `ESP32-S3-WROOM-1`
+footprint stitches its thermal pad with **0.2 mm** vias, and JLC's standard process floor is 0.3 mm. Enlarge them,
+or the board comes back with a note or a surcharge.
+
 ## Board and fab
 
 - 2 layers, 1.6 mm, HASL is fine, round outline about 50 mm.
 - **Single-sided assembly, everything on top, LEDs included.** The shell diffuses from above. Halves the cost and
   removes a class of process risk.
-- **Three M2 holes on one bolt circle, frozen when the outline is.** This is what makes "one board, several shells"
-  real. Pick the circle once and never move it.
+- **Three M2 holes on a 42 mm bolt circle at {24°, 144°, 264°}**, frozen, and shared by every shell. Solved
+  against the board rather than chosen: at 40 mm no equilateral trio clears the LEDs, module and connector.
 - Conservative rules well inside JLC's standard process: 0.152 mm track and clearance, 0.3 mm drill with 0.6 mm pad.
   Confirm against their current capability page before ordering rather than trusting these.
 - Extended parts carry a per-part setup fee. U1, U3, D1–D3 and probably J1 will all be extended.

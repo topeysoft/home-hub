@@ -41,11 +41,11 @@ show    = "assembly";   // [assembly, base, diffuser, board, section]
 /* [The board it holds] */
 board_d     = 50;    // PCB outside diameter
 board_t     = 1.6;
-bolt_circle = 40;    // 3x M2, frozen with the board outline
+bolt_circle = 42;    // 3x M2, frozen with the board outline; see gen_pcb.py for why 42 not 40
 board_clear = 0.4;   // radial slop around the PCB
 
 /* [Light] */
-led_ring_d = 34;     // circle the three SK6812s sit on
+led_ring_d = 34;     // circle the FOUR SK6812s sit on -- four, because three will not place
 led_h      = 1.6;    // SK6812 5050 body height -- the emitter face, not the PCB, is the datum
 standoff   = 9;      // emitter face to the inner surface of the diffuser's top
 diff_wall  = 2.0;
@@ -73,7 +73,7 @@ antenna_keepout = 30;   // +/- degrees that must stay free of bosses, magnets, m
 /* [Dock variant] */
 magnet_d = 6.2;
 magnet_t = 3.2;
-magnet_angles = [90, 270];
+magnet_angles = [110, 290];
 
 /* [Tail variant] */
 tie_tab_w   = 12.0;    // tangential width of the strain-relief tab
@@ -98,7 +98,7 @@ skirt_z   = pcb_top + 0.8;             // skirt starts clear of board-edge compo
 skirt_od  = inner_d - 2 * fit_clear;   // the diffuser's skirt drops INSIDE the base
 skirt_id  = skirt_od - 2 * diff_wall;
 
-boss_angles = [0, 120, 240];
+boss_angles = [24, 144, 264];   // solved against the board, not chosen
 
 // The one rule that cannot be negotiated, checked rather than trusted. Anything solid and
 // especially anything metal within the keepout detunes the antenna, and the symptom is FAR
@@ -112,6 +112,19 @@ module keepout_check(angles, what) {
 }
 keepout_check(boss_angles, "mounting boss");
 keepout_check(magnet_angles, "magnet");
+
+// Bosses and magnet pockets share a floor and are solved on different circles, so their angles alone
+// do not tell you whether they touch. Check the actual distance.
+module spacing_check() {
+    for (b = boss_angles) for (m = magnet_angles) {
+        bx = (bolt_circle/2) * cos(b); by = (bolt_circle/2) * sin(b);
+        mx = (bolt_circle/2 - 4) * cos(m); my = (bolt_circle/2 - 4) * sin(m);
+        d = sqrt(pow(bx-mx,2) + pow(by-my,2));
+        need = boss_d/2 + magnet_d/2 + wall + 0.6;
+        assert(d > need, str("boss ", b, " and magnet ", m, " are ", d, " mm apart; need ", need));
+    }
+}
+spacing_check();
 
 module at(angle, r, z = 0) {
     rotate([0, 0, angle]) translate([r, 0, z]) children();
@@ -213,8 +226,8 @@ module diffuser() {
 
 module board_mock() {
     color("#2d6a4f") translate([0, 0, pcb_z]) cylinder(d = board_d, h = board_t);
-    // the three emitters, where the standoff is measured from
-    for (a = [30, 150, 270])
+    // the four emitters, where the standoff is measured from (gen_pcb.py solves the angles)
+    for (a = [43, 128, 232, 317])
         color("#fff1d8") at(a, led_ring_d/2, pcb_top) cylinder(d = 5, h = 1.6);
     // the module, lying with its antenna end over the board edge
     color("#1b1d23") at(antenna_angle, board_d/2 - 12.75, pcb_top + 1.55)
