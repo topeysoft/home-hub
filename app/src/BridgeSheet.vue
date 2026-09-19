@@ -71,8 +71,17 @@ const dismiss = () => run(dismissBridge)
 const placed = () => run(placedBridge)
 /* Walking away from a bridge that is mid-job does not stop it -- the hub is writing to a thing on its
    own cable and will finish whatever this screen does. Closing only puts the sheet away; it comes
-   back on the next poll while there is still something to say. */
-function close() { if (store.bridge) store.bridge = { ...store.bridge, state: 'none' } }
+   back on the next poll while there is still something to say.
+
+   A FAILURE HAS NOTHING LEFT TO SAY once it has been read, and until the brain is told so it keeps
+   reporting it: the sheet goes away and the very next poll brings it straight back. Somebody with a
+   board the hub cannot use sits there pressing OK at a dialog that will not die. So acknowledging a
+   failure is a thing the brain hears, not a thing this screen does to its own copy. */
+function close() {
+  const was = b.value?.state
+  if (store.bridge) store.bridge = { ...store.bridge, state: 'none' }
+  if (was === 'failed') run(dismissBridge)
+}
 function key(e: KeyboardEvent) { if (e.key === 'Escape' && b.value?.state !== 'working') close() }
 onMounted(() => window.addEventListener('keydown', key))
 onUnmounted(() => window.removeEventListener('keydown', key))
