@@ -29,7 +29,7 @@ Bridges the house already has are learned from the broker, not from the cable: e
 `.../proxy` (the switch it is linked to, and how strongly); the switches under `<base>/<net>/<addr>/`
 are counted per net. This subscribes through the engine's own MQTT link, the way pairing.py does.
 """
-import asyncio, json, logging, os, re, secrets, socket, sys, time
+import asyncio, contextlib, json, logging, os, re, secrets, signal, socket, sys, time
 from pathlib import Path
 
 log = logging.getLogger("hub.bridge")
@@ -143,17 +143,29 @@ class Cable:
                 "d = esptool.detect_chip(sys.argv[1], connect_attempts=2)\n"
                 "print('CHIP=' + d.CHIP_NAME)\n")
         try:
+            # Its own session, so the whole family can be killed by group. Reaping the child
+            # alone is not enough: esptool's multiprocessing helpers are GRANDchildren and
+            # they outlive it holding the port, which is the bug this is here to stop.
             proc = await asyncio.create_subprocess_exec(
                 sys.executable, "-c", code, port,
-                stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT)
-            try:
-                out, _ = await asyncio.wait_for(proc.communicate(), timeout=PROBE_SECONDS)
-            except asyncio.TimeoutError:
-                proc.kill(); await proc.wait()
-                log.info("bridge: %s did not answer as an ESP (gave up after %ss)", port, PROBE_SECONDS)
-                return None
+                stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT,
+                start_new_session=True)
         except Exception as e:
             log.warning("bridge: could not probe %s (%s)", port, e)
+            return None
+        timed_out = False
+        try:
+            out, _ = await asyncio.wait_for(proc.communicate(), timeout=PROBE_SECONDS)
+        except asyncio.TimeoutError:
+            timed_out, out = True, b""
+        finally:
+            # Always, not only on timeout: a probe that answered perfectly well can still
+            # have left a helper behind, and one of those poisons every probe after it.
+            try: os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+            except (ProcessLookupError, PermissionError): pass
+            with contextlib.suppress(Exception): await proc.wait()
+        if timed_out:
+            log.info("bridge: %s did not answer as an ESP (gave up after %ss)", port, PROBE_SECONDS)
             return None
         said = out.decode(errors="replace")
         for line in said.splitlines():
