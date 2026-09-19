@@ -18,7 +18,24 @@ export type Part = { id: string; name: string; state: 'unknown' | 'off' | 'addin
    inside the brain's image, so these are the notes for the code this hub is actually running. */
 export type ReleaseNotes = { version: string; what: string[]; details: string }
 export type UpdateNotes = { notes: ReleaseNotes | null; history: ReleaseNotes[] }
-export type Update = { version: string; commit: string; channel: 'release' | 'main'; latest: { version: string; sha: string; when: string; title: string; what: string[] } | null; whats_new: ReleaseNotes | null; held: boolean; reached_us: boolean; available: boolean | null; offer: boolean | null; rejected: string | null; auto: boolean; verified: boolean; checked: number | null; requested: boolean; state: { state: 'running' | 'done' | 'failed' | 'reverted' | 'refused'; started?: number; finished?: number; commit?: string; to?: string; bad?: string; reverted?: boolean } | null; error: string | null }
+export type Update = { version: string; commit: string; channel: 'release' | 'main'; latest: { version: string; sha: string; when: string; title: string; what: string[] } | null; whats_new: ReleaseNotes | null; held: boolean; reached_us: boolean; available: boolean | null; offer: boolean | null; rejected: string | null; auto: boolean; verified: boolean; checked: number | null; requested: boolean; state: { state: 'running' | 'done' | 'failed' | 'reverted' | 'refused'; started?: number; finished?: number; commit?: string; to?: string; bad?: string; reverted?: boolean } | null; error: string | null
+  /* Where the host has got to, while it is getting there. The brain is alive for nearly all of an
+     update -- the code, the signature and the pull all happen with it running -- so this is a real
+     answer for most of the wait rather than a spinner. null when nothing is happening. */
+  progress: UpdateProgress | null
+  seconds: number        // how long an update takes in THIS house, measured rather than guessed
+  dark_seconds: number   // ...and how much of that the wall is actually away for
+}
+export type UpdateProgress = {
+  phase: 'checking' | 'fetching' | 'downloading' | 'building' | 'restarting' | 'proving' | 'putting_back'
+  says: string           // the words for it, written in the brain: the panel decides none of them
+  at: number | null; since: number
+  dark: boolean          // the brain is not there to be asked during this one
+  step: number | null; steps: number
+  detail: string | null
+  moving: string[] | null   // which containers this update really recreates, once the host has looked
+  notices: string[]         // ...and what a household would notice about that, where there is anything
+}
 export type Status = { driver: Driver; reason: string; setup_done: boolean; locked?: boolean; owner: string | null; home: string | null; location: boolean; rooms: number; devices: number; drivers: Part[]; problems?: Problem[]; version?: string; update?: Update }
 /* One job on Needs a look. The brain writes every word of it, including the words on the buttons: the
    panel does not know what it is looking at, so it draws `acts` and invents nothing. `with` is what went
@@ -283,6 +300,21 @@ export async function askRestart(rung: Rung = 'hub'): Promise<RestartAsk> {
 export const doRestart = (rung: Rung, understood = false) =>
   post<{ rung: Rung; seconds: number; how_long: string }>('/restart', { rung, understood })
 
+export type UpdateAsk = {
+  version: string | null; title: string; yes: string
+  what: string[]         // why this one, in the release's own words
+  seconds: number; how_long: string
+  dark_seconds: number; dark_how_long: string
+  keeps: string          // the line an update may say more generously than a restart: downloading is not a blackout
+  stops: string[]; flight: string[]
+  blocked: string | null
+  warn: string | null    // away, and nobody is home if it does not come back
+  auto: boolean
+}
+/** What installing this update would cost, in this house, right now. Open, like the restart sheet. */
+export async function askUpdate(): Promise<UpdateAsk> {
+  const r = await request('/update/ask'); if (!r.ok) await fail(r); return r.json()
+}
 /** This build's notes and every release before it the image carries. */
 export async function getUpdateNotes(): Promise<UpdateNotes> {
   const r = await request('/update/notes'); if (!r.ok) await fail(r); return r.json()

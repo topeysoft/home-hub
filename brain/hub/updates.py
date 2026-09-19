@@ -24,6 +24,7 @@ import asyncio, hashlib, json, logging, os, re, time, urllib.request
 from datetime import datetime
 
 from . import notes
+from .restart import plainly
 from .settings import DATA
 
 log = logging.getLogger("hub.updates")
@@ -33,6 +34,7 @@ MAIN_API = f"https://api.github.com/repos/{REPO}/commits/main"
 EVERY = 6 * 3600
 RECHECK = 5 * 60                      # how soon opening This hub can make the hub ask GitHub again
 TICK = 300                            # how often the loop looks at the clock, as against at GitHub
+WATCH = 2                             # ...and how often while an update is actually happening
 WINDOW = (2, 5)                       # the local hours a house is most likely to be asleep
 QUIET = 30 * 60                       # ...and how long since anybody asked the house for anything
 RETRY = 12 * 3600                     # one go a night, so a failing update does not run all night
@@ -40,6 +42,30 @@ REQUEST = DATA / "update.request"     # the panel asked; the host's home-hub-upd
 STATE = DATA / "update.json"          # written by the host's update.sh: running, done or failed
 CHANNEL = DATA / "channel.json"       # written by the host's channel.sh, after it checked the signature
 RELEASE = re.compile(r"^v?\d+\.\d+")  # what a version tag looks like, next to "dev" and "main-1a2b3c4"
+PROGRESS = DATA / "update.progress"   # the host says where it has got to, a line at a time
+TOOK = 3600                           # a run longer than this taught us nothing worth keeping
+USUALLY = {"total": 300, "dark": 60}  # seconds, until this hub has measured its own
+
+# What the host is doing, in the words the wall shows. The host appends **a phase from this list and
+# never a sentence**: the same rule restart.request keeps, and for the same reason -- the reader owns
+# the words, so nothing that can write into the data volume can put a sentence on somebody's wall.
+SAYS = {"checking":     "Checking this update is really ours.",
+        "fetching":     "Fetching the new version.",
+        "downloading":  "Downloading it.",
+        "building":     "Building it here. This one takes a while.",
+        "restarting":   "Restarting the house.",
+        "proving":      "Making sure it came back.",
+        "putting_back": "That version didn\u2019t start. Putting the old one back."}
+ORDER = ("checking", "fetching", "downloading", "restarting", "proving")
+STEP = {p: i + 1 for i, p in enumerate(ORDER)}
+STEP["building"] = STEP["downloading"]   # a hub that has to build is on the same step, slowly
+DARK = ("restarting", "putting_back")    # the brain is not there to be asked during these
+# Which container moving means what, for the one sentence this document has been promising since the
+# first draft. Only the services a household would notice; the rest recreate behind the scenes.
+NOTICES = {"homeassistant": "For about a minute the wall switches still work but the app doesn\u2019t.",
+           "matter-bridge": "Apple Home, Google Home and Alexa say \u201cno response\u201d for a minute longer.",
+           "zigbee2mqtt": "The Zigbee radio restarts too, so anything on it is quiet for a minute.",
+           "zwave-js-ui": "The Z-Wave radio restarts too, so anything on it is quiet for a minute."}
 
 
 def _get(url: str) -> dict:
@@ -64,6 +90,7 @@ class Updates:
         # plugged one in is being set up, not caught up. So the first version a hub sees is marked
         # read, and the card is for the ones after it.
         if self.hub.settings.get("notes_seen") is None: self.hub.settings.set(notes_seen=self.version)
+        self._learn()
 
     @property
     def available(self):
@@ -162,6 +189,140 @@ class Updates:
         try: return json.loads(STATE.read_text())
         except (OSError, ValueError): return None
 
+    def running(self) -> bool:
+        """An update is in the air: asked for, or under way."""
+        return REQUEST.exists() or (self.state() or {}).get("state") == "running"
+
+    # ---- where the host has got to ----
+    def timeline(self) -> list[dict]:
+        """Every phase the last run passed through, oldest first.
+
+        The file is append-only, which is what makes it both the live answer (the last line) and the
+        stopwatch (the whole of it) without anybody having to write the same fact twice.
+        """
+        out = []
+        try: lines = PROGRESS.read_text().splitlines()
+        except OSError: return out
+        for line in lines:
+            try: m = json.loads(line)
+            except ValueError: continue                      # a line the host was part way through writing
+            if isinstance(m, dict) and m.get("phase") in SAYS: out.append(m)
+        return out
+
+    def progress(self) -> dict | None:
+        """Where the host is right now, or None when nothing is happening.
+
+        The brain is alive for nearly all of an update -- the code, the signature and the pull all
+        happen with it running, and on a slow line that is most of the wait -- so for most of it this
+        is a real answer rather than a guess, and the panel can leave the house usable instead of
+        throwing a blackout screen over a hub that is merely downloading something.
+        """
+        if not self.running(): return None
+        marks = self.timeline()
+        # The request is written and the host has not picked it up yet: a second or two, and saying
+        # nothing at all for it would make the tap feel like it missed.
+        if not marks: return {"phase": "checking", "says": SAYS["checking"], "at": None, "since": 0,
+                              "dark": False, "step": STEP["checking"], "steps": len(ORDER),
+                              "detail": None, "moving": None, "notices": []}
+        now = marks[-1]
+        phase = now["phase"]
+        at = float(now.get("at") or 0) or None
+        # Which containers this update really recreates, once the host has looked. It is written on
+        # the way past and holds for the rest of the run, so this reads back rather than forgets it.
+        moving = next((m["moving"] for m in reversed(marks) if isinstance(m.get("moving"), list)), None)
+        return {"phase": phase, "says": SAYS[phase], "at": at,
+                "since": round(time.time() - at) if at else 0,
+                "dark": phase in DARK, "step": STEP.get(phase), "steps": len(ORDER),
+                "detail": str(now.get("detail"))[:120] if now.get("detail") else None,
+                "moving": moving, "notices": [NOTICES[s] for s in (moving or []) if s in NOTICES]}
+
+    # ---- how long it costs, in this house ----
+    def seconds(self, dark: bool = False) -> int:
+        """What the last update on this hardware actually took, or a careful guess until there is one.
+
+        Two figures, because they fail differently. The **total** moves with the release and with the
+        house's broadband; the **dark** stretch at the end is a property of the box. A household on a
+        slow line should stop being read the figure that was true on the maker's desk.
+        """
+        key = "dark" if dark else "total"
+        kept = self.hub.settings.get("update_took") or {}
+        try: n = int(kept.get(key) or 0)
+        except (TypeError, ValueError): n = 0
+        return n if 5 <= n < TOOK else USUALLY[key]
+
+    def _learn(self):
+        """Read what the last run left behind, and learn from it. Only ever called at start.
+
+        It is the *new* build doing the reading: the brain that asked for an update is not the brain
+        that comes back, which is exactly why the figures have to be on the disk rather than in
+        anybody's memory. restart.py makes the same move with restart.json.
+        """
+        st = self.state() or {}
+        if st.get("state") != "done": return
+        fin, began = float(st.get("finished") or 0), float(st.get("started") or 0)
+        kept = dict(self.hub.settings.get("update_took") or {})
+        if not (fin and began) or kept.get("at") == fin: return      # nothing new, or already learned
+        total, marks = round(fin - began), {m["phase"]: float(m.get("at") or 0) for m in self.timeline()}
+        # The dark stretch is from the moment compose was told to recreate to the moment the host got
+        # an answer back. It is the number a household is actually asking for: how long is my wall away.
+        dark = round(marks["proving"] - marks["restarting"]) if marks.get("restarting") and marks.get("proving") else 0
+        learned = {"at": fin}
+        if 5 <= total < TOOK: learned["total"] = total
+        if 5 <= dark < TOOK: learned["dark"] = dark
+        self.hub.settings.set(update_took={**kept, **learned})
+        # The morning receipt. "What's new" says what changed; this is the line that says the house
+        # did it for them at twenty to three and was away for a minute, which is the difference
+        # between an update that happened FOR a household and one that happened TO them.
+        was = next((e for e in self.hub.log.recent(limit=20, subject="update", kinds=("home",))
+                    if e["new"] not in ("installed",)), {})
+        self.hub.log.add("home", "update", was.get("old") or None, "installed", source=was.get("source") or "hub",
+                         detail={"took": total, "dark": dark or None, "to": self.version})
+        log.info("came back on %s: %ds in all, %ds of it away", self.version, total, dark)
+
+    # ---- whether it may happen at all ----
+    def blocked(self) -> str | None:
+        """The refusals, in the words the row shows. The panel hides the button too; this is what
+        answers a phone whose page is an hour old and still has one."""
+        if self.running(): return "This hub is already installing an update."
+        if self.held(): return "That update has been paused by the people who make the hub."
+        try:
+            if (self.hub.backup.state() or {}).get("state") == "running":
+                return "The hub is putting a backup back. Try again when that's done."
+        except Exception: pass
+        r = getattr(self.hub, "restart", None)
+        if r is not None and r.pending(): return "The hub is restarting. Try again once it's back."
+        return None
+
+    # ---- the sheet ----
+    def ask(self, away: bool = False) -> dict:
+        """Everything the confirmation needs, written here rather than in the panel.
+
+        Half of it is restart.py's, and deliberately the same words: an update *is* a restart with a
+        download in front of it, and a household reading two different accounts of what happens while
+        the hub is quiet is a household learning that the panel guesses.
+        """
+        v = (self.latest or {}).get("version") or ""
+        secs, dark = self.seconds(), self.seconds(dark=True)
+        r = getattr(self.hub, "restart", None)
+        return {"version": v or None, "yes": "Install it",
+                "title": f"Install {v}?" if v else "Install the update?",
+                # Why this one, in the release's own words. They are fetched already and drawn
+                # nowhere, and the wait is the one moment somebody is both captive and curious.
+                "what": [str(x)[:160] for x in ((self.latest or {}).get("what") or [])][:4],
+                "seconds": secs, "how_long": plainly(secs),
+                "dark_seconds": dark, "dark_how_long": plainly(dark),
+                # The sentence an update may say more generously than a restart can: downloading is
+                # not a blackout. The house is entirely usable until the last stretch.
+                "keeps": "Lights and switches keep working, and so does everything else while it downloads.",
+                "stops": r.stops("hub", away) if r is not None else [],
+                "flight": r.flight("hub") if r is not None else [],
+                "blocked": self.blocked(), "auto": self.auto,
+                # Nobody is home if it does not come back. The hub puts itself back without anybody's
+                # help, which is piece 1 -- so this warns and then allows, rather than refusing the
+                # household who is furthest from the plug and most in need of the fix.
+                "warn": ("Nobody is home if it doesn\u2019t come back. The hub puts the old version back by "
+                         "itself, but the house is away for a few minutes while it does.") if away else None}
+
     def channel_says(self) -> dict:
         """What the maker is saying about releases right now, as against what a release is.
 
@@ -228,7 +389,10 @@ class Updates:
                 "auto": self.auto, "verified": self.verified, "whats_new": self.whats_new,
                 "held": self.held(), "reached_us": self.reached_us(),
                 "checked": self.checked, "requested": REQUEST.exists(),
-                "state": self.state(), "error": self.error}
+                "state": self.state(), "error": self.error,
+                # The wait, and how long it should be. An update the hub started by itself at twenty
+                # to three was never tapped, so the panel cannot have asked for these first.
+                "progress": self.progress(), "seconds": self.seconds(), "dark_seconds": self.seconds(dark=True)}
 
     def fetch(self) -> dict:
         if self.channel == "main":
@@ -269,6 +433,7 @@ class Updates:
 
     async def run(self):
         await asyncio.sleep(90)            # let the house come up first
+        seen = None                        # the phase the panel was last told about
         while True:
             try:
                 if not self.checked or time.time() - self.checked > EVERY: await self.check()
@@ -277,9 +442,17 @@ class Updates:
                              (self.latest or {}).get("version"))
                     self.request(source="hub")
             except Exception: log.exception("update tick")
-            await asyncio.sleep(TICK)
+            # While an update is happening the panel wants the phase the moment it changes, and five
+            # minutes late is no answer at all -- so the loop shortens its stride, and only then. The
+            # file is three lines long and on the same disk; this costs nothing worth counting.
+            try: now = (self.progress() or {}).get("phase")
+            except Exception: now = None
+            if now != seen:
+                seen = now
+                self._tell()
+            await asyncio.sleep(WATCH if now else TICK)
 
-    def request(self, source: str = "user") -> dict:
+    def request(self, source: str = "user", who: str = "the wall") -> dict:
         """A tap on the panel, or the hub's own small hours. Writes the file the host watches.
 
         `source` is what tells the two apart in the log and under Recent, and it is worth the word:
@@ -287,14 +460,19 @@ class Updates:
         nobody in the house did it.
         """
         want = (self.latest or {}).get("version") or ""
-        # The host refuses a held release too, and its copy of the channel is the fresher one. This
-        # is here so the panel gets a sentence instead of a restart that ends in "not installed".
-        if self.held(want): raise ValueError("That update has been paused by the people who make the hub.")
+        # The host refuses a held release too, and its copy of the channel is the fresher one. These
+        # are here so the panel gets a sentence instead of a wait that ends in "not installed".
+        blocked = self.blocked()
+        if blocked: raise ValueError(blocked)
         REQUEST.parent.mkdir(parents=True, exist_ok=True)
+        # Last time's timeline is not this time's. It goes now rather than when the host gets round
+        # to it, because the panel starts reading the phase the moment this file exists.
+        try: PROGRESS.unlink()
+        except OSError: pass
         REQUEST.write_text(json.dumps({"at": time.time(), "channel": self.channel, "from": self.version, "to": want,
                                        "from_commit": self.commit, "to_commit": (self.latest or {}).get("sha") or ""}))
         if source == "hub": self.asked_at = time.time()
-        self.hub.log.add("home", "update", self.version, want, source=source)
+        self.hub.log.add("home", "update", self.version, want, source=source, detail={"who": who})
         self._tell(); return self.summary()
 
     def _tell(self):

@@ -2,7 +2,9 @@
    house of eight rooms. `npm run mock`, then open http://localhost:8399/ (every ?at= ?wx= ?month= ?room= ?sheet= ?setup=
    preview works), or `BRAIN=http://localhost:8399 npm run dev` for hot reload against it.
    Knobs: PORT, WX=rainy (a condition), FOUND=0 (nothing new nearby), ENGINE=down (the engine-starting screen),
-   LOCKED=1 (a code is set), FRESH=1 (first run), ASK=1 (a phone is asking to join; needs LOCKED=1), ?join=1 (the join screen). Nothing here talks to a real device; every POST or DELETE says ok. */
+   LOCKED=1 (a code is set), FRESH=1 (first run), ASK=1 (a phone is asking to join; needs LOCKED=1), ?join=1 (the join screen),
+   UPDATE=ready (one waiting, with its sheet), UPDATE=running (one happening, walking the phases), UPDATE=away (the sheet a
+   phone outside the house gets). Nothing here talks to a real device; every POST or DELETE says ok. */
 import http from 'node:http'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -119,6 +121,37 @@ const releaseNotes = [
   { version: '0.3.0', what: ['Speakers remember how loud you had them.', 'The kitchen comes up on the wall faster after the hub restarts.'], details: 'Longer, for whoever goes looking.' },
   { version: '0.2.2', what: ['Blinds stop where you let go of them.'], details: '' },
 ]
+/* An update waiting, and one happening. UPDATE=ready puts the nudge on Home and the sheet under
+   This hub; UPDATE=running walks the phases so the wait can be looked at -- the several minutes where
+   the house still works and the panel says what is being downloaded, and then the stretch where the
+   brain is gone and the overlay counts down. docs/updates.md, piece 6. */
+const waiting = { version: 'v0.3.1', sha: 'b'.repeat(40), when: new Date().toISOString(), title: 'Quieter mornings',
+                  what: ['Speakers remember how loud you had them.', 'The kitchen comes up on the wall faster.'] }
+if (process.env.UPDATE) {
+  status.update = { version: 'v0.3.0', commit: 'abc123def456', channel: 'release', latest: waiting, whats_new: null,
+                    held: false, reached_us: true, available: true, offer: true, rejected: null, auto: true,
+                    verified: true, checked: Date.now() / 1000, requested: process.env.UPDATE === 'running',
+                    state: process.env.UPDATE === 'running' ? { state: 'running', started: Date.now() / 1000 } : null,
+                    error: null, progress: null, seconds: 260, dark_seconds: 45 }
+}
+/* The phases, a few seconds apart, so the panel can be watched moving through them rather than
+   described. The last one is dark on purpose: that is where the countdown takes over. */
+if (process.env.UPDATE === 'running') {
+  const walk = [['checking', 'Checking this update is really ours.', false, 1],
+                ['fetching', 'Fetching the new version.', false, 2],
+                ['downloading', 'Downloading it.', false, 3],
+                ['restarting', 'Restarting the house.', true, 4]]
+  let i = 0
+  const step = () => {
+    const [phase, says, dark, n] = walk[i]
+    status.update.progress = { phase, says, at: Date.now() / 1000, since: 0, dark, step: n, steps: 5, detail: null,
+                               moving: phase === 'restarting' ? ['brain', 'homeassistant'] : null,
+                               notices: phase === 'restarting' ? ['For about a minute the wall switches still work but the app doesn\u2019t.'] : [] }
+    push({ type: 'status', status })     // the real brain tells the panel the moment the phase changes
+    if (++i < walk.length) setTimeout(step, 6000)
+  }
+  setTimeout(step, 2000)
+}
 if (process.env.WHATSNEW === '1') {
   status.version = 'v0.3.0'
   status.update = { version: 'v0.3.0', commit: 'abc123def456', channel: 'release', latest: null, whats_new: releaseNotes[0],
@@ -360,6 +393,21 @@ const server = http.createServer((req, res) => {
   /* Turning it off and on again. The sheet's every word is the brain's, so the mock has to speak them
      or This hub previews a blank question. RESTART=weary shows the rung that has stopped helping, and
      the POST answers and does nothing: the panel's overlay is the thing being looked at here. */
+  /* What installing would cost, in this house. Half of it is the restart sheet's answer to the same
+     question, and the mock says it the same way for the same reason: This hub would otherwise
+     preview a blank question. */
+  if (p === '/update/ask') {
+    const secs = status.update?.seconds ?? 300, dark = status.update?.dark_seconds ?? 60
+    return json(res, {
+      version: waiting.version, title: `Install ${waiting.version}?`, yes: 'Install it', what: waiting.what,
+      seconds: secs, how_long: `about ${Math.round(secs / 60)} minutes`,
+      dark_seconds: dark, dark_how_long: `about ${Math.round(dark / 10) * 10} seconds`,
+      keeps: 'Lights and switches keep working, and so does everything else while it downloads.',
+      stops: ['Motion lights and schedules pause.'], flight: [], blocked: null,
+      warn: process.env.UPDATE === 'away' ? 'Nobody is home if it doesn\u2019t come back. The hub puts the old version back by itself, but the house is away for a few minutes while it does.' : null,
+      auto: true,
+    })
+  }
   if (p === '/restart' && req.method !== 'POST') {
     const rung = url.searchParams.get('rung') || 'hub'
     const secs = { hub: 30, everything: 120, machine: 180 }[rung] ?? 30

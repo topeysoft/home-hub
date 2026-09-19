@@ -24,7 +24,7 @@
  * height and stop the row moving when something wants you.
  */
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { installUpdate, loadHealth, store } from './store'
+import { installUpdate, loadHealth, plainly, store } from './store'
 import Icon from './Icon.vue'
 import Say from './Say.vue'
 import Asks from './Asks.vue'
@@ -39,6 +39,11 @@ withDefaults(defineProps<{ say?: boolean }>(), { say: true })
 const update = computed(() => store.status?.update ?? null)
 const updateReady = computed(() => !!update.value?.offer && update.value?.state?.state !== 'running' && !update.value?.requested && !store.updating)
 const updateBusy = computed(() => store.updating || !!update.value?.requested || update.value?.state?.state === 'running')
+/* Where the host has got to, in the brain's words. For most of an update the brain is up and can
+   answer this, which is why the wait is a line here and not a wall across the panel: the house is
+   working, and saying so is the difference between waiting and worrying. */
+const phase = computed(() => update.value?.progress ?? null)
+const howLong = computed(() => plainly(update.value?.seconds ?? 300))
 
 /* What changed, the morning after the hub updated itself. Since piece 4 of docs/updates.md the
    ordinary way an update happens is overnight, so nobody is ever standing in front of a release note
@@ -76,11 +81,11 @@ defineExpose({ updateReady })
   <Asks />
   <button class="nudge" v-if="updateReady" @click="installUpdate">
     <span class="nudge-icon"><Icon name="sparkle" :size="20" /></span>
-    <span class="nudge-text"><span class="nudge-title">An update is ready</span><span class="nudge-sub">{{ update?.latest?.title || 'New for the hub.' }} Tap to install; it takes a few minutes and the lights keep working.</span></span>
+    <span class="nudge-text"><span class="nudge-title">An update is ready</span><span class="nudge-sub">{{ update?.latest?.title || 'New for the hub.' }} Tap to install: {{ howLong }}, and the lights keep working throughout.</span></span>
   </button>
   <div class="nudge quiet" v-else-if="updateBusy">
     <span class="nudge-icon pulse"><Icon name="refresh" :size="20" /></span>
-    <span class="nudge-text"><span class="nudge-title">Updating the hub</span><span class="nudge-sub">This screen will blink and come back. Nothing to do.</span></span>
+    <span class="nudge-text"><span class="nudge-title">Updating the hub</span><span class="nudge-sub">{{ phase?.says || 'Starting.' }} {{ phase?.dark ? 'This screen will blink and come back.' : 'Everything keeps working while it does.' }} {{ (phase?.notices ?? []).join(' ') }}</span></span>
   </div>
   <button class="nudge" v-if="whatsNew" @click="store.sheet = 'hub'">
     <span class="nudge-icon"><Icon name="sparkle" :size="20" /></span>

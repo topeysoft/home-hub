@@ -234,7 +234,7 @@ onUnmounted(() => {
         <div class="banner" v-if="store.loaded && store.linkLost"><Icon name="refresh" :size="16" /> Reconnecting to the hub. What you see may be a little behind.</div>
       </Transition>
 
-      <div class="offline" v-if="!store.loaded || store.restarting || store.status?.driver !== 'ready'">
+      <div class="offline" v-if="!store.loaded || store.restarting || store.updating?.lost || store.status?.driver !== 'ready'">
         <!-- A restart is the one thing this panel does that destroys the thing doing it, and it is
              short enough to count. So it gets the overlay from the moment it is asked for rather than
              when the hub next answers, and a number that runs out rather than a spinner: a spinner
@@ -245,10 +245,21 @@ onUnmounted(() => {
           <p>{{ store.restarting.left > 0 ? `Back in about ${store.restarting.left} seconds.` : 'Taking longer than usual. Still trying.' }}</p>
           <p class="keeps">{{ store.restarting.rung === 'hub' ? 'Lights and switches keep working.' : 'Switches on the wall keep working.' }}</p>
         </template>
+        <!-- An update, and only the part of one that is actually dark. For the several minutes
+             before this the brain is up, the house works, and the wait is a line on Home and on This
+             hub rather than a wall across the panel: a screen that says "come back later" while every
+             light in the house still answers is the panel exaggerating. What it says when the number
+             runs out is the whole of piece 1 in a sentence -- the hub is not stuck, it is deciding. -->
+        <template v-else-if="store.updating">
+          <span class="offline-icon pulse"><Icon name="refresh" :size="28" /></span>
+          <h1 class="display">Updating the hub</h1>
+          <p>{{ store.updating.left > 0 ? `Back in about ${store.updating.left} seconds.` : 'Taking longer than usual. If it doesn’t come back, the hub puts the old version back by itself.' }}</p>
+          <p class="keeps">Lights and switches keep working.</p>
+        </template>
         <template v-else-if="store.loaded && store.status && store.status.driver !== 'ready'">
           <span class="offline-icon pulse"><Icon name="home" :size="28" /></span>
-          <h1 class="display">{{ store.restoring ? 'Restoring your house' : store.updating ? 'Updating the hub' : store.status.driver === 'down' ? 'The engine is starting' : 'Reconnecting' }}</h1>
-          <p>{{ store.restoring || store.updating ? 'A few minutes. The lights and switches keep working; this screen comes back on its own.' : store.status.reason || 'The house will be back in a moment. Nothing needs doing.' }}</p>
+          <h1 class="display">{{ store.restoring ? 'Restoring your house' : store.status.driver === 'down' ? 'The engine is starting' : 'Reconnecting' }}</h1>
+          <p>{{ store.restoring ? 'A few minutes. The lights and switches keep working; this screen comes back on its own.' : store.status.reason || 'The house will be back in a moment. Nothing needs doing.' }}</p>
         </template>
         <template v-else-if="store.error">
           <span class="offline-icon"><Icon name="home" :size="28" /></span>

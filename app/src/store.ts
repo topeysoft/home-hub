@@ -40,7 +40,12 @@ export const store = reactive({
      says how things stand there without anybody opening it. Null until the hub has answered once. */
   share: null as Share | null,
   sounds: [] as Sound[],                     // what a speaker can play: the hub's noises and the files in its sounds folder
-  updating: false,                           // this screen asked for an update; cleared when a new build answers
+  /* An update is happening -- this screen asked, or the hub started one in the night and said so.
+     For most of it the house is entirely usable: the code, the signature and the download all happen
+     with the brain running, and the panel shows the phase as a line rather than throwing a blackout
+     over a hub that is merely fetching something. `lost` is when the brain actually went, and only
+     then does `left` count down, from the figure the HUB measured on its own last update. */
+  updating: null as null | { at: number; dark: number; left: number; lost: boolean },
   restoring: false,                          // this screen sent a backup back; cleared when the hub returns
   /* This screen asked the hub to restart. `left` is the countdown the overlay draws, from the figure
      the HUB measured on its own last restart -- a spinner says "this may never end", a number that
@@ -491,10 +496,38 @@ export const routineById = (id: string) => store.routines.find(r => r.id === id)
 export function updateReady(): boolean { const u = store.status?.update; return !!u?.offer && u.state?.state !== 'running' && !u.requested && !store.updating }
 /** Install the update that is waiting, from wherever it is offered: the nudge in the band and the
     Needs a look page both ask for the same one thing, and the host does the work. */
-export async function installUpdate() {
-  try { await requestUpdate(); store.updating = true; notify('Updating. The lights keep working; this screen comes back on its own.') }
-  catch (e: any) { notify(e.message, 'error') }
+export async function installUpdate(): Promise<boolean> {
+  try {
+    const u = await requestUpdate()
+    if (store.status) store.status.update = u
+    beginUpdate(u.dark_seconds)
+    notify('Installing. Everything keeps working while it downloads.')
+    return true
+  } catch (e: any) { notify(e.message, 'error'); return false }
 }
+/** Seconds as a household says them. The same rounding as the brain's `plainly`, because the two
+    quote the same figures at people and disagreeing about them would be worse than either. */
+export const plainly = (s: number) => s < 90 ? `about ${Math.round(s / 10) * 10} seconds` : `about ${Math.round(s / 60)} minutes`
+let updateTick: number | undefined
+/** An update is under way: this screen asked for it, or the hub started one in the night and the
+    status said so on the way past. Either way the panel has to be able to draw the wait.
+
+    The number counts the DARK stretch and nothing else, and it does not start running until the
+    brain has actually gone. Before that the phase the hub is reporting is a better answer than any
+    number, because it is true: for most of an update the house is entirely usable and the honest
+    thing to show is a line saying what is being downloaded, not a screen saying come back later. */
+export function beginUpdate(dark?: number) {
+  const secs = dark || store.status?.update?.dark_seconds || 60
+  if (store.updating) { store.updating.dark = secs; return }
+  store.updating = { at: Date.now(), dark: secs, left: secs, lost: false }
+  clearInterval(updateTick)
+  updateTick = window.setInterval(() => { if (store.updating?.lost) store.updating.left = Math.max(0, store.updating.left - 1) }, 1000)
+}
+export function endUpdate() { store.updating = null; clearInterval(updateTick) }
+/** The live stream going down while an update is in the air: from here on the hub cannot be asked
+    anything, so the countdown takes over from the phase. Coming back is not handled here -- an
+    update ends by the brain answering as a new build, which the status handler reads. */
+export function updateLink(up: boolean) { if (store.updating && !up) store.updating.lost = true }
 /* ---------- turning it off and on again ---------- */
 let restartTick: number | undefined
 /** Restart, at the rung the hub chose. The panel keeps its own stopwatch rather than asking the hub
@@ -633,15 +666,23 @@ let foundPoll: number | undefined
 export function newBuild(was: string | undefined, now: string | undefined): boolean {
   return !!was && !!now && was !== now && now !== 'dev'
 }
-export function reloadOnto(version: string) {
-  try { sessionStorage.setItem('hub.updated', version) } catch { /* a private window keeps nothing; the reload still happens */ }
+export function reloadOnto(version: string, took = 0) {
+  try { sessionStorage.setItem('hub.updated', took ? `${version}|${took}` : version) } catch { /* a private window keeps nothing; the reload still happens */ }
   location.reload()
 }
-/** The page after the reload: say what the one before it saw. */
+/** The page after the reload: say what the one before it saw, and how long it stood there.
+
+    The figure is worth the words. A household that watched an update take four minutes twice has
+    learned something about their own hardware, and it is the same figure the hub is now quoting back
+    at them next time -- so the two had better agree. */
 export function sayUpdated() {
   let v = ''
   try { v = sessionStorage.getItem('hub.updated') || ''; if (v) sessionStorage.removeItem('hub.updated') } catch { /* nothing kept */ }
-  if (v) notify(`Updated to ${v}.`)
+  if (!v) return
+  const [version, took] = v.split('|')
+  const n = Number(took || 0)
+  notify(n >= 5 ? `Updated to ${version}. That took ${n < 90 ? `${Math.round(n / 10) * 10} seconds` : `${Math.round(n / 60)} minutes`}.`
+                : `Updated to ${version}.`)
 }
 
 export async function start() {
@@ -654,12 +695,22 @@ export async function start() {
   stop = connect({ device: applyDevice, home: applyHome, intent: applyIntent, drafts: d => { store.drafts = d; eventsSoon() }, presence: p => { store.presence = p; eventsSoon() }, phones: () => loadPhones(true), share: () => { store.shareTick++; loadShare() }, ambient: a => { store.ambient = a; updateSky() }, status: s => {
     const was = store.status?.driver, version = store.status?.version
     store.status = s
-    if (newBuild(version, s.version)) { store.updating = false; reloadOnto(s.version!); return }
+    if (newBuild(version, s.version)) {
+      const took = store.updating ? Math.round((Date.now() - store.updating.at) / 1000) : 0
+      endUpdate(); reloadOnto(s.version!, took); return
+    }
+    /* An update nobody on this screen asked for -- the hub's own, at twenty to three, or somebody
+       else's tap on another phone. The wall should say what is happening either way, and it can:
+       the phase is in the status it just received. */
+    const u = s.update
+    if (u && (u.requested || u.state?.state === 'running')) beginUpdate(u.dark_seconds)
+    else if (store.updating && u && !u.requested) endUpdate()
     if (s.driver === 'ready' && was !== 'ready') { load() }   // the engine just came up: read the house
   }, link: v => {
     store.linkUp = v
     clearTimeout(lostTimer)
     const back = restartLink(v)     // a restart this screen asked for, going or coming back
+    updateLink(v)                   // ...and an update, which only ever needs to know it went
     if (v) {
       store.linkLost = false
       if (back) load()
