@@ -105,13 +105,20 @@ def crosses(a, b, c, d):
     return o1 != o2 and o3 != o4
 
 
-def zone(net, name, layer, poly, clearance=0.3, priority=0):
+def zone(net, name, layer, poly, clearance=0.3, priority=0, solid=False):
+    """A pour. `solid` connects pads with full copper instead of thermal spokes: J1's ground pads are
+    big enough that KiCad could only reach them with one spoke where it wants two, which is six
+    starved_thermal errors. These boards are reflowed by the fab, so nothing needs the spokes."""
     pts = "".join(f"\n\t\t\t\t(xy {f(x)} {f(y)})" for x, y in poly)
+    connect = ('\t\t(connect_pads yes\n\t\t\t(clearance 0)\n\t\t)\n' if solid else
+               f'\t\t(connect_pads\n\t\t\t(clearance {clearance})\n\t\t)\n')
     return (f'\t(zone\n\t\t(net {net})\n\t\t(net_name "{name}")\n\t\t(layers "{layer}")\n'
-            f'\t\t(uuid "{uid()}")\n\t\t(priority {priority})\n\t\t(hatch edge 0.5)\n\t\t(connect_pads\n\t\t\t(clearance {clearance})\n\t\t)\n'
+            f'\t\t(uuid "{uid()}")\n\t\t(priority {priority})\n\t\t(hatch edge 0.5)\n'
+            + connect +
             f'\t\t(min_thickness 0.2)\n\t\t(filled_areas_thickness no)\n'
             f'\t\t(fill\n\t\t\t(thermal_gap 0.4)\n\t\t\t(thermal_bridge_width 0.4)\n\t\t)\n'
             f'\t\t(polygon\n\t\t\t(pts{pts}\n\t\t\t)\n\t\t)\n\t)')
+
 
 def disc(r, n=180):
     return [(CX + r * math.cos(math.radians(a * 360 / n)), CY + r * math.sin(math.radians(a * 360 / n)))
@@ -143,8 +150,8 @@ def main():
     # KiCad clears it around foreign nets on its own. Stitching ~40 GND pads by hand-rolled geometry
     # instead cost shorts, mask bridges and crossing tracks in every arrangement I tried -- I was
     # writing a bad autorouter to solve a problem a pour does not have.
-    art.append(zone(nid["GND"], "GND", "F.Cu", disc(24.4), priority=0))
-    art.append(zone(nid["GND"], "GND", "B.Cu", disc(24.4), priority=0))
+    art.append(zone(nid["GND"], "GND", "F.Cu", disc(24.4), priority=0, solid=True))
+    art.append(zone(nid["GND"], "GND", "B.Cu", disc(24.4), priority=0, solid=True))
     # VBUS takes the back as a ring through r=18.76, where the LEDs put their VDD pads.
     art.append(zone(nid["VBUS"], "VBUS", "B.Cu", slit_annulus(17.5, 20.1), priority=1))
 
@@ -155,22 +162,48 @@ def main():
     # --- the LED chain, on the front -----------------------------------------------------------
     # Every hop is identical: DOUT at r=15.59 on one flank to the next DIN at r=18.76 on the other,
     # with the corner at r=13.6, inboard of both, so no run crosses a neighbour's pads.
-    hops = 0
-    laid = []
+    # Each hop is SEARCHED, not assumed. The obvious shape -- drop inboard, run round, climb back
+    # out at the far end -- puts the climb straight through the next LED's VSS pad: 0.46 mm of
+    # overlap, ten real shorts, and I called them an unfilled-zone artifact until the GUI's own DRC
+    # said otherwise. So: generate candidate paths, measure each against every foreign pad, take the
+    # first that clears. Cheap, and it cannot be wrong in the way a chosen radius can.
+    foreign = [(x, y) for _r, _n, x, y, net, lay in P if "F.Cu" in lay]
+    PAD_CLR = 0.95                       # pad half (~0.75) + track half (0.125) + margin
+
+    def path_ok(pts, net_pads):
+        for a, b in zip(pts, pts[1:]):
+            for (x, y) in foreign:
+                if (x, y) in net_pads: continue
+                if seg_dist(a, b, (x, y), (x, y)) < PAD_CLR: return False
+        return True
+
+    def arc(r, th0, th1, steps=6):
+        return [(CX + r * math.cos(th0 + (th1 - th0) * k / steps),
+                 CY + r * math.sin(th0 + (th1 - th0) * k / steps)) for k in range(steps + 1)]
+
+    hops, laid, unrouted = 0, [], []
     for i in range(1, n_leds):
         a, b = byref[f"D{i}"]["2"], byref[f"D{i+1}"]["4"]
         net = nid[a[2]]
-        # THREE segments, not two. A straight dogleg from DOUT out to the next DIN cuts clean across
-        # the intervening VSS pad -- twenty DRC hits on one pad of D9 alone. So: drop radially to
-        # r=13.6, which is inboard of every pad on the ring and outboard of the module's own pads,
-        # travel round at that radius, and climb back out at the far end.
-        ra = math.atan2(a[1] - CY, a[0] - CX)
-        rb = math.atan2(b[1] - CY, b[0] - CX)
-        p1 = (CX + 13.6 * math.cos(ra), CY + 13.6 * math.sin(ra))
-        p2 = (CX + 13.6 * math.cos(rb), CY + 13.6 * math.sin(rb))
-        for (s0, s1) in (((a[0], a[1]), p1), (p1, p2), (p2, (b[0], b[1]))):
-            art.append(seg(s0[0], s0[1], s1[0], s1[1], net)); laid.append((s0, s1))
-        hops += 1
+        pa, pb = (a[0], a[1]), (b[0], b[1])
+        mine = {pa, pb}
+        ta = math.atan2(pa[1] - CY, pa[0] - CX)
+        tb = math.atan2(pb[1] - CY, pb[0] - CX)
+        if tb - ta > math.pi: tb -= 2 * math.pi
+        if ta - tb > math.pi: tb += 2 * math.pi
+        cands = [[pa, pb]]
+        for rr in (13.2, 12.8, 13.6, 12.4, 14.0):
+            cands.append([pa] + arc(rr, ta, tb) + [pb])
+        for rr in (20.6, 21.0, 20.2):
+            cands.append([pa] + arc(rr, ta, tb) + [pb])
+        for pts in cands:
+            if path_ok(pts, mine):
+                for s0, s1 in zip(pts, pts[1:]):
+                    art.append(seg(s0[0], s0[1], s1[0], s1[1], net)); laid.append((s0, s1))
+                hops += 1
+                break
+        else:
+            unrouted.append(f"D{i}->D{i+1}")
 
     # --- VBUS down to its ring -----------------------------------------------------------------
     # Only the pads that sit ON the ring get a via here, offset along it rather than across it --
@@ -198,6 +231,7 @@ def main():
     BOARD.write_text(t[:t.rindex(")")] + "\n".join(art) + "\n)\n")
     print(f"routed: 3 pours (GND both sides, VBUS ring on the back), {hops} chain hops, "
           f"{counts['VBUS']} VBUS vias")
+    if unrouted: print(f"  chain hops with no clear path: {', '.join(unrouted)}")
     if missed: print(f"  left for a person ({len(missed)} VBUS pads): {', '.join(missed)}")
 
 def check(t):
