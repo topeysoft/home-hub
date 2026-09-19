@@ -40,6 +40,10 @@ SCAN_EVERY = 3
 # Long enough for two connect attempts on a sleepy board, short enough that a board which
 # will never answer does not hold the one job slot for a minute.
 PROBE_SECONDS = 45
+# A freshly enumerated board can answer badly once; by hand it answers every time. Waiting
+# a moment and asking again costs nothing and is the difference between a board being seen
+# and a board being written off.
+PROBE_RETRY = 2
 # Probing a board resets it, and a board being reset drops off the USB and comes back a
 # moment later. That is OUR doing, not a person's, and must not be read as an unplug --
 # otherwise a dismissal never sticks: the board vanishes, is forgiven, reappears as a fresh
@@ -72,6 +76,18 @@ def network_id(netkey: bytes) -> str:
     salt = cmac(b"\x00" * 16, b"smk3")          # s1("smk3")
     t = cmac(salt, netkey)
     return cmac(t, b"id64" + b"\x01")[-8:].hex()
+
+
+def _hostname() -> str:
+    """The name this hub answers to, for a puck to resolve instead of remembering a number.
+
+    Read rather than assumed: install.sh sets `hub`, but a second hub on the same LAN becomes
+    `hub-2`, and a puck told the wrong name eventually resolves somebody else's machine."""
+    try:
+        n = socket.gethostname().split(".")[0].strip()
+        return n or "hub"
+    except Exception:
+        return "hub"
 
 
 def lan_ip() -> str:
@@ -121,7 +137,20 @@ class Cable:
     async def is_esp(self, port: str) -> bool:
         return await self.esp_chip(port) is not None
 
-    async def esp_chip(self, port: str) -> str | None:
+    async def esp_chip(self, port: str, tries: int = 2) -> str | None:
+        """Ask more than once. A board that has just enumerated answers badly now and again
+        -- "Unexpected chip magic value 0x00000009" is a half-synced connection, not a
+        verdict -- and by hand the same board on the same hub answers every time. One bad
+        sync used to be the end of it, and the board was never seen again."""
+        for attempt in range(tries):
+            chip = await self._esp_chip_once(port)
+            if chip:
+                return chip
+            if attempt + 1 < tries:
+                await asyncio.sleep(PROBE_RETRY)
+        return None
+
+    async def _esp_chip_once(self, port: str) -> str | None:
         """Which ESP this is -- "esp32s3", "esp32c3" -- or None if it is not one at all.
 
         Two things had to be got right here and both were got wrong first.
@@ -145,7 +174,7 @@ class Cable:
         # start of a line, are belt and braces for the same mistake -- which cost an evening
         # once already, with the answer sitting in the log being thrown away.
         code = ("import sys, esptool\n"
-                "d = esptool.detect_chip(sys.argv[1], connect_attempts=2)\n"
+                "d = esptool.detect_chip(sys.argv[1], connect_attempts=3)\n"
                 "print('\\nCHIP=' + d.CHIP_NAME, flush=True)\n")
         try:
             # Its own session, so the whole family can be killed by group. Reaping the child
@@ -242,12 +271,15 @@ class Bridges:
         self.pucks: dict[str, dict] = {}
         self.switches: dict[tuple, str] = {}
         self._heard: dict[str, dict] = {}       # the last answer to a claim command, per leaf
+        self.moving: dict | None = None         # every bridge being handed a new Wi-Fi at once
+        self._move_task: asyncio.Task | None = None
         self._woke: asyncio.Event | None = None  # made per question, inside the loop asking it
         self._first = True
 
     # ---- what the panel sees ----
     def status(self) -> dict:
         base = {"bridges": sum(1 for p in self.pucks.values() if p.get("online")), "waiting": 0}
+        if (mv := self.move_status()): base["moving"] = mv
         if not self.job: return {**base, "state": "none"}
         j = self.job
         out = {**base, "state": j["state"], "how": "cable"}
@@ -494,14 +526,158 @@ class Bridges:
             log.warning("bridge setup failed: %s", e)
             self._set("failed", text=f"{e}")
 
+    # ---- moving every bridge onto another Wi-Fi ----
+    #
+    # docs/network.md, pieces 3 and 6. The hub hands each online puck a second set of credentials
+    # and the puck keeps the one it has as a spare, so the order of the move stops mattering and a
+    # mistyped password repairs itself. Nothing here restarts anything or waits on a cable: a puck
+    # that is on the broker can be told, and a puck that is not is named for the person instead.
+    #
+    # The command is RETAINED on purpose. A puck that was switched off during the move gets it the
+    # moment it comes back and joins by itself -- which turns most of the "did not follow" list into
+    # nothing at all. The `at` on it is what stops a retained command being re-applied for ever: the
+    # puck remembers the last one it acted on.
+
+    MOVE_WAIT = 210            # how long a puck has to come back before the panel calls it late
+    MOVE_SETTLE = 4            # ...and how often we look while it does
+
+    def where(self, chip: str) -> str:
+        """A bridge in the words a household has for it: the room it serves.
+
+        A chip id tells nobody anything, and this is the one list where a panel would be forgiven for
+        thinking otherwise. Somebody may have named it (the placing step is where that will land);
+        failing that, a puck that is the only one carrying its mesh is fairly described by the room
+        most of its switches are in. Two pucks on one mesh cannot be told apart this way, so they are
+        not: guessing would put a name on the wrong object, which is worse than a plain one."""
+        mine = (self.hub.settings.get("bridges") or {}).get(chip) or {}
+        if mine.get("where"):
+            return str(mine["where"])
+        net = (self.pucks.get(chip) or {}).get("net")
+        home = getattr(self.hub, "home", None)
+        if net and home and sum(1 for c, p in self.pucks.items() if p.get("net") == net) == 1:
+            tag = f"light.{BASE}_{net[:4]}_"
+            rooms: dict[str, int] = {}
+            for d in home.devices.values():
+                if d.id.startswith(tag) and d.room_id and d.room_id != "unassigned":
+                    rooms[d.room_id] = rooms.get(d.room_id, 0) + 1
+            if rooms:
+                best = max(rooms, key=lambda r: rooms[r])
+                room = home.rooms.get(best)
+                if room: return room.name
+        return "A bridge"
+
+    def move_status(self) -> dict | None:
+        """What the panel draws while a move is on, and after it. None when nothing has happened."""
+        j = self.moving
+        if not j: return None
+        out = {"state": j["state"], "ssid": j["ssid"], "total": len(j["asked"]),
+               "followed": [self.where(c) for c in j["followed"]],
+               "waiting": [self.where(c) for c in j["asked"] if c not in j["followed"]]}
+        if j["state"] == "done":
+            out["late"] = out.pop("waiting")
+        return out
+
+    async def move(self, ssid: str, password: str) -> dict:
+        """Hand every bridge that is listening a new Wi-Fi, and watch them come back on it."""
+        ssid = (ssid or "").strip()
+        if not ssid: raise ValueError("Which Wi‑Fi? The name is needed.")
+        # Written down first. A move that is interrupted halfway must leave the hub agreeing with
+        # the pucks it already told, not with the network it is leaving.
+        self.hub.settings.set(wifi={"ssid": ssid, "pass": password})
+        at = time.time()
+        cfg = self.config()
+        body = json.dumps({"at": int(at), "ssid": ssid, "pass": password,
+                           "name": cfg["name"], "ip": cfg["host"], "port": cfg["port"]})
+        asked = sorted(c for c, p in self.pucks.items() if p.get("online"))
+        for chip in asked:
+            await self.hub.ha.call("mqtt", "publish", None,
+                                   topic=f"{BASE}/bridge/{chip}/cfg", payload=body, retain=True)
+        self.moving = {"state": "moving" if asked else "done", "ssid": ssid, "at": at,
+                       "asked": asked, "followed": []}
+        self.hub.log.add("home", "network", None, f"bridges moving to {ssid}", source="user")
+        if asked:
+            self._move_task = asyncio.create_task(self._move_watch(at))
+        return self.move_status()
+
+    async def _move_watch(self, at: float) -> None:
+        """Wait for them, then stop waiting and say who is missing.
+
+        A watch that never gives up is a screen that never resolves, and the person standing at it
+        learns nothing. The deadline is generous enough for a puck to restart twice."""
+        try:
+            end = time.time() + self.MOVE_WAIT
+            while time.time() < end:
+                await asyncio.sleep(self.MOVE_SETTLE)
+                j = self.moving
+                if not j or j["at"] != at: return        # a second move started; this one is history
+                if len(j["followed"]) >= len(j["asked"]): break
+                self.hub._broadcast(json.dumps({"type": "bridge", "bridge": self.status()}))
+        except asyncio.CancelledError:
+            return
+        j = self.moving
+        if j and j["at"] == at:
+            j["state"] = "done"
+            late = [c for c in j["asked"] if c not in j["followed"]]
+            if late: log.info("bridge: %d did not follow to %s", len(late), j["ssid"])
+            # Everybody came: the spare is no longer worth the room it takes on them. Told once,
+            # and only now -- a puck that is online cannot tell whether the HUB can see it.
+            if not late:
+                for chip in j["asked"]:
+                    with contextlib.suppress(Exception):
+                        await self.hub.ha.call("mqtt", "publish", None,
+                                               topic=f"{BASE}/bridge/{chip}/cfg",
+                                               payload=json.dumps({"at": int(time.time()), "forget_spare": True}),
+                                               retain=True)
+            self.hub._broadcast(json.dumps({"type": "bridge", "bridge": self.status()}))
+
+    async def clear_move(self) -> dict:
+        """The person has read it. Nothing vanishes under a tap until it has been."""
+        if self.moving and self.moving["state"] == "done":
+            self.moving = None
+        return self.status()
+
+    def wifi_for_pucks(self) -> dict:
+        """The Wi‑Fi a puck should be given, and how much the hub actually knows about it.
+
+        docs/network.md's rule: the hub hands out what the hub is USING. A hub on Wi‑Fi reads its own
+        connection, and that name cannot be stale -- if it were, the hub would not be on the network
+        to say it. A hub on a cable is the one case that still has to be told, and the panel then
+        says so rather than stating it as a fact.
+
+        The password is a separate question from the name, and conflating them is the original bug.
+        The host never hands secrets back up (network.sh keeps the PSK where NetworkManager put it),
+        so what the hub holds is whatever was typed here last. If that was typed for a DIFFERENT
+        network, it is not a password for this one and must not be written into anything: `known`
+        goes false, and the caller asks instead of guessing. Silently writing the old password into
+        a new puck and finishing with a green tick is exactly what this module used to do.
+        """
+        env = getattr(self.hub, "env", {}) or {}
+        held = self.hub.settings.get("wifi") or {}
+        ssid = held.get("ssid") or env.get("PUCK_WIFI_SSID") or ""
+        password = held.get("pass") or env.get("PUCK_WIFI_PASS") or ""
+        checked = False
+        net = getattr(self.hub, "net", None)
+        state = net.state() if net else {}
+        if state.get("how") == "wifi" and state.get("ssid"):
+            checked = True
+            if state["ssid"] != ssid:
+                # The hub moved, or was flashed onto a network nobody typed here. Its name is the
+                # truth; the password we are holding belongs to somewhere else.
+                ssid, password = state["ssid"], ""
+        return {"ssid": ssid, "pass": password, "checked": checked, "known": bool(ssid and password)}
+
     def config(self) -> dict:
         """Everything a puck is told. The Wi‑Fi is the one thing the hub might not have (it may be on a cable)."""
-        wifi = self.hub.settings.get("wifi") or {}
         env = getattr(self.hub, "env", {}) or {}
         keys = self.keys()
+        wifi = self.wifi_for_pucks()
         return {
-            "ssid": wifi.get("ssid") or env.get("PUCK_WIFI_SSID") or "", "pass": wifi.get("pass") or env.get("PUCK_WIFI_PASS") or "",
-            "host": lan_ip(), "port": 1883, "user": env.get("MQTT_USER") or os.environ.get("MQTT_USER", ""),
+            "ssid": wifi["ssid"] if wifi["known"] else "", "pass": wifi["pass"],
+            # A name AND a number. The name is tried first, over mDNS, so a DHCP reshuffle stops
+            # stranding every puck in the house; the number is what answers in a house whose router
+            # filters multicast. docs/network.md, piece 1.
+            "host": lan_ip(), "name": _hostname(), "port": 1883,
+            "user": env.get("MQTT_USER") or os.environ.get("MQTT_USER", ""),
             "mqtt_pass": env.get("MQTT_PASSWORD") or os.environ.get("MQTT_PASSWORD", ""),
             "netkey": keys["netkey"], "appkey": keys["appkey"], "iv": keys["iv_index"], "base": BASE, "label": "Brilliant",
         }
@@ -533,6 +709,17 @@ class Bridges:
                 try: self._heard[leaf] = {"at": time.time(), "body": json.loads(payload), "chip": chip}
                 except Exception: self._heard[leaf] = {"at": time.time(), "body": None, "chip": chip}
                 if self._woke: self._woke.set()
+                return
+            if leaf == "cfgack":
+                # Proof, not a promise. A puck can only publish this from the broker, and it can only
+                # reach the broker on a network it actually joined.
+                j = self.moving
+                try: ack = json.loads(payload)
+                except Exception: ack = {}
+                if j and j["state"] == "moving" and int(ack.get("at") or 0) == int(j["at"]) and chip not in j["followed"]:
+                    j["followed"].append(chip)
+                    log.info("bridge: %s followed to %s", chip, j["ssid"])
+                    self.hub._broadcast(json.dumps({"type": "bridge", "bridge": self.status()}))
                 return
             if leaf == "status": p["online"] = payload == "online"
             elif leaf == "net": p["net"] = payload
