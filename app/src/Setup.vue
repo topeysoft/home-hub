@@ -15,7 +15,8 @@ import Restore from './Restore.vue'
 import PhoneSteps from './PhoneSteps.vue'
 
 /* First run. One question per screen, in this order: who you are, where home is, which rooms,
-   what to add. Every step after the first can be skipped and finished later from Home. */
+   what to add. Every step after the first can be skipped and finished later from Home -- except the
+   code, which cannot, because a house that is still open to the whole Wi-Fi is not set up yet. */
 type Page = 'welcome' | 'login' | 'owner' | 'starting' | 'code' | 'location' | 'rooms' | 'devices' | 'done'
 const PAGES: Page[] = ['welcome', 'login', 'owner', 'starting', 'code', 'location', 'rooms', 'devices', 'done']
 const preview = new URLSearchParams(location.search).get('page') as Page | null   // ?setup=1&page=rooms previews one screen
@@ -156,13 +157,12 @@ async function saveCode() {
       <section class="setup-page" v-else-if="page === 'code'" key="code">
         <p class="setup-step">Step {{ idx + 1 }} of 4</p>
         <h1 class="display">A code for changes.</h1>
-        <p class="setup-lede">Anyone in the house can turn things on and off from the wall. Adding devices, renaming rooms and the settings behind them will ask for this. Four to eight digits.</p>
+        <p class="setup-lede">Anyone in the house can turn things on and off from the wall. This is for <em>changing</em> it — adding devices, renaming rooms, and taking a copy of the house away with you. Four to eight digits, and the one step here that cannot wait: without it, anyone on your Wi‑Fi can do all of that too.</p>
         <label class="field"><span class="field-label">Code</span><input class="input code-input" v-model="pin" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off" @keydown.enter="saveCode" /></label>
         <label class="field"><span class="field-label">Once more</span><input class="input code-input" v-model="again" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off" @keydown.enter="saveCode" /></label>
         <p class="error" v-if="error">{{ error }}</p>
         <div class="setup-actions">
           <button class="button big" :class="{ busy }" @click="saveCode">Continue</button>
-          <button class="button ghost" @click="next('code')">No code for now</button>
         </div>
       </section>
 

@@ -390,3 +390,37 @@ class AwayGateTests(ApiTest):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TheBackupNeedsACodeToExist(ApiTest):
+    """A copy of the house is not a change to the house, and that is why it is different.
+
+    Every other gated route alters something a household can alter back. This one is the radios'
+    network keys, the accounts' sign-ins and the hub's own certificate authority leaving in one file,
+    to anybody who can reach the hub. `lock.py` only ever bit when a code was SET, so on a hub that
+    skipped that step -- which setup allowed until now -- the file was there for the asking.
+    docs/updates.md, "One thing to fix regardless of all of the above".
+    """
+    def test_a_house_with_no_code_is_told_to_set_one_rather_than_handed_the_keys(self):
+        self.assertFalse(self.hub.lock.locked)
+        r = self.client.get("/backup")
+        self.assertEqual(r.status_code, 403)
+        self.assertIn("Set a code first", r.json()["detail"])
+
+    def test_once_there_is_a_code_it_behaves_exactly_as_it_did(self):
+        code = self.lock_the_house()
+        _, token = self.hub.phones.from_setup()      # a locked house wants the phone as well as the code
+        self.client.cookies.set(COOKIE, token)
+        r = self.client.get("/backup", headers={"x-hub-code": code})
+        self.assertEqual(r.status_code, 200)
+
+    def test_the_code_is_still_asked_for_on_a_house_that_has_one(self):
+        """The new gate is in front of the old one, not instead of it."""
+        self.lock_the_house()
+        self.assertEqual(self.client.get("/backup").status_code, 401)
+
+    def test_putting_a_backup_BACK_is_not_gated_this_way(self):
+        """A fresh hub someone is restoring onto has no code yet, and never will if the restore that
+        carries it is the thing being refused. Recovery must not need the thing it recovers."""
+        self.assertFalse(self.hub.lock.locked)
+        self.assertNotEqual(self.client.post("/restore").status_code, 403)

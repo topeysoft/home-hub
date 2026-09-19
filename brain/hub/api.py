@@ -1847,7 +1847,17 @@ def health():
 # ---------- backup and restore ----------
 @app.get("/backup")
 def backup():
-    """The house as one .tar.gz. Behind the settings code: it holds the engine's key and the code's hash."""
+    """The house as one .tar.gz. Behind the settings code: it holds the engine's key and the code's hash.
+
+    And on a hub that has NO code, behind having one. Every other gated route is a change to the
+    house, which a household can undo; this one is a copy of it walking out of the door -- the
+    radios' network keys, the accounts' sign-ins and the hub's own certificate authority, in one
+    file, to anybody who can reach the hub. Setup requires a code now, so this is the hub that was
+    set up before it did, and the answer is a sentence naming the fix rather than a file.
+    """
+    if not hub.lock.locked:
+        raise HTTPException(403, "Set a code first. This file holds the keys to the house, and "
+                                 "without a code anyone on your Wi‑Fi could ask for it too.")
     path = hub.backup.make()
     return FileResponse(path, media_type="application/gzip", filename=path.name, background=BackgroundTask(shutil.rmtree, path.parent, True))
 
