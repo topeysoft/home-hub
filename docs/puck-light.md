@@ -5,12 +5,12 @@ already worked as a nightlight, by accident, and it was pleasant. Two, and it is
 puck is meant to be **a product** — a small, plain relay object sitting out in the open in a living space — not an
 ESP32 devkit on a shelf, and part of the job is that it is nice to look at. Its light is the only expressive
 surface it has. The design is settled; what it asks of the hardware, and the questions that are genuinely open,
-are at the foot and marked as such. **Steps 1 to 5 of the build order are written** (18–19 September):
-the state, the precedence, the NVS setting, the MQTT topics, the Home Assistant entity, the hub side and the question
-on the sheet all exist; both firmware targets compile, the brain's 936 tests and the panel's 415 pass, and the
-question has been walked through in the real panel against the mock. Step 5's behaviour is built and
-tested but its switch is not yet reachable from the panel, which is named at the foot. Nothing has run on a puck yet — there has been none on the cable — so every
-claim below about how it *behaves on hardware* is still a claim.*
+are at the foot and marked as such. **The whole build order is written** (18–19 September): the state, the
+precedence, the NVS setting, the MQTT topics, the Home Assistant entity, the hub side, the question on the sheet,
+the motion lift, and the Bridges section on This hub that step 5 turned out to need. Both firmware targets
+compile, the brain's 964 tests and the panel's 415 pass, and every screen has been walked through in the real
+panel against the mock. Nothing has run on a puck yet — there has been none on the cable — so every claim below
+about how it *behaves on hardware* is still a claim.*
 
 ## What the light does today, and for how long
 
@@ -218,12 +218,29 @@ shipping.
 
 Steps 1–4 are the feature. Step 5 is the one that makes people like it.
 
-**Step 5 is not finished, and this is the piece:** its switch exists only as a Home Assistant entity. That is
-enough to build and test against and not enough to ship, because `product-direction-out-of-the-box` says the
-panel must never send anybody to Home Assistant's UI. There is no per-bridge surface on the panel today — the
-hub page talks about bridges in the plural and lists none — so this needs somewhere for one bridge to be looked
-at, which is a piece of panel design rather than a toggle to drop in. Until then the behaviour is reachable only
-by somebody who already knows their way around HA, which is not who this is for.
+6. **This hub gets a Bridges section (19 September)** — not in the original build order, and the thing step 5
+   turned out to need. Step 5's switch existed only as a Home Assistant entity, which
+   `product-direction-out-of-the-box` forbids, and there was nowhere on the panel to put it: **a puck surfaced
+   only when something was wrong with it** — a note when it went quiet, a line here when it was a version
+   behind — so the one place a household could act on one was a problem report. That is the wrong shape for an
+   object that mostly just works.
+
+   `GET /bridge/list` and `POST /bridge/light` in the brain (`Bridges.each()` and `Bridges.light()`), a Bridges
+   section on `HubPage.vue` listing every bridge by the room it serves, and `BridgeCard.vue` for one of them:
+   whether it is working, the nightlight, how bright it rests, brighten-as-you-pass, its software, and forget.
+   Three decisions worth keeping:
+
+   - **Three brightnesses, not a slider.** This panel has no sliders anywhere: brightness is a gesture on the
+     thing itself. The nightlight *is* a light in the house, so anyone wanting a level between Dim, Soft and
+     Bright has its own tile. What belongs on this card is the handful of decisions about the *bridge*.
+   - **A puck the hub has never heard from gets no switches drawn.** `night` comes back `null` rather than
+     `false`, and the card says "not heard from yet" — a switch showing "off" for something that has not
+     answered is a small lie that costs somebody an evening.
+   - **Turning a nightlight down is driving the house, not changing it**, so `/bridge/light` is open like
+     `/devices/…/on` rather than gated behind the settings code (`hub/lock.py`'s own line).
+
+   10 brain tests and 3 e2e cases; `/bridge/light` sends one field at a time, so a tap changes what it says and
+   nothing else.
 
 **What steps 1 to 4 still owe:** a puck on a cable. `set settled 1` then `set night 1 <level>` should put a settled,
 healthy puck into a warm glow; pulling the broker should take it straight back to amber; a reboot should come

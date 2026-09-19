@@ -237,6 +237,24 @@ export const dismissBridge = () => post<Bridge>('/bridge/dismiss')
 export const bridgeWifi = (ssid: string, password: string) => post<Bridge>('/bridge/wifi', { ssid, password })
 /* Take a bridge off the house. Offered only from the *Needs a look* line about one that has not come
    back, because it is the answer to a question the house asked first -- never a thing to go and find. */
+/* ONE BRIDGE, as This hub lists it. Separate from `Bridge` above, which is the setting-up machine
+   the sheet draws: this is the standing fact about a puck that is already in and working.
+   `night` is null, not false, for a puck the hub has never heard speak -- "off" is a claim about a
+   thing that has answered, and the card says "not heard from yet" instead of drawing a switch in a
+   position nobody can vouch for. */
+export type BridgeRow = {
+  chip: string; room: string | null; where: string
+  online: boolean; signal: 'strong' | 'weak' | 'none'
+  switches: number; fw: string | null; behind: boolean
+  night: boolean | null; level: number | null; lift: boolean
+}
+export async function listBridges(): Promise<{ bridges: BridgeRow[] }> {
+  const r = await request('/bridge/list'); if (!r.ok) await fail(r); return r.json()
+}
+/* A bridge's own light. Leaving a field out means "do not touch it", which is what lets the card
+   send one change at a time rather than restating the whole state on every tap. */
+export const setBridgeLight = (chip: string, what: { night?: boolean; level?: number; lift?: boolean }) =>
+  post<{ bridges: BridgeRow[] }>('/bridge/light', { chip, ...what })
 export const forgetBridge = (chip: string) => post<{ forgotten: string }>('/bridge/forget', { chip })
 /** Leave it here -- the placing is over, whatever the signal says. */
 /* "Leave it here" -- and, when the sheet asked it, the answer to "leave its light on?" in the same

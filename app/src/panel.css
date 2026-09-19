@@ -10565,6 +10565,43 @@ button.reading[data-held] {
   border: 1px solid var(--edge);
   text-align: center;
 }
+/* THE BRIDGES ON THIS HUB. One button per puck, named by the room it serves -- the only word a
+   household has for one -- with what it is doing beside it. Rows rather than cards: this page is a
+   list of standing facts and a bridge is another of them, not a feature with a panel of its own. */
+.hub-bridges {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+.hub-bridge {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 11px 14px;
+  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid var(--edge);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.hub-bridge:hover { border-color: var(--edge-hi); }
+.hub-bridge-name { font-size: 15px; font-weight: 500; }
+.hub-bridge-state { font-size: 13px; color: var(--ink-2); }
+.hub-bridge-state.quiet { color: var(--muted); }
+/* the three brightnesses, and the two halves of a confirmation: a row of small buttons where the
+   other rows on this page have one */
+.bridge-levels {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.bridge-settings { margin-top: 14px; }
+
 /* one of them, on its own: the nightlight is not a choice between three things. Kept to the width
    one of the three would have had rather than stretched across the sheet -- the object should sit in
    a card the size of an object (design/puck/Nightlight.dc.html). */

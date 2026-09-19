@@ -465,6 +465,26 @@ const server = http.createServer((req, res) => {
   }
   if (p === '/rules') return json(res, rules)
   if (p === '/discovered') return json(res, discovered)
+/* The bridges This hub lists, and what a household can change about one (docs/puck-light.md).
+   BRIDGES=none empties the list, so the page can be seen without one. */
+const bridgeRows = process.env.BRIDGES === 'none' ? [] : [
+  { chip: 'c8ebba', room: 'hall', where: 'Hallway', online: true, signal: 'strong', switches: 11,
+    fw: '0.5.0', behind: false, night: true, level: 110, lift: false },
+  { chip: 'f4a9f3', room: 'landing', where: 'Landing', online: true, signal: 'weak', switches: 4,
+    fw: '0.4.0', behind: true, night: false, level: 110, lift: false },
+  { chip: '9a01cc', room: null, where: 'A bridge', online: false, signal: 'none', switches: 0,
+    fw: '0.5.0', behind: false, night: null, level: null, lift: false },
+]
+  if (p === '/bridge/list') return json(res, { bridges: bridgeRows })
+  if (p === '/bridge/light' && req.method === 'POST') { let raw = ''; req.on('data', c => (raw += c)); return req.on('end', () => {
+    let b = {}; try { b = JSON.parse(raw) } catch {}
+    const row = bridgeRows.find(x => x.chip === b.chip)
+    if (!row) return json(res, { error: 'The hub does not know that bridge.' }, 400)
+    if (b.night !== undefined) row.night = !!b.night
+    if (b.level !== undefined && row.night) row.level = b.level
+    if (b.lift !== undefined) row.lift = !!b.lift
+    json(res, { bridges: bridgeRows })
+  }) }
   if (p === '/bridge/forget') return json(res, { forgotten: 'The Hallway bridge' })
   if (p === '/health') return json(res, { notes })
   // What a speaker can play. The real brain generates the noises and lists the sounds folder; here it is

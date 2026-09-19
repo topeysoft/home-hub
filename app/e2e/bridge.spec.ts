@@ -105,3 +105,55 @@ test('walking away from the question places nothing at all', async ({ page }) =>
   await page.goto('/?at=13:00', { waitUntil: 'networkidle' })
   await expect(page.getByRole('button', { name: 'Leave it here' })).toBeVisible()
 })
+
+/* This hub, and the thing that had no home before it.
+ *
+ * A puck used to appear on the panel only when something was WRONG with it, so the only place a
+ * household could act on one was a problem report -- which is why hub/nightlight.py's "brighten as
+ * you pass" was reachable nowhere but Home Assistant. These hold the two halves of the fix: every
+ * bridge is listed whether or not anything is wrong, and what it sends when a switch is flipped.
+ */
+const ROWS = [
+  { chip: 'c8ebba', room: 'hall', where: 'Hallway', online: true, signal: 'strong', switches: 11,
+    fw: '0.5.0', behind: false, night: true, level: 110, lift: false },
+  { chip: '9a01cc', room: null, where: 'A bridge', online: false, signal: 'none', switches: 0,
+    fw: null, behind: false, night: null, level: null, lift: false },
+]
+
+async function toTheHub(page: any, sent: any[]) {
+  await page.route('**/bridge/list', (route: any) => route.fulfill({ json: { bridges: ROWS } }))
+  await page.route('**/bridge/light', (route: any) => {
+    sent.push(JSON.parse(route.request().postData() || '{}'))
+    return route.fulfill({ json: { bridges: ROWS } })
+  })
+  await page.goto('/?at=13:00&sheet=hub', { waitUntil: 'networkidle' })
+}
+
+test('this hub lists every bridge, not only the ones something is wrong with', async ({ page }) => {
+  await toTheHub(page, [])
+  await expect(page.getByRole('button', { name: /Hallway/ })).toBeVisible()
+  // ...including one it cannot place, named honestly rather than by a chip id nobody can read.
+  await expect(page.getByRole('button', { name: /A bridge/ })).toBeVisible()
+})
+
+test('opening one gives the nightlight a place to be turned on', async ({ page }) => {
+  const sent: any[] = []
+  await toTheHub(page, sent)
+  await page.getByRole('button', { name: /Hallway/ }).click()
+
+  const card = page.getByRole('dialog', { name: 'Hallway bridge' })
+  await expect(card).toBeVisible()
+  await card.getByRole('switch', { name: 'Brighten as you pass' }).click()
+  expect(sent).toEqual([{ chip: 'c8ebba', lift: true }])
+})
+
+test('a bridge that has never spoken is not drawn with its light off', async ({ page }) => {
+  const sent: any[] = []
+  await toTheHub(page, sent)
+  await page.getByRole('button', { name: /A bridge/ }).click()
+
+  const card = page.getByRole('dialog', { name: 'A bridge bridge' })
+  await expect(card.getByText('Not heard from yet.')).toBeVisible()
+  await expect(card.getByRole('switch', { name: 'Nightlight' })).toBeHidden()
+  expect(sent, 'nothing can be changed about a puck the hub has not heard').toHaveLength(0)
+})

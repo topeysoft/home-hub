@@ -850,6 +850,56 @@ class Bridges:
         room_of() is the same question where the caller would rather have the None."""
         return self.room_of(chip) or "A bridge"
 
+    def each(self) -> list[dict]:
+        """Every bridge this hub set up, in the words a household has for one.
+
+        THE PANEL HAD NOWHERE TO LOOK AT A BRIDGE THAT IS FINE. Until this, a puck surfaced only when
+        something was wrong with it -- a note when it went quiet, a line on This hub when it was a
+        version behind -- so the one place a household could act on one was a problem report. That is
+        the wrong shape for an object that mostly just works, and it is what left the nightlight with
+        a switch nobody could reach without Home Assistant (docs/puck-light.md).
+
+        Ordered by the room's name, with the ones the hub cannot place last: a list that reorders
+        itself as signal moves would be unreadable on a wall."""
+        behind = {b["chip"] for b in self.behind()}
+        out = []
+        for chip, rec in (self.hub.settings.get("bridges") or {}).items():
+            p = self.pucks.get(chip) or {}
+            room = self.room_of(chip)
+            out.append({
+                "chip": chip, "room": room, "where": self.where(chip),
+                "online": bool(p.get("online")), "signal": self._signal(chip),
+                "switches": self._count(p.get("net")) if p.get("net") else 0,
+                "fw": rec.get("fw"), "behind": chip in behind,
+                # None rather than false when the puck has never said: "off" is a claim about a thing
+                # we have heard from, and a puck that has not spoken is not a puck with its light off.
+                "night": p.get("night"), "level": p.get("level"),
+                "lift": bool(rec.get("lift")),
+            })
+        out.sort(key=lambda b: (b["room"] is None, (b["room"] or "").lower(), b["chip"]))
+        return out
+
+    async def light(self, chip: str, night: bool | None = None,
+                    level: int | None = None, lift: bool | None = None) -> list[dict]:
+        """Change a bridge's own light from the panel.
+
+        The household's, not the placement answer's, so these go once and are not retained -- the
+        puck holds them in NVS and says so back on its own topics. `lift` is the brain's and is
+        written to settings instead; see hub/nightlight.py."""
+        if chip not in (self.hub.settings.get("bridges") or {}):
+            raise ValueError("The hub does not know that bridge.")
+        if level is not None and not 0 <= int(level) <= 255:
+            raise ValueError("A brightness is 0 to 255.")
+        if night is not None:
+            await self._tell(chip, "night/set", "ON" if night else "OFF")
+        if level is not None and (night is None or night):
+            await self._tell(chip, "night/brightness/set", str(int(level)))
+        if lift is not None:
+            nl = getattr(self.hub, "nightlight", None)
+            if nl: nl.on_command(chip, "ON" if lift else "OFF")
+        self.hub.log.add("bridge", chip, None, "light changed", source="user")
+        return self.each()
+
     def move_status(self) -> dict | None:
         """What the panel draws while a move is on, and after it. None when nothing has happened."""
         j = self.moving
@@ -1039,6 +1089,9 @@ class Bridges:
             if self.job and self.job.get("chip") == chip and self.job.get("quiet") and p.get("online"):
                 self.job.pop("quiet", None)
                 self._set("placing")
+        elif len(parts) == 5 and parts[1] == "bridge" and parts[3:] == ["night", "brightness"]:
+            with contextlib.suppress(ValueError):
+                self.pucks.setdefault(parts[2], {})["level"] = max(0, min(255, int(payload)))
         elif len(parts) == 5 and parts[1] == "bridge" and parts[3:] == ["motion", "set"]:
             # "Lift on motion" is a switch the BRAIN owns (hub/nightlight.py) -- the puck neither
             # stores it nor reads it -- but it rides the puck's topics so it sits on the puck's own

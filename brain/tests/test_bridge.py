@@ -12,6 +12,7 @@ from pathlib import Path
 
 from hub import bridge as bridge_mod
 from hub.bridge import Bridges, Cable, network_id
+from hub.nightlight import Nightlight
 from hub.settings import Settings
 
 
@@ -346,6 +347,76 @@ class TheLightAfterItIsPlaced(TheJob):
         self.hub.ha.call = boom
         run(self.b.placed(night=True))
         self.assertEqual(self.b.status()["state"], "ready")
+
+
+class LookingAtABridgeThatIsFine(unittest.TestCase):
+    """This hub's Bridges section: the list, and changing a bridge's own light from the panel.
+
+    What made this worth building: until now a puck surfaced on the panel only when something was
+    WRONG with it -- a note when it went quiet, a line when it was a version behind -- so the one
+    place a household could act on one was a problem report. That left hub/nightlight.py's switch
+    reachable only through Home Assistant, which product-direction-out-of-the-box forbids.
+    """
+    def setUp(self):
+        self.tmpdir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmpdir.cleanup)
+        self.hub = FakeHub(self.tmpdir.name)
+        self.b = Bridges(self.hub, FakeCable())
+        self.hub.ha.cb = self.b._on_mqtt
+        self.hub.bridge = self.b
+        self.hub.settings.set(bridges={"c8ebba": {"since": 1, "fw": "0.5.0"},
+                                       "f4a9f3": {"since": 2, "fw": "0.5.0"}})
+        self.b.pucks = {"c8ebba": {"online": True, "rssi": -53, "night": True, "level": 110},
+                        "f4a9f3": {"online": False}}
+
+    def each(self): return {x["chip"]: x for x in self.b.each()}
+
+    def test_every_bridge_is_listed_whether_or_not_anything_is_wrong_with_it(self):
+        self.assertEqual(set(self.each()), {"c8ebba", "f4a9f3"})
+
+    def test_it_says_what_it_honestly_knows_about_each(self):
+        one = self.each()["c8ebba"]
+        self.assertEqual((one["online"], one["signal"], one["night"], one["level"], one["lift"]),
+                         (True, "strong", True, 110, False))
+
+    def test_a_puck_that_has_never_spoken_has_no_opinion_about_its_light(self):
+        """None, not False: "off" is a claim about a thing we have heard from."""
+        self.assertIsNone(self.each()["f4a9f3"]["night"])
+
+    def test_one_the_hub_cannot_place_is_named_honestly_and_sorted_last(self):
+        self.assertEqual([x["where"] for x in self.b.each()], ["A bridge", "A bridge"])
+        self.assertEqual([x["room"] for x in self.b.each()], [None, None])
+
+    def test_turning_the_nightlight_down_is_said_once_and_not_retained(self):
+        """Retained would overrule the household the next time the puck reconnected -- the same
+        trap placed() avoids for the placement answer."""
+        run(self.b.light("c8ebba", night=True, level=40))
+        sent = {c["topic"]: c for c in self.hub.ha.calls}
+        self.assertEqual(sent["mesh/bridge/c8ebba/night/set"]["payload"], "ON")
+        self.assertEqual(sent["mesh/bridge/c8ebba/night/brightness/set"]["payload"], "40")
+        self.assertFalse(any(c.get("retain") for c in self.hub.ha.calls))
+
+    def test_turning_it_off_does_not_also_send_a_brightness(self):
+        """A brightness would turn it back on: the firmware reads any level above zero as an on."""
+        run(self.b.light("c8ebba", night=False, level=40))
+        self.assertNotIn("mesh/bridge/c8ebba/night/brightness/set", [c["topic"] for c in self.hub.ha.calls])
+
+    def test_lift_is_the_brains_and_is_written_down_rather_than_published_at_the_puck(self):
+        self.hub.nightlight = Nightlight(self.hub)
+        run(self.b.light("c8ebba", lift=True))
+        self.assertTrue((self.hub.settings.get("bridges")["c8ebba"]).get("lift"))
+        self.assertTrue(self.each()["c8ebba"]["lift"])
+
+    def test_a_bridge_the_hub_does_not_know_is_refused(self):
+        with self.assertRaises(ValueError): run(self.b.light("ffffff", night=True))
+
+    def test_a_brightness_that_is_not_one_is_refused_before_anything_is_sent(self):
+        with self.assertRaises(ValueError): run(self.b.light("c8ebba", night=True, level=999))
+        self.assertEqual(self.hub.ha.calls, [])
+
+    def test_the_brightness_a_household_chose_is_learned_from_the_puck(self):
+        self.b._on_mqtt({"topic": "mesh/bridge/f4a9f3/night/brightness", "payload": "200"})
+        self.assertEqual(self.each()["f4a9f3"]["level"], 200)
 
 
 class LettingASwitchIn(unittest.TestCase):

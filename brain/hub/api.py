@@ -1224,6 +1224,36 @@ async def network_done():
     return await hub.bridge.clear_move()
 
 
+@app.get("/bridge/list")
+def bridge_list():
+    """Every bridge the hub set up, so This hub has somewhere to look at one that is FINE.
+
+    Separate from GET /bridge, which is the setting-up machine the sheet draws and is polled hard
+    while a job runs. This is a standing list, read when somebody opens the page."""
+    return {"bridges": hub.bridge.each()}
+
+
+@app.post("/bridge/light")
+async def bridge_light(body: dict):
+    """A bridge's own light: on or off, how bright, and whether it lifts when somebody passes.
+
+    Open, like every other route that drives the house rather than changing it -- turning a
+    nightlight down is a tap, not a setting, and the lock's own line is that driving never asks for
+    the code (hub/lock.py)."""
+    hub.ready()
+    level = body.get("level")
+    if level is not None:
+        try: level = int(level)
+        except (TypeError, ValueError): raise HTTPException(400, "A brightness is 0 to 255.")
+    try:
+        return {"bridges": await hub.bridge.light(
+            str(body.get("chip") or ""),
+            night=None if body.get("night") is None else bool(body["night"]),
+            level=level,
+            lift=None if body.get("lift") is None else bool(body["lift"]))}
+    except ValueError as e: raise HTTPException(400, str(e))
+
+
 @app.post("/bridge/forget")
 async def bridge_forget(body: dict):
     """Take a bridge off the house: the last thing offered about one that is never coming back.
