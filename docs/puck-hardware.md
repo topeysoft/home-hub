@@ -128,7 +128,7 @@ The LEDs run from 5 V directly, not from the 3.3 V rail.
   obvious gesture, and adoption and factory reset may want it anyway.
 - **A 4-pin UART header**: GND, GPIO43 (TX), GPIO44 (RX), 3V3. Native USB is not a debug path when native USB is the
   fault.
-- **A 5-pad expansion header** at the board edge, inside the shell: 3V3, 5 V, GND and three spare GPIOs, one pair of
+- **A 6-pad expansion header** at the board edge, inside the shell: 3V3, 5 V, GND and three spare GPIOs, one pair of
   which can serve as a UART or an I2C bus. This is the honest version of "a footprint is free" — it is what lets an
   LD2410 or an AM312 be tried on a bench for a week without committing the shell, the orientation or the power
   budget. **Rev A populates it. The product does not, and the shell has no opening for it** — an exposed header on an
