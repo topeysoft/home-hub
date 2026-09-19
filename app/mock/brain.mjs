@@ -103,6 +103,13 @@ function pressEvent() {
   return [{ ts: pressedAt, kind: 'state', subject: pressedId, old: 'off', new: 'on', source: 'device', detail: null }]
 }
 
+/* A BIGGER HOUSE, on a knob. QUIET=n adds n rooms with one lamp off in each, which is what a real
+   thirteen-room house looks like of an evening -- and the shape the Rooms tab's arrangement is
+   hardest to get right at, since it is mostly index. design/rooms/Long.dc.html. */
+for (let i = 0; i < Number(process.env.QUIET || 0); i++)
+  rooms.splice(rooms.length - 1, 0, { id: `q${i}`, name: ['Theater', 'Basement', 'Main Workshop', 'Frontyard', 'Nadine\u2019s Room', 'Pod', 'Ace\u2019s Room', 'Loft', 'Porch', 'Attic', 'Landing', 'Utility'][i] ?? `Room ${i}`,
+    intent: 'unknown', set_by: null, hold_until: null, devices: [dev(`qd${i}`, 'Lamp', `q${i}`, 'light', 'off')] })
+
 const home = { name: "Temi's house", temp_unit: '°F', rooms }
 const status = { driver: process.env.ENGINE === 'down' ? 'down' : 'ready', reason: process.env.ENGINE === 'down' ? "The hub's engine is not answering yet." : '',
   version: 'v0.3.0',   // the build this mock is: the panel reloads itself when a status answers with another (store.ts, newBuild)

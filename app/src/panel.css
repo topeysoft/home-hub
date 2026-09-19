@@ -4230,13 +4230,21 @@ select.input {
   overflow-y: auto;
   margin: 0 -8px;
   padding: 0 8px;
+  /* A list inside a dialog, used with a finger: a flick that runs out of list must not carry on
+     into whatever is behind the panel, and a sideways drag on it means nothing. */
+  overscroll-behavior: contain;
+  touch-action: pan-y;
 }
+/* 62px tall and the full width of the list, because this is tapped standing in front of a wall
+   rather than held in a hand. It is a <button>, so Safari gives :active on a tap without the
+   touchstart shim non-interactive elements need -- which matters here, since the panel turns off
+   the browser's own tap highlight. */
 .door {
   display: grid;
   grid-template-columns: auto 1fr;
   align-items: center;
   gap: 12px;
-  padding: 9px 12px 9px 10px;
+  padding: 11px 12px 11px 10px;
   border-radius: 14px;
   text-align: left;
   color: var(--ink-2);
@@ -4464,18 +4472,21 @@ select.input {
   margin-top: 2px;
 }
 
-/* THE DOORS of beat one: four things a person can be holding, not four wires. Two up on a wall, one
-   up on a phone -- a door is a sentence and it does not want breaking over three lines.
-   design/adding/ChooseA.dc.html. */
-.doors {
+/* THE WAYS IN of beat one: four things a person can be holding, not four wires. Two across on a
+   wall, one up on a phone -- each is a sentence and it does not want breaking over three lines.
+   design/adding/ChooseA.dc.html.
+
+   Called `way` and not `door`, which is what the boards call them: the settings sheet's own page
+   list got to `.door` first. panel.css is one flat global sheet, so a second block of the same name
+   does not conflict, it silently restyles the first one from wherever it is written -- and this one
+   turned that menu into a 300px grid inside a 287px column, which scrolled sideways and was cut off
+   at the right. Nothing in the toolchain catches that; only looking at the other screen does. */
+.ways {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 10px;
 }
-.doors.one {
-  grid-template-columns: 1fr;
-}
-.door {
+.way {
   display: grid;
   grid-template-columns: auto 1fr;
   align-items: center;
@@ -4486,10 +4497,10 @@ select.input {
   border: 1px solid var(--edge);
   text-align: left;
 }
-.door:active {
+.way:active {
   background: var(--surface-press);
 }
-.door-icon {
+.way-icon {
   width: 44px;
   height: 44px;
   border-radius: 14px;
@@ -4498,16 +4509,16 @@ select.input {
   background: var(--surface-hi);
   color: var(--ink-2);
 }
-.door-text {
+.way-text {
   display: flex;
   flex-direction: column;
   min-width: 0;
 }
-.door-title {
+.way-title {
   font-size: 17px;
   font-weight: 500;
 }
-.door-sub {
+.way-sub {
   font-size: 13.5px;
   color: var(--muted);
 }

@@ -6,7 +6,7 @@
       "y": 0,
       "w": 1440,
       "h": 900,
-      "title": "Today \u2014 the Rooms tab as it ships",
+      "title": "Today — the Rooms tab as it ships",
       "page": "page-1"
     },
     {
@@ -15,7 +15,7 @@
       "y": 0,
       "w": 1440,
       "h": 900,
-      "title": "A \u2014 the house, ranked",
+      "title": "A — the house, ranked",
       "page": "page-1"
     },
     {
@@ -24,7 +24,7 @@
       "y": 0,
       "w": 1440,
       "h": 900,
-      "title": "B \u2014 rooms you can act on",
+      "title": "B — rooms you can act on",
       "page": "page-2"
     },
     {
@@ -33,7 +33,7 @@
       "y": 0,
       "w": 1440,
       "h": 900,
-      "title": "C \u2014 the room you are in",
+      "title": "C — the room you are in",
       "page": "page-2"
     },
     {
@@ -42,7 +42,7 @@
       "y": 0,
       "w": 1440,
       "h": 900,
-      "title": "1 \u2014 At rest",
+      "title": "1 — At rest",
       "page": "page-3"
     },
     {
@@ -51,7 +51,7 @@
       "y": 0,
       "w": 1440,
       "h": 900,
-      "title": "2 \u2014 The room at rest, drawn",
+      "title": "2 — The room at rest, drawn",
       "page": "page-3"
     },
     {
@@ -60,8 +60,44 @@
       "y": 0,
       "w": 1440,
       "h": 900,
-      "title": "3 \u2014 The quiet end is an index",
+      "title": "3 — The quiet end is an index",
       "page": "page-3"
+    },
+    {
+      "file": "Long.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1766,
+      "h": 1024,
+      "title": "Now — the last card takes the whole column",
+      "page": "page-4"
+    },
+    {
+      "file": "CapA.dc.html",
+      "x": 1906,
+      "y": 0,
+      "w": 1766,
+      "h": 1024,
+      "title": "A — a card grows by one size, never two",
+      "page": "page-4"
+    },
+    {
+      "file": "DemoteB.dc.html",
+      "x": 3812,
+      "y": 0,
+      "w": 1766,
+      "h": 1024,
+      "title": "B — the odd card out joins the index",
+      "page": "page-4"
+    },
+    {
+      "file": "LeadC.dc.html",
+      "x": 5718,
+      "y": 0,
+      "w": 1766,
+      "h": 1024,
+      "title": "C — the height goes to the room that earns it",
+      "page": "page-4"
     }
   ],
   "annotations": [
@@ -70,7 +106,7 @@
       "x": -560,
       "y": 0,
       "w": 480,
-      "text": "WHY THIS EXISTS\n\n\"The room list works, but it looks basic.\" It does, and the reason is measurable rather than a matter of taste.\n\nMeasured in the running panel at 1440x900, with the mock house:\n\n  top bar            0 -> 84\n  \"Rooms\"          104 -> 161\n  the grid         187 -> 413   (1360 x 226)\n  the stage ends        -> 802\n\nNine identical cards of 218x108 in the top third, and 389px of empty sky under them. The Home tab beside it is a full-bleed bento that fills the stage and runs off the right edge. Same house, two different products.\n\nThree things follow from the same cause. Every room gets the same box whatever it is doing, so the Living room's \"2 lights on \u00b7 The Bear \u00b7 Blind open \u00b7 Motion\" is ellipsised at 218px while the Garage spends the same card saying \"Quiet\". The order is data order, so an empty Bathroom sits among real rooms and New devices -- the one thing on the screen with something to ask -- is fourth in the second row. And a card is a door and nothing else: you cannot turn a room off without going into it and coming back.\n\nThree answers were drawn at the same house and the same hour so they could be judged rather than argued about. A is the one being built; the other two are on the second page with their cases intact, because the reasons they lost are the reasons A has to keep earning its place. The house is the one in app/mock/brain.mjs: nine rooms, four of them doing something, one empty, two waiting to be placed.",
+      "text": "WHY THIS EXISTS\n\n\"The room list works, but it looks basic.\" It does, and the reason is measurable rather than a matter of taste.\n\nMeasured in the running panel at 1440x900, with the mock house:\n\n  top bar            0 -> 84\n  \"Rooms\"          104 -> 161\n  the grid         187 -> 413   (1360 x 226)\n  the stage ends        -> 802\n\nNine identical cards of 218x108 in the top third, and 389px of empty sky under them. The Home tab beside it is a full-bleed bento that fills the stage and runs off the right edge. Same house, two different products.\n\nThree things follow from the same cause. Every room gets the same box whatever it is doing, so the Living room's \"2 lights on · The Bear · Blind open · Motion\" is ellipsised at 218px while the Garage spends the same card saying \"Quiet\". The order is data order, so an empty Bathroom sits among real rooms and New devices -- the one thing on the screen with something to ask -- is fourth in the second row. And a card is a door and nothing else: you cannot turn a room off without going into it and coming back.\n\nThree answers were drawn at the same house and the same hour so they could be judged rather than argued about. A is the one being built; the other two are on the second page with their cases intact, because the reasons they lost are the reasons A has to keep earning its place. The house is the one in app/mock/brain.mjs: nine rooms, four of them doing something, one empty, two waiting to be placed.",
       "page": "page-1"
     },
     {
@@ -78,7 +114,7 @@
       "x": 0,
       "y": 960,
       "w": 700,
-      "text": "TODAY\n\nNot a proposal. Every coordinate, type size and color on this board was read off the running panel, so the three directions have something honest to sit beside.\n\nWhat is actually on the screen: repeat(auto-fill, minmax(200px, 1fr)) at 14px gap, nine cards of 218x108, six across then three. A card carries a name, one line of activity, and a temperature when the room happens to own a temperature sensor -- which one room in nine does, so the 73\u00b0 on the Living room reads as a rendering glitch rather than as information.\n\nThe 56px \"Rooms\" headline costs 57px of stage to repeat the tab that is already lit behind it.\n\nIt is not ugly. It is just a list of buttons where the rest of the panel is a room.",
+      "text": "TODAY\n\nNot a proposal. Every coordinate, type size and color on this board was read off the running panel, so the three directions have something honest to sit beside.\n\nWhat is actually on the screen: repeat(auto-fill, minmax(200px, 1fr)) at 14px gap, nine cards of 218x108, six across then three. A card carries a name, one line of activity, and a temperature when the room happens to own a temperature sensor -- which one room in nine does, so the 73° on the Living room reads as a rendering glitch rather than as information.\n\nThe 56px \"Rooms\" headline costs 57px of stage to repeat the tab that is already lit behind it.\n\nIt is not ugly. It is just a list of buttons where the rest of the panel is a room.",
       "page": "page-1"
     },
     {
@@ -86,7 +122,7 @@
       "x": 1560,
       "y": 960,
       "w": 700,
-      "text": "A -- THE HOUSE, RANKED  \u00b7  CHOSEN\n\nThe grammar the room screen already uses, one level up. Three heights and nothing else -- FULL 598, HALF 392, THIRD 186 -- columns filling top to bottom then starting again to the right, and size standing for how much the room has to say.\n\nThe Living room gets a full column because it has a television playing, two lamps lit and a blind open, and at 218px none of that fits. At 300x598 it fits without an ellipsis, carries the artwork of what is playing, and has room for the one control a room needs from the doorway. The Bathroom is empty, so it is a third, and it is last.\n\nMaterial is not the ranking -- the amber rim and the lamp bleeding off the corner are exactly what `.room-card.active` already draws, so a lit room is the same card with its light on rather than a card made of something else.\n\nFOR: it is the vocabulary already in the house, so nothing new has to be learned or invented; the busiest room is the biggest thing on the screen; the stage is full; New devices is last and reads as an invitation rather than as a room.\n\nAGAINST: three sizes instead of one is more to hold in your head and more to get wrong as houses vary. Nine rooms fill four columns exactly -- fifteen would run off the right edge, and while what falls off is always the quiet and the empty, part of the house would be out of sight. And ranking has to be FROZEN on entry: the room screen learned that the hard way, when turning a lamp off resized two tiles and moved the rest under the finger that had just tapped.",
+      "text": "A -- THE HOUSE, RANKED  ·  CHOSEN\n\nThe grammar the room screen already uses, one level up. Three heights and nothing else -- FULL 598, HALF 392, THIRD 186 -- columns filling top to bottom then starting again to the right, and size standing for how much the room has to say.\n\nThe Living room gets a full column because it has a television playing, two lamps lit and a blind open, and at 218px none of that fits. At 300x598 it fits without an ellipsis, carries the artwork of what is playing, and has room for the one control a room needs from the doorway. The Bathroom is empty, so it is a third, and it is last.\n\nMaterial is not the ranking -- the amber rim and the lamp bleeding off the corner are exactly what `.room-card.active` already draws, so a lit room is the same card with its light on rather than a card made of something else.\n\nFOR: it is the vocabulary already in the house, so nothing new has to be learned or invented; the busiest room is the biggest thing on the screen; the stage is full; New devices is last and reads as an invitation rather than as a room.\n\nAGAINST: three sizes instead of one is more to hold in your head and more to get wrong as houses vary. Nine rooms fill four columns exactly -- fifteen would run off the right edge, and while what falls off is always the quiet and the empty, part of the house would be out of sight. And ranking has to be FROZEN on entry: the room screen learned that the hard way, when turning a lamp off resized two tiles and moved the rest under the finger that had just tapped.",
       "page": "page-1"
     },
     {
@@ -102,7 +138,7 @@
       "x": 0,
       "y": 960,
       "w": 700,
-      "text": "B -- ROOMS YOU CAN ACT ON\n\nOne row a room, the full 1360 wide. The width is spent on the two things the card cannot afford: the whole activity line with nothing truncated -- \"Ceiling light 90% \u00b7 Floor lamp 60% \u00b7 The Bear on the TV \u00b7 Blind 70% open\" -- and a control that does the obvious thing without going into the room and coming back.\n\nFifteen rooms look exactly like nine, and a phone shows the same rows one column wide. This is the direction that does not care how big the house is.\n\nFOR: nothing ever truncates; every room carries its own verb; the anatomy is identical at 1440 and at 390; a 44px control and an 84px row are honest touch targets from across a kitchen.\n\nAGAINST: it scrolls, and the board shows the bill rather than hiding it -- the Garage is cut by the bottom bar and the Bathroom and New devices are below the fold. What scrolls off a wall panel is whatever happened to land there, which is how the one card with something to ask ends up unseen. It is also the least like the rest of the panel: Home sweeps, a room sweeps, and this scrolls. And a row is a settings list. It is the most useful of the three and the least like a house.",
+      "text": "B -- ROOMS YOU CAN ACT ON\n\nOne row a room, the full 1360 wide. The width is spent on the two things the card cannot afford: the whole activity line with nothing truncated -- \"Ceiling light 90% · Floor lamp 60% · The Bear on the TV · Blind 70% open\" -- and a control that does the obvious thing without going into the room and coming back.\n\nFifteen rooms look exactly like nine, and a phone shows the same rows one column wide. This is the direction that does not care how big the house is.\n\nFOR: nothing ever truncates; every room carries its own verb; the anatomy is identical at 1440 and at 390; a 44px control and an 84px row are honest touch targets from across a kitchen.\n\nAGAINST: it scrolls, and the board shows the bill rather than hiding it -- the Garage is cut by the bottom bar and the Bathroom and New devices are below the fold. What scrolls off a wall panel is whatever happened to land there, which is how the one card with something to ask ends up unseen. It is also the least like the rest of the panel: Home sweeps, a room sweeps, and this scrolls. And a row is a settings list. It is the most useful of the three and the least like a house.",
       "page": "page-2"
     },
     {
@@ -144,6 +180,22 @@
       "w": 700,
       "page": "page-3",
       "text": "3 -- THE QUIET END IS AN INDEX\n\nThe rooms doing something keep the bento and the lead finally gets the full column it never gets today -- the Living Room at 300x598, with its lamps, its blinds and the one control the tab has never had. The rest of the house stops being cards and becomes rows: 350x106, a glyph, a name, the resting line from direction 1.\n\nThe whole thirteen-room house fits on one screen with a 40px margin to spare. Nothing runs off the right edge.\n\nThis is direction B from the original three -- the one that lost for being a settings list -- applied only to the tail. The reason it lost does not bite here: a list is exactly the right shape for the part of the house that has nothing to say, and the part that does say something keeps the bento.\n\nFOR: it fixes the real complaint (the quiet end dominates a screen it should not) rather than decorating it; the house stops being clipped, which today hides three rooms; it gives the busy rooms MORE, not less.\n\nAGAINST: two grammars on one screen instead of one, and a threshold that decides which a room gets -- the thing A was chosen for avoiding. On a house where nine rooms are on it degenerates back to today's bento with no index at all, so the tab would look different hour to hour. Needs a rule for that, and the rule is the hard part.\n\nWHAT THE BUILD ADDED, 17 Sep 2026\n\nTwo rules the board could not show, because the house it draws does not exercise them. Both are in rooms.ts with the reasoning.\n\nWHOLE COLUMNS OR NOTHING. Five rows are exactly one column, and a column with three rows in it is 240px of sky with names above it -- which reads as a bug, not an index. So only whole fives go to the index and the remainder, the highest-ranked of the quiet rooms, stay cards in the bento. Tried first as a plain threshold and the mock house showed why that does not work.\n\nTHE LAST CARD STRETCHES. The bento's own last column is often short, and `column dense` will drop the index's first row into that hole -- the index then runs one room short for the rest of its length. The last CARD takes the leftover tracks instead, which closes the hole and looks better than the hole did.\n\nNeither changes this board: ten quiet rooms are two columns exactly, and the cards come to two columns exactly, so nothing stretches and nothing is left over. That is why they had to be found by building it."
+    },
+    {
+      "id": "long-why",
+      "x": -620,
+      "y": 0,
+      "w": 500,
+      "page": "page-4",
+      "text": "WHY THIS EXISTS\n\n19 Sep 2026, from the user's own iPad: \"the room view seems unnecessarily long for some cards\".\n\nOne card, and it is arithmetic rather than taste. tracks() in rooms.ts gives the bento's whole remainder to its LAST card, so that `column dense` cannot drop an index row into the hole. That was written for a hole at the FOOT of a column. When the last card happens to START a column, the remainder is the entire column -- and a room with \"1 light off\" to say is drawn three times the size its content asked for.\n\nThe reproduction is exact: thirteen rooms, one lamp on, cards at 10 + 5 | 5. The third card is stretched from five tracks to fifteen.\n\nNothing else about the arrangement is wrong. The ranking is right, the index is right, and the lead is the room that is on.\n\nThree ways out, drawn at the size it went wrong on."
+    },
+    {
+      "id": "long-pick",
+      "x": 3812,
+      "y": 1104,
+      "w": 900,
+      "page": "page-4",
+      "text": "THE CHOICE\n\nA and C cost the same thing -- about four tracks of sky at the foot of one column, and rows pinned to their own columns so nothing backfills it. B spends the rule from 17 Sep instead, and gives back the short column that was called a bug then.\n\nC is the recommendation. It answers the complaint at its root rather than capping it: the only card that can be a whole column tall is a room with something on and a picture to draw. A room with one line of text is never more than a third, whatever the arithmetic has left over."
     }
   ],
   "launch": {
@@ -158,6 +210,10 @@
     {
       "id": "page-2",
       "name": "Not chosen"
+    },
+    {
+      "id": "page-4",
+      "name": "The long card"
     }
   ]
 }
