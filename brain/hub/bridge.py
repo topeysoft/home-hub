@@ -44,6 +44,10 @@ PROBE_SECONDS = 45
 # a moment and asking again costs nothing and is the difference between a board being seen
 # and a board being written off.
 PROBE_RETRY = 2
+# Fast first, then a speed that holds on hardware where the fast one does not. A minute
+# longer on a job somebody does once is a fair price for it finishing.
+FLASH_BAUDS = (460800, 115200)
+FLASH_SECONDS = 300
 # Probing a board resets it, and a board being reset drops off the USB and comes back a
 # moment later. That is OUR doing, not a person's, and must not be read as an unplug --
 # otherwise a dismissal never sticks: the board vanishes, is forgiven, reappears as a fresh
@@ -226,14 +230,43 @@ class Cable:
         return want if want.exists() else None
 
     async def flash(self, port: str, chip: str = "esp32s3"):
+        """Write the image, dropping to a slower line if a fast one does not hold.
+
+        460800 is fine over a Mac's USB and marginal over a Pi's: a real write got to 65% of
+        634kB and then "No more data to read from the serial port", which is what a line that
+        cannot keep up looks like. Falling back costs a minute on a job somebody does once,
+        and the alternative is a bridge that cannot be set up on the hardware it ships on.
+
+        In a subprocess for the same reason the probe is: esptool leaves multiprocessing
+        helpers behind, and one of those holding the port poisons everything after it."""
         image = self.image_for(chip)
         if not image:
             raise RuntimeError(f"no {chip} image")
-        def go():
-            import esptool
-            esptool.main(["--chip", chip, "--port", port, "--baud", "460800", "--before", "default-reset", "--after", "hard-reset",
-                          "write-flash", "-z", "--flash-mode", "dio", "--flash-freq", "80m", "--flash-size", "16MB", "0x0", str(image)])
-        await self._in_thread(go)
+        last = ""
+        for baud in FLASH_BAUDS:
+            log.info("bridge: writing %s to %s at %s baud", image.name, port, baud)
+            proc = await asyncio.create_subprocess_exec(
+                sys.executable, "-m", "esptool", "--chip", chip, "--port", port,
+                "--baud", str(baud), "--before", "default-reset", "--after", "hard-reset",
+                "write-flash", "-z", "--flash-mode", "dio", "--flash-freq", "80m",
+                "--flash-size", "16MB", "0x0", str(image),
+                stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT,
+                start_new_session=True)
+            try:
+                out, _ = await asyncio.wait_for(proc.communicate(), timeout=FLASH_SECONDS)
+                rc = proc.returncode
+            except asyncio.TimeoutError:
+                out, rc = b"", -1
+            finally:
+                try: os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+                except (ProcessLookupError, PermissionError): pass
+                with contextlib.suppress(Exception): await proc.wait()
+            if rc == 0:
+                return
+            last = " / ".join(l.strip() for l in out.decode(errors="replace").splitlines()
+                              if l.strip() and "Writing at" not in l)[-300:]
+            log.info("bridge: %s baud did not hold (%s)", baud, last or f"exit {rc}")
+        raise RuntimeError(last or "the write did not finish")
 
     async def write(self, port: str, cfg: dict) -> dict:
         """Everything in cfg, then apply, then wait for it back. Returns its hello afterwards."""
