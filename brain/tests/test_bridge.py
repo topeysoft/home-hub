@@ -590,45 +590,57 @@ class WhoseMeshAndWhereItIs(unittest.TestCase):
         self.assertEqual(self.hub.settings.get("bridges") or {}, {})
 
 
-class OnePortOneProbe(unittest.TestCase):
-    """Probing a board resets it, and a board being reset drops off the USB and comes back.
+class OneProbeAtATime(unittest.TestCase):
+    """Probing is exclusive, across every port, and ports wait their turn rather than being
+    dropped.
 
-    `self.job` is not set until a probe FINISHES, so it cannot stop the returning port from
-    being read as a fresh arrival and probed a second time while the first is still going.
-    The two fight over the serial line and both lose: "device reports readiness to read but
-    returned no data (multiple access on port?)" -- a probe losing a race with itself."""
+    Two things forced it. Probing resets the board, so its USB re-enumerates and the port
+    churns -- the returning port reads as a fresh arrival and would be probed underneath the
+    probe still running. And ONE BOARD CAN BE TWO PORTS: an ESP32-S3 on Linux appears as
+    both its USB-serial bridge and the chip's own USB-JTAG unit, so "probe each new port"
+    means two probes on one chip, fighting over it. macOS shows only one of those ports,
+    which is why a hub failed all evening and a Mac never reproduced it."""
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.dev = Path(self.tmp.name) / "by-id"; self.dev.mkdir()
-        self.cable = FakeCable()
-        self.b = Bridges(FakeHub(self.tmp.name), self.cable, devdir=self.dev)
+        self.b = Bridges(FakeHub(self.tmp.name), FakeCable(), devdir=self.dev)
+        self.probes = []
+        async def counted(port): self.probes.append(port)
+        self.b._arrived = counted
 
     def tearDown(self): self.tmp.cleanup()
 
-    def test_a_port_already_being_probed_is_not_probed_again(self):
-        run(self.b.scan())                      # baseline
-        port = str(self.dev / "usb-board"); (self.dev / "usb-board").touch()
-        self.b._probing.add(port)               # a probe is in flight, as it would really be
-        probes = []
-        async def counted(p): probes.append(p)
-        self.b._arrived = counted
-        run(self.b.scan())
-        self.assertEqual(probes, [])
+    def touch(self, name):
+        (self.dev / name).touch(); return str(self.dev / name)
 
-    def test_and_is_probed_once_the_first_one_is_done(self):
+    def test_one_board_showing_two_ports_is_probed_once(self):
+        """The hub case, exactly: a C3/S3 devkit's serial bridge and its USB-JTAG unit both
+        appear, and probing both at once is two probes on one chip."""
+        run(self.b.scan())                                  # baseline
+        self.touch("usb-1a86_USB_Single_Serial_5A46080020-if00")
+        self.touch("usb-Espressif_USB_JTAG_serial_debug_unit_FC:01:2C:C6:E2:EC-if00")
         run(self.b.scan())
-        port = str(self.dev / "usb-board"); (self.dev / "usb-board").touch()
-        self.b._probing.add(port)
-        probes = []
-        async def counted(p): probes.append(p)
-        self.b._arrived = counted
-        run(self.b.scan())
-        self.b._probing.discard(port)           # the probe finished
-        (self.dev / "usb-board").unlink(); run(self.b.scan())
-        (self.dev / "usb-board").touch(); run(self.b.scan())
-        self.assertEqual(probes, [port])
+        self.assertEqual(len(self.probes), 1)
 
+    def test_nothing_is_probed_while_a_probe_is_in_flight(self):
+        run(self.b.scan())
+        port = self.touch("usb-board")
+        self.b._probing.add("some-other-port")
+        run(self.b.scan())
+        self.assertEqual(self.probes, [])
+        self.b._probing.clear()                             # that one finished
+        run(self.b.scan())
+        self.assertEqual(self.probes, [port])
+
+    def test_a_port_that_waited_is_not_forgotten(self):
+        """Queued, not dropped: skipping a port used to lose it, because it stays in _seen
+        and never looks new again."""
+        run(self.b.scan())
+        a = self.touch("usb-aaa"); b = self.touch("usb-bbb")
+        run(self.b.scan())
+        run(self.b.scan())
+        self.assertEqual(sorted(self.probes), sorted([a, b]))
 
 class ReadingTheProbesAnswer(unittest.TestCase):
     """The probe prints a marker and the hub reads it back. Three times now that reading has
