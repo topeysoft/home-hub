@@ -161,7 +161,7 @@ onMounted(() => { if (media.value?.attrs.entity_picture) art.value = imageUrl(me
         <Icon name="power" :size="17" /> Turn the room off
       </button>
       <button class="room-cell-pill ghost" v-else-if="waiting" @click.stop="store.sheet = 'add'">
-        <Icon name="plus" :size="16" /> Add a device
+        <Icon name="plus" :size="16" /> Add something
       </button>
     </div>
   </div>

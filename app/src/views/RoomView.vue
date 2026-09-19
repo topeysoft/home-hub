@@ -195,7 +195,7 @@ onUnmounted(() => clearInterval(tick))
       <p class="empty-sub" v-else>Add something and say it lives in the {{ room.name }}; it shows up here on its own.</p>
       <div class="empty-actions">
         <button class="button" v-if="waiting" @click="$emit('open', 'unassigned')"><Icon name="sparkle" :size="16" /> Place new devices</button>
-        <button class="button" :class="{ ghost: waiting }" @click="store.sheet = 'add'"><Icon name="plus" :size="16" /> Add a device</button>
+        <button class="button" :class="{ ghost: waiting }" @click="store.sheet = 'add'"><Icon name="plus" :size="16" /> Add something</button>
       </div>
     </div>
   </section>

@@ -12,6 +12,12 @@ import BridgeArt from './BridgeArt.vue'
 /*
  * Setting up a bridge, on the wall.
  *
+ * AN ARRIVAL, WHICH IS WHY IT IS A SHEET. Something you went looking for belongs on the Add page;
+ * something that just happened in the room comes up over whatever you were doing, because it is
+ * news. Both wear the same four beats and, more to the point, the same words: "That's the one" is
+ * the identity check here exactly as it is under Add, and there is no OK button and no Cancel.
+ * design/adding/Words.dc.html.
+ *
  * One sheet for the whole job because it IS one job, and the person is standing there for all of it.
  * It opens itself: a bridge knocking or being written to is something that happened in the room, not
  * somewhere you navigate to. Drawn from design/puck/ -- Knock (it arrives over the air), Cable (it
@@ -139,7 +145,7 @@ onUnmounted(() => window.removeEventListener('keydown', key))
             <span class="bridge-text"><span class="bridge-name">Nothing has been let in yet</span><span class="bridge-sub">Until you say yes it is only knocking. Nothing of yours is on it.</span></span>
           </div>
           <div class="flow-actions">
-            <button class="button" :class="{ busy }" @click="adopt">Yes, that’s mine</button>
+            <button class="button" :class="{ busy }" @click="adopt">That’s the one</button>
             <button class="button ghost" @click="dismiss">Not mine</button>
           </div>
         </template>
@@ -226,7 +232,7 @@ onUnmounted(() => window.removeEventListener('keydown', key))
           </p>
           <p class="sheet-lede" v-if="b.unplaced">What nobody knows yet is which is which. That is one walk around the house, pressing them.</p>
           <div class="flow-actions">
-            <button class="button" v-if="b.unplaced" @click="close(); store.sheet = 'add'">Put them in rooms</button>
+            <button class="button" v-if="b.unplaced" @click="close(); store.goRoom = 'unassigned'; store.sheet = null">Put them in rooms</button>
             <button class="button" :class="{ ghost: !!b.unplaced }" @click="close">Done</button>
           </div>
         </template>
@@ -244,7 +250,7 @@ onUnmounted(() => window.removeEventListener('keydown', key))
           <label class="field" v-else><span class="field-label">Wi‑Fi name</span><input class="input" v-model="ssid" autocomplete="off" autocapitalize="off" spellcheck="false" @keydown.enter="tell" /></label>
           <label class="field"><span class="field-label">Password</span><input class="input" type="password" v-model="password" autocomplete="off" @keydown.enter="tell" /></label>
           <div class="flow-actions">
-            <button class="button" :class="{ busy }" @click="tell">Use it</button>
+            <button class="button" :class="{ busy }" @click="tell">Continue</button>
             <button class="button ghost" @click="close">Not now</button>
           </div>
         </template>
@@ -252,7 +258,7 @@ onUnmounted(() => window.removeEventListener('keydown', key))
         <!-- it did not work, in the brain's words -->
         <template v-else>
           <p class="sheet-lede">{{ b.text || 'The hub could not finish setting it up.' }}</p>
-          <div class="flow-actions"><button class="button" @click="close">OK</button></div>
+          <div class="flow-actions"><button class="button ghost" @click="close">Not now</button></div>
         </template>
       </div>
     </div>

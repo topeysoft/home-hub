@@ -8,6 +8,7 @@ import { store, notify, installUpdate, restartHub } from './store'
 import { askRestart, askUpdate, checkForUpdate, downloadBackup, getNetwork, getUpdateNotes, listBridges, markNotesRead, setAutoUpdate, type BridgeRow, type NetState, type RestartAsk, type Rung, type UpdateAsk, type UpdateNotes } from './api'
 import Restore from './Restore.vue'
 import AdvancedLink from './AdvancedLink.vue'
+import Drivers from './Drivers.vue'
 import NetworkSheet from './NetworkSheet.vue'
 import BridgeCard from './BridgeCard.vue'
 
@@ -311,6 +312,14 @@ const when = (ts?: number | null) => ts ? new Date(ts * 1000).toLocaleString([],
         </template>
       </li>
     </ul>
+
+    <!-- The hub's own wiring, which is where wiring belongs. It used to sit on the Add page under
+         the four doors, where it answered a question nobody adding a lamp had asked, and where it
+         went on listing itself underneath a half-finished one. design/adding/Under.dc.html. -->
+    <div class="add-block">
+      <h3 class="label">Behind the scenes</h3>
+      <Drivers />
+    </div>
 
     <AdvancedLink />
     <NetworkSheet v-if="netOpen" @close="closeNet" />

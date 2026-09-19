@@ -42,7 +42,7 @@ function line(a: Account) {
 
 /* finishing a sign-in is the conversation the Add page already draws; it is handed the flow and reads
    as being about that one job (docs/settings.md, What landed) */
-function signIn(a: Account) { store.resume = a.flow; store.sheet = 'add' }
+function signIn(a: Account) { store.resume = a.flow; store.resumeName = a.name; store.sheet = 'add' }
 
 const sure = ref(''), busy = ref('')
 async function remove(a: Account) {
@@ -79,8 +79,8 @@ async function remove(a: Account) {
       </li>
       <li v-else>
         <span class="hub-k">Accounts</span>
-        <span class="hub-v">Nothing signed in yet.<span class="hub-sub line">Things that live behind an account — a camera, a thermostat, a doorbell — are added from <i>Add a device</i>, and appear here once they are.</span></span>
-        <button class="button small" @click="store.sheet = 'add'">Add a device</button>
+        <span class="hub-v">Nothing signed in yet.<span class="hub-sub line">Things that live behind an account — a camera, a thermostat, a doorbell — are added from <i>Add to the house</i>, and appear here once they are.</span></span>
+        <button class="button small" @click="store.sheet = 'add'">Add to the house</button>
       </li>
     </ul>
   </div>

@@ -60,9 +60,9 @@ clock over the sky; a touch brings it back to Home.
 Until the brain says setup is done, the panel shows `src/Setup.vue` instead of the house: welcome,
 your name and the home's name (which creates the engine login behind the scenes), where home is,
 which rooms, what to add, done. Every step after the names can be skipped. `?setup=1&page=rooms`
-previews any screen. The same pieces live on after setup: `src/AddPanel.vue` (found nearby, add by
-brand, and the short form each one needs) sits in the *Add a device* sheet, and `src/SortView.vue`
-is the *New devices* room where unplaced things get a name and a room.
+previews any screen. The same pieces live on after setup: `src/Adding.vue` (the four beats of adding
+anything) sits in the *Add to the house* sheet, and `src/SortView.vue` is the *New devices* room
+where things that arrived unwatched get a name and a room.
 
 ## The sky
 
@@ -87,11 +87,17 @@ and the sheet with `?sheet=location`.
   English "Recently" list built from the brain's event log.
 - `src/views/HomeView.vue`, `src/views/RoomView.vue` — the two screens.
 - `src/SceneBar.vue` — scene buttons; each shows its effect for the room it is in.
-- `src/Setup.vue`, `src/AddPanel.vue`, `src/SortView.vue`, `src/LocationPicker.vue` — first run and
-  the few things a person is ever asked: names, code, place, rooms, devices.
-- `src/PairPanel.vue` — the door for a Zigbee, Z‑Wave or Matter device, offered on the Add sheet for
-  each radio that is up: what to press, a live line while the hub listens, the S2 code when a lock
-  asks, and what joined.
+- `src/Setup.vue`, `src/Adding.vue`, `src/SortView.vue`, `src/LocationPicker.vue` — first run and
+  the few things a person is ever asked: names, code, place, rooms, what is in the house.
+- `src/Adding.vue` and `src/prove/` — adding anything, in four beats that never vary: what have you
+  got, which one is yours, letting it in, it's in — which room. The shell owns the beats and every
+  button on them; the pieces in `prove/` fill the second beat and draw nothing else. Which piece
+  depends on the OBJECT, never the protocol: `Blink` (a switch already on the wall announces itself),
+  `Press` (a plug or bulb joins a radio — the hub tries each one it has, and never asks which),
+  `Code` (a Matter code typed, or a switch's own code read by a phone's camera), `SignIn` (a maker's
+  account, and every form their flow asks for), `House` (a bridge or another panel, which arrive by
+  themselves). `src/adding.ts` holds the doors, the words and the types; `tests/adding.test.ts`
+  pins the vocabulary so no route can quietly grow one of its own. design/adding/.
 - `src/code.ts`, `src/CodePrompt.vue`, `src/CodePage.vue` — the code on the settings. Every request
   goes through `request()`, which attaches the code kept for this tab and, when the hub answers 401
   `code`, asks for it and retries. Controls never ask; changes do. `?sheet=code` previews the sheet.

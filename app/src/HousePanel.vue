@@ -97,7 +97,7 @@ const doors = computed(() => [
   { id: 'routines' as const, icon: 'sparkle', name: 'Routines', hint: routines.value },
   { id: 'people' as const, icon: 'people', name: 'People and phones', hint: people.value },
   { id: 'accounts' as const, icon: 'lock', name: 'Accounts', hint: accounts.value, attention: store.accounts.some(a => a.state !== 'on') },
-  { id: 'add' as const, icon: 'plus', name: 'Add a device', hint: found.value, attention: store.found.length > 0 },
+  { id: 'add' as const, icon: 'plus', name: 'Add to the house', hint: found.value, attention: store.found.length > 0 },
   { id: 'share' as const, icon: 'share', name: 'Share this house', hint: share.value },
   { id: 'hub' as const, icon: 'home', name: 'The hub', hint: hub.value, attention: ready.value },
   ...(store.status?.setup_done ? [{ id: 'code' as const, icon: 'lock', name: locked.value ? 'The code' : 'Lock the settings', hint: code.value }] : []),

@@ -245,6 +245,34 @@ const why = [
   { ts: now - 900, kind: 'intent', subject: 'living', old: 'occupied', new: 'movie', source: 'rule:evening-lights', detail: JSON.stringify({ rule: 'evening-lights', when: { sun: 'set', offset: -1200 }, if: [] }) },
   { ts: now - 7200, kind: 'intent', subject: 'living', old: 'empty', new: 'occupied', source: 'panel', detail: null },
 ]
+/* The one pairing session a hub can have. It is a clock, not a machine: a few seconds after the door
+   opens something joins, and a second later it is a device in the house with no room. */
+let pairing = null
+function pairStatus() {
+  if (!pairing) return { state: 'idle' }
+  if (pairing.state !== 'listening') return { ...pairing, at: undefined, joined: undefined }
+  const on = (Date.now() - pairing.at) / 1000
+  if (process.env.PAIR === 'none') {
+    if (on > 12) { pairing = { state: 'closed', text: 'Nothing joined. Put the device in pairing mode and try again.' }; return pairing }
+    return { state: 'listening', text: 'Listening. Put the device in pairing mode.', seconds_left: Math.round(12 - on) }
+  }
+  if (process.env.PAIR === 'pin' && on > 4 && pairing.needs !== null) {
+    pairing.needs = 'pin'
+    return { state: 'pin', needs: 'pin', text: 'It is a secured device and wants the 5-digit code on its sticker.' }
+  }
+  if (pairing.joined === undefined && on > 5) pairing.joined = Date.now()
+  if (pairing.joined === undefined) return { state: 'listening', text: 'Listening. Put the device in pairing mode.', seconds_left: Math.round(240 - on) }
+  if (Date.now() - pairing.joined < 2500) return { state: 'found', text: 'Something is joining… (Smart plug)', device: { id: 'new-plug', name: 'Smart plug' } }
+  /* it is in: the house gains it, once, with no room of its own */
+  if (!unassigned.devices.some(d => d.id === 'radio-new')) {
+    const d = dev('radio-new', 'Smart plug', 'unassigned', 'plug', 'off', {})
+    unassigned.devices.push(d)
+    push({ type: 'device', device: d })
+  }
+  pairing = { state: 'done', text: 'A plug joined the house.', device: { id: 'new-plug', name: 'Smart plug' } }
+  return pairing
+}
+
 const discovered = process.env.FOUND === '0' ? [] : [{ flow_id: 'f1', handler: 'sonos', kind: 'speaker', title: 'Sonos Roam', source: 'zeroconf' }, { flow_id: 'f2', handler: 'cast', kind: 'tv', title: 'Chromecast (Den)', source: 'zeroconf' }]
 // NEEDSLOOK=1 gives Home its quiet list. Every line is a job: it says what can be done about it in `acts`,
 // and a fault gathers what went quiet behind it in `with` -- one dead radio is one line and not seven.
@@ -589,7 +617,22 @@ const bridgeRows = process.env.BRIDGES === 'none' ? [] : [
     if (what === 'wifi') { bridgeAt = Date.now(); bridgePinned = null }        // told: the job carries on
     return json(res, bridgeNow())
   }
-  if (p === '/pair') return json(res, { state: 'idle' })
+  /* PAIRING a radio thing, simulated so the screens that drive it can be seen. The panel opens a door,
+     something joins a few seconds later, and the house gains a device with no room -- which is what
+     beat four then asks about. PAIR=pin makes it ask for a lock's code first; PAIR=none lets the
+     window run out with nothing joining; PAIR=fail refuses at the door. */
+  if (p === '/pair' && req.method === 'POST') {
+    if (process.env.PAIR === 'fail') { pairing = { state: 'failed', text: 'That radio is not answering.' }; return json(res, pairing) }
+    pairing = { state: 'listening', at: Date.now(), text: 'Listening. Put the device in pairing mode.' }
+    return json(res, pairStatus())
+  }
+  if (p === '/pair' && req.method === 'DELETE') { pairing = { state: 'closed', text: 'Stopped.' }; return json(res, pairing) }
+  if (p === '/pair/pin' && req.method === 'POST') {
+    if (!pairing || pairing.needs !== 'pin') { res.writeHead(400, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify({ detail: 'Nothing is asking for a code right now.' })) }
+    pairing.needs = null; pairing.joined = Date.now()
+    return json(res, pairStatus())
+  }
+  if (p === '/pair') return json(res, pairStatus())
   if (p === '/assistant') return json(res, { available: true, configured: false, source: null, model: 'claude-sonnet-5' })
   if (p === '/setup/drivers') return json(res, status)
   if (p === '/setup/advanced') return json(res, { url: 'http://hub.local:8123/', username: 'hub', password: 'secret' })
@@ -604,7 +647,7 @@ const bridgeRows = process.env.BRIDGES === 'none' ? [] : [
   /* the accounts page: one of each state, so the page can be read without a house behind it.
      ACCOUNTS=0 empties it (the nothing-signed-in-yet case). */
   if (p === '/accounts') return json(res, { accounts: process.env.ACCOUNTS === '0' ? [] : [
-    { id: 'e-nest', kind: 'Google Nest', name: 'Google Nest', state: 'signin', why: '', flow: 'flow-nest', things: 4 },
+    { id: 'e-nest', kind: 'Google Nest', name: 'Google Nest', state: 'signin', why: '', flow: 'r1', things: 4 },   // r1 is the one flow the mock can actually walk, so Sign in again works here
     { id: 'e-ring', kind: 'Ring', name: 'Ring', state: 'stopped', why: 'the key it was given has been revoked', flow: null, things: 3 },
     { id: 'e-hue', kind: 'Philips Hue', name: 'Philips Hue bridge', state: 'on', why: '', flow: null, things: 11 },
     { id: 'e-tesla', kind: 'Tesla', name: 'Tesla', state: 'on', why: '', flow: null, things: 1 },
