@@ -195,7 +195,7 @@ class Cable:
         timed_out = False
         try:
             out, _ = await asyncio.wait_for(proc.communicate(), timeout=PROBE_SECONDS)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             timed_out, out = True, b""
         finally:
             # Always, not only on timeout: a probe that answered perfectly well can still
@@ -819,7 +819,7 @@ class Bridges:
         end = time.time() + timeout
         while time.time() < end:
             try: await asyncio.wait_for(self._woke.wait(), timeout=max(0.2, end - time.time()))
-            except asyncio.TimeoutError: break
+            except TimeoutError: break
             self._woke.clear()
             got = self._heard.get(leaf)
             if got and got["chip"] == chip: return got["body"]

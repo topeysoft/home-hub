@@ -157,17 +157,17 @@ class Restart:
         """Everything the confirmation needs, written here rather than in the panel: the panel does not
         know what it is looking at and so decides none of these words."""
         rung = rung if rung in RUNGS else "hub"
-        weary = self.lately() >= WEARY
+        lately = self.lately()        # a query against the log; the sheet asked it three times over
+        weary = lately >= WEARY
         secs = self.seconds(rung)
         return {"rung": rung, "title": TITLE[rung], "yes": DO[rung], "keeps": KEEPS[rung],
                 "stops": self.stops(rung, away), "flight": self.flight(rung),
                 "seconds": secs, "how_long": plainly(secs),
-                "blocked": self.blocked(), "busy": self.pending(), "lately": self.lately(),
+                "blocked": self.blocked(), "busy": self.pending(), "lately": lately,
                 # Once the same rung has been tried three times in an hour it has stopped being the
                 # answer, and saying so is worth more than offering it a fourth time.
                 "harder": DEEPER[rung] if weary else None,
-                "weary": ("The hub has restarted %d times in the past hour. Something is wrong that restarting isn't fixing."
-                          % self.lately()) if weary else None,
+                "weary": f"The hub has restarted {lately} times in the past hour. Something is wrong that restarting isn't fixing." if weary else None,
                 # Nobody is home to reach the plug, and no rung below this one can be undone from away
                 # either. The away phone is told, and then allowed: the household that most needs this
                 # is the one furthest from the socket.
