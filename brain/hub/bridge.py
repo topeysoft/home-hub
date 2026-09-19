@@ -299,7 +299,14 @@ class Bridges:
         if self._first:
             self._first = False; return       # what was there at boot is not something that just arrived
         for port in sorted(new):
-            if RADIO.search(port) or port in self._dismissed or self.job: continue
+            # `self.job` is not set until a probe FINISHES, so it cannot stop a second probe
+            # of the port already being probed -- and probing is exactly what makes a port
+            # churn, because it resets the board and its USB re-enumerates. The returning
+            # port reads as a fresh arrival, a second probe starts on it, and the two fight:
+            # "device reports readiness to read but returned no data (multiple access on
+            # port?)". That is a probe losing a race with itself.
+            if RADIO.search(port) or port in self._dismissed or port in self._probing or self.job:
+                continue
             asyncio.create_task(self._arrived(port))
 
     async def _arrived(self, port: str):
