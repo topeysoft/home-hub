@@ -503,7 +503,9 @@ const server = http.createServer((req, res) => {
        NET=cable    the hub is on ethernet and eleven bridges are on a Wi-Fi it was told about
        NET=wifi     the hub is on the Wi-Fi too, and a change takes it with them
        NET=moved    the hub has moved and the password it holds is for somewhere else
-       NET=none     no host script at all: the row says so and offers two typed fields
+       NET=none     no host script at all ('unknown'): the row says so and offers two typed fields
+       NET=off      a managed hub with a radio and nothing connected. Looks like 'none' and is the
+                    opposite case: this one IS the hub that should be moved
      MOVE=moving|done|late pins a moment of the move instead of walking it. */
   if (p.startsWith('/network')) return network(p, req, res)
   /* A bridge being set up. BRIDGE=cable walks the whole job the way a real one does -- software,
@@ -721,6 +723,7 @@ function netState() {
   const bridges = { ssid: moved ? 'Downstairs' : netSsid, checked: NET === 'wifi' || moved, known: !moved, count: 11 }
   if (NET === 'wifi') return { how: 'wifi', ssid: netSsid, signal: 'strong', band: '5', ip: '192.168.1.30', name: 'hub', can_change: true, managed: true, bridges, bridges_moving: netMove }
   if (NET === 'moved') return { how: 'wifi', ssid: 'Downstairs', signal: 'ok', ip: '192.168.1.30', name: 'hub', can_change: true, managed: true, bridges, bridges_moving: netMove }
+  if (NET === 'off') return { how: 'none', ip: '127.0.0.1', name: 'hub', can_change: true, managed: true, bridges, bridges_moving: netMove }
   if (NET === 'none') return { how: 'unknown', ip: '192.168.1.9', name: 'hub', can_change: false, managed: false, bridges, bridges_moving: netMove }
   return { how: 'cable', ip: '192.168.1.9', name: 'hub', can_change: true, spare: null, managed: true, bridges, bridges_moving: netMove }
 }

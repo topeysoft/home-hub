@@ -133,9 +133,12 @@ onUnmounted(() => window.removeEventListener('keydown', key))
           <p class="sheet-lede" v-else-if="net?.how === 'cable'">
             The hub is on a cable and stays on it. This is the Wi‑Fi {{ them }} use — change it here and they all move over together.
           </p>
-          <!-- A hub whose machine has no network script. Its own connection is somebody else's
-               business and this sheet must not imply it is about to touch it. -->
-          <p class="sheet-lede" v-else-if="net?.how === 'none'">
+          <!-- A hub whose machine has no network script ('unknown'), NOT one that merely has nothing
+               connected ('none'). Its own connection is somebody else's business and this sheet must
+               not imply it is about to touch it -- and hubMoves is false here, so the button below
+               says "Move them over" and go() calls moveBridges, which is the same sentence. A hub on
+               'none' is managed, has a radio, and is exactly the one that should be moved. -->
+          <p class="sheet-lede" v-else-if="net?.how === 'unknown'">
             This hub’s own connection is looked after by the machine it runs on. What this changes is the Wi‑Fi {{ them }} use — change it here and they all move over together.
           </p>
           <p class="sheet-lede" v-else>
