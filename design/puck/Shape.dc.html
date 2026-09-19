@@ -1,0 +1,163 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      /* the panel's own tokens, unchanged -- app/src/panel.css */
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp: #e9b872; --lamp-ink: #2a1c07; --live: #74c69d; --danger: #e08a8a;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .card { border-radius: 22px; background: var(--surface); border: 1px solid var(--edge);
+            padding: 18px; display: flex; flex-direction: column; }
+    .stage { border-radius: 14px; background: rgba(255,255,255,.022); border: 1px solid rgba(255,255,255,.05);
+             height: 152px; flex: none; display: grid; place-items: center; overflow: hidden; }
+    .t1 { font-size: 16px; font-weight: 500; }
+    .t2 { font-size: 13px; color: var(--muted); line-height: 1.35; }
+    .tr { display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: start;
+          font-size: 12.5px; line-height: 1.38; color: var(--ink-2); }
+    .dot { width: 6px; height: 6px; border-radius: 99px; margin-top: 5px; }
+    .dot.ok { background: var(--live); }
+    .dot.no { background: var(--danger); }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: #0c0d10; color: var(--ink); font-size: 17px; line-height: 1.4;">
+  <div style="position: absolute; inset: 0; background: radial-gradient(60% 50% at 20% 18%, rgba(72,63,135,.2), transparent 70%), radial-gradient(58% 50% at 86% 88%, rgba(92,63,57,.2), transparent 72%);"></div>
+
+  <svg width="0" height="0" style="position: absolute;"><defs>
+    <radialGradient id="sGlow" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#fff1d8" stop-opacity=".6"/><stop offset="52%" stop-color="#f0c98d" stop-opacity=".19"/><stop offset="1" stop-color="#f0c98d" stop-opacity="0"/></radialGradient>
+    <radialGradient id="sGlowHi" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#fff1d8" stop-opacity=".88"/><stop offset="50%" stop-color="#f0c98d" stop-opacity=".3"/><stop offset="1" stop-color="#f0c98d" stop-opacity="0"/></radialGradient>
+  </defs></svg>
+
+  <div style="position: absolute; top: 50px; left: 56px; right: 56px;">
+    <h1 class="dsp" style="margin: 0; font-size: 41px;">It has to be near a switch. The outlet is only where the power is.</h1>
+    <p style="margin: 11px 0 0; font-size: 16.5px; color: var(--ink-2); max-width: 104ch;"><em style="font-style: normal; color: var(--ink);">brilliant.md</em> already settles why the bridge is its own object and not a radio in the hub: it has to sit within about &minus;80&nbsp;dBm of any one switch, and that has to hold whether the hub is a Pi, a NUC or a VM. So the spec is proximity to a <em style="font-style: normal; color: var(--ink);">switch</em> &mdash; the socket is a constraint it is forced to satisfy, not the thing it is for. <em style="font-style: normal; color: var(--ink);">Nothing here is chosen.</em></p>
+  </div>
+
+  <div class="cap" style="position: absolute; top: 212px; left: 56px;">Four shapes, one scale &mdash; the puck is 55&nbsp;mm across in every drawing</div>
+
+  <!-- 1 -- the plug in the shell -->
+  <div class="card" style="position: absolute; top: 246px; left: 56px; width: 314px; height: 396px;">
+    <div class="stage">
+      <svg viewBox="0 0 200 100" width="276" height="138">
+        <rect x="82.5" y="6" width="35" height="57" rx="5" fill="#1b1d23" stroke="rgba(255,255,255,.12)"/>
+        <rect x="89" y="13" width="22" height="22" rx="4" fill="rgba(255,255,255,.06)"/>
+        <rect x="89" y="38" width="22" height="22" rx="4" fill="rgba(255,255,255,.06)"/>
+        <rect x="93.25" y="37" width="13.5" height="13.5" rx="3" fill="#5a5f6a"/>
+        <circle cx="100" cy="62" r="30" fill="url(#sGlow)"/>
+        <circle cx="100" cy="62" r="13.75" fill="#32353d"/>
+        <circle cx="100" cy="62" r="13.75" fill="none" stroke="rgba(255,255,255,.18)"/>
+        <circle cx="100" cy="62" r="11.4" fill="none" stroke="#f0c98d" stroke-width="2.2" opacity=".85"/>
+      </svg>
+    </div>
+    <span class="t1" style="margin-top: 14px;">The plug in the shell</span>
+    <span class="t2" style="margin: 4px 0 12px;">One piece, hanging off a cube in the socket. Orbit&rsquo;s B&#8209;hyve hub, the thing that started this.</span>
+    <div style="display: flex; flex-direction: column; gap: 8px; margin-top: auto;">
+      <div class="tr"><span class="dot ok"></span><span>No mains inside, no cable, one SKU. The cube is the only certified part and the only thing that changes by country.</span></div>
+      <div class="tr"><span class="dot no"></span><span>Locks the body to the socket &mdash; thickness, orientation, antenna and where the light gets out, all at once.</span></div>
+    </div>
+  </div>
+
+  <!-- 2 -- a short tail -->
+  <div class="card" style="position: absolute; top: 246px; left: 394px; width: 314px; height: 396px;">
+    <div class="stage">
+      <svg viewBox="0 0 200 100" width="276" height="138">
+        <rect x="26" y="8" width="35" height="57" rx="5" fill="#1b1d23" stroke="rgba(255,255,255,.12)"/>
+        <rect x="32.5" y="15" width="22" height="22" rx="4" fill="rgba(255,255,255,.06)"/>
+        <rect x="32.5" y="40" width="22" height="22" rx="4" fill="rgba(255,255,255,.06)"/>
+        <rect x="36.75" y="39" width="13.5" height="13.5" rx="3" fill="#5a5f6a"/>
+        <path d="M43.5 52 C 44 74, 52 88, 78 89.5 C 100 91, 116 88, 128.5 80" fill="none" stroke="#4a4e58" stroke-width="2.4" stroke-linecap="round"/>
+        <rect x="0" y="90" width="200" height="2.4" fill="rgba(255,255,255,.08)"/>
+        <circle cx="142" cy="76" r="30" fill="url(#sGlow)"/>
+        <circle cx="142" cy="76" r="13.75" fill="#32353d"/>
+        <circle cx="142" cy="76" r="13.75" fill="none" stroke="rgba(255,255,255,.18)"/>
+        <circle cx="142" cy="76" r="11.4" fill="none" stroke="#f0c98d" stroke-width="2.2" opacity=".85"/>
+      </svg>
+    </div>
+    <span class="t1" style="margin-top: 14px;">A short tail</span>
+    <span class="t2" style="margin: 4px 0 12px;">150&nbsp;mm of finished cable, and the body never touches the connector. A Chromecast, not a devkit.</span>
+    <div style="display: flex; flex-direction: column; gap: 8px; margin-top: auto;">
+      <div class="tr"><span class="dot ok"></span><span>The same object seats in the hub&rsquo;s port, in any cube, or on a shelf beside the switch &mdash; where the radio wants to be.</span></div>
+      <div class="tr"><span class="dot no"></span><span>A visible cable, which is the look the molded plug was buying its way out of.</span></div>
+    </div>
+  </div>
+
+  <!-- 3 -- off its dock -->
+  <div class="card" style="position: absolute; top: 246px; left: 732px; width: 314px; height: 396px;">
+    <div class="stage">
+      <svg viewBox="0 0 200 100" width="276" height="138">
+        <rect x="26" y="8" width="35" height="57" rx="5" fill="#1b1d23" stroke="rgba(255,255,255,.12)"/>
+        <rect x="32.5" y="15" width="22" height="22" rx="4" fill="rgba(255,255,255,.06)"/>
+        <rect x="32.5" y="40" width="22" height="22" rx="4" fill="rgba(255,255,255,.06)"/>
+        <circle cx="43.5" cy="51" r="13.75" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.34)" stroke-width="1.4" stroke-dasharray="3 4"/>
+        <path d="M59 43 C 80 18, 112 17, 131 35" fill="none" stroke="rgba(240,201,141,.5)" stroke-width="1.6" stroke-dasharray="2 4.5" stroke-linecap="round"/>
+        <rect x="0" y="90" width="200" height="2.4" fill="rgba(255,255,255,.08)"/>
+        <circle cx="145" cy="53" r="34" fill="url(#sGlowHi)"/>
+        <circle cx="145" cy="53" r="13.75" fill="#32353d"/>
+        <circle cx="145" cy="53" r="13.75" fill="none" stroke="rgba(255,255,255,.22)"/>
+        <circle cx="145" cy="53" r="11.4" fill="none" stroke="#ffe6bb" stroke-width="2.4"/>
+      </svg>
+    </div>
+    <span class="t1" style="margin-top: 14px;">Off its dock, still lit</span>
+    <span class="t2" style="margin: 4px 0 12px;">Contacts in the dock, and enough charge in the puck to walk a corridor with it.</span>
+    <div style="display: flex; flex-direction: column; gap: 8px; margin-top: auto;">
+      <div class="tr"><span class="dot ok"></span><span><em style="font-style: normal; color: var(--ink);">Placing</em> works as it is already drawn: it answers in your hand, so you survey first and place second.</span></div>
+      <div class="tr"><span class="dot no"></span><span>Two parts, a cell, contacts that can tarnish, and the shipping paperwork a cell brings.</span></div>
+    </div>
+  </div>
+
+  <!-- 4 -- a shelf and a port -->
+  <div class="card" style="position: absolute; top: 246px; left: 1070px; width: 314px; height: 396px;">
+    <div class="stage">
+      <svg viewBox="0 0 200 100" width="276" height="138">
+        <circle cx="68" cy="48" r="30" fill="url(#sGlow)"/>
+        <rect x="16" y="62" width="168" height="6" rx="3" fill="#2a2d34"/>
+        <rect x="16" y="62" width="168" height="1.4" rx=".7" fill="rgba(255,255,255,.09)"/>
+        <rect x="20" y="68" width="160" height="3" rx="1.5" fill="#1a1c22"/>
+        <circle cx="68" cy="48" r="13.75" fill="#32353d"/>
+        <circle cx="68" cy="48" r="13.75" fill="none" stroke="rgba(255,255,255,.18)"/>
+        <circle cx="68" cy="48" r="11.4" fill="none" stroke="#f0c98d" stroke-width="2.2" opacity=".85"/>
+        <path d="M81.5 52 C 98 56, 104 66, 110 78 C 116 90, 132 94, 198 95" fill="none" stroke="#4a4e58" stroke-width="2.4" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <span class="t1" style="margin-top: 14px;">A shelf and a port</span>
+    <span class="t2" style="margin: 4px 0 12px;">Female USB&#8209;C on the body. Any cable, any surface, nothing invented.</span>
+    <div style="display: flex; flex-direction: column; gap: 8px; margin-top: auto;">
+      <div class="tr"><span class="dot ok"></span><span>Cheapest by a distance, and a known &ldquo;up&rdquo; &mdash; so the light needs no rim, and waist height beats a floor socket.</span></div>
+      <div class="tr"><span class="dot no"></span><span>Reads as equipment. This is the one that ends up being a devkit on a shelf.</span></div>
+    </div>
+  </div>
+
+  <div style="position: absolute; top: 682px; left: 56px; right: 56px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 40px;">
+    <div>
+      <div class="cap" style="margin-bottom: 8px;">Which part is reversible</div>
+      <p style="margin: 0; color: var(--ink-2); font-size: 15px;">The connector can change in a second revision. The shell, the diffusing face and where the antenna sits cannot. The plug in the shell is the most finished of these four and the least reversible &mdash; which is the argument for it being the <em style="font-style: normal; color: var(--ink);">second</em> decision, taken after a few have been placed by people who did not build them.</p>
+    </div>
+    <div>
+      <div class="cap" style="margin-bottom: 8px;">All four keep the hub&rsquo;s port</div>
+      <p style="margin: 0; color: var(--ink-2); font-size: 15px;">Every shape keeps the seat that matters: the hub writes Wi&#8209;Fi, broker and keys down the CDC console the puck already speaks, so the in&#8209;box bridge never asks anybody for a password. A 100&nbsp;mm cable in the box serves that as well as a molded plug &mdash; and keeps the radio out of a metal chassis, the worst RF position in the house.</p>
+    </div>
+    <div>
+      <div class="cap" style="margin-bottom: 8px;">The thing no drawing shows</div>
+      <p style="margin: 0; color: var(--ink-2); font-size: 15px;">Whether the walk survives a cold boot. Only the dock stays alive in your hand; in the other three you unplug it, it dies, and each candidate socket has to prove itself from scratch &mdash; a 6&nbsp;s scan, three empty passes before red. Nobody stands in a hallway through that twice. Shorten it, or carry the charge.</p>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

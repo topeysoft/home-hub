@@ -135,6 +135,14 @@
       "w": 1440,
       "h": 900,
       "title": "No code to read \u2014 the wall can do it alone"
+    },
+    {
+      "file": "Shape.dc.html",
+      "x": 6240,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "The shape, and what the connector locks"
     }
   ],
   "annotations": [
@@ -256,6 +264,13 @@
       "y": 6360,
       "w": 800,
       "text": "NO CODE TO READ MEANS NO CAMERA TO NEED\n\nTHE PRODUCT RULE QUIETLY CHANGES HERE. 'The wall shows, the phone scans' exists because a wall panel has no camera and a QR must be read -- it is why AddSwitch.vue has two faces and a handoff between them. Take the code away and the rule has nothing left to do. A person holds a finger on a switch, the house blinks what it can hear, they say which one: no camera anywhere in it. So for a switch already in the wall, THE WALL CAN RUN THE WHOLE JOB, and the phone handoff becomes an option for the hand-held case rather than the only road. That is a simplification of the product, arrived at by removing a requirement rather than adding a feature.\n\nBLINK ONE AT A TIME, NEVER ALL OF THEM. Three unclaimed switches in a house is not far-fetched -- a room being redone, or somebody resetting a few before starting. A room with two blinking switches in it answers nothing, so the house offers candidates in turn and 'not that one' steps to the next. Which means the scan must return EVERY unclaimed switch in the window, not the strongest; taking the loudest is only safe when there is provably one, and there is not.\n\n'NOTHING IS WAITING' IS A REAL SCREEN, not an error. The likeliest cause is a reset that did not take -- the tab not pulled fully out, or the finger lifted early -- and the second likeliest is a switch that is already on the house, where the answer is that it lives under its light rather than here. Both are said in the room they happen in, with the thing to try next.\n\nWHAT THE BLINK COSTS: the Invite PDU's one parameter, an attention timer, which the provisioner currently hardcodes to zero. To blink a candidate you connect, send Invite with a non-zero attention, and disconnect if the person says it is not theirs -- the device drops back to advertising on its own. Two connections rather than one, for a question that could not otherwise be asked.\n\nUNVERIFIED, AND IT IS THE WHOLE BOARD: that a Brilliant switch actually DOES anything visible when the attention timer is set. The spec says a device should attract human attention; what these switches do about it is unknown, and if the answer is nothing, the codeless path needs a different proof of identity and this board is wrong. One switch, one reset, one Invite -- and it should be checked before any of this is built."
+    },
+    {
+      "id": "shape",
+      "x": 6240,
+      "y": 960,
+      "w": 700,
+      "text": "THE SHAPE OF THE OBJECT\n\nNot a decision \u2014 a look at four, after seeing Orbit's B-hyve hub, which molds a male USB plug into its shell and ships a commodity cube to put it in. It is clever, it is the most finished-looking of these, and that is exactly what makes it worth holding off on.\n\nTHE SPEC IS NOT \"AT AN OUTLET\". brilliant.md gives the real one: within about -80 dBm of any one switch, and true whether the hub is a Pi, a NUC or a VM \u2014 which is why the bridge is its own object and not a radio in the hub. A shape that molds the body onto a socket optimizes for the power, not for the radio. The two correlate in most rooms and come apart in the rooms that matter.\n\nWHAT THE CONNECTOR LOCKS. A plug in the shell settles thickness, orientation, antenna position and where the light can get out, all at once, and a 55 mm body centered on a USB-A plug also blocks the neighboring port on a Pi, whose stacked receptacles sit about 15-16 mm apart. The connector is the part a second revision can change; the shell and the diffuser are not. So take it second.\n\nWHAT SURVIVES IN ALL FOUR: the hub's USB seat, which is what makes the in-box bridge need no Wi-Fi password at all \u2014 the hub writes Wi-Fi, broker and keys down the CDC console the puck already speaks. brilliant.md already calls that the right shape for it. A 100 mm cable in the box serves it as well as a molded plug, and keeps the radio out of a metal chassis.\n\nWHAT NONE OF THE DRAWINGS SHOW: whether the placement walk survives a cold boot. Placing is drawn with the light answering while the thing is in your hand, and only the dock shape keeps that literally true. In the other three you unplug it, it dies, and each candidate socket has to prove itself from a cold start \u2014 a 6 s scan and three empty passes before red. Either that path gets shortened, or the object carries its own charge."
     }
   ],
   "launch": {
@@ -271,6 +286,8 @@
     "shared",
     "Nightlight.dc.html",
     "nightlight",
+    "shape",
+    "Shape.dc.html",
     "Naming.dc.html",
     "naming",
     "Switch.dc.html",
