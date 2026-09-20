@@ -185,6 +185,12 @@ container before the Pi's first start so the two do not fight over Ring's token.
   being possible the day the servers do. Why the answer is a takeover kit and not a custom Android, which layer
   is actually hard (the loads, not the glass), and where Brilliant and the Wink Relay each land.
   `docs/brilliant.md` is the same hardware from the worst starting position: both panels dead.
+- `docs/happened.md` — What happened: why the answer to "should there be a dashboard" is no and what was built
+  instead. A finding is a span, not an event ("on for ten hours" is the news, and a timeline cannot show it), so
+  what is still true leads with a button each and what is over reads quietly under it. Also the event log's
+  retention — it was append-only and unbounded, on eMMC, riding every backup — and the one scoped rule that keeps
+  a prune from resetting the clocks `health.py` and `rules.seed` read. And `who` asked, which is only ever written
+  for a person.
 - `docs/storage.md` — Storage: why the unit sold runs on eMMC and not NVMe (the finding, so it is not re-argued), and
   the plan for the hub to say months ahead that its storage is wearing out: the host reads the wear once a day, the
   brain turns it into one *Needs a look* line with *Back up* beside it, and *This hub* gets a Storage row.
