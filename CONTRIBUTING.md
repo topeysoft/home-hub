@@ -32,9 +32,17 @@ somebody's grandmother, it is not finished yet.
 
 ## Running it
 
-A Mac or Linux box is enough to develop against; you do not need a Pi. See
-[`README.md`](README.md#developing-on-the-mac-until-the-pi-arrives) for the mock brain and how to
-point the panel at it.
+A Mac or Linux box is enough to develop against; you do not need a Pi, a hub, or any account. You
+need node 22+ and python 3.13+, and then one command from the clone:
+
+```sh
+tools/dev.sh          # what this is and what to run, or where you left it. Changes nothing.
+tools/dev.sh up       # installs both halves, then the panel on a mock house at the address it prints
+```
+
+The mock house has eight rooms, lights at half, a film on the TV and three cameras, and every change
+to `app/src/` is on the screen as you save it. [`README.md`](README.md#starting-and-starting-again)
+has the rest, including how to point the panel at a real brain.
 
 ## What CI will check
 

@@ -77,6 +77,9 @@ container before the Pi's first start so the two do not fight over Ring's token.
 
 ## Layout
 
+- `tools/dev.sh` — the first command to run in a clone, and the one to run after a break: what this
+  is and what to run, or where you left it, and then the panel on a mock house. Nothing below needs
+  to be installed by hand.
 - `install.sh` — the one-command install for the hub host. `driver-layer/radios.sh` finds the Zigbee and
   Z-Wave sticks and starts their containers; a udev rule runs it again whenever a stick is plugged in or pulled.
 - `driver-layer/` — Docker Compose for the whole hub: Home Assistant Core (headless), Mosquitto,
@@ -193,6 +196,29 @@ container before the Pi's first start so the two do not fight over Ring's token.
   software), why the entitlement is checked at the relay and never in the hub, and how billing closed the
   name-squatting question for free.
 - `tools/ha_bootstrap.py` — the old manual bootstrap; the brain's setup screen does this now.
+
+## Starting, and starting again
+
+One command, whether the checkout is an hour old or a month old:
+
+```sh
+tools/dev.sh          # a fresh clone: what this is, what each directory does, what to run.
+                      # a checkout you have worked in: the branch, what is uncommitted, what is
+                      # unpushed, what is stashed, what is still listening. Changes nothing.
+tools/dev.sh up       # installs both halves, then the panel on the mock house — no hub needed
+tools/dev.sh hub      # the same against a real brain, replaced with your code first
+tools/dev.sh check    # what CI runs, minus the browser pass
+```
+
+`up` is the one to live in: `npm run dev:mock` with the install step in front of it, so a clone
+that has never been built and a checkout from three weeks ago start the same way. It checks the
+two floors first (**node 22+, python 3.13+**) and names the version it found, because a `python3`
+that is 3.9 — which is what pyenv or conda often puts first on a Mac — builds a venv happily and
+then fails in the tests in ways that read as bugs in the code.
+
+`hub` goes through `brain/dev.py`, which stops whatever hub is holding :8300 and starts yours: a
+hub left running from before the break serves an older shape of `/home`, and the panel renders it
+without complaint, so it reads as a panel bug.
 
 ## Developing on the Mac (until the Pi arrives)
 

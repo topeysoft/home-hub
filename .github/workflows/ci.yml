@@ -137,6 +137,7 @@ jobs:
       SHELLS: >-
         install.sh
         tools/add-sound.sh
+        tools/dev.sh
         tools/release.sh
         driver-layer/radios.sh
         driver-layer/mqtt-auth.sh
