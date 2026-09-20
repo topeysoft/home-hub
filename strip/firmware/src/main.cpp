@@ -53,6 +53,16 @@ void show(const Pixels &p);
 #ifndef DATA_PIN
 #define DATA_PIN 5
 #endif
+// The way back, and there has to be one. A commissioned Matter device stops advertising itself as
+// commissionable -- which is correct, and means the pairing code printed at boot works exactly once.
+// Every later attempt sits on "connecting" and then fails, with nothing anywhere saying why. Adding a
+// SECOND ecosystem is done by opening a window from the first; starting over is this button.
+// GPIO 0 is the BOOT button on every devkit and an ordinary input once running.
+#ifndef BUTTON_PIN
+#define BUTTON_PIN 0
+#endif
+#define HOLD_ARMED 1000
+#define HOLD_DONE 5000
 
 static MatterEnhancedColorLight light;
 static Preferences nvs;
@@ -255,6 +265,7 @@ void setup() {
     const uint64_t mac = ESP.getEfuseMac();
     snprintf(chipHex, sizeof(chipHex), "%06llx", (unsigned long long)(mac >> 24) & 0xFFFFFF);
 
+    pinMode(BUTTON_PIN, INPUT_PULLUP);
     nvs.begin("strip", false);
     // isKey() first, because Preferences logs getString of a missing key as an ERROR. On a strip that
     // has never been set up every one of these is missing, which is correct -- and a first boot that
@@ -345,7 +356,44 @@ void setup() {
     mqtt.setCallback(onMqtt);
 }
 
+// Held down: the strip goes red to say the hold has registered, and forgets the house if it is kept
+// there. The feedback is the point -- a reset you cannot tell is happening is one people do twice,
+// and the second one lands on a device that was already back to new.
+static void button() {
+    static uint32_t down = 0;
+    static bool armed = false;
+    if (digitalRead(BUTTON_PIN) == LOW) {
+        if (!down) down = millis();
+        const uint32_t held = millis() - down;
+        if (!armed && held > HOLD_ARMED) {
+            armed = true;
+            instrument = true;
+            strip.solid(255, 0, 0);
+            px::show(strip);
+            tell("[strip] keep holding to forget the house...");
+        }
+        if (held > HOLD_DONE) {
+            tell("[strip] forgetting the house. It will come back new.");
+            strip.clear();
+            px::show(strip);
+            Matter.decommission();
+            nvs.clear();
+            delay(300);
+            ESP.restart();
+        }
+    } else if (down) {
+        down = 0;
+        if (armed) {   // let go in time: nothing happened, and it says so by going back
+            armed = false;
+            instrument = !Matter.isDeviceCommissioned();
+            if (instrument) { strip.solid(SIG_R, SIG_G, SIG_B); px::show(strip); } else paint();
+        }
+    }
+}
+
 void loop() {
+    button();
+
     // The knock is over the moment somebody has taken it. Hand the strip back, and draw whatever the
     // household's own state says -- which is off, until they turn it on, exactly like any other new
     // light in their app. Without this it sat on the setup glow for ever and looked stuck.
