@@ -394,8 +394,10 @@ input:focus-visible {
 [data-face='glass'][data-flat] .bottombar .say-box {
   backdrop-filter: none;
 }
-[data-face='glass'][data-flat] .opened-panel,
-[data-face='glass'][data-flat] .house-panel {
+[data-face='glass'][data-flat] .opened-panel {
+  background: var(--pane-flat);
+}
+[data-face='glass'][data-flat] .house-panel::before {
   background: var(--pane-flat);
 }
 /* the side rail is the panel's own furniture rather than a card, so it takes
@@ -4278,13 +4280,46 @@ select.input {
   border-radius: 34px 34px 0 0;
   border: 1px solid var(--edge-hi);
   border-bottom: 0;
+  transition: transform 0.38s var(--ease);
+}
+/* The frosted ground, as a layer of its OWN rather than a filter on the box that
+   holds everything.
+ *
+ * It used to be `background` + `backdrop-filter` on .house-panel itself, which
+ * made every page of This house a descendant of a backdrop-filtered element.
+ * That was invisible for a year because no page of This house had ever been
+ * long enough to scroll -- they all fit. What happened is the first one that
+ * does, and scrolling it left rows drawn as bare icons with no text beside
+ * them: backgrounds composited, text and SVG did not. A backdrop-filter has to
+ * resolve what is behind it, and a scrolling subtree inside one drags that
+ * whole computation into every scroll frame.
+ *
+ * Here the blur is a fixed, non-scrolling box the content sits ON TOP of, so
+ * nothing that scrolls is inside the filtered element any more. The look is
+ * meant to be identical -- same gradient, same blur, same saturation, same
+ * corners -- and it is checked against screenshots of both engines rather than
+ * asserted. It also fixes a second thing, found while chasing the first: in
+ * WebKit the filter on the box never applied at all, so the panel was
+ * see-through and every page of This house read low-contrast in Safari. */
+.house-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: inherit;
   background: linear-gradient(
     180deg,
     rgba(var(--surface-rgb), 0.86),
     rgba(16, 17, 21, 0.96)
   );
   backdrop-filter: blur(30px) saturate(1.25);
-  transition: transform 0.38s var(--ease);
+}
+/* ...and the two columns sit above that ground rather than inside it. */
+.house-doors,
+.house-main {
+  position: relative;
+  z-index: 1;
 }
 /* How long each way lasts is told to Vue in App.vue rather than inferred here:
    nothing on .house itself moves, so there is nothing for it to measure, and it
@@ -5928,10 +5963,15 @@ select.input {
      is on a pane. tone.ts holds them to a ratio against the pane's own foot. */
   --ink-2: var(--pane-ink-2);
   --muted: var(--pane-muted);
-  background: var(--pane);
   border-color: transparent;
-  backdrop-filter: blur(var(--pane-blur, 30px)) saturate(var(--glass-sat, 1.7));
   box-shadow: var(--pane-edge);
+}
+/* The ground, on the layer the ground lives on now. Putting `backdrop-filter` back on
+   .house-panel here would put the scroller inside a filtered element again for every house
+   set to glass, which is the whole of the bug this moved to avoid. */
+[data-face='glass'] .house-panel::before {
+  background: var(--pane);
+  backdrop-filter: blur(var(--pane-blur, 30px)) saturate(var(--glass-sat, 1.7));
 }
 .opened {
   position: fixed;
