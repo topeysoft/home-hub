@@ -36,6 +36,7 @@
 #include <Preferences.h>
 #include <PubSubClient.h>
 #include <WiFi.h>
+#include <WiFiProv.h>
 #include <ESPmDNS.h>
 #include <platform/ConfigurationManager.h>
 #include <esp_log.h>
@@ -80,6 +81,8 @@ static String mhost, muser, mpass;
 // back the moment they stop. Without this a "fill" that was never stopped would leave somebody's
 // living room running a test pattern for ever.
 static bool instrument = false;
+static bool matterUp = false;
+static char pop[9];       // the proof of possession for provisioning; see popFor()
 
 // WHAT THE INSTRUMENTS ARE LIT IN, AND WHY IT IS NOT THE PANEL'S AMBER.
 //
@@ -259,6 +262,34 @@ static void selftest() {
 }
 #endif
 
+// GETTING ONTO THE WI-FI, WHICH MATTER CANNOT DO HERE.
+//
+// CONFIG_ENABLE_CHIPOBLE is not set in the Arduino framework on any target, so a device built this
+// way never advertises itself for BLE commissioning -- it has to be on the Wi-Fi ALREADY and be found
+// over mDNS. Every Arduino Matter example hardcodes the credentials for exactly that reason, which
+// looked like laziness until the hardware said otherwise.
+//
+// So something else carries them, and it is not going to be the hand-rolled characteristic this
+// firmware started with, which put a household's Wi-Fi password on an open link. WiFiProv ships in
+// the same core and does protocomm SECURITY_1 -- X25519 to agree a key, then AES-CTR, with a proof of
+// possession so that being in radio range is not enough on its own.
+//
+// THE PROOF OF POSSESSION IS RANDOM AND PER DEVICE, made once and kept. Deriving it from the chip id
+// would be no proof at all: the chip is in the name the thing advertises under, so anybody listening
+// would already have it. How the hub comes to know it without somebody typing it is the open question
+// in docs/strip.md, and it is the same question Matter's own passcode asks.
+static void popFor() {
+    if (nvs.isKey("pop")) {
+        nvs.getString("pop").toCharArray(pop, sizeof(pop));
+        return;
+    }
+    // No look-alike characters: somebody is going to read this one out loud or copy it off a label.
+    static const char ALPHABET[] = "23456789abcdefghjkmnpqrstuvwxyz";
+    for (int i = 0; i < 8; i++) pop[i] = ALPHABET[esp_random() % (sizeof(ALPHABET) - 1)];
+    pop[8] = 0;
+    nvs.putString("pop", pop);
+}
+
 void setup() {
     Serial.begin(115200);
 #if ARDUINO_USB_CDC_ON_BOOT
@@ -300,8 +331,6 @@ void setup() {
     });
     light.begin(false, {21, 216, 120}, 180);
 
-    Matter.begin();
-
     // THE ONE PIECE OF IDENTITY WE CAN SET WITHOUT BUYING ONE.
     //
     // On the first commissioning the hub saw manufacturer TEST_VENDOR and model TEST_PRODUCT, which
@@ -315,31 +344,21 @@ void setup() {
     // Stored rather than declared, so it is read back from config on every boot after this one. The
     // Basic Information cluster has already been built by the time we get here, so the very first
     // boot after a flash still reports the default and the one after it is right.
-#ifndef SKIP_SERIAL_STORE
-    chip::DeviceLayer::ConfigurationMgr().StoreSerialNumber(chipHex, strlen(chipHex));
-#endif
     char line[200];
+
+    // Onto the Wi-Fi first, which is the half Matter cannot do here. One call covers both cases: it
+    // starts a BLE provisioning service when there are no credentials, and simply connects when there
+    // are. Freeing the Bluetooth memory afterwards is deliberate -- nothing wants BLE once this is
+    // done, and it is a large allocation on a part that is also holding Matter and a frame buffer.
+    popFor();
+    char svc[32];
+    snprintf(svc, sizeof(svc), "hub-strip-%s", chipHex);
+    WiFiProv.beginProvision(NETWORK_PROV_SCHEME_BLE, NETWORK_PROV_SCHEME_HANDLER_FREE_BTDM,
+                            NETWORK_PROV_SECURITY_1, pop, svc);
 
     // ASK THE STACK, RATHER THAN INFERRING FROM ITS SILENCE. The Matter libraries ship precompiled
     // with their own log calls stripped, so "no CHIP output" says nothing about whether CHIP is
     // running -- which cost an hour of reading absence as evidence. These three are facts.
-    {
-        auto &srv = chip::Server::GetInstance();
-        auto &cwm = srv.GetCommissioningWindowManager();
-        snprintf(line, sizeof(line), "[strip] fabrics %u, commissioning window %s",
-                 (unsigned)srv.GetFabricTable().FabricCount(),
-                 cwm.IsCommissioningWindowOpen() ? "OPEN" : "CLOSED");
-        tell(line);
-        // And if nobody has it and nothing is listening, say so and open one. A device that is not
-        // commissioned and is not advertising is a device nobody can ever reach again.
-        if (srv.GetFabricTable().FabricCount() == 0 && !cwm.IsCommissioningWindowOpen()) {
-            CHIP_ERROR e = cwm.OpenBasicCommissioningWindow();
-            snprintf(line, sizeof(line), "[strip] nothing was listening -- opened a window: %s",
-                     e == CHIP_NO_ERROR ? "ok" : "FAILED");
-            tell(line);
-        }
-    }
-
     // Said on EVERY boot, not only an interesting one. The first thing anybody does with a board that
     // is not behaving is open the serial monitor, and a board that says nothing there has given them
     // no way to tell "it is working and you cannot see it" from "it never started".
@@ -365,24 +384,18 @@ void setup() {
     // a fraction of a second apart, which from the bench is indistinguishable from never lighting at
     // all. It is the same flag the fill and the color question use, and for the same reason: while an
     // instrument owns the strip, nobody else may draw on it.
-    if (!Matter.isDeviceCommissioned()) {
-        instrument = true;
-        // Lit while it waits, because being lit IS the identity check: the wall asks whether the
-        // thing that just came on is theirs, and there is nothing to disambiguate -- it is two meters
-        // of light and it is the only one lit (design/strip/Spine.dc.html).
-        strip.solid(SIG_R, SIG_G, SIG_B);
-        px::show(strip);
-        // The code goes on the box and in the log. Our own hub reads it off the commissionable-node
-        // advertisement instead, so a household with our panel still never types anything -- which is
-        // what keeps design/puck/Knock.dc.html's argument intact for the people we sell to.
-        snprintf(line, sizeof(line), "[strip] not commissioned yet\n  code: %s\n  qr:   %s",
-                 Matter.getManualPairingCode().c_str(), Matter.getOnboardingQRCodeUrl().c_str());
+    // Lit while it waits, because being lit IS the identity check: the wall asks whether the thing
+    // that just came on is theirs, and there is nothing to disambiguate -- it is two meters of light
+    // and it is the only one lit (design/strip/Spine.dc.html). Marked as an instrument so that the
+    // first thing to call paint() cannot quietly wipe it.
+    instrument = true;
+    strip.solid(SIG_R, SIG_G, SIG_B);
+    px::show(strip);
+
+    if (WiFi.status() != WL_CONNECTED) {
+        snprintf(line, sizeof(line), "[strip] waiting to be put on the Wi-Fi over Bluetooth"
+                                     "\n  as: %s\n  proof of possession: %s", svc, pop);
         tell(line);
-    } else {
-        tell("[strip] already commissioned -- the pairing code above works ONCE and is spent.");
-        tell("[strip]   to add another ecosystem, open a window from the one that has it.");
-        tell("[strip]   to start over, hold the BOOT button for five seconds.");
-        paint();
     }
     mqtt.setBufferSize(1024);
     mqtt.setCallback(onMqtt);
@@ -446,6 +459,29 @@ static void button() {
 
 void loop() {
     button();
+
+    // MATTER STARTS ONLY ONCE THERE IS A NETWORK, because on this framework it has no other way in:
+    // with CHIPoBLE compiled out it is found over mDNS, and mDNS needs an address. Starting it before
+    // the Wi-Fi is up would leave it advertising to nobody on nothing.
+    if (!matterUp && WiFi.status() == WL_CONNECTED) {
+        matterUp = true;
+        Matter.begin();
+        // The one piece of identity we can set without buying a Vendor ID, and the field the hub will
+        // use to join a light it can see to a strip it has been talking to. Stored, so it is read
+        // back from config on every boot after this one.
+        chip::DeviceLayer::ConfigurationMgr().StoreSerialNumber(chipHex, strlen(chipHex));
+        char line[200];
+        snprintf(line, sizeof(line), "[strip] on the Wi-Fi as %s", WiFi.localIP().toString().c_str());
+        tell(line);
+        if (!Matter.isDeviceCommissioned()) {
+            snprintf(line, sizeof(line), "[strip] ready to be commissioned\n  code: %s\n  qr:   %s",
+                     Matter.getManualPairingCode().c_str(), Matter.getOnboardingQRCodeUrl().c_str());
+            tell(line);
+        } else {
+            tell("[strip] already commissioned. To add another ecosystem, open a window from the one");
+            tell("[strip]   that has it. To start over, hold BOOT for five seconds.");
+        }
+    }
 
     // The knock is over the moment somebody has taken it. Hand the strip back, and draw whatever the
     // household's own state says -- which is off, until they turn it on, exactly like any other new

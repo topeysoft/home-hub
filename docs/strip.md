@@ -142,9 +142,21 @@ to close that hole and buy four ecosystems in the same move.
 > itself reported `fabrics 0, commissioning window OPEN`.
 
 So Matter gets us the ecosystems and **does not, here, get us secure provisioning**. Something still has to put
-the strip on the Wi-Fi first. The answer is `WiFiProv`, which ships in the same core: BLE transport, protocomm
-`SECURITY_1` (X25519 then AES-CTR, with a proof of possession), which is the handshake that was wanted in the
-first place. It is not written yet.
+the strip on the Wi-Fi first, and that is now `WiFiProv` from the same core: BLE transport, protocomm
+`SECURITY_1` — X25519 to agree a key, then AES-CTR, with a per-device random proof of possession so being in
+radio range is not enough. The handshake that was wanted in the first design conversation, before Matter looked
+like it would do the job for us.
+
+**Built and seen on air, 20 September**: `hub-strip-58422e` at −45 dBm carrying the protocomm service. It
+advertises under the same name `Radio.scan()` in the brain was already written to look for, so that half needs
+no change. Matter is started only once there is an address, because with CHIPoBLE gone it is found over mDNS
+and mDNS needs a network.
+
+**Two costs, both real.** Bluedroid takes the image from 1.77 MB to **2.38 MB**, which does not fit
+`min_spiffs.csv` at all — the partition decision made before any of this was known turns out to have been the
+one that mattered. And free heap at boot falls from 129 KB to **66 KB**, with a 28 KB frame buffer still to
+come; `FREE_BTDM` hands the Bluetooth memory back once provisioning is done, and nothing has yet watched it do
+so under load.
 
 ### The two numbers that made it urgent
 
@@ -200,11 +212,11 @@ and a gap over about 50 µs is precisely what a WS2812 reads as *end of frame*. 
 
 Everything under this line is honest. None of it is done.
 
-**1. NOT closed after all — the Wi-Fi password still has no safe way across.** This was written down as closed
-when Matter came in, and hardware says otherwise: CHIPoBLE is compiled out of the Arduino framework on every
-target, so Matter cannot carry the credentials and something else must. `WiFiProv` with BLE and protocomm
-`SECURITY_1` is in the same core and is the intended answer; nothing is built. **Until it is, a strip can only
-be put on the Wi-Fi by a method that does not exist yet, which is also why nothing can be commissioned.**
+**1. Half closed.** Matter was written down here as having closed this and had not: CHIPoBLE is compiled out of
+the Arduino framework on every target, so Matter never carries the credentials. `WiFiProv` with BLE and
+protocomm `SECURITY_1` now does, and is on air. **What is still open is not the handshake but the proof of
+possession**: it is random per device, printed on the serial console, and nothing decides how a household or
+the hub comes to know it. That is the same question Matter's own passcode asks, and it is 1a.
 
 **1a. But nobody can commission it yet.** A commissionable Matter device advertises its discriminator; it does
 **not** advertise its passcode, and commissioning cannot happen without one. So the hub cannot silently adopt a
