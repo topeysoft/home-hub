@@ -8,7 +8,12 @@ output "house_name_pattern" {
   value       = "<house>.${var.zone_name}"
 }
 
-output "relay_reachable" {
-  description = "Whether the zone actually points anywhere yet."
-  value       = var.relay_ipv4 == "" && var.relay_ipv6 == "" ? "no box yet: no records made" : "houses resolve to the relay"
+output "relay_ipv4" {
+  description = "Where every house's name points: the box made here, or the one you brought."
+  value       = local.relay_ipv4
+}
+
+output "relay_is_ours" {
+  description = "Whether this directory rented the box, or was handed an address to point at."
+  value       = local.make_box ? "made here" : "brought: ${var.relay_ipv4}"
 }

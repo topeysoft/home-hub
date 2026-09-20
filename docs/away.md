@@ -225,6 +225,13 @@ The first two steps need nothing from the maker and can land and be tested on a 
      would carry the first tap; `elyir.app` being HSTS-preloaded means there is no click-through to offer. So this is
      not two pieces being coupled: **step 5 lands before step 3's first tap.**
    - **PROXY protocol at both ends**, or the house cannot tell one away phone from another. See *What was verified*.
+   - **One port carries both**, checked against frp's documentation on 19 September 2026 rather than assumed: the hub
+     dials in on 443 and phones arrive on 443, because `frps` detects the protocol and multiplexes `bindPort` and
+     `vhostHTTPSPort` onto the same port. This is what lets the hub dial out on the one port that survives a hotel.
+     It costs one line on the *client*: `transport.tls.disableCustomTLSFirstByte = false` in `frpc.toml`, which is
+     what lets the relay tell a hub dialling in from a phone opening a house. Without it the two collide and the
+     tunnel fails to establish. Note the nesting — that key is client-level, while
+     `transport.proxyProtocolVersion` above belongs to the individual proxy.
 4. **The registration service and the switch in *This hub*.** Names, keys, more than one house.
 5. **The certificate:** TLS-ALPN-01 on the hub — which is why this now comes before the first tap in step 3 —
    then the alias that covers home.

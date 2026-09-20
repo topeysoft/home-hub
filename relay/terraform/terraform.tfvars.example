@@ -1,4 +1,22 @@
-# Copy to terraform.tfvars and fill in when the box exists. Until then an empty address is a valid
-# state: the plan makes no records and the directory still reviews.
-relay_ipv4 = ""
-relay_ipv6 = ""
+# Copy to terraform.tfvars and fill in. terraform.tfvars is gitignored: it holds the auth token.
+#
+# The two API tokens are NOT here and never are -- they come from the environment:
+#
+#   export CLOUDFLARE_API_TOKEN=...   # scoped to the elyir.app zone, DNS edit
+#   export HCLOUD_TOKEN=...           # a project token, read and write
+#
+# Those two are the only things minted by hand in this whole design, because they are the
+# credentials Terraform authenticates with and nothing can create them for you.
+
+# What stops any frpc on the internet registering a proxy on the relay. Generate it with:
+#   openssl rand -hex 32
+relay_auth_token = ""
+
+# The operator's public key, so there is a way back into the box. `cat ~/.ssh/id_ed25519.pub`
+admin_ssh_public_key = ""
+
+# Narrow this to your own address if it is ever static. Password authentication is off regardless.
+# admin_cidrs = ["203.0.113.4/32"]
+
+# Bring your own box instead of renting one here: set this and nothing is created.
+# relay_ipv4 = ""

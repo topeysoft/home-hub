@@ -6,6 +6,10 @@ terraform {
       source  = "cloudflare/cloudflare"
       version = "~> 5.25"
     }
+    hcloud = {
+      source  = "hetznercloud/hcloud"
+      version = "~> 1.51"
+    }
   }
 }
 
@@ -14,3 +18,10 @@ terraform {
 # one -- Cloudflare scopes tokens to a zone and not to a record, so a token that let one house
 # write its own name would let it write every other house's too. See docs/away.md, piece 3.
 provider "cloudflare" {}
+
+# Same rule as above: the token comes from HCLOUD_TOKEN in the environment. Hetzner was chosen on
+# 19 September 2026 for one reason -- bandwidth is the only cost here that scales with use, and its
+# included traffic is an order of magnitude cheaper than the alternatives. docs/service.md has the
+# arithmetic. Nothing in this design depends on the provider; a box somewhere else only has to run
+# frps and answer on 443.
+provider "hcloud" {}
