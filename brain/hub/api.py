@@ -14,7 +14,7 @@ from . import ha_setup
 from .ha_adapter import HAAdapter, AuthError
 from . import forecast as forecast_of
 from .model import CONTROLS, Home, kinds_for, kind_of, default_kind
-from .events import EventLog
+from .events import EventLog, asked_by
 from .intents import RoomState, SERVICE, plan, rules_as_data, holds
 from .onboarding import Onboarding
 from .provision import Provision
@@ -605,8 +605,10 @@ async def lifespan(app):
     hub._forecast_ticker = asyncio.create_task(hub._forecast_loop())
     hub._update_task = asyncio.create_task(hub.updates.run())
     hub._suggest_task = asyncio.create_task(hub.assistant.run())
+    hub._prune_task = asyncio.create_task(hub.log.run())      # the diary, kept a diary: events.py
     yield
-    for t in (hub._loop_task, hub._tick_task, hub._drivers_task, hub._comfort_task, hub._update_task, hub._suggest_task): t.cancel()
+    for t in (hub._loop_task, hub._tick_task, hub._drivers_task, hub._comfort_task, hub._update_task,
+              hub._suggest_task, hub._prune_task): t.cancel()
     if hub.ha: await hub.ha.close()
 
 
@@ -625,6 +627,11 @@ async def settings_lock(request: Request, call_next):
     request.state.away = from_away(request.headers)   # off the Wi-Fi, or in through the relay: docs/away.md piece 2
     m, path = request.method, request.url.path
     phone = hub.phones.identify(request.cookies.get(COOKIE)) if hub.lock.locked else None
+    # Who is asking, for anything this request writes down. Set before call_next so the copy the
+    # endpoint's task starts with has it, and only ever read for source="user" (events.py). A house
+    # with no code has no phones to tell apart, so it stays unset and the log says nothing rather
+    # than guessing -- which is what `Who changed what` draws its "before the code was set" line from.
+    if phone: asked_by.set(phone["name"])
     let_out = bool(phone and phone.get("remote"))
     if request.state.away and away_refused(m, path, let_out):
         return JSONResponse(away_refusal(phone, let_out), status_code=403)
