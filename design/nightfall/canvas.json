@@ -11,6 +11,10 @@
     {
       "id": "page-3",
       "name": "The cards"
+    },
+    {
+      "id": "page-4",
+      "name": "How the row sits"
     }
   ],
   "artboards": [
@@ -150,6 +154,33 @@
       "h": 780,
       "title": "Does the dial fit on the card?",
       "page": "page-3"
+    },
+    {
+      "file": "RowFlush.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Flush \u2014 as it ships",
+      "page": "page-4"
+    },
+    {
+      "file": "RowInset.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Inset \u2014 the pair is the tallest thing",
+      "page": "page-4"
+    },
+    {
+      "file": "RowAnchored.dc.html",
+      "x": 3120,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Anchored \u2014 three heights, not two",
+      "page": "page-4"
     }
   ],
   "annotations": [
@@ -280,6 +311,38 @@
       "w": 440,
       "page": "page-3",
       "text": "THE DIAL COMES BACK, decided 20 Sep. The card gets the drawing and gives up the step buttons; changing the temperature means opening the pane, which is where the real dial -- the one you turn -- already is.\n\nIt was removed twice, and both notes are worth reading before overturning them. `.tiles > .tile.climate[data-size='third']`: \"on the tile they were a dial drawn at 92px with its own reading pushed out through the bottom of the card\". `.bento .tile.climate`: \"this card's height is the rail's row, so a dial round the number could only be bought by shrinking the number, and on a short screen it does not fit at all\".\n\nBoth were right when written and neither holds now, for two reasons measured rather than argued. The row GREW: --row is clamp(168, (100dvh-332)/2, 264) today, so the card is 253x264 on a 1440x900 wall where those notes were written against 196. And the thing that was competing for the space is gone -- every earlier attempt kept the dial AND the two step buttons AND the sentence. Drop the buttons and the dial is not bought by shrinking the number; the number gets bigger.\n\nThe bottom row is the honest hard case: 161x168, where --row bottoms out on a short screen. The dial survives it. What does not survive it is the NAME -- the third column keeps it and it lands at about 10px there, which is not a name anybody reads from a doorway. So the shipped card is the middle one, and a house with two thermostats tells them apart by the room they are in and by the pane, not by a label on the card.\n\nOne thing the left column shows by accident: what ships today stops about two thirds of the way down a 264px card. A third of that card has been empty this whole time."
+    },
+    {
+      "id": "row-lead",
+      "x": -560,
+      "y": 0,
+      "w": 480,
+      "text": "HOW TALL IS A TALL CARD?\n\nMeasured off the running panel at 1440x900: --row is 264 and the gap is 18, so a glance pair spans 546 -- and every tall card is 546 exactly. Every card in the row tops out at y 8 and bottoms out at 554. The only thing that varies across the whole row is WIDTH.\n\nThat is deliberate and it is written down. `.wall-stage .bento .tile.light, ...` sets `height: auto; align-self: stretch` over the top of the shared rule, with the note: \"on the board they are the full 548 and the glance column beside them adds up to exactly the same, which is what makes the row read as one block rather than as a row of things of different sizes\". And it is faithful -- Main.dc.html has the media card at top 180 height 548, the camera at 180+252 and the thermostat at 452+276, both ending at 728.\n\nBOTH LOOKS ALREADY EXIST. The shared rule underneath is `height: calc(var(--row) * 2 - 52px)` with `align-self: center` -- an inset of 87% -- and that is what the RAIL home has shipped all along. The Wall overrides it. So this is not a new mechanism, it is a question about which of two the Wall should use.\n\nTHE REFERENCE, measured in its own pixels rather than described: the glance pair spans 828, the media and light cards are 684 (83% of it), the scenes card is 760 (92%), and all four share one vertical centre. Two things follow that are easy to miss. The pair is the TALLEST element, not the band everything fills. And there are THREE heights, not two -- inset alone gives a shorter uniform band, not this.",
+      "page": "page-4"
+    },
+    {
+      "id": "row-flush",
+      "x": 0,
+      "y": 950,
+      "w": 460,
+      "text": "FLUSH -- what ships, drawn so there is something to compare against.\n\nThe case for it is the one already in the stylesheet and it is not weak: the row reads as a single block, it is the most card area a given row height can carry, and on a screen read from across a room area is legibility. Nothing is ragged, nothing is accidental.\n\nThe case against is what the row's own file says it is trying to avoid: \"a row of equal boxes is a spreadsheet, and the difference between that and a room is the one small column\". At 546 for every tall card, the one small column is the ONLY variation there is.",
+      "page": "page-4"
+    },
+    {
+      "id": "row-inset",
+      "x": 1560,
+      "y": 950,
+      "w": 460,
+      "text": "INSET -- the shared rule the Rail already uses, applied to the Wall. Tall cards at 83% of the pair, centred on it.\n\nIt is a one-line change: delete the `height: auto; align-self: stretch` override and the Wall inherits what the Rail has always done.\n\nWhat it buys is air, and a hierarchy -- the glance column becomes the anchor of the row rather than a slot inside it, which is right, because a camera and a thermostat are the two things you look at without touching.\n\nWhat it does NOT buy is the reference's rhythm. Every tall card is still the same height as every other tall card; the band is shorter and the row is still regular. If the complaint was \"too uniform\" rather than \"too tall\", this does not answer it.\n\nAnd it costs area. 93px off every tall card, on the screen whose whole argument is that the house fits on it at once.",
+      "page": "page-4"
+    },
+    {
+      "id": "row-anchored",
+      "x": 3120,
+      "y": 950,
+      "w": 460,
+      "text": "ANCHORED -- the reference's own numbers: tall cards 83%, the scenes card 92%, everything centred on the line the pair defines.\n\nThis is the one that actually looks like the picture, and the third height is why. Two sizes read as a rule; three read as a composition. It is also the only one of the three where the row has a shape you could describe without measuring it -- tall in the middle, and the glance column standing over everything.\n\nTHE HARD PART, and it should be settled before this is built rather than after. What makes a card 83% and another 92%? In the reference it is a person's eye. Here it has to be a rule the row can apply to a house it has never seen, because BentoRow composes from whatever is on --  it cannot know that THIS house's scenes card wants to be the tall one. The honest candidates are: by kind (scenes always 92%), by content (a card with more rows in it gets more height), or by position (the card nearest the middle is tallest). Only the first is cheap, and it is also the most arbitrary.\n\nUntil that is answered this is a picture of one house at one moment, which is exactly what a board is for -- but not yet a layout.",
+      "page": "page-4"
     }
   ],
   "launch": {

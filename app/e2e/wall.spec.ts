@@ -178,16 +178,42 @@ test('the row is proportioned the way the board draws it', async ({ page }) => {
     expect(Math.abs(got - want), `${what}: ${(got * 100).toFixed(1)}% against the board's ${(want * 100).toFixed(1)}%`)
       .toBeLessThan(0.015)
 
-  // what is playing: 332x548 of 1440x900
+  /* THE BAND is what the glance pair spans -- 180 to 728 on the board, 548 of 900 -- and it is the
+     tallest thing in the row. Every full card is inset into it and centred on it, at two sizes: a
+     card that is one device holds 83% of the band, and the scenes card, the only one carrying a
+     list rather than a thing, holds 92%. design/nightfall page 4 has the three laid side by side.
+     The widths follow each card's own height at the ratios the board drew, so 332/548 is applied
+     to the inset height rather than to the band. */
+  const BAND = 548 / 900, CARD = BAND * 0.83, LIST = BAND * 0.92
+  const MID = (180 + 548 / 2) / 900
+
+  // what is playing: the board's 332/548, at the inset height
   const media = await box('.bento-card')
   near(media.x, 506 / 1440, 'the first card starts in the wrong place')
-  near(media.w, 332 / 1440, 'what is playing is the wrong width')
-  near(media.h, 548 / 900, 'what is playing is the wrong height')
+  near(media.h, CARD, 'what is playing is the wrong height')
+  near(media.w, (CARD * 900 * 0.606) / 1440, 'what is playing is the wrong width')
 
-  // the glance column: two 252-wide cards where one tall card would be
+  /* the glance column: two 252-wide cards where one tall card would be. Its x is derived rather
+     than pinned at the board's 860, because a card's width follows its own height now -- inset the
+     cards and everything after the first one moves left. That is not drift, it is the proportion
+     being kept; what would be drift is the column landing somewhere the card before it does not
+     explain. */
   const glance = await box('.bento-card', 1)
-  near(glance.x, 860 / 1440, 'the glance column starts in the wrong place')
+  near(glance.x, media.x + media.w + 18 / 1440, 'the glance column does not follow the card before it')
   near(glance.w, 252 / 1440, 'a glance card is the wrong width')
+
+  /* and the composition itself, which is the thing that would drift without saying so. Three
+     heights and one centre line: a row where every card is the same height again has only its
+     widths left to say anything with, and that is the spreadsheet BentoRow is written against. */
+  const scenes = await box('.scene-card')
+  near(scenes.h, LIST, 'the scenes card is the wrong height')
+  expect(scenes.h, 'the scenes card should be taller than a device card').toBeGreaterThan(media.h + 0.01)
+  expect(scenes.h, 'and still shorter than the band the pair spans').toBeLessThan(BAND - 0.01)
+
+  for (const [what, b] of [['what is playing', media], ['the scenes card', scenes]] as const)
+    near(b.y + b.h / 2, MID, `${what} is not centred on the band`)
+  const pair = await box('.bento-card', 2)          // the lower half of the glance column
+  near(pair.y + pair.h - BAND / 2 - (180 / 900), MID - (180 / 900), 'the glance pair does not span the band')
 
   // the weather: 460 wide of 1440, and the pane 226x372 hung inside it
   // where the weather stops and the row starts, rather than the column's own width: the board's

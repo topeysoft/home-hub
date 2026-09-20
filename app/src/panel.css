@@ -6988,17 +6988,47 @@ select.input {
 .wall-quiet {
   margin: 6px 2px 26px;
 }
-/* The tall cards fill their whole span here. The Rail holds them 52px short and
-   centered, which is right when they sit under a greeting and the row is the
-   shorter half of the screen; on the board they are the full 548 and the glance
-   column beside them adds up to exactly the same, which is what makes the row
-   read as one block rather than as a row of things of different sizes. */
+/* THREE HEIGHTS, and the glance pair is the tallest thing in the row.
+
+   The tall cards used to fill their whole span: every one of them 546 on a
+   1440x900 wall, the pair beside them adding to exactly the same, everything
+   topping out and bottoming out on the same two lines. That was faithful to the
+   board -- media at 180+548, the camera at 180+252 and the thermostat at
+   452+276 both ending at 728 -- and the argument for it was that the row reads
+   as one block rather than as a row of things of different sizes.
+
+   The trouble is that it reads as one block a bit too well. With every tall card
+   the same height, the ONLY thing that varies across the whole row is width,
+   which is the spreadsheet BentoRow's own file says it is trying not to be: "a
+   row of equal boxes is a spreadsheet, and the difference between that and a
+   room is the one small column". One small column is not enough difference.
+
+   So the pair keeps the band and everything else is inset into it, centred, at
+   two sizes rather than one. Two sizes read as a rule; three read as a
+   composition, and the third is what makes the row have a shape you could
+   describe without measuring it. The numbers are off the reference the same way
+   the widths below are off the board: 83% of the band for a card that is one
+   thing, 92% for the scenes card.
+
+   WHY THE SCENES CARD IS THE EXCEPTION, because "because it looked right" is not
+   a rule a row can apply to a house it has never seen. Every other card here is
+   one device -- a lamp, a screen, a lock -- and says one thing about it. The
+   scenes card is the only one carrying a LIST: two whole actions stacked, each
+   with a name and a line under it, and it is the only card in the row whose
+   height is spent on rows rather than on a picture. It gets the extra height
+   because it has more to put in it, which is a test the next card to want this
+   can be held to. See design/nightfall page 4. */
+.wall-stage .bento {
+  /* the band, and the two cards inset into it */
+  --tall: calc(var(--row) * 2 + 18px);
+  --tall-card: calc(var(--tall) * 0.83);
+  --tall-list: calc(var(--tall) * 0.92);
+}
 .wall-stage .bento .tile.light,
 .wall-stage .bento .tile.media,
-.wall-stage .bento .tile.plain,
-.wall-stage .bento .scene-card {
-  height: auto;
-  align-self: stretch;
+.wall-stage .bento .tile.plain {
+  height: var(--tall-card);
+  align-self: center;
 }
 /* The cards keep the proportions they were drawn at, which means their widths
    have to follow the row's height rather than stay put. The Rail's card is
@@ -7010,18 +7040,19 @@ select.input {
    Every ratio here is off the board: 332/548 for what is playing, 392/548 and
    352/548 for the tall cards after it, 252/252 for a glance card. Nothing is
    picked by eye. */
-.wall-stage .bento {
-  --tall: calc(var(--row) * 2 + 18px);
-}
 .wall-stage .bento .tile.media {
-  width: calc(var(--tall) * 0.606);
+  width: calc(var(--tall-card) * 0.606);
 }
 .wall-stage .bento .tile.light {
-  width: calc(var(--tall) * 0.715);
+  width: calc(var(--tall-card) * 0.715);
 }
-.wall-stage .bento .tile.plain,
+.wall-stage .bento .tile.plain {
+  width: calc(var(--tall-card) * 0.642);
+}
 .wall-stage .bento .scene-card {
-  width: calc(var(--tall) * 0.642);
+  height: var(--tall-list);
+  align-self: center;
+  width: calc(var(--tall-list) * 0.642);
 }
 .wall-stage .bento .tile.camera,
 .wall-stage .bento .tile.climate {
