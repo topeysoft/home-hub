@@ -455,7 +455,9 @@ export async function getHappened(): Promise<Happened> {
 /* Who changed what: behind the code, so `request` prompts for it on the 401 the way it does anywhere
    else. `named` is false when the house could not tell who it was -- never a guess. */
 export type Change = { who: string; text: string; ts: number; named: boolean; when: string; kind: string; subject: string }
-export type Changes = { rows: Change[]; coded_since: number | null; coded_when: string | null }
+export type Changes = {
+  rows: Change[]; coded_since: number | null; coded_when: string | null
+  more: boolean }      // there is more behind this page: a list that stops at the limit looks like one that ended
 export async function getChanges(limit = 200): Promise<Changes> {
   const r = await request(`/happened/changes?limit=${limit}`); if (!r.ok) await fail(r); return r.json()
 }

@@ -43,6 +43,9 @@ import Icon from './Icon.vue'
 
 const page = computed(() => store.happened)
 const busy = ref('')                                   // the act that is running; one at a time
+/* A finding with nothing to say draws as a bare icon and empty space, which reads as the page having
+   run out while it is still going. The brain does not send one; this page will not draw one either. */
+const itemsOf = (g: { items: HappenedItem[] }) => g.items.filter(i => i?.text?.trim())
 
 const key = (i: HappenedItem, n: number) => `${i.kind}:${i.subject}:${n}`
 
@@ -97,7 +100,7 @@ onMounted(loadHappened)
 
         <!-- still: a card each, because each one carries a button -->
         <ul class="recent notes" v-if="g.id === 'still'">
-          <li v-for="(i, n) in g.items" :key="key(i, n)">
+          <li v-for="(i, n) in itemsOf(g)" :key="key(i, n)">
             <span class="recent-icon happened-warm"><Icon :name="iconFor(i)" :size="16" /></span>
             <span class="recent-text">
               {{ i.text }}
@@ -114,7 +117,7 @@ onMounted(loadHappened)
 
         <!-- over, and the phones: a line each, no buttons, nothing to do -->
         <ul class="recent happened-over" v-else>
-          <li v-for="(i, n) in g.items" :key="key(i, n)">
+          <li v-for="(i, n) in itemsOf(g)" :key="key(i, n)">
             <span class="recent-icon"><Icon :name="iconFor(i)" :size="16" /></span>
             <span class="recent-text happened-wrap">{{ i.text }}</span>
             <span class="recent-when">{{ i.when }}</span>

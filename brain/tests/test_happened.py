@@ -292,3 +292,83 @@ class TheArrangement(ApiTest):
         api = __import__("hub.api", fromlist=["api"])
         api.hub.home.devices["light.ceiling"].state = "off"
         self.assertEqual(self.client.get("/happened").json()["groups"], [])
+
+
+class NothingIsDroppedQuietly(ApiTest):
+    """20 Sep 2026, from a screenshot captioned "not showing everything".
+
+    The audit started out dropping any row `sentence()` had no words for. Against one real house's
+    log that silently swallowed more than a quarter of the rows. It is the wrong default here by
+    some distance: a log that quietly omits is worse than no log, because what is missing from it
+    cannot be noticed. Now the only absences are the ones in SKIP, by name.
+    """
+
+    def add(self, kind, subject, new, old=None, source="user", detail=None, who=None):
+        api = __import__("hub.api", fromlist=["api"])
+        api.hub.log.add(kind, subject, old, new, source=source, detail=detail, who=who)
+
+    def texts(self):
+        return [r["text"] for r in self.client.get("/happened/changes").json()["rows"]]
+
+    def test_a_shape_nobody_wrote_words_for_still_gets_a_line(self):
+        self.add("home", "something-new", "a thing that did not exist when this was written")
+        self.assertEqual(self.texts(), ["changed Something-new: a thing that did not exist when this was written."])
+
+    def test_a_kind_nobody_wrote_words_for_still_gets_a_line(self):
+        self.add("share", "a-new-sort-of-thing", "whatever")
+        self.assertTrue(self.texts(), "a share row with an unknown subject vanished")
+
+    def test_no_row_is_ever_blank(self):
+        """A row with no sentence draws as a bare icon with nothing beside it, which is how this was
+        noticed in the first place."""
+        for kind, subject, new in [("home", "x", None), ("home", "", ""), ("phone", "p", None),
+                                   ("bridge", "abc", None), ("share", "?", None), ("draft", "d", None)]:
+            self.add(kind, subject, new)
+        for t in self.texts():
+            self.assertTrue(t and t.strip(), "a blank line reached the panel")
+
+    def test_the_only_absences_are_the_named_ones(self):
+        self.add("home", "registry", "rebuilt", source="system")       # the house re-reading HA
+        self.add("draft", "r1", "proposed", source="assistant")        # merely offered, not acted on
+        self.add("home", "room", "Landing")
+        self.assertEqual(self.texts(), ["added the room Landing."])
+
+    def test_an_entity_id_never_reaches_the_panel(self):
+        """AGENTS.md section 5: no household ever reads Home Assistant's vocabulary. A device the
+        house has since forgotten leaves only its id, so the id is turned back into words."""
+        self.add("home", "light.frontyard_light", "forgotten")
+        self.add("home", "switch.holts_summit_alarm_siren", "alarm", detail={"shown_as": True})
+        for t in self.texts():
+            self.assertNotRegex(t, r"\b[a-z_]+\.[a-z0-9_]+\b", t)
+        self.assertIn("now treats Holts summit alarm siren as an alarm.", self.texts())
+
+    def test_a_shared_device_is_named_from_where_its_id_actually_is(self):
+        """The row is ("share", "device", <id>, "shared"): the id is in `old`. Reading it off
+        `subject` gave every one of these the sentence "shared device." """
+        self.add("share", "device", "shared", old="light.ceiling")
+        self.assertEqual(self.texts(), ["shared Ceiling light with other apps."])
+
+    def test_an_integration_signing_in_reads_as_a_sentence(self):
+        """`new` is already a phrase, so putting a who in front of it made "The hub Messages signed in." """
+        self.add("home", "driver", "Messages signed in", source="system", detail={"integration": "mqtt"})
+        rows = self.client.get("/happened/changes").json()["rows"]
+        self.assertEqual((rows[0]["who"], rows[0]["text"]), ("The hub", "signed in to Messages."))
+
+    def test_the_phone_asking_to_join_is_the_one_asking(self):
+        """It comes from a phone the house has not let in, so it carries no name -- and "Someone at
+        the wall asked to join the house" describes the wrong person entirely."""
+        self.add("phone", "p9", "asked", detail={"name": "Ada's iPad"})
+        rows = self.client.get("/happened/changes").json()["rows"]
+        self.assertEqual((rows[0]["who"], rows[0]["text"]), ("Ada's iPad", "asked to join the house."))
+
+    def test_a_stay_running_out_is_the_hubs_doing_and_says_the_name_once(self):
+        self.add("phone", "p9", "left", source="hub", detail={"name": "Sam's phone", "why": "its stay was over"})
+        rows = self.client.get("/happened/changes").json()["rows"]
+        self.assertEqual(rows[0]["who"], "The hub")
+        self.assertEqual(rows[0]["text"].count("Sam's phone"), 1)
+
+    def test_it_says_when_there_is_more_than_it_is_showing(self):
+        """A list that simply stops at the limit looks like a list that ended."""
+        for i in range(6): self.add("home", "room", f"Room {i}")
+        self.assertTrue(self.client.get("/happened/changes?limit=3").json()["more"])
+        self.assertFalse(self.client.get("/happened/changes?limit=200").json()["more"])

@@ -23,13 +23,26 @@
  * Before the code was set the house had no phones to tell apart, so nothing
  * before that date can name anybody -- and saying so once is more honest than a
  * column that is mysteriously empty for the first half of the list.
+ *
+ * The other line at the foot says when there is more behind this page. A list
+ * that simply stops at its limit looks like a list that ended, and on the one
+ * page whose whole job is completeness that is the worst thing it could imply.
  */
 import { computed, onMounted } from 'vue'
 import { loadChanges, store } from './store'
 import Icon from './Icon.vue'
 
 const page = computed(() => store.changes)
+/* A row with nothing to say draws as a bare icon with empty space beside it, which reads as the list
+   having run out while it is still going. The brain is not supposed to send one -- happened.py falls
+   back rather than dropping, and its tests hold that shut -- but this page is the one place a blank
+   is visible, so it refuses to draw one whatever arrives. Belt and braces, on the page whose whole
+   job is that you can believe what it shows you. */
+const rows = computed(() => (page.value?.rows ?? []).filter(r => r?.text?.trim() && r?.who?.trim()))
 const ICON: Record<string, string> = { phone: 'phone', share: 'share', bridge: 'wifi', draft: 'sparkle', home: 'home' }
+/* Never an icon name Icon.vue does not have: an unknown one draws an empty square, and a column of
+   empty squares is exactly what a broken row looks like. */
+const iconFor = (kind: string) => ICON[kind] ?? 'home'
 
 onMounted(loadChanges)
 </script>
@@ -41,9 +54,9 @@ onMounted(loadChanges)
       the house and is not here. Kept for a year.
     </p>
 
-    <ul class="recent happened-over" v-if="page?.rows.length">
-      <li v-for="(r, n) in page.rows" :key="`${r.ts}:${n}`">
-        <span class="recent-icon"><Icon :name="ICON[r.kind] ?? 'home'" :size="16" /></span>
+    <ul class="recent happened-over" v-if="rows.length">
+      <li v-for="(r, n) in rows" :key="`${r.ts}:${n}`">
+        <span class="recent-icon"><Icon :name="iconFor(r.kind)" :size="16" /></span>
         <span class="recent-text happened-wrap">
           <b class="happened-who" :class="{ 'happened-unnamed': !r.named }">{{ r.who }}</b> {{ r.text }}
         </span>
@@ -53,6 +66,10 @@ onMounted(loadChanges)
 
     <p class="page-lede happened-quiet" v-else-if="page">
       Nothing has been changed about the house yet.
+    </p>
+
+    <p class="page-lede happened-quiet" v-if="page?.more">
+      Showing the most recent changes. Older ones are kept for a year.
     </p>
 
     <div class="happened-note" v-if="page?.coded_when">
