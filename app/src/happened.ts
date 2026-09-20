@@ -17,12 +17,12 @@ export function iconFor(i: HappenedItem): string {
   return 'light'
 }
 
-/* What a tap just did, said in the row it did it to. Nothing vanishes under a tap: the row stays
-   where it was and this is what it gains, so the thing you touched is still under your finger and
-   still the way back. Re-reading the page from the brain would take the finding away mid-tap and
-   carry the heading and everything under it up the screen. */
-export function didWhat(arg: string | undefined): string {
-  if (arg === 'lock') return 'Locked.'
-  if (arg === 'close') return 'Closing.'
-  return 'Turned off.'
+/* What the thing will read as once the act lands, so the drawing can move before the house has
+   answered. The WORDS a quieted row says are not here -- that is the store's `done` map and
+   doneLine(), shared with Home, so the two cannot disagree about a light they both show. This is
+   only the state to guess, which perform() needs and the store does not know from the act alone. */
+export function guessFor(arg: string | undefined): { state: string } {
+  if (arg === 'lock') return { state: 'locked' }
+  if (arg === 'close') return { state: 'closed' }
+  return { state: 'off' }
 }

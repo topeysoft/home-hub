@@ -289,7 +289,7 @@ const quietOnes = [
   { id: 'l5', name: 'Dimmer', where: 'Living room · a light' },
   { id: 'l6', name: 'Home Theater Light', where: 'Den · a light' },
   { id: 'l7', name: 'Holts Summit Alarm Siren', where: 'Hall · a plug' },
-  { id: 'l8', name: 'Porch light', where: 'Porch · a light' },
+  { id: 'l8', name: 'Porch light', where: 'Living room · a light' },
   { id: 'l9', name: 'Garage sensor', where: 'Garage · a plug' },
 ]
 const notes = process.env.NEEDSLOOK ? [
@@ -534,15 +534,15 @@ const bridgeRows = process.env.BRIDGES === 'none' ? [] : [
     away: { from: Date.now() / 1000 - 9.2 * 3600, to: Date.now() / 1000 - 0.3 * 3600 },
     groups: [
       { id: 'still', label: 'Still on', items: [
-        { kind: 'still', subject: 'light.porch', seconds: 36000, ts: Date.now() / 1000 - 10 * 3600, word: 'on', when: 'now',
-          text: 'Porch light has been on for 10 hours, since 7:32am.', where: 'Porch · a light',
-          acts: [{ do: 'Turn off', act: 'device', to: 'light.porch', arg: 'off' }] },
-        { kind: 'still', subject: 'light.kitchen', seconds: 32400, ts: Date.now() / 1000 - 9 * 3600, word: 'on', when: 'now',
+        { kind: 'still', subject: 'l1', seconds: 36000, ts: Date.now() / 1000 - 10 * 3600, word: 'on', when: 'now',
+          text: 'Ceiling light has been on for 10 hours, since 7:32am.', where: 'Living room · a light',
+          acts: [{ do: 'Turn off', act: 'device', to: 'l1', arg: 'off' }] },
+        { kind: 'still', subject: 'k1', seconds: 32400, ts: Date.now() / 1000 - 9 * 3600, word: 'on', when: 'now',
           text: 'Kitchen lights have been on for 9 hours, since 9:10am.', where: 'Kitchen · a light',
-          acts: [{ do: 'Turn off', act: 'device', to: 'light.kitchen', arg: 'off' }] },
+          acts: [{ do: 'Turn off', act: 'device', to: 'k1', arg: 'off' }] },
       ] },
       { id: 'over', label: 'While you were out', items: [
-        { kind: 'over', subject: 'lock.front', seconds: 27420, ts: Date.now() / 1000 - 12 * 3600, word: 'unlocked', when: 'last night',
+        { kind: 'over', subject: 'f1', seconds: 27420, ts: Date.now() / 1000 - 12 * 3600, word: 'unlocked', when: 'last night',
           text: 'Front door was unlocked for 7 hours overnight, 11:03pm to 6:40am. It is locked now.',
           where: 'Front door · a lock', acts: [] },
         { kind: 'over', subject: 'cover.garage', seconds: 7200, ts: Date.now() / 1000 - 5 * 3600, word: 'open', when: '1:12pm',

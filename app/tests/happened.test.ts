@@ -5,7 +5,7 @@
    sentences, the group headings and the buttons' words all arrive over the wire, which is the point
    of them arriving over the wire. brain/tests/test_happened.py is where those are held shut. */
 import { describe, expect, it } from 'vitest'
-import { didWhat, iconFor } from '../src/happened'
+import { guessFor, iconFor } from '../src/happened'
 import type { HappenedItem } from '../src/api'
 
 const item = (over: Partial<HappenedItem> = {}): HappenedItem =>
@@ -30,19 +30,22 @@ describe('which glyph a finding wears', () => {
   })
 })
 
-describe('what a tap says afterwards', () => {
-  it('names what was actually done', () => {
-    expect(didWhat('off')).toBe('Turned off.')
-    expect(didWhat('lock')).toBe('Locked.')
+describe('what the row will read as before the house has answered', () => {
+  it('guesses the state each act lands on', () => {
+    expect(guessFor('off')).toEqual({ state: 'off' })
+    expect(guessFor('lock')).toEqual({ state: 'locked' })
+    expect(guessFor('close')).toEqual({ state: 'closed' })
   })
 
-  it('does not claim a blind has finished closing, because it has not', () => {
-    /* A cover takes a quarter of a minute to run and the panel is told the moment the call is
-       accepted. "Closed." would be a thing the row says while the door is still moving. */
-    expect(didWhat('close')).toBe('Closing.')
+  it('guesses off when the act carried no argument', () => {
+    expect(guessFor(undefined)).toEqual({ state: 'off' })
   })
 
-  it('says something rather than nothing when the act had no argument', () => {
-    expect(didWhat(undefined)).toBe('Turned off.')
+  /* The WORDS a quieted row says are deliberately not in this file. They are the store's `done` map
+     and doneLine(), shared with Home -- a second copy here would disagree with Home about a light
+     they both show, and would go on saying it after the wall had gone to rest. */
+  it('does not carry the wording: that is the store\'s, and shared with Home', async () => {
+    const src = await import('node:fs').then(fs => fs.readFileSync('src/happened.ts', 'utf8'))
+    expect(src).not.toMatch(/Turned off|Locked\.|Closed \u00b7/)
   })
 })

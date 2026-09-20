@@ -10909,7 +10909,7 @@ button.reading[data-held] {
 .happened-group {
   margin-bottom: 28px;
 }
-/* The heading over what is STILL true, in the lamp accent -- the same colour the
+/* The heading over what is STILL true, in the lamp accent -- the same color the
    panel uses everywhere for "on", because that is exactly what it means here.
    Nothing else on the page takes it, so the eye lands on the only rows with
    buttons. The words are the brain's: see HappenedPage.vue. */
@@ -10926,7 +10926,7 @@ button.reading[data-held] {
 .happened-did {
   color: var(--live);
 }
-/* The half with nothing to do about it. .recent centres its three columns, which
+/* The half with nothing to do about it. .recent centers its three columns, which
    is right for one line; these sentences run to two on a phone, so the icon and
    the time hang from the top instead of floating to the middle of a paragraph. */
 .happened-over li {

@@ -28,20 +28,25 @@
  * the row is the undo. Re-reading the page from the brain would be the obvious
  * thing and is the wrong one: the finding would disappear mid-tap, taking the
  * heading and everything under it up the screen.
+ *
+ * The saying-so is the store's `done` map and `doneLine`, not a second one kept
+ * here. Home already holds a card a person has quieted, in those words ("Off ·
+ * just now"), and App.vue already sweeps them at the three moments nobody is
+ * looking. A per-page copy would disagree with Home about a light they both
+ * show, and would go on saying it after the wall had gone to rest.
  */
 import { computed, onMounted, ref } from 'vue'
-import { ago, describe, loadHappened, notify, store } from './store'
+import { ago, deviceById, describe, done, doneLine, loadHappened, notify, perform, store } from './store'
 import { act, getEvents, type HappenedAct, type HappenedItem } from './api'
-import { didWhat, iconFor } from './happened'
+import { guessFor, iconFor } from './happened'
 import Icon from './Icon.vue'
 
 const page = computed(() => store.happened)
 const busy = ref('')                                   // the act that is running; one at a time
-const done = ref<Record<string, string>>({})           // subject -> what this page just did to it
 
 const key = (i: HappenedItem, n: number) => `${i.kind}:${i.subject}:${n}`
 
-async function run(i: HappenedItem, a: HappenedAct, id: string) {
+async function run(a: HappenedAct, id: string) {
   if (a.act === 'room') {                              // nothing closes a door over the network: go and look
     store.goRoom = a.to
     store.sheet = null
@@ -49,12 +54,15 @@ async function run(i: HappenedItem, a: HappenedAct, id: string) {
   }
   if (busy.value) return
   busy.value = id
-  try {
-    await act(a.to, a.arg ?? 'off')
-    /* The row stays, and says what it now says. The house will agree on the next stream message;
-       this is so the screen agrees at the moment of the tap rather than a beat later. */
-    done.value[i.subject] = didWhat(a.arg)
-  } catch (e: any) { notify(e.message, 'error') }
+  const d = deviceById(a.to)
+  /* perform() marks the store's `done` map before it asks and puts it back if the house refuses, so
+     the row says what it now says at the moment of the tap rather than a beat later -- and Home,
+     showing the same light, says the same thing about it. A thing the house has since forgotten has
+     no device to guess with, so that one goes the plain way. */
+  if (d) await perform(d, a.arg ?? 'off', undefined, guessFor(a.arg))
+  else {
+    try { await act(a.to, a.arg ?? 'off') } catch (e: any) { notify(e.message, 'error') }
+  }
   busy.value = ''
 }
 
@@ -95,11 +103,11 @@ onMounted(loadHappened)
               {{ i.text }}
               <small class="note-where" v-if="i.where">{{ i.where }}</small>
               <!-- what this page just did, kept where the thing was: the row is the undo -->
-              <small class="happened-did" v-if="done[i.subject]">{{ done[i.subject] }}</small>
+              <small class="happened-did" v-if="done[i.subject]">{{ doneLine(i.subject) }}</small>
             </span>
             <span class="note-acts">
               <button v-for="(a, j) in i.acts" :key="j" class="button small" :class="{ ghost: j > 0, busy: busy === key(i, n) }"
-                      :disabled="!!busy || !!done[i.subject]" @click="run(i, a, key(i, n))">{{ a.do }}</button>
+                      :disabled="!!busy || !!done[i.subject]" @click="run(a, key(i, n))">{{ a.do }}</button>
             </span>
           </li>
         </ul>

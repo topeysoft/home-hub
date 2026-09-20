@@ -241,3 +241,54 @@ class TheDoorsHint(ApiTest):
         api = __import__("hub.api", fromlist=["api"])
         api.hub.home.devices["light.ceiling"].state = "off"
         self.assertEqual(self.client.get("/happened").json()["hint"], "Nothing to catch up on")
+
+
+class TheArrangement(ApiTest):
+    """What design/happened/Main.dc.html drew, pinned so it cannot drift.
+
+    The picture is the spec (AGENTS.md section 1). The ranking IS the design here -- it is the whole
+    difference between this page and design/happened/Sections.dc.html, which is the same facts flat
+    and was rejected for reading as a report you have to finish before you know if anything wants you.
+    """
+
+    def aged(self, kind, subject, new, hours_ago, old=None, source="device"):
+        import time
+        api = __import__("hub.api", fromlist=["api"])
+        api.hub.log.db.execute("INSERT INTO events(ts,kind,subject,old,new,source) VALUES(?,?,?,?,?,?)",
+                               (time.time() - hours_ago * 3600, kind, subject, old, new, source))
+        api.hub.log.db.commit()
+
+    def a_full_house(self):
+        api = __import__("hub.api", fromlist=["api"])
+        self.aged("presence", "home", "nobody", 12)
+        self.aged("presence", "home", "somebody", 0.2)
+        self.aged("state", "light.ceiling", "on", 10, old="off")       # still on, the longer of the two
+        api.hub.home.devices["light.kitchen"].state = "on"
+        self.aged("state", "light.kitchen", "on", 6, old="off")        # still on, the shorter
+        self.aged("state", "lock.front", "unlocked", 11, old="locked")  # over
+        self.aged("state", "lock.front", "locked", 4, old="unlocked")
+        self.aged("phone", "p1", "joined", 30, source="user")
+        return self.client.get("/happened").json()
+
+    def test_the_groups_come_in_the_order_the_board_drew_them(self):
+        self.assertEqual([g["id"] for g in self.a_full_house()["groups"]], ["still", "over", "people"])
+
+    def test_only_what_is_still_true_carries_a_button(self):
+        """A door that locked itself four hours ago is not a job. A button against it would offer to
+        do something that has already happened, which is the rule the whole ranking rests on."""
+        page = self.a_full_house()
+        for g in page["groups"]:
+            for i in g["items"]:
+                if g["id"] == "still": self.assertTrue(i["acts"], i["text"])
+                else: self.assertEqual(i["acts"], [], i["text"])
+
+    def test_the_longest_standing_finding_leads(self):
+        still = next(g for g in self.a_full_house()["groups"] if g["id"] == "still")
+        self.assertEqual([i["subject"] for i in still["items"]], ["light.ceiling", "light.kitchen"])
+        self.assertGreater(still["items"][0]["seconds"], still["items"][1]["seconds"])
+
+    def test_an_empty_group_is_left_out_rather_than_drawn_empty(self):
+        """A heading with nothing under it teaches somebody to stop reading the headings."""
+        api = __import__("hub.api", fromlist=["api"])
+        api.hub.home.devices["light.ceiling"].state = "off"
+        self.assertEqual(self.client.get("/happened").json()["groups"], [])
