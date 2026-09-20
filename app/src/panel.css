@@ -10896,3 +10896,130 @@ button.reading[data-held] {
     text-align: center;
   }
 }
+
+/* ---------- What happened: the catch-up, and who changed what ---------- */
+/* Every class here is prefixed. This sheet is one flat global namespace -- a
+   second `.group` or `.more` would silently restyle somebody else's component,
+   which has cost a day already. See HappenedPage.vue.
+
+   The page borrows rather than invents: .notes for the rows that carry a button
+   (they are the same object as a Needs a look job -- a sentence, where to go,
+   and what to do), and .recent for the ones that do not. What is added here is
+   only the difference between the two halves, which is the whole design. */
+.happened-group {
+  margin-bottom: 28px;
+}
+/* The heading over what is STILL true, in the lamp accent -- the same colour the
+   panel uses everywhere for "on", because that is exactly what it means here.
+   Nothing else on the page takes it, so the eye lands on the only rows with
+   buttons. The words are the brain's: see HappenedPage.vue. */
+.happened-live {
+  color: var(--lamp);
+}
+.happened-warm {
+  background: var(--lamp-glow);
+  color: var(--lamp);
+}
+/* What the page just did, kept in the row it did it to. Nothing vanishes under a
+   tap: re-reading from the brain would take the finding away mid-tap, and the
+   heading and everything under it would jump up the screen. */
+.happened-did {
+  color: var(--live);
+}
+/* The half with nothing to do about it. .recent centres its three columns, which
+   is right for one line; these sentences run to two on a phone, so the icon and
+   the time hang from the top instead of floating to the middle of a paragraph. */
+.happened-over li {
+  align-items: start;
+  padding: 11px 0;
+}
+.happened-over .recent-icon,
+.happened-over .recent-when {
+  margin-top: 1px;
+}
+.happened-wrap {
+  white-space: normal;
+  line-height: 1.45;
+}
+.happened-quiet {
+  color: var(--muted);
+}
+.happened-log {
+  margin: 2px 0 6px;
+  padding-left: 2px;
+}
+/* A fold, and a door to another page, drawn the same because they answer the
+   same question -- "is there more?" -- and a person should not have to learn
+   which of the two they are about to get. */
+.happened-more {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 720px;
+  margin-top: 6px;
+  padding: 12px 16px;
+  border: 1px solid var(--edge);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  text-align: left;
+  font-size: 15px;
+  color: var(--ink);
+}
+.happened-more:active {
+  background: var(--surface-press);
+}
+.happened-more small {
+  display: block;
+  margin-top: 2px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.happened-more .flip {
+  color: var(--muted);
+  transform: rotate(180deg);
+  transition: transform 0.2s var(--ease);
+}
+.happened-more .happened-open {
+  transform: rotate(270deg); /* pointing down at the list it just opened */
+}
+/* Said on the door rather than behind it: somebody who cannot remember the code
+   should find that out before tapping, not after. */
+.happened-gated {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: 10px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--lamp-glow);
+  color: var(--lamp);
+  font-size: 12px;
+  vertical-align: 1px;
+}
+.happened-who {
+  font-weight: 500;
+}
+/* The house could not tell who it was. Quieter than a name, so the two are never
+   mistaken for each other at a glance -- which is the only thing this page has
+   to get right. */
+.happened-unnamed {
+  font-weight: 400;
+  color: var(--ink-2);
+}
+.happened-note {
+  max-width: 660px;
+  margin-top: 22px;
+  padding: 16px 18px;
+  border: 1px solid var(--edge);
+  border-radius: var(--r-md);
+  background: var(--surface-hi);
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+.happened-note b {
+  font-weight: 500;
+  color: var(--ink);
+}

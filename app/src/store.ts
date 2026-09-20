@@ -1,14 +1,14 @@
 // SPDX-FileCopyrightText: 2026 Temitope Adeyeri
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { reactive } from 'vue'
-import { doRestart, type Rung, getBridge, type Bridge, getHome, getEvents, getAmbient, getScenes, getStatus, getDiscovered, getRoutines, getAssistant, getPresence, getHealth, getSounds, connect, act, setIntent, setHomeIntent, type Room, type Device, type Home, type Event, type Ambient, type Rules, type Status, type Found, type Intent, type Routine, type Assistant, type Presence, type Note, type Sound, requestUpdate, getPhones, type Phone, type Ask, getAccounts, type Account, getShare, type Share } from './api'
+import { doRestart, type Rung, getBridge, type Bridge, getHome, getEvents, getAmbient, getScenes, getStatus, getDiscovered, getRoutines, getAssistant, getPresence, getHealth, getSounds, connect, act, setIntent, setHomeIntent, type Room, type Device, type Home, type Event, type Ambient, type Rules, type Status, type Found, type Intent, type Routine, type Assistant, type Presence, type Note, type Sound, requestUpdate, getPhones, type Phone, type Ask, getAccounts, type Account, getShare, type Share, getHappened, type Happened, getChanges, type Changes } from './api'
 import { lock } from './code'
 import { sunPosition, sunGuess, moonPhase } from './sun'
 
 /* The few soft sheets the panel has. Named rather than written out twice: the restart keeps the one
    it closed so it can come back to it, and `typeof store.sheet` there would make the store's own type
    circular -- which typescript answers by quietly making the whole store `any`. */
-export type Sheet = null | 'location' | 'add' | 'code' | 'why' | 'routines' | 'hub' | 'look' | 'house' | 'people' | 'accounts' | 'share' | 'notes'
+export type Sheet = null | 'location' | 'add' | 'code' | 'why' | 'routines' | 'hub' | 'look' | 'house' | 'people' | 'accounts' | 'share' | 'notes' | 'happened' | 'changes'
 
 export const store = reactive({
   rooms: [] as Room[], linkUp: false, linkLost: false, error: '', loaded: false,   // linkLost: down long enough to be worth mentioning
@@ -29,7 +29,7 @@ export const store = reactive({
      on the wall opens the house on a phone, and it promised to land ON the step with the camera --
      which it never did, because nothing here opened the page it lives on. Now it does. */
   sheet: (new URLSearchParams(location.search).has('add') ? 'add'
-    : ['location', 'add', 'code', 'why', 'routines', 'hub', 'look', 'house', 'people', 'accounts', 'share', 'notes'].includes(new URLSearchParams(location.search).get('sheet') ?? '') ? new URLSearchParams(location.search).get('sheet') : null) as Sheet,
+    : ['location', 'add', 'code', 'why', 'routines', 'hub', 'look', 'house', 'people', 'accounts', 'share', 'notes', 'happened', 'changes'].includes(new URLSearchParams(location.search).get('sheet') ?? '') ? new URLSearchParams(location.search).get('sheet') : null) as Sheet,
   whyRoom: new URLSearchParams(location.search).get('room') as string | null,   // the room the why sheet is about; ?sheet=why&room=kitchen previews it
   resume: new URLSearchParams(location.search).get('signin') as string | null,   // a conversation already open in the house (signing an account in again); the add sheet picks it up. ?sheet=add&signin=<flow> previews it
   /* ...and what it is about, when whoever handed it over knows. The screen it lands on is headed by
@@ -43,6 +43,8 @@ export const store = reactive({
   assistant: null as Assistant | null,       // whether the hub can talk to the model at all
   presence: null as Presence | null,         // who is home, from the brain; null until it has said
   notes: [] as Note[],                       // what needs a look, in the brain's words
+  happened: null as Happened | null,         // the catch-up, in the brain's words; null until it has answered
+  changes: null as Changes | null,           // who changed what -- only ever loaded behind the code
   accounts: [] as Account[],                 // the services the house has signed into, for the Accounts page and its door
   /* What this house gives out to other apps as Matter devices: its own page, and its own door, which
      says how things stand there without anybody opening it. Null until the hub has answered once. */
@@ -484,6 +486,17 @@ export async function refreshEvents() {
 function eventsSoon() { clearTimeout(eventsTimer); eventsTimer = window.setTimeout(refreshEvents, 1500) }
 
 /* ---------- routines: what the house does on its own, and why a room is the way it is ---------- */
+/* The catch-up. Asked for when the page opens rather than watched: a span only changes as the clock
+   moves, so nothing on the stream could push it, and a house that recomputed it on every state change
+   would spend the evening measuring how long the kitchen light has been on. */
+export async function loadHappened() {
+  try { store.happened = await getHappened() } catch {}
+}
+/* Behind the code, so this one is allowed to throw: `request` puts up the prompt, and a person who
+   waves it away should see the page stay empty rather than a toast about a 401 they caused. */
+export async function loadChanges() {
+  try { store.changes = await getChanges() } catch { store.changes = null }
+}
 export async function loadRoutines() {
   try { const f = await getRoutines(); store.routines = f.rules ?? []; store.routineErrors = f.errors ?? []; store.drafts = f.drafts ?? [] } catch {}
 }

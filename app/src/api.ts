@@ -434,6 +434,31 @@ export async function restoreBackup(file: File): Promise<{ ok: boolean; manifest
 export async function getHealth(): Promise<{ notes: Note[] }> {
   const r = await request('/health'); if (!r.ok) await fail(r); return r.json()
 }
+/* What happened while nobody was watching. Every word of this is the brain's, headings included:
+   "Still on" is wrong over a door that is still unlocked, and the panel cannot know which it has.
+   A finding is a SPAN -- "on for 10 hours" -- which is why there is no timestamp to format here. */
+export type HappenedAct = { do: string; act: 'device' | 'room'; to: string; arg?: string }
+export type HappenedItem = {
+  kind: 'still' | 'over' | 'phone'; subject: string; text: string; when: string; ts: number
+  where?: string        // which room and what sort of thing: enough to walk to it
+  seconds?: number      // how long it has been that way; the sort order, already applied
+  word?: string         // on | open | unlocked -- what the group heading was built from
+  acts: HappenedAct[] } // empty on anything already over: there is nothing left to do about it
+export type HappenedGroup = { id: 'still' | 'over' | 'people'; label: string; items: HappenedItem[] }
+export type Happened = {
+  lede: string; since: number; hint: string; empty: boolean
+  away: { from?: number; to?: number | null }
+  groups: HappenedGroup[] }
+export async function getHappened(): Promise<Happened> {
+  const r = await request('/happened'); if (!r.ok) await fail(r); return r.json()
+}
+/* Who changed what: behind the code, so `request` prompts for it on the 401 the way it does anywhere
+   else. `named` is false when the house could not tell who it was -- never a guess. */
+export type Change = { who: string; text: string; ts: number; named: boolean; when: string; kind: string; subject: string }
+export type Changes = { rows: Change[]; coded_since: number | null; coded_when: string | null }
+export async function getChanges(limit = 200): Promise<Changes> {
+  const r = await request(`/happened/changes?limit=${limit}`); if (!r.ok) await fail(r); return r.json()
+}
 export const setEntry = (rooms: string[]) => post<{ entry: string[] }>('/home/entry', { rooms })
 export const enableRoutine = (id: string, enabled: boolean) => post<{ ok: boolean; enabled: boolean }>(`/rules/${encodeURIComponent(id)}/enable`, { enabled })
 /* The assistant: it writes drafts and explains from the log. It has no call that changes a device. */

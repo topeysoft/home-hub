@@ -32,11 +32,13 @@ import SharePage from './SharePage.vue'
 import HubPage from './HubPage.vue'
 import CodePage from './CodePage.vue'
 import NotesPage from './NotesPage.vue'
+import HappenedPage from './HappenedPage.vue'
+import ChangesPage from './ChangesPage.vue'
 import AdvancedLink from './AdvancedLink.vue'
-import { isPage, type PageId } from './pages'
+import { isPage, LIT, type PageId } from './pages'
 
 const page = computed<PageId>(() => isPage(store.sheet) ? store.sheet : 'house')
-const PAGE: Record<Exclude<PageId, 'house'>, Component> = { location: LocationPage, look: LookPage, routines: RoutinesPage, people: PeoplePage, accounts: AccountsPage, add: AddPage, share: SharePage, hub: HubPage, code: CodePage, notes: NotesPage }
+const PAGE: Record<Exclude<PageId, 'house'>, Component> = { location: LocationPage, look: LookPage, routines: RoutinesPage, people: PeoplePage, accounts: AccountsPage, add: AddPage, share: SharePage, hub: HubPage, code: CodePage, notes: NotesPage, happened: HappenedPage, changes: ChangesPage }
 
 /* a conversation the house already has open (signing an account in again) is
    handed to the Add page on the way in, once, so the page reads as that one job */
@@ -48,8 +50,13 @@ const locked = computed(() => !!store.status?.locked)
 const title = computed(() => ({
   house: 'This house', location: 'Where is home?', look: 'How the house looks', routines: 'Routines', people: 'People', accounts: 'Accounts',
   add: resume.value ? 'Sign in again' : 'Add to the house', share: 'Share this house', hub: 'This hub', code: locked.value ? 'Change the code' : 'Lock the settings',
-  notes: 'Needs a look',
+  notes: 'Needs a look', happened: 'What happened', changes: 'Who changed what',
 }[page.value]))
+
+/* Which door is lit. Who changed what has no door of its own -- it is reached from inside What
+   happened -- so the door it belongs to stays lit while it is open, and the list never looks as
+   though nothing in it is selected. */
+const lit = computed<PageId>(() => LIT[page.value] ?? page.value)
 
 /* each door says where it leads and how things stand there, so most questions
    are answered from the list without opening anything */
@@ -91,6 +98,9 @@ const version = computed(() => { const v = store.status?.version; return !v || v
 const hub = computed(() => ready.value ? `${version.value} · an update is ready` : version.value)
 const code = computed(() => locked.value ? 'Changing the house needs it' : 'Open to anyone on the Wi‑Fi')
 const notes = computed(() => store.notes.length === 1 ? store.notes[0].text : `${store.notes.length} things have stopped answering`)
+/* The brain writes this line too. It has to say what is actually inside, and "2 things still on"
+   versus "2 things still unlocked" is a distinction the panel cannot make from a count. */
+const happened = computed(() => store.happened?.hint ?? 'What the house did while you were out')
 const doors = computed(() => [
   { id: 'location' as const, icon: 'pin', name: 'Where home is', hint: store.ambient.location?.name ?? 'Not set yet' },
   { id: 'look' as const, icon: 'sun', name: 'How it looks', hint: look.value },
@@ -100,6 +110,9 @@ const doors = computed(() => [
   { id: 'add' as const, icon: 'plus', name: 'Add to the house', hint: found.value, attention: store.found.length > 0 },
   { id: 'share' as const, icon: 'share', name: 'Share this house', hint: share.value },
   { id: 'hub' as const, icon: 'home', name: 'The hub', hint: hub.value, attention: ready.value },
+  /* Always here, unlike Needs a look: this is a place somebody goes to look something up, not a
+     fault that should appear only when there is one. */
+  { id: 'happened' as const, icon: 'clock', name: 'What happened', hint: happened.value },
   ...(store.status?.setup_done ? [{ id: 'code' as const, icon: 'lock', name: locked.value ? 'The code' : 'Lock the settings', hint: code.value }] : []),
   /* only while there is something behind it. A door that is always there saying "nothing is wrong"
      teaches a person to stop reading it, which is the opposite of what a fault list is for. */
@@ -132,7 +145,7 @@ onUnmounted(() => window.removeEventListener('keydown', key))
           <button class="round house-close" @click="close" aria-label="Close"><Icon name="close" :size="20" /></button>
         </div>
         <nav class="doors" aria-label="Pages">
-          <button v-for="d in doors" :key="d.id" class="door" :class="{ on: page === d.id, attention: d.attention }" @click="go(d.id)">
+          <button v-for="d in doors" :key="d.id" class="door" :class="{ on: lit === d.id, attention: d.attention }" @click="go(d.id)">
             <span class="door-icon"><Icon :name="d.icon" :size="18" /></span>
             <span class="door-text"><span class="door-name">{{ d.name }}</span><span class="door-hint">{{ d.hint }}</span></span>
             <Icon name="back" :size="16" class="flip" />

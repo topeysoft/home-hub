@@ -524,6 +524,50 @@ const bridgeRows = process.env.BRIDGES === 'none' ? [] : [
   }) }
   if (p === '/bridge/forget') return json(res, { forgotten: 'The Hallway bridge' })
   if (p === '/health') return json(res, { notes })
+  /* What happened, and who changed what. The brain measures these off the event log (happened.py);
+     here they are fixed, so the page can be drawn and argued about without a house that has actually
+     been left alone all day. The wording is the brain's in production and copied here verbatim --
+     including the group headings, which is the whole point of them coming over the wire. */
+  if (p === '/happened') return json(res, {
+    lede: 'You were out from 9:04am until 6:12pm. Two things are still on that were on the whole time.',
+    since: Date.now() / 1000 - 10 * 3600, hint: '2 things still on', empty: false,
+    away: { from: Date.now() / 1000 - 9.2 * 3600, to: Date.now() / 1000 - 0.3 * 3600 },
+    groups: [
+      { id: 'still', label: 'Still on', items: [
+        { kind: 'still', subject: 'light.porch', seconds: 36000, ts: Date.now() / 1000 - 10 * 3600, word: 'on', when: 'now',
+          text: 'Porch light has been on for 10 hours, since 7:32am.', where: 'Porch · a light',
+          acts: [{ do: 'Turn off', act: 'device', to: 'light.porch', arg: 'off' }] },
+        { kind: 'still', subject: 'light.kitchen', seconds: 32400, ts: Date.now() / 1000 - 9 * 3600, word: 'on', when: 'now',
+          text: 'Kitchen lights have been on for 9 hours, since 9:10am.', where: 'Kitchen · a light',
+          acts: [{ do: 'Turn off', act: 'device', to: 'light.kitchen', arg: 'off' }] },
+      ] },
+      { id: 'over', label: 'While you were out', items: [
+        { kind: 'over', subject: 'lock.front', seconds: 27420, ts: Date.now() / 1000 - 12 * 3600, word: 'unlocked', when: 'last night',
+          text: 'Front door was unlocked for 7 hours overnight, 11:03pm to 6:40am. It is locked now.',
+          where: 'Front door · a lock', acts: [] },
+        { kind: 'over', subject: 'cover.garage', seconds: 7200, ts: Date.now() / 1000 - 5 * 3600, word: 'open', when: '1:12pm',
+          text: 'Garage door was open for 2 hours, 1:12pm to 3:12pm. It is closed now.',
+          where: 'Garage · a blind', acts: [] },
+      ] },
+      { id: 'people', label: 'People and phones', items: [
+        { kind: 'phone', subject: 'p1', ts: Date.now() / 1000 - 3 * 86400, when: 'Tuesday',
+          text: "Ada's iPad joined the house.", acts: [] },
+        { kind: 'phone', subject: 'p2', ts: Date.now() / 1000 - 5 * 86400, when: 'Sunday',
+          text: "Sam's phone's stay ended on its own.", acts: [] },
+      ] },
+    ],
+  })
+  if (p.startsWith('/happened/changes')) return json(res, {
+    coded_since: Date.now() / 1000 - 16 * 86400, coded_when: 'Sep 4',
+    rows: [
+      { who: "Temi's iPhone", named: true, kind: 'home', subject: 'hallway', when: '4:02pm', ts: 0, text: 'renamed Hallway to Landing.' },
+      { who: 'Someone at the wall', named: false, kind: 'draft', subject: 'r1', when: 'Wednesday', ts: 0, text: 'approved a suggested routine.' },
+      { who: 'Someone at the wall', named: false, kind: 'phone', subject: 'p1', when: 'Tuesday', ts: 0, text: "let Ada's iPad into the house, for good." },
+      { who: "Temi's iPhone", named: true, kind: 'home', subject: 'e1', when: 'Tuesday', ts: 0, text: 'removed the Nest. Everything it brought went with it.' },
+      { who: "Ada's iPad", named: true, kind: 'home', subject: 'light.landing', when: 'Monday', ts: 0, text: 'added Landing light to the house.' },
+      { who: 'The hub', named: false, kind: 'home', subject: 'update', when: 'Sep 12', ts: 0, text: 'installed 0.8.1.' },
+    ],
+  })
   // What a speaker can play. The real brain generates the noises and lists the sounds folder; here it is
   // a fixed shelf, so the sounds sheet has something to draw without a hub or a speaker in the room.
   if (p === '/sounds') return json(res, {
