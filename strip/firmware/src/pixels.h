@@ -20,9 +20,11 @@
 #include <stdint.h>
 #include <string.h>
 
-// The most lights one controller will drive. Not a limit anybody should meet: a 5 m strip at 60/m is
-// 300, and past about that the 5 V rail is the thing that gives out, not this.
-#define PX_MOST 1200
+// The most lights one controller will drive. Not a software limit and not a limit anybody should
+// meet: a 5 m strip at 60/m is 300, and somewhere past that the 5 V rail is what gives out, not this.
+// It also sets the RMT symbol buffer in pixels.cpp -- 600 rgbw pixels is 76 KB of symbols, which is
+// already a lot to ask of a part that is holding Matter and Wi-Fi at the same time.
+#define PX_MOST 600
 
 // How many lights to write before the household has said. A strip shorter than this simply does not
 // receive the rest -- the surplus falls off the end of the wire and nobody ever sees it -- which is

@@ -3,8 +3,9 @@
 *Written 20 September 2026, from "what's the possibility of building an ESP32-controlled RGB/RGBW strip for
 accent lighting". The answer turned out to be that two thirds of it already existed in this tree, and the
 interesting part was not the electronics. The design is settled and drawn (`design/strip/`, `design/occasion/`);
-the brain, the panel and the firmware are written and their suites pass. **Nothing in here has run against a
-real strip.** Every claim below about how it behaves on hardware is a claim, and the honest list of what is
+the brain, the panel and the firmware are written and their suites pass. The firmware is a **Matter device**,
+which was decided on 20 September before anything shipped and is the subject of its own section below.
+**Nothing in here has run against a real strip.** Every claim below about how it behaves on hardware is a claim, and the honest list of what is
 not built at all is at the foot, where it is meant to be read.*
 
 ## What it is, and what it is not
@@ -22,8 +23,8 @@ A strip is the first thing this house adopts that is neither a bridge nor alread
 needed a whole new flow. It does not: **four of its six beats are the arrival sheet the panel already ships**,
 including the words. `design/strip/Spine.dc.html` is mostly a demonstration of that.
 
-    knocking   it has power and is advertising. Nothing of the house's has moved
-    working    wifi, then hub. Two steps, not the bridge's three -- the software is already on it
+    knocking   it has power and is advertising itself as commissionable. Nothing of the house's has moved
+    working    onto the Wi-Fi, then found. Two steps, not the bridge's three -- the software is already on it
     order      which color comes out first
     length     how far it goes
     room       the ordinary room chips every new device gets
@@ -76,10 +77,11 @@ lies, so a fault outranks its light. A strip is behind somebody's television whi
 it amber because the broker blinked is the product breaking, not reporting. **It holds whatever it was asked
 for, and the panel carries the fault.**
 
-The same reasoning decides what happens when the Wi-Fi goes. It does **not** reopen a pairing window: a router
-reboot would otherwise make every strip in the house start advertising at once, several times a year, with
-nobody present and nobody told. It keeps its light, alternates between the two sets of credentials it holds,
-and stays quiet. Coming back needs a deliberate act.
+The same reasoning decides what happens when the Wi-Fi goes. It does **not** reopen a commissioning window: a
+router reboot would otherwise make every strip in the house advertise itself at once, several times a year,
+with nobody present and nobody told. It keeps its light and stays quiet. **Since Matter came in, retrying the
+Wi-Fi is `esp-matter`'s job rather than ours** — the hand-rolled ring of two credentials went with the
+hand-rolled provisioning, which is one fewer thing of ours to be wrong. Coming back needs a deliberate act.
 
 ## Occasions, and what moves
 
@@ -106,7 +108,7 @@ they belong in three different places (`design/occasion/`):
 | `brain/tests/test_strip.py` | 24 tests, one pinning the six beats to the board |
 | `brain/hub/api.py` | nine routes, adopt gated by the code like `/bridge/adopt` |
 | `app/src/StripSheet.vue`, `StripArt.vue` | the sheet, in `BridgeSheet`'s shell and words |
-| `strip/firmware/` | pixels, RMT, BLE knock, the two-key ring, MQTT, HA discovery |
+| `strip/firmware/` | pixels, RMT, Matter commissioning and an Enhanced Color Light, MQTT for the instruments |
 | `strip/firmware/test_pixels_native.cpp` | all six orderings, checked against the brain's arithmetic |
 
 Brain 1090 tests, panel 490, `vue-tsc -p tsconfig.app.json` clean, `lint:css` no errors. `pio run` succeeds for
@@ -118,26 +120,105 @@ that takes the UART bridge chip off the board, and it is the same part as the pu
 both. A classic ESP32 does everything in the ambient product perfectly well and is a fine thing to prototype
 on; it is simply the oldest part in the family to start a multi-year product on.
 
+## Matter, and why it was done before anything shipped
+
+**A strip we make is a Matter device in its own right.** Commission it with any hub — Apple Home, Google Home,
+Alexa, SmartThings — and it is a color light: on, off, dim, any color, any warmth, in whatever app the
+household already has. Nothing of ours needs to be in the house.
+
+That is worth having on its own. It is not why it was done now.
+
+**It replaced something that was wrong.** The first firmware provisioned itself over a hand-rolled BLE
+characteristic taking `key=value` lines, which sent the household's Wi-Fi password over an unauthenticated
+link. Matter's commissioning is PASE with SPAKE2+ and then CASE — the credentials never cross in the clear, in
+a stack a great many people have read. So the choice was never "ship the strip, add Matter later". It was
+"write SRP6a ourselves, or adopt a commissioning stack that already did it and get four ecosystems in the same
+move". **The security item that used to be number one under the line below is closed by this.**
+
+### The two numbers that made it urgent
+
+|  | flash |
+|---|---|
+| the bespoke-BLE firmware | 942,869 bytes |
+| the same firmware as a Matter device | **1,759,998 bytes** |
+
+`min_spiffs.csv`, which it was on, has 1,966,080-byte app slots. Matter would have fitted at **89.5 % with
+nothing left to grow into**, and that table has no `esp_secure_cert` or `fctry` partitions at all — so a
+*certified* unit, which needs a per-device attestation certificate written at manufacture, could not have
+existed on it.
+
+**A partition table is the one thing an update cannot change.** An update writes the other app slot and flips
+`otadata`; it cannot move the slots. A unit shipped on the old table could never have become a Matter device,
+and the household would have had to send it back. `partitions-matter.csv` gives 3.75 MB a slot on an 8 MB part
+and lays down the two certification partitions now, while they cost nothing.
+
+The bridge puck already learned the shallow version of this: it shipped once on `huge_app.csv`, which has one
+app slot, so it could never be updated remotely at all.
+
+### What Matter cannot say
+
+The Enhanced Color Light cluster is on/off, level, hue, saturation and color temperature — **one color for the
+whole fitting.** It has no concept of a pixel. So:
+
+| | |
+|---|---|
+| the ambient product | entirely Matter. Any hub, no code of ours |
+| the order and fill questions | ours, over MQTT |
+| spatial occasions, following a picture | ours, and always will be |
+
+That is the same split Hue and Nanoleaf run, and it is not a compromise. **A strip with no broker in its NVS
+simply does not do the second half and is none the worse for it** — which is exactly the strip somebody buys
+in a shop.
+
+### What it cost
+
+The core had to move from Arduino 2.0.17 to 3.2.1 (the pioarduino build, which `brilliant/esp32-bridge`
+already reaches for when it wants a C6), because the Arduino wrapper for `esp-matter` arrived in 3.x. That
+rewrote the RMT driver against the new API and deleted NimBLE entirely — Matter owns the Bluetooth radio now,
+and a second BLE stack in the image was both wasted flash and a second thing that could hold the radio.
+
+Reworking the RMT driver caught a real bug on the way past. The first version built symbols eight bytes at a
+time and called `rmtWrite` per block; the gap between two of those calls is whatever the scheduler feels like,
+and a gap over about 50 µs is precisely what a WS2812 reads as *end of frame*. It would have looked correct at
+30 pixels and torn at 300.
+
+
 ---
 
 ## What is not built, and what is not safe yet
 
 Everything under this line is honest. None of it is done.
 
-**1. The Wi-Fi password crosses Bluetooth without a handshake. This is the one that must be fixed before
-anything ships.** The firmware's provisioning is a single write characteristic taking `key=value` lines, which
-is readable and works and is *not* secure: the household's PSK goes over an unauthenticated BLE link, and
-anything in radio range during setup can read it. The intended fix is ESP-IDF's `wifi_provisioning` with the
-BLE transport and **security2 (SRP6a)** — the crypto is done, it is maintained, and the hub side is Python, so
-`brain/hub/bridge.py`'s sibling gains a transport rather than a subsystem. The friction is that security2 wants
-a proof-of-possession, and the canonical answer is a code printed on the device, which is the number on a
-screen that `design/puck/Knock.dc.html` is proud of not having. The intended resolution is the first-boot
-window plus the blink confirmation as the proof for the normal path, with a printed code as the recovery and
-hardened option — **and that residual risk has not been accepted by anybody yet; it is written here so it can
-be.** Until this is done, treat provisioning as a bench convenience.
+**1. CLOSED — the Wi-Fi password no longer crosses in the clear.** It used to, and that entry used to be the
+first thing under this line. Matter commissioning replaced it (above). Kept here rather than deleted, because
+what a project decided to stop doing is worth as much as what it decided to do.
 
-**2. The hub cannot actually drive the firmware.** `Radio.join()` raises. The firmware advertises and accepts
-writes; the brain's `bleak` client for it is not written. So the two halves have never spoken.
+**1a. But nobody can commission it yet.** A commissionable Matter device advertises its discriminator; it does
+**not** advertise its passcode, and commissioning cannot happen without one. So the hub cannot silently adopt a
+strip the way `design/puck/Knock.dc.html` argues for — **that board's proudest claim, that the identity check is
+the object and never a number, is now in tension with the standard.** Options, none chosen: put the code in the
+box like every other Matter device and accept that our own panel is no better than anyone else's; derive
+passcodes at manufacture from something the hub can look up, which makes every unit we sell commissionable by
+anybody holding our algorithm; or an NFC tag the phone reads. **This is an artboard conversation before it is a
+code one, and it has not been had.**
+
+**2. The hub cannot actually drive the firmware.** `Radio.join()` raises. The firmware is commissionable; the
+brain has no commissioning client and does not talk to `matter-server` at all yet. So the two halves have never
+spoken. `Radio.scan()` still matches on our own name prefix rather than the Matter commissionable service, for
+the reason in 1a.
+
+**2a. Nothing decides how a strip learns our broker.** After commissioning it is on the house Wi-Fi and knows
+nothing about us; `mhost` in its NVS is blank, so it is a plain Matter light and the color and length questions
+never get asked. Handing those details over needs either a route on the hub or a custom Matter cluster, and
+neither is designed. **This is the seam between "a Matter light anybody can buy" and "a light our hub set up
+properly", and it is currently an empty string.**
+
+**2b. Certification, which is what "just works" actually costs.** Everything above runs on a *test* vendor id.
+Apple and Google will commission such a device with an "uncertified accessory" warning; it cannot be sold.
+Shipping needs CSA membership and a real Vendor ID (the Adopter tier is roughly $7k a year — verify before
+planning around it), a Device Attestation Certificate provisioned into `esp_secure_cert` on **every unit** at
+manufacture, and certification testing per product at an authorized lab. The partitions are laid down for it.
+Nothing else is.
 
 **3. Nothing has run on hardware at all.** Not one LED has been lit by this code.
 

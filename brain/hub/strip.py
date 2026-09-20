@@ -115,15 +115,25 @@ class StripError(RuntimeError):
 
 
 class Radio:
-    """What the brain does to a strip over Bluetooth, and nothing else it does at all.
+    """Getting a strip onto the house's Wi-Fi. It is Matter commissioning, and that is the point.
 
-    BLE is the provisioning and recovery channel here, never the control path: a controller taped
-    behind a television is a bad radio position, a hub holds under ten BLE links before it runs out,
-    and sixty frames a second of pixels is not going over it. Once a strip is on the Wi-Fi every
-    other word in this file goes over the broker.
+    THIS USED TO BE OUR OWN BLE PROTOCOL AND THAT WAS A MISTAKE. It took the household's Wi-Fi
+    password over an unauthenticated link, where anything in radio range during setup could read it.
+    Matter's commissioning is PASE with SPAKE2+ and then CASE, in a stack a great many people have
+    looked at -- so the firmware moved to it (strip/firmware/), and the side effect is that every
+    strip we make also works with Apple Home, Google Home and Alexa with no hub of ours in the house
+    at all.
 
-    NOTHING IN THIS CLASS HAS RUN AGAINST HARDWARE. It is the shape the firmware is being written to,
-    and until a strip has answered it, every method here is a claim."""
+    So this class has one job and it is a small one: notice a commissionable strip, and hand it to
+    the commissioner the house already runs (matter-server, in the compose file -- docs/matter.md).
+    It does NOT carry Wi-Fi credentials any more, and must never be given a route that does.
+
+    Once a strip is commissioned it is a Matter light and the ecosystem drives it. Everything else in
+    this file -- the color question, the fill -- goes over the broker, because the Enhanced Color
+    Light cluster is one color for the whole fitting and has no concept of a pixel.
+
+    NOTHING IN THIS CLASS HAS RUN AGAINST HARDWARE, and the commissioning half is not written at all:
+    see docs/strip.md, which also has the one question Matter forces and nobody has answered yet."""
 
     def __init__(self, adapter: str | None = None):
         self.adapter = adapter
@@ -136,7 +146,7 @@ class Radio:
         return bleak
 
     async def scan(self, seconds: float = 4.0) -> list[dict]:
-        """Every strip advertising that it has never been set up: [{"id", "addr", "rssi"}].
+        """Every strip advertising that it has never been commissioned: [{"id", "addr", "rssi"}].
 
         TWO NAMES FOR ONE THING, and they are not interchangeable. `addr` is the Bluetooth address,
         which is how you connect to it and nothing else -- on a Mac it is not even a MAC, and on any
@@ -156,10 +166,16 @@ class Radio:
             name = adv.local_name or ""
             if not name.startswith("hub-strip-"): continue
             found.append({"id": name[len("hub-strip-"):], "addr": d.address, "rssi": adv.rssi})
+        # A commissionable Matter device also advertises service 0xFFF6 with its discriminator, which
+        # is how this should find one rather than by our name prefix. What that advertisement does NOT
+        # carry is the passcode, and commissioning cannot happen without it -- which is the open
+        # question at the foot of docs/strip.md and the reason this is still matching on a name.
         return sorted(found, key=lambda s: -(s["rssi"] or -127))
 
     async def join(self, addr: str, cfg: dict) -> dict:
-        raise StripError("Setting a light strip up over Bluetooth is not built yet.")
+        """Commission it onto the house's fabric. `cfg` no longer carries Wi-Fi: the commissioner
+        does that over a channel that is encrypted, which is the whole reason this changed."""
+        raise StripError("Commissioning a light strip is not built yet.")
 
     async def forget(self, id: str) -> None:
         return None

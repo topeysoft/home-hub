@@ -1,0 +1,30 @@
+# A light strip that can become a Matter device without being opened up again.
+#
+# THIS IS THE ONE THING THAT CANNOT BE CHANGED OVER THE AIR. An update writes the other app slot and
+# flips otadata; it cannot move the slots themselves. So a unit that ships on a table too small for
+# Matter can never become a Matter device, and the household would have to send it back. The bridge
+# puck already learned the shallow version of this -- it shipped once on huge_app.csv, which has ONE
+# app slot, and so could never be updated remotely at all (docs/puck-updates.md).
+#
+# Sized for 8 MB, which is the floor for the module we would actually buy; it loads unchanged on a
+# 16 MB part and simply leaves the top unused. The current firmware is about 940 KB and a Matter
+# application on this silicon runs 1.5-2 MB, so 3.75 MB a slot is room for Matter plus years of it
+# getting fatter -- which is the point, because this number is the one we only get to pick once.
+#
+# Two partitions here are for a Matter device that is CERTIFIED rather than one running on a test
+# vendor id, and they are laid down now for the same reason:
+#   esp_secure_cert  the per-unit Device Attestation Certificate and its key, written at manufacture
+#                    (Espressif provision this as a service; every shipped unit needs its own)
+#   fctry            the factory data esp-matter reads its vendor id, product id and discriminator
+#                    from, kept apart from nvs so a factory reset cannot take the identity with it
+# Neither costs anything while unused. Both are unrecoverable if left out.
+#
+# Name,           Type, SubType,  Offset,   Size,     Flags
+nvs,              data, nvs,      0x9000,   0x6000,
+otadata,          data, ota,      0xF000,   0x2000,
+phy_init,         data, phy,      0x11000,  0x1000,
+esp_secure_cert,  0x3F, 0x00,     0x12000,  0x2000,
+fctry,            data, nvs,      0x14000,  0x6000,
+ota_0,            app,  ota_0,    0x20000,  0x3C0000,
+ota_1,            app,  ota_1,    0x3E0000, 0x3C0000,
+storage,          data, spiffs,   0x7A0000, 0x60000,
