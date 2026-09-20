@@ -27,8 +27,16 @@
  * The other line at the foot says when there is more behind this page. A list
  * that simply stops at its limit looks like a list that ended, and on the one
  * page whose whole job is completeness that is the worst thing it could imply.
+ *
+ * It is PAGED, and that is a fix as much as a nicety. Drawn in full, a real
+ * house's year of changes came to 5331px of rows -- three to five times taller
+ * than any other page in This house, and all of it inside the panel's
+ * backdrop-filter. On that page, and only that page, scrolling left rows drawn
+ * as bare icons with no text beside them: the element boxes painted and the
+ * text and SVG did not. No page in this panel should be thousands of pixels
+ * long, and an audit read newest-first has no reason to be.
  */
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { loadChanges, store } from './store'
 import Icon from './Icon.vue'
 
@@ -44,6 +52,13 @@ const ICON: Record<string, string> = { phone: 'phone', share: 'share', bridge: '
    empty squares is exactly what a broken row looks like. */
 const iconFor = (kind: string) => ICON[kind] ?? 'home'
 
+/* How many rows are drawn at once, and how many more each tap adds. Thirty is about two screens on a
+   wall, which is the most anybody reads in one go and well under the height that broke the painting. */
+const PAGE = 30
+const shown = ref(PAGE)
+const drawn = computed(() => rows.value.slice(0, shown.value))
+const behind = computed(() => Math.max(0, rows.value.length - shown.value))
+
 onMounted(loadChanges)
 </script>
 
@@ -55,7 +70,7 @@ onMounted(loadChanges)
     </p>
 
     <ul class="recent happened-over" v-if="rows.length">
-      <li v-for="(r, n) in rows" :key="`${r.ts}:${n}`">
+      <li v-for="(r, n) in drawn" :key="`${r.ts}:${n}`">
         <span class="recent-icon"><Icon :name="iconFor(r.kind)" :size="16" /></span>
         <span class="recent-text happened-wrap">
           <b class="happened-who" :class="{ 'happened-unnamed': !r.named }">{{ r.who }}</b> {{ r.text }}
@@ -68,7 +83,15 @@ onMounted(loadChanges)
       Nothing has been changed about the house yet.
     </p>
 
-    <p class="page-lede happened-quiet" v-if="page?.more">
+    <button class="happened-more" v-if="behind" @click="shown += PAGE">
+      <span>
+        Show older changes
+        <small>{{ behind === 1 ? '1 more' : `${behind} more` }}<template v-if="page?.coded_when">, back to {{ page.coded_when }}</template>. The house keeps them for a year.</small>
+      </span>
+      <Icon name="back" :size="16" class="flip happened-open" />
+    </button>
+
+    <p class="page-lede happened-quiet" v-else-if="page?.more">
       Showing the most recent changes. Older ones are kept for a year.
     </p>
 

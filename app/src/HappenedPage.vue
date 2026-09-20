@@ -79,7 +79,10 @@ async function openLog() {
   opening.value = true
   try {
     const tick = Date.now()
-    all.value = (await getEvents(200)).flatMap(e => {
+    /* Sixty, not two hundred: see ChangesPage.vue. A list long enough to be thousands of pixels tall
+       stops painting its own text inside the panel's backdrop-filter, and nobody reads to the end of
+       two hundred lines of a diary anyway. */
+    all.value = (await getEvents(60)).flatMap(e => {
       const d = describe(e)
       return d ? [{ key: e.ts, text: d.text, icon: d.icon, when: ago(e.ts, tick) }] : []
     })
