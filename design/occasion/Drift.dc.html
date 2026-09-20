@@ -1,0 +1,135 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --ink-3: #8d8a84; --muted: #7f7d77;
+      --lamp-rgb: 233,184,114; --lamp: rgb(var(--lamp-rgb)); --lamp-ink: #2a1c07;
+      --r-lg: 22px; --r-md: 16px; --r-sm: 12px;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .lbl { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); }
+    .t1 { font-size: 16px; font-weight: 500; }
+    .t2 { font-size: 13.5px; color: var(--muted); }
+    /* one control, three answers: the same shape the color block uses */
+    .opt { flex: 1; border-radius: var(--r-md); padding: 16px 16px 15px; background: rgba(255,255,255,.04);
+           box-shadow: inset 0 0 0 1px rgba(255,255,255,.07); display: flex; flex-direction: column; gap: 12px; }
+    .opt.on { background: linear-gradient(rgba(var(--lamp-rgb),.14), rgba(var(--lamp-rgb),.14)), rgba(255,255,255,.04);
+              box-shadow: inset 0 0 0 1px rgba(var(--lamp-rgb),.45); }
+    .run { position: relative; height: 20px; border-radius: 4px;
+           background: repeating-linear-gradient(90deg, rgba(255,255,255,.12) 0 4px, transparent 4px 7px); }
+    .dead { color: rgba(255,255,255,.26); text-decoration: line-through; text-decoration-color: rgba(224,138,138,.5); }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: var(--bg); color: var(--ink); font-size: 17px; line-height: 1.4;">
+
+  <div style="position: absolute; inset: 0; background: linear-gradient(rgb(29,33,46) 0%, rgb(41,42,63) 44%, rgb(72,55,58) 88%, rgb(52,40,42) 100%);"></div>
+  <div style="position: absolute; left: -222px; top: -135px; width: 1855px; height: 1156px; background: radial-gradient(58% 54% at 30% 64%, rgba(75,66,139,.4), transparent 68%), radial-gradient(62% 52% at 54% 110%, rgba(58,54,104,.44), transparent 72%);"></div>
+  <div style="position: absolute; inset: 0; background: rgba(6,7,9,.5);"></div>
+
+  <div style="position: absolute; left: 48px; top: 40px; right: 48px;">
+    <span class="cap">One control on the pane, and the menu it is instead of</span>
+    <h1 class="dsp" style="margin: 10px 0 0; font-size: 40px; font-weight: 400;">Movement is a property of the light, not a list of tricks.</h1>
+  </div>
+
+  <!-- ==================== left: the control, at the size it ships ==================== -->
+  <div style="position: absolute; left: 48px; top: 172px; width: 800px;">
+    <div style="border-radius: 26px; background: rgba(255,255,255,.035); box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); padding: 26px;">
+      <div class="lbl" style="margin-bottom: 18px;">Movement</div>
+      <div style="display: flex; gap: 14px;">
+
+        <div class="opt">
+          <div class="run" style="background: repeating-linear-gradient(90deg, var(--lamp) 0 4px, transparent 4px 7px);
+                      filter: drop-shadow(0 0 7px rgba(var(--lamp-rgb),.45));"></div>
+          <span class="t1">Still</span>
+          <span class="t2">Whatever color you set, and it stays there.</span>
+        </div>
+
+        <div class="opt on">
+          <div class="run" style="background: linear-gradient(90deg, #e9b872, #e08a8a 34%, #b48ae0 64%, #e9b872);
+                      -webkit-mask-image: repeating-linear-gradient(90deg, #000 0 4px, transparent 4px 7px);
+                      mask-image: repeating-linear-gradient(90deg, #000 0 4px, transparent 4px 7px);
+                      filter: drop-shadow(0 0 8px rgba(var(--lamp-rgb),.45));"></div>
+          <span class="t1">Drifting</span>
+          <span class="t2">Wanders, slowly enough that you notice it only when you look.</span>
+        </div>
+
+        <div class="opt">
+          <div class="run" style="background: repeating-linear-gradient(90deg, #f6d9a0 0 4px, transparent 4px 7px, #c98a3e 7px 11px, transparent 11px 14px, #f0b25e 14px 18px, transparent 18px 21px, #a96f2e 21px 25px, transparent 25px 28px, #f6d9a0 28px 32px, transparent 32px 35px);
+                      filter: drop-shadow(0 0 7px rgba(240,178,94,.45));"></div>
+          <span class="t1">Candlelight</span>
+          <span class="t2">A warm unsteadiness, like something burning.</span>
+        </div>
+      </div>
+
+      <p class="t2" style="margin: 20px 0 0; line-height: 1.6;">
+        Three, and there is no fourth. Each is a way for the light the household already chose to <em>be</em>, so none of them
+        takes the color away or replaces it &mdash; which is exactly what an effect does, and why an effect cannot live here.
+      </p>
+    </div>
+
+    <div style="margin-top: 18px; border-radius: var(--r-lg); border: 1px solid rgba(var(--lamp-rgb),.3); background: linear-gradient(rgba(var(--lamp-rgb),.07), rgba(var(--lamp-rgb),.07)), rgba(255,255,255,.02); padding: 20px 24px;">
+      <span class="cap">And Christmas is not here</span>
+      <p style="margin: 12px 0 0; font-size: 15px; line-height: 1.6;">
+        It is a chip in the scene bar, on the board beside this one. If an occasion were a fourth option in this row, the
+        household would have to come to every strip in the house to start it, and none of the bulbs would join in.
+      </p>
+    </div>
+  </div>
+
+  <!-- ==================== right: the thing we are not building ==================== -->
+  <div style="position: absolute; left: 888px; top: 172px; width: 504px;">
+    <div style="border-radius: 26px; border: 1px dashed rgba(224,138,138,.35); background: rgba(224,138,138,.04); padding: 24px; ">
+      <span class="cap" style="color: rgba(224,138,138,.8);">Not this</span>
+      <div style="margin-top: 16px; display: flex; flex-direction: column; gap: 9px; font-size: 14.5px;">
+        <span class="dead">Rainbow</span>
+        <span class="dead">Theater chase</span>
+        <span class="dead">Fire 2012</span>
+        <span class="dead">Meteor shower</span>
+        <span class="dead">Colorwaves</span>
+        <span class="dead">Bouncing balls</span>
+        <span class="dead">Twinkle fox</span>
+        <span class="dead">Lightning</span>
+        <span class="dead">Strobe</span>
+        <span style="color: rgba(255,255,255,.18); font-size: 13px;">&hellip; and seventy-three more</span>
+      </div>
+      <p class="t2" style="margin: 20px 0 0; line-height: 1.6; color: var(--ink-2);">
+        These are real names from the firmware everybody builds on. They are not bad engineering &mdash; they are a
+        <em>component's</em> vocabulary, and a household that has to read them is being handed the inside of the product.
+        Half of them cannot be told apart without trying each one, which is what makes it a menu rather than a choice.
+      </p>
+    </div>
+  </div>
+
+  <!-- ==================== the bottom: where it runs ==================== -->
+  <div style="position: absolute; left: 48px; right: 48px; bottom: 40px; border-radius: var(--r-lg); border: 1px solid var(--edge); background: rgba(255,255,255,.025); padding: 20px 24px;">
+    <span class="cap">Where the movement actually runs, and why it is split</span>
+    <p style="margin: 12px 0 0; font-size: 14.5px; line-height: 1.6; color: var(--ink-2);">
+      <strong style="color: var(--ink); font-weight: 500;">Firmware holds these three</strong>, because they have to survive the hub
+      going down &mdash; a strip that goes flat because the broker blinked is the fault the whole strip collection is built to avoid.
+      <strong style="color: var(--ink); font-weight: 500;">The brain streams everything else</strong>, over the same path the
+      television picture would need, so an occasion is software on one hub rather than an update to every strip in every house.
+      That split is also the argument for building the streaming path earlier than it looked worth doing: the occasions and the
+      picture follower turn out to be one pipe.
+    </p>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

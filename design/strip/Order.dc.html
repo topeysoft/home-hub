@@ -1,0 +1,135 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp-rgb: 233,184,114; --lamp: rgb(var(--lamp-rgb)); --lamp-ink: #2a1c07;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .sheet { width: 560px; border-radius: 26px; background: rgba(22,24,30,.92);
+             border: 1px solid var(--edge-hi); box-shadow: 0 40px 100px -30px rgba(0,0,0,.9); overflow: hidden; }
+    .sheet h2 { margin: 0; font-size: 34px; line-height: 1.05; font-weight: 400; letter-spacing: -.025em; }
+    .lede { margin: 0 0 18px; color: var(--ink-2); font-size: 15px; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 26px;
+           border-radius: 999px; background: var(--ink); color: var(--bg); font-weight: 500; font-size: 17px; }
+    .btn.ghost { background: var(--surface-hi); color: var(--ink); border: 1px solid var(--edge); }
+    .t1 { font-size: 15.5px; font-weight: 500; }
+    .t2 { font-size: 13px; color: var(--muted); }
+    .tag { position: absolute; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .px { position: absolute; inset: 0; border-radius: 4px; }
+    /* a choice you make by looking at the thing, not by reading the label under it */
+    .pick { border-radius: 18px; border: 1px solid var(--edge); background: rgba(255,255,255,.03);
+            padding: 14px; display: flex; flex-direction: column; gap: 11px; }
+    .pick .swatch { height: 46px; border-radius: 10px; }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: var(--bg); color: var(--ink); font-size: 17px; line-height: 1.4;">
+
+  <div style="position: absolute; inset: 0; background: linear-gradient(rgb(29,33,46) 0%, rgb(41,42,63) 44%, rgb(92,63,57) 84%, rgb(62,44,42) 100%);"></div>
+  <div style="position: absolute; left: -222px; top: -135px; width: 1855px; height: 1156px; background: radial-gradient(58% 54% at 30% 64%, rgba(72,63,135,.4), transparent 68%), radial-gradient(62% 52% at 54% 110%, rgba(55,51,100,.44), transparent 72%);"></div>
+  <div style="position: absolute; inset: 0; background: rgba(6,7,9,.62);"></div>
+
+  <div style="position: absolute; left: 140px; top: 34px; right: 140px; display: flex; align-items: baseline; gap: 14px;">
+    <span class="cap">The order the colors come in</span>
+    <span class="t2" style="flex: 1;">Nothing can be read back off a strip, so it cannot be detected. It is shown, and the household names what they see.</span>
+  </div>
+
+  <!-- ================= the common case: one tap, and it is over ================= -->
+  <div class="tag" style="left: 140px; top: 96px;">Nearly everybody &mdash; one tap</div>
+  <div class="sheet" style="position: absolute; left: 140px; top: 120px;">
+    <div style="display: flex; align-items: flex-start; gap: 14px; padding: 24px 22px 6px 28px;">
+      <h2 class="dsp" style="flex: 1;">Is it red?</h2>
+      <div style="width: 38px; height: 38px; border-radius: 999px; background: var(--surface-hi); border: 1px solid var(--edge); display: grid; place-items: center;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-2)" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </div>
+    </div>
+    <div style="padding: 4px 28px 26px;">
+      <p class="lede">Strips do not all put their colors in the same order, and there is no way to ask one. So: look at it.</p>
+
+      <div style="position: relative; height: 212px; border-radius: 20px; background: rgba(255,255,255,.03); border: 1px solid var(--edge); margin-bottom: 18px; overflow: hidden;">
+        <div style="position: absolute; left: 0; right: 0; top: 0; height: 212px; background: radial-gradient(44% 52% at 50% 50%, rgba(226,72,62,.34), transparent 72%);"></div>
+        <div style="position: absolute; left: 28px; right: 28px; top: 92px;">
+          <div style="position: relative; height: 26px;">
+            <div class="px" style="background: repeating-linear-gradient(90deg, #e2483e 0 4px, transparent 4px 7px);
+                        filter: drop-shadow(0 0 10px rgba(226,72,62,.8));"></div>
+          </div>
+        </div>
+        <div style="position: absolute; bottom: 16px; left: 0; right: 0; text-align: center;">
+          <span class="t2">All of it, one color</span>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 10px;">
+        <span class="btn" style="flex: 1;">Yes, that&rsquo;s red</span>
+        <span class="btn ghost" style="flex: 1;">No &mdash; it&rsquo;s something else</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= the way out, and it is one more tap ================= -->
+  <div class="tag" style="left: 740px; top: 96px;">Everybody else &mdash; one more</div>
+  <div class="sheet" style="position: absolute; left: 740px; top: 120px;">
+    <div style="display: flex; align-items: flex-start; gap: 14px; padding: 24px 22px 6px 28px;">
+      <h2 class="dsp" style="flex: 1;">Then what is it showing?</h2>
+      <div style="width: 38px; height: 38px; border-radius: 999px; background: var(--surface-hi); border: 1px solid var(--edge); display: grid; place-items: center;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-2)" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </div>
+    </div>
+    <div style="padding: 4px 28px 26px;">
+      <p class="lede">Whatever you are looking at is the answer. Tap it and the strip is right from then on.</p>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+        <div class="pick">
+          <div class="swatch" style="background: repeating-linear-gradient(90deg, #4ac46a 0 4px, transparent 4px 7px), #12141a; box-shadow: inset 0 0 22px rgba(74,196,106,.4);"></div>
+          <span class="t1">Green</span>
+        </div>
+        <div class="pick">
+          <div class="swatch" style="background: repeating-linear-gradient(90deg, #4b86e8 0 4px, transparent 4px 7px), #12141a; box-shadow: inset 0 0 22px rgba(75,134,232,.4);"></div>
+          <span class="t1">Blue</span>
+        </div>
+        <div class="pick">
+          <div class="swatch" style="background: repeating-linear-gradient(90deg, #e2483e 0 4px, #4ac46a 4px 8px, #4b86e8 8px 12px, transparent 12px 15px), #12141a;"></div>
+          <span class="t1">Stripes of color</span>
+          <span class="t2" style="margin-top: -6px;">Not one color all along</span>
+        </div>
+        <div class="pick">
+          <div class="swatch" style="background: repeating-linear-gradient(90deg, rgba(255,255,255,.1) 0 4px, transparent 4px 7px); "></div>
+          <span class="t1">Nothing at all</span>
+          <span class="t2" style="margin-top: -6px;">Dark end to end</span>
+        </div>
+      </div>
+
+      <p class="t2" style="margin: 0;">Stripes mean it carries a separate white as well, which is worth knowing and is not a fault. Nothing at all is a fault, and goes somewhere else.</p>
+    </div>
+  </div>
+
+  <div style="position: absolute; left: 140px; right: 140px; bottom: 40px; border-radius: 20px; border: 1px solid var(--edge); background: rgba(255,255,255,.025); padding: 18px 22px;">
+    <p style="margin: 0; font-size: 14.5px; line-height: 1.55; color: var(--ink-2);">
+      <strong style="color: var(--ink); font-weight: 500;">Two primaries settle all six orderings</strong>, because whichever color comes back
+      names the channel that went out first. Red is asked here because the common strip is already right and answers in one tap;
+      a second question only ever reaches the households whose first answer was no. Getting it wrong harms nothing &mdash; it is
+      the wrong color, not a damaged strip &mdash; so the way back lives on the tile, which is where the second strip somebody buys
+      will need it anyway.
+    </p>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>
