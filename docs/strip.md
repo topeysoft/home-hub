@@ -129,12 +129,22 @@ household already has. Nothing of ours needs to be in the house.
 
 That is worth having on its own. It is not why it was done now.
 
-**It replaced something that was wrong.** The first firmware provisioned itself over a hand-rolled BLE
-characteristic taking `key=value` lines, which sent the household's Wi-Fi password over an unauthenticated
-link. Matter's commissioning is PASE with SPAKE2+ and then CASE — the credentials never cross in the clear, in
-a stack a great many people have read. So the choice was never "ship the strip, add Matter later". It was
-"write SRP6a ourselves, or adopt a commissioning stack that already did it and get four ecosystems in the same
-move". **The security item that used to be number one under the line below is closed by this.**
+**It was meant to replace something that was wrong**, and on this framework it does not. The first firmware
+provisioned itself over a hand-rolled BLE characteristic, which sent the household's Wi-Fi password over an
+unauthenticated link. Matter's own commissioning is PASE with SPAKE2+ and then CASE, so adopting it was meant
+to close that hole and buy four ecosystems in the same move.
+
+> **CHIPoBLE IS COMPILED OUT OF THE ARDUINO FRAMEWORK.** `CONFIG_ENABLE_CHIPOBLE is not set` in the
+> precompiled libraries for **every** target — esp32, c3, c6 and s3. So a device built this way can never
+> advertise itself for BLE commissioning: it has to be **on the Wi-Fi already**, and the commissioner finds it
+> by mDNS. That is why every Arduino Matter example hardcodes `WiFi.begin(ssid, pass)` — not laziness, a
+> requirement. Found on 20 September by scanning for the advertisement and not finding it, after the stack
+> itself reported `fabrics 0, commissioning window OPEN`.
+
+So Matter gets us the ecosystems and **does not, here, get us secure provisioning**. Something still has to put
+the strip on the Wi-Fi first. The answer is `WiFiProv`, which ships in the same core: BLE transport, protocomm
+`SECURITY_1` (X25519 then AES-CTR, with a proof of possession), which is the handshake that was wanted in the
+first place. It is not written yet.
 
 ### The two numbers that made it urgent
 
@@ -190,9 +200,11 @@ and a gap over about 50 µs is precisely what a WS2812 reads as *end of frame*. 
 
 Everything under this line is honest. None of it is done.
 
-**1. CLOSED — the Wi-Fi password no longer crosses in the clear.** It used to, and that entry used to be the
-first thing under this line. Matter commissioning replaced it (above). Kept here rather than deleted, because
-what a project decided to stop doing is worth as much as what it decided to do.
+**1. NOT closed after all — the Wi-Fi password still has no safe way across.** This was written down as closed
+when Matter came in, and hardware says otherwise: CHIPoBLE is compiled out of the Arduino framework on every
+target, so Matter cannot carry the credentials and something else must. `WiFiProv` with BLE and protocomm
+`SECURITY_1` is in the same core and is the intended answer; nothing is built. **Until it is, a strip can only
+be put on the Wi-Fi by a method that does not exist yet, which is also why nothing can be commissioned.**
 
 **1a. But nobody can commission it yet.** A commissionable Matter device advertises its discriminator; it does
 **not** advertise its passcode, and commissioning cannot happen without one. So the hub cannot silently adopt a

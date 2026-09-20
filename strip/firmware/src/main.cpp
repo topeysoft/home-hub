@@ -38,6 +38,8 @@
 #include <WiFi.h>
 #include <ESPmDNS.h>
 #include <platform/ConfigurationManager.h>
+#include <esp_log.h>
+#include <app/server/Server.h>
 
 #include "pixels.h"
 
@@ -265,6 +267,11 @@ void setup() {
     const uint64_t mac = ESP.getEfuseMac();
     snprintf(chipHex, sizeof(chipHex), "%06llx", (unsigned long long)(mac >> 24) & 0xFFFFFF);
 
+#ifdef VERBOSE
+    // The Matter library is precompiled, so CORE_DEBUG_LEVEL cannot reach its logs -- they are
+    // filtered at runtime by esp-idf's own level, and this is the only lever for them.
+    esp_log_level_set("*", ESP_LOG_INFO);
+#endif
     pinMode(BUTTON_PIN, INPUT_PULLUP);
     nvs.begin("strip", false);
     // isKey() first, because Preferences logs getString of a missing key as an ERROR. On a strip that
@@ -308,7 +315,30 @@ void setup() {
     // Stored rather than declared, so it is read back from config on every boot after this one. The
     // Basic Information cluster has already been built by the time we get here, so the very first
     // boot after a flash still reports the default and the one after it is right.
+#ifndef SKIP_SERIAL_STORE
     chip::DeviceLayer::ConfigurationMgr().StoreSerialNumber(chipHex, strlen(chipHex));
+#endif
+    char line[200];
+
+    // ASK THE STACK, RATHER THAN INFERRING FROM ITS SILENCE. The Matter libraries ship precompiled
+    // with their own log calls stripped, so "no CHIP output" says nothing about whether CHIP is
+    // running -- which cost an hour of reading absence as evidence. These three are facts.
+    {
+        auto &srv = chip::Server::GetInstance();
+        auto &cwm = srv.GetCommissioningWindowManager();
+        snprintf(line, sizeof(line), "[strip] fabrics %u, commissioning window %s",
+                 (unsigned)srv.GetFabricTable().FabricCount(),
+                 cwm.IsCommissioningWindowOpen() ? "OPEN" : "CLOSED");
+        tell(line);
+        // And if nobody has it and nothing is listening, say so and open one. A device that is not
+        // commissioned and is not advertising is a device nobody can ever reach again.
+        if (srv.GetFabricTable().FabricCount() == 0 && !cwm.IsCommissioningWindowOpen()) {
+            CHIP_ERROR e = cwm.OpenBasicCommissioningWindow();
+            snprintf(line, sizeof(line), "[strip] nothing was listening -- opened a window: %s",
+                     e == CHIP_NO_ERROR ? "ok" : "FAILED");
+            tell(line);
+        }
+    }
 
     // Said on EVERY boot, not only an interesting one. The first thing anybody does with a board that
     // is not behaving is open the serial monitor, and a board that says nothing there has given them
@@ -317,7 +347,6 @@ void setup() {
     const char letters[3] = {'r', 'g', 'b'};
     char ord[4] = {0, 0, 0, 0};
     for (int c = 0; c < 3; c++) ord[strip.order.at[c]] = letters[c];
-    char line[160];
     snprintf(line, sizeof(line), "\n[strip] " FW "  chip %s  pin %d  %d lights, order %s%s",
              chipHex, DATA_PIN, strip.count, ord, strip.order.white ? "w" : "");
     tell(line);
