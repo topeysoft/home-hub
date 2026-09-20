@@ -42,21 +42,37 @@ constexpr uint32_t TICK_HZ = 10 * 1000 * 1000;   // 10 MHz: one tick is the 100 
 
 namespace px {
 
-bool begin(int pin) {
-    dataPin = pin;
-    const size_t want = (size_t)PX_MOST * 4 * 8;
+// Grown to fit the frame being sent, rather than claimed for the longest strip anybody could attach.
+// The first version asked for PX_MOST up front -- 76 KB -- which on a board with no PSRAM comes out
+// of the same internal heap Matter and Wi-Fi are living in. It failed there, begin() returned false,
+// show() then returned silently for ever, and the symptom was a strip that never lit with nothing
+// said about it anywhere. A 300-pixel strip needs 28 KB; most households will never grow this twice.
+static bool room_for(size_t bytes) {
+    const size_t want = bytes * 8;
+    if (symbols && symbolsFor >= want) return true;
+    if (symbols) heap_caps_free(symbols);
     symbols = (rmt_data_t *)heap_caps_malloc(want * sizeof(rmt_data_t), MALLOC_CAP_SPIRAM);
     if (!symbols) symbols = (rmt_data_t *)heap_caps_malloc(want * sizeof(rmt_data_t), MALLOC_CAP_8BIT);
-    if (!symbols) return false;
-    symbolsFor = want;
+    symbolsFor = symbols ? want : 0;
+    return symbols != nullptr;
+}
+
+bool begin(int pin) {
+    dataPin = pin;
     ready = rmtInit(pin, RMT_TX_MODE, RMT_MEM_NUM_BLOCKS_1, TICK_HZ);
     return ready;
 }
 
 void show(const Pixels &p) {
-    if (!ready || !symbols) return;
+    if (!ready) return;
     const size_t n = p.bytes_used();
-    if (n * 8 > symbolsFor) return;
+    if (!room_for(n)) {
+        // Loud, and once. A strip that cannot find the memory to draw itself is a dead product, and
+        // the one thing it must not do is fail the way it used to -- quietly, for ever.
+        static bool moaned = false;
+        if (!moaned) { moaned = true; log_e("no room for %u RMT symbols: the strip cannot be drawn", (unsigned)(n * 8)); }
+        return;
+    }
     for (size_t i = 0; i < n; i++) {
         const uint8_t byte = p.buf[i];
         for (int k = 0; k < 8; k++) {

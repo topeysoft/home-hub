@@ -207,7 +207,7 @@ void setup() {
     muser = nvs.getString("muser", "");
     mpass = nvs.getString("mpass", "");
 
-    px::begin(DATA_PIN);
+    const bool lit = px::begin(DATA_PIN);
 
     light.onChange([](bool state, espHsvColor_t hsv, uint8_t bri, uint16_t) -> bool {
         want_on = state;
@@ -219,6 +219,19 @@ void setup() {
     light.begin(false, {21, 216, 120}, 180);
 
     Matter.begin();
+
+    // Said on EVERY boot, not only an interesting one. The first thing anybody does with a board that
+    // is not behaving is open the serial monitor, and a board that says nothing there has given them
+    // no way to tell "it is working and you cannot see it" from "it never started".
+    delay(600);   // USB CDC enumerates after boot; without this the first lines go nowhere
+    Serial.printf("\n[strip] " FW "  chip %s  pin %d  %d lights, order ", chipHex, DATA_PIN, strip.count);
+    const char letters[3] = {'r', 'g', 'b'};
+    char ord[4] = {0, 0, 0, 0};
+    for (int c = 0; c < 3; c++) ord[strip.order.at[c]] = letters[c];
+    Serial.printf("%s%s\n", ord, strip.order.white ? "w" : "");
+    if (!lit) Serial.println("[strip] THE LIGHT DRIVER DID NOT START -- nothing will light. Check the pin.");
+    Serial.printf("[strip] free heap %u, psram %u\n",
+                  (unsigned)ESP.getFreeHeap(), (unsigned)ESP.getPsramSize());
 
     if (!Matter.isDeviceCommissioned()) {
         // Lit while it waits, because being lit IS the identity check: the wall asks whether the
