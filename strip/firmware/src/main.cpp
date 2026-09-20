@@ -365,6 +365,21 @@ void setup() {
 static void button() {
     static uint32_t down = 0;
     static bool armed = false;
+    // A HOLD ONLY COUNTS ONCE THE BUTTON HAS BEEN SEEN LET GO, and without this the feature eats the
+    // product. GPIO 0 is BOOT: it is held to flash, it is a strapping pin, and on some boards it sits
+    // low. Any of those and the device factory-resets itself five seconds into EVERY boot, for ever,
+    // so it never stays advertising long enough to be commissioned -- which from the outside is a
+    // device that pairs once and then never again, with the log scrolling past too fast to read.
+    static bool released = false;
+    if (digitalRead(BUTTON_PIN) == HIGH) released = true;
+    else if (!released) {
+        static bool moaned = false;
+        if (!moaned && millis() > 3000) {
+            moaned = true;
+            tell("[strip] the button has been down since boot, so it is being ignored. Let it go once.");
+        }
+        return;
+    }
     if (digitalRead(BUTTON_PIN) == LOW) {
         if (!down) down = millis();
         const uint32_t held = millis() - down;
