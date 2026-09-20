@@ -9450,7 +9450,14 @@ select.input {
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(rgba(243, 203, 143, 0.95), rgba(196, 145, 72, 0.9));
+  /* Lamplight, and it has to BE the lamp: this was two hand-written ambers, so a
+     bulb somebody had set to magenta filled its brightness column in amber. The
+     two ends are the accent lifted and deepened, so the column is the same shape
+     it always was and follows whatever the lamp is actually emitting. */
+  background: linear-gradient(
+    color-mix(in oklab, rgb(var(--lamp-rgb)) 62%, #ffffff),
+    color-mix(in oklab, rgb(var(--lamp-rgb)) 82%, #000000)
+  );
   transition: height 0.12s linear;
 }
 .rig-mark {

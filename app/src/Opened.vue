@@ -46,6 +46,8 @@ import MachinePane from './panes/MachinePane.vue'
 import { canShare, cap, defaultKind, deviceById, isDead, isShared, notify, perform, roomOf, shownAs, store } from './store'
 import { facts as factsOf, moments as momentsOf, paneKind, reading, verbs as verbsOf, whyLine } from './pane'
 import { useArm } from './twice'
+import { bulbColor } from './art'
+import { oklch } from './sky'
 import Icon from './Icon.vue'
 import LightPane from './panes/LightPane.vue'
 import MediaPane from './panes/MediaPane.vue'
@@ -58,6 +60,33 @@ import SensePane from './panes/SensePane.vue'
 
 const dev = computed(() => store.opened)
 const kind = computed(() => dev.value ? cap(dev.value) : '')
+
+/*
+ * What lamplight IS, while a colored bulb is open.
+ *
+ * --lamp is the panel's accent for everything a light does: the power button, the
+ * brightness column, the bar under a dimmer. It is amber because a lamp is, and
+ * that was true of every bulb in the house until one could say otherwise. It is
+ * set here rather than in LightPane because the pane is assembled from a shell
+ * and a rig, and the power button is in the shell -- so a magenta lamp opened
+ * into an amber screen, with the swatch it is set to ringed two feet away.
+ *
+ * Both forms, because --lamp is `rgb(var(--lamp-rgb))` computed at :root and a
+ * later --lamp-rgb cannot reach back into it. And the ink with them: the chip is
+ * dark type on the accent, and near-black amber on a magenta chip is a stain.
+ *
+ * Only while it is ON and only when the bulb has told the house a color. A warm
+ * white lamp keeps the amber, which is not a fallback -- amber IS what it is
+ * emitting.
+ */
+const lampTint = computed(() => {
+  const d = dev.value
+  if (!d || cap(d) !== 'light' || d.state !== 'on') return undefined
+  const c = bulbColor(d.attrs)
+  if (!c) return undefined
+  const rgb = c.join(',')
+  return { '--lamp-rgb': rgb, '--lamp': `rgb(${rgb})`, '--lamp-ink': `oklch(.24 .06 ${oklch(c).H.toFixed(1)})` }
+})
 const room = computed(() => dev.value ? roomOf(dev.value) : null)
 const shown = ref(false)              // flipped a frame after mount, so the transitions have a from-state to leave from
 const dead = computed(() => !!dev.value && isDead(dev.value))
@@ -251,7 +280,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 <template>
   <div class="opened" :class="{ shown, closing }" v-if="dev" role="dialog" :aria-label="dev.name">
     <div class="opened-veil" @click="close"></div>
-    <div class="opened-panel" :data-cap="kind">
+    <div class="opened-panel" :data-cap="kind" :style="lampTint">
       <button class="back opened-close" @click="close" aria-label="Close"><Icon name="close" :size="18" /></button>
 
       <div class="opened-body pane-body">

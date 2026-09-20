@@ -130,3 +130,29 @@ test('a color tuned against the room can be kept, and comes back in the grid', a
   await expect(page.locator('.rig-color')).toBeVisible()
   await expect(page.locator('.rig-color .rig-lbl').first(), 'the kept color joins the grid').toHaveText('This room')
 })
+
+/* The pane is assembled from a shell and a rig, and --lamp -- the accent for the power button, the
+   brightness column, the lit preset -- lives on the shell. So a magenta lamp opened into an amber
+   screen with the swatch it was set to ringed two feet away. Nothing that reads one component can
+   see that; it only shows when the whole pane is on screen at once. */
+test('the pane is lit in the color the lamp actually is', async ({ page }) => {
+  await openLight(page, 'Ceiling light')          // pinned to a color in the mock
+
+  const lit = await page.evaluate(() => {
+    const px = (s: string) => getComputedStyle(document.querySelector(s)!).backgroundColor
+    return { chip: px('.opened-acts .ctl.primary'), lamp: getComputedStyle(document.querySelector('.opened-panel')!).getPropertyValue('--lamp').trim() }
+  })
+  const [r, g, b] = lit.chip.match(/\d+/g)!.slice(0, 3).map(Number)
+  /* not amber. --lamp is rgb(233,184,114); a power button anywhere near it here means the shell
+     never heard about the bulb, which is exactly the bug. */
+  expect(Math.hypot(r - 233, g - 184, b - 114), `power button is ${lit.chip}`).toBeGreaterThan(60)
+  expect(lit.lamp, 'and the accent itself is the bulb').toContain('226')
+})
+
+/* while a warm white lamp keeps the amber, which is not a fallback -- it is what it is emitting */
+test('and a warm white lamp keeps lamplight', async ({ page }) => {
+  await openLight(page, 'Floor lamp')
+  const chip = await page.evaluate(() => getComputedStyle(document.querySelector('.opened-acts .ctl.primary')!).backgroundColor)
+  const [r, g, b] = chip.match(/\d+/g)!.slice(0, 3).map(Number)
+  expect(Math.hypot(r - 233, g - 184, b - 114), `power button is ${chip}`).toBeLessThan(30)
+})
