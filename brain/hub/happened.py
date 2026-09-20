@@ -214,7 +214,15 @@ class Happened:
         people = self.people(now)
         if people: groups.append({"id": "people", "label": "People and phones", "items": people})
         return {"lede": lede, "since": since, "away": self.away(now), "groups": groups,
-                "empty": not groups}
+                "empty": not groups, "hint": self.hint(still, over)}
+
+    def hint(self, still, over) -> str:
+        """The one line under the door, which is what makes somebody open it. Written here for the
+        reason the heading is: it has to say what is actually inside."""
+        def n(items, thing): return f"1 {thing}" if len(items) == 1 else f"{len(items)} {thing}s"
+        if still: return f"{n(still, 'thing')} still {still[0]['word']}"
+        if over: return f"{n(over, 'thing')} while you were out"
+        return "Nothing to catch up on"
 
 
 # ---- who changed what ----

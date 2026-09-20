@@ -214,3 +214,30 @@ class WhoChangedWhat(ApiTest):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TheDoorsHint(ApiTest):
+    """The one line under the door is what makes somebody open it, so the brain writes it too."""
+
+    def aged(self, kind, subject, new, hours_ago, old=None):
+        import time
+        api = __import__("hub.api", fromlist=["api"])
+        api.hub.log.db.execute("INSERT INTO events(ts,kind,subject,old,new,source) VALUES(?,?,?,?,?,?)",
+                               (time.time() - hours_ago * 3600, kind, subject, old, new, "device"))
+        api.hub.log.db.commit()
+
+    def test_it_counts_what_is_still_on(self):
+        self.aged("state", "light.ceiling", "on", 9, old="off")
+        self.assertEqual(self.client.get("/happened").json()["hint"], "1 thing still on")
+
+    def test_it_falls_back_to_what_is_over(self):
+        api = __import__("hub.api", fromlist=["api"])
+        api.hub.home.devices["light.ceiling"].state = "off"      # the house ships with it on
+        self.aged("state", "lock.front", "unlocked", 14, old="locked")
+        self.aged("state", "lock.front", "locked", 7, old="unlocked")
+        self.assertEqual(self.client.get("/happened").json()["hint"], "1 thing while you were out")
+
+    def test_a_quiet_house_says_so_rather_than_nothing(self):
+        api = __import__("hub.api", fromlist=["api"])
+        api.hub.home.devices["light.ceiling"].state = "off"
+        self.assertEqual(self.client.get("/happened").json()["hint"], "Nothing to catch up on")
