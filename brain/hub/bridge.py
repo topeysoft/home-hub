@@ -122,6 +122,17 @@ def _puck():
     return mod
 
 
+class BridgeError(RuntimeError):
+    """A failure whose message was written for the person standing in front of the panel.
+
+    Everything else that can be raised in here was written for a log -- "no esp32s3 image", a
+    serial port's own words, or whatever a library felt like saying. Those must not reach a screen:
+    a bridge once failed with "database is locked" on it, which tells the person nothing and is not
+    even true about their bridge. So the catch-all says a house sentence, and only these come
+    through as themselves.
+    """
+
+
 class Cable:
     """What the brain does to a puck over its USB port. Every call blocks on serial and runs in a thread."""
 
@@ -265,7 +276,8 @@ class Cable:
         helpers behind, and one of those holding the port poisons everything after it."""
         image = self.image_for(chip)
         if not image:
-            raise RuntimeError(f"no {chip} image")
+            log.warning("bridge: no image for %s", chip)
+            raise BridgeError("This is a kind of board the hub has no software for.")
         last = ""
         for baud in FLASH_BAUDS:
             log.info("bridge: writing %s to %s at %s baud", image.name, port, baud)
@@ -291,7 +303,7 @@ class Cable:
                               if l.strip() and "Writing at" not in l)[-300:]
             log.info("bridge: %s baud did not hold (%s)", baud, last or f"exit {rc}")
         log.warning("bridge: the write did not finish on %s: %s", port, last or f"exit {rc}")
-        raise RuntimeError(self._why(last, rc))
+        raise BridgeError(self._why(last, rc))
 
     async def write(self, port: str, cfg: dict) -> dict:
         """Everything in cfg, then apply, then wait for it back. Returns its hello afterwards."""
@@ -322,7 +334,9 @@ class Cable:
                     q = Puck(port); who = q.hello(patience=4.0); q.s.close(); return who
                 except Exception as e:
                     last = e; time.sleep(1)
-            raise RuntimeError(f"it did not come back on the cable ({last})")
+            log.warning("bridge: it did not come back on the cable (%s)", last)
+            raise BridgeError("It did not come back on the cable after it was written to. Unplug it, "
+                              "plug it back into the hub, and it will pick up where it left off.")
         return await self._in_thread(go)
 
 
@@ -645,7 +659,7 @@ class Bridges:
             if j["bare"]:
                 await self.cable.flash(j["port"], j.get("silicon") or "esp32s3")
                 who = await self.cable.hello(j["port"])
-                if not who: raise RuntimeError("It took the software but did not answer afterwards.")
+                if not who: raise BridgeError("It took the software but did not answer afterwards.")
                 j["chip"], j["fw"] = who["chip"], who["fw"]
             cfg = self.config()
             if not cfg.get("ssid"):
@@ -667,15 +681,20 @@ class Bridges:
             await asyncio.sleep(0)            # the step is drawn before the write starts
             self._set("working", step="keys")
             who = await self.cable.write(j["port"], cfg)
-            if who["state"] != "set": raise RuntimeError("It restarted without keeping what it was told.")
+            if who["state"] != "set": raise BridgeError("It restarted without keeping what it was told.")
             j["chip"] = who["chip"]; j["net"] = None
             self.hub.settings.set(bridges={**(self.hub.settings.get("bridges") or {}), who["chip"]: {"since": time.time(), "fw": who["fw"]}})
             self.hub.log.add("bridge", who["chip"], None, "set up", source="user")
             self._set("placing")
             self._quiet = asyncio.create_task(self._placing_went_quiet())
         except Exception as e:
-            log.warning("bridge setup failed: %s", e)
-            self._set("failed", text=f"{e}")
+            # The whole error goes to the log, with a traceback for anything the house did not
+            # phrase itself. The screen gets a sentence and something to do about it.
+            told = isinstance(e, BridgeError)
+            log.warning("bridge setup failed: %s", e, exc_info=not told)
+            self._set("failed", text=str(e) if told else
+                      "The hub could not finish setting it up. Unplug it, plug it back into the hub, "
+                      "and it will pick up where it left off.")
 
     # ---- moving every bridge onto another Wi-Fi ----
     #

@@ -2,6 +2,9 @@ node_modules/
 app/dist/
 brain/.venv/
 brain/events.db
+brain/events.db-journal
+brain/events.db-wal
+brain/events.db-shm
 .DS_Store
 __pycache__/
 *.pyc
