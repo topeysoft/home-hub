@@ -111,3 +111,42 @@ test('waking brings the knock back, because the bridge is still knocking', async
   await expect(page.locator('.sheet-back')).toHaveCSS('opacity', '1')
   await expect(page.getByRole('button', { name: 'That\u2019s the one' })).toBeVisible()
 })
+
+test('a bridge knocking wakes the wall, the way a phone at the door does', async ({ page }) => {
+  /* The screen has gone dark and somebody plugs a bridge in beside it. They are standing right
+     there, so the wall comes back on -- the same event, and the same answer, as a phone knocking. */
+  let knocks = false
+  await page.route('**/bridge', r => r.fulfill({
+    status: 200, contentType: 'application/json',
+    body: JSON.stringify(knocks ? { bridges: 1, waiting: 0, state: 'knocking', how: 'air' }
+                                 : { bridges: 1, waiting: 0, state: 'none' }),
+  }))
+  await page.clock.install({ time: new Date('2026-09-13T19:40:00') })
+  await page.goto('/?at=19:40', { waitUntil: 'networkidle' })
+
+  await page.clock.fastForward(REST_AFTER)
+  await expect(page.locator('.idle')).toBeVisible()
+
+  knocks = true
+  /* store.ts asks /bridge once a minute while there is no job running, and every two seconds once
+     there is. So the knock lands on the next slow poll. */
+  await page.clock.fastForward('01:10')
+  await expect(page.locator('.idle'), 'the wall came back on for it').toHaveCount(0)
+  await expect(page.locator('.sheet-back')).toHaveCSS('opacity', '1')
+  await expect(page.getByText('A bridge is here.')).toBeVisible()
+})
+
+test('a knock nobody answers does not hold the wall awake', async ({ page }) => {
+  /* It says `knocking` every two seconds until somebody deals with it. Waking on the state rather
+     than on its arrival would mean a wall that can never rest again, which is worse than the fault
+     this fixed. */
+  await knocking(page)
+  await page.clock.install({ time: new Date('2026-09-13T19:40:00') })
+  await page.goto('/?at=19:40', { waitUntil: 'networkidle' })
+  await expect(page.locator('.sheet-back')).toBeVisible()
+
+  await page.clock.fastForward(REST_AFTER)
+  await expect(page.locator('.idle'), 'it rested with the knock still standing').toBeVisible()
+  await page.clock.fastForward('01:00')                       // and thirty more polls do not undo it
+  await expect(page.locator('.idle')).toBeVisible()
+})

@@ -151,9 +151,23 @@ function touched() {
   woke.value++
 }
 /* A phone knocking wakes the wall, and clears anything put aside so the pane comes back up: this is
-   the one event the panel turns the screen on for, and a knock that has been set aside must not
-   silence the next one. */
+   one of the two events the panel turns the screen on for, and a knock that has been set aside must
+   not silence the next one. */
 watch(() => store.asks.length, (n, o) => { if (n > o) { store.askAside = false; touched() } })
+/*
+ * And the other one: a bridge knocking. Somebody has just plugged a thing in, in this room, and is
+ * standing in front of a screen that has gone dark -- which is the same moment as the phone, and
+ * wants the same answer.
+ *
+ * On the EDGE and not the state, exactly as the phone is. A bridge that nobody answers goes on
+ * saying `knocking` every two seconds; waking on the state would mean a wall that can never rest
+ * again until somebody deals with it, which is the opposite of what a house at rest is for.
+ *
+ * And only from a state we had already read: at boot, and after the link drops, `store.bridge` comes
+ * back from nothing, and a knock that was already there is not news -- the panel is awake at boot
+ * anyway, and a hub that knows nothing about bridges stays null forever and never gets here.
+ */
+watch(() => store.bridge?.state, (is, was) => { if (is === 'knocking' && was && was !== 'knocking') touched() })
 async function rejoin() { halt(); await start() }                       // this screen just joined: read the house and reconnect
 function checkIdle() {
   if (!idle.value && kiosk.matches && !store.viewer && !store.sheet && !setup.value && Date.now() - lastTouch > IDLE_AFTER) idle.value = true
