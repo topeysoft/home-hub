@@ -290,7 +290,14 @@ void setup() {
     selftest();
 #endif
 
+    // THE GLOW WHILE IT WAITS IS AN INSTRUMENT, and saying so is what stops it being wiped. Matter
+    // starts the light off, and the moment its stack syncs that attribute our onChange fires with
+    // state=false, paint() clears the strip and the "I am here" light is gone -- drawn, then undrawn,
+    // a fraction of a second apart, which from the bench is indistinguishable from never lighting at
+    // all. It is the same flag the fill and the color question use, and for the same reason: while an
+    // instrument owns the strip, nobody else may draw on it.
     if (!Matter.isDeviceCommissioned()) {
+        instrument = true;
         // Lit while it waits, because being lit IS the identity check: the wall asks whether the
         // thing that just came on is theirs, and there is nothing to disambiguate -- it is two meters
         // of light and it is the only one lit (design/strip/Spine.dc.html).
@@ -310,6 +317,17 @@ void setup() {
 }
 
 void loop() {
+    // The knock is over the moment somebody has taken it. Hand the strip back, and draw whatever the
+    // household's own state says -- which is off, until they turn it on, exactly like any other new
+    // light in their app. Without this it sat on the setup glow for ever and looked stuck.
+    static bool taken = false;
+    if (!taken && Matter.isDeviceCommissioned()) {
+        taken = true;
+        instrument = false;
+        tell("[strip] commissioned. The light is the household's now.");
+        paint();
+    }
+
     if (Matter.isDeviceConnected() && mhost.length()) {
         if (!mqtt.connected()) findHub(); else mqtt.loop();
     }
