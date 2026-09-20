@@ -5,8 +5,9 @@ accent lighting". The answer turned out to be that two thirds of it already exis
 interesting part was not the electronics. The design is settled and drawn (`design/strip/`, `design/occasion/`);
 the brain, the panel and the firmware are written and their suites pass. The firmware is a **Matter device**,
 which was decided on 20 September before anything shipped and is the subject of its own section below.
-**Nothing in here has run against a real strip.** Every claim below about how it behaves on hardware is a claim, and the honest list of what is
-not built at all is at the foot, where it is meant to be read.*
+**First bring-up was 20 September and the light driver is now proven on silicon** — see below for exactly how
+much of it, which is less than all of it. The honest list of what is not built is at the foot, where it is
+meant to be read.*
 
 ## What it is, and what it is not
 
@@ -220,7 +221,26 @@ planning around it), a Device Attestation Certificate provisioned into `esp_secu
 manufacture, and certification testing per product at an authorized lab. The partitions are laid down for it.
 Nothing else is.
 
-**3. Nothing has run on hardware at all.** Not one LED has been lit by this code.
+**3. Some of it has run on hardware now, and this is exactly how much.** An ESP32-S3 on 20 September lit a
+WS2812 through red, green, blue and white in order, then held the waiting glow. That settles the RMT driver,
+the WS2812 timing, MSB-first bit order, the one-write-per-frame frame shape, and `Order::bytes` agreeing with
+the brain about `grb` — a real strip lights, in the right colors, from this code.
+
+Everything past that light is still a claim. Nothing has been commissioned, no ecosystem has seen it, the
+broker has never been spoken to, and neither the color question nor the fill has run outside a unit test.
+
+**Three bugs came out of that one evening, and none of them could have been found any other way.** The waiting
+glow was drawn and then wiped a fraction of a second later, when Matter synced its light's off state through
+our own callback — indistinguishable from never lighting. The frame buffer was claimed for the longest strip
+anybody could attach, 60% of free heap, where it would have failed or starved Matter later. And the glow was
+lit with the panel's own accent copied out of the palette, which came out **white**, which is precisely what
+`AGENTS.md` says a pastel does on an emitter and why it says never to do it. That one cost an evening of pin
+swapping, because an identity light that is white and an identity light that is broken look identical on a
+bench.
+
+**And one non-bug worth recording**: the first dead strip was a power problem, not a pin. The driver had been
+right the whole time, which is what the self-test (`-e esp32s3-selftest`, no wiring, fifteen seconds) exists to
+establish before anybody starts swapping pins.
 
 **4. `esp32c3` is unverified** — the RISC-V toolchain on the machine this was written on is the wrong
 architecture and would not run. The environment is in `platformio.ini` and has never been built.
