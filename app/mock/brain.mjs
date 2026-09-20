@@ -21,7 +21,12 @@ const dev = (id, name, room_id, capability, state, attrs = {}, maker = null, mor
 const feature = (id, name, room_id, state, hw, hw_name, maker = 'Samsung') => dev(id, name, room_id, 'switch', state, {}, maker, { guess: 'appliance', hw, hw_name })
 const rooms = [
   { id: 'living', name: 'Living room', intent: 'movie', set_by: 'rule:evening-lights', hold_until: null, devices: [
-    dev('l1', 'Ceiling light', 'living', 'light', 'on', { brightness: 90, color_temp_kelvin: 2700, supported_color_modes: ['brightness', 'color_temp'] }, 'Philips Hue'),
+    /* A bulb that can do color, IN a color, because until one existed here nobody saw that the
+       panel was reading rgb_color off the wire and throwing it away: every light in this house
+       was a warm white, so a magenta lamp and a 2700K one were the same picture and no test or
+       screenshot could tell. color_mode is what says which it is -- rgb_color is reported in
+       color_temp mode too, as the white point. See art.ts/bulbColor. */
+    dev('l1', 'Ceiling light', 'living', 'light', 'on', { brightness: 90, color_mode: 'hs', rgb_color: [226, 72, 184], supported_color_modes: ['color_temp', 'hs'] }, 'Philips Hue'),
     dev('l2', 'Floor lamp', 'living', 'light', 'on', { brightness: 60, supported_color_modes: ['brightness'] }),
     dev('l3', 'Reading lamp', 'living', 'light', 'off', { supported_color_modes: ['onoff'] }),
     dev('m1', 'Living room TV', 'living', 'media', 'playing', { media_title: 'The Bear', media_artist: 'Season 3, Episode 4', app_name: 'Disney+', volume_level: 0.35, entity_picture: '/x.jpg', media_position: 1421, media_duration: 3740 }),

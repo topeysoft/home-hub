@@ -70,10 +70,70 @@ export function materials(el: number, condition: string): Materials {
 }
 
 /* Emitted light, which does NOT take the room -- see the rule at the top. These
-   are the same values panel.css declares for the lamp accent. */
+   are the same values panel.css declares for the lamp accent, and they are what
+   a lamp emits when the house has not been told otherwise. */
 export const LIT = '#fbeed6'        // the surface a lamp's own light falls on
 export const GLOW = '#f6dcae'       // the light itself, close in
 export const LAMP = '#e9b872'       // the accent, and the far edge of a light pool
+
+/*
+ * And when the house HAS been told. A bulb that can do color reports what color
+ * it is, and until now the panel read that off the wire and threw it away: a
+ * magenta lamp and a warm white one were drawn in the same amber, on the same
+ * card, with no way to tell them apart or to change either.
+ *
+ * This is not a hole in the rule above, it is the rule. "A lamp is warm because
+ * it is a lamp" was written against the SKY tinting emitted light -- mix the
+ * room into a lamp and it turns blue at noon and stops meaning "on". Nothing
+ * here takes the room. What changes is only where the lamp's own color comes
+ * from: a constant, or the bulb that is actually in the room.
+ *
+ * The ramp keeps its shape. A real source blows out toward white at the middle
+ * however colored it is, which is also what keeps a deep blue bulb from being
+ * drawn as an unlit one: `lit` is the color most of the way to white, `glow` and
+ * `lamp` are the color itself, carried outward on alpha rather than on hue.
+ */
+export function emitRamp(c: RGB): { lit: string; glow: string; lamp: string } {
+  return { lit: rgb(mix(c, [255, 255, 255], 0.62)), glow: rgb(mix(c, [255, 255, 255], 0.16)), lamp: rgb(c) }
+}
+
+/* The id fragment a color's gradients are declared under. An SVG gradient is
+   addressed by id across the whole document (ArtDefs says why there is one copy
+   of each), so a colored bulb needs its own set -- and two lamps set to the same
+   color share one rather than each declaring a duplicate. */
+export const emitId = (c: RGB) =>
+  c.map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('')
+
+/*
+ * Whether a light is showing a COLOR, and which one.
+ *
+ * Home Assistant reports `rgb_color` whatever mode a bulb is in: in color_temp
+ * mode it is the RGB rendering of the white point, which is not a color anybody
+ * chose and must not be drawn as one, or every warm white bulb in the house
+ * turns into a "colored" lamp the moment this ships.
+ *
+ * `color_mode` is what separates them, so the hub forwards it now. A hub older
+ * than this panel sends none, and the fallback reads the tell HA leaves anyway:
+ * a bulb in a color mode reports no color_temp_kelvin. That is the same signal
+ * LightPane has always used to decide whether to offer a warmth slider, so an
+ * old hub and this panel at least agree with each other.
+ */
+const COLOR_MODES = new Set(['hs', 'rgb', 'rgbw', 'rgbww', 'xy'])
+export function bulbColor(attrs: Record<string, any> | null | undefined): RGB | undefined {
+  const c = attrs?.rgb_color
+  if (!Array.isArray(c) || c.length < 3 || c.slice(0, 3).some((v) => typeof v !== 'number')) return undefined
+  const mode = attrs!.color_mode
+  if (typeof mode === 'string') return COLOR_MODES.has(mode) ? [c[0], c[1], c[2]] : undefined
+  return attrs!.color_temp_kelvin == null ? [c[0], c[1], c[2]] : undefined
+}
+
+/* What a given bulb paints with: the shared warm set, or its own. */
+function emitters(c?: RGB) {
+  if (!c) return { POOL, CONE, GLASS, LIT, GLOW }
+  const id = emitId(c)
+  const r = emitRamp(c)
+  return { POOL: `url(#mPool-${id})`, CONE: `url(#mCone-${id})`, GLASS: `url(#mGlass-${id})`, LIT: r.lit, GLOW: r.glow }
+}
 
 /* ---------- marks ---------- */
 
@@ -117,6 +177,7 @@ const SCREEN = 'url(#mScreen)'    // a dark panel with a sheen across it
 export type ArtState = {
   on?: boolean
   brightness?: number     // 0..1; a light that cannot dim is simply 1 when it is on
+  color?: RGB             // what a bulb that can do color says it is; absent means lamplight
   locked?: boolean
   position?: number       // 0..1, how far open a cover is
   live?: boolean          // a camera that is watching
@@ -163,6 +224,10 @@ function light(kind: Kind, s: ArtState, m: Materials): Art {
   const k = output(s)
   const on = k > 0
   const glow = on ? 0.25 + k * 0.75 : 0
+  /* what THIS bulb is emitting: lamplight, or the color it says it is set to.
+     Shadowing the module constants keeps every mark below written the way it
+     always was -- the drawing does not know a bulb can be pink. */
+  const { POOL, CONE, GLASS, LIT, GLOW } = emitters(s.color)
 
   if (kind === 'floor-lamp') {
     return {

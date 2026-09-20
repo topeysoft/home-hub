@@ -196,7 +196,11 @@ class Home:
 
     @staticmethod
     def _keep_attrs(cap, a):
-        keys = {"light": ("brightness", "color_temp_kelvin", "rgb_color", "supported_color_modes"),
+        # color_mode, not just rgb_color: HA reports rgb_color whatever mode a bulb is in, and in
+        # color_temp mode it is the RGB rendering of the white point. Without the mode the panel
+        # cannot tell a bulb somebody set to magenta from a warm white one, and would draw both
+        # as colored. See art.ts/bulbColor, which falls back for hubs older than this line.
+        keys = {"light": ("brightness", "color_temp_kelvin", "color_mode", "rgb_color", "supported_color_modes"),
                 "media": ("volume_level", "media_title", "media_artist", "app_name", "source", "entity_picture"),
                 # device_class tells a blind from a garage door, and that is the whole of what decides
                 # whether a cover can leave the house with the ordinary kinds or needs the switch that
