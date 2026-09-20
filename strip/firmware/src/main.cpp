@@ -189,23 +189,40 @@ static void findHub() {
 
 // ---------------------------------------------------------------- setup
 
+// SAY IT ON BOTH PORTS, because on an S3 they are two different consoles and the one somebody opens
+// is not the one this was written to. With USB CDC on boot `Serial` is the native port, while the ROM
+// bootloader and every esp-idf log line come out of UART0 -- so a bring-up log full of IDF errors and
+// no word from us is the ordinary experience, and it reads as a board that never ran our code. It ran.
+static void tell(const char *line) {
+    Serial.println(line);
+#if ARDUINO_USB_CDC_ON_BOOT
+    Serial0.println(line);
+#endif
+}
+
 void setup() {
     Serial.begin(115200);
+#if ARDUINO_USB_CDC_ON_BOOT
+    Serial0.begin(115200);
+#endif
     const uint64_t mac = ESP.getEfuseMac();
     snprintf(chipHex, sizeof(chipHex), "%06llx", (unsigned long long)(mac >> 24) & 0xFFFFFF);
 
     nvs.begin("strip", false);
+    // isKey() first, because Preferences logs getString of a missing key as an ERROR. On a strip that
+    // has never been set up every one of these is missing, which is correct -- and a first boot that
+    // prints five red lines about it is a product telling its own maker it is broken when it is not.
     strip.set_count(nvs.getInt("count", PX_ASSUMED));
     strip.order.white = nvs.getBool("white", false);
     char o[8];
-    nvs.getString("order", "grb").toCharArray(o, sizeof(o));
+    (nvs.isKey("order") ? nvs.getString("order") : String("grb")).toCharArray(o, sizeof(o));
     strip.order.set(o);
-    nvs.getString("base", "strip").toCharArray(base, sizeof(base));
+    (nvs.isKey("base") ? nvs.getString("base") : String("strip")).toCharArray(base, sizeof(base));
     // Blank on a strip that has never met our hub, which is the ordinary case for one bought in a
     // shop. It is then simply a Matter light and everything above this line is all it ever does.
-    mhost = nvs.getString("mhost", "");
-    muser = nvs.getString("muser", "");
-    mpass = nvs.getString("mpass", "");
+    mhost = nvs.isKey("mhost") ? nvs.getString("mhost") : String("");
+    muser = nvs.isKey("muser") ? nvs.getString("muser") : String("");
+    mpass = nvs.isKey("mpass") ? nvs.getString("mpass") : String("");
 
     const bool lit = px::begin(DATA_PIN);
 
@@ -224,14 +241,17 @@ void setup() {
     // is not behaving is open the serial monitor, and a board that says nothing there has given them
     // no way to tell "it is working and you cannot see it" from "it never started".
     delay(600);   // USB CDC enumerates after boot; without this the first lines go nowhere
-    Serial.printf("\n[strip] " FW "  chip %s  pin %d  %d lights, order ", chipHex, DATA_PIN, strip.count);
     const char letters[3] = {'r', 'g', 'b'};
     char ord[4] = {0, 0, 0, 0};
     for (int c = 0; c < 3; c++) ord[strip.order.at[c]] = letters[c];
-    Serial.printf("%s%s\n", ord, strip.order.white ? "w" : "");
-    if (!lit) Serial.println("[strip] THE LIGHT DRIVER DID NOT START -- nothing will light. Check the pin.");
-    Serial.printf("[strip] free heap %u, psram %u\n",
-                  (unsigned)ESP.getFreeHeap(), (unsigned)ESP.getPsramSize());
+    char line[160];
+    snprintf(line, sizeof(line), "\n[strip] " FW "  chip %s  pin %d  %d lights, order %s%s",
+             chipHex, DATA_PIN, strip.count, ord, strip.order.white ? "w" : "");
+    tell(line);
+    if (!lit) tell("[strip] THE LIGHT DRIVER DID NOT START -- nothing will light. Check the pin.");
+    snprintf(line, sizeof(line), "[strip] free heap %u, psram %u",
+             (unsigned)ESP.getFreeHeap(), (unsigned)ESP.getPsramSize());
+    tell(line);
 
     if (!Matter.isDeviceCommissioned()) {
         // Lit while it waits, because being lit IS the identity check: the wall asks whether the
@@ -242,8 +262,9 @@ void setup() {
         // The code goes on the box and in the log. Our own hub reads it off the commissionable-node
         // advertisement instead, so a household with our panel still never types anything -- which is
         // what keeps design/puck/Knock.dc.html's argument intact for the people we sell to.
-        Serial.printf("[strip] not commissioned yet\n  code: %s\n  qr:   %s\n",
-                      Matter.getManualPairingCode().c_str(), Matter.getOnboardingQRCodeUrl().c_str());
+        snprintf(line, sizeof(line), "[strip] not commissioned yet\n  code: %s\n  qr:   %s",
+                 Matter.getManualPairingCode().c_str(), Matter.getOnboardingQRCodeUrl().c_str());
+        tell(line);
     } else {
         paint();
     }

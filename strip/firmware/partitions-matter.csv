@@ -17,6 +17,11 @@
 #                    (Espressif provision this as a service; every shipped unit needs its own)
 #   fctry            the factory data esp-matter reads its vendor id, product id and discriminator
 #                    from, kept apart from nvs so a factory reset cannot take the identity with it
+#   coredump         where a crash writes itself down. A strip in somebody's living room that reboots
+#                    once a week is otherwise undiagnosable: nobody is watching a serial port when it
+#                    happens, and the only evidence is gone by the time anybody asks. The first boot
+#                    said "No core dump partition found" and that was the cheapest possible moment to
+#                    notice, because this table is the one thing an update cannot change.
 # Neither costs anything while unused. Both are unrecoverable if left out.
 #
 # Name,           Type, SubType,  Offset,   Size,     Flags
@@ -27,4 +32,5 @@ esp_secure_cert,  0x3F, 0x00,     0x12000,  0x2000,
 fctry,            data, nvs,      0x14000,  0x6000,
 ota_0,            app,  ota_0,    0x20000,  0x3C0000,
 ota_1,            app,  ota_1,    0x3E0000, 0x3C0000,
-storage,          data, spiffs,   0x7A0000, 0x60000,
+coredump,         data, coredump, 0x7A0000, 0x10000,
+storage,          data, spiffs,   0x7B0000, 0x50000,
