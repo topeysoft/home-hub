@@ -201,6 +201,9 @@ class Strips:
         if not self.job: return {**base, "state": "none"}
         j = self.job
         out = {**base, "state": j["state"], "name": j.get("label") or "A light strip"}
+        # The panel says a different sentence for a question being asked again than for one being
+        # asked the first time: somebody who came back already knows what the thing does.
+        if j.get("revisit"): out["revisit"] = j["revisit"]
         if j["state"] == "working": out["step"] = j["step"]
         if j["state"] == "order":
             # Which question is on screen: the first is a yes/no, the second is the three primaries.
@@ -419,6 +422,10 @@ class Strips:
         j = self.job
         j["order"] = order
         await self._tell(j["id"], "order/set", order, retain=True)
+        # Somebody who came back to fix the colors did not ask to be walked through the length again.
+        if j.get("revisit"):
+            self._set("ready")
+            return self.status()
         return await self._fill()
 
     # ---- how long it is ----
@@ -445,7 +452,9 @@ class Strips:
         n = max(1, min(MOST, n))
         j["count"] = n
         await self._tell(j["id"], "count/set", str(n), retain=True)
-        self._set("room")
+        # A strip that is already in a room keeps it. Asking again would be the panel forgetting
+        # something the household told it once.
+        self._set("ready" if j.get("revisit") else "room")
         return self.status()
 
     async def again(self) -> dict:
@@ -453,6 +462,49 @@ class Strips:
         if not self.job or self.job["state"] != "length":
             raise StripError("Nothing is being measured just now.")
         return await self._fill()
+
+    # ---- afterwards ----
+    def each(self) -> list[dict]:
+        """Every strip the house has, for the screen that offers to ask it something again."""
+        return [{"id": i, "online": bool(v.get("online")),
+                 "count": v.get("count"), "order": v.get("order")}
+                for i, v in sorted(self.strips.items())]
+
+    REVISIT = ("colors", "length")
+
+    async def revisit(self, id_: str, what: str) -> dict:
+        """Ask one of the setup questions again about a strip that is already in.
+
+        BOTH ANSWERS GO STALE, and none of the ways are unusual. A strip gets cut down to fit a shelf.
+        Another gets soldered on to reach round a corner. One fails and is replaced by whatever was in
+        stock, which is very often not the same make and therefore not the same channel order. None of
+        that should mean setting the thing up again from the beginning, so this is the same
+        conversation restarted at the question that has gone wrong, and it ends there rather than
+        marching on through the rest of setup. design/strip/Later.dc.html.
+
+        THE COLOR ONE IS NOT A CONVENIENCE. resolve() takes "yes, red" as grb on its odds, which is
+        right almost always and silently wrong on a brg strip -- the household sees colors that are
+        not the ones they asked for and has no word for what is happening. This is the other half of
+        that shortcut. Without it the shortcut is not a shortcut, it is a bug we decided not to fix.
+        """
+        if what not in self.REVISIT:
+            raise StripError("That is not something a light strip can be asked again.")
+        if self.job:
+            raise StripError("Something else is being set up just now. One at a time.")
+        known = self.strips.get(id_)
+        if not known:
+            raise StripError("That light strip is not one this hub knows about.")
+        if not known.get("online"):
+            # Every one of these questions works by lighting the thing up, so there is nothing to
+            # ask and nothing to look at. Saying so is better than opening a sheet that cannot move.
+            raise StripError("That light strip is not answering just now.")
+        self.job = {"state": "none", "id": id_, "label": self._label(known),
+                    "first": None, "revisit": what, "count": known.get("count", ASSUMED)}
+        if what == "colors":
+            await self._show_red()
+        else:
+            await self._fill()
+        return self.status()
 
     # ---- where it is ----
     async def put(self, room_id: str) -> dict:

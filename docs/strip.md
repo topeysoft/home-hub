@@ -229,8 +229,17 @@ architecture and would not run. The environment is in `platformio.ini` and has n
 `AttributeError` guard, and there is no such method. The room is recorded on a retained topic and the light
 appears through Home Assistant discovery; making it a first-class device the brain has placed is not done.
 
-**6. The pane rows are not built.** `design/strip/Later.dc.html` draws them — *Ends here* and *The colors look
-wrong* — and item 1 of the color question depends on the second one existing. Drawn, not written.
+**6. The pane rows are half built, and the half that is missing needs hardware.** Asking either question
+again is done: `Strips.revisit()`, `GET /strip/list`, `POST /strip/revisit`, and the sheet says a different
+sentence for a question being asked a second time than for one asked the first. What is missing is the **entry
+point** — the two rows on the light's own pane that `design/strip/Later.dc.html` draws.
+
+They need the panel to know that a given light *is* one of our strips, and that link does not exist. The strip
+reaches Home Assistant through the Matter integration now, so its unique id is not ours to choose, and what the
+device registry ends up holding — manufacturer, model, serial number — comes from the Basic Information cluster
+and has never been looked at on a real device. **The cheapest way to settle it is five minutes of the first
+bring-up: commission one, then read what Home Assistant's device registry says about it.** Whatever the serial
+number turns out to be is probably the join, and `Device.hw` is where the brain already keeps that kind of fact.
 
 **7. No updates story.** `docs/puck-updates.md` is about pucks. A strip in a living room has the same problem
 and none of the answer.

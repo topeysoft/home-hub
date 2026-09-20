@@ -259,6 +259,10 @@ export type Strip = {
   name?: string
   step?: 'wifi' | 'hub'                    // two, not the bridge's three: the software is already on it
   asking?: 'red' | 'which'
+  /* Set when one of the two setup questions is being asked AGAIN about a strip that is already in --
+     somebody cut it down, joined another on, or replaced it with a different make. The sheet says a
+     different sentence for it, because somebody who came back already knows what the thing does. */
+  revisit?: 'colors' | 'length'
   lit?: number                             // how many lights the fill has reached
   count?: number                           // ...and where it stopped
   order?: string                           // which of the six it turned out to be
@@ -285,6 +289,14 @@ export const stripEnds = () => post<Strip>('/strip/ends')
 export const stripAgain = () => post<Strip>('/strip/again')
 export const stripRoom = (room: string) => post<Strip>('/strip/room', { room })
 export const stripDone = () => post<Strip>('/strip/done')
+/** Every strip the house has, for the rows that offer to ask one of them something again. */
+export type StripRow = { id: string; online: boolean; count: number | null; order: string | null }
+export async function listStrips(): Promise<{ strips: StripRow[] }> {
+  const r = await request('/strip/list'); if (!r.ok) await fail(r); return r.json()
+}
+/** Ask a strip already in the house one of the two questions again. design/strip/Later.dc.html. */
+export const revisitStrip = (id: string, what: 'colors' | 'length') =>
+  post<Strip>('/strip/revisit', { id, what })
 /* Take a bridge off the house. Offered only from the *Needs a look* line about one that has not come
    back, because it is the answer to a question the house asked first -- never a thing to go and find. */
 /* ONE BRIDGE, as This hub lists it. Separate from `Bridge` above, which is the setting-up machine

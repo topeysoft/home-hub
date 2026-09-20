@@ -268,6 +268,69 @@ class TheWholeWay(unittest.TestCase):
         self.assertEqual(self.steps, ["wifi", "hub"])
 
 
+class Afterwards(unittest.TestCase):
+    """Both setup answers go stale -- a strip gets cut down, extended, or replaced by another make --
+    and none of that should mean setting it up again from the beginning. design/strip/Later.dc.html."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.hub = FakeHub(self.tmp.name)
+        self.s = Strips(self.hub, radio=FakeRadio())
+        run(self.s.listen())
+        # a strip that is already in, the way the broker would have told us about it
+        self.s.strips["c8ebba"] = {"online": True, "count": 186, "order": "grb"}
+        self.hub.ha.answers = {"fill/stop": ("count", "240")}
+
+    def tearDown(self): self.tmp.cleanup()
+
+    def said(self, leaf):
+        return [p for t, p in self.hub.ha.published if t.endswith("/" + leaf)]
+
+    def test_the_house_can_list_what_it_has(self):
+        self.assertEqual(self.s.each(), [{"id": "c8ebba", "online": True, "count": 186, "order": "grb"}])
+
+    def test_the_colors_can_be_asked_again(self):
+        run(self.s.revisit("c8ebba", "colors"))
+        st = self.s.status()
+        self.assertEqual((st["state"], st["asking"], st["revisit"]), ("order", "red", "colors"))
+        self.assertEqual(self.said("show/set"), ["raw 0 255 0"])
+
+    def test_and_it_stops_there_rather_than_walking_setup_again(self):
+        """Somebody who came back to fix the colors did not ask to measure the strip again."""
+        run(self.s.revisit("c8ebba", "colors"))
+        run(self.s.saw("red"))
+        self.assertEqual(self.s.status()["state"], "ready")
+        self.assertEqual(self.said("order/set"), ["grb"])
+
+    def test_the_length_can_be_asked_again_and_keeps_its_room(self):
+        run(self.s.revisit("c8ebba", "length"))
+        self.assertEqual(self.s.status()["state"], "length")
+        run(self.s.ends())
+        st = self.s.status()
+        self.assertEqual((st["state"], st["count"]), ("ready", 240))
+        self.assertEqual(self.said("count/set"), ["240"])
+
+    def test_a_strip_the_hub_has_never_heard_of_is_refused(self):
+        with self.assertRaises(StripError):
+            run(self.s.revisit("nope", "colors"))
+
+    def test_and_so_is_one_that_is_not_answering(self):
+        """Every one of these questions works by lighting the thing up, so an offline strip has
+        nothing to show and the sheet would open on a question that cannot move."""
+        self.s.strips["c8ebba"]["online"] = False
+        with self.assertRaises(StripError):
+            run(self.s.revisit("c8ebba", "colors"))
+
+    def test_and_never_while_something_else_is_being_set_up(self):
+        self.s.job = {"state": "knocking", "id": "other", "first": None}
+        with self.assertRaises(StripError):
+            run(self.s.revisit("c8ebba", "colors"))
+
+    def test_only_the_two_questions_that_exist(self):
+        with self.assertRaises(StripError):
+            run(self.s.revisit("c8ebba", "brightness"))
+
+
 class WhenItGoesWrong(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()

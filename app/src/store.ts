@@ -675,7 +675,9 @@ let stripTimer: number | undefined
    the way ?sheet= and ?setup=1 draw the others (AGENTS.md §4). It is the only way to hold a screen
    still beside the board it was drawn from, since every real beat is over in seconds. */
 const STRIP_PREVIEW = new URLSearchParams(location.search).get('strip')
+const STRIP_BACK = new URLSearchParams(location.search).get('back')   // &back=colors|length
 const previewStrip = (beat: string): Strip => ({
+  revisit: (STRIP_BACK as Strip['revisit']) || undefined,
   state: (beat === 'which' ? 'order' : beat) as Strip['state'],
   name: 'A light strip',
   step: beat === 'working' ? 'hub' : undefined,

@@ -1301,6 +1301,21 @@ async def strip_room(body: dict):
 async def strip_done(): return await hub.strip.done()
 
 
+# Afterwards. Both setup answers go stale -- a strip gets cut down, extended, or replaced by a
+# different make -- and asking again is the same conversation restarted at the question that went
+# wrong. design/strip/Later.dc.html. Reading the list is open, like every other read; asking a strip
+# to light itself up in somebody's room is a change, and is gated.
+@app.get("/strip/list")
+def strip_list(): return {"strips": hub.strip.each()}
+
+
+@app.post("/strip/revisit")
+async def strip_revisit(body: dict):
+    hub.ready()
+    try: return await hub.strip.revisit(str(body.get("id") or ""), str(body.get("what") or ""))
+    except StripError as e: raise HTTPException(409, str(e))
+
+
 # ---------------------------------------------------------------- the network the house runs on
 #
 # docs/network.md. Three verbs and one of them is a read. Reading is open: a household should be able

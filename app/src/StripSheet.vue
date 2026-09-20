@@ -38,6 +38,10 @@ const TITLE: Record<string, string> = {
   working: 'Setting it up.',
   order: 'Is it red?',
   length: 'How far does it go?',
+  'order:colors': 'Are the colors right?',
+  'length:length': 'Let’s measure it again.',
+  'ready:colors': 'All set.',
+  'ready:length': 'All set.',
   room: 'Where is it?',
   ready: 'It’s in.',
   failed: 'That did not work.',
@@ -46,7 +50,22 @@ const TITLE: Record<string, string> = {
 const title = computed(() =>
   b.value?.needs === 'wifi' ? TITLE.wifi
   : b.value?.state === 'order' && (other.value || b.value?.asking === 'which') ? 'Then what is it showing?'
-  : TITLE[b.value?.state ?? ''] ?? 'A light strip')
+  : TITLE[`${b.value?.state}:${b.value?.revisit}`] ?? TITLE[b.value?.state ?? ''] ?? 'A light strip')
+
+/* Somebody who came back to fix something already knows what a light strip is and what this screen
+   does. Repeating the introduction at them is the panel forgetting it has met them. */
+const back = computed(() => b.value?.revisit)
+const lede = computed(() => {
+  if (back.value === 'colors' && b.value?.state === 'order')
+    return 'It is showing what it thinks red is. If that is not what you can see, the colors have been coming out in the wrong order.'
+  if (back.value === 'length' && b.value?.state === 'length')
+    return 'Filling up again, from the end it plugs in at. Tap when it reaches the far end of the strip as it is now.'
+  return ''
+})
+const finished = computed(() =>
+  back.value === 'colors' ? 'Its colors are right now.'
+  : back.value === 'length' ? 'It knows where it ends now.'
+  : 'It is on the house. Turn it off, dim it, color it or put it on a schedule, the same as anything else.')
 
 /* Two steps, not the bridge's three. There is no mesh to hand keys to, and the software is already on
    it -- which is the whole reason it could knock rather than being carried to the hub on a cable. */
@@ -165,7 +184,7 @@ onUnmounted(() => window.removeEventListener('keydown', key))
         <!-- WHICH COLOR COMES OUT FIRST. Strips do not agree and nothing can be read back off one, so
              it is lit and the household names what they see. design/strip/Order.dc.html -->
         <template v-else-if="b.state === 'order' && !other && b.asking === 'red'">
-          <p class="sheet-lede">Strips do not all put their colors in the same order, and there is no way to ask one. So: look at it.</p>
+          <p class="sheet-lede">{{ lede || 'Strips do not all put their colors in the same order, and there is no way to ask one. So: look at it.' }}</p>
           <div class="stage">
             <StripArt show="red" />
             <span class="caption">All of it, one color</span>
@@ -193,7 +212,7 @@ onUnmounted(() => window.removeEventListener('keydown', key))
         <!-- HOW FAR IT GOES. It fills from the plug end; the moment the far end lights, the picture
              stops changing, and that is the thing a person can catch. design/strip/Fill.dc.html -->
         <template v-else-if="b.state === 'length'">
-          <p class="sheet-lede">It is lighting up one at a time, from the end it plugs in at. Tap the moment the far end of your strip comes on.</p>
+          <p class="sheet-lede">{{ lede || 'It is lighting up one at a time, from the end it plugs in at. Tap the moment the far end of your strip comes on.' }}</p>
           <div class="stage">
             <StripArt show="fill" />
             <span class="ends"><span>Where it plugs in</span><span>… still dark, still filling</span></span>
@@ -217,7 +236,7 @@ onUnmounted(() => window.removeEventListener('keydown', key))
         <template v-else-if="b.state === 'ready'">
           <p class="flow-done">
             <span class="done-icon"><Icon name="check" :size="20" /></span>
-            <span>It is on the house. Turn it off, dim it, color it or put it on a schedule, the same as anything else.</span>
+            <span>{{ finished }}</span>
           </p>
           <div class="flow-actions"><button class="button" @click="close">Done</button></div>
         </template>
