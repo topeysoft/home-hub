@@ -249,17 +249,21 @@ architecture and would not run. The environment is in `platformio.ini` and has n
 `AttributeError` guard, and there is no such method. The room is recorded on a retained topic and the light
 appears through Home Assistant discovery; making it a first-class device the brain has placed is not done.
 
-**6. The pane rows are half built, and the half that is missing needs hardware.** Asking either question
-again is done: `Strips.revisit()`, `GET /strip/list`, `POST /strip/revisit`, and the sheet says a different
-sentence for a question being asked a second time than for one asked the first. What is missing is the **entry
-point** — the two rows on the light's own pane that `design/strip/Later.dc.html` draws.
+**6. The pane rows are half built, and the join is now known but unproven.** Asking either question again
+is done: `Strips.revisit()`, `GET /strip/list`, `POST /strip/revisit`, and the sheet says a different sentence
+for a question asked a second time. What is missing is the **entry point** — the two rows on the light's own
+pane that `design/strip/Later.dc.html` draws — which needs the panel to know that a given light *is* one of
+our strips.
 
-They need the panel to know that a given light *is* one of our strips, and that link does not exist. The strip
-reaches Home Assistant through the Matter integration now, so its unique id is not ours to choose, and what the
-device registry ends up holding — manufacturer, model, serial number — comes from the Basic Information cluster
-and has never been looked at on a real device. **The cheapest way to settle it is five minutes of the first
-bring-up: commission one, then read what Home Assistant's device registry says about it.** Whatever the serial
-number turns out to be is probably the join, and `Device.hw` is where the brain already keeps that kind of fact.
+The first commissioning answered what that join cannot be. Home Assistant reported **manufacturer
+`TEST_VENDOR`, model `TEST_PRODUCT`** — esp-matter's defaults for a test vendor id, identical on every device
+anybody builds this way, so neither field distinguishes one of our strips from another or from somebody else's
+weekend project. Real vendor and product names arrive with a real Vendor ID and not before (see 2b).
+
+So the join is the **serial number**, which we can set without buying anything: the firmware now stores the
+chip there at boot, which is the same id the strip publishes all its MQTT topics under. **Unproven** — it is
+stored after the Basic Information cluster has already been built, so the first boot after a flash still
+reports the default and the one after it should be right. Nobody has looked yet.
 
 **7. No updates story.** `docs/puck-updates.md` is about pucks. A strip in a living room has the same problem
 and none of the answer.

@@ -37,6 +37,7 @@
 #include <PubSubClient.h>
 #include <WiFi.h>
 #include <ESPmDNS.h>
+#include <platform/ConfigurationManager.h>
 
 #include "pixels.h"
 
@@ -282,6 +283,21 @@ void setup() {
     light.begin(false, {21, 216, 120}, 180);
 
     Matter.begin();
+
+    // THE ONE PIECE OF IDENTITY WE CAN SET WITHOUT BUYING ONE.
+    //
+    // On the first commissioning the hub saw manufacturer TEST_VENDOR and model TEST_PRODUCT, which
+    // are esp-matter's defaults for a test vendor id and are the same on every device anybody builds
+    // this way -- so nothing in that registry entry could tell one of our strips from another, or
+    // from somebody else's project. Vendor and product names come with a real Vendor ID and cannot be
+    // had before certification. The serial number can, and it is the field that matters: it is what
+    // lets the hub join the light it can see in Home Assistant to the strip it has been talking to
+    // over the broker, which is what the two rows on the light's own pane are waiting for.
+    //
+    // Stored rather than declared, so it is read back from config on every boot after this one. The
+    // Basic Information cluster has already been built by the time we get here, so the very first
+    // boot after a flash still reports the default and the one after it is right.
+    chip::DeviceLayer::ConfigurationMgr().StoreSerialNumber(chipHex, strlen(chipHex));
 
     // Said on EVERY boot, not only an interesting one. The first thing anybody does with a board that
     // is not behaving is open the serial monitor, and a board that says nothing there has given them
