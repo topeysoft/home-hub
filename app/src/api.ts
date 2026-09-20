@@ -242,6 +242,49 @@ export const adoptBridge = () => post<Bridge>('/bridge/adopt')
 export const dismissBridge = () => post<Bridge>('/bridge/dismiss')
 /** The house's Wi-Fi, told once: a hub on a cable has no other way to know it. Kept for every bridge after. */
 export const bridgeWifi = (ssid: string, password: string) => post<Bridge>('/bridge/wifi', { ssid, password })
+
+/* ---------- a light strip, knocking over Bluetooth ----------
+ *
+ * The same four beats as a bridge, in the same shell, with the same words -- design/strip/Spine.dc.html
+ * is mostly a demonstration that a strip needs no new flow. What it does need is two questions in the
+ * middle, and both exist for one reason: NOTHING CAN BE READ BACK OFF A STRIP. The data line is
+ * write-only on every one of these parts, so neither the order its colors come out in nor how far it
+ * goes can be detected. They are shown, and the household names what it can see.
+ *
+ * `asking` is which half of the color question is on screen. `lit` is how far the fill has got, which
+ * the strip publishes as it goes -- the panel does not count, because the strip is the only thing that
+ * knows how fast it is actually going. */
+export type Strip = {
+  state: 'none' | 'knocking' | 'working' | 'order' | 'length' | 'room' | 'ready' | 'failed'
+  name?: string
+  step?: 'wifi' | 'hub'                    // two, not the bridge's three: the software is already on it
+  asking?: 'red' | 'which'
+  lit?: number                             // how many lights the fill has reached
+  count?: number                           // ...and where it stopped
+  order?: string                           // which of the six it turned out to be
+  white?: boolean                          // it carries a separate white channel (the "stripes" answer)
+  rooms?: { id: string; name: string }[]
+  strips?: number                          // how many are set up and working, job or no job
+  text?: string
+  needs?: 'wifi'
+}
+/* Ending a job is the brain's to know, exactly as it is for a bridge: a sheet that closes only its
+   own copy goes away and the next poll brings it straight back. */
+export const STRIP_READ_ONCE = ['ready', 'failed'] as const
+export const readStripOnce = (state?: string) => (STRIP_READ_ONCE as readonly string[]).includes(state ?? '')
+export async function getStrip(): Promise<Strip> { const r = await request('/strip'); if (!r.ok) await fail(r); return r.json() }
+/** Yes, that one is mine. Nothing of the house's moves before this. */
+export const adoptStrip = () => post<Strip>('/strip/adopt')
+/** Not mine. Needs no code -- refusing gives nothing away, and nothing was ever sent. */
+export const dismissStrip = () => post<Strip>('/strip/dismiss')
+export const stripWifi = (ssid: string, password: string) => post<Strip>('/strip/wifi', { ssid, password })
+/** What the household can see on it: red, green, blue, stripes, or nothing at all. */
+export const stripSaw = (saw: string) => post<Strip>('/strip/saw', { saw })
+/** That's the whole of it. The strip latches where the fill had got to the instant it hears this. */
+export const stripEnds = () => post<Strip>('/strip/ends')
+export const stripAgain = () => post<Strip>('/strip/again')
+export const stripRoom = (room: string) => post<Strip>('/strip/room', { room })
+export const stripDone = () => post<Strip>('/strip/done')
 /* Take a bridge off the house. Offered only from the *Needs a look* line about one that has not come
    back, because it is the answer to a question the house asked first -- never a thing to go and find. */
 /* ONE BRIDGE, as This hub lists it. Separate from `Bridge` above, which is the setting-up machine

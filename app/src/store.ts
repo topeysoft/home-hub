@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Temitope Adeyeri
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { reactive, watch } from 'vue'
-import { doRestart, type Rung, getBridge, type Bridge, getHome, getEvents, getAmbient, getScenes, getStatus, getDiscovered, getRoutines, getAssistant, getPresence, getHealth, getSounds, connect, act, setIntent, setHomeIntent, type Room, type Device, type Home, type Event, type Ambient, type Rules, type Status, type Found, type Intent, type Routine, type Assistant, type Presence, type Note, type Sound, requestUpdate, getPhones, type Phone, type Ask, getAccounts, type Account, getShare, type Share, getHappened, type Happened, getChanges, type Changes } from './api'
+import { doRestart, type Rung, getBridge, type Bridge, getStrip, type Strip, getHome, getEvents, getAmbient, getScenes, getStatus, getDiscovered, getRoutines, getAssistant, getPresence, getHealth, getSounds, connect, act, setIntent, setHomeIntent, type Room, type Device, type Home, type Event, type Ambient, type Rules, type Status, type Found, type Intent, type Routine, type Assistant, type Presence, type Note, type Sound, requestUpdate, getPhones, type Phone, type Ask, getAccounts, type Account, getShare, type Share, getHappened, type Happened, getChanges, type Changes } from './api'
 import { lock } from './code'
 import { sunPosition, sunGuess, moonPhase } from './sun'
 import { locale, setHouseLanguage } from './lang'
@@ -82,6 +82,7 @@ export const store = reactive({
      all, which is most of them. `state: 'none'` is a hub that has them and is not busy, which is not
      the same thing and is why this is not cleared to null -- see refreshBridge(). */
   bridge: null as Bridge | null,
+  strip: null as Strip | null,   // a light strip being set up; hub/strip.py. One at a time, same as a bridge
   /* A room the panel has been asked to open from somewhere else -- New devices, after an account
      brought in six things at once. App.vue takes it and clears it; nothing else reads it. */
   goRoom: null as string | null,
@@ -664,6 +665,35 @@ export async function refreshBridge() {
   bridgeTimer = window.setTimeout(refreshBridge, live ? 2000 : 60000)
 }
 
+/* ---------- a light strip being set up ----------
+
+   The same poll as a bridge and for the same reason: it matters only while somebody is standing in
+   front of the thing. A hub too old to know what a strip is answers 404 and the sheet simply never
+   appears, which is why this swallows rather than raises. */
+let stripTimer: number | undefined
+/* ?strip=knocking|working|order|which|length|room|ready draws one beat without a strip in the room,
+   the way ?sheet= and ?setup=1 draw the others (AGENTS.md §4). It is the only way to hold a screen
+   still beside the board it was drawn from, since every real beat is over in seconds. */
+const STRIP_PREVIEW = new URLSearchParams(location.search).get('strip')
+const previewStrip = (beat: string): Strip => ({
+  state: (beat === 'which' ? 'order' : beat) as Strip['state'],
+  name: 'A light strip',
+  step: beat === 'working' ? 'hub' : undefined,
+  asking: beat === 'which' ? 'which' : beat === 'order' ? 'red' : undefined,
+  count: 186,
+  rooms: store.rooms.length
+    ? store.rooms.map(r => ({ id: r.id, name: r.name }))
+    : [{ id: 'living', name: 'Living room' }, { id: 'kitchen', name: 'Kitchen' },
+       { id: 'bedroom', name: 'Bedroom' }, { id: 'study', name: 'Study' }],
+})
+export async function refreshStrip() {
+  clearTimeout(stripTimer)
+  if (STRIP_PREVIEW) { store.strip = previewStrip(STRIP_PREVIEW); return }
+  try { store.strip = await getStrip() } catch { store.strip = null }
+  const live = !!store.strip && !['none', 'ready'].includes(store.strip.state)
+  stripTimer = window.setTimeout(refreshStrip, live ? 2000 : 60000)
+}
+
 let foundTimer: number | undefined
 export async function refreshFound() {
   if (store.status?.driver !== 'ready') return
@@ -734,6 +764,7 @@ export async function start() {
   updateSky(); clearInterval(skyTimer); skyTimer = window.setInterval(updateSky, 30000)
   clearInterval(foundPoll); foundPoll = window.setInterval(refreshFound, 60000)
   refreshBridge()
+  refreshStrip()
   stop = connect({ device: applyDevice, home: applyHome, intent: applyIntent, drafts: d => { store.drafts = d; eventsSoon() }, presence: p => { store.presence = p; eventsSoon() }, phones: () => loadPhones(true), share: () => { store.shareTick++; loadShare() }, ambient: a => { store.ambient = a; updateSky() }, status: s => {
     const was = store.status?.driver, version = store.status?.version
     store.status = s
@@ -762,4 +793,4 @@ export async function start() {
     else lostTimer = window.setTimeout(() => (store.linkLost = true), 4000)   // a blink on startup is not worth a banner
   } })
 }
-export function halt() { stop?.(); clearInterval(skyTimer); clearInterval(foundPoll); clearTimeout(bridgeTimer) }
+export function halt() { stop?.(); clearInterval(skyTimer); clearInterval(foundPoll); clearTimeout(bridgeTimer); clearTimeout(stripTimer) }

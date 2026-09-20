@@ -17,6 +17,7 @@ import RoomView from './views/RoomView.vue'
 import Viewer from './Viewer.vue'
 import WhySheet from './WhySheet.vue'
 import BridgeSheet from './BridgeSheet.vue'
+import StripSheet from './StripSheet.vue'
 import HousePanel from './HousePanel.vue'
 import AskPane from './AskPane.vue'
 import { isPage } from './pages'
@@ -319,6 +320,9 @@ onUnmounted(() => {
     <!-- A bridge being set up opens itself: somebody has just plugged a thing in, in this room, and
          is standing here. It is not a place in the house to navigate to. -->
     <Transition name="sheet"><BridgeSheet v-if="store.bridge && store.bridge.state !== 'none'" /></Transition>
+    <!-- One arrival at a time: a bridge on the cable outranks a strip knocking over the air, because
+         somebody is holding the bridge. -->
+    <Transition name="sheet"><StripSheet v-if="store.strip && store.strip.state !== 'none' && !(store.bridge && store.bridge.state !== 'none')" /></Transition>
     <Transition name="sheet"><CodePrompt v-if="lock.prompt" /></Transition>
 
     <Transition name="toast">
