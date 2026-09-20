@@ -350,6 +350,9 @@ void setup() {
                  Matter.getManualPairingCode().c_str(), Matter.getOnboardingQRCodeUrl().c_str());
         tell(line);
     } else {
+        tell("[strip] already commissioned -- the pairing code above works ONCE and is spent.");
+        tell("[strip]   to add another ecosystem, open a window from the one that has it.");
+        tell("[strip]   to start over, hold the BOOT button for five seconds.");
         paint();
     }
     mqtt.setBufferSize(1024);
@@ -376,9 +379,15 @@ static void button() {
             tell("[strip] forgetting the house. It will come back new.");
             strip.clear();
             px::show(strip);
-            Matter.decommission();
+            // OURS FIRST, because decommission() is esp_matter::factory_reset(), which erases the NVS
+            // partition and restarts the chip itself. Anything written after it is a race with a
+            // reboot that has already been asked for, and the first version of this put the clear and
+            // a restart of its own on the far side of exactly that.
             nvs.clear();
-            delay(300);
+            nvs.end();
+            delay(50);
+            Matter.decommission();
+            delay(2000);                 // it restarts itself; this is only for if it ever does not
             ESP.restart();
         }
     } else if (down) {
