@@ -7,7 +7,7 @@ import { nextTick, onMounted, ref, watch } from 'vue'
 import { lock, remember } from './code'
 import Icon from './Icon.vue'
 
-/* "What's the code?" Shown the moment something needs it; the request that asked carries on. */
+/* "What's the passcode?" Shown the moment something needs it; the request that asked carries on. */
 const code = ref(''), input = ref<HTMLInputElement | null>(null)
 function done(ok: boolean) {
   const p = lock.prompt; if (!p) return
@@ -21,13 +21,13 @@ watch(() => lock.prompt, p => { if (p) { code.value = ''; nextTick(() => input.v
 
 <template>
   <div class="sheet-back code-back" @click.self="done(false)">
-    <div class="sheet code" role="dialog" aria-label="The code">
+    <div class="sheet code" role="dialog" aria-label="The passcode">
       <div class="sheet-head">
-        <h2 class="display">What's the code?</h2>
+        <h2 class="display">What's the passcode?</h2>
         <button class="round sheet-close" @click="done(false)" aria-label="Cancel"><Icon name="close" :size="20" /></button>
       </div>
       <div class="sheet-body">
-      <p class="sheet-lede">{{ lock.prompt?.wrong ? "That wasn't it. Try again." : 'Changing the house needs the code that was set for it.' }}</p>
+      <p class="sheet-lede">{{ lock.prompt?.wrong ? "That wasn't it. Try again." : 'Changing the house needs the passcode that was set for it.' }}</p>
       <input ref="input" class="input code-input" v-model="code" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" maxlength="8" placeholder="••••" @keydown.enter="submit" />
       <div class="flow-actions">
         <button class="button" :disabled="code.trim().length < 4" @click="submit">Continue</button>

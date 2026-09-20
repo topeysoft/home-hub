@@ -16,14 +16,14 @@ function close() { store.sheet = null }
 async function save(clear = false) {
   error.value = ''
   if (!clear) {
-    if (!/^\d{4,8}$/.test(pin.value)) { error.value = 'A code is 4 to 8 digits.'; return }
+    if (!/^\d{4,8}$/.test(pin.value)) { error.value = 'A passcode is 4 to 8 digits.'; return }
     if (pin.value !== again.value) { error.value = 'The two do not match.'; return }
   }
   busy.value = true
   try {
     store.status = await setPin(clear ? '' : pin.value)
     remember(clear ? '' : pin.value)
-    notify(clear ? 'The code is off. Anyone here can change the house.' : 'The settings are locked.')
+    notify(clear ? 'The passcode is off. Anyone here can change the house.' : 'The settings are locked.')
     close()
   } catch (e: any) { error.value = e.message }
   busy.value = false
@@ -33,12 +33,12 @@ async function save(clear = false) {
 <template>
   <div class="page">
     <p class="page-lede">Lights, scenes and doors never need it. Adding devices, renaming, moving rooms and the Advanced door do. Pick 4 to 8 digits.</p>
-    <label class="field"><span class="field-label">Code</span><input class="input code-input" v-model="pin" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off" @keydown.enter="save()" /></label>
+    <label class="field"><span class="field-label">Passcode</span><input class="input code-input" v-model="pin" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off" @keydown.enter="save()" /></label>
     <label class="field"><span class="field-label">Once more</span><input class="input code-input" v-model="again" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off" @keydown.enter="save()" /></label>
     <p class="error" v-if="error">{{ error }}</p>
     <div class="flow-actions">
       <button class="button" :class="{ busy }" @click="save()">{{ has() ? 'Change it' : 'Lock' }}</button>
-      <button class="button ghost" v-if="has()" :class="{ busy }" @click="save(true)">Remove the code</button>
+      <button class="button ghost" v-if="has()" :class="{ busy }" @click="save(true)">Remove the passcode</button>
     </div>
     <AdvancedLink />
   </div>

@@ -49,7 +49,7 @@ const ready = computed(updateReady)
 const locked = computed(() => !!store.status?.locked)
 const title = computed(() => ({
   house: 'This house', location: 'Where is home?', look: 'How the house looks', routines: 'Routines', people: 'People', accounts: 'Accounts',
-  add: resume.value ? 'Sign in again' : 'Add to the house', share: 'Share this house', hub: 'This hub', code: locked.value ? 'Change the code' : 'Lock the settings',
+  add: resume.value ? 'Sign in again' : 'Add to the house', share: 'Share this house', hub: 'This hub', code: locked.value ? 'Change the passcode' : 'Lock the settings',
   notes: 'Needs a look', happened: 'What happened', changes: 'Who changed what',
 }[page.value]))
 
@@ -113,7 +113,7 @@ const doors = computed(() => [
   /* Always here, unlike Needs a look: this is a place somebody goes to look something up, not a
      fault that should appear only when there is one. */
   { id: 'happened' as const, icon: 'clock', name: 'What happened', hint: happened.value },
-  ...(store.status?.setup_done ? [{ id: 'code' as const, icon: 'lock', name: locked.value ? 'The code' : 'Lock the settings', hint: code.value }] : []),
+  ...(store.status?.setup_done ? [{ id: 'code' as const, icon: 'lock', name: locked.value ? 'The passcode' : 'Lock the settings', hint: code.value }] : []),
   /* only while there is something behind it. A door that is always there saying "nothing is wrong"
      teaches a person to stop reading it, which is the opposite of what a fault list is for. */
   ...(store.notes.length ? [{ id: 'notes' as const, icon: 'sparkle', name: 'Needs a look', hint: notes.value, attention: true }] : []),
@@ -163,11 +163,11 @@ onUnmounted(() => window.removeEventListener('keydown', key))
         <Transition name="view" mode="out-in">
           <div class="house-page" :key="page">
             <div class="page" v-if="page === 'house'">
-              <p class="page-lede">Everything about the house that is not a light, a scene or a door. Those never need the code; some of this does.</p>
+              <p class="page-lede">Everything about the house that is not a light, a scene or a door. Those never need the passcode; some of this does.</p>
               <ul class="hub-rows">
                 <li><span class="hub-k">Home</span><span class="hub-v">{{ store.ambient.location?.name ?? 'No location yet' }}<span class="hub-sub" v-if="homeLine"> · {{ homeLine }}</span></span><button class="button small ghost" @click="go(store.ambient.location ? 'people' : 'location')">{{ store.ambient.location ? 'People' : 'Set it' }}</button></li>
                 <li><span class="hub-k">Software</span><span class="hub-v">{{ version }}<span class="hub-sub" v-if="ready"> · an update is ready</span></span><button class="button small" :class="{ ghost: !ready }" @click="go('hub')">{{ ready ? 'Update' : 'The hub' }}</button></li>
-                <li><span class="hub-k">Settings</span><span class="hub-v">{{ locked ? 'Locked. Changing the house needs the code.' : 'Open. Anyone on the Wi‑Fi can change the house.' }}</span><button class="button small" :class="{ ghost: locked }" v-if="store.status?.setup_done" @click="go('code')">{{ locked ? 'The code' : 'Lock' }}</button><span v-else></span></li>
+                <li><span class="hub-k">Settings</span><span class="hub-v">{{ locked ? 'Locked. Changing the house needs the passcode.' : 'Open. Anyone on the Wi‑Fi can change the house.' }}</span><button class="button small" :class="{ ghost: locked }" v-if="store.status?.setup_done" @click="go('code')">{{ locked ? 'The passcode' : 'Lock' }}</button><span v-else></span></li>
               </ul>
               <AdvancedLink />
             </div>

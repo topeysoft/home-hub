@@ -32,7 +32,7 @@ export async function request(url: string, init: RequestInit = {}): Promise<Resp
     try { detail = (await r.clone().json()).detail } catch {}
     if (detail === 'phone') { lock.unpaired = true; throw new Error('This phone is not in the house yet.') }
     if (detail !== 'code') break
-    if (!(await askCode(wrong))) throw new Error('That needs the code.')
+    if (!(await askCode(wrong))) throw new Error('That needs the passcode.')
     wrong = true
     r = await go()
   }

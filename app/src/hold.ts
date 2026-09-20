@@ -28,30 +28,44 @@ const state = new WeakMap<HTMLElement, State>()
  * whatever is beneath the point WHEN THE FINGER LIFTS, and by then that is the panel, not the card:
  * the card's own click handler is never offered it and has nothing to stop. On an iPad-shaped wall
  * panel the light pane's three presets land almost exactly where the finger was holding, so letting
- * go of a lamp at 35% to open it set it to 100% -- the panel opened AND something in it was tapped,
- * by one press nobody meant as two.
+ * go of a lamp at 35% to open it also set it to 100% -- one press, doing two things, one of which
+ * nobody asked for.
  *
  * `pointerup` on the card is still swallowed below, and still has to be: that is the tile's own
- * dimmer, and a different bug. This is the other half, and it has to sit on the document because
- * the element it needs to defend is one nothing here has a reference to.
+ * dimmer. This is the other half, and it sits on the document because the element it has to defend
+ * is one nothing here has a reference to.
  *
- * One click, and only for as long as one can still be coming. A gesture that ends without one -- a
- * finger slid away, a pointercancel, a hold on something that opens nothing -- must not leave this
- * waiting to eat somebody's next real tap, so it also lets go on a timer.
+ * WHAT IT MUST NOT EAT is the next real tap, and a plain timer is not good enough at telling the
+ * two apart. A person holds a lamp open in order to touch something in it, and they are quick about
+ * it -- `pane.spec.ts` taps a preset within a few hundred milliseconds of the release, which is the
+ * ordinary speed, not a fast one. Any window wide enough to be sure of catching the stray click is
+ * also wide enough to eat that tap, which would be this same bug pointed the other way.
+ *
+ * So the rule is about the press, not the clock: the click that belongs to a press cannot arrive
+ * after the NEXT press has begun. Arm on the release, drop it on the next pointerdown anywhere,
+ * eat at most one, and keep a long timer only so nothing is ever left armed for good.
  */
-const AFTER_HOLD = 700    // longer than the gap between lifting a finger and the click that follows
+const NEVER_ARMED_PAST = 1200   // a backstop, not the rule: the pointerdown below is the rule
 let releasing: (() => void) | null = null
 
-function swallowNextClick() {
-  releasing?.()   // a second hold before the first one's click arrived: the newer press is the real one
-  const eat = (e: MouseEvent) => { e.stopImmediatePropagation(); e.preventDefault(); stop() }
-  const timer = window.setTimeout(() => stop(), AFTER_HOLD)
+function swallowClickFrom(release: PointerEvent) {
+  releasing?.()   // an earlier hold whose click never came; this release is the live one now
+  const eat = (e: MouseEvent) => {
+    /* Only the click this release produced. A click that is somehow somewhere else entirely is
+       somebody else's, and eating it would be the bug this is here to fix, pointed the other way. */
+    if (Math.abs(e.clientX - release.clientX) > 24 || Math.abs(e.clientY - release.clientY) > 24) return
+    e.stopImmediatePropagation(); e.preventDefault(); stop()
+  }
+  const next = () => stop()                       // a new press: whatever was coming is no longer ours
+  const timer = window.setTimeout(() => stop(), NEVER_ARMED_PAST)
   function stop() {
     clearTimeout(timer)
     document.removeEventListener('click', eat, true)
+    document.removeEventListener('pointerdown', next, true)
     if (releasing === stop) releasing = null
   }
   document.addEventListener('click', eat, true)
+  document.addEventListener('pointerdown', next, true)
   releasing = stop
 }
 
@@ -86,9 +100,6 @@ export const vHold: Directive<HTMLElement, (() => void) | undefined> = {
         s.fired = true
         el.setAttribute('data-held', '')                       // the card acknowledges the hold before it opens
         navigator.vibrate?.(8)
-        /* Before opening, not after: `open()` mounts the panel synchronously enough that a click
-           already on its way must find this in place. */
-        swallowNextClick()
         open()
         setTimeout(() => el.removeAttribute('data-held'), 220)
       }, HOLD)
@@ -100,7 +111,7 @@ export const vHold: Directive<HTMLElement, (() => void) | undefined> = {
        tile's own handler never runs: no light toggles on its way into its detail */
     const up = (e: PointerEvent) => {
       cancel()
-      if (s.fired) { e.stopImmediatePropagation(); e.preventDefault() }
+      if (s.fired) { e.stopImmediatePropagation(); e.preventDefault(); swallowClickFrom(e) }
     }
     /* Kept, though swallowNextClick above usually gets there first: this one still fires where the
        click lands on the card itself and nothing opened over it, and it is the only one that clears

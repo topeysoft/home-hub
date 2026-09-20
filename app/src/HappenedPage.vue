@@ -133,7 +133,7 @@ onMounted(loadHappened)
         nobody new has joined the house.
       </p>
 
-      <!-- the two folds: the full log for the curious, and the audit behind the code -->
+      <!-- the two folds: the full log for the curious, and the audit behind the passcode -->
       <button class="happened-more" :class="{ busy: opening }" @click="openLog">
         <span>
           Everything that happened
@@ -153,7 +153,7 @@ onMounted(loadHappened)
       <button class="happened-more" @click="store.sheet = 'changes'">
         <span>
           Who changed what
-          <span class="happened-gated"><Icon name="lock" :size="12" />needs the code</span>
+          <span class="happened-gated"><Icon name="lock" :size="12" />needs the passcode</span>
           <small>Renames, rooms, accounts, routines and phones — and which phone asked.</small>
         </span>
         <Icon name="back" :size="16" class="flip" />

@@ -103,7 +103,7 @@ onMounted(loadChanges)
     </p>
 
     <div class="happened-note" v-if="page?.coded_when">
-      Before the code was set on <b>{{ page.coded_when }}</b> the house could not tell its phones
+      Before the passcode was set on <b>{{ page.coded_when }}</b> the house could not tell its phones
       apart, so the changes above that date say <b>Someone at the wall</b> and nothing more.
     </div>
   </div>

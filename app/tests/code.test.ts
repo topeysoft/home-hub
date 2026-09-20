@@ -67,7 +67,7 @@ describe('when the house asks for the code', () => {
     const fetchMock = vi.fn().mockResolvedValue(answer(401, { detail: 'code' }))
     vi.stubGlobal('fetch', fetchMock)
     const stop = typing(null)
-    await expect(request('/rooms', { method: 'POST' })).rejects.toThrow('That needs the code')
+    await expect(request('/rooms', { method: 'POST' })).rejects.toThrow('That needs the passcode')
     stop()
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })

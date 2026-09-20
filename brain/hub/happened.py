@@ -341,7 +341,7 @@ class Changes:
             if new.endswith(" connected"): return f"connected {new[:-len(' connected')]}."
             return self.fallback(r, detail)
         if subject == "setup":
-            return {"code set": "set the code on the settings.", "code removed": "took the code off the settings.",
+            return {"code set": "set the passcode on the settings.", "code removed": "took the passcode off the settings.",
                     "owner created": "set the house up.", "finished": "finished setting the house up."
                     }.get(new) or self.fallback(r, detail)
         if subject == "update":

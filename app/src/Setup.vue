@@ -97,7 +97,7 @@ const readyLine = computed(() => {   // "Nadine's house is ready." or "Home is r
   return f && !h.toLowerCase().includes(f.toLowerCase()) ? `${h} is ready, ${f}.` : `${h} is ready.`
 })
 /* The numbered part of first run: every screen that asks something, in order. It used to
-   count only the last four, so a person typed their name, chose a code, and was then told
+   count only the last four, so a person typed their name, chose a passcode, and was then told
    they were on "Step 1 of 4" -- two answers in and apparently at the beginning. */
 const ASKED: Page[] = ['owner', 'code', 'location', 'rooms', 'devices']
 const idx = computed(() => ASKED.indexOf(page.value))
@@ -125,11 +125,11 @@ onUnmounted(() => { ro?.disconnect(); window.removeEventListener('resize', measu
    landed -- and again when what is on it grows, which `Adding` does as it goes. */
 watch([page, adding, () => store.found.length], () => nextTick(measure))
 
-/* the code on the settings */
+/* the passcode on the settings */
 const pin = ref(''), again = ref('')
 async function saveCode() {
   error.value = ''
-  if (!/^\d{4,8}$/.test(pin.value)) { error.value = 'A code is 4 to 8 digits.'; return }
+  if (!/^\d{4,8}$/.test(pin.value)) { error.value = 'A passcode is 4 to 8 digits.'; return }
   if (pin.value !== again.value) { error.value = 'The two do not match.'; return }
   busy.value = true
   try { store.status = await setPin(pin.value); remember(pin.value); next('code') } catch (e: any) { error.value = e.message }
@@ -189,13 +189,13 @@ async function saveCode() {
         <p class="setup-lede">{{ status?.reason || 'Just a moment.' }}</p>
       </section>
 
-      <!-- the code -->
+      <!-- the passcode -->
       <section class="setup-page" v-else-if="page === 'code'" key="code">
         <p class="setup-step">{{ step }}</p>
-        <h1 class="display">A code for changes.</h1>
-        <p class="setup-lede">Four to eight digits. Anyone in the house can still work the lights from the wall without it — the code is for <em>changing</em> the house: adding devices, renaming rooms, taking a copy away with you.</p>
+        <h1 class="display">A passcode for changes.</h1>
+        <p class="setup-lede">Four to eight digits. Anyone in the house can still work the lights from the wall without it — the passcode is for <em>changing</em> the house: adding devices, renaming rooms, taking a copy away with you.</p>
         <p class="setup-note"><Icon name="lock" :size="16" /><span>The one step that can't wait. Until it is set, anyone on your Wi‑Fi can change the house too.</span></p>
-        <label class="field"><span class="field-label">Code</span><input class="input code-input" v-model="pin" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off" @keydown.enter="saveCode" /></label>
+        <label class="field"><span class="field-label">Passcode</span><input class="input code-input" v-model="pin" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off" @keydown.enter="saveCode" /></label>
         <label class="field"><span class="field-label">Once more</span><input class="input code-input" v-model="again" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off" @keydown.enter="saveCode" /></label>
         <p class="error" v-if="error">{{ error }}</p>
         <div class="setup-actions">

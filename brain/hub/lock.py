@@ -117,7 +117,7 @@ class Lock:
     def set(self, pin: str):
         if not pin:
             self.settings.set(pin=None); return
-        if not (pin.isdigit() and 4 <= len(pin) <= 8): raise ValueError("A code is 4 to 8 digits.")
+        if not (pin.isdigit() and 4 <= len(pin) <= 8): raise ValueError("A passcode is 4 to 8 digits.")
         salt = os.urandom(16)
         self.settings.set(pin={"salt": salt.hex(), "hash": self._digest(pin, salt)})
 

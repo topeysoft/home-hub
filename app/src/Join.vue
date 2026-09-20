@@ -9,7 +9,7 @@ import { lock, remember } from './code'
 import Icon from './Icon.vue'
 
 /* The house has a code and this device is not one of its phones yet. Two ways in: ask, and someone at a screen that
-   is already in taps Allow (and types the code); or type the code here. Being on the Wi‑Fi alone gets nothing. */
+   is already in taps Allow (and types the passcode); or type the passcode here. Being on the Wi‑Fi alone gets nothing. */
 const emit = defineEmits<{ joined: [] }>()
 const home = ref('the house'), who = ref(''), code = ref(''), mode = ref<'ask' | 'code'>('ask'), error = ref(''), busy = ref(false), asked = ref<string | null>(null)
 const ua = navigator.userAgent
@@ -32,14 +32,14 @@ async function check() {
   try {
     const c = await claimJoin(asked.value)
     if (c.state === 'allowed') done()
-    else if (c.state === 'gone') { clearInterval(poll); asked.value = null; error.value = 'Not this time. Ask again, or type the code.' }
+    else if (c.state === 'gone') { clearInterval(poll); asked.value = null; error.value = 'Not this time. Ask again, or type the passcode.' }
   } catch {}
 }
 function cancel() { clearInterval(poll); asked.value = null }
 async function withCode() {
   if (busy.value) return
   error.value = ''
-  if (!/^\d{4,8}$/.test(code.value)) { error.value = 'A code is 4 to 8 digits.'; return }
+  if (!/^\d{4,8}$/.test(code.value)) { error.value = 'A passcode is 4 to 8 digits.'; return }
   busy.value = true
   try { await joinWithCode(code.value, name.value); remember(code.value); done() } catch (e: any) { error.value = e.message }
   busy.value = false
@@ -52,15 +52,15 @@ async function withCode() {
       <span class="setup-mark"><Icon name="phone" :size="30" /></span>
       <h1 class="display">Join {{ home }}.</h1>
       <template v-if="!asked">
-        <p class="setup-lede">This {{ device }} is new here. Someone at the wall can let it in, or type the house's code.</p>
+        <p class="setup-lede">This {{ device }} is new here. Someone at the wall can let it in, or type the house's passcode.</p>
         <label class="field"><span class="field-label">Your name <span class="field-opt">· so the house knows whose this is</span></span>
           <input class="input" v-model="who" autocomplete="given-name" autocapitalize="words" placeholder="Sam" @keydown.enter="mode === 'code' ? withCode() : ask()" /></label>
-        <label class="field" v-if="mode === 'code'"><span class="field-label">The code</span>
+        <label class="field" v-if="mode === 'code'"><span class="field-label">The passcode</span>
           <input class="input code-input" v-model="code" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" maxlength="8" placeholder="••••" @keydown.enter="withCode" /></label>
         <p class="error" v-if="error">{{ error }}</p>
         <div class="setup-actions" v-if="mode === 'ask'">
           <button class="button big" :class="{ busy }" @click="ask">Ask to join</button>
-          <button class="button ghost" @click="mode = 'code'; error = ''">I know the code</button>
+          <button class="button ghost" @click="mode = 'code'; error = ''">I know the passcode</button>
         </div>
         <div class="setup-actions" v-else>
           <button class="button big" :class="{ busy }" :disabled="code.length < 4" @click="withCode">Join</button>
