@@ -3,7 +3,7 @@
   SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { setupOwner, setupLogin, setupDone, addRoom, setPin } from './api'
 import { remember } from './code'
 import { store, load } from './store'
@@ -96,7 +96,34 @@ const readyLine = computed(() => {   // "Nadine's house is ready." or "Home is r
   const h = store.homeName || 'Home', f = firstName.value
   return f && !h.toLowerCase().includes(f.toLowerCase()) ? `${h} is ready, ${f}.` : `${h} is ready.`
 })
-const idx = computed(() => ['code', 'location', 'rooms', 'devices'].indexOf(page.value))
+/* The numbered part of first run: every screen that asks something, in order. It used to
+   count only the last four, so a person typed their name, chose a code, and was then told
+   they were on "Step 1 of 4" -- two answers in and apparently at the beginning. */
+const ASKED: Page[] = ['owner', 'code', 'location', 'rooms', 'devices']
+const idx = computed(() => ASKED.indexOf(page.value))
+const step = computed(() => (idx.value < 0 ? '' : `Step ${idx.value + 1} of ${ASKED.length}`))
+
+/* Whether this step is taller than the panel it is on. The action row docks to the
+   bottom when it is, so Continue is never a thing you have to find by scrolling a
+   screen that gives no sign there is more of it. Measured rather than assumed from
+   the width: the same step is short on a tall tablet and long on a 1280x800 wall. */
+const scroller = ref<HTMLElement | null>(null)
+const docked = ref(false)
+function measure() {
+  const el = scroller.value
+  docked.value = !!el && el.scrollHeight - el.clientHeight > 1
+}
+let ro: ResizeObserver | undefined
+onMounted(() => {
+  measure()
+  ro = new ResizeObserver(measure)
+  if (scroller.value) ro.observe(scroller.value)
+  window.addEventListener('resize', measure)
+})
+onUnmounted(() => { ro?.disconnect(); window.removeEventListener('resize', measure) })
+/* A step change swaps the whole page under the transition, so re-measure once it has
+   landed -- and again when what is on it grows, which `Adding` does as it goes. */
+watch([page, adding, () => store.found.length], () => nextTick(measure))
 
 /* the code on the settings */
 const pin = ref(''), again = ref('')
@@ -111,13 +138,18 @@ async function saveCode() {
 </script>
 
 <template>
-  <main class="setup">
-    <Transition name="view" mode="out-in">
+  <main class="setup" :class="{ docked }" ref="scroller">
+    <Transition name="view" mode="out-in" @after-enter="measure">
       <!-- welcome -->
       <section class="setup-page" v-if="page === 'welcome'" key="welcome">
         <span class="setup-mark"><Icon name="home" :size="30" /></span>
         <h1 class="display">Welcome home.</h1>
-        <p class="setup-lede">This screen will run the house: lights, screens, doors, cameras, all in one calm place. Setting it up takes a few minutes and one or two questions.</p>
+        <!-- No count in here, on purpose. It used to promise "one or two questions" and then ask
+             five, and a sentence that has to be rewritten every time ASKED grows or shrinks is a
+             sentence that will quietly go out of date. What the number was really doing was
+             softening the ask; "you can change any of it later" does that instead, and stays true
+             at any length -- every answer in first run is editable afterwards. -->
+        <p class="setup-lede">This screen will run the house: lights, screens, doors, cameras, all in one calm place. Setting it up takes a few minutes, and you can change any of it later.</p>
         <div class="setup-actions">
           <button class="button big" :disabled="!engineReady" @click="next('welcome')">Get started</button>
         </div>
@@ -141,6 +173,7 @@ async function saveCode() {
 
       <!-- who you are -->
       <section class="setup-page" v-else-if="page === 'owner'" key="owner">
+        <p class="setup-step">{{ step }}</p>
         <h1 class="display">First, a couple of names.</h1>
         <p class="setup-lede">Yours, so the house can greet you, and one for the house itself.</p>
         <label class="field"><span class="field-label">Your name</span><input class="input" v-model="name" autocomplete="given-name" autocapitalize="words" placeholder="Nadine" @keydown.enter="saveOwner" /></label>
@@ -158,9 +191,10 @@ async function saveCode() {
 
       <!-- the code -->
       <section class="setup-page" v-else-if="page === 'code'" key="code">
-        <p class="setup-step">Step {{ idx + 1 }} of 4</p>
+        <p class="setup-step">{{ step }}</p>
         <h1 class="display">A code for changes.</h1>
-        <p class="setup-lede">Anyone in the house can turn things on and off from the wall. This is for <em>changing</em> it — adding devices, renaming rooms, and taking a copy of the house away with you. Four to eight digits, and the one step here that cannot wait: without it, anyone on your Wi‑Fi can do all of that too.</p>
+        <p class="setup-lede">Four to eight digits. Anyone in the house can still work the lights from the wall without it — the code is for <em>changing</em> the house: adding devices, renaming rooms, taking a copy away with you.</p>
+        <p class="setup-note"><Icon name="lock" :size="16" /><span>The one step that can't wait. Until it is set, anyone on your Wi‑Fi can change the house too.</span></p>
         <label class="field"><span class="field-label">Code</span><input class="input code-input" v-model="pin" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off" @keydown.enter="saveCode" /></label>
         <label class="field"><span class="field-label">Once more</span><input class="input code-input" v-model="again" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off" @keydown.enter="saveCode" /></label>
         <p class="error" v-if="error">{{ error }}</p>
@@ -171,23 +205,27 @@ async function saveCode() {
 
       <!-- where -->
       <section class="setup-page" v-else-if="page === 'location'" key="location">
-        <p class="setup-step">Step {{ idx + 1 }} of 4</p>
+        <p class="setup-step">{{ step }}</p>
         <h1 class="display">Where is home?</h1>
         <p class="setup-lede">The sky behind this screen, sunrise, sunset and the weather all follow it. It stays on the hub and is never shared.</p>
         <LocationPicker @saved="next('location')" />
-        <div class="setup-actions"><button class="button ghost" @click="next('location')">{{ status?.location ? 'Keep it' : 'Later' }}</button></div>
+        <div class="setup-actions">
+          <button v-if="status?.location" class="button big" @click="next('location')">Continue</button>
+          <button v-else class="button ghost" @click="next('location')">Skip for now</button>
+        </div>
       </section>
 
       <!-- rooms -->
       <section class="setup-page" v-else-if="page === 'rooms'" key="rooms">
-        <p class="setup-step">Step {{ idx + 1 }} of 4</p>
+        <p class="setup-step">{{ step }}</p>
         <h1 class="display">Which rooms do you have?</h1>
         <p class="setup-lede">Tap the ones that apply. You can rename or add more any time.</p>
+        <p class="setup-note plain" v-if="existing.length">The outlined ones are already in the house.</p>
         <div class="chips">
           <button v-for="r in existing" :key="'e' + r" class="chip-btn on fixed"><Icon name="check" :size="14" />{{ r }}</button>
           <button v-for="r in allRooms" :key="r" class="chip-btn" :class="{ on: chosen.has(r) }" @click="toggle(r)"><Icon v-if="chosen.has(r)" name="check" :size="14" />{{ r }}</button>
         </div>
-        <label class="search"><Icon name="search" :size="18" /><input v-model="custom" placeholder="Another room…" @keydown.enter="addCustom" autocapitalize="words" /><button class="button small" v-if="custom.trim()" @click="addCustom">Add</button></label>
+        <label class="search"><Icon name="plus" :size="18" /><input v-model="custom" placeholder="Another room…" @keydown.enter="addCustom" autocapitalize="words" /><button class="button small" v-if="custom.trim()" @click="addCustom">Add</button></label>
         <p class="error" v-if="error">{{ error }}</p>
         <div class="setup-actions">
           <button class="button big" :class="{ busy }" @click="saveRooms">Continue</button>
@@ -196,7 +234,7 @@ async function saveCode() {
 
       <!-- devices -->
       <section class="setup-page" v-else-if="page === 'devices'" key="devices">
-        <p class="setup-step">Step {{ idx + 1 }} of 4</p>
+        <p class="setup-step">{{ step }}</p>
         <h1 class="display">What's in the house?</h1>
         <p class="setup-lede">Things already on your Wi‑Fi show up here on their own. Add what you like now; the rest can wait.</p>
         <Adding @busy="adding = $event" />

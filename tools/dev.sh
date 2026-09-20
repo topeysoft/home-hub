@@ -7,6 +7,7 @@
 #   tools/dev.sh up       install whatever is missing, then the panel on a mock house
 #   tools/dev.sh hub      the panel against a real brain, started fresh so it is your code
 #   tools/dev.sh check    what CI runs, here, before pushing
+#   tools/dev.sh design   every artboard in a browser, on the canvas they were drawn on
 #
 # Two audiences, one report. Somebody coming back wants the half hour deleted that goes: which
 # branch was I on, what is that uncommitted file, is that stash mine, is anything still listening on
@@ -99,6 +100,7 @@ first_time() {
   echo
   row "app/"    "the screens — one Vue app for the wall panel and the phone"
   row "brain/"  "the hub — FastAPI: the house's state, the rules, the assistant, the websocket"
+  row "design/" "the artboards — what a screen should look like, before it is a screen"
   row "docs/"   "why each piece is the way it is. Read one before changing what it describes"
   echo
   local bad; bad=$(prereqs)
@@ -153,6 +155,7 @@ where_you_were() {
 8399 the mock brain
 5173 vite
 8123 home assistant
+8402 the artboards
 PORTS
 
   missing=()
@@ -166,15 +169,20 @@ PORTS
   echo
   echo "  ${D}tools/dev.sh up${R} — the panel on the mock brain, watched, no hub needed"
   echo "  ${D}tools/dev.sh hub${R} — the same against a real brain   ${D}tools/dev.sh check${R} — what CI runs"
+  echo "  ${D}tools/dev.sh design${R} — the artboards, before any of it is code"
 }
 
-usage() { sed -n '4,9p' "$0" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '4,10p' "$0" | sed 's/^# \{0,1\}//'; }
 
 case "${1:-status}" in
   status|"") if fresh; then first_time; else where_you_were; fi ;;
   # Vite prints the address it actually took, so this does not guess one. PORT=8405 moves the mock
   # if something already holds :8399.
   up)    ensure panel; cd app && exec npm run dev:mock ;;
+  # The boards are static HTML and the viewer is dependency-free node, so this deliberately does
+  # NOT call ensure: looking at the design is the one thing here that should work in a clone
+  # where nothing has been installed. Extra flags (--port, --no-open) pass straight through.
+  design) shift || true; exec node tools/artboards.mjs "$@" ;;
   # dev.py stops whatever hub is holding the port and starts yours with the reloader on, so the
   # brain here is always the code you just wrote.
   hub)   ensure both

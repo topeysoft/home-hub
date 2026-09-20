@@ -1,0 +1,130 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp: #e9b872; --lamp-ink: #2a1c07; --live: #74c69d; --danger: #e08a8a;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .t1 { font-size: 15.5px; font-weight: 500; }
+    .t2 { font-size: 13px; color: var(--muted); line-height: 1.45; }
+    .note { padding: 13px 16px 14px; border-radius: 18px; background: var(--surface); border: 1px solid var(--edge); }
+    .sheet { border-radius: 22px; background: rgba(22,24,30,.94); border: 1px solid var(--edge); }
+    .bookend { border-style: dashed; border-color: rgba(255,255,255,.16); background: rgba(22,24,30,.5); }
+    .num { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
+           background: var(--lamp); color: var(--lamp-ink); font-size: 13px; font-weight: 600; }
+    .num.none { background: var(--surface-hi); color: var(--muted); font-size: 15px; }
+    .pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px 5px; border-radius: 999px;
+            font-size: 12px; border: 1px solid var(--edge); color: var(--ink-2); }
+    .pill.must { border-color: rgba(233,184,114,.5); color: var(--lamp); }
+    .pill.skip { color: var(--muted); }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: #0c0d10; color: var(--ink); font-size: 17px; line-height: 1.4;">
+  <div style="position: absolute; inset: 0; background: radial-gradient(64% 54% at 22% 18%, rgba(72,63,135,.22), transparent 70%), radial-gradient(56% 48% at 86% 88%, rgba(92,63,57,.2), transparent 72%);"></div>
+
+  <div style="position: absolute; top: 44px; left: 56px; right: 56px;">
+    <h1 class="dsp" style="margin: 0; font-size: 42px;">Seven screens. Five of them ask you something.</h1>
+    <p style="margin: 10px 0 0; font-size: 17px; color: var(--ink-2); max-width: 106ch;">The flow itself is unchanged &mdash; same screens, same order, same brain calls. What changed is that the count is now honest and every screen that asks something wears the same eyebrow, so the frame holds still while the question inside it changes.</p>
+  </div>
+
+  <!-- the two bookends and the five questions -->
+  <div class="sheet bookend" style="position: absolute; top: 190px; left: 56px; width: 186px; height: 196px; padding: 16px;">
+    <div class="num none">&bull;</div>
+    <div class="dsp" style="font-size: 20px; margin: 12px 0 7px;">Welcome home.</div>
+    <div class="t2">A mark, a promise, and one button. No number: nothing has been asked yet.</div>
+  </div>
+
+  <div class="sheet" style="position: absolute; top: 190px; left: 262px; width: 186px; height: 196px; padding: 16px;">
+    <div class="num">1</div>
+    <div class="dsp" style="font-size: 20px; margin: 12px 0 7px;">A couple of names.</div>
+    <div class="t2">Yours, and the house&rsquo;s. <span style="color:var(--danger)">Was unnumbered.</span></div>
+  </div>
+
+  <div class="sheet" style="position: absolute; top: 190px; left: 468px; width: 186px; height: 196px; padding: 16px;">
+    <div class="num">2</div>
+    <div class="dsp" style="font-size: 20px; margin: 12px 0 7px;">A code for changes.</div>
+    <div class="t2">The one that cannot be skipped, and now says so in its own line.</div>
+  </div>
+
+  <div class="sheet" style="position: absolute; top: 190px; left: 674px; width: 186px; height: 196px; padding: 16px;">
+    <div class="num">3</div>
+    <div class="dsp" style="font-size: 20px; margin: 12px 0 7px;">Where is home?</div>
+    <div class="t2">The sky, the sun and the weather follow it. Skippable.</div>
+  </div>
+
+  <div class="sheet" style="position: absolute; top: 190px; left: 880px; width: 186px; height: 196px; padding: 16px;">
+    <div class="num">4</div>
+    <div class="dsp" style="font-size: 20px; margin: 12px 0 7px;">Which rooms?</div>
+    <div class="t2">Tap the ones that apply. Renameable forever after.</div>
+  </div>
+
+  <div class="sheet" style="position: absolute; top: 190px; left: 1086px; width: 186px; height: 196px; padding: 16px;">
+    <div class="num">5</div>
+    <div class="dsp" style="font-size: 20px; margin: 12px 0 7px;">What&rsquo;s in the house?</div>
+    <div class="t2">Whatever is already on the Wi&#8209;Fi. The rest can wait.</div>
+  </div>
+
+  <div class="sheet bookend" style="position: absolute; top: 190px; left: 1292px; width: 92px; height: 196px; padding: 16px;">
+    <div class="num none" style="background: var(--live); color: #0b2216; font-size: 13px;">&#10003;</div>
+    <div class="dsp" style="font-size: 18px; margin: 12px 0 7px;">Ready.</div>
+    <div class="t2">Hand it over.</div>
+  </div>
+
+  <!-- the spine -->
+  <div style="position: absolute; top: 406px; left: 56px; width: 1328px; height: 1px; background: linear-gradient(90deg, rgba(233,184,114,.18), rgba(233,184,114,.55) 18%, rgba(233,184,114,.55) 82%, rgba(233,184,114,.18));"></div>
+  <div class="cap" style="position: absolute; top: 418px; left: 262px; color: var(--lamp);">Step 1 of 5 &nbsp;&middot;&nbsp; Step 2 of 5 &nbsp;&middot;&nbsp; Step 3 of 5 &nbsp;&middot;&nbsp; Step 4 of 5 &nbsp;&middot;&nbsp; Step 5 of 5</div>
+
+  <!-- what may be skipped -->
+  <div class="cap" style="position: absolute; top: 468px; left: 56px;">what a person may walk past</div>
+  <div style="position: absolute; top: 496px; left: 56px; display: flex; gap: 10px; flex-wrap: wrap; width: 1328px;">
+    <span class="pill must">Step 2 &mdash; the code cannot wait</span>
+    <span class="pill skip">Step 3 &mdash; Skip for now</span>
+    <span class="pill skip">Step 4 &mdash; Continue with nothing picked</span>
+    <span class="pill skip">Step 5 &mdash; Skip for now</span>
+    <span class="pill">Step 1 &mdash; a name is the only required typing in the whole of first run</span>
+  </div>
+
+  <!-- two hidden screens -->
+  <div class="cap" style="position: absolute; top: 562px; left: 56px;">and two screens most houses never see</div>
+  <div style="position: absolute; top: 590px; left: 56px; right: 56px; display: grid; grid-template-columns: 1fr 1fr; gap: 18px;">
+    <div class="note">
+      <div class="t1" style="margin-bottom: 5px;">Sign in &mdash; when Home Assistant was already here</div>
+      <div class="t2">Someone set the engine up separately before the panel ever ran. It sits between welcome and the names, and it is not numbered: it is not a question about your house, it is a door being unlocked.</div>
+    </div>
+    <div class="note">
+      <div class="t1" style="margin-bottom: 5px;">Building your home&hellip; &mdash; the wait after the names</div>
+      <div class="t2">The engine is still coming up. Centered, with the mark breathing, and it moves on by itself the moment the driver says <code style="color:var(--lamp)">ready</code>. No number and no button, because there is nothing to answer.</div>
+    </div>
+  </div>
+
+  <div style="position: absolute; top: 726px; left: 56px; right: 56px; display: grid; grid-template-columns: 1fr 1fr; gap: 18px;">
+    <div class="note">
+      <div class="t1" style="margin-bottom: 5px;">The count is derived, not written down twice</div>
+      <div class="t2">One list in <code style="color:var(--lamp)">Setup.vue</code> &mdash; <code style="color:var(--lamp)">ASKED = ['owner','code','location','rooms','devices']</code> &mdash; supplies both the position and the total. Adding a sixth question cannot leave a screen saying &ldquo;of 5&rdquo;, because nothing says 5.</div>
+    </div>
+    <div class="note">
+      <div class="t1" style="margin-bottom: 5px;">Welcome carries no count, and that is the decision</div>
+      <div class="t2">It used to promise &ldquo;one or two questions&rdquo; and then ask five. A sentence that has to be rewritten every time <code style="color:var(--lamp)">ASKED</code> grows or shrinks will quietly go out of date, so it now says <i>&ldquo;a few minutes, and you can change any of it later&rdquo;</i> &mdash; true at any length. <b>The number of questions is free to change without touching a word of copy.</b></div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

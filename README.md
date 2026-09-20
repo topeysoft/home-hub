@@ -90,6 +90,10 @@ container before the Pi's first start so the two do not fight over Ring's token.
   log, websocket stream, first-run setup, device discovery. Talks only to HA's websocket and REST.
   Serves `app/dist`. `brain/Dockerfile` packages it with the panel built in.
 - `app/` — Vue PWA for the wall kiosk and phone (`npm run build` → served by the brain).
+- `design/` — the artboards: what a screen should look like, drawn at the size of the real display,
+  before it is code. One directory per area, each with a `canvas.json` placing every board and the
+  note that argues it. `tools/dev.sh design` opens the lot in a browser, on the canvas they were
+  drawn on. A UI change starts here — see [`AGENTS.md`](AGENTS.md#1-a-screen-is-drawn-before-it-is-built).
 - `matter-bridge/` — the house as Apple Home, Google Home and Alexa see it: a Matter bridge (matter.js on Node)
   with one endpoint per shared thing, so this house's lights and plugs become Matter devices in those apps. It
   decides nothing — `brain/hub/share.py` hands it the list, and the rules about what may leave the house have tests

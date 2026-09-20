@@ -68,6 +68,12 @@ jobs:
       - run: cd app && npm ci --no-audit --no-fund
       - name: lint
         run: cd app && npm run lint
+      # The tokens at the top of panel.css are only the source of the panel's look for as long as
+      # nothing writes their values out by hand. This is the rule that keeps that true -- and the
+      # one that catches a class name colliding with another component's, which neither the
+      # typecheck nor the browser below will ever report.
+      - name: the styles still spell the tokens by name
+        run: cd app && npm run lint:css
       - name: types
         run: cd app && npm run typecheck
       - name: tests

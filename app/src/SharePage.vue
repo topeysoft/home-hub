@@ -274,7 +274,7 @@ onUnmounted(() => clearInterval(poll))
   align-items: center;
   padding: 22px 24px;
   margin-bottom: 26px;
-  border-radius: 22px;
+  border-radius: var(--r-lg);
   background: var(--surface);
   border: 1px solid var(--edge);
 }
@@ -297,7 +297,7 @@ onUnmounted(() => clearInterval(poll))
   align-items: center;
   gap: 9px;
   padding: 9px 12px;
-  border-radius: 12px;
+  border-radius: var(--r-sm);
   background: var(--surface-hi);
   border: 1px solid var(--edge);
   font-size: 14px;
@@ -307,7 +307,7 @@ onUnmounted(() => clearInterval(poll))
   white-space: nowrap;
 }
 .share-app.holding {
-  border-color: rgba(116, 198, 157, 0.4);
+  border-color: rgba(var(--live-rgb), 0.4);
 }
 .share-live {
   width: 7px;
@@ -335,7 +335,7 @@ onUnmounted(() => clearInterval(poll))
   place-items: center;
   background: linear-gradient(150deg, #f0c887, #dfa55c);
   color: var(--lamp-ink);
-  box-shadow: 0 16px 38px -14px rgba(233, 184, 114, 0.45);
+  box-shadow: 0 16px 38px -14px rgba(var(--lamp-rgb), 0.45);
 }
 .share-word {
   font-size: 18px;
@@ -363,7 +363,7 @@ onUnmounted(() => clearInterval(poll))
     display: block;
     grid-area: in;
     height: 0;
-    border-top: 1.6px dashed rgba(233, 184, 114, 0.5);
+    border-top: 1.6px dashed rgba(var(--lamp-rgb), 0.5);
     align-self: center;
     /* `justify-items: center` on the grid above shrinks every child to its content, and a rule with
        no content is nothing at all: without this the dashes are 0px wide and simply never appear. */
@@ -371,7 +371,7 @@ onUnmounted(() => clearInterval(poll))
   }
   .share-wire.out {
     grid-area: out;
-    border-top-color: rgba(116, 198, 157, 0.5);
+    border-top-color: rgba(var(--live-rgb), 0.5);
   }
 }
 @media (max-width: 860px) {
