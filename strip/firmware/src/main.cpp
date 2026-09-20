@@ -68,6 +68,19 @@ static String mhost, muser, mpass;
 // living room running a test pattern for ever.
 static bool instrument = false;
 
+// WHAT THE INSTRUMENTS ARE LIT IN, AND WHY IT IS NOT THE PANEL'S AMBER.
+//
+// This was rgb(233,184,114) -- the panel's own --lamp, copied straight out of the palette -- and on
+// the first real board it came out WHITE. Which is exactly what AGENTS.md says will happen and why
+// it says never to drive an emitter with a screen token: a pastel is chosen to read as ink on a dark
+// field, and an LED gives the eye no reference to read it against, so the eye takes it as white.
+//
+// An indicator wants its off-channels near zero. This is the same amber the panel means, said in the
+// only way an emitter can say it. NOTE THIS DOES NOT APPLY TO THE HOUSEHOLD'S OWN LIGHT: that is
+// illuminating a room rather than signalling, and washing it out to a saturated amber would be the
+// product overriding what somebody asked for. Only the instruments use this.
+static constexpr uint8_t SIG_R = 255, SIG_G = 96, SIG_B = 0;
+
 static bool want_on = false;
 static uint8_t want_r = 233, want_g = 184, want_b = 114, want_bri = 200;
 
@@ -301,7 +314,7 @@ void setup() {
         // Lit while it waits, because being lit IS the identity check: the wall asks whether the
         // thing that just came on is theirs, and there is nothing to disambiguate -- it is two meters
         // of light and it is the only one lit (design/strip/Spine.dc.html).
-        strip.solid(233, 184, 114);
+        strip.solid(SIG_R, SIG_G, SIG_B);
         px::show(strip);
         // The code goes on the box and in the log. Our own hub reads it off the commissionable-node
         // advertisement instead, so a household with our panel still never types anything -- which is
@@ -338,7 +351,7 @@ void loop() {
         if (fill.at != was) {
             strip.clear();
             for (int i = 0; i < fill.at; i++)
-                strip.order.bytes(233, 184, 114, &strip.buf[i * strip.order.per_pixel()]);
+                strip.order.bytes(SIG_R, SIG_G, SIG_B, &strip.buf[i * strip.order.per_pixel()]);
             px::show(strip);
             char v[16];
             snprintf(v, sizeof(v), "%d", fill.at);
