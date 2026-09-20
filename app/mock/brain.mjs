@@ -26,7 +26,8 @@ const rooms = [
        was a warm white, so a magenta lamp and a 2700K one were the same picture and no test or
        screenshot could tell. color_mode is what says which it is -- rgb_color is reported in
        color_temp mode too, as the white point. See art.ts/bulbColor. */
-    dev('l1', 'Ceiling light', 'living', 'light', 'on', { brightness: 90, color_mode: 'hs', rgb_color: [226, 72, 184], supported_color_modes: ['color_temp', 'hs'] }, 'Philips Hue'),
+    dev('l1', 'Ceiling light', 'living', 'light', 'on', { brightness: 90, color_mode: 'hs', hs_color: [302, 66], rgb_color: [226, 72, 184],
+        color_pinned: true, supported_color_modes: ['color_temp', 'hs'] }, 'Philips Hue'),
     dev('l2', 'Floor lamp', 'living', 'light', 'on', { brightness: 60, supported_color_modes: ['brightness'] }),
     dev('l3', 'Reading lamp', 'living', 'light', 'off', { supported_color_modes: ['onoff'] }),
     dev('m1', 'Living room TV', 'living', 'media', 'playing', { media_title: 'The Bear', media_artist: 'Season 3, Episode 4', app_name: 'Disney+', volume_level: 0.35, entity_picture: '/x.jpg', media_position: 1421, media_duration: 3740 }),
@@ -59,7 +60,12 @@ const rooms = [
     dev('b4', 'Bedroom blinds', 'bedroom', 'cover', 'closed', { current_position: 0 }),
   ] },
   { id: 'office', name: 'Office', intent: 'occupied', set_by: null, hold_until: null, devices: [
-    dev('o1', 'Desk lamp', 'office', 'light', 'on', { brightness: 180, supported_color_modes: ['brightness'] }),
+    /* the other half of the color story: a bulb that CAN do color and has never been asked to, so it
+       is on Automatic -- which is where every light in a house out of the box is. Changed in place
+       rather than added: the wall boards were drawn at this house, and a device more or fewer moves
+       every card in the row. */
+    dev('o1', 'Desk lamp', 'office', 'light', 'on', { brightness: 180, color_mode: 'color_temp', color_temp_kelvin: 2700,
+        supported_color_modes: ['color_temp', 'hs'] }, 'Philips Hue'),
     dev('o2', 'Monitor light', 'office', 'light', 'unavailable', { supported_color_modes: ['brightness'] }),
     dev('o3', 'Office plug', 'office', 'switch', 'on', {}),
   ] },

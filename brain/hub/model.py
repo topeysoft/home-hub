@@ -176,6 +176,11 @@ class Home:
         self.devices: dict[str, Device] = {}
         self.intent: str = "unknown"     # the last home-wide intent (bedtime, everything off)
         self.extras: dict[str, dict] = {}  # what the brain knows about a device that HA does not (a fan timer's end); shown with its attrs
+        # Which lights somebody has actually chosen a color for. The house has to keep this because
+        # HA cannot: a bulb sitting at 2700K is indistinguishable from one a person deliberately set
+        # to 2700K, and the difference -- who decided -- is the whole of what Automatic means. Kept
+        # in settings beside `kinds` so a restore brings it back with the rest of the house.
+        self.color_pinned: set[str] = set()
         self.lamps: dict[str, str] = {}    # camera id -> the light built into the same unit (Ring floodlight and spotlight cams)
         self.eyes: dict[str, str] = {}     # light/switch/fan id -> the motion sensor built into the same unit (a Brilliant switch, a Ring pathlight): docs/units.md
         self.fixtures: dict[str, dict] = {}   # device id -> what a fan-with-a-light's parts know about each other ({"light": id} on the fan, {"fan": id} on the light, "leads" on both): docs/units.md
@@ -192,6 +197,7 @@ class Home:
         if eid in self.eyes: out["motion"] = self.eyes[eid]
         out.update(self.fixtures.get(eid, {}))
         if extra.get("fan_until", 0) > time.time(): out["fan_mode"] = "on"
+        if cap.split(".")[0] == "light" and eid in self.color_pinned: out["color_pinned"] = True
         return out
 
     @staticmethod
