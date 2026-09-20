@@ -127,7 +127,8 @@ suggestions. The name is then shown under *This hub* and is what a phone's app r
 
 **What the maker runs.** A domain, one small VPS with the relay on it, a wildcard record pointing at that VPS, and the
 registration service. Bytes only cross it while somebody is away, and camera video is the only heavy thing a house
-sends.
+sends. Who pays for it, and what that may never buy, is `docs/service.md`; running your own instead of the maker's is
+a supported path and always will be.
 
 **Finding the house.** The app tries the LAN first with a short timeout and the public name second, the way Plex does,
 so the relay is never in the path at home. At home with the internet down the name fails and `hub.local` answers. The
@@ -265,9 +266,12 @@ door under test was the `:9443` site as it is actually written.*
 
 ## Open decisions
 
-- **What stops a thousand names being registered?** A token per box written at flash time, or open registration with
-  rate limits. This is also the question of who pays for the VPS, and it is the one decision here that is about
-  selling a box rather than building one.
+- ~~**What stops a thousand names being registered?**~~ **Closed, 19 September 2026**, together with who pays for the
+  VPS: the relay is offered as an optional paid service, so a name costs something and scarcity needs no mechanism of
+  its own. The entitlement is checked **at the relay and never in the hub** — `frps` asks the registration service
+  when a hub dials in. Nothing in this document changes; step 4 gains entitlement state beside the public key, and the
+  box in step 3 is sized for a few thousand houses rather than one. The reasoning, the tiers and what may never be
+  sold are `docs/service.md`.
 - **The alias that covers home** — a private address in public DNS, or the hub answering for its own name on the LAN.
 - **Does the wall panel ever get `remote`?** Recommended no: it never leaves the house, so it never needs the door.
 

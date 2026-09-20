@@ -13,6 +13,10 @@ Not here yet, in the order they are needed:
   routes by SNI and forwards bytes it cannot read (checked, 12 September 2026 — `docs/away.md`,
   *What was verified*). Which provider is not decided, so nothing here assumes one; when it is, the
   host joins this directory and hands its address to `relay_ipv4`.
-- **The registration service.** Hands out a name and holds the public key a hub signs with. It does
+- **The registration service.** Hands out a name and holds the public key a hub signs with, and — since
+  19 September 2026 — the entitlement beside it, because the relay is offered as an optional paid
+  service and `frps` asks this service whether to carry a house at all. The check lives here and
+  never in the hub: a household that runs its own relay needs none of it, and every line of this
+  directory stays AGPL and self-hostable for exactly that reason. `docs/service.md`. It still does
   not touch DNS: the zone below has one record in it and never changes at runtime, which is the
   whole reason it fits in Terraform.

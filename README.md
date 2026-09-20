@@ -188,6 +188,10 @@ container before the Pi's first start so the two do not fight over Ring's token.
 - `docs/shipping.md` — Shipping it: why the unit to sell is a Compute Module 5 and not a Pi 5, the staged hardware path
   (Pi 5 kit, CM5 in a partner box, a custom carrier only later), radios on the network rather than USB, and the list of
   what is open on the Wi‑Fi or missing from the appliance layer before a stranger pays, with what can be done today.
+- `docs/service.md` — The relay as a service: why the maker-run relay is the one part of an AGPL project that can be
+  charged for honestly, what is sold (a box, a name, the bytes) and what may never be (any capability in the
+  software), why the entitlement is checked at the relay and never in the hub, and how billing closed the
+  name-squatting question for free.
 - `tools/ha_bootstrap.py` — the old manual bootstrap; the brain's setup screen does this now.
 
 ## Developing on the Mac (until the Pi arrives)
