@@ -25,6 +25,7 @@ from .assistant import Assistant, AssistantError
 from . import notes as notes_mod
 from .updates import Updates
 from .health import Health
+from .happened import Happened, Changes
 from .backup import Backup
 from .network import Network
 from .restart import Restart
@@ -121,6 +122,8 @@ class Hub:
         self.assistant = Assistant(self)               # writes drafts and explains from the log; never runs anything
         self.updates = Updates(self)                   # which build this is, whether a newer one exists, and the panel's ask
         self.health = Health(self)                     # what needs a look, as sentences
+        self.happened = Happened(self)                 # what the house did while nobody watched
+        self.changes = Changes(self)                   # who changed what, behind the code
         self.backup = Backup(self)                     # the house as one file, and back
         self.restart = Restart(self)                   # turning it off and on again, at the smallest rung that could help
         self.sounds = Sounds(self)                     # noise and rain on a speaker, looped here, with a sleep timer
@@ -1545,6 +1548,18 @@ async def geo_reverse(lat: float, lon: float):
 # ---------- events, images, actions ----------
 @app.get("/events")
 def get_events(limit: int = 100, subject: str | None = None): return hub.log.recent(limit, subject)
+
+
+# ---------- what happened ----------
+# The catch-up is the household's own house and needs no code, the same way the network page does not:
+# a family should be able to read their own situation without typing anything. Who changed what is the
+# one exception, and lock.needs_code() is where that is said.
+@app.get("/happened")
+def get_happened(): return hub.happened.page()
+
+
+@app.get("/happened/changes")
+def get_changes(limit: int = 200): return hub.changes.page(limit)
 
 
 @app.get("/devices/{device_id}/image")
