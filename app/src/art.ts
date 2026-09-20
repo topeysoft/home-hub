@@ -393,7 +393,15 @@ function thing(kind: Kind, s: ArtState, m: Materials): Art {
         /* the set-point mark. The number itself stays out of the drawing: the
            tile already says it in type you can read across a room. */
         pathOf('M96 26v7', 'none', { stroke: '#f1eee8', 'stroke-width': 2, 'stroke-linecap': 'round' }),
-        ...(arc ? [ell(96, 62, 43, 43, 'none', { stroke: arc, 'stroke-width': 3, opacity: 0.8, 'stroke-dasharray': '34 236', transform: 'rotate(140 96 62)' })] : []),
+        /* The one mark on this drawing that says which way the house is going, and
+           it is drawn to be seen now rather than to be found. It used to be 34 of
+           the ring's 270 units at 3 wide and .8 opaque -- a tick, which was the
+           right weight while this drawing was hidden on every screen and only ever
+           appeared on the generated sheet. The dial is the thermostat's card now,
+           so its state mark has to carry across a room like everything else on that
+           row: a little over a quarter of the ring, at the full color. The ellipse
+           and its radius are untouched, so the crop the tests hold it to is too. */
+        ...(arc ? [ell(96, 62, 43, 43, 'none', { stroke: arc, 'stroke-width': 4, opacity: 0.95, 'stroke-dasharray': '78 192', transform: 'rotate(140 96 62)' })] : []),
       ],
     }
   }

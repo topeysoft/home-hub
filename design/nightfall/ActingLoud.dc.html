@@ -17,16 +17,13 @@
     .gl::before { content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
       background:linear-gradient(112deg, transparent 26%, rgba(255,255,255,.14) 45%, rgba(255,255,255,.02) 56%, transparent 64%); }
     .cap { font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-3); line-height:1.7; }
-    .tag { display:inline-flex; align-items:center; height:26px; padding:0 12px; border-radius:999px;
-      font-size:10px; font-weight:700; letter-spacing:.13em; text-transform:uppercase;
-      background:rgba(255,255,255,.16); color:rgba(255,255,255,.88); }
   </style>
 </helmet>
 
-<!-- LOUD ENOUGH? -- three ways to put the thermostat's action where a room can read it,
-     each at all three states, at the size the Wall row actually draws the card.
-     The colors are panel.css's own --tint values throughout: cooling 122,176,232
-     (oklch H 250.2) and heating 233,150,90 (H 55.3). Only where they are PUT moves. -->
+<!-- CAN YOU READ IT FROM THE SOFA? Three ways to put the thermostat's action where
+     a room can read it, each at all three states, on the card ClimateTile actually
+     renders -- no dial, because panel.css hides art.ts's in every layout. The colors
+     are panel.css's own --tint values throughout; only where they are PUT moves. -->
 
 <div style="position:relative;width:1120px;height:1160px;overflow:hidden;background:#141527;color:var(--ink);font-size:17px;">
   <div style="position:absolute;inset:0;background:linear-gradient(rgb(33,38,51) 0%, rgb(45,47,69) 44%, rgb(98,69,65) 84%, rgb(63,44,42) 100%);"></div>
@@ -43,129 +40,141 @@
        <div style="font-size:16px;font-weight:600;letter-spacing:-.01em;">C — The rail</div>
        <div style="font-size:13px;color:var(--ink-3);margin-top:3px;">One edge, solid.</div>
      </div><div class="cap" style="position:absolute;left:40px;top:256px;width:170px;">hvac_action<br><span style="color:var(--ink-2);font-size:14px;letter-spacing:0;text-transform:none;">cooling</span></div><div class="cap" style="position:absolute;left:40px;top:590px;width:170px;">hvac_action<br><span style="color:var(--ink-2);font-size:14px;letter-spacing:0;text-transform:none;">idle</span></div><div class="cap" style="position:absolute;left:40px;top:924px;width:170px;">hvac_action<br><span style="color:var(--ink-2);font-size:14px;letter-spacing:0;text-transform:none;">heating</span></div><div style="position:absolute;left:230px;top:128px;"><div class="sf" style="position:relative;width:238px;height:286px;border-radius:28px;overflow:hidden;background:linear-gradient(155deg, oklch(.592 .085 250), oklch(.537 .085 256));">
-    <svg width="168" height="168" viewBox="0 0 150 150" style="position:absolute;left:35px;top:18px;">
-      <defs>
-        <linearGradient id="lbcooling4ffffff" x1="0" y1="0" x2=".35" y2="1"><stop offset="0" stop-color="#fdf7fb"/><stop offset="52%" stop-color="#cdbcd2"/><stop offset="100%" stop-color="#8e7d98"/></linearGradient>
-        <radialGradient id="lfcooling4ffffff" cx="38%" cy="30%" r="80%"><stop offset="0" stop-color="#3b3550"/><stop offset="72%" stop-color="#1d1930"/><stop offset="100%" stop-color="#100e1e"/></radialGradient>
-      </defs>
-      <ellipse cx="75" cy="136" rx="44" ry="9" fill="rgba(20,18,34,.28)"/>
-      <circle cx="75" cy="70" r="62" fill="url(#lbcooling4ffffff)"/>
-      <circle cx="75" cy="70" r="53" fill="url(#lfcooling4ffffff)"/>
-      <circle cx="75" cy="70" r="53" fill="none" stroke="rgba(255,255,255,.16)" stroke-width="1"/>
-      <circle cx="75" cy="70" r="58" fill="none" stroke="#7fb4e8" stroke-width="4" stroke-linecap="round" stroke-dasharray="106 258" transform="rotate(128 75 70)" opacity=".95"/>
-      <path d="M75 20v10" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round" opacity=".9"/>
-      <text x="75" y="70" text-anchor="middle" dominant-baseline="central" fill="#ffffff" font-family="Plus Jakarta Sans, system-ui, sans-serif" font-size="44" font-weight="300" letter-spacing="-2">71</text>
-    </svg><div class="tag" style="position:absolute;left:14px;bottom:14px;background:rgba(122,176,232,.9);color:#0d1a26;">Cooling</div></div></div><div style="position:absolute;left:528px;top:128px;"><div class="gl" style="position:relative;width:238px;height:286px;border-radius:28px;overflow:hidden;background:linear-gradient(148deg, oklch(.407 .014 280 / .34), oklch(.337 .012 280 / .12) 46%, oklch(.367 .014 280 / .24));">
-    <svg width="168" height="168" viewBox="0 0 150 150" style="position:absolute;left:35px;top:18px;">
-      <defs>
-        <linearGradient id="lbcooling139ecbf5" x1="0" y1="0" x2=".35" y2="1"><stop offset="0" stop-color="#fdf7fb"/><stop offset="52%" stop-color="#cdbcd2"/><stop offset="100%" stop-color="#8e7d98"/></linearGradient>
-        <radialGradient id="lfcooling139ecbf5" cx="38%" cy="30%" r="80%"><stop offset="0" stop-color="#3b3550"/><stop offset="72%" stop-color="#1d1930"/><stop offset="100%" stop-color="#100e1e"/></radialGradient>
-      </defs>
-      <ellipse cx="75" cy="136" rx="44" ry="9" fill="rgba(20,18,34,.28)"/>
-      <circle cx="75" cy="70" r="62" fill="url(#lbcooling139ecbf5)"/>
-      <circle cx="75" cy="70" r="53" fill="url(#lfcooling139ecbf5)"/>
-      <circle cx="75" cy="70" r="53" fill="none" stroke="rgba(255,255,255,.16)" stroke-width="1"/>
-      <circle cx="75" cy="70" r="62.5" fill="none" stroke="#7fb4e8" stroke-width="13" stroke-linecap="round" stroke-dasharray="150 260" transform="rotate(128 75 70)" opacity=".95"/>
-      <path d="M75 20v10" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round" opacity=".9"/>
-      <text x="75" y="70" text-anchor="middle" dominant-baseline="central" fill="#9ecbf5" font-family="Plus Jakarta Sans, system-ui, sans-serif" font-size="44" font-weight="300" letter-spacing="-2">71</text>
-    </svg><div class="tag" style="position:absolute;left:14px;bottom:14px;background:rgba(122,176,232,.9);color:#0d1a26;">Cooling</div></div></div><div style="position:absolute;left:826px;top:128px;"><div class="gl" style="position:relative;width:238px;height:286px;border-radius:28px;overflow:hidden;background:linear-gradient(148deg, oklch(.407 .014 280 / .34), oklch(.337 .012 280 / .12) 46%, oklch(.367 .014 280 / .24));">
-      <div style="position:absolute;left:0;top:0;bottom:0;width:20px;background:rgb(122,176,232);"></div>
-      <div style="position:absolute;left:20px;right:0;top:0;bottom:0;">
-    <svg width="168" height="168" viewBox="0 0 150 150" style="position:absolute;left:25px;top:18px;">
-      <defs>
-        <linearGradient id="lbcooling4ffffff" x1="0" y1="0" x2=".35" y2="1"><stop offset="0" stop-color="#fdf7fb"/><stop offset="52%" stop-color="#cdbcd2"/><stop offset="100%" stop-color="#8e7d98"/></linearGradient>
-        <radialGradient id="lfcooling4ffffff" cx="38%" cy="30%" r="80%"><stop offset="0" stop-color="#3b3550"/><stop offset="72%" stop-color="#1d1930"/><stop offset="100%" stop-color="#100e1e"/></radialGradient>
-      </defs>
-      <ellipse cx="75" cy="136" rx="44" ry="9" fill="rgba(20,18,34,.28)"/>
-      <circle cx="75" cy="70" r="62" fill="url(#lbcooling4ffffff)"/>
-      <circle cx="75" cy="70" r="53" fill="url(#lfcooling4ffffff)"/>
-      <circle cx="75" cy="70" r="53" fill="none" stroke="rgba(255,255,255,.16)" stroke-width="1"/>
-      <circle cx="75" cy="70" r="58" fill="none" stroke="#7fb4e8" stroke-width="4" stroke-linecap="round" stroke-dasharray="106 258" transform="rotate(128 75 70)" opacity=".95"/>
-      <path d="M75 20v10" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round" opacity=".9"/>
-      <text x="75" y="70" text-anchor="middle" dominant-baseline="central" fill="#ffffff" font-family="Plus Jakarta Sans, system-ui, sans-serif" font-size="44" font-weight="300" letter-spacing="-2">71</text>
-    </svg></div><div class="tag" style="position:absolute;left:14px;bottom:14px;background:rgba(122,176,232,.9);color:#0d1a26;">Cooling</div></div></div><div style="position:absolute;left:230px;top:462px;"><div class="gl" style="position:relative;width:238px;height:286px;border-radius:28px;overflow:hidden;background:linear-gradient(148deg, oklch(.407 .014 280 / .34), oklch(.337 .012 280 / .12) 46%, oklch(.367 .014 280 / .24));">
-    <svg width="168" height="168" viewBox="0 0 150 150" style="position:absolute;left:35px;top:18px;">
-      <defs>
-        <linearGradient id="lbidle4ffffff" x1="0" y1="0" x2=".35" y2="1"><stop offset="0" stop-color="#fdf7fb"/><stop offset="52%" stop-color="#cdbcd2"/><stop offset="100%" stop-color="#8e7d98"/></linearGradient>
-        <radialGradient id="lfidle4ffffff" cx="38%" cy="30%" r="80%"><stop offset="0" stop-color="#3b3550"/><stop offset="72%" stop-color="#1d1930"/><stop offset="100%" stop-color="#100e1e"/></radialGradient>
-      </defs>
-      <ellipse cx="75" cy="136" rx="44" ry="9" fill="rgba(20,18,34,.28)"/>
-      <circle cx="75" cy="70" r="62" fill="url(#lbidle4ffffff)"/>
-      <circle cx="75" cy="70" r="53" fill="url(#lfidle4ffffff)"/>
-      <circle cx="75" cy="70" r="53" fill="none" stroke="rgba(255,255,255,.16)" stroke-width="1"/>
-      
-      <path d="M75 20v10" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round" opacity=".9"/>
-      <text x="75" y="70" text-anchor="middle" dominant-baseline="central" fill="#ffffff" font-family="Plus Jakarta Sans, system-ui, sans-serif" font-size="44" font-weight="300" letter-spacing="-2">71</text>
-    </svg><div class="tag" style="position:absolute;left:14px;bottom:14px;">Holding</div></div></div><div style="position:absolute;left:528px;top:462px;"><div class="gl" style="position:relative;width:238px;height:286px;border-radius:28px;overflow:hidden;background:linear-gradient(148deg, oklch(.407 .014 280 / .34), oklch(.337 .012 280 / .12) 46%, oklch(.367 .014 280 / .24));">
-    <svg width="168" height="168" viewBox="0 0 150 150" style="position:absolute;left:35px;top:18px;">
-      <defs>
-        <linearGradient id="lbidle13f1eee8" x1="0" y1="0" x2=".35" y2="1"><stop offset="0" stop-color="#fdf7fb"/><stop offset="52%" stop-color="#cdbcd2"/><stop offset="100%" stop-color="#8e7d98"/></linearGradient>
-        <radialGradient id="lfidle13f1eee8" cx="38%" cy="30%" r="80%"><stop offset="0" stop-color="#3b3550"/><stop offset="72%" stop-color="#1d1930"/><stop offset="100%" stop-color="#100e1e"/></radialGradient>
-      </defs>
-      <ellipse cx="75" cy="136" rx="44" ry="9" fill="rgba(20,18,34,.28)"/>
-      <circle cx="75" cy="70" r="62" fill="url(#lbidle13f1eee8)"/>
-      <circle cx="75" cy="70" r="53" fill="url(#lfidle13f1eee8)"/>
-      <circle cx="75" cy="70" r="53" fill="none" stroke="rgba(255,255,255,.16)" stroke-width="1"/>
-      
-      <path d="M75 20v10" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round" opacity=".9"/>
-      <text x="75" y="70" text-anchor="middle" dominant-baseline="central" fill="#f1eee8" font-family="Plus Jakarta Sans, system-ui, sans-serif" font-size="44" font-weight="300" letter-spacing="-2">71</text>
-    </svg><div class="tag" style="position:absolute;left:14px;bottom:14px;">Holding</div></div></div><div style="position:absolute;left:826px;top:462px;"><div class="gl" style="position:relative;width:238px;height:286px;border-radius:28px;overflow:hidden;background:linear-gradient(148deg, oklch(.407 .014 280 / .34), oklch(.337 .012 280 / .12) 46%, oklch(.367 .014 280 / .24));">
-      
-      <div style="position:absolute;left:0px;right:0;top:0;bottom:0;">
-    <svg width="168" height="168" viewBox="0 0 150 150" style="position:absolute;left:35px;top:18px;">
-      <defs>
-        <linearGradient id="lbidle4ffffff" x1="0" y1="0" x2=".35" y2="1"><stop offset="0" stop-color="#fdf7fb"/><stop offset="52%" stop-color="#cdbcd2"/><stop offset="100%" stop-color="#8e7d98"/></linearGradient>
-        <radialGradient id="lfidle4ffffff" cx="38%" cy="30%" r="80%"><stop offset="0" stop-color="#3b3550"/><stop offset="72%" stop-color="#1d1930"/><stop offset="100%" stop-color="#100e1e"/></radialGradient>
-      </defs>
-      <ellipse cx="75" cy="136" rx="44" ry="9" fill="rgba(20,18,34,.28)"/>
-      <circle cx="75" cy="70" r="62" fill="url(#lbidle4ffffff)"/>
-      <circle cx="75" cy="70" r="53" fill="url(#lfidle4ffffff)"/>
-      <circle cx="75" cy="70" r="53" fill="none" stroke="rgba(255,255,255,.16)" stroke-width="1"/>
-      
-      <path d="M75 20v10" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round" opacity=".9"/>
-      <text x="75" y="70" text-anchor="middle" dominant-baseline="central" fill="#ffffff" font-family="Plus Jakarta Sans, system-ui, sans-serif" font-size="44" font-weight="300" letter-spacing="-2">71</text>
-    </svg></div><div class="tag" style="position:absolute;left:14px;bottom:14px;">Holding</div></div></div><div style="position:absolute;left:230px;top:796px;"><div class="sf" style="position:relative;width:238px;height:286px;border-radius:28px;overflow:hidden;background:linear-gradient(155deg, oklch(.592 .085 55), oklch(.537 .085 61));">
-    <svg width="168" height="168" viewBox="0 0 150 150" style="position:absolute;left:35px;top:18px;">
-      <defs>
-        <linearGradient id="lbheating4ffffff" x1="0" y1="0" x2=".35" y2="1"><stop offset="0" stop-color="#fdf7fb"/><stop offset="52%" stop-color="#cdbcd2"/><stop offset="100%" stop-color="#8e7d98"/></linearGradient>
-        <radialGradient id="lfheating4ffffff" cx="38%" cy="30%" r="80%"><stop offset="0" stop-color="#3b3550"/><stop offset="72%" stop-color="#1d1930"/><stop offset="100%" stop-color="#100e1e"/></radialGradient>
-      </defs>
-      <ellipse cx="75" cy="136" rx="44" ry="9" fill="rgba(20,18,34,.28)"/>
-      <circle cx="75" cy="70" r="62" fill="url(#lbheating4ffffff)"/>
-      <circle cx="75" cy="70" r="53" fill="url(#lfheating4ffffff)"/>
-      <circle cx="75" cy="70" r="53" fill="none" stroke="rgba(255,255,255,.16)" stroke-width="1"/>
-      <circle cx="75" cy="70" r="58" fill="none" stroke="#e9965a" stroke-width="4" stroke-linecap="round" stroke-dasharray="106 258" transform="rotate(128 75 70)" opacity=".95"/>
-      <path d="M75 20v10" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round" opacity=".9"/>
-      <text x="75" y="70" text-anchor="middle" dominant-baseline="central" fill="#ffffff" font-family="Plus Jakarta Sans, system-ui, sans-serif" font-size="44" font-weight="300" letter-spacing="-2">71</text>
-    </svg><div class="tag" style="position:absolute;left:14px;bottom:14px;background:rgba(233,150,90,.9);color:#0d1a26;">Heating</div></div></div><div style="position:absolute;left:528px;top:796px;"><div class="gl" style="position:relative;width:238px;height:286px;border-radius:28px;overflow:hidden;background:linear-gradient(148deg, oklch(.407 .014 280 / .34), oklch(.337 .012 280 / .12) 46%, oklch(.367 .014 280 / .24));">
-    <svg width="168" height="168" viewBox="0 0 150 150" style="position:absolute;left:35px;top:18px;">
-      <defs>
-        <linearGradient id="lbheating13f5b784" x1="0" y1="0" x2=".35" y2="1"><stop offset="0" stop-color="#fdf7fb"/><stop offset="52%" stop-color="#cdbcd2"/><stop offset="100%" stop-color="#8e7d98"/></linearGradient>
-        <radialGradient id="lfheating13f5b784" cx="38%" cy="30%" r="80%"><stop offset="0" stop-color="#3b3550"/><stop offset="72%" stop-color="#1d1930"/><stop offset="100%" stop-color="#100e1e"/></radialGradient>
-      </defs>
-      <ellipse cx="75" cy="136" rx="44" ry="9" fill="rgba(20,18,34,.28)"/>
-      <circle cx="75" cy="70" r="62" fill="url(#lbheating13f5b784)"/>
-      <circle cx="75" cy="70" r="53" fill="url(#lfheating13f5b784)"/>
-      <circle cx="75" cy="70" r="53" fill="none" stroke="rgba(255,255,255,.16)" stroke-width="1"/>
-      <circle cx="75" cy="70" r="62.5" fill="none" stroke="#e9965a" stroke-width="13" stroke-linecap="round" stroke-dasharray="150 260" transform="rotate(128 75 70)" opacity=".95"/>
-      <path d="M75 20v10" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round" opacity=".9"/>
-      <text x="75" y="70" text-anchor="middle" dominant-baseline="central" fill="#f5b784" font-family="Plus Jakarta Sans, system-ui, sans-serif" font-size="44" font-weight="300" letter-spacing="-2">71</text>
-    </svg><div class="tag" style="position:absolute;left:14px;bottom:14px;background:rgba(233,150,90,.9);color:#0d1a26;">Heating</div></div></div><div style="position:absolute;left:826px;top:796px;"><div class="gl" style="position:relative;width:238px;height:286px;border-radius:28px;overflow:hidden;background:linear-gradient(148deg, oklch(.407 .014 280 / .34), oklch(.337 .012 280 / .12) 46%, oklch(.367 .014 280 / .24));">
-      <div style="position:absolute;left:0;top:0;bottom:0;width:20px;background:rgb(233,150,90);"></div>
-      <div style="position:absolute;left:20px;right:0;top:0;bottom:0;">
-    <svg width="168" height="168" viewBox="0 0 150 150" style="position:absolute;left:25px;top:18px;">
-      <defs>
-        <linearGradient id="lbheating4ffffff" x1="0" y1="0" x2=".35" y2="1"><stop offset="0" stop-color="#fdf7fb"/><stop offset="52%" stop-color="#cdbcd2"/><stop offset="100%" stop-color="#8e7d98"/></linearGradient>
-        <radialGradient id="lfheating4ffffff" cx="38%" cy="30%" r="80%"><stop offset="0" stop-color="#3b3550"/><stop offset="72%" stop-color="#1d1930"/><stop offset="100%" stop-color="#100e1e"/></radialGradient>
-      </defs>
-      <ellipse cx="75" cy="136" rx="44" ry="9" fill="rgba(20,18,34,.28)"/>
-      <circle cx="75" cy="70" r="62" fill="url(#lbheating4ffffff)"/>
-      <circle cx="75" cy="70" r="53" fill="url(#lfheating4ffffff)"/>
-      <circle cx="75" cy="70" r="53" fill="none" stroke="rgba(255,255,255,.16)" stroke-width="1"/>
-      <circle cx="75" cy="70" r="58" fill="none" stroke="#e9965a" stroke-width="4" stroke-linecap="round" stroke-dasharray="106 258" transform="rotate(128 75 70)" opacity=".95"/>
-      <path d="M75 20v10" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round" opacity=".9"/>
-      <text x="75" y="70" text-anchor="middle" dominant-baseline="central" fill="#ffffff" font-family="Plus Jakarta Sans, system-ui, sans-serif" font-size="44" font-weight="300" letter-spacing="-2">71</text>
-    </svg></div><div class="tag" style="position:absolute;left:14px;bottom:14px;background:rgba(233,150,90,.9);color:#0d1a26;">Heating</div></div></div>
+    
+    <div style="position:absolute;left:18px;top:18px;right:18px;display:flex;align-items:center;gap:12px;">
+      <span style="width:38px;height:38px;border-radius:12px;display:grid;place-items:center;
+        background:rgba(255,255,255,.93);color:#16202c;">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.6 19.3 7.8v8.4L12 20.4 4.7 16.2V7.8z"/><circle cx="12" cy="12" r="3"/></svg></span>
+      <span style="font-size:19px;font-weight:500;">Thermostat</span>
+    </div>
+    <div style="position:absolute;left:14px;right:14px;top:92px;display:flex;align-items:center;justify-content:space-between;">
+      <span style="width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.1);display:grid;place-items:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg></span>
+      <span style="font-size:54px;line-height:1;letter-spacing:-.025em;color:inherit;">71<span style="font-size:21px;vertical-align:super;">°F</span></span>
+      <span style="width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.1);display:grid;place-items:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>
+    </div>
+    <div style="position:absolute;left:18px;right:18px;top:162px;font-size:13.5px;color:var(--ink-2);">
+      Currently 74°F · Cooling · 48% humidity
+    </div></div></div><div style="position:absolute;left:528px;top:128px;"><div class="gl" style="position:relative;width:238px;height:286px;border-radius:28px;overflow:hidden;background:linear-gradient(148deg, oklch(.407 .014 280 / .34), oklch(.337 .012 280 / .12) 46%, oklch(.367 .014 280 / .24));">
+    
+    <div style="position:absolute;left:18px;top:18px;right:18px;display:flex;align-items:center;gap:12px;">
+      <span style="width:38px;height:38px;border-radius:12px;display:grid;place-items:center;
+        background:rgba(255,255,255,.93);color:#16202c;">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.6 19.3 7.8v8.4L12 20.4 4.7 16.2V7.8z"/><circle cx="12" cy="12" r="3"/></svg></span>
+      <span style="font-size:19px;font-weight:500;">Thermostat</span>
+    </div>
+    <div style="position:absolute;left:14px;right:14px;top:92px;display:flex;align-items:center;justify-content:space-between;">
+      <span style="width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.1);display:grid;place-items:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg></span>
+      <span style="font-size:72px;line-height:1;letter-spacing:-.025em;color:rgb(122,176,232);">71<span style="font-size:21px;vertical-align:super;">°F</span></span>
+      <span style="width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.1);display:grid;place-items:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>
+    </div>
+    <div style="position:absolute;left:18px;right:18px;top:162px;font-size:13.5px;color:var(--ink-2);">
+      Currently 74°F · Cooling · 48% humidity
+    </div></div></div><div style="position:absolute;left:826px;top:128px;"><div class="gl" style="position:relative;width:238px;height:286px;border-radius:28px;overflow:hidden;background:linear-gradient(148deg, oklch(.407 .014 280 / .34), oklch(.337 .012 280 / .12) 46%, oklch(.367 .014 280 / .24));">
+    <div style="position:absolute;left:0;top:0;bottom:0;width:20px;background:rgb(122,176,232);"></div>
+    <div style="position:absolute;left:32px;top:18px;right:18px;display:flex;align-items:center;gap:12px;">
+      <span style="width:38px;height:38px;border-radius:12px;display:grid;place-items:center;
+        background:rgba(255,255,255,.93);color:#16202c;">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.6 19.3 7.8v8.4L12 20.4 4.7 16.2V7.8z"/><circle cx="12" cy="12" r="3"/></svg></span>
+      <span style="font-size:19px;font-weight:500;">Thermostat</span>
+    </div>
+    <div style="position:absolute;left:28px;right:14px;top:92px;display:flex;align-items:center;justify-content:space-between;">
+      <span style="width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.1);display:grid;place-items:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg></span>
+      <span style="font-size:54px;line-height:1;letter-spacing:-.025em;color:inherit;">71<span style="font-size:21px;vertical-align:super;">°F</span></span>
+      <span style="width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.1);display:grid;place-items:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>
+    </div>
+    <div style="position:absolute;left:32px;right:18px;top:162px;font-size:13.5px;color:var(--ink-2);">
+      Currently 74°F · Cooling · 48% humidity
+    </div></div></div><div style="position:absolute;left:230px;top:462px;"><div class="gl" style="position:relative;width:238px;height:286px;border-radius:28px;overflow:hidden;background:linear-gradient(148deg, oklch(.407 .014 280 / .34), oklch(.337 .012 280 / .12) 46%, oklch(.367 .014 280 / .24));">
+    
+    <div style="position:absolute;left:18px;top:18px;right:18px;display:flex;align-items:center;gap:12px;">
+      <span style="width:38px;height:38px;border-radius:12px;display:grid;place-items:center;
+        background:rgba(255,255,255,.08);color:var(--ink-2);">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.6 19.3 7.8v8.4L12 20.4 4.7 16.2V7.8z"/><circle cx="12" cy="12" r="3"/></svg></span>
+      <span style="font-size:19px;font-weight:500;">Thermostat</span>
+    </div>
+    <div style="position:absolute;left:14px;right:14px;top:92px;display:flex;align-items:center;justify-content:space-between;">
+      <span style="width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.1);display:grid;place-items:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg></span>
+      <span style="font-size:54px;line-height:1;letter-spacing:-.025em;color:inherit;">71<span style="font-size:21px;vertical-align:super;">°F</span></span>
+      <span style="width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.1);display:grid;place-items:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>
+    </div>
+    <div style="position:absolute;left:18px;right:18px;top:162px;font-size:13.5px;color:var(--ink-2);">
+      Currently 74°F · Holding · 48% humidity
+    </div></div></div><div style="position:absolute;left:528px;top:462px;"><div class="gl" style="position:relative;width:238px;height:286px;border-radius:28px;overflow:hidden;background:linear-gradient(148deg, oklch(.407 .014 280 / .34), oklch(.337 .012 280 / .12) 46%, oklch(.367 .014 280 / .24));">
+    
+    <div style="position:absolute;left:18px;top:18px;right:18px;display:flex;align-items:center;gap:12px;">
+      <span style="width:38px;height:38px;border-radius:12px;display:grid;place-items:center;
+        background:rgba(255,255,255,.08);color:var(--ink-2);">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.6 19.3 7.8v8.4L12 20.4 4.7 16.2V7.8z"/><circle cx="12" cy="12" r="3"/></svg></span>
+      <span style="font-size:19px;font-weight:500;">Thermostat</span>
+    </div>
+    <div style="position:absolute;left:14px;right:14px;top:92px;display:flex;align-items:center;justify-content:space-between;">
+      <span style="width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.1);display:grid;place-items:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg></span>
+      <span style="font-size:72px;line-height:1;letter-spacing:-.025em;color:inherit;">71<span style="font-size:21px;vertical-align:super;">°F</span></span>
+      <span style="width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.1);display:grid;place-items:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>
+    </div>
+    <div style="position:absolute;left:18px;right:18px;top:162px;font-size:13.5px;color:var(--ink-2);">
+      Currently 74°F · Holding · 48% humidity
+    </div></div></div><div style="position:absolute;left:826px;top:462px;"><div class="gl" style="position:relative;width:238px;height:286px;border-radius:28px;overflow:hidden;background:linear-gradient(148deg, oklch(.407 .014 280 / .34), oklch(.337 .012 280 / .12) 46%, oklch(.367 .014 280 / .24));">
+    
+    <div style="position:absolute;left:18px;top:18px;right:18px;display:flex;align-items:center;gap:12px;">
+      <span style="width:38px;height:38px;border-radius:12px;display:grid;place-items:center;
+        background:rgba(255,255,255,.08);color:var(--ink-2);">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.6 19.3 7.8v8.4L12 20.4 4.7 16.2V7.8z"/><circle cx="12" cy="12" r="3"/></svg></span>
+      <span style="font-size:19px;font-weight:500;">Thermostat</span>
+    </div>
+    <div style="position:absolute;left:14px;right:14px;top:92px;display:flex;align-items:center;justify-content:space-between;">
+      <span style="width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.1);display:grid;place-items:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg></span>
+      <span style="font-size:54px;line-height:1;letter-spacing:-.025em;color:inherit;">71<span style="font-size:21px;vertical-align:super;">°F</span></span>
+      <span style="width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.1);display:grid;place-items:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>
+    </div>
+    <div style="position:absolute;left:18px;right:18px;top:162px;font-size:13.5px;color:var(--ink-2);">
+      Currently 74°F · Holding · 48% humidity
+    </div></div></div><div style="position:absolute;left:230px;top:796px;"><div class="sf" style="position:relative;width:238px;height:286px;border-radius:28px;overflow:hidden;background:linear-gradient(155deg, oklch(.592 .085 55), oklch(.537 .085 61));">
+    
+    <div style="position:absolute;left:18px;top:18px;right:18px;display:flex;align-items:center;gap:12px;">
+      <span style="width:38px;height:38px;border-radius:12px;display:grid;place-items:center;
+        background:rgba(255,255,255,.93);color:#16202c;">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.6 19.3 7.8v8.4L12 20.4 4.7 16.2V7.8z"/><circle cx="12" cy="12" r="3"/></svg></span>
+      <span style="font-size:19px;font-weight:500;">Thermostat</span>
+    </div>
+    <div style="position:absolute;left:14px;right:14px;top:92px;display:flex;align-items:center;justify-content:space-between;">
+      <span style="width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.1);display:grid;place-items:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg></span>
+      <span style="font-size:54px;line-height:1;letter-spacing:-.025em;color:inherit;">71<span style="font-size:21px;vertical-align:super;">°F</span></span>
+      <span style="width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.1);display:grid;place-items:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>
+    </div>
+    <div style="position:absolute;left:18px;right:18px;top:162px;font-size:13.5px;color:var(--ink-2);">
+      Currently 74°F · Heating · 48% humidity
+    </div></div></div><div style="position:absolute;left:528px;top:796px;"><div class="gl" style="position:relative;width:238px;height:286px;border-radius:28px;overflow:hidden;background:linear-gradient(148deg, oklch(.407 .014 280 / .34), oklch(.337 .012 280 / .12) 46%, oklch(.367 .014 280 / .24));">
+    
+    <div style="position:absolute;left:18px;top:18px;right:18px;display:flex;align-items:center;gap:12px;">
+      <span style="width:38px;height:38px;border-radius:12px;display:grid;place-items:center;
+        background:rgba(255,255,255,.93);color:#16202c;">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.6 19.3 7.8v8.4L12 20.4 4.7 16.2V7.8z"/><circle cx="12" cy="12" r="3"/></svg></span>
+      <span style="font-size:19px;font-weight:500;">Thermostat</span>
+    </div>
+    <div style="position:absolute;left:14px;right:14px;top:92px;display:flex;align-items:center;justify-content:space-between;">
+      <span style="width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.1);display:grid;place-items:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg></span>
+      <span style="font-size:72px;line-height:1;letter-spacing:-.025em;color:rgb(233,150,90);">71<span style="font-size:21px;vertical-align:super;">°F</span></span>
+      <span style="width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.1);display:grid;place-items:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>
+    </div>
+    <div style="position:absolute;left:18px;right:18px;top:162px;font-size:13.5px;color:var(--ink-2);">
+      Currently 74°F · Heating · 48% humidity
+    </div></div></div><div style="position:absolute;left:826px;top:796px;"><div class="gl" style="position:relative;width:238px;height:286px;border-radius:28px;overflow:hidden;background:linear-gradient(148deg, oklch(.407 .014 280 / .34), oklch(.337 .012 280 / .12) 46%, oklch(.367 .014 280 / .24));">
+    <div style="position:absolute;left:0;top:0;bottom:0;width:20px;background:rgb(233,150,90);"></div>
+    <div style="position:absolute;left:32px;top:18px;right:18px;display:flex;align-items:center;gap:12px;">
+      <span style="width:38px;height:38px;border-radius:12px;display:grid;place-items:center;
+        background:rgba(255,255,255,.93);color:#16202c;">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.6 19.3 7.8v8.4L12 20.4 4.7 16.2V7.8z"/><circle cx="12" cy="12" r="3"/></svg></span>
+      <span style="font-size:19px;font-weight:500;">Thermostat</span>
+    </div>
+    <div style="position:absolute;left:28px;right:14px;top:92px;display:flex;align-items:center;justify-content:space-between;">
+      <span style="width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.1);display:grid;place-items:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg></span>
+      <span style="font-size:54px;line-height:1;letter-spacing:-.025em;color:inherit;">71<span style="font-size:21px;vertical-align:super;">°F</span></span>
+      <span style="width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.1);display:grid;place-items:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>
+    </div>
+    <div style="position:absolute;left:32px;right:18px;top:162px;font-size:13.5px;color:var(--ink-2);">
+      Currently 74°F · Heating · 48% humidity
+    </div></div></div>
 </div>
 </x-dc>
 </body></html>

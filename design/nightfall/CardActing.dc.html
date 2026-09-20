@@ -160,21 +160,24 @@
 
   <!-- the thermostat -->
   <div class="sf" style="position:absolute;left:814px;top:442px;width:238px;height:286px;border-radius:28px;overflow:hidden;background:linear-gradient(155deg, oklch(.592 .085 250), oklch(.537 .085 256));">
-    
-    <svg width="180" height="180" viewBox="0 0 150 150" style="position:absolute;left:29px;top:14px;">
-      <defs>
-        <linearGradient id="bzActing" x1="0" y1="0" x2=".35" y2="1"><stop offset="0" stop-color="#fdf7fb"/><stop offset="52%" stop-color="#cdbcd2"/><stop offset="100%" stop-color="#8e7d98"/></linearGradient>
-        <radialGradient id="fcActing" cx="38%" cy="30%" r="80%"><stop offset="0" stop-color="#3b3550"/><stop offset="72%" stop-color="#1d1930"/><stop offset="100%" stop-color="#100e1e"/></radialGradient>
-      </defs>
-      <ellipse cx="75" cy="136" rx="44" ry="9" fill="rgba(20,18,34,.28)"/>
-      <circle cx="75" cy="70" r="62" fill="url(#bzActing)"/>
-      <circle cx="75" cy="70" r="53" fill="url(#fcActing)"/>
-      <circle cx="75" cy="70" r="53" fill="none" stroke="rgba(255,255,255,.16)" stroke-width="1"/>
-      <circle cx="75" cy="70" r="58" fill="none" stroke="#7fb4e8" stroke-width="4" stroke-linecap="round" stroke-dasharray="106 258" transform="rotate(128 75 70)" opacity=".92"/>
-      <path d="M75 20v10" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round" opacity=".9"/>
-      <text x="75" y="70" text-anchor="middle" dominant-baseline="central" fill="#ffffff" font-family="Plus Jakarta Sans, system-ui, sans-serif" font-size="44" font-weight="300" letter-spacing="-2">71</text>
-    </svg>
-    <div class="tag" style="position:absolute;left:14px;bottom:14px;gap:6px;background:rgba(255,255,255,.93);color:oklch(.34 .07 250);"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 2"/></svg> Cooling</div></div>
+    <div style="position:absolute;left:18px;top:18px;right:18px;display:flex;align-items:center;gap:12px;">
+      <span style="width:38px;height:38px;border-radius:12px;display:grid;place-items:center;
+                   background:rgba(255,255,255,.93);
+                   color:#16202c;">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.6 19.3 7.8v8.4L12 20.4 4.7 16.2V7.8z"/><circle cx="12" cy="12" r="3"/></svg>
+      </span>
+      <span style="font-size:19px;font-weight:500;letter-spacing:-.012em;">Thermostat</span>
+    </div>
+    <div style="position:absolute;left:14px;right:14px;top:92px;display:flex;align-items:center;justify-content:space-between;">
+      <span style="width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.1);display:grid;place-items:center;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg></span>
+      <span class="dsp" style="font-size:54px;line-height:1;">71<span style="font-size:21px;vertical-align:super;margin-left:2px;">°F</span></span>
+      <span style="width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.1);display:grid;place-items:center;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>
+    </div>
+    <div style="position:absolute;left:18px;right:18px;top:162px;font-size:13.5px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+      Currently 74°F · Cooling · 48% humidity
+    </div></div>
 
   <!-- the ceiling light -->
   <div class="gl" style="position:absolute;left:1074px;top:180px;width:238px;height:548px;border-radius:28px;overflow:hidden;background:linear-gradient(148deg, oklch(.407 .014 280 / .34), oklch(.337 .012 280 / .12) 46%, oklch(.367 .014 280 / .24));"><div style="position:absolute;inset:0;background:radial-gradient(86% 64% at 72% 16%, rgba(226,72,184,.34), transparent 64%), radial-gradient(60% 46% at 24% 104%, rgba(226,72,184,.2), transparent 70%);"></div>

@@ -42,6 +42,15 @@
   --ink: #f1eee8;
   --ink-2: #b9b5ad;
   --muted: #7f7d77;
+  /* The same ink, for the few things that sit on an OBJECT rather than on a
+     card. A card holds a distance from the sky and flips to dark type when it
+     passes the sky on the way up; a drawn object carries its own lighting and
+     does not. A thermostat's dial is a dark disc at every hour, so the reading
+     on it has to stay light while the card around it flips -- and it cannot ask
+     for --ink, because the card it is on is one of the surfaces that redeclares
+     that. This resolves here, where --ink still means what it says, and the
+     computed value is what inherits down. */
+  --ink-lit: var(--ink);
 
   --r-lg: 22px;
   --r-md: 16px;
@@ -8031,41 +8040,131 @@ select.input {
   display: none;
 }
 .bento .tile.climate .clim-dial {
-  grid-template-columns: auto 1fr auto;
-  grid-template-rows: auto auto;
-  gap: 4px 6px;
-  margin: 14px 0 0;
+  /* The dial row takes what the card has rather than what its own text needs.
+     It stood at 113px of a 264px card, so the bottom third had been empty for as
+     long as the row has been this tall -- which is why the drawing looked like it
+     would not fit when nothing had ever offered it the space. Three rows now:
+     the dial, the two steps under it, and the state line. */
+  flex: 1 1 auto;
+  min-height: 0;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-rows: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px 6px;
+  margin: 10px 0 0;
 }
 .bento .tile.climate .clim-center {
   display: contents;
 }
+/* The rail card already drops the modes and the fan: it is the summary, and the
+   room tile is the control. The STEP BUTTONS now go the same way, and that is
+   what buys the dial back.
+
+   The dial used to be hidden here, with the note that it "could only be bought
+   by shrinking the number, and on a short screen (--row at its 150px floor) it
+   does not fit at all". That was true and is not any more, for two reasons
+   measured rather than argued. The row grew: --row is clamp(168px, …, 264px)
+   now, so this card is 253×264 on a 1440×900 wall where that note was written
+   against 196. And the dial was never really competing with the number — it was
+   competing with these two 44px buttons and the gap either side of them. Take
+   them out and the number gets BIGGER, not smaller.
+
+   What it costs is that you cannot change the temperature from the card. That
+   is the trade, taken deliberately: a thermostat is a thing you glance at many
+   times and adjust rarely, and the pane it opens into has the real dial — one
+   you turn, with its own steps — rather than two arrows on a card you had to be
+   standing in front of anyway. design/nightfall page 3, ClimateDial.dc.html,
+   has it drawn at both sizes the row produces. */
 .bento .tile.climate .clim-btn {
-  grid-row: 1;
+  grid-row: 2;
   width: 44px;
   height: 44px;
 }
-/* The rail card already drops the modes and the fan: it is the summary, and the
-   room tile is the control. The dial goes the same way and for the same reason —
-   this card's height is the rail's row, so a dial round the number could only be
-   bought by shrinking the number, and on a short screen (--row at its 150px
-   floor) it does not fit at all. The reading you can take from a doorway is
-   worth more here than the picture. */
-.bento .tile.climate .clim-face {
-  grid-column: 2;
-  grid-row: 1;
-  justify-self: center;
-  padding: 0;
-  aspect-ratio: auto;
+.bento .tile.climate .clim-btn:first-child { grid-column: 1; }
+.bento .tile.climate .clim-btn:last-child { grid-column: 3; }
+/* Both, until the screen is too short for both.
+
+   Measured on the running panel: with the two buttons under the dial, the card
+   composes at 253x264 on a 1440x900 wall -- a 133px dial, two 44px buttons in
+   the bottom corners, the state line under them. What does NOT work is putting
+   them beside the dial, which is what every earlier attempt did and why the note
+   that removed the dial said 92px: the buttons and their gaps take 108 of the
+   card's 217 usable width, and the dial gets what is left.
+
+   Vertically there is no such slack. The dial is what the row's height is for,
+   and the buttons cost it 44px plus a gap out of a track that shrinks with the
+   screen. At --row's floor the dial collapsed to 55x37 -- not even square. So
+   the buttons are the thing that gives, and the line is where the DIAL would drop
+   under about 100px, which is 800 of window -- the size the e2e wall runs at and
+   a likely panel. Measured across the range, with the buttons: 133px of dial at
+   900, 103 at 800, 53 at 700. The first two are a dial; the third is a token of
+   one, and it is the picture the note that removed this drawing was describing.
+
+   What it costs at 800 is the reading, not the drawing: 34px with the buttons
+   against 48 without. That is the whole of the old argument -- "the reading you
+   can take from a doorway is worth more here than the picture" -- and it is why
+   the line is here rather than lower. Below it the card is the drawing and the
+   reading, and the temperature is one long press away in the pane. */
+@media (max-height: 799px) {
+  .bento .tile.climate .clim-btn {
+    display: none;
+  }
+  .bento .tile.climate .clim-dial {
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+  .bento .tile.climate .clim-doing {
+    grid-row: 2;
+  }
 }
-.bento .tile.climate .face-render {
+
+/* The name goes with them, which is what the board draws: a dial is a thermostat
+   the way a cloud is the weather, and the row it sits in is already the room you
+   are looking at. The cost is a house with two of them in one row, which now
+   tells them apart by opening one; that was the trade taken when the drawing was
+   chosen over the controls, and it is written down beside the board rather than
+   discovered later. */
+.bento .tile.climate .clim-head {
   display: none;
 }
+.bento .tile.climate .clim-face {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  justify-self: center;
+  align-self: center;
+  padding: 0;
+  /* square, and never taller than the row it was given: the drawing is the
+     readout, so it takes the space rather than sitting beside something */
+  aspect-ratio: 1;
+  height: 100%;
+  max-height: 100%;
+  min-height: 0;
+  /* the reading is sized FROM the dial, below, so the two can never get out of
+     proportion with each other however the card is squeezed */
+  container-type: size;
+}
+.bento .tile.climate .face-render {
+  z-index: 0;
+} /* behind the number, which the drawing is deliberately missing — see art.ts */
 .bento .tile.climate .clim-big {
-  font-size: 46px;
+  position: relative;
+  z-index: 1;
+  font-size: clamp(22px, 33cqh, 52px);
+  /* The reading is ON the dial now, not on the card, so it takes the DIAL's ink
+     and not the card's. art.ts paints that face dark at every hour -- a dial is
+     a dark disc in a lit room and in a dark one -- while the card underneath is
+     painted at a distance from the sky and flips to dark type by late morning.
+     Left on the card's answer this came out near-black on a near-black disc at
+     noon, with the card around it perfectly legible. Same shape as the glass
+     face redeclaring --card-ink: the surface moved, so what sits on it moves. */
+  color: var(--ink-lit);
+}
+.bento .tile.climate .clim-unit {
+  color: var(--ink-lit);
+  opacity: 0.66;
 }
 .bento .tile.climate .clim-doing {
   grid-column: 1 / -1;
-  grid-row: 2;
+  grid-row: 3;
   margin-top: 8px;
   font-size: 12.5px;
   text-align: center;
