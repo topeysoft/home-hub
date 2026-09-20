@@ -37,6 +37,7 @@ from .settings import Settings, DATA, env_file
 from .lock import Lock, needs_code
 from .pairing import Pairing
 from .bridge import Bridges
+from .strip import Strips, StripError
 from .share import Share
 from .nightlight import Nightlight
 from .relay import Relay
@@ -119,6 +120,7 @@ class Hub:
         self.lock = Lock(self.settings)
         self.pair = Pairing(self)
         self.bridge = Bridges(self)        # a puck on the cable, and the ones the house has
+        self.strip = Strips(self)          # a light strip knocking over Bluetooth: hub/strip.py
         self.net = Network(self)           # how this hub is connected, and what it hands out: docs/network.md
         self.share = Share(self)           # what this house lets a Matter bridge publish: docs/matter.md
         self.share_status: dict = {}       # what the bridge last said about itself (pairing codes, who holds it)
@@ -234,6 +236,8 @@ class Hub:
         asyncio.create_task(self.provision.refresh())   # look at the driver layer now, not at the next half-minute
         asyncio.create_task(self.sounds.ensure())        # the generated noises, once
         asyncio.create_task(self.bridge.watch())         # what appears on the USB from now on
+        asyncio.create_task(self.strip.listen())         # the strips the house already has
+        asyncio.create_task(self.strip.watch())          # and any that start knocking
         self._broadcast(json.dumps({"type": "home", "home": self.home_dict()}))
         self._broadcast(json.dumps({"type": "ambient", "ambient": self.ambient()}))
         log.info("home: %d rooms, %d devices, weather=%s", len(self.home.rooms), len(self.home.devices), self.weather and self.weather["id"])
@@ -1234,6 +1238,67 @@ async def bridge_wifi(body: dict):
     hub.ready()
     try: return await hub.bridge.wifi(str(body.get("ssid") or ""), str(body.get("password") or ""))
     except ValueError as e: raise HTTPException(400, str(e))
+
+
+# ---------- a light strip, knocking over Bluetooth ----------
+# The state the panel draws and the answers a person gives. design/strip/Spine.dc.html is six beats
+# and these are them. Adopting is behind the code for the same reason a bridge is: until somebody
+# says yes the hub has only heard a thing advertising, and none of the house's keys have gone
+# anywhere. Saying it is NOT yours is open, because refusing gives nothing away.
+@app.get("/strip")
+def strip_status(): return hub.strip.status()
+
+
+@app.post("/strip/adopt")
+async def strip_adopt():
+    hub.ready()
+    try: return await hub.strip.adopt()
+    except StripError as e: raise HTTPException(409, str(e))
+
+
+@app.post("/strip/dismiss")
+async def strip_dismiss(): return await hub.strip.dismiss()
+
+
+@app.post("/strip/wifi")
+async def strip_wifi(body: dict):
+    hub.ready()
+    try: return await hub.strip.wifi(str(body.get("ssid") or ""), str(body.get("password") or ""))
+    except StripError as e: raise HTTPException(400, str(e))
+
+
+@app.post("/strip/saw")
+async def strip_saw(body: dict):
+    """What the household can see on the strip: red, green, blue, stripes, or nothing at all."""
+    hub.ready()
+    try: return await hub.strip.saw(str(body.get("saw") or ""))
+    except StripError as e: raise HTTPException(400, str(e))
+
+
+@app.post("/strip/ends")
+async def strip_ends():
+    """That's the whole of it. The strip latches where the fill had got to when it hears this."""
+    hub.ready()
+    try: return await hub.strip.ends()
+    except StripError as e: raise HTTPException(409, str(e))
+
+
+@app.post("/strip/again")
+async def strip_again():
+    hub.ready()
+    try: return await hub.strip.again()
+    except StripError as e: raise HTTPException(409, str(e))
+
+
+@app.post("/strip/room")
+async def strip_room(body: dict):
+    hub.ready()
+    try: return await hub.strip.put(str(body.get("room") or ""))
+    except StripError as e: raise HTTPException(400, str(e))
+
+
+@app.post("/strip/done")
+async def strip_done(): return await hub.strip.done()
 
 
 # ---------------------------------------------------------------- the network the house runs on
