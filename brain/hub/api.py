@@ -95,6 +95,8 @@ class Hub:
         self.ha: HAAdapter | None = None
         self.home = Home()
         self.home.kinds = dict(self.settings.get("kinds") or {})   # what the owner said things are; kept in settings so a restore brings it back with the rest of the house
+        self.home.color_pinned = set(self.settings.get("color_pinned") or [])   # and which lights somebody chose a color for, rather than leaving to the house
+        self.home.room_colors = {k: list(v) for k, v in (self.settings.get("room_colors") or {}).items()}
         self.home.leads = dict(self.settings.get("leads") or {})   # which part of a fan-with-a-light is the tile, where the owner has said (docs/units.md)
         self.log = EventLog(DATA / "events.db")
         self.streams: set[WebSocket] = set()
@@ -249,6 +251,26 @@ class Hub:
         self.log.add("home", "entry", None, ",".join(self.entry), source="user")
         self._broadcast(json.dumps({"type": "home", "home": self.home_dict()}))
         return self.entry
+
+    KEPT_COLORS = 6
+
+    def keep_color(self, room_id: str, hue: float, amount: float):
+        """Keep a color somebody tuned against the lamps in this room, so it is one tap next time.
+
+        Deliberately explicit rather than read off the event log, which is where the three brightness
+        levels are eventually going. A log fills with every color that was tried and put back; this
+        list only ever holds the ones somebody said to keep."""
+        room = self.home.rooms.get(room_id)
+        if not room or room_id == "unassigned": raise ValueError("no such room")
+        h, a = round(float(hue)) % 360, max(0, min(100, round(float(amount))))
+        # near enough is the same color: a lamp answers with what it managed, not what it was asked
+        kept = [c for c in room.colors if not (min(abs(c[0] - h), 360 - abs(c[0] - h)) <= 8 and abs(c[1] - a) <= 8)]
+        room.colors = ([[h, a]] + kept)[:self.KEPT_COLORS]
+        self.home.room_colors[room_id] = room.colors
+        self.settings.set(room_colors=self.home.room_colors)
+        self.log.add("home", room_id, None, f"{h},{a}", source="user", detail={"kept_color": True})
+        self._broadcast(json.dumps({"type": "home", "home": self.home_dict()}))
+        return room.colors
 
     # ---- setup, driven by the panel ----
     async def create_owner(self, name: str, home: str, language: str = ""):
@@ -573,6 +595,14 @@ class Hub:
             # "dim the kitchen lights" reaches a lamp on a plug as an on, because a plug has no 30%, and a
             # brightness sent to switch.turn_on is refused outright. Turning on is the part it can do.
             if dev.kind and dev.kind != dev.capability: data = {}
+            # A light's color is the house's own record and not a service parameter, so it comes off
+            # here rather than going to HA: a bulb at 2700K cannot be told from one somebody set to
+            # 2700K by looking at it, and only the house knows which happened. See art.ts/color.ts.
+            pinned = data.pop("color_pinned", None)
+            if pinned is not None:
+                if pinned: self.home.color_pinned.add(dev.id)
+                else: self.home.color_pinned.discard(dev.id)
+                self.settings.set(color_pinned=sorted(self.home.color_pinned))
             key = (dev.capability.split(".")[0], action)
             if key not in SERVICE: raise ValueError(f"{dev.capability} cannot {action}")
             domain, service = SERVICE[key]
@@ -1879,6 +1909,14 @@ def phones_remote(request: Request, phone_id: str, body: dict):
     _keys(request)
     try: return hub.phones.set_remote(phone_id, bool(body.get("remote")))
     except KeyError as e: raise HTTPException(404, str(e.args[0]))
+
+
+@app.post("/rooms/{room_id}/colors")
+async def room_keep_color(room_id: str, body: dict):
+    """{"hue": 152, "amount": 62} -- keep a color somebody matched against this room's own lamps."""
+    hub.ready()
+    try: return {"colors": hub.keep_color(room_id, body.get("hue"), body.get("amount"))}
+    except (ValueError, TypeError) as e: raise HTTPException(400, str(e))
 
 
 @app.post("/rooms/{room_id}/intent/{state}")

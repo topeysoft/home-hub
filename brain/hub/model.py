@@ -168,6 +168,10 @@ class Room:
     set_by: str | None = None        # "user", or "rule:<id>": who last set the intent
     hold_until: float | None = None  # rules leave the room alone until then (a hand on the panel set it)
     motion_at: float | None = None   # last motion from any motion device here; idle rules count from it
+    # Colors somebody tuned by eye against the bulbs in THIS room and asked to keep. A color matched
+    # against a real lamp is worth more than any preset -- a bulb's idea of pink is not a swatch's --
+    # and making somebody find it twice is the failure. [[hue, amount], ...], newest first.
+    colors: list = field(default_factory=list)
 
 
 class Home:
@@ -176,6 +180,12 @@ class Home:
         self.devices: dict[str, Device] = {}
         self.intent: str = "unknown"     # the last home-wide intent (bedtime, everything off)
         self.extras: dict[str, dict] = {}  # what the brain knows about a device that HA does not (a fan timer's end); shown with its attrs
+        # Which lights somebody has actually chosen a color for. The house has to keep this because
+        # HA cannot: a bulb sitting at 2700K is indistinguishable from one a person deliberately set
+        # to 2700K, and the difference -- who decided -- is the whole of what Automatic means. Kept
+        # in settings beside `kinds` so a restore brings it back with the rest of the house.
+        self.color_pinned: set[str] = set()
+        self.room_colors: dict[str, list] = {}   # kept per room, from settings, so a restore brings them back
         self.lamps: dict[str, str] = {}    # camera id -> the light built into the same unit (Ring floodlight and spotlight cams)
         self.eyes: dict[str, str] = {}     # light/switch/fan id -> the motion sensor built into the same unit (a Brilliant switch, a Ring pathlight): docs/units.md
         self.fixtures: dict[str, dict] = {}   # device id -> what a fan-with-a-light's parts know about each other ({"light": id} on the fan, {"fan": id} on the light, "leads" on both): docs/units.md
@@ -192,6 +202,7 @@ class Home:
         if eid in self.eyes: out["motion"] = self.eyes[eid]
         out.update(self.fixtures.get(eid, {}))
         if extra.get("fan_until", 0) > time.time(): out["fan_mode"] = "on"
+        if cap.split(".")[0] == "light" and eid in self.color_pinned: out["color_pinned"] = True
         return out
 
     @staticmethod
@@ -219,6 +230,9 @@ class Home:
         for rid, r in self.rooms.items():           # a rebuild must not forget what rooms were told or when they last moved
             if rid in was:
                 r.intent, r.set_by, r.hold_until, r.motion_at = was[rid].intent, was[rid].set_by, was[rid].hold_until, was[rid].motion_at
+            # off the settings rather than off the last build: these outlive a restart, which is the
+            # whole point of somebody having pressed Keep
+            r.colors = list(self.room_colors.get(rid, []))
         dev_area = {d["id"]: d.get("area_id") for d in ha_devices}
         dev_words = {d["id"]: " ".join(str(d.get(k) or "") for k in ("name_by_user", "name", "model", "manufacturer")) for d in ha_devices}
         dev_entry = {d["id"]: next(iter(d.get("config_entries") or []), None) for d in ha_devices}   # what brought the hardware, for entries that do not name it themselves

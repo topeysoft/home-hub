@@ -26,7 +26,8 @@ const rooms = [
        was a warm white, so a magenta lamp and a 2700K one were the same picture and no test or
        screenshot could tell. color_mode is what says which it is -- rgb_color is reported in
        color_temp mode too, as the white point. See art.ts/bulbColor. */
-    dev('l1', 'Ceiling light', 'living', 'light', 'on', { brightness: 90, color_mode: 'hs', rgb_color: [226, 72, 184], supported_color_modes: ['color_temp', 'hs'] }, 'Philips Hue'),
+    dev('l1', 'Ceiling light', 'living', 'light', 'on', { brightness: 90, color_mode: 'hs', hs_color: [302, 66], rgb_color: [226, 72, 184],
+        color_pinned: true, supported_color_modes: ['color_temp', 'hs'] }, 'Philips Hue'),
     dev('l2', 'Floor lamp', 'living', 'light', 'on', { brightness: 60, supported_color_modes: ['brightness'] }),
     dev('l3', 'Reading lamp', 'living', 'light', 'off', { supported_color_modes: ['onoff'] }),
     dev('m1', 'Living room TV', 'living', 'media', 'playing', { media_title: 'The Bear', media_artist: 'Season 3, Episode 4', app_name: 'Disney+', volume_level: 0.35, entity_picture: '/x.jpg', media_position: 1421, media_duration: 3740 }),
@@ -59,7 +60,12 @@ const rooms = [
     dev('b4', 'Bedroom blinds', 'bedroom', 'cover', 'closed', { current_position: 0 }),
   ] },
   { id: 'office', name: 'Office', intent: 'occupied', set_by: null, hold_until: null, devices: [
-    dev('o1', 'Desk lamp', 'office', 'light', 'on', { brightness: 180, supported_color_modes: ['brightness'] }),
+    /* the other half of the color story: a bulb that CAN do color and has never been asked to, so it
+       is on Automatic -- which is where every light in a house out of the box is. Changed in place
+       rather than added: the wall boards were drawn at this house, and a device more or fewer moves
+       every card in the row. */
+    dev('o1', 'Desk lamp', 'office', 'light', 'on', { brightness: 180, color_mode: 'color_temp', color_temp_kelvin: 2700,
+        supported_color_modes: ['color_temp', 'hs'] }, 'Philips Hue'),
     dev('o2', 'Monitor light', 'office', 'light', 'unavailable', { supported_color_modes: ['brightness'] }),
     dev('o3', 'Office plug', 'office', 'switch', 'on', {}),
   ] },
@@ -799,6 +805,17 @@ const bridgeRows = process.env.BRIDGES === 'none' ? [] : [
     return json(res, { capability: d.capability, kind: kindOf(d), offer, words: Object.fromEntries(offer.map(k => [k, WORD[k]])),
                        why: offer.length ? 'This can be switched on and off, so it can be shown as anything that switches on and off. A plug goes off with Everything off; an appliance is part of a machine and is left alone. An alarm is the one that asks before it sounds.' : '' })
   }
+  /* a color somebody matched against this room's own lamps, kept so it is one tap next time */
+  const keepColor = p.match(/^\/rooms\/([^/]+)\/colors$/)
+  if (keepColor && req.method === 'POST') { let b = ''; req.on('data', c => (b += c)); return req.on('end', () => {
+    const room = home.rooms.find(r => r.id === keepColor[1])
+    if (!room) { res.writeHead(404, { 'Content-Type': 'application/json' }); return res.end('{"detail":"unknown room"}') }
+    let h = 0, a = 0; try { const j = JSON.parse(b); h = Math.round(j.hue) % 360; a = Math.max(0, Math.min(100, Math.round(j.amount))) } catch {}
+    const near = (c) => Math.min(Math.abs(c[0] - h), 360 - Math.abs(c[0] - h)) <= 8 && Math.abs(c[1] - a) <= 8
+    room.colors = [[h, a], ...(room.colors || []).filter(c => !near(c))].slice(0, 6)
+    push({ type: 'home', home })
+    json(res, { colors: room.colors })
+  }) }
   const setLead = p.match(/^\/devices\/([^/]+)\/lead$/)
   if (setLead && req.method === 'POST') { let b = ''; req.on('data', c => (b += c)); return req.on('end', () => {
     let k = 'fan'; try { k = JSON.parse(b).lead || 'fan' } catch {}

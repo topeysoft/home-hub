@@ -5,7 +5,7 @@ import { request } from './code'
    the owner's, where they have given one. Read the two together through cap() in store.ts, never the raw
    field: a lamp on a smart plug is a switch to the driver and a light to everybody who lives there. */
 export type Device = { id: string; name: string; room_id: string; capability: string; state: string; attrs: Record<string, any>; hw?: string | null; own_room?: boolean; maker?: string | null; model?: string | null; entry?: string | null; kind?: string | null; guess?: string | null; hw_name?: string | null; named_by_unit?: boolean }
-export type Room = { id: string; name: string; devices: Device[]; intent: string; set_by?: string | null; hold_until?: number | null; motion_at?: number | null }
+export type Room = { id: string; name: string; devices: Device[]; intent: string; set_by?: string | null; hold_until?: number | null; motion_at?: number | null; colors?: number[][] }   // colors: kept per room, [[hue, amount], …]
 export type Intent = { room: string; intent: string; set_by: string | null; hold_until: number | null }
 export type Home = { name?: string | null; temp_unit?: string; entry?: string[]; rooms: Room[] }   // entry: the rooms people come in through
 export type Driver = 'down' | 'fresh' | 'needs-login' | 'connecting' | 'ready'
@@ -491,6 +491,14 @@ export const explainRoom = (roomId: string, question: string) => post<{ question
 export async function act(id: string, action: string, data?: Record<string, unknown>) {
   const r = await request(`/devices/${encodeURIComponent(id)}/${action}`, { method: 'POST', headers: json, body: data ? JSON.stringify(data) : undefined })
   if (!r.ok) await fail(r)
+}
+/* A color somebody matched against this room's own lamps, kept so it is one tap next time.
+   Per room rather than per lamp: it was tuned against the bulbs in there, and the bulb beside
+   it is the same make more often than not. */
+export async function keepColor(roomId: string, hue: number, amount: number): Promise<number[][]> {
+  const r = await request(`/rooms/${encodeURIComponent(roomId)}/colors`, { method: 'POST', headers: json, body: JSON.stringify({ hue, amount }) })
+  if (!r.ok) await fail(r)
+  return (await r.json()).colors
 }
 export async function setIntent(roomId: string, state: string) {
   const r = await request(`/rooms/${encodeURIComponent(roomId)}/intent/${state}`, { method: 'POST' })

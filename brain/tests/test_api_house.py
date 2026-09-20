@@ -67,6 +67,52 @@ class DeviceActionTests(ApiTest):
         self.assertEqual(r.status_code, 200)
         self.assertEqual(self.ha.called("light", "turn_on", "light.kitchen"), [("light", "turn_on", "light.kitchen", {"brightness_pct": 40})])
 
+    def test_a_light_remembers_that_somebody_chose_its_color(self):
+        """The house's own record, because a bulb cannot keep it.
+
+        A lamp sitting at 2700K is indistinguishable from one somebody deliberately set to 2700K by
+        looking at the lamp; the difference is who decided, and that is the whole of what Automatic
+        means on the panel. So the pin rides in on the same call as the color -- and must not reach
+        the driver, which would refuse it."""
+        r = self.client.post("/devices/light.kitchen/on", json={"hs_color": [302, 66], "color_pinned": True})
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("light.kitchen", self.hub.home.color_pinned)
+        self.assertIs(self.hub.home.attrs_for("light.kitchen", "light", {}).get("color_pinned"), True)
+        # the driver is asked for the color and nothing else
+        call = self.ha.called("light", "turn_on", "light.kitchen")[-1]
+        self.assertEqual(call[3], {"hs_color": [302, 66]})
+
+    def test_putting_a_light_back_on_automatic_forgets_the_color_it_was_given(self):
+        """Automatic is the absence of a choice, so the record goes with it -- and a real white goes
+        with it too, or the lamp would sit on yesterday's color until something else happened."""
+        self.client.post("/devices/light.kitchen/on", json={"hs_color": [302, 66], "color_pinned": True})
+        r = self.client.post("/devices/light.kitchen/on", json={"color_temp_kelvin": 2400, "color_pinned": False})
+        self.assertEqual(r.status_code, 200)
+        self.assertNotIn("light.kitchen", self.hub.home.color_pinned)
+        self.assertNotIn("color_pinned", self.hub.home.attrs_for("light.kitchen", "light", {}))
+        self.assertEqual(self.ha.called("light", "turn_on", "light.kitchen")[-1][3], {"color_temp_kelvin": 2400})
+
+    def test_a_room_keeps_a_color_somebody_matched_against_its_own_lamps(self):
+        """A color tuned by eye against the bulbs in a room is worth more than any preset -- a bulb's
+        idea of pink is not a swatch's -- and making somebody find it twice is the failure."""
+        r = self.client.post("/rooms/living/colors", json={"hue": 152, "amount": 62})
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()["colors"], [[152, 62]])
+        # newest first, so the last thing kept is the first thing offered
+        self.client.post("/rooms/living/colors", json={"hue": 300, "amount": 70})
+        self.assertEqual(self.client.get("/home").json()["rooms"][0]["colors"][0], [300, 70])
+
+    def test_keeping_a_color_twice_does_not_fill_the_row_with_the_same_one(self):
+        """A lamp answers with what it managed rather than what it was asked, so the same color comes
+        back a degree or two out. Near enough is the same color."""
+        self.client.post("/rooms/living/colors", json={"hue": 152, "amount": 62})
+        self.client.post("/rooms/living/colors", json={"hue": 156, "amount": 65})
+        living = next(r for r in self.client.get("/home").json()["rooms"] if r["id"] == "living")
+        self.assertEqual(living["colors"], [[156, 65]])
+
+    def test_a_room_that_does_not_exist_cannot_be_given_a_color(self):
+        self.assertEqual(self.client.post("/rooms/nowhere/colors", json={"hue": 1, "amount": 1}).status_code, 400)
+
     def test_a_tap_holds_the_room_off_the_rules_and_tells_every_screen(self):
         self.client.post("/devices/light.kitchen/on")
         self.assertGreater(self.hub.home.rooms["kitchen"].hold_until, 0)
