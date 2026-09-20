@@ -3755,29 +3755,58 @@ select.input {
   min-height: 0;
   grid-row: span 2;
 } /* two rows tall, so its neighbors keep their size */
-.tile.climate.cool {
+/* What the house is DOING, not what it was asked for. These were `.cool` and
+   `.heat` -- the MODE -- so a thermostat that had reached temperature sat fully
+   blue with nothing running, and a heat pump on Auto was green whatever it was
+   doing. The words and the dial arc have always followed hvac_action; this is
+   the half that never came with them. See ClimateTile's `acting`.
+
+   Named `act-` rather than `cooling`/`idle` on purpose: this sheet is one flat
+   global namespace and `.idle` further up is the REST SCREEN, at
+   `position: absolute; inset: 0; z-index: 50`. A bare class here would have
+   handed a thermostat the screensaver's geometry, silently, with both screens
+   still rendering. */
+.tile.climate.act-cooling {
   --tint: 122, 176, 232;
+  --card-act: var(--card-cooling);
 }
-.tile.climate.heat {
+.tile.climate.act-heating {
   --tint: 233, 150, 90;
-}
-.tile.climate.heat_cool,
-.tile.climate.auto {
-  --tint: 160, 200, 170;
+  --card-act: var(--card-heating);
 }
 .tile.climate.on {
-  border-color: rgba(var(--tint), 0.38);
-  background:
-    radial-gradient(
-      ellipse 70% 60% at 50% 42%,
-      rgba(var(--tint), 0.16),
-      rgba(var(--tint), 0) 70%
-    ),
-    var(--surface);
+  background: var(--surface);
 }
+/* and the card IS the state, rather than a hint of one. A 0.16-alpha wash and a
+   4px ring were legible at arm's length and gone by three metres, on the one
+   screen in the house that is read from a sofa. */
+.tile.climate.on.act-cooling,
+.tile.climate.on.act-heating {
+  background: var(--card-act, var(--surface));
+  border-color: transparent;
+  /* The tile's own text asks for --ink, --ink-2 and --muted rather than the card
+     ink the tones hand out, so they are redeclared here and everything inside
+     picks them up without knowing it is on a painted card. tone.ts flips them at
+     this card's own lightness, which is not where a tone card flips. */
+  --ink: var(--act-ink, #f1eee8);
+  --ink-2: var(--act-ink-2, #cfcbc3);
+  --muted: var(--act-ink-2, #cfcbc3);
+  --surface-hi: var(--act-chip, rgba(255, 255, 255, 0.16));
+}
+/* A holding thermostat has to say so here too. `.tile.on .tile-icon` up at the
+   top of this file paints every lit tile's badge in --lamp, and the rule this
+   replaced masked that for EVERY running thermostat; scoped to the two actions,
+   an idle one fell through to it and wore the lamp accent -- "a light is on" --
+   as the loudest thing on an otherwise quiet card. Nothing catches that: both
+   screens still render and the class is correct. */
 .tile.climate.on .tile-icon {
-  background: rgba(var(--tint), 0.9);
-  color: #0f1216;
+  background: var(--surface-hi);
+  color: var(--ink-2);
+}
+.tile.climate.on.act-cooling .tile-icon,
+.tile.climate.on.act-heating .tile-icon {
+  background: rgba(255, 255, 255, 0.93);
+  color: #16202c;
 }
 .tile.climate .tile-body {
   padding: 16px 18px 14px;
