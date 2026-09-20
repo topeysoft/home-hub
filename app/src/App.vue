@@ -33,6 +33,7 @@ import RoomsView from './views/RoomsView.vue'
 import CamerasView from './views/CamerasView.vue'
 import TopBar from './TopBar.vue'
 import Household from './Household.vue'
+import { locale } from './lang'
 
 const now = ref(new Date())
 const selected = ref<string | null>(new URLSearchParams(location.search).get('room') ?? safeGet('room'))   // ?room=kitchen deep-links a kiosk
@@ -128,9 +129,9 @@ const wxIcon = computed(() => WX_ICON[store.sky.condition] ?? 'cloud')
 
 const previewAt = new URLSearchParams(location.search).get('at')   // ?at=19:30 previews an hour; the clock follows the sky so a preview agrees with itself
 const shown = computed(() => { if (!previewAt) return now.value; const d = new Date(now.value); const [h, m] = previewAt.split(':').map(Number); d.setHours(h || 0, m || 0, 0, 0); return d })
-const clock = computed(() => shown.value.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }))
+const clock = computed(() => shown.value.toLocaleTimeString(locale(), { hour: 'numeric', minute: '2-digit' }))
 const nextLine = computed(() => idle.value ? upcomingLine(shown.value) : '')   // only worked out while the panel rests
-const day = computed(() => shown.value.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' }))
+const day = computed(() => shown.value.toLocaleDateString(locale(), { weekday: 'long', month: 'long', day: 'numeric' }))
 
 /* The wall panel rests after a few minutes: a clock, the date, one line about the house. A touch brings it back to Home. */
 const IDLE_AFTER = 3 * 60 * 1000

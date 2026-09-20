@@ -3,6 +3,7 @@
 /* Words for what the house did on its own. Everything here is rendered from the event log and rules.json; no model. */
 import { outcomesOf, roomsOf, type Event, type Room, type Routine } from './api'
 import { store, LABELS, deviceById, routineById, cap } from './store'
+import { locale } from './lang'
 
 const cap1 = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 const label = (s: string | null | undefined, home = false) => home && s === 'asleep' ? 'Bedtime' : LABELS[s ?? ''] ?? (s && s !== 'unknown' ? cap1(s) : 'Set')
@@ -27,18 +28,18 @@ export function left(until: number | null | undefined, now = Date.now()): string
   const h = Math.floor(s / 3600), m = Math.round((s - h * 3600) / 60)
   return m ? `${h} h ${m} min` : `${h} h`
 }
-const at = (ts: number) => new Date(ts * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+const at = (ts: number) => new Date(ts * 1000).toLocaleTimeString(locale(), { hour: 'numeric', minute: '2-digit' })
 export function clock(hhmm: string): string {
   const [h, m] = String(hhmm).split(':').map(Number)
   const d = new Date(); d.setHours(h || 0, m || 0, 0, 0)
-  return d.toLocaleTimeString([], m ? { hour: 'numeric', minute: '2-digit' } : { hour: 'numeric' })
+  return d.toLocaleTimeString(locale(), m ? { hour: 'numeric', minute: '2-digit' } : { hour: 'numeric' })
 }
 export function whenText(ts: number, now = Date.now()): string {
   const d = new Date(ts * 1000), t = at(ts)
   const today = new Date(now); today.setHours(0, 0, 0, 0)
   if (d.getTime() >= today.getTime()) return t
   if (d.getTime() >= today.getTime() - 86400000) return `Yesterday, ${t}`
-  return `${d.toLocaleDateString([], { weekday: 'short' })}, ${t}`
+  return `${d.toLocaleDateString(locale(), { weekday: 'short' })}, ${t}`
 }
 
 /* ---------- the rule vocabulary, in sentences ---------- */

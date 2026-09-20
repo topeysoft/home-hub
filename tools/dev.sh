@@ -6,6 +6,7 @@
 #   tools/dev.sh          where you left it — or, in a fresh clone, what this is and what to run
 #   tools/dev.sh up       install whatever is missing, then the panel on a mock house
 #   tools/dev.sh hub      the panel against a real brain, started fresh so it is your code
+#   tools/dev.sh live     the panel against a house that is up and lived in, its brain answering
 #   tools/dev.sh check    what CI runs, here, before pushing
 #   tools/dev.sh design   every artboard in a browser, on the canvas they were drawn on
 #
@@ -168,11 +169,12 @@ PORTS
 
   echo
   echo "  ${D}tools/dev.sh up${R} — the panel on the mock brain, watched, no hub needed"
-  echo "  ${D}tools/dev.sh hub${R} — the same against a real brain   ${D}tools/dev.sh check${R} — what CI runs"
+  echo "  ${D}tools/dev.sh hub${R} — the same against a brain running here   ${D}tools/dev.sh check${R} — what CI runs"
+  echo "  ${D}tools/dev.sh live${R} — the same against a house that is up, every tap real"
   echo "  ${D}tools/dev.sh design${R} — the artboards, before any of it is code"
 }
 
-usage() { sed -n '4,10p' "$0" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '4,11p' "$0" | sed 's/^# \{0,1\}//'; }
 
 case "${1:-status}" in
   status|"") if fresh; then first_time; else where_you_were; fi ;;
@@ -197,6 +199,39 @@ case "${1:-status}" in
          # One of them going down makes the other useless, so the pair lives and dies together —
          # the rule mock/dev.mjs already keeps for the mock pair, in the shell rather than in node.
          while kill -0 $brain 2>/dev/null && kill -0 $panel 2>/dev/null; do sleep 1; done ;;
+  # The panel from this tree, against a house somebody lives in. No brain is started here: the
+  # house's own is the one answering, which is the whole point and is also the rule -- a second brain
+  # against a real house reads their Home Assistant and starts provisioning drivers.
+  #
+  # It hands you the stale-brain trap the other way round, though. Everywhere else in this script the
+  # danger is a hub older than your code; here that is the ordinary case, because their hub follows
+  # released code and you are twenty commits into a branch. A route your panel calls and their brain
+  # has never heard of comes back 404 and draws as a missing feature. /alive is open to anyone and
+  # carries the commit, so the gap is on the screen before Vite starts rather than in a bug report.
+  live)  ensure panel
+         house=${2:-hub.local}
+         BRAIN="http://${house}:8300"
+         alive=$(curl -fsS -m 5 "$BRAIN/alive" 2>/dev/null || true)
+         if [ -z "$alive" ]; then
+           echo "${Y}no brain answering at $BRAIN${R}" >&2
+           echo "  ${D}tools/dev.sh live <name-or-address>  — the brain is on :8300, behind the front door on :80${R}" >&2
+           exit 1
+         fi
+         say() { printf '%s' "$alive" | sed -n "s/.*\"$1\":\"\\([^\"]*\\)\".*/\\1/p"; }
+         row "house" "$house ${D}— running $(say version)${R}"
+         # `git rev-list` needs the commit to be in this checkout; a hub on code that never landed
+         # here is a real answer too, and a more alarming one than being ahead of it.
+         if ahead=$(git rev-list --count "$(say commit)..HEAD" 2>/dev/null); then
+           [ "$ahead" != 0 ] && row "ahead" "${Y}this tree is $(n "$ahead" commit) past that brain${R} ${D}— a route it has not got answers 404${R}"
+         else
+           row "ahead" "${Y}its commit is not in this checkout${R} ${D}— git fetch, or that hub is on code nobody merged${R}"
+         fi
+         row "taps" "${Y}real${R} ${D}— their lights, their names, their Restart and Install buttons${R}"
+         # A house with a code wants a phone before it will say anything, and the panel asks for one:
+         # the join screen comes up here and somebody at their wall lets this laptop in. The cookie
+         # that comes back is the dev server's own, so it is undone by removing that phone on Settings.
+         echo
+         cd app && exec env BRAIN="$BRAIN" npm run dev ;;
   # CI's jobs, in CI's order, minus the ones that need a browser or a container. The sheet checks
   # are in here because they catch what nothing else does: a drawing changed in src/art.ts or
   # src/sky.ts and not in the design sheet generated from it.

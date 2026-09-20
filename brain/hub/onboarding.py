@@ -78,7 +78,11 @@ class Onboarding:
     async def strings(self, handler: str) -> dict:
         if handler not in self._strings:
             try:
-                r = await self.hub.ha.send("frontend/get_translations", language="en", category="config", integration=[handler])
+                # The house's language, not a hard-coded "en". This is the single cheapest bit of
+                # localization in the hub: HA ships these in ~70 languages, so every integration
+                # name, every form label and every error on the Add screen arrives translated
+                # without the panel owning one string of it. hub.set_language clears this cache.
+                r = await self.hub.ha.send("frontend/get_translations", language=self.hub.language, category="config", integration=[handler])
                 self._strings[handler] = r.get("resources", {})
             except Exception as e:
                 log.warning("no strings for %s: %s", handler, e); self._strings[handler] = {}

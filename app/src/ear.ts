@@ -17,6 +17,8 @@
 
 /** What the panel wants back. `heard` is a whole sentence; `ended` is listening stopping without one;
  *  `failed` is the house having to say why it cannot listen, in words a person can act on. */
+import { locale } from './lang'
+
 export type Listener = {
   heard(said: string): void
   ended(): void
@@ -167,7 +169,10 @@ function browserEar(to: Listener): Ear | null {
 
   const attach = (local: boolean): boolean => {
     const r = new Ctor()
-    r.lang = navigator.language || 'en-GB'
+    // The house's language, not this device's. A tablet in a French house was listening for French
+    // and handing the result to a parser that only speaks English -- so it heard perfectly and
+    // understood nothing. Whatever the house says it is, that is what the ear is tuned to.
+    r.lang = locale()
     /* `continuous` is what stops Chrome ending the turn at the first breath, and `interimResults` is
        what keeps words arriving while somebody is still talking -- both are what the timer below
        needs to know they have not finished. */

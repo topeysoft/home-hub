@@ -18,13 +18,14 @@ import { removePhone, type Phone } from './api'
 import { initials, personTone } from './people'
 import Icon from './Icon.vue'
 import PhoneSteps from './PhoneSteps.vue'
+import { locale } from './lang'
 
 const people = computed(() => store.presence?.people ?? [])
 const state = (home: boolean | null) => home === true ? 'Home' : home === false ? 'Away' : 'Not sure'
 
 /* the phones that belong to the house: who, since when, for how long, and one way out each */
 const HOW: Record<string, string> = { code: 'typed the code', wall: 'let in from the wall', setup: 'set up the house' }
-const day = (ts: number) => new Date(ts * 1000).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })
+const day = (ts: number) => new Date(ts * 1000).toLocaleDateString(locale(), { weekday: 'short', month: 'short', day: 'numeric' })
 function phoneLine(p: Phone) {
   const bits = [`${HOW[p.how] ?? 'joined'} ${day(p.joined)}`]
   if (p.expires) bits.push(`until ${day(p.expires)}`)

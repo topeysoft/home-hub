@@ -41,6 +41,7 @@ import Attention from '../Attention.vue'
 import RoomGrid from '../RoomGrid.vue'
 import WeatherArt from '../WeatherArt.vue'
 import BentoRow from './BentoRow.vue'
+import { locale } from '../lang'
 
 const props = defineProps<{ rooms: Room[]; now: Date; topNav?: boolean; woke?: number }>()
 defineEmits<{ open: [id: string] }>()
@@ -62,7 +63,7 @@ const sun = computed(() => {
   const up = store.sky.elevation > -0.833
   const at = nextSun(props.now, !up)
   if (!at) return ''
-  return `${up ? 'Sunset' : 'Sunrise'} ${at.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
+  return `${up ? 'Sunset' : 'Sunrise'} ${at.toLocaleTimeString(locale(), { hour: 'numeric', minute: '2-digit' })}`
 })
 const also = computed(() => {
   const w = store.ambient.weather

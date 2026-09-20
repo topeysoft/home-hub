@@ -36,7 +36,7 @@ export type UpdateProgress = {
   moving: string[] | null   // which containers this update really recreates, once the host has looked
   notices: string[]         // ...and what a household would notice about that, where there is anything
 }
-export type Status = { driver: Driver; reason: string; setup_done: boolean; locked?: boolean; owner: string | null; home: string | null; location: boolean; rooms: number; devices: number; drivers: Part[]; problems?: Problem[]; version?: string; update?: Update }
+export type Status = { driver: Driver; reason: string; setup_done: boolean; locked?: boolean; owner: string | null; home: string | null; location: boolean; rooms: number; devices: number; drivers: Part[]; problems?: Problem[]; version?: string; update?: Update; language?: string }
 /* One job on Needs a look. The brain writes every word of it, including the words on the buttons: the
    panel does not know what it is looking at, so it draws `acts` and invents nothing. `with` is what went
    quiet behind this one fault -- fix the fault and they all come back, which is why they are not lines of
@@ -91,7 +91,14 @@ async function post<T = any>(url: string, body?: unknown): Promise<T> {
 export async function getStatus(): Promise<Status> {
   const r = await request('/setup/status'); if (!r.ok) await fail(r); return r.json()
 }
-export const setupOwner = (name: string, home: string) => post<Status>('/setup/owner', { name, home })
+/* The screen's own language rides along with the names. It is the last moment the engine's account
+   can be given one -- Home Assistant takes it at onboarding and never asks again -- and nobody sets
+   up a hub in order to answer a question about locales, so it is sent rather than asked for. */
+export const setupOwner = (name: string, home: string) =>
+  post<Status>('/setup/owner', { name, home, language: (() => { try { return navigator.language || 'en' } catch { return 'en' } })() })
+
+/** The house's language, changed later from This hub. */
+export const setLanguage = (language: string) => post<{ language: string }>('/language', { language })
 export const setupLogin = (username: string, password: string) => post<Status>('/setup/login', { username, password })
 export const setupHome = (name: string) => post<Status>('/setup/home', { name })
 export const setupDone = () => post<Status>('/setup/done')

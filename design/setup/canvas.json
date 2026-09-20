@@ -39,6 +39,14 @@
       "w": 1440,
       "h": 900,
       "title": "Three controls that meant the wrong thing"
+    },
+    {
+      "file": "Names.dc.html",
+      "x": 1560,
+      "y": 2160,
+      "w": 1440,
+      "h": 900,
+      "title": "Two screens, or one — the names and the code"
     }
   ],
   "annotations": [
@@ -79,10 +87,10 @@
     },
     {
       "id": "next",
-      "x": 1560,
+      "x": 3120,
       "y": 2160,
       "w": 500,
-      "text": "THE ARGUMENT NOT HAD YET\n\nDECIDED 20 Sep 2026: welcome carries no count. It used to promise 'a few minutes and one or two questions' and then ask five, and a sentence that has to be rewritten every time ASKED grows or shrinks is a sentence that goes quietly out of date. It now says 'a few minutes, and you can change any of it later' — which stays true at any length, and is what the number was really doing anyway: softening the ask.\n\nSo the step count is free to move without touching a word of copy. That is the point.\n\nWhat is still open: folding the names and the code onto one screen. Fewer screens is kinder, but it re-orders setupOwner and setPin and it moves the 'Building your home…' wait that currently sits between them. A decision about what the hub does, not a fix to what a screen looks like — so it is deliberately not in this pass."
+      "text": "TWO SCREENS, OR ONE\n\nThe fold is cheaper than I said it was. Reading the brain rather than guessing: /setup/pin is pure settings — hub.lock.set() hashes and writes, with no hub.ready() guard and no HA call — so the code can be set before the engine exists. Only /setup/owner needs the driver, and it is the thing the 'Building your home…' wait is waiting for.\n\nSo there is no interleaving to get wrong: one screen takes all four answers, sets the code instantly, starts the engine, and the wait becomes the last word instead of an interruption between two questions.\n\nTHE COST IS NOT THE WIRING, IT IS THE KEYBOARD. Four fields on one screen, with an IME taking 40% of a phone and more of a tablet in portrait: the code boxes end up under the keys. The docked action row does not help — what has to stay visible is the field being typed into, not the button.\n\nBoard C is the way through: one screen, the code revealed under the names once a name is in, and a focused field that scrolls itself clear of the keyboard. That last part is the whole of the work.\n\nNOT DECIDED. A is not broken, and since welcome stopped promising a number there is nothing here that is actually wrong. The fold is worth doing for the feel, or not at all."
     }
   ],
   "reading": [
@@ -96,6 +104,7 @@
     "Dock.dc.html",
     "words",
     "Words.dc.html",
+    "Names.dc.html",
     "next"
   ]
 }

@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2026 Temitope Adeyeri
 # SPDX-License-Identifier: AGPL-3.0-or-later
-import asyncio, json, logging, shutil, time, urllib.parse, urllib.request
+import asyncio, json, logging, re, shutil, time, urllib.parse, urllib.request
 from contextlib import asynccontextmanager
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -95,7 +95,6 @@ class Hub:
         self.ha: HAAdapter | None = None
         self.home = Home()
         self.home.kinds = dict(self.settings.get("kinds") or {})   # what the owner said things are; kept in settings so a restore brings it back with the rest of the house
-        self.home.color_pinned = set(self.settings.get("color_pinned") or [])   # and which lights somebody chose a color for, rather than leaving to the house
         self.home.leads = dict(self.settings.get("leads") or {})   # which part of a fan-with-a-light is the tile, where the owner has said (docs/units.md)
         self.log = EventLog(DATA / "events.db")
         self.streams: set[WebSocket] = set()
@@ -103,6 +102,12 @@ class Hub:
         self.location = self.settings.get("location")   # {"name", "lat", "lon"}: chosen in the panel, else HA's config, else HOME_LAT/HOME_LON in .env
         self.entry: list = list(self.settings.get("entry") or [])   # room ids the family comes in through; rules for "entry" run there
         self.look = {**LOOK, **(self.settings.get("look") or {})}   # how the panel looks: one house, one answer, every screen
+        # What language the house is in. One answer for the whole house, like the look and the
+        # location -- not a per-screen preference, because a phone and the wall must not disagree
+        # about what the thermostat's maker calls itself. It is NOT what the panel's own words are
+        # in (those are English); it is what everything the house did not write is asked for in:
+        # HA's integration names and form labels, place names, dates, and the voice.
+        self.language = self.settings.get("language") or "en"
         self.weather = None
         self.forecast = None        # what is coming, asked for rather than watched: forecast.py says why
         self._forecast_task = None
@@ -156,7 +161,8 @@ class Hub:
                 "owner": (self.settings.get("owner") or {}).get("name"), "home": self.settings.get("home_name"),
                 "location": bool(self.location), "rooms": sum(1 for r in self.home.rooms.values() if r.id != "unassigned"),
                 "devices": len(self.home.devices), "drivers": self.provision.summary(), "problems": self.provision.problems,
-                "locked": self.lock.locked, "version": self.updates.version, "update": self.updates.summary()}
+                "locked": self.lock.locked, "version": self.updates.version, "update": self.updates.summary(),
+                "language": self.language}
 
     def _set(self, driver, reason=""):
         if (driver, reason) == (self.driver, self.reason): return
@@ -245,9 +251,16 @@ class Hub:
         return self.entry
 
     # ---- setup, driven by the panel ----
-    async def create_owner(self, name: str, home: str):
+    async def create_owner(self, name: str, home: str, language: str = ""):
+        # The engine's own account is made once and carries a language it is never asked for again,
+        # so this is the last moment it can be got right. The panel sends the screen's own language
+        # here rather than anybody being asked for one: nobody sets up a hub in order to answer a
+        # question about locales.
+        if language:
+            try: self.set_language(language)
+            except ValueError: pass   # a browser sent something odd; English is still a fine house
         if self.driver == "fresh":
-            acct = await ha_setup.onboard(self.ha_url, name)
+            acct = await ha_setup.onboard(self.ha_url, name, self.language)
             self.settings.set(ha={"url": self.ha_url, **acct})
             self.log.add("home", "setup", None, "owner created", source="user")
         self.settings.set(owner={"name": name}, home_name=home)
@@ -315,6 +328,23 @@ class Hub:
         self.settings.set(look=self.look)
         self._broadcast(json.dumps({"type": "ambient", "ambient": self.ambient()}))
         return self.look
+
+    def set_language(self, code: str) -> str:
+        """The house's language. A BCP-47 tag -- "en", "pt-BR" -- kept as given but for the primary
+        subtag, which is lowercased so "EN" and "en" are not two languages.
+
+        Onboarding's caches are dropped on the way out: it keeps every integration's form labels by
+        handler, and those were fetched in whatever the language was a moment ago. Without this the
+        Add screen would go on speaking the old language until the brain restarted."""
+        code = (code or "").strip()
+        if not re.fullmatch(r"[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*", code):
+            raise ValueError("That is not a language tag.")
+        parts = code.split("-")
+        self.language = "-".join([parts[0].lower(), *parts[1:]])
+        self.settings.set(language=self.language)
+        self.onboarding._strings.clear(); self.onboarding._names.clear()
+        self._broadcast(json.dumps({"type": "status", "status": self.status()}))
+        return self.language
 
     async def set_location(self, place):
         """Remember the home's location, tell HA (fixes sun.sun), and set up Met.no weather if there is none yet."""
@@ -543,14 +573,6 @@ class Hub:
             # "dim the kitchen lights" reaches a lamp on a plug as an on, because a plug has no 30%, and a
             # brightness sent to switch.turn_on is refused outright. Turning on is the part it can do.
             if dev.kind and dev.kind != dev.capability: data = {}
-            # A light's color is the house's own record and not a service parameter, so it comes off
-            # here rather than going to HA: a bulb at 2700K cannot be told from one somebody set to
-            # 2700K by looking at it, and only the house knows which happened. See art.ts/color.ts.
-            pinned = data.pop("color_pinned", None)
-            if pinned is not None:
-                if pinned: self.home.color_pinned.add(dev.id)
-                else: self.home.color_pinned.discard(dev.id)
-                self.settings.set(color_pinned=sorted(self.home.color_pinned))
             key = (dev.capability.split(".")[0], action)
             if key not in SERVICE: raise ValueError(f"{dev.capability} cannot {action}")
             domain, service = SERVICE[key]
@@ -714,7 +736,7 @@ async def setup_owner(body: dict):
     name, home = (body.get("name") or "").strip(), (body.get("home") or "").strip()
     if not name: raise HTTPException(400, "A name is needed.")
     if hub.driver not in ("fresh", "ready", "connecting", "needs-login"): raise HTTPException(503, "The hub's engine is not ready yet.")
-    try: await hub.create_owner(name, home or "Home")
+    try: await hub.create_owner(name, home or "Home", (body.get("language") or "").strip())
     except ha_setup.SetupError as e: raise HTTPException(502, str(e))
     return hub.status()
 
@@ -1511,6 +1533,13 @@ async def set_location(place: dict):
     return {"ok": True, "weather": weather}
 
 
+@app.post("/language")
+def set_language(body: dict):
+    """The house's language, changed from This hub. Behind the code, like every other change."""
+    try: return {"language": hub.set_language(str(body.get("language") or ""))}
+    except ValueError as e: raise HTTPException(400, str(e))
+
+
 @app.post("/look")
 def set_look(look: dict):
     """The house's own look. Unknown keys are ignored rather than refused, so a
@@ -1523,7 +1552,7 @@ def set_look(look: dict):
 @app.get("/geo/search")
 async def geo_search(q: str):
     """Towns matching a name, from Open-Meteo's free geocoder."""
-    try: r = await asyncio.to_thread(_get_json, f"https://geocoding-api.open-meteo.com/v1/search?name={urllib.parse.quote(q)}&count=6&language=en&format=json")
+    try: r = await asyncio.to_thread(_get_json, f"https://geocoding-api.open-meteo.com/v1/search?name={urllib.parse.quote(q)}&count=6&language={urllib.parse.quote(hub.language.split('-')[0])}&format=json")
     except Exception as e: raise HTTPException(502, f"search unavailable: {e}")
     return [{"name": _place_name([x.get("name"), x.get("admin1"), None if x.get("country_code") == "US" else x.get("country")]),
              "lat": x["latitude"], "lon": x["longitude"], "tz": x.get("timezone")} for x in r.get("results", [])]

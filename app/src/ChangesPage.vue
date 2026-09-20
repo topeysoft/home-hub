@@ -35,6 +35,13 @@
  * as bare icons with no text beside them: the element boxes painted and the
  * text and SVG did not. No page in this panel should be thousands of pixels
  * long, and an audit read newest-first has no reason to be.
+ *
+ * Paging narrowed that and did not close it: asking for older ones a few times
+ * walks the page straight back past the height where it happens, which is
+ * around eight thousand pixels. What closes it is in panel.css, on
+ * `.happened-over li` -- the rows off screen are not drawn until they come near
+ * -- and the reason is written there. Thirty at a time stays, for the reason it
+ * was chosen: it is what somebody reads in one go.
  */
 import { computed, onMounted, ref } from 'vue'
 import { loadChanges, store } from './store'

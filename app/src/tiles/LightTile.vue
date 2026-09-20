@@ -9,7 +9,6 @@ import { perform, shortName, roomOf, store, isDead } from '../store'
 import Icon from '../Icon.vue'
 import DeviceArt from '../DeviceArt.vue'
 import { bulbColor, lightKind } from '../art'
-import { oklch } from '../sky'
 import { leadsFixture, partnerOf, seeing, speedWord } from '../units'
 
 const props = defineProps<{ device: Device }>()
@@ -42,49 +41,21 @@ const wash = computed(() => {
   const c = color.value
   if (!c) return undefined
   const rgb = c.join(',')
-  /* The card a lit light gets, in the bulb's own hue instead of the tone's.
-
-     Not a wash over it: the same card toneVars builds, at the same distance from
-     the sky and the same chroma, turned to a different place on the wheel. That
-     matters because --card-light IS the card on the glass face -- the rule there
-     is `background-image: var(--glass-sweep), var(--card-light, ...)`, so a lit
-     light is not a frosted pane at all, it is the tone's warm card with the
-     sweep laid over it. Leave that alone and a pink bulb sits on an amber card,
-     which is the two-things-at-once this is here to stop. Replace it with a wash
-     over --card-plain, as the first pass did, and the card stops being a card:
-     at noon that came out as the milky pink rectangle this replaced.
-
-     Built from --card-l and --card-c, which toneVars already publishes, so the
-     lightness and the chroma stay whatever the hour and the tone say they are
-     and only the hue is the bulb's. The card still lightens through the morning
-     with every other card, and --card-ink still flips at the right moment,
-     because none of the numbers that decide those has moved. */
-  const H = oklch(c).H
+  /* The strength follows the dimmer, because a lamp at 5% does not fill a room.
+     Floored rather than scaled to nothing: at the bottom of the range the color
+     is the only thing saying which lamp this is. */
+  const a = 0.18 + (pct.value / 100) * 0.26
   return {
-    '--card-light': `linear-gradient(155deg, oklch(calc(var(--card-l) + .055) var(--card-c) ${H.toFixed(1)}),`
-      + ` oklch(var(--card-l) var(--card-c) ${(H + 6).toFixed(1)}))`,
+    '--card-light': `radial-gradient(86% 64% at 72% 16%, rgba(${rgb},${a.toFixed(3)}), transparent 64%),`
+      + ` radial-gradient(60% 46% at 24% 104%, rgba(${rgb},${(a * 0.6).toFixed(3)}), transparent 70%),`
+      + ` var(--card-plain, var(--surface))`,
     /* Both forms, and they are not interchangeable: the dimmer's fill and the
        lit card's border are written against `--lamp-rgb` (bare channels, for
        rgba()) while the bar across the foot uses `--lamp`. Setting only one
        leaves a pink lamp with an amber wash behind it, which is the two-things-
-       at-once this is meant to stop.
-
-       And these two are the WHOLE of it. The first pass also repainted the card
-       itself, by handing --card-light a wash over --card-plain -- which on the
-       glass face quietly swapped the frosted pane for a plain card, so a lit
-       Hue came out as a milky pink rectangle with the drawing barely in it. The
-       board never did that: its card is the pane, unchanged, and the color
-       arrives as LIGHT in it -- the cone out of the fitting, the pool it lands
-       in, the dimmer's own wash, the bar and the badge. */
+       at-once this is meant to stop. */
     '--lamp': `rgb(${rgb})`,
     '--lamp-rgb': rgb,
-    /* and the state line, which has its own token because it has to read as
-       lamplight against a card that may have gone pale by noon -- toneVars sets
-       it to #e9b872 or #7a4a10 depending. Both are amber, which was right while
-       every lamp was, and is the last thing on this card still saying a color
-       the bulb is not. Same two answers, at the bulb's hue: the lit card's own
-       lightness decides which, so it is the card that flips it, not the sky. */
-    '--card-lamp-ink': `oklch(calc(.82 - var(--card-flip, 0) * .42) .16 ${H.toFixed(1)})`,
   }
 })
 /* a fan with a light in it, when the owner has said the light is the tile: the fan is a row on it (units.ts).

@@ -67,31 +67,6 @@ class DeviceActionTests(ApiTest):
         self.assertEqual(r.status_code, 200)
         self.assertEqual(self.ha.called("light", "turn_on", "light.kitchen"), [("light", "turn_on", "light.kitchen", {"brightness_pct": 40})])
 
-    def test_a_light_remembers_that_somebody_chose_its_color(self):
-        """The house's own record, because a bulb cannot keep it.
-
-        A lamp sitting at 2700K is indistinguishable from one somebody deliberately set to 2700K by
-        looking at the lamp; the difference is who decided, and that is the whole of what Automatic
-        means on the panel. So the pin rides in on the same call as the color -- and must not reach
-        the driver, which would refuse it."""
-        r = self.client.post("/devices/light.kitchen/on", json={"hs_color": [302, 66], "color_pinned": True})
-        self.assertEqual(r.status_code, 200)
-        self.assertIn("light.kitchen", self.hub.home.color_pinned)
-        self.assertIs(self.hub.home.attrs_for("light.kitchen", "light", {}).get("color_pinned"), True)
-        # the driver is asked for the color and nothing else
-        call = self.ha.called("light", "turn_on", "light.kitchen")[-1]
-        self.assertEqual(call[3], {"hs_color": [302, 66]})
-
-    def test_putting_a_light_back_on_automatic_forgets_the_color_it_was_given(self):
-        """Automatic is the absence of a choice, so the record goes with it -- and a real white goes
-        with it too, or the lamp would sit on yesterday's color until something else happened."""
-        self.client.post("/devices/light.kitchen/on", json={"hs_color": [302, 66], "color_pinned": True})
-        r = self.client.post("/devices/light.kitchen/on", json={"color_temp_kelvin": 2400, "color_pinned": False})
-        self.assertEqual(r.status_code, 200)
-        self.assertNotIn("light.kitchen", self.hub.home.color_pinned)
-        self.assertNotIn("color_pinned", self.hub.home.attrs_for("light.kitchen", "light", {}))
-        self.assertEqual(self.ha.called("light", "turn_on", "light.kitchen")[-1][3], {"color_temp_kelvin": 2400})
-
     def test_a_tap_holds_the_room_off_the_rules_and_tells_every_screen(self):
         self.client.post("/devices/light.kitchen/on")
         self.assertGreater(self.hub.home.rooms["kitchen"].hold_until, 0)
@@ -314,6 +289,10 @@ class AccountTests(ApiTest):
         self.assertIn("Philips Hue", r.json()["detail"])
 
     def test_removing_an_account_needs_the_code(self):
+        # the house's language is a change to the house; how it looks is taste, and stays open
+        self.assertTrue(needs_code("POST", "/language"))
+        self.assertFalse(needs_code("POST", "/look"))
+        self.assertFalse(needs_code("GET", "/setup/status"))
         self.assertTrue(needs_code("DELETE", "/accounts/e-hue"))
         self.assertFalse(needs_code("GET", "/accounts"))
 

@@ -20,6 +20,41 @@ const SLOP = 10           // past this the finger is scrolling, not holding
 type State = { t?: number; x: number; y: number; fired: boolean }
 const state = new WeakMap<HTMLElement, State>()
 
+/*
+ * Swallowing the click that ends a hold -- wherever it lands, which is the part the card cannot do
+ * for itself.
+ *
+ * A hold opens a panel UNDER the finger that is still down. The browser then sends the click to
+ * whatever is beneath the point WHEN THE FINGER LIFTS, and by then that is the panel, not the card:
+ * the card's own click handler is never offered it and has nothing to stop. On an iPad-shaped wall
+ * panel the light pane's three presets land almost exactly where the finger was holding, so letting
+ * go of a lamp at 35% to open it set it to 100% -- the panel opened AND something in it was tapped,
+ * by one press nobody meant as two.
+ *
+ * `pointerup` on the card is still swallowed below, and still has to be: that is the tile's own
+ * dimmer, and a different bug. This is the other half, and it has to sit on the document because
+ * the element it needs to defend is one nothing here has a reference to.
+ *
+ * One click, and only for as long as one can still be coming. A gesture that ends without one -- a
+ * finger slid away, a pointercancel, a hold on something that opens nothing -- must not leave this
+ * waiting to eat somebody's next real tap, so it also lets go on a timer.
+ */
+const AFTER_HOLD = 700    // longer than the gap between lifting a finger and the click that follows
+let releasing: (() => void) | null = null
+
+function swallowNextClick() {
+  releasing?.()   // a second hold before the first one's click arrived: the newer press is the real one
+  const eat = (e: MouseEvent) => { e.stopImmediatePropagation(); e.preventDefault(); stop() }
+  const timer = window.setTimeout(() => stop(), AFTER_HOLD)
+  function stop() {
+    clearTimeout(timer)
+    document.removeEventListener('click', eat, true)
+    if (releasing === stop) releasing = null
+  }
+  document.addEventListener('click', eat, true)
+  releasing = stop
+}
+
 export const vHold: Directive<HTMLElement, (() => void) | undefined> = {
   /* created, not mounted: at the target element listeners run in the order they
      were registered, and `created` is the one hook that runs before Vue attaches
@@ -51,6 +86,9 @@ export const vHold: Directive<HTMLElement, (() => void) | undefined> = {
         s.fired = true
         el.setAttribute('data-held', '')                       // the card acknowledges the hold before it opens
         navigator.vibrate?.(8)
+        /* Before opening, not after: `open()` mounts the panel synchronously enough that a click
+           already on its way must find this in place. */
+        swallowNextClick()
         open()
         setTimeout(() => el.removeAttribute('data-held'), 220)
       }, HOLD)
@@ -64,6 +102,9 @@ export const vHold: Directive<HTMLElement, (() => void) | undefined> = {
       cancel()
       if (s.fired) { e.stopImmediatePropagation(); e.preventDefault() }
     }
+    /* Kept, though swallowNextClick above usually gets there first: this one still fires where the
+       click lands on the card itself and nothing opened over it, and it is the only one that clears
+       `fired` on the element. Cheap, and the two do not fight -- whichever runs first stops the other. */
     const click = (e: MouseEvent) => {
       if (s.fired) { e.stopImmediatePropagation(); e.preventDefault(); s.fired = false }
     }

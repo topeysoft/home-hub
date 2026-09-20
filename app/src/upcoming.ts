@@ -5,6 +5,7 @@
 import type { Routine } from './api'
 import { store } from './store'
 import { sunPosition } from './sun'
+import { locale } from './lang'
 
 const DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
 function allowedDay(r: Routine, d: Date): boolean {
@@ -62,7 +63,7 @@ export function upcoming(now = new Date()): { routine: Routine; at: Date } | nul
 /** "Next: Living room lights on at dusk, 7:12 PM" — or '' when nothing is due in the coming day. */
 export function upcomingLine(now = new Date()): string {
   const u = upcoming(now); if (!u) return ''
-  const t = u.at.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+  const t = u.at.toLocaleTimeString(locale(), { hour: 'numeric', minute: '2-digit' })
   const today = u.at.toDateString() === now.toDateString()
   return `Next: ${u.routine.name}, ${today ? '' : 'tomorrow '}${t}`
 }

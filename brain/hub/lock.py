@@ -25,6 +25,12 @@ def needs_code(method: str, path: str) -> bool:
     if path.startswith(("/flows", "/credentials")): return True
     if path.startswith("/accounts") and m == "DELETE": return True   # everything it brought goes with it
     if path in ("/location", "/home/entry") and m == "POST": return True
+    # The house's language. /look is deliberately NOT on this list -- how the panel looks is taste,
+    # and a guest who prefers the dark tone costs nobody anything -- but the language is not taste:
+    # it decides what every OTHER screen in the house says its devices are called, and it is a
+    # setting on This hub sitting between two that are gated. Changing the house rather than driving
+    # it, which is what this function is for.
+    if path == "/language" and m == "POST": return True
     if path.startswith("/rules") and m in ("PUT", "POST", "DELETE"): return True
     # The one GET on this list. Reading what the house DID never needs the code -- that is the
     # household's own situation, and the catch-up is open like the network page. Reading who did it

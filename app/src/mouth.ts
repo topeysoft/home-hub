@@ -20,6 +20,7 @@
  * it is handed.
  */
 import type { Spoken } from './api'
+import { locale } from './lang'
 
 /* Only one thing ever speaks. Within a panel that is this variable: a second answer stops the first
    rather than talking over it, which is the same rule the brain keeps between two panels in earshot. */
@@ -73,7 +74,9 @@ function say(line: string): boolean {
   if (!synth || typeof SpeechSynthesisUtterance === 'undefined') return false
   console.warn('[mouth] ?speak=browser: this is the BROWSER speaking, not the house')
   const u = new SpeechSynthesisUtterance(line)
-  u.lang = navigator.language || 'en-GB'
+  // Same as the ear: the house decides, not the screen. A phone set to Japanese was reading the
+  // house's English sentences aloud in a Japanese voice.
+  u.lang = locale()
   u.onend = () => { browser = false }
   browser = true
   synth.speak(u)

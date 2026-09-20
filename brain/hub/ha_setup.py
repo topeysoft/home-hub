@@ -44,11 +44,15 @@ def username_for(name: str) -> str:
     return u[:24]
 
 
-def create_owner(url: str, name: str) -> dict:
-    """Owner account + the rest of onboarding. Returns {username, password, access, refresh}."""
+def create_owner(url: str, name: str, language: str = "en") -> dict:
+    """Owner account + the rest of onboarding. Returns {username, password, access, refresh}.
+
+    The language is the engine's, not the panel's: it decides what Home Assistant calls every
+    integration, every form label and every error the Add screen then shows in the house's words.
+    Onboarding takes it once and there is no second chance to answer -- hence the argument."""
     client_id = f"{url}/"
     username, password = username_for(name), secrets.token_urlsafe(18)
-    code, r = _req(f"{url}/api/onboarding/users", {"client_id": client_id, "name": name, "username": username, "password": password, "language": "en"})
+    code, r = _req(f"{url}/api/onboarding/users", {"client_id": client_id, "name": name, "username": username, "password": password, "language": language or "en"})
     if code != 200: raise SetupError(f"could not create the owner: {r}")
     tok = _exchange(url, client_id, r["auth_code"])
     access = tok["access_token"]
@@ -88,9 +92,9 @@ async def long_lived_token(url: str, access: str, client_name="home-hub brain") 
         return r["result"]
 
 
-async def onboard(url: str, name: str) -> dict:
+async def onboard(url: str, name: str, language: str = "en") -> dict:
     """The whole thing for a fresh HA: owner, onboarding steps, long-lived token."""
-    acct = await asyncio.to_thread(create_owner, url, name)
+    acct = await asyncio.to_thread(create_owner, url, name, language)
     acct["token"] = await long_lived_token(url, acct.pop("access"))
     return acct
 

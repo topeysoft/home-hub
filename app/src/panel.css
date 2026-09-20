@@ -9504,195 +9504,6 @@ select.input {
   font-weight: 500;
   color: var(--lamp-ink);
 }
-/* ---- what color a light is ----
-   Replaces the Warmth column, which asked for color_temp_kelvin and so vanished
-   the moment a bulb went into a color mode. White is a swatch beside the colors
-   here, so nothing appears or disappears with a bulb's MODE and the way back
-   from pink is where it always was. design/device page 4. */
-.rig-color {
-  display: flex;
-  flex-direction: column;
-  gap: 11px;
-  width: 292px;
-  flex: 0 0 auto;
-  min-width: 0;
-}
-/* Where every light starts, and where most of them stay: the answer for a house
-   that does not want to pick one. Wide rather than a swatch because it is not a
-   color -- it is the absence of one, and it has a sentence to say. */
-.rig-auto {
-  display: flex;
-  align-items: center;
-  gap: 13px;
-  height: 66px;
-  padding: 0 16px;
-  border-radius: 20px;
-  border: 1px solid var(--edge);
-  background: var(--surface-hi);
-  color: var(--ink);
-  text-align: left;
-  cursor: pointer;
-  transition:
-    background 0.18s var(--ease),
-    color 0.18s;
-}
-.rig-auto.on {
-  background: var(--ink);
-  border-color: transparent;
-  color: #1d1a22;
-}
-.rig-auto-dot {
-  width: 40px;
-  height: 40px;
-  flex: 0 0 auto;
-  border-radius: 50%;
-  /* the whole range a lamp on Automatic moves through in a day, which is what
-     the word means here -- lamplight after dark, cooler while the sun is up */
-  background: linear-gradient(135deg, #ffa657, #ffe9d4 52%, #e2ecff);
-}
-.rig-auto-text {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-.rig-auto-name {
-  font-size: 17px;
-  font-weight: 500;
-}
-.rig-auto-sub {
-  font-size: 13.5px;
-  margin-top: 1px;
-  color: var(--ink-2);
-}
-.rig-auto.on .rig-auto-sub {
-  color: rgba(29, 26, 34, 0.66);
-}
-.rig-auto-tick {
-  margin-left: auto;
-  flex: 0 0 auto;
-}
-.rig-swatches {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 13px;
-}
-/* 58px, because the hand that reaches for one of these is not looking -- the
-   same reason the columns beside them are 168 wide. */
-.rig-swatch {
-  width: 58px;
-  height: 58px;
-  border-radius: 50%;
-  border: 0;
-  cursor: pointer;
-  box-shadow: inset 0 -2px 6px rgba(0, 0, 0, 0.24);
-  transition: box-shadow 0.18s var(--ease);
-}
-.rig-swatch.on {
-  box-shadow:
-    0 0 0 3px var(--pane-ring, rgba(12, 13, 24, 0.9)),
-    0 0 0 6px var(--ink);
-}
-.rig-swatch:disabled,
-.rig-auto:disabled,
-.rig-more:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
-.rig-more {
-  align-self: flex-start;
-  height: 44px;
-  padding: 0 18px;
-  border-radius: 999px;
-  border: 1px solid var(--edge);
-  background: none;
-  color: var(--ink-2);
-  font-size: 15px;
-  cursor: pointer;
-}
-
-/* ---- the thirteenth color ----
-   Not a picker with a preview: a pair of dials turned while looking at the lamp,
-   because a bulb's idea of pink is not the swatch's pink. What it is showing NOW
-   is at the top, which is the readout rather than the target. */
-.rig-tune {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: stretch;
-  gap: 18px 26px;
-  flex: 1 1 auto;
-  min-width: 0;
-}
-/* the two columns are the same object as Brightness beside them, so they take
-   the same height rather than sizing to the wrapper that happens to hold them */
-.rig-tune > .rig-slot {
-  flex: 0 0 auto;
-}
-.rig-tune-head {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex: 1 0 100%;
-  align-self: flex-start;
-}
-.rig-back {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 42px;
-  padding: 0 16px 0 12px;
-  border-radius: 999px;
-  border: 0;
-  background: var(--surface-hi);
-  color: var(--ink-2);
-  font-size: 15px;
-  cursor: pointer;
-}
-.rig-tune-now {
-  width: 44px;
-  height: 44px;
-  flex: 0 0 auto;
-  border-radius: 50%;
-  box-shadow:
-    0 0 0 3px var(--pane-ring, rgba(12, 13, 24, 0.8)),
-    0 0 0 5px rgba(255, 255, 255, 0.85);
-}
-.rig-tune-text {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-/* the wheel, stood on its end: a finger finds a column without looking, where a
-   dot on a disc has to be aimed with two axes at once */
-.rig-hue {
-  background: linear-gradient(
-    180deg,
-    hsl(360, 90%, 60%),
-    hsl(300, 90%, 60%) 17%,
-    hsl(240, 90%, 60%) 33%,
-    hsl(180, 90%, 60%) 50%,
-    hsl(120, 90%, 60%) 67%,
-    hsl(60, 90%, 60%) 83%,
-    hsl(0, 90%, 60%)
-  );
-}
-.rig-amount {
-  background: linear-gradient(180deg, var(--tune, var(--lamp)), #ffffff);
-}
-.rig-hue.bar {
-  background: linear-gradient(
-    90deg,
-    hsl(0, 90%, 60%),
-    hsl(60, 90%, 60%) 17%,
-    hsl(120, 90%, 60%) 33%,
-    hsl(180, 90%, 60%) 50%,
-    hsl(240, 90%, 60%) 67%,
-    hsl(300, 90%, 60%) 83%,
-    hsl(360, 90%, 60%)
-  );
-}
-.rig-amount.bar {
-  background: linear-gradient(90deg, #ffffff, var(--tune, var(--lamp)));
-}
 .rig-levels {
   flex: 1 1 0;
   min-width: 200px;
@@ -11420,6 +11231,24 @@ button.reading[data-held] {
 .happened-over li {
   align-items: start;
   padding: 11px 0;
+  /* Only the rows near the window are drawn. Who changed what grows by thirty
+     every time somebody asks for older ones, and past roughly eight thousand
+     pixels the rows came back as bare icons with no sentence beside them --
+     boxes painted, text and SVG did not. The panel's frost is what makes it
+     happen: it puts the whole scrolling page on one composited layer, and a
+     layer that tall is past what the machine will raster in one piece. Paging
+     it, and moving the frost off the box, each pushed the wall further away
+     without moving it.
+
+     This takes the wall away instead, by giving the browser less to hold: a row
+     off screen costs nothing until it comes near. `auto` means a row that has
+     been seen once is remembered at its real height, so the length of the
+     scrollbar settles as you go rather than lying about it; the 62px is only
+     the first guess for rows nobody has reached yet, and it is the height of a
+     two-line row on the wall. Nothing is removed from the page -- every row is
+     still there to be found, read aloud, or scrolled back to. */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 62px;
 }
 .happened-over .recent-icon,
 .happened-over .recent-when {

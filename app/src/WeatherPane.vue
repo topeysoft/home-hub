@@ -33,6 +33,7 @@ import { nextSun } from './upcoming'
 import { ahead, changeLine, days, inside, listed, nextChange, openThings, range, WET } from './weather'
 import Icon from './Icon.vue'
 import WeatherArt from './WeatherArt.vue'
+import { locale } from './lang'
 
 /* the panel's clock rather than this pane's own: ?at= previews an hour and a
    pane that ignored it would put the forecast in a different afternoon from the
@@ -70,7 +71,7 @@ const facts = computed(() => {
   if (w?.wind_speed != null) out.push({ k: 'Wind', v: `${Math.round(w.wind_speed)} ${w.wind_unit ?? ''}`.trim() })
   const up = store.sky.elevation > -0.833
   const at = nextSun(now.value, !up)
-  if (at) out.push({ k: up ? 'Sunset' : 'Sunrise', v: at.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) })
+  if (at) out.push({ k: up ? 'Sunset' : 'Sunrise', v: at.toLocaleTimeString(locale(), { hour: 'numeric', minute: '2-digit' }) })
   const warm = inside()
   if (warm != null) out.push({ k: 'Inside', v: deg(warm) })
   return out
@@ -86,7 +87,7 @@ const hours = computed(() => {
   const lo = Math.min(...reads), hi = Math.max(...reads)
   return rows.map((h, i) => ({
     key: h.at,
-    when: i === 0 ? 'Now' : new Date(h.at).toLocaleTimeString([], { hour: 'numeric' }),
+    when: i === 0 ? 'Now' : new Date(h.at).toLocaleTimeString(locale(), { hour: 'numeric' }),
     temp: h.temperature == null ? '' : deg(h.temperature),
     wet: WET.has(h.condition),
     /* 12px of bar even where every hour is the same reading, so a flat day is a row and not a gap */
@@ -103,7 +104,7 @@ const week = computed(() => {
   const place = (v: number | null) => v == null || hi === lo ? 50 : ((v - lo) / (hi - lo)) * 100
   return rows.map((d, i) => ({
     key: d.at,
-    name: i === 0 ? 'Today' : new Date(d.at).toLocaleDateString([], { weekday: 'long' }),
+    name: i === 0 ? 'Today' : new Date(d.at).toLocaleDateString(locale(), { weekday: 'long' }),
     wet: WET.has(d.condition),
     says: WEATHER_LABEL[d.condition] ?? '',
     low: deg(d.low), high: deg(d.high),

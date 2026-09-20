@@ -1,9 +1,10 @@
 // SPDX-FileCopyrightText: 2026 Temitope Adeyeri
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { reactive } from 'vue'
+import { reactive, watch } from 'vue'
 import { doRestart, type Rung, getBridge, type Bridge, getHome, getEvents, getAmbient, getScenes, getStatus, getDiscovered, getRoutines, getAssistant, getPresence, getHealth, getSounds, connect, act, setIntent, setHomeIntent, type Room, type Device, type Home, type Event, type Ambient, type Rules, type Status, type Found, type Intent, type Routine, type Assistant, type Presence, type Note, type Sound, requestUpdate, getPhones, type Phone, type Ask, getAccounts, type Account, getShare, type Share, getHappened, type Happened, getChanges, type Changes } from './api'
 import { lock } from './code'
 import { sunPosition, sunGuess, moonPhase } from './sun'
+import { locale, setHouseLanguage } from './lang'
 
 /* The few soft sheets the panel has. Named rather than written out twice: the restart keeps the one
    it closed so it can come back to it, and `typeof store.sheet` there would make the store's own type
@@ -86,6 +87,14 @@ export const store = reactive({
   goRoom: null as string | null,
   sky: { elevation: -20, azimuth: 0, phase: 0, hour: 0, month: 6, condition: 'clear-night', guessed: true },   // what the sky draws; month is seasonal (0 midwinter → 6 midsummer, either hemisphere)
 })
+
+/*
+ * The house has one language and the panel follows it, wherever the status came from -- the boot
+ * fetch, the websocket, or one of first run's own calls. A watcher rather than a line beside every
+ * `store.status =` there are six of, which is how <html lang> and the clock drifted apart from the
+ * rest of the panel in the first place. See lang.ts.
+ */
+watch(() => store.status?.language, setHouseLanguage, { immediate: true })
 
 /* ---------- the sky: sun from the clock and the location, weather from the house ---------- */
 const params = new URLSearchParams(location.search)
@@ -284,9 +293,9 @@ export function houseLine(): string {
 function sinceText(): string {
   const s = store.presence?.since; if (!s) return ''
   const d = new Date(s * 1000), today = new Date(); today.setHours(0, 0, 0, 0)
-  if (d.getTime() >= today.getTime()) return ` since ${d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
+  if (d.getTime() >= today.getTime()) return ` since ${d.toLocaleTimeString(locale(), { hour: 'numeric', minute: '2-digit' })}`
   if (d.getTime() >= today.getTime() - 86400000) return ' since yesterday'
-  return ` since ${d.toLocaleDateString([], { weekday: 'long' })}`
+  return ` since ${d.toLocaleDateString(locale(), { weekday: 'long' })}`
 }
 
 /* ---------- scenes: every button says what it will do ---------- */
@@ -477,7 +486,7 @@ export function ago(ts: number, now = Date.now()): string {
   if (s < 60) return 'Just now'
   if (s < 3600) return `${Math.round(s / 60)} min ago`
   if (s < 86400) return `${Math.round(s / 3600)} h ago`
-  return new Date(ts * 1000).toLocaleDateString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' })
+  return new Date(ts * 1000).toLocaleDateString(locale(), { weekday: 'short', hour: 'numeric', minute: '2-digit' })
 }
 let eventsTimer: number | undefined
 export async function refreshEvents() {

@@ -102,6 +102,15 @@ Every one of these has already shipped a bug.
 - **Never start a second brain against a real house** to test something. It reads their live Home
   Assistant and will attempt driver provisioning. Use `HUB_PORT` and `HUB_DATA`, and say that you
   did.
+- **To see a screen against real rooms, borrow a house's brain rather than standing one up.**
+  `tools/dev.sh live [host]` serves the panel from this tree, hot reloaded, and hands every path the
+  brain owns to a hub that is already running — nothing is started here and nothing is pushed there.
+  It is the answer to the rule above, and it inverts the stale-brain trap: that hub follows released
+  code, so a route you wrote this morning comes back 404 and draws as a missing feature. The mode
+  prints how far this tree is past that brain before Vite starts, and you are expected to read it.
+  Two things it cannot do: every tap is that house — their lights, their names, their Restart button
+  — and the Advanced door and driver links point at your own machine, because they are built from
+  `location.hostname`.
 
 ---
 

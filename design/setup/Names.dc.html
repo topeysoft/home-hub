@@ -1,0 +1,195 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp: #e9b872; --lamp-ink: #2a1c07; --live: #74c69d; --danger: #e08a8a;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .t1 { font-size: 15px; font-weight: 500; }
+    .t2 { font-size: 13px; color: var(--muted); line-height: 1.45; }
+    .note { padding: 13px 16px 14px; border-radius: 18px; background: var(--surface); border: 1px solid var(--edge); }
+    code { color: var(--lamp); font-size: .94em; }
+
+    /* a step, drawn small: these are schematics of a screen, not the screen */
+    .mini { position: relative; border-radius: 9px; overflow: hidden; border: 1px solid var(--edge);
+            background: linear-gradient(#1b2b44, #24354b 55%, #18231f); padding: 13px 14px; }
+    .mini.wait { background: linear-gradient(#141b26, #171f2b); border-style: dashed; }
+    .mini .eb { font-size: 8.5px; letter-spacing: .13em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+    .mini .hh { font-size: 17px; line-height: 1.05; letter-spacing: -.02em; color: var(--ink); margin-bottom: 8px; }
+    .mini .fl { font-size: 9.5px; color: var(--ink-2); margin-bottom: 3px; }
+    .mini .fi { height: 20px; border-radius: 7px; background: rgba(255,255,255,.07); border: 1px solid var(--edge); margin-bottom: 8px; }
+    .mini .bt { display: inline-flex; padding: 6px 13px; border-radius: 999px; background: #f1eee8; color: #0c0d10;
+                font-size: 10.5px; font-weight: 500; }
+    .arrow { position: absolute; color: var(--muted); font-size: 17px; }
+
+    .tag { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px 4px; border-radius: 999px;
+           font-size: 11px; border: 1px solid var(--edge); color: var(--ink-2); }
+    .tag.good { border-color: rgba(116,198,157,.5); color: var(--live); }
+    .tag.cost { border-color: rgba(224,138,138,.5); color: var(--danger); }
+    .tag.wire { border-color: rgba(233,184,114,.45); color: var(--lamp); }
+
+    /* the phone, with the keyboard up: the whole of the cost, in one picture */
+    .ph { position: relative; width: 112px; height: 186px; border-radius: 14px; overflow: hidden;
+          border: 1px solid var(--edge-hi); background: linear-gradient(#1b2b44, #24354b 60%, #18231f); }
+    .ph .kb { position: absolute; left: 0; right: 0; bottom: 0; height: 80px; background: #1a1c22;
+              border-top: 1px solid rgba(255,255,255,.14); display: grid; grid-template-rows: repeat(3, 1fr);
+              gap: 3px; padding: 4px; }
+    .ph .kb i { display: grid; grid-template-columns: repeat(8, 1fr); gap: 3px; }
+    .ph .kb i b { background: rgba(255,255,255,.12); border-radius: 2px; }
+    .ph .inner { position: absolute; inset: 0 0 80px 0; padding: 9px 9px 0; overflow: hidden; }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: #0c0d10; color: var(--ink); font-size: 17px; line-height: 1.4;">
+  <div style="position: absolute; inset: 0; background: radial-gradient(64% 54% at 22% 18%, rgba(72,63,135,.22), transparent 70%), radial-gradient(56% 48% at 86% 88%, rgba(92,63,57,.2), transparent 72%);"></div>
+
+  <div style="position: absolute; top: 38px; left: 56px; right: 56px;">
+    <h1 class="dsp" style="margin: 0; font-size: 40px;">Two screens, or one.</h1>
+    <p style="margin: 9px 0 0; font-size: 16.5px; color: var(--ink-2); max-width: 112ch;">The two things first run cannot skip, today split by the engine&rsquo;s first boot. Folding them is cheaper than it looked &mdash; <code>/setup/pin</code> needs no engine at all &mdash; but it costs four fields on one screen, and a keyboard leaves room for two.</p>
+  </div>
+
+  <!-- ===== A: today ===== -->
+  <div style="position: absolute; top: 158px; left: 56px; width: 636px;">
+    <div class="cap" style="margin-bottom: 4px;">A &mdash; today</div>
+    <div class="dsp" style="font-size: 21px; margin-bottom: 14px;">Two questions, and a wait in the middle of them.</div>
+  </div>
+
+  <div class="mini" style="position: absolute; top: 238px; left: 56px; width: 192px; height: 172px;">
+    <div class="eb">Step 1 of 5</div>
+    <div class="hh">A couple of names.</div>
+    <div class="fl">Your name</div><div class="fi"></div>
+    <div class="fl">Call this home</div><div class="fi"></div>
+    <div class="bt">Continue</div>
+  </div>
+  <div class="arrow" style="top: 312px; left: 256px;">&rarr;</div>
+
+  <div class="mini wait" style="position: absolute; top: 238px; left: 278px; width: 192px; height: 172px;">
+    <div class="eb">no number, no button</div>
+    <div class="hh" style="margin-top: 34px;">Building your home&hellip;</div>
+    <div class="t2" style="font-size: 10.5px;">The engine&rsquo;s first boot. A minute or two, and it moves on by itself.</div>
+  </div>
+  <div class="arrow" style="top: 312px; left: 478px;">&rarr;</div>
+
+  <div class="mini" style="position: absolute; top: 238px; left: 500px; width: 192px; height: 172px;">
+    <div class="eb">Step 2 of 5</div>
+    <div class="hh">A code for changes.</div>
+    <div class="fl">Code</div><div class="fi"></div>
+    <div class="fl">Once more</div><div class="fi"></div>
+    <div class="bt">Continue</div>
+  </div>
+
+  <div style="position: absolute; top: 424px; left: 56px; width: 636px; display: flex; gap: 8px; flex-wrap: wrap;">
+    <span class="tag good">Two fields a screen</span>
+    <span class="tag good">Keyboard&#8209;friendly</span>
+    <span class="tag cost">The wait interrupts the asking</span>
+  </div>
+
+  <!-- ===== B: folded ===== -->
+  <div style="position: absolute; top: 158px; left: 748px; width: 636px;">
+    <div class="cap" style="margin-bottom: 4px;">B &mdash; folded</div>
+    <div class="dsp" style="font-size: 21px; margin-bottom: 14px;">One question, then one wait, and the wait is the last word.</div>
+  </div>
+
+  <div class="mini" style="position: absolute; top: 238px; left: 748px; width: 298px; height: 172px;">
+    <div class="eb">Step 1 of 4</div>
+    <div class="hh">First, the names and a code.</div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px;">
+      <div><div class="fl">Your name</div><div class="fi"></div></div>
+      <div><div class="fl">Call this home</div><div class="fi"></div></div>
+      <div><div class="fl">Code</div><div class="fi"></div></div>
+      <div><div class="fl">Once more</div><div class="fi"></div></div>
+    </div>
+    <div class="bt">Continue</div>
+  </div>
+  <div class="arrow" style="top: 312px; left: 1054px;">&rarr;</div>
+
+  <div class="mini wait" style="position: absolute; top: 238px; left: 1076px; width: 192px; height: 172px;">
+    <div class="eb">no number, no button</div>
+    <div class="hh" style="margin-top: 34px;">Building your home&hellip;</div>
+    <div class="t2" style="font-size: 10.5px;">Same boot, same wait &mdash; but nothing is queued behind it now.</div>
+  </div>
+  <div class="arrow" style="top: 312px; left: 1274px;">&rarr;</div>
+  <div class="cap" style="position: absolute; top: 306px; left: 1296px; width: 80px; line-height: 1.5;">on to<br>where is<br>home?</div>
+
+  <div style="position: absolute; top: 424px; left: 748px; width: 636px; display: flex; gap: 8px; flex-wrap: wrap;">
+    <span class="tag good">Step 1 of 4, not 5</span>
+    <span class="tag good">The wait stops interrupting</span>
+    <span class="tag good">The door shuts sooner</span>
+    <span class="tag cost">Four fields on one screen</span>
+  </div>
+
+  <!-- ===== the wiring, which is the thing that changed ===== -->
+  <div class="note" style="position: absolute; top: 464px; left: 56px; width: 636px; height: 226px;">
+    <div class="cap" style="color: var(--lamp); margin-bottom: 9px;">the wiring, which is why this is now cheap</div>
+    <div class="t2" style="margin-bottom: 9px;">Last time I said folding these &ldquo;re&#8209;orders <code>setupOwner</code> and <code>setPin</code>&rdquo;. Reading the brain: it mostly does not.</div>
+    <div style="display: grid; grid-template-columns: auto 1fr; gap: 7px 12px; font-size: 13px; color: var(--ink-2);">
+      <span class="tag wire" style="justify-self: start;">/setup/pin</span>
+      <span>Pure settings. <code>hub.lock.set()</code> hashes and writes &mdash; no <code>hub.ready()</code> guard, no HA call. It can run before the engine exists.</span>
+      <span class="tag wire" style="justify-self: start;">/setup/owner</span>
+      <span>The only one that needs the driver (<code>fresh | ready | connecting | needs-login</code>), and the only one that takes time. It is what the wait is waiting for.</span>
+    </div>
+    <div class="t2" style="margin-top: 10px;">So one screen can take all four answers, set the code instantly, then start the engine and let the wait be the last thing on screen. There is no interleaving to get wrong.</div>
+  </div>
+
+  <!-- ===== the cost, drawn ===== -->
+  <div class="note" style="position: absolute; top: 464px; left: 748px; width: 636px; height: 226px; display: flex; gap: 18px;">
+    <div class="ph" style="flex: none;">
+      <div class="inner">
+        <div class="eb" style="font-size: 8px; letter-spacing: .13em; text-transform: uppercase; color: var(--muted); margin-bottom: 5px;">Step 1 of 4</div>
+        <div style="font-size: 11.5px; line-height: 1.08; letter-spacing: -.02em; margin-bottom: 6px;">First, the names and a code.</div>
+        <div class="fl" style="font-size: 9px; color: var(--ink-2); margin-bottom: 3px;">Your name</div>
+        <div class="fi" style="height: 14px; border-radius: 7px; background: rgba(255,255,255,.07); border: 1px solid var(--edge); margin-bottom: 7px;"></div>
+        <div class="fl" style="font-size: 9px; color: var(--ink-2); margin-bottom: 3px;">Call this home</div>
+        <div class="fi" style="height: 14px; border-radius: 7px; background: rgba(255,255,255,.07); border: 1px solid var(--edge);"></div>
+      </div>
+      <div class="kb">
+        <i><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b></i>
+        <i><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b></i>
+        <i><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b></i>
+      </div>
+    </div>
+    <div>
+      <div class="cap" style="color: var(--danger); margin-bottom: 9px;">the cost, and it is the whole argument</div>
+      <div class="t2" style="margin-bottom: 9px;">A keyboard takes about 40% of a phone and rather more of a wall tablet held in portrait. Two fields clear it. <b style="color: var(--ink)">Four do not</b> &mdash; the code boxes are under the keys, and the person is typing their name into a form they cannot see the end of.</div>
+      <div class="t2">The docked action row handles the button. It does not handle a <i>field</i> below the fold, because the thing that has to stay visible is the one being typed into.</div>
+    </div>
+  </div>
+
+  <!-- ===== the way through ===== -->
+  <div class="note" style="position: absolute; top: 710px; left: 56px; width: 1328px; border-color: rgba(233,184,114,.34);">
+    <div class="cap" style="color: var(--lamp); margin-bottom: 8px;">C &mdash; what I would actually build, if you want the fold</div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px;">
+      <div>
+        <div class="t1" style="margin-bottom: 4px;">One screen, two beats</div>
+        <div class="t2">The names, with the code revealed under them once a name is in &mdash; not a second screen and not a second step number. Nothing is hidden that has not already been earned, and at most two fields ever want the keyboard at once.</div>
+      </div>
+      <div>
+        <div class="t1" style="margin-bottom: 4px;">The field being typed into stays in view</div>
+        <div class="t2">The same <code>ResizeObserver</code> that docks the action row already knows the scroller&rsquo;s height; a focused field scrolls itself into the space the keyboard leaves. This is the piece of work, and it is the only one.</div>
+      </div>
+      <div>
+        <div class="t1" style="margin-bottom: 4px;">And if that is too clever</div>
+        <div class="t2">Keep A. It is not broken &mdash; it is two calm screens and a wait, and the welcome no longer promises a number it has to keep. The fold is worth doing for the <i>feel</i>, not to fix anything.</div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
