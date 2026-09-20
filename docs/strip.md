@@ -206,6 +206,58 @@ and a gap over about 50 µs is precisely what a WS2812 reads as *end of frame*. 
 30 pixels and torn at 300.
 
 
+## Scoped: leaving Arduino for ESP-IDF
+
+*Scoped 20 September, not started. The question it answers is not "is Arduino nice" — it is that **on the
+Arduino framework a strip cannot be set up by Apple Home or Google Home at all.* Without CHIPoBLE they cannot
+provision Wi-Fi, so a strip bought by a household with no hub of ours does not work, and no amount of work on
+our side fixes it: it is a compile-time flag in somebody else's precompiled binary. That is the promise this
+whole product line started from.*
+
+### What the move buys
+
+Matter does the Wi-Fi **and** the commissioning, in one encrypted flow, over BLE. Which means these all go
+away rather than getting ported: `WiFiProv`, the proof of possession and the question of how anybody learns it,
+the two-key Wi-Fi ring, and most of `Radio` in the brain — because the hub would commission a strip through
+`matter-server`, which the house already runs (`docs/matter.md`), exactly like any other Matter device.
+
+It also puts secure boot, flash encryption and per-unit DAC provisioning within reach. Those are IDF-level and
+are what the `esp_secure_cert` and `fctry` partitions were laid down for.
+
+### What the move actually touches
+
+| | |
+|---|---|
+| `src/pixels.h`, `test_pixels_native.cpp` | **nothing.** 351 lines, already framework-free, and that was the point of writing them that way |
+| `partitions-matter.csv` | nothing |
+| the brain, the panel, every board in `design/` | nothing |
+| `src/pixels.cpp` | the RMT layer, about 40 lines, from `esp32-hal-rmt.h` to IDF's `driver/rmt_tx.h` |
+| `src/main.cpp` | the rewrite, and it **shrinks** |
+
+Counted from the real file, `main.cpp` uses: `Matter` (23 call sites, and the real work — the Arduino wrapper
+becomes esp-matter's own `node`/`endpoint`/`attribute` API), `Preferences` (16, → `nvs_flash`, mechanical),
+`String` (10, → `std::string`), `millis` and `delay` (12, → `esp_timer` and `vTaskDelay`), `PubSubClient` (7, →
+`esp_mqtt_client`, which is in IDF), `Serial` (5, → `ESP_LOGI`, and one console instead of two, which was its
+own bug), `gpio` (3). **`WiFi` and `WiFiProv` (7) are deletions, not ports.**
+
+### What it costs
+
+**esp-matter's README recommends ESP-IDF v6.0.2.** The install on this machine is v5.4.1, so this is a second
+IDF, not a reuse — a couple of gigabytes with toolchains, plus esp-matter itself, which vendors connectedhomeip
+as a submodule. Expect a long first fetch and a first build measured in tens of minutes; CHIP is enormous.
+Incremental builds afterwards are ordinary.
+
+The daily cost is slower builds and losing the fifteen-second self-test loop that has already earned its keep
+twice.
+
+### The honest risk
+
+Nobody here has built esp-matter before. The version matrix between esp-matter, connectedhomeip and IDF is the
+part that historically goes wrong, and "it recommends v6.0.2" is a README rather than a build that has run.
+**The first thing to do is not to port anything — it is to build esp-matter's own `light` example, unmodified,
+and commission it from a phone.** If that works, the port is mechanical and the estimate above holds. If it
+does not, we have learned it for the price of a download instead of a rewrite.
+
 ---
 
 ## What is not built, and what is not safe yet
