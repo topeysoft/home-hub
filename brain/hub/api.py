@@ -57,7 +57,11 @@ SERVICE_HEADER = "x-hub-service"   # how the Matter bridge says it is the Matter
 # a house that set its look by hand before feels existed keeps exactly what it
 # chose. "face" was missing from this list, which quietly dropped every Glass a
 # panel ever sent: the panel showed it, the house never kept it.
-LOOK = {"feel": "calm", "tone": "follow", "face": "paper", "layout": "auto", "nav": "auto"}   # nav: where the way around the house lives -- a list down the side, or tabs across the top
+LOOK = {"feel": "nightfall", "tone": "follow", "face": "glass", "layout": "auto", "nav": "auto"}
+# What a house looks like before anybody picks: glass, and automatic for everything that can be --
+# `follow` takes the tone from the light, and layout and nav are the screen's own to work out.
+# nav: where the way around the house lives -- a list down the side, or tabs across the top.
+# A stored key still wins (see self.look below), so this moves only houses that never chose.
 US_ZONES = ("America/New_York", "America/Chicago", "America/Denver", "America/Phoenix", "America/Los_Angeles", "America/Anchorage",
             "America/Juneau", "America/Sitka", "America/Nome", "America/Adak", "America/Boise", "America/Detroit", "America/Menominee",
             "America/Indiana/", "America/Kentucky/", "America/North_Dakota/", "Pacific/Honolulu", "US/")

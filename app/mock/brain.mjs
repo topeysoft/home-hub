@@ -203,7 +203,7 @@ const forecastDays = () => {
 }
 const ambient = { location: { name: 'Holts Summit, MO', lat: 38.6355985, lon: -92.1176322 }, weather: { id: 'w', condition: process.env.WX || 'partlycloudy', temperature: 78, unit: '°F', humidity: 48, wind_speed: 6, wind_unit: 'mph' },
   forecast: process.env.FORECAST === '0' ? null : { hourly: forecastHours(), daily: forecastDays() },
-  look: { feel: process.env.FEEL || 'calm', tone: process.env.TONE || 'follow', face: process.env.FACE || 'paper', layout: process.env.LAYOUT || 'auto', nav: process.env.NAV || 'auto' } }   // FEEL=nightfall LAYOUT=rail TONE=pastel NAV=top FACE=glass start the house somewhere else
+  look: { feel: process.env.FEEL || 'nightfall', tone: process.env.TONE || 'follow', face: process.env.FACE || 'glass', layout: process.env.LAYOUT || 'auto', nav: process.env.NAV || 'auto' } }   // the default a fresh house gets; FEEL=calm LAYOUT=rail TONE=pastel NAV=top FACE=paper start it somewhere else
 const scenes = { movie: [['light', 'off', {}], ['media', 'on', {}]], guests: [['light', 'on', {}]], asleep: [['light', 'off', {}], ['media', 'off', {}], ['lock', 'lock', {}]], empty: [['light', 'off', {}], ['media', 'pause', {}]], away: [['light', 'off', {}], ['media', 'off', {}], ['switch', 'off', {}], ['lock', 'lock', {}]] }
 const events = [
   { ts: now - 40, kind: 'state', subject: 'mo1', old: 'off', new: 'on', source: 'ha', detail: null },

@@ -171,17 +171,25 @@ input:focus-visible {
 .shell.resting .stage,
 .shell.resting .topbar,
 .shell.resting .bottombar,
-/* and anything held open in front of the house: a device, or a phone asking to join. The resting
-   screen is the sky and four lines of type, and it is drawn ABOVE this layer -- so a pane left
-   open at bedtime used to sit there fully lit with the clock floating over it, which reads as a
-   rendering fault rather than as a house at rest. It goes with the room behind it. */
-.shell.resting .opened {
+/* and anything held open in front of the house: a device, a phone asking to join, or a sheet that
+   opened itself. The resting screen is the sky and four lines of type, and it is drawn ABOVE this
+   layer -- so a pane left open at bedtime used to sit there fully lit with the clock floating over
+   it, which reads as a rendering fault rather than as a house at rest. It goes with the room behind
+   it.
+
+   `.sheet-back` was the half of that never covered. A bridge knocking is news that arrives on its
+   own, so unlike every other sheet it can still be up when the three minutes run out -- and it made
+   the fault twice over: the clock landed on live text, AND the sheet's own veil blacked out the sky
+   the resting screen is mostly made of, so the weather went with it. */
+.shell.resting .opened,
+.shell.resting .sheet-back {
   opacity: 0;
   transition: opacity 0.9s var(--ease);
 }
 /* and takes no touches while it is invisible: the first press on a resting screen is the one that
    wakes it, and it must not also land on the veil of a pane nobody can see */
-.shell.resting .opened {
+.shell.resting .opened,
+.shell.resting .sheet-back {
   pointer-events: none;
 }
 .rail,

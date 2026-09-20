@@ -64,14 +64,34 @@ export const FEELS: Feel[] = [
   { id: 'nightfall', label: 'Nightfall', hint: 'The same house behind frosted panes, with the sky moving through them.', face: 'glass', tone: 'follow' },
 ]
 
-export const DEFAULT_FEEL: FeelName = 'calm'
+/*
+ * What a house looks like before anybody says otherwise: GLASS, and automatic for
+ * everything that can be.
+ *
+ * It was Calm -- paper -- because paper was what the house had always been made
+ * of and a default should not surprise anybody. Glass is the one that shows what
+ * the panel actually is now: the sky moves through it, so the house looks like
+ * the hour without anyone setting an hour. The other three keys default to the
+ * answer that needs no person in the room: `follow` takes the tone from the
+ * light, and layout and nav are the screen's own to work out (placeOf).
+ *
+ * A house that HAS chosen keeps its choice -- the hub stores only what was
+ * picked, and a stored key wins over this. So this moves houses that never
+ * opened the Look page, and nobody else.
+ */
+export const DEFAULT_FEEL: FeelName = 'nightfall'
+
+/* The feel every fallback here lands on, named once. It used to be FEELS[0],
+   which quietly meant "whichever is written first" and disagreed with
+   DEFAULT_FEEL the moment the default stopped being the first one. */
+const fallback = (): Feel => FEELS.find(f => f.id === DEFAULT_FEEL) ?? FEELS[0]
 
 export function isFeel(v: unknown): v is FeelName {
   return v === 'calm' || v === 'daylight' || v === 'nightfall'
 }
 
 export function feelOf(v: unknown): Feel {
-  return FEELS.find(f => f.id === v) ?? FEELS[0]
+  return FEELS.find(f => f.id === v) ?? fallback()
 }
 
 /*
@@ -95,8 +115,11 @@ export function feelOf(v: unknown): Feel {
 export function feelFrom(look: { feel?: string; face?: string; tone?: string } | null | undefined): Feel {
   const named = FEELS.find(f => f.id === look?.feel)
   if (named) return named
-  const made = FEELS.find(f => f.face === (look?.face ?? 'paper') && f.tone === (look?.tone ?? 'follow'))
-  return made ?? FEELS[0]
+  /* A key the hub never sent is not a key set to paper: it is a key nobody has
+     answered, and the answer to those is the default. */
+  const d = fallback()
+  const made = FEELS.find(f => f.face === (look?.face ?? d.face) && f.tone === (look?.tone ?? d.tone))
+  return made ?? d
 }
 
 /*
