@@ -46,7 +46,12 @@ void show(const Pixels &p);
 }  // namespace px
 
 #define FW "0.2.0"
+// Overridable at build time (-DDATA_PIN=48), because the right pin is a fact about the board on the
+// desk and not about this firmware. GPIO 5 is free on a bare devkit and is a camera pin on several
+// of the S3 boards people actually have lying around, which is a dead strip and no error anywhere.
+#ifndef DATA_PIN
 #define DATA_PIN 5
+#endif
 
 static MatterEnhancedColorLight light;
 static Preferences nvs;
@@ -200,6 +205,34 @@ static void tell(const char *line) {
 #endif
 }
 
+#ifdef SELFTEST
+// THE ONE TEST THAT SEPARATES "MY DRIVER IS WRONG" FROM "THE WIRING IS WRONG", and it needs nothing
+// attached: most S3 devkits carry a single WS2812 of their own, usually on GPIO 48. Point at that,
+// write one light, and watch. If the four colors come out in order the driver, the timing, the bit
+// order and the RMT setup are all proven, and whatever is wrong is on the bench. If nothing happens
+// on a pin that is soldered to an LED, the fault is mine.
+static void selftest() {
+    char line[120];
+    snprintf(line, sizeof(line), "[strip] SELF TEST on pin %d, one light, ignoring what is saved", DATA_PIN);
+    tell(line);
+    strip.set_count(1);
+    const struct { const char *name; uint8_t r, g, b; } steps[] = {
+        {"RED", 255, 0, 0}, {"GREEN", 0, 255, 0}, {"BLUE", 0, 0, 255}, {"warm white", 255, 180, 110}};
+    for (const auto &s : steps) {
+        snprintf(line, sizeof(line), "[strip]   now showing %s", s.name);
+        tell(line);
+        strip.solid(s.r, s.g, s.b);
+        px::show(strip);
+        delay(1500);
+    }
+    strip.clear();
+    px::show(strip);
+    tell("[strip] SELF TEST over. Four colors in that order means the driver is fine and the fault is");
+    tell("[strip]   on the bench. A color in the WRONG place means this board's own light is not grb,");
+    tell("[strip]   which is the same question the panel asks about a strip -- and still a pass.");
+}
+#endif
+
 void setup() {
     Serial.begin(115200);
 #if ARDUINO_USB_CDC_ON_BOOT
@@ -252,6 +285,10 @@ void setup() {
     snprintf(line, sizeof(line), "[strip] free heap %u, psram %u",
              (unsigned)ESP.getFreeHeap(), (unsigned)ESP.getPsramSize());
     tell(line);
+
+#ifdef SELFTEST
+    selftest();
+#endif
 
     if (!Matter.isDeviceCommissioned()) {
         // Lit while it waits, because being lit IS the identity check: the wall asks whether the
