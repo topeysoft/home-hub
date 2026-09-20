@@ -112,6 +112,11 @@ export function toneVars(elevation: number, condition: string, name: ToneName = 
     '--card-track': light ? 'rgba(30,27,36,.18)' : 'rgba(255,255,255,.18)',
     // the lamp still has to read as lamplight against a card that may now be pale
     '--card-lamp-ink': light ? '#7a4a10' : '#e9b872',
+    /* the same decision as a number, for the one caller that has to make this
+       choice in a hue of its own: a light whose bulb has told the house what
+       color it is (LightTile). Published rather than recomputed, so there is
+       one place that decides when a card has out-lightened its own text. */
+    '--card-flip': light ? '1' : '0',
   }
   /* what an opened device lends the room: its own hue, at the strength a tint
      can carry without fighting the sky it sits on */
