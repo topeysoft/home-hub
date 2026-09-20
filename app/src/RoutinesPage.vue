@@ -5,7 +5,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { store, notify, loadRoutines, loadAssistant, visibleRooms } from './store'
-import { enableRoutine, draftRoutine, approveDraft, discardDraft, setAssistantKey, setEntry, act, type Routine, type Proposal } from './api'
+import { enableRoutine, draftRoutine, approveDraft, discardDraft, setAssistantKey, setEntry, act, roomsOf, type Routine, type Proposal } from './api'
 import { routineWords } from './why'
 import Icon from './Icon.vue'
 
@@ -15,13 +15,16 @@ const busy = ref('')
 const groups = computed(() => {
   const order = ['home', ...visibleRooms().map(r => r.id)]
   const by = new Map<string, Routine[]>()
-  for (const r of store.routines) by.set(r.room, [...(by.get(r.room) ?? []), r])
+  // A rule naming several rooms is listed under each of them -- one rule, so its switch is the same switch
+  // wherever you find it, and the line underneath says which rooms it moves.
+  for (const r of store.routines) for (const id of roomsOf(r)) by.set(id, [...(by.get(id) ?? []), r])
   const rank = (id: string) => { const i = order.indexOf(id); return i < 0 ? 999 : i }
   return [...by.keys()].sort((a, b) => rank(a) - rank(b))
     .map(id => ({ id, name: roomName(id), rules: by.get(id)! }))
 })
 const roomName = (id: string) => id === 'home' ? 'Whole house' : id === 'entry' ? 'Where you come in' : store.rooms.find(r => r.id === id)?.name ?? id
-const hasEntryRules = computed(() => store.routines.some(r => r.room === 'entry'))
+const roomNames = (r: Routine) => roomsOf(r).map(roomName).join(' · ')
+const hasEntryRules = computed(() => store.routines.some(r => roomsOf(r).includes('entry')))
 
 /* where you come in: the rooms an "entry" routine runs in */
 const pickable = computed(() => visibleRooms().filter(r => r.id !== 'unassigned'))
@@ -136,7 +139,7 @@ onMounted(() => { loadRoutines(); loadAssistant() })
         <li v-for="d in store.drafts" :key="d.id">
           <span class="routine-text">
             <span class="routine-name">{{ d.name }}</span>
-            <span class="routine-sub">{{ roomName(d.room) }} · {{ routineWords(d) }}</span>
+            <span class="routine-sub">{{ roomNames(d) }} · {{ routineWords(d) }}</span>
             <span class="draft-said" v-if="d.said">You said: “{{ d.said }}”</span>
             <span class="draft-said" v-else-if="d.why">Noticed: {{ d.why }}</span>
           </span>

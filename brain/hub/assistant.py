@@ -35,8 +35,10 @@ class AssistantError(Exception):
 
 VOCABULARY = """A rule is one JSON object: {"id", "name", "room", "when", "if", "then"}.
 - "name": one plain sentence a person would say about it, no jargon. "id": short kebab-case.
-- "room": a room id from the house, "home" for the whole house, or "entry" for every room the family comes in through
-  (they choose those on the panel; a rule for "entry" runs in each of them).
+- "room": a room id from the house, "home" for the whole house, "entry" for every room the family comes in through
+  (they choose those on the panel; a rule for "entry" runs in each of them), or a LIST of room ids
+  ["hallway", "stairway"] when one rule should act on several -- it runs in each. "home" and "entry" never
+  go inside a list.
 - "when", exactly one trigger:
   {"motion": "on"}                                  any motion sensor in the room (room rules only)
   {"contact": "open"} or {"contact": "closed"}      a door or window sensor in the room (room rules only)
@@ -54,8 +56,12 @@ VOCABULARY = """A rule is one JSON object: {"id", "name", "room", "when", "if", 
   ["home", "is" | "not", "<state>"]                 the whole house's current state
   ["presence", "is", "nobody" | "somebody"]
   ["light", "below" | "above", <lux>]               needs a light sensor in the room
+  ["quiet", "above" | "below", <seconds>]          how long THIS room has been still (no motion)
+  ["quiet", "<room id>" | ["<id>", ...], "above", <seconds>]   how long those rooms have ALL been still.
+      The only way to say "nobody has moved anywhere upstairs for twenty minutes"; a room with no motion
+      sensor makes it unknown, and an unknown condition never passes.
   ["device", "<device id>", "is" | "not", "<state>"]
-- "then", exactly one outcome:
+- "then", one outcome, or a LIST of outcomes run in order when the rule should do several things:
   {"intent": "<state>"}                             the normal outcome: the room, or the house, goes to that state
   {"device": "<device id>", "action": "on" | "off" | "lock" | "unlock" | "open" | "close" | "pause" | "play"}
   {"device": "<speaker id>", "action": "sound", "data": {"sound": "<sound id>", "minutes": <optional>}}   a sound on a speaker
@@ -285,7 +291,8 @@ class Assistant:
         """Already a rule or draft for that room, state and time (give or take the bin)?"""
         want = int(hhmm[:2]) * 60 + int(hhmm[3:])
         for r in self.hub.engine.raw.get("rules", []) + self.drafts():
-            if not isinstance(r, dict) or r.get("room") != room or (r.get("then") or {}).get("intent") != state: continue
+            if not isinstance(r, dict) or room not in rules_mod.rooms_of(r): continue
+            if not any(t.get("intent") == state for t in rules_mod.outcomes_of(r)): continue
             t = (r.get("when") or {}).get("time")
             if t and abs(int(t[:2]) * 60 + int(t[3:]) - want) <= BIN_MINUTES: return True
         return False
@@ -352,7 +359,8 @@ class Assistant:
         question = " ".join((question or "").split()) or "Why is this room the way it is?"
         name = room.name if room else "the whole house"
         state = (f"It is set to {room.intent}, by {room.set_by or 'nobody yet'}" + (f", held until {datetime.fromtimestamp(room.hold_until, self.hub.tz).strftime('%H:%M')}" if room and room.hold_until else "")) if room else f"The house is set to {self.hub.home.intent}"
-        routines = [f"  {r.get('name')}" for r in self.hub.engine.raw.get("rules", []) if isinstance(r, dict) and r.get("room") in (room_id, "home")]
+        routines = [f"  {r.get('name')}" for r in self.hub.engine.raw.get("rules", [])
+                    if isinstance(r, dict) and set(rules_mod.rooms_of(r)) & {room_id, "home"}]
         user = "\n".join([f"Room: {name}. {state}. Now: {datetime.now(self.hub.tz).strftime('%A %H:%M')}.",
                           "Routines for it:", *(routines or ["  none"]), "", "Log, oldest first:", self.story(room_id), "",
                           f"Question: {question}"])

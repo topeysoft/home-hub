@@ -354,7 +354,13 @@ export async function getWhy(roomId: string, limit = 6): Promise<Event[]> {
   const r = await request(`/rooms/${encodeURIComponent(roomId)}/why?limit=${limit}`); if (!r.ok) await fail(r); return r.json()
 }
 /* Routines: the brain's rules.json, read whole and switched on or off one at a time. The panel never edits one here. */
-export type Routine = { id: string; name: string; room: string; when: Record<string, any>; if?: any[][]; then: Record<string, any>; enabled?: boolean; by?: string; said?: string; why?: string; noticed?: string; created?: number }
+export type Outcome = Record<string, any>
+export type Routine = { id: string; name: string; room: string | string[]; when: Record<string, any>; if?: any[][]; then: Outcome | Outcome[]; enabled?: boolean; by?: string; said?: string; why?: string; noticed?: string; created?: number }
+/* A routine's rooms and outcomes, always as lists. `room` is one id, "home", "entry" or several ids; `then`
+   is one outcome or several run in order. Everything on the panel reads them through these two, so a rule
+   that names three rooms is not a shape each caller has to remember to handle. */
+export const roomsOf = (r: Routine): string[] => Array.isArray(r.room) ? r.room : [r.room]
+export const outcomesOf = (r: Routine): Outcome[] => Array.isArray(r.then) ? r.then : r.then ? [r.then] : []
 export type RoutineFile = { rules: Routine[]; drafts?: Routine[]; valid: boolean; errors: string[] }
 export async function getRoutines(): Promise<RoutineFile> {
   const r = await request('/rules'); if (!r.ok) await fail(r); return r.json()

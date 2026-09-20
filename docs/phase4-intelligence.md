@@ -67,7 +67,18 @@ motion_at:   1788659400.0 | null   # last motion from any motion device in the r
 volume (`HUB_DATA`, next to `settings.json` and the event log), seeded from the repo copies the first time,
 so panel switches, drafts and hold lengths survive an image update. A rule's `room` may also be `entry`:
 every room the family comes in through, chosen on the panel (`POST /home/entry`); such a rule runs once
-per entry room and does nothing while none are chosen.
+per entry room and does nothing while none are chosen. It may also be a **list** of room ids,
+`"room": ["hallway", "stairway", "landing"]`, which runs the rule once per room named — the alternative
+being three copies of one rule that drift apart. `"home"` and `"entry"` already mean a set of rooms and
+cannot go inside a list.
+
+**What a list means depends on the trigger, and this is the one thing to get right.** `motion`, `contact`
+and `idle` are about the room they happen in, so a list is *several independent behaviors*: hallway motion
+lights the hallway, stairway motion lights the stairway. Exactly what `entry` has always meant. The
+room-independent triggers — `device`, `time`, `sun`, `presence`, `intent` — carry no room of their own, so
+there a list is a genuine **fan-out**: one signal, every room named, at once. "The living room sensor lights
+the hallway and the landing" is a `device` trigger with a list of rooms. Held down by
+`test_a_room_scoped_trigger_means_each_room_on_its_own_signal`.
 
 ```json
 {
@@ -110,6 +121,7 @@ per entry room and does nothing while none are chosen.
 | Trigger | Fires when | Needs |
 |---|---|---|
 | `{"motion": "on"}` | any motion device in the room turns on | a motion sensor in the room |
+| `{"device": "<id>", "state": "on"}` on a rule whose `room` is elsewhere | one named sensor anywhere lights a room somewhere else | nothing; this is the cross-room path |
 | `{"contact": "open"}` / `"closed"` | any contact device in the room changes to that | a door or window sensor |
 | `{"device": "<id>", "state": "<s>"}` | one named device reaches a state | escape hatch, discouraged |
 | `{"device": "<id>", "state": "<s>", "for": 10800}` | one named device has *stayed* in a state that long | as above. The wait counts from HA's own `last_changed`, kept on the device as `since`, so a brain that restarts an hour in still fires at three hours rather than at four |
@@ -120,7 +132,11 @@ per entry room and does nothing while none are chosen.
 | `{"intent": "<state>"}` | another room, or the home, was set to that state | nothing |
 
 Triggers with `for` or `idle` are timers. The evaluator arms them when the condition starts and
-fires them if it still holds when the time is up.
+fires them if it still holds when the time is up. Each fires **once per spell**, and what spends that one
+turn is the subtle part: a rule whose `if` was simply not ready yet keeps it, so *everything off upstairs
+once the landing is still too* gets another look when the landing goes still. A rule the room refused —
+held by a hand, or shadowed — has had its real answer and is not asked again until the spell restarts,
+which is what stops a held rule writing the same line to the log once a second.
 
 A `for` on a device is what turns an event into a standing condition, and the two are different
 rules: *the front door unlocked* is a moment, and *the front door has been unlocked for three hours*
@@ -136,7 +152,16 @@ intent), `presence` (`somebody` / `nobody`), `light` (the room's illuminance in 
 sensor), `device` (`["device", "media_player.x", "playing"]`). Operators: `is`, `not`, `below`,
 `above`, `between`, `in`.
 
-### Outcome (`then`, exactly one)
+`quiet` is the one subject that takes a duration rather than a level: `["quiet", "above", 600]` is this
+room still for ten minutes, and `["quiet", ["hall", "stairs", "landing"], "above", 1200]` is *every* one of
+those rooms still for twenty — the least quiet of them governs. It exists because `for` lives on triggers,
+so a list of `["device", …, "not", "on"]` conditions could only ever describe the instant, never the
+duration, and "nobody has moved anywhere upstairs for twenty minutes" is the condition a whole-floor off
+actually needs. A room the house cannot speak for — no motion sensor, or none seen since the hub came up —
+makes it unknown, and an unknown condition never passes: the failure lands on leaving lights **on**, never
+on putting a house dark around somebody it could not see.
+
+### Outcome (`then`, one — or a list of them)
 
 - `{"intent": "<state>"}`: set this room's intent. The normal case. `room: "home"` sets every room.
 - `{"device": "<id>", "action": "<a>", "data": {}}`: one capability action. The escape hatch for
@@ -144,10 +169,21 @@ sensor), `device` (`["device", "media_player.x", "playing"]`). Operators: `is`, 
   panel, so it can only do what the panel can do.
 - `{"notify": "<text>"}`: a message on the panel and, later, a push. No device changes.
 
+`then` may be a **list** of those, run in the order written: `[{"intent": "occupied"}, {"device": "cover.blind",
+"action": "open"}]`. One that fails is logged and the rest still run — a rule should not lose the hall to a
+dead blind. But a list is one thought where the hold is concerned: if any outcome sets an intent and a hand
+has held that room, the whole rule is skipped rather than half-applied.
+
+Where `room` is a list, only `intent` varies by room: a `device` outcome names an absolute id and a `notify`
+is one sentence, so those run **once** for the rule however many rooms it names. Otherwise a rule lighting
+three rooms would turn the same lamp on three times and say the same thing to the panel three times.
+
 ### Ordering and conflicts
 
 Rules are evaluated in file order. Within one evaluation, the first rule that sets a room's intent
 wins for that room; later ones that would set the same room are skipped and logged as *shadowed*.
+Shadowing is per room, so a rule naming three rooms that loses one of them to an earlier rule still acts
+on the other two — all-or-nothing there would make a multi-room rule silently collapse on any collision.
 This keeps the file readable as a priority list and avoids inventing a priority field.
 
 ## The evaluator
