@@ -1,0 +1,52 @@
+{
+  "artboards": [
+    { "file": "Today.dc.html", "x": 0, "y": 0, "w": 1440, "h": 900, "title": "Today — and what is not in it", "page": "page-1" },
+    { "file": "Main.dc.html", "x": 1560, "y": 0, "w": 1440, "h": 900, "title": "A — the catch-up", "page": "page-1" },
+    { "file": "Sections.dc.html", "x": 0, "y": 0, "w": 1440, "h": 900, "title": "B — three plain lists", "page": "page-2" },
+    { "file": "Timeline.dc.html", "x": 1560, "y": 0, "w": 1440, "h": 900, "title": "C — one thread", "page": "page-2" },
+    { "file": "Audit.dc.html", "x": 0, "y": 0, "w": 1440, "h": 900, "title": "Who changed what — behind the code", "page": "page-3" }
+  ],
+  "annotations": [
+    {
+      "id": "gap",
+      "x": -540,
+      "y": 40,
+      "w": 440,
+      "page": "page-1",
+      "text": "This house as it ships, on the one page that comes closest.\n\nNeeds a look is for things that have STOPPED ANSWERING. A porch light that has been on for ten hours is answering perfectly, so it is not here and cannot be — putting it here would mean that page stops meaning what it means.\n\nThe only history the panel draws is four lines of Recently on Home. On a busy evening that reaches back about eleven minutes.\n\nSo there is no door for what the house did while nobody was watching, and none for who changed what. That is the hole all three directions fill."
+    },
+    {
+      "id": "catchup",
+      "x": 3060,
+      "y": 40,
+      "w": 460,
+      "page": "page-1",
+      "text": "A — the catch-up. RECOMMENDED.\n\nThe one idea: a finding is a SPAN, not an event. \"On for ten hours\" is the news; \"turned on at 7:32am\" is a row in a log nobody reads. The log already holds both — this is what you can say once you measure the gap between two rows.\n\nRanked the way health.py ranks: what is still true and can be acted on leads, and carries the only buttons on the page. What is over reads below it, quiet, no buttons, because there is nothing to do about a door that is already locked again.\n\nThe warm accent is doing the work it does everywhere else in the panel — it is the lamp, and it means ON. Two rows carry it. Nothing else on the page does.\n\nTwo folds at the bottom rather than two more sections: the full log is for the curious, the audit is behind the code, and neither should be the thing you read first.\n\nOPEN QUESTION on this board: the section is labelled \"Still on\", which is right for lights and plugs and wrong over a door that is still unlocked. The brain should NAME the section rather than the panel, the way it already writes every word of a health line — \"Still on\", \"Still on, and still unlocked\". Worth ruling on before it is built."
+    },
+    {
+      "id": "plain",
+      "x": -540,
+      "y": 40,
+      "w": 440,
+      "page": "page-2",
+      "text": "B — three plain lists. The same facts, nothing ranked.\n\nWorth looking at because it is what this page becomes on its own if nobody defends the ranking: every line the same weight, the porch light that is still burning sitting between a routine that ran and a door that has been shut for twelve hours.\n\nIt reads as a report. You have to get to the end of it before you know whether anything wants you — which is the exact failure Needs a look was rebuilt to fix, and the note at the top of NotesPage.vue is the record of that.\n\nIt does have one honest advantage: the audit is visible rather than folded, so nobody has to know it exists to find it."
+    },
+    {
+      "id": "thread",
+      "x": 3060,
+      "y": 40,
+      "w": 460,
+      "page": "page-2",
+      "text": "C — one thread. Time down the left, the two live things pinned above it.\n\nThis is the shape people expect from the words \"history\" and \"audit log\", and it is the best of the three at one job: answering \"what happened at 4pm on Tuesday\", where you know roughly when and want to read around it.\n\nIt is the worst at the job you actually asked for. \"What lights were left on all day\" is not a moment — it is the DISTANCE between two moments that may be twelve hours apart and forty rows apart. On a timeline that finding is invisible by construction: you see \"Kitchen light turned on, 9:10am\" and there is simply no row for the ten hours that followed.\n\nWhich is why A pins spans above the thread rather than trusting the thread to show them. If this direction wins, it still needs A's pinned rows to work — at which point it is A with the log unfolded by default."
+    },
+    {
+      "id": "audit",
+      "x": -540,
+      "y": 40,
+      "w": 460,
+      "page": "page-3",
+      "text": "Who changed what — the page behind the code.\n\nWhat is in it is exactly what needs_code() in lock.py already gates: renames, rooms, accounts, routines, pairing, phones, the network, the update. Turning a light on is not a change to the house, so it is not here — which also keeps the page short enough to read.\n\nThe WHO is new. request.state.phone already exists in the middleware and identifies the phone on every request; it just never reaches the log. Adding it is one column and one ContextVar, and the rule that keeps it honest is that it is only ever written for source=\"user\": a rule that fires has no who, and a background job a request happened to start must not inherit the name of whoever last tapped something. An audit trail is the one place a plausible guess is worse than a blank.\n\nThe last card is the same rule as the memory card in storage.md: a house with no code cannot tell its phones apart, so it says so plainly rather than inventing a name. It disappears once every row is after the date the code was set."
+    }
+  ],
+  "launch": { "view": "canvas" }
+}
