@@ -293,6 +293,18 @@ class TheRadioIsWiredUp(unittest.TestCase):
         self.assertIn("no Matter setup", said)
         self.assertNotIn("Check it", said)
 
+    def test_and_the_same_answer_comes_out_of_the_wifi_call(self):
+        """Both calls reach the same engine and fail the same way when nothing is listening. The
+        answer was got right in one and wrong in the other a commit later, and a household sent to
+        check their Wi-Fi by one and to add an integration by the other is being sent to opposite
+        ends of the house for one cause."""
+        class Engine:
+            async def send(self, type_, **kw): raise RuntimeError("unknown_command")
+        self.hub.ha = Engine()
+        with self.assertRaises(StripError) as e:
+            run(Strips(self.hub).radio.set_wifi("House", "hunter2"))
+        self.assertIn("no Matter setup", str(e.exception))
+
     def test_but_a_refused_code_still_says_so(self):
         class Engine:
             async def send(self, type_, **kw): raise RuntimeError("commissioning failed: timeout")

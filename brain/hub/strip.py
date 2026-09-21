@@ -153,6 +153,20 @@ def commissionable(data: bytes) -> dict | None:
             "product": int.from_bytes(data[5:7], "little")}
 
 
+def _no_matter(e: Exception) -> bool:
+    """Is this Home Assistant saying it has never heard of Matter, rather than Matter saying no?
+
+    The distinction is the difference between "add the integration" and "check the code", and those
+    send a household to opposite ends of the house. It was got right in one call and wrong in the one
+    beside it a commit later, which is what a shared answer is for."""
+    said = str(e).lower()
+    return "unknown" in said or "not found" in said or "no matter" in said
+
+
+NO_MATTER = ("This house has no Matter setup yet. The matter\u2011server is running, but nothing in "
+             "Home Assistant is using it.").replace("\u2011", "\u2011")
+
+
 class Radio:
     """Finding a strip that wants letting in, and handing it to the commissioner the house runs.
 
@@ -219,6 +233,8 @@ class Radio:
             await ha.send("matter/set_wifi_credentials", network_name=ssid, password=password)
         except Exception as e:
             log.warning("strip: could not give Matter the Wi-Fi (%s)", e)
+            if _no_matter(e):
+                raise StripError(NO_MATTER)
             raise StripError("The hub could not pass your Wi‑Fi on. Try again in a moment.")
 
     async def commission(self, code: str) -> dict:
@@ -243,10 +259,8 @@ class Radio:
             # check the code and the strip when the real answer was that the house had no Matter
             # controller running at all, which is not a thing anybody finds by looking at a strip.
             log.warning("strip: commissioning failed (%s)", e)
-            said = str(e).lower()
-            if "unknown" in said or "not found" in said or "no matter" in said:
-                raise StripError("This house has no Matter setup yet. It is the matter\u2011server "
-                                 "the hub ships with, and it is not running.")
+            if _no_matter(e):
+                raise StripError(NO_MATTER)
             raise StripError("The strip did not take the code. Check it, and that the strip is still lit.")
 
     async def forget(self, id: str) -> None:
