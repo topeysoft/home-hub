@@ -114,68 +114,91 @@ class StripError(RuntimeError):
     true about their bridge."""
 
 
+# The service a commissionable Matter device advertises under, and how to read what it says.
+MATTER_SVC = "0000fff6-0000-1000-8000-00805f9b34fb"
+# Our own, until there is a real Vendor ID to replace it. docs/strip.md item 2b.
+TEST_VID = 0xFFF1
+
+
+def commissionable(data: bytes) -> dict | None:
+    """What a commissionable advertisement means, or None if it is not one.
+
+    Eight bytes: an opcode, then the discriminator with a version in its top nibble, then the vendor
+    and product ids, then flags. Checked against a real device rather than a spec page -- an S3
+    running our firmware advertises 00000ff1ff008000, and its own log says discriminator=3840/15
+    vendorID=65521 productID=32768, which is what this reads out of it."""
+    if len(data) < 7 or data[0] != 0x00:
+        return None
+    return {"discriminator": int.from_bytes(data[1:3], "little") & 0x0FFF,
+            "vendor": int.from_bytes(data[3:5], "little"),
+            "product": int.from_bytes(data[5:7], "little")}
+
+
 class Radio:
-    """Getting a strip onto the house's Wi-Fi. It is Matter commissioning, and that is the point.
+    """Finding a strip that wants letting in, and handing it to the commissioner the house runs.
 
-    THIS USED TO BE OUR OWN BLE PROTOCOL AND THAT WAS A MISTAKE. It took the household's Wi-Fi
-    password over an unauthenticated link, where anything in radio range during setup could read it.
-    Matter's commissioning is PASE with SPAKE2+ and then CASE, in a stack a great many people have
-    looked at -- so the firmware moved to it (strip/firmware/), and the side effect is that every
-    strip we make also works with Apple Home, Google Home and Alexa with no hub of ours in the house
-    at all.
+    THIS USED TO BE OUR OWN BLE PROTOCOL, TWICE, AND BOTH WERE WRONG. First a hand-rolled
+    characteristic taking key=value lines, which put the household's Wi-Fi password on an open link.
+    Then WiFiProv, which was at least encrypted but only existed because the Arduino framework
+    compiles Matter-over-BLE out. On ESP-IDF it is compiled in, so Matter carries the credentials and
+    the commissioning together and neither of ours is needed (docs/strip.md).
 
-    So this class has one job and it is a small one: notice a commissionable strip, and hand it to
-    the commissioner the house already runs (matter-server, in the compose file -- docs/matter.md).
-    It does NOT carry Wi-Fi credentials any more, and must never be given a route that does.
+    So this has two small jobs. NOTICE one -- a commissionable Matter device advertises over BLE and
+    says its discriminator, which is enough to know that something is knocking. And HAND IT OVER to
+    `matter-server`, which the house already runs (docs/matter.md), through Home Assistant's own
+    websocket command. It carries no credentials of its own and must never be given a route that does.
 
-    Once a strip is commissioned it is a Matter light and the ecosystem drives it. Everything else in
-    this file -- the color question, the fill -- goes over the broker, because the Enhanced Color
-    Light cluster is one color for the whole fitting and has no concept of a pixel.
+    WHAT IT CANNOT DO, and this is the open question rather than a missing function: an advertisement
+    carries the discriminator and NOT the passcode, and commissioning needs the passcode. So the hub
+    cannot silently adopt a strip the way design/puck/Knock.dc.html argues for. Where the code comes
+    from -- printed on the box like every other Matter device, derived at manufacture from something
+    the hub can look up, or read off an NFC tag -- has not been decided. docs/strip.md item 1a."""
 
-    NOTHING IN THIS CLASS HAS RUN AGAINST HARDWARE, and the commissioning half is not written at all:
-    see docs/strip.md, which also has the one question Matter forces and nobody has answered yet."""
-
-    def __init__(self, adapter: str | None = None):
+    def __init__(self, hub=None, adapter: str | None = None):
+        self.hub = hub
         self.adapter = adapter
 
     async def _bleak(self):
         try:
             import bleak
         except ModuleNotFoundError:
-            raise StripError("This hub has no Bluetooth to set a light strip up with.")
+            raise StripError("This hub has no Bluetooth to look for a light strip with.")
         return bleak
 
-    async def scan(self, seconds: float = 4.0) -> list[dict]:
-        """Every strip advertising that it has never been commissioned: [{"id", "addr", "rssi"}].
+    async def scan(self, seconds: float = 6.0) -> list[dict]:
+        """Every Matter device advertising that it has never been commissioned.
 
-        TWO NAMES FOR ONE THING, and they are not interchangeable. `addr` is the Bluetooth address,
-        which is how you connect to it and nothing else -- on a Mac it is not even a MAC, and on any
-        host it can change. `id` is the chip, which the strip puts in its advertised name and then
-        uses for every one of its MQTT topics for the rest of its life. Using the address as the id
-        would work right up until the first strip was set up, and then the hub would be listening on
-        a topic the strip never publishes to.
-
-        A strip that HAS been set up does not advertise at all, which is the whole of the answer to
-        "what happens when the router reboots". It keeps the light the household asked for, cycles
-        the two Wi-Fi keys it holds, and stays quiet. Opening a pairing window on an event that
-        happens several times a year, with nobody present and nobody told, would be a security
-        posture set by somebody else's firmware updates."""
+        A device that HAS been commissioned stops advertising, which is the whole of the answer to
+        "what happens when the router reboots": it keeps the light the household asked for and stays
+        quiet. Nothing here opens a window; only a person holding the thing can do that."""
         bleak = await self._bleak()
         found = []
         for d, adv in (await bleak.BleakScanner.discover(timeout=seconds, return_adv=True)).values():
-            name = adv.local_name or ""
-            if not name.startswith("hub-strip-"): continue
-            found.append({"id": name[len("hub-strip-"):], "addr": d.address, "rssi": adv.rssi})
-        # A commissionable Matter device also advertises service 0xFFF6 with its discriminator, which
-        # is how this should find one rather than by our name prefix. What that advertisement does NOT
-        # carry is the passcode, and commissioning cannot happen without it -- which is the open
-        # question at the foot of docs/strip.md and the reason this is still matching on a name.
+            for uuid, data in (adv.service_data or {}).items():
+                if uuid.lower() != MATTER_SVC:
+                    continue
+                what = commissionable(bytes(data))
+                if not what:
+                    continue
+                found.append({**what, "addr": d.address, "rssi": adv.rssi,
+                              "ours": what["vendor"] == TEST_VID})
         return sorted(found, key=lambda s: -(s["rssi"] or -127))
 
-    async def join(self, addr: str, cfg: dict) -> dict:
-        """Commission it onto the house's fabric. `cfg` no longer carries Wi-Fi: the commissioner
-        does that over a channel that is encrypted, which is the whole reason this changed."""
-        raise StripError("Commissioning a light strip is not built yet.")
+    async def commission(self, code: str) -> dict:
+        """Hand it to matter-server, through Home Assistant's own command.
+
+        The code is the one thing this cannot discover, and asking for it here rather than pretending
+        otherwise is the honest shape until somebody decides where it comes from."""
+        if not code:
+            raise StripError("That light strip needs its setup code.")
+        try:
+            return await self.hub.ha.send("matter/commission", code=code) or {}
+        except AttributeError:
+            raise StripError("This hub cannot set Matter devices up yet.")
+        except Exception as e:
+            # Whatever matter-server said was written for a log. The wall gets a sentence.
+            log.info("strip: commissioning failed (%s)", e)
+            raise StripError("That did not work. Check the code and that the strip is still lit.")
 
     async def forget(self, id: str) -> None:
         return None
@@ -303,15 +326,18 @@ class Strips:
         except Exception as e:
             log.info("strip: scan failed (%s)", e); return self.status()
         for s in found:
-            if s["id"] in self._dismissed: continue
-            self.job = {"state": "knocking", "id": s["id"], "addr": s.get("addr") or s["id"],
-                        "label": self._label(s), "first": None}
+            if s["addr"] in self._dismissed: continue
+            # No chip here: a Matter advertisement carries a discriminator and not an id of ours.
+            # `id` arrives later, from the broker, if the strip ever finds it (item 2a).
+            self.job = {"state": "knocking", "id": None, "addr": s["addr"],
+                        "discriminator": s.get("discriminator"), "label": self._label(s),
+                        "first": None}
             self._set("knocking")
             break
         return self.status()
 
     @staticmethod
-    def _label(s: dict) -> str:
+    def _label(s: dict | None) -> str:
         """What to call it before anybody has named it. Never the address: a household that is shown
         a MAC has been handed the inside of the product, and there is nothing to disambiguate anyway
         -- the thing is two meters of light and it is the only one lit."""
@@ -319,46 +345,54 @@ class Strips:
 
     async def dismiss(self) -> dict:
         """Not mine. Needs no code: refusing gives nothing away, and nothing was ever sent."""
-        if self.job: self._dismissed.add(self.job["id"])
+        if self.job: self._dismissed.add(self.job["addr"])
         self.job = None
         self.hub._broadcast(json.dumps({"type": "strip", "strip": self.status()}))
         return self.status()
 
-    async def adopt(self) -> dict:
-        """Yes, that's mine. The first moment anything of the house's moves."""
+    async def adopt(self, code: str = "") -> dict:
+        """Yes, that's mine. The first moment anything of the house's moves.
+
+        THE WI-FI IS NOT OURS TO HAND OVER ANY MORE, and that is the whole point of the move to
+        Matter: commissioning carries the credentials itself, encrypted, so the hub never holds them
+        on a strip's behalf and there is no step here that could leak one.
+
+        It does need the setup code, which an advertisement does not carry -- see Radio. Where a
+        household's code comes from is docs/strip.md item 1a and is not decided."""
         if not self.job or self.job["state"] != "knocking":
             raise StripError("There is no light strip waiting to be let in.")
-        wifi = (self.hub.settings.get("wifi") or {}) if hasattr(self.hub, "settings") else {}
-        if not wifi.get("ssid"):
-            return self._needs_wifi()
+        self.job["code"] = code
         self._set("working", step="wifi")
-        self._task = asyncio.create_task(self._setup(dict(wifi)))
-        return self.status()
-
-    def _needs_wifi(self) -> dict:
-        self._set("working", step="wifi", needs="wifi")
+        self._task = asyncio.create_task(self._setup())
         return self.status()
 
     async def wifi(self, ssid: str, password: str) -> dict:
-        """The one thing a hub cannot know for a strip it has never met: asked once, and kept."""
-        if not ssid: raise StripError("Which Wi‑Fi? The name is needed.")
-        self.hub.settings.set(wifi={"ssid": ssid, "pass": password})
-        if not self.job: return self.status()
-        self._set("working", step="wifi", needs=None)
-        self._task = asyncio.create_task(self._setup({"ssid": ssid, "pass": password}))
-        return self.status()
+        """Kept only so an older panel gets a sentence rather than a 500, and it refuses.
 
-    async def _setup(self, wifi: dict):
+        A strip gets onto the Wi-Fi by being commissioned now, over a channel the hub is not part of.
+        This module used to carry a household's password twice over -- first to a hand-rolled BLE
+        characteristic that sent it in the clear, then to WiFiProv, which only existed because the
+        Arduino framework compiles Matter-over-BLE out. Neither is here any more and neither should
+        come back. Delete this when nothing calls it."""
+        raise StripError("A light strip gets onto the Wi‑Fi by being commissioned, not by being told.")
+
+    async def _setup(self):
         j = self.job
         if not j: return
         try:
-            cfg = {"ssid": wifi.get("ssid"), "pass": wifi.get("pass"),
-                   "host": getattr(self.hub, "hostname", None) or "hub",
-                   "user": (getattr(self.hub, "env", {}) or {}).get("MQTT_USER") or "hub",
-                   "mqtt_pass": (getattr(self.hub, "env", {}) or {}).get("MQTT_PASSWORD") or "",
-                   "base": BASE}
-            await self.radio.join(j["addr"], cfg)
+            await self.radio.commission(j.get("code", ""))
             self._set("working", step="hub")
+            # AND HERE THE SETUP STOPS, FOR NOW, AND IT IS WORTH SAYING WHY RATHER THAN QUIETLY
+            # DOING LESS. Everything after this -- which color comes out first, how far it goes --
+            # is ours and goes over the broker, and needs the strip's chip to address it by. A
+            # Matter advertisement does not carry that, and a commissioned strip only tells us when
+            # it finds our broker, which it cannot do until something has told it where the broker
+            # is. That is docs/strip.md item 2a and it is not designed.
+            #
+            # A strip that gets here is a working Matter light in whatever app commissioned it. It
+            # is our extra half that is missing, not its own.
+            self._set("ready")
+            return
             # It is on the Wi-Fi now, so everything after this goes over the broker. Wait for it to
             # say so itself rather than assuming: a strip that joined and cannot find the hub is a
             # different failure from one that never joined, and the household can fix only one of them.

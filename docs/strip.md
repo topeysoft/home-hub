@@ -326,10 +326,18 @@ passcodes at manufacture from something the hub can look up, which makes every u
 anybody holding our algorithm; or an NFC tag the phone reads. **This is an artboard conversation before it is a
 code one, and it has not been had.**
 
-**2. The hub cannot actually drive the firmware.** `Radio.join()` raises. The firmware is commissionable; the
-brain has no commissioning client and does not talk to `matter-server` at all yet. So the two halves have never
-spoken. `Radio.scan()` still matches on our own name prefix rather than the Matter commissionable service, for
-the reason in 1a.
+**2. The hub can now hand a strip to the commissioner, and that is all it can do.** `Radio` speaks Matter:
+it scans for the commissionable advertisement and decodes it (checked against a real device — an S3 running
+our firmware advertises `00000ff1ff008000`, and its own log agrees the discriminator is 3840 and the vendor
+0xFFF1), and hands a code to `matter/commission` through Home Assistant's websocket, which reaches
+`matter-server` the house already runs. It carries no credentials of its own and must never be given a route
+that does.
+
+**Setup now stops at commissioned, and that is honest rather than a regression.** Everything after it — the
+color question, the fill, a room — is addressed by the strip's *chip* over the broker, and a Matter
+advertisement does not carry one. It used to pass in tests because a fake handed over an id nothing real would
+have. A strip that reaches `ready` is a working Matter light in whatever app commissioned it; it is our extra
+half that is missing, not its own.
 
 **2a. Nothing decides how a strip learns our broker.** After commissioning it is on the house Wi-Fi and knows
 nothing about us; `mhost` in its NVS is blank, so it is a plain Matter light and the color and length questions

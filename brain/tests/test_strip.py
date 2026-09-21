@@ -16,20 +16,24 @@ from hub.strip import ASSUME, ORDERS, StripError, Strips, lit_index, narrow, pro
 
 
 class FakeRadio:
-    """What Bluetooth would have said. `advertising` is every strip that has never been set up."""
+    """What Bluetooth would have said, in the shape a commissionable Matter device says it.
+
+    Note what is NOT here: no Wi-Fi, no credentials of any kind. Commissioning carries those itself,
+    which is the whole reason the firmware left the Arduino framework."""
     def __init__(self):
         self.advertising = []
-        self.joined = []
-        self.join_fails = None
+        self.commissioned = []
+        self.commission_fails = None
         self.scan_boom = None
 
     async def scan(self, seconds=4.0):
         if self.scan_boom: raise self.scan_boom
         return list(self.advertising)
 
-    async def join(self, addr, cfg):
-        if self.join_fails: raise StripError(self.join_fails)
-        self.joined.append((addr, cfg)); return {"addr": addr}
+    async def commission(self, code):
+        if self.commission_fails: raise StripError(self.commission_fails)
+        if not code: raise StripError("That light strip needs its setup code.")
+        self.commissioned.append(code); return {"node_id": 7}
 
     async def forget(self, id): return None
 
@@ -118,8 +122,9 @@ class Knocking(unittest.TestCase):
 
     def tearDown(self): self.tmp.cleanup()
 
-    def arrive(self, id="c8ebba", addr="AA:BB:CC:DD:EE:FF", rssi=-52):
-        self.radio.advertising = [{"id": id, "addr": addr, "rssi": rssi}]
+    def arrive(self, addr="AA:BB:CC:DD:EE:FF", discriminator=3840, rssi=-52):
+        self.radio.advertising = [{"addr": addr, "discriminator": discriminator, "rssi": rssi,
+                                   "vendor": 0xFFF1, "product": 0x8000, "ours": True}]
 
     def test_nothing_to_say_when_nothing_is_advertising(self):
         run(self.s.look())
@@ -129,23 +134,24 @@ class Knocking(unittest.TestCase):
         self.arrive()
         run(self.s.look())
         self.assertEqual(self.s.status()["state"], "knocking")
-        self.assertEqual(self.radio.joined, [])          # nothing of the house's has gone anywhere
+        self.assertEqual(self.radio.commissioned, [])    # nothing of the house's has gone anywhere
 
     def test_the_wall_is_never_shown_an_address(self):
         """The identity check is the object: it is two meters of lit strip and it is the only one
         lit. A household shown a MAC has been handed the inside of the product."""
-        self.arrive(id="c8ebba", addr="AA:BB:CC:DD:EE:FF")
+        self.arrive(addr="AA:BB:CC:DD:EE:FF")
         run(self.s.look())
         said = json.dumps(self.s.status())
         self.assertNotIn("AA:BB", said)
-        self.assertNotIn("c8ebba", said)
+        self.assertNotIn("3840", said)
 
-    def test_the_chip_is_the_id_and_the_address_is_only_how_to_reach_it(self):
-        """They are not interchangeable: the strip publishes on its chip for the rest of its life,
-        and the Bluetooth address it was found at is not even the same kind of thing on every host."""
-        self.arrive(id="c8ebba", addr="AA:BB:CC:DD:EE:FF")
+    def test_a_matter_advertisement_carries_no_id_of_ours(self):
+        """Which is the whole reason setup now stops at commissioned: everything after it is
+        addressed by the strip's chip, and only the broker can say what that is."""
+        self.arrive()
         run(self.s.look())
-        self.assertEqual((self.s.job["id"], self.s.job["addr"]), ("c8ebba", "AA:BB:CC:DD:EE:FF"))
+        self.assertIsNone(self.s.job["id"])
+        self.assertEqual(self.s.job["discriminator"], 3840)
 
     def test_not_mine_needs_no_code_and_sends_nothing(self):
         self.arrive()
@@ -161,111 +167,63 @@ class Knocking(unittest.TestCase):
         run(self.s.look()); run(self.s.dismiss()); run(self.s.look())
         self.assertEqual(self.s.status()["state"], "none")
 
-    def test_a_hub_with_no_wifi_asks_for_it_rather_than_failing(self):
-        self.hub.settings.set(wifi=None)
-        self.arrive()
-        run(self.s.look())
-        run(self.s.adopt())
-        s = self.s.status()
-        self.assertEqual((s["state"], s["needs"]), ("working", "wifi"))
-        self.assertEqual(self.radio.joined, [])
+    def test_the_hub_never_handles_the_wifi_password_at_all_any_more(self):
+        """It used to, twice, and both were wrong: a hand-rolled BLE characteristic that sent the
+        password in the clear, then WiFiProv, which only existed because Arduino compiles
+        Matter-over-BLE out. Commissioning carries the credentials itself now, so there is no route
+        through this module that could leak one -- and the old one refuses rather than lying."""
+        with self.assertRaises(StripError):
+            run(self.s.wifi("House", "hunter2"))
 
 
 class TheWholeWay(unittest.TestCase):
-    """Knock to ready, the way one household would go through it once."""
+    """Knock to commissioned, which is as far as setup honestly goes now.
+
+    It used to run on through the color question, the fill and a room. All of those are addressed by
+    the strip's chip over the broker, and a Matter advertisement does not carry one -- so the old test
+    was passing because a fake handed it an id that nothing real would have. What is left is true."""
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.hub = FakeHub(self.tmp.name)
         self.radio = FakeRadio()
-        self.radio.advertising = [{"id": "c8ebba", "addr": "AA:BB:CC:DD:EE:FF", "rssi": -50}]
+        self.radio.advertising = [{"addr": "AA:BB:CC:DD:EE:FF", "discriminator": 3840, "rssi": -50,
+                                   "vendor": 0xFFF1, "product": 0x8000, "ours": True}]
         self.s = Strips(self.hub, radio=self.radio)
-        # the strip answers: it comes online when greeted, and says where the fill got to when stopped
-        self.hub.ha.answers = {"hello": ("status", "online"), "fill/stop": ("count", "186")}
         run(self.s.listen())
 
     def tearDown(self): self.tmp.cleanup()
 
-    async def adopt(self):
+    async def adopt(self, code="3497-011-2332"):
         await self.s.look()
-        await self.s.adopt()
+        await self.s.adopt(code)
         for _ in range(50): await asyncio.sleep(0)
 
-    def said(self, leaf):
-        return [p for t, p in self.hub.ha.published if t.endswith("/" + leaf)]
-
-    def test_it_joins_and_then_asks_about_color(self):
+    def test_it_knocks_then_is_commissioned(self):
         run(self.adopt())
-        s = self.s.status()
-        self.assertEqual((s["state"], s["asking"]), ("order", "red"))
-        self.assertEqual(self.radio.joined[0][1]["ssid"], "House")
-        self.assertEqual(self.said("show/set"), ["raw 0 255 0"])   # red on a grb strip, sent unmapped
+        self.assertEqual(self.s.status()["state"], "ready")
+        self.assertEqual(self.radio.commissioned, ["3497-011-2332"])
 
-    def test_yes_that_is_red_goes_straight_to_the_fill(self):
+    def test_and_the_beats_it_can_still_honestly_claim(self):
+        """design/strip/Spine.dc.html is six beats. Three of them are reachable today and the board
+        has not changed -- so this says what is true rather than what is drawn, and the gap is
+        docs/strip.md item 2a rather than a board nobody updated."""
         run(self.adopt())
-        run(self.s.saw("red"))
-        self.assertEqual(self.s.status()["state"], "length")
-        self.assertEqual(self.said("order/set"), ["grb"])
+        beats = [b for i, b in enumerate(self.hub.pushed) if i == 0 or b != self.hub.pushed[i - 1]]
+        self.assertEqual(beats, ["knocking", "working", "ready"])
+        self.assertEqual(self.hub.steps, ["wifi", "hub"])
 
-    def test_something_else_asks_once_more_and_then_settles(self):
-        run(self.adopt())
-        run(self.s.saw("green"))
-        s = self.s.status()
-        self.assertEqual((s["state"], s["asking"]), ("order", "which"))
-        self.assertEqual(self.said("show/set")[-1], "raw 255 0 0")
-        run(self.s.saw("blue"))
-        self.assertEqual(self.said("order/set"), ["bgr"])
-        self.assertEqual(self.s.status()["state"], "length")
-
-    def test_stripes_mean_a_white_channel_and_are_not_a_fault(self):
-        """A three-byte frame on a four-channel strip misaligns by a byte a pixel and comes out as a
-        candy-stripe. It answers how many channels, not which order, so the color question stays open."""
-        run(self.adopt())
-        run(self.s.saw("stripes"))
-        s = self.s.status()
-        self.assertEqual((s["state"], s["asking"]), ("order", "red"))
-        self.assertEqual(self.said("white/set"), ["1"])
-
-    def test_nothing_at_all_is_a_fault_and_says_something_useful(self):
-        run(self.adopt())
-        run(self.s.saw("nothing"))
+    def test_a_strip_with_no_code_is_refused_rather_than_half_set_up(self):
+        run(self.adopt(code=""))
         s = self.s.status()
         self.assertEqual(s["state"], "failed")
-        self.assertIn("plugged in", s["text"])
-
-    def test_the_fill_is_stopped_and_the_length_is_the_strip_s_own_number(self):
-        """The firmware latches where it had got to when it hears the stop, not when the brain gets
-        round to reading a number back -- otherwise a strip measures short by however busy the Wi-Fi
-        was, and the person's reaction time is already the error that matters."""
-        run(self.adopt()); run(self.s.saw("red"))
-        run(self.s.ends())
-        s = self.s.status()
-        self.assertEqual((s["state"], s["count"]), ("room", 186))
-        self.assertEqual(self.said("count/set"), ["186"])
-
-    def test_a_room_finishes_it(self):
-        run(self.adopt()); run(self.s.saw("red")); run(self.s.ends())
-        run(self.s.put("living"))
-        self.assertEqual(self.s.status()["state"], "ready")
-        self.assertEqual(self.hub.placed, [("c8ebba", "living")])
+        self.assertIn("setup code", s["text"])
+        self.assertEqual(self.radio.commissioned, [])
 
     def test_and_a_finished_job_stops_reporting_once_it_is_read(self):
-        """Otherwise the sheet goes away and the very next poll brings it straight back, and somebody
-        sits there pressing OK at a dialog that will not die."""
-        run(self.adopt()); run(self.s.saw("red")); run(self.s.ends()); run(self.s.put("living"))
+        run(self.adopt())
         run(self.s.done())
         self.assertEqual(self.s.status()["state"], "none")
-
-    def test_the_whole_way_through_is_drawn_beat_for_beat(self):
-        """design/strip/Spine.dc.html is six beats and this is the order they happen in. If a beat is
-        added, moved or dropped, the board changed and this should fail until it is redrawn."""
-        run(self.adopt()); run(self.s.saw("red")); run(self.s.ends()); run(self.s.put("living"))
-        self.steps = self.hub.steps
-        beats = [b for i, b in enumerate(self.hub.pushed) if i == 0 or b != self.hub.pushed[i - 1]]
-        self.assertEqual(beats, ["knocking", "working", "order", "length", "room", "ready"])
-        # and the middle beat is TWO steps, not the bridge's three: the software is already on it,
-        # which is the whole reason it could knock in the first place.
-        self.assertEqual(self.steps, ["wifi", "hub"])
 
 
 class Afterwards(unittest.TestCase):
@@ -336,39 +294,30 @@ class WhenItGoesWrong(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.hub = FakeHub(self.tmp.name)
         self.radio = FakeRadio()
-        self.radio.advertising = [{"id": "c8ebba", "addr": "AA:BB:CC:DD:EE:FF", "rssi": -50}]
+        self.radio.advertising = [{"addr": "AA:BB:CC:DD:EE:FF", "discriminator": 3840, "rssi": -50,
+                                   "vendor": 0xFFF1, "product": 0x8000, "ours": True}]
         self.s = Strips(self.hub, radio=self.radio)
         run(self.s.listen())
 
     def tearDown(self): self.tmp.cleanup()
 
     async def adopt(self, settle: float = 0.0):
-        await self.s.look(); await self.s.adopt()
+        await self.s.look(); await self.s.adopt("3497-011-2332")
         for _ in range(50): await asyncio.sleep(0)
         if settle: await asyncio.sleep(settle)
-
-    def test_a_strip_that_joins_but_never_finds_the_hub_says_which_it_was(self):
-        """Two different failures the household can only fix one of."""
-        import hub.strip as mod
-        was, mod.JOIN_WAIT = mod.JOIN_WAIT, 0.01
-        try: run(self.adopt(settle=0.08))
-        finally: mod.JOIN_WAIT = was
-        s = self.s.status()
-        self.assertEqual(s["state"], "failed")
-        self.assertIn("never found the hub", s["text"])
 
     def test_a_library_s_own_words_never_reach_the_wall(self):
         """bridge.py learned this the expensive way: a bridge once failed with "database is locked"
         on the wall, which tells nobody anything and was not even true about their bridge."""
-        async def boom(addr, cfg): raise sqlite3.OperationalError("database is locked")
-        self.radio.join = boom
+        async def boom(code): raise sqlite3.OperationalError("database is locked")
+        self.radio.commission = boom
         run(self.adopt())
         s = self.s.status()
         self.assertEqual(s["state"], "failed")
         self.assertNotIn("database", s["text"])
 
     def test_but_a_sentence_written_for_the_wall_comes_through_as_itself(self):
-        self.radio.join_fails = "This hub has no Bluetooth to set a light strip up with."
+        self.radio.commission_fails = "This hub has no Bluetooth to look for a light strip with."
         run(self.adopt())
         self.assertIn("no Bluetooth", self.s.status()["text"])
 

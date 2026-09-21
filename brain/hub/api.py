@@ -1250,9 +1250,11 @@ def strip_status(): return hub.strip.status()
 
 
 @app.post("/strip/adopt")
-async def strip_adopt():
+async def strip_adopt(body: dict | None = None):
+    """Yes, that one is mine -- with its setup code, which is the one thing an advertisement does not
+    carry and so the one thing somebody still has to hand over. docs/strip.md item 1a."""
     hub.ready()
-    try: return await hub.strip.adopt()
+    try: return await hub.strip.adopt(str((body or {}).get("code") or ""))
     except StripError as e: raise HTTPException(409, str(e))
 
 
