@@ -213,7 +213,18 @@ class TheWholeWay(unittest.TestCase):
         self.assertEqual(beats, ["knocking", "working", "ready"])
         self.assertEqual(self.hub.steps, ["wifi", "hub"])
 
-    def test_a_strip_with_no_code_is_refused_rather_than_half_set_up(self):
+    def test_a_development_board_needs_no_code_typed_at_it(self):
+        """Its passcode is CHIP's own 20202021, compiled in and published in their source, so asking
+        somebody to copy it off a terminal would be ceremony rather than security."""
+        run(self.adopt(code=""))
+        self.assertEqual(self.s.status()["state"], "ready")
+        self.assertEqual(self.radio.commissioned, ["34970112332"])
+
+    def test_but_a_real_unit_still_has_to_be_told(self):
+        """The shortcut is keyed on the TEST vendor id, so it stops applying by itself the day a unit
+        ships with a passcode of its own. Nothing has to be remembered or switched off."""
+        self.radio.advertising = [{"addr": "AA:BB:CC:DD:EE:FF", "discriminator": 3840, "rssi": -50,
+                                   "vendor": 0x1234, "product": 0x8000, "ours": False}]
         run(self.adopt(code=""))
         s = self.s.status()
         self.assertEqual(s["state"], "failed")

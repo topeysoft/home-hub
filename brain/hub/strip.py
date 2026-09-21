@@ -119,6 +119,21 @@ MATTER_SVC = "0000fff6-0000-1000-8000-00805f9b34fb"
 # Our own, until there is a real Vendor ID to replace it. docs/strip.md item 2b.
 TEST_VID = 0xFFF1
 
+# THE CODE EVERY DEVICE WE BUILD TODAY HAS, AND WHY IT IS SAFE TO WRITE DOWN.
+#
+# Our firmware is built with CONFIG_ENABLE_TEST_SETUP_PARAMS, so its passcode is CHIP's own
+# 20202021 and its discriminator 3840 -- compiled in, printed on the serial console at every boot,
+# and published in connectedhomeip's source. It is not a secret and cannot be treated as one, which
+# is precisely why a unit with it cannot be sold.
+#
+# So while there is no box and no label, a strip that says it is a TEST vendor is a development
+# board, and the hub may as well use the code everybody already knows rather than asking somebody to
+# copy it off a terminal. THE MOMENT A REAL VENDOR ID EXISTS THIS STOPS APPLYING BY ITSELF: a unit
+# with its own passcode in `fctry` will not advertise TEST_VID, so this never fires for it, and the
+# code has to come from the label as design/strip/CodeBox.dc.html says. That self-limiting is the
+# whole reason it is written this way rather than as a setting somebody could leave switched on.
+DEV_CODE = "34970112332"
+
 
 def commissionable(data: bytes) -> dict | None:
     """What a commissionable advertisement means, or None if it is not one.
@@ -330,8 +345,8 @@ class Strips:
             # No chip here: a Matter advertisement carries a discriminator and not an id of ours.
             # `id` arrives later, from the broker, if the strip ever finds it (item 2a).
             self.job = {"state": "knocking", "id": None, "addr": s["addr"],
-                        "discriminator": s.get("discriminator"), "label": self._label(s),
-                        "first": None}
+                        "discriminator": s.get("discriminator"), "vendor": s.get("vendor"),
+                        "label": self._label(s), "first": None}
             self._set("knocking")
             break
         return self.status()
@@ -361,6 +376,9 @@ class Strips:
         household's code comes from is docs/strip.md item 1a and is not decided."""
         if not self.job or self.job["state"] != "knocking":
             raise StripError("There is no light strip waiting to be let in.")
+        # A development board's code is public, so nobody should have to read it off a terminal.
+        if not code and self.job.get("vendor") == TEST_VID:
+            code = DEV_CODE
         self.job["code"] = code
         self._set("working", step="wifi")
         self._task = asyncio.create_task(self._setup())
