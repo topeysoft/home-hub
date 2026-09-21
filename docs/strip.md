@@ -50,9 +50,8 @@ unit test, and Alexa has not been tried.
 
 ### The next three things, in order
 
-1. **Write the real service behind the door the spike proved** — protocomm `SECURITY_2` on the second GATT
-   service, and the mDNS half that `Theirs` draws. Apple and Google have both commissioned the strip and
-   neither refused it, so nothing is waiting on an ecosystem any more.
+1. **Write the shim** — protocomm's core and `protocomm_security2` behind our own GATT characteristics on
+   CHIP's host, per item 13. Nothing is waiting on an ecosystem or on a risk any more; this is the work.
 2. **Then the brain's half**, which has to match on our service UUID rather than on a device name — there is no
    room for a name in the scan response, item 12.
 3. **Then the hub path, on the Pi.** Not on the Mac — see `2-mac`. That is the first time the brain, the panel
@@ -488,7 +487,9 @@ neither is designed. **This is the seam between "a Matter light anybody can buy"
 properly", and it is currently an empty string.**
 
 **2b. Certification, which is what "just works" actually costs.** Everything above runs on a *test* vendor id.
-Apple and Google will commission such a device with an "uncertified accessory" warning; it cannot be sold.
+Apple and Google will commission such a device with an "uncertified accessory" warning — *the warning is the
+part nobody here has written down having seen, so treat it as expected rather than observed* — and it cannot
+be sold.
 **Both have now done it** — Apple Home on 20 September and Google Home the same day, `VendorId 0x6006` sitting
 in the fabric table beside Apple's. So the sentence above is confirmed in the half that matters and the
 temptation to read it the other way should be resisted: **nothing refused the strip, and it still cannot be
@@ -561,6 +562,29 @@ real annual cost before a unit ships — and inserts the product into the most q
 the house, which is how these things get returned. The camera route avoids all of that and costs a camera
 pointed into a living room. **The cheap next step is neither: a capture stick and HyperHDR on a bench,
 to find out whether it feels like the screen extended or like a gimmick, before any of it is paid for.**
+
+**13. How the second door actually gets built, read out of the source rather than guessed.** Three facts, and
+together they decide the shape:
+
+- **`protocomm_ble` cannot be used, and that is not negotiable.** `protocomm_nimble.c` stands up its own host
+  inside `simple_ble_start()`: `nimble_port_init()`, `nimble_port_freertos_init(nimble_host_task)` and its own
+  `ble_gatts_add_svcs`. CHIP has already done all three. Two NimBLE hosts is not a thing.
+- **Protocomm's core is transport-neutral, and it is the part worth having.** `protocomm_new`,
+  `protocomm_add_endpoint`, `protocomm_set_security`, and the one that matters:
+  `protocomm_req_handle(pc, ep_name, session_id, inbuf, inlen, &outbuf, &outlen)`. `protocomm_security2` —
+  SRP6a — ships beside it. **The half we must not hand-roll comes for free**, which is the whole reason to
+  reach for protocomm at all rather than invent a handshake again.
+- **The transport is a shim, and a small one.** `protocomm_nimble`'s GATT callback resolves an endpoint from a
+  16-bit discriminator carried at byte 12 of each 128-bit characteristic UUID, calls `protocomm_req_handle`,
+  and stashes the response for the read that follows. That is about a hundred lines of its eleven hundred, and
+  it is the only part we write — against `ConfigureExtraServices`, which item 12 proved. Everything
+  `protocomm_ble` does about advertising is dropped: CHIP owns the advertisement and we ride the scan response.
+
+**Keep protocomm's UUID convention and its endpoint names** (`prov-session`, `prov-config`), so a client that
+already exists can drive it. That matters more than it looks, because **`esp_prov` is not in ESP-IDF v6.0.2** —
+there is no `tools/esp_prov`, and nothing under esp-matter either. So the end-to-end proof of a SECURITY_2
+session needs Espressif's provisioning app on a phone, or a client of our own; and a client of our own means
+writing an SRP6a client in order to test our SRP6a, which tests the wrong thing twice. Use the app.
 
 **12. BLE coexistence is answered, on the desk, and it corrected a board.** The forked design in
 `design/strip/` rests on the strip offering our own provisioning service and Matter's at the same time. Read out
