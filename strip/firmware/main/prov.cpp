@@ -23,6 +23,7 @@
 
 #include <esp_log.h>
 #include <esp_random.h>
+#include <esp_timer.h>
 #include <esp_srp.h>
 #include <host/ble_hs.h>
 // CHIPDeviceLayer.h first: BLEManagerImpl.h is not self-contained and will not compile without the
@@ -231,6 +232,15 @@ constexpr char kUser[] = "wifiprov";
 
 HubDetails gHubDetails = nullptr;
 Taken gTaken = nullptr;
+int64_t gOpenedAt = 0;
+
+// TWO DAYS, IN OUR OWN CODE (design/strip/KnockTwoDays.dc.html). CHIP caps a commissioning window at
+// 900 seconds and its own way round that, CONFIG_ENABLE_BLE_EXT_ANNOUNCEMENT, does not compile in
+// this connectedhomeip -- it is `default n`, nobody builds that path, and BLEManagerImpl.cpp drops a
+// nodiscard CHIP_ERROR under -Werror. Patching vendored CHIP would put the fix outside this
+// repository, so the window is simply reopened here until the budget runs out. The board said B was
+// one line of configuration; it is not, and that is written down in docs/strip.md.
+constexpr int64_t kKnockFor = (int64_t)48 * 60 * 60 * 1000000;  // microseconds
 
 // WHERE OUR HUB IS, HANDED OVER IN THE SESSION THAT IS ALREADY OPEN. This is item 2a, which was an
 // empty string from the day Matter came in: a strip finishes provisioning knowing the household's
@@ -271,6 +281,7 @@ void on_prov_event(void *, network_prov_cb_event_t event, void *data) {
         // running manager; the characteristic it lands on was reserved at boot.
         if (network_prov_mgr_endpoint_register("hub", hub_handler, nullptr) != ESP_OK)
             ESP_LOGE(TAG, "no 'hub' endpoint; a strip set up here will not know where we are");
+        gOpenedAt = esp_timer_get_time();
         ESP_LOGI(TAG, "listening. The rhythm is %d %d %d %d", gRhythm[0], gRhythm[1], gRhythm[2], gRhythm[3]);
         break;
     case NETWORK_PROV_WIFI_CRED_RECV: {
@@ -290,6 +301,7 @@ void on_prov_event(void *, network_prov_cb_event_t event, void *data) {
         // has no Matter fabric, so nothing else on the device can answer this at the next boot --
         // without it the strip flashes its rhythm for ever and tries to reopen a door it has
         // already been through.
+        gOpenedAt = 0;
         if (gTaken) gTaken(true);
         // ON THE CHIP TASK, NOT THIS ONE. We are on network_provisioning's thread here, and touching
         // the stack from it is not a race that might bite later: CHIP checks, calls the access
@@ -372,6 +384,27 @@ void on_hub_details(HubDetails fn) { gHubDetails = fn; }
 
 void on_taken(Taken fn) { gTaken = fn; }
 
+bool keep_knocking() {
+    if (!gPc || !gOpenedAt) return false;                       // never opened, or already taken
+    if (esp_timer_get_time() - gOpenedAt >= kKnockFor) {
+        ESP_LOGI(TAG, "two days of knocking is enough");
+        return false;
+    }
+    // Reopening is a CHIP call, so it goes on the CHIP task: doing it from anywhere else does not
+    // race, it aborts the device.
+    const CHIP_ERROR e = chip::DeviceLayer::PlatformMgr().ScheduleWork([](intptr_t) {
+        const CHIP_ERROR opened =
+            chip::Server::GetInstance().GetCommissioningWindowManager().OpenBasicCommissioningWindow();
+        if (opened != CHIP_NO_ERROR) ESP_LOGE(TAG, "the window would not reopen: %s", chip::ErrorStr(opened));
+    });
+    if (e != CHIP_NO_ERROR) {
+        ESP_LOGE(TAG, "could not keep knocking: %s", chip::ErrorStr(e));
+        return false;
+    }
+    ESP_LOGI(TAG, "still nobody. Knocking again");
+    return true;
+}
+
 const uint8_t *rhythm() { return gRhythm; }
 bool busy() { return gBusy; }
 
@@ -442,6 +475,7 @@ esp_err_t reserve(const char *name) {
         return ESP_FAIL;
     }
 
+    gOpenedAt = 0;
     gScheme.prov_start = prov_start;
     gScheme.prov_stop = prov_stop;
     gScheme.new_config = new_config;

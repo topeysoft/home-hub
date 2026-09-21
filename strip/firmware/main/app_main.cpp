@@ -93,6 +93,9 @@ static uint16_t light_endpoint = 0;
 // a test pattern for ever -- and, on the Arduino version, the waiting glow was drawn and then wiped a
 // fraction of a second later by the first attribute sync, which from a bench looks like a dead strip.
 static bool instrument = false;
+// The knocking is over and nobody took the strip. It keeps the light, drained, rather than going
+// dark, and the rhythm stops.
+static bool waiting_over = false;
 static bool want_on = false;
 static uint8_t want_r = 255, want_g = 180, want_b = 110, want_bri = 200;
 
@@ -302,6 +305,21 @@ static void on_event(const ChipDeviceEvent *event, intptr_t) {
     // household's own state says, which is off until they turn it on, exactly like any other new
     // light in their app. Without this it sat on the setup glow for ever, looking stuck.
     if (event->Type == chip::DeviceLayer::DeviceEventType::kCHIPoBLEConnectionClosed) prov::disconnected();
+
+    // TWO DAYS LATER, AND NOBODY CAME (design/strip/KnockTwoDays.dc.html). When the advertisement
+    // finally stops, a strip nobody has taken must read as STOPPED rather than as broken: going
+    // dark is what a dead strip does. So the rhythm ends and a drained version of the same glow
+    // stays, which is the rule the whole panel runs on -- what was asking is still there, quieter,
+    // saying it is no longer asking. A power cycle starts the two days again.
+    if (event->Type == chip::DeviceLayer::DeviceEventType::kCHIPoBLEAdvertisingChange &&
+        event->CHIPoBLEAdvertisingChange.Result == chip::DeviceLayer::kActivity_Stopped && instrument &&
+        !waiting_over) {
+        if (prov::keep_knocking()) return;
+        waiting_over = true;
+        strip.solid(SIG_R / 6, SIG_G / 6, SIG_B / 6);
+        px::show(strip);
+        ESP_LOGI(TAG, "nobody came. Still here, no longer asking -- power it off and on to ask again");
+    }
     if (event->Type == chip::DeviceLayer::DeviceEventType::kCommissioningComplete) {
         ESP_LOGI(TAG, "commissioned. The light is the household's now.");
         instrument = false;
@@ -338,7 +356,7 @@ static void housekeeping(void *) {
     for (;;) {
         // While the strip is waiting through our door it flashes its rhythm; once credentials have
         // arrived it holds the steady glow until the manager is done with the Wi-Fi.
-        if (instrument && !armed && !fill.running && prov::rhythm()[0]) {
+        if (instrument && !waiting_over && !armed && !fill.running && prov::rhythm()[0]) {
             const bool lit = prov::busy() || rhythm_lit(now_ms());
             if (lit != was_lit) {
                 if (lit) strip.solid(SIG_R, SIG_G, SIG_B); else strip.clear();

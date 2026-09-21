@@ -33,3 +33,12 @@ CONFIG_ESP_MATTER_MAX_DYNAMIC_ENDPOINT_COUNT=2
 CONFIG_MBEDTLS_HKDF_C=y
 CONFIG_ENABLE_OTA_REQUESTOR=y
 CONFIG_MAX_GROUP_KEYS_PER_FABRIC=4
+
+# TWO DAYS OF KNOCKING, NOT FIFTEEN MINUTES (design/strip/KnockTwoDays.dc.html), AND NOT THE WAY THE
+# BOARD SAID. CHIP shuts a commissioning window after 900 seconds and our own door's scan response
+# rides on that same advertisement, so both close together while network_provisioning still believes
+# it is listening. CHIP's own answer is CONFIG_ENABLE_BLE_EXT_ANNOUNCEMENT, which lifts the ceiling
+# to 48 hours -- and it does not compile: it is `default n`, nobody builds that path, and
+# BLEManagerImpl.cpp:288 drops a nodiscard CHIP_ERROR under -Werror. Turning it on would mean
+# patching vendored connectedhomeip, which lives outside this repository and so would not be a fix
+# anybody else could reproduce. The window is reopened from our own code instead; see prov.cpp.

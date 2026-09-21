@@ -58,6 +58,10 @@ void on_taken(Taken fn);
 // The four counts, 1..6 each, for whoever is drawing them. Zero until open() has run.
 const uint8_t *rhythm();
 
+// CHIP stopped advertising. If the strip is still untaken and the two days are not up, the window
+// is reopened; otherwise this returns false and the knocking is over for this power cycle.
+bool keep_knocking();
+
 // CHIP saw the BLE link close. Whatever session was on it is over.
 void disconnected();
 

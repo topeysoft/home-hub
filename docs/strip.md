@@ -598,6 +598,23 @@ the house, which is how these things get returned. The camera route avoids all o
 pointed into a living room. **The cheap next step is neither: a capture stick and HyperHDR on a bench,
 to find out whether it feels like the screen extended or like a gimmick, before any of it is paid for.**
 
+**17. Two days of knocking, and CHIP's own way of doing it does not compile.** Item 14 is decided:
+`design/strip/KnockTwoDays.dc.html`, a strip nobody has taken keeps knocking for 48 hours and then stops
+in a way that reads as stopped. The board said this was one line of configuration and **it is not**.
+`CONFIG_ENABLE_BLE_EXT_ANNOUNCEMENT` lifts `CHIP_DISCOVERY_TIMEOUT_SECS` from a 900-second ceiling to
+172,800 — and it will not build: it is `default n`, nobody compiles that path, and CHIP's own
+`BLEManagerImpl.cpp:288` drops a nodiscard `CHIP_ERROR` under `-Werror`. Turning it on means patching
+vendored connectedhomeip, which lives outside this repository, so the fix would not be one anybody else
+could reproduce.
+
+So the window is reopened from our own code instead, in `prov::keep_knocking()`, with a 48-hour budget
+measured from the moment the door opened. When the budget runs out the rhythm stops and the strip holds
+a drained version of the same glow rather than going dark — **going dark is what a broken strip does**,
+and the rule this whole panel runs on is that what was asking stays put and says it is no longer asking.
+A power cycle starts the two days again. The board has been corrected rather than left standing: B lost
+the cheapness that was most of its case and is still the right answer, because what was chosen was the
+behavior, not the line of configuration.
+
 **16. "Has anybody taken this strip?" is not a question the fabric table can answer, and two boots'
 worth of bugs came out of assuming it was.** A strip adopted through our own door never joins a Matter
 fabric, so `FabricCount()` is 0 for the rest of its life. Both fixed on 21 September, and both were

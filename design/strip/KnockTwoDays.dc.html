@@ -70,7 +70,7 @@
   <div style="position: absolute; left: 60px; top: 44px; right: 60px;">
     <span class="cap">B &mdash; two days, then dark</span>
     <h1 class="dsp" style="margin: 10px 0 0; font-size: 38px; font-weight: 400;">Long enough to be a weekend. Short enough to end.</h1>
-    <p style="margin: 12px 0 0; color: var(--ink-2); font-size: 15.5px; max-width: 660px;">CHIP already has the knob. <em>ENABLE_BLE_EXT_ANNOUNCEMENT</em> raises the window cap from 900 seconds to 48 hours for a device nobody has commissioned, so the cliff moves from a quarter of an hour to two days for one line of configuration.</p>
+    <p style="margin: 12px 0 0; color: var(--ink-2); font-size: 15.5px; max-width: 660px;">CHIP looks as though it has the knob &mdash; <em>ENABLE_BLE_EXT_ANNOUNCEMENT</em> raises the window cap from 900 seconds to 48 hours for a device nobody has commissioned. <strong style="font-weight: 500;">It does not compile.</strong> It is <em>default n</em>, nobody builds that path, and CHIP's own BLEManagerImpl drops a nodiscard error under <em>&#8209;Werror</em>. So the window is reopened from our code instead, until the two days are up.</p>
   </div>
   <div style="position: absolute; left: 60px; top: 300px; width: 660px;">
     <span class="cap">What the strip is doing, from the moment it is plugged in</span>
@@ -83,7 +83,7 @@
   <div style="position: absolute; left: 760px; top: 300px; width: 620px;">
     <div class="box" style="border-color: rgba(var(--live-rgb),.3); background: linear-gradient(rgba(var(--live-rgb),.07), rgba(var(--live-rgb),.07)), rgba(255,255,255,.02); margin-bottom: 16px;">
       <span class="cap" style="color: rgba(var(--live-rgb),.85);">For</span>
-      <p style="margin: 10px 0 0; font-size: 15px; line-height: 1.6;">It covers the story that actually happens: plugged it in, got called away, came back tomorrow. It is a line of configuration rather than a mechanism of ours to maintain, it is the number Matter's own authors chose for this exact case, and it ends, so a strip nobody wanted goes quiet by itself.</p>
+      <p style="margin: 10px 0 0; font-size: 15px; line-height: 1.6;">It covers the story that actually happens: plugged it in, got called away, came back tomorrow. Forty&#8209;eight hours is the number Matter's own authors chose for this exact case, so the behavior is theirs even though the mechanism has to be ours. And it <em>ends</em>, so a strip nobody wanted goes quiet by itself rather than talking for years.</p>
     </div>
     <div class="box" style="border-color: rgba(var(--danger-rgb),.3); background: rgba(var(--danger-rgb),.05);">
       <span class="cap" style="color: rgba(var(--danger-rgb),.85);">Against</span>
@@ -93,7 +93,7 @@
 
   <div class="box" style="position: absolute; left: 60px; right: 60px; top: 700px; border-color: rgba(var(--lamp-rgb),.3); background: linear-gradient(rgba(var(--lamp-rgb),.06), rgba(var(--lamp-rgb),.06)), rgba(255,255,255,.02);">
     <span class="cap">What B costs to build, and what it is not</span>
-    <p style="margin: 10px 0 0; font-size: 15px; line-height: 1.6;">One line: <em>CONFIG_ENABLE_BLE_EXT_ANNOUNCEMENT</em>, which moves <em>CHIP_DISCOVERY_TIMEOUT_SECS</em> from a 900&#8209;second ceiling to 172,800. <strong style="font-weight: 500;">This is not the case the router&#8209;reboot rule covers</strong> &mdash; that one is a strip somebody has already set up announcing itself again, unasked. This is a strip nobody has ever taken, with nothing yet to protect. The two look similar on a radio and are opposite in a house.</p>
+    <p style="margin: 10px 0 0; font-size: 15px; line-height: 1.6;"><strong style="font-weight: 500;">Not the one line this board first claimed.</strong> CHIP's own extended announcement does not build in this connectedhomeip, and patching it would put the fix outside this repository where nobody else could reproduce it. So B costs what A costs &mdash; reopening the window ourselves &mdash; with a budget on it. That is a worse answer than the board was sold on, and still the right one. <strong style="font-weight: 500;">This is not the case the router&#8209;reboot rule covers</strong> &mdash; that one is a strip somebody has already set up announcing itself again, unasked. This is a strip nobody has ever taken, with nothing yet to protect. The two look similar on a radio and are opposite in a house.</p>
   </div>
 </div>
 </x-dc>
