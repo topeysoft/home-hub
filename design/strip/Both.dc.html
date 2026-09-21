@@ -1,0 +1,184 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp-rgb: 233,184,114; --lamp: rgb(var(--lamp-rgb)); --lamp-ink: #2a1c07;
+      --live-rgb: 116,198,157; --live: rgb(var(--live-rgb));
+      --danger-rgb: 224,138,138; --danger: rgb(var(--danger-rgb));
+      --r-lg: 22px; --r-md: 16px;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .t1 { font-size: 15.5px; font-weight: 500; }
+    .t2 { font-size: 12.5px; color: var(--muted); line-height: 1.45; }
+  </style>
+</helmet>
+<style>
+  .beat { width: 192px; height: 190px; border-radius: var(--r-md); background: var(--surface);
+          border: 1px solid var(--edge); padding: 14px 15px; display: flex; flex-direction: column; gap: 8px; }
+  .beat.ours { border-color: rgba(var(--lamp-rgb),.4);
+               background: linear-gradient(rgba(var(--lamp-rgb),.08), rgba(var(--lamp-rgb),.08)), var(--surface); }
+  .beat h3 { margin: 0; font-size: 17px; font-weight: 400; letter-spacing: -.02em; }
+  .pill { align-self: flex-start; font-size: 10px; letter-spacing: .1em; text-transform: uppercase;
+          padding: 3px 8px; border-radius: 999px; background: var(--surface-hi); color: var(--muted); }
+  .pill.ours { background: rgba(var(--lamp-rgb),.18); color: var(--lamp); }
+  .lane { display: flex; align-items: stretch; gap: 21px; }
+  .run { display: flex; gap: 3px; height: 16px; align-items: center; }
+  .px { width: 5px; height: 14px; border-radius: 2px; background: rgba(255,255,255,.1); }
+  .px.on { background: rgb(255,96,0); box-shadow: 0 0 9px rgba(255,120,30,.85); }
+  .px.dim { background: rgba(255,96,0,.32); }
+  .box { border-radius: var(--r-lg); border: 1px solid var(--edge); background: rgba(255,255,255,.03); padding: 18px 20px; }
+  .box.warm { border-color: rgba(var(--lamp-rgb),.32);
+              background: linear-gradient(rgba(var(--lamp-rgb),.07), rgba(var(--lamp-rgb),.07)), rgba(255,255,255,.02); }
+</style>
+
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: var(--bg); color: var(--ink); font-size: 17px; line-height: 1.4;">
+  <div style="position: absolute; inset: 0; background: linear-gradient(rgb(29,33,46) 0%, rgb(41,42,63) 44%, rgb(92,63,57) 84%, rgb(62,44,42) 100%);"></div>
+  <div style="position: absolute; inset: 0; background: rgba(6,7,9,.72);"></div>
+
+  <div style="position: absolute; left: 60px; top: 40px; right: 60px;">
+    <span class="cap">The spine, forked &mdash; one strip, two doors</span>
+    <h1 class="dsp" style="margin: 8px 0 0; font-size: 37px; font-weight: 400;">Whoever arrives first wins, and nobody is asked which.</h1>
+    <p style="margin: 10px 0 0; color: var(--ink-2); font-size: 15.5px; max-width: 1140px;">
+      The strip leaves the factory advertising both &mdash; our own handshake and a commissionable Matter payload, on
+      one radio, in one advertisement. Whichever session finishes first decides what kind of setup this household
+      got. The word <em>Matter</em> never appears on the wall, and neither does ours.
+    </p>
+  </div>
+
+  <!-- ============================ it knocks, once, for both ============================ -->
+  <div class="beat" style="position: absolute; left: 60px; top: 216px; width: 214px; height: 396px; justify-content: center;">
+    <span class="pill">Unchanged</span>
+    <h3>It knocks</h3>
+    <div style="height: 48px; border-radius: 12px; background: rgba(255,255,255,.04); border: 1px solid var(--edge); display: grid; place-items: center;">
+      <div class="run">
+        <span class="px on"></span><span class="px dim"></span><span class="px on"></span><span class="px dim"></span><span class="px on"></span>
+      </div>
+    </div>
+    <div class="t2">Plugged in anywhere in the house, with nothing of ours near it. One advertisement carrying two
+      services, because the radio does not care how many it offers.</div>
+    <div class="t2" style="color: rgba(var(--lamp-rgb),.75);">The only beat both doors share, and the one that was
+      already built.</div>
+  </div>
+
+  <svg width="54" height="396" style="position: absolute; left: 282px; top: 216px;" fill="none" stroke="rgba(255,255,255,.26)" stroke-width="2" stroke-linecap="round">
+    <path d="M0 198 H18 M18 95 V301 M18 95 H50 M18 301 H50"/>
+    <path d="M44 89 l6 6 -6 6" stroke="rgba(var(--lamp-rgb),.8)"/>
+    <path d="M44 295 l6 6 -6 6"/>
+  </svg>
+
+  <!-- ============================ lane A: our own door answered ============================ -->
+  <div class="lane" style="position: absolute; left: 336px; top: 216px;">
+    <div class="beat ours">
+      <span class="pill ours">Our hub</span>
+      <h3>That&rsquo;s the one</h3>
+      <div class="run"><span class="px on"></span><span class="px on"></span><span class="px on"></span><span class="px on"></span><span class="px on"></span><span class="px on"></span><span class="px on"></span></div>
+      <div class="t2">The whole of it lights. Nothing to type, and the Wi&#8209;Fi and our broker ride the same
+        session.</div>
+    </div>
+    <div class="beat ours">
+      <span class="pill ours">Our hub</span>
+      <h3>Is it red?</h3>
+      <div class="run"><span class="px" style="background:#e2483e;box-shadow:0 0 9px rgba(226,72,62,.9)"></span><span class="px" style="background:#e2483e;box-shadow:0 0 9px rgba(226,72,62,.9)"></span><span class="px" style="background:#e2483e;box-shadow:0 0 9px rgba(226,72,62,.9)"></span><span class="px" style="background:#e2483e;box-shadow:0 0 9px rgba(226,72,62,.9)"></span></div>
+      <div class="t2">Three particular bytes on the wire. Nothing in Matter&rsquo;s color light can carry bytes.</div>
+    </div>
+    <div class="beat ours">
+      <span class="pill ours">Our hub</span>
+      <h3>How long is it?</h3>
+      <div class="run"><span class="px on"></span><span class="px on"></span><span class="px dim"></span><span class="px"></span><span class="px"></span><span class="px"></span><span class="px"></span></div>
+      <div class="t2">Latched at the tap. It sends a number <em>back</em>, and the standard has nowhere to put
+        one.</div>
+    </div>
+    <div class="beat">
+      <span class="pill">Inherited</span>
+      <h3>Which room?</h3>
+      <div style="display: flex; gap: 5px; align-items: center; height: 16px;">
+        <span style="font-size: 11px; padding: 3px 8px; border-radius: 999px; background: var(--lamp); color: var(--lamp-ink); font-weight: 500;">Lounge</span>
+        <span style="font-size: 11px; padding: 3px 8px; border-radius: 999px; background: var(--surface-hi); color: var(--ink-2);">Kitchen</span>
+      </div>
+      <div class="t2">The ordinary room chips, as every new device gets them. Nothing invented.</div>
+    </div>
+    <div class="beat">
+      <span class="pill">Inherited</span>
+      <h3>It&rsquo;s in</h3>
+      <div style="height: 16px; display: flex; align-items: center;">
+        <span style="width: 18px; height: 18px; border-radius: 999px; background: rgba(var(--live-rgb),.9); display: grid; place-items: center;">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#0b2216" stroke-width="3.5" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg>
+        </span>
+      </div>
+      <div class="t2">An ordinary light from here: the tile, the colors, the schedules, &ldquo;everything off&rdquo;.</div>
+    </div>
+  </div>
+
+  <!-- ============================ lane B: anybody else answered ============================ -->
+  <div class="lane" style="position: absolute; left: 336px; top: 422px;">
+    <div class="beat">
+      <span class="pill">Their app</span>
+      <h3>Their code</h3>
+      <div style="height: 16px; display: flex; align-items: center;">
+        <span style="font-size: 12px; letter-spacing: .1em; color: var(--ink-2);">3497&#8209;011&#8209;2332</span>
+      </div>
+      <div class="t2">Off the label, the way every Matter device in the shop does. Board A is still this half&rsquo;s
+        answer.</div>
+    </div>
+    <div class="beat">
+      <span class="pill">Their app</span>
+      <h3>It&rsquo;s a light</h3>
+      <div class="run"><span class="px on"></span><span class="px on"></span><span class="px on"></span><span class="px on"></span><span class="px on"></span><span class="px on"></span><span class="px on"></span></div>
+      <div class="t2">On, dim, any color, any warmth, in the app they already had. Two beats, and it is
+        finished.</div>
+    </div>
+    <div class="box" style="width: 618px; height: 190px; padding: 16px 20px;">
+      <span class="cap">And nothing is missing</span>
+      <p style="margin: 8px 0 0; font-size: 14.5px; line-height: 1.55;">
+        The Enhanced Color Light <em>is</em> the whole ambient product. The two questions that never got asked
+        have defaults: a strip lights a generous number of pixels and holds the color it was given. A household
+        that bought one strip and owns nothing of ours has a working thing out of the box &mdash; which is the
+        promise this product line started from, and this lane is where it is kept.
+      </p>
+    </div>
+  </div>
+
+  <!-- ============================ what decides, and what it does not close ============================ -->
+  <div style="position: absolute; left: 60px; right: 60px; top: 670px; display: grid; grid-template-columns: 1fr 1fr; gap: 22px;">
+    <div class="box warm">
+      <span class="cap">What actually decides, and it is not a setting</span>
+      <p style="margin: 10px 0 0; font-size: 14.5px; line-height: 1.55;">
+        The first session to <strong style="font-weight: 500;">complete</strong> takes it, and the strip then
+        stops offering the other door. Not the first to connect &mdash; a half&#8209;finished attempt from either side
+        must leave the strip exactly as it found it, because the commonest real event here is somebody starting
+        in the wrong app and giving up. No screen asks which protocol this household has, because no household
+        knows.
+      </p>
+    </div>
+    <div class="box">
+      <span class="cap">And neither door locks the other</span>
+      <p style="margin: 10px 0 0; font-size: 14.5px; line-height: 1.55;">
+        A strip we set up can be added to Apple Home, Google Home or Alexa afterwards &mdash;
+        <strong style="font-weight: 500;">CodeHub</strong>, on this row, is how that code reaches the wall
+        without being printed on anything. A strip <em>they</em> set up can be handed to us afterwards too, and
+        it does not need the Bluetooth door at all, because it is already on the Wi&#8209;Fi &mdash;
+        <strong style="font-weight: 500;">Theirs</strong> draws that.
+      </p>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

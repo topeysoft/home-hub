@@ -110,7 +110,7 @@
       "y": 5400,
       "w": 1440,
       "h": 900,
-      "title": "Two tiers \u2014 it works anywhere, better here"
+      "title": "Three states \u2014 and the middle one arrives later"
     },
     {
       "file": "Foreign.dc.html",
@@ -119,6 +119,38 @@
       "w": 1440,
       "h": 900,
       "title": "The pane for one we cannot ask"
+    },
+    {
+      "file": "Both.dc.html",
+      "x": 0,
+      "y": 6480,
+      "w": 1440,
+      "h": 900,
+      "title": "The spine, forked \u2014 whoever arrives first wins"
+    },
+    {
+      "file": "Ours.dc.html",
+      "x": 1560,
+      "y": 6480,
+      "w": 1440,
+      "h": 900,
+      "title": "Our hub got there first"
+    },
+    {
+      "file": "Theirs.dc.html",
+      "x": 3120,
+      "y": 6480,
+      "w": 1440,
+      "h": 900,
+      "title": "Somebody else's app got there first"
+    },
+    {
+      "file": "CodeHub.dc.html",
+      "x": 4680,
+      "y": 6480,
+      "w": 1440,
+      "h": 900,
+      "title": "D \u2014 the hub is the box the code comes in"
     }
   ],
   "annotations": [
@@ -211,7 +243,21 @@
       "x": -620,
       "y": 5400,
       "w": 500,
-      "text": "IT WORKS ANYWHERE, AND BETTER HERE\n\nFrom \"this should be simpler when a user provisions the device in our hub directly -- C and Never should only apply to others, not our hub\", which was right and corrected a real mistake. The two cases had been collapsed into one, and the answer for the worst of them applied to both.\n\nOur hub is present at the one moment when more is possible: the commissioning, where there is already an encrypted session and somebody standing in the room holding the thing. A strip set up here can be handed the broker and then asked the two questions properly -- real bytes for the color, a fill latched in firmware at the tap. A strip that joined somebody else's fabric was never in a room with us, and may have been shared over months later.\n\nTHIS IS THE HONEST VERSION OF SOMETHING THE CANVAS ALREADY TRIED TO BUY. Direction B of the setup code wanted \"our hub is better at this than anybody else's app\" and got there by knowing a secret that would leak out of every unit we ship. This gets the same thing by DOING more rather than by KNOWING more, which is a sentence that can be said out loud.\n\nWHAT THE SECOND BOARD IS FOR. A light that cannot do a thing says so in the room rather than being skipped in silence -- that rule came out of the occasion boards and it applies here too. So the pane does not simply lose two rows; it says which kind of strip this is and offers the one action that would change it.\n\nOPEN: whether \"set it up here instead\" is a good idea or a trap. It means decommissioning it out of the app that has it, and a household that does that to a strip their partner added is going to be surprised. It may want to be a sentence rather than a button."
+      "text": "IT WORKS ANYWHERE, AND BETTER HERE \u2014 REDRAWN AFTER THE FORK\n\nFrom \"this should be simpler when a user provisions the device in our hub directly -- C and Never should only apply to others, not our hub\", which was right and corrected a real mistake. The two cases had been collapsed into one, and the answer for the worst of them applied to both.\n\nWHAT IT USED TO ARGUE, kept here because the board no longer says it. Our hub is present at the one moment when more is possible: the Matter commissioning, where there is already an encrypted session and somebody standing in the room holding the thing. A strip that joined somebody else's fabric was never in a room with us, may have been shared over months later, and so there was no moment left to hand it anything.\n\nWHAT THE FORK CHANGED. The moment is our own handshake now rather than Matter's commissioning, which is the whole of Ours. And the premise that no later moment exists turned out to be false: a strip somebody else set up is already on the Wi-Fi, so the handshake it is missing can come over mDNS whenever the household wants it. Two tiers became three states, and a state can be left.\n\nIT IS STILL THE HONEST VERSION OF SOMETHING THE CANVAS ALREADY TRIED TO BUY. Direction B of the setup code wanted \"our hub is better at this than anybody else's app\" and got there by knowing a secret that would leak out of every unit we ship. This gets the same thing by DOING more rather than by KNOWING more, which is a sentence that can be said out loud. CodeHub extends it and does not spend it: the hub is told the code and still derives nothing.\n\nWHAT THE THIRD COLUMN IS FOR. A light that cannot do a thing says so in the room rather than being skipped in silence -- that rule came out of the occasion boards and applies here too. So the pane does not simply lose two rows; it says which kind of strip this is and offers the one action that would change it.\n\nRESOLVED, AND IT WAS THIS BOARD'S OPEN QUESTION. Whether \"set it up here instead\" is a good idea or a trap, because it would mean decommissioning the strip out of the app that has it, and a household that does that to a strip their partner added is going to be surprised. It does not mean that any more: the mDNS handshake never touches their fabric, nothing is re-commissioned, and the strip stays where it is. Theirs draws it, and it can be a button after all.\n\nAND ONE CLAIM THIS BOARD HAD WRONG. It said a vendor and product id let the house recognize one of ours whoever set it up. The first real commissioning reported TEST_VENDOR and TEST_PRODUCT, which is what every device on a test vendor id says. Corrected in the band at the foot."
+    },
+    {
+      "id": "fork",
+      "x": -620,
+      "y": 6480,
+      "w": 500,
+      "text": "WHOEVER ARRIVES FIRST \u2014 THE ROW THAT WAS DRAWN AFTER ALL THE OTHERS\n\nRaised on 20 September, after everything above was settled: instead of bending over backwards to make Matter work with our hub, what if the strip works with our hub with or without it, and which protocol gets used is decided along the way, by whoever turns up to set it up. This row is that question drawn. It is later in time than every board above and it reopens two of them on purpose.\n\nTHE ARGUMENT IS NOT CONVENIENCE, AND THAT MATTERS. Everything on the bench runs on the test vendor id. Apple warns about such a device and Google has refused one, so until certification is bought \u2014 membership, a certificate written into every unit at manufacture, testing per product at a lab \u2014 there is no strip to sell at all. A second door is how a strip reaches a household before any of that and gains the Matter lane by an update afterwards. The partitions were laid down for exactly that.\n\nWHAT IT COSTS, SAID PLAINLY. WiFiProv comes back, weeks after being deleted as won by Matter, and that reversal belongs in docs/strip.md as a decision rather than as drift. Two BLE services share an image with 66 KB of free heap and a frame buffer still to come, which wants NimBLE and a measurement rather than an argument. And the second security surface is ours: the first firmware put a household's Wi-Fi password on an unauthenticated link, and bringing our own door back brings that responsibility back with it.\n\nWHAT IT REPAIRS IS MORE THAN IT BREAKS. Item 2a, how a strip learns our broker, stops being an empty string \u2014 it rides the session. Item 1a gets an answer at last, and it is CodeHub on this row. And 2-mac comes off the critical path, because our own door needs no matter-server, no host networking and no Matter integration added to Home Assistant by hand.\n\nAND IT LEAVES ONE BOARD STALE. Tiers.dc.html still argues that our advantage comes from being present at the Matter commissioning. Under this row the moment is our own handshake instead, and its right-hand column is unchanged. It wants redrawing and has not been."
+    },
+    {
+      "id": "code-hub",
+      "x": 6240,
+      "y": 6480,
+      "w": 500,
+      "text": "AND THEN ITEM 1A ANSWERS ITSELF\n\nThe three code boards were drawn when Matter was the only door, and none of them was good. A gives up the thing design/puck/Knock.dc.html was proudest of \u2014 that the identity check is the object and never a number. B makes every unit we ever sell commissionable by anybody holding the algorithm. C cannot stand alone. The recommendation was A, on the grounds that it was the least bad.\n\nD IS ONLY POSSIBLE BECAUSE OF OURS. Once there is a link the strip itself authenticated, a passcode no longer has to travel from outside the radio: the strip can simply say it, and the wall is where a code was going to have to appear anyway. Nothing is printed, nothing is derived, nothing is kept at the factory.\n\nIT DOES NOT REPLACE A, and the board says so where an enthusiastic board would not. A strip bought by a household with no hub of ours still needs a number from outside the radio, and that is still the label. D is what A becomes once our hub is in the house. Recommendation: ship A on the box, D on the wall, and B stays rejected for the reason it was always rejected.\n\nONE THING NOBODY HAS CHECKED. Whether a certified device may disclose its factory passcode over a vendor channel at all. If it may not, the strip installs a fresh verifier instead \u2014 more firmware, the same screen. Worth finding out before either is written, because it is cheap to ask and expensive to discover."
     }
   ],
   "reading": [
@@ -241,6 +287,12 @@
     "ReachNone.dc.html",
     "tiers",
     "Tiers.dc.html",
-    "Foreign.dc.html"
+    "Foreign.dc.html",
+    "fork",
+    "Both.dc.html",
+    "Ours.dc.html",
+    "Theirs.dc.html",
+    "code-hub",
+    "CodeHub.dc.html"
   ]
 }
