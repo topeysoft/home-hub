@@ -41,10 +41,8 @@ for item in order:
   .note p {{ margin: 0 0 12px; color: #b9b5ad; }}
 </style>
 <header>
-  <h1>Adopting a light strip</h1>
-  <p>A strip is the first thing this house adopts that is neither a bridge nor already in a wall. Four of its five
-     beats are the sheet the panel already ships; the fifth has no precedent, and A, B and C are three whole answers
-     to it. Every screen is 1440&times;900, the size of the wall.</p>
+  <h1>Our own door</h1>
+  <p>How anything we make proves it is in your house. A puck, a plug, a sensor and a strip all knock the same way and all need the same answer to the same question: this hub can hear you, but is the person answering with you? Three rungs, not three rivals.</p>
 </header>
 <main>{''.join(parts)}</main>
 <script>
