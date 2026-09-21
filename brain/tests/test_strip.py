@@ -261,6 +261,27 @@ class TheRadioIsWiredUp(unittest.TestCase):
         run(Strips(self.hub).radio.commission("3497-011-2332"))
         self.assertEqual(sent, [("matter/commission", {"code": "3497-011-2332"})])
 
+    def test_a_house_with_no_matter_controller_is_told_that_and_not_to_check_a_code(self):
+        """The real first failure on hardware: matter-server was not running, HA had no Matter
+        integration, and the wall said "check the code and that the strip is still lit" -- which
+        points at a strip that was working perfectly and hides the one thing that was wrong."""
+        class Engine:
+            async def send(self, type_, **kw): raise RuntimeError("matter/commission: unknown_command")
+        self.hub.ha = Engine()
+        with self.assertRaises(StripError) as e:
+            run(Strips(self.hub).radio.commission("3497-011-2332"))
+        said = str(e.exception)
+        self.assertIn("no Matter setup", said)
+        self.assertNotIn("Check it", said)
+
+    def test_but_a_refused_code_still_says_so(self):
+        class Engine:
+            async def send(self, type_, **kw): raise RuntimeError("commissioning failed: timeout")
+        self.hub.ha = Engine()
+        with self.assertRaises(StripError) as e:
+            run(Strips(self.hub).radio.commission("3497-011-2332"))
+        self.assertIn("did not take the code", str(e.exception))
+
     def test_and_says_something_true_when_there_is_no_engine(self):
         self.hub.ha = None
         with self.assertRaises(StripError) as e:

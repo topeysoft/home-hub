@@ -220,9 +220,16 @@ class Radio:
         try:
             return await ha.send("matter/commission", code=code) or {}
         except Exception as e:
-            # Whatever matter-server said was written for a log. The wall gets a sentence.
-            log.info("strip: commissioning failed (%s)", e)
-            raise StripError("That did not work. Check the code and that the strip is still lit.")
+            # Whatever the engine said was written for a log. The wall gets a sentence -- but WHICH
+            # sentence matters, and the first version of this had only one. It told a household to
+            # check the code and the strip when the real answer was that the house had no Matter
+            # controller running at all, which is not a thing anybody finds by looking at a strip.
+            log.warning("strip: commissioning failed (%s)", e)
+            said = str(e).lower()
+            if "unknown" in said or "not found" in said or "no matter" in said:
+                raise StripError("This house has no Matter setup yet. It is the matter\u2011server "
+                                 "the hub ships with, and it is not running.")
+            raise StripError("The strip did not take the code. Check it, and that the strip is still lit.")
 
     async def forget(self, id: str) -> None:
         return None

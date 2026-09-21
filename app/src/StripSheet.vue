@@ -245,7 +245,9 @@ onUnmounted(() => window.removeEventListener('keydown', key))
           <div class="flow-actions"><button class="button" @click="close">Done</button></div>
         </template>
 
-        <!-- it did not work, in the brain's words and never a library's -->
+        <!-- It did not work, in the brain's words and never a library's. The brain's sentence must
+             not open the way the title does: the first one to reach a screen began "That did not
+             work." under a heading reading "That did not work." -->
         <template v-else>
           <p class="sheet-lede">{{ b.text || 'The hub could not finish setting it up.' }}</p>
           <div class="flow-actions"><button class="button ghost" @click="close">Not now</button></div>
