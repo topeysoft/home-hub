@@ -51,3 +51,4 @@ strip/firmware/sdkconfig
 strip/firmware/sdkconfig.old
 strip/firmware/managed_components/
 strip/firmware/dependencies.lock
+strip/firmware/.vscode
