@@ -682,7 +682,30 @@ keeping the link up.** A connection establishes and then dies three to five seco
 reason `0x208` — a supervision timeout — every time a session is attempted, at about −64 dBm. The same
 code against the same strip at −25 dBm on a Mac completes.
 
-The cause is not the code: **CHIP never negotiates connection parameters at all**
+**Two software levers were tried on 21 September and neither closed the gap.** Both are kept because
+both are right on their own terms, and neither is the answer:
+
+- **The strip now stays on fast advertising while it is knocking.** CHIP drops from a 25 ms interval to
+  500 ms after thirty seconds, which is right for a device somebody is standing over and wrong for one a
+  household walks away from. At the far table the Pi found the strip in seconds at 25 ms and **could not
+  find it at all in twenty seconds** at 500 ms, so this one was worth having whatever else is true. It is
+  a nudge on a timer, because CHIP raises no event when it drops to slow — the first version hung off
+  `kCHIPoBLEAdvertisingChange` and silently never ran.
+- **The strip now asks every new link for a 30–50 ms interval and a ten-second supervision timeout.**
+  NimBLE accepts the request (`asked link 1 to be patient: ok`) and the link still dies about a second
+  later. It has to be polled from the housekeeping loop: `kCHIPoBLEConnectionEstablished` is raised when
+  a client subscribes to CHIPoBLE, not when the GAP link comes up, and the link was dying during service
+  discovery seconds before that. CHIP owns the GAP event handler and we are not forking it.
+
+**So the remaining gap looks like RF rather than software**, which is where it should have been suspected
+once the parameter request was accepted and changed nothing. The devkit's antenna, the S3 holding up
+Wi-Fi on the same radio, and thirteen decibels. Next places to look, none tried: the coexistence
+balance, the antenna on a real board rather than a devkit, and whether the strip should stop scanning
+Wi-Fi while a provisioning link is up. **Close range is unaffected and was re-checked after both
+changes: −23 dBm, session established.**
+
+The original diagnosis, kept because it is still true and still not the whole story: **CHIP never
+negotiates connection parameters at all**
 — there is no `ble_gap_update_params` anywhere in its NimBLE `BLEManagerImpl` — so the link runs on
 whatever BlueZ proposes, and the strip is holding up Wi-Fi on the same radio while it answers. Software
 coexistence is already on (`CONFIG_ESP_COEX_SW_COEXIST_ENABLE`). The fix is probably for the strip to ask

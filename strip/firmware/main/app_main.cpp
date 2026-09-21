@@ -352,10 +352,22 @@ static bool rhythm_lit(uint32_t t) {
 
 static void housekeeping(void *) {
     bool released = false, armed = false, was_lit = true;
+    uint32_t loud_at = 0;
     uint32_t down = 0;
     for (;;) {
         // While the strip is waiting through our door it flashes its rhythm; once credentials have
         // arrived it holds the steady glow until the manager is done with the Wi-Fi.
+        // Every ten seconds while the strip is still knocking, in case CHIP has quietly dropped the
+        // advertisement to its slow interval and put the strip out of earshot of the hub.
+        // A link that has just come up needs slower parameters before it times out in somebody
+        // else's service discovery, and nothing tells us when one appears; see prov.cpp.
+        prov::be_patient_with_everyone();
+
+        if (instrument && !waiting_over && now_ms() - loud_at > 10000) {
+            loud_at = now_ms();
+            prov::stay_loud();
+        }
+
         if (instrument && !waiting_over && !armed && !fill.running && prov::rhythm()[0]) {
             const bool lit = prov::busy() || rhythm_lit(now_ms());
             if (lit != was_lit) {

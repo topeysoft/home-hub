@@ -62,6 +62,15 @@ const uint8_t *rhythm();
 // is reopened; otherwise this returns false and the knocking is over for this power cycle.
 bool keep_knocking();
 
+// Put the advertisement back to its fast interval if CHIP has let it fall to slow. Safe to call
+// often and does nothing once the strip has been taken; see prov.cpp for why it is on a timer.
+void stay_loud();
+
+// Ask every live BLE link for a slower interval and a longer supervision timeout. Called the moment
+// CHIP says a connection came up, because the link dies during service discovery -- before any
+// characteristic of ours is touched -- and a request made on first write comes far too late.
+void be_patient_with_everyone();
+
 // CHIP saw the BLE link close. Whatever session was on it is over.
 void disconnected();
 

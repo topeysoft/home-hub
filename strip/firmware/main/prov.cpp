@@ -109,6 +109,52 @@ void drop_responses() {
     for (int i = 0; i < kCount; i++) drop_response(i);
 }
 
+// ASK THE OTHER END TO BE PATIENT (docs/strip.md item 15). CHIP negotiates no connection parameters
+// at all, so a link runs on whatever the central proposed -- and BlueZ proposes a short supervision
+// timeout with a fast interval, which the strip cannot always meet while it is also holding up
+// Wi-Fi on the same radio. Measured on 21 September: a session completes at -51 dBm and dies three
+// to five seconds in at -64 with reason 0x208, a supervision timeout. Thirteen decibels, and a real
+// strip is behind a television with the hub in another room.
+//
+// So we ask for a slower interval and ten seconds of patience the moment a client speaks to us. It
+// is a request: the central may refuse, and nothing here depends on it being granted.
+void ask_for_a_patient_link(uint16_t conn) {
+    struct ble_gap_upd_params want = {};
+    want.itvl_min = 24;              // 30 ms, in 1.25 ms units
+    want.itvl_max = 40;              // 50 ms -- room between events for the Wi-Fi half of the radio
+    want.latency = 0;                // provisioning is a conversation; do not let it skip events
+    want.supervision_timeout = 1000; // 10 s, in 10 ms units
+    const int rc = ble_gap_update_params(conn, &want);
+    ESP_LOGI(TAG, "asked link %u to be patient: %s", conn, rc == 0 ? "ok" : "refused");
+}
+
+}  // namespace
+
+// Every link that is currently up, asked once each. There is no "list connections" call in NimBLE
+// and at three maximum connections walking the handles is honest enough.
+//
+// THIS IS POLLED, AND IT HAS TO BE. The obvious hook, CHIP's kCHIPoBLEConnectionEstablished, is
+// raised when a client subscribes to CHIPoBLE and not when the GAP link comes up -- and the link
+// was dying during service discovery, several seconds before any of that. CHIP owns the GAP event
+// handler and we are not forking it, so the housekeeping loop looks instead. A link is found within
+// a tick of forming, which is early enough to matter and late enough to cost nothing.
+void be_patient_with_everyone() {
+    static uint8_t asked = 0;
+    for (uint16_t h = 0; h < 3; h++) {
+        struct ble_gap_conn_desc desc;
+        const bool up = ble_gap_conn_find(h, &desc) == 0;
+        const uint8_t bit = (uint8_t)(1u << h);
+        if (up && !(asked & bit)) {
+            asked = (uint8_t)(asked | bit);
+            ask_for_a_patient_link(h);
+        } else if (!up) {
+            asked = (uint8_t)(asked & ~bit);
+        }
+    }
+}
+
+namespace {
+
 // A write is a request and a read is its answer: protocomm is request/response over two operations
 // on one characteristic, so the answer has to be kept between them.
 int chr_access(uint16_t conn, uint16_t, struct ble_gatt_access_ctxt *ctxt, void *arg) {
@@ -383,6 +429,27 @@ void disconnected() { end_session(); drop_responses(); }
 void on_hub_details(HubDetails fn) { gHubDetails = fn; }
 
 void on_taken(Taken fn) { gTaken = fn; }
+
+// KEEP IT SHOUTING WHILE IT IS STILL KNOCKING. CHIP drops from fast advertising to slow after thirty
+// seconds, which is right for a device somebody is standing over and wrong for ours: a household
+// plugs a strip in and then walks to the wall, so the hub always looks after the thirty seconds are
+// up. Measured on 21 September -- from the far end of a room the Pi found the strip in seconds at a
+// 25 ms interval and could not find it at all in twenty seconds at 500 ms. A strip on mains power
+// that nobody has taken has nothing better to do than be findable.
+//
+// It is a nudge on a timer rather than a reaction to an event, because CHIP does not raise one when
+// it drops to slow: kCHIPoBLEAdvertisingChange does not fire, and the first version of this hung off
+// that and silently never ran.
+void stay_loud() {
+    if (!gPc || !gOpenedAt) return;
+    if (!chip::Server::GetInstance().GetCommissioningWindowManager().IsCommissioningWindowOpen()) return;
+    const CHIP_ERROR e = chip::DeviceLayer::PlatformMgr().ScheduleWork([](intptr_t) {
+        const CHIP_ERROR set = chip::DeviceLayer::Internal::BLEMgr().SetAdvertisingMode(
+            chip::DeviceLayer::ConnectivityManager::BLEAdvertisingMode::kFastAdvertising);
+        if (set != CHIP_NO_ERROR) ESP_LOGW(TAG, "could not stay loud: %s", chip::ErrorStr(set));
+    });
+    if (e != CHIP_NO_ERROR) ESP_LOGW(TAG, "could not stay loud: %s", chip::ErrorStr(e));
+}
 
 bool keep_knocking() {
     if (!gPc || !gOpenedAt) return false;                       // never opened, or already taken
