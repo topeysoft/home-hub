@@ -28,8 +28,21 @@ with Espressif, and the fixes are not guessable.
 
 ## Every session
 
+    export IDF_PYTHON_ENV_PATH=~/.espressif/python_env/idf6.0_py3.10_env
     . ~/esp/esp-idf-v6.0.2/export.sh
     . ~/esp/esp-matter/export.sh
+
+**The first line is not optional on a machine with more than one Python**, which is most of them. `export.sh`
+works out which virtual environment to use from whichever `python3` is on the PATH *at that moment*, so a shell
+with 3.14 goes looking for `idf6.0_py3.14_env` and fails with:
+
+    ERROR: ESP-IDF Python virtual environment ".../idf6.0_py3.14_env" not found.
+    Please run the install script to set it up before proceeding.
+
+The install script has already been run; the environment is just under a different Python's name. `ls
+~/.espressif/python_env/` says which one exists, and `IDF_PYTHON_ENV_PATH` points at it regardless of what the
+shell's `python3` happens to be. Re-running `install.sh` also works, but it builds a second multi-gigabyte
+environment to solve a naming problem, and a Python new enough to cause this is often too new for ESP-IDF.
 
 ## Build and flash
 
