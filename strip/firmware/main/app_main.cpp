@@ -311,10 +311,40 @@ static void on_event(const ChipDeviceEvent *event, intptr_t) {
 
 // ---------------------------------------------------------------- the button, and the fill
 
+// THE RHYTHM, DRAWN. Four groups of flashes with a gap between groups and a pause after the last,
+// repeating; the whole thing is a function of time so there is nothing to keep in step. Written to the
+// strip only on a change of state, because a WS2812 latches and rewriting a steady frame is how the
+// bridge puck turned one misread into twenty-five a second (AGENTS.md).
+static constexpr uint32_t RH_ON = 220, RH_OFF = 220, RH_GAP = 700, RH_PAUSE = 1800;
+static bool rhythm_lit(uint32_t t) {
+    const uint8_t *r = prov::rhythm();
+    uint32_t period = RH_PAUSE;
+    for (int g = 0; g < 4; g++) period += r[g] * (RH_ON + RH_OFF) + RH_GAP;
+    uint32_t at = t % period;
+    for (int g = 0; g < 4; g++) {
+        const uint32_t group = r[g] * (RH_ON + RH_OFF);
+        if (at < group) return (at % (RH_ON + RH_OFF)) < RH_ON;
+        at -= group;
+        if (at < RH_GAP) return false;
+        at -= RH_GAP;
+    }
+    return false;
+}
+
 static void housekeeping(void *) {
-    bool released = false, armed = false;
+    bool released = false, armed = false, was_lit = true;
     uint32_t down = 0;
     for (;;) {
+        // While the strip is waiting through our door it flashes its rhythm; once credentials have
+        // arrived it holds the steady glow until the manager is done with the Wi-Fi.
+        if (instrument && !armed && !fill.running && prov::rhythm()[0]) {
+            const bool lit = prov::busy() || rhythm_lit(now_ms());
+            if (lit != was_lit) {
+                if (lit) strip.solid(SIG_R, SIG_G, SIG_B); else strip.clear();
+                px::show(strip);
+                was_lit = lit;
+            }
+        }
         // A hold only counts once the button has been seen let go; see BUTTON_PIN above.
         if (gpio_get_level((gpio_num_t)BUTTON_PIN)) released = true;
         else if (released) {
@@ -472,6 +502,7 @@ extern "C" void app_main() {
         strip.solid(SIG_R, SIG_G, SIG_B);
         px::show(strip);
         ESP_LOGI(TAG, "not commissioned yet -- advertising over Bluetooth");
+        if (prov::open() != ESP_OK) ESP_LOGE(TAG, "our own door did not open; only Matter's is on");
         // The code this strip can be paired with, said out loud. Without this the only way to
         // commission it was to know that a test build uses the default passcode, which is exactly
         // the sort of thing that is obvious until the day it is not.

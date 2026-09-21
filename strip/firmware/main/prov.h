@@ -29,4 +29,22 @@ esp_err_t reserve();
 // The scheme to hand to network_prov_mgr_init(). Valid once reserve() has succeeded.
 const network_prov_scheme_t &scheme();
 
+// OPEN THE DOOR. Mints the rhythm, makes the SRP6a verifier from it, and starts the manager. Call
+// after esp_matter::start(), and only on a strip nobody has taken yet.
+//
+// THE RHYTHM IS THE PROOF OF POSSESSION (design/strip/PopLight.dc.html). Four groups of one to six
+// flashes, minted fresh each time the strip is plugged in and shown on the strip itself; the person
+// taps what they count and that is the SRP6a password. Nothing printed, nothing derived from the chip.
+// Rhythm rather than color because "Is it red?" has not been asked yet, so a color cannot be trusted
+// and a count can. It is small until SRP6a is under it: no offline attack, one wrong guess ends the
+// session, and the next power cycle mints a new one.
+esp_err_t open();
+
+// The four counts, 1..6 each, for whoever is drawing them. Zero until open() has run.
+const uint8_t *rhythm();
+
+// True from the moment credentials arrive until the manager has finished with them. The light is
+// the manager's while this is true.
+bool busy();
+
 }  // namespace prov

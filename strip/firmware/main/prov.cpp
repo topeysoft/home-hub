@@ -21,6 +21,8 @@
 #include <vector>
 
 #include <esp_log.h>
+#include <esp_random.h>
+#include <esp_srp.h>
 #include <host/ble_hs.h>
 // CHIPDeviceLayer.h first: BLEManagerImpl.h is not self-contained and will not compile without the
 // platform types it assumes somebody else has already pulled in.
@@ -177,7 +179,95 @@ esp_err_t prov_stop(protocomm_t *) {
 
 network_prov_scheme_t gScheme = {};
 
+// ---- the door itself -----------------------------------------------------------------------------
+
+uint8_t gRhythm[4] = {0, 0, 0, 0};
+bool gBusy = false;
+char *gSalt = nullptr;
+char *gVerifier = nullptr;
+int gVerifierLen = 0;
+
+// The username is fixed and public; the rhythm is the whole secret. "wifiprov" because that is what
+// every existing protocomm client sends unless told otherwise, and a bench client should just work.
+constexpr char kUser[] = "wifiprov";
+
+void on_prov_event(void *, network_prov_cb_event_t event, void *data) {
+    switch (event) {
+    case NETWORK_PROV_START:
+        ESP_LOGI(TAG, "listening. The rhythm is %d %d %d %d", gRhythm[0], gRhythm[1], gRhythm[2], gRhythm[3]);
+        break;
+    case NETWORK_PROV_WIFI_CRED_RECV: {
+        // Somebody counted right. From here the manager owns the Wi-Fi driver until it succeeds or
+        // gives up, and the light stops being an instrument.
+        auto *cfg = (wifi_sta_config_t *)data;
+        gBusy = true;
+        ESP_LOGI(TAG, "credentials for '%s' arrived through our door", (const char *)cfg->ssid);
+        break;
+    }
+    case NETWORK_PROV_WIFI_CRED_FAIL:
+        ESP_LOGW(TAG, "the house's Wi-Fi did not take those credentials");
+        break;
+    case NETWORK_PROV_WIFI_CRED_SUCCESS:
+        ESP_LOGI(TAG, "on the household's Wi-Fi, through our own door");
+        break;
+    case NETWORK_PROV_END:
+        // One completed session shuts the door, and it stays shut: the strip does not re-advertise
+        // on a router reboot or anything else (docs/strip.md, "The light never reports a fault").
+        gBusy = false;
+        network_prov_mgr_deinit();
+        break;
+    default:
+        break;
+    }
+}
+
 }  // namespace
+
+esp_err_t open() {
+    if (gPc) return ESP_ERR_INVALID_STATE;
+
+    // esp_random() is the hardware RNG once the radio is up, which it is by now.
+    char pass[5];
+    for (int i = 0; i < 4; i++) {
+        gRhythm[i] = (uint8_t)(1 + esp_random() % 6);
+        pass[i] = (char)('0' + gRhythm[i]);
+    }
+    pass[4] = 0;
+
+    free(gSalt); free(gVerifier);
+    gSalt = gVerifier = nullptr;
+    esp_err_t err = esp_srp_gen_salt_verifier(kUser, sizeof(kUser) - 1, pass, 4, &gSalt, 16, &gVerifier, &gVerifierLen);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "could not make a verifier from the rhythm: %s", esp_err_to_name(err));
+        return err;
+    }
+
+    network_prov_mgr_config_t cfg = {};
+    cfg.scheme = gScheme;
+    cfg.scheme_event_handler = NETWORK_PROV_EVENT_HANDLER_NONE;
+    cfg.app_event_handler.event_cb = on_prov_event;
+    err = network_prov_mgr_init(cfg);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "the manager would not start: %s", esp_err_to_name(err));
+        return err;
+    }
+
+    protocomm_security2_params_t sec2 = {};
+    sec2.salt = gSalt;
+    sec2.salt_len = 16;
+    sec2.verifier = gVerifier;
+    sec2.verifier_len = (uint16_t)gVerifierLen;
+    err = network_prov_mgr_start_provisioning(NETWORK_PROV_SECURITY_2, &sec2, "strip", nullptr);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "the door would not open: %s", esp_err_to_name(err));
+        network_prov_mgr_deinit();
+        return err;
+    }
+    return ESP_OK;
+}
+
+const uint8_t *rhythm() { return gRhythm; }
+bool busy() { return gBusy; }
 
 esp_err_t reserve() {
     memcpy(gSvcUuid.value, kServiceUuid, sizeof(kServiceUuid));
