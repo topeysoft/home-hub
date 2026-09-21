@@ -120,6 +120,8 @@ firmware and neither has the `ours` flag it writes.
   `sudo xcode-select -s` fixes it properly.
 - **Two PlatformIO cores are installed** and fight over the build directory; builds fail and then succeed
   unchanged. Irrelevant now the firmware is ESP-IDF, but it will confuse anybody touching `brilliant/`.
+- **A failed setup used to leave a strip that could never be set up again.** Item 24, and the brain
+  described it with the wrong sentence for an hour because the exception had no message.
 - **The build cache keeps a `-D` from a session nobody remembers**, so read the `pin N` in the boot line
   before believing anything about the light. Item 21.
 - **`network_prov_mgr_deinit()` from the `NETWORK_PROV_END` handler deadlocks silently** and takes the
@@ -621,6 +623,35 @@ real annual cost before a unit ships — and inserts the product into the most q
 the house, which is how these things get returned. The camera route avoids all of that and costs a camera
 pointed into a living room. **The cheap next step is neither: a capture stick and HyperHDR on a bench,
 to find out whether it feels like the screen extended or like a gimmick, before any of it is paid for.**
+
+**24. A strip that took credentials and never joined could not open its door again, ever.** Found on a
+real hub on 21 September, minutes after the press shipped, and it read on the wall as *"The hub could not
+finish setting it up"* with nothing anywhere saying why.
+
+**The path, and any household can walk it.** Setup hands over a Wi-Fi name and password. The strip stores
+them and tries to join. The join fails — a typo, the 5 GHz band, a network that has since moved — so
+`NETWORK_PROV_WIFI_CRED_SUCCESS` never fires and the `ours` flag is never written. At the next boot CHIP is
+already connecting with those stored credentials, and `network_prov_mgr_start_provisioning` cannot set an
+empty config over a connecting STA: **`ESP_ERR_WIFI_STATE`**, and the door never opens again. The strip goes
+on advertising for ever and cannot be taken by anybody, at either rung, until somebody knows the five-second
+hold exists.
+
+**The fix is where the knowledge is.** Inside `FabricCount() == 0 && !ours` the strip has never finished
+setup with *anybody*, so anything stored is from an attempt that failed and is only in the way:
+`esp_wifi_restore()` and one restart. Guarded by a `wificlr` flag in NVS so a restore that does not take
+cannot become a reboot loop in somebody's living room, and the flag is cleared the moment a door opens
+normally. Proven on the bench twice over — brick it, watch it clear itself in one reboot, brick it again,
+watch it clear itself again.
+
+**And the brain was describing it wrong.** `hub.strip` logged `our own door did not open ()` — an exception
+whose `str()` is the empty string, which is what a BLE connect timeout is on BlueZ. The wall's sentence was
+picked by matching on that message, so every timeout fell through to *"Unplug it and try again"* instead of
+*"try again a little nearer the hub"*. It matches on `type(e).__name__` as well now, and the log line names
+the type. **A log line that reads `()` is a log line that told nobody anything**, and this one had been
+printing for an hour.
+
+**This is a cousin of the partial-commissioning bug** at the top of the open list: both are a setup that
+reported failure and left something behind that silently bricks the strip.
 
 **23. The proof of possession is a press, and PopLight is demoted rather than deleted.** Chosen
 21 September from `design/door/PressIt.dc.html`; the spec for the strip is `design/strip/Press.dc.html`

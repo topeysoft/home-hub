@@ -40,6 +40,7 @@
 #include <nvs_flash.h>
 #include <nvs.h>
 #include <driver/gpio.h>
+#include <esp_wifi.h>
 #include <esp_timer.h>
 #include <mqtt_client.h>
 
@@ -593,7 +594,34 @@ extern "C" void app_main() {
                 if (!strcmp(key, k)) { put_str(key, value); return true; }
             return false;
         });
-        if (prov::open() != ESP_OK) ESP_LOGE(TAG, "our own door did not open; only Matter's is on");
+        // A STRIP THAT TOOK CREDENTIALS AND NEVER JOINED CANNOT OPEN ITS DOOR AGAIN, and this is a
+        // way to brick one in somebody's living room. Setup hands over a Wi-Fi name and password;
+        // the strip stores them and tries; the join fails -- a typo, the wrong band, a network that
+        // has since moved -- so NETWORK_PROV_WIFI_CRED_SUCCESS never fires and `ours` is never
+        // written. At the next boot CHIP is already connecting with those stored credentials, and
+        // the provisioning manager cannot set an empty config over a connecting STA: the door comes
+        // back ESP_ERR_WIFI_STATE and this is a strip that advertises itself for ever and can never
+        // be taken by anybody. Seen on a real hub on 21 September, where it read as "the hub could
+        // not finish setting it up" and nothing said why.
+        //
+        // We are inside "no fabric and not ours", so this strip has never finished setup with
+        // anybody. Whatever is stored is from an attempt that failed, and it is in the way.
+        const esp_err_t opened = prov::open();
+        if (opened == ESP_ERR_WIFI_STATE && get_i32("wificlr", 0) == 0) {
+            // Once per stored-credential mess, so a restore that does not take cannot become a
+            // reboot loop in a house. The flag is cleared the moment a door opens normally.
+            put_i32("wificlr", 1);
+            ESP_LOGW(TAG, "credentials from a setup that never finished are in the way. "
+                          "Clearing them and starting over");
+            esp_wifi_restore();
+            vTaskDelay(pdMS_TO_TICKS(250));
+            esp_restart();
+        }
+        if (opened != ESP_OK) {
+            ESP_LOGE(TAG, "our own door did not open (%s); only Matter's is on", esp_err_to_name(opened));
+        } else if (get_i32("wificlr", 0) != 0) {
+            put_i32("wificlr", 0);
+        }
         // The code this strip can be paired with, said out loud. Without this the only way to
         // commission it was to know that a test build uses the default passcode, which is exactly
         // the sort of thing that is obvious until the day it is not.

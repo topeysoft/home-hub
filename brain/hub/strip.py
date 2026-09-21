@@ -313,14 +313,23 @@ class Radio:
             raise StripError("Nobody pressed the button on it. The button is on the controller, at "
                              "the end it plugs in at \u2014 say it is yours again to start over.")
         except Exception as e:
-            log.warning("strip: our own door did not open (%s)", e)
-            # TWO FAILURES THAT ARE NOT THE SAME, and telling a household to recount when the radio
+            # THE TYPE AS WELL AS THE MESSAGE, and the type FIRST, because the most common failure
+            # out here has no message at all. A BLE connect that times out on BlueZ arrives as a
+            # bare asyncio.TimeoutError whose str() is the empty string, so this line used to log
+            # "our own door did not open ()" -- which told the next person nothing -- and the
+            # matching below fell through every timeout test and sent the household to unplug a
+            # strip whose only problem was the distance to the hub. Seen on a real hub, 21 September.
+            log.warning("strip: our own door did not open (%s: %s)", type(e).__name__, e or "no message")
+            # THREE FAILURES THAT ARE NOT THE SAME, and telling a household to recount when the radio
             # dropped is telling them to fix something they did not break. The strip refuses a wrong
             # rhythm inside SRP6a and the refusal comes back as an ATT error; a link that died comes
-            # back as a disconnect. Both used to say "check the flashes", which sent somebody to
-            # count again and again at the far end of a room where the real answer was to move.
-            said = str(e).lower()
-            if "disconnect" in said or "not found" in said or "timeout" in said:
+            # back as a disconnect; a link that never formed comes back as nothing at all. The first
+            # two both used to say "check the flashes", which sent somebody to count again and again
+            # at the far end of a room where the real answer was to move.
+            said = f"{type(e).__name__} {e}".lower()
+            # "notfound" as well as "not found": a class name has no spaces in it, and
+            # BleakDeviceNotFoundError is exactly the case this branch exists for.
+            if any(k in said for k in ("disconnect", "not found", "notfound", "timeout", "unreachable")):
                 raise StripError("The strip stopped answering part way through. "
                                  "Try again a little nearer the hub.")
             if not rhythm:

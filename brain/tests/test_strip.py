@@ -707,6 +707,21 @@ class ThreeFailuresThatAreNotTheSame(unittest.TestCase):
         self.assertNotIn("nearer", said)
         self.assertNotIn("flashes", said)
 
+    def test_a_failure_with_no_message_at_all_is_still_read_right(self):
+        """The commonest one on a real hub, and the one that used to read as "unplug it": a BLE
+        connect that times out on BlueZ arrives as a bare asyncio.TimeoutError whose str() is the
+        empty string -- and asyncio.TimeoutError has BEEN the builtin since 3.11, so there is only
+        one of them to catch. Matching on the message alone missed every one."""
+        said = self.said_for(TimeoutError(), rhythm="")
+        self.assertIn("nearer the hub", said)
+        self.assertNotIn("Unplug it", said)
+
+    def test_a_strip_the_radio_never_reached_is_not_blamed_on_the_strip(self):
+        """bleak names the class and says nothing else, and a class name has no spaces in it."""
+        class BleakDeviceNotFoundError(Exception): pass
+        said = self.said_for(BleakDeviceNotFoundError(), rhythm="")
+        self.assertIn("nearer the hub", said)
+
     def test_a_strip_that_will_not_finish_a_press_session_is_not_told_to_recount(self):
         """There are no flashes on this rung, so "count them again" is an instruction about a thing
         that is not on the wall."""
