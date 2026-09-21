@@ -39,7 +39,11 @@ import asyncio, json, logging, re, time
 log = logging.getLogger("hub.strip")
 
 BASE = "strip"
-STEPS = ("wifi", "hub")
+# ONE STEP, BECAUSE ONE THING HAPPENS. It used to be two -- "putting it on your Wi-Fi", then
+# "introducing it to the hub" -- back when the hub carried the credentials itself and then waited for
+# the strip to appear on the broker. Commissioning does both at once and neither of them is ours, so
+# a second line would be a progress bar with nothing behind it.
+STEPS = ("letting",)
 
 # How long to wait on a strip for each kind of question. Named so the tests can shrink them: a suite
 # that waits out a real timeout teaches people to skip it.
@@ -380,7 +384,7 @@ class Strips:
         if not code and self.job.get("vendor") == TEST_VID:
             code = DEV_CODE
         self.job["code"] = code
-        self._set("working", step="wifi")
+        self._set("working", step="letting")
         self._task = asyncio.create_task(self._setup())
         return self.status()
 
@@ -399,7 +403,6 @@ class Strips:
         if not j: return
         try:
             await self.radio.commission(j.get("code", ""))
-            self._set("working", step="hub")
             # AND HERE THE SETUP STOPS, FOR NOW, AND IT IS WORTH SAYING WHY RATHER THAN QUIETLY
             # DOING LESS. Everything after this -- which color comes out first, how far it goes --
             # is ours and goes over the broker, and needs the strip's chip to address it by. A

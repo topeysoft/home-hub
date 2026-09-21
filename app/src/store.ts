@@ -680,7 +680,7 @@ const previewStrip = (beat: string): Strip => ({
   revisit: (STRIP_BACK as Strip['revisit']) || undefined,
   state: (beat === 'which' ? 'order' : beat) as Strip['state'],
   name: 'A light strip',
-  step: beat === 'working' ? 'hub' : undefined,
+  step: beat === 'working' ? 'letting' : undefined,
   asking: beat === 'which' ? 'which' : beat === 'order' ? 'red' : undefined,
   count: 186,
   rooms: store.rooms.length

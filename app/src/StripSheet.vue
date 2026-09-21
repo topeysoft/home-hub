@@ -65,15 +65,18 @@ const lede = computed(() => {
 const finished = computed(() =>
   back.value === 'colors' ? 'Its colors are right now.'
   : back.value === 'length' ? 'It knows where it ends now.'
-  : 'It is on the house. Turn it off, dim it, color it or put it on a schedule, the same as anything else.')
+  : 'It is a light in the house now — on, dim, any color, on a schedule, in the room it lives in.')
 
-/* Two steps, not the bridge's three. There is no mesh to hand keys to, and the software is already on
-   it -- which is the whole reason it could knock rather than being carried to the hub on a cable. */
-const STEPS = { wifi: 'Putting it on your Wi‑Fi', hub: 'Introducing it to the hub' } as const
-const ORDER = ['wifi', 'hub'] as const
-const at = computed(() => ORDER.indexOf((b.value?.step ?? 'wifi') as any))
+/* ONE STEP, where a bridge has three. The hub does not hand over the Wi-Fi any more and never sees
+   the password: commissioning carries it, encrypted, and does the letting-in at the same time. Two
+   lines here would be a progress bar with nothing behind one of them. */
+const STEPS = { letting: 'Letting it into the house' } as const
+const ORDER = ['letting'] as const
+const at = computed(() => ORDER.indexOf((b.value?.step ?? 'letting') as any))
 const steps = computed(() => ORDER.map((id, i) => ({ id, text: STEPS[id], done: i < at.value, live: i === at.value })))
-const far = computed(() => `${Math.round(((at.value + 0.5) / ORDER.length) * 100)}%`)
+/* No progress bar. With one step it would sit at half for the whole wait and then vanish, which is
+   a picture of progress rather than progress -- the very thing the one-step comment above objects to.
+   The live dot says it is happening and does not claim to know how far along it is. */
 
 /* What it could be showing, and the fourth one is not a color at all. A three-byte frame sent to a
    strip that carries a separate white channel misaligns by a byte a pixel and comes out as a repeating
@@ -102,7 +105,9 @@ async function run(fn: () => Promise<any>, after?: string) {
   busy.value = false
   refreshStrip()
 }
-const adopt = () => run(adoptStrip)
+/* No code passed: a development board's is public and the brain fills it in. When real units
+   exist this is where the one off the label goes. */
+const adopt = () => run(() => adoptStrip())
 const dismiss = () => run(dismissStrip)
 const saw = (what: string) => { other.value = false; run(() => stripSaw(what)) }
 const ends = () => run(stripEnds)
@@ -170,9 +175,8 @@ onUnmounted(() => window.removeEventListener('keydown', key))
 
         <!-- the hub is talking to it over Bluetooth. Nothing to do, so nothing to press. -->
         <template v-else-if="b.state === 'working'">
-          <p class="sheet-lede">Everything it needs is going on it now, over Bluetooth. A moment. You can walk away; the wall will say when it is done.</p>
+          <p class="sheet-lede">It is being let in now, over Bluetooth, and it gets onto your Wi‑Fi as part of the same conversation. A moment. You can walk away; the wall will say when it is done.</p>
           <div class="stage"><StripArt show="lit" /></div>
-          <div class="bridge-bar"><i :style="{ width: far }"></i></div>
           <ul class="bridge-steps">
             <li v-for="s in steps" :key="s.id" :class="{ done: s.done, live: s.live }">
               <span class="bridge-tick"><Icon v-if="s.done" name="check" :size="13" /><span v-else-if="s.live" class="pulse-dot"></span></span>

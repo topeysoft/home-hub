@@ -257,7 +257,7 @@ export const bridgeWifi = (ssid: string, password: string) => post<Bridge>('/bri
 export type Strip = {
   state: 'none' | 'knocking' | 'working' | 'order' | 'length' | 'room' | 'ready' | 'failed'
   name?: string
-  step?: 'wifi' | 'hub'                    // two, not the bridge's three: the software is already on it
+  step?: 'letting'                         // one, where a bridge has three: commissioning does the Wi-Fi and the letting-in together
   asking?: 'red' | 'which'
   /* Set when one of the two setup questions is being asked AGAIN about a strip that is already in --
      somebody cut it down, joined another on, or replaced it with a different make. The sheet says a
@@ -270,6 +270,8 @@ export type Strip = {
   rooms?: { id: string; name: string }[]
   strips?: number                          // how many are set up and working, job or no job
   text?: string
+  /* A strip no longer gets its Wi-Fi from us at all -- commissioning carries it -- so this is only
+     still here for a hub older than that change. */
   needs?: 'wifi'
 }
 /* Ending a job is the brain's to know, exactly as it is for a bridge: a sheet that closes only its
@@ -277,8 +279,13 @@ export type Strip = {
 export const STRIP_READ_ONCE = ['ready', 'failed'] as const
 export const readStripOnce = (state?: string) => (STRIP_READ_ONCE as readonly string[]).includes(state ?? '')
 export async function getStrip(): Promise<Strip> { const r = await request('/strip'); if (!r.ok) await fail(r); return r.json() }
-/** Yes, that one is mine. Nothing of the house's moves before this. */
-export const adoptStrip = () => post<Strip>('/strip/adopt')
+/** Yes, that one is mine, with its setup code.
+ *
+ * A development board needs none: its passcode is CHIP's own, compiled in and published, so the brain
+ * fills it in rather than making somebody copy a public number off a terminal. A real unit is refused
+ * without one, and that difference is keyed on the vendor id rather than a setting, so it cannot be
+ * left switched on by accident. design/strip/CodeBox.dc.html. */
+export const adoptStrip = (code = '') => post<Strip>('/strip/adopt', { code })
 /** Not mine. Needs no code -- refusing gives nothing away, and nothing was ever sent. */
 export const dismissStrip = () => post<Strip>('/strip/dismiss')
 export const stripWifi = (ssid: string, password: string) => post<Strip>('/strip/wifi', { ssid, password })

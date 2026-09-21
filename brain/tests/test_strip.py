@@ -211,7 +211,7 @@ class TheWholeWay(unittest.TestCase):
         run(self.adopt())
         beats = [b for i, b in enumerate(self.hub.pushed) if i == 0 or b != self.hub.pushed[i - 1]]
         self.assertEqual(beats, ["knocking", "working", "ready"])
-        self.assertEqual(self.hub.steps, ["wifi", "hub"])
+        self.assertEqual(self.hub.steps, ["letting"])
 
     def test_a_development_board_needs_no_code_typed_at_it(self):
         """Its passcode is CHIP's own 20202021, compiled in and published in their source, so asking
