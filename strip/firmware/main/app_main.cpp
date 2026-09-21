@@ -51,7 +51,6 @@
 #include <app/server/Server.h>
 #include <setup_payload/OnboardingCodesUtil.h>
 
-
 #include "pixels.h"
 
 using namespace esp_matter;

@@ -48,10 +48,9 @@ a unit test. Google Home and Alexa have not been tried.
 
 1. **Commission it from Google Home or Alexa.** Apple Home has done it. The other two matter because they are
    the ones most likely to refuse a test vendor id, and refusing is the answer item 2b needs.
-2. **Prove the scan response really carries our service, and that a scanner sees both.** The heap half of the
-   coexistence question is answered and it was free (item 12). What is left is the 31-byte advertising payload:
-   nothing has yet put a vendor UUID in the scan response and watched a scanner find Matter's payload and ours
-   from the same board. That is the last unproven thing the forked design rests on.
+2. **Write the real service behind the door the spike proved.** Coexistence is settled on hardware, both
+   halves (item 12), so what is left is not a risk but the work: protocomm `SECURITY_2` on that second GATT
+   service, and the mDNS half that `Theirs` draws.
 3. **Then the hub path, on the Pi.** Not on the Mac — see `2-mac`. That is the first time the brain, the panel
    and the firmware will have run together.
 
@@ -562,21 +561,27 @@ of `connectedhomeip` rather than reasoned about:
   second `nimble_port_init`**, which was the thing that could have killed the design. It has to be called before
   the stack starts — it returns `CHIP_ERROR_INCORRECT_STATE` once `mGattSvcs` is non-empty. esp-matter's own FAQ
   documents the surrounding story and points at `blemesh_bridge`.
-- **The advertising half is the real constraint, and `Both.dc.html` overstated it.** That board said *one
-  advertisement carrying two services*. As this firmware is configured it cannot: without
-  `CONFIG_BT_NIMBLE_EXT_ADV`, CHIP calls `ble_gap_adv_start` — the single legacy advertising set — and a legacy
-  payload is 31 bytes, which Matter's `0xFFF6` service data plus a 128-bit vendor UUID overruns. Three ways out,
-  cheapest first: `ConfigureScanResponseData`, which CHIP already exposes and which buys another 31 bytes;
-  extended advertising, where Matter holds `kMatterAdvInstance = 0` and we take another instance, at the cost of
-  re-proving Matter's advertisement on air; or alternating, which is nobody's idea of a good time. The board now
-  says the scan response.
-- **Measured, 20 September: a second GATT service costs 232 bytes.** Registered through
+- **The advertising half needed the scan response, and it is now proven on air.** `Both.dc.html` originally
+  said *one advertisement carrying two services*, which this firmware cannot do: without
+  `CONFIG_BT_NIMBLE_EXT_ADV`, CHIP calls `ble_gap_adv_start` — the single legacy advertising set — and 31 bytes
+  will not hold Matter's `0xFFF6` service data and a 128-bit vendor UUID. `ConfigureScanResponseData` buys a
+  second 31 bytes, and on **20 September a scanner saw both from one board**:
+
+      svc data   {'0000fff6-0000-1000-8000-00805f9b34fb': '00000ff1ff008000'}
+      svc uuids  ['21436587-09ba-dcfe-0001-020304050607']
+
+  One address, −25 dBm, Matter's commissionable payload in the advertisement and a vendor service UUID in the
+  scan response beside it. The UUID takes **18 of the 31 bytes and leaves 13**, which is not enough for the
+  16-character device name the old `WiFiProv` design advertised — so the UUID is the identifier now and the
+  brain's `Radio.scan()` has to match on that rather than on a name. Extended advertising, where Matter holds
+  `kMatterAdvInstance = 0` and we take another instance, stays available and is not needed.
+- **Measured, 20 September: the whole second door costs 228 bytes of heap and 1,232 of flash** — the GATT
+  service and the scan response together, free internal DRAM 114,544 → 114,316 with the largest free block
+  unmoved. A second GATT service alone, without the scan response, was 232 bytes. Registered through
   `ConfigureExtraServices` as one 128-bit service with four read/write characteristics, which is roughly the
-  shape protocomm exposes, on an uncommissioned board with Matter up and CHIPoBLE advertising: free internal
-  DRAM went from **114,544 to 114,312**, the largest free block did not move at 73,728, and the image grew by
-  1,024 bytes. The call returned `Success` and advertising was unaffected. **Against 114 KB free, the heap half
-  of the coexistence question is not a question.** The spike was removed once it had answered; the numbers are
-  the record.
+  shape protocomm exposes, on an uncommissioned board with Matter up and CHIPoBLE advertising. Both calls
+  returned `Success` and advertising was unaffected. **Against 114 KB free, the heap half of the coexistence
+  question is not a question.** The spike was removed once it had answered; the numbers are the record.
 - **`CONFIG_USE_BLE_ONLY_FOR_COMMISSIONING=y` can stay.** Our own door has no use for BLE once the strip is on
   the Wi-Fi — `Theirs` hands over via mDNS after that, and an enhanced commissioning window never advertises
   over Bluetooth at all — so the Bluetooth memory still goes back.
