@@ -304,8 +304,12 @@ class TheRadioIsWiredUp(unittest.TestCase):
         with self.assertRaises(StripError) as e:
             run(Strips(self.hub).radio.commission("3497-011-2332"))
         said = str(e.exception)
-        self.assertIn("no Matter setup", said)
+        self.assertIn("cannot let that kind of light in yet", said)
         self.assertNotIn("Check it", said)
+        # AND IT NAMES NOTHING THE HOUSEHOLD DID NOT BUY. This sentence said "matter-server" and
+        # "Home Assistant" for weeks, on a wall, to somebody who can do nothing with either.
+        for word in ("matter-server", "matter\u2011server", "Home Assistant", "integration"):
+            self.assertNotIn(word.lower(), said.lower())
 
     def test_and_the_same_answer_comes_out_of_the_wifi_call(self):
         """Both calls reach the same engine and fail the same way when nothing is listening. The
@@ -317,7 +321,7 @@ class TheRadioIsWiredUp(unittest.TestCase):
         self.hub.ha = Engine()
         with self.assertRaises(StripError) as e:
             run(Strips(self.hub).radio.set_wifi("House", "hunter2"))
-        self.assertIn("no Matter setup", str(e.exception))
+        self.assertIn("cannot let that kind of light in yet", str(e.exception))
 
     def test_but_a_refused_code_still_says_so(self):
         class Engine:
@@ -501,3 +505,49 @@ class OurOwnDoor(unittest.TestCase):
         st = self.strips.status()
         self.assertEqual(st["state"], "failed")
         self.assertIn("flashes", st["text"])
+
+
+class WhichDoorTheStripIsTakenThrough(unittest.TestCase):
+    """Matter's identity is in the advertisement and ours is in the scan response, which only
+    arrives if the scanner asked and the answer got back. At range the advertisement lands and the
+    scan response sometimes does not, so the same strip can turn up at Matter's door alone -- and
+    on 21 September a household was asked for a setup code, and the commissioner failed, for a
+    strip with a perfectly good door of ours open the whole time."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.hub = FakeHub(self.tmp.name)
+        self.radio = FakeRadio()
+        self.strips = Strips(self.hub, self.radio)
+
+    def tearDown(self): self.tmp.cleanup()
+
+    def test_one_strip_at_both_doors_is_taken_through_ours(self):
+        self.radio.ours = [{"address": "AA:BB", "rssi": -40, "name": "PROV_1"}]
+        self.radio.advertising = [{"addr": "AA:BB", "rssi": -42, "discriminator": 3840,
+                                   "vendor": TEST_VID, "ours": True}]
+        run(self.strips.look())
+        self.assertEqual(self.strips.job["door"], "ours")
+
+    def test_a_missed_scan_response_is_asked_for_again_before_settling_for_matters(self):
+        """The bug itself: our scan came back empty, Matter's did not, and the job went to the
+        wrong door without anything saying so."""
+        self.radio.advertising = [{"addr": "AA:BB", "rssi": -68, "discriminator": 3840,
+                                   "vendor": TEST_VID, "ours": True}]
+        tries = []
+
+        async def flaky(seconds=8.0):
+            tries.append(seconds)
+            if len(tries) == 1: return []
+            return [{"addr": "AA:BB", "rssi": -68, "name": "PROV_1", "door": "ours", "ours": True}]
+        self.radio.scan_ours = flaky
+        run(self.strips.look())
+        self.assertEqual(len(tries), 2)            # asked again
+        self.assertGreater(tries[1], tries[0])     # and for longer
+        self.assertEqual(self.strips.job["door"], "ours")
+
+    def test_a_strip_that_really_is_only_matters_still_goes_through_matters(self):
+        self.radio.advertising = [{"addr": "CC:DD", "rssi": -50, "discriminator": 3840,
+                                   "vendor": TEST_VID, "ours": True}]
+        run(self.strips.look())
+        self.assertEqual(self.strips.job["door"], "matter")

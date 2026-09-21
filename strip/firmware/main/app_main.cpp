@@ -377,9 +377,16 @@ static void housekeeping(void *) {
             }
         }
         // A hold only counts once the button has been seen let go; see BUTTON_PIN above.
+        //
+        // AND IT SAYS WHEN IT SEES ONE. A household holding the button and getting nothing has no
+        // way to tell a button that is not wired from a hold that is not long enough from the wrong
+        // button entirely -- on a devkit RST sits next to BOOT and looks identical. On 21 September
+        // a five-second hold produced a reboot and no log line at all, which is what the wrong
+        // button looks like and what a dead pin looks like, and there was no way to tell them apart
+        // without a flash cycle. One line at the press ends that for good.
         if (gpio_get_level((gpio_num_t)BUTTON_PIN)) released = true;
         else if (released) {
-            if (!down) down = now_ms();
+            if (!down) { down = now_ms(); ESP_LOGI(TAG, "button down -- hold %d s to forget the house", HOLD_DONE / 1000); }
             const uint32_t held = now_ms() - down;
             if (!armed && held > HOLD_ARMED) {
                 armed = true;

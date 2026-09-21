@@ -101,6 +101,13 @@ services:
       # start: 188 is ttyUSB (a bridge chip), 166 is ttyACM (a native USB port). Read-only would not
       # do -- flashing and talking are both writes.
       - /dev:/dev
+      # AND THE SYSTEM BUS, WHICH IS HOW BLUETOOTH IS REACHED AT ALL. A light strip knocks over BLE
+      # and the brain talks to BlueZ through D-Bus, not through a device node -- so network_mode
+      # host is not enough on its own and /dev does nothing for it. Without this the brain has bleak
+      # installed, raises on every scan, and a strip flashing a metre from the hub simply never
+      # appears: our door and Matter's both go quiet at once, with nothing on any screen to say why.
+      # Found on 21 September with a strip knocking and the panel showing nothing.
+      - /run/dbus:/run/dbus:ro
     device_cgroup_rules:
       - 'c 188:* rmw'
       - 'c 166:* rmw'

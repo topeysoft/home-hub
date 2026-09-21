@@ -9,6 +9,7 @@
 #   tools/dev.sh live     the panel against a house that is up and lived in, its brain answering
 #   tools/dev.sh check    what CI runs, here, before pushing
 #   tools/dev.sh design   every artboard in a browser, on the canvas they were drawn on
+#   tools/dev.sh graft    this tree's brain onto a hub, without a release
 #
 # Two audiences, one report. Somebody coming back wants the half hour deleted that goes: which
 # branch was I on, what is that uncommitted file, is that stash mine, is anything still listening on
@@ -232,6 +233,38 @@ case "${1:-status}" in
          # that comes back is the dev server's own, so it is undone by removing that phone on Settings.
          echo
          cd app && exec env BRAIN="$BRAIN" npm run dev ;;
+  # THIS TREE'S BRAIN, ON A HUB, WITHOUT A RELEASE. `live` does this for the panel; this is the
+  # other half, and it exists because the round trip for one line of brain code was push to main,
+  # wait for CI to build an image, wait for the hub to update. Two evenings of strip work went that
+  # way before anybody said it out loud.
+  #
+  # It copies hub/ and vendor/ into the running container and restarts it. Nothing is installed and
+  # nothing is merged: `docker compose up -d --force-recreate brain` puts the hub back on its own
+  # image, and so does the next update, so a hub left like this heals itself rather than drifting
+  # quietly. The container keeps reporting the version it was built from, which is why the line
+  # below says so -- /alive will lie about what is running, and that is the trap to know about.
+  #
+  # Same warning as `live`: it is a real house. Their lights, their names, their Restart button.
+  graft) house=${2:-hub.local}
+         # SetEnv, because ssh otherwise forwards this Mac's locale to a hub that does not have it
+         # and every remote command opens with a setlocale warning that looks like a fault.
+         ssh -o BatchMode=yes -o SetEnv=LC_ALL=C -o ConnectTimeout=8 "pi@$house" true 2>/dev/null || {
+           echo "${Y}cannot ssh to pi@$house${R}" >&2
+           echo "  ${D}tools/dev.sh graft <name-or-address>${R}" >&2; exit 1; }
+         # Compile it here first. Shipping a syntax error to a house and finding out from a
+         # container that will not start is a slow way to learn you typed a colon.
+         python3 -m compileall -q brain/hub >/dev/null || { echo "${Y}brain does not compile${R}" >&2; exit 1; }
+         row "house" "$house"
+         row "taps" "${Y}real${R} ${D}— their lights, their names, their Restart button${R}"
+         row "undo" "${D}docker compose up -d --force-recreate brain, or the next update${R}"
+         # --no-xattrs, because bsdtar on a Mac writes com.apple.provenance into every header and
+         # GNU tar on the hub then prints a warning per file. Nothing is wrong; it just looks it.
+         COPYFILE_DISABLE=1 tar --no-xattrs -czf - -C brain hub vendor 2>/dev/null \
+           | ssh -o BatchMode=yes -o SetEnv=LC_ALL=C "pi@$house" 'tmp=$(mktemp -d) && tar xzf - -C "$tmp" 2>/dev/null \
+               && sudo -n docker cp "$tmp/hub" brain:/srv/brain/ \
+               && sudo -n docker cp "$tmp/vendor" brain:/srv/brain/ \
+               && rm -rf "$tmp" && sudo -n docker restart brain >/dev/null && echo grafted'
+         row "note" "${Y}/alive still reports the image's commit${R} ${D}— it cannot see what was copied over it${R}" ;;
   # CI's jobs, in CI's order, minus the ones that need a browser or a container. The sheet checks
   # are in here because they catch what nothing else does: a drawing changed in src/art.ts or
   # src/sky.ts and not in the design sheet generated from it.

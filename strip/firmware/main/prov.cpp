@@ -140,6 +140,21 @@ void ask_for_a_patient_link(uint16_t conn) {
 // a tick of forming, which is early enough to matter and late enough to cost nothing.
 void be_patient_with_everyone() {
     static uint8_t asked = 0;
+    // NOT EVERY TICK, AND NOT WHEN THE DOOR IS SHUT. The first version of this walked three handles
+    // on every pass of the housekeeping loop whether or not anything was connected, and NimBLE logs
+    // "GAP conn_find: connection not found" for each miss -- three hundred lines a second, a core
+    // spent on nothing, and a console in which the thing you were actually looking for could not be
+    // found. Discovered on 21 September while reading the log for something else, which is exactly
+    // how a log that shouts loses the message it was kept for.
+    //
+    // A quarter of a second is forty times less often and still far inside the window that matters:
+    // the link it needs to catch dies a second or more after it forms.
+    if (!gPc) return;   // gPc is set only while the door is open
+    const int64_t now = esp_timer_get_time();
+    static int64_t looked = 0;
+    if (now - looked < 250000) return;
+    looked = now;
+
     for (uint16_t h = 0; h < 3; h++) {
         struct ble_gap_conn_desc desc;
         const bool up = ble_gap_conn_find(h, &desc) == 0;

@@ -163,8 +163,15 @@ def _no_matter(e: Exception) -> bool:
     return "unknown" in said or "not found" in said or "no matter" in said
 
 
-NO_MATTER = ("This house has no Matter setup yet. The matter\u2011server is running, but nothing in "
-             "Home Assistant is using it.").replace("\u2011", "\u2011")
+# WHAT THE WALL SAYS WHEN THE ENGINE CANNOT DO IT, and it says nothing about the engine. This used
+# to read "the matter-server is running, but nothing in Home Assistant is using it", which is two
+# pieces of somebody else's vocabulary on a household's wall and is what
+# `product-direction-out-of-the-box` exists to forbid -- a sentence nobody in the house can act on,
+# about a product they did not buy. Nor does it tell them to go and fix it: the hub drives its own
+# engine's setup elsewhere (api.py does it for the weather) and has simply never been taught this
+# one, which is ours to do and not theirs. docs/strip.md, the related note under item 2-mac.
+NO_MATTER = ("This hub cannot let that kind of light in yet \u2014 a part of it has never been set up. "
+             "That is ours to fix rather than yours, and it is nothing you have done wrong.")
 
 
 class Radio:
@@ -434,15 +441,40 @@ class Strips:
         found: list[dict] = []
         # OUR DOOR FIRST, because a strip that offers it can be asked more, and a strip offers both
         # until somebody takes it (design/strip/Both.dc.html).
-        try: found += await self.radio.scan_ours()
+        try: ours = await self.radio.scan_ours()
         except StripError as e: return {**self.status(), "text": str(e)}
-        except Exception as e: log.info("strip: our door found nothing (%s)", e)
-        try: found += await self.radio.scan()
+        except Exception as e:
+            log.info("strip: our door found nothing (%s)", e); ours = []
+        theirs: list[dict] = []
+        try: theirs = await self.radio.scan()
         except StripError as e:
-            if not found: return {**self.status(), "text": str(e)}
+            if not ours: return {**self.status(), "text": str(e)}
         except Exception as e:
             log.info("strip: scan failed (%s)", e)
-            if not found: return self.status()
+            if not ours: return self.status()
+
+        # THE TWO DOORS ARE NOT EQUALLY EASY TO SEE, and that asymmetry sent a household down the
+        # wrong one on 21 September. Matter's identity is in the ADVERTISEMENT; ours is in the SCAN
+        # RESPONSE, because Matter's payload had already filled the advertisement and 31 bytes will
+        # not hold both (docs/strip.md item 12). A scan response only arrives if the scanner asked
+        # for one and the answer got back, so at the far end of a room the advertisement lands and
+        # the scan response sometimes does not -- and the same strip appears at Matter's door only.
+        # The household was then asked for a setup code, and the commissioner failed, for a strip
+        # that had a perfectly good door of ours open the whole time.
+        #
+        # So: if nothing turned up at our door but something turned up at Matter's that could be
+        # ours, ask again, once, for longer. A retry rather than a guess -- the alternative is
+        # treating a test vendor id as proof, and item 6 already established that identifies
+        # nobody.
+        if not ours and any(t.get("ours") for t in theirs):
+            log.info("strip: something that might be ours is at Matter's door; asking ours again")
+            try: ours = await self.radio.scan_ours(14.0)
+            except Exception as e: log.info("strip: our door still found nothing (%s)", e)
+
+        # One strip, two advertisements: if an address answered at both, it is the same board and
+        # our door is the one worth having.
+        at_ours = {o["addr"] for o in ours}
+        found = ours + [t for t in theirs if t["addr"] not in at_ours]
         for s in found:
             if s["addr"] in self._dismissed: continue
             # No chip here: a Matter advertisement carries a discriminator and not an id of ours.

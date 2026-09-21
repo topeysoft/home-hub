@@ -598,6 +598,53 @@ the house, which is how these things get returned. The camera route avoids all o
 pointed into a living room. **The cheap next step is neither: a capture stick and HyperHDR on a bench,
 to find out whether it feels like the screen extended or like a gimmick, before any of it is paid for.**
 
+**20. A log that shouts loses the message it was kept for.** `be_patient_with_everyone()` walked
+three connection handles on every pass of the housekeeping loop — every 10 ms — whether or not
+anything was connected, and NimBLE logs `GAP conn_find: connection not found` for each miss. Three
+hundred lines a second, a core spent on nothing, and a console in which the thing you were actually
+looking for could not be found. It was discovered on 21 September only because somebody was reading
+the log for a different reason.
+
+It is now gated on the door being open and rate-limited to four times a second, which is forty times
+less often and still far inside the window that matters — the link it exists to catch dies a second
+or more after it forms. 6,000 lines in twenty seconds became 213. **`ble_gap_conn_active()` is not
+the check to use:** it reports an in-progress *connect* procedure, which a peripheral never has, so
+it is false even with a link up.
+
+**19. The two doors are not equally easy to see, and the harder one is ours.** Matter's identity is
+in the **advertisement**; ours is in the **scan response**, because Matter's payload had already
+filled the advertisement and 31 bytes will not hold both (item 12). A scan response only arrives if
+the scanner asked for one and the answer got back, so at the far end of a room the advertisement
+lands and the scan response sometimes does not — and the same strip appears at Matter's door alone.
+
+Seen on 21 September, on a real hub, minutes after the D-Bus mount made scanning work at all: the
+household was asked for a setup code and the commissioner answered
+`matter/commission: Node 1 does not exist`, for a strip that had a perfectly good door of ours open
+the whole time. Nothing on the screen could have told them.
+
+`look()` now asks our door a second time, for longer, when nothing turned up there and something at
+Matter's door might be ours — a retry rather than a guess, since treating a test vendor id as proof
+of anything is what item 6 already ruled out. And an address that answers at both doors is one strip,
+so ours wins. **It is a mitigation and not a cure:** a scan response is simply less likely to arrive
+than an advertisement, and the real answer is either extended advertising, where we would get an
+advertising set of our own, or accepting that the last few decibels belong to Matter's door.
+
+**18. The brain could not do Bluetooth at all on a real hub, and nothing said so.** Found on
+21 September with a strip knocking a metre from the hub and the panel showing nothing. The brain runs
+in a container with `network_mode: host`, which gives it the network and **not the system bus** — and
+BlueZ is reached over D-Bus, not through a device node, so `/dev:/dev` does nothing for it. The
+container had `bleak` installed and raised on every scan. Both doors went quiet at once: ours and
+Matter's use the same radio, so the failure looked like "no strips anywhere" rather than like a
+missing mount.
+
+Proven by running the same published image twice on the hub: without `/run/dbus` a scan sees nothing,
+with it the scan sees 28 devices. The fix is one line in `driver-layer/docker-compose.yml`.
+
+**Two things this leaves.** The scan failure is caught and logged and the screen says nothing, which
+is how it hid — `look()` swallows the exception so one door failing cannot take the other down, and
+the cost is that both failing is silent. And a hub that has been updated will not have the mount until
+its compose is updated too, so this is a thing to check on any hub that says it can see no strips.
+
 **17. Two days of knocking, and CHIP's own way of doing it does not compile.** Item 14 is decided:
 `design/strip/KnockTwoDays.dc.html`, a strip nobody has taken keeps knocking for 48 hours and then stops
 in a way that reads as stopped. The board said this was one line of configuration and **it is not**.
