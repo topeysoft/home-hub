@@ -53,9 +53,11 @@ been spoken to, and neither the color question nor the fill has run outside a un
 
 ### Open, with boards to argue from
 
-- **Where the setup code comes from** — `CodeBox` / `CodeMade` / `CodeTap`. The recommendation is `CodeBox`,
-  because `CodeMade` fails certification and `CodeTap` cannot stand alone. **Not urgent:** a development board's
-  passcode is public and the brain fills it in, so nothing is blocked until real units are labelled.
+- **Where the setup code comes from** — `CodeBox` / `CodeMade` / `CodeTap`, and now `CodeHub`. `CodeBox` for
+  the box, because `CodeMade` fails certification and `CodeTap` cannot stand alone; `CodeHub` for a house with
+  our hub in it, where the strip mints a code for one window and the wall shows it. The two are not rivals — see
+  item 1a. **Not urgent:** a development board's passcode is public and the brain fills it in, so nothing is
+  blocked until real units are labeled.
 - **How a strip finds our hub** — `ReachTold` / `ReachAsks` / `ReachNone`. Recommendation is `ReachAsks` for
   strips we commission, `ReachNone` as the fallback for strips somebody else did.
 
@@ -386,14 +388,33 @@ protocomm `SECURITY_1` now does, and is on air. **What is still open is not the 
 possession**: it is random per device, printed on the serial console, and nothing decides how a household or
 the hub comes to know it. That is the same question Matter's own passcode asks, and it is 1a.
 
-**1a. But nobody can commission it yet.** A commissionable Matter device advertises its discriminator; it does
-**not** advertise its passcode, and commissioning cannot happen without one. So the hub cannot silently adopt a
-strip the way `design/puck/Knock.dc.html` argues for — **that board's proudest claim, that the identity check is
-the object and never a number, is now in tension with the standard.** Options, none chosen: put the code in the
-box like every other Matter device and accept that our own panel is no better than anyone else's; derive
-passcodes at manufacture from something the hub can look up, which makes every unit we sell commissionable by
-anybody holding our algorithm; or an NFC tag the phone reads. **This is an artboard conversation before it is a
-code one, and it has not been had.**
+**1a. Nobody can commission it yet, and the design for that is now settled.** A commissionable Matter device
+advertises its discriminator; it does **not** advertise its passcode, and commissioning cannot happen without
+one. So the hub cannot silently adopt a strip the way `design/puck/Knock.dc.html` argues for — that board's
+proudest claim, that the identity check is the object and never a number, was in tension with the standard.
+The artboard conversation has now been had: `design/strip/` gained a row on 20 September (`Both`, `Ours`,
+`Theirs`, `CodeHub`) in which Matter is one door rather than the only one, and the identity check survives on
+our own door where the standard does not reach.
+
+**The passcode question underneath it is answered, and the answer is not the one the board first drew.** The
+question was whether a certified device may hand its factory passcode to a vendor channel. It cannot, and not
+because a rule forbids it — **it does not have one.** A production device stores only the SPAKE2+ verifier:
+`ESP32FactoryDataProvider::GetSetupPasscode` returns `CHIP_ERROR_NOT_IMPLEMENTED`, connectedhomeip's own header
+says that using the verifier rather than the passcode *"safeguards the passcode from ever leaking"*, and
+Espressif's production guide says the verifier is installed *"and not the actual passcode"*. Deriving passcodes
+at manufacture stays rejected for the reason it always was: one algorithm loose and every unit we have sold is
+open.
+
+**What works instead is smaller than the thing it replaces.** The strip mints a passcode when it is asked,
+derives the verifier on the chip, and opens an enhanced commissioning window with it — which is what Espressif
+recommends for a device whose onboarding payload can be displayed, and it ships the code:
+`examples/light_switch`'s `dynamic_commissionable_data_provider` is a DRBG draw, the disallowed-passcode check
+and `Spake2pVerifier::Generate`. `CommissioningWindowManager::OpenEnhancedCommissioningWindow` takes the
+verifier directly and needs neither a fabric nor a Matter administrator, so the hub does not have to be one and
+`matter-server` stays off this path. Three things come with it and none is a blocker: an enhanced window never
+advertises over Bluetooth, so the other app must be on the house Wi-Fi; the label's own code does not work while
+the window is open, because the fresh verifier has replaced it; and fifteen minutes is the specification's
+ceiling on a window rather than a number we chose. **None of it is written yet.**
 
 **2. The hub can now hand a strip to the commissioner, and that is all it can do.** `Radio` speaks Matter:
 it scans for the commissionable advertisement and decodes it (checked against a real device — an S3 running

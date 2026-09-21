@@ -112,32 +112,35 @@
   <div style="position: absolute; left: 740px; top: 104px; width: 640px;">
     <h3 class="dsp" style="margin: 0 0 14px; font-size: 26px; font-weight: 400;">Nobody printed this anywhere.</h3>
     <p style="margin: 0 0 18px; color: var(--ink-2); font-size: 15.5px; line-height: 1.6;">
-      The strip has always held its own passcode. What it never had was a way to <em>say</em> it &mdash; a
-      commissionable advertisement carries a discriminator and never the code, which is the whole of item 1a. It
-      has one now: the same link that carried the Wi&#8209;Fi and the broker in
-      <strong style="font-weight: 500;">Ours</strong>. So the hub asks the strip to open its window, the strip
-      answers with its code, and the wall is where a code was going to have to appear anyway.
+      <strong style="font-weight: 500;">The strip has no passcode to give, and that is the point.</strong> A
+      production device stores only the SPAKE2+ verifier &mdash; on ESP32 <em>GetSetupPasscode</em> returns
+      NOT_IMPLEMENTED, and Espressif&rsquo;s own guidance is that the verifier is installed &ldquo;and not the
+      actual passcode&rdquo;. Asked over the link that carried the Wi&#8209;Fi and the broker in
+      <strong style="font-weight: 500;">Ours</strong>, it <em>mints</em> one instead: a passcode for this window
+      only, its verifier derived on the chip. The wall shows a code that did not exist a second ago and will
+      not exist in fifteen minutes.
     </p>
     <div class="box" style="border-color: rgba(var(--live-rgb),.3); background: linear-gradient(rgba(var(--live-rgb),.07), rgba(var(--live-rgb),.07)), rgba(255,255,255,.02); margin-bottom: 14px;">
       <span class="cap" style="color: rgba(var(--live-rgb),.85);">For</span>
       <p style="margin: 10px 0 0; font-size: 15px; line-height: 1.6;">
-        <strong style="font-weight: 500;">B fails because it derives; this is told.</strong> A hub that can work
-        out any unit&rsquo;s code from its chip id makes every strip we ever sell commissionable by anybody holding
-        the algorithm. Here there is no algorithm, no list kept at the factory and nothing to leak &mdash; one strip
-        told one hub, over a session that strip authenticated, because somebody in the room asked. And where C
-        needed a phone held against the object, this needs only the wall the household already bought.
+        <strong style="font-weight: 500;">B fails because it derives. This does not even store.</strong> A hub
+        that can work out any unit&rsquo;s code from its chip id makes every strip we ever sell commissionable by
+        anybody holding the algorithm. Here there is no algorithm, no list kept at the factory, and no passcode
+        anywhere at all until somebody in the room asks for one: the chip&rsquo;s own DRBG makes it, the verifier
+        comes off it, and both are gone when the window shuts. And where C needed a phone held against the
+        object, this needs only the wall the household already bought.
       </p>
     </div>
     <div class="box" style="border-color: rgba(var(--danger-rgb),.3); background: rgba(var(--danger-rgb),.05);">
       <span class="cap" style="color: rgba(var(--danger-rgb),.85);">Against</span>
       <p style="margin: 10px 0 0; font-size: 15px; line-height: 1.6;">
         <strong style="font-weight: 500;">It does not replace A, and saying it does would be the mistake.</strong>
-        A strip bought by a household with no hub of ours still needs a number from outside the radio, and that
-        is still the label. This is what A <em>becomes</em> once our hub is in the house &mdash; so it is not a fourth
-        candidate so much as a second act, and it only exists for strips that came in through our own door. It
-        also rests on one thing nobody has checked: whether a certified device may hand its factory passcode to a
-        vendor channel at all. If it may not, the strip installs a fresh verifier instead &mdash; more firmware, the
-        same screen, and worth finding out before either is written.
+        A strip in a house with no hub of ours needs a number from outside the radio, and that is the label.
+        This is what A <em>becomes</em> once our hub is there: a second act, not a fourth candidate. Two things
+        the screen must not hide &mdash; while this window is open
+        <strong style="font-weight: 500;">the label&rsquo;s own code does not work</strong>, the fresh verifier
+        having taken its place; and an enhanced window never advertises over Bluetooth, so the phone has to be
+        on the house Wi&#8209;Fi. Fifteen minutes is the specification&rsquo;s ceiling, not our choice.
       </p>
     </div>
   </div>
