@@ -367,7 +367,11 @@ static void housekeeping(void *) {
 // own light is not grb -- the same question the panel asks about a strip -- and is still a pass.
 // Nothing at all means the fault is in pixels.cpp.
 static void selftest() {
-    ESP_LOGW(TAG, "SELF TEST on pin %d, one light, ignoring what is saved", DATA_PIN);
+    // What is saved is borrowed, not spent. Without putting it back the strip runs on one pixel for
+    // the rest of its life and lights exactly one LED however long it really is -- which on a board
+    // somebody has just paired reads as a broken strip rather than as a self test that forgot.
+    const int saved = strip.count;
+    ESP_LOGW(TAG, "SELF TEST on pin %d, one light, borrowing what is saved", DATA_PIN);
     strip.set_count(1);
     const struct { const char *name; uint8_t r, g, b; } steps[] = {
         {"RED", 255, 0, 0}, {"GREEN", 0, 255, 0}, {"BLUE", 0, 0, 255}, {"warm white", 255, 180, 110}};
@@ -379,7 +383,9 @@ static void selftest() {
     }
     strip.clear();
     px::show(strip);
-    ESP_LOGW(TAG, "SELF TEST over. Four colors in that order means the fault is on the bench.");
+    strip.set_count(saved);
+    ESP_LOGW(TAG, "SELF TEST over, %d lights restored. Four colors in that order means the fault is "
+                  "on the bench.", strip.count);
 }
 #endif
 

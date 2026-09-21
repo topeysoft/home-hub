@@ -36,15 +36,18 @@ line here used to read *"never run: a completed commissioning, by anything"*, be
 item 3 three hours after item 6 had already recorded one. If two parts of this document disagree, date them
 against the log before believing either.
 
-**Never run:** a commissioning by a *phone* — no Apple or Google commissioner has taken the strip, and those are
-the two that warn or refuse on a test vendor id, so Home Assistant taking it does not stand in for them. The
-broker has never been spoken to, and neither the color question nor the fill has run outside a unit test.
+**Also proven, 20 September: a phone has taken it.** Apple Home commissioned the strip from the code it now
+prints at boot. **It took two fabric slots of the five, not one** — `VendorId 0x1349` (Apple Inc., the local
+home hub) and `0x1384` (Apple Keychain, the iCloud admin) — which is worth knowing before promising a household
+Apple, Google and Alexa at once, because that is four slots of five before our own hub asks for one.
+
+**Never run:** the broker has never been spoken to, and neither the color question nor the fill has run outside
+a unit test. Google Home and Alexa have not been tried.
 
 ### The next three things, in order
 
-1. **Commission it from a phone.** Apple Home or Google Home, using the code the board prints at boot. This
-   needs none of the hub and proves the claim the whole product line rests on. Home Assistant has done it; a
-   phone has not.
+1. **Commission it from Google Home or Alexa.** Apple Home has done it. The other two matter because they are
+   the ones most likely to refuse a test vendor id, and refusing is the answer item 2b needs.
 2. **Measure the cost of the second BLE service.** The baseline is now measured — 114 KB free with Matter up
    and advertising, item 12 — and what is still unknown is what one more GATT service takes out of it. That is
    the last unproven thing the forked design rests on.
@@ -82,6 +85,15 @@ broker has never been spoken to, and neither the color question nor the fill has
   `sudo xcode-select -s` fixes it properly.
 - **Two PlatformIO cores are installed** and fight over the build directory; builds fail and then succeed
   unchanged. Irrelevant now the firmware is ESP-IDF, but it will confuse anybody touching `brilliant/`.
+- **`idf.py -D<anything> build` re-runs CHIP's GN build, and GN needs esp-matter's own environment.** Sourcing
+  `esp-idf/export.sh` alone is enough for an ordinary rebuild and not enough for a reconfigure; the failure is
+  `Unable to load "/build_overrides/pigweed_environment.gni"`, which names pigweed and has nothing to do with
+  whatever you passed on the command line. Source `esp-matter/export.sh` too.
+- **`SELFTEST` is a CMake cache variable, so it stays on until it is explicitly cleared** — `idf.py -DSELFTEST=`
+  with an empty value, because `-DSELFTEST=0` still satisfies the `#ifdef`. A build dir configured for the
+  bring-up self test keeps self-testing forever, and until 20 September the test left `strip.count` at 1
+  afterwards, so the board lit exactly one LED however long the strip really was. On a board somebody has just
+  paired that reads as a broken strip rather than as a self test that forgot to put something back.
 - **The error text on the wall lied four times in a row** during bring-up, each time naming a confident wrong
   cause. If a strip screen tells you what is wrong, verify it before acting on it, and see item 11.
 
@@ -562,12 +574,17 @@ of `connectedhomeip` rather than reasoned about:
 | | free | largest block |
 |---|---|---|
 | at boot | 258,532 | 196,608 |
-| before `esp_matter::start` | 246,928 | 196,608 |
-| **after Matter, BLE advertising** | **114,020** | 73,728 |
+| before `esp_matter::start` | 246,532 | 196,608 |
+| **after Matter, two fabrics** | **112,616** | 65,536 |
 
-Low water 112,480. So NimBLE and Matter together cost about 133 KB and leave **114 KB**, not the 66 KB that had
-been written down and repeated onto a board — the old figure was pessimistic by 48 KB, because it was measuring
-Bluedroid. The image is 1,637,360 bytes, 58% of the app slot free.
+**Low water 95,312**, and that is the number with the say in it: there is a dip during Matter's startup that
+the steady-state figure hides. So NimBLE and Matter together cost about 134 KB and leave **112 KB**, not the
+66 KB that had been written down and repeated onto a board — the old figure was pessimistic by 46 KB, because it
+was measuring Bluedroid. The image is 1,636,976 bytes, 58% of the app slot free.
+
+*(An earlier version of this table read 114,020 free and 112,480 low water. Those were measured on a build with
+`SELFTEST` left on in the CMake cache, which is a different binary and a six-second slower boot. The figures
+above are the ordinary build.)*
 
 **And there is no frame buffer still to come.** That phrase came from the same build. The pixel buffer is
 `uint8_t buf[PX_MOST * 4]` — 2,400 bytes, static, already in `.bss` and already counted above — and the RMT
