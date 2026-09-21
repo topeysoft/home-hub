@@ -48,9 +48,10 @@ a unit test. Google Home and Alexa have not been tried.
 
 1. **Commission it from Google Home or Alexa.** Apple Home has done it. The other two matter because they are
    the ones most likely to refuse a test vendor id, and refusing is the answer item 2b needs.
-2. **Measure the cost of the second BLE service.** The baseline is now measured — 114 KB free with Matter up
-   and advertising, item 12 — and what is still unknown is what one more GATT service takes out of it. That is
-   the last unproven thing the forked design rests on.
+2. **Prove the scan response really carries our service, and that a scanner sees both.** The heap half of the
+   coexistence question is answered and it was free (item 12). What is left is the 31-byte advertising payload:
+   nothing has yet put a vendor UUID in the scan response and watched a scanner find Matter's payload and ours
+   from the same board. That is the last unproven thing the forked design rests on.
 3. **Then the hub path, on the Pi.** Not on the Mac — see `2-mac`. That is the first time the brain, the panel
    and the firmware will have run together.
 
@@ -85,6 +86,12 @@ a unit test. Google Home and Alexa have not been tried.
   `sudo xcode-select -s` fixes it properly.
 - **Two PlatformIO cores are installed** and fight over the build directory; builds fail and then succeed
   unchanged. Irrelevant now the firmware is ESP-IDF, but it will confuse anybody touching `brilliant/`.
+- **`pdMS_TO_TICKS` of anything under one tick is zero, and `vTaskDelay(0)` does not sleep.** The tick here is
+  100 Hz, so the housekeeping loop's `pdMS_TO_TICKS(5)` was 0 ticks; `vTaskDelay(0)` yields only to tasks at
+  the same priority or above and never to the idle task at 0. The loop was a busy spin that starved IDLE0 and
+  tripped the task watchdog every five seconds — found on 20 September only because an uncommissioned board was
+  left running long enough to print it twice, and invisible on a commissioned one in the same session. Fixed to
+  10 ms. Any delay under 10 ms in this firmware silently means *do not sleep at all*.
 - **`idf.py -D<anything> build` re-runs CHIP's GN build, and GN needs esp-matter's own environment.** Sourcing
   `esp-idf/export.sh` alone is enough for an ordinary rebuild and not enough for a reconfigure; the failure is
   `Unable to load "/build_overrides/pigweed_environment.gni"`, which names pigweed and has nothing to do with
@@ -563,6 +570,13 @@ of `connectedhomeip` rather than reasoned about:
   extended advertising, where Matter holds `kMatterAdvInstance = 0` and we take another instance, at the cost of
   re-proving Matter's advertisement on air; or alternating, which is nobody's idea of a good time. The board now
   says the scan response.
+- **Measured, 20 September: a second GATT service costs 232 bytes.** Registered through
+  `ConfigureExtraServices` as one 128-bit service with four read/write characteristics, which is roughly the
+  shape protocomm exposes, on an uncommissioned board with Matter up and CHIPoBLE advertising: free internal
+  DRAM went from **114,544 to 114,312**, the largest free block did not move at 73,728, and the image grew by
+  1,024 bytes. The call returned `Success` and advertising was unaffected. **Against 114 KB free, the heap half
+  of the coexistence question is not a question.** The spike was removed once it had answered; the numbers are
+  the record.
 - **`CONFIG_USE_BLE_ONLY_FOR_COMMISSIONING=y` can stay.** Our own door has no use for BLE once the strip is on
   the Wi-Fi — `Theirs` hands over via mDNS after that, and an enhanced commissioning window never advertises
   over Bluetooth at all — so the Bluetooth memory still goes back.

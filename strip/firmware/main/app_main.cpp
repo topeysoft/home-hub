@@ -51,6 +51,7 @@
 #include <app/server/Server.h>
 #include <setup_payload/OnboardingCodesUtil.h>
 
+
 #include "pixels.h"
 
 using namespace esp_matter;
@@ -356,7 +357,11 @@ static void housekeeping(void *) {
                 say("fill", v);
             }
         }
-        vTaskDelay(pdMS_TO_TICKS(5));
+        // TEN, NOT FIVE. The tick is 100 Hz, so pdMS_TO_TICKS(5) is 0 ticks, and vTaskDelay(0) only
+        // yields to tasks at this priority or above -- never to the idle task at 0. This loop was
+        // therefore a busy spin that starved IDLE0 and tripped the task watchdog every five seconds.
+        // Anything under one tick here silently means "do not sleep at all".
+        vTaskDelay(pdMS_TO_TICKS(10));
     }
 }
 
