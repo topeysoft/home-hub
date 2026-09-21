@@ -598,6 +598,19 @@ the house, which is how these things get returned. The camera route avoids all o
 pointed into a living room. **The cheap next step is neither: a capture stick and HyperHDR on a bench,
 to find out whether it feels like the screen extended or like a gimmick, before any of it is paid for.**
 
+**20. A log that shouts loses the message it was kept for.** `be_patient_with_everyone()` walked
+three connection handles on every pass of the housekeeping loop — every 10 ms — whether or not
+anything was connected, and NimBLE logs `GAP conn_find: connection not found` for each miss. Three
+hundred lines a second, a core spent on nothing, and a console in which the thing you were actually
+looking for could not be found. It was discovered on 21 September only because somebody was reading
+the log for a different reason.
+
+It is now gated on the door being open and rate-limited to four times a second, which is forty times
+less often and still far inside the window that matters — the link it exists to catch dies a second
+or more after it forms. 6,000 lines in twenty seconds became 213. **`ble_gap_conn_active()` is not
+the check to use:** it reports an in-progress *connect* procedure, which a peripheral never has, so
+it is false even with a link up.
+
 **19. The two doors are not equally easy to see, and the harder one is ours.** Matter's identity is
 in the **advertisement**; ours is in the **scan response**, because Matter's payload had already
 filled the advertisement and 31 bytes will not hold both (item 12). A scan response only arrives if
