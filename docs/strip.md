@@ -598,6 +598,22 @@ the house, which is how these things get returned. The camera route avoids all o
 pointed into a living room. **The cheap next step is neither: a capture stick and HyperHDR on a bench,
 to find out whether it feels like the screen extended or like a gimmick, before any of it is paid for.**
 
+**18. The brain could not do Bluetooth at all on a real hub, and nothing said so.** Found on
+21 September with a strip knocking a metre from the hub and the panel showing nothing. The brain runs
+in a container with `network_mode: host`, which gives it the network and **not the system bus** — and
+BlueZ is reached over D-Bus, not through a device node, so `/dev:/dev` does nothing for it. The
+container had `bleak` installed and raised on every scan. Both doors went quiet at once: ours and
+Matter's use the same radio, so the failure looked like "no strips anywhere" rather than like a
+missing mount.
+
+Proven by running the same published image twice on the hub: without `/run/dbus` a scan sees nothing,
+with it the scan sees 28 devices. The fix is one line in `driver-layer/docker-compose.yml`.
+
+**Two things this leaves.** The scan failure is caught and logged and the screen says nothing, which
+is how it hid — `look()` swallows the exception so one door failing cannot take the other down, and
+the cost is that both failing is silent. And a hub that has been updated will not have the mount until
+its compose is updated too, so this is a thing to check on any hub that says it can see no strips.
+
 **17. Two days of knocking, and CHIP's own way of doing it does not compile.** Item 14 is decided:
 `design/strip/KnockTwoDays.dc.html`, a strip nobody has taken keeps knocking for 48 hours and then stops
 in a way that reads as stopped. The board said this was one line of configuration and **it is not**.
