@@ -357,6 +357,29 @@ static void housekeeping(void *) {
     }
 }
 
+#ifdef SELFTEST
+// ONE LIGHT, FOUR COLORS, NOTHING ATTACHED. Most S3 devkits carry a WS2812 of their own, usually on
+// GPIO 48: point at that and watch. Four colors in order proves the driver, the timing, the bit order
+// and the RMT setup, and says the fault is on the bench. A color in the wrong place means this board's
+// own light is not grb -- the same question the panel asks about a strip -- and is still a pass.
+// Nothing at all means the fault is in pixels.cpp.
+static void selftest() {
+    ESP_LOGW(TAG, "SELF TEST on pin %d, one light, ignoring what is saved", DATA_PIN);
+    strip.set_count(1);
+    const struct { const char *name; uint8_t r, g, b; } steps[] = {
+        {"RED", 255, 0, 0}, {"GREEN", 0, 255, 0}, {"BLUE", 0, 0, 255}, {"warm white", 255, 180, 110}};
+    for (const auto &st : steps) {
+        ESP_LOGW(TAG, "  now showing %s", st.name);
+        strip.solid(st.r, st.g, st.b);
+        px::show(strip);
+        vTaskDelay(pdMS_TO_TICKS(1500));
+    }
+    strip.clear();
+    px::show(strip);
+    ESP_LOGW(TAG, "SELF TEST over. Four colors in that order means the fault is on the bench.");
+}
+#endif
+
 extern "C" void app_main() {
     nvs_flash_init();
     nvs_open("strip", NVS_READWRITE, &nvs);
@@ -388,6 +411,10 @@ extern "C" void app_main() {
     ESP_LOGI(TAG, FW "  chip %s  pin %d  %d lights, order %s%s", chipHex, DATA_PIN, strip.count, ord,
              strip.order.white ? "w" : "");
     if (!lit) ESP_LOGE(TAG, "THE LIGHT DRIVER DID NOT START -- nothing will light. Check the pin.");
+
+#ifdef SELFTEST
+    selftest();
+#endif
 
     node::config_t node_config;
     node_t *node = node::create(&node_config, on_attribute, on_identify);
