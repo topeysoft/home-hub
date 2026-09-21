@@ -598,6 +598,27 @@ the house, which is how these things get returned. The camera route avoids all o
 pointed into a living room. **The cheap next step is neither: a capture stick and HyperHDR on a bench,
 to find out whether it feels like the screen extended or like a gimmick, before any of it is paid for.**
 
+**16. "Has anybody taken this strip?" is not a question the fabric table can answer, and two boots'
+worth of bugs came out of assuming it was.** A strip adopted through our own door never joins a Matter
+fabric, so `FabricCount()` is 0 for the rest of its life. Both fixed on 21 September, and both were
+invisible on the first boot:
+
+- **It reopened our door at every boot.** The condition for knocking was only "no fabric", so an adopted
+  strip flashed its rhythm again and tried to start provisioning — by which time CHIP owns the Wi-Fi
+  driver, so it failed with `ESP_ERR_WIFI_STATE`, *"sta is connecting, cannot set config"*. The wall
+  would have said the strip was waiting while nothing was listening. The answer is an `ours` flag in NVS,
+  written when a session completes, and it is the "first session to complete takes it" rule from
+  `Both.dc.html` made real.
+- **Matter reopened its own door.** CHIP opens a commissioning window by itself whenever there are no
+  fabrics, so an adopted strip went back to advertising as commissionable at every boot and anybody in
+  radio range could have put it into their app. An adopted strip now closes that window at boot and
+  reserves no GATT service of its own, and a scan finds nothing at all.
+
+**And a trap that kills the device rather than misbehaving:** `CloseCommissioningWindow()` from
+`network_provisioning`'s task aborts. CHIP notices, calls it *"Chip stack locking error ... unsafe/racy"*,
+and `chipDie`s into a reboot loop. Anything touching the stack from another task goes through
+`PlatformMgr().ScheduleWork`.
+
 **14. Our door is discoverable only while Matter's window is open, and nobody decided that.** Our scan
 response rides on CHIP's advertisement, and CHIP caps a commissioning window at fifteen minutes
 (`MaxCommissioningTimeout`, spec 5.4.2.3). When it shuts, the strip goes off air for *both* doors while

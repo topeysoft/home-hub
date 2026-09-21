@@ -49,6 +49,12 @@ esp_err_t open();
 using HubDetails = bool (*)(const char *key, const char *value);
 void on_hub_details(HubDetails fn);
 
+// True once a session through our door has completed, which is remembered across reboots. A strip
+// adopted this way never joins a Matter fabric, so the fabric table cannot answer "has anybody taken
+// this strip?" and this is the other half of that question.
+using Taken = void (*)(bool);
+void on_taken(Taken fn);
+
 // The four counts, 1..6 each, for whoever is drawing them. Zero until open() has run.
 const uint8_t *rhythm();
 

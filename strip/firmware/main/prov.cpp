@@ -30,6 +30,7 @@
 #include <platform/CHIPDeviceLayer.h>
 #include <platform/internal/BLEManager.h>
 #include <platform/ESP32/BLEManagerImpl.h>
+#include <app/server/Server.h>
 #include <protocomm.h>
 
 static const char *TAG = "prov";
@@ -229,6 +230,7 @@ int gVerifierLen = 0;
 constexpr char kUser[] = "wifiprov";
 
 HubDetails gHubDetails = nullptr;
+Taken gTaken = nullptr;
 
 // WHERE OUR HUB IS, HANDED OVER IN THE SESSION THAT IS ALREADY OPEN. This is item 2a, which was an
 // empty string from the day Matter came in: a strip finishes provisioning knowing the household's
@@ -282,9 +284,25 @@ void on_prov_event(void *, network_prov_cb_event_t event, void *data) {
     case NETWORK_PROV_WIFI_CRED_FAIL:
         ESP_LOGW(TAG, "the house's Wi-Fi did not take those credentials");
         break;
-    case NETWORK_PROV_WIFI_CRED_SUCCESS:
+    case NETWORK_PROV_WIFI_CRED_SUCCESS: {
+        // THE FIRST SESSION TO COMPLETE TAKES THE STRIP, and the other door shuts
+        // (design/strip/Both.dc.html). Remembered in NVS because a strip that came through our door
+        // has no Matter fabric, so nothing else on the device can answer this at the next boot --
+        // without it the strip flashes its rhythm for ever and tries to reopen a door it has
+        // already been through.
+        if (gTaken) gTaken(true);
+        // ON THE CHIP TASK, NOT THIS ONE. We are on network_provisioning's thread here, and touching
+        // the stack from it is not a race that might bite later: CHIP checks, calls the access
+        // "unsafe/racy", and aborts the device. It cost a reboot loop on 21 September.
+        const CHIP_ERROR scheduled = chip::DeviceLayer::PlatformMgr().ScheduleWork([](intptr_t) {
+            chip::Server::GetInstance().GetCommissioningWindowManager().CloseCommissioningWindow();
+            ESP_LOGI(TAG, "Matter's window is shut; this strip is ours");
+        });
+        if (scheduled != CHIP_NO_ERROR)
+            ESP_LOGE(TAG, "Matter's window stayed open: %s", chip::ErrorStr(scheduled));
         ESP_LOGI(TAG, "on the household's Wi-Fi, through our own door");
         break;
+    }
     case NETWORK_PROV_END:
         // One completed session shuts the door, and it stays shut: the strip does not re-advertise
         // on a router reboot or anything else (docs/strip.md, "The light never reports a fault").
@@ -351,6 +369,8 @@ esp_err_t open() {
 void disconnected() { end_session(); drop_responses(); }
 
 void on_hub_details(HubDetails fn) { gHubDetails = fn; }
+
+void on_taken(Taken fn) { gTaken = fn; }
 
 const uint8_t *rhythm() { return gRhythm; }
 bool busy() { return gBusy; }

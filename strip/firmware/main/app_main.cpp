@@ -487,10 +487,13 @@ extern "C" void app_main() {
     light_endpoint = endpoint::get_id(ep);
 
     // Before Matter, and it has to be: CHIP will not take another GATT service once its own stack
-    // has started, and there is no second chance at it. See prov.h.
+    // has started, and there is no second chance at it. See prov.h. A strip somebody has already
+    // taken offers no door, so it does not reserve one either.
+    const bool ours = get_i32("ours", 0) != 0;
     char prov_name[24];  // "PROV_" and six hex digits; sized up only to keep the compiler quiet
     snprintf(prov_name, sizeof(prov_name), "PROV_%s", chipHex);  // prov::reserve cuts it to fit
-    if (prov::reserve(prov_name) != ESP_OK) ESP_LOGE(TAG, "our own door will not open this boot");
+    if (!ours && prov::reserve(prov_name) != ESP_OK)
+        ESP_LOGE(TAG, "our own door will not open this boot");
 
     heap("before Matter");
     esp_matter::start(on_event);
@@ -500,14 +503,21 @@ extern "C" void app_main() {
     // that just came on is theirs, and there is nothing to disambiguate -- it is two meters of light
     // and it is the only one lit (design/strip/Spine.dc.html). Marked as an instrument so the first
     // attribute sync cannot quietly wipe it, which is exactly what happened on the Arduino version.
-    if (chip::Server::GetInstance().GetFabricTable().FabricCount() == 0) {
+    // HAS ANYBODY TAKEN THIS STRIP? The fabric table cannot answer it on its own: a strip that came
+    // through our own door never joins a Matter fabric, so FabricCount stays 0 for the rest of its
+    // life. Asking only that made an adopted strip flash its rhythm at every boot and try to reopen
+    // a door it had already been through -- and by then CHIP owns the Wi-Fi driver, so the attempt
+    // failed with "sta is connecting, cannot set config" and the wall said it was waiting when it
+    // was not. "Ours" is remembered in NVS beside everything else the household chose.
+    if (chip::Server::GetInstance().GetFabricTable().FabricCount() == 0 && !ours) {
         instrument = true;
         strip.solid(SIG_R, SIG_G, SIG_B);
         px::show(strip);
-        ESP_LOGI(TAG, "not commissioned yet -- advertising over Bluetooth");
+        ESP_LOGI(TAG, "nobody has taken this strip yet -- both doors are open");
         // The four things a strip needs to find us again after a reboot. Anything else the hub
         // offers is refused out loud rather than silently dropped, so a mismatch between the two
         // halves shows up on the bench instead of as a strip that never speaks.
+        prov::on_taken([](bool yes) { put_i32("ours", yes ? 1 : 0); });
         prov::on_hub_details([](const char *key, const char *value) {
             for (const char *k : {"mhost", "muser", "mpass", "base"})
                 if (!strcmp(key, k)) { put_str(key, value); return true; }
@@ -519,6 +529,18 @@ extern "C" void app_main() {
         // the sort of thing that is obvious until the day it is not.
         PrintOnboardingCodes(chip::RendezvousInformationFlag::kBLE);
     } else {
+        ESP_LOGI(TAG, "already set up, %s", ours ? "through our own door" : "by somebody else");
+        // AND THE OTHER DOOR STAYS SHUT (design/strip/Both.dc.html). CHIP opens a commissioning
+        // window by itself whenever there are no fabrics, and a strip taken through our door never
+        // has one -- so without this it goes back to advertising as commissionable at every boot,
+        // and anybody in radio range could put it into their own app.
+        if (ours) {
+            const CHIP_ERROR e = chip::DeviceLayer::PlatformMgr().ScheduleWork([](intptr_t) {
+                chip::Server::GetInstance().GetCommissioningWindowManager().CloseCommissioningWindow();
+                ESP_LOGI(TAG, "Matter's window shut again; this strip is still ours");
+            });
+            if (e != CHIP_NO_ERROR) ESP_LOGE(TAG, "Matter's window stayed open: %s", chip::ErrorStr(e));
+        }
         paint();
         find_hub();
     }

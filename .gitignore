@@ -52,3 +52,6 @@ strip/firmware/sdkconfig.old
 strip/firmware/managed_components/
 strip/firmware/dependencies.lock
 strip/firmware/.vscode
+
+# Bench scratch, and it has a household Wi-Fi password in it. Never committed.
+test.sh
