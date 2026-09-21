@@ -505,7 +505,17 @@ drives config flows for the weather integration (`api.py`, `/api/config/config_e
 same for Matter with the url from the compose file. Not built, and it should be, because otherwise every house
 needs somebody to do this by hand exactly once and nobody will remember.
 
-**2a. Nothing decides how a strip learns our broker.** After commissioning it is on the house Wi-Fi and knows
+**2a. ANSWERED AND BUILT, 21 September.** The strip is handed the broker inside the session that carried
+the Wi-Fi, on a `hub` endpoint of our own: `network_prov_mgr_endpoint_create("hub")` takes `0xFF53 + 1`,
+which is exactly the first characteristic `prov::reserve()` keeps spare, and the payload is lines of
+`key=value` for the four things `find_hub()` reads. Not protobuf: the schema is ours at both ends, there are
+four keys, and the hub-side client has to be hand-written anyway. A key the strip does not keep is refused
+out loud rather than dropped, so a mismatch between the halves shows up on a bench. Seen in the table as
+`1775ff54 name="hub"`. **Not yet driven by a client** — `esp_prov --custom_data` speaks its own
+`custom-data` endpoint wrapped in a protobuf, so proving this needs the hub's own client, which is next
+anyway.
+
+*What it replaced, for the record:* **Nothing decides how a strip learns our broker.** After commissioning it is on the house Wi-Fi and knows
 nothing about us; `mhost` in its NVS is blank, so it is a plain Matter light and the color and length questions
 never get asked. Handing those details over needs either a route on the hub or a custom Matter cluster, and
 neither is designed. **This is the seam between "a Matter light anybody can buy" and "a light our hub set up

@@ -505,6 +505,14 @@ extern "C" void app_main() {
         strip.solid(SIG_R, SIG_G, SIG_B);
         px::show(strip);
         ESP_LOGI(TAG, "not commissioned yet -- advertising over Bluetooth");
+        // The four things a strip needs to find us again after a reboot. Anything else the hub
+        // offers is refused out loud rather than silently dropped, so a mismatch between the two
+        // halves shows up on the bench instead of as a strip that never speaks.
+        prov::on_hub_details([](const char *key, const char *value) {
+            for (const char *k : {"mhost", "muser", "mpass", "base"})
+                if (!strcmp(key, k)) { put_str(key, value); return true; }
+            return false;
+        });
         if (prov::open() != ESP_OK) ESP_LOGE(TAG, "our own door did not open; only Matter's is on");
         // The code this strip can be paired with, said out loud. Without this the only way to
         // commission it was to know that a test build uses the default passcode, which is exactly

@@ -43,6 +43,12 @@ const network_prov_scheme_t &scheme();
 // session, and the next power cycle mints a new one.
 esp_err_t open();
 
+// Called when the hub hands over where our broker is, on the `hub` endpoint, inside the same
+// session that carried the Wi-Fi. Each line is `key=value`; the keys are the ones find_hub() reads.
+// Return false to refuse, which tells the hub it asked for something this strip does not keep.
+using HubDetails = bool (*)(const char *key, const char *value);
+void on_hub_details(HubDetails fn);
+
 // The four counts, 1..6 each, for whoever is drawing them. Zero until open() has run.
 const uint8_t *rhythm();
 

@@ -18,6 +18,7 @@
 #include "prov.h"
 
 #include <cstring>
+#include <string>
 #include <vector>
 
 #include <esp_log.h>
@@ -227,9 +228,47 @@ int gVerifierLen = 0;
 // every existing protocomm client sends unless told otherwise, and a bench client should just work.
 constexpr char kUser[] = "wifiprov";
 
+HubDetails gHubDetails = nullptr;
+
+// WHERE OUR HUB IS, HANDED OVER IN THE SESSION THAT IS ALREADY OPEN. This is item 2a, which was an
+// empty string from the day Matter came in: a strip finishes provisioning knowing the household's
+// Wi-Fi and nothing about us, so the color question and the fill can never be asked. The one moment
+// it is safe to say is this one -- a session the strip authenticated, with somebody standing in the
+// room -- and it costs one endpoint on a characteristic that was reserved at boot for exactly this.
+//
+// Lines of key=value, not protobuf: the schema is ours on both ends, there are four keys, and a
+// hub-side client that has to be hand-written anyway should not also need a .proto.
+esp_err_t hub_handler(uint32_t, const uint8_t *inbuf, ssize_t inlen, uint8_t **outbuf, ssize_t *outlen, void *) {
+    int taken = 0, refused = 0;
+    std::string body((const char *)inbuf, inlen > 0 ? (size_t)inlen : 0);
+    size_t at = 0;
+    while (at < body.size()) {
+        size_t nl = body.find('\n', at);
+        if (nl == std::string::npos) nl = body.size();
+        const std::string line = body.substr(at, nl - at);
+        at = nl + 1;
+        const size_t eq = line.find('=');
+        if (eq == std::string::npos || eq == 0) continue;
+        const std::string k = line.substr(0, eq), v = line.substr(eq + 1);
+        if (gHubDetails && gHubDetails(k.c_str(), v.c_str())) taken++;
+        else { refused++; ESP_LOGW(TAG, "the hub offered '%s', which this strip does not keep", k.c_str()); }
+    }
+    ESP_LOGI(TAG, "the hub said where it is: %d details taken, %d refused", taken, refused);
+    const char *answer = refused ? "partial" : (taken ? "ok" : "empty");
+    *outlen = (ssize_t)strlen(answer);
+    *outbuf = (uint8_t *)malloc(*outlen);
+    if (!*outbuf) { *outlen = 0; return ESP_ERR_NO_MEM; }
+    memcpy(*outbuf, answer, *outlen);
+    return ESP_OK;
+}
+
 void on_prov_event(void *, network_prov_cb_event_t event, void *data) {
     switch (event) {
     case NETWORK_PROV_START:
+        // Registered here rather than before starting, because protocomm_add_endpoint needs a
+        // running manager; the characteristic it lands on was reserved at boot.
+        if (network_prov_mgr_endpoint_register("hub", hub_handler, nullptr) != ESP_OK)
+            ESP_LOGE(TAG, "no 'hub' endpoint; a strip set up here will not know where we are");
         ESP_LOGI(TAG, "listening. The rhythm is %d %d %d %d", gRhythm[0], gRhythm[1], gRhythm[2], gRhythm[3]);
         break;
     case NETWORK_PROV_WIFI_CRED_RECV: {
@@ -278,7 +317,7 @@ esp_err_t open() {
         return err;
     }
 
-    network_prov_mgr_config_t cfg = {};
+    network_prov_mgr_config_t cfg = {};  // NOLINT: the scheme is copied in below
     cfg.scheme = gScheme;
     cfg.scheme_event_handler = NETWORK_PROV_EVENT_HANDLER_NONE;
     cfg.app_event_handler.event_cb = on_prov_event;
@@ -286,6 +325,13 @@ esp_err_t open() {
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "the manager would not start: %s", esp_err_to_name(err));
         return err;
+    }
+
+    // 0xFF53 + 1, which is the first characteristic reserve() kept spare.
+    if (network_prov_mgr_endpoint_create("hub") != ESP_OK) {
+        ESP_LOGE(TAG, "could not make room for the 'hub' endpoint");
+        network_prov_mgr_deinit();
+        return ESP_FAIL;
     }
 
     protocomm_security2_params_t sec2 = {};
@@ -303,6 +349,8 @@ esp_err_t open() {
 }
 
 void disconnected() { end_session(); drop_responses(); }
+
+void on_hub_details(HubDetails fn) { gHubDetails = fn; }
 
 const uint8_t *rhythm() { return gRhythm; }
 bool busy() { return gBusy; }
