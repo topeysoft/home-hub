@@ -203,6 +203,24 @@ class Radio:
                               "ours": what["vendor"] == TEST_VID})
         return sorted(found, key=lambda s: -(s["rssi"] or -127))
 
+    async def set_wifi(self, ssid: str, password: str) -> None:
+        """Give the Matter controller the house Wi-Fi, which it needs before it can commission onto it.
+
+        THE HUB DOES TOUCH THE PASSWORD, and an earlier version of this file claimed it never would
+        again. It does -- once, to matter-server, which then hands it to a device inside the
+        commissioning session. That is a different thing from what was removed: the old code put it on
+        an unauthenticated BLE link where anything in range could read it. This puts it on the local
+        engine link and lets a reviewed stack deliver it encrypted. Worth stating plainly rather than
+        keeping a tidier sentence that was not true."""
+        ha = getattr(self.hub, "ha", None)
+        if ha is None:
+            raise StripError("This hub is not talking to its engine just now.")
+        try:
+            await ha.send("matter/set_wifi_credentials", network_name=ssid, password=password)
+        except Exception as e:
+            log.warning("strip: could not give Matter the Wi-Fi (%s)", e)
+            raise StripError("The hub could not pass your Wi‑Fi on. Try again in a moment.")
+
     async def commission(self, code: str) -> dict:
         """Hand it to matter-server, through Home Assistant's own command.
 
@@ -392,6 +410,13 @@ class Strips:
         household's code comes from is docs/strip.md item 1a and is not decided."""
         if not self.job or self.job["state"] != "knocking":
             raise StripError("There is no light strip waiting to be let in.")
+        # The controller cannot commission onto a network it has not been told about, and it is the
+        # house's own Wi-Fi rather than this strip's -- so it is asked once, on the wall, exactly the
+        # way bridge.py asks it, and no strip after this one asks again.
+        wifi = (self.hub.settings.get("wifi") or {}) if hasattr(self.hub, "settings") else {}
+        if not wifi.get("ssid"):
+            self._set("working", step="letting", needs="wifi")
+            return self.status()
         # A development board's code is public, so nobody should have to read it off a terminal.
         if not code and self.job.get("vendor") == TEST_VID:
             code = DEV_CODE
@@ -401,19 +426,26 @@ class Strips:
         return self.status()
 
     async def wifi(self, ssid: str, password: str) -> dict:
-        """Kept only so an older panel gets a sentence rather than a 500, and it refuses.
+        """The house's Wi-Fi, for the Matter controller: asked once, on the wall, and kept.
 
-        A strip gets onto the Wi-Fi by being commissioned now, over a channel the hub is not part of.
-        This module used to carry a household's password twice over -- first to a hand-rolled BLE
-        characteristic that sent it in the clear, then to WiFiProv, which only existed because the
-        Arduino framework compiles Matter-over-BLE out. Neither is here any more and neither should
-        come back. Delete this when nothing calls it."""
-        raise StripError("A light strip gets onto the Wi‑Fi by being commissioned, not by being told.")
+        Not handed to a strip. Handed to matter-server, which passes it to a device inside the
+        commissioning session. Every strip after this one is set up without anybody being asked."""
+        if not ssid:
+            raise StripError("Which Wi‑Fi? The name is needed.")
+        self.hub.settings.set(wifi={"ssid": ssid, "pass": password})
+        if not self.job:
+            return self.status()
+        self._set("working", step="letting", needs=None)
+        self._task = asyncio.create_task(self._setup())
+        return self.status()
 
     async def _setup(self):
         j = self.job
         if not j: return
         try:
+            wifi = (self.hub.settings.get("wifi") or {}) if hasattr(self.hub, "settings") else {}
+            if wifi.get("ssid"):
+                await self.radio.set_wifi(wifi["ssid"], wifi.get("pass") or "")
             await self.radio.commission(j.get("code", ""))
             # AND HERE THE SETUP STOPS, FOR NOW, AND IT IS WORTH SAYING WHY RATHER THAN QUIETLY
             # DOING LESS. Everything after this -- which color comes out first, how far it goes --

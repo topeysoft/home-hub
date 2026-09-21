@@ -23,8 +23,12 @@ class FakeRadio:
     def __init__(self):
         self.advertising = []
         self.commissioned = []
+        self.told_wifi = []
         self.commission_fails = None
         self.scan_boom = None
+
+    async def set_wifi(self, ssid, password):
+        self.told_wifi.append((ssid, password))
 
     async def scan(self, seconds=4.0):
         if self.scan_boom: raise self.scan_boom
@@ -167,13 +171,28 @@ class Knocking(unittest.TestCase):
         run(self.s.look()); run(self.s.dismiss()); run(self.s.look())
         self.assertEqual(self.s.status()["state"], "none")
 
-    def test_the_hub_never_handles_the_wifi_password_at_all_any_more(self):
-        """It used to, twice, and both were wrong: a hand-rolled BLE characteristic that sent the
-        password in the clear, then WiFiProv, which only existed because Arduino compiles
-        Matter-over-BLE out. Commissioning carries the credentials itself now, so there is no route
-        through this module that could leak one -- and the old one refuses rather than lying."""
-        with self.assertRaises(StripError):
-            run(self.s.wifi("House", "hunter2"))
+    def test_the_wifi_goes_to_the_controller_and_not_to_the_strip(self):
+        """This file claimed for a while that the hub never touched a household's password again. It
+        was too strong and had to be corrected by reading Home Assistant's own API: the Matter
+        controller cannot commission onto a network it has not been told about, so the hub does hand
+        it over -- once, to matter-server, which delivers it inside the commissioning session. That is
+        a different thing from the unauthenticated BLE link this replaced, and worth being exact
+        about rather than keeping the tidier sentence."""
+        self.arrive()
+        run(self.s.look())
+        run(self.s.adopt("3497-011-2332"))
+        for _ in range(40): run(asyncio.sleep(0))
+        self.assertEqual(self.radio.told_wifi, [("House", "hunter2 with space")])
+
+    def test_and_a_hub_that_has_never_been_told_asks_once(self):
+        """Exactly the way bridge.py asks it, and no strip after this one asks again."""
+        self.hub.settings.set(wifi=None)
+        self.arrive()
+        run(self.s.look())
+        run(self.s.adopt("3497-011-2332"))
+        s = self.s.status()
+        self.assertEqual((s["state"], s["needs"]), ("working", "wifi"))
+        self.assertEqual(self.radio.commissioned, [])
 
 
 class TheWholeWay(unittest.TestCase):

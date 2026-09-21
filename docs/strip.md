@@ -311,6 +311,14 @@ it. Moving to ESP-IDF gives back about 880 KB *and* does more.
 
 Everything under this line is honest. None of it is done.
 
+**0. A correction, because this document said something too strong.** It claimed the hub never handles a
+household's Wi-Fi password again. It does — **once**, to `matter-server`, via Home Assistant's
+`matter/set_wifi_credentials`, because a Matter controller cannot commission a device onto a network it has not
+been told about. The controller then delivers it to the device inside the commissioning session. That is a
+different thing from what was removed, which put it on an unauthenticated BLE link anything in range could
+read, but it is not *nothing*, and the tidier sentence was wrong. Found by reading Home Assistant's own API
+rather than by reasoning about it, which is how it should have been settled the first time.
+
 **1. Half closed.** Matter was written down here as having closed this and had not: CHIPoBLE is compiled out of
 the Arduino framework on every target, so Matter never carries the credentials. `WiFiProv` with BLE and
 protocomm `SECURITY_1` now does, and is on air. **What is still open is not the handshake but the proof of
