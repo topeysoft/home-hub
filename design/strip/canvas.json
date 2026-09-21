@@ -79,6 +79,30 @@
       "w": 1440,
       "h": 900,
       "title": "C \u2014 the phone reads it off the thing"
+    },
+    {
+      "file": "ReachTold.dc.html",
+      "x": 0,
+      "y": 4320,
+      "w": 1440,
+      "h": 900,
+      "title": "A \u2014 the hub tells it"
+    },
+    {
+      "file": "ReachAsks.dc.html",
+      "x": 1560,
+      "y": 4320,
+      "w": 1440,
+      "h": 900,
+      "title": "B \u2014 the strip asks"
+    },
+    {
+      "file": "ReachNone.dc.html",
+      "x": 3120,
+      "y": 4320,
+      "w": 1440,
+      "h": 900,
+      "title": "C \u2014 no broker at all"
     }
   ],
   "annotations": [
@@ -158,6 +182,13 @@
       "y": 3240,
       "w": 500,
       "text": "WHERE THE SETUP CODE COMES FROM\n\nThe question the firmware move left behind, and the one thing between a commissionable strip and a household owning one. Matter's advertisement carries a discriminator and NEVER the passcode -- that is the standard being careful, not an oversight -- so something outside the radio has to bring it, and the hub cannot invent it.\n\nIT IS A QUESTION ABOUT design/puck/Knock.dc.html AS MUCH AS ABOUT A STRIP. That board's proudest line is that the identity check is the object and never a number: no chip id, no serial, nothing to read out to anybody. A passcode is a number. So whichever of these wins, Knock either survives, is bought back at a price, or is amended -- and it should be amended deliberately rather than quietly eroded by a protocol.\n\nB IS THE ONE THAT LOOKS BEST AND IS PROBABLY WRONG, which is why it is drawn rather than described. It keeps the one-tap promise exactly, and it does it by making every unit we sell commissionable by anybody who has worked out the derivation -- from a serial that is in the advertisement, using a secret that is in every hub we ship. It also fails certification, which forbids a passcode with a fixed relationship to anything public. A thing can be the nicest screen here and still not be shippable.\n\nA IS WHAT EVERY OTHER MAKER DOES and is finished, honest and dull. C is the interesting middle: the proof becomes physical rather than written, Knock's argument mostly survives, and the cost is that a wall panel cannot do it at all -- which in a house whose every other setup happens on the wall is a real thing to give up.\n\nTHE ANSWER MAY BE OUTSIDE THESE THREE. It usually has been."
+    },
+    {
+      "id": "reach",
+      "x": -620,
+      "y": 4320,
+      "w": 500,
+      "text": "HOW A STRIP FINDS OUR HUB, IF IT EVER DOES\n\nThe other thing the firmware move left behind. Matter gets a strip onto the Wi-Fi and into somebody's app, and then it knows nothing whatever about us: the two questions that are ours -- which order its colors come out in, and how far it goes -- are addressed over a broker it has never heard of. Today the field is an empty string and setup stops at commissioned.\n\nA AND B ARE THE SAME ANSWER AT DIFFERENT PRICES. A uses the encrypted session Matter already built and waits on a Vendor ID to exist at all. B needs nothing and protects itself with a time window, which is a weaker promise than a session -- and the fix for that turns it back into A. Worth drawing both anyway, because which one is cheaper depends entirely on when certification happens, and that is not our decision alone.\n\nC IS THE ONE THAT WAS NOT OBVIOUS, and it came out of porting the firmware rather than out of a design conversation. The color question never needed a private channel: it needed three particular bytes on the wire, and the hub can get them there by asking for an ordinary color, because it knows what the firmware will do to it. Everything about item 2a stops existing.\n\nAND THEN C COLLECTS ITS BILL. The fill has to send a number BACK, latched at the moment somebody taps, and Matter has nowhere to put it. So choosing C is choosing Never -- the length direction drawn, argued and not chosen, kept because 'it will come back'. It has, from a direction nobody was watching.\n\nWhich makes the real question the one Never already named: are the ambient light and the picture follower two products or one? If two, C is clean and free. If one, the length is not optional and C is borrowing against a debt that comes due."
     }
   ],
   "reading": [
@@ -180,6 +211,10 @@
     "code",
     "CodeBox.dc.html",
     "CodeMade.dc.html",
-    "CodeTap.dc.html"
+    "CodeTap.dc.html",
+    "reach",
+    "ReachTold.dc.html",
+    "ReachAsks.dc.html",
+    "ReachNone.dc.html"
   ]
 }
