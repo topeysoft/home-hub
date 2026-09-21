@@ -55,6 +55,30 @@
       "w": 1440,
       "h": 900,
       "title": "Afterwards \u2014 both answers, on its own pane"
+    },
+    {
+      "file": "CodeBox.dc.html",
+      "x": 0,
+      "y": 3240,
+      "w": 1440,
+      "h": 900,
+      "title": "A \u2014 the code is on the box"
+    },
+    {
+      "file": "CodeMade.dc.html",
+      "x": 1560,
+      "y": 3240,
+      "w": 1440,
+      "h": 900,
+      "title": "B \u2014 the hub already knows it"
+    },
+    {
+      "file": "CodeTap.dc.html",
+      "x": 3120,
+      "y": 3240,
+      "w": 1440,
+      "h": 900,
+      "title": "C \u2014 the phone reads it off the thing"
     }
   ],
   "annotations": [
@@ -127,6 +151,13 @@
       "y": 1840,
       "w": 500,
       "text": "WHAT WAS DECIDED, AND WHAT IT COST\n\n20 September 2026: A at setup, B afterwards on the pane. C stays on the canvas with its case intact, because the argument it makes -- that the ambient light and the picture follower are two products and the second one's questions should not be charged to the first -- is still live and will come back.\n\nThe two boards below were drawn after that decision, not before it. Later is what choosing two answers rather than one actually costs: a surface that has to hold both of them for ever. Order is a question nobody had asked yet, and it is the more dangerous of the two, because a strip whose red is green is broken in a way the household can see and the panel cannot."
+    },
+    {
+      "id": "code",
+      "x": -620,
+      "y": 3240,
+      "w": 500,
+      "text": "WHERE THE SETUP CODE COMES FROM\n\nThe question the firmware move left behind, and the one thing between a commissionable strip and a household owning one. Matter's advertisement carries a discriminator and NEVER the passcode -- that is the standard being careful, not an oversight -- so something outside the radio has to bring it, and the hub cannot invent it.\n\nIT IS A QUESTION ABOUT design/puck/Knock.dc.html AS MUCH AS ABOUT A STRIP. That board's proudest line is that the identity check is the object and never a number: no chip id, no serial, nothing to read out to anybody. A passcode is a number. So whichever of these wins, Knock either survives, is bought back at a price, or is amended -- and it should be amended deliberately rather than quietly eroded by a protocol.\n\nB IS THE ONE THAT LOOKS BEST AND IS PROBABLY WRONG, which is why it is drawn rather than described. It keeps the one-tap promise exactly, and it does it by making every unit we sell commissionable by anybody who has worked out the derivation -- from a serial that is in the advertisement, using a secret that is in every hub we ship. It also fails certification, which forbids a passcode with a fixed relationship to anything public. A thing can be the nicest screen here and still not be shippable.\n\nA IS WHAT EVERY OTHER MAKER DOES and is finished, honest and dull. C is the interesting middle: the proof becomes physical rather than written, Knock's argument mostly survives, and the cost is that a wall panel cannot do it at all -- which in a house whose every other setup happens on the wall is a real thing to give up.\n\nTHE ANSWER MAY BE OUTSIDE THESE THREE. It usually has been."
     }
   ],
   "reading": [
@@ -145,6 +176,10 @@
     "order",
     "Order.dc.html",
     "later",
-    "Later.dc.html"
+    "Later.dc.html",
+    "code",
+    "CodeBox.dc.html",
+    "CodeMade.dc.html",
+    "CodeTap.dc.html"
   ]
 }
