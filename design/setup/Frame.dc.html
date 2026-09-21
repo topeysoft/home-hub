@@ -1,0 +1,138 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp: #e9b872; --lamp-ink: #2a1c07; --live: #74c69d; --danger: #e08a8a;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .t2 { font-size: 13px; color: var(--muted); line-height: 1.45; }
+
+    /* the step itself, at 1:1 -- this column is 600px in the panel too */
+    .stage { position: absolute; border-radius: 12px; overflow: hidden; border: 1px solid var(--edge-hi);
+             background: linear-gradient(#1b2b44 0%, #22344e 40%, #2b3a4c 70%, #1c2826 88%, #141d18 100%); }
+    .eyebrow { font-size: 11.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted);
+               margin: 0 0 12px; min-height: 16px; }
+    .h { font-size: 44px; line-height: 1.02; letter-spacing: -.025em; font-weight: 400; margin: 0; color: var(--ink); }
+    .lede { margin: 13px 0 22px; color: var(--ink-2); font-size: 16px; line-height: 1.42; max-width: 52ch; }
+    .snote { display: flex; align-items: flex-start; gap: 10px; margin: -10px 0 22px; padding: 12px 14px;
+             border-radius: 14px; background: var(--surface); border: 1px solid var(--edge);
+             color: var(--ink-2); font-size: 13.5px; line-height: 1.45; }
+    .flabel { font-size: 13px; color: var(--ink-2); margin: 0 0 7px; }
+    .field { height: 46px; border-radius: 14px; background: rgba(255,255,255,.06); border: 1px solid var(--edge); }
+    .cta { display: inline-flex; padding: 14px 26px; border-radius: 999px; background: #f1eee8; color: #0c0d10;
+           font-weight: 500; font-size: 16px; }
+
+    /* a slot on the stage, and its number */
+    .band { position: absolute; border-radius: 7px; border: 1px dashed rgba(233,184,114,.5); }
+    .pin { position: absolute; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center;
+           background: var(--lamp); color: var(--lamp-ink); font-size: 12px; font-weight: 600;
+           box-shadow: 0 0 0 3px #16202e; }
+
+    /* the reading column beside it */
+    .co { position: absolute; left: 748px; width: 336px; }
+    .co .k { display: flex; align-items: baseline; gap: 8px; font-size: 11.5px; letter-spacing: .11em;
+             text-transform: uppercase; color: var(--lamp); margin-bottom: 5px; }
+    .co .k b { font-variant-numeric: tabular-nums; font-weight: 600; }
+    .co .v { font-size: 13px; color: var(--ink-2); line-height: 1.46; }
+    .was { color: var(--danger); }
+    code { color: var(--lamp); }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: #0c0d10; color: var(--ink); font-size: 17px; line-height: 1.4;">
+  <div style="position: absolute; inset: 0; background: radial-gradient(64% 54% at 22% 18%, rgba(72,63,135,.22), transparent 70%), radial-gradient(56% 48% at 86% 88%, rgba(92,63,57,.2), transparent 72%);"></div>
+
+  <div style="position: absolute; top: 40px; left: 56px; right: 56px;">
+    <h1 class="dsp" style="margin: 0; font-size: 40px;">The frame every question wears.</h1>
+    <p style="margin: 9px 0 0; font-size: 16.5px; color: var(--ink-2); max-width: 100ch;">Drawn at 1:1 &mdash; this column really is 600px. Six slots, always in this order, and every one of them holds its place whether it has anything in it or not.</p>
+  </div>
+
+  <!-- the step, 1:1 -->
+  <div class="stage" style="top: 152px; left: 56px; width: 640px; height: 700px;">
+    <div style="position: absolute; top: 44px; left: 20px; width: 600px;">
+      <p class="eyebrow">Step 2 of 5</p>
+      <h2 class="h">A passcode for changes.</h2>
+      <p class="lede">Four to eight digits. Anyone in the house can still work the lights from the wall without it &mdash; the passcode is for <i>changing</i> the house: adding devices, renaming rooms, taking a copy away with you.</p>
+      <div class="snote">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#e9b872" stroke-width="1.8" stroke-linecap="round" style="flex:none; margin-top:2px;"><rect x="6" y="11" width="12" height="9.5"/><path d="M9 11V8a3 3 0 0 1 6 0v3M12 15v2"/></svg>
+        <span>The one step that can&rsquo;t wait. Until it is set, anyone on your Wi&#8209;Fi can change the house too.</span>
+      </div>
+      <p class="flabel">Passcode</p>
+      <div class="field" style="width: 260px; margin-bottom: 16px;"></div>
+      <p class="flabel">Once more</p>
+      <div class="field" style="width: 260px; margin-bottom: 30px;"></div>
+      <div class="cta">Continue</div>
+    </div>
+  </div>
+
+  <!-- slot 1: the eyebrow -->
+  <div class="band" style="top: 190px; left: 70px; width: 612px; height: 24px;"></div>
+  <div class="pin" style="top: 191px; left: 52px;">1</div>
+  <!-- slot 2: the heading -->
+  <div class="band" style="top: 220px; left: 70px; width: 612px; height: 54px;"></div>
+  <div class="pin" style="top: 236px; left: 52px;">2</div>
+  <!-- slot 3: the lede -->
+  <div class="band" style="top: 282px; left: 70px; width: 542px; height: 76px;"></div>
+  <div class="pin" style="top: 309px; left: 52px;">3</div>
+  <!-- slot 4: the note -->
+  <div class="band" style="top: 368px; left: 70px; width: 542px; height: 66px;"></div>
+  <div class="pin" style="top: 390px; left: 52px;">4</div>
+  <!-- slot 5: the middle -->
+  <div class="band" style="top: 444px; left: 70px; width: 300px; height: 168px;"></div>
+  <div class="pin" style="top: 517px; left: 52px;">5</div>
+  <!-- slot 6: the way on -->
+  <div class="band" style="top: 622px; left: 70px; width: 160px; height: 56px;"></div>
+  <div class="pin" style="top: 639px; left: 52px;">6</div>
+
+  <!-- the reading column -->
+  <div class="co" style="top: 158px;">
+    <div class="k"><b>1</b> the eyebrow &mdash; always there</div>
+    <div class="v"><code>min-height: 16px</code>, rendered empty on the screens with no number. It is why the heading below it stopped hopping <span class="was">90px</span> between one step and the next.</div>
+  </div>
+
+  <div class="co" style="top: 272px;">
+    <div class="k"><b>2</b> the question, in five words</div>
+    <div class="v">54px on a wall, 40 on a phone. One sentence with a full stop &mdash; never a label, never a noun on its own.</div>
+  </div>
+
+  <div class="co" style="top: 372px;">
+    <div class="k"><b>3</b> the lede &mdash; what it is for</div>
+    <div class="v">Capped at 52ch, and it now says only what the thing <i>is</i>. It used to carry the warning too: five lines, with the sentence that mattered last.</div>
+  </div>
+
+  <div class="co" style="top: 486px;">
+    <div class="k"><b>4</b> the note &mdash; new, and rare</div>
+    <div class="v">A line that outweighs the lede above it: why a step cannot be skipped. Two screens use one. A third would be over&#8209;explaining.</div>
+  </div>
+
+  <div class="co" style="top: 600px;">
+    <div class="k"><b>5</b> the middle &mdash; the only slot that differs</div>
+    <div class="v">Two fields here; chips on rooms, a picker on location, the whole of <code>Adding</code> on devices. Everything around it is identical on all five.</div>
+  </div>
+
+  <div class="co" style="top: 726px;">
+    <div class="k"><b>6</b> the way on &mdash; one primary, always</div>
+    <div class="v">Exactly one filled button per screen, and never the way <i>past</i> the question. <i>Where is home?</i> used to offer nothing but <span class="was">Keep it</span>.</div>
+  </div>
+
+  <div class="cap" style="position: absolute; top: 862px; left: 56px;">app/src/Setup.vue &middot; the first&#8209;run block of app/src/panel.css &middot; nothing under <code>/setup</code> on the brain changed</div>
+</div>
+</x-dc>
+</body>
+</html>

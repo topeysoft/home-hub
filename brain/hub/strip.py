@@ -1,0 +1,641 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
+"""A light strip arriving, and the two questions only a strip has to be asked.
+
+A strip is the first thing this house adopts that is neither a bridge nor already in a wall. It
+comes in a box, gets taped behind a television or under a shelf, and is plugged into a socket
+nowhere near the hub -- so it is never carried to the cable. It leaves the factory flashed and
+knocks over Bluetooth the moment it has power, which is design/strip/ direction A and the shape
+design/puck/Knock.dc.html argued for and lost on one line: "it only works on a bridge that already
+has firmware on it". A product we ship is flashed. That objection is gone.
+
+The machine is what the panel draws, so what it holds is the sequence a person sees:
+
+    none      nothing to say
+    knocking  a strip is advertising and nobody has said it is theirs. Nothing of the house's has
+              gone anywhere -- saying it is not yours needs no code, because refusing gives nothing
+              away. The identity check is the object: it is lit, and no serial number is shown
+    working   `step` is wifi | hub, in that order. Two steps, not the bridge's three: the software
+              is already on it, which is the whole reason it could knock
+    order     which color comes out first (below). The strip is lit and the household names it
+    length    it fills from the plug end and somebody taps when the far end lights
+    room      the ordinary room chips every new device gets
+    ready     it is an ordinary light from here: the tile, the colors, the schedules, "everything off"
+    failed    `text` says why, in words for the wall
+
+Two things a bridge has that a strip does not, and both are absences worth keeping in mind. There
+is no mesh, so no keys step. And there is no walk to find it a socket, so the placing instrument --
+blinking amber, steady green, breathing red -- has nothing to answer here. That matters for more
+than setup: docs/puck-light.md puts a fault ABOVE a puck's light because a puck that glows while its
+bridge is down is furniture that lies. A strip is the opposite case. The household is watching a
+film, and a strip that turns amber mid-scene because the broker blinked is the product breaking,
+not reporting. So a strip keeps whatever the household set it to, and the panel carries the fault.
+
+The radio is behind `Radio` for the same reason bridge.py hides pyserial behind `Cable`: the machine
+is tested with a fake one, and nothing in here needs a strip on a desk to run.
+"""
+import asyncio, json, logging, re, time
+
+log = logging.getLogger("hub.strip")
+
+BASE = "strip"
+# ONE STEP, BECAUSE ONE THING HAPPENS. It used to be two -- "putting it on your Wi-Fi", then
+# "introducing it to the hub" -- back when the hub carried the credentials itself and then waited for
+# the strip to appear on the broker. Commissioning does both at once and neither of them is ours, so
+# a second line would be a progress bar with nothing behind it.
+STEPS = ("letting",)
+
+# How long to wait on a strip for each kind of question. Named so the tests can shrink them: a suite
+# that waits out a real timeout teaches people to skip it.
+JOIN_WAIT = 60
+ANSWER_WAIT = 10
+
+# A strip nobody has told how long it is. The controller writes this many lights every frame and the
+# surplus falls off the end of the wire, so a strip shorter than this is simply right -- which is
+# what makes direction C on the canvas a real argument rather than a shortcut. We ask anyway, because
+# anything that needs to know where the MIDDLE is comes out wrong without it.
+ASSUMED = 300
+MOST = 1200
+
+
+# ---------------------------------------------------------------- the order the colors come in
+
+# The six orderings in circulation, written as the order the three bytes go out on the wire. WS2812B
+# is "grb" and is most of what anybody owns; WS2811 and APA106 are "rgb"; the rest are clones.
+ORDERS = ("rgb", "rbg", "grb", "gbr", "brg", "bgr")
+ASSUME = "grb"
+NAMES = {"r": "red", "g": "green", "b": "blue"}
+
+
+def probe(assume: str = ASSUME) -> tuple[int, int, int]:
+    """The three bytes that are RED on a strip that really is `assume`.
+
+    Not (255, 0, 0). We are asking "is my guess right", so we send what red WOULD be under the guess
+    and let the household tell us what came out. On a strip that is what we assumed, they see red and
+    there is one tap in the whole business."""
+    i = assume.index("r")
+    return tuple(255 if k == i else 0 for k in range(3))
+
+
+def lit_index(assume: str = ASSUME) -> int:
+    """Which byte of `probe()` is the loud one -- and so which channel position the answer names."""
+    return assume.index("r")
+
+
+def narrow(seen: str, at: int, among=ORDERS) -> list[str]:
+    """The orderings still possible once somebody has named the color they can see.
+
+    `seen` is 'r', 'g' or 'b' and `at` is the byte we made loud. The channel they named IS the one
+    that byte drives, so every ordering that puts a different channel there is out. Two of these
+    settle all six, because the first answer leaves a pair and the second splits it."""
+    return [o for o in among if o[at] == seen]
+
+
+def resolve(first: str, second: str | None = None) -> str | None:
+    """The ordering, from one answer or two. None while it is still ambiguous.
+
+    ONE TAP IS A PRIOR, NOT A PROOF, and this is the one place in the file where that is true.
+    Answering "yes, red" to the first question leaves "grb" and "brg" both possible -- the second
+    byte drives red in each -- and we take "grb", because it is what almost every 5 V strip on sale
+    actually is. A household with the other one sees wrong colors and has a row on the light's own
+    pane that asks the question again (design/strip/Later.dc.html). That row is not a nicety; it is
+    the other half of this shortcut, and the shortcut is not honest without it."""
+    left = narrow(first, lit_index())
+    if len(left) == 1: return left[0]
+    if first == "r" and second is None: return ASSUME        # the common strip, taken on its odds
+    if second is None: return None
+    # The second question makes red the FIRST byte, which splits whichever pair is left.
+    left = narrow(second, 0, among=left)
+    return left[0] if len(left) == 1 else None
+
+
+class StripError(RuntimeError):
+    """A failure whose message was written for the person standing in front of the panel.
+
+    Everything else in here was written for a log -- a library's words, a timeout, whatever bleak felt
+    like saying. Those must not reach a screen. bridge.py learned this the expensive way: a bridge
+    once failed with "database is locked" on the wall, which tells nobody anything and was not even
+    true about their bridge."""
+
+
+# The service a commissionable Matter device advertises under, and how to read what it says.
+MATTER_SVC = "0000fff6-0000-1000-8000-00805f9b34fb"
+# Our own, until there is a real Vendor ID to replace it. docs/strip.md item 2b.
+TEST_VID = 0xFFF1
+
+# THE CODE EVERY DEVICE WE BUILD TODAY HAS, AND WHY IT IS SAFE TO WRITE DOWN.
+#
+# Our firmware is built with CONFIG_ENABLE_TEST_SETUP_PARAMS, so its passcode is CHIP's own
+# 20202021 and its discriminator 3840 -- compiled in, printed on the serial console at every boot,
+# and published in connectedhomeip's source. It is not a secret and cannot be treated as one, which
+# is precisely why a unit with it cannot be sold.
+#
+# So while there is no box and no label, a strip that says it is a TEST vendor is a development
+# board, and the hub may as well use the code everybody already knows rather than asking somebody to
+# copy it off a terminal. THE MOMENT A REAL VENDOR ID EXISTS THIS STOPS APPLYING BY ITSELF: a unit
+# with its own passcode in `fctry` will not advertise TEST_VID, so this never fires for it, and the
+# code has to come from the label as design/strip/CodeBox.dc.html says. That self-limiting is the
+# whole reason it is written this way rather than as a setting somebody could leave switched on.
+DEV_CODE = "34970112332"
+
+
+def commissionable(data: bytes) -> dict | None:
+    """What a commissionable advertisement means, or None if it is not one.
+
+    Eight bytes: an opcode, then the discriminator with a version in its top nibble, then the vendor
+    and product ids, then flags. Checked against a real device rather than a spec page -- an S3
+    running our firmware advertises 00000ff1ff008000, and its own log says discriminator=3840/15
+    vendorID=65521 productID=32768, which is what this reads out of it."""
+    if len(data) < 7 or data[0] != 0x00:
+        return None
+    return {"discriminator": int.from_bytes(data[1:3], "little") & 0x0FFF,
+            "vendor": int.from_bytes(data[3:5], "little"),
+            "product": int.from_bytes(data[5:7], "little")}
+
+
+def _no_matter(e: Exception) -> bool:
+    """Is this Home Assistant saying it has never heard of Matter, rather than Matter saying no?
+
+    The distinction is the difference between "add the integration" and "check the code", and those
+    send a household to opposite ends of the house. It was got right in one call and wrong in the one
+    beside it a commit later, which is what a shared answer is for."""
+    said = str(e).lower()
+    return "unknown" in said or "not found" in said or "no matter" in said
+
+
+NO_MATTER = ("This house has no Matter setup yet. The matter\u2011server is running, but nothing in "
+             "Home Assistant is using it.").replace("\u2011", "\u2011")
+
+
+class Radio:
+    """Finding a strip that wants letting in, and handing it to the commissioner the house runs.
+
+    THIS USED TO BE OUR OWN BLE PROTOCOL, TWICE, AND BOTH WERE WRONG. First a hand-rolled
+    characteristic taking key=value lines, which put the household's Wi-Fi password on an open link.
+    Then WiFiProv, which was at least encrypted but only existed because the Arduino framework
+    compiles Matter-over-BLE out. On ESP-IDF it is compiled in, so Matter carries the credentials and
+    the commissioning together and neither of ours is needed (docs/strip.md).
+
+    So this has two small jobs. NOTICE one -- a commissionable Matter device advertises over BLE and
+    says its discriminator, which is enough to know that something is knocking. And HAND IT OVER to
+    `matter-server`, which the house already runs (docs/matter.md), through Home Assistant's own
+    websocket command. It carries no credentials of its own and must never be given a route that does.
+
+    WHAT IT CANNOT DO, and this is the open question rather than a missing function: an advertisement
+    carries the discriminator and NOT the passcode, and commissioning needs the passcode. So the hub
+    cannot silently adopt a strip the way design/puck/Knock.dc.html argues for. Where the code comes
+    from -- printed on the box like every other Matter device, derived at manufacture from something
+    the hub can look up, or read off an NFC tag -- has not been decided. docs/strip.md item 1a."""
+
+    def __init__(self, hub=None, adapter: str | None = None):
+        self.hub = hub
+        self.adapter = adapter
+
+    async def _bleak(self):
+        try:
+            import bleak
+        except ModuleNotFoundError:
+            raise StripError("This hub has no Bluetooth to look for a light strip with.")
+        return bleak
+
+    async def scan(self, seconds: float = 6.0) -> list[dict]:
+        """Every Matter device advertising that it has never been commissioned.
+
+        A device that HAS been commissioned stops advertising, which is the whole of the answer to
+        "what happens when the router reboots": it keeps the light the household asked for and stays
+        quiet. Nothing here opens a window; only a person holding the thing can do that."""
+        bleak = await self._bleak()
+        found = []
+        for d, adv in (await bleak.BleakScanner.discover(timeout=seconds, return_adv=True)).values():
+            for uuid, data in (adv.service_data or {}).items():
+                if uuid.lower() != MATTER_SVC:
+                    continue
+                what = commissionable(bytes(data))
+                if not what:
+                    continue
+                found.append({**what, "addr": d.address, "rssi": adv.rssi,
+                              "ours": what["vendor"] == TEST_VID})
+        return sorted(found, key=lambda s: -(s["rssi"] or -127))
+
+    async def set_wifi(self, ssid: str, password: str) -> None:
+        """Give the Matter controller the house Wi-Fi, which it needs before it can commission onto it.
+
+        THE HUB DOES TOUCH THE PASSWORD, and an earlier version of this file claimed it never would
+        again. It does -- once, to matter-server, which then hands it to a device inside the
+        commissioning session. That is a different thing from what was removed: the old code put it on
+        an unauthenticated BLE link where anything in range could read it. This puts it on the local
+        engine link and lets a reviewed stack deliver it encrypted. Worth stating plainly rather than
+        keeping a tidier sentence that was not true."""
+        ha = getattr(self.hub, "ha", None)
+        if ha is None:
+            raise StripError("This hub is not talking to its engine just now.")
+        try:
+            await ha.send("matter/set_wifi_credentials", network_name=ssid, password=password)
+        except Exception as e:
+            log.warning("strip: could not give Matter the Wi-Fi (%s)", e)
+            if _no_matter(e):
+                raise StripError(NO_MATTER)
+            raise StripError("The hub could not pass your Wi‑Fi on. Try again in a moment.")
+
+    async def commission(self, code: str) -> dict:
+        """Hand it to matter-server, through Home Assistant's own command.
+
+        The code is the one thing this cannot discover, and asking for it here rather than pretending
+        otherwise is the honest shape until somebody decides where it comes from."""
+        if not code:
+            raise StripError("That light strip needs its setup code.")
+        # Checked rather than caught. This used to be `except AttributeError`, which is a net wide
+        # enough to catch a bug of ours -- the radio was being built without a hub, so `self.hub.ha`
+        # raised, and the net turned a wiring mistake into a confident sentence on the wall saying
+        # this hub could not do Matter. It could. A household would have believed the screen.
+        ha = getattr(self.hub, "ha", None)
+        if ha is None:
+            raise StripError("This hub is not talking to its engine just now.")
+        try:
+            return await ha.send("matter/commission", code=code) or {}
+        except Exception as e:
+            # Whatever the engine said was written for a log. The wall gets a sentence -- but WHICH
+            # sentence matters, and the first version of this had only one. It told a household to
+            # check the code and the strip when the real answer was that the house had no Matter
+            # controller running at all, which is not a thing anybody finds by looking at a strip.
+            log.warning("strip: commissioning failed (%s)", e)
+            if _no_matter(e):
+                raise StripError(NO_MATTER)
+            raise StripError("The strip did not take the code. Check it, and that the strip is still lit.")
+
+    async def forget(self, id: str) -> None:
+        return None
+
+
+class Strips:
+    """One job at a time, because it is a person standing in front of a thing."""
+
+    def __init__(self, hub, radio: Radio | None = None):
+        self.hub = hub
+        self.radio = radio or Radio(hub)
+        self.job: dict | None = None
+        self._sub: int | None = None
+        self._dismissed: set[str] = set()      # "not mine": left alone until it is power-cycled
+        self.strips: dict[str, dict] = {}      # what the broker says: id -> {"online", "count", "order"}
+        self._heard: dict[str, dict] = {}      # the last retained value per (id, leaf)
+        self._woke: asyncio.Event | None = None
+        self._task: asyncio.Task | None = None
+
+    # ---- what the panel sees ----
+    def status(self) -> dict:
+        base = {"strips": sum(1 for s in self.strips.values() if s.get("online"))}
+        if not self.job: return {**base, "state": "none"}
+        j = self.job
+        out = {**base, "state": j["state"], "name": j.get("label") or "A light strip"}
+        # The panel says a different sentence for a question being asked again than for one being
+        # asked the first time: somebody who came back already knows what the thing does.
+        if j.get("revisit"): out["revisit"] = j["revisit"]
+        if j["state"] == "working": out["step"] = j["step"]
+        if j["state"] == "order":
+            # Which question is on screen: the first is a yes/no, the second is the three primaries.
+            out["asking"] = "red" if j.get("first") is None else "which"
+        if j["state"] == "length": out["lit"] = j.get("lit", 0)
+        if j["state"] in ("room", "ready"):
+            out["count"] = j.get("count", ASSUMED); out["order"] = j.get("order", ASSUME)
+            out["white"] = bool(j.get("white"))
+        if j["state"] == "room": out["rooms"] = self._rooms()
+        if j.get("text"): out["text"] = j["text"]
+        if j.get("needs"): out["needs"] = j["needs"]
+        return out
+
+    def _rooms(self) -> list:
+        home = getattr(self.hub, "home", None)
+        rooms = getattr(home, "rooms", None) or []
+        return [{"id": getattr(r, "id", None) or r["id"], "name": getattr(r, "name", None) or r["name"]}
+                for r in rooms]
+
+    def _set(self, state, **more):
+        if not self.job: return
+        self.job.update(state=state, **more)
+        self.hub._broadcast(json.dumps({"type": "strip", "strip": self.status()}))
+
+    def _fail(self, text: str) -> dict:
+        self._set("failed", text=text)
+        return self.status()
+
+    # ---- the broker: strips the house already has ----
+    async def listen(self):
+        try:
+            self._sub = await self.hub.ha.subscribe("mqtt/subscribe", self._on_mqtt, topic=f"{BASE}/#")
+        except Exception as e:
+            log.info("strip: no broker view yet (%s)", e)
+
+    def _on_mqtt(self, ev):
+        topic = (ev or {}).get("topic") or ""
+        payload = (ev or {}).get("payload")
+        parts = topic.split("/")
+        if len(parts) < 3 or parts[0] != BASE: return
+        id_, leaf = parts[1], "/".join(parts[2:])
+        self._heard[f"{id_}/{leaf}"] = payload
+        s = self.strips.setdefault(id_, {})
+        if leaf == "status": s["online"] = str(payload).strip() == "online"
+        elif leaf == "count":
+            try: s["count"] = int(str(payload).strip())
+            except ValueError: pass
+        elif leaf == "order": s["order"] = str(payload).strip()
+        # A fill that has reached the end says so itself, so the panel can stop asking somebody to
+        # watch a thing that has finished happening.
+        if self.job and self.job.get("id") == id_ and leaf == "fill":
+            try: self._set("length", lit=int(str(payload).strip()))
+            except ValueError: pass
+        if self._woke and not self._woke.is_set(): self._woke.set()
+
+    async def _tell(self, id_: str, leaf: str, payload: str, retain: bool = False) -> None:
+        try:
+            await self.hub.ha.call("mqtt", "publish", {},
+                                   topic=f"{BASE}/{id_}/{leaf}", payload=payload, retain=retain)
+        except Exception as e:
+            log.info("strip %s: could not say %s (%s)", id_, leaf, e)
+
+    async def _ask(self, id_: str, leaf: str, payload: str, want: str, timeout: float) -> str | None:
+        """Say something and wait for the strip's own answer on `want`. None if it never came."""
+        self._heard.pop(f"{id_}/{want}", None)
+        self._woke = asyncio.Event()
+        await self._tell(id_, leaf, payload)
+        end = time.monotonic() + timeout
+        while time.monotonic() < end:
+            got = self._heard.get(f"{id_}/{want}")
+            if got is not None: return str(got)
+            try: await asyncio.wait_for(self._woke.wait(), timeout=max(0.01, end - time.monotonic()))
+            except asyncio.TimeoutError: break
+            self._woke.clear()
+        return self._heard.get(f"{id_}/{want}")
+
+    # ---- the knock ----
+    async def watch(self, every: float = 20.0):
+        """Look for a strip that is knocking, for as long as the brain is up.
+
+        Not often, and never while a job is running. A BLE scan is a radio going quiet for other
+        things, and the hub is also the Bluetooth end of every OTHER device the house has; a scan
+        loop tight enough to feel instant is a scan loop that costs the house something all day, to
+        catch an event that happens when somebody plugs a thing in and is standing right there."""
+        while True:
+            try:
+                if not self.job: await self.look()
+            except Exception as e:
+                log.info("strip: look failed (%s)", e)
+            await asyncio.sleep(every)
+
+    async def look(self) -> dict:
+        """One scan. A strip that is advertising has never been set up, so anything found is a knock."""
+        if self.job: return self.status()
+        try: found = await self.radio.scan()
+        except StripError as e: return {**self.status(), "text": str(e)}
+        except Exception as e:
+            log.info("strip: scan failed (%s)", e); return self.status()
+        for s in found:
+            if s["addr"] in self._dismissed: continue
+            # No chip here: a Matter advertisement carries a discriminator and not an id of ours.
+            # `id` arrives later, from the broker, if the strip ever finds it (item 2a).
+            self.job = {"state": "knocking", "id": None, "addr": s["addr"],
+                        "discriminator": s.get("discriminator"), "vendor": s.get("vendor"),
+                        "label": self._label(s), "first": None}
+            self._set("knocking")
+            break
+        return self.status()
+
+    @staticmethod
+    def _label(s: dict | None) -> str:
+        """What to call it before anybody has named it. Never the address: a household that is shown
+        a MAC has been handed the inside of the product, and there is nothing to disambiguate anyway
+        -- the thing is two meters of light and it is the only one lit."""
+        return "A light strip"
+
+    async def dismiss(self) -> dict:
+        """Not mine. Needs no code: refusing gives nothing away, and nothing was ever sent."""
+        if self.job: self._dismissed.add(self.job["addr"])
+        self.job = None
+        self.hub._broadcast(json.dumps({"type": "strip", "strip": self.status()}))
+        return self.status()
+
+    async def adopt(self, code: str = "") -> dict:
+        """Yes, that's mine. The first moment anything of the house's moves.
+
+        THE WI-FI IS NOT OURS TO HAND OVER ANY MORE, and that is the whole point of the move to
+        Matter: commissioning carries the credentials itself, encrypted, so the hub never holds them
+        on a strip's behalf and there is no step here that could leak one.
+
+        It does need the setup code, which an advertisement does not carry -- see Radio. Where a
+        household's code comes from is docs/strip.md item 1a and is not decided."""
+        if not self.job or self.job["state"] != "knocking":
+            raise StripError("There is no light strip waiting to be let in.")
+        # The controller cannot commission onto a network it has not been told about, and it is the
+        # house's own Wi-Fi rather than this strip's -- so it is asked once, on the wall, exactly the
+        # way bridge.py asks it, and no strip after this one asks again.
+        wifi = (self.hub.settings.get("wifi") or {}) if hasattr(self.hub, "settings") else {}
+        if not wifi.get("ssid"):
+            self._set("working", step="letting", needs="wifi")
+            return self.status()
+        # A development board's code is public, so nobody should have to read it off a terminal.
+        if not code and self.job.get("vendor") == TEST_VID:
+            code = DEV_CODE
+        self.job["code"] = code
+        self._set("working", step="letting")
+        self._task = asyncio.create_task(self._setup())
+        return self.status()
+
+    async def wifi(self, ssid: str, password: str) -> dict:
+        """The house's Wi-Fi, for the Matter controller: asked once, on the wall, and kept.
+
+        Not handed to a strip. Handed to matter-server, which passes it to a device inside the
+        commissioning session. Every strip after this one is set up without anybody being asked."""
+        if not ssid:
+            raise StripError("Which Wi‑Fi? The name is needed.")
+        self.hub.settings.set(wifi={"ssid": ssid, "pass": password})
+        if not self.job:
+            return self.status()
+        self._set("working", step="letting", needs=None)
+        self._task = asyncio.create_task(self._setup())
+        return self.status()
+
+    async def _setup(self):
+        j = self.job
+        if not j: return
+        try:
+            wifi = (self.hub.settings.get("wifi") or {}) if hasattr(self.hub, "settings") else {}
+            if wifi.get("ssid"):
+                await self.radio.set_wifi(wifi["ssid"], wifi.get("pass") or "")
+            await self.radio.commission(j.get("code", ""))
+            # AND HERE THE SETUP STOPS, FOR NOW, AND IT IS WORTH SAYING WHY RATHER THAN QUIETLY
+            # DOING LESS. Everything after this -- which color comes out first, how far it goes --
+            # is ours and goes over the broker, and needs the strip's chip to address it by. A
+            # Matter advertisement does not carry that, and a commissioned strip only tells us when
+            # it finds our broker, which it cannot do until something has told it where the broker
+            # is. That is docs/strip.md item 2a and it is not designed.
+            #
+            # A strip that gets here is a working Matter light in whatever app commissioned it. It
+            # is our extra half that is missing, not its own.
+            self._set("ready")
+            return
+            # It is on the Wi-Fi now, so everything after this goes over the broker. Wait for it to
+            # say so itself rather than assuming: a strip that joined and cannot find the hub is a
+            # different failure from one that never joined, and the household can fix only one of them.
+            got = await self._ask(j["id"], "hello", "1", want="status", timeout=JOIN_WAIT)
+            if str(got or "").strip() != "online":
+                return self._fail("It joined your Wi‑Fi but never found the hub. Try it nearer the router.")
+            await self._show_red()
+        except StripError as e:
+            self._fail(str(e))
+        except Exception as e:
+            log.exception("strip setup failed")
+            self._fail("Setting that light strip up did not work. Unplug it and try again.")
+
+    # ---- the order the colors come in ----
+    async def _show_red(self):
+        j = self.job
+        r, g, b = probe()
+        # `raw`, not a color: these three bytes go out exactly as given. Putting them through the
+        # strip's mapping would be applying the very guess the question exists to test, and the
+        # firmware refuses to do it for that reason (strip/firmware/src/pixels.h, raw3).
+        await self._tell(j["id"], "show/set", f"raw {r} {g} {b}")
+        self._set("order", first=None)
+
+    async def saw(self, what: str) -> dict:
+        """What the household can see on the strip right now.
+
+        'red' | 'green' | 'blue' answer the color question. 'stripes' is the fourth choice on the
+        board and answers a completely different question: a three-byte frame sent to a strip that
+        carries a separate white channel misaligns by a byte a pixel and comes out as a candy-stripe
+        rather than one color. Nobody has to be taught to give that answer, and it is not a fault.
+        'nothing' is a fault, and goes somewhere else."""
+        if not self.job or self.job["state"] != "order":
+            raise StripError("Nothing is asking about colors just now.")
+        j = self.job
+        what = (what or "").strip().lower()
+        if what == "nothing":
+            return self._fail("Nothing lit up. Check the strip is plugged in at both ends.")
+        if what == "stripes":
+            # Four channels per pixel. Say so, keep the order question open, and ask it again with
+            # frames the strip's own width so the colors mean something.
+            j["white"] = True
+            await self._tell(j["id"], "white/set", "1")
+            await self._show_red()
+            return self.status()
+        seen = {"red": "r", "green": "g", "blue": "b"}.get(what)
+        if not seen: raise StripError("That is not one of the colors it can be showing.")
+        if j.get("first") is None:
+            order = resolve(seen)
+            j["first"] = seen
+            if order: return await self._settled(order)
+            # Still two possible. Make red the FIRST byte this time, which splits whichever pair it is.
+            await self._tell(j["id"], "show/set", "raw 255 0 0")
+            self._set("order")
+            return self.status()
+        order = resolve(j["first"], seen)
+        if not order:
+            return self._fail("That strip is not one this hub knows how to drive.")
+        return await self._settled(order)
+
+    async def _settled(self, order: str) -> dict:
+        j = self.job
+        j["order"] = order
+        await self._tell(j["id"], "order/set", order, retain=True)
+        # Somebody who came back to fix the colors did not ask to be walked through the length again.
+        if j.get("revisit"):
+            self._set("ready")
+            return self.status()
+        return await self._fill()
+
+    # ---- how long it is ----
+    async def _fill(self) -> dict:
+        j = self.job
+        await self._tell(j["id"], "show/set", "fill")
+        self._set("length", lit=0)
+        return self.status()
+
+    async def ends(self) -> dict:
+        """That's the whole of it.
+
+        The firmware latches where the fill had got to the instant it hears this, not when the brain
+        gets round to reading a number back. A person's reaction time is the error that matters here
+        and it is already in the answer; adding a round trip's worth of network on top of it would
+        make a strip measure short by however busy the Wi-Fi was."""
+        if not self.job or self.job["state"] != "length":
+            raise StripError("Nothing is being measured just now.")
+        j = self.job
+        got = await self._ask(j["id"], "fill/stop", "1", want="count", timeout=ANSWER_WAIT)
+        try: n = int(str(got).strip())
+        except (TypeError, ValueError):
+            return self._fail("The strip did not say how long it is. Try that again.")
+        n = max(1, min(MOST, n))
+        j["count"] = n
+        await self._tell(j["id"], "count/set", str(n), retain=True)
+        # A strip that is already in a room keeps it. Asking again would be the panel forgetting
+        # something the household told it once.
+        self._set("ready" if j.get("revisit") else "room")
+        return self.status()
+
+    async def again(self) -> dict:
+        """Start again -- the fill empties and runs once more. Missing it costs nothing."""
+        if not self.job or self.job["state"] != "length":
+            raise StripError("Nothing is being measured just now.")
+        return await self._fill()
+
+    # ---- afterwards ----
+    def each(self) -> list[dict]:
+        """Every strip the house has, for the screen that offers to ask it something again."""
+        return [{"id": i, "online": bool(v.get("online")),
+                 "count": v.get("count"), "order": v.get("order")}
+                for i, v in sorted(self.strips.items())]
+
+    REVISIT = ("colors", "length")
+
+    async def revisit(self, id_: str, what: str) -> dict:
+        """Ask one of the setup questions again about a strip that is already in.
+
+        BOTH ANSWERS GO STALE, and none of the ways are unusual. A strip gets cut down to fit a shelf.
+        Another gets soldered on to reach round a corner. One fails and is replaced by whatever was in
+        stock, which is very often not the same make and therefore not the same channel order. None of
+        that should mean setting the thing up again from the beginning, so this is the same
+        conversation restarted at the question that has gone wrong, and it ends there rather than
+        marching on through the rest of setup. design/strip/Later.dc.html.
+
+        THE COLOR ONE IS NOT A CONVENIENCE. resolve() takes "yes, red" as grb on its odds, which is
+        right almost always and silently wrong on a brg strip -- the household sees colors that are
+        not the ones they asked for and has no word for what is happening. This is the other half of
+        that shortcut. Without it the shortcut is not a shortcut, it is a bug we decided not to fix.
+        """
+        if what not in self.REVISIT:
+            raise StripError("That is not something a light strip can be asked again.")
+        if self.job:
+            raise StripError("Something else is being set up just now. One at a time.")
+        known = self.strips.get(id_)
+        if not known:
+            raise StripError("That light strip is not one this hub knows about.")
+        if not known.get("online"):
+            # Every one of these questions works by lighting the thing up, so there is nothing to
+            # ask and nothing to look at. Saying so is better than opening a sheet that cannot move.
+            raise StripError("That light strip is not answering just now.")
+        self.job = {"state": "none", "id": id_, "label": self._label(known),
+                    "first": None, "revisit": what, "count": known.get("count", ASSUMED)}
+        if what == "colors":
+            await self._show_red()
+        else:
+            await self._fill()
+        return self.status()
+
+    # ---- where it is ----
+    async def put(self, room_id: str) -> dict:
+        if not self.job or self.job["state"] != "room":
+            raise StripError("There is no light strip waiting for a room.")
+        j = self.job
+        j["room"] = room_id
+        await self._tell(j["id"], "room/set", room_id, retain=True)
+        try:
+            await self.hub.strip_placed(j["id"], room_id)
+        except AttributeError:
+            pass
+        self._set("ready")
+        return self.status()
+
+    async def done(self) -> dict:
+        """The sheet has been read. A finished job has nothing left to say, and until the brain is
+        told so it keeps reporting it -- which is somebody pressing OK at a dialog that will not die."""
+        self.job = None
+        self.hub._broadcast(json.dumps({"type": "strip", "strip": self.status()}))
+        return self.status()

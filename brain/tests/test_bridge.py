@@ -7,11 +7,11 @@ of states a person would see: a puck appears and knocks, nothing of the house's 
 say yes, the three steps in order, then the walk, then the count. And the ways it goes wrong that
 have a sentence for the wall: unplugged halfway, a hub with no Wi‑Fi to give.
 """
-import asyncio, json, tempfile, unittest
+import asyncio, json, sqlite3, tempfile, unittest
 from pathlib import Path
 
 from hub import bridge as bridge_mod
-from hub.bridge import Bridges, Cable, network_id
+from hub.bridge import BridgeError, Bridges, Cable, network_id
 from hub.nightlight import Nightlight
 from hub.settings import Settings
 
@@ -26,6 +26,7 @@ class FakeCable:
         self.flashed, self.written = [], []
         self.write_says = {"chip": "c8ebba", "fw": "0.2.0", "state": "set"}
         self.write_fails = None
+        self.write_boom = None      # an exception the house never wrote: a library's, a driver's, SQLite's
         # The image the hub would write, and the manifest beside it. `ships()` puts a version in it;
         # a cable with no manifest is a house that cannot say what it ships, which is its own case.
         self.image = Path(tempfile.mkdtemp()) / "esp32s3-ship.bin"
@@ -45,7 +46,10 @@ class FakeCable:
         self.hello_says[port] = {"chip": "c8ebba", "fw": "0.2.0", "state": "blank"}
     async def write(self, port, cfg):
         self.written.append((port, cfg))
-        if self.write_fails: raise RuntimeError(self.write_fails)
+        # BridgeError, because that is what the real Cable.write raises: a sentence written for
+        # the person standing there, which the job is allowed to put on the screen as it is.
+        if self.write_boom: raise self.write_boom
+        if self.write_fails: raise BridgeError(self.write_fails)
         return self.write_says
 
 
@@ -264,6 +268,22 @@ class TheJob(Knocking):
         run(self.adopt_and_finish())
         s = self.b.status()
         self.assertEqual(s["state"], "failed"); self.assertIn("did not come back", s["text"])
+
+    def test_anything_the_house_did_not_phrase_itself_never_reaches_the_screen(self):
+        """19 Sep 2026, on a real hub: a puck took its firmware and its Wi-Fi, and then the panel
+        said "That did not work. / database is locked" -- SQLite\'s words, about a write to the
+        event log, on a wall. The third time a raw error has reached this screen (see
+        ABoardTheHouseCannotUse and TheWriteThatKeptStopping, both fixed one raise at a time), so
+        this one is held at the boundary: only what the house phrased itself comes through."""
+        self.knock()
+        self.cable.write_boom = sqlite3.OperationalError("database is locked")
+        run(self.adopt_and_finish())
+        s = self.b.status()
+        self.assertEqual(s["state"], "failed")
+        self.assertNotIn("database", s["text"])
+        self.assertNotIn("locked", s["text"])
+        self.assertIn("could not finish setting it up", s["text"])
+        self.assertIn("plug it back into the hub", s["text"])     # and something to do about it
 
     def test_placing_hears_the_broker_then_ready_counts_the_unplaced(self):
         self.knock(); run(self.adopt_and_finish()); run(self.b.listen())

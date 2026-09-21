@@ -1,0 +1,110 @@
+{
+  "artboards": [
+    {
+      "file": "Today.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Today — the receipts"
+    },
+    {
+      "file": "Spine.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "The shape — seven screens, five questions"
+    },
+    {
+      "file": "Frame.dc.html",
+      "x": 0,
+      "y": 1080,
+      "w": 1440,
+      "h": 900,
+      "title": "The frame every question wears"
+    },
+    {
+      "file": "Dock.dc.html",
+      "x": 1560,
+      "y": 1080,
+      "w": 1440,
+      "h": 900,
+      "title": "The way on is never off the screen"
+    },
+    {
+      "file": "Words.dc.html",
+      "x": 0,
+      "y": 2160,
+      "w": 1440,
+      "h": 900,
+      "title": "Three controls that meant the wrong thing"
+    },
+    {
+      "file": "Names.dc.html",
+      "x": 1560,
+      "y": 2160,
+      "w": 1440,
+      "h": 900,
+      "title": "Two screens, or one — the names and the code"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "why",
+      "x": -620,
+      "y": 0,
+      "w": 500,
+      "text": "WHY THIS EXISTS\n\nFirst run is the only screen in the product that everybody sees and nobody sees twice. It is also the only one that was never drawn — the rest of design/ has boards for adding, for rooms, for the weather, for the tones, and first run has a README paragraph.\n\nSo this collection is late: it was drawn AFTER the change, from measurements taken in the browser, which is the wrong order and is why it exists at all.\n\nThe first board is the receipts. Two of the nine screens had a defect that is not a matter of taste, on the exact wall size the product ships on.\n\nNothing here asks the brain to change. Same endpoints, same order, same setup/status. Two files: app/src/Setup.vue and the first-run block of app/src/panel.css."
+    },
+    {
+      "id": "bug",
+      "x": -620,
+      "y": 520,
+      "w": 500,
+      "text": "THE PART THAT IS A BUG, NOT A TASTE\n\nOn a 1280×800 wall — the size mock/shots.mjs itself calls 'kiosk' — the last screen of first run had its only button at y=948. The screen is 800 tall.\n\nThe column scrolls inside .setup, so nothing on the page says there is more of it. A person finishes setting up their house and is looking at a screen with no visible way into it.\n\nThe step before it, 'What's in the house?', put Continue at y=803. Three pixels out of reach.\n\nBoth were found by measuring every screen at the four sizes the project ships to, not by looking at screenshots — a full-page screenshot does not show a fold, which is exactly how this survived."
+    },
+    {
+      "id": "frame",
+      "x": -620,
+      "y": 1080,
+      "w": 500,
+      "text": "THE FRAME\n\nSix slots, always in this order, and every one of them holds its place whether it has anything in it or not. That last part is the whole of it: the eyebrow is rendered empty on the screens with no number, so the heading below it stops hopping 90px between one step and the next under a mode=\"out-in\" transition.\n\nThe column is now the height of the screen with its contents centered — justify-content: safe center. 'safe' is doing real work: a step TALLER than the screen stays pinned to the top where it can be scrolled, instead of having its own heading clipped off above the edge.\n\nBefore this the column was top-anchored at a flat 8vh, which on a 1920×1080 wall left up to 500px of empty landscape under a finished question, and made the whole thing read as a phone form pinned to a wall."
+    },
+    {
+      "id": "dock",
+      "x": 3120,
+      "y": 1080,
+      "w": 500,
+      "text": "THE DOCK\n\nA step that fits is left alone. A step that does not grows a ground at the bottom and the action row rides on it.\n\nWhich of the two happens is MEASURED — a ResizeObserver on the scroller — never inferred from the width. The same step is short on a tall tablet and long on a 1280×800 wall, so a breakpoint would be wrong on one of them.\n\nSticky rather than a fixed footer, because a fixed footer is furniture: there on every screen whether it is needed or not, and costing the same 80px on the one screen that had room for a fifth room chip.\n\nThe ground runs past both sides of the 600px column and well below the fold. Drawn column-width first, it read as a dark slab laid over the step rather than the bottom of the screen."
+    },
+    {
+      "id": "words",
+      "x": -620,
+      "y": 2160,
+      "w": 500,
+      "text": "THREE CONTROLS THAT MEANT THE WRONG THING\n\nNone of these is a layout problem. Each is a control whose appearance meant something other than what it did.\n\nA room the house already has was drawn as a 0.7-opacity copy of a room you had just picked: it read as unavailable, and glancing away you could no longer tell the two apart. Now outlined, filled dark, filled light — already yours, tap to add, just picked.\n\n'Where is home?' offered nothing but 'Keep it' until you had already chosen a place — the screen's whole visible offer was skip.\n\nAnd 'Another room…' carried a magnifying glass on a field that makes a room that did not exist a moment ago.\n\nSix buttons for the whole of first run. If a seventh turns up, the screen is asking for a special case."
+    },
+    {
+      "id": "next",
+      "x": 3120,
+      "y": 2160,
+      "w": 500,
+      "text": "TWO SCREENS, OR ONE\n\nThe fold is cheaper than I said it was. Reading the brain rather than guessing: /setup/pin is pure settings — hub.lock.set() hashes and writes, with no hub.ready() guard and no HA call — so the passcode can be set before the engine exists. Only /setup/owner needs the driver, and it is the thing the 'Building your home…' wait is waiting for.\n\nSo there is no interleaving to get wrong: one screen takes all four answers, sets the passcode instantly, starts the engine, and the wait becomes the last word instead of an interruption between two questions.\n\nTHE COST IS NOT THE WIRING, IT IS THE KEYBOARD. Four fields on one screen, with an IME taking 40% of a phone and more of a tablet in portrait: the code boxes end up under the keys. The docked action row does not help — what has to stay visible is the field being typed into, not the button.\n\nBoard C is the way through: one screen, the code revealed under the names once a name is in, and a focused field that scrolls itself clear of the keyboard. That last part is the whole of the work.\n\nNOT DECIDED. A is not broken, and since welcome stopped promising a number there is nothing here that is actually wrong. The fold is worth doing for the feel, or not at all."
+    }
+  ],
+  "reading": [
+    "why",
+    "Today.dc.html",
+    "bug",
+    "Spine.dc.html",
+    "frame",
+    "Frame.dc.html",
+    "dock",
+    "Dock.dc.html",
+    "words",
+    "Words.dc.html",
+    "Names.dc.html",
+    "next"
+  ]
+}

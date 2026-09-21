@@ -18,24 +18,22 @@ data "cloudflare_zone" "this" {
 # Cloudflare, which would put a cloud back between a person and their light switch and quietly undo
 # the one property everything else rests on. docs/away.md says so under *Rules that do not change*.
 resource "cloudflare_dns_record" "houses_v4" {
-  count = var.relay_ipv4 == "" ? 0 : 1
-
   zone_id = data.cloudflare_zone.this.zone_id
   name    = "*.${var.zone_name}"
   type    = "A"
-  content = var.relay_ipv4
+  content = local.relay_ipv4
   ttl     = 300
   proxied = false
   comment = "Every house. Gray cloud on purpose: proxying would terminate TLS at Cloudflare."
 }
 
 resource "cloudflare_dns_record" "houses_v6" {
-  count = var.relay_ipv6 == "" ? 0 : 1
+  count = local.make_box || var.relay_ipv6 != "" ? 1 : 0
 
   zone_id = data.cloudflare_zone.this.zone_id
   name    = "*.${var.zone_name}"
   type    = "AAAA"
-  content = var.relay_ipv6
+  content = local.relay_ipv6
   ttl     = 300
   proxied = false
   comment = "Every house, over IPv6. Gray cloud for the same reason as the A record."

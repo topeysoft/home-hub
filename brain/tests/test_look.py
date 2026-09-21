@@ -31,14 +31,20 @@ class LookTests(unittest.TestCase):
     def tearDown(self): self.dir.cleanup()
 
     def test_defaults_before_anyone_chooses(self):
-        """A house nobody has touched still has an answer, so a new screen is right first time."""
+        """A house nobody has touched still has an answer, so a new screen is right first time.
+
+        Glass and automatic since 19 Sep 2026: the material that shows the hour without being
+        told one, and `follow`/`auto` for everything that has an answer needing no person."""
         self.assertEqual(self.hub.look, LOOK)
-        self.assertEqual(self.hub.look["feel"], "calm")      # the one thing a person actually picks
-        self.assertEqual(self.hub.look["layout"], "auto")    # and the one the screen answers for itself
+        self.assertEqual(self.hub.look["feel"], "nightfall")   # the one thing a person actually picks
+        self.assertEqual(self.hub.look["face"], "glass")
+        self.assertEqual(self.hub.look["tone"], "follow")      # the tone that reads the light
+        self.assertEqual(self.hub.look["layout"], "auto")      # and the ones the screen answers for itself
+        self.assertEqual(self.hub.look["nav"], "auto")
 
     def test_setting_one_key_leaves_the_others(self):
         self.hub.set_look({"tone": "pastel"})
-        self.assertEqual(self.hub.look, {"feel": "calm", "tone": "pastel", "face": "paper", "layout": "auto", "nav": "auto"})
+        self.assertEqual(self.hub.look, {"feel": "nightfall", "tone": "pastel", "face": "glass", "layout": "auto", "nav": "auto"})
         self.hub.set_look({"layout": "rail"})
         self.assertEqual(self.hub.look["layout"], "rail")
         self.assertEqual(self.hub.look["tone"], "pastel")
@@ -83,7 +89,8 @@ class LookTests(unittest.TestCase):
         self.assertEqual(again.look["layout"], "rail")
         self.assertEqual(again.look["nav"], "top")
         self.assertEqual(again.look["tone"], "warm")
-        self.assertEqual(again.look["feel"], "calm")   # somewhere real to fall back to; the panel calls it adjusted
+        self.assertEqual(again.look["feel"], "nightfall")   # somewhere real to fall back to; the panel calls it adjusted
+        self.assertEqual(again.look["face"], "glass")       # it never chose a material, so it gets the house default
 
 
 if __name__ == "__main__":

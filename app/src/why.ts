@@ -1,8 +1,9 @@
 // SPDX-FileCopyrightText: 2026 Temitope Adeyeri
 // SPDX-License-Identifier: AGPL-3.0-or-later
 /* Words for what the house did on its own. Everything here is rendered from the event log and rules.json; no model. */
-import type { Event, Room, Routine } from './api'
+import { outcomesOf, roomsOf, type Event, type Room, type Routine } from './api'
 import { store, LABELS, deviceById, routineById, cap } from './store'
+import { locale } from './lang'
 
 const cap1 = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 const label = (s: string | null | undefined, home = false) => home && s === 'asleep' ? 'Bedtime' : LABELS[s ?? ''] ?? (s && s !== 'unknown' ? cap1(s) : 'Set')
@@ -27,18 +28,18 @@ export function left(until: number | null | undefined, now = Date.now()): string
   const h = Math.floor(s / 3600), m = Math.round((s - h * 3600) / 60)
   return m ? `${h} h ${m} min` : `${h} h`
 }
-const at = (ts: number) => new Date(ts * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+const at = (ts: number) => new Date(ts * 1000).toLocaleTimeString(locale(), { hour: 'numeric', minute: '2-digit' })
 export function clock(hhmm: string): string {
   const [h, m] = String(hhmm).split(':').map(Number)
   const d = new Date(); d.setHours(h || 0, m || 0, 0, 0)
-  return d.toLocaleTimeString([], m ? { hour: 'numeric', minute: '2-digit' } : { hour: 'numeric' })
+  return d.toLocaleTimeString(locale(), m ? { hour: 'numeric', minute: '2-digit' } : { hour: 'numeric' })
 }
 export function whenText(ts: number, now = Date.now()): string {
   const d = new Date(ts * 1000), t = at(ts)
   const today = new Date(now); today.setHours(0, 0, 0, 0)
   if (d.getTime() >= today.getTime()) return t
   if (d.getTime() >= today.getTime() - 86400000) return `Yesterday, ${t}`
-  return `${d.toLocaleDateString([], { weekday: 'short' })}, ${t}`
+  return `${d.toLocaleDateString(locale(), { weekday: 'short' })}, ${t}`
 }
 
 /* ---------- the rule vocabulary, in sentences ---------- */
@@ -71,14 +72,24 @@ export function condWords(c: any[]): string {
   if (subject === 'home') return op === 'not' ? `unless the house is on ${label(val, true)}` : `while the house is on ${label(val, true)}`
   if (subject === 'presence') return val === 'nobody' ? 'when nobody is home' : 'when someone is home'
   if (subject === 'light') return op === 'below' ? 'when it is dim inside' : 'when it is bright inside'
+  if (subject === 'quiet') {
+    const [, arg, op2, secs] = c.length >= 6 || c.length === 4 ? c : [c[0], null, c[1], c[2]]
+    const ids: string[] = Array.isArray(arg) ? arg : arg ? [arg] : []
+    const where = ids.length ? list(ids.map(id => store.rooms.find(r => r.id === id)?.name ?? id)) : 'the room'
+    return op2 === 'below' ? `if something moved in ${where} in the last ${dur(Number(secs))}`
+                           : `once ${where} ${ids.length > 1 ? 'have' : 'has'} been still for ${dur(Number(secs))}`
+  }
   return ''
 }
 function outcomeWords(r: Routine): string {
-  const th = r.then
-  if ('intent' in th) return r.room === 'home' ? `Sets the whole house to ${label(th.intent, true)}.` : r.room === 'entry' ? `Sets those rooms to ${label(th.intent)}.` : `Sets the room to ${label(th.intent)}.`
-  if ('device' in th) return `${cap1(devName(th.device))}: ${th.action}.`
-  if ('notify' in th) return `Sends a note: “${th.notify}”.`
-  return ''
+  const rooms = roomsOf(r), house = rooms.includes('home')
+  const place = house ? 'the whole house' : rooms.length > 1 || rooms[0] === 'entry' ? 'those rooms' : 'the room'
+  return outcomesOf(r).map(th => {
+    if ('intent' in th) return `Sets ${place} to ${label(th.intent, house)}.`
+    if ('device' in th) return `${cap1(devName(th.device))}: ${th.action}.`
+    if ('notify' in th) return `Sends a note: “${th.notify}”.`
+    return ''
+  }).filter(Boolean).join(' ')
 }
 /** One line under a routine's name: "When there's motion, after dark. Sets the room to Here." */
 export function routineWords(r: Routine): string {
@@ -120,7 +131,12 @@ export function explain(ev: Event): { icon: string; text: string; sub: string } 
     if (ev.source === 'user') return { icon: 'check', text: home ? `The whole house set to ${want} by hand` : `Set to ${want} by hand`, sub: 'Chosen on a panel or phone. Routines leave the room alone for a while after that.' }
     return { icon: 'sparkle', text: `${home ? 'The whole house' : 'The room'} went to ${want}`, sub: `By the hub itself.` }
   }
-  if (ev.kind === 'held') return { icon: 'lock', text: `A routine wanted ${want} but left the room alone`, sub: `${cap1(name)} · someone had used the room by hand${d.until ? `, so it waits until ${at(d.until)}` : ''}` }
+  if (ev.kind === 'held') {
+    const until = d.until ? `, so it waits until ${at(d.until)}` : ''
+    const dev = deviceById(ev.subject)      // a held device outcome names the light; a held intent names the room
+    if (dev) return { icon: 'lock', text: `A routine wanted to turn ${dev.name} ${ev.new} but left it alone`, sub: `${cap1(name)} · someone had used it by hand${until}` }
+    return { icon: 'lock', text: `A routine wanted ${want} but left the room alone`, sub: `${cap1(name)} · someone had used the room by hand${until}` }
+  }
   if (ev.kind === 'shadowed') return { icon: 'sparkle', text: `A routine wanted ${want} but another got there first`, sub: cap1(name) }
   if (ev.kind === 'failed') return { icon: 'refresh', text: "A routine tried but something didn't respond", sub: `${cap1(name)} · ${ev.new ?? ''}`.trim() }
   return { icon: 'sparkle', text: `${home ? 'The whole house' : 'The room'} changed`, sub: ev.kind }

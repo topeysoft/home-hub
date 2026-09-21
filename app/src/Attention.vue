@@ -97,7 +97,7 @@ defineExpose({ updateReady })
   </button>
   <button class="nudge" v-if="store.status?.setup_done && store.status.locked === false" @click="store.sheet = 'code'">
     <span class="nudge-icon"><Icon name="lock" :size="20" /></span>
-    <span class="nudge-text"><span class="nudge-title">Lock the settings</span><span class="nudge-sub">Anyone on the Wi‑Fi can change the house right now. A code keeps the controls open and the settings yours.</span></span>
+    <span class="nudge-text"><span class="nudge-title">Lock the settings</span><span class="nudge-sub">Anyone on the Wi‑Fi can change the house right now. A passcode keeps the controls open and the settings yours.</span></span>
   </button>
   <button class="nudge" v-if="store.ambientLoaded && !store.ambient.location" @click="store.sheet = 'location'">
     <span class="nudge-icon"><Icon name="pin" :size="20" /></span>

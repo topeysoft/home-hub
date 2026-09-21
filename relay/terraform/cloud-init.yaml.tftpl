@@ -1,0 +1,66 @@
+#cloud-config
+# What the box runs, written once at first boot so the server is reproducible rather than
+# remembered. Nothing here is specific to a house: the relay learns names from the hubs that dial
+# in, and forgets them when they go.
+
+package_update: true
+package_upgrade: true
+packages:
+  - docker.io
+
+write_files:
+  # The whole configuration. Two ports and an auth token, and the token is what stops any frpc on
+  # the internet registering a proxy here -- it is the interim answer until the registration service
+  # in docs/service.md checks an entitlement per house instead.
+  #
+  # NOT here, deliberately: any `plugin` line. frp ships an `https2http` plugin that terminates TLS,
+  # and the relay's whole claim -- that it carries bytes it cannot read -- is a property of not
+  # using one. docs/away.md, *What was verified*.
+  - path: /etc/frp/frps.toml
+    permissions: '0600'
+    owner: root:root
+    content: |
+      bindPort = 443
+      vhostHTTPSPort = 443
+
+      auth.method = "token"
+      auth.token = "${auth_token}"
+
+      log.to = "console"
+      log.level = "info"
+
+      # Names are not logged with the bytes: what this box can see is which house, when, and how
+      # much, which is what docs/service.md promises out loud and nothing more.
+      log.maxDays = 7
+
+  - path: /etc/systemd/system/frps.service
+    permissions: '0644'
+    owner: root:root
+    content: |
+      [Unit]
+      Description=frps, the relay
+      After=docker.service
+      Requires=docker.service
+
+      [Service]
+      Restart=always
+      RestartSec=5
+      ExecStartPre=-/usr/bin/docker rm -f frps
+      ExecStartPre=/usr/bin/docker pull fatedier/frps:v${frp_version}
+      ExecStart=/usr/bin/docker run --rm --name frps \
+        --network host \
+        -v /etc/frp/frps.toml:/etc/frp/frps.toml:ro \
+        fatedier/frps:v${frp_version} -c /etc/frp/frps.toml
+      ExecStop=/usr/bin/docker stop frps
+
+      [Install]
+      WantedBy=multi-user.target
+
+runcmd:
+  # Key-only, no root password, no sshd password prompt to brute force.
+  - sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
+  - sed -i 's/^#\?PermitRootLogin.*/PermitRootLogin prohibit-password/' /etc/ssh/sshd_config
+  - systemctl restart ssh || systemctl restart sshd
+  - systemctl enable --now docker
+  - systemctl daemon-reload
+  - systemctl enable --now frps

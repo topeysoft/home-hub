@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2026 Temitope Adeyeri
 # SPDX-License-Identifier: AGPL-3.0-or-later
-import asyncio, json, logging, shutil, time, urllib.parse, urllib.request
+import asyncio, json, logging, re, shutil, time, urllib.parse, urllib.request
 from contextlib import asynccontextmanager
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -14,7 +14,7 @@ from . import ha_setup
 from .ha_adapter import HAAdapter, AuthError
 from . import forecast as forecast_of
 from .model import CONTROLS, Home, kinds_for, kind_of, default_kind
-from .events import EventLog
+from .events import EventLog, asked_by
 from .intents import RoomState, SERVICE, plan, rules_as_data, holds
 from .onboarding import Onboarding
 from .provision import Provision
@@ -25,6 +25,7 @@ from .assistant import Assistant, AssistantError
 from . import notes as notes_mod
 from .updates import Updates
 from .health import Health
+from .happened import Happened, Changes
 from .backup import Backup
 from .network import Network
 from .restart import Restart
@@ -36,6 +37,7 @@ from .settings import Settings, DATA, env_file
 from .lock import Lock, needs_code
 from .pairing import Pairing
 from .bridge import Bridges
+from .strip import Strips, StripError
 from .share import Share
 from .nightlight import Nightlight
 from .relay import Relay
@@ -57,7 +59,11 @@ SERVICE_HEADER = "x-hub-service"   # how the Matter bridge says it is the Matter
 # a house that set its look by hand before feels existed keeps exactly what it
 # chose. "face" was missing from this list, which quietly dropped every Glass a
 # panel ever sent: the panel showed it, the house never kept it.
-LOOK = {"feel": "calm", "tone": "follow", "face": "paper", "layout": "auto", "nav": "auto"}   # nav: where the way around the house lives -- a list down the side, or tabs across the top
+LOOK = {"feel": "nightfall", "tone": "follow", "face": "glass", "layout": "auto", "nav": "auto"}
+# What a house looks like before anybody picks: glass, and automatic for everything that can be --
+# `follow` takes the tone from the light, and layout and nav are the screen's own to work out.
+# nav: where the way around the house lives -- a list down the side, or tabs across the top.
+# A stored key still wins (see self.look below), so this moves only houses that never chose.
 US_ZONES = ("America/New_York", "America/Chicago", "America/Denver", "America/Phoenix", "America/Los_Angeles", "America/Anchorage",
             "America/Juneau", "America/Sitka", "America/Nome", "America/Adak", "America/Boise", "America/Detroit", "America/Menominee",
             "America/Indiana/", "America/Kentucky/", "America/North_Dakota/", "Pacific/Honolulu", "US/")
@@ -90,6 +96,8 @@ class Hub:
         self.ha: HAAdapter | None = None
         self.home = Home()
         self.home.kinds = dict(self.settings.get("kinds") or {})   # what the owner said things are; kept in settings so a restore brings it back with the rest of the house
+        self.home.color_pinned = set(self.settings.get("color_pinned") or [])   # and which lights somebody chose a color for, rather than leaving to the house
+        self.home.room_colors = {k: list(v) for k, v in (self.settings.get("room_colors") or {}).items()}
         self.home.leads = dict(self.settings.get("leads") or {})   # which part of a fan-with-a-light is the tile, where the owner has said (docs/units.md)
         self.log = EventLog(DATA / "events.db")
         self.streams: set[WebSocket] = set()
@@ -97,6 +105,12 @@ class Hub:
         self.location = self.settings.get("location")   # {"name", "lat", "lon"}: chosen in the panel, else HA's config, else HOME_LAT/HOME_LON in .env
         self.entry: list = list(self.settings.get("entry") or [])   # room ids the family comes in through; rules for "entry" run there
         self.look = {**LOOK, **(self.settings.get("look") or {})}   # how the panel looks: one house, one answer, every screen
+        # What language the house is in. One answer for the whole house, like the look and the
+        # location -- not a per-screen preference, because a phone and the wall must not disagree
+        # about what the thermostat's maker calls itself. It is NOT what the panel's own words are
+        # in (those are English); it is what everything the house did not write is asked for in:
+        # HA's integration names and form labels, place names, dates, and the voice.
+        self.language = self.settings.get("language") or "en"
         self.weather = None
         self.forecast = None        # what is coming, asked for rather than watched: forecast.py says why
         self._forecast_task = None
@@ -106,6 +120,7 @@ class Hub:
         self.lock = Lock(self.settings)
         self.pair = Pairing(self)
         self.bridge = Bridges(self)        # a puck on the cable, and the ones the house has
+        self.strip = Strips(self)          # a light strip knocking over Bluetooth: hub/strip.py
         self.net = Network(self)           # how this hub is connected, and what it hands out: docs/network.md
         self.share = Share(self)           # what this house lets a Matter bridge publish: docs/matter.md
         self.share_status: dict = {}       # what the bridge last said about itself (pairing codes, who holds it)
@@ -117,6 +132,8 @@ class Hub:
         self.assistant = Assistant(self)               # writes drafts and explains from the log; never runs anything
         self.updates = Updates(self)                   # which build this is, whether a newer one exists, and the panel's ask
         self.health = Health(self)                     # what needs a look, as sentences
+        self.happened = Happened(self)                 # what the house did while nobody watched
+        self.changes = Changes(self)                   # who changed what, behind the code
         self.backup = Backup(self)                     # the house as one file, and back
         self.restart = Restart(self)                   # turning it off and on again, at the smallest rung that could help
         self.sounds = Sounds(self)                     # noise and rain on a speaker, looped here, with a sleep timer
@@ -148,7 +165,8 @@ class Hub:
                 "owner": (self.settings.get("owner") or {}).get("name"), "home": self.settings.get("home_name"),
                 "location": bool(self.location), "rooms": sum(1 for r in self.home.rooms.values() if r.id != "unassigned"),
                 "devices": len(self.home.devices), "drivers": self.provision.summary(), "problems": self.provision.problems,
-                "locked": self.lock.locked, "version": self.updates.version, "update": self.updates.summary()}
+                "locked": self.lock.locked, "version": self.updates.version, "update": self.updates.summary(),
+                "language": self.language}
 
     def _set(self, driver, reason=""):
         if (driver, reason) == (self.driver, self.reason): return
@@ -218,6 +236,8 @@ class Hub:
         asyncio.create_task(self.provision.refresh())   # look at the driver layer now, not at the next half-minute
         asyncio.create_task(self.sounds.ensure())        # the generated noises, once
         asyncio.create_task(self.bridge.watch())         # what appears on the USB from now on
+        asyncio.create_task(self.strip.listen())         # the strips the house already has
+        asyncio.create_task(self.strip.watch())          # and any that start knocking
         self._broadcast(json.dumps({"type": "home", "home": self.home_dict()}))
         self._broadcast(json.dumps({"type": "ambient", "ambient": self.ambient()}))
         log.info("home: %d rooms, %d devices, weather=%s", len(self.home.rooms), len(self.home.devices), self.weather and self.weather["id"])
@@ -236,10 +256,37 @@ class Hub:
         self._broadcast(json.dumps({"type": "home", "home": self.home_dict()}))
         return self.entry
 
+    KEPT_COLORS = 6
+
+    def keep_color(self, room_id: str, hue: float, amount: float):
+        """Keep a color somebody tuned against the lamps in this room, so it is one tap next time.
+
+        Deliberately explicit rather than read off the event log, which is where the three brightness
+        levels are eventually going. A log fills with every color that was tried and put back; this
+        list only ever holds the ones somebody said to keep."""
+        room = self.home.rooms.get(room_id)
+        if not room or room_id == "unassigned": raise ValueError("no such room")
+        h, a = round(float(hue)) % 360, max(0, min(100, round(float(amount))))
+        # near enough is the same color: a lamp answers with what it managed, not what it was asked
+        kept = [c for c in room.colors if not (min(abs(c[0] - h), 360 - abs(c[0] - h)) <= 8 and abs(c[1] - a) <= 8)]
+        room.colors = ([[h, a]] + kept)[:self.KEPT_COLORS]
+        self.home.room_colors[room_id] = room.colors
+        self.settings.set(room_colors=self.home.room_colors)
+        self.log.add("home", room_id, None, f"{h},{a}", source="user", detail={"kept_color": True})
+        self._broadcast(json.dumps({"type": "home", "home": self.home_dict()}))
+        return room.colors
+
     # ---- setup, driven by the panel ----
-    async def create_owner(self, name: str, home: str):
+    async def create_owner(self, name: str, home: str, language: str = ""):
+        # The engine's own account is made once and carries a language it is never asked for again,
+        # so this is the last moment it can be got right. The panel sends the screen's own language
+        # here rather than anybody being asked for one: nobody sets up a hub in order to answer a
+        # question about locales.
+        if language:
+            try: self.set_language(language)
+            except ValueError: pass   # a browser sent something odd; English is still a fine house
         if self.driver == "fresh":
-            acct = await ha_setup.onboard(self.ha_url, name)
+            acct = await ha_setup.onboard(self.ha_url, name, self.language)
             self.settings.set(ha={"url": self.ha_url, **acct})
             self.log.add("home", "setup", None, "owner created", source="user")
         self.settings.set(owner={"name": name}, home_name=home)
@@ -307,6 +354,23 @@ class Hub:
         self.settings.set(look=self.look)
         self._broadcast(json.dumps({"type": "ambient", "ambient": self.ambient()}))
         return self.look
+
+    def set_language(self, code: str) -> str:
+        """The house's language. A BCP-47 tag -- "en", "pt-BR" -- kept as given but for the primary
+        subtag, which is lowercased so "EN" and "en" are not two languages.
+
+        Onboarding's caches are dropped on the way out: it keeps every integration's form labels by
+        handler, and those were fetched in whatever the language was a moment ago. Without this the
+        Add screen would go on speaking the old language until the brain restarted."""
+        code = (code or "").strip()
+        if not re.fullmatch(r"[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*", code):
+            raise ValueError("That is not a language tag.")
+        parts = code.split("-")
+        self.language = "-".join([parts[0].lower(), *parts[1:]])
+        self.settings.set(language=self.language)
+        self.onboarding._strings.clear(); self.onboarding._names.clear()
+        self._broadcast(json.dumps({"type": "status", "status": self.status()}))
+        return self.language
 
     async def set_location(self, place):
         """Remember the home's location, tell HA (fixes sun.sun), and set up Met.no weather if there is none yet."""
@@ -535,6 +599,14 @@ class Hub:
             # "dim the kitchen lights" reaches a lamp on a plug as an on, because a plug has no 30%, and a
             # brightness sent to switch.turn_on is refused outright. Turning on is the part it can do.
             if dev.kind and dev.kind != dev.capability: data = {}
+            # A light's color is the house's own record and not a service parameter, so it comes off
+            # here rather than going to HA: a bulb at 2700K cannot be told from one somebody set to
+            # 2700K by looking at it, and only the house knows which happened. See art.ts/color.ts.
+            pinned = data.pop("color_pinned", None)
+            if pinned is not None:
+                if pinned: self.home.color_pinned.add(dev.id)
+                else: self.home.color_pinned.discard(dev.id)
+                self.settings.set(color_pinned=sorted(self.home.color_pinned))
             key = (dev.capability.split(".")[0], action)
             if key not in SERVICE: raise ValueError(f"{dev.capability} cannot {action}")
             domain, service = SERVICE[key]
@@ -601,8 +673,10 @@ async def lifespan(app):
     hub._forecast_ticker = asyncio.create_task(hub._forecast_loop())
     hub._update_task = asyncio.create_task(hub.updates.run())
     hub._suggest_task = asyncio.create_task(hub.assistant.run())
+    hub._prune_task = asyncio.create_task(hub.log.run())      # the diary, kept a diary: events.py
     yield
-    for t in (hub._loop_task, hub._tick_task, hub._drivers_task, hub._comfort_task, hub._update_task, hub._suggest_task): t.cancel()
+    for t in (hub._loop_task, hub._tick_task, hub._drivers_task, hub._comfort_task, hub._update_task,
+              hub._suggest_task, hub._prune_task): t.cancel()
     if hub.ha: await hub.ha.close()
 
 
@@ -621,6 +695,11 @@ async def settings_lock(request: Request, call_next):
     request.state.away = from_away(request.headers)   # off the Wi-Fi, or in through the relay: docs/away.md piece 2
     m, path = request.method, request.url.path
     phone = hub.phones.identify(request.cookies.get(COOKIE)) if hub.lock.locked else None
+    # Who is asking, for anything this request writes down. Set before call_next so the copy the
+    # endpoint's task starts with has it, and only ever read for source="user" (events.py). A house
+    # with no code has no phones to tell apart, so it stays unset and the log says nothing rather
+    # than guessing -- which is what `Who changed what` draws its "before the code was set" line from.
+    if phone: asked_by.set(phone["name"])
     let_out = bool(phone and phone.get("remote"))
     if request.state.away and away_refused(m, path, let_out):
         return JSONResponse(away_refusal(phone, let_out), status_code=403)
@@ -691,7 +770,7 @@ async def setup_owner(body: dict):
     name, home = (body.get("name") or "").strip(), (body.get("home") or "").strip()
     if not name: raise HTTPException(400, "A name is needed.")
     if hub.driver not in ("fresh", "ready", "connecting", "needs-login"): raise HTTPException(503, "The hub's engine is not ready yet.")
-    try: await hub.create_owner(name, home or "Home")
+    try: await hub.create_owner(name, home or "Home", (body.get("language") or "").strip())
     except ha_setup.SetupError as e: raise HTTPException(502, str(e))
     return hub.status()
 
@@ -1161,6 +1240,84 @@ async def bridge_wifi(body: dict):
     except ValueError as e: raise HTTPException(400, str(e))
 
 
+# ---------- a light strip, knocking over Bluetooth ----------
+# The state the panel draws and the answers a person gives. design/strip/Spine.dc.html is six beats
+# and these are them. Adopting is behind the code for the same reason a bridge is: until somebody
+# says yes the hub has only heard a thing advertising, and none of the house's keys have gone
+# anywhere. Saying it is NOT yours is open, because refusing gives nothing away.
+@app.get("/strip")
+def strip_status(): return hub.strip.status()
+
+
+@app.post("/strip/adopt")
+async def strip_adopt(body: dict | None = None):
+    """Yes, that one is mine -- with its setup code, which is the one thing an advertisement does not
+    carry and so the one thing somebody still has to hand over. docs/strip.md item 1a."""
+    hub.ready()
+    try: return await hub.strip.adopt(str((body or {}).get("code") or ""))
+    except StripError as e: raise HTTPException(409, str(e))
+
+
+@app.post("/strip/dismiss")
+async def strip_dismiss(): return await hub.strip.dismiss()
+
+
+@app.post("/strip/wifi")
+async def strip_wifi(body: dict):
+    hub.ready()
+    try: return await hub.strip.wifi(str(body.get("ssid") or ""), str(body.get("password") or ""))
+    except StripError as e: raise HTTPException(400, str(e))
+
+
+@app.post("/strip/saw")
+async def strip_saw(body: dict):
+    """What the household can see on the strip: red, green, blue, stripes, or nothing at all."""
+    hub.ready()
+    try: return await hub.strip.saw(str(body.get("saw") or ""))
+    except StripError as e: raise HTTPException(400, str(e))
+
+
+@app.post("/strip/ends")
+async def strip_ends():
+    """That's the whole of it. The strip latches where the fill had got to when it hears this."""
+    hub.ready()
+    try: return await hub.strip.ends()
+    except StripError as e: raise HTTPException(409, str(e))
+
+
+@app.post("/strip/again")
+async def strip_again():
+    hub.ready()
+    try: return await hub.strip.again()
+    except StripError as e: raise HTTPException(409, str(e))
+
+
+@app.post("/strip/room")
+async def strip_room(body: dict):
+    hub.ready()
+    try: return await hub.strip.put(str(body.get("room") or ""))
+    except StripError as e: raise HTTPException(400, str(e))
+
+
+@app.post("/strip/done")
+async def strip_done(): return await hub.strip.done()
+
+
+# Afterwards. Both setup answers go stale -- a strip gets cut down, extended, or replaced by a
+# different make -- and asking again is the same conversation restarted at the question that went
+# wrong. design/strip/Later.dc.html. Reading the list is open, like every other read; asking a strip
+# to light itself up in somebody's room is a change, and is gated.
+@app.get("/strip/list")
+def strip_list(): return {"strips": hub.strip.each()}
+
+
+@app.post("/strip/revisit")
+async def strip_revisit(body: dict):
+    hub.ready()
+    try: return await hub.strip.revisit(str(body.get("id") or ""), str(body.get("what") or ""))
+    except StripError as e: raise HTTPException(409, str(e))
+
+
 # ---------------------------------------------------------------- the network the house runs on
 #
 # docs/network.md. Three verbs and one of them is a read. Reading is open: a household should be able
@@ -1488,6 +1645,13 @@ async def set_location(place: dict):
     return {"ok": True, "weather": weather}
 
 
+@app.post("/language")
+def set_language(body: dict):
+    """The house's language, changed from This hub. Behind the code, like every other change."""
+    try: return {"language": hub.set_language(str(body.get("language") or ""))}
+    except ValueError as e: raise HTTPException(400, str(e))
+
+
 @app.post("/look")
 def set_look(look: dict):
     """The house's own look. Unknown keys are ignored rather than refused, so a
@@ -1500,7 +1664,7 @@ def set_look(look: dict):
 @app.get("/geo/search")
 async def geo_search(q: str):
     """Towns matching a name, from Open-Meteo's free geocoder."""
-    try: r = await asyncio.to_thread(_get_json, f"https://geocoding-api.open-meteo.com/v1/search?name={urllib.parse.quote(q)}&count=6&language=en&format=json")
+    try: r = await asyncio.to_thread(_get_json, f"https://geocoding-api.open-meteo.com/v1/search?name={urllib.parse.quote(q)}&count=6&language={urllib.parse.quote(hub.language.split('-')[0])}&format=json")
     except Exception as e: raise HTTPException(502, f"search unavailable: {e}")
     return [{"name": _place_name([x.get("name"), x.get("admin1"), None if x.get("country_code") == "US" else x.get("country")]),
              "lat": x["latitude"], "lon": x["longitude"], "tz": x.get("timezone")} for x in r.get("results", [])]
@@ -1534,6 +1698,18 @@ async def geo_reverse(lat: float, lon: float):
 # ---------- events, images, actions ----------
 @app.get("/events")
 def get_events(limit: int = 100, subject: str | None = None): return hub.log.recent(limit, subject)
+
+
+# ---------- what happened ----------
+# The catch-up is the household's own house and needs no code, the same way the network page does not:
+# a family should be able to read their own situation without typing anything. Who changed what is the
+# one exception, and lock.needs_code() is where that is said.
+@app.get("/happened")
+def get_happened(): return hub.happened.page()
+
+
+@app.get("/happened/changes")
+def get_changes(limit: int = 200): return hub.changes.page(limit)
 
 
 @app.get("/devices/{device_id}/image")
@@ -1815,6 +1991,14 @@ def phones_remote(request: Request, phone_id: str, body: dict):
     _keys(request)
     try: return hub.phones.set_remote(phone_id, bool(body.get("remote")))
     except KeyError as e: raise HTTPException(404, str(e.args[0]))
+
+
+@app.post("/rooms/{room_id}/colors")
+async def room_keep_color(room_id: str, body: dict):
+    """{"hue": 152, "amount": 62} -- keep a color somebody matched against this room's own lamps."""
+    hub.ready()
+    try: return {"colors": hub.keep_color(room_id, body.get("hue"), body.get("amount"))}
+    except (ValueError, TypeError) as e: raise HTTPException(400, str(e))
 
 
 @app.post("/rooms/{room_id}/intent/{state}")

@@ -77,6 +77,9 @@ container before the Pi's first start so the two do not fight over Ring's token.
 
 ## Layout
 
+- `tools/dev.sh` — the first command to run in a clone, and the one to run after a break: what this
+  is and what to run, or where you left it, and then the panel on a mock house. Nothing below needs
+  to be installed by hand.
 - `install.sh` — the one-command install for the hub host. `driver-layer/radios.sh` finds the Zigbee and
   Z-Wave sticks and starts their containers; a udev rule runs it again whenever a stick is plugged in or pulled.
 - `driver-layer/` — Docker Compose for the whole hub: Home Assistant Core (headless), Mosquitto,
@@ -87,6 +90,10 @@ container before the Pi's first start so the two do not fight over Ring's token.
   log, websocket stream, first-run setup, device discovery. Talks only to HA's websocket and REST.
   Serves `app/dist`. `brain/Dockerfile` packages it with the panel built in.
 - `app/` — Vue PWA for the wall kiosk and phone (`npm run build` → served by the brain).
+- `design/` — the artboards: what a screen should look like, drawn at the size of the real display,
+  before it is code. One directory per area, each with a `canvas.json` placing every board and the
+  note that argues it. `tools/dev.sh design` opens the lot in a browser, on the canvas they were
+  drawn on. A UI change starts here — see [`AGENTS.md`](AGENTS.md#1-a-screen-is-drawn-before-it-is-built).
 - `matter-bridge/` — the house as Apple Home, Google Home and Alexa see it: a Matter bridge (matter.js on Node)
   with one endpoint per shared thing, so this house's lights and plugs become Matter devices in those apps. It
   decides nothing — `brain/hub/share.py` hands it the list, and the rules about what may leave the house have tests
@@ -182,13 +189,46 @@ container before the Pi's first start so the two do not fight over Ring's token.
   being possible the day the servers do. Why the answer is a takeover kit and not a custom Android, which layer
   is actually hard (the loads, not the glass), and where Brilliant and the Wink Relay each land.
   `docs/brilliant.md` is the same hardware from the worst starting position: both panels dead.
+- `docs/happened.md` — What happened: why the answer to "should there be a dashboard" is no and what was built
+  instead. A finding is a span, not an event ("on for ten hours" is the news, and a timeline cannot show it), so
+  what is still true leads with a button each and what is over reads quietly under it. Also the event log's
+  retention — it was append-only and unbounded, on eMMC, riding every backup — and the one scoped rule that keeps
+  a prune from resetting the clocks `health.py` and `rules.seed` read. And `who` asked, which is only ever written
+  for a person.
 - `docs/storage.md` — Storage: why the unit sold runs on eMMC and not NVMe (the finding, so it is not re-argued), and
   the plan for the hub to say months ahead that its storage is wearing out: the host reads the wear once a day, the
   brain turns it into one *Needs a look* line with *Back up* beside it, and *This hub* gets a Storage row.
 - `docs/shipping.md` — Shipping it: why the unit to sell is a Compute Module 5 and not a Pi 5, the staged hardware path
   (Pi 5 kit, CM5 in a partner box, a custom carrier only later), radios on the network rather than USB, and the list of
   what is open on the Wi‑Fi or missing from the appliance layer before a stranger pays, with what can be done today.
+- `docs/service.md` — The relay as a service: why the maker-run relay is the one part of an AGPL project that can be
+  charged for honestly, what is sold (a box, a name, the bytes) and what may never be (any capability in the
+  software), why the entitlement is checked at the relay and never in the hub, and how billing closed the
+  name-squatting question for free.
 - `tools/ha_bootstrap.py` — the old manual bootstrap; the brain's setup screen does this now.
+
+## Starting, and starting again
+
+One command, whether the checkout is an hour old or a month old:
+
+```sh
+tools/dev.sh          # a fresh clone: what this is, what each directory does, what to run.
+                      # a checkout you have worked in: the branch, what is uncommitted, what is
+                      # unpushed, what is stashed, what is still listening. Changes nothing.
+tools/dev.sh up       # installs both halves, then the panel on the mock house — no hub needed
+tools/dev.sh hub      # the same against a real brain, replaced with your code first
+tools/dev.sh check    # what CI runs, minus the browser pass
+```
+
+`up` is the one to live in: `npm run dev:mock` with the install step in front of it, so a clone
+that has never been built and a checkout from three weeks ago start the same way. It checks the
+two floors first (**node 22+, python 3.13+**) and names the version it found, because a `python3`
+that is 3.9 — which is what pyenv or conda often puts first on a Mac — builds a venv happily and
+then fails in the tests in ways that read as bugs in the code.
+
+`hub` goes through `brain/dev.py`, which stops whatever hub is holding :8300 and starts yours: a
+hub left running from before the break serves an older shape of `/home`, and the panel renders it
+without complaint, so it reads as a panel bug.
 
 ## Developing on the Mac (until the Pi arrives)
 

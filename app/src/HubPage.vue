@@ -5,12 +5,14 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { store, notify, installUpdate, restartHub } from './store'
-import { askRestart, askUpdate, checkForUpdate, downloadBackup, getNetwork, getUpdateNotes, listBridges, markNotesRead, setAutoUpdate, type BridgeRow, type NetState, type RestartAsk, type Rung, type UpdateAsk, type UpdateNotes } from './api'
+import { askRestart, askUpdate, checkForUpdate, downloadBackup, getNetwork, getUpdateNotes, listBridges, markNotesRead, setAutoUpdate, setLanguage, type BridgeRow, type NetState, type RestartAsk, type Rung, type UpdateAsk, type UpdateNotes } from './api'
 import Restore from './Restore.vue'
 import AdvancedLink from './AdvancedLink.vue'
 import Drivers from './Drivers.vue'
 import NetworkSheet from './NetworkSheet.vue'
 import BridgeCard from './BridgeCard.vue'
+import Icon from './Icon.vue'
+import { locale, languageName, LANGUAGES } from './lang'
 
 /* This hub: which build it is, whether a newer one exists, a backup to take away and a way to put one back.
    The phones that belong to the house are on the People page: they are about who, not about this computer. */
@@ -193,9 +195,32 @@ const netSub = computed(() => {
   return `${them} given ${b.ssid}.`
 })
 async function loadNet() { try { net.value = await getNetwork() } catch { /* an older hub: the row stays away */ } }
+
+/*
+ * The house's language. Not what the panel's own words are in -- those are English -- but what
+ * everything the house did not write is asked for in: what your devices' makers call themselves on
+ * the Add screen, the place search, the dates, and the voice. The row says exactly that, because a
+ * row called "Language" on a screen still speaking English is a promise nobody meant to make.
+ *
+ * Set from the browser at first run and almost never touched again, so it is a row that shows and
+ * offers Change, like Network -- not a picker sitting open on a settings page.
+ */
+const langOpen = ref(false), langBusy = ref(false)
+const lang = computed(() => store.status?.language || 'en')
+async function pickLanguage(code: string) {
+  if (langBusy.value || code === lang.value) { langOpen.value = false; return }
+  langBusy.value = true
+  try {
+    const r = await setLanguage(code)
+    if (store.status) store.status = { ...store.status, language: r.language }
+    langOpen.value = false
+    notify('The house is in ' + languageName(r.language) + ' now.')
+  } catch (e: any) { notify(e.message, 'error') }
+  langBusy.value = false
+}
 function closeNet() { netOpen.value = false; loadNet() }
 
-const when = (ts?: number | null) => ts ? new Date(ts * 1000).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' }) : ''
+const when = (ts?: number | null) => ts ? new Date(ts * 1000).toLocaleString(locale(), { weekday: 'short', hour: 'numeric', minute: '2-digit' }) : ''
 </script>
 
 <template>
@@ -252,6 +277,19 @@ const when = (ts?: number | null) => ts ? new Date(ts * 1000).toLocaleString([],
         <span class="hub-v">{{ netLine }}<span class="hub-sub line">{{ netSub }}</span></span>
         <button class="button small" v-if="!net.moving" @click="netOpen = true">Change</button>
         <span class="hub-sub" v-else>Moving…</span>
+      </li>
+      <li :class="{ asking: langOpen }">
+        <span class="hub-k">Language</span>
+        <span class="hub-v">{{ languageName(lang) }}
+          <span class="hub-sub line">What your devices&rsquo; makers are called, the place search, the dates and the voice. The house&rsquo;s own words are English for now.</span>
+          <span class="hub-langs" v-if="langOpen">
+            <button v-for="l in LANGUAGES" :key="l.code" class="chip-btn" :class="{ on: l.code === lang }"
+                    :disabled="langBusy" @click="pickLanguage(l.code)">
+              <Icon v-if="l.code === lang" name="check" :size="14" />{{ l.name }}
+            </button>
+          </span>
+        </span>
+        <button class="button small" :class="{ ghost: langOpen }" @click="langOpen = !langOpen">{{ langOpen ? 'Cancel' : 'Change' }}</button>
       </li>
       <li>
         <span class="hub-k">Updates</span>
@@ -336,4 +374,7 @@ const when = (ts?: number | null) => ts ? new Date(ts * 1000).toLocaleString([],
    panel.css: it is three declarations and only this page has them. */
 .was { display: block; margin-top: 0.45em; font-size: 0.92em; opacity: 0.55; }
 .was b { font-weight: 600; margin-right: 0.35em; }
+/* The language list while it is open. Scoped here rather than in panel.css, which is one flat
+   global sheet: a `.langs` in there would be one name away from restyling somebody else. */
+.hub-langs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 </style>

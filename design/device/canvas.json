@@ -98,6 +98,69 @@
       "h": 844,
       "title": "The light, at 390\u00d7844",
       "page": "page-3"
+    },
+    {
+      "file": "PaneToday.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Today \u2014 a color bulb, and nowhere to say so",
+      "page": "page-4"
+    },
+    {
+      "file": "PaneSwatches.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "A \u2014 Swatches",
+      "page": "page-4"
+    },
+    {
+      "file": "PaneWheel.dc.html",
+      "x": 4680,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "B \u2014 The wheel",
+      "page": "page-4"
+    },
+    {
+      "file": "PaneOneSlider.dc.html",
+      "x": 6240,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "C \u2014 One slider",
+      "page": "page-4"
+    },
+    {
+      "file": "PaneAutomatic.dc.html",
+      "x": 3120,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "A \u2014 Automatic, which is where a light starts",
+      "page": "page-4"
+    },
+    {
+      "file": "PaneTuneWheel.dc.html",
+      "x": 7800,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "D \u2014 More colors, on a wheel",
+      "page": "page-4"
+    },
+    {
+      "file": "PaneTuneRigs.dc.html",
+      "x": 9360,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "E \u2014 More colors, on two columns",
+      "page": "page-4"
     }
   ],
   "annotations": [
@@ -204,6 +267,70 @@
       "w": 520,
       "text": "THE SAME PANE, FOLDED\n\nThe panel's own phone rules, unchanged: the pane starts at 16vh rather than 25, the body pads 30/24, the name drops to 34px and the reading to 44.\n\nThe instrument turns on its side -- brightness and warmth become full-width bars, the three levels become a row -- and the day strip becomes one line. Nothing is dropped, which is the test: if a kind's instrument cannot fold into 342px, it is too clever for this house.",
       "page": "page-3"
+    },
+    {
+      "id": "color-why",
+      "x": -820,
+      "y": 0,
+      "w": 520,
+      "text": "SAYING WHAT COLOR, which is the half that is still missing.\n\nThe panel now DRAWS a bulb in the color it is: the card, the light it throws, the pool, the dimmer. What it cannot do is change it. A household with color bulbs still has to open Home Assistant's own screens to make a lamp pink, and that is the one thing the box is not supposed to need.\n\nTHE DEEPER ONE, and any answer here has to fix it. The Warmth column DISAPPEARS when a bulb is in a color mode -- `v-if=\"warmth != null\"`, and a bulb in hs mode reports no color_temp_kelvin. That is Home Assistant's mode system showing through the panel as a control that comes and goes, and the panel is supposed to never surface that vocabulary. Set your lamp to pink and the warmth slider vanishes; there is no way back to white from this screen at all.\n\nAND THE THREE PRESETS LIE. Reading, Evening and Night send a color temperature. Tap one on a pink lamp and it goes white, with nothing on the screen having said it would. Whichever board wins has to answer that too -- it is the same bug wearing a different hat.\n\nTHE CONSTRAINT is LightPane's own note: the columns are 168 wide \"because the hand that reaches for them is not looking -- this is a panel on a wall\". A control that needs a fingertip and a look is the wrong answer here however good it is on a phone.",
+      "page": "page-4"
+    },
+    {
+      "id": "color-today",
+      "x": 0,
+      "y": 960,
+      "w": 700,
+      "text": "TODAY. A trace, not a proposal: this is the shipped pane, opened on the mock's Philips Hue with the bulb in hs mode and set to pink.\n\nThere is a brightness column, three presets that are all whites, and nothing anywhere that says the lamp is pink. No Warmth column either -- see the note to the left; its absence is the mode system leaking.\n\nThe amber is real and it is a gap the display work left: the TILE now carries the bulb's color and the pane does not, so a pink card opens into an amber screen. Small -- the pane needs the same two custom properties the tile sets -- but it should land with whichever of these wins rather than on its own, because what the accent should BE depends on the answer.",
+      "page": "page-4"
+    },
+    {
+      "id": "color-swatches",
+      "x": 1560,
+      "y": 960,
+      "w": 700,
+      "text": "A -- SWATCHES. No wheel, no modes, no precision. Eight colors and the four whites, in one grid, all the same size.\n\nTHE CASE. Nobody standing at a wall panel wants to hunt for a hue; they want the lamp warm for the evening, or red because it is somebody's birthday. These are 62px targets a hand finds without looking, which is the rule the rest of this pane was built to. The eight sit at one chroma and even spacing round the wheel so that no swatch is louder than its neighbour and the row reads as a set rather than a ranking.\n\nAnd it kills the mode leak outright: white is a swatch in the same grid as pink, so a person never learns that their bulb has two modes, never loses a control, and always has a way back to white.\n\nAGAINST. A house that wants one particular shade cannot get it. Twelve answers is all there is, and somebody will want the thirteenth.",
+      "page": "page-4"
+    },
+    {
+      "id": "color-wheel",
+      "x": 4680,
+      "y": 960,
+      "w": 700,
+      "text": "B -- THE WHEEL. Every color the bulb can do, as a third thing you drag beside the two you already drag.\n\nTHE CASE. It is the complete answer, and it is the only one of the three that is. It also sits in the vocabulary the pane already has: brightness is a column you drag, warmth was a column you drag, and this is a disc you drag. Saturation comes for free as distance from the middle, so the one thing swatches cannot express -- a pale wash of a color rather than a saturated one -- is here without a fourth control.\n\nAGAINST, and it is the reason this is not the obvious pick. A wheel wants a fingertip and a look, on the one screen in the house explicitly built for neither. It is also a technical object: a color wheel is what an app for enthusiasts has, and the box is for somebody who does not want one. And it does not fix the mode leak on its own -- the whites still need their own row underneath, so there are still two places to go and a person can still get lost between them.",
+      "page": "page-4"
+    },
+    {
+      "id": "color-oneslider",
+      "x": 6240,
+      "y": 960,
+      "w": 700,
+      "text": "C -- ONE SLIDER. Warmth does not stop at its warm end; it keeps going, round into color. One control where there were two, in the exact shape of the column beside it.\n\nTHE CASE, and it is a product argument rather than a visual one. \"Warmth\" and \"color\" are not two things a person has; they are two MODES a bulb has, which is Home Assistant's idea and not the household's. Put them on one track and nobody ever learns the difference: you slide toward the warm end for lamplight and past it for a color, the control never disappears, and the way back to white is the way you came. That is the mode leak not worked around but gone.\n\nIt is also the only one that costs no new gesture. The pane already teaches this drag twice.\n\nAGAINST. Saturation has nowhere to live -- every color on this track is at one chroma, so it can say pink but not a pale dusty pink. And the whites are a band in the middle of a strip whose two ends are colors, which is a real thing to look at and understand; the label carries more weight here than on either of the others.",
+      "page": "page-4"
+    },
+    {
+      "id": "color-automatic",
+      "x": 3120,
+      "y": 960,
+      "w": 700,
+      "page": "page-4",
+      "text": "AUTOMATIC -- the answer for the household that does not want to pick one, and the state a light is in until somebody does.\n\nTwelve swatches with no way to say \"I don't mind\" makes not-choosing into a non-state: a bulb would sit at whatever color it happened to be, which nobody chose and nothing explains. This is the same shape the panel already uses everywhere else it can avoid asking -- layout and nav are `auto` because the screen knows better than the person tapping, and the default tone is `follow` because the light outside is a better answer than a preference.\n\nWHAT IT MEANS is already named. \"Follow the light -- cool and open by day, lamplit after sunset\" is the tone's own wording, and a lamp on Automatic does that with its white: the house drives color_temp_kelvin off the same curve every card already holds its distance from. A bulb that cannot change its white simply stays on and Automatic is the only entry it has.\n\nIT IS ALSO THE DEFAULT, and that is the point rather than a convenience. A house out of the box has nobody who has opened this pane; every lamp in it is on Automatic and warms after sunset without anyone having asked, which is the whole promise of the box. Picking a swatch is what TAKES a light off it, and picking Automatic again is how you give it back.\n\nTHE DECISION THIS FORCES, and it should be made before it is built: the house would now be changing bulbs nobody touched. That is not new -- rooms already move by rule, `set_by: \"rule:...\"`, and why.ts already says \"by a routine\" with a Why? beside it -- so the machinery for making it visible and attributable exists. What has to be true is that a lamp that retunes itself says so on the card, in that same line, or it is a light changing on its own in somebody's living room with no account of why."
+    },
+    {
+      "id": "color-thirteenth",
+      "x": 7800,
+      "y": 960,
+      "w": 700,
+      "page": "page-4",
+      "text": "THE THIRTEENTH COLOR. A's own note said somebody would want it, and there are two of them.\n\nOne: the color you want is not one of the twelve. Two, and it is the sharper one: the color you want IS one of the twelve, and the lamp does not show it. A bulb's idea of pink is not the swatch's pink -- rendering varies by make, by model, by how warm the phosphor has gone -- so a preset is an instruction, not a result. The person is not picking a color out of a space, they are matching one against the thing glowing in the room.\n\nThat second case decides the shape. Both boards put what the LAMP IS SHOWING at the top, beside the way back, and say to nudge until it matches the room. It is not a color picker with a preview; it is a dial you turn while looking at the lamp, and the swatch at the top is the readout rather than the target.\n\nAND IT GETS KEPT. A color somebody tuned by eye against their own bulb is worth more than any preset, and asking them to find it twice is the real failure. \"Add to this room's colors\" puts it in the grid, which is also where LightPane already says it is going: the three levels are \"fixed for now and deliberately few; what they should eventually be is what THIS lamp keeps being set to, which the event log already knows\". Same argument, same log.\n\nSo A is not twelve answers. It is twelve to start with, a way through to all of them, and a grid that grows into the house's own."
+    },
+    {
+      "id": "color-tune-rigs",
+      "x": 9360,
+      "y": 960,
+      "w": 700,
+      "page": "page-4",
+      "text": "E -- TWO COLUMNS instead of the disc, and the case is the one this pane already made for itself.\n\nLightPane's own note: the columns are 168 wide \"because the hand that reaches for them is not looking -- this is a panel on a wall\". A disc breaks that. A dot on a disc has to be AIMED: two axes at once, with a fingertip, on a screen somebody is standing in front of rather than holding. Two columns are two drags, each in one direction, each the same gesture the pane teaches for brightness and taught for warmth.\n\nIt is also better at the job that matters here. Matching a lamp by eye is nudging -- a little warmer, a little less of it -- and a one-dimensional track is something you can nudge. On the disc the same correction is a small diagonal move that changes both things at once, which is why D has to carry four nudge buttons to be usable and this does not.\n\nWHAT IT GIVES UP is the picture. A disc SHOWS you the space: you can see that there is a teal over there and wander to it. Two columns are exact and blind -- you cannot browse them, you can only tune. Which is right depends on whether the thirteenth color is one somebody is looking for or one they already have in mind, and the second case above says it is usually the second."
     }
   ],
   "launch": {
@@ -222,6 +349,10 @@
     {
       "id": "page-3",
       "name": "On a phone"
+    },
+    {
+      "id": "page-4",
+      "name": "Saying what color"
     }
   ]
 }

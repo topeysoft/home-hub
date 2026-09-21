@@ -1,0 +1,67 @@
+{
+  "artboards": [
+    {
+      "file": "Today.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Today \u2014 six chips, and none of them is a season"
+    },
+    {
+      "file": "Occasion.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Christmas is a chip, and the house does it"
+    },
+    {
+      "file": "Drift.dc.html",
+      "x": 3120,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Movement \u2014 one control, and the menu it is instead of"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "why",
+      "x": -620,
+      "y": 0,
+      "w": 500,
+      "text": "WHY THIS EXISTS\n\nFrom \"these are addressable, they can do effects -- Christmas, festive periods -- should we design for that?\". The answer that came back first was no, and it was aimed at the wrong thing: no to a dropdown of eighty named animations, which wrongly swept up a real case with it.\n\nSplitting the word settles most of it. THREE things were hiding under \"effects\". Ambient motion, which is not an effect at all but a way for a light to be. Occasions -- Christmas, Halloween, a birthday, a team's colors -- which are seasonal and house-wide. And the zoo: strobe, meteor, fire, rainbow cycle.\n\nThe second is the one worth building, and the board for it is not on the strip. This collection lives apart from design/strip/ on purpose: an occasion is a house feature that a strip happens to serve better than a bulb, and drawing it inside the strip's collection would have been the mistake it argues against."
+    },
+    {
+      "id": "today",
+      "x": -620,
+      "y": 380,
+      "w": 500,
+      "text": "TODAY -- AND THE GAP IS THE POINT\n\nEvery scene chip the panel has, drawn from store.ts: two for the house (Bedtime, Everything off) and four for a room (Movie, Guests, Sleep, All off). Six, and that is all of them.\n\nThey share one idea. Get ready to do a thing, or stop doing it -- watch a film, go to bed, leave the house. Not one is about how the house FEELS, and none has a season in it. There is nowhere in this vocabulary for \"it is December\" to go, which is the whole finding.\n\nThe materials are already here, though, and that is what makes this cheap. A room remembers the colors it has been set to (room_colors, api.py:1914) and the swatches shipped last week. What is missing is a reason to put a set of them on the whole house at once."
+    },
+    {
+      "id": "occasion",
+      "x": 3120,
+      "y": 0,
+      "w": 500,
+      "text": "CHRISTMAS IS A CHIP\n\nOne more in the bar the household already uses, and one tap does the house.\n\nWHY NOT ON THE STRIP, which is the obvious place and the wrong one: make it a strip setting and somebody has to walk to every strip and set each one, while the color-capable bulbs and switches never join in at all. Make it a house occasion and the strip is simply the best renderer of it -- alternating along its run, pooling at one end -- because it is the only thing in the house with pixels. The strip is not getting a feature. The house is.\n\nTHE HALLWAY CARD IS THE ONE TO LOOK AT. A light that cannot do color says so, in the room, rather than being skipped in silence -- an occasion that quietly does nothing in two rooms reads as a broken occasion. And the bedroom card is the other half of the same rule: an occasion turns nothing ON that was not already on, because a house that lights itself up at midnight because it is December is a house nobody trusts again.\n\nOPEN: who authors one. The board deliberately shows a shipped occasion and no editor. \"Keep this\" already exists for a room's colors and is the obvious seed, but an authoring screen for a feature used three weeks a year is the failure mode named on the board, and it should stay unbuilt until somebody asks twice."
+    },
+    {
+      "id": "drift",
+      "x": 4680,
+      "y": 0,
+      "w": 500,
+      "text": "MOVEMENT -- ONE CONTROL, AND THE MENU IT IS INSTEAD OF\n\nThe third thing under the word: not an occasion, and not a trick. Still, Drifting, Candlelight -- three ways for the color the household already chose to BE. None of them takes that color away, which is exactly what an effect does, and is the line between the two halves of this board.\n\nThe right-hand panel is real names from the firmware everybody builds on. They are not bad engineering; they are a COMPONENT's vocabulary, and half of them cannot be told apart without trying each one, which is what makes it a menu rather than a choice. Drawing it beside the control is the argument -- the two cannot be compared in prose, and the prose version of this lost an argument earlier in the same conversation.\n\nWHERE IT RUNS, AND THE REUSE THAT FALLS OUT. Firmware holds these three, because they must survive the hub going down -- a strip that goes flat when the broker blinks is the exact fault design/strip/ is built to avoid. Everything else the brain streams, over the same path a television picture would need. So occasions are software on one hub rather than an update to every strip in every house, and the effects engine and the picture follower turn out to be one pipe. That is a reason to build the streaming path earlier than it looked worth doing."
+    }
+  ],
+  "reading": [
+    "why",
+    "today",
+    "Today.dc.html",
+    "occasion",
+    "Occasion.dc.html",
+    "drift",
+    "Drift.dc.html"
+  ]
+}

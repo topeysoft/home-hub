@@ -1,0 +1,106 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><script src="./support.js"></script></head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200;300;400;500;600;700&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin:0; font-family:"Plus Jakarta Sans", system-ui, sans-serif; -webkit-font-smoothing:antialiased;
+      --ink:#f1eee8; --ink-2:#b9b5ad; --ink-3:#7f7d77; --rim:linear-gradient(158deg, rgba(255,255,255,.683), rgba(255,255,255,.08) 34%, rgba(14,14,22,.05) 62%, rgba(255,255,255,.393)); --drop:0 27px 61px -26px rgba(17,19,28,.666), 0 2px 10px rgba(17,19,28,.32); --inner:inset 0 -46px 56px -48px rgba(22,25,33,.9); }
+    .gl { backdrop-filter: blur(26px) saturate(1.61) brightness(1.043); box-shadow: var(--inner), var(--drop); }
+    .gl::after { content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+      padding:1.4px; background:var(--rim);
+      -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite:xor;
+      mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite:exclude; }
+    .gl::before { content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+      background:linear-gradient(112deg, transparent 26%, rgba(255,255,255,.14) 45%, rgba(255,255,255,.02) 56%, transparent 64%); }
+    .cap { font-size:12px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-3); }
+    .tag { display:inline-flex; align-items:center; height:26px; padding:0 12px; border-radius:999px;
+      font-size:10px; font-weight:700; letter-spacing:.13em; text-transform:uppercase;
+      background:rgba(255,255,255,.16); color:rgba(255,255,255,.88); }
+  </style>
+</helmet>
+
+<!-- THREE STATES -- what a screen cannot show, because it is only ever in one of them.
+     Same hour, same pane, same dial. Only hvac_action moves. The two colors are the
+     ones panel.css already declares in its --tint table; what changes is that the
+     ACTION selects them instead of the mode. -->
+
+<div style="position:relative;width:1080px;height:520px;overflow:hidden;background:#141527;color:var(--ink);font-size:17px;">
+  <div style="position:absolute;inset:0;background:linear-gradient(rgb(33,38,51) 0%, rgb(45,47,69) 44%, rgb(98,69,65) 84%, rgb(63,44,42) 100%);"></div>
+  <div style="position:absolute;left:-200px;top:-120px;width:1500px;height:800px;background:radial-gradient(58% 54% at 30% 64%, rgba(75,66,139,.4), transparent 68%), radial-gradient(44% 42% at 74% 12%, rgba(72,58,67,.26), transparent 70%), radial-gradient(62% 52% at 54% 110%, rgba(58,54,104,.44), transparent 72%), radial-gradient(74% 64% at 6% 2%, rgba(23,26,35,.5), transparent 72%);"></div>
+  <div style="position:absolute;inset:0;background:linear-gradient(rgba(12,13,16,.3) 0%, rgba(12,13,16,.52) 45%, rgba(12,13,16,.8) 100%);"></div>
+  <div style="position:absolute;left:36px;top:24px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);">One thermostat · mode unchanged · hvac_action moves</div>
+  
+  <div style="position:absolute;left:36px;top:64px;width:238px;">
+    <div class="cap" style="margin-bottom:12px;">hvac_action: cooling</div>
+    <div class="gl" style="position:relative;width:238px;height:286px;border-radius:28px;overflow:hidden;background:linear-gradient(148deg, oklch(.407 .014 280 / .34), oklch(.337 .012 280 / .12) 46%, oklch(.367 .014 280 / .24));">
+      <div style="position:absolute;inset:0;background:radial-gradient(86% 64% at 72% 16%, rgba(122,176,232,.34), transparent 64%), radial-gradient(60% 46% at 24% 104%, rgba(122,176,232,.2), transparent 70%);"></div>
+      
+    <div style="position:absolute;left:18px;top:18px;right:18px;display:flex;align-items:center;gap:12px;">
+      <span style="width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:rgba(255,255,255,.08);color:var(--ink-2);">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.6 19.3 7.8v8.4L12 20.4 4.7 16.2V7.8z"/><circle cx="12" cy="12" r="3"/></svg></span>
+      <span style="font-size:19px;font-weight:500;">Thermostat</span>
+    </div>
+    <div style="position:absolute;left:14px;right:14px;top:92px;display:flex;align-items:center;justify-content:space-between;">
+      <span style="width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.1);display:grid;place-items:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg></span>
+      <span style="font-size:54px;line-height:1;letter-spacing:-.025em;">71<span style="font-size:21px;vertical-align:super;">°F</span></span>
+      <span style="width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.1);display:grid;place-items:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>
+    </div>
+    <div style="position:absolute;left:18px;right:18px;top:162px;font-size:13.5px;color:var(--ink-2);">
+      Currently 74°F · Cooling · 48% humidity
+    </div>
+      <div class="tag" style="position:absolute;left:14px;bottom:14px;background:rgba(122,176,232,.9);color:#0d1a26;">Cooling</div>
+    </div>
+    <div style="margin-top:14px;font-size:13.5px;color:var(--ink-2);line-height:1.45;">Blue, and it earns it: something is running. Today this is also blue, by accident — the mode happens to agree.</div>
+  </div>
+  
+  <div style="position:absolute;left:420px;top:64px;width:238px;">
+    <div class="cap" style="margin-bottom:12px;">hvac_action: idle</div>
+    <div class="gl" style="position:relative;width:238px;height:286px;border-radius:28px;overflow:hidden;background:linear-gradient(148deg, oklch(.407 .014 280 / .34), oklch(.337 .012 280 / .12) 46%, oklch(.367 .014 280 / .24));">
+      
+      
+    <div style="position:absolute;left:18px;top:18px;right:18px;display:flex;align-items:center;gap:12px;">
+      <span style="width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:rgba(255,255,255,.08);color:var(--ink-2);">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.6 19.3 7.8v8.4L12 20.4 4.7 16.2V7.8z"/><circle cx="12" cy="12" r="3"/></svg></span>
+      <span style="font-size:19px;font-weight:500;">Thermostat</span>
+    </div>
+    <div style="position:absolute;left:14px;right:14px;top:92px;display:flex;align-items:center;justify-content:space-between;">
+      <span style="width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.1);display:grid;place-items:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg></span>
+      <span style="font-size:54px;line-height:1;letter-spacing:-.025em;">71<span style="font-size:21px;vertical-align:super;">°F</span></span>
+      <span style="width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.1);display:grid;place-items:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>
+    </div>
+    <div style="position:absolute;left:18px;right:18px;top:162px;font-size:13.5px;color:var(--ink-2);">
+      Currently 74°F · Holding · 48% humidity
+    </div>
+      <div class="tag" style="position:absolute;left:14px;bottom:14px;">Holding</div>
+    </div>
+    <div style="margin-top:14px;font-size:13.5px;color:var(--ink-2);line-height:1.45;">Drained to the pane. Today this is <b>still fully blue</b>, which is the case that is wrong and the one a thermostat is in most of the day.</div>
+  </div>
+  
+  <div style="position:absolute;left:804px;top:64px;width:238px;">
+    <div class="cap" style="margin-bottom:12px;">hvac_action: heating</div>
+    <div class="gl" style="position:relative;width:238px;height:286px;border-radius:28px;overflow:hidden;background:linear-gradient(148deg, oklch(.407 .014 280 / .34), oklch(.337 .012 280 / .12) 46%, oklch(.367 .014 280 / .24));">
+      <div style="position:absolute;inset:0;background:radial-gradient(86% 64% at 72% 16%, rgba(233,150,90,.34), transparent 64%), radial-gradient(60% 46% at 24% 104%, rgba(233,150,90,.2), transparent 70%);"></div>
+      
+    <div style="position:absolute;left:18px;top:18px;right:18px;display:flex;align-items:center;gap:12px;">
+      <span style="width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:rgba(255,255,255,.08);color:var(--ink-2);">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.6 19.3 7.8v8.4L12 20.4 4.7 16.2V7.8z"/><circle cx="12" cy="12" r="3"/></svg></span>
+      <span style="font-size:19px;font-weight:500;">Thermostat</span>
+    </div>
+    <div style="position:absolute;left:14px;right:14px;top:92px;display:flex;align-items:center;justify-content:space-between;">
+      <span style="width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.1);display:grid;place-items:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg></span>
+      <span style="font-size:54px;line-height:1;letter-spacing:-.025em;">71<span style="font-size:21px;vertical-align:super;">°F</span></span>
+      <span style="width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.1);display:grid;place-items:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>
+    </div>
+    <div style="position:absolute;left:18px;right:18px;top:162px;font-size:13.5px;color:var(--ink-2);">
+      Currently 74°F · Heating · 48% humidity
+    </div>
+      <div class="tag" style="position:absolute;left:14px;bottom:14px;background:rgba(233,150,90,.9);color:#0d1a26;">Heating</div>
+    </div>
+    <div style="margin-top:14px;font-size:13.5px;color:var(--ink-2);line-height:1.45;">Warm. Today a heat pump on Auto doing this is <b>green</b> — 160,200,170 — because Auto is the mode it was set to.</div>
+  </div>
+</div>
+</x-dc>
+</body></html>

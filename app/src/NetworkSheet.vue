@@ -282,7 +282,7 @@ onUnmounted(() => window.removeEventListener('keydown', key))
 .nets { list-style: none; margin: 0 0 4px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .net {
   display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
-  padding: 11px 14px; border-radius: 16px;
+  padding: 11px 14px; border-radius: var(--r-md);
   background: var(--surface); border: 1px solid var(--edge); cursor: pointer;
 }
 .net.here { opacity: 0.55; cursor: default; }

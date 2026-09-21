@@ -1,4 +1,22 @@
 {
+  "pages": [
+    {
+      "id": "page-1",
+      "name": "The face"
+    },
+    {
+      "id": "page-2",
+      "name": "Can it be warmed?"
+    },
+    {
+      "id": "page-3",
+      "name": "The cards"
+    },
+    {
+      "id": "page-4",
+      "name": "How the row sits"
+    }
+  ],
   "artboards": [
     {
       "file": "Main.dc.html",
@@ -64,6 +82,105 @@
       "h": 900,
       "title": "Pastel",
       "page": "page-2"
+    },
+    {
+      "file": "CardToday.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Today \u2014 what ships",
+      "page": "page-3"
+    },
+    {
+      "file": "CardVivid.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Vivid \u2014 the board's painted cards, as a fifth tone",
+      "page": "page-3"
+    },
+    {
+      "file": "CardEmitted.dc.html",
+      "x": 3120,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Emitted \u2014 the lights carry their own color",
+      "page": "page-3"
+    },
+    {
+      "file": "CardBoth.dc.html",
+      "x": 6240,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Both \u2014 emitted lights, over a pane that takes a tint",
+      "page": "page-3"
+    },
+    {
+      "file": "CardActing.dc.html",
+      "x": 4680,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Acting \u2014 the color is what the house is doing",
+      "page": "page-3"
+    },
+    {
+      "file": "ActingStates.dc.html",
+      "x": 4680,
+      "y": 1720,
+      "w": 1080,
+      "h": 520,
+      "title": "Three states, one thermostat",
+      "page": "page-3"
+    },
+    {
+      "file": "ActingLoud.dc.html",
+      "x": 4680,
+      "y": 2440,
+      "w": 1120,
+      "h": 1160,
+      "title": "Can you read it from the sofa?",
+      "page": "page-3"
+    },
+    {
+      "file": "ClimateDial.dc.html",
+      "x": 4680,
+      "y": 3760,
+      "w": 1420,
+      "h": 780,
+      "title": "Does the dial fit on the card?",
+      "page": "page-3"
+    },
+    {
+      "file": "RowFlush.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Flush \u2014 as it ships",
+      "page": "page-4"
+    },
+    {
+      "file": "RowInset.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Inset \u2014 the pair is the tallest thing",
+      "page": "page-4"
+    },
+    {
+      "file": "RowAnchored.dc.html",
+      "x": 3120,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Anchored \u2014 three heights, not two",
+      "page": "page-4"
     }
   ],
   "annotations": [
@@ -122,6 +239,110 @@
       "w": 480,
       "page": "page-2",
       "text": "CAN NIGHTFALL BE WARMED?\n\nToday it cannot, and the Look page does not admit it. glassVars() takes an elevation and a condition and no tone at all, so on the glass face Warm, Cool and Pastel resolve to an identical pane -- measured: all three come out at oklch(0.573 ... 242). But LookPage renders all four tone rows unconditionally under a heading that says \"Cards\", with swatches built from toneVars() that ignore the face. So the swatches show four different colors, tapping one changes nothing, and the footer says \"the tone sets which way they lean\", which on this face is false.\n\nTHE PRINCIPLE THESE BOARDS ARE DRAWN ON\n\nThe tone leans the PANE, never the SKY. The sky is real -- it tracks the hour and the weather, and every card and pane in the system holds its distance from ground(). Warming it would make every distance in the system a lie, and it would be a lie about the weather. The glass is a made object, and what a made object is tinted with is a choice. So on all four boards the field, the house, the hour and the arrangement are identical, and the only thing that moves is what the pane is made of.\n\nWHAT MOVES, EXACTLY\n\nAt 7:40 pm the pane resolves to gL 0.327 at the sky's own hue, 281, with chroma .012-.014 -- near enough neutral. A tone rewrites the hue and raises the chroma to about .045, which is the least that reads as a tint rather than as a rendering artifact. Pastel does one thing more: on paper its whole character is a much lighter card (dL .335 against .135), so here it is a milkier pane -- lifted about .10 and carried at .48/.24/.40 rather than .34/.12/.24 -- and not merely a bluer one. The lamp, the live green and the danger red do not move on any board, because they are signals.\n\nTHE ONE OPEN QUESTION\n\nWhat should \"Follow the light\" do here? On paper it is pastel by day and warm after sunset. If it did that on glass too, every existing Nightfall house would look different after dark tomorrow -- a change to the default, not a repair of a dead control. The boards leave Follow exactly as it is: the pane takes the sky's own hue, and only the three named tones lean it. That way nobody's house changes unless they asked."
+    },
+    {
+      "id": "cards-lead",
+      "x": -560,
+      "y": 0,
+      "w": 480,
+      "text": "WHY IS THE SHIPPED SCREEN FLAT, WHEN THE BOARD IS NOT?\n\nPage 1 draws two painted cards -- a mint camera and a pink thermostat, ground L + .30 at hue 178 and 328, chroma .078. Nothing like them reaches the panel, and the reason is not one decision but two things stacked.\n\nFirst, the port defined a face as what the panel is MADE OF, not what is on it. Material, motion, the pane, the floor and the Wall arrangement all landed. The painted cards were never in a slice, so nobody rejected them -- they fell outside the definition and nobody went back.\n\nSecond, the glass face repaints every plain tile with --glass, and glass is near-neutral by design: chroma .014, ground L + .10. The tone control does work on it (LEANS, 17 Sep), but `follow` is deliberately left out of that table, and Nightfall IS glass + follow. So the default look is the most neutral combination the system can produce.\n\nAnd no tone can get to the board. A tone leans the whole material ONE way; the board has two different hues on two adjacent cards. toneVars only carries hues for `light` and `lock`.\n\nFour boards. Same sky, same hour, same house, same arrangement. The cards are the only thing that moves. Every number is read out of sky.ts, tone.ts and art.ts at ground(-4, 'cloudy') -- L .2373, C .0236, H 280 -- so nothing here is a color somebody liked.",
+      "page": "page-3"
+    },
+    {
+      "id": "cards-today",
+      "x": 0,
+      "y": 950,
+      "w": 460,
+      "text": "TODAY. Drawn from the shipped panel, not from memory of it: screenshot the Wall home at 1440x900 with ?face=glass&layout=wall and this is what comes back.\n\nThe camera and the thermostat are the same pane as everything else. The thermostat keeps its cooling blue, but only in the ring -- the card around it is neutral. One thing on the screen is painted: a light that is on, which keeps --card-light through the glass rules (panel.css, `[data-face='glass'] .tile.light`).\n\nLook at the two light cards. One bulb is pink and one is teal. They are drawn in the same amber, because art.ts paints every lamp with a fixed #fbeed6 and ArtState has no color field at all. That is not a tone problem and no tone fixes it.",
+      "page": "page-3"
+    },
+    {
+      "id": "cards-vivid",
+      "x": 1560,
+      "y": 950,
+      "w": 460,
+      "text": "VIVID -- the board's own answer, as a fifth tone beside Warm, Cool and Pastel.\n\ndL .30 and C .078, quieted to .071 by this sky's own chroma the way toneVars already quiets every tone. The shape is nothing new: the tone axis carries exactly these two numbers, and Pastel is already dL .335. What IS new is a hue per kind -- 178 for the camera, 328 for the climate card -- where WARM_HUES and COOL_HUES hold only `light` and `lock`.\n\nTHE CASE AGAINST, corrected. The first draft of this note said painting the thermostat pink breaks the cooling signal, because tone.ts says a card colored by --tint does not get overpainted. Measured, that objection is weaker than it looked: --tint is selected by the MODE, not by hvac_action (ClimateTile binds :class=\"[mode, ...]\"), so a thermostat holding at temperature is already fully blue with nothing running, and a heat pump on Auto is green whatever it is doing. There is less working signal here to protect than the rule implies. See Acting, two boards along.\n\nWhat stands against it instead: the hue is assigned rather than meant. 178 is mint because a reference render had a mint card in that position, and it will be mint on a camera that is offline, watching, or seeing someone at the door.\n\nAnd it only holds at night. At L .5373 the ink stays light; by late morning the card passes INK_FLIPS_AT and the whole screen flips to dark type.",
+      "page": "page-3"
+    },
+    {
+      "id": "cards-emitted",
+      "x": 3120,
+      "y": 950,
+      "w": 460,
+      "text": "EMITTED -- no new tone. Every card is the pane it is today, and the color comes from the bulbs.\n\nThis is already half-built and nobody noticed. model.py keeps `rgb_color` for every light and sends it to the panel; the string appears exactly once in the repo, on that line, and zero times under app/src/. api.py passes service data straight through, so the panel could write a color today without one line of brain change.\n\nWhat the panel does instead: LightPane offers brightness and a Warmth slider, and that slider is `v-if=\"warmth != null\"`. A Hue in color mode reports no color_temp_kelvin, so the pane collapses to on/off and a dimmer. There is no way to set a bulb's color from this panel at all -- which sends the household to Home Assistant's UI, and that is a rule, not a taste.\n\nThe rule this reopens is one line in art.ts: \"emitted light, which never takes the ambient: a lamp is warm because it is a lamp.\" That was written against the SKY tinting a lamp, and it stays. What changes is where the lamp's color comes from -- a constant, or the bulb. The ambient still never touches it.\n\nThe argument for it: this color means something. A mint camera means a camera was mint on somebody's reference render. A magenta card means the light in that room is magenta.",
+      "page": "page-3"
+    },
+    {
+      "id": "cards-both",
+      "x": 6240,
+      "y": 950,
+      "w": 460,
+      "text": "BOTH -- Emitted, over a pane carrying more of the sky.\n\nA FINDING, written down rather than tuned away. The first draft of this board lifted the pane from ground L + .10 to + .20 and was indistinguishable from Emitted. The arithmetic says why: at .12 alpha over a field at L .237, a +.10 lift moves the composite by .012. After dark a pane cannot be lifted by lightness, because there is almost nothing of the pane there.\n\ntone.ts already knew this and it is worth copying rather than re-deriving: LEANS.pastel is the one lean that raises the ALPHAS, to [.48, .24, .40], and the sweep to 1.36 -- a milkier pane, not merely a lighter one. This board does the same, and now it reads.\n\nWhat it costs: the pane is the one surface carrying a page of text, and every ink ratio in glassVars is measured off where its foot lands. Moving the solidity moves that floor. If this is the pick, the ratios get re-measured off the screen before it ships, not recomputed on paper.\n\nWhat it buys: the row stops being two bright cards on a dark field. The panes are present enough to be objects, and the lights are still the only things with a hue.",
+      "page": "page-3"
+    },
+    {
+      "id": "cards-acting",
+      "x": 4680,
+      "y": 950,
+      "w": 460,
+      "page": "page-3",
+      "text": "ACTING -- Emitted, carried across to the thermostat. Same idea, one more device: everything on this screen wearing a color is wearing it because of something true right now.\n\nThe two colors are not new. 122,176,232 and 233,150,90 are lifted out of the --tint table in panel.css unchanged. What changes is one line: what SELECTS them. Today it is the mode, from `:class=\"[mode, ...]\"`; here it is `doingNow`, which is `hvac_action ?? mode` and already exists in ClimateTile -- it feeds the words and the dial arc.\n\nThat split is the whole argument. The panel already decided this question for the drawing: \"which way the arc runs is what the house is doing, not what it was asked for... a thermostat set to cool but currently holding draws no arc and says Holding.\" Rewriting the brain's answer mid-flight to hold the mode at `cool` and move only hvac_action: the words go Cooling -> Holding, the arc disappears, and --tint does not move off 122,176,232. The card was never brought along.\n\nWhat it costs: on the days nothing is running, this row has less color than Emitted, not more. That is the honest version of the trade -- color that means something can only appear when there is something to mean.\n\nAND IT DOES NOT CARRY. Read from across the room this board fails: the word is a smudge by 3 m and the 4px arc's color is a guess, while the two lights read instantly -- because a bulb's color fills its card and this state was put in a chip. Three ways to fix that are drawn below, at all three states. A -- PAINTED was picked on 20 Sep, and this board now shows it in the row: the climate card is painted at the --tint hue, idle falls back to the pane, and the chip went white because tint on tint disappeared."
+    },
+    {
+      "id": "acting-states",
+      "x": 5820,
+      "y": 1720,
+      "w": 420,
+      "page": "page-3",
+      "text": "THREE STATES, because a screen is only ever in one of them and a single board cannot argue this. Same hour, same pane, same dial; only hvac_action moves.\n\nThe middle one is the case that is wrong today and the one a thermostat is in most of the day. Idle is not a mode, so the color vocabulary has no word for it -- the classes in panel.css are .cool, .heat, .heat_cool and .auto, and a thermostat that has reached temperature keeps whichever of those it was set to.\n\nThe right-hand one is the one nobody would notice reading the code. A heat pump on Auto is the ordinary setting, and on Auto the card is 160,200,170 -- green -- whether it is heating, cooling or doing nothing at all. The blue and the orange that were carefully chosen may hardly ever appear in that house."
+    },
+    {
+      "id": "acting-loud",
+      "x": 5860,
+      "y": 2440,
+      "w": 420,
+      "page": "page-3",
+      "text": "CAN YOU READ IT FROM THE SOFA? The colors never change on this sheet -- 122,176,232 and 233,150,90, panel.css's own --tint values. Only where they are PUT moves.\n\nJudged by simulating the acuity, not by squinting: a 1440px wall panel is about 27 inches across, so one arcmin lands at roughly 0.6px per metre of viewing distance. Downsample by that, blur, put it back, and what survives is what a person actually sees. At 4 m:\n\nA -- PAINTED reads with no effort at all. A blue block, a dark block, an orange block; you have the answer before you have looked at the card. It is also the biggest change, and on a row where two lights already carry a full card of color it makes three shouting cards.\n\nB -- THE NUMBER works, but NOT for the reason it was drawn. The colored numeral contributes almost nothing at distance; the thickened arc carries the whole thing. Worth saying plainly because it makes B much cheaper than it looks: the arc already exists and is already driven by hvac_action, so this is one number, 4px to 13px, and nothing else.\n\nC -- THE RAIL survives cleanly and costs the least of the three: the card stays glass and the row keeps its material. `border-left` appears nowhere in panel.css, so a colored edge is new vocabulary rather than a collision -- but it is new vocabulary, and the panel does not have another one.\n\nIf the question is only \"can I tell from the sofa\", A wins outright. If it is \"can I tell from the sofa without the row shouting\", it is B, and B is also the smallest diff in the repo by a wide margin.\n\nPICKED 20 Sep: A. CardActing now draws it in the row and it reads at 4 m. Two things A brings that the sheet could not show. The row now carries color three different ways -- a wash for a light, a painted card for a state, artwork for media -- and that is defensible rather than sloppy: a lamp emits INTO its card, a thermostat does not emit anything, so a wash and a paint are saying different things. And the climate card is the only opaque surface in a row of glass, which is the price of being the loudest thing on the wall. Watch it at noon: at L .537 the ink holds now, but the card is painted at a fixed distance from the sky and passes INK_FLIPS_AT later in the day than a tone card does, so the flip wants measuring rather than assuming."
+    },
+    {
+      "id": "climate-dial",
+      "x": 6160,
+      "y": 3760,
+      "w": 440,
+      "page": "page-3",
+      "text": "THE DIAL COMES BACK, decided 20 Sep. The card gets the drawing and gives up the step buttons; changing the temperature means opening the pane, which is where the real dial -- the one you turn -- already is.\n\nIt was removed twice, and both notes are worth reading before overturning them. `.tiles > .tile.climate[data-size='third']`: \"on the tile they were a dial drawn at 92px with its own reading pushed out through the bottom of the card\". `.bento .tile.climate`: \"this card's height is the rail's row, so a dial round the number could only be bought by shrinking the number, and on a short screen it does not fit at all\".\n\nBoth were right when written and neither holds now, for two reasons measured rather than argued. The row GREW: --row is clamp(168, (100dvh-332)/2, 264) today, so the card is 253x264 on a 1440x900 wall where those notes were written against 196. And the thing that was competing for the space is gone -- every earlier attempt kept the dial AND the two step buttons AND the sentence. Drop the buttons and the dial is not bought by shrinking the number; the number gets bigger.\n\nThe bottom row is the honest hard case: 161x168, where --row bottoms out on a short screen. The dial survives it. What does not survive it is the NAME -- the third column keeps it and it lands at about 10px there, which is not a name anybody reads from a doorway. So the shipped card is the middle one, and a house with two thermostats tells them apart by the room they are in and by the pane, not by a label on the card.\n\nOne thing the left column shows by accident: what ships today stops about two thirds of the way down a 264px card. A third of that card has been empty this whole time."
+    },
+    {
+      "id": "row-lead",
+      "x": -560,
+      "y": 0,
+      "w": 480,
+      "text": "HOW TALL IS A TALL CARD?\n\nMeasured off the running panel at 1440x900: --row is 264 and the gap is 18, so a glance pair spans 546 -- and every tall card is 546 exactly. Every card in the row tops out at y 8 and bottoms out at 554. The only thing that varies across the whole row is WIDTH.\n\nThat is deliberate and it is written down. `.wall-stage .bento .tile.light, ...` sets `height: auto; align-self: stretch` over the top of the shared rule, with the note: \"on the board they are the full 548 and the glance column beside them adds up to exactly the same, which is what makes the row read as one block rather than as a row of things of different sizes\". And it is faithful -- Main.dc.html has the media card at top 180 height 548, the camera at 180+252 and the thermostat at 452+276, both ending at 728.\n\nBOTH LOOKS ALREADY EXIST. The shared rule underneath is `height: calc(var(--row) * 2 - 52px)` with `align-self: center` -- an inset of 87% -- and that is what the RAIL home has shipped all along. The Wall overrides it. So this is not a new mechanism, it is a question about which of two the Wall should use.\n\nTHE REFERENCE, measured in its own pixels rather than described: the glance pair spans 828, the media and light cards are 684 (83% of it), the scenes card is 760 (92%), and all four share one vertical centre. Two things follow that are easy to miss. The pair is the TALLEST element, not the band everything fills. And there are THREE heights, not two -- inset alone gives a shorter uniform band, not this.",
+      "page": "page-4"
+    },
+    {
+      "id": "row-flush",
+      "x": 0,
+      "y": 950,
+      "w": 460,
+      "text": "FLUSH -- what ships, drawn so there is something to compare against.\n\nThe case for it is the one already in the stylesheet and it is not weak: the row reads as a single block, it is the most card area a given row height can carry, and on a screen read from across a room area is legibility. Nothing is ragged, nothing is accidental.\n\nThe case against is what the row's own file says it is trying to avoid: \"a row of equal boxes is a spreadsheet, and the difference between that and a room is the one small column\". At 546 for every tall card, the one small column is the ONLY variation there is.",
+      "page": "page-4"
+    },
+    {
+      "id": "row-inset",
+      "x": 1560,
+      "y": 950,
+      "w": 460,
+      "text": "INSET -- the shared rule the Rail already uses, applied to the Wall. Tall cards at 83% of the pair, centred on it.\n\nIt is a one-line change: delete the `height: auto; align-self: stretch` override and the Wall inherits what the Rail has always done.\n\nWhat it buys is air, and a hierarchy -- the glance column becomes the anchor of the row rather than a slot inside it, which is right, because a camera and a thermostat are the two things you look at without touching.\n\nWhat it does NOT buy is the reference's rhythm. Every tall card is still the same height as every other tall card; the band is shorter and the row is still regular. If the complaint was \"too uniform\" rather than \"too tall\", this does not answer it.\n\nAnd it costs area. 93px off every tall card, on the screen whose whole argument is that the house fits on it at once.",
+      "page": "page-4"
+    },
+    {
+      "id": "row-anchored",
+      "x": 3120,
+      "y": 950,
+      "w": 460,
+      "text": "ANCHORED -- the reference's own numbers: tall cards 83%, the scenes card 92%, everything centred on the line the pair defines.\n\nThis is the one that actually looks like the picture, and the third height is why. Two sizes read as a rule; three read as a composition. It is also the only one of the three where the row has a shape you could describe without measuring it -- tall in the middle, and the glance column standing over everything.\n\nTHE HARD PART, and it should be settled before this is built rather than after. What makes a card 83% and another 92%? In the reference it is a person's eye. Here it has to be a rule the row can apply to a house it has never seen, because BentoRow composes from whatever is on --  it cannot know that THIS house's scenes card wants to be the tall one. The honest candidates are: by kind (scenes always 92%), by content (a card with more rows in it gets more height), or by position (the card nearest the middle is tallest). Only the first is cheap, and it is also the most arbitrary.\n\nUntil that is answered this is a picture of one house at one moment, which is exactly what a board is for -- but not yet a layout.",
+      "page": "page-4"
     }
   ],
   "launch": {

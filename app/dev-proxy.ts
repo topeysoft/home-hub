@@ -14,21 +14,26 @@
  */
 export const BRAIN_PATHS = [
   '/accounts', '/ambient', '/assistant', '/backup', '/bridge', '/catalog', '/credentials', '/devices', '/discovered',
-  '/drafts', '/events', '/flows', '/geo', '/health', '/home', '/location', '/look', '/network', '/pair',
+  '/drafts', '/events', '/flows', '/geo', '/happened', '/health', '/home', '/language', '/location', '/look', '/network', '/pair',
   '/phone', '/phones', '/presence', '/qr.svg', '/restart', '/restore', '/rooms', '/rules', '/say', '/scenes',
-  '/setup', '/share', '/sounds', '/suggestions', '/update',
+  '/setup', '/share', '/sounds', '/strip', '/suggestions', '/update',
   '/docs', '/openapi.json', '/redoc',        // FastAPI's own, handy when the panel is not the thing being debugged
 ] as const
 
 /** The paths that carry a websocket: the live stream, and a camera's WebRTC signaling. */
 export const BRAIN_SOCKETS = ['/stream', '/devices'] as const
 
+/* `changeOrigin` puts the brain's own name in the Host header, in place of the localhost:5173 the
+   browser typed. Against a brain on this machine it changes nothing -- uvicorn never reads it -- but
+   `tools/dev.sh live` points this at a real house, and a real house has caddy in front of the brain
+   picking the site by Host. Without this, every request through the front door is a site caddy does
+   not serve. */
 export function proxyFor(brain: string) {
-  const http = Object.fromEntries(BRAIN_PATHS.map(p => [p, brain]))
+  const http = Object.fromEntries(BRAIN_PATHS.map(p => [p, { target: brain, changeOrigin: true }]))
   return {
     ...http,
     // A camera's signaling socket lives under /devices too, so that one is both.
-    '/devices': { target: brain, ws: true },
-    '/stream': { target: brain.replace('http', 'ws'), ws: true },
+    '/devices': { target: brain, ws: true, changeOrigin: true },
+    '/stream': { target: brain.replace('http', 'ws'), ws: true, changeOrigin: true },
   }
 }

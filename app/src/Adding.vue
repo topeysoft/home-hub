@@ -172,10 +172,10 @@ if (props.resume) open_('signin', props.resume, store.resumeName || 'Sign in aga
 
       <div class="add-block">
         <h3 class="label">{{ store.found.length ? 'Or start it yourself' : 'What are you adding?' }}</h3>
-        <div class="doors">
-          <button v-for="d in doors()" :key="d.id" class="door" @click="knock(d)">
-            <span class="door-icon"><Icon :name="d.icon" :size="21" /></span>
-            <span class="door-text"><span class="door-title">{{ d.title }}</span><span class="door-sub">{{ d.sub }}</span></span>
+        <div class="ways">
+          <button v-for="d in doors()" :key="d.id" class="way" @click="knock(d)">
+            <span class="way-icon"><Icon :name="d.icon" :size="21" /></span>
+            <span class="way-text"><span class="way-title">{{ d.title }}</span><span class="way-sub">{{ d.sub }}</span></span>
           </button>
         </div>
       </div>

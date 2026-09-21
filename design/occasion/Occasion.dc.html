@@ -1,0 +1,161 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp-rgb: 233,184,114; --lamp: rgb(var(--lamp-rgb)); --lamp-ink: #2a1c07;
+      --r-lg: 22px; --r-md: 16px; --r-sm: 12px;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .scene { display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: 12px;
+             padding: 10px 20px 10px 10px; min-height: 60px; border-radius: 18px;
+             background: var(--surface); border: 1px solid var(--edge); color: var(--ink); }
+    .scene.active { background: linear-gradient(rgba(var(--lamp-rgb),.14), rgba(var(--lamp-rgb),.14)), var(--surface);
+                    border-color: rgba(var(--lamp-rgb),.4); }
+    .scene-icon { width: 40px; height: 40px; border-radius: 13px; display: grid; place-items: center;
+                  background: var(--surface-hi); color: var(--ink-2); }
+    .scene.active .scene-icon { background: var(--lamp); color: var(--lamp-ink); }
+    .scene-label { font-size: 15.5px; font-weight: 500; line-height: 1.2; }
+    .scene-hint { font-size: 12.5px; color: var(--muted); line-height: 1.25; white-space: nowrap; }
+    .scene.active .scene-hint { color: var(--ink-2); }
+    .scenes { display: flex; flex-wrap: wrap; gap: 10px; }
+    .room { position: relative; border-radius: var(--r-lg); background: var(--surface); border: 1px solid var(--edge);
+            padding: 16px 18px; overflow: hidden; display: flex; flex-direction: column; }
+    .t2 { font-size: 13px; color: var(--muted); }
+    .dots { display: flex; gap: 8px; }
+    .dots span { width: 22px; height: 22px; border-radius: 50%; }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: var(--bg); color: var(--ink); font-size: 17px; line-height: 1.4;">
+
+  <div style="position: absolute; inset: 0; background: linear-gradient(rgb(29,33,46) 0%, rgb(41,42,63) 44%, rgb(92,63,57) 84%, rgb(62,44,42) 100%);"></div>
+  <div style="position: absolute; left: -222px; top: -135px; width: 1855px; height: 1156px; background: radial-gradient(58% 54% at 30% 64%, rgba(72,63,135,.4), transparent 68%), radial-gradient(62% 52% at 54% 110%, rgba(55,51,100,.44), transparent 72%);"></div>
+  <div style="position: absolute; inset: 0; background: linear-gradient(rgba(12,13,16,.3) 0%, rgba(12,13,16,.52) 45%, rgba(12,13,16,.8) 100%);"></div>
+
+  <div style="position: absolute; left: 40px; top: 30px; font-size: 16px; color: rgba(255,255,255,.55);">Fri, Dec 19 &nbsp;&middot;&nbsp; 4&deg;</div>
+  <div style="position: absolute; left: 566px; top: 18px; width: 308px; height: 50px; border-radius: 999px; background: rgba(255,255,255,.06); border: 1px solid var(--edge); display: flex; align-items: center; gap: 4px; padding: 4px;">
+    <span style="flex: 1; text-align: center; font-size: 14.5px; padding: 8px 0; border-radius: 999px; background: var(--surface-hi); color: var(--ink);">Home</span>
+    <span style="flex: 1; text-align: center; font-size: 14.5px; color: var(--muted);">Rooms</span>
+    <span style="flex: 1; text-align: center; font-size: 14.5px; color: var(--muted);">More</span>
+  </div>
+
+  <div class="dsp" style="position: absolute; left: 40px; top: 92px; font-size: 54px;">Home</div>
+
+  <!-- ============ the same bar, one chip longer ============ -->
+  <div class="scenes" style="position: absolute; left: 40px; top: 196px;">
+    <div class="scene active">
+      <span class="scene-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3L5 19h14z"/><path d="M12 19v2"/><path d="M9.5 11h5M8 15h8"/></svg></span>
+      <span>
+        <span class="scene-label" style="display: block;">Christmas</span>
+        <span class="scene-hint">Reds and greens, everywhere that can</span>
+      </span>
+    </div>
+    <div class="scene">
+      <span class="scene-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg></span>
+      <span><span class="scene-label" style="display: block;">Bedtime</span><span class="scene-hint">Lights and media off in every room</span></span>
+    </div>
+    <div class="scene">
+      <span class="scene-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3h5v18h-5"/><path d="M10 12H3M6 8l-3 4 3 4"/></svg></span>
+      <span><span class="scene-label" style="display: block;">Everything off</span><span class="scene-hint">Lights and media off, doors locked</span></span>
+    </div>
+  </div>
+
+  <!-- ============ the house, doing it ============ -->
+  <div style="position: absolute; left: 40px; top: 312px; display: grid; grid-template-columns: repeat(4, 323px); gap: 16px;">
+
+    <!-- the strip's room: the only one that can be spatial about it -->
+    <div class="room" style="height: 218px; border-color: rgba(220,70,66,.4);">
+      <div style="position: absolute; left: -20px; right: -20px; top: 60px; height: 140px; background: radial-gradient(44% 60% at 30% 50%, rgba(220,70,66,.26), transparent 70%), radial-gradient(44% 60% at 72% 50%, rgba(74,196,106,.22), transparent 70%);"></div>
+      <span class="scene-label" style="position: relative;">Living room</span>
+      <span class="t2" style="position: relative; margin-top: 2px;">Shelf lights, 2 lamps</span>
+      <div style="position: relative; margin-top: 20px; height: 20px; border-radius: 4px;
+                  background: repeating-linear-gradient(90deg, #e2483e 0 4px, transparent 4px 7px, #e2483e 7px 11px, transparent 11px 14px, #4ac46a 14px 18px, transparent 18px 21px, #4ac46a 21px 25px, transparent 25px 28px);
+                  filter: drop-shadow(0 0 8px rgba(220,70,66,.5));"></div>
+      <div class="dots" style="position: relative; margin-top: 18px;">
+        <span style="background: #e2483e; box-shadow: 0 0 14px rgba(226,72,62,.8);"></span>
+        <span style="background: #4ac46a; box-shadow: 0 0 14px rgba(74,196,106,.8);"></span>
+      </div>
+      <span class="t2" style="position: relative; margin-top: auto;">The strip alternates. The lamps hold one each.</span>
+    </div>
+
+    <div class="room" style="height: 218px; border-color: rgba(74,196,106,.34);">
+      <div style="position: absolute; left: -20px; right: -20px; top: 60px; height: 140px; background: radial-gradient(48% 60% at 50% 50%, rgba(74,196,106,.2), transparent 70%);"></div>
+      <span class="scene-label" style="position: relative;">Kitchen</span>
+      <span class="t2" style="position: relative; margin-top: 2px;">3 downlights</span>
+      <div class="dots" style="position: relative; margin-top: 30px;">
+        <span style="background: #4ac46a; box-shadow: 0 0 14px rgba(74,196,106,.8);"></span>
+        <span style="background: #e2483e; box-shadow: 0 0 14px rgba(226,72,62,.8);"></span>
+        <span style="background: #4ac46a; box-shadow: 0 0 14px rgba(74,196,106,.8);"></span>
+      </div>
+      <span class="t2" style="position: relative; margin-top: auto;">One color each, taken in turn round the room.</span>
+    </div>
+
+    <!-- THE HONEST ONE -->
+    <div class="room" style="height: 218px;">
+      <div style="position: absolute; left: -20px; right: -20px; top: 60px; height: 140px; background: radial-gradient(48% 60% at 50% 50%, rgba(var(--lamp-rgb),.16), transparent 70%);"></div>
+      <span class="scene-label" style="position: relative;">Hallway</span>
+      <span class="t2" style="position: relative; margin-top: 2px;">1 light</span>
+      <div class="dots" style="position: relative; margin-top: 30px;">
+        <span style="background: #f0e2c8; box-shadow: 0 0 14px rgba(240,226,200,.6);"></span>
+      </div>
+      <span class="t2" style="position: relative; margin-top: auto; color: var(--ink-2);">Left warm &mdash; this one cannot do color, and says so rather than being skipped in silence.</span>
+    </div>
+
+    <div class="room" style="height: 218px; opacity: .72;">
+      <span class="scene-label" style="position: relative;">Bedroom</span>
+      <span class="t2" style="position: relative; margin-top: 2px;">2 lamps</span>
+      <div class="dots" style="position: relative; margin-top: 30px;">
+        <span style="background: rgba(255,255,255,.1);"></span>
+        <span style="background: rgba(255,255,255,.1);"></span>
+      </div>
+      <span class="t2" style="position: relative; margin-top: auto;">Off, and stays off. An occasion turns nothing on that was not already on.</span>
+    </div>
+  </div>
+
+  <!-- ============ the argument ============ -->
+  <div style="position: absolute; left: 40px; right: 40px; top: 578px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px;">
+    <div style="border-radius: var(--r-lg); border: 1px solid var(--edge); background: rgba(255,255,255,.03); padding: 20px 22px;">
+      <span class="cap">Why it is a chip and not a setting</span>
+      <p style="margin: 12px 0 0; font-size: 14.5px; line-height: 1.6; color: var(--ink-2);">
+        Put Christmas on the strip and somebody has to go into each strip and set it, one at a time, and the bulbs and the
+        switches that can do color never join in. Put it here and one tap does the house. The strip is not getting a feature;
+        the house is, and the strip happens to render it best.
+      </p>
+    </div>
+    <div style="border-radius: var(--r-lg); border: 1px solid var(--edge); background: rgba(255,255,255,.03); padding: 20px 22px;">
+      <span class="cap">What the strip adds that a bulb cannot</span>
+      <p style="margin: 12px 0 0; font-size: 14.5px; line-height: 1.6; color: var(--ink-2);">
+        Pixels, so an occasion on a strip is <em>spatial</em> &mdash; alternating along the run, or pooling at one end &mdash; where a
+        bulb can only hold one color at a time. That is the whole of the strip's contribution, and it needs to know where the
+        strip ends, which is the length question already answered.
+      </p>
+    </div>
+    <div style="border-radius: var(--r-lg); border: 1px solid rgba(var(--lamp-rgb),.3); background: linear-gradient(rgba(var(--lamp-rgb),.07), rgba(var(--lamp-rgb),.07)), rgba(255,255,255,.02); padding: 20px 22px;">
+      <span class="cap">The risk to hold on to</span>
+      <p style="margin: 12px 0 0; font-size: 14.5px; line-height: 1.6;">
+        This gets used about three weeks a year. The failure mode is building an authoring screen for it. Ship a handful with
+        household names, let &ldquo;keep this&rdquo; reuse the colors a room already remembers, and stop there.
+      </p>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

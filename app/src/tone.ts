@@ -54,6 +54,35 @@ function toneOf(name: ToneName, day: boolean): Tone {
 /* the point past which a card has out-lightened its own text and the ink must flip */
 const INK_FLIPS_AT = 0.62
 
+/* Where cooling and heating sit on the wheel. Not new colors: these are the two
+   --tint values panel.css has always declared, rgb(122,176,232) and
+   rgb(233,150,90), read back as oklch hues. What changed is not the color, it is
+   that the ACTION selects it rather than the mode -- see ClimateTile. */
+const ACT_HUES = { cooling: 250, heating: 55 }
+const ACT_C = 0.085
+
+/*
+ * Which of them a thermostat is wearing, from what it says it is DOING.
+ *
+ * This lives here rather than in ClimateTile because it is the decision, not the
+ * markup: it is what the panel believes about a thermostat, and it is the thing
+ * that was wrong. The caller passes `hvac_action ?? mode`, so a box that reports
+ * no action still colors by its mode exactly as it always did -- the change is
+ * only that a box which DOES say what it is doing is now believed.
+ *
+ * The returned name is namespaced, and that is not decoration. panel.css is one
+ * flat global sheet and `.idle` in it is the rest screen, at `position:absolute;
+ * inset:0; z-index:50`. Returning a bare 'idle' here would have handed a
+ * thermostat the screensaver's geometry with both screens still rendering and
+ * nothing failing.
+ */
+export type Acting = '' | 'act-cooling' | 'act-heating'
+export function actingOf(doing: string | null | undefined): Acting {
+  if (doing === 'cooling' || doing === 'cool') return 'act-cooling'
+  if (doing === 'heating' || doing === 'heat' || doing === 'preheating' || doing === 'defrosting') return 'act-heating'
+  return ''       // idle, fan, drying, off: running perhaps, but not moving the temperature
+}
+
 export type ToneVars = Record<string, string>
 
 /*
@@ -83,6 +112,11 @@ export function toneVars(elevation: number, condition: string, name: ToneName = 
     '--card-track': light ? 'rgba(30,27,36,.18)' : 'rgba(255,255,255,.18)',
     // the lamp still has to read as lamplight against a card that may now be pale
     '--card-lamp-ink': light ? '#7a4a10' : '#e9b872',
+    /* the same decision as a number, for the one caller that has to make this
+       choice in a hue of its own: a light whose bulb has told the house what
+       color it is (LightTile). Published rather than recomputed, so there is
+       one place that decides when a card has out-lightened its own text. */
+    '--card-flip': light ? '1' : '0',
   }
   /* what an opened device lends the room: its own hue, at the strength a tint
      can carry without fighting the sky it sits on */
@@ -96,6 +130,32 @@ export function toneVars(elevation: number, condition: string, name: ToneName = 
   // a room, a sensor, anything without a capability of its own: the same surface,
   // near enough neutral that the colored cards stay the ones you notice
   vars['--card-plain'] = card(tone.hues.lock, C * 0.22)
+
+  /* What the house is DOING, as a whole card. Cooling and heating are signals,
+     so they take no tone -- Warm and Cool would have to disagree about what blue
+     means, and a signal that changes color is not a signal. What they do take is
+     the sky, because everything here does: a fixed blue is a lit surface at
+     midnight and a hole punched in the daylight by noon, which is the trap the
+     tones are written to avoid in the first place.
+
+     A fixed distance, then, and a longer one than a tone holds: dL .30 against
+     .135, chroma .085 against .05. This is the one card that has to be read from
+     the far side of a room, and the treatment it replaced could not be. Measured
+     by simulating the acuity rather than by squinting -- a 27-inch panel at
+     1440px puts one arcmin at about .6px per metre of distance -- a .16-alpha
+     wash and a 4px arc were a smudge at 3m while a lamp's own color, which fills
+     its card, read instantly. See design/nightfall, page 3. */
+  const aL = clamp(field.L + 0.30, 0.16, 0.92)
+  for (const [act, hue] of Object.entries(ACT_HUES))
+    vars[`--card-${act}`] = `linear-gradient(155deg, oklch(${(aL + 0.055).toFixed(3)} ${ACT_C} ${hue}),`
+      + ` oklch(${aL.toFixed(3)} ${ACT_C} ${hue + 6}))`
+  /* and its own ink, for the same reason a card has one: this surface holds a
+     different distance from the sky than the tone's cards do, so it crosses the
+     flip at a different hour and cannot use their answer */
+  const aLight = aL > INK_FLIPS_AT
+  vars['--act-ink'] = aLight ? '#1e1b24' : '#f1eee8'
+  vars['--act-ink-2'] = aLight ? 'rgba(30,27,36,.66)' : '#cfcbc3'
+  vars['--act-chip'] = aLight ? 'rgba(30,27,36,.12)' : 'rgba(255,255,255,.16)'
   return vars
 }
 

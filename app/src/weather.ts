@@ -19,6 +19,7 @@
  */
 import { cap, isDead, shortName, store, WEATHER_LABEL } from './store'
 import type { Day, Hour } from './api'
+import { locale } from './lang'
 
 /* The conditions somebody would pick up an umbrella for. `exceptional` is not here on purpose: HA
    uses it for anything an integration cannot name, which is as often a gap in the data as a storm. */
@@ -26,7 +27,7 @@ export const WET = new Set(['rainy', 'pouring', 'hail', 'lightning', 'lightning-
 
 /* "4 PM", and "4:30 PM" only if an integration ever sends a row off the hour. Forecast rows are
    hours; printing ":00" on every one of them is four characters of nothing on the panel's best line. */
-const time = (d: Date) => d.toLocaleTimeString([], d.getMinutes() ? { hour: 'numeric', minute: '2-digit' } : { hour: 'numeric' })
+const time = (d: Date) => d.toLocaleTimeString(locale(), d.getMinutes() ? { hour: 'numeric', minute: '2-digit' } : { hour: 'numeric' })
 const parse = (at: string) => { const d = new Date(at); return Number.isNaN(d.getTime()) ? null : d }
 
 export type Change = { kind: 'starts' | 'stops'; at: Date; condition: string }

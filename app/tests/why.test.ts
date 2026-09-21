@@ -127,6 +127,26 @@ describe('a whole routine in one line', () => {
   it('names the rooms people come in through', () => {
     expect(routineWords(routine({ room: 'entry', then: { intent: 'occupied' } }))).toContain('Sets those rooms to')
   })
+
+  it('says how long a set of rooms has to have been still', () => {
+    const line = routineWords(routine({ when: { idle: 600 }, if: [['quiet', ['living', 'kitchen'], 'above', 1200]], then: { intent: 'empty' } }))
+    expect(line).toContain('once Living room and Kitchen have been still for 20 minutes')
+  })
+
+  it('reads a quiet condition with no rooms named as this room', () => {
+    const line = routineWords(routine({ if: [['quiet', 'above', 600]], then: { intent: 'empty' } }))
+    expect(line).toContain('once the room has been still for 10 minutes')
+  })
+
+  it('says "those rooms" for a routine that names several', () => {
+    const line = routineWords(routine({ room: ['living', 'kitchen'], then: { intent: 'occupied' } }))
+    expect(line).toBe("When there's motion. Sets those rooms to In use.")
+  })
+
+  it('says every outcome, in the order they are written', () => {
+    const line = routineWords(routine({ then: [{ intent: 'occupied' }, { notify: 'Mind the step' }] }))
+    expect(line).toBe("When there's motion. Sets the room to In use. Sends a note: \u201cMind the step\u201d.")
+  })
 })
 
 describe('naming a place', () => {

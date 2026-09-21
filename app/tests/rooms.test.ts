@@ -128,10 +128,11 @@ describe('how much of the screen a room gets', () => {
   })
 })
 
-/* The index: the quiet end of the house, which on a big one is most of it. The
-   rule these all circle is the same one -- whole columns or nothing -- because a
-   column with three rows and a hole under them reads as a bug, not a list.
-   design/rooms/QuietIndex.dc.html. */
+/* The index: the quiet end of the house, which on a big one is most of it.
+   design/rooms/QuietIndex.dc.html for why it exists, and design/rooms/Long.dc.html
+   for the rule that replaced its arithmetic on 19 Sep 2026 -- the BENTO is what
+   ends on a column boundary now, and the index takes whatever is left, even when
+   that leaves its last column short. */
 describe('the quiet end of the house', () => {
   it('leaves a house with too few quiet rooms exactly as it was', () => {
     /* four quiet rooms is less than a column, so there is no index to make and
@@ -139,14 +140,33 @@ describe('the quiet end of the house', () => {
     expect(arrangeRooms(house()).some(c => c.size === 'row')).toBe(false)
   })
 
-  it('makes rows only in whole columns of five, and keeps the remainder as cards', () => {
+  it('keeps exactly as many cards as make whole columns, and rows for the rest', () => {
     const asleep = house().map(r => ({ ...r, devices: r.devices.map(d => ({ ...d, state: 'off' })) }))
     const plan = arrangeRooms(asleep)
-    /* nine quiet rooms: one column of five rows, and the four highest-ranked
-       stay cards rather than leaving a hole at the bottom of a second column */
-    expect(plan.filter(c => c.size === 'row')).toHaveLength(5)
-    expect(plan.filter(c => c.size === 'third')).toHaveLength(4)
-    expect(plan.slice(4).every(c => c.size === 'row')).toBe(true)   // and they are the tail
+    /* nine quiet rooms: three thirds are one flush column, and the six behind
+       them are the index -- one column of five and one row over. The row over is
+       what this rule costs, and it is at the END of the house, where the list
+       simply finishes. */
+    expect(plan.filter(c => c.size === 'third')).toHaveLength(3)
+    expect(plan.filter(c => c.size === 'row')).toHaveLength(6)
+    expect(plan.slice(3).every(c => c.size === 'row')).toBe(true)   // and they are the tail
+  })
+
+  it('never gives a card more room than its size, whatever is left over', () => {
+    /* The one that started it: thirteen rooms, one lamp on. The cards used to
+       come to twenty tracks and the third of them was stretched from five to
+       fifteen -- a whole column holding "1 light off". Now two cards make the
+       column and the third room is a row. design/rooms/Long.dc.html. */
+    const thirteen = [
+      room('bed', 'Main Bedroom', [dev('b1', 'Lamp', 'light', 'on', { brightness: 200 })]),
+      room('living', 'Living Room', [dev('l1', 'Front door', 'lock', 'locked')]),
+      ...Array.from({ length: 11 }, (_, i) => room(`q${i}`, `Room ${i}`, [dev(`d${i}`, 'Lamp', 'light', 'off')])),
+    ]
+    const plan = arrangeRooms(thirteen)
+    const t = tracks(plan)
+    expect(plan.filter(c => c.size !== 'row')).toHaveLength(2)
+    expect(t.slice(0, 2).map(x => x.span)).toEqual([10, 5])         // a half and a third: one flush column
+    expect(Math.max(...t.map(x => x.span))).toBe(10)                // and nothing was blown up to fill a gap
   })
 
   it('gives the lead the full column when the index has made room for one', () => {
@@ -160,7 +180,7 @@ describe('the quiet end of the house', () => {
       : ['kitchen', 'office', 'bedroom'].includes(r.id) ? { ...r, devices: r.devices.map(d => ({ ...d, state: 'off' })) }
       : r)
     const plan = arrangeRooms(evening)
-    expect(plan.filter(c => c.size === 'row')).toHaveLength(5)
+    expect(plan.filter(c => c.size === 'row')).toHaveLength(6)
     expect(plan[0]).toEqual({ id: 'living', size: 'full' })
   })
 
@@ -179,21 +199,20 @@ describe('the quiet end of the house', () => {
   it('places every row on a track of its own so the columns cannot interleave', () => {
     const asleep = house().map(r => ({ ...r, devices: r.devices.map(d => ({ ...d, state: 'off' })) }))
     const at = tracks(arrangeRooms(asleep)).map(t => t.at)
-    expect(at.slice(0, 4)).toEqual([undefined, undefined, undefined, undefined])
-    expect(at.slice(4)).toEqual([1, 4, 7, 10, 13])                  // one column, top to bottom
+    expect(at.slice(0, 3)).toEqual([undefined, undefined, undefined])
+    expect(at.slice(3)).toEqual([1, 4, 7, 10, 13, 1])               // a column top to bottom, then one over
   })
 
   it('starts the next column over rather than running past the foot of one', () => {
     const many = Array.from({ length: 10 }, (_, i) => room(`q${i}`, `Room ${i}`, [dev(`d${i}`, 'Lamp', 'light', 'off')]))
     const at = tracks(arrangeRooms(many)).map(t => t.at).filter(n => n !== undefined)
-    expect(at).toEqual([1, 4, 7, 10, 13, 1, 4, 7, 10, 13])
+    expect(at).toEqual([1, 4, 7, 10, 13, 1, 4])
   })
 
-  it('stretches the last card to the foot of its column, so no row can backfill the hole', () => {
-    /* three rooms on and twelve quiet: the cards come to fifty tracks, which is
-       three columns and five tracks of sky. That sky is where `column dense`
-       would put the index's first row, and the index would run short from there
-       to its end. The last card takes it instead. */
+  it('ends the bento on a column boundary, so there is no hole to backfill', () => {
+    /* The hole is what `column dense` used to drop an index row into, and the
+       old answer was to stretch the last card over it. The answer now is that
+       there is no hole: the cards are chosen to come to whole columns. */
     const big = [...house(), ...Array.from({ length: 6 }, (_, i) =>
       room(`x${i}`, `Room ${i}`, [dev(`e${i}`, 'Lamp', 'light', 'off')]))]
       .map(r => ['living', 'kitchen', 'backyard'].includes(r.id) ? r
@@ -203,7 +222,7 @@ describe('the quiet end of the house', () => {
     const cards = plan.filter(c => c.size !== 'row').length
     const spans = t.slice(0, cards).reduce((n, x) => n + x.span, 0)
     expect(spans % 15).toBe(0)                                      // whole columns, always
-    expect(t[cards - 1].span).toBeGreaterThan(5)                    // and the last card paid for it
+    expect(t.every((x, i) => x.span === [15, 10, 5, 3][['full', 'half', 'third', 'row'].indexOf(plan[i].size)])).toBe(true)
   })
 
   it('leaves a flush wall alone rather than stretching a card that already fits', () => {

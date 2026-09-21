@@ -20,6 +20,55 @@ const SLOP = 10           // past this the finger is scrolling, not holding
 type State = { t?: number; x: number; y: number; fired: boolean }
 const state = new WeakMap<HTMLElement, State>()
 
+/*
+ * Swallowing the click that ends a hold -- wherever it lands, which is the part the card cannot do
+ * for itself.
+ *
+ * A hold opens a panel UNDER the finger that is still down. The browser then sends the click to
+ * whatever is beneath the point WHEN THE FINGER LIFTS, and by then that is the panel, not the card:
+ * the card's own click handler is never offered it and has nothing to stop. On an iPad-shaped wall
+ * panel the light pane's three presets land almost exactly where the finger was holding, so letting
+ * go of a lamp at 35% to open it also set it to 100% -- one press, doing two things, one of which
+ * nobody asked for.
+ *
+ * `pointerup` on the card is still swallowed below, and still has to be: that is the tile's own
+ * dimmer. This is the other half, and it sits on the document because the element it has to defend
+ * is one nothing here has a reference to.
+ *
+ * WHAT IT MUST NOT EAT is the next real tap, and a plain timer is not good enough at telling the
+ * two apart. A person holds a lamp open in order to touch something in it, and they are quick about
+ * it -- `pane.spec.ts` taps a preset within a few hundred milliseconds of the release, which is the
+ * ordinary speed, not a fast one. Any window wide enough to be sure of catching the stray click is
+ * also wide enough to eat that tap, which would be this same bug pointed the other way.
+ *
+ * So the rule is about the press, not the clock: the click that belongs to a press cannot arrive
+ * after the NEXT press has begun. Arm on the release, drop it on the next pointerdown anywhere,
+ * eat at most one, and keep a long timer only so nothing is ever left armed for good.
+ */
+const NEVER_ARMED_PAST = 1200   // a backstop, not the rule: the pointerdown below is the rule
+let releasing: (() => void) | null = null
+
+function swallowClickFrom(release: PointerEvent) {
+  releasing?.()   // an earlier hold whose click never came; this release is the live one now
+  const eat = (e: MouseEvent) => {
+    /* Only the click this release produced. A click that is somehow somewhere else entirely is
+       somebody else's, and eating it would be the bug this is here to fix, pointed the other way. */
+    if (Math.abs(e.clientX - release.clientX) > 24 || Math.abs(e.clientY - release.clientY) > 24) return
+    e.stopImmediatePropagation(); e.preventDefault(); stop()
+  }
+  const next = () => stop()                       // a new press: whatever was coming is no longer ours
+  const timer = window.setTimeout(() => stop(), NEVER_ARMED_PAST)
+  function stop() {
+    clearTimeout(timer)
+    document.removeEventListener('click', eat, true)
+    document.removeEventListener('pointerdown', next, true)
+    if (releasing === stop) releasing = null
+  }
+  document.addEventListener('click', eat, true)
+  document.addEventListener('pointerdown', next, true)
+  releasing = stop
+}
+
 export const vHold: Directive<HTMLElement, (() => void) | undefined> = {
   /* created, not mounted: at the target element listeners run in the order they
      were registered, and `created` is the one hook that runs before Vue attaches
@@ -62,8 +111,11 @@ export const vHold: Directive<HTMLElement, (() => void) | undefined> = {
        tile's own handler never runs: no light toggles on its way into its detail */
     const up = (e: PointerEvent) => {
       cancel()
-      if (s.fired) { e.stopImmediatePropagation(); e.preventDefault() }
+      if (s.fired) { e.stopImmediatePropagation(); e.preventDefault(); swallowClickFrom(e) }
     }
+    /* Kept, though swallowNextClick above usually gets there first: this one still fires where the
+       click lands on the card itself and nothing opened over it, and it is the only one that clears
+       `fired` on the element. Cheap, and the two do not fight -- whichever runs first stops the other. */
     const click = (e: MouseEvent) => {
       if (s.fired) { e.stopImmediatePropagation(); e.preventDefault(); s.fired = false }
     }

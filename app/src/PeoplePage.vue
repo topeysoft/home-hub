@@ -18,13 +18,14 @@ import { removePhone, type Phone } from './api'
 import { initials, personTone } from './people'
 import Icon from './Icon.vue'
 import PhoneSteps from './PhoneSteps.vue'
+import { locale } from './lang'
 
 const people = computed(() => store.presence?.people ?? [])
 const state = (home: boolean | null) => home === true ? 'Home' : home === false ? 'Away' : 'Not sure'
 
 /* the phones that belong to the house: who, since when, for how long, and one way out each */
-const HOW: Record<string, string> = { code: 'typed the code', wall: 'let in from the wall', setup: 'set up the house' }
-const day = (ts: number) => new Date(ts * 1000).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })
+const HOW: Record<string, string> = { code: 'typed the passcode', wall: 'let in from the wall', setup: 'set up the house' }
+const day = (ts: number) => new Date(ts * 1000).toLocaleDateString(locale(), { weekday: 'short', month: 'short', day: 'numeric' })
 function phoneLine(p: Phone) {
   const bits = [`${HOW[p.how] ?? 'joined'} ${day(p.joined)}`]
   if (p.expires) bits.push(`until ${day(p.expires)}`)
@@ -35,7 +36,7 @@ async function remove(p: Phone) {
   if (sure.value !== p.id) { sure.value = p.id; return }         // one tap asks, the second does
   removing.value = p.id
   try { await removePhone(p.id); notify(p.me ? 'This phone is out. Join again from the wall.' : `${p.name} is out.`) }
-  catch (e: any) { if (e.message !== 'That needs the code.') notify(e.message, 'error') }
+  catch (e: any) { if (e.message !== 'That needs the passcode.') notify(e.message, 'error') }
   sure.value = ''; removing.value = ''
 }
 const adding = ref(new URLSearchParams(location.search).get('add') === '1')   // ?sheet=people&add=1 previews the steps
@@ -95,8 +96,8 @@ const keys = computed(() => holdsKeys())
       </li>
       <li v-else-if="store.status?.setup_done && !store.status?.locked">
         <span class="hub-k">Phones</span>
-        <span class="hub-v">Without a code, every phone on the Wi‑Fi can run the house.<span class="hub-sub line">Set one and only the phones you let in can.</span></span>
-        <button class="button small" @click="store.sheet = 'code'">Set a code</button>
+        <span class="hub-v">Without a passcode, every phone on the Wi‑Fi can run the house.<span class="hub-sub line">Set one and only the phones you let in can.</span></span>
+        <button class="button small" @click="store.sheet = 'code'">Set a passcode</button>
       </li>
     </ul>
   </div>

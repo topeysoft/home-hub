@@ -13,10 +13,34 @@
  * point -- see the rule at the top of art.ts.
  */
 import { computed } from 'vue'
-import { materials, GLOW, LAMP, LIT } from './art'
+import { bulbColor, emitId, emitRamp, materials, GLOW, LAMP, LIT } from './art'
 import { store } from './store'
 
 const m = computed(() => materials(store.sky.elevation, store.sky.condition))
+
+/*
+ * And one more set per bulb that is lit and knows its own color.
+ *
+ * Same reason there is only one of everything above: a gradient is addressed by
+ * id across the document, so a pink lamp cannot simply be handed a pink copy of
+ * `mPool` -- it would be a second element claiming that name and the browser
+ * would use whichever it saw first, for every lamp on the screen. It gets an id
+ * of its own instead, keyed by the color, so two lamps set alike share one set
+ * and a house with no color bulbs declares nothing extra at all.
+ *
+ * Off bulbs are left out on purpose. An unlit lamp emits nothing, so it has no
+ * ramp to declare, and leaving them in would grow this with every bulb in the
+ * house rather than with the handful currently lit.
+ */
+const emitting = computed(() => {
+  const seen = new Map<string, { lit: string; glow: string; lamp: string }>()
+  for (const r of store.rooms) for (const d of r.devices) {
+    if (d.state !== 'on') continue
+    const c = bulbColor(d.attrs)
+    if (c) seen.set(emitId(c), emitRamp(c))
+  }
+  return [...seen].map(([id, ramp]) => ({ id, ...ramp }))
+})
 </script>
 
 <template>
@@ -64,6 +88,21 @@ const m = computed(() => materials(store.sky.elevation, store.sky.condition))
       <radialGradient id="mGlass" cx="38%" cy="32%" r="76%">
         <stop offset="0" :stop-color="LIT" stop-opacity=".95" /><stop offset="62%" :stop-color="GLOW" stop-opacity=".62" /><stop offset="100%" :stop-color="LAMP" stop-opacity=".22" />
       </radialGradient>
+
+      <!-- The same three again, in the color a bulb says it is. Every offset and
+           every opacity is the warm set's, unchanged: what a colored lamp changes
+           is its hue, not how light falls out of it. -->
+      <template v-for="e in emitting" :key="e.id">
+        <radialGradient :id="`mPool-${e.id}`" cx="50%" cy="34%" r="64%">
+          <stop offset="0" :stop-color="e.glow" stop-opacity=".62" /><stop offset="54%" :stop-color="e.lamp" stop-opacity=".22" /><stop offset="100%" :stop-color="e.lamp" stop-opacity="0" />
+        </radialGradient>
+        <linearGradient :id="`mCone-${e.id}`" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" :stop-color="e.glow" stop-opacity=".46" /><stop offset="100%" :stop-color="e.lamp" stop-opacity="0" />
+        </linearGradient>
+        <radialGradient :id="`mGlass-${e.id}`" cx="38%" cy="32%" r="76%">
+          <stop offset="0" :stop-color="e.lit" stop-opacity=".95" /><stop offset="62%" :stop-color="e.glow" stop-opacity=".62" /><stop offset="100%" :stop-color="e.lamp" stop-opacity=".22" />
+        </radialGradient>
+      </template>
     </defs>
   </svg>
 </template>

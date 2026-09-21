@@ -8,7 +8,8 @@ import type { Device } from '../api'
 import { perform, shortName, roomOf, store, isDead } from '../store'
 import Icon from '../Icon.vue'
 import DeviceArt from '../DeviceArt.vue'
-import { lightKind } from '../art'
+import { bulbColor, lightKind } from '../art'
+import { oklch } from '../sky'
 import { leadsFixture, partnerOf, seeing, speedWord } from '../units'
 
 const props = defineProps<{ device: Device }>()
@@ -31,6 +32,61 @@ const kind = computed(() => lightKind(props.device.name || name.value))
 /* A light with a motion sensor built in (units.ts) says so here, on the one line, while it sees
    someone: the sensor is part of the same thing on the wall, and this tile is where the thing is. */
 const eye = computed(() => seeing(props.device))
+/* What color this bulb says it is, if it can say. The card wears it as well as
+   the drawing: a lamp's light is what fills its card, which is the whole reason
+   a lit light reads across a room while a thermostat's state did not, and a
+   magenta bulb drawn on an amber card would be saying two things at once. Off
+   bulbs wear nothing -- an unlit lamp has no color to show. */
+const color = computed(() => (on.value ? bulbColor(props.device.attrs) : undefined))
+const wash = computed(() => {
+  const c = color.value
+  if (!c) return undefined
+  const rgb = c.join(',')
+  /* The card a lit light gets, in the bulb's own hue instead of the tone's.
+
+     Not a wash over it: the same card toneVars builds, at the same distance from
+     the sky and the same chroma, turned to a different place on the wheel. That
+     matters because --card-light IS the card on the glass face -- the rule there
+     is `background-image: var(--glass-sweep), var(--card-light, ...)`, so a lit
+     light is not a frosted pane at all, it is the tone's warm card with the
+     sweep laid over it. Leave that alone and a pink bulb sits on an amber card,
+     which is the two-things-at-once this is here to stop. Replace it with a wash
+     over --card-plain, as the first pass did, and the card stops being a card:
+     at noon that came out as the milky pink rectangle this replaced.
+
+     Built from --card-l and --card-c, which toneVars already publishes, so the
+     lightness and the chroma stay whatever the hour and the tone say they are
+     and only the hue is the bulb's. The card still lightens through the morning
+     with every other card, and --card-ink still flips at the right moment,
+     because none of the numbers that decide those has moved. */
+  const H = oklch(c).H
+  return {
+    '--card-light': `linear-gradient(155deg, oklch(calc(var(--card-l) + .055) var(--card-c) ${H.toFixed(1)}),`
+      + ` oklch(var(--card-l) var(--card-c) ${(H + 6).toFixed(1)}))`,
+    /* Both forms, and they are not interchangeable: the dimmer's fill and the
+       lit card's border are written against `--lamp-rgb` (bare channels, for
+       rgba()) while the bar across the foot uses `--lamp`. Setting only one
+       leaves a pink lamp with an amber wash behind it, which is the two-things-
+       at-once this is meant to stop.
+
+       And these two are the WHOLE of it. The first pass also repainted the card
+       itself, by handing --card-light a wash over --card-plain -- which on the
+       glass face quietly swapped the frosted pane for a plain card, so a lit
+       Hue came out as a milky pink rectangle with the drawing barely in it. The
+       board never did that: its card is the pane, unchanged, and the color
+       arrives as LIGHT in it -- the cone out of the fitting, the pool it lands
+       in, the dimmer's own wash, the bar and the badge. */
+    '--lamp': `rgb(${rgb})`,
+    '--lamp-rgb': rgb,
+    /* and the state line, which has its own token because it has to read as
+       lamplight against a card that may have gone pale by noon -- toneVars sets
+       it to #e9b872 or #7a4a10 depending. Both are amber, which was right while
+       every lamp was, and is the last thing on this card still saying a color
+       the bulb is not. Same two answers, at the bulb's hue: the lit card's own
+       lightness decides which, so it is the card that flips it, not the sky. */
+    '--card-lamp-ink': `oklch(calc(.82 - var(--card-flip, 0) * .42) .16 ${H.toFixed(1)})`,
+  }
+})
 /* a fan with a light in it, when the owner has said the light is the tile: the fan is a row on it (units.ts).
    The row stops the pointer, because the tile around it is the dimmer and a tap on the fan is not a tap
    on the light. */
@@ -80,10 +136,10 @@ async function up() {
 </script>
 
 <template>
-  <div class="tile light" :class="{ on, dead, dimmable, pending, seeing: eye }" role="button" :aria-label="`${name}, ${label}`" :aria-pressed="on"
+  <div class="tile light" :class="{ on, dead, dimmable, pending, seeing: eye }" :style="wash" role="button" :aria-label="`${name}, ${label}`" :aria-pressed="on"
        tabindex="0" @pointerdown="down" @pointermove="move" @pointerup="up" @pointercancel="release" @lostpointercapture="release" @keydown.enter.space.prevent="perform(device, on ? 'off' : 'on', undefined, { state: on ? 'off' : 'on' })">
     <div class="fill" :style="{ width: pct + '%' }"></div>
-    <DeviceArt :kind="kind" :state="{ on, brightness: pct / 100 }" />
+    <DeviceArt :kind="kind" :state="{ on, brightness: pct / 100, color }" />
     <span class="tile-maker" v-if="device.maker">{{ device.maker }}</span>
     <div class="tile-body">
       <span class="tile-icon"><Icon name="light" /></span>

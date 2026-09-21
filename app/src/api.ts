@@ -5,7 +5,7 @@ import { request } from './code'
    the owner's, where they have given one. Read the two together through cap() in store.ts, never the raw
    field: a lamp on a smart plug is a switch to the driver and a light to everybody who lives there. */
 export type Device = { id: string; name: string; room_id: string; capability: string; state: string; attrs: Record<string, any>; hw?: string | null; own_room?: boolean; maker?: string | null; model?: string | null; entry?: string | null; kind?: string | null; guess?: string | null; hw_name?: string | null; named_by_unit?: boolean }
-export type Room = { id: string; name: string; devices: Device[]; intent: string; set_by?: string | null; hold_until?: number | null; motion_at?: number | null }
+export type Room = { id: string; name: string; devices: Device[]; intent: string; set_by?: string | null; hold_until?: number | null; motion_at?: number | null; colors?: number[][] }   // colors: kept per room, [[hue, amount], …]
 export type Intent = { room: string; intent: string; set_by: string | null; hold_until: number | null }
 export type Home = { name?: string | null; temp_unit?: string; entry?: string[]; rooms: Room[] }   // entry: the rooms people come in through
 export type Driver = 'down' | 'fresh' | 'needs-login' | 'connecting' | 'ready'
@@ -36,7 +36,7 @@ export type UpdateProgress = {
   moving: string[] | null   // which containers this update really recreates, once the host has looked
   notices: string[]         // ...and what a household would notice about that, where there is anything
 }
-export type Status = { driver: Driver; reason: string; setup_done: boolean; locked?: boolean; owner: string | null; home: string | null; location: boolean; rooms: number; devices: number; drivers: Part[]; problems?: Problem[]; version?: string; update?: Update }
+export type Status = { driver: Driver; reason: string; setup_done: boolean; locked?: boolean; owner: string | null; home: string | null; location: boolean; rooms: number; devices: number; drivers: Part[]; problems?: Problem[]; version?: string; update?: Update; language?: string }
 /* One job on Needs a look. The brain writes every word of it, including the words on the buttons: the
    panel does not know what it is looking at, so it draws `acts` and invents nothing. `with` is what went
    quiet behind this one fault -- fix the fault and they all come back, which is why they are not lines of
@@ -91,7 +91,14 @@ async function post<T = any>(url: string, body?: unknown): Promise<T> {
 export async function getStatus(): Promise<Status> {
   const r = await request('/setup/status'); if (!r.ok) await fail(r); return r.json()
 }
-export const setupOwner = (name: string, home: string) => post<Status>('/setup/owner', { name, home })
+/* The screen's own language rides along with the names. It is the last moment the engine's account
+   can be given one -- Home Assistant takes it at onboarding and never asks again -- and nobody sets
+   up a hub in order to answer a question about locales, so it is sent rather than asked for. */
+export const setupOwner = (name: string, home: string) =>
+  post<Status>('/setup/owner', { name, home, language: (() => { try { return navigator.language || 'en' } catch { return 'en' } })() })
+
+/** The house's language, changed later from This hub. */
+export const setLanguage = (language: string) => post<{ language: string }>('/language', { language })
 export const setupLogin = (username: string, password: string) => post<Status>('/setup/login', { username, password })
 export const setupHome = (name: string) => post<Status>('/setup/home', { name })
 export const setupDone = () => post<Status>('/setup/done')
@@ -235,6 +242,68 @@ export const adoptBridge = () => post<Bridge>('/bridge/adopt')
 export const dismissBridge = () => post<Bridge>('/bridge/dismiss')
 /** The house's Wi-Fi, told once: a hub on a cable has no other way to know it. Kept for every bridge after. */
 export const bridgeWifi = (ssid: string, password: string) => post<Bridge>('/bridge/wifi', { ssid, password })
+
+/* ---------- a light strip, knocking over Bluetooth ----------
+ *
+ * The same four beats as a bridge, in the same shell, with the same words -- design/strip/Spine.dc.html
+ * is mostly a demonstration that a strip needs no new flow. What it does need is two questions in the
+ * middle, and both exist for one reason: NOTHING CAN BE READ BACK OFF A STRIP. The data line is
+ * write-only on every one of these parts, so neither the order its colors come out in nor how far it
+ * goes can be detected. They are shown, and the household names what it can see.
+ *
+ * `asking` is which half of the color question is on screen. `lit` is how far the fill has got, which
+ * the strip publishes as it goes -- the panel does not count, because the strip is the only thing that
+ * knows how fast it is actually going. */
+export type Strip = {
+  state: 'none' | 'knocking' | 'working' | 'order' | 'length' | 'room' | 'ready' | 'failed'
+  name?: string
+  step?: 'letting'                         // one, where a bridge has three: commissioning does the Wi-Fi and the letting-in together
+  asking?: 'red' | 'which'
+  /* Set when one of the two setup questions is being asked AGAIN about a strip that is already in --
+     somebody cut it down, joined another on, or replaced it with a different make. The sheet says a
+     different sentence for it, because somebody who came back already knows what the thing does. */
+  revisit?: 'colors' | 'length'
+  lit?: number                             // how many lights the fill has reached
+  count?: number                           // ...and where it stopped
+  order?: string                           // which of the six it turned out to be
+  white?: boolean                          // it carries a separate white channel (the "stripes" answer)
+  rooms?: { id: string; name: string }[]
+  strips?: number                          // how many are set up and working, job or no job
+  text?: string
+  /* A strip no longer gets its Wi-Fi from us at all -- commissioning carries it -- so this is only
+     still here for a hub older than that change. */
+  needs?: 'wifi'
+}
+/* Ending a job is the brain's to know, exactly as it is for a bridge: a sheet that closes only its
+   own copy goes away and the next poll brings it straight back. */
+export const STRIP_READ_ONCE = ['ready', 'failed'] as const
+export const readStripOnce = (state?: string) => (STRIP_READ_ONCE as readonly string[]).includes(state ?? '')
+export async function getStrip(): Promise<Strip> { const r = await request('/strip'); if (!r.ok) await fail(r); return r.json() }
+/** Yes, that one is mine, with its setup code.
+ *
+ * A development board needs none: its passcode is CHIP's own, compiled in and published, so the brain
+ * fills it in rather than making somebody copy a public number off a terminal. A real unit is refused
+ * without one, and that difference is keyed on the vendor id rather than a setting, so it cannot be
+ * left switched on by accident. design/strip/CodeBox.dc.html. */
+export const adoptStrip = (code = '') => post<Strip>('/strip/adopt', { code })
+/** Not mine. Needs no code -- refusing gives nothing away, and nothing was ever sent. */
+export const dismissStrip = () => post<Strip>('/strip/dismiss')
+export const stripWifi = (ssid: string, password: string) => post<Strip>('/strip/wifi', { ssid, password })
+/** What the household can see on it: red, green, blue, stripes, or nothing at all. */
+export const stripSaw = (saw: string) => post<Strip>('/strip/saw', { saw })
+/** That's the whole of it. The strip latches where the fill had got to the instant it hears this. */
+export const stripEnds = () => post<Strip>('/strip/ends')
+export const stripAgain = () => post<Strip>('/strip/again')
+export const stripRoom = (room: string) => post<Strip>('/strip/room', { room })
+export const stripDone = () => post<Strip>('/strip/done')
+/** Every strip the house has, for the rows that offer to ask one of them something again. */
+export type StripRow = { id: string; online: boolean; count: number | null; order: string | null }
+export async function listStrips(): Promise<{ strips: StripRow[] }> {
+  const r = await request('/strip/list'); if (!r.ok) await fail(r); return r.json()
+}
+/** Ask a strip already in the house one of the two questions again. design/strip/Later.dc.html. */
+export const revisitStrip = (id: string, what: 'colors' | 'length') =>
+  post<Strip>('/strip/revisit', { id, what })
 /* Take a bridge off the house. Offered only from the *Needs a look* line about one that has not come
    back, because it is the answer to a question the house asked first -- never a thing to go and find. */
 /* ONE BRIDGE, as This hub lists it. Separate from `Bridge` above, which is the setting-up machine
@@ -354,7 +423,13 @@ export async function getWhy(roomId: string, limit = 6): Promise<Event[]> {
   const r = await request(`/rooms/${encodeURIComponent(roomId)}/why?limit=${limit}`); if (!r.ok) await fail(r); return r.json()
 }
 /* Routines: the brain's rules.json, read whole and switched on or off one at a time. The panel never edits one here. */
-export type Routine = { id: string; name: string; room: string; when: Record<string, any>; if?: any[][]; then: Record<string, any>; enabled?: boolean; by?: string; said?: string; why?: string; noticed?: string; created?: number }
+export type Outcome = Record<string, any>
+export type Routine = { id: string; name: string; room: string | string[]; when: Record<string, any>; if?: any[][]; then: Outcome | Outcome[]; enabled?: boolean; by?: string; said?: string; why?: string; noticed?: string; created?: number }
+/* A routine's rooms and outcomes, always as lists. `room` is one id, "home", "entry" or several ids; `then`
+   is one outcome or several run in order. Everything on the panel reads them through these two, so a rule
+   that names three rooms is not a shape each caller has to remember to handle. */
+export const roomsOf = (r: Routine): string[] => Array.isArray(r.room) ? r.room : [r.room]
+export const outcomesOf = (r: Routine): Outcome[] => Array.isArray(r.then) ? r.then : r.then ? [r.then] : []
 export type RoutineFile = { rules: Routine[]; drafts?: Routine[]; valid: boolean; errors: string[] }
 export async function getRoutines(): Promise<RoutineFile> {
   const r = await request('/rules'); if (!r.ok) await fail(r); return r.json()
@@ -428,6 +503,33 @@ export async function restoreBackup(file: File): Promise<{ ok: boolean; manifest
 export async function getHealth(): Promise<{ notes: Note[] }> {
   const r = await request('/health'); if (!r.ok) await fail(r); return r.json()
 }
+/* What happened while nobody was watching. Every word of this is the brain's, headings included:
+   "Still on" is wrong over a door that is still unlocked, and the panel cannot know which it has.
+   A finding is a SPAN -- "on for 10 hours" -- which is why there is no timestamp to format here. */
+export type HappenedAct = { do: string; act: 'device' | 'room'; to: string; arg?: string }
+export type HappenedItem = {
+  kind: 'still' | 'over' | 'phone'; subject: string; text: string; when: string; ts: number
+  where?: string        // which room and what sort of thing: enough to walk to it
+  seconds?: number      // how long it has been that way; the sort order, already applied
+  word?: string         // on | open | unlocked -- what the group heading was built from
+  acts: HappenedAct[] } // empty on anything already over: there is nothing left to do about it
+export type HappenedGroup = { id: 'still' | 'over' | 'people'; label: string; items: HappenedItem[] }
+export type Happened = {
+  lede: string; since: number; hint: string; empty: boolean
+  away: { from?: number; to?: number | null }
+  groups: HappenedGroup[] }
+export async function getHappened(): Promise<Happened> {
+  const r = await request('/happened'); if (!r.ok) await fail(r); return r.json()
+}
+/* Who changed what: behind the code, so `request` prompts for it on the 401 the way it does anywhere
+   else. `named` is false when the house could not tell who it was -- never a guess. */
+export type Change = { who: string; text: string; ts: number; named: boolean; when: string; kind: string; subject: string }
+export type Changes = {
+  rows: Change[]; coded_since: number | null; coded_when: string | null
+  more: boolean }      // there is more behind this page: a list that stops at the limit looks like one that ended
+export async function getChanges(limit = 200): Promise<Changes> {
+  const r = await request(`/happened/changes?limit=${limit}`); if (!r.ok) await fail(r); return r.json()
+}
 export const setEntry = (rooms: string[]) => post<{ entry: string[] }>('/home/entry', { rooms })
 export const enableRoutine = (id: string, enabled: boolean) => post<{ ok: boolean; enabled: boolean }>(`/rules/${encodeURIComponent(id)}/enable`, { enabled })
 /* The assistant: it writes drafts and explains from the log. It has no call that changes a device. */
@@ -451,6 +553,14 @@ export const explainRoom = (roomId: string, question: string) => post<{ question
 export async function act(id: string, action: string, data?: Record<string, unknown>) {
   const r = await request(`/devices/${encodeURIComponent(id)}/${action}`, { method: 'POST', headers: json, body: data ? JSON.stringify(data) : undefined })
   if (!r.ok) await fail(r)
+}
+/* A color somebody matched against this room's own lamps, kept so it is one tap next time.
+   Per room rather than per lamp: it was tuned against the bulbs in there, and the bulb beside
+   it is the same make more often than not. */
+export async function keepColor(roomId: string, hue: number, amount: number): Promise<number[][]> {
+  const r = await request(`/rooms/${encodeURIComponent(roomId)}/colors`, { method: 'POST', headers: json, body: JSON.stringify({ hue, amount }) })
+  if (!r.ok) await fail(r)
+  return (await r.json()).colors
 }
 export async function setIntent(roomId: string, state: string) {
   const r = await request(`/rooms/${encodeURIComponent(roomId)}/intent/${state}`, { method: 'POST' })

@@ -1,0 +1,137 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      /* the panel's own tokens, unchanged -- app/src/panel.css */
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp: #e9b872; --lamp-ink: #2a1c07; --live: #74c69d; --danger: #e08a8a;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .t1 { font-size: 15.5px; font-weight: 500; }
+    .t2 { font-size: 13px; color: var(--muted); }
+    .note { padding: 13px 16px 14px; border-radius: 18px; background: var(--surface); border: 1px solid var(--edge); }
+    .bad { color: var(--danger); }
+
+    /* A wall, drawn at its real pixel size and then shrunk, so every measurement on this
+       board is the measurement the panel actually has. .wall is 1280x800 -- the kiosk. */
+    .screen { position: absolute; border-radius: 10px; overflow: hidden;
+              border: 1px solid var(--edge-hi); box-shadow: 0 30px 70px -34px rgba(0,0,0,.95); }
+    .wall { width: 1280px; height: 800px; transform-origin: 0 0; position: relative;
+            background: linear-gradient(#1b2b44 0%, #22344e 34%, #2c3c50 62%, #1d2a2a 78%, #141d18 100%); }
+    .wall .sun { position: absolute; top: 210px; left: 600px; width: 78px; height: 78px; border-radius: 50%;
+                 background: radial-gradient(rgba(255,228,170,.55), transparent 68%); }
+    .wall .land { position: absolute; left: 0; right: 0; bottom: 0; height: 210px;
+                  background: linear-gradient(transparent, rgba(18,28,20,.85) 45%, #101a13); }
+    .col { position: absolute; left: 340px; width: 600px; }
+    .eyebrow { font-size: 11.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+    .h { font-size: 54px; line-height: 1.02; letter-spacing: -.025em; font-weight: 400; margin: 0; color: var(--ink); }
+    .lede { margin: 14px 0 26px; color: var(--ink-2); font-size: 18px; line-height: 1.4; max-width: 52ch; }
+    .cta { display: inline-flex; padding: 15px 28px; border-radius: 999px; background: #f1eee8; color: #0c0d10;
+           font-weight: 500; font-size: 17px; }
+    .card { border-radius: 16px; background: rgba(26,28,34,.72); border: 1px solid var(--edge); padding: 14px 16px; }
+
+    /* the fold: where an 800px-tall wall actually ends */
+    .fold { position: absolute; left: 0; right: 0; height: 0; border-top: 2px dashed rgba(224,138,138,.85); }
+    .foldtag { position: absolute; right: 8px; transform: translateY(-100%); padding: 2px 8px 3px;
+               background: rgba(224,138,138,.92); color: #2a0d0d; font-size: 11px; font-weight: 600;
+               letter-spacing: .08em; text-transform: uppercase; border-radius: 4px 4px 0 0; }
+    .ghosted { opacity: .34; }
+    .measure { position: absolute; font-size: 12px; color: var(--danger); font-variant-numeric: tabular-nums; }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: #0c0d10; color: var(--ink); font-size: 17px; line-height: 1.4;">
+  <div style="position: absolute; inset: 0; background: radial-gradient(64% 54% at 22% 18%, rgba(72,63,135,.22), transparent 70%), radial-gradient(56% 48% at 86% 88%, rgba(92,63,57,.2), transparent 72%);"></div>
+
+  <div style="position: absolute; top: 44px; left: 56px; right: 56px;">
+    <h1 class="dsp" style="margin: 0; font-size: 42px;">Today, on the wall the product ships on.</h1>
+    <p style="margin: 10px 0 0; font-size: 17px; color: var(--ink-2); max-width: 104ch;">Both of these are 1280&times;800 &mdash; the size <code style="color:var(--lamp)">mock/shots.mjs</code> itself calls <i>kiosk</i>. The column scrolls inside <code style="color:var(--lamp)">.setup</code>, so the page gives no sign there is more of it. Measured in the browser, not guessed from the markup.</p>
+  </div>
+
+  <!-- receipt one: the devices step -->
+  <div class="cap" style="position: absolute; top: 172px; left: 56px;">step five &mdash; what&rsquo;s in the house?</div>
+  <div class="screen" style="top: 200px; left: 56px; width: 630px; height: 394px;">
+    <div class="wall" style="transform: scale(.4922);">
+      <div class="sun"></div><div class="land"></div>
+      <div class="col" style="top: 64px;">
+        <div class="eyebrow">Step 4 of 4</div>
+        <h2 class="h">What&rsquo;s in the house?</h2>
+        <p class="lede">Things already on your Wi&#8209;Fi show up here on their own. Add what you like now; the rest can wait.</p>
+        <div class="cap" style="margin-bottom: 10px;">already waiting</div>
+        <div class="card" style="margin-bottom: 10px;"><span class="t1">Sonos Roam</span><span class="t2" style="display:block">speaker</span></div>
+        <div class="card" style="margin-bottom: 18px;"><span class="t1">Chromecast (Den)</span><span class="t2" style="display:block">tv</span></div>
+        <div class="cap" style="margin-bottom: 10px;">or start it yourself</div>
+        <div class="card" style="margin-bottom: 10px; height: 74px;"><span class="t1">A plug, bulb or sensor</span><span class="t2" style="display:block">Something out of a box, in your hand</span></div>
+        <div class="card" style="margin-bottom: 10px; height: 74px;"><span class="t1">Something with its own app</span><span class="t2" style="display:block">Hue, Sonos, Ring, a thermostat&hellip;</span></div>
+        <div class="card" style="height: 74px;"><span class="t1">A part of the house</span><span class="t2" style="display:block">Another panel, or a bridge for your switches</span></div>
+      </div>
+      <!-- pinned where it really sits: bottom edge at y=803, on a screen that ends at 800 -->
+      <div style="position: absolute; top: 755px; left: 340px;"><span class="cta">Continue</span></div>
+    </div>
+    <!-- the fold is the bottom edge of this frame; the button sits below it -->
+    <div class="foldtag" style="bottom: 0; right: 10px; transform: none; border-radius: 4px 4px 0 0;">the screen ends here</div>
+  </div>
+  <div style="position: absolute; top: 604px; left: 56px; width: 630px;">
+    <div class="t1" style="margin-bottom: 4px;"><span class="bad">Continue sits at y&nbsp;=&nbsp;803.</span> The screen is 800 tall.</div>
+    <div class="t2">Three pixels out of reach, with 391px of page below it and nothing on screen to say so.</div>
+  </div>
+
+  <!-- receipt two: the done step -->
+  <div class="cap" style="position: absolute; top: 172px; left: 754px;">the last screen &mdash; hand over the house</div>
+  <div class="screen" style="top: 200px; left: 754px; width: 630px; height: 394px;">
+    <div class="wall" style="transform: scale(.4922);">
+      <div class="sun"></div><div class="land"></div>
+      <div class="col" style="top: 64px;">
+        <div style="width: 64px; height: 64px; border-radius: 22px; background: var(--live); margin-bottom: 26px;"></div>
+        <h2 class="h">Temi&rsquo;s house is ready.</h2>
+        <p class="lede">Leave this screen on the wall. It rests to a clock after a few minutes and wakes with a touch.</p>
+        <div class="card" style="height: 312px; margin-bottom: 20px; display: flex; gap: 18px;">
+          <div style="width: 148px; height: 148px; background: #fbf8f2; border-radius: 8px; flex: none;"></div>
+          <div><span class="t1">Point the phone&rsquo;s camera at the code</span><span class="t2" style="display:block; margin-top: 6px;">iPhone or iPad &mdash; three steps<br>Android &mdash; three steps</span></div>
+        </div>
+        <div class="card" style="height: 62px; margin-bottom: 10px;"><span class="t2">Tell the house what you want&hellip;</span></div>
+        <div class="card" style="height: 62px; margin-bottom: 26px;"><span class="t2">New things you plug in&hellip;</span></div>
+        <div class="cta ghosted">Open Home</div>
+      </div>
+    </div>
+    <div class="foldtag" style="bottom: 0; right: 10px; transform: none;">the screen ends here</div>
+  </div>
+  <div style="position: absolute; top: 604px; left: 754px; width: 630px;">
+    <div class="t1" style="margin-bottom: 4px;"><span class="bad">Open Home sits at y&nbsp;=&nbsp;948.</span> 148px below the fold.</div>
+    <div class="t2">The last screen of first run, on a wall panel, with its only button invisible. The house is finished and there is no visible way into it.</div>
+  </div>
+
+  <!-- the third receipt, which is composition rather than a bug -->
+  <div style="position: absolute; top: 700px; left: 56px; right: 56px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px;">
+    <div class="note">
+      <div class="t1" style="margin-bottom: 5px;">And on a 1920&times;1080 wall, the opposite problem</div>
+      <div class="t2">The column is 600px wide, top&#8209;anchored at a flat <code style="color:var(--lamp)">8vh</code>. Six of the nine screens end above y&nbsp;=&nbsp;600, leaving up to 500px of empty landscape beneath. It reads as a phone form pinned to a wall.</div>
+    </div>
+    <div class="note">
+      <div class="t1" style="margin-bottom: 5px;">The heading hops 90px between steps</div>
+      <div class="t2">Welcome 154 &rarr; names 64 &rarr; code 92 &rarr; done 154. The eyebrow and the mark are on some screens and not others, so the title moves under a <code style="color:var(--lamp)">mode="out-in"</code> transition every time you answer something.</div>
+    </div>
+    <div class="note">
+      <div class="t1" style="margin-bottom: 5px;">And the counter is not telling the truth</div>
+      <div class="t2">It counts four screens. There are six. You type your name, choose a passcode that cannot be skipped, and the next thing the house says is <b>Step 1 of 4</b> &mdash; two answers in, and apparently at the beginning.</div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

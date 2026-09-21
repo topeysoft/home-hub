@@ -41,6 +41,14 @@ describe('what the dev server sends to the brain', () => {
     expect(proxy['/stream'].target).toMatch(/^ws:/)
   })
 
+  it('sends the brain its own name in Host, so a real house behind caddy answers', () => {
+    // tools/dev.sh live points this at a house that is up, where caddy picks the site by Host.
+    // A bare string target passes on the browser's localhost:5173 and every request is a site
+    // caddy does not serve -- which looks like the hub being down rather than like this.
+    const proxy = proxyFor('http://hub.local:8300') as Record<string, any>
+    for (const p of [...BRAIN_PATHS, ...BRAIN_SOCKETS]) expect(proxy[p]?.changeOrigin, p).toBe(true)
+  })
+
   it('never claims a path Vite needs for itself', () => {
     // Proxying any of these away from Vite breaks hot reload, which is the whole point of the dev server.
     for (const own of ['/@vite', '/@id', '/@fs', '/src', '/node_modules']) {

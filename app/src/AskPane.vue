@@ -89,7 +89,7 @@ async function allow(span: 'day' | 'weekend' | 'keep') {
     answered(a.id)
   } catch (e: any) {
     // the code was asked for and not given, or the hub said no: the question stands, so the pane does
-    if (e.message !== 'That needs the code.') notify(e.message, 'error')
+    if (e.message !== 'That needs the passcode.') notify(e.message, 'error')
     choosing.value = false; busy.value = false
   }
 }
@@ -97,7 +97,7 @@ async function deny() {
   const a = ask.value; if (!a || busy.value) return
   busy.value = true
   try { await denyPhone(a.id); answered(a.id) }
-  catch (e: any) { if (e.message !== 'That needs the code.') notify(e.message, 'error'); busy.value = false }
+  catch (e: any) { if (e.message !== 'That needs the passcode.') notify(e.message, 'error'); busy.value = false }
 }
 
 /* A wall panel has no keyboard, so Escape is not the way out and never the only

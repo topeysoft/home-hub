@@ -1,14 +1,15 @@
 // SPDX-FileCopyrightText: 2026 Temitope Adeyeri
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { reactive } from 'vue'
-import { doRestart, type Rung, getBridge, type Bridge, getHome, getEvents, getAmbient, getScenes, getStatus, getDiscovered, getRoutines, getAssistant, getPresence, getHealth, getSounds, connect, act, setIntent, setHomeIntent, type Room, type Device, type Home, type Event, type Ambient, type Rules, type Status, type Found, type Intent, type Routine, type Assistant, type Presence, type Note, type Sound, requestUpdate, getPhones, type Phone, type Ask, getAccounts, type Account, getShare, type Share } from './api'
+import { reactive, watch } from 'vue'
+import { doRestart, type Rung, getBridge, type Bridge, getStrip, type Strip, getHome, getEvents, getAmbient, getScenes, getStatus, getDiscovered, getRoutines, getAssistant, getPresence, getHealth, getSounds, connect, act, setIntent, setHomeIntent, type Room, type Device, type Home, type Event, type Ambient, type Rules, type Status, type Found, type Intent, type Routine, type Assistant, type Presence, type Note, type Sound, requestUpdate, getPhones, type Phone, type Ask, getAccounts, type Account, getShare, type Share, getHappened, type Happened, getChanges, type Changes } from './api'
 import { lock } from './code'
 import { sunPosition, sunGuess, moonPhase } from './sun'
+import { locale, setHouseLanguage } from './lang'
 
 /* The few soft sheets the panel has. Named rather than written out twice: the restart keeps the one
    it closed so it can come back to it, and `typeof store.sheet` there would make the store's own type
    circular -- which typescript answers by quietly making the whole store `any`. */
-export type Sheet = null | 'location' | 'add' | 'code' | 'why' | 'routines' | 'hub' | 'look' | 'house' | 'people' | 'accounts' | 'share' | 'notes'
+export type Sheet = null | 'location' | 'add' | 'code' | 'why' | 'routines' | 'hub' | 'look' | 'house' | 'people' | 'accounts' | 'share' | 'notes' | 'happened' | 'changes'
 
 export const store = reactive({
   rooms: [] as Room[], linkUp: false, linkLost: false, error: '', loaded: false,   // linkLost: down long enough to be worth mentioning
@@ -29,7 +30,7 @@ export const store = reactive({
      on the wall opens the house on a phone, and it promised to land ON the step with the camera --
      which it never did, because nothing here opened the page it lives on. Now it does. */
   sheet: (new URLSearchParams(location.search).has('add') ? 'add'
-    : ['location', 'add', 'code', 'why', 'routines', 'hub', 'look', 'house', 'people', 'accounts', 'share', 'notes'].includes(new URLSearchParams(location.search).get('sheet') ?? '') ? new URLSearchParams(location.search).get('sheet') : null) as Sheet,
+    : ['location', 'add', 'code', 'why', 'routines', 'hub', 'look', 'house', 'people', 'accounts', 'share', 'notes', 'happened', 'changes'].includes(new URLSearchParams(location.search).get('sheet') ?? '') ? new URLSearchParams(location.search).get('sheet') : null) as Sheet,
   whyRoom: new URLSearchParams(location.search).get('room') as string | null,   // the room the why sheet is about; ?sheet=why&room=kitchen previews it
   resume: new URLSearchParams(location.search).get('signin') as string | null,   // a conversation already open in the house (signing an account in again); the add sheet picks it up. ?sheet=add&signin=<flow> previews it
   /* ...and what it is about, when whoever handed it over knows. The screen it lands on is headed by
@@ -43,6 +44,8 @@ export const store = reactive({
   assistant: null as Assistant | null,       // whether the hub can talk to the model at all
   presence: null as Presence | null,         // who is home, from the brain; null until it has said
   notes: [] as Note[],                       // what needs a look, in the brain's words
+  happened: null as Happened | null,         // the catch-up, in the brain's words; null until it has answered
+  changes: null as Changes | null,           // who changed what -- only ever loaded behind the code
   accounts: [] as Account[],                 // the services the house has signed into, for the Accounts page and its door
   /* What this house gives out to other apps as Matter devices: its own page, and its own door, which
      says how things stand there without anybody opening it. Null until the hub has answered once. */
@@ -79,11 +82,20 @@ export const store = reactive({
      all, which is most of them. `state: 'none'` is a hub that has them and is not busy, which is not
      the same thing and is why this is not cleared to null -- see refreshBridge(). */
   bridge: null as Bridge | null,
+  strip: null as Strip | null,   // a light strip being set up; hub/strip.py. One at a time, same as a bridge
   /* A room the panel has been asked to open from somewhere else -- New devices, after an account
      brought in six things at once. App.vue takes it and clears it; nothing else reads it. */
   goRoom: null as string | null,
   sky: { elevation: -20, azimuth: 0, phase: 0, hour: 0, month: 6, condition: 'clear-night', guessed: true },   // what the sky draws; month is seasonal (0 midwinter → 6 midsummer, either hemisphere)
 })
+
+/*
+ * The house has one language and the panel follows it, wherever the status came from -- the boot
+ * fetch, the websocket, or one of first run's own calls. A watcher rather than a line beside every
+ * `store.status =` there are six of, which is how <html lang> and the clock drifted apart from the
+ * rest of the panel in the first place. See lang.ts.
+ */
+watch(() => store.status?.language, setHouseLanguage, { immediate: true })
 
 /* ---------- the sky: sun from the clock and the location, weather from the house ---------- */
 const params = new URLSearchParams(location.search)
@@ -282,9 +294,9 @@ export function houseLine(): string {
 function sinceText(): string {
   const s = store.presence?.since; if (!s) return ''
   const d = new Date(s * 1000), today = new Date(); today.setHours(0, 0, 0, 0)
-  if (d.getTime() >= today.getTime()) return ` since ${d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
+  if (d.getTime() >= today.getTime()) return ` since ${d.toLocaleTimeString(locale(), { hour: 'numeric', minute: '2-digit' })}`
   if (d.getTime() >= today.getTime() - 86400000) return ' since yesterday'
-  return ` since ${d.toLocaleDateString([], { weekday: 'long' })}`
+  return ` since ${d.toLocaleDateString(locale(), { weekday: 'long' })}`
 }
 
 /* ---------- scenes: every button says what it will do ---------- */
@@ -475,7 +487,7 @@ export function ago(ts: number, now = Date.now()): string {
   if (s < 60) return 'Just now'
   if (s < 3600) return `${Math.round(s / 60)} min ago`
   if (s < 86400) return `${Math.round(s / 3600)} h ago`
-  return new Date(ts * 1000).toLocaleDateString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' })
+  return new Date(ts * 1000).toLocaleDateString(locale(), { weekday: 'short', hour: 'numeric', minute: '2-digit' })
 }
 let eventsTimer: number | undefined
 export async function refreshEvents() {
@@ -484,6 +496,17 @@ export async function refreshEvents() {
 function eventsSoon() { clearTimeout(eventsTimer); eventsTimer = window.setTimeout(refreshEvents, 1500) }
 
 /* ---------- routines: what the house does on its own, and why a room is the way it is ---------- */
+/* The catch-up. Asked for when the page opens rather than watched: a span only changes as the clock
+   moves, so nothing on the stream could push it, and a house that recomputed it on every state change
+   would spend the evening measuring how long the kitchen light has been on. */
+export async function loadHappened() {
+  try { store.happened = await getHappened() } catch {}
+}
+/* Behind the code, so this one is allowed to throw: `request` puts up the prompt, and a person who
+   waves it away should see the page stay empty rather than a toast about a 401 they caused. */
+export async function loadChanges() {
+  try { store.changes = await getChanges() } catch { store.changes = null }
+}
 export async function loadRoutines() {
   try { const f = await getRoutines(); store.routines = f.rules ?? []; store.routineErrors = f.errors ?? []; store.drafts = f.drafts ?? [] } catch {}
 }
@@ -642,6 +665,37 @@ export async function refreshBridge() {
   bridgeTimer = window.setTimeout(refreshBridge, live ? 2000 : 60000)
 }
 
+/* ---------- a light strip being set up ----------
+
+   The same poll as a bridge and for the same reason: it matters only while somebody is standing in
+   front of the thing. A hub too old to know what a strip is answers 404 and the sheet simply never
+   appears, which is why this swallows rather than raises. */
+let stripTimer: number | undefined
+/* ?strip=knocking|working|order|which|length|room|ready draws one beat without a strip in the room,
+   the way ?sheet= and ?setup=1 draw the others (AGENTS.md §4). It is the only way to hold a screen
+   still beside the board it was drawn from, since every real beat is over in seconds. */
+const STRIP_PREVIEW = new URLSearchParams(location.search).get('strip')
+const STRIP_BACK = new URLSearchParams(location.search).get('back')   // &back=colors|length
+const previewStrip = (beat: string): Strip => ({
+  revisit: (STRIP_BACK as Strip['revisit']) || undefined,
+  state: (beat === 'which' ? 'order' : beat) as Strip['state'],
+  name: 'A light strip',
+  step: beat === 'working' ? 'letting' : undefined,
+  asking: beat === 'which' ? 'which' : beat === 'order' ? 'red' : undefined,
+  count: 186,
+  rooms: store.rooms.length
+    ? store.rooms.map(r => ({ id: r.id, name: r.name }))
+    : [{ id: 'living', name: 'Living room' }, { id: 'kitchen', name: 'Kitchen' },
+       { id: 'bedroom', name: 'Bedroom' }, { id: 'study', name: 'Study' }],
+})
+export async function refreshStrip() {
+  clearTimeout(stripTimer)
+  if (STRIP_PREVIEW) { store.strip = previewStrip(STRIP_PREVIEW); return }
+  try { store.strip = await getStrip() } catch { store.strip = null }
+  const live = !!store.strip && !['none', 'ready'].includes(store.strip.state)
+  stripTimer = window.setTimeout(refreshStrip, live ? 2000 : 60000)
+}
+
 let foundTimer: number | undefined
 export async function refreshFound() {
   if (store.status?.driver !== 'ready') return
@@ -712,6 +766,7 @@ export async function start() {
   updateSky(); clearInterval(skyTimer); skyTimer = window.setInterval(updateSky, 30000)
   clearInterval(foundPoll); foundPoll = window.setInterval(refreshFound, 60000)
   refreshBridge()
+  refreshStrip()
   stop = connect({ device: applyDevice, home: applyHome, intent: applyIntent, drafts: d => { store.drafts = d; eventsSoon() }, presence: p => { store.presence = p; eventsSoon() }, phones: () => loadPhones(true), share: () => { store.shareTick++; loadShare() }, ambient: a => { store.ambient = a; updateSky() }, status: s => {
     const was = store.status?.driver, version = store.status?.version
     store.status = s
@@ -740,4 +795,4 @@ export async function start() {
     else lostTimer = window.setTimeout(() => (store.linkLost = true), 4000)   // a blink on startup is not worth a banner
   } })
 }
-export function halt() { stop?.(); clearInterval(skyTimer); clearInterval(foundPoll); clearTimeout(bridgeTimer) }
+export function halt() { stop?.(); clearInterval(skyTimer); clearInterval(foundPoll); clearTimeout(bridgeTimer); clearTimeout(stripTimer) }

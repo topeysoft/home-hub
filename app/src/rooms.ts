@@ -91,6 +91,11 @@ const saying = (r: Room) => activityParts(r).length
  * near a multiple of five will see the tab change shape as rooms come on and
  * go off. Nothing here is worth a hole in the wall to avoid that.
  */
+/* What each size is worth in the grid's fifteen tracks. The same table the test
+   adds up to check the wall comes out flush. */
+const TRACKS = { full: 15, half: 10, third: 5, row: 3 } as const
+const COLUMN = 15
+
 const PER_COLUMN = 5
 
 /*
@@ -114,50 +119,82 @@ const PER_COLUMN = 5
  */
 export function sizeRooms(ranked: Room[]): Cell[] {
   const quiet = ranked.filter(r => tier(r) > 0).length
-  const rows = quiet - (quiet % PER_COLUMN)
-  /* the quiet rooms are already last -- that is what tier() sorts on -- so the
-     index is simply the tail, and everything before it is the bento */
-  const firstRow = ranked.length - rows
-  return ranked.map((r, i): Cell => {
-    if (i >= firstRow) return { id: r.id, size: 'row' }
-    if (tier(r) > 0) return { id: r.id, size: 'third' }
-    if (i > 1) return { id: r.id, size: 'third' }
-    if (i === 1) return { id: r.id, size: 'half' }
-    return { id: r.id, size: playingIn(r) || (rows > 0 && saying(r) >= 2) ? 'full' : 'half' }
-  })
+  /* Is there an index at all. Fewer than a column of quiet rooms and the house
+     is all cards, exactly as design/rooms/Main.dc.html drew it. */
+  const index = quiet >= PER_COLUMN
+  const cards = index ? flush(ranked, quiet) : ranked.length
+  return ranked.map((r, i): Cell =>
+    i >= cards ? { id: r.id, size: 'row' } : { id: r.id, size: sizeAt(r, i, cards < ranked.length) })
 }
 
-/* What each size is worth in the grid's fifteen tracks. The same table the test
-   adds up to check the wall comes out flush. */
-const TRACKS = { full: 15, half: 10, third: 5, row: 3 } as const
-const COLUMN = 15
+/* What a card is worth where it sits. The lead may take a whole column when
+   there is an index behind it to make the room -- but only if it has more than
+   one thing to say, because one lamp is one line and one line does not want a
+   poster. */
+function sizeAt(r: Room, i: number, index: boolean): Size {
+  if (tier(r) > 0) return 'third'
+  if (i > 1) return 'third'
+  if (i === 1) return 'half'
+  return playingIn(r) || (index && saying(r) >= 2) ? 'full' : 'half'
+}
+
+/*
+ * HOW MANY ROOMS STAY CARDS, which is the rule the whole arrangement now turns on.
+ *
+ * It used to be the other way round: the index took quiet rooms in whole columns
+ * of five and whatever would not fit stayed a card. That left the bento ending
+ * wherever it happened to end, and tracks() closed the hole by giving the
+ * remainder to the last card -- fine when the hole is at the foot of a column,
+ * absurd when the last card STARTS one. On a thirteen-room house with one lamp
+ * on, a room with "1 light off" to say was drawn a whole column tall.
+ * design/rooms/Long.dc.html, and design/rooms/DemoteB.dc.html for this answer.
+ *
+ * So the BENTO is what ends flush, and the index takes the rest: the smallest
+ * number of leading rooms whose cards come to whole columns, which is
+ *
+ *   at least two, because one room leading and one beside it is the
+ *     arrangement, and a lead on its own is not;
+ *   at least the number of rooms doing something, because those are never rows;
+ *   at most one short of the house, because an index of nothing is not an index.
+ *
+ * One always exists once there is an index to have: every size is a multiple of
+ * five, so three more cards carry the total through every multiple of fifteen,
+ * and an index needs five quiet rooms before it exists at all.
+ *
+ * What it spends is the rule from 17 Sep 2026: the index is no longer whole
+ * columns, so its last one can run short. That was chosen knowing it -- a short
+ * column at the END of the house reads as the list finishing, where the same
+ * hole in the middle of the index read as a bug.
+ */
+function flush(ranked: Room[], quiet: number): number {
+  const least = Math.max(2, ranked.length - quiet)
+  let sum = 0
+  for (let i = 0; i < ranked.length; i++) {
+    sum += TRACKS[sizeAt(ranked[i], i, true)]
+    const k = i + 1
+    if (k >= least && k < ranked.length && sum % COLUMN === 0) return k
+  }
+  return ranked.length          // nothing fits: the house is all cards, and has no hole to fill
+}
 
 export type Track = { span: number; at?: number }
 
 /*
  * Where each cell sits in the grid, which the grid cannot be left to work out
- * on its own. Two things go wrong if it is:
+ * on its own.
  *
- * The bento's last column is often short -- a house whose cards come to fifty
- * tracks leaves five at the foot of the fourth column -- and `column dense`
- * will drop the first row of the index into that hole. The index then runs one
- * room short for the rest of its length and the bottom of a column is a gap
- * where a room should be. So the last CARD stretches to the foot of its column,
- * which closes the hole and is better looking than the hole was.
+ * A row is PLACED on its own track rather than flowed: flowed, a row that
+ * happened to fit a leftover two tracks would take them and drag the rest of the
+ * index up behind it. Five rows are one column, top to bottom, and the sixth
+ * starts the next one over.
  *
- * And a row is placed on its own track rather than flowed, so five rows are one
- * column top to bottom and the sixth starts the next. Flowed, a row that
- * happened to fit a leftover two tracks would take them and drag the rest of
- * the index up behind it.
+ * There used to be a second job here -- the last card stretched to the foot of
+ * its column, so `column dense` could not drop an index row into the hole the
+ * cards left behind. sizeRooms() no longer leaves one: the bento ends on a
+ * column boundary, or there is no index to backfill it with. See flush().
  */
 export function tracks(plan: Cell[]): Track[] {
   const out: Track[] = plan.map(c => ({ span: TRACKS[c.size] }))
-  const cards = plan.reduce((n, c, i) => c.size === 'row' ? n : i + 1, 0)   // one past the last card
-  let fill = 0
-  for (let i = 0; i < cards; i++) {
-    fill = fill + out[i].span > COLUMN ? out[i].span : fill + out[i].span
-  }
-  if (cards && fill < COLUMN) out[cards - 1].span += COLUMN - fill
   const first = plan.findIndex(c => c.size === 'row')
   if (first >= 0) for (let i = first; i < plan.length; i++) out[i].at = 1 + 3 * ((i - first) % PER_COLUMN)
   return out

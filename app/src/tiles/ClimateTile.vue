@@ -7,6 +7,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import type { Device } from '../api'
 import { setFan, setSense } from '../api'
 import { perform, shortName, roomOf, store, isDead, notify, cap } from '../store'
+import { actingOf } from '../tone'
 import Icon from '../Icon.vue'
 import DeviceArt from '../DeviceArt.vue'
 
@@ -107,6 +108,14 @@ const artState = computed(() => ({
   heating: doingNow.value === 'heating' || doingNow.value === 'heat',
 }))
 
+/* And the CARD, off the same answer. It used to be `:class="[mode, ...]"` -- what
+ * the thermostat was set to -- so a box holding at temperature stayed fully blue
+ * with nothing running, and a heat pump on Auto was green whether it was heating,
+ * cooling or idle. Auto being the ordinary setting for a heat pump, the blue and
+ * the orange may hardly have appeared in that house at all. tone.ts/actingOf has
+ * the rest of the argument, and the reason the name is namespaced. */
+const acting = computed(() => off.value || dead.value ? '' : actingOf(doingNow.value))
+
 /* the fan: Home Assistant only knows on and off (and "on" means hours), so the hub keeps the timer */
 const FAN = [{ m: 15, label: '15 min' }, { m: 30, label: '30 min' }, { m: 60, label: '1 hr' }, { m: 120, label: '2 hr' }]
 const hasFan = computed(() => Array.isArray(a.value.fan_modes) && a.value.fan_modes.includes('on'))
@@ -128,7 +137,7 @@ async function fan(minutes: number) {
 </script>
 
 <template>
-  <div class="tile climate wide" :class="[mode, { on: !off, dead, pending }]" :aria-label="`${name}, ${doing}`">
+  <div class="tile climate wide" :class="[acting, { on: !off, dead, pending }]" :aria-label="`${name}, ${doing}`">
     <div class="tile-body">
       <div class="clim-head">
         <span class="tile-icon"><Icon name="climate" /></span>

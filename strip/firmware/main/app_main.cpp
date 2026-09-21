@@ -1,0 +1,423 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
+//
+// A light strip controller: a Matter device in its own right, and a little more in a house with our hub.
+//
+// WHY THIS IS ESP-IDF AND NOT ARDUINO, because it was Arduino first and the hardware settled it. The
+// Arduino framework ships its Matter libraries with CONFIG_ENABLE_CHIPOBLE unset on every target, so
+// a strip built that way never advertises itself for commissioning: it has to be on the Wi-Fi
+// already and be found over mDNS. Which means a household with an Apple TV and no hub of ours could
+// not set one up at all. An evening went on a strip that would not pair, a BLE scan that found
+// fifty-nine devices and not ours, and finally the same board running esp-matter's own example
+// saying "CHIPoBLE advertising started" with nothing configured. docs/strip.md has both scans.
+//
+// So Matter carries the Wi-Fi credentials and the commissioning, in one encrypted flow, and the
+// hand-rolled provisioning this firmware started with -- which put a household's Wi-Fi password on
+// an open BLE link -- is gone rather than fixed.
+//
+// TWO WAYS TO OWN ONE, and the first is the whole product on its own:
+//
+//   Any Matter hub    commission it with the code. It is a color light: on, off, dim, any color, any
+//                     warmth, in whatever app the household already has. Nothing of ours is involved.
+//   Our hub as well   the same, plus the two questions Matter has no words for -- which order its
+//                     colors come out in, and how far it goes -- over MQTT. A strip with no broker in
+//                     its settings simply does not do this half and is none the worse for it.
+//
+// WHAT MATTER CANNOT SAY: the Extended Color Light is one color for the whole fitting. It has no
+// concept of a pixel, so the setup instruments and anything spatial are ours and always will be.
+// That is the same split Hue and Nanoleaf run and it is not a compromise.
+//
+// THE LIGHT NEVER REPORTS A FAULT BY CHANGING COLOR. This is the one place a strip is the opposite of
+// the bridge puck. docs/puck-light.md puts a fault above a puck's light, because a puck glowing while
+// its bridge is down is furniture that lies. A strip is behind somebody's television while they watch
+// a film: turning it amber because a broker blinked is the product breaking, not reporting.
+#include <esp_err.h>
+#include <esp_log.h>
+#include <esp_mac.h>
+#include <esp_system.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#include <nvs_flash.h>
+#include <nvs.h>
+#include <driver/gpio.h>
+#include <esp_timer.h>
+#include <mqtt_client.h>
+
+#include <esp_matter.h>
+#include <esp_matter_console.h>
+#include <esp_matter_ota.h>
+#include <app/server/Server.h>
+
+#include "pixels.h"
+
+using namespace esp_matter;
+using namespace esp_matter::attribute;
+using namespace esp_matter::endpoint;
+using namespace chip::app::Clusters;
+
+#define FW "0.3.0"
+#ifndef DATA_PIN
+#define DATA_PIN 5
+#endif
+// GPIO 0 is BOOT on every devkit and an ordinary input once running. A hold only counts once it has
+// been seen let go: it is held down to flash, it is a strapping pin, and on some boards it sits low,
+// and any of those would otherwise factory-reset the device five seconds into every boot for ever.
+#ifndef BUTTON_PIN
+#define BUTTON_PIN 0
+#endif
+#define HOLD_ARMED 1000
+#define HOLD_DONE 5000
+
+static const char *TAG = "strip";
+
+// WHAT THE INSTRUMENTS ARE LIT IN, AND WHY IT IS NOT THE PANEL'S AMBER. This was rgb(233,184,114) --
+// the panel's own --lamp, copied out of the palette -- and on the first real board it came out WHITE,
+// which is exactly what AGENTS.md says a pastel does on an emitter and why it says never to drive one
+// with a screen token. An indicator wants its off-channels near zero. The household's own light is
+// deliberately untouched by this: that one is lighting a room rather than signalling.
+static constexpr uint8_t SIG_R = 255, SIG_G = 96, SIG_B = 0;
+
+static px::Pixels strip;
+static px::Fill fill;
+static nvs_handle_t nvs;
+static char chipHex[13];
+static char base[16] = "strip";
+static uint16_t light_endpoint = 0;
+
+// The setup instruments own the strip while they run, and the household's own color goes back the
+// moment they stop. Without this a fill that was never stopped leaves somebody's living room running
+// a test pattern for ever -- and, on the Arduino version, the waiting glow was drawn and then wiped a
+// fraction of a second later by the first attribute sync, which from a bench looks like a dead strip.
+static bool instrument = false;
+static bool want_on = false;
+static uint8_t want_r = 255, want_g = 180, want_b = 110, want_bri = 200;
+
+static esp_mqtt_client_handle_t mqtt = nullptr;
+static bool broker_up = false;
+
+static inline uint32_t now_ms() { return (uint32_t)(esp_timer_get_time() / 1000); }
+
+// ---------------------------------------------------------------- settings
+
+static std::string get_str(const char *key, const char *fallback) {
+    size_t len = 0;
+    if (nvs_get_str(nvs, key, nullptr, &len) != ESP_OK || len == 0) return fallback;
+    std::string out(len, '\0');
+    if (nvs_get_str(nvs, key, out.data(), &len) != ESP_OK) return fallback;
+    out.resize(len - 1);
+    return out;
+}
+static void put_str(const char *key, const std::string &v) {
+    nvs_set_str(nvs, key, v.c_str());
+    nvs_commit(nvs);
+}
+static int get_i32(const char *key, int fallback) {
+    int32_t v = 0;
+    return nvs_get_i32(nvs, key, &v) == ESP_OK ? (int)v : fallback;
+}
+static void put_i32(const char *key, int v) { nvs_set_i32(nvs, key, v); nvs_commit(nvs); }
+
+// ---------------------------------------------------------------- what it is showing
+
+static void paint() {
+    if (instrument) return;
+    if (!want_on) strip.clear();
+    else {
+        const uint16_t k = want_bri ? want_bri : 1;
+        strip.solid((uint8_t)(want_r * k / 255), (uint8_t)(want_g * k / 255), (uint8_t)(want_b * k / 255));
+    }
+    px::show(strip);
+}
+
+// Matter carries color as hue and saturation, 0-254 each. Value is the level, which is its own
+// attribute -- so this is at full output and paint() scales it, exactly as the panel's color.ts does
+// and for the same reason: a swatch says which color, the dimmer says how much of it.
+static void from_hs(uint8_t hue, uint8_t sat, uint8_t &r, uint8_t &g, uint8_t &b) {
+    const float h = hue * 360.0f / 254.0f / 60.0f;
+    const float s = sat / 254.0f;
+    const int i = ((int)h) % 6;
+    const float f = h - (int)h;
+    const float p = 1 - s, q = 1 - s * f, t = 1 - s * (1 - f);
+    float c[3];
+    switch (i) {
+        case 0: c[0] = 1; c[1] = t; c[2] = p; break;
+        case 1: c[0] = q; c[1] = 1; c[2] = p; break;
+        case 2: c[0] = p; c[1] = 1; c[2] = t; break;
+        case 3: c[0] = p; c[1] = q; c[2] = 1; break;
+        case 4: c[0] = t; c[1] = p; c[2] = 1; break;
+        default: c[0] = 1; c[1] = p; c[2] = q; break;
+    }
+    r = (uint8_t)(c[0] * 255); g = (uint8_t)(c[1] * 255); b = (uint8_t)(c[2] * 255);
+}
+
+// ---------------------------------------------------------------- our hub, when there is one
+
+static void say(const char *leaf, const char *payload, int retain = 0) {
+    if (!mqtt || !broker_up) return;
+    char t[96];
+    snprintf(t, sizeof(t), "%s/%s/%s", base, chipHex, leaf);
+    esp_mqtt_client_publish(mqtt, t, payload, 0, 1, retain);
+}
+
+static void say_what_we_are() {
+    char v[16];
+    snprintf(v, sizeof(v), "%d", strip.count);
+    say("count", v, 1);
+    const char letters[3] = {'r', 'g', 'b'};
+    char ord[4] = {0, 0, 0, 0};
+    for (int c = 0; c < 3; c++) ord[strip.order.at[c]] = letters[c];
+    say("order", ord, 1);
+    say("status", "online", 1);
+}
+
+static void on_command(const std::string &leaf, const std::string &msg) {
+    if (leaf == "hello") { say_what_we_are(); return; }
+
+    if (leaf == "show/set") {
+        if (msg.rfind("raw ", 0) == 0) {
+            int b0 = 0, b1 = 0, b2 = 0;
+            if (sscanf(msg.c_str() + 4, "%d %d %d", &b0, &b1, &b2) != 3) return;
+            instrument = true;
+            fill.running = false;
+            // Exactly as given. Putting these through the strip's mapping would be applying the very
+            // guess the question exists to test (pixels.h, raw3).
+            strip.raw3((uint8_t)b0, (uint8_t)b1, (uint8_t)b2);
+            px::show(strip);
+        } else if (msg == "fill") {
+            instrument = true;
+            strip.clear();
+            px::show(strip);
+            fill.start(now_ms());
+        } else if (msg == "off") {
+            instrument = false;
+            paint();
+        }
+        return;
+    }
+
+    if (leaf == "fill/stop") {
+        // Latched HERE, at the moment the message lands. A person's reaction time is already the only
+        // error in this answer; adding however busy the Wi-Fi is would make a strip measure short on a
+        // busy evening and right on a quiet one, which is the worst kind of wrong.
+        const int n = fill.stop();
+        strip.set_count(n);
+        put_i32("count", n);
+        char v[16];
+        snprintf(v, sizeof(v), "%d", n);
+        say("count", v, 1);
+        instrument = false;
+        paint();
+        return;
+    }
+    if (leaf == "order/set") {
+        if (strip.order.set(msg.c_str())) { put_str("order", msg); say("order", msg.c_str(), 1); }
+        return;
+    }
+    if (leaf == "white/set") {
+        strip.order.white = (msg == "1");
+        nvs_set_u8(nvs, "white", strip.order.white); nvs_commit(nvs);
+        return;
+    }
+    if (leaf == "count/set") { strip.set_count(atoi(msg.c_str())); put_i32("count", strip.count); return; }
+    if (leaf == "room/set")  { put_str("room", msg); return; }
+}
+
+static void mqtt_event(void *arg, esp_event_base_t, int32_t id, void *data) {
+    auto *e = (esp_mqtt_event_handle_t)data;
+    switch ((esp_mqtt_event_id_t)id) {
+        case MQTT_EVENT_CONNECTED: {
+            broker_up = true;
+            char sub[96];
+            snprintf(sub, sizeof(sub), "%s/%s/#", base, chipHex);
+            esp_mqtt_client_subscribe(mqtt, sub, 1);
+            say_what_we_are();
+            break;
+        }
+        case MQTT_EVENT_DISCONNECTED: broker_up = false; break;
+        case MQTT_EVENT_DATA: {
+            std::string topic(e->topic, e->topic_len), msg(e->data, e->data_len);
+            const std::string prefix = std::string(chipHex) + "/";
+            const size_t cut = topic.find(prefix);
+            if (cut == std::string::npos) break;
+            on_command(topic.substr(cut + prefix.size()), msg);
+            break;
+        }
+        default: break;
+    }
+}
+
+static void find_hub() {
+    const std::string host = get_str("mhost", "");
+    // Blank on a strip that has never met our hub, which is the ordinary case for one bought in a
+    // shop. It is then simply a Matter light and none of this half ever runs.
+    if (host.empty()) return;
+    const std::string uri = "mqtt://" + host + ".local:1883";
+    esp_mqtt_client_config_t cfg = {};
+    cfg.broker.address.uri = uri.c_str();
+    cfg.credentials.username = strdup(get_str("muser", "").c_str());
+    cfg.credentials.authentication.password = strdup(get_str("mpass", "").c_str());
+    char will[96];
+    snprintf(will, sizeof(will), "%s/%s/status", base, chipHex);
+    cfg.session.last_will.topic = strdup(will);
+    cfg.session.last_will.msg = "offline";
+    cfg.session.last_will.retain = 1;
+    mqtt = esp_mqtt_client_init(&cfg);
+    if (!mqtt) return;
+    esp_mqtt_client_register_event(mqtt, MQTT_EVENT_ANY, mqtt_event, nullptr);
+    esp_mqtt_client_start(mqtt);
+}
+
+// ---------------------------------------------------------------- Matter
+
+static esp_err_t on_attribute(attribute::callback_type_t type, uint16_t endpoint_id, uint32_t cluster_id,
+                              uint32_t attribute_id, esp_matter_attr_val_t *val, void *) {
+    if (type != PRE_UPDATE || endpoint_id != light_endpoint) return ESP_OK;
+    static uint8_t hue = 21, sat = 216;
+    if (cluster_id == OnOff::Id && attribute_id == OnOff::Attributes::OnOff::Id) {
+        want_on = val->val.b;
+    } else if (cluster_id == LevelControl::Id && attribute_id == LevelControl::Attributes::CurrentLevel::Id) {
+        want_bri = val->val.u8;
+    } else if (cluster_id == ColorControl::Id) {
+        if (attribute_id == ColorControl::Attributes::CurrentHue::Id) hue = val->val.u8;
+        else if (attribute_id == ColorControl::Attributes::CurrentSaturation::Id) sat = val->val.u8;
+        else return ESP_OK;
+        from_hs(hue, sat, want_r, want_g, want_b);
+    } else {
+        return ESP_OK;
+    }
+    paint();
+    return ESP_OK;
+}
+
+static esp_err_t on_identify(identification::callback_type_t, uint16_t, uint8_t, uint8_t, void *) {
+    return ESP_OK;
+}
+
+static void on_event(const ChipDeviceEvent *event, intptr_t) {
+    // The knock is over the moment somebody has taken it: hand the strip back and draw whatever the
+    // household's own state says, which is off until they turn it on, exactly like any other new
+    // light in their app. Without this it sat on the setup glow for ever, looking stuck.
+    if (event->Type == chip::DeviceLayer::DeviceEventType::kCommissioningComplete) {
+        ESP_LOGI(TAG, "commissioned. The light is the household's now.");
+        instrument = false;
+        paint();
+        find_hub();
+    }
+}
+
+// ---------------------------------------------------------------- the button, and the fill
+
+static void housekeeping(void *) {
+    bool released = false, armed = false;
+    uint32_t down = 0;
+    for (;;) {
+        // A hold only counts once the button has been seen let go; see BUTTON_PIN above.
+        if (gpio_get_level((gpio_num_t)BUTTON_PIN)) released = true;
+        else if (released) {
+            if (!down) down = now_ms();
+            const uint32_t held = now_ms() - down;
+            if (!armed && held > HOLD_ARMED) {
+                armed = true;
+                instrument = true;
+                strip.solid(255, 0, 0);
+                px::show(strip);
+                ESP_LOGW(TAG, "keep holding to forget the house...");
+            }
+            if (held > HOLD_DONE) {
+                ESP_LOGW(TAG, "forgetting the house. It will come back new.");
+                strip.clear();
+                px::show(strip);
+                nvs_erase_all(nvs);
+                nvs_commit(nvs);
+                esp_matter::factory_reset();   // erases Matter's own storage and restarts
+                vTaskDelay(pdMS_TO_TICKS(2000));
+                esp_restart();
+            }
+        }
+        if (gpio_get_level((gpio_num_t)BUTTON_PIN) && down) {
+            down = 0;
+            if (armed) { armed = false; instrument = !chip::Server::GetInstance().GetFabricTable().FabricCount();
+                         if (instrument) { strip.solid(SIG_R, SIG_G, SIG_B); px::show(strip); } else paint(); }
+        }
+
+        if (fill.running) {
+            const int was = fill.at;
+            fill.tick(now_ms(), strip.count);
+            if (fill.at != was) {
+                strip.clear();
+                for (int i = 0; i < fill.at; i++)
+                    strip.order.bytes(SIG_R, SIG_G, SIG_B, &strip.buf[i * strip.order.per_pixel()]);
+                px::show(strip);
+                char v[16];
+                snprintf(v, sizeof(v), "%d", fill.at);
+                say("fill", v);
+            }
+        }
+        vTaskDelay(pdMS_TO_TICKS(5));
+    }
+}
+
+extern "C" void app_main() {
+    nvs_flash_init();
+    nvs_open("strip", NVS_READWRITE, &nvs);
+
+    uint8_t mac[6] = {0};
+    esp_read_mac(mac, ESP_MAC_WIFI_STA);
+    snprintf(chipHex, sizeof(chipHex), "%02x%02x%02x", mac[3], mac[4], mac[5]);
+
+    strip.set_count(get_i32("count", PX_ASSUMED));
+    uint8_t w = 0;
+    nvs_get_u8(nvs, "white", &w);
+    strip.order.white = w;
+    strip.order.set(get_str("order", "grb").c_str());
+    snprintf(base, sizeof(base), "%s", get_str("base", "strip").c_str());
+
+    const bool lit = px::begin(DATA_PIN);
+    gpio_config_t btn = {};
+    btn.pin_bit_mask = 1ULL << BUTTON_PIN;
+    btn.mode = GPIO_MODE_INPUT;
+    btn.pull_up_en = GPIO_PULLUP_ENABLE;
+    gpio_config(&btn);
+
+    // One console, which the Arduino version could not manage: there, the framework logs came out of
+    // UART0 while our own Serial was the native USB port, so a bring-up log full of errors and not one
+    // word from us was the ordinary experience and read as a board that never ran our code.
+    const char letters[3] = {'r', 'g', 'b'};
+    char ord[4] = {0, 0, 0, 0};
+    for (int c = 0; c < 3; c++) ord[strip.order.at[c]] = letters[c];
+    ESP_LOGI(TAG, FW "  chip %s  pin %d  %d lights, order %s%s", chipHex, DATA_PIN, strip.count, ord,
+             strip.order.white ? "w" : "");
+    if (!lit) ESP_LOGE(TAG, "THE LIGHT DRIVER DID NOT START -- nothing will light. Check the pin.");
+
+    node::config_t node_config;
+    node_t *node = node::create(&node_config, on_attribute, on_identify);
+    if (!node) { ESP_LOGE(TAG, "no Matter node"); return; }
+
+    extended_color_light::config_t light_config;
+    light_config.on_off.on_off = false;
+    light_config.level_control.current_level = 180;
+    light_config.level_control.on_level = 180;
+    light_config.color_control.color_mode = (uint8_t)ColorControl::ColorMode::kCurrentHueAndCurrentSaturation;
+    light_config.color_control.enhanced_color_mode = (uint8_t)ColorControl::ColorMode::kCurrentHueAndCurrentSaturation;
+    endpoint_t *ep = extended_color_light::create(node, &light_config, ENDPOINT_FLAG_NONE, nullptr);
+    if (!ep) { ESP_LOGE(TAG, "no light endpoint"); return; }
+    light_endpoint = endpoint::get_id(ep);
+
+    esp_matter::start(on_event);
+
+    // Lit while it waits, because being lit IS the identity check: the wall asks whether the thing
+    // that just came on is theirs, and there is nothing to disambiguate -- it is two meters of light
+    // and it is the only one lit (design/strip/Spine.dc.html). Marked as an instrument so the first
+    // attribute sync cannot quietly wipe it, which is exactly what happened on the Arduino version.
+    if (chip::Server::GetInstance().GetFabricTable().FabricCount() == 0) {
+        instrument = true;
+        strip.solid(SIG_R, SIG_G, SIG_B);
+        px::show(strip);
+        ESP_LOGI(TAG, "not commissioned yet -- advertising over Bluetooth");
+    } else {
+        paint();
+        find_hub();
+    }
+
+    xTaskCreate(housekeeping, "strip", 4096, nullptr, 5, nullptr);
+}

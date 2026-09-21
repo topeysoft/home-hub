@@ -21,7 +21,13 @@ const dev = (id, name, room_id, capability, state, attrs = {}, maker = null, mor
 const feature = (id, name, room_id, state, hw, hw_name, maker = 'Samsung') => dev(id, name, room_id, 'switch', state, {}, maker, { guess: 'appliance', hw, hw_name })
 const rooms = [
   { id: 'living', name: 'Living room', intent: 'movie', set_by: 'rule:evening-lights', hold_until: null, devices: [
-    dev('l1', 'Ceiling light', 'living', 'light', 'on', { brightness: 90, color_temp_kelvin: 2700, supported_color_modes: ['brightness', 'color_temp'] }, 'Philips Hue'),
+    /* A bulb that can do color, IN a color, because until one existed here nobody saw that the
+       panel was reading rgb_color off the wire and throwing it away: every light in this house
+       was a warm white, so a magenta lamp and a 2700K one were the same picture and no test or
+       screenshot could tell. color_mode is what says which it is -- rgb_color is reported in
+       color_temp mode too, as the white point. See art.ts/bulbColor. */
+    dev('l1', 'Ceiling light', 'living', 'light', 'on', { brightness: 90, color_mode: 'hs', hs_color: [302, 66], rgb_color: [226, 72, 184],
+        color_pinned: true, supported_color_modes: ['color_temp', 'hs'] }, 'Philips Hue'),
     dev('l2', 'Floor lamp', 'living', 'light', 'on', { brightness: 60, supported_color_modes: ['brightness'] }),
     dev('l3', 'Reading lamp', 'living', 'light', 'off', { supported_color_modes: ['onoff'] }),
     dev('m1', 'Living room TV', 'living', 'media', 'playing', { media_title: 'The Bear', media_artist: 'Season 3, Episode 4', app_name: 'Disney+', volume_level: 0.35, entity_picture: '/x.jpg', media_position: 1421, media_duration: 3740 }),
@@ -54,7 +60,12 @@ const rooms = [
     dev('b4', 'Bedroom blinds', 'bedroom', 'cover', 'closed', { current_position: 0 }),
   ] },
   { id: 'office', name: 'Office', intent: 'occupied', set_by: null, hold_until: null, devices: [
-    dev('o1', 'Desk lamp', 'office', 'light', 'on', { brightness: 180, supported_color_modes: ['brightness'] }),
+    /* the other half of the color story: a bulb that CAN do color and has never been asked to, so it
+       is on Automatic -- which is where every light in a house out of the box is. Changed in place
+       rather than added: the wall boards were drawn at this house, and a device more or fewer moves
+       every card in the row. */
+    dev('o1', 'Desk lamp', 'office', 'light', 'on', { brightness: 180, color_mode: 'color_temp', color_temp_kelvin: 2700,
+        supported_color_modes: ['color_temp', 'hs'] }, 'Philips Hue'),
     dev('o2', 'Monitor light', 'office', 'light', 'unavailable', { supported_color_modes: ['brightness'] }),
     dev('o3', 'Office plug', 'office', 'switch', 'on', {}),
   ] },
@@ -102,6 +113,13 @@ function pressEvent() {
   if (!pressedId || Date.now() / 1000 - pressedAt > 45) return []
   return [{ ts: pressedAt, kind: 'state', subject: pressedId, old: 'off', new: 'on', source: 'device', detail: null }]
 }
+
+/* A BIGGER HOUSE, on a knob. QUIET=n adds n rooms with one lamp off in each, which is what a real
+   thirteen-room house looks like of an evening -- and the shape the Rooms tab's arrangement is
+   hardest to get right at, since it is mostly index. design/rooms/Long.dc.html. */
+for (let i = 0; i < Number(process.env.QUIET || 0); i++)
+  rooms.splice(rooms.length - 1, 0, { id: `q${i}`, name: ['Theater', 'Basement', 'Main Workshop', 'Frontyard', 'Nadine\u2019s Room', 'Pod', 'Ace\u2019s Room', 'Loft', 'Porch', 'Attic', 'Landing', 'Utility'][i] ?? `Room ${i}`,
+    intent: 'unknown', set_by: null, hold_until: null, devices: [dev(`qd${i}`, 'Lamp', `q${i}`, 'light', 'off')] })
 
 const home = { name: "Temi's house", temp_unit: '°F', rooms }
 const status = { driver: process.env.ENGINE === 'down' ? 'down' : 'ready', reason: process.env.ENGINE === 'down' ? "The hub's engine is not answering yet." : '',
@@ -196,7 +214,7 @@ const forecastDays = () => {
 }
 const ambient = { location: { name: 'Holts Summit, MO', lat: 38.6355985, lon: -92.1176322 }, weather: { id: 'w', condition: process.env.WX || 'partlycloudy', temperature: 78, unit: '°F', humidity: 48, wind_speed: 6, wind_unit: 'mph' },
   forecast: process.env.FORECAST === '0' ? null : { hourly: forecastHours(), daily: forecastDays() },
-  look: { feel: process.env.FEEL || 'calm', tone: process.env.TONE || 'follow', face: process.env.FACE || 'paper', layout: process.env.LAYOUT || 'auto', nav: process.env.NAV || 'auto' } }   // FEEL=nightfall LAYOUT=rail TONE=pastel NAV=top FACE=glass start the house somewhere else
+  look: { feel: process.env.FEEL || 'nightfall', tone: process.env.TONE || 'follow', face: process.env.FACE || 'glass', layout: process.env.LAYOUT || 'auto', nav: process.env.NAV || 'auto' } }   // the default a fresh house gets; FEEL=calm LAYOUT=rail TONE=pastel NAV=top FACE=paper start it somewhere else
 const scenes = { movie: [['light', 'off', {}], ['media', 'on', {}]], guests: [['light', 'on', {}]], asleep: [['light', 'off', {}], ['media', 'off', {}], ['lock', 'lock', {}]], empty: [['light', 'off', {}], ['media', 'pause', {}]], away: [['light', 'off', {}], ['media', 'off', {}], ['switch', 'off', {}], ['lock', 'lock', {}]] }
 const events = [
   { ts: now - 40, kind: 'state', subject: 'mo1', old: 'off', new: 'on', source: 'ha', detail: null },
@@ -517,6 +535,54 @@ const bridgeRows = process.env.BRIDGES === 'none' ? [] : [
   }) }
   if (p === '/bridge/forget') return json(res, { forgotten: 'The Hallway bridge' })
   if (p === '/health') return json(res, { notes })
+  /* What happened, and who changed what. The brain measures these off the event log (happened.py);
+     here they are fixed, so the page can be drawn and argued about without a house that has actually
+     been left alone all day. The wording is the brain's in production and copied here verbatim --
+     including the group headings, which is the whole point of them coming over the wire. */
+  if (p === '/happened') return json(res, {
+    lede: 'You were out from 9:04am until 6:12pm. Two things are still on that were on the whole time.',
+    since: Date.now() / 1000 - 10 * 3600, hint: '2 things still on', empty: false,
+    away: { from: Date.now() / 1000 - 9.2 * 3600, to: Date.now() / 1000 - 0.3 * 3600 },
+    groups: [
+      { id: 'still', label: 'Still on', items: [
+        { kind: 'still', subject: 'l1', seconds: 36000, ts: Date.now() / 1000 - 10 * 3600, word: 'on', when: 'now',
+          text: 'Ceiling light has been on for 10 hours, since 7:32am.', where: 'Living room · a light',
+          acts: [{ do: 'Turn off', act: 'device', to: 'l1', arg: 'off' }] },
+        { kind: 'still', subject: 'k1', seconds: 32400, ts: Date.now() / 1000 - 9 * 3600, word: 'on', when: 'now',
+          text: 'Kitchen lights have been on for 9 hours, since 9:10am.', where: 'Kitchen · a light',
+          acts: [{ do: 'Turn off', act: 'device', to: 'k1', arg: 'off' }] },
+      ] },
+      { id: 'over', label: 'While you were out', items: [
+        { kind: 'over', subject: 'f1', seconds: 27420, ts: Date.now() / 1000 - 12 * 3600, word: 'unlocked', when: 'last night',
+          text: 'Front door was unlocked for 7 hours overnight, 11:03pm to 6:40am. It is locked now.',
+          where: 'Front door · a lock', acts: [] },
+        { kind: 'over', subject: 'cover.garage', seconds: 7200, ts: Date.now() / 1000 - 5 * 3600, word: 'open', when: '1:12pm',
+          text: 'Garage door was open for 2 hours, 1:12pm to 3:12pm. It is closed now.',
+          where: 'Garage · a blind', acts: [] },
+      ] },
+      { id: 'people', label: 'People and phones', items: [
+        { kind: 'phone', subject: 'p1', ts: Date.now() / 1000 - 3 * 86400, when: 'Tuesday',
+          text: "Ada's iPad joined the house.", acts: [] },
+        { kind: 'phone', subject: 'p2', ts: Date.now() / 1000 - 5 * 86400, when: 'Sunday',
+          text: "Sam's phone's stay ended on its own.", acts: [] },
+      ] },
+    ],
+  })
+  if (p.startsWith('/happened/changes')) return json(res, {
+    coded_since: Date.now() / 1000 - 16 * 86400, coded_when: 'Sep 4', more: false,
+    rows: [
+      { who: "Temi's iPhone", named: true, kind: 'home', subject: 'hallway', when: '4:02pm', ts: 0, text: 'renamed Hallway to Landing.' },
+      { who: 'Someone at the wall', named: false, kind: 'draft', subject: 'r1', when: 'Wednesday', ts: 0, text: 'approved a suggested routine.' },
+      { who: 'Someone at the wall', named: false, kind: 'phone', subject: 'p1', when: 'Tuesday', ts: 0, text: "let Ada's iPad into the house, for good." },
+      { who: "Ada's iPad", named: true, kind: 'phone', subject: 'p3', when: 'Tuesday', ts: 0, text: 'asked to join the house.' },
+      { who: "Temi's iPhone", named: true, kind: 'home', subject: 'e1', when: 'Tuesday', ts: 0, text: 'removed the Nest. Everything it brought went with it.' },
+      { who: "Temi's iPhone", named: true, kind: 'home', subject: 'l1', when: 'Tuesday', ts: 0, text: 'now treats Ceiling light as a light.' },
+      { who: "Ada's iPad", named: true, kind: 'share', subject: 'device', when: 'Monday', ts: 0, text: 'shared Kitchen lights with other apps.' },
+      { who: 'The hub', named: false, kind: 'bridge', subject: 'c8ebba', when: 'Monday', ts: 0, text: 'recognized the bridge c8ebba.' },
+      { who: 'The hub', named: false, kind: 'home', subject: 'driver', when: 'Sep 13', ts: 0, text: 'signed in to Messages.' },
+      { who: 'The hub', named: false, kind: 'home', subject: 'update', when: 'Sep 12', ts: 0, text: 'installed 0.8.1.' },
+    ],
+  })
   // What a speaker can play. The real brain generates the noises and lists the sounds folder; here it is
   // a fixed shelf, so the sounds sheet has something to draw without a hub or a speaker in the room.
   if (p === '/sounds') return json(res, {
@@ -739,6 +805,17 @@ const bridgeRows = process.env.BRIDGES === 'none' ? [] : [
     return json(res, { capability: d.capability, kind: kindOf(d), offer, words: Object.fromEntries(offer.map(k => [k, WORD[k]])),
                        why: offer.length ? 'This can be switched on and off, so it can be shown as anything that switches on and off. A plug goes off with Everything off; an appliance is part of a machine and is left alone. An alarm is the one that asks before it sounds.' : '' })
   }
+  /* a color somebody matched against this room's own lamps, kept so it is one tap next time */
+  const keepColor = p.match(/^\/rooms\/([^/]+)\/colors$/)
+  if (keepColor && req.method === 'POST') { let b = ''; req.on('data', c => (b += c)); return req.on('end', () => {
+    const room = home.rooms.find(r => r.id === keepColor[1])
+    if (!room) { res.writeHead(404, { 'Content-Type': 'application/json' }); return res.end('{"detail":"unknown room"}') }
+    let h = 0, a = 0; try { const j = JSON.parse(b); h = Math.round(j.hue) % 360; a = Math.max(0, Math.min(100, Math.round(j.amount))) } catch {}
+    const near = (c) => Math.min(Math.abs(c[0] - h), 360 - Math.abs(c[0] - h)) <= 8 && Math.abs(c[1] - a) <= 8
+    room.colors = [[h, a], ...(room.colors || []).filter(c => !near(c))].slice(0, 6)
+    push({ type: 'home', home })
+    json(res, { colors: room.colors })
+  }) }
   const setLead = p.match(/^\/devices\/([^/]+)\/lead$/)
   if (setLead && req.method === 'POST') { let b = ''; req.on('data', c => (b += c)); return req.on('end', () => {
     let k = 'fan'; try { k = JSON.parse(b).lead || 'fan' } catch {}

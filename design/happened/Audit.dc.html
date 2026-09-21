@@ -1,0 +1,106 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"></head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: "Instrument Sans", -apple-system, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    .door { display:grid; grid-template-columns:auto 1fr; align-items:center; gap:12px; padding:11px 12px 11px 10px; border-radius:14px; color:#b9b5ad; }
+    .door.on { background:rgba(255,255,255,.08); color:#f1eee8; }
+    .di { width:36px; height:36px; border-radius:12px; display:grid; place-items:center; background:rgba(255,255,255,.08); color:#b9b5ad; flex:0 0 auto; }
+    .door.on .di { background:#f1eee8; color:#0c0d10; }
+    .door.att .di { background:#e9b872; color:#2a1c07; }
+    .dn { font-size:15.5px; font-weight:500; }
+    .dh { font-size:12.5px; color:#7f7d77; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:inline-block; max-width:228px; }
+    .door.att .dh { color:#e9b872; }
+    .lab { font-size:11.5px; font-weight:500; letter-spacing:.14em; text-transform:uppercase; color:#7f7d77; margin:0 0 12px; }
+    .btn { display:inline-flex; align-items:center; padding:8px 14px; border-radius:999px; background:#f1eee8; color:#0c0d10; font-weight:500; font-size:14px; white-space:nowrap; }
+    .btn.g { background:rgba(255,255,255,.08); color:#f1eee8; border:1px solid rgba(255,255,255,.1); }
+    .card { padding:12px 14px; border:1px solid rgba(255,255,255,.1); border-radius:16px; background:rgba(26,28,34,.68); display:grid; grid-template-columns:auto 1fr auto; gap:12px; align-items:start; font-size:15px; color:#f1eee8; }
+    .ni { width:28px; height:28px; border-radius:9px; display:grid; place-items:center; background:rgba(255,255,255,.08); color:#b9b5ad; margin-top:1px; }
+    .ni.warm { background:rgba(233,184,114,.16); color:#e9b872; }
+    .sub { font-size:12.5px; color:#7f7d77; }
+    .row { display:grid; grid-template-columns:auto 1fr auto; gap:12px; align-items:center; padding:9px 0; border-bottom:1px solid rgba(255,255,255,.1); font-size:15px; }
+    .row:last-child { border-bottom:0; }
+    .when { font-size:13px; color:#7f7d77; font-variant-numeric:tabular-nums; white-space:nowrap; }
+</style>
+</helmet>
+<div style="position:relative; width:1440px; height:900px; overflow:hidden; background:#0c0d10; color:#f1eee8;">
+  <div style="position:absolute; inset:0; background:linear-gradient(rgb(16,20,34) 0%, rgb(21,25,40) 48%, rgb(25,27,33) 100%);"></div>
+  <div style="position:absolute; inset:0; background:radial-gradient(60% 40% at 24% 10%, rgba(120,150,210,.16), transparent 70%);"></div>
+  <div style="position:absolute; inset:0; background:rgba(6,7,9,.42);"></div>
+  <div style="position:absolute; left:0; right:0; top:99px; bottom:0; border-radius:34px 34px 0 0; border:1px solid rgba(255,255,255,.18); border-bottom:0; overflow:hidden;
+              background:linear-gradient(180deg, rgba(26,28,34,.86), rgba(16,17,21,.96)); display:grid; grid-template-columns:320px 1fr;">
+    <aside style="display:flex; flex-direction:column; padding:30px 18px 22px 30px; border-right:1px solid rgba(255,255,255,.1); background:rgba(12,13,16,.22);">
+      <div style="margin:0 0 14px 12px; font-size:15px; color:#b9b5ad; letter-spacing:.01em;">This house</div>
+      <nav style="display:flex; flex-direction:column; gap:2px; margin:0 -8px; padding:0 8px;">
+        <div class="door"><span class="di"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.4 7-11a7 7 0 1 0-14 0c0 4.6 7 11 7 11z"/><circle cx="12" cy="10" r="2.6"/></svg></span><span><span class="dn">Where home is</span><br><span class="dh">Lagos</span></span></div>
+        <div class="door"><span class="di"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.4M12 19v2.4M2.6 12h2.4M19 12h2.4M5.4 5.4l1.7 1.7M16.9 16.9l1.7 1.7M18.6 5.4l-1.7 1.7M7.1 16.9l-1.7 1.7"/></svg></span><span><span class="dn">How it looks</span><br><span class="dh">Nightfall</span></span></div>
+        <div class="door"><span class="di"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg></span><span><span class="dn">Routines</span><br><span class="dh">6 routines, 1 off</span></span></div>
+        <div class="door"><span class="di"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8.5" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><path d="M16 5.6a3.2 3.2 0 0 1 0 5.8M17.5 14.3A5.5 5.5 0 0 1 20.5 19"/></svg></span><span><span class="dn">People and phones</span><br><span class="dh">4 people, 2 home · 5 phones</span></span></div>
+        <div class="door"><span class="di"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9.5" rx="2.4"/><path d="M8.2 10.5V7.6a3.8 3.8 0 0 1 7.6 0v2.9"/></svg></span><span><span class="dn">Accounts</span><br><span class="dh">7 accounts, all signed in</span></span></div>
+        <div class="door"><span class="di"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.5v13M5.5 12h13"/></svg></span><span><span class="dn">Add to the house</span><br><span class="dh">Lights, plugs, cameras, locks</span></span></div>
+        <div class="door"><span class="di"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="17.5" cy="6.5" r="2.6"/><circle cx="6.5" cy="12" r="2.6"/><circle cx="17.5" cy="17.5" r="2.6"/><path d="M8.9 10.7l6.2-3M8.9 13.3l6.2 3"/></svg></span><span><span class="dn">Share this house</span><br><span class="dh">Apple Home, Google Home, Alexa</span></span></div>
+        <div class="door"><span class="di"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11.2L12 4.5l8 6.7"/><path d="M6.2 12.6V19h11.6v-6.4"/></svg></span><span><span class="dn">The hub</span><br><span class="dh">0.8.2</span></span></div>
+        <div class="door"><span class="di"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9.5" rx="2.4"/><path d="M8.2 10.5V7.6a3.8 3.8 0 0 1 7.6 0v2.9"/></svg></span><span><span class="dn">The code</span><br><span class="dh">Changing the house needs it</span></span></div>
+        <div class="door on"><span class="di"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.2"/><path d="M12 7.4V12l3.1 1.9"/></svg></span><span><span class="dn">What happened</span><br><span class="dh">You were out 9:04am–6:12pm · 2 still on</span></span></div>
+        <div class="door att"><span class="di"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg></span><span><span class="dn">Needs a look</span><br><span class="dh">The Hall radio has stopped answering</span></span></div>
+      </nav>
+      <div style="margin:auto 0 0 12px; padding-top:14px; font-size:13px; color:#74c69d;">Connected</div>
+    </aside>
+    <section style="display:flex; flex-direction:column; min-width:0;">
+      <header style="display:flex; align-items:center; gap:16px; padding:26px 30px 16px 48px; border-bottom:1px solid rgba(255,255,255,.1);">
+        <h2 style="margin:0; flex:1; font-size:40px; line-height:1.04; font-weight:400; letter-spacing:-.025em;">Who changed what</h2>
+        <span style="width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:rgba(255,255,255,.14); color:#fff;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
+      </header>
+      <div style="padding:22px 48px 48px; max-width:808px; overflow:hidden;">
+        <p style="margin:0 0 22px; font-size:16px; color:#b9b5ad; max-width:660px;">
+          Every change to the house, and which phone asked for it. Turning a light on is not a change
+          to the house and is not here. Kept for a year.
+        </p>
+        <div style="display:flex; flex-direction:column; margin-bottom:26px;">
+          <div class="row">
+            <span class="ni"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11.2L12 4.5l8 6.7"/><path d="M6.2 12.6V19h11.6v-6.4"/></svg></span>
+            <span><b style="font-weight:500;">Temi's iPhone</b> renamed <b style='font-weight:500;'>Hallway</b> to <b style='font-weight:500;'>Landing</b>.</span><span class="when">4:02pm</span>
+          </div>
+          <div class="row">
+            <span class="ni"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg></span>
+            <span><b style="font-weight:500;">The wall</b> approved the routine <b style='font-weight:500;'>Bedtime at 10:30pm</b>.</span><span class="when">Wednesday</span>
+          </div>
+          <div class="row">
+            <span class="ni"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="10" height="18" rx="2.4"/><path d="M10.8 18.2h2.4"/></svg></span>
+            <span><b style="font-weight:500;">The wall</b> let <b style='font-weight:500;'>Ada's iPad</b> into the house, for good.</span><span class="when">Tuesday</span>
+          </div>
+          <div class="row">
+            <span class="ni"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9.5" rx="2.4"/><path d="M8.2 10.5V7.6a3.8 3.8 0 0 1 7.6 0v2.9"/></svg></span>
+            <span><b style="font-weight:500;">Temi's iPhone</b> removed the <b style='font-weight:500;'>Nest</b> account. 6 things went with it.</span><span class="when">Tuesday</span>
+          </div>
+          <div class="row">
+            <span class="ni"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.5v13M5.5 12h13"/></svg></span>
+            <span><b style="font-weight:500;">Ada's iPad</b> added <b style='font-weight:500;'>Landing light</b> to the house.</span><span class="when">Monday</span>
+          </div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr auto; align-items:center; gap:12px; padding:12px 16px; margin-top:6px;
+              border:1px solid rgba(255,255,255,.1); border-radius:16px; background:rgba(26,28,34,.68);">
+            <span style="font-size:15px;">Show older changes<br><span class="sub">92 more, back to 4 September. The house keeps them for a year.</span></span>
+            <span style="color:#7f7d77;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 5.5L16 12l-6.5 6.5"/></svg></span>
+          </div>
+
+        <div style="margin-top:22px; padding:16px 18px; border-radius:16px; border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.03); max-width:660px;">
+          <div style="font-size:14.5px; color:#b9b5ad; line-height:1.55;">
+            Before the code was set on <b style="font-weight:500; color:#f1eee8;">4 September</b> the house
+            could not tell its phones apart, so the changes above that date say
+            <b style="font-weight:500; color:#f1eee8;">someone at the wall</b> and nothing more.
+          </div>
+        </div>
+
+      </div>
+    </section>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

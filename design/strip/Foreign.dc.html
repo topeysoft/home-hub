@@ -1,0 +1,167 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --ink-3: #8d8a84; --muted: #7f7d77;
+      --lamp-rgb: 233,184,114; --lamp: rgb(var(--lamp-rgb)); --lamp-ink: #2a1c07;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .lbl { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); }
+    .t1 { font-size: 16px; font-weight: 500; }
+    .t2 { font-size: 13.5px; color: var(--muted); }
+    .rowc { border-radius: 20px; background: rgba(255,255,255,.04); box-shadow: inset 0 0 0 1px rgba(255,255,255,.07);
+            padding: 18px 20px; }
+  </style>
+</helmet>
+
+<div style="position:relative;width:1440px;height:900px;overflow:hidden;background:#0c0d28;color:var(--ink);font-size:17px;line-height:1.4;">
+
+  <!-- the room, still there and taken down: a pane dims what it covers rather than blurring it -->
+  <div style="position:absolute;inset:0;background:linear-gradient(rgb(29,33,46) 0%, rgb(41,42,63) 44%, rgb(72,55,58) 88%, rgb(52,40,42) 100%);"></div>
+  <div style="position:absolute;left:-222px;top:-135px;width:1855px;height:1156px;background:radial-gradient(58% 54% at 30% 64%, rgba(75,66,139,.4), transparent 68%), radial-gradient(62% 52% at 54% 110%, rgba(58,54,104,.44), transparent 72%);"></div>
+
+  <div style="position:absolute;left:40px;top:44px;font-size:16px;color:rgba(255,255,255,.5);">Fri, Sep 20 &nbsp;&middot;&nbsp; Living room</div>
+
+  <!-- the room the pane opened from, dimmed and cut off by it rather than blurred away -->
+  <div style="position:absolute;left:40px;top:96px;display:flex;gap:20px;opacity:.5;">
+    <div style="width:300px;height:300px;border-radius:26px;background:rgba(var(--lamp-rgb),.14);box-shadow:inset 0 0 0 1px rgba(255,255,255,.1);"></div>
+    <div style="width:300px;height:300px;border-radius:26px;background:rgba(26,28,34,.6);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);"></div>
+    <div style="width:300px;height:300px;border-radius:26px;background:rgba(26,28,34,.6);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);"></div>
+    <div style="width:300px;height:300px;border-radius:26px;background:rgba(26,28,34,.6);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);"></div>
+  </div>
+  <div style="position:absolute;inset:0;background:rgba(6,7,9,.42);"></div>
+  <div style="position:absolute;right:40px;top:112px;" class="lbl">Light &middot; a strip, set up elsewhere</div>
+
+  <!-- the pane, risen from the bottom and stopping short of the top bar -->
+  <div style="position:absolute;left:0;right:0;top:214px;bottom:0;border-radius:28px 28px 0 0;overflow:hidden;
+              background:linear-gradient(168deg, rgba(48,45,62,.3), rgba(34,33,45,.58) 44%, rgba(29,28,38,.78));
+              box-shadow:inset 0 1px 0 rgba(255,255,255,.08);">
+
+    <!-- ============ left: what it is, and what it is doing ============ -->
+    <div style="position:absolute;left:48px;top:44px;width:430px;">
+      <h1 class="dsp" style="margin:0;font-size:46px;font-weight:400;">Shelf lights</h1>
+      <div style="margin-top:8px;color:var(--ink-2);font-size:17px;">On, warm &middot; three quarters</div>
+
+      <!-- the thing itself, as it is right now -->
+      <div style="position:relative;margin-top:30px;height:150px;border-radius:22px;background:rgba(255,255,255,.035);
+                  box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);overflow:hidden;">
+        <div style="position:absolute;left:0;right:0;top:0;height:150px;background:radial-gradient(46% 54% at 44% 50%, rgba(var(--lamp-rgb),.3), transparent 72%);"></div>
+        <div style="position:absolute;left:26px;right:26px;top:62px;">
+          <div style="position:relative;height:24px;">
+            <div style="position:absolute;inset:0;border-radius:4px;background:repeating-linear-gradient(90deg, rgba(255,255,255,.12) 0 4px, transparent 4px 7px);"></div>
+            <div style="position:absolute;left:0;top:0;width:284px;height:24px;overflow:hidden;filter:drop-shadow(0 0 9px rgba(var(--lamp-rgb),.7));">
+              <div style="width:378px;height:24px;border-radius:4px;background:repeating-linear-gradient(90deg, var(--lamp) 0 4px, transparent 4px 7px);"></div>
+            </div>
+          </div>
+        </div>
+        <div style="position:absolute;bottom:14px;left:26px;" class="t2">Lit end to end &mdash; nobody has told it where it stops</div>
+      </div>
+
+      <div style="display:flex;gap:14px;margin-top:26px;">
+        <span style="width:56px;height:56px;border-radius:50%;background:rgb(var(--lamp-rgb));display:grid;place-items:center;color:#2a1c07;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v9M18.4 6.6a9 9 0 1 1-12.8 0"/></svg></span>
+        <span style="width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,.08);display:grid;place-items:center;color:var(--ink-2);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.4L19 10l-5.2 1.6L12 17l-1.8-5.4L5 10l5.2-1.6z"/></svg></span>
+        <span style="width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,.08);display:grid;place-items:center;color:var(--ink-2);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l4-1 9.5-9.5a2.1 2.1 0 0 0-3-3L5 16z"/></svg></span>
+      </div>
+    </div>
+
+    <!-- ============ right: the cluster, with the two rows a strip adds ============ -->
+    <div style="position:absolute;left:520px;right:40px;top:44px;height:606px;border-radius:26px;background:rgba(255,255,255,.035);box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);padding:28px;display:flex;gap:28px;">
+
+        <!-- brightness, unchanged: a strip is an ordinary light and this is an ordinary pane, so the
+             column runs the whole height of the cluster exactly as it does on every other one -->
+        <div style="width:168px;display:flex;flex-direction:column;">
+          <div style="position:relative;width:168px;flex:1;border-radius:84px;overflow:hidden;background:rgba(255,255,255,.09);box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);">
+            <span style="position:absolute;left:0;right:0;bottom:0;height:74%;background:linear-gradient(180deg, rgba(var(--lamp-rgb),.92), rgba(var(--lamp-rgb),.5));"></span>
+            <span style="position:absolute;left:34px;right:34px;bottom:74%;height:3px;border-radius:2px;background:rgba(255,255,255,.62);"></span>
+            <span style="position:absolute;left:0;right:0;top:20px;display:grid;place-items:center;color:rgba(255,255,255,.34);"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M4.3 4.3l1.6 1.6M18.1 18.1l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.3 19.7l1.6-1.6M18.1 5.9l1.6-1.6"/></svg></span>
+            <span style="position:absolute;left:0;right:0;bottom:18px;display:grid;place-items:center;color:rgba(20,12,22,.55);"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg></span>
+          </div>
+          <div class="lbl" style="text-align:center;margin-top:14px;">Brightness</div>
+        </div>
+
+        <!-- the colors, unchanged: it is announced with rgb, so LightPane draws this already -->
+        <div style="flex:1;display:flex;flex-direction:column;">
+          <div class="lbl" style="margin-bottom:14px;">Color</div>
+
+          <!-- Automatic is not a color, it is the absence of one, so it says what it is on itself
+               and carries no label above it (LightPane.vue). -->
+          <div style="display:flex;align-items:center;gap:14px;padding:12px 16px;border-radius:var(--r-md);
+                      background:linear-gradient(rgba(var(--lamp-rgb),.13), rgba(var(--lamp-rgb),.13)), rgba(255,255,255,.04);
+                      box-shadow:inset 0 0 0 1px rgba(var(--lamp-rgb),.4);">
+            <span style="width:34px;height:34px;border-radius:50%;background:conic-gradient(#ffa955,#ffe7d0,#dfebff,#ffa955);"></span>
+            <span style="flex:1;">
+              <span class="t1" style="display:block;">Automatic</span>
+              <span class="t2">Follows the light</span>
+            </span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--lamp)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+          </div>
+
+          <div class="lbl" style="margin:20px 0 12px;">This room</div>
+          <div style="display:flex;gap:14px;">
+            <span style="width:48px;height:48px;border-radius:50%;background:#ff7729;"></span>
+            <span style="width:48px;height:48px;border-radius:50%;background:#61ffb5;"></span>
+            <span style="width:48px;height:48px;border-radius:50%;background:#976bff;"></span>
+          </div>
+
+          <div class="lbl" style="margin:20px 0 12px;">Colors</div>
+          <div style="display:flex;flex-wrap:wrap;gap:12px;">
+            <span style="width:48px;height:48px;border-radius:50%;background:#ff4766;"></span>
+            <span style="width:48px;height:48px;border-radius:50%;background:#ff7729;"></span>
+            <span style="width:48px;height:48px;border-radius:50%;background:#ffd014;"></span>
+            <span style="width:48px;height:48px;border-radius:50%;background:#9aff57;"></span>
+            <span style="width:48px;height:48px;border-radius:50%;background:#61ffb5;"></span>
+            <span style="width:48px;height:48px;border-radius:50%;background:#52bfff;"></span>
+            <span style="width:48px;height:48px;border-radius:50%;background:#976bff;"></span>
+            <span style="width:48px;height:48px;border-radius:50%;background:#ff57f9;"></span>
+            <!-- the whites live in the same grid as the colors on purpose: nothing appears or
+                 disappears when a lamp goes into a color mode, so the way back is where it was -->
+            <span style="width:48px;height:48px;border-radius:50%;background:#ffa955;"></span>
+            <span style="width:48px;height:48px;border-radius:50%;background:#ffc88c;"></span>
+            <span style="width:48px;height:48px;border-radius:50%;background:#ffe7d0;"></span>
+            <span style="width:48px;height:48px;border-radius:50%;background:#dfebff;"></span>
+            <span style="width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.08);display:grid;place-items:center;color:var(--ink-2);font-size:12.5px;line-height:1.1;text-align:center;">More</span>
+          </div>
+
+          <!-- WHAT GOES WHERE THE TWO ROWS WOULD BE, on a strip we cannot ask. Not nothing: the occasion
+           boards already settled that a light which cannot do a thing SAYS SO in the room rather than
+           being skipped in silence, and the same rule applies to a light we cannot reach. -->
+      <div style="margin-top:20px;border-radius:20px;background:rgba(255,255,255,.03);
+                  box-shadow:inset 0 0 0 1px rgba(255,255,255,.07);padding:18px 22px;">
+        <div style="display:flex;align-items:flex-start;gap:16px;">
+          <span style="width:38px;height:38px;border-radius:12px;flex:0 0 auto;display:grid;place-items:center;background:rgba(255,255,255,.06);">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--ink-3)" stroke-width="1.7" stroke-linecap="round"><path d="M12 8v5M12 16.5v.5"/><circle cx="12" cy="12" r="9"/></svg>
+          </span>
+          <span style="flex:1;">
+            <span class="t1" style="display:block;">This one was set up somewhere else</span>
+            <span class="t2" style="display:block;margin-top:5px;line-height:1.55;">
+              So the house can turn it on, dim it and color it like any other light, and cannot ask it the two
+              things it would ask one of its own &mdash; where it ends, and which order its colors come out in.
+            </span>
+          </span>
+        </div>
+        <div style="display:flex;gap:12px;margin-top:16px;">
+          <span style="display:inline-flex;align-items:center;padding:12px 20px;border-radius:999px;background:var(--surface-hi);border:1px solid var(--edge);font-size:15px;">Set it up here instead</span>
+          <span class="t2" style="align-self:center;">It will be forgotten by the app that has it now.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

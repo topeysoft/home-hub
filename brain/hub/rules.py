@@ -22,7 +22,7 @@ ENTRY = "entry"   # a rule's room may be "entry": every room the family comes in
 
 TRIGGERS = ("motion", "contact", "device", "idle", "time", "sun", "presence", "intent")
 OUTCOMES = ("intent", "device", "notify")
-SUBJECTS = ("sun", "time", "weekday", "intent", "home", "presence", "light", "device")
+SUBJECTS = ("sun", "time", "weekday", "intent", "home", "presence", "light", "device", "quiet")
 OPS = ("is", "not", "below", "above", "between", "in")
 WEEKDAYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
 
@@ -65,10 +65,27 @@ def _wait(when: dict) -> float:
     return float(w)
 
 
+def rooms_of(r) -> list:
+    """A rule's rooms, always a list. `room` is one id, "home", "entry", or a list of ids -- and the list is
+    what keeps "the hallway, the stairs and the landing" one rule instead of three copies drifting apart."""
+    room = r.get("room") if isinstance(r, dict) else None
+    return [x for x in room if isinstance(x, str)] if isinstance(room, list) else [room]
+
+
+def outcomes_of(r) -> list:
+    """A rule's outcomes, always a list. `then` is one object or a list of them, run in order."""
+    then = r.get("then") if isinstance(r, dict) else None
+    if isinstance(then, list): return [t for t in then if isinstance(t, dict)]
+    return [then] if isinstance(then, dict) else []
+
+
 def _condition_parts(c):
-    """[subject, op, value], or [device, id, value] / [device, id, op, value] -> (subject, arg, op, value)."""
+    """[subject, op, value], or [device, id, value] / [device, id, op, value] / [quiet, rooms, op, seconds]
+    -> (subject, arg, op, value). A `quiet` with no rooms named means the rule's own room."""
     if c[0] == "device":
         return "device", c[1], (c[2] if len(c) == 4 else "is"), c[-1]
+    if c[0] == "quiet" and len(c) >= 4:
+        return "quiet", c[1], c[2], c[3]
     return c[0], None, c[1], c[2]
 
 
@@ -85,13 +102,22 @@ def validate(raw, rooms: set) -> tuple[list, list]:
             if not rid or not isinstance(rid, str): raise ValueError("needs an id")
             if rid in seen: raise ValueError("duplicate id")
             room = r.get("room")
-            if room not in ("home", ENTRY) and room not in rooms: raise ValueError(f"unknown room {room!r}")
+            if isinstance(room, list):
+                if not room: raise ValueError('"room" is a list of room ids, and it cannot be empty')
+                if len(set(room)) != len(room): raise ValueError('"room" names the same room twice')
+                for x in room:
+                    # "home" and "entry" already mean a set of rooms; nesting one inside a list would give
+                    # two ways to say the same thing and a question about what the overlap means.
+                    if x in ("home", ENTRY): raise ValueError(f'{x!r} cannot go in a list of rooms; use it on its own')
+                    if x not in rooms: raise ValueError(f"unknown room {x!r}")
+            elif room not in ("home", ENTRY) and room not in rooms:
+                raise ValueError(f"unknown room {room!r}")
             when = r.get("when")
             if not isinstance(when, dict): raise ValueError('needs a "when"')
             kinds = [k for k in when if k in TRIGGERS]
             if len(kinds) != 1: raise ValueError('"when" needs exactly one trigger')
             kind = kinds[0]
-            if kind in ("motion", "contact", "idle", "device") and room == "home":
+            if kind in ("motion", "contact", "idle", "device") and "home" in rooms_of(r):
                 raise ValueError(f"{kind} needs a room, not home")
             if kind == "motion" and when[kind] != "on": raise ValueError('motion can only be "on"')
             if kind == "contact" and when[kind] not in ("open", "closed"): raise ValueError("contact must be open or closed")
@@ -110,14 +136,25 @@ def validate(raw, rooms: set) -> tuple[list, list]:
                 _wait(when)
             for c in r.get("if") or []:
                 if not (isinstance(c, list) and len(c) >= 3 and c[0] in SUBJECTS): raise ValueError(f"bad condition {c}")
-                _, _, op, _ = _condition_parts(c)
+                subject, arg, op, val = _condition_parts(c)
                 if op not in OPS: raise ValueError(f"bad operator {op!r} in {c}")
+                if subject == "quiet":
+                    if op not in ("above", "below"): raise ValueError("quiet takes above or below, in seconds")
+                    if isinstance(val, bool) or not isinstance(val, (int, float)) or val < 0:
+                        raise ValueError("quiet is seconds, 0 or more")
+                    named = [arg] if isinstance(arg, str) else arg if isinstance(arg, list) else []
+                    if arg is not None and not named: raise ValueError("quiet names a room, a list of rooms, or nothing")
+                    for x in named:
+                        if x not in rooms: raise ValueError(f"unknown room {x!r} in {c}")
             then = r.get("then")
-            if not isinstance(then, dict): raise ValueError('needs a "then"')
-            outs = [k for k in then if k in OUTCOMES]
-            if len(outs) != 1: raise ValueError('"then" needs exactly one outcome')
-            if outs[0] == "intent": RoomState(then["intent"])
-            if outs[0] == "device" and not then.get("action"): raise ValueError("a device outcome needs an action")
+            if isinstance(then, list) and not then: raise ValueError('"then" is a list of outcomes, and it cannot be empty')
+            if not isinstance(then, (dict, list)): raise ValueError('needs a "then"')
+            for t in (then if isinstance(then, list) else [then]):
+                if not isinstance(t, dict): raise ValueError("an outcome is an object")
+                outs = [k for k in t if k in OUTCOMES]
+                if len(outs) != 1: raise ValueError('each outcome in "then" is exactly one of ' + ", ".join(OUTCOMES))
+                if outs[0] == "intent": RoomState(t["intent"])
+                if outs[0] == "device" and not t.get("action"): raise ValueError("a device outcome needs an action")
         except (ValueError, KeyError, TypeError) as e:
             errors.append(f"{label}: {e}"); continue
         seen.add(rid); good.append(r)
@@ -133,6 +170,7 @@ class Engine:
         self._presence_done = {}    # rule id -> the presence `since` a waiting presence rule already fired for
         self._device_done = {}      # rule id -> the device `since` a waiting device rule already fired for: once per spell, not once a second
         self._sun_cache = {}        # (date, lat, lon) -> (sunrise, sunset)
+        self._once = set()          # rule ids whose absolute outcomes have run THIS wake-up: see _pass()
 
     # ---- the file ----
     def load(self, force=False):
@@ -175,9 +213,15 @@ class Engine:
         return next((r for r in self.rules if r["id"] == rule_id), None)
 
     def _concrete(self, r):
-        """A rule for "entry" is one rule per room the family comes in through; with none chosen, it is nothing."""
-        if r["room"] != ENTRY: return [r]
-        return [{**r, "room": rid} for rid in self.hub.entry if rid in self.hub.home.rooms]
+        """One rule per room it runs in. A list of rooms is that list; "entry" is every room the family comes
+        in through, and with none chosen it is nothing. Everything downstream sees a rule with one room."""
+        out = []
+        for rid in rooms_of(r):
+            if rid == ENTRY:
+                out += [{**r, "room": x} for x in self.hub.entry if x in self.hub.home.rooms]
+            else:
+                out.append({**r, "room": rid})
+        return out
 
     def _active(self, kind=None, room_id=None):
         self.load()
@@ -217,6 +261,19 @@ class Engine:
         if subject == "device":
             d = self.hub.home.devices.get(arg)
             return d.state if d else None
+        if subject == "quiet":
+            # Seconds since anything last moved in the rooms named -- the LEAST quiet of them governs, so
+            # "above 1200" means every one of them has been still that long. A room the house cannot speak
+            # for (no motion sensor, or none seen since the hub came up) makes the whole thing unknown, and
+            # an unknown condition never passes: the failure lands on leaving lights ON, never on putting a
+            # house dark around somebody it could not see.
+            ids = [arg] if isinstance(arg, str) else list(arg) if isinstance(arg, list) else [room.id if room else None]
+            now_ts, seen = time.time(), []
+            for rid in ids:
+                rm = self.hub.home.rooms.get(rid)
+                if not rm or not rm.motion_at: return None
+                seen.append(now_ts - rm.motion_at)
+            return round(min(seen), 1) if seen else None
         return None
 
     def check(self, cond, room, now):
@@ -224,64 +281,117 @@ class Engine:
         subject, arg, op, val = _condition_parts(cond)
         actual = self.value(subject, arg, room, now)
         ok = actual is not None and _compare(op, actual, val)
-        shown = [subject, arg, op, val] if subject == "device" else [subject, op, val]
+        shown = [subject, arg, op, val] if arg is not None else [subject, op, val]
         return shown + [actual, ok]
 
     # ---- deciding ----
     def _consider(self, rules, trigger):
-        """Which of these rules fire now. The first that sets a room's intent wins it; the rest are shadowed."""
+        """Every rule's verdict now, as (concrete rule, why, verdict). The first that sets a room's intent
+        wins it; the rest are shadowed.
+
+        The verdict matters to the timer triggers. "wait" means the conditions were not ready, and a rule
+        that is merely not ready keeps its turn -- *everything off upstairs once the landing is still too*
+        must get another look when the landing goes still, not be spent on the first tick where it did not
+        hold. "held" and "shadowed" mean the room has already spoken, and asking again each second would
+        only write the same line to the log over and over."""
         now, ts, taken, out = self.now(), time.time(), set(), []
         for r in rules:
             target = self.hub.home.rooms.get(r["room"])          # None for "home"
             checked = [self.check(c, target, now) for c in r.get("if") or []]
             why = {"rule": r["id"], "trigger": trigger, "checked": checked}
             if not all(c[-1] for c in checked):
-                log.debug("rule %s: conditions not met %s", r["id"], checked); continue
-            if "intent" in r["then"]:
+                log.debug("rule %s: conditions not met %s", r["id"], checked)
+                out.append((r, why, "wait")); continue
+            # A rule claims a room if ANY of its outcomes sets that room's intent; the rest of the
+            # outcomes ride with it, so a shadowed or held rule does none of its work rather than half.
+            wants = next((t["intent"] for t in outcomes_of(r) if "intent" in t), None)
+            if wants is not None:
                 if r["room"] in taken:
-                    self.hub.log.add("shadowed", r["room"], None, r["then"]["intent"], source="rule", detail=why); continue
+                    self.hub.log.add("shadowed", r["room"], None, wants, source="rule", detail=why)
+                    out.append((r, why, "shadowed")); continue
                 if target and target.hold_until and target.hold_until > ts:
-                    self.hub.log.add("held", r["room"], target.intent, r["then"]["intent"], source="rule",
-                                     detail={**why, "until": target.hold_until, "set_by": target.set_by}); continue
+                    self.hub.log.add("held", r["room"], target.intent, wants, source="rule",
+                                     detail={**why, "until": target.hold_until, "set_by": target.set_by})
+                    out.append((r, why, "held")); continue
                 taken.add(r["room"])
-            out.append((r, why))
+            keep = []
+            for t in outcomes_of(r):
+                if "intent" in t: keep.append(t); continue
+                # A rule naming several rooms is several concrete rules by here, and only `intent` varies by
+                # room: a device outcome names an absolute id and a notify is one sentence. Running those
+                # once per room would turn a light on twice and say the same thing to the panel three times.
+                if r["id"] in self._once: continue
+                # And a hand beats a rule here too, not only on an intent. Without this a rule that names a
+                # light directly turns it straight back on at the next flicker of motion, seconds after
+                # somebody switched it off -- the one thing a hold exists to stop. The room that governs is
+                # the one the DEVICE is in, which is not always the room the rule is filed under.
+                d = "device" in t and self.hub.home.devices.get(t["device"])
+                held = d and self.hub.home.rooms.get(d.room_id)
+                if held and held.hold_until and held.hold_until > ts:
+                    self.hub.log.add("held", d.id, None, t.get("action"), source="rule",
+                                     detail={**why, "until": held.hold_until, "set_by": held.set_by})
+                    continue
+                keep.append(t)
+            self._once.add(r["id"])
+            if not keep: out.append((r, why, "done")); continue
+            out.append(({**r, "then": keep}, why, "fire"))
         return out
 
+    def _pass(self):
+        """Start a fresh evaluation pass. `_once` spans one wake-up rather than one `_consider`, because the
+        timer triggers evaluate a multi-room rule one room at a time -- `tick` loops over concrete rules and
+        calls `_run` for each, since every room carries its own idle clock. Without this, one rule saying
+        "everything off upstairs, and tell me" would tell you once per room."""
+        self._once = set()
+
+    @staticmethod
+    def _decided(verdicts) -> bool:
+        """Did the rule get a real answer, or was it only not ready yet? A timer trigger spends its
+        once-per-spell turn on the first, and keeps it on the second."""
+        return any(v != "wait" for _, _, v in verdicts)
+
     def _run(self, rules, trigger, depth=0):
-        for r, why in self._consider(list(rules), trigger):
-            asyncio.get_running_loop().create_task(self.fire(r, why, depth))
+        """Schedules what fires and hands back every verdict, so a caller holding a once-per-spell latch can
+        tell "it did not hold yet" from "the room said no"."""
+        out = self._consider(list(rules), trigger)
+        for r, why, verdict in out:
+            if verdict == "fire": asyncio.get_running_loop().create_task(self.fire(r, why, depth))
+        return out
 
     async def fire(self, rule, why, depth=0):
-        then = rule["then"]
-        try:
-            if "intent" in then:
-                state = RoomState(then["intent"])
-                if rule["room"] == "home":
-                    await self.hub.set_home_intent(state, source="rule", detail=why, depth=depth)
-                else:
-                    await self.hub.set_intent(self.hub.home.rooms[rule["room"]], state, source="rule", detail=why, depth=depth)
-            elif "device" in then:
-                d = self.hub.home.devices.get(then["device"])
-                data = then.get("data") or {}
-                if d and then["action"] == "sound":
-                    await self.hub.sounds.play(d, str(data.get("sound", "")), data.get("minutes"), data.get("volume"), source="rule"); return
-                if d and then["action"] == "sound_off":
-                    await self.hub.sounds.stop(d, source="rule"); return
-                key = (d.capability.split(".")[0], then["action"]) if d else None
-                if key not in SERVICE: raise ValueError(f"{then['device']} cannot {then.get('action')}")
-                domain, service = SERVICE[key]
-                await self.hub.ha.call(domain, service, d.id, **data)
-                self.hub.log.add("action", d.id, None, then["action"], source="rule", detail=why)
-            elif "notify" in then:
-                self.hub.log.add("notify", rule["room"], None, then["notify"], source="rule", detail=why)
-                self.hub._broadcast(json.dumps({"type": "notify", "text": then["notify"], "rule": rule["id"]}))
-        except Exception as e:
-            log.warning("rule %s failed: %s", rule["id"], e)
-            self.hub.log.add("failed", rule["room"], None, str(e), source="rule", detail=why)
+        """Run a rule's outcomes in the order they are written. One that fails is logged and the rest still
+        run: a rule that lights the hall and opens the blind should not lose the hall to a dead blind."""
+        for then in outcomes_of(rule):
+            try:
+                if "intent" in then:
+                    state = RoomState(then["intent"])
+                    if rule["room"] == "home":
+                        await self.hub.set_home_intent(state, source="rule", detail=why, depth=depth)
+                    else:
+                        await self.hub.set_intent(self.hub.home.rooms[rule["room"]], state, source="rule", detail=why, depth=depth)
+                elif "device" in then:
+                    d = self.hub.home.devices.get(then["device"])
+                    data = then.get("data") or {}
+                    if d and then["action"] == "sound":
+                        await self.hub.sounds.play(d, str(data.get("sound", "")), data.get("minutes"), data.get("volume"), source="rule"); continue
+                    if d and then["action"] == "sound_off":
+                        await self.hub.sounds.stop(d, source="rule"); continue
+                    key = (d.capability.split(".")[0], then["action"]) if d else None
+                    if key not in SERVICE: raise ValueError(f"{then['device']} cannot {then.get('action')}")
+                    domain, service = SERVICE[key]
+                    await self.hub.ha.call(domain, service, d.id, **data)
+                    self.hub.log.add("action", d.id, None, then["action"], source="rule", detail=why)
+                elif "notify" in then:
+                    self.hub.log.add("notify", rule["room"], None, then["notify"], source="rule", detail=why)
+                    self.hub._broadcast(json.dumps({"type": "notify", "text": then["notify"], "rule": rule["id"]}))
+            except Exception as e:
+                log.warning("rule %s failed: %s", rule["id"], e)
+                self.hub.log.add("failed", rule["room"], None, str(e), source="rule", detail=why)
 
     # ---- what wakes rules ----
     def on_state(self, dev, old):
         """A device changed. Motion stamps its room and wakes motion rules; contact and device rules likewise."""
+        self._pass()
         room = self.hub.home.rooms.get(dev.room_id)
         if not room or old == dev.state: return
         if dev.capability == "motion" and dev.state == "on":
@@ -297,6 +407,7 @@ class Engine:
 
     def on_presence(self):
         """Who is home changed. Presence rules with no wait fire now; those with `for` arm, and the tick decides."""
+        self._pass()
         p = self.hub.presence
         if p.somebody is None: return
         now = presence_word(p.somebody)
@@ -305,6 +416,7 @@ class Engine:
 
     def on_intent(self, subject, state: RoomState, depth=0):
         """A room, or the home, was set to a state. Rules waiting on that run once; they cannot chain."""
+        self._pass()
         if depth >= 1: return
         self._run((r for r in self._active("intent")
                    if r["when"]["intent"] == state.value and r["when"].get("in") in (None, subject)),
@@ -331,6 +443,7 @@ class Engine:
 
     def tick(self, now=None):
         """Once a second: clock times, sunrise and sunset, and rooms that have gone quiet."""
+        self._pass()
         now = now or self.now()
         last, self._last_tick = self._last_tick, now
         if last is None or now - last > timedelta(minutes=5):
@@ -355,8 +468,8 @@ class Engine:
             if not room or not room.motion_at: continue
             key = (r["id"], room.id)
             if ts - room.motion_at >= r["when"]["idle"] and self._idle_done.get(key) != room.motion_at:
-                self._idle_done[key] = room.motion_at
-                self._run([r], {"idle": r["when"]["idle"], "since": room.motion_at})
+                if self._decided(self._run([r], {"idle": r["when"]["idle"], "since": room.motion_at})):
+                    self._idle_done[key] = room.motion_at
         p = self.hub.presence
         if p.somebody is not None and p.since:
             now_word = presence_word(p.somebody)
@@ -364,8 +477,8 @@ class Engine:
                 wait = r["when"].get("for") or 0
                 if not wait or r["when"]["presence"] != now_word: continue
                 if ts - p.since >= wait and self._presence_done.get(r["id"]) != p.since:
-                    self._presence_done[r["id"]] = p.since
-                    self._run([r], {"presence": now_word, "for": wait, "since": p.since})
+                    if self._decided(self._run([r], {"presence": now_word, "for": wait, "since": p.since})):
+                        self._presence_done[r["id"]] = p.since
         # and a device that has STAYED somewhere. `d.since` is HA's own last_changed, so a brain that
         # restarts an hour in still fires at three hours rather than at four: the wait is the door's,
         # not this process's. Dedupe on that same `since`, so one spell unlocked says it once.
@@ -374,8 +487,8 @@ class Engine:
             d = self.hub.home.devices.get(r["when"]["device"]) if wait else None
             if not d or str(r["when"]["state"]) != d.state: continue
             if ts - d.since >= wait and self._device_done.get(r["id"]) != d.since:
-                self._device_done[r["id"]] = d.since
-                self._run([r], {"device": d.id, "state": d.state, "for": wait, "since": d.since})
+                if self._decided(self._run([r], {"device": d.id, "state": d.state, "for": wait, "since": d.since})):
+                    self._device_done[r["id"]] = d.since
 
     def dry_run(self, rule_id):
         """What a rule would do, with every condition's current value. `would` is off, not yet, wait (a condition
@@ -384,14 +497,13 @@ class Engine:
         r = self.get(rule_id)
         if not r: return None
         now, ts = self.now(), time.time()
-        if r["room"] == ENTRY:
-            rooms = self._concrete(r)
-            if not rooms: return {"rule": r, "would": "wait", "next": None, "checked": [], "time": now.strftime("%H:%M"),
-                                  "sun": self.value("sun", None, None, now), "room": None, "note": "no entry rooms chosen yet"}
-            r = rooms[0]                                 # the first entry room stands for them all here
+        concrete = self._concrete(r)
+        if not concrete: return {"rule": r, "would": "wait", "next": None, "checked": [], "time": now.strftime("%H:%M"),
+                                 "sun": self.value("sun", None, None, now), "room": None, "note": "no entry rooms chosen yet"}
+        r = concrete[0]                                  # the first room stands for them all here
         target = self.hub.home.rooms.get(r["room"])
         checked = [self.check(c, target, now) for c in r.get("if") or []]
-        held = bool(target and target.hold_until and target.hold_until > ts and "intent" in r["then"])
+        held = bool(target and target.hold_until and target.hold_until > ts and any("intent" in t for t in outcomes_of(r)))
         when, nxt = r["when"], None                      # timer triggers also say when they would next go off
         if "idle" in when:
             nxt = target.motion_at + when["idle"] if target and target.motion_at else None

@@ -17,6 +17,7 @@ import RoomView from './views/RoomView.vue'
 import Viewer from './Viewer.vue'
 import WhySheet from './WhySheet.vue'
 import BridgeSheet from './BridgeSheet.vue'
+import StripSheet from './StripSheet.vue'
 import HousePanel from './HousePanel.vue'
 import AskPane from './AskPane.vue'
 import { isPage } from './pages'
@@ -33,6 +34,7 @@ import RoomsView from './views/RoomsView.vue'
 import CamerasView from './views/CamerasView.vue'
 import TopBar from './TopBar.vue'
 import Household from './Household.vue'
+import { locale } from './lang'
 
 const now = ref(new Date())
 const selected = ref<string | null>(new URLSearchParams(location.search).get('room') ?? safeGet('room'))   // ?room=kitchen deep-links a kiosk
@@ -128,9 +130,9 @@ const wxIcon = computed(() => WX_ICON[store.sky.condition] ?? 'cloud')
 
 const previewAt = new URLSearchParams(location.search).get('at')   // ?at=19:30 previews an hour; the clock follows the sky so a preview agrees with itself
 const shown = computed(() => { if (!previewAt) return now.value; const d = new Date(now.value); const [h, m] = previewAt.split(':').map(Number); d.setHours(h || 0, m || 0, 0, 0); return d })
-const clock = computed(() => shown.value.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }))
+const clock = computed(() => shown.value.toLocaleTimeString(locale(), { hour: 'numeric', minute: '2-digit' }))
 const nextLine = computed(() => idle.value ? upcomingLine(shown.value) : '')   // only worked out while the panel rests
-const day = computed(() => shown.value.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' }))
+const day = computed(() => shown.value.toLocaleDateString(locale(), { weekday: 'long', month: 'long', day: 'numeric' }))
 
 /* The wall panel rests after a few minutes: a clock, the date, one line about the house. A touch brings it back to Home. */
 const IDLE_AFTER = 3 * 60 * 1000
@@ -151,9 +153,23 @@ function touched() {
   woke.value++
 }
 /* A phone knocking wakes the wall, and clears anything put aside so the pane comes back up: this is
-   the one event the panel turns the screen on for, and a knock that has been set aside must not
-   silence the next one. */
+   one of the two events the panel turns the screen on for, and a knock that has been set aside must
+   not silence the next one. */
 watch(() => store.asks.length, (n, o) => { if (n > o) { store.askAside = false; touched() } })
+/*
+ * And the other one: a bridge knocking. Somebody has just plugged a thing in, in this room, and is
+ * standing in front of a screen that has gone dark -- which is the same moment as the phone, and
+ * wants the same answer.
+ *
+ * On the EDGE and not the state, exactly as the phone is. A bridge that nobody answers goes on
+ * saying `knocking` every two seconds; waking on the state would mean a wall that can never rest
+ * again until somebody deals with it, which is the opposite of what a house at rest is for.
+ *
+ * And only from a state we had already read: at boot, and after the link drops, `store.bridge` comes
+ * back from nothing, and a knock that was already there is not news -- the panel is awake at boot
+ * anyway, and a hub that knows nothing about bridges stays null forever and never gets here.
+ */
+watch(() => store.bridge?.state, (is, was) => { if (is === 'knocking' && was && was !== 'knocking') touched() })
 async function rejoin() { halt(); await start() }                       // this screen just joined: read the house and reconnect
 function checkIdle() {
   if (!idle.value && kiosk.matches && !store.viewer && !store.sheet && !setup.value && Date.now() - lastTouch > IDLE_AFTER) idle.value = true
@@ -304,6 +320,9 @@ onUnmounted(() => {
     <!-- A bridge being set up opens itself: somebody has just plugged a thing in, in this room, and
          is standing here. It is not a place in the house to navigate to. -->
     <Transition name="sheet"><BridgeSheet v-if="store.bridge && store.bridge.state !== 'none'" /></Transition>
+    <!-- One arrival at a time: a bridge on the cable outranks a strip knocking over the air, because
+         somebody is holding the bridge. -->
+    <Transition name="sheet"><StripSheet v-if="store.strip && store.strip.state !== 'none' && !(store.bridge && store.bridge.state !== 'none')" /></Transition>
     <Transition name="sheet"><CodePrompt v-if="lock.prompt" /></Transition>
 
     <Transition name="toast">

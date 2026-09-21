@@ -25,7 +25,18 @@ def needs_code(method: str, path: str) -> bool:
     if path.startswith(("/flows", "/credentials")): return True
     if path.startswith("/accounts") and m == "DELETE": return True   # everything it brought goes with it
     if path in ("/location", "/home/entry") and m == "POST": return True
+    # The house's language. /look is deliberately NOT on this list -- how the panel looks is taste,
+    # and a guest who prefers the dark tone costs nobody anything -- but the language is not taste:
+    # it decides what every OTHER screen in the house says its devices are called, and it is a
+    # setting on This hub sitting between two that are gated. Changing the house rather than driving
+    # it, which is what this function is for.
+    if path == "/language" and m == "POST": return True
     if path.startswith("/rules") and m in ("PUT", "POST", "DELETE"): return True
+    # The one GET on this list. Reading what the house DID never needs the code -- that is the
+    # household's own situation, and the catch-up is open like the network page. Reading who did it
+    # names people and what they did to the house, which is the same size of fact as the settings
+    # those people changed, so it sits on the same side of the door.
+    if path == "/happened/changes": return True
     if path == "/drafts/suggest": return False                                   # looking for habits changes nothing
     if path.startswith("/drafts/") and m in ("POST", "DELETE"): return True   # approving or discarding a suggestion; asking for one stays open
     if path == "/assistant/key": return True
@@ -106,7 +117,7 @@ class Lock:
     def set(self, pin: str):
         if not pin:
             self.settings.set(pin=None); return
-        if not (pin.isdigit() and 4 <= len(pin) <= 8): raise ValueError("A code is 4 to 8 digits.")
+        if not (pin.isdigit() and 4 <= len(pin) <= 8): raise ValueError("A passcode is 4 to 8 digits.")
         salt = os.urandom(16)
         self.settings.set(pin={"salt": salt.hex(), "hash": self._digest(pin, salt)})
 
