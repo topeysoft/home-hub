@@ -41,16 +41,20 @@ prints at boot. **It took two fabric slots of the five, not one** — `VendorId 
 home hub) and `0x1384` (Apple Keychain, the iCloud admin) — which is worth knowing before promising a household
 Apple, Google and Alexa at once, because that is four slots of five before our own hub asks for one.
 
-**Never run:** the broker has never been spoken to, and neither the color question nor the fill has run outside
-a unit test. Google Home and Alexa have not been tried.
+**And Google Home too**, `VendorId 0x6006`, on a test vendor id and without refusing it — see 2b, which is the
+item that claim belongs to. Apple made **two** fabrics on the first pairing (`0x1349` local home hub and
+`0x1384` iCloud) and only `0x1384` on the second, so budget two and do not count on one.
+
+**Never run:** the broker has never been spoken to, neither the color question nor the fill has run outside a
+unit test, and Alexa has not been tried.
 
 ### The next three things, in order
 
-1. **Commission it from Google Home or Alexa.** Apple Home has done it. The other two matter because they are
-   the ones most likely to refuse a test vendor id, and refusing is the answer item 2b needs.
-2. **Write the real service behind the door the spike proved.** Coexistence is settled on hardware, both
-   halves (item 12), so what is left is not a risk but the work: protocomm `SECURITY_2` on that second GATT
-   service, and the mDNS half that `Theirs` draws.
+1. **Write the real service behind the door the spike proved** — protocomm `SECURITY_2` on the second GATT
+   service, and the mDNS half that `Theirs` draws. Apple and Google have both commissioned the strip and
+   neither refused it, so nothing is waiting on an ecosystem any more.
+2. **Then the brain's half**, which has to match on our service UUID rather than on a device name — there is no
+   room for a name in the scan response, item 12.
 3. **Then the hub path, on the Pi.** Not on the Mac — see `2-mac`. That is the first time the brain, the panel
    and the firmware will have run together.
 
@@ -485,6 +489,12 @@ properly", and it is currently an empty string.**
 
 **2b. Certification, which is what "just works" actually costs.** Everything above runs on a *test* vendor id.
 Apple and Google will commission such a device with an "uncertified accessory" warning; it cannot be sold.
+**Both have now done it** — Apple Home on 20 September and Google Home the same day, `VendorId 0x6006` sitting
+in the fabric table beside Apple's. So the sentence above is confirmed in the half that matters and the
+temptation to read it the other way should be resisted: **nothing refused the strip, and it still cannot be
+sold.** What certification buys is not commissionability but the right to ship — a real Vendor ID instead of
+reporting itself as `TEST_VENDOR`, a listing in the compliance ledger, the logo, and a certificate in the unit.
+An artboard here had said Google refuses such a device. It does not, and that was invented rather than observed.
 Shipping needs CSA membership and a real Vendor ID (the Adopter tier is roughly $7k a year — verify before
 planning around it), a Device Attestation Certificate provisioned into `esp_secure_cert` on **every unit** at
 manufacture, and certification testing per product at an authorized lab. The partitions are laid down for it.
