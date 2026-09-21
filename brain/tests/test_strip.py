@@ -660,6 +660,57 @@ class WhichDoorTheStripIsTakenThrough(unittest.TestCase):
         self.assertEqual(self.strips.job["door"], "matter")
 
 
+class WhenTheRealAnswerIsTheDistance(unittest.TestCase):
+    """A strip at the far end of a house fails in whatever way the radio fails that minute, and every
+    one of those sentences sends somebody to check a thing that is not wrong. Seen on a real hub on
+    21 September: the hub could not hear the strip at all on a twenty-second scan, and the wall said
+    "the strip did not take the code". The hub knew how faint it was when it knocked."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.hub = FakeHub(self.tmp.name)
+        self.radio = FakeRadio()
+        self.strips = Strips(self.hub, self.radio)
+        self.hub.settings.set(wifi={"ssid": "House", "pass": "secret"})
+
+    def tearDown(self): self.tmp.cleanup()
+
+    def said_at(self, rssi: int) -> str:
+        async def go():
+            self.radio.ours = [{"address": "AA:BB", "rssi": rssi, "name": "PROV_1"}]
+            await self.strips.look()
+            self.radio.adopt_fails = "The strip did not take the code."
+            await self.strips.adopt()
+            await turn()
+            return self.strips.status()["text"]
+        return run(go())
+
+    def test_a_strip_barely_heard_is_told_it_is_too_far_and_nothing_else(self):
+        said = self.said_at(-78)
+        self.assertIn("long way from the hub", said)
+        self.assertIn("same room", said)
+        # And NOT the library's reason as well: two answers is the household checking both.
+        self.assertNotIn("did not take the code", said)
+
+    def test_a_strip_right_next_to_the_hub_gets_the_real_reason(self):
+        said = self.said_at(-38)
+        self.assertIn("did not take the code", said)
+        self.assertNotIn("long way", said)
+
+    def test_a_strip_with_no_signal_reported_is_not_guessed_about(self):
+        """Matter's door does not always give one, and inventing a distance is worse than saying
+        what actually failed."""
+        async def go():
+            self.radio.advertising = [{"addr": "CC:DD", "discriminator": 3840, "vendor": TEST_VID,
+                                       "ours": True, "rssi": None}]
+            await self.strips.look()
+            self.radio.commission_fails = "The strip did not take the code."
+            await self.strips.adopt()
+            await turn()
+            return self.strips.status()["text"]
+        self.assertIn("did not take the code", run(go()))
+
+
 class ThreeFailuresThatAreNotTheSame(unittest.TestCase):
     """A wrong count and a dropped radio both used to say "check the flashes", which sends somebody
     to count again and again at the far end of a room where the real answer was to move nearer. The

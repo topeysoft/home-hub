@@ -624,6 +624,36 @@ the house, which is how these things get returned. The camera route avoids all o
 pointed into a living room. **The cheap next step is neither: a capture stick and HyperHDR on a bench,
 to find out whether it feels like the screen extended or like a gimmick, before any of it is paid for.**
 
+**25. A strip too far from the hub failed four different ways and never once said "too far".** The
+whole of 21 September's evening on a real hub, in one log:
+
+    16:29  something that might be ours is at Matter's door; asking ours again
+    16:33  commissioning failed (Commission with code failed for node 2.)
+    16:35  our own door did not open (BleakDeviceNotFoundError: Device with address ... was not found)
+    16:40  a twenty-second scan from the hub: nothing at either door, at all
+
+Nothing was wrong with the code. The strip was on a desk at the other end of the house and the hub
+could not hear it. Each attempt failed in whatever way the radio happened to fail that minute — the
+setup code refused, a device that answered a scan not connectable a moment later, our scan response
+arriving when the advertisement did not (item 19) — and **every one of those sentences sent somebody
+to check a thing that was not wrong.** The worst of them was on the wall: *"The strip did not take the
+code. Check it, and that the strip is still lit."*
+
+**The hub knew all along.** `scan_ours()` and `scan()` both return an RSSI and the job threw it away.
+It is kept now, and `_fail()` replaces whatever the radio said with the distance whenever the strip was
+under **−60 dBm** when it knocked — measured, not guessed: item 15 has a session establishing first try
+at −51 and the link dying three to five seconds in at −64, every time. Below that, the distance *is* the
+reason, and giving two reasons is the household checking both.
+
+**And the sentence is the product's own model of the order**, which `design/door/` had to correct once
+already: a thing is unboxed, plugged in, **set up**, and *then* placed. So the wall says *set it up in
+the same room as the hub, then put it where you want it* — which is what somebody should have been told
+at 16:29.
+
+**What this does not do is close item 15.** Telling a household their strip is too far is honest, and it
+is still a strip they cannot use where they want it. The 13 dB is a product problem and `hardware/` has
+still never had the conversation.
+
 **24. A strip that took credentials and never joined could not open its door again, ever.** Found on a
 real hub on 21 September, minutes after the press shipped, and it read on the wall as *"The hub could not
 finish setting it up"* with nothing anywhere saying why.

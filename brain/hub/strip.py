@@ -62,6 +62,12 @@ ANSWER_WAIT = 10
 ASSUMED = 300
 MOST = 1200
 
+# HOW FAINT IS TOO FAINT, MEASURED RATHER THAN GUESSED (docs/strip.md item 15). From a real hub a
+# session establishes first try at -51 dBm and the link dies three to five seconds in at -64, every
+# time. So anything heard below this is a strip we may well fail to set up, and the reason will be
+# the distance rather than anything the household did.
+FAINT = -60
+
 
 # ---------------------------------------------------------------- the order the colors come in
 
@@ -406,8 +412,24 @@ class Strips:
         self.hub._broadcast(json.dumps({"type": "strip", "strip": self.status()}))
 
     def _fail(self, text: str) -> dict:
+        """Why it did not work, in words for the wall.
+
+        AND WHEN THE REAL ANSWER IS THE DISTANCE, THAT IS THE ONLY ANSWER WORTH GIVING. A strip at
+        the far end of a house fails in whatever way the radio happens to fail that minute -- the
+        setup code is refused, a link dies in the middle, a device that answered a scan cannot be
+        connected to a moment later -- and every one of those sentences sends somebody to check a
+        thing that is not wrong. The hub heard how faint it was when it knocked and has known all
+        along. Seen on a real hub on 21 September: a strip the hub could not hear at all on a
+        twenty-second scan, and the wall said "the strip did not take the code"."""
+        if self._faint():
+            text = ("That strip is a long way from the hub \u2014 it was only just audible when it "
+                    "knocked. Set it up in the same room as the hub, then put it where you want it.")
         self._set("failed", text=text)
         return self.status()
+
+    def _faint(self) -> bool:
+        heard = (self.job or {}).get("rssi")
+        return heard is not None and heard < FAINT
 
     # ---- the broker: strips the house already has ----
     async def listen(self):
@@ -518,7 +540,7 @@ class Strips:
             # `id` arrives later, from the broker, if the strip ever finds it (item 2a).
             self.job = {"state": "knocking", "id": None, "addr": s["addr"],
                         "discriminator": s.get("discriminator"), "vendor": s.get("vendor"),
-                        "door": s.get("door", "matter"),
+                        "door": s.get("door", "matter"), "rssi": s.get("rssi"),
                         "label": self._label(s), "first": None}
             self._set("knocking")
             break
