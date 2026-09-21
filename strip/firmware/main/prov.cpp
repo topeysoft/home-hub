@@ -62,8 +62,12 @@ size_t gScanRspLen = 0;
 
 // Live only while provisioning is running.
 protocomm_t *gPc = nullptr;
+// The name is a std::string and not a strdup because this table now outlives one opening of the
+// door: dropping a rung stops the manager and starts it again against the SAME scheme config, so
+// anything freed on the way out is read again on the way back in. It was a strdup freed in
+// prov_stop, which the Config it was copied from went on pointing at.
 struct Endpoint {
-    const char *name;
+    std::string name;
     uint16_t id;
 };
 std::vector<Endpoint> gEndpoints;
@@ -75,6 +79,9 @@ struct Kept {
     ssize_t len = 0;
 };
 Kept gResp[kCount];
+
+// Defined with the rest of the door, below. Declared here because the transport is what enforces it.
+bool gate_is_open();
 
 int slot_for(uint16_t id) {
     for (int i = 0; i < kCount; i++)
@@ -95,7 +102,7 @@ void end_session() {
 
 const char *name_for(uint16_t id) {
     for (const auto &e : gEndpoints)
-        if (e.id == id) return e.name;
+        if (e.id == id) return e.name.c_str();
     return nullptr;
 }
 
@@ -197,6 +204,22 @@ int chr_access(uint16_t conn, uint16_t, struct ble_gatt_access_ctxt *ctxt, void 
         gSession = conn;
     }
 
+    // THE GATE, AND IT IS HERE RATHER THAN ON THE HUB (design/strip/Press.dc.html). This is the whole
+    // of what the press buys, and it is four lines in the one place a request can be stopped: anything
+    // in radio range may open a session, walk the table and ask the strip its version, and it gets
+    // exactly this far. The credentials are refused until somebody in the room has touched the object.
+    //
+    // It is deliberately not the hub's to decide. A gate the hub releases is a gate whoever spoke
+    // first releases, which is the unauthenticated link this firmware was rewritten to remove.
+    if (strcmp(ep, "prov-config") == 0 && !gate_is_open()) {
+        ESP_LOGW(TAG, "somebody asked for the Wi-Fi before the button was pressed. No.");
+        // AUTHORIZATION, NOT AUTHENTICATION. 0x05 and 0x0f both mean "encrypt the link and come
+        // back", so a central takes them as an invitation to pair -- CoreBluetooth answered our
+        // 0x05 with "Insufficient Encryption" on 21 September, having tried. There is nothing to
+        // pair: the link is fine and the answer is no. 0x08 is the one that says so.
+        return BLE_ATT_ERR_INSUFFICIENT_AUTHOR;
+    }
+
     uint16_t len = 0;
     const uint16_t room = OS_MBUF_PKTLEN(ctxt->om);
     uint8_t *req = (uint8_t *)malloc(room ? room : 1);
@@ -248,9 +271,7 @@ esp_err_t set_config_endpoint(void *config, const char *endpoint_name, uint16_t 
     if (!config || !endpoint_name) return ESP_ERR_INVALID_ARG;
     for (uint16_t id : kIds) {
         if (id != uuid) continue;
-        char *copy = strdup(endpoint_name);
-        if (!copy) return ESP_ERR_NO_MEM;
-        ((Config *)config)->endpoints.push_back({copy, uuid});
+        ((Config *)config)->endpoints.push_back({endpoint_name, uuid});
         return ESP_OK;
     }
     // Reserving the table at boot means a late endpoint has nowhere to go, and failing loudly here is
@@ -270,7 +291,6 @@ esp_err_t prov_start(protocomm_t *pc, void *config) {
 esp_err_t prov_stop(protocomm_t *) {
     end_session();
     gPc = nullptr;
-    for (auto &e : gEndpoints) free((void *)e.name);
     gEndpoints.clear();
     drop_responses();
     ESP_LOGI(TAG, "our door is shut");
@@ -287,9 +307,42 @@ char *gSalt = nullptr;
 char *gVerifier = nullptr;
 int gVerifierLen = 0;
 
-// The username is fixed and public; the rhythm is the whole secret. "wifiprov" because that is what
-// every existing protocomm client sends unless told otherwise, and a bench client should just work.
+// The username is fixed and public. "wifiprov" because that is what every existing protocomm client
+// sends unless told otherwise, and a bench client should just work.
 constexpr char kUser[] = "wifiprov";
+// And on the press rung the PASSWORD is fixed and public too, which is the point rather than an
+// oversight: there is no secret on this rung. What stops a stranger is gate_is_open() below.
+constexpr char kOpenSesame[] = "press";
+
+// THE GATE. Anything in radio range can open a session; nothing gets the household's Wi-Fi out of it
+// until somebody standing in the room has touched the strip. Two minutes is the walk across a house
+// and back, and it is also the window an attacker would have to be racing in.
+constexpr int64_t kPressGoodFor = (int64_t)120 * 1000000;
+bool gPressed = false;
+int64_t gPressedAt = 0;
+// The hub has asked for the rung below. It cannot be done from the handler that hears it -- that runs
+// on the manager's own task, inside the manager it would be tearing down -- so it is a flag, and
+// tend_the_door() picks it up from somewhere safe.
+bool gDropARung = false;
+bool gReopenWithRhythm = false;
+// The manager has finished with the door and its memory is still ours to give back. See the
+// NETWORK_PROV_END case for why that cannot be done where it is noticed.
+bool gDoorIsShut = false;
+
+// True when the door may hand over credentials.
+//
+// On the rung below there is nothing to gate: four counts went through SRP6a to get this far, so the
+// session itself is the proof and the strip has already refused everybody who got them wrong.
+bool gate_is_open() {
+    if (gRhythm[0]) return true;
+    if (!gPressed) return false;
+    if (esp_timer_get_time() - gPressedAt >= kPressGoodFor) {
+        gPressed = false;
+        ESP_LOGW(TAG, "that press is too old now. Waiting for another");
+        return false;
+    }
+    return true;
+}
 
 HubDetails gHubDetails = nullptr;
 Taken gTaken = nullptr;
@@ -335,6 +388,27 @@ esp_err_t hub_handler(uint32_t, const uint8_t *inbuf, ssize_t inlen, uint8_t **o
     return ESP_OK;
 }
 
+// IS IT PRESSED YET? The hub asks this, politely, every second or so while the wall says it is
+// waiting; the answer moves the wall off that beat. A plain word each way rather than protobuf, for
+// the same reason the `hub` endpoint is: the schema is ours on both ends and there are three words.
+//
+// Asking for "rhythm" is the household tapping "It has no button I can reach" -- see tend_the_door().
+esp_err_t press_handler(uint32_t, const uint8_t *inbuf, ssize_t inlen, uint8_t **outbuf, ssize_t *outlen, void *) {
+    const std::string asked((const char *)inbuf, inlen > 0 ? (size_t)inlen : 0);
+    const char *answer = "waiting";
+    if (asked == "rhythm") {
+        gDropARung = true;
+        answer = "ok";
+    } else if (gate_is_open()) {
+        answer = "pressed";
+    }
+    *outlen = (ssize_t)strlen(answer);
+    *outbuf = (uint8_t *)malloc(*outlen);
+    if (!*outbuf) { *outlen = 0; return ESP_ERR_NO_MEM; }
+    memcpy(*outbuf, answer, *outlen);
+    return ESP_OK;
+}
+
 void on_prov_event(void *, network_prov_cb_event_t event, void *data) {
     switch (event) {
     case NETWORK_PROV_START:
@@ -342,8 +416,13 @@ void on_prov_event(void *, network_prov_cb_event_t event, void *data) {
         // running manager; the characteristic it lands on was reserved at boot.
         if (network_prov_mgr_endpoint_register("hub", hub_handler, nullptr) != ESP_OK)
             ESP_LOGE(TAG, "no 'hub' endpoint; a strip set up here will not know where we are");
+        if (network_prov_mgr_endpoint_register("press", press_handler, nullptr) != ESP_OK)
+            ESP_LOGE(TAG, "no 'press' endpoint; nothing can ever be let in through our door");
         gOpenedAt = esp_timer_get_time();
-        ESP_LOGI(TAG, "listening. The rhythm is %d %d %d %d", gRhythm[0], gRhythm[1], gRhythm[2], gRhythm[3]);
+        if (gRhythm[0])
+            ESP_LOGI(TAG, "listening. The rhythm is %d %d %d %d", gRhythm[0], gRhythm[1], gRhythm[2], gRhythm[3]);
+        else
+            ESP_LOGI(TAG, "listening. Press the button to let anybody in");
         break;
     case NETWORK_PROV_WIFI_CRED_RECV: {
         // Somebody counted right. From here the manager owns the Wi-Fi driver until it succeeds or
@@ -379,8 +458,19 @@ void on_prov_event(void *, network_prov_cb_event_t event, void *data) {
     case NETWORK_PROV_END:
         // One completed session shuts the door, and it stays shut: the strip does not re-advertise
         // on a router reboot or anything else (docs/strip.md, "The light never reports a fault").
+        //
+        // AND THE DEINIT DOES NOT HAPPEN HERE, which cost an evening on the bench on 21 September.
+        // This callback is made from inside prov_stop_and_notify(), on the esp_timer task, WITH THE
+        // MANAGER'S OWN LOCK ALREADY HELD -- the comment in manager.c says so and nothing in the
+        // header does. network_prov_mgr_deinit() takes that same lock, and it is not recursive, so
+        // the call never returns and the task it was on is gone for good. Nothing is logged. The
+        // strip goes on looking perfectly alive until something else wants a timer, and the next
+        // task to ask the manager for anything joins it -- which is how the whole housekeeping loop,
+        // the button with it, stopped dead one line after asking to open a door a rung lower.
+        //
+        // So it is noticed here and done in tend_the_door(), from a task that holds nothing.
         gBusy = false;
-        network_prov_mgr_deinit();
+        gDoorIsShut = true;
         break;
     default:
         break;
@@ -389,40 +479,49 @@ void on_prov_event(void *, network_prov_cb_event_t event, void *data) {
 
 }  // namespace
 
-esp_err_t open() {
-    if (gPc) return ESP_ERR_INVALID_STATE;
+namespace {
 
-    // esp_random() is the hardware RNG once the radio is up, which it is by now.
-    char pass[5];
-    for (int i = 0; i < 4; i++) {
-        gRhythm[i] = (uint8_t)(1 + esp_random() % 6);
-        pass[i] = (char)('0' + gRhythm[i]);
-    }
-    pass[4] = 0;
+// Everything both rungs have in common, which is all of it but the password. `again` is the second
+// opening of a door that has already been built once -- the manager is still initialised and its
+// endpoints still exist, so all that is wanted is a start with a different verifier.
+esp_err_t open_on(const char *pass, size_t pass_len, bool again = false) {
+    if (gPc) return ESP_ERR_INVALID_STATE;
 
     free(gSalt); free(gVerifier);
     gSalt = gVerifier = nullptr;
-    esp_err_t err = esp_srp_gen_salt_verifier(kUser, sizeof(kUser) - 1, pass, 4, &gSalt, 16, &gVerifier, &gVerifierLen);
+    esp_err_t err = esp_srp_gen_salt_verifier(kUser, sizeof(kUser) - 1, pass, (int)pass_len,
+                                              &gSalt, 16, &gVerifier, &gVerifierLen);
     if (err != ESP_OK) {
-        ESP_LOGE(TAG, "could not make a verifier from the rhythm: %s", esp_err_to_name(err));
+        ESP_LOGE(TAG, "could not make a verifier: %s", esp_err_to_name(err));
         return err;
     }
 
-    network_prov_mgr_config_t cfg = {};  // NOLINT: the scheme is copied in below
-    cfg.scheme = gScheme;
-    cfg.scheme_event_handler = NETWORK_PROV_EVENT_HANDLER_NONE;
-    cfg.app_event_handler.event_cb = on_prov_event;
-    err = network_prov_mgr_init(cfg);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "the manager would not start: %s", esp_err_to_name(err));
-        return err;
-    }
+    if (!again) {
+        network_prov_mgr_config_t cfg = {};  // NOLINT: the scheme is copied in below
+        cfg.scheme = gScheme;
+        cfg.scheme_event_handler = NETWORK_PROV_EVENT_HANDLER_NONE;
+        cfg.app_event_handler.event_cb = on_prov_event;
+        err = network_prov_mgr_init(cfg);
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "the manager would not start: %s", esp_err_to_name(err));
+            return err;
+        }
 
-    // 0xFF53 + 1, which is the first characteristic reserve() kept spare.
-    if (network_prov_mgr_endpoint_create("hub") != ESP_OK) {
-        ESP_LOGE(TAG, "could not make room for the 'hub' endpoint");
-        network_prov_mgr_deinit();
-        return ESP_FAIL;
+        // 0xFF53 + 1 and + 2, which are the characteristics reserve() kept spare. Both have to be
+        // made BEFORE provisioning starts -- the manager hands the whole endpoint table to the
+        // scheme in one go, and reserve() cannot grow the table once Matter has started. Registering
+        // a handler later (NETWORK_PROV_START) without creating the endpoint here gives it nowhere
+        // to live, and the only sign of it is the endpoint count in the log being one short.
+        //
+        // AND ONLY ONCE, EVER. endpoint_create hands out the next id each time it is called, so
+        // asking again on the second opening would ask for 0xFF56 and 0xFF57, which no characteristic
+        // was reserved for. The table the manager already holds is the one to reuse.
+        for (const char *ep : {"hub", "press"}) {
+            if (network_prov_mgr_endpoint_create(ep) == ESP_OK) continue;
+            ESP_LOGE(TAG, "could not make room for the '%s' endpoint", ep);
+            network_prov_mgr_deinit();
+            return ESP_FAIL;
+        }
     }
 
     protocomm_security2_params_t sec2 = {};
@@ -433,10 +532,82 @@ esp_err_t open() {
     err = network_prov_mgr_start_provisioning(NETWORK_PROV_SECURITY_2, &sec2, "strip", nullptr);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "the door would not open: %s", esp_err_to_name(err));
-        network_prov_mgr_deinit();
+        if (!again) network_prov_mgr_deinit();
         return err;
     }
     return ESP_OK;
+}
+
+// THE RUNG BELOW. Four counts of one to six, minted fresh, shown on the strip and made into a real
+// SRP6a verifier. esp_random() is the hardware RNG once the radio is up, which it is by now. It is
+// small until SRP6a is under it: no offline attack, one wrong guess ends the session, and a fresh
+// rhythm every time somebody asks for one.
+esp_err_t open_with_a_rhythm() {
+    char pass[5];
+    for (int i = 0; i < 4; i++) {
+        gRhythm[i] = (uint8_t)(1 + esp_random() % 6);
+        pass[i] = (char)('0' + gRhythm[i]);
+    }
+    pass[4] = 0;
+    return open_on(pass, 4, /*again=*/true);
+}
+
+}  // namespace
+
+esp_err_t open() {
+    // Nothing to show and nothing to count: the strip is simply lit, and stays that way until the
+    // button is pressed. rhythm()[0] staying zero is how everything else tells the two rungs apart.
+    memset(gRhythm, 0, sizeof(gRhythm));
+    gPressed = false;
+    gPressedAt = 0;
+    return open_on(kOpenSesame, sizeof(kOpenSesame) - 1);
+}
+
+bool press() {
+    if (!gPc || !gOpenedAt) return false;   // nothing is asking, so nothing to answer
+    if (gRhythm[0]) return false;           // a rung down, the flashes are the proof and this is not
+    gPressed = true;
+    gPressedAt = esp_timer_get_time();
+    ESP_LOGI(TAG, "pressed. Whoever is at the door has %d seconds", (int)(kPressGoodFor / 1000000));
+    return true;
+}
+
+void tend_the_door() {
+    // EVERY LINE OF THIS COST A ROUND ON THE BENCH ON 21 SEPTEMBER, and none of it is in a header.
+    //
+    // ONE: stop_provisioning() is asynchronous -- it arms a cleanup timer and returns -- so the flag
+    // is cleared HERE rather than when the stop lands. This loop runs every ten milliseconds, and the
+    // first version watched gPc instead and asked for the same stop eighteen times in a fifth of a
+    // second.
+    //
+    // TWO: the thing to wait for is gPc going null, which our own prov_stop does. Not an event: the
+    // first version waited for NETWORK_PROV_END, which a stop does not raise on its own, and the
+    // strip shut its door and then sat there in silence with nothing open at either rung.
+    //
+    // THREE: the reopen is a start and nothing else. A stop leaves the manager initialised and IDLE
+    // with its endpoints intact, which is exactly what a second start_provisioning wants -- and a
+    // deinit in between is the deadlock the NETWORK_PROV_END case above is about.
+    if (gDropARung) {
+        gDropARung = false;
+        gReopenWithRhythm = true;
+        ESP_LOGI(TAG, "nobody can reach the button. Shutting the door to open it a rung lower");
+        network_prov_mgr_stop_provisioning();
+        return;
+    }
+    if (gReopenWithRhythm && !gPc) {
+        gReopenWithRhythm = false;
+        gDoorIsShut = false;   // it is about to be open again, so there is nothing to give back
+        if (open_with_a_rhythm() != ESP_OK)
+            ESP_LOGE(TAG, "the door would not reopen with a rhythm; this strip cannot be taken now");
+        return;
+    }
+    // The door is shut for good. Give the manager's memory back, from here, where no lock is held
+    // and this call can take the manager's own without meeting itself coming the other way.
+    if (gDoorIsShut && !gPc) {
+        gDoorIsShut = false;
+        network_prov_mgr_deinit();
+        ESP_LOGI(TAG, "the door is shut and the manager is packed away");
+    }
 }
 
 void disconnected() { end_session(); drop_responses(); }

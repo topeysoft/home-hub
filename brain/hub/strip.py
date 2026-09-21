@@ -15,6 +15,11 @@ The machine is what the panel draws, so what it holds is the sequence a person s
     knocking  a strip is advertising and nobody has said it is theirs. Nothing of the house's has
               gone anywhere -- saying it is not yours needs no code, because refusing gives nothing
               away. The identity check is the object: it is lit, and no serial number is shown
+    press     our own door, and the only thing it ever asks: press the button on the thing. The
+              session is already open and the credentials are still here, because the gate is on
+              the STRIP. A tap on "it has no button I can reach" drops a rung, to:
+    rhythm    the strip mints four counts of one to six and flashes them, and somebody taps what
+              they count. Reached only from `press`, never on its own
     working   `step` is wifi | hub, in that order. Two steps, not the bridge's three: the software
               is already on it, which is the whole reason it could knock
     order     which color comes out first (below). The strip is lit and the household names it
@@ -289,20 +294,48 @@ class Radio:
         return [{"addr": s["address"], "rssi": s["rssi"], "name": s.get("name"),
                  "door": "ours", "ours": True} for s in found]
 
-    async def adopt_ours(self, addr: str, rhythm: str, ssid: str, password: str,
-                         hub: dict | None = None) -> None:
-        """Prove the rhythm, hand over the Wi-Fi, then say where we are -- one session, no phone.
+    async def adopt_ours(self, addr: str, ssid: str, password: str, hub: dict | None = None,
+                         rhythm: str = "", on_pressed=None,
+                         out_of_reach: "asyncio.Event | None" = None) -> str:
+        """Wait for the press, hand over the Wi-Fi, then say where we are -- one session, no phone.
 
         THE WI-FI DOES GO THROUGH US HERE, and unlike Matter's door there is no controller in the
-        middle: it goes straight to the strip inside a session the strip authenticated with SRP6a.
-        That is the handshake the first firmware should have had, and the reason this door exists."""
+        middle: it goes straight to the strip inside a session the strip itself gated on somebody
+        touching it. That is the handshake the first firmware should have had, and the reason this
+        door exists. Returns 'done', or 'rhythm' when the household said they cannot reach it."""
         from . import strip_door
         try:
-            await strip_door.adopt(addr, rhythm, ssid, password, hub=hub)
+            return await strip_door.adopt(addr, ssid, password, hub=hub, rhythm=rhythm,
+                                          on_pressed=on_pressed, out_of_reach=out_of_reach)
+        except strip_door.NotPressed:
+            # NOT A RADIO FAILURE, and it must never be dressed as one. Somebody is standing in the
+            # right room; they have simply not touched the thing yet.
+            raise StripError("Nobody pressed the button on it. The button is on the controller, at "
+                             "the end it plugs in at \u2014 say it is yours again to start over.")
         except Exception as e:
-            log.warning("strip: our own door did not open (%s)", e)
-            raise StripError("That did not work. Check the flashes and try again \u2014 "
-                             "the strip shows a new set every time it is plugged in.")
+            # THE TYPE AS WELL AS THE MESSAGE, and the type FIRST, because the most common failure
+            # out here has no message at all. A BLE connect that times out on BlueZ arrives as a
+            # bare asyncio.TimeoutError whose str() is the empty string, so this line used to log
+            # "our own door did not open ()" -- which told the next person nothing -- and the
+            # matching below fell through every timeout test and sent the household to unplug a
+            # strip whose only problem was the distance to the hub. Seen on a real hub, 21 September.
+            log.warning("strip: our own door did not open (%s: %s)", type(e).__name__, e or "no message")
+            # THREE FAILURES THAT ARE NOT THE SAME, and telling a household to recount when the radio
+            # dropped is telling them to fix something they did not break. The strip refuses a wrong
+            # rhythm inside SRP6a and the refusal comes back as an ATT error; a link that died comes
+            # back as a disconnect; a link that never formed comes back as nothing at all. The first
+            # two both used to say "check the flashes", which sent somebody to count again and again
+            # at the far end of a room where the real answer was to move.
+            said = f"{type(e).__name__} {e}".lower()
+            # "notfound" as well as "not found": a class name has no spaces in it, and
+            # BleakDeviceNotFoundError is exactly the case this branch exists for.
+            if any(k in said for k in ("disconnect", "not found", "notfound", "timeout", "unreachable")):
+                raise StripError("The strip stopped answering part way through. "
+                                 "Try again a little nearer the hub.")
+            if not rhythm:
+                raise StripError("The strip would not finish letting us in. Unplug it and try again.")
+            raise StripError("Those were not the flashes it is showing. Count them again \u2014 "
+                             "and note it shows a new set every time it is plugged in.")
 
     async def forget(self, id: str) -> None:
         return None
@@ -321,6 +354,9 @@ class Strips:
         self._heard: dict[str, dict] = {}      # the last retained value per (id, leaf)
         self._woke: asyncio.Event | None = None
         self._task: asyncio.Task | None = None
+        # Set when the household says they cannot reach the button. The session waiting for a press
+        # is holding a BLE link open, so this is how it is told to stop waiting and drop a rung.
+        self._out_of_reach: asyncio.Event | None = None
 
     # ---- what the panel sees ----
     def status(self) -> dict:
@@ -338,7 +374,8 @@ class Strips:
         if j["state"] == "length": out["lit"] = j.get("lit", 0)
         # Four counts of one to six, read off the light itself. The panel draws four steppers and
         # sends back what somebody counted; nothing here is typed and nothing is printed on the
-        # strip (design/strip/PopLight.dc.html).
+        # strip. The rung below the press, and reached only from it
+        # (design/strip/ReachRhythm.dc.html).
         if j["state"] == "rhythm": out["groups"] = 4; out["most"] = 6
         if j["state"] in ("room", "ready"):
             out["count"] = j.get("count", ASSUMED); out["order"] = j.get("order", ASSUME)
@@ -512,18 +549,20 @@ class Strips:
         household's code comes from is docs/strip.md item 1a and is not decided."""
         if not self.job or self.job["state"] != "knocking":
             raise StripError("There is no light strip waiting to be let in.")
-        # OUR DOOR ASKS ONE MORE THING, and it is the only thing it ever asks: how many times the
-        # strip is flashing. That is the proof of possession, so there is no point going any further
-        # until somebody has looked at the light. Matter's door skips this and wants a code instead.
-        if self.job.get("door") == "ours":
-            self._set("rhythm")
-            return self.status()
+        # OUR DOOR ASKS ONE MORE THING, and it is the only thing it ever asks: press the button on
+        # the thing. The session opens straight away and gets as far as the Wi-Fi question, where the
+        # STRIP refuses it until somebody in the room has touched it -- so nothing of the house's has
+        # moved while this beat is on screen. Matter's door skips it and wants a code instead.
+        #
         # The controller cannot commission onto a network it has not been told about, and it is the
         # house's own Wi-Fi rather than this strip's -- so it is asked once, on the wall, exactly the
         # way bridge.py asks it, and no strip after this one asks again.
         wifi = (self.hub.settings.get("wifi") or {}) if hasattr(self.hub, "settings") else {}
         if not wifi.get("ssid"):
             self._set("working", step="letting", needs="wifi")
+            return self.status()
+        if self.job.get("door") == "ours":
+            self._begin()
             return self.status()
         # A development board's code is public, so nobody should have to read it off a terminal.
         if not code and self.job.get("vendor") == TEST_VID:
@@ -533,23 +572,53 @@ class Strips:
         self._task = asyncio.create_task(self._setup())
         return self.status()
 
+    def _pressed(self):
+        """The strip says somebody touched it, and it is the strip saying so rather than a timer here.
+
+        Nothing of the house's had moved until this instant: the session was open, the strip was lit,
+        and the credentials were still on the hub."""
+        if self.job and self.job["state"] == "press":
+            self._set("working", step="letting")
+
+    def _begin(self):
+        """The Wi-Fi is known, so start the session. ONE PLACE, because there are three ways in --
+        saying yes, answering the Wi-Fi question, and counting the flashes -- and the beat they land
+        on is a fact about the door rather than about which of the three it was."""
+        j = self.job
+        j["needs"] = None
+        if j.get("door") == "ours" and not j.get("rhythm"):
+            self._out_of_reach = asyncio.Event()
+            self._set("press")
+        else:
+            self._set("working", step="letting")
+        self._task = asyncio.create_task(self._setup())
+
+    async def reach(self) -> dict:
+        """It has no button anybody can reach.
+
+        THE ONLY WAY TO THE RUNG BELOW, and it is a real button because it will be pressed: a strip
+        already taped behind a television is exactly the thing whose controller cannot be got at. The
+        session that is waiting for a press asks the strip for a rhythm instead, the strip shuts its
+        door and reopens it with a verifier made from four fresh counts, and this beat waits for
+        somebody to read them off the light. design/strip/ReachRhythm.dc.html."""
+        if not self.job or self.job["state"] != "press":
+            raise StripError("Nothing is waiting to be pressed just now.")
+        if self._out_of_reach: self._out_of_reach.set()
+        self._set("rhythm")
+        return self.status()
+
     async def counted(self, rhythm: str) -> dict:
         """What somebody counted off the light. Four digits, one to six each.
 
         A wrong count fails inside SRP6a and ends the session, so there is no guessing at this: the
-        strip mints a new rhythm on its next power cycle and the wall says so."""
+        strip mints a new rhythm every time it is asked for one, and the wall says so."""
         if not self.job or self.job["state"] != "rhythm":
             raise StripError("Nothing is asking to be counted just now.")
         digits = "".join(ch for ch in (rhythm or "") if ch.isdigit())
         if len(digits) != 4 or any(ch not in "123456" for ch in digits):
             raise StripError("Four groups, and each one is between one and six flashes.")
         self.job["rhythm"] = digits
-        wifi = (self.hub.settings.get("wifi") or {}) if hasattr(self.hub, "settings") else {}
-        if not wifi.get("ssid"):
-            self._set("working", step="letting", needs="wifi")
-            return self.status()
-        self._set("working", step="letting")
-        self._task = asyncio.create_task(self._setup())
+        self._begin()
         return self.status()
 
     async def wifi(self, ssid: str, password: str) -> dict:
@@ -562,8 +631,7 @@ class Strips:
         self.hub.settings.set(wifi={"ssid": ssid, "pass": password})
         if not self.job:
             return self.status()
-        self._set("working", step="letting", needs=None)
-        self._task = asyncio.create_task(self._setup())
+        self._begin()
         return self.status()
 
     async def _setup(self):
@@ -576,9 +644,20 @@ class Strips:
                 # Wi-Fi and where we are go together, so the strip comes out of setup already able
                 # to reach the broker -- and the two questions Matter has no words for can be asked
                 # at all. That was item 2a, and it was an empty string from the day Matter came in.
-                await self.radio.adopt_ours(j["addr"], j.get("rhythm", ""),
-                                            wifi.get("ssid", ""), wifi.get("pass") or "",
-                                            hub=self._where_we_are())
+                #
+                # The session opens at once and then holds, because the strip will not take the
+                # credentials until somebody presses the button on it. `pressed` is what moves the
+                # wall off that beat, and it comes from the strip rather than from a timer here.
+                went = await self.radio.adopt_ours(j["addr"], wifi.get("ssid", ""),
+                                                   wifi.get("pass") or "",
+                                                   hub=self._where_we_are(),
+                                                   rhythm=j.get("rhythm", ""),
+                                                   on_pressed=self._pressed,
+                                                   out_of_reach=self._out_of_reach)
+                # They could not reach it, so `reach()` has already moved the wall to the flashes and
+                # the strip is minting them. Nothing failed and nothing should be said.
+                if went == "rhythm":
+                    return
             else:
                 if wifi.get("ssid"):
                     await self.radio.set_wifi(wifi["ssid"], wifi.get("pass") or "")

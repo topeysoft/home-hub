@@ -1253,7 +1253,7 @@ def strip_status(): return hub.strip.status()
 async def strip_adopt(body: dict | None = None):
     """Yes, that one is mine.
 
-    A strip at OUR door goes on to be asked how many times it is flashing, and needs no code at all.
+    A strip at OUR door goes on to be asked for a press on the button, and needs no code at all.
     One at Matter's door still needs its setup code, which an advertisement does not carry and so is
     the one thing somebody has to hand over. docs/strip.md item 1a."""
     hub.ready()
@@ -1261,10 +1261,19 @@ async def strip_adopt(body: dict | None = None):
     except StripError as e: raise HTTPException(409, str(e))
 
 
+@app.post("/strip/reach")
+async def strip_reach():
+    """It has no button anybody can reach. Drops to the rung below: the strip mints four counts and
+    flashes them, and those become the proof instead (design/strip/ReachRhythm.dc.html)."""
+    hub.ready()
+    try: return await hub.strip.reach()
+    except StripError as e: raise HTTPException(409, str(e))
+
+
 @app.post("/strip/counted")
 async def strip_counted(body: dict):
-    """How many times the strip flashed, in four groups. That is the proof of possession for our own
-    door and it is read off the light rather than off a label (design/strip/PopLight.dc.html)."""
+    """How many times the strip flashed, in four groups. The proof of possession on the rung below
+    the press, read off the light rather than off a label (design/strip/ReachRhythm.dc.html)."""
     hub.ready()
     try: return await hub.strip.counted(str(body.get("rhythm") or ""))
     except StripError as e: raise HTTPException(409, str(e))

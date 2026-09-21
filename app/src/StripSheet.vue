@@ -5,7 +5,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { store, notify, refreshStrip } from './store'
-import { adoptStrip, stripCounted, dismissStrip, readStripOnce, stripAgain, stripDone, stripEnds, stripRoom, stripSaw, stripWifi } from './api'
+import { adoptStrip, stripCounted, dismissStrip, readStripOnce, stripAgain, stripDone, stripEnds, stripReach, stripRoom, stripSaw, stripWifi } from './api'
 import Icon from './Icon.vue'
 import StripArt from './StripArt.vue'
 
@@ -35,6 +35,7 @@ const other = ref(false)
 
 const TITLE: Record<string, string> = {
   knocking: 'A light strip is here.',
+  press: 'Press the button on it.',
   rhythm: 'How many times does it flash?',
   working: 'Setting it up.',
   order: 'Is it red?',
@@ -109,18 +110,24 @@ async function run(fn: () => Promise<any>, after?: string) {
 /* No code passed: a development board's is public and the brain fills it in. When real units
    exist this is where the one off the label goes. */
 const adopt = () => run(() => adoptStrip())
+const reach = () => run(stripReach)
 const dismiss = () => run(dismissStrip)
 const saw = (what: string) => { other.value = false; run(() => stripSaw(what)) }
 const ends = () => run(stripEnds)
 const again = () => run(stripAgain)
 const room = (id: string) => run(() => stripRoom(id))
 
-/* FOUR COUNTS, READ OFF THE LIGHT (design/strip/PopLight.dc.html). This is the proof of possession
-   for our own door and the only thing that door ever asks. It is a count and not a code: there is
-   nothing printed on a strip to copy and nothing derived from its chip to leak, so a wrong answer is
-   somebody having miscounted rather than having mistyped -- which is why the sheet offers to start
-   again rather than telling anybody off. Rhythm and not color, because "is it red?" has not been
-   asked yet and a color cannot be trusted until it has. */
+/* A PRESS, ON THE THING (design/door/PressIt.dc.html, design/strip/Press.dc.html). The one thing our
+   own door asks, and there is nothing on this screen to do: the session is already open, the strip is
+   lit, and the credentials are still on the hub because THE GATE IS ON THE STRIP. The wall waits and
+   says it is waiting; the beat ends when the strip says it was touched, never on a timer here.
+
+   FOUR COUNTS, READ OFF THE LIGHT, is the rung below (design/strip/ReachRhythm.dc.html) and is
+   reached one way only: by saying the button cannot be reached. It shipped for a few hours as what
+   everybody got, and counting four groups of flashes from across a room is a chore -- but it keeps a
+   real secret behind SRP6a, which is why it is the fallback rather than deleted. A wrong answer is
+   somebody having miscounted rather than having mistyped, which is why the sheet offers to start
+   again rather than telling anybody off. */
 const counts = ref<number[]>([0, 0, 0, 0])
 const most = computed(() => b.value?.most ?? 6)
 watch(() => b.value?.state, (now, was) => { if (now === 'rhythm' && was !== 'rhythm') counts.value = [0, 0, 0, 0] })
@@ -176,11 +183,24 @@ onUnmounted(() => window.removeEventListener('keydown', key))
           </div>
         </template>
 
-        <!-- OUR OWN DOOR, AND THE ONE THING IT ASKS. Not a code: four counts of flashes off the
-             strip itself, which is the proof of possession (design/strip/PopLight.dc.html). A strip
-             that came through Matter's door never reaches this. -->
+<!-- OUR OWN DOOR, AND THE ONE THING IT ASKS. Not a code and nothing to count: press the button
+             on the controller of the thing just unpacked (design/strip/Press.dc.html). A strip that
+             came through Matter's door never reaches this. -->
+        <template v-else-if="b.state === 'press'">
+          <p class="sheet-lede">The button is on the controller, at the end it plugs in at. A short press, and it is yours — there is nothing to read, count or type.</p>
+          <div class="stage">
+            <StripArt show="lit" />
+            <span class="caption">It is lit, steady, so you can see which one you have</span>
+          </div>
+          <p class="waiting"><span class="pulse-dot"></span>Waiting for the press…</p>
+          <div class="flow-actions">
+            <button class="button ghost wide" :class="{ busy }" @click="reach">It has no button I can reach</button>
+          </div>
+        </template>
+
+        <!-- THE RUNG BELOW, and the only way here is the button above (design/strip/ReachRhythm.dc.html). -->
         <template v-else-if="b.state === 'rhythm'">
-          <p class="sheet-lede">It is flashing in four groups, over and over. Count each group and tap the numbers. There is nothing to read off a label.</p>
+          <p class="sheet-lede">It has started flashing in four groups, over and over. Count each group and tap the numbers. There is still nothing to read off a label.</p>
           <div class="stage">
             <StripArt show="lit" />
             <span class="caption"><span class="pulse-dot"></span>Watch it, then tap what you counted</span>
@@ -194,7 +214,7 @@ onUnmounted(() => window.removeEventListener('keydown', key))
           </div>
           <div class="flow-actions">
             <button class="button" :class="{ busy }" :disabled="!counted" @click="send">That’s it</button>
-            <button class="button ghost" @click="dismiss">I can’t see it</button>
+            <button class="button ghost" @click="dismiss">I can’t see it either</button>
           </div>
         </template>
 
@@ -321,4 +341,11 @@ onUnmounted(() => window.removeEventListener('keydown', key))
 .button.wide { width: 100%; }
 /* a full-width primary with a small ghost beside it reads as an orphan, so they stack */
 .flow-actions.stack { flex-direction: column; align-items: stretch; }
+/* The line that says nothing is happening yet, and that nothing is meant to be. It sits between the
+   strip and the only button, where a primary would be on every other beat -- because on this one the
+   thing to press is not on the wall. */
+.waiting {
+  display: flex; align-items: center; justify-content: center; gap: 9px;
+  margin: 0 0 16px; font-size: 13.5px; color: var(--ink-2);
+}
 </style>

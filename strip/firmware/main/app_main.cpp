@@ -40,6 +40,7 @@
 #include <nvs_flash.h>
 #include <nvs.h>
 #include <driver/gpio.h>
+#include <esp_wifi.h>
 #include <esp_timer.h>
 #include <mqtt_client.h>
 
@@ -350,6 +351,17 @@ static bool rhythm_lit(uint32_t t) {
     return false;
 }
 
+// THE PRESS, ANSWERED ON THE THING THAT WAS PRESSED. A household standing at a socket with the wall
+// in another room has nothing else to tell them it worked, and "nothing happened" is what a dead
+// button and a button that is not wired both look like.
+static void blink_back() {
+    strip.solid(255, 255, 255);
+    px::show(strip);
+    vTaskDelay(pdMS_TO_TICKS(120));
+    strip.solid(SIG_R, SIG_G, SIG_B);
+    px::show(strip);
+}
+
 static void housekeeping(void *) {
     bool released = false, armed = false, was_lit = true;
     uint32_t loud_at = 0;
@@ -368,14 +380,24 @@ static void housekeeping(void *) {
             prov::stay_loud();
         }
 
-        if (instrument && !waiting_over && !armed && !fill.running && prov::rhythm()[0]) {
-            const bool lit = prov::busy() || rhythm_lit(now_ms());
+        // WHAT THE STRIP IS DOING WHILE IT WAITS (design/strip/Press.dc.html). On our own door it is
+        // simply LIT, steady, end to end: a steady light is a thing you can point at, and it says
+        // nothing a stranger could use. It only flashes on the rung below, where four counts ARE the
+        // secret -- which is what rhythm()[0] distinguishes. Written on a change of state only,
+        // because a WS2812 latches and rewriting a steady frame is how the bridge puck turned one
+        // misread into twenty-five a second (AGENTS.md).
+        if (instrument && !waiting_over && !armed && !fill.running) {
+            const bool lit = prov::busy() || !prov::rhythm()[0] || rhythm_lit(now_ms());
             if (lit != was_lit) {
                 if (lit) strip.solid(SIG_R, SIG_G, SIG_B); else strip.clear();
                 px::show(strip);
                 was_lit = lit;
             }
         }
+        // The household said nobody can reach the button, so the door is being shut and reopened a
+        // rung lower. It has to be driven from here rather than from the handler that heard it: that
+        // one runs on the manager's own task, inside the manager it would be tearing down.
+        prov::tend_the_door();
         // A hold only counts once the button has been seen let go; see BUTTON_PIN above.
         //
         // AND IT SAYS WHEN IT SEES ONE. A household holding the button and getting nothing has no
@@ -407,9 +429,21 @@ static void housekeeping(void *) {
             }
         }
         if (gpio_get_level((gpio_num_t)BUTTON_PIN) && down) {
+            const uint32_t held = now_ms() - down;
             down = 0;
             if (armed) { armed = false; instrument = !chip::Server::GetInstance().GetFabricTable().FabricCount();
                          if (instrument) { strip.solid(SIG_R, SIG_G, SIG_B); px::show(strip); } else paint(); }
+            // A SHORT PRESS IS THE WHOLE HANDSHAKE (design/door/PressIt.dc.html). It is counted on the
+            // way UP and only if the hold never armed, so the two lengths of the same button cannot be
+            // confused by anybody doing either of them on purpose: under a second lets somebody in,
+            // five forgets the house, and one second turns the strip red to say which is coming.
+            //
+            // AND THE THING THAT WAS PRESSED IS WHAT ANSWERS. One bright blink on the strip itself,
+            // because the wall may be in another room and the person is looking at their hand.
+            else if (held < HOLD_ARMED && prov::press()) {
+                blink_back();
+                was_lit = true;
+            }
         }
 
         if (fill.running) {
@@ -560,7 +594,34 @@ extern "C" void app_main() {
                 if (!strcmp(key, k)) { put_str(key, value); return true; }
             return false;
         });
-        if (prov::open() != ESP_OK) ESP_LOGE(TAG, "our own door did not open; only Matter's is on");
+        // A STRIP THAT TOOK CREDENTIALS AND NEVER JOINED CANNOT OPEN ITS DOOR AGAIN, and this is a
+        // way to brick one in somebody's living room. Setup hands over a Wi-Fi name and password;
+        // the strip stores them and tries; the join fails -- a typo, the wrong band, a network that
+        // has since moved -- so NETWORK_PROV_WIFI_CRED_SUCCESS never fires and `ours` is never
+        // written. At the next boot CHIP is already connecting with those stored credentials, and
+        // the provisioning manager cannot set an empty config over a connecting STA: the door comes
+        // back ESP_ERR_WIFI_STATE and this is a strip that advertises itself for ever and can never
+        // be taken by anybody. Seen on a real hub on 21 September, where it read as "the hub could
+        // not finish setting it up" and nothing said why.
+        //
+        // We are inside "no fabric and not ours", so this strip has never finished setup with
+        // anybody. Whatever is stored is from an attempt that failed, and it is in the way.
+        const esp_err_t opened = prov::open();
+        if (opened == ESP_ERR_WIFI_STATE && get_i32("wificlr", 0) == 0) {
+            // Once per stored-credential mess, so a restore that does not take cannot become a
+            // reboot loop in a house. The flag is cleared the moment a door opens normally.
+            put_i32("wificlr", 1);
+            ESP_LOGW(TAG, "credentials from a setup that never finished are in the way. "
+                          "Clearing them and starting over");
+            esp_wifi_restore();
+            vTaskDelay(pdMS_TO_TICKS(250));
+            esp_restart();
+        }
+        if (opened != ESP_OK) {
+            ESP_LOGE(TAG, "our own door did not open (%s); only Matter's is on", esp_err_to_name(opened));
+        } else if (get_i32("wificlr", 0) != 0) {
+            put_i32("wificlr", 0);
+        }
         // The code this strip can be paired with, said out loud. Without this the only way to
         // commission it was to know that a test build uses the default passcode, which is exactly
         // the sort of thing that is obvious until the day it is not.

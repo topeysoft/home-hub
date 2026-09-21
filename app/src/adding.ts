@@ -131,5 +131,5 @@ export function asThing(text?: string): string | undefined {
  * failed, is not something waiting to be let in, and listing it as one would be a second place in
  * the panel claiming to know the same thing -- which is how two screens start disagreeing.
  */
-const STILL_ASKING = ['knocking', 'rhythm']
+const STILL_ASKING = ['knocking', 'press', 'rhythm']
 export const stripWaiting = (state?: string) => STILL_ASKING.includes(state ?? '')
