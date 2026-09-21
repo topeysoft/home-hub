@@ -281,8 +281,29 @@ Three install attempts died, each further along, and none of it was esp-matter's
 Xcode is installed and **its** SDK is intact, so `DEVELOPER_DIR` gets past the first. The second needs
 `softwareupdate --install-rosetta`. Both want an administrator and are the machine owner's to run.
 
-**So the port is not blocked on anything we have learned about Matter.** What is unproven is only the last step:
-a `light` example on real silicon advertising `MATTER-xxxx` over BLE with no Wi-Fi configured.
+### And then it was proven on the board
+
+Rosetta installed, the install completed, and esp-matter's own `light` example built and ran on the same
+ESP32-S3 that had spent the evening refusing to pair. Its config, the thing the whole trip was for:
+
+    CONFIG_BT_ENABLED=y
+    CONFIG_ENABLE_CHIPOBLE=y
+
+Its own log, with no Wi-Fi configured at all:
+
+    chip[DL]: CHIPoBLE advertising started
+    chip[DIS]: Advertise commission parameter vendorID=65521 productID=32768 discriminator=3840/15
+
+And a scan from the laptop, the same scan that found 59 devices and none of ours on the Arduino build, now
+finds it at **-35 dBm** carrying service `fff6` = `00000ff1ff008000` — a commissionable payload with vendor
+0xFFF1, the test vendor id, which is what an uncertified device should say.
+
+**The same question asked of both builds, on one board, with one scanner: Arduino advertises nothing, ESP-IDF
+advertises properly.** That is the decision made on evidence rather than on a config file.
+
+**And it is smaller.** `light.bin` is **1.5 MB** with BLE commissioning built in, against 1.76 MB for the
+Arduino Matter build that could not commission at all and 2.38 MB once `WiFiProv` was bolted on to work around
+it. Moving to ESP-IDF gives back about 880 KB *and* does more.
 
 ---
 
