@@ -580,11 +580,40 @@ together they decide the shape:
   it is the only part we write — against `ConfigureExtraServices`, which item 12 proved. Everything
   `protocomm_ble` does about advertising is dropped: CHIP owns the advertisement and we ride the scan response.
 
+**And there is a seam for exactly this, which makes the shim smaller again.** `wifi_provisioning` is no longer
+a core component in v6.0.2; it has become the managed component `espressif/network_provisioning`, and its
+manager takes a **pluggable transport**:
+
+    typedef struct network_prov_scheme {
+        esp_err_t (*prov_start)(protocomm_t *pc, void *config);
+        esp_err_t (*prov_stop)(protocomm_t *pc);
+        void *(*new_config)(void);
+        void (*delete_config)(void *config);
+        esp_err_t (*set_config_service)(void *config, const char *service_name, const char *service_key);
+        esp_err_t (*set_config_endpoint)(void *config, const char *endpoint_name, uint16_t uuid);
+        wifi_mode_t wifi_mode;
+    } network_prov_scheme_t;
+
+So we supply a scheme instead of reimplementing a transport, and the manager hands us the whole flow: its
+endpoints and their protobuf schemas, the SEC2 wiring, applying the credentials, and compatibility with a
+client that already speaks all of it. **One constraint falls out of the timing and it shapes the code:**
+`ConfigureExtraServices` refuses once CHIP's stack has started, and `prov_start` runs long after it. So the
+characteristic table is registered at boot with the endpoint UUIDs known ahead of time, and the scheme's
+`prov_start` only attaches the protocomm instance to characteristics that already exist.
+
 **Keep protocomm's UUID convention and its endpoint names** (`prov-session`, `prov-config`), so a client that
-already exists can drive it. That matters more than it looks, because **`esp_prov` is not in ESP-IDF v6.0.2** —
-there is no `tools/esp_prov`, and nothing under esp-matter either. So the end-to-end proof of a SECURITY_2
-session needs Espressif's provisioning app on a phone, or a client of our own; and a client of our own means
-writing an SRP6a client in order to test our SRP6a, which tests the wrong thing twice. Use the app.
+already exists can drive it. **`esp_prov` is not in ESP-IDF v6.0.2** — no `tools/esp_prov`, nothing under
+esp-matter — so the first end-to-end proof of a SECURITY_2 session wants Espressif's provisioning app on a
+phone. **The app is a bench instrument and is never part of the product**: it is a second app, and somebody
+else's, which `product-direction-out-of-the-box` rules out twice over. In the shipped thing the *hub* is the
+client, which is the whole of what `Ours` draws.
+
+**The client the hub needs already exists and does not have to be written.** `tools/esp_prov` is still in
+ESP-IDF **v5.4.1**, which is also installed here: 22 files, about 1,950 lines, Apache-2.0, with
+`security/security2.py` doing SRP6a and a `bleak` BLE transport that works over BlueZ on the Pi. Apache-2.0
+into AGPL-3.0-or-later is compatible one way, so it is vendored with attribution rather than reimplemented.
+One change is needed and item 12 already named it: `ble_cli.py` discovers by device name, and there is no room
+for a name in our scan response, so it has to match on the service UUID.
 
 **12. BLE coexistence is answered, on the desk, and it corrected a board.** The forked design in
 `design/strip/` rests on the strip offering our own provisioning service and Matter's at the same time. Read out
