@@ -12,7 +12,7 @@ import asyncio, json, sqlite3, tempfile, unittest
 from pathlib import Path
 
 from hub.settings import Settings
-from hub.strip import (ASSUME, DEV_CODE, ORDERS, TEST_VID, StripError, Strips,
+from hub.strip import (ASSUME, DEV_CODE, ORDERS, TEST_VID, Radio, StripError, Strips,
                        lit_index, narrow, probe, resolve)
 
 
@@ -37,8 +37,8 @@ class FakeRadio:
 
     async def adopt_ours(self, addr, rhythm, ssid, password, hub=None):
         if self.adopt_fails:
-            raise StripError("That did not work. Check the flashes and try again \u2014 "
-                             "the strip shows a new set every time it is plugged in.")
+            raise StripError(self.adopt_fails if isinstance(self.adopt_fails, str)
+                             else "Those were not the flashes it is showing.")
         self.adopted.append((addr, rhythm, ssid, password, hub or {}))
 
     async def set_wifi(self, ssid, password):
@@ -551,3 +551,40 @@ class WhichDoorTheStripIsTakenThrough(unittest.TestCase):
                                    "vendor": TEST_VID, "ours": True}]
         run(self.strips.look())
         self.assertEqual(self.strips.job["door"], "matter")
+
+
+class TwoFailuresThatAreNotTheSame(unittest.TestCase):
+    """A wrong count and a dropped radio both used to say "check the flashes", which sends somebody
+    to count again and again at the far end of a room where the real answer was to move nearer. The
+    strip refuses a wrong rhythm inside SRP6a and it comes back as an ATT error; a link that died
+    comes back as a disconnect. They are different sentences now."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.hub = FakeHub(self.tmp.name)
+
+    def tearDown(self): self.tmp.cleanup()
+
+    def said_for(self, boom: str) -> str:
+        radio = Radio(self.hub)
+
+        async def go():
+            import hub.strip_door as door
+            async def bang(*a, **k): raise RuntimeError(boom)
+            door.adopt = bang
+            with self.assertRaises(StripError) as e:
+                await radio.adopt_ours("AA:BB", "1234", "House", "x", hub={})
+            return str(e.exception)
+        return run(go())
+
+    def test_a_wrong_count_is_told_to_count_again(self):
+        said = self.said_for("GATT Protocol Error: Unlikely Error")
+        self.assertIn("not the flashes", said)
+        self.assertNotIn("nearer", said)
+
+    def test_a_dropped_link_is_told_to_move_nearer_and_not_to_recount(self):
+        for boom in ("failed to discover services, device disconnected",
+                     "Device not found", "TimeoutError"):
+            said = self.said_for(boom)
+            self.assertIn("nearer the hub", said)
+            self.assertNotIn("Count them again", said)

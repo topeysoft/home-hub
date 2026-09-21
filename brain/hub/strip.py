@@ -301,8 +301,17 @@ class Radio:
             await strip_door.adopt(addr, rhythm, ssid, password, hub=hub)
         except Exception as e:
             log.warning("strip: our own door did not open (%s)", e)
-            raise StripError("That did not work. Check the flashes and try again \u2014 "
-                             "the strip shows a new set every time it is plugged in.")
+            # TWO FAILURES THAT ARE NOT THE SAME, and telling a household to recount when the radio
+            # dropped is telling them to fix something they did not break. The strip refuses a wrong
+            # rhythm inside SRP6a and the refusal comes back as an ATT error; a link that died comes
+            # back as a disconnect. Both used to say "check the flashes", which sent somebody to
+            # count again and again at the far end of a room where the real answer was to move.
+            said = str(e).lower()
+            if "disconnect" in said or "not found" in said or "timeout" in said:
+                raise StripError("The strip stopped answering part way through. "
+                                 "Try again a little nearer the hub.")
+            raise StripError("Those were not the flashes it is showing. Count them again \u2014 "
+                             "and note it shows a new set every time it is plugged in.")
 
     async def forget(self, id: str) -> None:
         return None

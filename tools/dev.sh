@@ -10,6 +10,7 @@
 #   tools/dev.sh check    what CI runs, here, before pushing
 #   tools/dev.sh design   every artboard in a browser, on the canvas they were drawn on
 #   tools/dev.sh graft    this tree's brain onto a hub, without a release
+#   tools/dev.sh says     what a hub's brain is saying, with its request log taken out
 #
 # Two audiences, one report. Somebody coming back wants the half hour deleted that goes: which
 # branch was I on, what is that uncommitted file, is that stash mine, is anything still listening on
@@ -265,6 +266,16 @@ case "${1:-status}" in
                && sudo -n docker cp "$tmp/vendor" brain:/srv/brain/ \
                && rm -rf "$tmp" && sudo -n docker restart brain >/dev/null && echo grafted'
          row "note" "${Y}/alive still reports the image's commit${R} ${D}— it cannot see what was copied over it${R}" ;;
+  # WHAT THE HUB IS SAYING, WITHOUT SSH-ING INTO IT. The brain's own lines are drowned in one
+  # request log line per poll -- the panel asks every two seconds -- so `docker logs` is unreadable
+  # exactly when something is going wrong. This is the filter you would have typed, and it follows.
+  #
+  # It cost an evening to learn that the brain logs at all: a strip refused three times and the
+  # reason was in there each time, under three hundred lines of GET /strip.
+  says) house=${2:-hub.local}
+        row "house" "$house ${D}— its own lines only, following${R}"
+        exec ssh -o BatchMode=yes -o SetEnv=LC_ALL=C "pi@$house" \
+          'sudo -n docker logs -f --tail 200 brain 2>&1 | grep --line-buffered -avE "HTTP/1.1|WebSocket|connection (open|closed|rejected)"' ;;
   # CI's jobs, in CI's order, minus the ones that need a browser or a container. The sheet checks
   # are in here because they catch what nothing else does: a drawing changed in src/art.ts or
   # src/sky.ts and not in the design sheet generated from it.
