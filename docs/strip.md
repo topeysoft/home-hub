@@ -18,7 +18,7 @@ is where it stands, as of 21 September 2026.*
 
 | | |
 |---|---|
-| **Design** | 15 boards in `design/strip/`, 3 in `design/occasion/`. Two questions still open, both drawn |
+| **Design** | 19 boards in `design/strip/`, 3 in `design/occasion/`. The last row forks the spine: Matter is one door, not the only one |
 | **Firmware** | ESP-IDF + esp-matter, **commissionable over BLE, proven on an ESP32-S3** |
 | **Brain** | knock → adopt → commission. 33 tests. Setup stops at commissioned, on purpose |
 | **Panel** | the three real beats, previewable with `?strip=knocking\|working\|ready` |
@@ -30,16 +30,26 @@ is where it stands, as of 21 September 2026.*
 commissioning advertisement — the board says `CHIPoBLE advertising started` and a laptop scan finds it at
 −41 dBm carrying a valid commissionable payload.
 
-**Never run:** a completed commissioning, by anything. No ecosystem has taken the strip, the broker has never
-been spoken to, and neither the color question nor the fill has run outside a unit test.
+**Also proven, and this page said otherwise until 20 September:** a commissioning has completed. Home Assistant
+took the strip and reported manufacturer `TEST_VENDOR`, model `TEST_PRODUCT`, which is what item 6 is about. The
+line here used to read *"never run: a completed commissioning, by anything"*, because this page was written from
+item 3 three hours after item 6 had already recorded one. If two parts of this document disagree, date them
+against the log before believing either.
+
+**Never run:** a commissioning by a *phone* — no Apple or Google commissioner has taken the strip, and those are
+the two that warn or refuse on a test vendor id, so Home Assistant taking it does not stand in for them. The
+broker has never been spoken to, and neither the color question nor the fill has run outside a unit test.
 
 ### The next three things, in order
 
 1. **Commission it from a phone.** Apple Home or Google Home, using the code the board prints at boot. This
-   needs none of the hub and proves the claim the whole product line rests on. It has never been done.
-2. **Then the hub path, on the Pi.** Not on the Mac — see `2-mac`. That is the first time the brain, the panel
+   needs none of the hub and proves the claim the whole product line rests on. Home Assistant has done it; a
+   phone has not.
+2. **Measure free heap on the current build with both BLE services registered.** It is the one unproven thing
+   the whole forked design rests on, and the figures in this document are from a build that no longer exists —
+   see item 12.
+3. **Then the hub path, on the Pi.** Not on the Mac — see `2-mac`. That is the first time the brain, the panel
    and the firmware will have run together.
-3. **Then decide the two open questions below**, with something working in front of you rather than in the abstract.
 
 ### Decided, and not to be reopened without a reason
 
@@ -58,8 +68,11 @@ been spoken to, and neither the color question nor the fill has run outside a un
   our hub in it, where the strip mints a code for one window and the wall shows it. The two are not rivals — see
   item 1a. **Not urgent:** a development board's passcode is public and the brain fills it in, so nothing is
   blocked until real units are labeled.
-- **How a strip finds our hub** — `ReachTold` / `ReachAsks` / `ReachNone`. Recommendation is `ReachAsks` for
-  strips we commission, `ReachNone` as the fallback for strips somebody else did.
+- **How a strip finds our hub** — `ReachTold` / `ReachAsks` / `ReachNone`. Recommendation was `ReachAsks` for
+  strips we commission, `ReachNone` as the fallback for strips somebody else did. **The forked row has largely
+  overtaken this:** a strip that came through our own door is handed the broker during that handshake, and a
+  strip somebody else set up is reached over mDNS afterwards (`Theirs`), which is better than `ReachNone`. What
+  is left of the question is only the strip we can never reach at all. The three boards stay for the record.
 
 ### Traps that have already cost a day
 
@@ -520,6 +533,32 @@ real annual cost before a unit ships — and inserts the product into the most q
 the house, which is how these things get returned. The camera route avoids all of that and costs a camera
 pointed into a living room. **The cheap next step is neither: a capture stick and HyperHDR on a bench,
 to find out whether it feels like the screen extended or like a gimmick, before any of it is paid for.**
+
+**12. BLE coexistence is answered, on the desk, and it corrected a board.** The forked design in
+`design/strip/` rests on the strip offering our own provisioning service and Matter's at the same time. Read out
+of `connectedhomeip` rather than reasoned about:
+
+- **The GATT half is first-class and supported.** `BLEManagerImpl::ConfigureExtraServices(std::vector<ble_gatt_svc_def> &, bool afterMatterSvc)`
+  merges application services into the same NimBLE host as `CHIPoBLEGATTSvc`. **There is no second stack and no
+  second `nimble_port_init`**, which was the thing that could have killed the design. It has to be called before
+  the stack starts — it returns `CHIP_ERROR_INCORRECT_STATE` once `mGattSvcs` is non-empty. esp-matter's own FAQ
+  documents the surrounding story and points at `blemesh_bridge`.
+- **The advertising half is the real constraint, and `Both.dc.html` overstated it.** That board said *one
+  advertisement carrying two services*. As this firmware is configured it cannot: without
+  `CONFIG_BT_NIMBLE_EXT_ADV`, CHIP calls `ble_gap_adv_start` — the single legacy advertising set — and a legacy
+  payload is 31 bytes, which Matter's `0xFFF6` service data plus a 128-bit vendor UUID overruns. Three ways out,
+  cheapest first: `ConfigureScanResponseData`, which CHIP already exposes and which buys another 31 bytes;
+  extended advertising, where Matter holds `kMatterAdvInstance = 0` and we take another instance, at the cost of
+  re-proving Matter's advertisement on air; or alternating, which is nobody's idea of a good time. The board now
+  says the scan response.
+- **`CONFIG_USE_BLE_ONLY_FOR_COMMISSIONING=y` can stay.** Our own door has no use for BLE once the strip is on
+  the Wi-Fi — `Theirs` hands over via mDNS after that, and an enhanced commissioning window never advertises
+  over Bluetooth at all — so the Bluetooth memory still goes back.
+
+**And every heap and image figure in this document is from a build that no longer exists.** 1.77 MB, 2.38 MB,
+129 KB and 66 KB are all Arduino plus Bluedroid plus `WiFiProv`. This firmware is ESP-IDF plus **NimBLE**, where
+the esp-matter light example came in at 1.5 MB. Nobody has measured free heap on it. Until somebody does, no
+heap claim here or on any board is worth quoting — which is why measuring it is item 2 at the top.
 
 **11. The error text needs a pass with one rule: do not guess.** Four screens in a row during bring-up named a
 confident wrong cause — Matter cannot do it, then check your code, then check your strip, then check your
