@@ -151,6 +151,30 @@
       "w": 1440,
       "h": 900,
       "title": "D \u2014 the hub is the box the code comes in"
+    },
+    {
+      "file": "PopBox.dc.html",
+      "x": 0,
+      "y": 7560,
+      "w": 1440,
+      "h": 900,
+      "title": "A \u2014 the code is on the box, for this door too"
+    },
+    {
+      "file": "PopLight.dc.html",
+      "x": 1560,
+      "y": 7560,
+      "w": 1440,
+      "h": 900,
+      "title": "B \u2014 the strip shows the secret"
+    },
+    {
+      "file": "PopWindow.dc.html",
+      "x": 3120,
+      "y": 7560,
+      "w": 1440,
+      "h": 900,
+      "title": "C \u2014 no secret, only a window"
     }
   ],
   "annotations": [
@@ -258,6 +282,13 @@
       "y": 6480,
       "w": 500,
       "text": "AND THEN ITEM 1A ANSWERS ITSELF\n\nThe three code boards were drawn when Matter was the only door, and none of them was good. A gives up the thing design/puck/Knock.dc.html was proudest of \u2014 that the identity check is the object and never a number. B makes every unit we ever sell commissionable by anybody holding the algorithm. C cannot stand alone. The recommendation was A, on the grounds that it was the least bad.\n\nD IS ONLY POSSIBLE BECAUSE OF OURS. Once there is a link the strip itself authenticated, a passcode no longer has to travel from outside the radio: the strip can simply say it, and the wall is where a code was going to have to appear anyway. Nothing is printed, nothing is derived, nothing is kept at the factory.\n\nIT DOES NOT REPLACE A, and the board says so where an enthusiastic board would not. A strip bought by a household with no hub of ours still needs a number from outside the radio, and that is still the label. D is what A becomes once our hub is in the house. Recommendation: ship A on the box, D on the wall, and B stays rejected for the reason it was always rejected.\n\nSETTLED 20 SEPTEMBER, AND IT CHANGED THE BOARD. The question was whether a certified device may hand its factory passcode to a vendor channel. It cannot, and not because a rule forbids it: it does not have one. A production device stores only the SPAKE2+ verifier. ESP32FactoryDataProvider::GetSetupPasscode returns CHIP_ERROR_NOT_IMPLEMENTED; connectedhomeip's own header says using the verifier rather than the passcode \"safeguards the passcode from ever leaking\"; and Espressif's production guide says the verifier is installed \"and not the actual passcode\". So this board's central sentence -- the strip has always held its own passcode -- was false, and has been redrawn.\n\nWHAT REPLACED IT IS SMALLER AND BETTER. The strip mints a passcode when it is asked, derives the verifier on the chip, and opens an enhanced commissioning window with it. Espressif recommends exactly this for a device whose onboarding payload can be displayed, and ships the code: examples/light_switch's dynamic_commissionable_data_provider is a DRBG draw, the disallowed-passcode check and Spake2pVerifier::Generate. CommissioningWindowManager::OpenEnhancedCommissioningWindow needs no fabric and no Matter administrator, so the hub does not have to be one. The sheet on this board did not change at all.\n\nTHREE CONSTRAINTS ARRIVED WITH IT. An enhanced window never advertises over Bluetooth -- \"once a device is operational it shall be commissioned into subsequent fabrics using the operational network only\" -- so the other app has to be on the house Wi-Fi. While the window is open the fresh verifier replaces the factory one, so the code on the label does not work. And fifteen minutes is the specification's ceiling on a window rather than a number we picked; the countdown already drawn on the sheet was inside it."
+    },
+    {
+      "id": "pop",
+      "x": -620,
+      "y": 7560,
+      "w": 500,
+      "text": "WHO IS THE HUB, AS FAR AS THE STRIP CAN TELL -- 1A AGAIN, ON OUR OWN DOOR\n\nRaised 21 September by the code itself: network_prov_mgr_start_provisioning needs a security level, and every real one needs the hub to know a secret before the session. SEC0 is the Wi-Fi password on an unauthenticated link, which is the sin Matter came in to remove. SEC1 wants a proof-of-possession string. SEC2 wants a per-device salt and SRP6a verifier, which is a password by another name.\n\nTHE PROMISE IN TENSION IS OURS'S. \"There is nothing to type\" and \"the identity check is two meters of light.\" The light tells the HOUSEHOLD which strip it is. It tells the STRIP nothing about who the hub is. Those are different proofs, and the boards above conflated them.\n\nA BORROWS A NUMBER THAT ALREADY EXISTS. The Matter setup code has to be on the label for the other lane anyway, and SRP6a can be seeded from the same digits, so A costs no manufacturing and no new secret. It costs the promise, and it makes one label open both doors.\n\nB MAKES THE LIGHT THE LABEL. The strip mints a rhythm each time it is plugged in -- four groups of one to six flashes -- and the person taps what they count. Rhythm rather than color because \"Is it red?\" has not been asked yet and a color cannot be trusted; a count can. 1,296 possibilities is small until SRP6a is under it: no offline attack, one wrong guess ends the session, a new rhythm next power cycle. It asks somebody to count flashes from across a room, and \"I can't see it\" is a real button because it will be pressed.\n\nC KEEPS OURS EXACTLY AS DRAWN AND SAYS WHAT THAT COSTS. SEC1 with no secret: encrypted, so nothing can listen, but unauthenticated, so anything that speaks first in the three minutes after a plug-in is the hub. Theirs already ruled that being nearby is not proof. This is proximity standing in for a secret.\n\nRECOMMENDATION: B, with A as the fallback that costs nothing because the label exists anyway. Not C -- it re-admits the class of risk this project already paid to remove, and it would have to say so on the box. What B needs before it is real: a rhythm the firmware can show while Matter is also advertising, and a retry that does not lock a household out of its own strip."
     }
   ],
   "reading": [
@@ -293,6 +324,10 @@
     "Ours.dc.html",
     "Theirs.dc.html",
     "code-hub",
-    "CodeHub.dc.html"
+    "CodeHub.dc.html",
+    "pop",
+    "PopBox.dc.html",
+    "PopLight.dc.html",
+    "PopWindow.dc.html"
   ]
 }
