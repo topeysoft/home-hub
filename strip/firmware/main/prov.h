@@ -24,7 +24,10 @@ namespace prov {
 // ConfigureExtraServices refuses once the stack is up, and there is no second chance at it.
 // It also puts our service UUID in the scan response, because Matter's own payload has already
 // filled the advertisement and 31 bytes will not hold both (docs/strip.md item 12).
-esp_err_t reserve();
+// `name` rides in the scan response beside the UUID and may be at most 11 characters: the UUID takes
+// 18 of the 31 bytes and a name costs two plus its length. It exists for one reason, which is that
+// Espressif's own app finds devices by name prefix and shows nothing without one.
+esp_err_t reserve(const char *name);
 
 // The scheme to hand to network_prov_mgr_init(). Valid once reserve() has succeeded.
 const network_prov_scheme_t &scheme();

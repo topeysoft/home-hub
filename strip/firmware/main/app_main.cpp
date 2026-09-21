@@ -487,7 +487,9 @@ extern "C" void app_main() {
 
     // Before Matter, and it has to be: CHIP will not take another GATT service once its own stack
     // has started, and there is no second chance at it. See prov.h.
-    if (prov::reserve() != ESP_OK) ESP_LOGE(TAG, "our own door will not open this boot");
+    char prov_name[24];  // "PROV_" and six hex digits; sized up only to keep the compiler quiet
+    snprintf(prov_name, sizeof(prov_name), "PROV_%s", chipHex);  // prov::reserve cuts it to fit
+    if (prov::reserve(prov_name) != ESP_OK) ESP_LOGE(TAG, "our own door will not open this boot");
 
     heap("before Matter");
     esp_matter::start(on_event);

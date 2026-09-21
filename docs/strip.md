@@ -100,6 +100,10 @@ unit test, and Alexa has not been tried.
   `sudo xcode-select -s` fixes it properly.
 - **Two PlatformIO cores are installed** and fight over the build directory; builds fail and then succeed
   unchanged. Irrelevant now the firmware is ESP-IDF, but it will confuse anybody touching `brilliant/`.
+- **A 31-byte scan response makes the strip vanish from scanners — the whole advertisement, Matter's
+  included.** The spec allows 31 and CHIP accepts 31; at 31 nothing found the board, at 30 everything did,
+  name included. `prov.cpp` caps at 30 on purpose. Also: Espressif's provisioning app finds devices by name
+  prefix (`PROV_`) and shows nothing without one, which is the only reason a name is in the scan response.
 - **`pdMS_TO_TICKS` of anything under one tick is zero, and `vTaskDelay(0)` does not sleep.** The tick here is
   100 Hz, so the housekeeping loop's `pdMS_TO_TICKS(5)` was 0 ticks; `vTaskDelay(0)` yields only to tasks at
   the same priority or above and never to the idle task at 0. The loop was a busy spin that starved IDLE0 and

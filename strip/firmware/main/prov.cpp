@@ -54,7 +54,8 @@ ble_uuid128_t gChrUuid[kCount];
 ble_uuid16_t gDscUuid = BLE_UUID16_INIT(0x2901);  // Characteristic User Description
 ble_gatt_dsc_def gDscs[kCount][2];
 ble_gatt_chr_def gChrs[kCount + 1];
-uint8_t gScanRsp[18];
+uint8_t gScanRsp[31];
+size_t gScanRspLen = 0;
 
 // Live only while provisioning is running.
 protocomm_t *gPc = nullptr;
@@ -269,7 +270,7 @@ esp_err_t open() {
 const uint8_t *rhythm() { return gRhythm; }
 bool busy() { return gBusy; }
 
-esp_err_t reserve() {
+esp_err_t reserve(const char *name) {
     memcpy(gSvcUuid.value, kServiceUuid, sizeof(kServiceUuid));
     gSvcUuid.u.type = BLE_UUID_TYPE_128;
 
@@ -309,11 +310,28 @@ esp_err_t reserve() {
         return ESP_FAIL;
     }
 
-    // One AD structure: complete list of 128-bit service UUIDs, which is 18 of the 31 bytes.
+    // Two AD structures: the complete list of 128-bit service UUIDs, 18 bytes, and a complete local
+    // name in whatever is left. A name longer than fits is cut, not refused, because the UUID is the
+    // identifier and the name is a courtesy.
+    //
+    // THIRTY, NOT THIRTY-ONE. The spec allows 31 and CHIP accepts 31, and at 31 the strip vanished
+    // from every scanner on 21 September -- not the name, the whole advertisement, Matter's included.
+    // At 30 it is all there. Whether that is the controller or the scanners does not matter to a
+    // household that cannot find its strip, so one byte is left on the table on purpose.
+    constexpr size_t kScanRspMax = 30;
     gScanRsp[0] = 0x11;
     gScanRsp[1] = 0x07;
     memcpy(&gScanRsp[2], kServiceUuid, sizeof(kServiceUuid));
-    err = ble.ConfigureScanResponseData(chip::ByteSpan(gScanRsp, sizeof(gScanRsp)));
+    gScanRspLen = 18;
+    size_t n = name ? strlen(name) : 0;
+    if (n > kScanRspMax - gScanRspLen - 2) n = kScanRspMax - gScanRspLen - 2;
+    if (n) {
+        gScanRsp[gScanRspLen++] = (uint8_t)(n + 1);
+        gScanRsp[gScanRspLen++] = 0x09;
+        memcpy(&gScanRsp[gScanRspLen], name, n);
+        gScanRspLen += n;
+    }
+    err = ble.ConfigureScanResponseData(chip::ByteSpan(gScanRsp, gScanRspLen));
     if (err != CHIP_NO_ERROR) {
         ESP_LOGE(TAG, "CHIP would not take our scan response: %s", chip::ErrorStr(err));
         return ESP_FAIL;
@@ -329,8 +347,8 @@ esp_err_t reserve() {
     gScheme.wifi_mode = WIFI_MODE_STA;
 #endif
 
-    ESP_LOGI(TAG, "%d characteristics reserved beside Matter's, scan response %u bytes of 31",
-             kCount, (unsigned)sizeof(gScanRsp));
+    ESP_LOGI(TAG, "%d characteristics reserved beside Matter's, scan response %u bytes of %u%s%.*s",
+             kCount, (unsigned)gScanRspLen, (unsigned)kScanRspMax, n ? ", named " : "", (int)n, name ? name : "");
     return ESP_OK;
 }
 
