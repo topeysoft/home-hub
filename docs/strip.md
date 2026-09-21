@@ -601,6 +601,30 @@ client that already speaks all of it. **One constraint falls out of the timing a
 characteristic table is registered at boot with the endpoint UUIDs known ahead of time, and the scheme's
 `prov_start` only attaches the protocomm instance to characteristics that already exist.
 
+**Built and proven on the board, 20 September.** `main/prov.cpp` is the scheme; `reserve()` runs before
+`esp_matter::start()`. A scan and a GATT walk from this laptop, on an uncommissioned strip:
+
+    ADVERTISEMENT  rssi -36
+      service data { 0000fff6 } = ['00000ff1ff008000']      <- Matter, in the advertisement
+      service uuids ['1775244d-6b43-439b-877c-060f2d9bed07'] <- ours, in the scan response
+
+    GATT TABLE
+      service 1775244d-6b43-439b-877c-060f2d9bed07   <-- ours
+          chr 1775ff4f … 1775ff55  [write,read]  name=""     (seven of them)
+      service 0000fff6-0000-1000-8000-00805f9b34fb  <-- Matter
+          chr 18ee2ef5-…-9d11 [write]   chr 18ee2ef5-…-9d12 [read,indicate]
+
+Two services in one table on one radio, which is what the whole forked row rests on. The empty names are the
+design working rather than a fault: the manager has not been started, so the live table is empty and the
+`0x2901` descriptors have nothing to say yet. The service costs 2,984 bytes of heap against 113 KB free.
+
+**A trap for whoever writes the hub's half: CoreBluetooth will not enumerate this device.** macOS refuses
+descriptor discovery on characteristics it reserves — *"the specified UUID is not allowed for this
+operation"* — and bleak discovers descriptors for every characteristic during connect, so one refusal loses
+the entire table. The walk above needed that call monkeypatched to tolerate it. Since the client reads the
+`0x2901` descriptors to find its endpoints, **the vendored `esp_prov` has to be tested on the Pi over BlueZ,
+not on a Mac**, and a Mac failing to provision a strip will not be a bug in the strip.
+
 **Keep protocomm's UUID convention and its endpoint names** (`prov-session`, `prov-config`), so a client that
 already exists can drive it. **`esp_prov` is not in ESP-IDF v6.0.2** — no `tools/esp_prov`, nothing under
 esp-matter — so the first end-to-end proof of a SECURITY_2 session wants Espressif's provisioning app on a
