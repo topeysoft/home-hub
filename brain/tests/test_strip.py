@@ -12,7 +12,8 @@ import asyncio, json, sqlite3, tempfile, unittest
 from pathlib import Path
 
 from hub.settings import Settings
-from hub.strip import ASSUME, ORDERS, StripError, Strips, lit_index, narrow, probe, resolve
+from hub.strip import (ASSUME, DEV_CODE, ORDERS, TEST_VID, StripError, Strips,
+                       lit_index, narrow, probe, resolve)
 
 
 class FakeRadio:
@@ -22,10 +23,23 @@ class FakeRadio:
     which is the whole reason the firmware left the Arduino framework."""
     def __init__(self):
         self.advertising = []
+        self.ours = []            # strips knocking at OUR door, as strip_door.find() returns them
         self.commissioned = []
+        self.adopted = []         # (addr, rhythm, ssid, password, where-we-are)
         self.told_wifi = []
         self.commission_fails = None
+        self.adopt_fails = None
         self.scan_boom = None
+
+    async def scan_ours(self, seconds=8.0):
+        return [{"addr": s["address"], "rssi": s["rssi"], "name": s.get("name"),
+                 "door": "ours", "ours": True} for s in self.ours]
+
+    async def adopt_ours(self, addr, rhythm, ssid, password, hub=None):
+        if self.adopt_fails:
+            raise StripError("That did not work. Check the flashes and try again \u2014 "
+                             "the strip shows a new set every time it is plugged in.")
+        self.adopted.append((addr, rhythm, ssid, password, hub or {}))
 
     async def set_wifi(self, ssid, password):
         self.told_wifi.append((ssid, password))
@@ -418,3 +432,72 @@ class WhenItGoesWrong(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class OurOwnDoor(unittest.TestCase):
+    """A strip that offers our door is asked one thing and it is not a code.
+
+    design/strip/Ours.dc.html and PopLight.dc.html: the identity check is two meters of light, and
+    the proof of possession is four counts of flashes read off the same light. Nothing is printed on
+    a strip and nothing is derived from its chip, so there is nothing to read out and nothing to
+    leak. Matter's door is unchanged and still wants a code."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.hub = FakeHub(self.tmp.name)
+        self.radio = FakeRadio()
+        self.strips = Strips(self.hub, self.radio)
+        self.hub.settings.set(wifi={"ssid": "House", "pass": "secret"})
+
+    def tearDown(self): self.tmp.cleanup()
+
+    def knock(self):
+        self.radio.ours = [{"address": "AA:BB", "rssi": -40, "name": "PROV_52e20"}]
+        run(self.strips.look())
+
+    def test_a_strip_at_our_door_is_asked_for_the_rhythm_and_not_a_code(self):
+        self.knock()
+        self.assertEqual(self.strips.status()["state"], "knocking")
+        run(self.strips.adopt())
+        st = self.strips.status()
+        self.assertEqual(st["state"], "rhythm")
+        self.assertEqual((st["groups"], st["most"]), (4, 6))
+        self.assertEqual(self.radio.adopted, [])   # nothing has moved yet
+
+    def test_the_counts_have_to_be_four_groups_of_one_to_six(self):
+        self.knock(); run(self.strips.adopt())
+        for bad in ("", "123", "12345", "1207", "abcd"):
+            with self.assertRaises(StripError): run(self.strips.counted(bad))
+        self.assertEqual(self.strips.status()["state"], "rhythm")
+
+    def test_counting_right_hands_over_the_wifi_and_where_we_are_together(self):
+        self.knock(); run(self.strips.adopt())
+        run(self.strips.counted("3164"))
+        for _ in range(60): run(asyncio.sleep(0))
+        self.assertEqual(len(self.radio.adopted), 1)
+        addr, rhythm, ssid, password, where = self.radio.adopted[0]
+        self.assertEqual((addr, rhythm, ssid, password), ("AA:BB", "3164", "House", "secret"))
+        # The broker, in the same session. This is item 2a, which was an empty string for weeks.
+        self.assertEqual(where["mhost"], "hub")
+        self.assertIn("base", where)
+        # And our door never goes near Matter's commissioner.
+        self.assertEqual(self.radio.commissioned, [])
+        self.assertEqual(self.radio.told_wifi, [])
+
+    def test_a_strip_at_matters_door_is_unchanged_and_still_wants_a_code(self):
+        self.radio.advertising = [{"addr": "CC:DD", "rssi": -50, "discriminator": 3840,
+                                   "vendor": TEST_VID, "ours": True}]
+        run(self.strips.look())
+        run(self.strips.adopt())
+        for _ in range(60): run(asyncio.sleep(0))
+        self.assertEqual(self.radio.commissioned, [DEV_CODE])
+        self.assertEqual(self.radio.adopted, [])
+
+    def test_a_miscount_says_the_strip_will_show_a_new_one(self):
+        self.knock(); run(self.strips.adopt())
+        self.radio.adopt_fails = True
+        run(self.strips.counted("1111"))
+        for _ in range(60): run(asyncio.sleep(0))
+        st = self.strips.status()
+        self.assertEqual(st["state"], "failed")
+        self.assertIn("flashes", st["text"])

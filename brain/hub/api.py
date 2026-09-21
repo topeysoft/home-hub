@@ -1251,10 +1251,22 @@ def strip_status(): return hub.strip.status()
 
 @app.post("/strip/adopt")
 async def strip_adopt(body: dict | None = None):
-    """Yes, that one is mine -- with its setup code, which is the one thing an advertisement does not
-    carry and so the one thing somebody still has to hand over. docs/strip.md item 1a."""
+    """Yes, that one is mine.
+
+    A strip at OUR door goes on to be asked how many times it is flashing, and needs no code at all.
+    One at Matter's door still needs its setup code, which an advertisement does not carry and so is
+    the one thing somebody has to hand over. docs/strip.md item 1a."""
     hub.ready()
     try: return await hub.strip.adopt(str((body or {}).get("code") or ""))
+    except StripError as e: raise HTTPException(409, str(e))
+
+
+@app.post("/strip/counted")
+async def strip_counted(body: dict):
+    """How many times the strip flashed, in four groups. That is the proof of possession for our own
+    door and it is read off the light rather than off a label (design/strip/PopLight.dc.html)."""
+    hub.ready()
+    try: return await hub.strip.counted(str(body.get("rhythm") or ""))
     except StripError as e: raise HTTPException(409, str(e))
 
 

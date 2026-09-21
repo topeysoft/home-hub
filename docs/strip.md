@@ -20,7 +20,7 @@ is where it stands, as of 21 September 2026.*
 |---|---|
 | **Design** | 19 boards in `design/strip/`, 3 in `design/occasion/`. The last row forks the spine: Matter is one door, not the only one |
 | **Firmware** | ESP-IDF + esp-matter, **commissionable over BLE, proven on an ESP32-S3** |
-| **Brain** | knock → adopt → commission. 33 tests. Setup stops at commissioned, on purpose |
+| **Brain** | both doors: knock → adopt → (rhythm | code) → set up. 39 tests. Our door carries the broker |
 | **Panel** | the three real beats, previewable with `?strip=knocking\|working\|ready` |
 | **Suites** | brain 1100, panel 490, native firmware test, all green |
 

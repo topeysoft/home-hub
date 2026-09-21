@@ -263,6 +263,40 @@ class Radio:
                 raise StripError(NO_MATTER)
             raise StripError("The strip did not take the code. Check it, and that the strip is still lit.")
 
+    # ---- our own door (design/strip/Ours.dc.html, docs/strip.md items 13 and 15) ----
+    #
+    # A strip we make offers two ways in and the household is never asked which. Everything above
+    # this line is Matter's door, which is for anybody. Below it is ours, which is the only one that
+    # can ask the two questions Matter has no words for and the only one that can say where we are.
+    # The protocol is protocomm with SRP6a, in brain/vendor/esp_prov; hub/strip_door.py is the part
+    # that is ours.
+
+    async def scan_ours(self, seconds: float = 8.0) -> list[dict]:
+        """Every strip knocking at OUR door, by service UUID rather than by name.
+
+        The address is not an identity: a strip rotates it between advertisements, which was seen on
+        21 September when two scans minutes apart returned different ones for the same board. It is
+        good only for connecting to right now."""
+        from . import strip_door
+        found = await strip_door.find(seconds)
+        return [{"addr": s["address"], "rssi": s["rssi"], "name": s.get("name"),
+                 "door": "ours", "ours": True} for s in found]
+
+    async def adopt_ours(self, addr: str, rhythm: str, ssid: str, password: str,
+                         hub: dict | None = None) -> None:
+        """Prove the rhythm, hand over the Wi-Fi, then say where we are -- one session, no phone.
+
+        THE WI-FI DOES GO THROUGH US HERE, and unlike Matter's door there is no controller in the
+        middle: it goes straight to the strip inside a session the strip authenticated with SRP6a.
+        That is the handshake the first firmware should have had, and the reason this door exists."""
+        from . import strip_door
+        try:
+            await strip_door.adopt(addr, rhythm, ssid, password, hub=hub)
+        except Exception as e:
+            log.warning("strip: our own door did not open (%s)", e)
+            raise StripError("That did not work. Check the flashes and try again \u2014 "
+                             "the strip shows a new set every time it is plugged in.")
+
     async def forget(self, id: str) -> None:
         return None
 
@@ -295,6 +329,10 @@ class Strips:
             # Which question is on screen: the first is a yes/no, the second is the three primaries.
             out["asking"] = "red" if j.get("first") is None else "which"
         if j["state"] == "length": out["lit"] = j.get("lit", 0)
+        # Four counts of one to six, read off the light itself. The panel draws four steppers and
+        # sends back what somebody counted; nothing here is typed and nothing is printed on the
+        # strip (design/strip/PopLight.dc.html).
+        if j["state"] == "rhythm": out["groups"] = 4; out["most"] = 6
         if j["state"] in ("room", "ready"):
             out["count"] = j.get("count", ASSUMED); out["order"] = j.get("order", ASSUME)
             out["white"] = bool(j.get("white"))
@@ -302,6 +340,15 @@ class Strips:
         if j.get("text"): out["text"] = j["text"]
         if j.get("needs"): out["needs"] = j["needs"]
         return out
+
+    def _where_we_are(self) -> dict:
+        """What a strip needs to find us again after it reboots, in the shape the `hub` endpoint
+        reads. Only sent through our own door, and only inside a session the strip authenticated."""
+        broker = (self.hub.settings.get("broker") or {}) if hasattr(self.hub, "settings") else {}
+        where = {"mhost": broker.get("host") or "hub", "base": BASE}
+        if broker.get("user"): where["muser"] = broker["user"]
+        if broker.get("pass"): where["mpass"] = broker["pass"]
+        return where
 
     def _rooms(self) -> list:
         home = getattr(self.hub, "home", None)
@@ -384,16 +431,25 @@ class Strips:
     async def look(self) -> dict:
         """One scan. A strip that is advertising has never been set up, so anything found is a knock."""
         if self.job: return self.status()
-        try: found = await self.radio.scan()
+        found: list[dict] = []
+        # OUR DOOR FIRST, because a strip that offers it can be asked more, and a strip offers both
+        # until somebody takes it (design/strip/Both.dc.html).
+        try: found += await self.radio.scan_ours()
         except StripError as e: return {**self.status(), "text": str(e)}
+        except Exception as e: log.info("strip: our door found nothing (%s)", e)
+        try: found += await self.radio.scan()
+        except StripError as e:
+            if not found: return {**self.status(), "text": str(e)}
         except Exception as e:
-            log.info("strip: scan failed (%s)", e); return self.status()
+            log.info("strip: scan failed (%s)", e)
+            if not found: return self.status()
         for s in found:
             if s["addr"] in self._dismissed: continue
             # No chip here: a Matter advertisement carries a discriminator and not an id of ours.
             # `id` arrives later, from the broker, if the strip ever finds it (item 2a).
             self.job = {"state": "knocking", "id": None, "addr": s["addr"],
                         "discriminator": s.get("discriminator"), "vendor": s.get("vendor"),
+                        "door": s.get("door", "matter"),
                         "label": self._label(s), "first": None}
             self._set("knocking")
             break
@@ -424,6 +480,12 @@ class Strips:
         household's code comes from is docs/strip.md item 1a and is not decided."""
         if not self.job or self.job["state"] != "knocking":
             raise StripError("There is no light strip waiting to be let in.")
+        # OUR DOOR ASKS ONE MORE THING, and it is the only thing it ever asks: how many times the
+        # strip is flashing. That is the proof of possession, so there is no point going any further
+        # until somebody has looked at the light. Matter's door skips this and wants a code instead.
+        if self.job.get("door") == "ours":
+            self._set("rhythm")
+            return self.status()
         # The controller cannot commission onto a network it has not been told about, and it is the
         # house's own Wi-Fi rather than this strip's -- so it is asked once, on the wall, exactly the
         # way bridge.py asks it, and no strip after this one asks again.
@@ -435,6 +497,25 @@ class Strips:
         if not code and self.job.get("vendor") == TEST_VID:
             code = DEV_CODE
         self.job["code"] = code
+        self._set("working", step="letting")
+        self._task = asyncio.create_task(self._setup())
+        return self.status()
+
+    async def counted(self, rhythm: str) -> dict:
+        """What somebody counted off the light. Four digits, one to six each.
+
+        A wrong count fails inside SRP6a and ends the session, so there is no guessing at this: the
+        strip mints a new rhythm on its next power cycle and the wall says so."""
+        if not self.job or self.job["state"] != "rhythm":
+            raise StripError("Nothing is asking to be counted just now.")
+        digits = "".join(ch for ch in (rhythm or "") if ch.isdigit())
+        if len(digits) != 4 or any(ch not in "123456" for ch in digits):
+            raise StripError("Four groups, and each one is between one and six flashes.")
+        self.job["rhythm"] = digits
+        wifi = (self.hub.settings.get("wifi") or {}) if hasattr(self.hub, "settings") else {}
+        if not wifi.get("ssid"):
+            self._set("working", step="letting", needs="wifi")
+            return self.status()
         self._set("working", step="letting")
         self._task = asyncio.create_task(self._setup())
         return self.status()
@@ -458,20 +539,30 @@ class Strips:
         if not j: return
         try:
             wifi = (self.hub.settings.get("wifi") or {}) if hasattr(self.hub, "settings") else {}
-            if wifi.get("ssid"):
-                await self.radio.set_wifi(wifi["ssid"], wifi.get("pass") or "")
-            await self.radio.commission(j.get("code", ""))
-            # AND HERE THE SETUP STOPS, FOR NOW, AND IT IS WORTH SAYING WHY RATHER THAN QUIETLY
-            # DOING LESS. Everything after this -- which color comes out first, how far it goes --
-            # is ours and goes over the broker, and needs the strip's chip to address it by. A
-            # Matter advertisement does not carry that, and a commissioned strip only tells us when
-            # it finds our broker, which it cannot do until something has told it where the broker
-            # is. That is docs/strip.md item 2a and it is not designed.
+            if j.get("door") == "ours":
+                # OUR DOOR CARRIES EVERYTHING IN ONE SESSION, which is the whole difference. The
+                # Wi-Fi and where we are go together, so the strip comes out of setup already able
+                # to reach the broker -- and the two questions Matter has no words for can be asked
+                # at all. That was item 2a, and it was an empty string from the day Matter came in.
+                await self.radio.adopt_ours(j["addr"], j.get("rhythm", ""),
+                                            wifi.get("ssid", ""), wifi.get("pass") or "",
+                                            hub=self._where_we_are())
+            else:
+                if wifi.get("ssid"):
+                    await self.radio.set_wifi(wifi["ssid"], wifi.get("pass") or "")
+                await self.radio.commission(j.get("code", ""))
+            # AND HERE THE SETUP STOPS FOR A STRIP THAT CAME THROUGH MATTER'S DOOR, and it is worth
+            # saying why rather than quietly doing less. Everything after this -- which color comes
+            # out first, how far it goes -- is ours and goes over the broker, and needs the strip's
+            # chip to address it by. A Matter advertisement does not carry one, and a commissioned
+            # strip only tells us when it finds our broker, which nothing has told it where to find.
             #
             # A strip that gets here is a working Matter light in whatever app commissioned it. It
-            # is our extra half that is missing, not its own.
-            self._set("ready")
-            return
+            # is our extra half that is missing, not its own. A strip that came through OUR door was
+            # handed the broker in the same session and does not stop here.
+            if j.get("door") != "ours":
+                self._set("ready")
+                return
             # It is on the Wi-Fi now, so everything after this goes over the broker. Wait for it to
             # say so itself rather than assuming: a strip that joined and cannot find the hub is a
             # different failure from one that never joined, and the household can fix only one of them.
