@@ -1,0 +1,101 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp-rgb: 233,184,114; --lamp: rgb(var(--lamp-rgb)); --lamp-ink: #2a1c07;
+      --live-rgb: 116,198,157; --live: rgb(var(--live-rgb));
+      --danger-rgb: 224,138,138; --danger: rgb(var(--danger-rgb));
+      --r-lg: 22px; --r-md: 16px;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .sheet { width: 560px; border-radius: 26px; background: rgba(22,24,30,.92);
+             border: 1px solid var(--edge-hi); box-shadow: 0 40px 100px -30px rgba(0,0,0,.9); overflow: hidden; }
+    .sheet h2 { margin: 0; font-size: 34px; line-height: 1.05; font-weight: 400; letter-spacing: -.025em; }
+    .lede { margin: 0 0 18px; color: var(--ink-2); font-size: 15px; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 26px;
+           border-radius: 999px; background: var(--ink); color: var(--bg); font-weight: 500; font-size: 17px; }
+    .btn.ghost { background: var(--surface-hi); color: var(--ink); border: 1px solid var(--edge); }
+    .t1 { font-size: 15.5px; font-weight: 500; }
+    .t2 { font-size: 13px; color: var(--muted); }
+    .row { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 12px;
+           padding: 12px 14px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--edge); }
+    .strip { height: 22px; border-radius: 4px;
+             background: repeating-linear-gradient(90deg, rgb(255,96,0) 0 4px, transparent 4px 7px);
+             filter: drop-shadow(0 0 9px rgba(255,140,40,.7)); }
+    .field { height: 56px; border-radius: var(--r-md); background: var(--surface-hi);
+             border: 1px solid var(--edge); display: flex; align-items: center; padding: 0 18px;
+             font-size: 22px; letter-spacing: .14em; color: var(--ink); }
+    .stage { position: relative; padding: 40px 24px 34px; border-radius: 20px;
+             background: rgba(255,255,255,.03); border: 1px solid var(--edge); overflow: hidden; }
+    .glow { position: absolute; left: 0; right: 0; top: -40px; height: 160px;
+            background: radial-gradient(42% 54% at 50% 50%, rgba(255,140,40,.26), transparent 72%); }
+  </style>
+</helmet>
+
+
+<style>
+  .box { border-radius: var(--r-lg); border: 1px solid var(--edge); background: rgba(255,255,255,.03); padding: 20px 22px; }
+  .lane { position: relative; height: 104px; border-radius: var(--r-md); border: 1px solid var(--edge);
+          background: rgba(255,255,255,.025); overflow: hidden; }
+  .tick { position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(255,255,255,.14); }
+  .tlab { position: absolute; top: 9px; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  .band { position: absolute; top: 44px; height: 26px; border-radius: 6px; }
+  .on   { background: repeating-linear-gradient(90deg, rgb(255,96,0) 0 4px, transparent 4px 7px);
+          filter: drop-shadow(0 0 8px rgba(255,140,40,.6)); }
+  .slow { background: repeating-linear-gradient(90deg, rgba(255,96,0,.9) 0 3px, transparent 3px 14px);
+          filter: drop-shadow(0 0 6px rgba(255,140,40,.4)); }
+  .off  { background: repeating-linear-gradient(90deg, rgba(255,255,255,.1) 0 3px, transparent 3px 8px); }
+  .blab { position: absolute; top: 78px; font-size: 12px; color: var(--ink-2); }
+</style>
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: var(--bg); color: var(--ink); font-size: 17px; line-height: 1.4;">
+  <div style="position: absolute; inset: 0; background: linear-gradient(rgb(29,33,46) 0%, rgb(41,42,63) 44%, rgb(72,55,58) 88%, rgb(52,40,42) 100%);"></div>
+  <div style="position: absolute; inset: 0; background: rgba(6,7,9,.7);"></div>
+
+  <div style="position: absolute; left: 60px; top: 44px; right: 60px;">
+    <span class="cap">C &mdash; it knocks when it is asked to</span>
+    <h1 class="dsp" style="margin: 10px 0 0; font-size: 38px; font-weight: 400;">Nothing here is advertising unless somebody just asked it to.</h1>
+    <p style="margin: 12px 0 0; color: var(--ink-2); font-size: 15.5px; max-width: 660px;">Fifteen minutes from power, and after that only when the button is pressed. The button already exists &mdash; it is the one that arms a factory reset on a long hold &mdash; so a short press is free and today does nothing at all.</p>
+  </div>
+  <div style="position: absolute; left: 60px; top: 300px; width: 660px;">
+    <span class="cap">What the strip is doing, from the moment it is plugged in</span>
+    <div class="lane" style="margin-top: 12px;"><div class="tick" style="left:2px;"></div><div class="tlab" style="left:10px;">plugged in</div><div class="tick" style="left:210px;"></div><div class="tlab" style="left:218px;">15 min</div><div class="tick" style="left:430px;"></div><div class="tlab" style="left:438px;">2 days</div><div class="band on" style="left:8px; width:200px;"></div><div class="band off" style="left:216px; width:150px;"></div><div class="band slow" style="left:374px; width:120px;"></div><div class="band off" style="left:502px; right:8px;"></div><div class="blab" style="left:12px;">knocking</div><div class="blab" style="left:220px;">quiet</div><div class="blab" style="left:378px;">a press, and it knocks again</div></div>
+  </div>
+  <div class="box" style="position: absolute; left: 60px; top: 492px; width: 660px;">
+    <span class="cap">And what the household sees</span>
+    <p style="margin: 10px 0 0; font-size: 15px; line-height: 1.6;">A strip in a spare room says nothing. A strip somebody wants says so within fifteen minutes of being asked, every time, identically. The cost is that the asking is a press on the object itself.</p>
+  </div>
+  <div style="position: absolute; left: 760px; top: 300px; width: 620px;">
+    <div class="box" style="border-color: rgba(var(--live-rgb),.3); background: linear-gradient(rgba(var(--live-rgb),.07), rgba(var(--live-rgb),.07)), rgba(255,255,255,.02); margin-bottom: 16px;">
+      <span class="cap" style="color: rgba(var(--live-rgb),.85);">For</span>
+      <p style="margin: 10px 0 0; font-size: 15px; line-height: 1.6;">The tightest of the three, and the only one whose promise fits in a sentence a household will believe: it is findable when you ask. Every attempt after the first is identical to the first, which neither of the others manages.</p>
+    </div>
+    <div class="box" style="border-color: rgba(var(--danger-rgb),.3); background: rgba(var(--danger-rgb),.05);">
+      <span class="cap" style="color: rgba(var(--danger-rgb),.85);">Against</span>
+      <p style="margin: 10px 0 0; font-size: 15px; line-height: 1.6;"><strong style="font-weight: 500;">It asks somebody to reach a thing they have just taped behind a television.</strong> That is precisely where a strip is hardest to touch, and the reason it never got a placing instrument. And a household who does not know about the button is exactly where B leaves them, only fifteen minutes sooner.</p>
+    </div>
+  </div>
+
+  <div class="box" style="position: absolute; left: 60px; right: 60px; top: 700px; border-color: rgba(var(--lamp-rgb),.3); background: linear-gradient(rgba(var(--lamp-rgb),.06), rgba(var(--lamp-rgb),.06)), rgba(255,255,255,.02);">
+    <span class="cap">What C costs to build, and what it is not</span>
+    <p style="margin: 10px 0 0; font-size: 15px; line-height: 1.6;">A short press on the button that already exists for the factory&#8209;reset hold, which is free in hardware and costs a reach behind a television. <strong style="font-weight: 500;">This is not the case the router&#8209;reboot rule covers</strong> &mdash; that one is a strip somebody has already set up announcing itself again, unasked. This is a strip nobody has ever taken, with nothing yet to protect. The two look similar on a radio and are opposite in a house.</p>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

@@ -175,6 +175,30 @@
       "w": 1440,
       "h": 900,
       "title": "C \u2014 no secret, only a window"
+    },
+    {
+      "file": "KnockOn.dc.html",
+      "x": 0,
+      "y": 8640,
+      "w": 1440,
+      "h": 900,
+      "title": "A \u2014 it never stops knocking"
+    },
+    {
+      "file": "KnockTwoDays.dc.html",
+      "x": 1560,
+      "y": 8640,
+      "w": 1440,
+      "h": 900,
+      "title": "B \u2014 two days, then dark"
+    },
+    {
+      "file": "KnockAsked.dc.html",
+      "x": 3120,
+      "y": 8640,
+      "w": 1440,
+      "h": 900,
+      "title": "C \u2014 it knocks when it is asked to"
     }
   ],
   "annotations": [
@@ -289,6 +313,13 @@
       "y": 7560,
       "w": 500,
       "text": "WHO IS THE HUB, AS FAR AS THE STRIP CAN TELL -- 1A AGAIN, ON OUR OWN DOOR\n\nRaised 21 September by the code itself: network_prov_mgr_start_provisioning needs a security level, and every real one needs the hub to know a secret before the session. SEC0 is the Wi-Fi password on an unauthenticated link, which is the sin Matter came in to remove. SEC1 wants a proof-of-possession string. SEC2 wants a per-device salt and SRP6a verifier, which is a password by another name.\n\nTHE PROMISE IN TENSION IS OURS'S. \"There is nothing to type\" and \"the identity check is two meters of light.\" The light tells the HOUSEHOLD which strip it is. It tells the STRIP nothing about who the hub is. Those are different proofs, and the boards above conflated them.\n\nA BORROWS A NUMBER THAT ALREADY EXISTS. The Matter setup code has to be on the label for the other lane anyway, and SRP6a can be seeded from the same digits, so A costs no manufacturing and no new secret. It costs the promise, and it makes one label open both doors.\n\nB MAKES THE LIGHT THE LABEL. The strip mints a rhythm each time it is plugged in -- four groups of one to six flashes -- and the person taps what they count. Rhythm rather than color because \"Is it red?\" has not been asked yet and a color cannot be trusted; a count can. 1,296 possibilities is small until SRP6a is under it: no offline attack, one wrong guess ends the session, a new rhythm next power cycle. It asks somebody to count flashes from across a room, and \"I can't see it\" is a real button because it will be pressed.\n\nC KEEPS OURS EXACTLY AS DRAWN AND SAYS WHAT THAT COSTS. SEC1 with no secret: encrypted, so nothing can listen, but unauthenticated, so anything that speaks first in the three minutes after a plug-in is the hub. Theirs already ruled that being nearby is not proof. This is proximity standing in for a secret.\n\nRECOMMENDATION: B, with A as the fallback that costs nothing because the label exists anyway. Not C -- it re-admits the class of risk this project already paid to remove, and it would have to say so on the box. What B needs before it is real: a rhythm the firmware can show while Matter is also advertising, and a retry that does not lock a household out of its own strip.\n\nCHOSEN 21 SEPTEMBER: B. And the same day the ground shifted under A: our ecosystem comes first and Matter on the strip is kept dormant, with Apple and Google reached through the hub's bridge instead. So the label A leaned on need not exist, and B's case stands alone. C is allowed behind a build flag on a bench and nowhere else."
+    },
+    {
+      "id": "knock",
+      "x": -620,
+      "y": 8640,
+      "w": 500,
+      "text": "HOW LONG A STRIP NOBODY HAS TAKEN GOES ON KNOCKING\n\nFound on 21 September by leaving a strip waiting and coming back to nothing. Our scan response rides on CHIP's advertisement, and CHIP shuts a commissioning window after fifteen minutes, so both doors close together while network_prov_mgr still believes it is listening. A household that plugs a strip in and comes back twenty minutes later finds a strip that is not there.\n\nTHIS IS NOT THE CASE THE DOCUMENT ALREADY RULES ON. That one is a strip somebody has SET UP re-advertising after a router reboot, which must never happen: every strip in the house announcing itself several times a year, with nobody present and nobody told. This is a strip nobody has ever taken, still in the state it left the factory in. It has nothing to protect yet.\n\nTHE THREE ARE NOT EQUALLY EXPENSIVE. B is a Kconfig line -- ENABLE_BLE_EXT_ANNOUNCEMENT raises the cap from 900 seconds to 48 hours and Matter's own authors put it there for exactly this. A is ours to maintain: reopen the window whenever it lapses, forever. C needs a short press on the button that already exists for the factory-reset hold, which is free in hardware and expensive in reach, because the button is behind the television.\n\nWHAT DECIDES IT IS WHICH SENTENCE WE ARE WILLING TO OWE. A owes none. B owes one nobody will read until the day it matters. C owes one and also asks for a finger. Weigh that against a radio talking in somebody's house for years because a strip in a drawer was never set up.\n\nRECOMMENDATION: B, and make the ending visible rather than silent -- the light should stop in a way that reads as stopped, not as broken, and the pane should offer the way back. That turns B's one real weakness into a screen, which is the kind of problem this canvas is good at. A if we decide a strip in a drawer is not our problem; C only if the product board ever gets a button somewhere reachable."
     }
   ],
   "reading": [
@@ -328,6 +359,10 @@
     "pop",
     "PopBox.dc.html",
     "PopLight.dc.html",
-    "PopWindow.dc.html"
+    "PopWindow.dc.html",
+    "knock",
+    "KnockOn.dc.html",
+    "KnockTwoDays.dc.html",
+    "KnockAsked.dc.html"
   ]
 }
