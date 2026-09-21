@@ -250,13 +250,39 @@ Incremental builds afterwards are ordinary.
 The daily cost is slower builds and losing the fifteen-second self-test loop that has already earned its keep
 twice.
 
-### The honest risk
+### The risk that was named, and what actually happened
 
-Nobody here has built esp-matter before. The version matrix between esp-matter, connectedhomeip and IDF is the
-part that historically goes wrong, and "it recommends v6.0.2" is a README rather than a build that has run.
-**The first thing to do is not to port anything — it is to build esp-matter's own `light` example, unmodified,
-and commission it from a phone.** If that works, the port is mechanical and the estimate above holds. If it
-does not, we have learned it for the price of a download instead of a rewrite.
+The named risk was the version matrix between esp-matter, connectedhomeip and IDF. **It did not materialize.**
+IDF v6.0.2 installed clean, esp-matter cloned, its submodules and connectedhomeip's resolved on the first try.
+
+**And the premise is confirmed from the source rather than inferred.** `connectedhomeip/config/esp32/components/chip/Kconfig`:
+
+    config ENABLE_CHIPOBLE
+        bool "Enable CHIP-over-BLE (CHIPoBLE) Support"
+        default y
+        depends on BT_ENABLED
+
+On esp-matter it is **on by default**. The Arduino framework turns it off — which cost 600 KB of `WiFiProv` to
+put back a worse version of the same capability. So the move buys exactly what was scoped.
+
+### What stopped it, and it is this machine rather than Matter
+
+Three install attempts died, each further along, and none of it was esp-matter's:
+
+1. **The Command Line Tools SDKs are broken.** `MacOSX27.0.sdk` — the default, the one `xcrun` returns — has a
+   malformed `libSystem.tbd` carrying an unknown `arm64e.x1` architecture, and `xcrun` cannot read its version.
+   Worse, **none of the CLT SDKs contain C headers at all**: `usr/include` is empty. Every native compile on
+   this machine fails, which is not a Matter problem and had already cost an hour earlier in the day on the
+   native pixel test, worked around with `-isysroot` and not written down.
+2. **Rosetta 2 is not functional.** No x86_64 binary can run: CHIP's `zap-cli` is x86_64, and so is the
+   PlatformIO RISC-V toolchain that failed identically hours earlier and was written off as "a toolchain
+   problem" without finding the cause.
+
+Xcode is installed and **its** SDK is intact, so `DEVELOPER_DIR` gets past the first. The second needs
+`softwareupdate --install-rosetta`. Both want an administrator and are the machine owner's to run.
+
+**So the port is not blocked on anything we have learned about Matter.** What is unproven is only the last step:
+a `light` example on real silicon advertising `MATTER-xxxx` over BLE with no Wi-Fi configured.
 
 ---
 
