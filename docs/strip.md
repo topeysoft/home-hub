@@ -347,6 +347,23 @@ advertisement does not carry one. It used to pass in tests because a fake handed
 have. A strip that reaches `ready` is a working Matter light in whatever app commissioned it; it is our extra
 half that is missing, not its own.
 
+**2-mac. COMMISSIONING CANNOT BE TESTED ON THE MAC, and an evening went into finding that out.** The strip
+advertises, the brain asks correctly, and it fails — because `matter-server` needs host networking, mDNS and
+IPv6 on the LAN, and `driver-layer/docker-compose.mac.yml` says in its own first line that Docker Desktop on
+macOS has none of them. That file has no `matter-server` service at all; the container that was started came
+from the Pi compose, where `network_mode: host` means something. On the Mac it binds a loopback Home Assistant
+cannot reach from its bridge network, and every address refuses.
+
+So the remaining ways to exercise commissioning are: **on the Pi**, where the driver layer is real; or **from a
+phone** — Apple Home or Google Home commission over the phone's own Bluetooth and do not need any of this,
+which is also the path a household buying one strip would use. The hub path waits for the Pi.
+
+**A related thing worth deciding rather than discovering.** Adding the Matter integration to Home Assistant by
+hand breaks `product-direction-out-of-the-box` — no household should have to open that UI. The hub already
+drives config flows for the weather integration (`api.py`, `/api/config/config_entries/flow`), so it can do the
+same for Matter with the url from the compose file. Not built, and it should be, because otherwise every house
+needs somebody to do this by hand exactly once and nobody will remember.
+
 **2a. Nothing decides how a strip learns our broker.** After commissioning it is on the house Wi-Fi and knows
 nothing about us; `mhost` in its NVS is blank, so it is a plain Matter light and the color and length questions
 never get asked. Handing those details over needs either a route on the hub or a custom Matter cluster, and
