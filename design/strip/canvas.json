@@ -103,6 +103,22 @@
       "w": 1440,
       "h": 900,
       "title": "C \u2014 no broker at all"
+    },
+    {
+      "file": "Tiers.dc.html",
+      "x": 0,
+      "y": 5400,
+      "w": 1440,
+      "h": 900,
+      "title": "Two tiers \u2014 it works anywhere, better here"
+    },
+    {
+      "file": "Foreign.dc.html",
+      "x": 1560,
+      "y": 5400,
+      "w": 1440,
+      "h": 900,
+      "title": "The pane for one we cannot ask"
     }
   ],
   "annotations": [
@@ -189,6 +205,13 @@
       "y": 4320,
       "w": 500,
       "text": "HOW A STRIP FINDS OUR HUB, IF IT EVER DOES\n\nThe other thing the firmware move left behind. Matter gets a strip onto the Wi-Fi and into somebody's app, and then it knows nothing whatever about us: the two questions that are ours -- which order its colors come out in, and how far it goes -- are addressed over a broker it has never heard of. Today the field is an empty string and setup stops at commissioned.\n\nA AND B ARE THE SAME ANSWER AT DIFFERENT PRICES. A uses the encrypted session Matter already built and waits on a Vendor ID to exist at all. B needs nothing and protects itself with a time window, which is a weaker promise than a session -- and the fix for that turns it back into A. Worth drawing both anyway, because which one is cheaper depends entirely on when certification happens, and that is not our decision alone.\n\nC IS THE ONE THAT WAS NOT OBVIOUS, and it came out of porting the firmware rather than out of a design conversation. The color question never needed a private channel: it needed three particular bytes on the wire, and the hub can get them there by asking for an ordinary color, because it knows what the firmware will do to it. Everything about item 2a stops existing.\n\nAND THEN C COLLECTS ITS BILL. The fill has to send a number BACK, latched at the moment somebody taps, and Matter has nowhere to put it. So choosing C is choosing Never -- the length direction drawn, argued and not chosen, kept because 'it will come back'. It has, from a direction nobody was watching.\n\nWhich makes the real question the one Never already named: are the ambient light and the picture follower two products or one? If two, C is clean and free. If one, the length is not optional and C is borrowing against a debt that comes due."
+    },
+    {
+      "id": "tiers",
+      "x": -620,
+      "y": 5400,
+      "w": 500,
+      "text": "IT WORKS ANYWHERE, AND BETTER HERE\n\nFrom \"this should be simpler when a user provisions the device in our hub directly -- C and Never should only apply to others, not our hub\", which was right and corrected a real mistake. The two cases had been collapsed into one, and the answer for the worst of them applied to both.\n\nOur hub is present at the one moment when more is possible: the commissioning, where there is already an encrypted session and somebody standing in the room holding the thing. A strip set up here can be handed the broker and then asked the two questions properly -- real bytes for the color, a fill latched in firmware at the tap. A strip that joined somebody else's fabric was never in a room with us, and may have been shared over months later.\n\nTHIS IS THE HONEST VERSION OF SOMETHING THE CANVAS ALREADY TRIED TO BUY. Direction B of the setup code wanted \"our hub is better at this than anybody else's app\" and got there by knowing a secret that would leak out of every unit we ship. This gets the same thing by DOING more rather than by KNOWING more, which is a sentence that can be said out loud.\n\nWHAT THE SECOND BOARD IS FOR. A light that cannot do a thing says so in the room rather than being skipped in silence -- that rule came out of the occasion boards and it applies here too. So the pane does not simply lose two rows; it says which kind of strip this is and offers the one action that would change it.\n\nOPEN: whether \"set it up here instead\" is a good idea or a trap. It means decommissioning it out of the app that has it, and a household that does that to a strip their partner added is going to be surprised. It may want to be a sentence rather than a button."
     }
   ],
   "reading": [
@@ -215,6 +238,9 @@
     "reach",
     "ReachTold.dc.html",
     "ReachAsks.dc.html",
-    "ReachNone.dc.html"
+    "ReachNone.dc.html",
+    "tiers",
+    "Tiers.dc.html",
+    "Foreign.dc.html"
   ]
 }
