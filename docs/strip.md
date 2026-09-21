@@ -659,20 +659,36 @@ Two things of ours sit on top of Espressif's: finding a strip by the service UUI
 and the `hub` step. Espressif's own `Transport_BLE` could not be used unchanged for two reasons, both
 assumptions that do not hold here — it finds a device by advertised *name*, and our scan response has
 barely room for one; and it derives characteristic UUIDs by masking the endpoint id against the service
-UUID, which is a no-op for the all-`ff` service it assumes and mangles ours. **Run on the Pi on 21 September, and it is half proven.** What works over BlueZ, with no
+UUID, which is a no-op for the all-`ff` service it assumes and mangles ours. **Run on the Pi on 21 September, and the client is proven: at −51 dBm an SRP6a session establishes
+first try, over BlueZ, with no workaround of any kind.** What was read as a client bug is link margin.
+Everything below is what that cost to find out, and it matters because the margin is a product problem
+rather than a bench one.
+
+| from the Pi | result |
+|---|---|
+| −51 dBm | session ESTABLISHED, first attempt |
+| −64 dBm | connection dies 3–5 s in, NimBLE reason `0x208`, every attempt |
+| −25 dBm (a Mac) | completes |
+
+**Thirteen decibels is the whole difference, and a real strip will not be at −51.** It is taped behind a
+television — a metal plane — and the hub is in another room. So this is not solved, it is only understood:
+a household at the wrong end of that gap sees a strip that will not set up, having done nothing wrong.
+The likely fix is still the one below, and it is now worth doing rather than worth investigating.
+
+**The original finding, kept because it is the diagnosis:** What works over BlueZ, with no
 workaround of any kind: the vendored modules import on Linux and Python 3.13, discovery by service UUID
 finds the strip repeatedly, and one connection walked 14 characteristics. **What does not work is
 keeping the link up.** A connection establishes and then dies three to five seconds in with NimBLE
 reason `0x208` — a supervision timeout — every time a session is attempted, at about −64 dBm. The same
 code against the same strip at −25 dBm on a Mac completes.
 
-The likeliest cause, and it is not yet confirmed: **CHIP never negotiates connection parameters at all**
+The cause is not the code: **CHIP never negotiates connection parameters at all**
 — there is no `ble_gap_update_params` anywhere in its NimBLE `BLEManagerImpl` — so the link runs on
 whatever BlueZ proposes, and the strip is holding up Wi-Fi on the same radio while it answers. Software
 coexistence is already on (`CONFIG_ESP_COEX_SW_COEXIST_ENABLE`). The fix is probably for the strip to ask
 for a longer supervision timeout when a link comes up, which means a GAP hook in a connection CHIP owns.
-**Nobody has tried moving the strip next to the Pi**, which would separate range from parameters in one
-minute and should be the first thing done.
+Moving the strip next to the Pi separated range from parameters in one minute, which is what the table
+above is.
 
 A scratch copy for continuing this lives at `~/strip-door-test` on the hub, with its own venv; nothing
 was installed into `/opt/home-hub`.
