@@ -671,7 +671,7 @@ export async function refreshBridge() {
    front of the thing. A hub too old to know what a strip is answers 404 and the sheet simply never
    appears, which is why this swallows rather than raises. */
 let stripTimer: number | undefined
-/* ?strip=knocking|working|order|which|length|room|ready draws one beat without a strip in the room,
+/* ?strip=knocking|rhythm|working|order|which|length|room|ready draws one beat without a strip in the room,
    the way ?sheet= and ?setup=1 draw the others (AGENTS.md §4). It is the only way to hold a screen
    still beside the board it was drawn from, since every real beat is over in seconds. */
 const STRIP_PREVIEW = new URLSearchParams(location.search).get('strip')
@@ -683,6 +683,8 @@ const previewStrip = (beat: string): Strip => ({
   step: beat === 'working' ? 'letting' : undefined,
   asking: beat === 'which' ? 'which' : beat === 'order' ? 'red' : undefined,
   count: 186,
+  groups: beat === 'rhythm' ? 4 : undefined,   // four counts of one to six, read off the light
+  most: beat === 'rhythm' ? 6 : undefined,
   rooms: store.rooms.length
     ? store.rooms.map(r => ({ id: r.id, name: r.name }))
     : [{ id: 'living', name: 'Living room' }, { id: 'kitchen', name: 'Kitchen' },

@@ -43,12 +43,16 @@
 #include <esp_timer.h>
 #include <mqtt_client.h>
 
+#include <esp_heap_caps.h>
+
 #include <esp_matter.h>
 #include <esp_matter_console.h>
 #include <esp_matter_ota.h>
 #include <app/server/Server.h>
+#include <setup_payload/OnboardingCodesUtil.h>
 
 #include "pixels.h"
+#include "prov.h"
 
 using namespace esp_matter;
 using namespace esp_matter::attribute;
@@ -89,6 +93,9 @@ static uint16_t light_endpoint = 0;
 // a test pattern for ever -- and, on the Arduino version, the waiting glow was drawn and then wiped a
 // fraction of a second later by the first attribute sync, which from a bench looks like a dead strip.
 static bool instrument = false;
+// The knocking is over and nobody took the strip. It keeps the light, drained, rather than going
+// dark, and the rhythm stops.
+static bool waiting_over = false;
 static bool want_on = false;
 static uint8_t want_r = 255, want_g = 180, want_b = 110, want_bri = 200;
 
@@ -297,6 +304,22 @@ static void on_event(const ChipDeviceEvent *event, intptr_t) {
     // The knock is over the moment somebody has taken it: hand the strip back and draw whatever the
     // household's own state says, which is off until they turn it on, exactly like any other new
     // light in their app. Without this it sat on the setup glow for ever, looking stuck.
+    if (event->Type == chip::DeviceLayer::DeviceEventType::kCHIPoBLEConnectionClosed) prov::disconnected();
+
+    // TWO DAYS LATER, AND NOBODY CAME (design/strip/KnockTwoDays.dc.html). When the advertisement
+    // finally stops, a strip nobody has taken must read as STOPPED rather than as broken: going
+    // dark is what a dead strip does. So the rhythm ends and a drained version of the same glow
+    // stays, which is the rule the whole panel runs on -- what was asking is still there, quieter,
+    // saying it is no longer asking. A power cycle starts the two days again.
+    if (event->Type == chip::DeviceLayer::DeviceEventType::kCHIPoBLEAdvertisingChange &&
+        event->CHIPoBLEAdvertisingChange.Result == chip::DeviceLayer::kActivity_Stopped && instrument &&
+        !waiting_over) {
+        if (prov::keep_knocking()) return;
+        waiting_over = true;
+        strip.solid(SIG_R / 6, SIG_G / 6, SIG_B / 6);
+        px::show(strip);
+        ESP_LOGI(TAG, "nobody came. Still here, no longer asking -- power it off and on to ask again");
+    }
     if (event->Type == chip::DeviceLayer::DeviceEventType::kCommissioningComplete) {
         ESP_LOGI(TAG, "commissioned. The light is the household's now.");
         instrument = false;
@@ -307,10 +330,52 @@ static void on_event(const ChipDeviceEvent *event, intptr_t) {
 
 // ---------------------------------------------------------------- the button, and the fill
 
+// THE RHYTHM, DRAWN. Four groups of flashes with a gap between groups and a pause after the last,
+// repeating; the whole thing is a function of time so there is nothing to keep in step. Written to the
+// strip only on a change of state, because a WS2812 latches and rewriting a steady frame is how the
+// bridge puck turned one misread into twenty-five a second (AGENTS.md).
+static constexpr uint32_t RH_ON = 220, RH_OFF = 220, RH_GAP = 700, RH_PAUSE = 1800;
+static bool rhythm_lit(uint32_t t) {
+    const uint8_t *r = prov::rhythm();
+    uint32_t period = RH_PAUSE;
+    for (int g = 0; g < 4; g++) period += r[g] * (RH_ON + RH_OFF) + RH_GAP;
+    uint32_t at = t % period;
+    for (int g = 0; g < 4; g++) {
+        const uint32_t group = r[g] * (RH_ON + RH_OFF);
+        if (at < group) return (at % (RH_ON + RH_OFF)) < RH_ON;
+        at -= group;
+        if (at < RH_GAP) return false;
+        at -= RH_GAP;
+    }
+    return false;
+}
+
 static void housekeeping(void *) {
-    bool released = false, armed = false;
+    bool released = false, armed = false, was_lit = true;
+    uint32_t loud_at = 0;
     uint32_t down = 0;
     for (;;) {
+        // While the strip is waiting through our door it flashes its rhythm; once credentials have
+        // arrived it holds the steady glow until the manager is done with the Wi-Fi.
+        // Every ten seconds while the strip is still knocking, in case CHIP has quietly dropped the
+        // advertisement to its slow interval and put the strip out of earshot of the hub.
+        // A link that has just come up needs slower parameters before it times out in somebody
+        // else's service discovery, and nothing tells us when one appears; see prov.cpp.
+        prov::be_patient_with_everyone();
+
+        if (instrument && !waiting_over && now_ms() - loud_at > 10000) {
+            loud_at = now_ms();
+            prov::stay_loud();
+        }
+
+        if (instrument && !waiting_over && !armed && !fill.running && prov::rhythm()[0]) {
+            const bool lit = prov::busy() || rhythm_lit(now_ms());
+            if (lit != was_lit) {
+                if (lit) strip.solid(SIG_R, SIG_G, SIG_B); else strip.clear();
+                px::show(strip);
+                was_lit = lit;
+            }
+        }
         // A hold only counts once the button has been seen let go; see BUTTON_PIN above.
         if (gpio_get_level((gpio_num_t)BUTTON_PIN)) released = true;
         else if (released) {
@@ -353,11 +418,55 @@ static void housekeeping(void *) {
                 say("fill", v);
             }
         }
-        vTaskDelay(pdMS_TO_TICKS(5));
+        // TEN, NOT FIVE. The tick is 100 Hz, so pdMS_TO_TICKS(5) is 0 ticks, and vTaskDelay(0) only
+        // yields to tasks at this priority or above -- never to the idle task at 0. This loop was
+        // therefore a busy spin that starved IDLE0 and tripped the task watchdog every five seconds.
+        // Anything under one tick here silently means "do not sleep at all".
+        vTaskDelay(pdMS_TO_TICKS(10));
     }
 }
 
+#ifdef SELFTEST
+// ONE LIGHT, FOUR COLORS, NOTHING ATTACHED. Most S3 devkits carry a WS2812 of their own, usually on
+// GPIO 48: point at that and watch. Four colors in order proves the driver, the timing, the bit order
+// and the RMT setup, and says the fault is on the bench. A color in the wrong place means this board's
+// own light is not grb -- the same question the panel asks about a strip -- and is still a pass.
+// Nothing at all means the fault is in pixels.cpp.
+static void selftest() {
+    // What is saved is borrowed, not spent. Without putting it back the strip runs on one pixel for
+    // the rest of its life and lights exactly one LED however long it really is -- which on a board
+    // somebody has just paired reads as a broken strip rather than as a self test that forgot.
+    const int saved = strip.count;
+    ESP_LOGW(TAG, "SELF TEST on pin %d, one light, borrowing what is saved", DATA_PIN);
+    strip.set_count(1);
+    const struct { const char *name; uint8_t r, g, b; } steps[] = {
+        {"RED", 255, 0, 0}, {"GREEN", 0, 255, 0}, {"BLUE", 0, 0, 255}, {"warm white", 255, 180, 110}};
+    for (const auto &st : steps) {
+        ESP_LOGW(TAG, "  now showing %s", st.name);
+        strip.solid(st.r, st.g, st.b);
+        px::show(strip);
+        vTaskDelay(pdMS_TO_TICKS(1500));
+    }
+    strip.clear();
+    px::show(strip);
+    strip.set_count(saved);
+    ESP_LOGW(TAG, "SELF TEST over, %d lights restored. Four colors in that order means the fault is "
+                  "on the bench.", strip.count);
+}
+#endif
+
+// Free internal DRAM, which is the one that runs out. Printed at the few moments that decide
+// whether a second BLE service fits: docs/strip.md item 12 exists because every heap figure
+// this project had written down came from the Arduino build and meant nothing here.
+static void heap(const char *when) {
+    ESP_LOGI(TAG, "heap %-16s free %u  largest block %u  low water %u", when,
+             (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT),
+             (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT),
+             (unsigned)esp_get_minimum_free_heap_size());
+}
+
 extern "C" void app_main() {
+    heap("at boot");
     nvs_flash_init();
     nvs_open("strip", NVS_READWRITE, &nvs);
 
@@ -389,6 +498,10 @@ extern "C" void app_main() {
              strip.order.white ? "w" : "");
     if (!lit) ESP_LOGE(TAG, "THE LIGHT DRIVER DID NOT START -- nothing will light. Check the pin.");
 
+#ifdef SELFTEST
+    selftest();
+#endif
+
     node::config_t node_config;
     node_t *node = node::create(&node_config, on_attribute, on_identify);
     if (!node) { ESP_LOGE(TAG, "no Matter node"); return; }
@@ -403,18 +516,61 @@ extern "C" void app_main() {
     if (!ep) { ESP_LOGE(TAG, "no light endpoint"); return; }
     light_endpoint = endpoint::get_id(ep);
 
+    // Before Matter, and it has to be: CHIP will not take another GATT service once its own stack
+    // has started, and there is no second chance at it. See prov.h. A strip somebody has already
+    // taken offers no door, so it does not reserve one either.
+    const bool ours = get_i32("ours", 0) != 0;
+    char prov_name[24];  // "PROV_" and six hex digits; sized up only to keep the compiler quiet
+    snprintf(prov_name, sizeof(prov_name), "PROV_%s", chipHex);  // prov::reserve cuts it to fit
+    if (!ours && prov::reserve(prov_name) != ESP_OK)
+        ESP_LOGE(TAG, "our own door will not open this boot");
+
+    heap("before Matter");
     esp_matter::start(on_event);
+    heap("after Matter");
 
     // Lit while it waits, because being lit IS the identity check: the wall asks whether the thing
     // that just came on is theirs, and there is nothing to disambiguate -- it is two meters of light
     // and it is the only one lit (design/strip/Spine.dc.html). Marked as an instrument so the first
     // attribute sync cannot quietly wipe it, which is exactly what happened on the Arduino version.
-    if (chip::Server::GetInstance().GetFabricTable().FabricCount() == 0) {
+    // HAS ANYBODY TAKEN THIS STRIP? The fabric table cannot answer it on its own: a strip that came
+    // through our own door never joins a Matter fabric, so FabricCount stays 0 for the rest of its
+    // life. Asking only that made an adopted strip flash its rhythm at every boot and try to reopen
+    // a door it had already been through -- and by then CHIP owns the Wi-Fi driver, so the attempt
+    // failed with "sta is connecting, cannot set config" and the wall said it was waiting when it
+    // was not. "Ours" is remembered in NVS beside everything else the household chose.
+    if (chip::Server::GetInstance().GetFabricTable().FabricCount() == 0 && !ours) {
         instrument = true;
         strip.solid(SIG_R, SIG_G, SIG_B);
         px::show(strip);
-        ESP_LOGI(TAG, "not commissioned yet -- advertising over Bluetooth");
+        ESP_LOGI(TAG, "nobody has taken this strip yet -- both doors are open");
+        // The four things a strip needs to find us again after a reboot. Anything else the hub
+        // offers is refused out loud rather than silently dropped, so a mismatch between the two
+        // halves shows up on the bench instead of as a strip that never speaks.
+        prov::on_taken([](bool yes) { put_i32("ours", yes ? 1 : 0); });
+        prov::on_hub_details([](const char *key, const char *value) {
+            for (const char *k : {"mhost", "muser", "mpass", "base"})
+                if (!strcmp(key, k)) { put_str(key, value); return true; }
+            return false;
+        });
+        if (prov::open() != ESP_OK) ESP_LOGE(TAG, "our own door did not open; only Matter's is on");
+        // The code this strip can be paired with, said out loud. Without this the only way to
+        // commission it was to know that a test build uses the default passcode, which is exactly
+        // the sort of thing that is obvious until the day it is not.
+        PrintOnboardingCodes(chip::RendezvousInformationFlag::kBLE);
     } else {
+        ESP_LOGI(TAG, "already set up, %s", ours ? "through our own door" : "by somebody else");
+        // AND THE OTHER DOOR STAYS SHUT (design/strip/Both.dc.html). CHIP opens a commissioning
+        // window by itself whenever there are no fabrics, and a strip taken through our door never
+        // has one -- so without this it goes back to advertising as commissionable at every boot,
+        // and anybody in radio range could put it into their own app.
+        if (ours) {
+            const CHIP_ERROR e = chip::DeviceLayer::PlatformMgr().ScheduleWork([](intptr_t) {
+                chip::Server::GetInstance().GetCommissioningWindowManager().CloseCommissioningWindow();
+                ESP_LOGI(TAG, "Matter's window shut again; this strip is still ours");
+            });
+            if (e != CHIP_NO_ERROR) ESP_LOGE(TAG, "Matter's window stayed open: %s", chip::ErrorStr(e));
+        }
         paint();
         find_hub();
     }

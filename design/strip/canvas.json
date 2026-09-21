@@ -110,7 +110,7 @@
       "y": 5400,
       "w": 1440,
       "h": 900,
-      "title": "Two tiers \u2014 it works anywhere, better here"
+      "title": "Three states \u2014 and the middle one arrives later"
     },
     {
       "file": "Foreign.dc.html",
@@ -119,6 +119,86 @@
       "w": 1440,
       "h": 900,
       "title": "The pane for one we cannot ask"
+    },
+    {
+      "file": "Both.dc.html",
+      "x": 0,
+      "y": 6480,
+      "w": 1440,
+      "h": 900,
+      "title": "The spine, forked \u2014 whoever arrives first wins"
+    },
+    {
+      "file": "Ours.dc.html",
+      "x": 1560,
+      "y": 6480,
+      "w": 1440,
+      "h": 900,
+      "title": "Our hub got there first"
+    },
+    {
+      "file": "Theirs.dc.html",
+      "x": 3120,
+      "y": 6480,
+      "w": 1440,
+      "h": 900,
+      "title": "Somebody else's app got there first"
+    },
+    {
+      "file": "CodeHub.dc.html",
+      "x": 4680,
+      "y": 6480,
+      "w": 1440,
+      "h": 900,
+      "title": "D \u2014 the hub is the box the code comes in"
+    },
+    {
+      "file": "PopBox.dc.html",
+      "x": 0,
+      "y": 7560,
+      "w": 1440,
+      "h": 900,
+      "title": "A \u2014 the code is on the box, for this door too"
+    },
+    {
+      "file": "PopLight.dc.html",
+      "x": 1560,
+      "y": 7560,
+      "w": 1440,
+      "h": 900,
+      "title": "B \u2014 the strip shows the secret"
+    },
+    {
+      "file": "PopWindow.dc.html",
+      "x": 3120,
+      "y": 7560,
+      "w": 1440,
+      "h": 900,
+      "title": "C \u2014 no secret, only a window"
+    },
+    {
+      "file": "KnockOn.dc.html",
+      "x": 0,
+      "y": 8640,
+      "w": 1440,
+      "h": 900,
+      "title": "A \u2014 it never stops knocking"
+    },
+    {
+      "file": "KnockTwoDays.dc.html",
+      "x": 1560,
+      "y": 8640,
+      "w": 1440,
+      "h": 900,
+      "title": "B \u2014 two days, then dark"
+    },
+    {
+      "file": "KnockAsked.dc.html",
+      "x": 3120,
+      "y": 8640,
+      "w": 1440,
+      "h": 900,
+      "title": "C \u2014 it knocks when it is asked to"
     }
   ],
   "annotations": [
@@ -211,7 +291,35 @@
       "x": -620,
       "y": 5400,
       "w": 500,
-      "text": "IT WORKS ANYWHERE, AND BETTER HERE\n\nFrom \"this should be simpler when a user provisions the device in our hub directly -- C and Never should only apply to others, not our hub\", which was right and corrected a real mistake. The two cases had been collapsed into one, and the answer for the worst of them applied to both.\n\nOur hub is present at the one moment when more is possible: the commissioning, where there is already an encrypted session and somebody standing in the room holding the thing. A strip set up here can be handed the broker and then asked the two questions properly -- real bytes for the color, a fill latched in firmware at the tap. A strip that joined somebody else's fabric was never in a room with us, and may have been shared over months later.\n\nTHIS IS THE HONEST VERSION OF SOMETHING THE CANVAS ALREADY TRIED TO BUY. Direction B of the setup code wanted \"our hub is better at this than anybody else's app\" and got there by knowing a secret that would leak out of every unit we ship. This gets the same thing by DOING more rather than by KNOWING more, which is a sentence that can be said out loud.\n\nWHAT THE SECOND BOARD IS FOR. A light that cannot do a thing says so in the room rather than being skipped in silence -- that rule came out of the occasion boards and it applies here too. So the pane does not simply lose two rows; it says which kind of strip this is and offers the one action that would change it.\n\nOPEN: whether \"set it up here instead\" is a good idea or a trap. It means decommissioning it out of the app that has it, and a household that does that to a strip their partner added is going to be surprised. It may want to be a sentence rather than a button."
+      "text": "IT WORKS ANYWHERE, AND BETTER HERE \u2014 REDRAWN AFTER THE FORK\n\nFrom \"this should be simpler when a user provisions the device in our hub directly -- C and Never should only apply to others, not our hub\", which was right and corrected a real mistake. The two cases had been collapsed into one, and the answer for the worst of them applied to both.\n\nWHAT IT USED TO ARGUE, kept here because the board no longer says it. Our hub is present at the one moment when more is possible: the Matter commissioning, where there is already an encrypted session and somebody standing in the room holding the thing. A strip that joined somebody else's fabric was never in a room with us, may have been shared over months later, and so there was no moment left to hand it anything.\n\nWHAT THE FORK CHANGED. The moment is our own handshake now rather than Matter's commissioning, which is the whole of Ours. And the premise that no later moment exists turned out to be false: a strip somebody else set up is already on the Wi-Fi, so the handshake it is missing can come over mDNS whenever the household wants it. Two tiers became three states, and a state can be left.\n\nIT IS STILL THE HONEST VERSION OF SOMETHING THE CANVAS ALREADY TRIED TO BUY. Direction B of the setup code wanted \"our hub is better at this than anybody else's app\" and got there by knowing a secret that would leak out of every unit we ship. This gets the same thing by DOING more rather than by KNOWING more, which is a sentence that can be said out loud. CodeHub extends it and does not spend it: the hub is told the code and still derives nothing.\n\nWHAT THE THIRD COLUMN IS FOR. A light that cannot do a thing says so in the room rather than being skipped in silence -- that rule came out of the occasion boards and applies here too. So the pane does not simply lose two rows; it says which kind of strip this is and offers the one action that would change it.\n\nRESOLVED, AND IT WAS THIS BOARD'S OPEN QUESTION. Whether \"set it up here instead\" is a good idea or a trap, because it would mean decommissioning the strip out of the app that has it, and a household that does that to a strip their partner added is going to be surprised. It does not mean that any more: the mDNS handshake never touches their fabric, nothing is re-commissioned, and the strip stays where it is. Theirs draws it, and it can be a button after all.\n\nAND ONE CLAIM THIS BOARD HAD WRONG. It said a vendor and product id let the house recognize one of ours whoever set it up. The first real commissioning reported TEST_VENDOR and TEST_PRODUCT, which is what every device on a test vendor id says. Corrected in the band at the foot."
+    },
+    {
+      "id": "fork",
+      "x": -620,
+      "y": 6480,
+      "w": 500,
+      "text": "WHOEVER ARRIVES FIRST \u2014 THE ROW THAT WAS DRAWN AFTER ALL THE OTHERS\n\nRaised on 20 September, after everything above was settled: instead of bending over backwards to make Matter work with our hub, what if the strip works with our hub with or without it, and which protocol gets used is decided along the way, by whoever turns up to set it up. This row is that question drawn. It is later in time than every board above and it reopens two of them on purpose.\n\nTHE ARGUMENT IS NOT CONVENIENCE, AND THAT MATTERS. Everything on the bench runs on the test vendor id. Apple Home and Google Home have both now commissioned one, so the gate is not the commissioner -- it is that a strip on a test id cannot be sold: it names itself TEST_VENDOR, it is in no compliance ledger, it may not wear the logo, and it carries no certificate of its own. Until membership, a certificate in every unit at manufacture and testing per product at a lab are bought, there is no strip to sell. A second door is how a strip reaches a household before any of that and gains the Matter lane by an update afterwards. The partitions were laid down for exactly that.\n\nWHAT IT COSTS, SAID PLAINLY. WiFiProv comes back, weeks after being deleted as won by Matter, and that reversal belongs in docs/strip.md as a decision rather than as drift. And the second security surface is ours: the first firmware put a household's Wi-Fi password on an unauthenticated link, and bringing our own door back brings that responsibility back with it.\n\nTHE COEXISTENCE RISK WAS CHECKED ON THE DESK AND THE ROW SURVIVED IT. connectedhomeip merges application GATT services into its own NimBLE host through BLEManagerImpl::ConfigureExtraServices, so there is no second stack and no second nimble_port_init -- which was the thing that could have killed all four of these boards. What did not survive is a sentence. Both said \"one advertisement carrying two services\"; a legacy advertising payload is 31 bytes, and Matter's own service data plus a 128-bit vendor UUID overruns it. Ours goes in the scan response, which CHIP already exposes, and the board now says so. Item 12 in docs/strip.md has the detail -- including that every heap figure anybody has been quoting is from the Arduino build and means nothing on this one.\n\nWHAT IT REPAIRS IS MORE THAN IT BREAKS. Item 2a, how a strip learns our broker, stops being an empty string \u2014 it rides the session. Item 1a gets an answer at last, and it is CodeHub on this row. And 2-mac comes off the critical path, because our own door needs no matter-server, no host networking and no Matter integration added to Home Assistant by hand.\n\nAND IT LEAVES ONE BOARD STALE. Tiers.dc.html still argues that our advantage comes from being present at the Matter commissioning. Under this row the moment is our own handshake instead, and its right-hand column is unchanged. It wants redrawing and has not been."
+    },
+    {
+      "id": "code-hub",
+      "x": 6240,
+      "y": 6480,
+      "w": 500,
+      "text": "AND THEN ITEM 1A ANSWERS ITSELF\n\nThe three code boards were drawn when Matter was the only door, and none of them was good. A gives up the thing design/puck/Knock.dc.html was proudest of \u2014 that the identity check is the object and never a number. B makes every unit we ever sell commissionable by anybody holding the algorithm. C cannot stand alone. The recommendation was A, on the grounds that it was the least bad.\n\nD IS ONLY POSSIBLE BECAUSE OF OURS. Once there is a link the strip itself authenticated, a passcode no longer has to travel from outside the radio: the strip can simply say it, and the wall is where a code was going to have to appear anyway. Nothing is printed, nothing is derived, nothing is kept at the factory.\n\nIT DOES NOT REPLACE A, and the board says so where an enthusiastic board would not. A strip bought by a household with no hub of ours still needs a number from outside the radio, and that is still the label. D is what A becomes once our hub is in the house. Recommendation: ship A on the box, D on the wall, and B stays rejected for the reason it was always rejected.\n\nSETTLED 20 SEPTEMBER, AND IT CHANGED THE BOARD. The question was whether a certified device may hand its factory passcode to a vendor channel. It cannot, and not because a rule forbids it: it does not have one. A production device stores only the SPAKE2+ verifier. ESP32FactoryDataProvider::GetSetupPasscode returns CHIP_ERROR_NOT_IMPLEMENTED; connectedhomeip's own header says using the verifier rather than the passcode \"safeguards the passcode from ever leaking\"; and Espressif's production guide says the verifier is installed \"and not the actual passcode\". So this board's central sentence -- the strip has always held its own passcode -- was false, and has been redrawn.\n\nWHAT REPLACED IT IS SMALLER AND BETTER. The strip mints a passcode when it is asked, derives the verifier on the chip, and opens an enhanced commissioning window with it. Espressif recommends exactly this for a device whose onboarding payload can be displayed, and ships the code: examples/light_switch's dynamic_commissionable_data_provider is a DRBG draw, the disallowed-passcode check and Spake2pVerifier::Generate. CommissioningWindowManager::OpenEnhancedCommissioningWindow needs no fabric and no Matter administrator, so the hub does not have to be one. The sheet on this board did not change at all.\n\nTHREE CONSTRAINTS ARRIVED WITH IT. An enhanced window never advertises over Bluetooth -- \"once a device is operational it shall be commissioned into subsequent fabrics using the operational network only\" -- so the other app has to be on the house Wi-Fi. While the window is open the fresh verifier replaces the factory one, so the code on the label does not work. And fifteen minutes is the specification's ceiling on a window rather than a number we picked; the countdown already drawn on the sheet was inside it."
+    },
+    {
+      "id": "pop",
+      "x": -620,
+      "y": 7560,
+      "w": 500,
+      "text": "WHO IS THE HUB, AS FAR AS THE STRIP CAN TELL -- 1A AGAIN, ON OUR OWN DOOR\n\nRaised 21 September by the code itself: network_prov_mgr_start_provisioning needs a security level, and every real one needs the hub to know a secret before the session. SEC0 is the Wi-Fi password on an unauthenticated link, which is the sin Matter came in to remove. SEC1 wants a proof-of-possession string. SEC2 wants a per-device salt and SRP6a verifier, which is a password by another name.\n\nTHE PROMISE IN TENSION IS OURS'S. \"There is nothing to type\" and \"the identity check is two meters of light.\" The light tells the HOUSEHOLD which strip it is. It tells the STRIP nothing about who the hub is. Those are different proofs, and the boards above conflated them.\n\nA BORROWS A NUMBER THAT ALREADY EXISTS. The Matter setup code has to be on the label for the other lane anyway, and SRP6a can be seeded from the same digits, so A costs no manufacturing and no new secret. It costs the promise, and it makes one label open both doors.\n\nB MAKES THE LIGHT THE LABEL. The strip mints a rhythm each time it is plugged in -- four groups of one to six flashes -- and the person taps what they count. Rhythm rather than color because \"Is it red?\" has not been asked yet and a color cannot be trusted; a count can. 1,296 possibilities is small until SRP6a is under it: no offline attack, one wrong guess ends the session, a new rhythm next power cycle. It asks somebody to count flashes from across a room, and \"I can't see it\" is a real button because it will be pressed.\n\nC KEEPS OURS EXACTLY AS DRAWN AND SAYS WHAT THAT COSTS. SEC1 with no secret: encrypted, so nothing can listen, but unauthenticated, so anything that speaks first in the three minutes after a plug-in is the hub. Theirs already ruled that being nearby is not proof. This is proximity standing in for a secret.\n\nRECOMMENDATION: B, with A as the fallback that costs nothing because the label exists anyway. Not C -- it re-admits the class of risk this project already paid to remove, and it would have to say so on the box. What B needs before it is real: a rhythm the firmware can show while Matter is also advertising, and a retry that does not lock a household out of its own strip.\n\nCHOSEN 21 SEPTEMBER: B. And the same day the ground shifted under A: our ecosystem comes first and Matter on the strip is kept dormant, with Apple and Google reached through the hub's bridge instead. So the label A leaned on need not exist, and B's case stands alone. C is allowed behind a build flag on a bench and nowhere else."
+    },
+    {
+      "id": "knock",
+      "x": -620,
+      "y": 8640,
+      "w": 500,
+      "text": "HOW LONG A STRIP NOBODY HAS TAKEN GOES ON KNOCKING\n\nFound on 21 September by leaving a strip waiting and coming back to nothing. Our scan response rides on CHIP's advertisement, and CHIP shuts a commissioning window after fifteen minutes, so both doors close together while network_prov_mgr still believes it is listening. A household that plugs a strip in and comes back twenty minutes later finds a strip that is not there.\n\nTHIS IS NOT THE CASE THE DOCUMENT ALREADY RULES ON. That one is a strip somebody has SET UP re-advertising after a router reboot, which must never happen: every strip in the house announcing itself several times a year, with nobody present and nobody told. This is a strip nobody has ever taken, still in the state it left the factory in. It has nothing to protect yet.\n\nTHE THREE ARE NOT EQUALLY EXPENSIVE. B is a Kconfig line -- ENABLE_BLE_EXT_ANNOUNCEMENT raises the cap from 900 seconds to 48 hours and Matter's own authors put it there for exactly this. A is ours to maintain: reopen the window whenever it lapses, forever. C needs a short press on the button that already exists for the factory-reset hold, which is free in hardware and expensive in reach, because the button is behind the television.\n\nWHAT DECIDES IT IS WHICH SENTENCE WE ARE WILLING TO OWE. A owes none. B owes one nobody will read until the day it matters. C owes one and also asks for a finger. Weigh that against a radio talking in somebody's house for years because a strip in a drawer was never set up.\n\nRECOMMENDATION: B, and make the ending visible rather than silent -- the light should stop in a way that reads as stopped, not as broken, and the pane should offer the way back. That turns B's one real weakness into a screen, which is the kind of problem this canvas is good at. A if we decide a strip in a drawer is not our problem; C only if the product board ever gets a button somewhere reachable.\n\nCHOSEN 21 SEPTEMBER: B -- AND ITS MAIN ARGUMENT WAS WRONG. ENABLE_BLE_EXT_ANNOUNCEMENT does not compile in this connectedhomeip: it is default n, nobody builds that path, and BLEManagerImpl.cpp:288 drops a nodiscard CHIP_ERROR under -Werror. Patching vendored CHIP would put the fix outside this repository. So B is built the way A is built, by reopening the window from our own code, with a 48-hour budget on it. The board has been corrected rather than quietly left standing: it cost B the cheapness that was most of its case, and B is still the right answer, because what was chosen was the behavior and not the line of configuration."
     }
   ],
   "reading": [
@@ -241,6 +349,20 @@
     "ReachNone.dc.html",
     "tiers",
     "Tiers.dc.html",
-    "Foreign.dc.html"
+    "Foreign.dc.html",
+    "fork",
+    "Both.dc.html",
+    "Ours.dc.html",
+    "Theirs.dc.html",
+    "code-hub",
+    "CodeHub.dc.html",
+    "pop",
+    "PopBox.dc.html",
+    "PopLight.dc.html",
+    "PopWindow.dc.html",
+    "knock",
+    "KnockOn.dc.html",
+    "KnockTwoDays.dc.html",
+    "KnockAsked.dc.html"
   ]
 }

@@ -3,9 +3,9 @@
   SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { store, notify, refreshStrip } from './store'
-import { adoptStrip, dismissStrip, readStripOnce, stripAgain, stripDone, stripEnds, stripRoom, stripSaw, stripWifi } from './api'
+import { adoptStrip, stripCounted, dismissStrip, readStripOnce, stripAgain, stripDone, stripEnds, stripRoom, stripSaw, stripWifi } from './api'
 import Icon from './Icon.vue'
 import StripArt from './StripArt.vue'
 
@@ -35,6 +35,7 @@ const other = ref(false)
 
 const TITLE: Record<string, string> = {
   knocking: 'A light strip is here.',
+  rhythm: 'How many times does it flash?',
   working: 'Setting it up.',
   order: 'Is it red?',
   length: 'How far does it go?',
@@ -114,6 +115,19 @@ const ends = () => run(stripEnds)
 const again = () => run(stripAgain)
 const room = (id: string) => run(() => stripRoom(id))
 
+/* FOUR COUNTS, READ OFF THE LIGHT (design/strip/PopLight.dc.html). This is the proof of possession
+   for our own door and the only thing that door ever asks. It is a count and not a code: there is
+   nothing printed on a strip to copy and nothing derived from its chip to leak, so a wrong answer is
+   somebody having miscounted rather than having mistyped -- which is why the sheet offers to start
+   again rather than telling anybody off. Rhythm and not color, because "is it red?" has not been
+   asked yet and a color cannot be trusted until it has. */
+const counts = ref<number[]>([0, 0, 0, 0])
+const most = computed(() => b.value?.most ?? 6)
+watch(() => b.value?.state, (now, was) => { if (now === 'rhythm' && was !== 'rhythm') counts.value = [0, 0, 0, 0] })
+const bump = (i: number) => { counts.value[i] = counts.value[i] >= most.value ? 1 : counts.value[i] + 1 }
+const counted = computed(() => counts.value.every(n => n >= 1))
+const send = () => run(() => stripCounted(counts.value.join('')))
+
 const ssid = ref(''), password = ref('')
 const tell = () => {
   const name = ssid.value.trim()
@@ -159,6 +173,28 @@ onUnmounted(() => window.removeEventListener('keydown', key))
           <div class="flow-actions">
             <button class="button" :class="{ busy }" @click="adopt">That’s the one</button>
             <button class="button ghost" @click="dismiss">Not mine</button>
+          </div>
+        </template>
+
+        <!-- OUR OWN DOOR, AND THE ONE THING IT ASKS. Not a code: four counts of flashes off the
+             strip itself, which is the proof of possession (design/strip/PopLight.dc.html). A strip
+             that came through Matter's door never reaches this. -->
+        <template v-else-if="b.state === 'rhythm'">
+          <p class="sheet-lede">It is flashing in four groups, over and over. Count each group and tap the numbers. There is nothing to read off a label.</p>
+          <div class="stage">
+            <StripArt show="lit" />
+            <span class="caption"><span class="pulse-dot"></span>Watch it, then tap what you counted</span>
+          </div>
+          <div class="rhythm-row">
+            <button v-for="(n, i) in counts" :key="i" class="rhythm-count" :class="{ set: n >= 1 }"
+                    @click="bump(i)" :aria-label="`Group ${i + 1}, ${n || 'not counted'}`">
+              <span class="rhythm-n">{{ n || '–' }}</span>
+              <span class="rhythm-sub">{{ n === 1 ? 'flash' : 'flashes' }}</span>
+            </button>
+          </div>
+          <div class="flow-actions">
+            <button class="button" :class="{ busy }" :disabled="!counted" @click="send">That’s it</button>
+            <button class="button ghost" @click="dismiss">I can’t see it</button>
           </div>
         </template>
 

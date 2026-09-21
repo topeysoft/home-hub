@@ -9,6 +9,128 @@ which was decided on 20 September before anything shipped and is the subject of 
 much of it, which is less than all of it. The honest list of what is not built is at the foot, where it is
 meant to be read.*
 
+## Picking this up
+
+*The rest of this document is how it got here, which is worth reading before changing any of it. This section
+is where it stands, as of 21 September 2026.*
+
+### Where each piece is
+
+| | |
+|---|---|
+| **Design** | 19 boards in `design/strip/`, 3 in `design/occasion/`. The last row forks the spine: Matter is one door, not the only one |
+| **Firmware** | ESP-IDF + esp-matter, **commissionable over BLE, proven on an ESP32-S3** |
+| **Brain** | both doors: knock → adopt → (rhythm | code) → set up. 39 tests. Our door carries the broker |
+| **Panel** | the beats including the rhythm, previewable with `?strip=knocking\|rhythm\|working\|ready` |
+| **Suites** | brain 1100, panel 490, native firmware test, all green |
+
+### What is proven on hardware, and what is not
+
+**Proven:** the RMT driver, WS2812 timing, bit order, `grb` mapping agreeing with the brain, and Matter's BLE
+commissioning advertisement — the board says `CHIPoBLE advertising started` and a laptop scan finds it at
+−41 dBm carrying a valid commissionable payload.
+
+**Also proven, and this page said otherwise until 20 September:** a commissioning has completed. Home Assistant
+took the strip and reported manufacturer `TEST_VENDOR`, model `TEST_PRODUCT`, which is what item 6 is about. The
+line here used to read *"never run: a completed commissioning, by anything"*, because this page was written from
+item 3 three hours after item 6 had already recorded one. If two parts of this document disagree, date them
+against the log before believing either.
+
+**Also proven, 20 September: a phone has taken it.** Apple Home commissioned the strip from the code it now
+prints at boot. **It took two fabric slots of the five, not one** — `VendorId 0x1349` (Apple Inc., the local
+home hub) and `0x1384` (Apple Keychain, the iCloud admin) — which is worth knowing before promising a household
+Apple, Google and Alexa at once, because that is four slots of five before our own hub asks for one.
+
+**And Google Home too**, `VendorId 0x6006`, on a test vendor id and without refusing it — see 2b, which is the
+item that claim belongs to. Apple made **two** fabrics on the first pairing (`0x1349` local home hub and
+`0x1384` iCloud) and only `0x1384` on the second, so budget two and do not count on one.
+
+**Never run:** the broker has never been spoken to, neither the color question nor the fill has run outside a
+unit test, and Alexa has not been tried.
+
+### The next three things, in order
+
+1. **Start the manager with SEC2 and PopLight** — the transport is built (item 13); what is missing is the
+   rhythm the strip mints and shows, the verifier made from it, and the first real session from a phone.
+2. **Then the brain's half**, which has to match on our service UUID rather than on a device name — there is no
+   room for a name in the scan response, item 12.
+3. **Then the hub path, on the Pi.** Not on the Mac — see `2-mac`. That is the first time the brain, the panel
+   and the firmware will have run together.
+
+### Decided, and not to be reopened without a reason
+
+- **Our ecosystem first; Matter is kept, dormant, and gates nothing** (21 September). The strip stays a Matter
+  device because it is proven and costs ~3 KB, but certification is off the table indefinitely and nothing is
+  designed around it. A household reaches the strip through our own door (`Ours`); Apple, Google and Alexa
+  reach it through the hub's bridge (`docs/matter.md`), not through the strip's own Matter stack. So `CodeHub`
+  is parked — the bridge opens commissioning windows, not the strip — and the fork stays as a fact of the
+  firmware rather than a product promise. Selling a certified unit remains possible later because the
+  partitions and the Matter lane are already there.
+- **The proof of possession on our door is the light** — `PopLight`: the strip mints a rhythm each time it is
+  plugged in and the person taps what they count. SRP6a underneath. `PopWindow` may exist only behind a build
+  flag for the bench, never in a release; `PopBox` was not chosen because its one argument — the label has to
+  exist anyway — only holds if Matter ships first.
+
+- **ESP-IDF, not Arduino.** Arduino compiles Matter-over-BLE out on every target; a strip built that way cannot
+  be set up by Apple or Google at all. Evidence both ways is in this document.
+- **The partition table** (`partitions-matter.csv`), sized for Matter with the certification partitions laid
+  down. An update cannot move slots, so this one could not wait.
+- **The length question:** the fill at setup, the trim row afterwards. `design/strip/Later.dc.html`.
+- **Occasions are a scene-bar chip, never a strip setting.** `design/occasion/`.
+- **Two tiers:** it works anywhere, and better in a house with our hub. `design/strip/Tiers.dc.html`.
+
+### Open, with boards to argue from
+
+- **Where the setup code comes from** — `CodeBox` / `CodeMade` / `CodeTap`, and now `CodeHub`. `CodeBox` for
+  the box, because `CodeMade` fails certification and `CodeTap` cannot stand alone; `CodeHub` for a house with
+  our hub in it, where the strip mints a code for one window and the wall shows it. The two are not rivals — see
+  item 1a. **Not urgent:** a development board's passcode is public and the brain fills it in, so nothing is
+  blocked until real units are labeled.
+- **How a strip finds our hub** — `ReachTold` / `ReachAsks` / `ReachNone`. Recommendation was `ReachAsks` for
+  strips we commission, `ReachNone` as the fallback for strips somebody else did. **The forked row has largely
+  overtaken this:** a strip that came through our own door is handed the broker during that handshake, and a
+  strip somebody else set up is reached over mDNS afterwards (`Theirs`), which is better than `ReachNone`. What
+  is left of the question is only the strip we can never reach at all. The three boards stay for the record.
+
+### Traps that have already cost a day
+
+- **Matter commissioning cannot be tested on the Mac.** Item `2-mac`. Read that before starting any container.
+- **The Command Line Tools on that machine are broken** — no C headers in any SDK, and a corrupt default SDK.
+  Every native build used `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` to borrow Xcode's.
+  `sudo xcode-select -s` fixes it properly.
+- **Two PlatformIO cores are installed** and fight over the build directory; builds fail and then succeed
+  unchanged. Irrelevant now the firmware is ESP-IDF, but it will confuse anybody touching `brilliant/`.
+- **Two things a protocomm transport must do that no header says.** Both cost an evening on
+  21 September and both look like "failed to initialise session" at the client. **One:** SECURITY_2
+  refuses every message until `protocomm_open_session` has been called for that connection —
+  *"Invalid session ID:1(expected -1)"* — and the reference transport does it from the GAP connect
+  event, which CHIP owns, so ours opens it on the first write instead and closes it on
+  `kCHIPoBLEConnectionClosed`. **Two:** NimBLE serves a long read as several callbacks with rising
+  offsets, so an answer freed after the first read is an answer cut off at the MTU. SRP's public key
+  is about 400 bytes, so the handshake broke every time and the log's last word was *"Using salt and
+  verifier to generate public key..."*. Keep each answer until the next write to that characteristic.
+- **A 31-byte scan response makes the strip vanish from scanners — the whole advertisement, Matter's
+  included.** The spec allows 31 and CHIP accepts 31; at 31 nothing found the board, at 30 everything did,
+  name included. `prov.cpp` caps at 30 on purpose. Also: Espressif's provisioning app finds devices by name
+  prefix (`PROV_`) and shows nothing without one, which is the only reason a name is in the scan response.
+- **`pdMS_TO_TICKS` of anything under one tick is zero, and `vTaskDelay(0)` does not sleep.** The tick here is
+  100 Hz, so the housekeeping loop's `pdMS_TO_TICKS(5)` was 0 ticks; `vTaskDelay(0)` yields only to tasks at
+  the same priority or above and never to the idle task at 0. The loop was a busy spin that starved IDLE0 and
+  tripped the task watchdog every five seconds — found on 20 September only because an uncommissioned board was
+  left running long enough to print it twice, and invisible on a commissioned one in the same session. Fixed to
+  10 ms. Any delay under 10 ms in this firmware silently means *do not sleep at all*.
+- **`idf.py -D<anything> build` re-runs CHIP's GN build, and GN needs esp-matter's own environment.** Sourcing
+  `esp-idf/export.sh` alone is enough for an ordinary rebuild and not enough for a reconfigure; the failure is
+  `Unable to load "/build_overrides/pigweed_environment.gni"`, which names pigweed and has nothing to do with
+  whatever you passed on the command line. Source `esp-matter/export.sh` too.
+- **`SELFTEST` is a CMake cache variable, so it stays on until it is explicitly cleared** — `idf.py -DSELFTEST=`
+  with an empty value, because `-DSELFTEST=0` still satisfies the `#ifdef`. A build dir configured for the
+  bring-up self test keeps self-testing forever, and until 20 September the test left `strip.count` at 1
+  afterwards, so the board lit exactly one LED however long the strip really was. On a board somebody has just
+  paired that reads as a broken strip rather than as a self test that forgot to put something back.
+- **The error text on the wall lied four times in a row** during bring-up, each time naming a confident wrong
+  cause. If a strip screen tells you what is wrong, verify it before acting on it, and see item 11.
+
 ## What it is, and what it is not
 
 A light strip you buy in a box, tape behind a television or under a shelf, and plug into a socket nowhere near
@@ -325,14 +447,33 @@ protocomm `SECURITY_1` now does, and is on air. **What is still open is not the 
 possession**: it is random per device, printed on the serial console, and nothing decides how a household or
 the hub comes to know it. That is the same question Matter's own passcode asks, and it is 1a.
 
-**1a. But nobody can commission it yet.** A commissionable Matter device advertises its discriminator; it does
-**not** advertise its passcode, and commissioning cannot happen without one. So the hub cannot silently adopt a
-strip the way `design/puck/Knock.dc.html` argues for — **that board's proudest claim, that the identity check is
-the object and never a number, is now in tension with the standard.** Options, none chosen: put the code in the
-box like every other Matter device and accept that our own panel is no better than anyone else's; derive
-passcodes at manufacture from something the hub can look up, which makes every unit we sell commissionable by
-anybody holding our algorithm; or an NFC tag the phone reads. **This is an artboard conversation before it is a
-code one, and it has not been had.**
+**1a. Nobody can commission it yet, and the design for that is now settled.** A commissionable Matter device
+advertises its discriminator; it does **not** advertise its passcode, and commissioning cannot happen without
+one. So the hub cannot silently adopt a strip the way `design/puck/Knock.dc.html` argues for — that board's
+proudest claim, that the identity check is the object and never a number, was in tension with the standard.
+The artboard conversation has now been had: `design/strip/` gained a row on 20 September (`Both`, `Ours`,
+`Theirs`, `CodeHub`) in which Matter is one door rather than the only one, and the identity check survives on
+our own door where the standard does not reach.
+
+**The passcode question underneath it is answered, and the answer is not the one the board first drew.** The
+question was whether a certified device may hand its factory passcode to a vendor channel. It cannot, and not
+because a rule forbids it — **it does not have one.** A production device stores only the SPAKE2+ verifier:
+`ESP32FactoryDataProvider::GetSetupPasscode` returns `CHIP_ERROR_NOT_IMPLEMENTED`, connectedhomeip's own header
+says that using the verifier rather than the passcode *"safeguards the passcode from ever leaking"*, and
+Espressif's production guide says the verifier is installed *"and not the actual passcode"*. Deriving passcodes
+at manufacture stays rejected for the reason it always was: one algorithm loose and every unit we have sold is
+open.
+
+**What works instead is smaller than the thing it replaces.** The strip mints a passcode when it is asked,
+derives the verifier on the chip, and opens an enhanced commissioning window with it — which is what Espressif
+recommends for a device whose onboarding payload can be displayed, and it ships the code:
+`examples/light_switch`'s `dynamic_commissionable_data_provider` is a DRBG draw, the disallowed-passcode check
+and `Spake2pVerifier::Generate`. `CommissioningWindowManager::OpenEnhancedCommissioningWindow` takes the
+verifier directly and needs neither a fabric nor a Matter administrator, so the hub does not have to be one and
+`matter-server` stays off this path. Three things come with it and none is a blocker: an enhanced window never
+advertises over Bluetooth, so the other app must be on the house Wi-Fi; the label's own code does not work while
+the window is open, because the fresh verifier has replaced it; and fifteen minutes is the specification's
+ceiling on a window rather than a number we chose. **None of it is written yet.**
 
 **2. The hub can now hand a strip to the commissioner, and that is all it can do.** `Radio` speaks Matter:
 it scans for the commissionable advertisement and decodes it (checked against a real device — an S3 running
@@ -364,14 +505,32 @@ drives config flows for the weather integration (`api.py`, `/api/config/config_e
 same for Matter with the url from the compose file. Not built, and it should be, because otherwise every house
 needs somebody to do this by hand exactly once and nobody will remember.
 
-**2a. Nothing decides how a strip learns our broker.** After commissioning it is on the house Wi-Fi and knows
+**2a. ANSWERED AND BUILT, 21 September.** The strip is handed the broker inside the session that carried
+the Wi-Fi, on a `hub` endpoint of our own: `network_prov_mgr_endpoint_create("hub")` takes `0xFF53 + 1`,
+which is exactly the first characteristic `prov::reserve()` keeps spare, and the payload is lines of
+`key=value` for the four things `find_hub()` reads. Not protobuf: the schema is ours at both ends, there are
+four keys, and the hub-side client has to be hand-written anyway. A key the strip does not keep is refused
+out loud rather than dropped, so a mismatch between the halves shows up on a bench. Seen in the table as
+`1775ff54 name="hub"`. **Not yet driven by a client** — `esp_prov --custom_data` speaks its own
+`custom-data` endpoint wrapped in a protobuf, so proving this needs the hub's own client, which is next
+anyway.
+
+*What it replaced, for the record:* **Nothing decides how a strip learns our broker.** After commissioning it is on the house Wi-Fi and knows
 nothing about us; `mhost` in its NVS is blank, so it is a plain Matter light and the color and length questions
 never get asked. Handing those details over needs either a route on the hub or a custom Matter cluster, and
 neither is designed. **This is the seam between "a Matter light anybody can buy" and "a light our hub set up
 properly", and it is currently an empty string.**
 
 **2b. Certification, which is what "just works" actually costs.** Everything above runs on a *test* vendor id.
-Apple and Google will commission such a device with an "uncertified accessory" warning; it cannot be sold.
+Apple and Google will commission such a device with an "uncertified accessory" warning — *the warning is the
+part nobody here has written down having seen, so treat it as expected rather than observed* — and it cannot
+be sold.
+**Both have now done it** — Apple Home on 20 September and Google Home the same day, `VendorId 0x6006` sitting
+in the fabric table beside Apple's. So the sentence above is confirmed in the half that matters and the
+temptation to read it the other way should be resisted: **nothing refused the strip, and it still cannot be
+sold.** What certification buys is not commissionability but the right to ship — a real Vendor ID instead of
+reporting itself as `TEST_VENDOR`, a listing in the compliance ledger, the logo, and a certificate in the unit.
+An artboard here had said Google refuses such a device. It does not, and that was invented rather than observed.
 Shipping needs CSA membership and a real Vendor ID (the Adopter tier is roughly $7k a year — verify before
 planning around it), a Device Attestation Certificate provisioned into `esp_secure_cert` on **every unit** at
 manufacture, and certification testing per product at an authorized lab. The partitions are laid down for it.
@@ -438,3 +597,266 @@ real annual cost before a unit ships — and inserts the product into the most q
 the house, which is how these things get returned. The camera route avoids all of that and costs a camera
 pointed into a living room. **The cheap next step is neither: a capture stick and HyperHDR on a bench,
 to find out whether it feels like the screen extended or like a gimmick, before any of it is paid for.**
+
+**17. Two days of knocking, and CHIP's own way of doing it does not compile.** Item 14 is decided:
+`design/strip/KnockTwoDays.dc.html`, a strip nobody has taken keeps knocking for 48 hours and then stops
+in a way that reads as stopped. The board said this was one line of configuration and **it is not**.
+`CONFIG_ENABLE_BLE_EXT_ANNOUNCEMENT` lifts `CHIP_DISCOVERY_TIMEOUT_SECS` from a 900-second ceiling to
+172,800 — and it will not build: it is `default n`, nobody compiles that path, and CHIP's own
+`BLEManagerImpl.cpp:288` drops a nodiscard `CHIP_ERROR` under `-Werror`. Turning it on means patching
+vendored connectedhomeip, which lives outside this repository, so the fix would not be one anybody else
+could reproduce.
+
+So the window is reopened from our own code instead, in `prov::keep_knocking()`, with a 48-hour budget
+measured from the moment the door opened. When the budget runs out the rhythm stops and the strip holds
+a drained version of the same glow rather than going dark — **going dark is what a broken strip does**,
+and the rule this whole panel runs on is that what was asking stays put and says it is no longer asking.
+A power cycle starts the two days again. The board has been corrected rather than left standing: B lost
+the cheapness that was most of its case and is still the right answer, because what was chosen was the
+behavior, not the line of configuration.
+
+**16. "Has anybody taken this strip?" is not a question the fabric table can answer, and two boots'
+worth of bugs came out of assuming it was.** A strip adopted through our own door never joins a Matter
+fabric, so `FabricCount()` is 0 for the rest of its life. Both fixed on 21 September, and both were
+invisible on the first boot:
+
+- **It reopened our door at every boot.** The condition for knocking was only "no fabric", so an adopted
+  strip flashed its rhythm again and tried to start provisioning — by which time CHIP owns the Wi-Fi
+  driver, so it failed with `ESP_ERR_WIFI_STATE`, *"sta is connecting, cannot set config"*. The wall
+  would have said the strip was waiting while nothing was listening. The answer is an `ours` flag in NVS,
+  written when a session completes, and it is the "first session to complete takes it" rule from
+  `Both.dc.html` made real.
+- **Matter reopened its own door.** CHIP opens a commissioning window by itself whenever there are no
+  fabrics, so an adopted strip went back to advertising as commissionable at every boot and anybody in
+  radio range could have put it into their app. An adopted strip now closes that window at boot and
+  reserves no GATT service of its own, and a scan finds nothing at all.
+
+**And a trap that kills the device rather than misbehaving:** `CloseCommissioningWindow()` from
+`network_provisioning`'s task aborts. CHIP notices, calls it *"Chip stack locking error ... unsafe/racy"*,
+and `chipDie`s into a reboot loop. Anything touching the stack from another task goes through
+`PlatformMgr().ScheduleWork`.
+
+**14. Our door is discoverable only while Matter's window is open, and nobody decided that.** Our scan
+response rides on CHIP's advertisement, and CHIP caps a commissioning window at fifteen minutes
+(`MaxCommissioningTimeout`, spec 5.4.2.3). When it shuts, the strip goes off air for *both* doors while
+`network_prov_mgr` still believes it is listening — seen on 21 September, when a strip left waiting was
+invisible to a scan and came back on a power cycle. A household that plugs a strip in and comes back
+twenty minutes later finds nothing. This is not the case `docs/strip.md` already rules on: that one is a
+*commissioned* strip re-advertising after a router reboot, which must never happen. This is a strip that
+has never been set up at all, still sitting in its box's worth of nothing, and it should probably keep
+knocking. **Not decided, and it wants an artboard** — for ever is a household-visible promise, and so is
+giving up.
+
+**15. The hub is the client, and it works.** `brain/hub/strip_door.py` plus `brain/vendor/esp_prov`
+(Apache-2.0, vendored because the IDF dropped it at v6). On 21 September it found a strip by service
+UUID, proved the rhythm, handed over the Wi-Fi and then the broker, in one session and with no phone:
+
+    found: [{'name': 'PROV_52e20', 'rssi': -22}]
+    prov: credentials for 'VirusBroadcast' arrived through our door
+    prov: the hub said where it is: 2 details taken, 0 refused
+
+Two things of ours sit on top of Espressif's: finding a strip by the service UUID rather than a name,
+and the `hub` step. Espressif's own `Transport_BLE` could not be used unchanged for two reasons, both
+assumptions that do not hold here — it finds a device by advertised *name*, and our scan response has
+barely room for one; and it derives characteristic UUIDs by masking the endpoint id against the service
+UUID, which is a no-op for the all-`ff` service it assumes and mangles ours. **Run on the Pi on 21 September, and the client is proven: at −51 dBm an SRP6a session establishes
+first try, over BlueZ, with no workaround of any kind.** What was read as a client bug is link margin.
+Everything below is what that cost to find out, and it matters because the margin is a product problem
+rather than a bench one.
+
+| from the Pi | result |
+|---|---|
+| −51 dBm | session ESTABLISHED, first attempt |
+| −64 dBm | connection dies 3–5 s in, NimBLE reason `0x208`, every attempt |
+| −25 dBm (a Mac) | completes |
+
+**Thirteen decibels is the whole difference, and a real strip will not be at −51.** It is taped behind a
+television — a metal plane — and the hub is in another room. So this is not solved, it is only understood:
+a household at the wrong end of that gap sees a strip that will not set up, having done nothing wrong.
+The likely fix is still the one below, and it is now worth doing rather than worth investigating.
+
+**The original finding, kept because it is the diagnosis:** What works over BlueZ, with no
+workaround of any kind: the vendored modules import on Linux and Python 3.13, discovery by service UUID
+finds the strip repeatedly, and one connection walked 14 characteristics. **What does not work is
+keeping the link up.** A connection establishes and then dies three to five seconds in with NimBLE
+reason `0x208` — a supervision timeout — every time a session is attempted, at about −64 dBm. The same
+code against the same strip at −25 dBm on a Mac completes.
+
+**Two software levers were tried on 21 September and neither closed the gap.** Both are kept because
+both are right on their own terms, and neither is the answer:
+
+- **The strip now stays on fast advertising while it is knocking.** CHIP drops from a 25 ms interval to
+  500 ms after thirty seconds, which is right for a device somebody is standing over and wrong for one a
+  household walks away from. At the far table the Pi found the strip in seconds at 25 ms and **could not
+  find it at all in twenty seconds** at 500 ms, so this one was worth having whatever else is true. It is
+  a nudge on a timer, because CHIP raises no event when it drops to slow — the first version hung off
+  `kCHIPoBLEAdvertisingChange` and silently never ran.
+- **The strip now asks every new link for a 30–50 ms interval and a ten-second supervision timeout.**
+  NimBLE accepts the request (`asked link 1 to be patient: ok`) and the link still dies about a second
+  later. It has to be polled from the housekeeping loop: `kCHIPoBLEConnectionEstablished` is raised when
+  a client subscribes to CHIPoBLE, not when the GAP link comes up, and the link was dying during service
+  discovery seconds before that. CHIP owns the GAP event handler and we are not forking it.
+
+**So the remaining gap looks like RF rather than software**, which is where it should have been suspected
+once the parameter request was accepted and changed nothing. The devkit's antenna, the S3 holding up
+Wi-Fi on the same radio, and thirteen decibels. Next places to look, none tried: the coexistence
+balance, the antenna on a real board rather than a devkit, and whether the strip should stop scanning
+Wi-Fi while a provisioning link is up. **Close range is unaffected and was re-checked after both
+changes: −23 dBm, session established.**
+
+The original diagnosis, kept because it is still true and still not the whole story: **CHIP never
+negotiates connection parameters at all**
+— there is no `ble_gap_update_params` anywhere in its NimBLE `BLEManagerImpl` — so the link runs on
+whatever BlueZ proposes, and the strip is holding up Wi-Fi on the same radio while it answers. Software
+coexistence is already on (`CONFIG_ESP_COEX_SW_COEXIST_ENABLE`). The fix is probably for the strip to ask
+for a longer supervision timeout when a link comes up, which means a GAP hook in a connection CHIP owns.
+Moving the strip next to the Pi separated range from parameters in one minute, which is what the table
+above is.
+
+A scratch copy for continuing this lives at `~/strip-door-test` on the hub, with its own venv; nothing
+was installed into `/opt/home-hub`.
+
+**And the BLE address rotates.** Two scans minutes apart returned `F3:EE:DA:BB:CD:5A` and then
+`CC:57:3B:B4:71:80` for the same strip, so the hub must never cache an address — the service UUID and
+the name are the identity, which is what `find()` already returns.
+
+**13. How the second door actually gets built, read out of the source rather than guessed.** Three facts, and
+together they decide the shape:
+
+- **`protocomm_ble` cannot be used, and that is not negotiable.** `protocomm_nimble.c` stands up its own host
+  inside `simple_ble_start()`: `nimble_port_init()`, `nimble_port_freertos_init(nimble_host_task)` and its own
+  `ble_gatts_add_svcs`. CHIP has already done all three. Two NimBLE hosts is not a thing.
+- **Protocomm's core is transport-neutral, and it is the part worth having.** `protocomm_new`,
+  `protocomm_add_endpoint`, `protocomm_set_security`, and the one that matters:
+  `protocomm_req_handle(pc, ep_name, session_id, inbuf, inlen, &outbuf, &outlen)`. `protocomm_security2` —
+  SRP6a — ships beside it. **The half we must not hand-roll comes for free**, which is the whole reason to
+  reach for protocomm at all rather than invent a handshake again.
+- **The transport is a shim, and a small one.** `protocomm_nimble`'s GATT callback resolves an endpoint from a
+  16-bit discriminator carried at byte 12 of each 128-bit characteristic UUID, calls `protocomm_req_handle`,
+  and stashes the response for the read that follows. That is about a hundred lines of its eleven hundred, and
+  it is the only part we write — against `ConfigureExtraServices`, which item 12 proved. Everything
+  `protocomm_ble` does about advertising is dropped: CHIP owns the advertisement and we ride the scan response.
+
+**And there is a seam for exactly this, which makes the shim smaller again.** `wifi_provisioning` is no longer
+a core component in v6.0.2; it has become the managed component `espressif/network_provisioning`, and its
+manager takes a **pluggable transport**:
+
+    typedef struct network_prov_scheme {
+        esp_err_t (*prov_start)(protocomm_t *pc, void *config);
+        esp_err_t (*prov_stop)(protocomm_t *pc);
+        void *(*new_config)(void);
+        void (*delete_config)(void *config);
+        esp_err_t (*set_config_service)(void *config, const char *service_name, const char *service_key);
+        esp_err_t (*set_config_endpoint)(void *config, const char *endpoint_name, uint16_t uuid);
+        wifi_mode_t wifi_mode;
+    } network_prov_scheme_t;
+
+So we supply a scheme instead of reimplementing a transport, and the manager hands us the whole flow: its
+endpoints and their protobuf schemas, the SEC2 wiring, applying the credentials, and compatibility with a
+client that already speaks all of it. **One constraint falls out of the timing and it shapes the code:**
+`ConfigureExtraServices` refuses once CHIP's stack has started, and `prov_start` runs long after it. So the
+characteristic table is registered at boot with the endpoint UUIDs known ahead of time, and the scheme's
+`prov_start` only attaches the protocomm instance to characteristics that already exist.
+
+**Built and proven on the board, 20 September.** `main/prov.cpp` is the scheme; `reserve()` runs before
+`esp_matter::start()`. A scan and a GATT walk from this laptop, on an uncommissioned strip:
+
+    ADVERTISEMENT  rssi -36
+      service data { 0000fff6 } = ['00000ff1ff008000']      <- Matter, in the advertisement
+      service uuids ['1775244d-6b43-439b-877c-060f2d9bed07'] <- ours, in the scan response
+
+    GATT TABLE
+      service 1775244d-6b43-439b-877c-060f2d9bed07   <-- ours
+          chr 1775ff4f … 1775ff55  [write,read]  name=""     (seven of them)
+      service 0000fff6-0000-1000-8000-00805f9b34fb  <-- Matter
+          chr 18ee2ef5-…-9d11 [write]   chr 18ee2ef5-…-9d12 [read,indicate]
+
+Two services in one table on one radio, which is what the whole forked row rests on. The empty names are the
+design working rather than a fault: the manager has not been started, so the live table is empty and the
+`0x2901` descriptors have nothing to say yet. The service costs 2,984 bytes of heap against 113 KB free.
+
+**A trap for whoever writes the hub's half: CoreBluetooth will not enumerate this device.** macOS refuses
+descriptor discovery on characteristics it reserves — *"the specified UUID is not allowed for this
+operation"* — and bleak discovers descriptors for every characteristic during connect, so one refusal loses
+the entire table. The walk above needed that call monkeypatched to tolerate it. Since the client reads the
+`0x2901` descriptors to find its endpoints, **the vendored `esp_prov` has to be tested on the Pi over BlueZ,
+not on a Mac**, and a Mac failing to provision a strip will not be a bug in the strip.
+
+**Keep protocomm's UUID convention and its endpoint names** (`prov-session`, `prov-config`), so a client that
+already exists can drive it. **`esp_prov` is not in ESP-IDF v6.0.2** — no `tools/esp_prov`, nothing under
+esp-matter — so the first end-to-end proof of a SECURITY_2 session wants Espressif's provisioning app on a
+phone. **The app is a bench instrument and is never part of the product**: it is a second app, and somebody
+else's, which `product-direction-out-of-the-box` rules out twice over. In the shipped thing the *hub* is the
+client, which is the whole of what `Ours` draws.
+
+**The client the hub needs already exists and does not have to be written.** `tools/esp_prov` is still in
+ESP-IDF **v5.4.1**, which is also installed here: 22 files, about 1,950 lines, Apache-2.0, with
+`security/security2.py` doing SRP6a and a `bleak` BLE transport that works over BlueZ on the Pi. Apache-2.0
+into AGPL-3.0-or-later is compatible one way, so it is vendored with attribution rather than reimplemented.
+One change is needed and item 12 already named it: `ble_cli.py` discovers by device name, and there is no room
+for a name in our scan response, so it has to match on the service UUID.
+
+**12. BLE coexistence is answered, on the desk, and it corrected a board.** The forked design in
+`design/strip/` rests on the strip offering our own provisioning service and Matter's at the same time. Read out
+of `connectedhomeip` rather than reasoned about:
+
+- **The GATT half is first-class and supported.** `BLEManagerImpl::ConfigureExtraServices(std::vector<ble_gatt_svc_def> &, bool afterMatterSvc)`
+  merges application services into the same NimBLE host as `CHIPoBLEGATTSvc`. **There is no second stack and no
+  second `nimble_port_init`**, which was the thing that could have killed the design. It has to be called before
+  the stack starts — it returns `CHIP_ERROR_INCORRECT_STATE` once `mGattSvcs` is non-empty. esp-matter's own FAQ
+  documents the surrounding story and points at `blemesh_bridge`.
+- **The advertising half needed the scan response, and it is now proven on air.** `Both.dc.html` originally
+  said *one advertisement carrying two services*, which this firmware cannot do: without
+  `CONFIG_BT_NIMBLE_EXT_ADV`, CHIP calls `ble_gap_adv_start` — the single legacy advertising set — and 31 bytes
+  will not hold Matter's `0xFFF6` service data and a 128-bit vendor UUID. `ConfigureScanResponseData` buys a
+  second 31 bytes, and on **20 September a scanner saw both from one board**:
+
+      svc data   {'0000fff6-0000-1000-8000-00805f9b34fb': '00000ff1ff008000'}
+      svc uuids  ['21436587-09ba-dcfe-0001-020304050607']
+
+  One address, −25 dBm, Matter's commissionable payload in the advertisement and a vendor service UUID in the
+  scan response beside it. The UUID takes **18 of the 31 bytes and leaves 13**, which is not enough for the
+  16-character device name the old `WiFiProv` design advertised — so the UUID is the identifier now and the
+  brain's `Radio.scan()` has to match on that rather than on a name. Extended advertising, where Matter holds
+  `kMatterAdvInstance = 0` and we take another instance, stays available and is not needed.
+- **Measured, 20 September: the whole second door costs 228 bytes of heap and 1,232 of flash** — the GATT
+  service and the scan response together, free internal DRAM 114,544 → 114,316 with the largest free block
+  unmoved. A second GATT service alone, without the scan response, was 232 bytes. Registered through
+  `ConfigureExtraServices` as one 128-bit service with four read/write characteristics, which is roughly the
+  shape protocomm exposes, on an uncommissioned board with Matter up and CHIPoBLE advertising. Both calls
+  returned `Success` and advertising was unaffected. **Against 114 KB free, the heap half of the coexistence
+  question is not a question.** The spike was removed once it had answered; the numbers are the record.
+- **`CONFIG_USE_BLE_ONLY_FOR_COMMISSIONING=y` can stay.** Our own door has no use for BLE once the strip is on
+  the Wi-Fi — `Theirs` hands over via mDNS after that, and an enhanced commissioning window never advertises
+  over Bluetooth at all — so the Bluetooth memory still goes back.
+
+**Every heap and image figure this document used to quote was from a build that no longer exists** — 1.77 MB,
+2.38 MB, 129 KB and 66 KB are all Arduino plus Bluedroid plus `WiFiProv`. Measured on the real thing on
+20 September, an ESP32-S3 running this firmware, free internal DRAM:
+
+| | free | largest block |
+|---|---|---|
+| at boot | 258,532 | 196,608 |
+| before `esp_matter::start` | 246,532 | 196,608 |
+| **after Matter, two fabrics** | **112,616** | 65,536 |
+
+**Low water 95,312**, and that is the number with the say in it: there is a dip during Matter's startup that
+the steady-state figure hides. So NimBLE and Matter together cost about 134 KB and leave **112 KB**, not the
+66 KB that had been written down and repeated onto a board — the old figure was pessimistic by 46 KB, because it
+was measuring Bluedroid. The image is 1,636,976 bytes, 58% of the app slot free.
+
+*(An earlier version of this table read 114,020 free and 112,480 low water. Those were measured on a build with
+`SELFTEST` left on in the CMake cache, which is a different binary and a six-second slower boot. The figures
+above are the ordinary build.)*
+
+**And there is no frame buffer still to come.** That phrase came from the same build. The pixel buffer is
+`uint8_t buf[PX_MOST * 4]` — 2,400 bytes, static, already in `.bss` and already counted above — and the RMT
+channel streams from `mem_block_symbols = 64` rather than holding a frame. Nothing large is waiting to be
+allocated, which is the headroom a second GATT service has to fit into.
+
+**11. The error text needs a pass with one rule: do not guess.** Four screens in a row during bring-up named a
+confident wrong cause — Matter cannot do it, then check your code, then check your strip, then check your
+Wi-Fi — while the real faults were a missing argument, a missing container, a missing integration and a
+platform that cannot do mDNS. Each sentence was written to sound reassuring about a failure nobody had
+diagnosed. On a wall panel that is worse than useless: a household cannot tell a guess from a diagnosis and
+will go and do what it says. The honest default is to say the hub does not know and name where to look.

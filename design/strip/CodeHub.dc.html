@@ -1,0 +1,150 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp-rgb: 233,184,114; --lamp: rgb(var(--lamp-rgb)); --lamp-ink: #2a1c07;
+      --live-rgb: 116,198,157; --live: rgb(var(--live-rgb));
+      --danger-rgb: 224,138,138; --danger: rgb(var(--danger-rgb));
+      --r-lg: 22px; --r-md: 16px;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .sheet { width: 560px; border-radius: 26px; background: rgba(22,24,30,.92);
+             border: 1px solid var(--edge-hi); box-shadow: 0 40px 100px -30px rgba(0,0,0,.9); overflow: hidden; }
+    .sheet h2 { margin: 0; font-size: 34px; line-height: 1.05; font-weight: 400; letter-spacing: -.025em; }
+    .lede { margin: 0 0 18px; color: var(--ink-2); font-size: 15px; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 26px;
+           border-radius: 999px; background: var(--ink); color: var(--bg); font-weight: 500; font-size: 17px; }
+    .btn.ghost { background: var(--surface-hi); color: var(--ink); border: 1px solid var(--edge); }
+    .t1 { font-size: 15.5px; font-weight: 500; }
+    .t2 { font-size: 13px; color: var(--muted); }
+    .strip { height: 22px; border-radius: 4px;
+             background: repeating-linear-gradient(90deg, rgb(255,96,0) 0 4px, transparent 4px 7px);
+             filter: drop-shadow(0 0 9px rgba(255,140,40,.7)); }
+    .stage { position: relative; padding: 26px 24px 20px; border-radius: 20px;
+             background: rgba(255,255,255,.03); border: 1px solid var(--edge); overflow: hidden; }
+    .glow { position: absolute; left: 0; right: 0; top: -40px; height: 170px;
+            background: radial-gradient(42% 54% at 50% 50%, rgba(255,140,40,.24), transparent 72%); }
+    .box { border-radius: var(--r-lg); border: 1px solid var(--edge); background: rgba(255,255,255,.03); padding: 20px 22px; }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: var(--bg); color: var(--ink); font-size: 17px; line-height: 1.4;">
+  <div style="position: absolute; inset: 0; background: linear-gradient(rgb(29,33,46) 0%, rgb(41,42,63) 44%, rgb(92,63,57) 84%, rgb(62,44,42) 100%);"></div>
+  <div style="position: absolute; left: -222px; top: -135px; width: 1855px; height: 1156px; background: radial-gradient(58% 54% at 30% 64%, rgba(72,63,135,.4), transparent 68%), radial-gradient(62% 52% at 54% 110%, rgba(55,51,100,.44), transparent 72%);"></div>
+  <div style="position: absolute; inset: 0; background: rgba(6,7,9,.58);"></div>
+
+  <div class="cap" style="position: absolute; left: 60px; top: 44px;">D &mdash; the hub is the box the code comes in</div>
+
+  <div class="sheet" style="position: absolute; left: 130px; top: 96px;">
+    <div style="display: flex; align-items: flex-start; gap: 14px; padding: 24px 22px 6px 28px;">
+      <h2 class="dsp" style="flex: 1;">Add it to another app</h2>
+      <div style="width: 38px; height: 38px; border-radius: 999px; background: var(--surface-hi); border: 1px solid var(--edge); display: grid; place-items: center;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-2)" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </div>
+    </div>
+    <div style="padding: 4px 28px 26px;">
+      <p class="lede">Whichever one this house uses. Ask it to add a light, and point its camera here &mdash; the
+        lounge strip stays here too.</p>
+      <div class="stage" style="margin-bottom: 16px;">
+        <div class="glow"></div>
+        <div style="position: relative; display: flex; justify-content: center; margin-bottom: 22px;">
+          <div style="width: 300px; padding: 16px; border-radius: 10px; background: #f3efe7; color: #1a1a1a; box-shadow: 0 10px 30px -10px rgba(0,0,0,.7); display: flex; align-items: center; gap: 16px;">
+            <div style="width: 88px; height: 88px; background: repeating-conic-gradient(#1a1a1a 0 25%, #f3efe7 0 50%) 0 0/16px 16px; flex: none;"></div>
+            <div>
+              <div style="font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: #6b6b6b;">Or type</div>
+              <div style="font-size: 22px; letter-spacing: .08em; font-weight: 500; margin-top: 4px; line-height: 1.25;">3497<br>011&#8209;2332</div>
+            </div>
+          </div>
+        </div>
+        <div style="position: relative;" class="strip"></div>
+        <div class="t2" style="position: relative; text-align: center; margin-top: 12px;">Lounge strip</div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span style="font-size: 12.5px; padding: 7px 13px; border-radius: 999px; background: rgba(var(--lamp-rgb),.18); color: var(--lamp); white-space: nowrap;">Open for 14:52</span>
+        <span class="t2" style="flex: 1; line-height: 1.4;">After that this code stops working and nothing can join.</span>
+        <span class="btn ghost" style="padding: 11px 22px; font-size: 15.5px;">Done</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="box" style="position: absolute; left: 130px; top: 588px; width: 560px; padding: 17px 22px;">
+    <span class="cap">What the other three had to give up</span>
+    <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 11px;">
+      <div style="display: grid; grid-template-columns: 20px 1fr; gap: 11px; align-items: baseline;">
+        <span class="t1" style="color: var(--muted);">A</span>
+        <span class="t2" style="line-height: 1.5;"><span class="t1" style="color: var(--ink-2);">On the box.</span>
+          Honest and finished, and it gives up the thing <em>Knock</em> was proudest of: eleven digits before the
+          wall will do anything.</span>
+      </div>
+      <div style="display: grid; grid-template-columns: 20px 1fr; gap: 11px; align-items: baseline;">
+        <span class="t1" style="color: var(--muted);">B</span>
+        <span class="t2" style="line-height: 1.5;"><span class="t1" style="color: var(--ink-2);">The hub works it
+          out.</span> One algorithm loose and every unit we have ever sold is open to whoever holds it.</span>
+      </div>
+      <div style="display: grid; grid-template-columns: 20px 1fr; gap: 11px; align-items: baseline;">
+        <span class="t1" style="color: var(--muted);">C</span>
+        <span class="t2" style="line-height: 1.5;"><span class="t1" style="color: var(--ink-2);">A phone reads it
+          off the thing.</span> Cannot stand alone &mdash; something still has to be printed for it to read.</span>
+      </div>
+    </div>
+    <p class="t2" style="margin: 12px 0 0; line-height: 1.55; color: rgba(var(--lamp-rgb),.78);">
+      All three answer the same hard question &mdash; how a code gets in from outside the radio. D is the only one
+      that never has to answer it.
+    </p>
+  </div>
+
+  <div style="position: absolute; left: 740px; top: 104px; width: 640px;">
+    <h3 class="dsp" style="margin: 0 0 14px; font-size: 26px; font-weight: 400;">Nobody printed this anywhere.</h3>
+    <p style="margin: 0 0 18px; color: var(--ink-2); font-size: 15.5px; line-height: 1.6;">
+      <strong style="font-weight: 500;">The strip has no passcode to give, and that is the point.</strong> A
+      production device stores only the SPAKE2+ verifier &mdash; on ESP32 <em>GetSetupPasscode</em> returns
+      NOT_IMPLEMENTED, and Espressif&rsquo;s own guidance is that the verifier is installed &ldquo;and not the
+      actual passcode&rdquo;. Asked over the link that carried the Wi&#8209;Fi and the broker in
+      <strong style="font-weight: 500;">Ours</strong>, it <em>mints</em> one instead: a passcode for this window
+      only, its verifier derived on the chip. The wall shows a code that did not exist a second ago and will
+      not exist in fifteen minutes.
+    </p>
+    <div class="box" style="border-color: rgba(var(--live-rgb),.3); background: linear-gradient(rgba(var(--live-rgb),.07), rgba(var(--live-rgb),.07)), rgba(255,255,255,.02); margin-bottom: 14px;">
+      <span class="cap" style="color: rgba(var(--live-rgb),.85);">For</span>
+      <p style="margin: 10px 0 0; font-size: 15px; line-height: 1.6;">
+        <strong style="font-weight: 500;">B fails because it derives. This does not even store.</strong> A hub
+        that can work out any unit&rsquo;s code from its chip id makes every strip we ever sell commissionable by
+        anybody holding the algorithm. Here there is no algorithm, no list kept at the factory, and no passcode
+        anywhere at all until somebody in the room asks for one: the chip&rsquo;s own DRBG makes it, the verifier
+        comes off it, and both are gone when the window shuts. And where C needed a phone held against the
+        object, this needs only the wall the household already bought.
+      </p>
+    </div>
+    <div class="box" style="border-color: rgba(var(--danger-rgb),.3); background: rgba(var(--danger-rgb),.05);">
+      <span class="cap" style="color: rgba(var(--danger-rgb),.85);">Against</span>
+      <p style="margin: 10px 0 0; font-size: 15px; line-height: 1.6;">
+        <strong style="font-weight: 500;">It does not replace A, and saying it does would be the mistake.</strong>
+        A strip in a house with no hub of ours needs a number from outside the radio, and that is the label.
+        This is what A <em>becomes</em> once our hub is there: a second act, not a fourth candidate. Two things
+        the screen must not hide &mdash; while this window is open
+        <strong style="font-weight: 500;">the label&rsquo;s own code does not work</strong>, the fresh verifier
+        having taken its place; and an enhanced window never advertises over Bluetooth, so the phone has to be
+        on the house Wi&#8209;Fi. Fifteen minutes is the specification&rsquo;s ceiling, not our choice.
+      </p>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

@@ -255,7 +255,7 @@ export const bridgeWifi = (ssid: string, password: string) => post<Bridge>('/bri
  * the strip publishes as it goes -- the panel does not count, because the strip is the only thing that
  * knows how fast it is actually going. */
 export type Strip = {
-  state: 'none' | 'knocking' | 'working' | 'order' | 'length' | 'room' | 'ready' | 'failed'
+  state: 'none' | 'knocking' | 'rhythm' | 'working' | 'order' | 'length' | 'room' | 'ready' | 'failed'
   name?: string
   step?: 'letting'                         // one, where a bridge has three: commissioning does the Wi-Fi and the letting-in together
   asking?: 'red' | 'which'
@@ -263,6 +263,12 @@ export type Strip = {
      somebody cut it down, joined another on, or replaced it with a different make. The sheet says a
      different sentence for it, because somebody who came back already knows what the thing does. */
   revisit?: 'colors' | 'length'
+  /* The rhythm beat, and only our own door ever asks it. A strip mints four counts of one to six
+     each time it is plugged in and flashes them; what somebody counts is the proof of possession.
+     Nothing is printed on a strip and nothing is derived from its chip, so there is nothing to read
+     out and nothing to leak. design/strip/PopLight.dc.html. */
+  groups?: number                          // how many groups to count (four)
+  most?: number                            // the largest a group can be (six)
   lit?: number                             // how many lights the fill has reached
   count?: number                           // ...and where it stopped
   order?: string                           // which of the six it turned out to be
@@ -288,6 +294,10 @@ export async function getStrip(): Promise<Strip> { const r = await request('/str
 export const adoptStrip = (code = '') => post<Strip>('/strip/adopt', { code })
 /** Not mine. Needs no code -- refusing gives nothing away, and nothing was ever sent. */
 export const dismissStrip = () => post<Strip>('/strip/dismiss')
+/** How many times it flashed, in four groups. The proof of possession for our own door, read off the
+ *  light rather than off a label -- so a wrong count is not a typo, it is having miscounted, and the
+ *  strip shows a fresh set the next time it is plugged in. design/strip/PopLight.dc.html. */
+export const stripCounted = (rhythm: string) => post<Strip>('/strip/counted', { rhythm })
 export const stripWifi = (ssid: string, password: string) => post<Strip>('/strip/wifi', { ssid, password })
 /** What the household can see on it: red, green, blue, stripes, or nothing at all. */
 export const stripSaw = (saw: string) => post<Strip>('/strip/saw', { saw })
