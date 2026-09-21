@@ -11124,6 +11124,45 @@ button.reading[data-held] {
   right: 19%;
 }
 /* a plain statement of fact, next to the amber one adding a thing already uses */
+/* THE FOUR COUNTS, off the light and not off a label (design/strip/PopLight.dc.html). Four taps and
+   nothing to type: each one cycles 1..6 and wraps, so there is no keyboard on a wall and no way to
+   enter something that is not a count. Big numerals because somebody is reading them from across a
+   room with one eye on a strip behind a television. */
+.rhythm-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.rhythm-count {
+  padding: 14px 0 12px;
+  border-radius: var(--r-md);
+  background: var(--surface);
+  border: 1px solid var(--edge);
+  color: var(--ink);
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  cursor: pointer;
+}
+.rhythm-count.set {
+  background: linear-gradient(rgba(var(--lamp-rgb), 0.1), rgba(var(--lamp-rgb), 0.1)), var(--surface);
+  border-color: rgba(var(--lamp-rgb), 0.38);
+}
+.rhythm-n {
+  font-size: 27px;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--muted);
+}
+.rhythm-count.set .rhythm-n {
+  color: var(--ink);
+}
+.rhythm-sub {
+  font-size: 12px;
+  color: var(--muted);
+}
+
 .bridge-row {
   display: grid;
   grid-template-columns: auto 1fr;
