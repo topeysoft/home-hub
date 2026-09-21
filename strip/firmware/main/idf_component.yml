@@ -1,7 +1,14 @@
 ## esp-mqtt left IDF core in v6, so the half of this firmware that talks to OUR hub -- the color
 ## question and the fill, which Matter has no words for -- needs it as a managed component.
+##
+## network_provisioning is the other half of our own door. wifi_provisioning left IDF core in v6 too
+## and became this; we use its manager, its endpoints and its SRP6a, and give it a transport of our
+## own because its BLE one stands up a second NimBLE host and CHIP already owns the first. See
+## main/prov.h and docs/strip.md item 13.
 dependencies:
   espressif/mqtt:
+    version: "*"
+  espressif/network_provisioning:
     version: "*"
   idf:
     version: ">=5.4"

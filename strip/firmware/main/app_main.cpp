@@ -52,6 +52,7 @@
 #include <setup_payload/OnboardingCodesUtil.h>
 
 #include "pixels.h"
+#include "prov.h"
 
 using namespace esp_matter;
 using namespace esp_matter::attribute;
@@ -453,6 +454,10 @@ extern "C" void app_main() {
     endpoint_t *ep = extended_color_light::create(node, &light_config, ENDPOINT_FLAG_NONE, nullptr);
     if (!ep) { ESP_LOGE(TAG, "no light endpoint"); return; }
     light_endpoint = endpoint::get_id(ep);
+
+    // Before Matter, and it has to be: CHIP will not take another GATT service once its own stack
+    // has started, and there is no second chance at it. See prov.h.
+    if (prov::reserve() != ESP_OK) ESP_LOGE(TAG, "our own door will not open this boot");
 
     heap("before Matter");
     esp_matter::start(on_event);
