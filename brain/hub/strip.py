@@ -163,8 +163,15 @@ def _no_matter(e: Exception) -> bool:
     return "unknown" in said or "not found" in said or "no matter" in said
 
 
-NO_MATTER = ("This house has no Matter setup yet. The matter\u2011server is running, but nothing in "
-             "Home Assistant is using it.").replace("\u2011", "\u2011")
+# WHAT THE WALL SAYS WHEN THE ENGINE CANNOT DO IT, and it says nothing about the engine. This used
+# to read "the matter-server is running, but nothing in Home Assistant is using it", which is two
+# pieces of somebody else's vocabulary on a household's wall and is what
+# `product-direction-out-of-the-box` exists to forbid -- a sentence nobody in the house can act on,
+# about a product they did not buy. Nor does it tell them to go and fix it: the hub drives its own
+# engine's setup elsewhere (api.py does it for the weather) and has simply never been taught this
+# one, which is ours to do and not theirs. docs/strip.md, the related note under item 2-mac.
+NO_MATTER = ("This hub cannot let that kind of light in yet \u2014 a part of it has never been set up. "
+             "That is ours to fix rather than yours, and it is nothing you have done wrong.")
 
 
 class Radio:

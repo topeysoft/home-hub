@@ -304,8 +304,12 @@ class TheRadioIsWiredUp(unittest.TestCase):
         with self.assertRaises(StripError) as e:
             run(Strips(self.hub).radio.commission("3497-011-2332"))
         said = str(e.exception)
-        self.assertIn("no Matter setup", said)
+        self.assertIn("cannot let that kind of light in yet", said)
         self.assertNotIn("Check it", said)
+        # AND IT NAMES NOTHING THE HOUSEHOLD DID NOT BUY. This sentence said "matter-server" and
+        # "Home Assistant" for weeks, on a wall, to somebody who can do nothing with either.
+        for word in ("matter-server", "matter\u2011server", "Home Assistant", "integration"):
+            self.assertNotIn(word.lower(), said.lower())
 
     def test_and_the_same_answer_comes_out_of_the_wifi_call(self):
         """Both calls reach the same engine and fail the same way when nothing is listening. The
@@ -317,7 +321,7 @@ class TheRadioIsWiredUp(unittest.TestCase):
         self.hub.ha = Engine()
         with self.assertRaises(StripError) as e:
             run(Strips(self.hub).radio.set_wifi("House", "hunter2"))
-        self.assertIn("no Matter setup", str(e.exception))
+        self.assertIn("cannot let that kind of light in yet", str(e.exception))
 
     def test_but_a_refused_code_still_says_so(self):
         class Engine:
