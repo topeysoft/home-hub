@@ -237,6 +237,37 @@ class TheWholeWay(unittest.TestCase):
         self.assertEqual(self.s.status()["state"], "none")
 
 
+class TheRadioIsWiredUp(unittest.TestCase):
+    """The commissioning call goes out over Home Assistant, so the radio needs the hub. It was built
+    without one, every commissioning failed, and the wall said "This hub cannot set Matter devices up
+    yet" -- a sentence that was confident, wrong, and would have been believed."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.hub = FakeHub(self.tmp.name)
+
+    def tearDown(self): self.tmp.cleanup()
+
+    def test_a_radio_the_hub_made_for_itself_knows_the_hub(self):
+        s = Strips(self.hub)
+        self.assertIs(s.radio.hub, self.hub)
+
+    def test_and_it_actually_reaches_the_engine(self):
+        """Not just that the attribute is set: that the call lands somewhere."""
+        sent = []
+        class Engine:
+            async def send(self, type_, **kw): sent.append((type_, kw)); return {"node_id": 3}
+        self.hub.ha = Engine()
+        run(Strips(self.hub).radio.commission("3497-011-2332"))
+        self.assertEqual(sent, [("matter/commission", {"code": "3497-011-2332"})])
+
+    def test_and_says_something_true_when_there_is_no_engine(self):
+        self.hub.ha = None
+        with self.assertRaises(StripError) as e:
+            run(Strips(self.hub).radio.commission("3497-011-2332"))
+        self.assertNotIn("cannot set Matter devices up", str(e.exception))
+
+
 class Afterwards(unittest.TestCase):
     """Both setup answers go stale -- a strip gets cut down, extended, or replaced by another make --
     and none of that should mean setting it up again from the beginning. design/strip/Later.dc.html."""

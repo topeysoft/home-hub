@@ -210,10 +210,15 @@ class Radio:
         otherwise is the honest shape until somebody decides where it comes from."""
         if not code:
             raise StripError("That light strip needs its setup code.")
+        # Checked rather than caught. This used to be `except AttributeError`, which is a net wide
+        # enough to catch a bug of ours -- the radio was being built without a hub, so `self.hub.ha`
+        # raised, and the net turned a wiring mistake into a confident sentence on the wall saying
+        # this hub could not do Matter. It could. A household would have believed the screen.
+        ha = getattr(self.hub, "ha", None)
+        if ha is None:
+            raise StripError("This hub is not talking to its engine just now.")
         try:
-            return await self.hub.ha.send("matter/commission", code=code) or {}
-        except AttributeError:
-            raise StripError("This hub cannot set Matter devices up yet.")
+            return await ha.send("matter/commission", code=code) or {}
         except Exception as e:
             # Whatever matter-server said was written for a log. The wall gets a sentence.
             log.info("strip: commissioning failed (%s)", e)
@@ -228,7 +233,7 @@ class Strips:
 
     def __init__(self, hub, radio: Radio | None = None):
         self.hub = hub
-        self.radio = radio or Radio()
+        self.radio = radio or Radio(hub)
         self.job: dict | None = None
         self._sub: int | None = None
         self._dismissed: set[str] = set()      # "not mine": left alone until it is power-cycled
