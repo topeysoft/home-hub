@@ -9,6 +9,67 @@ which was decided on 20 September before anything shipped and is the subject of 
 much of it, which is less than all of it. The honest list of what is not built is at the foot, where it is
 meant to be read.*
 
+## Picking this up
+
+*The rest of this document is how it got here, which is worth reading before changing any of it. This section
+is where it stands, as of 21 September 2026.*
+
+### Where each piece is
+
+| | |
+|---|---|
+| **Design** | 15 boards in `design/strip/`, 3 in `design/occasion/`. Two questions still open, both drawn |
+| **Firmware** | ESP-IDF + esp-matter, **commissionable over BLE, proven on an ESP32-S3** |
+| **Brain** | knock → adopt → commission. 33 tests. Setup stops at commissioned, on purpose |
+| **Panel** | the three real beats, previewable with `?strip=knocking\|working\|ready` |
+| **Suites** | brain 1100, panel 490, native firmware test, all green |
+
+### What is proven on hardware, and what is not
+
+**Proven:** the RMT driver, WS2812 timing, bit order, `grb` mapping agreeing with the brain, and Matter's BLE
+commissioning advertisement — the board says `CHIPoBLE advertising started` and a laptop scan finds it at
+−41 dBm carrying a valid commissionable payload.
+
+**Never run:** a completed commissioning, by anything. No ecosystem has taken the strip, the broker has never
+been spoken to, and neither the color question nor the fill has run outside a unit test.
+
+### The next three things, in order
+
+1. **Commission it from a phone.** Apple Home or Google Home, using the code the board prints at boot. This
+   needs none of the hub and proves the claim the whole product line rests on. It has never been done.
+2. **Then the hub path, on the Pi.** Not on the Mac — see `2-mac`. That is the first time the brain, the panel
+   and the firmware will have run together.
+3. **Then decide the two open questions below**, with something working in front of you rather than in the abstract.
+
+### Decided, and not to be reopened without a reason
+
+- **ESP-IDF, not Arduino.** Arduino compiles Matter-over-BLE out on every target; a strip built that way cannot
+  be set up by Apple or Google at all. Evidence both ways is in this document.
+- **The partition table** (`partitions-matter.csv`), sized for Matter with the certification partitions laid
+  down. An update cannot move slots, so this one could not wait.
+- **The length question:** the fill at setup, the trim row afterwards. `design/strip/Later.dc.html`.
+- **Occasions are a scene-bar chip, never a strip setting.** `design/occasion/`.
+- **Two tiers:** it works anywhere, and better in a house with our hub. `design/strip/Tiers.dc.html`.
+
+### Open, with boards to argue from
+
+- **Where the setup code comes from** — `CodeBox` / `CodeMade` / `CodeTap`. The recommendation is `CodeBox`,
+  because `CodeMade` fails certification and `CodeTap` cannot stand alone. **Not urgent:** a development board's
+  passcode is public and the brain fills it in, so nothing is blocked until real units are labelled.
+- **How a strip finds our hub** — `ReachTold` / `ReachAsks` / `ReachNone`. Recommendation is `ReachAsks` for
+  strips we commission, `ReachNone` as the fallback for strips somebody else did.
+
+### Traps that have already cost a day
+
+- **Matter commissioning cannot be tested on the Mac.** Item `2-mac`. Read that before starting any container.
+- **The Command Line Tools on that machine are broken** — no C headers in any SDK, and a corrupt default SDK.
+  Every native build used `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` to borrow Xcode's.
+  `sudo xcode-select -s` fixes it properly.
+- **Two PlatformIO cores are installed** and fight over the build directory; builds fail and then succeed
+  unchanged. Irrelevant now the firmware is ESP-IDF, but it will confuse anybody touching `brilliant/`.
+- **The error text on the wall lied four times in a row** during bring-up, each time naming a confident wrong
+  cause. If a strip screen tells you what is wrong, verify it before acting on it, and see item 11.
+
 ## What it is, and what it is not
 
 A light strip you buy in a box, tape behind a television or under a shelf, and plug into a socket nowhere near
@@ -438,3 +499,10 @@ real annual cost before a unit ships — and inserts the product into the most q
 the house, which is how these things get returned. The camera route avoids all of that and costs a camera
 pointed into a living room. **The cheap next step is neither: a capture stick and HyperHDR on a bench,
 to find out whether it feels like the screen extended or like a gimmick, before any of it is paid for.**
+
+**11. The error text needs a pass with one rule: do not guess.** Four screens in a row during bring-up named a
+confident wrong cause — Matter cannot do it, then check your code, then check your strip, then check your
+Wi-Fi — while the real faults were a missing argument, a missing container, a missing integration and a
+platform that cannot do mDNS. Each sentence was written to sound reassuring about a failure nobody had
+diagnosed. On a wall panel that is worse than useless: a household cannot tell a guess from a diagnosis and
+will go and do what it says. The honest default is to say the hub does not know and name where to look.
