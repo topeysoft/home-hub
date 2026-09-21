@@ -45,9 +45,9 @@ broker has never been spoken to, and neither the color question nor the fill has
 1. **Commission it from a phone.** Apple Home or Google Home, using the code the board prints at boot. This
    needs none of the hub and proves the claim the whole product line rests on. Home Assistant has done it; a
    phone has not.
-2. **Measure free heap on the current build with both BLE services registered.** It is the one unproven thing
-   the whole forked design rests on, and the figures in this document are from a build that no longer exists —
-   see item 12.
+2. **Measure the cost of the second BLE service.** The baseline is now measured — 114 KB free with Matter up
+   and advertising, item 12 — and what is still unknown is what one more GATT service takes out of it. That is
+   the last unproven thing the forked design rests on.
 3. **Then the hub path, on the Pi.** Not on the Mac — see `2-mac`. That is the first time the brain, the panel
    and the firmware will have run together.
 
@@ -555,10 +555,24 @@ of `connectedhomeip` rather than reasoned about:
   the Wi-Fi — `Theirs` hands over via mDNS after that, and an enhanced commissioning window never advertises
   over Bluetooth at all — so the Bluetooth memory still goes back.
 
-**And every heap and image figure in this document is from a build that no longer exists.** 1.77 MB, 2.38 MB,
-129 KB and 66 KB are all Arduino plus Bluedroid plus `WiFiProv`. This firmware is ESP-IDF plus **NimBLE**, where
-the esp-matter light example came in at 1.5 MB. Nobody has measured free heap on it. Until somebody does, no
-heap claim here or on any board is worth quoting — which is why measuring it is item 2 at the top.
+**Every heap and image figure this document used to quote was from a build that no longer exists** — 1.77 MB,
+2.38 MB, 129 KB and 66 KB are all Arduino plus Bluedroid plus `WiFiProv`. Measured on the real thing on
+20 September, an ESP32-S3 running this firmware, free internal DRAM:
+
+| | free | largest block |
+|---|---|---|
+| at boot | 258,532 | 196,608 |
+| before `esp_matter::start` | 246,928 | 196,608 |
+| **after Matter, BLE advertising** | **114,020** | 73,728 |
+
+Low water 112,480. So NimBLE and Matter together cost about 133 KB and leave **114 KB**, not the 66 KB that had
+been written down and repeated onto a board — the old figure was pessimistic by 48 KB, because it was measuring
+Bluedroid. The image is 1,637,360 bytes, 58% of the app slot free.
+
+**And there is no frame buffer still to come.** That phrase came from the same build. The pixel buffer is
+`uint8_t buf[PX_MOST * 4]` — 2,400 bytes, static, already in `.bss` and already counted above — and the RMT
+channel streams from `mem_block_symbols = 64` rather than holding a frame. Nothing large is waiting to be
+allocated, which is the headroom a second GATT service has to fit into.
 
 **11. The error text needs a pass with one rule: do not guess.** Four screens in a row during bring-up named a
 confident wrong cause — Matter cannot do it, then check your code, then check your strip, then check your

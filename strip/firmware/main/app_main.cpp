@@ -43,10 +43,13 @@
 #include <esp_timer.h>
 #include <mqtt_client.h>
 
+#include <esp_heap_caps.h>
+
 #include <esp_matter.h>
 #include <esp_matter_console.h>
 #include <esp_matter_ota.h>
 #include <app/server/Server.h>
+#include <setup_payload/OnboardingCodesUtil.h>
 
 #include "pixels.h"
 
@@ -380,7 +383,18 @@ static void selftest() {
 }
 #endif
 
+// Free internal DRAM, which is the one that runs out. Printed at the few moments that decide
+// whether a second BLE service fits: docs/strip.md item 12 exists because every heap figure
+// this project had written down came from the Arduino build and meant nothing here.
+static void heap(const char *when) {
+    ESP_LOGI(TAG, "heap %-16s free %u  largest block %u  low water %u", when,
+             (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT),
+             (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT),
+             (unsigned)esp_get_minimum_free_heap_size());
+}
+
 extern "C" void app_main() {
+    heap("at boot");
     nvs_flash_init();
     nvs_open("strip", NVS_READWRITE, &nvs);
 
@@ -430,7 +444,9 @@ extern "C" void app_main() {
     if (!ep) { ESP_LOGE(TAG, "no light endpoint"); return; }
     light_endpoint = endpoint::get_id(ep);
 
+    heap("before Matter");
     esp_matter::start(on_event);
+    heap("after Matter");
 
     // Lit while it waits, because being lit IS the identity check: the wall asks whether the thing
     // that just came on is theirs, and there is nothing to disambiguate -- it is two meters of light
@@ -441,6 +457,10 @@ extern "C" void app_main() {
         strip.solid(SIG_R, SIG_G, SIG_B);
         px::show(strip);
         ESP_LOGI(TAG, "not commissioned yet -- advertising over Bluetooth");
+        // The code this strip can be paired with, said out loud. Without this the only way to
+        // commission it was to know that a test build uses the default passcode, which is exactly
+        // the sort of thing that is obvious until the day it is not.
+        PrintOnboardingCodes(chip::RendezvousInformationFlag::kBLE);
     } else {
         paint();
         find_hub();
