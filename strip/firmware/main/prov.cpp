@@ -64,8 +64,31 @@ struct Endpoint {
     uint16_t id;
 };
 std::vector<Endpoint> gEndpoints;
-uint8_t *gResp = nullptr;
-ssize_t gRespLen = 0;
+// One kept answer per characteristic, replaced by the next write to it and never dropped on a read:
+// NimBLE serves a long read as several callbacks with rising offsets, so an answer freed after the
+// first is an answer cut off at the MTU, which is what a 400-byte SRP public key then is.
+struct Kept {
+    uint8_t *buf = nullptr;
+    ssize_t len = 0;
+};
+Kept gResp[kCount];
+
+int slot_for(uint16_t id) {
+    for (int i = 0; i < kCount; i++)
+        if (kIds[i] == id) return i;
+    return -1;
+}
+// The one protocomm session, keyed by the BLE connection it belongs to. SECURITY_2 refuses every
+// message until a session has been opened for the connection ("Invalid session ID, expected -1"),
+// and the reference transport opens it from the GAP connect event, which CHIP owns here. So it is
+// opened on the first write from a connection instead, and closed when CHIP says the link went.
+constexpr uint32_t kNoSession = 0xFFFFFFFF;
+uint32_t gSession = kNoSession;
+
+void end_session() {
+    if (gPc && gSession != kNoSession) protocomm_close_session(gPc, gSession);
+    gSession = kNoSession;
+}
 
 const char *name_for(uint16_t id) {
     for (const auto &e : gEndpoints)
@@ -73,22 +96,27 @@ const char *name_for(uint16_t id) {
     return nullptr;
 }
 
-void drop_response() {
-    free(gResp);
-    gResp = nullptr;
-    gRespLen = 0;
+void drop_response(int slot) {
+    if (slot < 0) return;
+    free(gResp[slot].buf);
+    gResp[slot].buf = nullptr;
+    gResp[slot].len = 0;
+}
+void drop_responses() {
+    for (int i = 0; i < kCount; i++) drop_response(i);
 }
 
 // A write is a request and a read is its answer: protocomm is request/response over two operations
 // on one characteristic, so the answer has to be kept between them.
 int chr_access(uint16_t conn, uint16_t, struct ble_gatt_access_ctxt *ctxt, void *arg) {
     const uint16_t id = (uint16_t)(uintptr_t)arg;
+    const int slot = slot_for(id);
+    if (slot < 0) return BLE_ATT_ERR_UNLIKELY;
 
     if (ctxt->op == BLE_GATT_ACCESS_OP_READ_CHR) {
-        if (!gResp || gRespLen <= 0) return 0;  // nothing asked yet; an empty read is not an error
-        const int rc = os_mbuf_append(ctxt->om, gResp, (uint16_t)gRespLen);
-        drop_response();
-        return rc == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
+        const Kept &k = gResp[slot];
+        if (!k.buf || k.len <= 0) return 0;  // nothing asked yet; an empty read is not an error
+        return os_mbuf_append(ctxt->om, k.buf, (uint16_t)k.len) == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
     }
 
     if (ctxt->op != BLE_GATT_ACCESS_OP_WRITE_CHR) return BLE_ATT_ERR_UNLIKELY;
@@ -97,6 +125,12 @@ int chr_access(uint16_t conn, uint16_t, struct ble_gatt_access_ctxt *ctxt, void 
     if (!gPc || !ep) {
         ESP_LOGW(TAG, "write to 0x%04x with no provisioning running", id);
         return BLE_ATT_ERR_UNLIKELY;
+    }
+
+    if (gSession != conn) {
+        end_session();
+        if (protocomm_open_session(gPc, conn) != ESP_OK) return BLE_ATT_ERR_UNLIKELY;
+        gSession = conn;
     }
 
     uint16_t len = 0;
@@ -108,12 +142,12 @@ int chr_access(uint16_t conn, uint16_t, struct ble_gatt_access_ctxt *ctxt, void 
         return BLE_ATT_ERR_UNLIKELY;
     }
 
-    drop_response();
-    const esp_err_t err = protocomm_req_handle(gPc, ep, conn, req, len, &gResp, &gRespLen);
+    drop_response(slot);
+    const esp_err_t err = protocomm_req_handle(gPc, ep, conn, req, len, &gResp[slot].buf, &gResp[slot].len);
     free(req);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "%s refused the request: %s", ep, esp_err_to_name(err));
-        drop_response();
+        drop_response(slot);
         return BLE_ATT_ERR_UNLIKELY;
     }
     return 0;
@@ -170,10 +204,11 @@ esp_err_t prov_start(protocomm_t *pc, void *config) {
 }
 
 esp_err_t prov_stop(protocomm_t *) {
+    end_session();
     gPc = nullptr;
     for (auto &e : gEndpoints) free((void *)e.name);
     gEndpoints.clear();
-    drop_response();
+    drop_responses();
     ESP_LOGI(TAG, "our door is shut");
     return ESP_OK;
 }
@@ -266,6 +301,8 @@ esp_err_t open() {
     }
     return ESP_OK;
 }
+
+void disconnected() { end_session(); drop_responses(); }
 
 const uint8_t *rhythm() { return gRhythm; }
 bool busy() { return gBusy; }

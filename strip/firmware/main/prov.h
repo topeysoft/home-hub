@@ -46,6 +46,9 @@ esp_err_t open();
 // The four counts, 1..6 each, for whoever is drawing them. Zero until open() has run.
 const uint8_t *rhythm();
 
+// CHIP saw the BLE link close. Whatever session was on it is over.
+void disconnected();
+
 // True from the moment credentials arrive until the manager has finished with them. The light is
 // the manager's while this is true.
 bool busy();

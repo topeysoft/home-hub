@@ -100,6 +100,15 @@ unit test, and Alexa has not been tried.
   `sudo xcode-select -s` fixes it properly.
 - **Two PlatformIO cores are installed** and fight over the build directory; builds fail and then succeed
   unchanged. Irrelevant now the firmware is ESP-IDF, but it will confuse anybody touching `brilliant/`.
+- **Two things a protocomm transport must do that no header says.** Both cost an evening on
+  21 September and both look like "failed to initialise session" at the client. **One:** SECURITY_2
+  refuses every message until `protocomm_open_session` has been called for that connection —
+  *"Invalid session ID:1(expected -1)"* — and the reference transport does it from the GAP connect
+  event, which CHIP owns, so ours opens it on the first write instead and closes it on
+  `kCHIPoBLEConnectionClosed`. **Two:** NimBLE serves a long read as several callbacks with rising
+  offsets, so an answer freed after the first read is an answer cut off at the MTU. SRP's public key
+  is about 400 bytes, so the handshake broke every time and the log's last word was *"Using salt and
+  verifier to generate public key..."*. Keep each answer until the next write to that characteristic.
 - **A 31-byte scan response makes the strip vanish from scanners — the whole advertisement, Matter's
   included.** The spec allows 31 and CHIP accepts 31; at 31 nothing found the board, at 30 everything did,
   name included. `prov.cpp` caps at 30 on purpose. Also: Espressif's provisioning app finds devices by name

@@ -301,6 +301,7 @@ static void on_event(const ChipDeviceEvent *event, intptr_t) {
     // The knock is over the moment somebody has taken it: hand the strip back and draw whatever the
     // household's own state says, which is off until they turn it on, exactly like any other new
     // light in their app. Without this it sat on the setup glow for ever, looking stuck.
+    if (event->Type == chip::DeviceLayer::DeviceEventType::kCHIPoBLEConnectionClosed) prov::disconnected();
     if (event->Type == chip::DeviceLayer::DeviceEventType::kCommissioningComplete) {
         ESP_LOGI(TAG, "commissioned. The light is the household's now.");
         instrument = false;
