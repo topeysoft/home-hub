@@ -598,6 +598,33 @@ the house, which is how these things get returned. The camera route avoids all o
 pointed into a living room. **The cheap next step is neither: a capture stick and HyperHDR on a bench,
 to find out whether it feels like the screen extended or like a gimmick, before any of it is paid for.**
 
+**14. Our door is discoverable only while Matter's window is open, and nobody decided that.** Our scan
+response rides on CHIP's advertisement, and CHIP caps a commissioning window at fifteen minutes
+(`MaxCommissioningTimeout`, spec 5.4.2.3). When it shuts, the strip goes off air for *both* doors while
+`network_prov_mgr` still believes it is listening — seen on 21 September, when a strip left waiting was
+invisible to a scan and came back on a power cycle. A household that plugs a strip in and comes back
+twenty minutes later finds nothing. This is not the case `docs/strip.md` already rules on: that one is a
+*commissioned* strip re-advertising after a router reboot, which must never happen. This is a strip that
+has never been set up at all, still sitting in its box's worth of nothing, and it should probably keep
+knocking. **Not decided, and it wants an artboard** — for ever is a household-visible promise, and so is
+giving up.
+
+**15. The hub is the client, and it works.** `brain/hub/strip_door.py` plus `brain/vendor/esp_prov`
+(Apache-2.0, vendored because the IDF dropped it at v6). On 21 September it found a strip by service
+UUID, proved the rhythm, handed over the Wi-Fi and then the broker, in one session and with no phone:
+
+    found: [{'name': 'PROV_52e20', 'rssi': -22}]
+    prov: credentials for 'VirusBroadcast' arrived through our door
+    prov: the hub said where it is: 2 details taken, 0 refused
+
+Two things of ours sit on top of Espressif's: finding a strip by the service UUID rather than a name,
+and the `hub` step. Espressif's own `Transport_BLE` could not be used unchanged for two reasons, both
+assumptions that do not hold here — it finds a device by advertised *name*, and our scan response has
+barely room for one; and it derives characteristic UUIDs by masking the endpoint id against the service
+UUID, which is a no-op for the all-`ff` service it assumes and mangles ours. **Not yet run on the Pi**,
+which is the only place it matters, and the CoreBluetooth workaround in that file exists so a bench on a
+Mac is not a dead end.
+
 **13. How the second door actually gets built, read out of the source rather than guessed.** Three facts, and
 together they decide the shape:
 
