@@ -1,0 +1,7 @@
+## esp-mqtt left IDF core in v6, so the half of this firmware that talks to OUR hub -- the color
+## question and the fill, which Matter has no words for -- needs it as a managed component.
+dependencies:
+  espressif/mqtt:
+    version: "*"
+  idf:
+    version: ">=5.4"

@@ -42,3 +42,12 @@ brilliant/tools/pairs-*.json
 brilliant/tools/plan-*.json
 brilliant/esp32-bridge/.vscode
 brain/mesh-keys.json
+strip/firmware/.vscode/extensions.json
+strip/firmware/build
+
+# Light strip controller: ESP-IDF build output and generated config
+strip/firmware/build/
+strip/firmware/sdkconfig
+strip/firmware/sdkconfig.old
+strip/firmware/managed_components/
+strip/firmware/dependencies.lock

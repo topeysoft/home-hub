@@ -11,7 +11,7 @@
 // design/device page 4 exists to tune away. There is no bench test for that and no e2e that catches
 // it. So the mapping is checked here, against the convention brain/hub/strip.py writes down, and the
 // last case walks all six orderings the way a household would actually answer them.
-#include "src/pixels.h"
+#include "main/pixels.h"
 
 #include <stdio.h>
 #include <string.h>
