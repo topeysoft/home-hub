@@ -32,16 +32,29 @@ esp_err_t reserve(const char *name);
 // The scheme to hand to network_prov_mgr_init(). Valid once reserve() has succeeded.
 const network_prov_scheme_t &scheme();
 
-// OPEN THE DOOR. Mints the rhythm, makes the SRP6a verifier from it, and starts the manager. Call
-// after esp_matter::start(), and only on a strip nobody has taken yet.
+// OPEN THE DOOR. Call after esp_matter::start(), and only on a strip nobody has taken yet.
 //
-// THE RHYTHM IS THE PROOF OF POSSESSION (design/strip/PopLight.dc.html). Four groups of one to six
-// flashes, minted fresh each time the strip is plugged in and shown on the strip itself; the person
-// taps what they count and that is the SRP6a password. Nothing printed, nothing derived from the chip.
-// Rhythm rather than color because "Is it red?" has not been asked yet, so a color cannot be trusted
-// and a count can. It is small until SRP6a is under it: no offline attack, one wrong guess ends the
-// session, and the next power cycle mints a new one.
+// THE PROOF OF POSSESSION IS A PRESS (design/door/PressIt.dc.html, design/strip/Press.dc.html). The
+// door opens on a password that is fixed and public, so anything in radio range can start a session
+// and get exactly as far as the Wi-Fi question -- where THIS FILE refuses it until press() has been
+// called. The gate is on the strip; the hub asks and waits and cannot let itself in.
+//
+// What that buys is possession rather than a keyspace: nothing printed, nothing derived from the
+// chip, nothing to count. What it does not buy is protection from somebody in radio range at the
+// exact moment of the press, which is the trade every push-button pairing makes and is written down
+// in docs/strip.md rather than left implied.
 esp_err_t open();
+
+// SOMEBODY TOUCHED THE STRIP. Opens the gate for two minutes. Returns true if that mattered -- the
+// door was open and waiting -- so the caller knows whether to answer the press on the light.
+bool press();
+
+// THE RUNG BELOW (design/strip/ReachRhythm.dc.html), for a strip already mounted where nobody can
+// reach the controller. The hub asks for it on the `press` endpoint; the door then shuts and opens
+// again with an SRP6a verifier made from four freshly minted counts, because a verifier cannot be
+// swapped inside a live session. Call this every pass of a task that is NOT the manager's own --
+// stopping the manager from inside its own handler is not a thing -- and it does nothing until asked.
+void tend_the_door();
 
 // Called when the hub hands over where our broker is, on the `hub` endpoint, inside the same
 // session that carried the Wi-Fi. Each line is `key=value`; the keys are the ones find_hub() reads.
@@ -55,7 +68,9 @@ void on_hub_details(HubDetails fn);
 using Taken = void (*)(bool);
 void on_taken(Taken fn);
 
-// The four counts, 1..6 each, for whoever is drawing them. Zero until open() has run.
+// The four counts, 1..6 each, for whoever is drawing them. ZERO UNLESS THE RUNG BELOW IS IN USE,
+// which is also how a caller tells the two apart: on the press rung there is nothing to show and the
+// strip is simply lit.
 const uint8_t *rhythm();
 
 // CHIP stopped advertising. If the strip is still untaken and the two days are not up, the window

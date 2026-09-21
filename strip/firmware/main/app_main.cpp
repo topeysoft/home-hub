@@ -350,6 +350,17 @@ static bool rhythm_lit(uint32_t t) {
     return false;
 }
 
+// THE PRESS, ANSWERED ON THE THING THAT WAS PRESSED. A household standing at a socket with the wall
+// in another room has nothing else to tell them it worked, and "nothing happened" is what a dead
+// button and a button that is not wired both look like.
+static void blink_back() {
+    strip.solid(255, 255, 255);
+    px::show(strip);
+    vTaskDelay(pdMS_TO_TICKS(120));
+    strip.solid(SIG_R, SIG_G, SIG_B);
+    px::show(strip);
+}
+
 static void housekeeping(void *) {
     bool released = false, armed = false, was_lit = true;
     uint32_t loud_at = 0;
@@ -368,14 +379,24 @@ static void housekeeping(void *) {
             prov::stay_loud();
         }
 
-        if (instrument && !waiting_over && !armed && !fill.running && prov::rhythm()[0]) {
-            const bool lit = prov::busy() || rhythm_lit(now_ms());
+        // WHAT THE STRIP IS DOING WHILE IT WAITS (design/strip/Press.dc.html). On our own door it is
+        // simply LIT, steady, end to end: a steady light is a thing you can point at, and it says
+        // nothing a stranger could use. It only flashes on the rung below, where four counts ARE the
+        // secret -- which is what rhythm()[0] distinguishes. Written on a change of state only,
+        // because a WS2812 latches and rewriting a steady frame is how the bridge puck turned one
+        // misread into twenty-five a second (AGENTS.md).
+        if (instrument && !waiting_over && !armed && !fill.running) {
+            const bool lit = prov::busy() || !prov::rhythm()[0] || rhythm_lit(now_ms());
             if (lit != was_lit) {
                 if (lit) strip.solid(SIG_R, SIG_G, SIG_B); else strip.clear();
                 px::show(strip);
                 was_lit = lit;
             }
         }
+        // The household said nobody can reach the button, so the door is being shut and reopened a
+        // rung lower. It has to be driven from here rather than from the handler that heard it: that
+        // one runs on the manager's own task, inside the manager it would be tearing down.
+        prov::tend_the_door();
         // A hold only counts once the button has been seen let go; see BUTTON_PIN above.
         //
         // AND IT SAYS WHEN IT SEES ONE. A household holding the button and getting nothing has no
@@ -407,9 +428,21 @@ static void housekeeping(void *) {
             }
         }
         if (gpio_get_level((gpio_num_t)BUTTON_PIN) && down) {
+            const uint32_t held = now_ms() - down;
             down = 0;
             if (armed) { armed = false; instrument = !chip::Server::GetInstance().GetFabricTable().FabricCount();
                          if (instrument) { strip.solid(SIG_R, SIG_G, SIG_B); px::show(strip); } else paint(); }
+            // A SHORT PRESS IS THE WHOLE HANDSHAKE (design/door/PressIt.dc.html). It is counted on the
+            // way UP and only if the hold never armed, so the two lengths of the same button cannot be
+            // confused by anybody doing either of them on purpose: under a second lets somebody in,
+            // five forgets the house, and one second turns the strip red to say which is coming.
+            //
+            // AND THE THING THAT WAS PRESSED IS WHAT ANSWERS. One bright blink on the strip itself,
+            // because the wall may be in another room and the person is looking at their hand.
+            else if (held < HOLD_ARMED && prov::press()) {
+                blink_back();
+                was_lit = true;
+            }
         }
 
         if (fill.running) {

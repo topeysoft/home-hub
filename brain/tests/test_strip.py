@@ -30,16 +30,38 @@ class FakeRadio:
         self.commission_fails = None
         self.adopt_fails = None
         self.scan_boom = None
+        # The press, as the strip would report it. `hold` keeps the session waiting the way a real
+        # one waits, so a test can look at the wall while nothing of the house's has moved.
+        self.hold = False
+        self.pressing = None      # the callback, kept so a test can press whenever it likes
+        self.asked_rhythm = 0     # how many times the strip was asked to drop a rung
+        self.not_pressed = False  # the two minutes ran out with nobody touching it
 
     async def scan_ours(self, seconds=8.0):
         return [{"addr": s["address"], "rssi": s["rssi"], "name": s.get("name"),
                  "door": "ours", "ours": True} for s in self.ours]
 
-    async def adopt_ours(self, addr, rhythm, ssid, password, hub=None):
+    async def adopt_ours(self, addr, ssid, password, hub=None, rhythm="",
+                         on_pressed=None, out_of_reach=None):
         if self.adopt_fails:
             raise StripError(self.adopt_fails if isinstance(self.adopt_fails, str)
                              else "Those were not the flashes it is showing.")
+        if not rhythm:
+            # Waiting for the press. A real session holds a BLE link open here with the credentials
+            # still on the hub; this holds the coroutine, which is the same fact for the machine.
+            self.pressing = on_pressed
+            while self.hold:
+                if out_of_reach is not None and out_of_reach.is_set():
+                    self.asked_rhythm += 1
+                    return "rhythm"
+                if self.not_pressed:
+                    raise StripError("Nobody pressed the button on it. The button is on the "
+                                     "controller, at the end it plugs in at \u2014 say it is yours "
+                                     "again to start over.")
+                await asyncio.sleep(0)
+            if on_pressed: on_pressed()
         self.adopted.append((addr, rhythm, ssid, password, hub or {}))
+        return "done"
 
     async def set_wifi(self, ssid, password):
         self.told_wifi.append((ssid, password))
@@ -95,6 +117,11 @@ class FakeHub:
 
 
 def run(coro): return asyncio.run(coro)
+
+
+async def turn(times: int = 60):
+    """Let every task that is ready have a go, without letting the clock move."""
+    for _ in range(times): await asyncio.sleep(0)
 
 
 class TheOrderTheColorsComeIn(unittest.TestCase):
@@ -441,10 +468,10 @@ if __name__ == "__main__":
 class OurOwnDoor(unittest.TestCase):
     """A strip that offers our door is asked one thing and it is not a code.
 
-    design/strip/Ours.dc.html and PopLight.dc.html: the identity check is two meters of light, and
-    the proof of possession is four counts of flashes read off the same light. Nothing is printed on
-    a strip and nothing is derived from its chip, so there is nothing to read out and nothing to
-    leak. Matter's door is unchanged and still wants a code."""
+    design/strip/Ours.dc.html and Press.dc.html: the identity check is two meters of light, and the
+    proof of possession is a press on the button of the thing somebody has just unpacked. Nothing is
+    printed on a strip and nothing is derived from its chip, so there is nothing to read out and
+    nothing to leak. Matter's door is unchanged and still wants a code."""
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -459,34 +486,112 @@ class OurOwnDoor(unittest.TestCase):
         self.radio.ours = [{"address": "AA:BB", "rssi": -40, "name": "PROV_52e20"}]
         run(self.strips.look())
 
-    def test_a_strip_at_our_door_is_asked_for_the_rhythm_and_not_a_code(self):
-        self.knock()
-        self.assertEqual(self.strips.status()["state"], "knocking")
-        run(self.strips.adopt())
-        st = self.strips.status()
-        self.assertEqual(st["state"], "rhythm")
-        self.assertEqual((st["groups"], st["most"]), (4, 6))
-        self.assertEqual(self.radio.adopted, [])   # nothing has moved yet
+    # THE PRESS BEAT HOLDS, and these run in ONE event loop for that reason. A session waiting to be
+    # pressed is a coroutine parked with the credentials still on the hub; asyncio.run() per step
+    # tears that down, so a test written the way the older ones are would be testing a shape the
+    # machine never has in a house.
+
+    async def waiting(self):
+        """Knocked, said yes, and now the wall is asking for a press."""
+        self.radio.hold = True
+        self.radio.ours = [{"address": "AA:BB", "rssi": -40, "name": "PROV_52e20"}]
+        await self.strips.look()
+        await self.strips.adopt()
+        await turn()
+        return self.strips.status()
+
+    async def out_of_reach(self):
+        """...and nobody can get at the button, so it drops to the flashes."""
+        await self.waiting()
+        await self.strips.reach()
+        await turn()
+        self.radio.hold = False
+
+    def test_a_strip_at_our_door_is_asked_for_a_press_and_not_a_code(self):
+        async def go():
+            st = await self.waiting()
+            self.assertEqual(st["state"], "press")
+            self.assertEqual(self.radio.adopted, [])   # nothing of the house's has moved yet
+            self.assertNotIn("groups", st)             # and nothing to count
+        run(go())
+
+    def test_the_press_is_what_moves_the_wall_on_and_it_comes_from_the_strip(self):
+        """The beat ends because the THING was touched, never because a timer here ran out."""
+        async def go():
+            self.assertEqual((await self.waiting())["state"], "press")
+            self.radio.hold = False                    # somebody presses it
+            await turn()
+            self.assertEqual(self.strips.status()["step"], "letting")
+            self.assertEqual(len(self.radio.adopted), 1)
+        run(go())
+
+    def test_a_press_hands_over_the_wifi_and_where_we_are_with_no_secret_at_all(self):
+        async def go():
+            await self.waiting()
+            self.radio.hold = False
+            await turn()
+            self.assertEqual(len(self.radio.adopted), 1)
+            addr, rhythm, ssid, password, where = self.radio.adopted[0]
+            # No secret of any kind went over that link: the press is the whole proof.
+            self.assertEqual((addr, rhythm, ssid, password), ("AA:BB", "", "House", "secret"))
+            # The broker, in the same session. This is item 2a, which was an empty string for weeks.
+            self.assertEqual(where["mhost"], "hub")
+            self.assertIn("base", where)
+            # And our door never goes near Matter's commissioner.
+            self.assertEqual(self.radio.commissioned, [])
+            self.assertEqual(self.radio.told_wifi, [])
+        run(go())
+
+    def test_nobody_pressing_it_is_never_reported_as_a_radio_failure(self):
+        async def go():
+            await self.waiting()
+            self.radio.not_pressed = True      # the two minutes run out
+            await turn()
+            said = self.strips.status()["text"]
+            self.assertIn("Nobody pressed", said)
+            self.assertNotIn("nearer", said)
+        run(go())
+
+    # ---- the rung below, reached one way only (design/strip/ReachRhythm.dc.html) ----
+
+    def test_the_flashes_are_reached_only_by_saying_the_button_is_out_of_reach(self):
+        async def go():
+            await self.out_of_reach()
+            st = self.strips.status()
+            self.assertEqual(st["state"], "rhythm")
+            self.assertEqual((st["groups"], st["most"]), (4, 6))
+            self.assertEqual(self.radio.asked_rhythm, 1)   # and the STRIP was told to mint one
+            self.assertEqual(self.radio.adopted, [])       # still nothing of the house's
+        run(go())
+
+    def test_nothing_drops_a_rung_on_its_own(self):
+        async def go():
+            self.radio.ours = [{"address": "AA:BB", "rssi": -40, "name": "PROV_52e20"}]
+            await self.strips.look()
+            with self.assertRaises(StripError): await self.strips.reach()   # still only knocking
+            await self.strips.adopt()
+            await turn()
+            with self.assertRaises(StripError): await self.strips.reach()   # the press already landed
+        run(go())
 
     def test_the_counts_have_to_be_four_groups_of_one_to_six(self):
-        self.knock(); run(self.strips.adopt())
-        for bad in ("", "123", "12345", "1207", "abcd"):
-            with self.assertRaises(StripError): run(self.strips.counted(bad))
-        self.assertEqual(self.strips.status()["state"], "rhythm")
+        async def go():
+            await self.out_of_reach()
+            for bad in ("", "123", "12345", "1207", "abcd"):
+                with self.assertRaises(StripError): await self.strips.counted(bad)
+            self.assertEqual(self.strips.status()["state"], "rhythm")
+        run(go())
 
-    def test_counting_right_hands_over_the_wifi_and_where_we_are_together(self):
-        self.knock(); run(self.strips.adopt())
-        run(self.strips.counted("3164"))
-        for _ in range(60): run(asyncio.sleep(0))
-        self.assertEqual(len(self.radio.adopted), 1)
-        addr, rhythm, ssid, password, where = self.radio.adopted[0]
-        self.assertEqual((addr, rhythm, ssid, password), ("AA:BB", "3164", "House", "secret"))
-        # The broker, in the same session. This is item 2a, which was an empty string for weeks.
-        self.assertEqual(where["mhost"], "hub")
-        self.assertIn("base", where)
-        # And our door never goes near Matter's commissioner.
-        self.assertEqual(self.radio.commissioned, [])
-        self.assertEqual(self.radio.told_wifi, [])
+    def test_counting_right_hands_the_flashes_to_the_door_as_the_password(self):
+        async def go():
+            await self.out_of_reach()
+            await self.strips.counted("3164")
+            await turn()
+            self.assertEqual(len(self.radio.adopted), 1)
+            addr, rhythm, ssid, password, where = self.radio.adopted[0]
+            self.assertEqual((addr, rhythm, ssid, password), ("AA:BB", "3164", "House", "secret"))
+            self.assertEqual(where["mhost"], "hub")
+        run(go())
 
     def test_a_strip_at_matters_door_is_unchanged_and_still_wants_a_code(self):
         self.radio.advertising = [{"addr": "CC:DD", "rssi": -50, "discriminator": 3840,
@@ -498,13 +603,15 @@ class OurOwnDoor(unittest.TestCase):
         self.assertEqual(self.radio.adopted, [])
 
     def test_a_miscount_says_the_strip_will_show_a_new_one(self):
-        self.knock(); run(self.strips.adopt())
-        self.radio.adopt_fails = True
-        run(self.strips.counted("1111"))
-        for _ in range(60): run(asyncio.sleep(0))
-        st = self.strips.status()
-        self.assertEqual(st["state"], "failed")
-        self.assertIn("flashes", st["text"])
+        async def go():
+            await self.out_of_reach()
+            self.radio.adopt_fails = True
+            await self.strips.counted("1111")
+            await turn()
+            st = self.strips.status()
+            self.assertEqual(st["state"], "failed")
+            self.assertIn("flashes", st["text"])
+        run(go())
 
 
 class WhichDoorTheStripIsTakenThrough(unittest.TestCase):
@@ -553,11 +660,12 @@ class WhichDoorTheStripIsTakenThrough(unittest.TestCase):
         self.assertEqual(self.strips.job["door"], "matter")
 
 
-class TwoFailuresThatAreNotTheSame(unittest.TestCase):
+class ThreeFailuresThatAreNotTheSame(unittest.TestCase):
     """A wrong count and a dropped radio both used to say "check the flashes", which sends somebody
     to count again and again at the far end of a room where the real answer was to move nearer. The
     strip refuses a wrong rhythm inside SRP6a and it comes back as an ATT error; a link that died
-    comes back as a disconnect. They are different sentences now."""
+    comes back as a disconnect. And nobody having pressed the button yet is neither -- the household
+    is standing in the right room and has simply not touched the thing. Three sentences."""
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -565,15 +673,16 @@ class TwoFailuresThatAreNotTheSame(unittest.TestCase):
 
     def tearDown(self): self.tmp.cleanup()
 
-    def said_for(self, boom: str) -> str:
+    def said_for(self, boom, rhythm: str = "1234") -> str:
         radio = Radio(self.hub)
 
         async def go():
             import hub.strip_door as door
-            async def bang(*a, **k): raise RuntimeError(boom)
+            async def bang(*a, **k):
+                raise (boom if isinstance(boom, BaseException) else RuntimeError(boom))
             door.adopt = bang
             with self.assertRaises(StripError) as e:
-                await radio.adopt_ours("AA:BB", "1234", "House", "x", hub={})
+                await radio.adopt_ours("AA:BB", "House", "x", hub={}, rhythm=rhythm)
             return str(e.exception)
         return run(go())
 
@@ -588,3 +697,19 @@ class TwoFailuresThatAreNotTheSame(unittest.TestCase):
             said = self.said_for(boom)
             self.assertIn("nearer the hub", said)
             self.assertNotIn("Count them again", said)
+
+    def test_nobody_having_pressed_it_is_never_dressed_as_a_radio_failure(self):
+        """The one that would be cruellest to get wrong: there is nothing wrong with the radio, the
+        strip or the room, and telling somebody to move nearer sends them to fix none of it."""
+        import hub.strip_door as door
+        said = self.said_for(door.NotPressed("nobody pressed the button on the strip"), rhythm="")
+        self.assertIn("Nobody pressed", said)
+        self.assertNotIn("nearer", said)
+        self.assertNotIn("flashes", said)
+
+    def test_a_strip_that_will_not_finish_a_press_session_is_not_told_to_recount(self):
+        """There are no flashes on this rung, so "count them again" is an instruction about a thing
+        that is not on the wall."""
+        said = self.said_for("Unlikely Error", rhythm="")
+        self.assertNotIn("Count them again", said)
+        self.assertIn("Unplug it", said)

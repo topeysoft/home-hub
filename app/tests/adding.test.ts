@@ -105,6 +105,7 @@ describe('the word list', () => {
 describe('a light strip waiting its turn', () => {
   it('counts only the beats where it is still asking', () => {
     expect(stripWaiting('knocking')).toBe(true)
+    expect(stripWaiting('press')).toBe(true)
     expect(stripWaiting('rhythm')).toBe(true)
   })
 
@@ -116,5 +117,53 @@ describe('a light strip waiting its turn', () => {
   it('is never offered as a door, because nobody starts a strip', () => {
     store.status = { drivers: [{ id: 'matter', state: 'ready' }] } as any
     for (const d of doors()) expect(`${d.title} ${d.sub}`.toLowerCase()).not.toContain('strip')
+  })
+})
+
+/* OUR OWN DOOR, ON THE WALL, PINNED TO THE BOARD IT WAS DRAWN FROM.
+   design/door/PressIt.dc.html was chosen on 21 September and design/strip/Press.dc.html is the
+   spec for the strip. What these hold is the composition, which is the part a screenshot of a
+   passing test cannot: one thing to look at, one line saying nothing is happening yet, and exactly
+   one button -- and it is the way DOWN a rung, not the way on. The beat cannot be finished from the
+   wall at all, because the thing to press is not on the wall.
+
+   And the rhythm below it, which shipped for a few hours as what everybody got and is now reached
+   one way only. design/strip/ReachRhythm.dc.html. */
+describe('the press, and the rung below it', () => {
+  const sheet = readFileSync('src/StripSheet.vue', 'utf8')
+  const beat = (name: string) => {
+    const at = sheet.indexOf(`b.state === '${name}'`)
+    expect(at, `no ${name} beat in StripSheet.vue`).toBeGreaterThan(-1)
+    return sheet.slice(at, sheet.indexOf('<template v-else', at + 20))
+  }
+
+  it('asks for the press with nothing to read, count or type', () => {
+    const press = beat('press')
+    expect(press).toContain('Waiting for the press')
+    expect(press).toMatch(/nothing to read, count or type/)
+    expect(press).not.toMatch(/rhythm-count|input|field/)
+  })
+
+  it('offers one button, and it is the way down a rung rather than the way on', () => {
+    const press = beat('press')
+    const buttons = press.match(/<button/g) ?? []
+    expect(buttons).toHaveLength(1)
+    expect(press).toContain('It has no button I can reach')
+    expect(press).toContain('@click="reach"')
+    // No primary. A beat that cannot be finished from the wall must not draw something that looks
+    // as though it could be.
+    expect(press).not.toMatch(/class="button"/)
+  })
+
+  it('never names a code, a number or a label on our own door', () => {
+    expect(beat('press').toLowerCase()).not.toMatch(/code|serial|label|number/)
+  })
+
+  it('keeps the four counts, one rung down, reached only from the press', () => {
+    const rhythm = beat('rhythm')
+    expect(rhythm).toContain('rhythm-count')
+    expect(rhythm).toContain('It has started flashing')
+    // The only door into it. If a second one ever appears, this is the line that says so.
+    expect(sheet.match(/@click="reach"/g) ?? []).toHaveLength(1)
   })
 })

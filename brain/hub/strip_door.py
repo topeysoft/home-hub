@@ -12,13 +12,21 @@
 # writing an SRP6a client to talk to our own SRP6a is not work worth doing twice. What is ours is this
 # file: finding a strip by the service UUID rather than by a name, and the `hub` step at the end.
 #
-# THE PASSWORD IS THE RHYTHM (design/strip/PopLight.dc.html). A strip mints four counts of one to six each
-# time it is plugged in and flashes them; the household taps what it sees and those four digits are the
-# proof of possession. Nothing is printed on the strip and nothing is derived from its chip, so there is
-# nothing to read off a unit and nothing to leak out of a factory.
+# THE PROOF IS A PRESS (design/door/PressIt.dc.html, design/strip/Press.dc.html). The household presses
+# the button on the controller of the thing they have just unpacked, and that is the whole handshake:
+# nothing printed, nothing derived from a chip, nothing to count. THE GATE IS ON THE STRIP, not here --
+# this client can open a session and get exactly as far as the Wi-Fi question, where the strip refuses
+# it until somebody in the room has touched the object. So the password below is fixed and public on
+# purpose; it is not what makes this safe and it is not pretending to be.
+#
+# AND WHEN NOBODY CAN REACH THE BUTTON, one rung down (design/strip/ReachRhythm.dc.html): the strip
+# mints four counts of one to six, flashes them, and reopens its door with an SRP6a verifier made from
+# them. That is PopLight, which shipped as what everybody got and was demoted the same day -- counting
+# flashes is a chore, and a proof made of light only works on something two metres long.
 import asyncio
 import os
 import sys
+import time
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'vendor'))
 
@@ -34,9 +42,25 @@ ENDPOINTS = {
     'prov-config': 0xFF52,
     'proto-ver': 0xFF53,
     'hub': 0xFF54,
+    'press': 0xFF55,
 }
-# Fixed and public; the rhythm is the whole secret.
 USERNAME = 'wifiprov'
+# What we say when the strip is waiting for a press. Public, and it has to be: on this rung there is no
+# secret at all, which is the point of choosing it. On the rung below, the rhythm takes its place and is
+# a real one.
+OPEN_SESAME = 'press'
+
+# HOW LONG SOMEBODY HAS TO WALK TO THE THING AND PRESS IT. Two minutes is the walk across a house and
+# back, and it is also the window an attacker in radio range would have to be racing in -- the residual
+# risk this rung accepts, written down rather than implied. The poll is what the panel's own "waiting"
+# line is made of, so it is fast enough to feel like an answer and slow enough not to hold the link busy.
+PRESS_WAIT = 120.0
+PRESS_POLL = 0.7
+
+
+class NotPressed(Exception):
+    """Nobody pressed it. Not a radio failure and it must never be reported as one: the household is
+    standing in the right place and has simply not touched the thing yet."""
 
 
 def _chrc_uuid(ep: str) -> str:
@@ -85,22 +109,32 @@ async def find(timeout: float = 8.0):
     return [{'address': a, 'name': d.name, 'rssi': adv.rssi} for a, (d, adv) in seen.items()]
 
 
-async def adopt(address: str, rhythm: str, ssid: str, passphrase: str, hub: dict | None = None) -> None:
-    """Take a strip: prove the rhythm, hand over the Wi-Fi, then say where we are.
+async def adopt(address: str, ssid: str, passphrase: str, hub: dict | None = None,
+                rhythm: str = '', on_pressed=None, out_of_reach: "asyncio.Event | None" = None,
+                press_wait: float = PRESS_WAIT) -> str:
+    """Take a strip: wait for the press, hand over the Wi-Fi, then say where we are.
 
-    `rhythm` is the four counts the household read off the light, as digits. `hub` is what the strip
-    needs to find us again after it reboots -- mhost, and the broker credentials if there are any.
-    Raises on any step, because a half-adopted strip is worse than one that never started.
+    `rhythm`, when there is one, is the four counts the household read off the light -- the rung below
+    the press, and then it is the SRP6a password and there is nothing to wait for. `hub` is what the
+    strip needs to find us again after it reboots. `on_pressed` is called the moment the strip says it
+    was touched, so the wall can stop saying it is waiting. `out_of_reach` is the household saying they
+    cannot reach the button; setting it asks the strip for a rhythm instead and returns 'rhythm'.
+
+    Returns 'done', or 'rhythm' if the strip was asked to drop a rung. Raises on any step, because a
+    half-adopted strip is worse than one that never started.
     """
     from bleak import BleakClient
     _tolerate_corebluetooth()
 
-    security = Security2(sec_patch_ver=1, username=USERNAME, password=rhythm, verbose=False)
+    security = Security2(sec_patch_ver=1, username=USERNAME, password=rhythm or OPEN_SESAME, verbose=False)
     async with BleakClient(address, timeout=20.0) as client:
         transport = _Bleak(client)
 
         # The handshake, until protocomm says there is nothing left to send. A wrong rhythm fails
         # here, inside SRP6a, and ends the session: there is no offline guessing at four digits.
+        # With no rhythm the password is public, so this proves nothing and is not meant to -- it is
+        # the encrypted channel the rest of the conversation needs, and the strip's own gate is what
+        # the Wi-Fi is actually waiting on.
         response = None
         while True:
             request = security.security_session(response)
@@ -109,6 +143,10 @@ async def adopt(address: str, rhythm: str, ssid: str, passphrase: str, hub: dict
             response = await transport.send_session_data(request)
         if security.session_state != security_state.FINISHED:
             raise RuntimeError('the strip did not accept that rhythm')
+
+        if not rhythm and await _wait_for_the_press(transport, security, on_pressed,
+                                                   out_of_reach, press_wait) == 'rhythm':
+            return 'rhythm'
 
         sent = await transport.send_config_data(wifi_prov.config_set_config_request(security, ssid, passphrase))
         if wifi_prov.config_set_config_response(security, sent) != 0:
@@ -127,6 +165,37 @@ async def adopt(address: str, rhythm: str, ssid: str, passphrase: str, hub: dict
             said = security.decrypt_data(answer.encode('latin-1')).decode('latin-1')
             if said != 'ok':
                 raise RuntimeError(f'the strip answered "{said}" when told where we are')
+    return 'done'
+
+
+async def _ask(transport, security, question: str) -> str:
+    """One question on the `press` endpoint, inside the session. The endpoint answers 'waiting' until
+    somebody has touched the strip, 'pressed' once they have, and 'ok' when asked for a rhythm."""
+    answer = await transport.send_data('press', security.encrypt_data(question.encode('latin-1')).decode('latin-1'))
+    return security.decrypt_data(answer.encode('latin-1')).decode('latin-1')
+
+
+async def _wait_for_the_press(transport, security, on_pressed, out_of_reach, wait: float) -> str:
+    """Hold, politely, until somebody presses the button on the thing.
+
+    NOTHING OF THE HOUSE'S HAS MOVED YET and that is the whole shape of this rung: the session is open,
+    the strip is lit, and the credentials are still here. The only two ways out are a press and the
+    household saying they cannot reach it."""
+    until = time.monotonic() + wait
+    while True:
+        if out_of_reach is not None and out_of_reach.is_set():
+            await _ask(transport, security, 'rhythm')
+            return 'rhythm'
+        said = await _ask(transport, security, '?')
+        if said == 'pressed':
+            if on_pressed:
+                on_pressed()
+            return 'pressed'
+        if said != 'waiting':
+            raise RuntimeError(f'the strip answered "{said}" when asked about the press')
+        if time.monotonic() >= until:
+            raise NotPressed('nobody pressed the button on the strip')
+        await asyncio.sleep(PRESS_POLL)
 
 
 def _tolerate_corebluetooth() -> None:

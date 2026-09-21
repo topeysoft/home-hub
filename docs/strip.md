@@ -18,11 +18,11 @@ is where it stands, as of 21 September 2026.*
 
 | | |
 |---|---|
-| **Design** | 19 boards in `design/strip/`, 3 in `design/occasion/`. The last row forks the spine: Matter is one door, not the only one |
+| **Design** | 21 boards in `design/strip/`, 3 in `design/door/`, 3 in `design/occasion/`. The last row of `design/strip/` is the press and the rung below it |
 | **Firmware** | ESP-IDF + esp-matter, **commissionable over BLE, proven on an ESP32-S3** |
-| **Brain** | both doors: knock → adopt → (rhythm | code) → set up. 39 tests. Our door carries the broker |
-| **Panel** | the beats including the rhythm, previewable with `?strip=knocking\|rhythm\|working\|ready` |
-| **Suites** | brain 1100, panel 490, native firmware test, all green |
+| **Brain** | both doors: knock → adopt → (press → rhythm | code) → set up. 51 tests. Our door carries the broker |
+| **Panel** | the beats including the press, previewable with `?strip=knocking\|press\|rhythm\|working\|ready` |
+| **Suites** | brain 1117, panel 497, native firmware test, all green |
 
 ### What is proven on hardware, and what is not
 
@@ -45,17 +45,32 @@ Apple, Google and Alexa at once, because that is four slots of five before our o
 item that claim belongs to. Apple made **two** fabrics on the first pairing (`0x1349` local home hub and
 `0x1384` iCloud) and only `0x1384` on the second, so budget two and do not count on one.
 
+**Also proven, 21 September: our own door, on the press.** On an ESP32-S3, with the hub's own client:
+a session opened on the public password and was **refused the Wi-Fi** until the button was pressed; a
+short press let it through and the Wi-Fi and the broker were handed over together; tapping *It has no
+button I can reach* shut the door and reopened it 150 ms later with a freshly minted rhythm; and a wrong
+rhythm was refused inside SRP6a. Item 23.
+
 **Never run:** the broker has never been spoken to, neither the color question nor the fill has run outside a
-unit test, and Alexa has not been tried.
+unit test, and Alexa has not been tried. **And no strip has ever joined a real Wi-Fi through our door** —
+the bench used a network name that does not exist, so `NETWORK_PROV_WIFI_CRED_SUCCESS` has never fired on
+this firmware and the `ours` flag it writes has never been written.
 
 ### The next three things, in order
 
-1. **Start the manager with SEC2 and PopLight** — the transport is built (item 13); what is missing is the
-   rhythm the strip mints and shows, the verifier made from it, and the first real session from a phone.
-2. **Then the brain's half**, which has to match on our service UUID rather than on a device name — there is no
-   room for a name in the scan response, item 12.
-3. **Then the hub path, on the Pi.** Not on the Mac — see `2-mac`. That is the first time the brain, the panel
-   and the firmware will have run together.
+1. **The partial-commissioning bug.** A Matter adopt reported failure on the wall and left a fabric behind,
+   which silently bricks a strip until somebody knows the reset exists.
+2. **The 13 dB range gap** (item 15). A session completes at −51 dBm and dies at −64 with NimBLE reason
+   `0x208`. Two software levers were tried and neither closed it; the evidence says RF, and `hardware/`
+   has never had the strip conversation.
+3. **A button, reachable, on the outside of every product** (item 23). Our whole door now rests on it and
+   it has never been written down as a hardware requirement. Free now, impossible later.
+
+**Not on this list and worth saying so:** the press path is built and proven end to end on an ESP32-S3 —
+no press refused, press accepted, out-of-reach dropping to a freshly minted rhythm, wrong rhythm refused.
+What it has *not* had is a run on a real hub against a real house, because that needs a real SSID; the
+bench used a name that does not exist, so `NETWORK_PROV_WIFI_CRED_SUCCESS` has never fired on this
+firmware and neither has the `ours` flag it writes.
 
 ### Decided, and not to be reopened without a reason
 
@@ -66,10 +81,15 @@ unit test, and Alexa has not been tried.
   is parked — the bridge opens commissioning windows, not the strip — and the fork stays as a fact of the
   firmware rather than a product promise. Selling a certified unit remains possible later because the
   partitions and the Matter lane are already there.
-- **The proof of possession on our door is the light** — `PopLight`: the strip mints a rhythm each time it is
-  plugged in and the person taps what they count. SRP6a underneath. `PopWindow` may exist only behind a build
-  flag for the bench, never in a release; `PopBox` was not chosen because its one argument — the label has to
-  exist anyway — only holds if Matter ships first.
+- **The proof of possession on our door is a press on the button** (21 September, `design/door/PressIt.dc.html`,
+  item 23). Nothing printed, nothing to count, nothing derived from the chip — and it needs no light, so it is
+  the same gesture on a sensor as on two metres of strip. The gate is on the strip and not on the hub.
+  **`PopLight` is demoted rather than deleted:** it is the rung below, reached only by tapping *It has no
+  button I can reach*, and it keeps a real SRP6a secret for a strip already mounted out of arm's reach.
+  `PopWindow` may exist only behind a build flag for the bench, never in a release; `PopBox` was not chosen
+  because its one argument — the label has to exist anyway — only holds if Matter ships first.
+  `design/door/ShowMe.dc.html` is the rung the door canvas names for out-of-reach things and it stays drawn
+  and unbuilt: for a strip it would move the gate onto the hub.
 
 - **ESP-IDF, not Arduino.** Arduino compiles Matter-over-BLE out on every target; a strip built that way cannot
   be set up by Apple or Google at all. Evidence both ways is in this document.
@@ -100,6 +120,10 @@ unit test, and Alexa has not been tried.
   `sudo xcode-select -s` fixes it properly.
 - **Two PlatformIO cores are installed** and fight over the build directory; builds fail and then succeed
   unchanged. Irrelevant now the firmware is ESP-IDF, but it will confuse anybody touching `brilliant/`.
+- **The build cache keeps a `-D` from a session nobody remembers**, so read the `pin N` in the boot line
+  before believing anything about the light. Item 21.
+- **`network_prov_mgr_deinit()` from the `NETWORK_PROV_END` handler deadlocks silently** and takes the
+  housekeeping loop with it. Item 22, and it was in the shipped code before the press was.
 - **Two things a protocomm transport must do that no header says.** Both cost an evening on
   21 September and both look like "failed to initialise session" at the client. **One:** SECURITY_2
   refuses every message until `protocomm_open_session` has been called for that connection —
@@ -597,6 +621,91 @@ real annual cost before a unit ships — and inserts the product into the most q
 the house, which is how these things get returned. The camera route avoids all of that and costs a camera
 pointed into a living room. **The cheap next step is neither: a capture stick and HyperHDR on a bench,
 to find out whether it feels like the screen extended or like a gimmick, before any of it is paid for.**
+
+**23. The proof of possession is a press, and PopLight is demoted rather than deleted.** Chosen
+21 September from `design/door/PressIt.dc.html`; the spec for the strip is `design/strip/Press.dc.html`
+and `design/strip/ReachRhythm.dc.html`. The rhythm shipped that morning as what *everybody* got, a real
+SRP6a session completed against it, and then somebody used it and said counting four groups of flashes
+is a chore — and then the thing that actually settled it, which is that **a proof made of light only
+works on something two metres long.** A puck has one LED. A sensor has none. Our door is not a strip
+feature, so an answer that needs a strip is not an answer for it.
+
+**THE GATE IS ON THE STRIP.** This is the whole of what the press buys and it is four lines in
+`chr_access`: anything in radio range may open a session, walk the GATT table and ask the strip its
+version, and it gets exactly as far as `prov-config`, which is refused until `press()` has been called.
+It is deliberately not the hub's to release — a gate the hub releases is a gate whoever spoke first
+releases, which is the unauthenticated link this firmware was rewritten to remove. Proven on the bench:
+a session on the public password, `config_set_config`, refused.
+
+**What it does not buy, written down rather than implied:** there is no keyspace any more. Somebody in
+radio range at the exact moment of the press, racing the household's own hub, is the residual risk, and
+it is the trade every push-button pairing has ever made. The window is 120 seconds and single-use.
+
+**The password is fixed and public** (`press`), so the SRP6a handshake on this rung proves nothing and
+is not meant to; it is the encrypted channel the rest of the conversation needs. A refusal returns
+`BLE_ATT_ERR_INSUFFICIENT_AUTHOR` and not `..._AUTHEN`: 0x05 and 0x0f both mean *encrypt the link and
+come back*, so a central takes them as an invitation to pair. CoreBluetooth reports both as
+"Insufficient Encryption" whatever we send, having tried; BlueZ does not.
+
+**And the rung below is reached one way only** — the household tapping *It has no button I can reach*,
+which is `/strip/reach`. The hub asks the strip for a rhythm on the `press` endpoint, the strip shuts
+its door and opens it again with a verifier made from four freshly minted counts, and the wall shows
+the four steppers exactly as before. A verifier cannot be swapped inside a live session, which is why
+it is a shut and not a switch. Forcing that downgrade buys an attacker nothing: they still cannot see
+the flashes. `design/door/ShowMe.dc.html` is what the door canvas names for this rung and it stays
+drawn and unbuilt, because for a strip it would move the gate off the strip and onto the hub.
+
+All four paths run on an ESP32-S3 on 21 September: no press → refused; press → Wi-Fi and the broker in
+one session; *no button I can reach* → door shut and reopened with a rhythm 150 ms later; wrong rhythm
+→ refused inside SRP6a. The button is GPIO 0, which is also what the auto-reset circuit pulls from DTR,
+so the press can be made from the bench with no finger in the room.
+
+**A button, reachable, on the outside of every product** is now a hardware claim this rests on. It is
+free to decide now and impossible later, and `hardware/` has never had the conversation.
+
+**22. Calling `network_prov_mgr_deinit()` from the `NETWORK_PROV_END` handler deadlocks the task it is
+on, and nothing says so.** The header does not; the source does, in a comment. `prov_stop_and_notify()`
+runs on the esp_timer task with the manager's own `prov_ctx_lock` **already held**, and the last thing
+it does is call the app's event callback with `NETWORK_PROV_END`. `deinit()` takes that same lock, and
+it is not recursive, so it never returns.
+
+**Nothing is logged and nothing looks wrong.** The strip stays lit and keeps advertising. What is gone
+is the esp_timer task, and then the next task that asks the manager for anything — which was the whole
+housekeeping loop, the button with it, one line after asking to open a door a rung lower. It was found
+only by holding BOOT for five seconds and getting no factory reset, which is the one thing that proves
+that loop is dead.
+
+**It was in the shipped code before any of this**, on the ordinary completion path, where it had never
+been noticed because nothing afterwards needed a timer. The deinit now happens in `tend_the_door()`,
+from the housekeeping task, which holds nothing.
+
+**Three smaller ones from the same evening**, all in `prov.cpp` and all invisible until hardware:
+
+- **`network_prov_mgr_stop_provisioning()` is asynchronous** — it arms a cleanup timer and returns. A
+  flag cleared when the stop *lands* is a flag that asks for the same stop eighteen times in a fifth of
+  a second, because the housekeeping loop runs every 10 ms. Clear it where it is set.
+- **A stop does not raise `NETWORK_PROV_END`** — only a deinit does. Waiting for it after a stop is
+  waiting for something that never comes, and the strip sat in silence with nothing open at either
+  rung. The thing to watch is `gPc`, which our own `prov_stop` clears.
+- **`network_prov_mgr_endpoint_create()` hands out the next id each time it is called.** Asking again
+  on a second opening asks for 0xFF56 and 0xFF57, which no characteristic was reserved for. A stop
+  leaves the manager initialised and IDLE with its endpoints intact, so the reopen is a
+  `start_provisioning` and nothing else. Relatedly, the endpoint names were `strdup`ed and freed in
+  `prov_stop` while the scheme config went on pointing at them — fine for a door that opens once, a
+  use-after-free for one that opens twice. They are `std::string` now.
+
+**And the endpoint count in the log is the only sign a handler has nowhere to live.**
+`network_prov_mgr_endpoint_register()` at `NETWORK_PROV_START` without a matching
+`endpoint_create()` before the start succeeds, silently, and the characteristic simply does not exist.
+The `press` endpoint shipped that way for one boot and the only evidence was
+`our door is open, 6 endpoints` where it should have said 7.
+
+**21. The build cache keeps a `-D` from a session nobody remembers.** `idf.py -DDATA_PIN=48 build` puts
+`DATA_PIN:UNINITIALIZED=48` in `build/CMakeCache.txt` and every later `idf.py build` uses it — so a
+strip wired to GPIO 5 was being driven on GPIO 48, the devkit's own LED, and the boot line said so all
+along: `0.3.0 chip 2e4258 pin 48 300 lights`. **Read that line before believing anything about the
+light.** It is the same class of thing as the stale brain in `AGENTS.md` §2: a green from the wrong
+instrument.
 
 **20. A log that shouts loses the message it was kept for.** `be_patient_with_everyone()` walked
 three connection handles on every pass of the housekeeping loop — every 10 ms — whether or not
