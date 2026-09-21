@@ -50,14 +50,26 @@ unit test, and Alexa has not been tried.
 
 ### The next three things, in order
 
-1. **Write the shim** — protocomm's core and `protocomm_security2` behind our own GATT characteristics on
-   CHIP's host, per item 13. Nothing is waiting on an ecosystem or on a risk any more; this is the work.
+1. **Start the manager with SEC2 and PopLight** — the transport is built (item 13); what is missing is the
+   rhythm the strip mints and shows, the verifier made from it, and the first real session from a phone.
 2. **Then the brain's half**, which has to match on our service UUID rather than on a device name — there is no
    room for a name in the scan response, item 12.
 3. **Then the hub path, on the Pi.** Not on the Mac — see `2-mac`. That is the first time the brain, the panel
    and the firmware will have run together.
 
 ### Decided, and not to be reopened without a reason
+
+- **Our ecosystem first; Matter is kept, dormant, and gates nothing** (21 September). The strip stays a Matter
+  device because it is proven and costs ~3 KB, but certification is off the table indefinitely and nothing is
+  designed around it. A household reaches the strip through our own door (`Ours`); Apple, Google and Alexa
+  reach it through the hub's bridge (`docs/matter.md`), not through the strip's own Matter stack. So `CodeHub`
+  is parked — the bridge opens commissioning windows, not the strip — and the fork stays as a fact of the
+  firmware rather than a product promise. Selling a certified unit remains possible later because the
+  partitions and the Matter lane are already there.
+- **The proof of possession on our door is the light** — `PopLight`: the strip mints a rhythm each time it is
+  plugged in and the person taps what they count. SRP6a underneath. `PopWindow` may exist only behind a build
+  flag for the bench, never in a release; `PopBox` was not chosen because its one argument — the label has to
+  exist anyway — only holds if Matter ships first.
 
 - **ESP-IDF, not Arduino.** Arduino compiles Matter-over-BLE out on every target; a strip built that way cannot
   be set up by Apple or Google at all. Evidence both ways is in this document.
