@@ -598,6 +598,24 @@ the house, which is how these things get returned. The camera route avoids all o
 pointed into a living room. **The cheap next step is neither: a capture stick and HyperHDR on a bench,
 to find out whether it feels like the screen extended or like a gimmick, before any of it is paid for.**
 
+**19. The two doors are not equally easy to see, and the harder one is ours.** Matter's identity is
+in the **advertisement**; ours is in the **scan response**, because Matter's payload had already
+filled the advertisement and 31 bytes will not hold both (item 12). A scan response only arrives if
+the scanner asked for one and the answer got back, so at the far end of a room the advertisement
+lands and the scan response sometimes does not — and the same strip appears at Matter's door alone.
+
+Seen on 21 September, on a real hub, minutes after the D-Bus mount made scanning work at all: the
+household was asked for a setup code and the commissioner answered
+`matter/commission: Node 1 does not exist`, for a strip that had a perfectly good door of ours open
+the whole time. Nothing on the screen could have told them.
+
+`look()` now asks our door a second time, for longer, when nothing turned up there and something at
+Matter's door might be ours — a retry rather than a guess, since treating a test vendor id as proof
+of anything is what item 6 already ruled out. And an address that answers at both doors is one strip,
+so ours wins. **It is a mitigation and not a cure:** a scan response is simply less likely to arrive
+than an advertisement, and the real answer is either extended advertising, where we would get an
+advertising set of our own, or accepting that the last few decibels belong to Matter's door.
+
 **18. The brain could not do Bluetooth at all on a real hub, and nothing said so.** Found on
 21 September with a strip knocking a metre from the hub and the panel showing nothing. The brain runs
 in a container with `network_mode: host`, which gives it the network and **not the system bus** — and

@@ -505,3 +505,49 @@ class OurOwnDoor(unittest.TestCase):
         st = self.strips.status()
         self.assertEqual(st["state"], "failed")
         self.assertIn("flashes", st["text"])
+
+
+class WhichDoorTheStripIsTakenThrough(unittest.TestCase):
+    """Matter's identity is in the advertisement and ours is in the scan response, which only
+    arrives if the scanner asked and the answer got back. At range the advertisement lands and the
+    scan response sometimes does not, so the same strip can turn up at Matter's door alone -- and
+    on 21 September a household was asked for a setup code, and the commissioner failed, for a
+    strip with a perfectly good door of ours open the whole time."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.hub = FakeHub(self.tmp.name)
+        self.radio = FakeRadio()
+        self.strips = Strips(self.hub, self.radio)
+
+    def tearDown(self): self.tmp.cleanup()
+
+    def test_one_strip_at_both_doors_is_taken_through_ours(self):
+        self.radio.ours = [{"address": "AA:BB", "rssi": -40, "name": "PROV_1"}]
+        self.radio.advertising = [{"addr": "AA:BB", "rssi": -42, "discriminator": 3840,
+                                   "vendor": TEST_VID, "ours": True}]
+        run(self.strips.look())
+        self.assertEqual(self.strips.job["door"], "ours")
+
+    def test_a_missed_scan_response_is_asked_for_again_before_settling_for_matters(self):
+        """The bug itself: our scan came back empty, Matter's did not, and the job went to the
+        wrong door without anything saying so."""
+        self.radio.advertising = [{"addr": "AA:BB", "rssi": -68, "discriminator": 3840,
+                                   "vendor": TEST_VID, "ours": True}]
+        tries = []
+
+        async def flaky(seconds=8.0):
+            tries.append(seconds)
+            if len(tries) == 1: return []
+            return [{"addr": "AA:BB", "rssi": -68, "name": "PROV_1", "door": "ours", "ours": True}]
+        self.radio.scan_ours = flaky
+        run(self.strips.look())
+        self.assertEqual(len(tries), 2)            # asked again
+        self.assertGreater(tries[1], tries[0])     # and for longer
+        self.assertEqual(self.strips.job["door"], "ours")
+
+    def test_a_strip_that_really_is_only_matters_still_goes_through_matters(self):
+        self.radio.advertising = [{"addr": "CC:DD", "rssi": -50, "discriminator": 3840,
+                                   "vendor": TEST_VID, "ours": True}]
+        run(self.strips.look())
+        self.assertEqual(self.strips.job["door"], "matter")
