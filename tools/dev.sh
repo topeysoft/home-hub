@@ -246,7 +246,9 @@ case "${1:-status}" in
   #
   # Same warning as `live`: it is a real house. Their lights, their names, their Restart button.
   graft) house=${2:-hub.local}
-         ssh -o BatchMode=yes -o ConnectTimeout=8 "pi@$house" true 2>/dev/null || {
+         # SetEnv, because ssh otherwise forwards this Mac's locale to a hub that does not have it
+         # and every remote command opens with a setlocale warning that looks like a fault.
+         ssh -o BatchMode=yes -o SetEnv=LC_ALL=C -o ConnectTimeout=8 "pi@$house" true 2>/dev/null || {
            echo "${Y}cannot ssh to pi@$house${R}" >&2
            echo "  ${D}tools/dev.sh graft <name-or-address>${R}" >&2; exit 1; }
          # Compile it here first. Shipping a syntax error to a house and finding out from a
@@ -255,8 +257,10 @@ case "${1:-status}" in
          row "house" "$house"
          row "taps" "${Y}real${R} ${D}— their lights, their names, their Restart button${R}"
          row "undo" "${D}docker compose up -d --force-recreate brain, or the next update${R}"
-         COPYFILE_DISABLE=1 tar czf - -C brain hub vendor 2>/dev/null \
-           | ssh -o BatchMode=yes "pi@$house" 'tmp=$(mktemp -d) && tar xzf - -C "$tmp" \
+         # --no-xattrs, because bsdtar on a Mac writes com.apple.provenance into every header and
+         # GNU tar on the hub then prints a warning per file. Nothing is wrong; it just looks it.
+         COPYFILE_DISABLE=1 tar --no-xattrs -czf - -C brain hub vendor 2>/dev/null \
+           | ssh -o BatchMode=yes -o SetEnv=LC_ALL=C "pi@$house" 'tmp=$(mktemp -d) && tar xzf - -C "$tmp" 2>/dev/null \
                && sudo -n docker cp "$tmp/hub" brain:/srv/brain/ \
                && sudo -n docker cp "$tmp/vendor" brain:/srv/brain/ \
                && rm -rf "$tmp" && sudo -n docker restart brain >/dev/null && echo grafted'
