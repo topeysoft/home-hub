@@ -6,7 +6,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { moveDevice, renameDevice } from './api'
 import { store, notify, refreshFound, loadHealth } from './store'
-import { doors, type Act, type Caught, type Door, type Proof, type Working } from './adding'
+import { doors, stripWaiting, type Act, type Caught, type Door, type Proof, type Working } from './adding'
 import Icon from './Icon.vue'
 import Blink from './prove/Blink.vue'
 import Press from './prove/Press.vue'
@@ -134,6 +134,10 @@ async function done() {
    pretend otherwise: it offers the screen that places them, rather than a paragraph about it. */
 function intoRooms() { store.goRoom = 'unassigned'; store.sheet = null }
 
+/* A strip still asking, while something else has the screen. The predicate is in adding.ts with
+   the rest of this screen's vocabulary, and is pinned by a test. */
+const waitingStrip = computed(() => stripWaiting(store.strip?.state))
+
 /* What is already waiting is the whole job most of the time, so it is asked for on the way in
    rather than whenever the house next gets round to it. */
 onMounted(refreshFound)
@@ -151,7 +155,7 @@ if (props.resume) open_('signin', props.resume, store.resumeName || 'Sign in aga
   <div class="add adding">
     <!-- ===== beat one: what have you got ===== -->
     <template v-if="beat === 'choose'">
-      <div class="add-block" v-if="store.found.length || (store.bridge?.waiting ?? 0) > 0">
+      <div class="add-block" v-if="store.found.length || (store.bridge?.waiting ?? 0) > 0 || waitingStrip">
         <h3 class="label">Already waiting</h3>
         <ul class="found">
           <li v-for="f in store.found" :key="f.flow_id">
@@ -166,6 +170,19 @@ if (props.resume) open_('signin', props.resume, store.resumeName || 'Sign in aga
               <span class="found-kind">Nearby, and not on your house yet</span>
             </span>
             <button class="button small" @click="open_('blink', null, 'A switch on the wall')">Have a look</button>
+          </li>
+          <!-- A KNOCKING STRIP, AND ONLY WHEN SOMETHING ELSE IS AHEAD OF IT. Its own sheet covers
+               the whole screen the moment one knocks, so the only time this page is visible with a
+               strip waiting is when a bridge has outranked it (App.vue: somebody is holding the
+               bridge). There is nothing to tap, because tapping could not bring the sheet forward
+               while the bridge still has it -- so the row says where it is in the queue instead of
+               offering a button that would do nothing. -->
+          <li v-if="waitingStrip">
+            <span class="found-icon"><Icon name="light" :size="18" /></span>
+            <span class="found-text">
+              <span class="found-title">A light strip is asking to be let in</span>
+              <span class="found-kind">It will ask as soon as the one on screen is done</span>
+            </span>
           </li>
         </ul>
       </div>

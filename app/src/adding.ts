@@ -118,3 +118,18 @@ export function asThing(text?: string): string | undefined {
   const [first] = t.split(/\s/)
   return OPENERS.has(first.toLowerCase()) ? first.toLowerCase() + t.slice(first.length) : t
 }
+
+/*
+ * IS A LIGHT STRIP STILL ASKING?
+ *
+ * A strip's own sheet covers the whole screen the moment one knocks, so the only time this page is
+ * visible with a strip waiting is when something has outranked it -- a bridge, because somebody is
+ * holding the bridge (App.vue). The row it drives says where the strip is in the queue rather than
+ * offering a button, because nothing tappable could bring the sheet forward while the bridge has it.
+ *
+ * Only the beats where it is still ASKING. A strip that is being set up, or is set up, or has
+ * failed, is not something waiting to be let in, and listing it as one would be a second place in
+ * the panel claiming to know the same thing -- which is how two screens start disagreeing.
+ */
+const STILL_ASKING = ['knocking', 'rhythm']
+export const stripWaiting = (state?: string) => STILL_ASKING.includes(state ?? '')

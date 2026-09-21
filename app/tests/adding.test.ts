@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it, beforeEach } from 'vitest'
 import { readFileSync, readdirSync } from 'node:fs'
-import { asThing, doors, kindOf } from '../src/adding'
+import { asThing, doors, kindOf, stripWaiting } from '../src/adding'
 import { store } from '../src/store'
 
 /* The vocabulary of adding, pinned. Five screens used to say the same thing five ways -- six words
@@ -94,5 +94,27 @@ describe('the word list', () => {
       expect(src(`prove/${f}`), f).not.toContain('Not now')
     }
     expect(src('Adding.vue')).toContain('flow-actions')
+  })
+})
+
+/* A KNOCKING STRIP HAS A PLACE ON THIS PAGE, and only one. Its own sheet covers the screen the
+   moment one knocks, so the page is visible with a strip waiting only when a bridge has outranked
+   it -- and then the household should still be told the strip is there. design/strip/Both.dc.html
+   and Knock.dc.html: a strip is never started, it is plugged in and it knocks, so it belongs under
+   "Already waiting" and never as a door somebody opens. */
+describe('a light strip waiting its turn', () => {
+  it('counts only the beats where it is still asking', () => {
+    expect(stripWaiting('knocking')).toBe(true)
+    expect(stripWaiting('rhythm')).toBe(true)
+  })
+
+  it('is not waiting once it is a job, or over, or nothing', () => {
+    for (const s of ['working', 'order', 'length', 'room', 'ready', 'failed', 'none', undefined])
+      expect(stripWaiting(s)).toBe(false)
+  })
+
+  it('is never offered as a door, because nobody starts a strip', () => {
+    store.status = { drivers: [{ id: 'matter', state: 'ready' }] } as any
+    for (const d of doors()) expect(`${d.title} ${d.sub}`.toLowerCase()).not.toContain('strip')
   })
 })
