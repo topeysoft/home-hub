@@ -386,6 +386,14 @@ void on_taken(Taken fn) { gTaken = fn; }
 
 bool keep_knocking() {
     if (!gPc || !gOpenedAt) return false;                       // never opened, or already taken
+
+    // CHIP STOPS ADVERTISING FOR REASONS THAT ARE NOT THE WINDOW CLOSING. It stops and restarts when
+    // it drops from fast to slow advertising, and again around a connection. Treating every stop as
+    // the end of the window reopened it constantly, kicked the radio back to fast advertising for
+    // ever, and dropped a client that was in the middle of discovering services -- which is how this
+    // was found, with a Pi failing at "failed to discover services, device disconnected".
+    if (chip::Server::GetInstance().GetCommissioningWindowManager().IsCommissioningWindowOpen()) return true;
+
     if (esp_timer_get_time() - gOpenedAt >= kKnockFor) {
         ESP_LOGI(TAG, "two days of knocking is enough");
         return false;

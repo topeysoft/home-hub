@@ -659,9 +659,27 @@ Two things of ours sit on top of Espressif's: finding a strip by the service UUI
 and the `hub` step. Espressif's own `Transport_BLE` could not be used unchanged for two reasons, both
 assumptions that do not hold here — it finds a device by advertised *name*, and our scan response has
 barely room for one; and it derives characteristic UUIDs by masking the endpoint id against the service
-UUID, which is a no-op for the all-`ff` service it assumes and mangles ours. **Not yet run on the Pi**,
-which is the only place it matters, and the CoreBluetooth workaround in that file exists so a bench on a
-Mac is not a dead end.
+UUID, which is a no-op for the all-`ff` service it assumes and mangles ours. **Run on the Pi on 21 September, and it is half proven.** What works over BlueZ, with no
+workaround of any kind: the vendored modules import on Linux and Python 3.13, discovery by service UUID
+finds the strip repeatedly, and one connection walked 14 characteristics. **What does not work is
+keeping the link up.** A connection establishes and then dies three to five seconds in with NimBLE
+reason `0x208` — a supervision timeout — every time a session is attempted, at about −64 dBm. The same
+code against the same strip at −25 dBm on a Mac completes.
+
+The likeliest cause, and it is not yet confirmed: **CHIP never negotiates connection parameters at all**
+— there is no `ble_gap_update_params` anywhere in its NimBLE `BLEManagerImpl` — so the link runs on
+whatever BlueZ proposes, and the strip is holding up Wi-Fi on the same radio while it answers. Software
+coexistence is already on (`CONFIG_ESP_COEX_SW_COEXIST_ENABLE`). The fix is probably for the strip to ask
+for a longer supervision timeout when a link comes up, which means a GAP hook in a connection CHIP owns.
+**Nobody has tried moving the strip next to the Pi**, which would separate range from parameters in one
+minute and should be the first thing done.
+
+A scratch copy for continuing this lives at `~/strip-door-test` on the hub, with its own venv; nothing
+was installed into `/opt/home-hub`.
+
+**And the BLE address rotates.** Two scans minutes apart returned `F3:EE:DA:BB:CD:5A` and then
+`CC:57:3B:B4:71:80` for the same strip, so the hub must never cache an address — the service UUID and
+the name are the identity, which is what `find()` already returns.
 
 **13. How the second door actually gets built, read out of the source rather than guessed.** Three facts, and
 together they decide the shape:
