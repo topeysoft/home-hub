@@ -567,8 +567,9 @@ class Strips:
             # was later called "a long way from the hub" is the sentence itself, and there is no way
             # to tell a faint strip from a bug in the reading. It is one line and it has already
             # been wanted three times in one evening.
-            log.info("strip: knocking at %s's door, heard at %s dBm%s", s.get("door", "matter"),
-                     s.get("rssi"), "" if len(found) == 1 else f" ({len(found)} are knocking)")
+            log.info("strip: knocking at %s door, heard at %s dBm%s",
+                     "our own" if s.get("door") == "ours" else "Matter's", s.get("rssi"),
+                     "" if len(found) == 1 else f" ({len(found)} are knocking)")
             self._set("knocking")
             break
         return self.status()
@@ -688,8 +689,13 @@ class Strips:
         if not j: return
         try:
             wifi = (self.hub.settings.get("wifi") or {}) if hasattr(self.hub, "settings") else {}
-            # Every strip the broker already knows about, so the one that turns up next is this one.
-            known = set(self.strips)
+            # Every strip that is ON THE BROKER RIGHT NOW, so the one that comes online next is
+            # this one. NOT every strip the broker has heard of: it keeps what a strip said last,
+            # retained, and the brain reads all of it the moment it subscribes -- so a strip being
+            # set up for the second time is already in this dict, marked offline, and "an id that
+            # was not there before" can never match it again. Which is a strip somebody factory
+            # reset and is standing over, watching the wall say it never reached the hub. 21 Sep.
+            known = {id_ for id_, s in self.strips.items() if s.get("online")}
             if j.get("door") == "ours":
                 # OUR DOOR CARRIES EVERYTHING IN ONE SESSION, which is the whole difference. The
                 # Wi-Fi and where we are go together, so the strip comes out of setup already able
@@ -750,16 +756,18 @@ class Strips:
             self._fail("Setting that light strip up did not work. Unplug it and try again.")
 
     async def _whoever_just_arrived(self, known: set, timeout: float) -> str | None:
-        """The id of the first strip to reach the broker that was not there before.
+        """The id of the first strip to COME ONLINE that was not online before.
 
         It announces itself -- `strip/<id>/status` is published retained the moment it connects --
-        so there is nothing to ask and nothing to poll. `known` is the set taken before the session,
-        because a house may already have strips in it and every one of them is also online."""
+        so there is nothing to ask and nothing to poll. `known` is the set of strips already online
+        when the session began, because a house may have strips in it and every one of them is also
+        online. It is deliberately not "every strip the broker has heard of": those are retained and
+        include every strip that has ever connected, which is exactly the strip being set up again."""
         self._woke = asyncio.Event()
         end = time.monotonic() + timeout
         while True:
             for id_, s in list(self.strips.items()):
-                if id_ not in known and s.get("online"): return id_
+                if s.get("online") and id_ not in known: return id_
             left = end - time.monotonic()
             if left <= 0: return None
             try: await asyncio.wait_for(self._woke.wait(), timeout=max(0.01, left))

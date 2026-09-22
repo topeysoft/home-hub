@@ -596,6 +596,25 @@ class OurOwnDoor(unittest.TestCase):
             self.assertEqual(self.strips.status()["state"], "order")   # on to the color question
         run(go())
 
+    def test_a_strip_being_set_up_a_SECOND_time_is_still_found(self):
+        """The broker keeps what a strip said last, retained, and the brain reads all of it the
+        moment it subscribes. So a strip that has ever connected is in the list before the session
+        starts -- marked offline -- and "an id that was not there before" can never match it again.
+        That is a strip somebody has just factory reset and is standing over."""
+        async def go():
+            # It has been here before: the broker still holds its last word, and it is offline.
+            self.strips._on_mqtt({"topic": "strip/52e204/status", "payload": "offline"})
+            self.strips._on_mqtt({"topic": "strip/52e204/order", "payload": "grb"})
+            await self.waiting()
+            self.radio.hold = False
+            await turn()
+            self.assertIsNone(self.strips.job["id"])
+            self.strips._on_mqtt({"topic": "strip/52e204/status", "payload": "online"})
+            await turn()
+            self.assertEqual(self.strips.job["id"], "52e204")
+            self.assertEqual(self.strips.status()["state"], "order")
+        run(go())
+
     def test_a_strip_the_house_already_had_is_not_mistaken_for_the_new_one(self):
         """A house with strips in it has every one of them online, and they are not this one."""
         async def go():

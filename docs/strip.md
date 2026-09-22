@@ -684,8 +684,23 @@ was not wrong**, which is the actual lesson of items 24, 25 and 26 together: a m
 household's house should be built from what the hub OBSERVED, not from where in the code the failure
 happened to surface.
 
-**Still not proven:** a strip reaching the broker and answering. Both fixes are tested and neither has
-run against a real broker yet.
+**And the fix for the second one was wrong on its first try, in a way only a real broker shows.** It
+waited for an id that **was not there before** — but the broker keeps what a strip said last, retained,
+and the brain reads all of it the moment it subscribes to `strip/#`. So a strip that has *ever*
+connected is already in that dict before the session starts, marked offline, and can never be "new"
+again. Which is precisely a strip somebody has just factory reset and is standing over. It waits for a
+strip to come **online** that was not online before, which is the fact it actually needs.
+
+**The broker is the instrument that settled it**, and it was three commands away the whole evening:
+
+    strip/52e204/count  300
+    strip/52e204/order  grb
+    strip/52e204/status offline
+
+That is a strip that reached the broker, said what it was, and later dropped — while the wall was
+saying it never reached the hub. `mosquitto_sub -t "strip/#" -v` inside the `mosquitto` container, with
+the brain's own `MQTT_USER`/`MQTT_PASSWORD`, is the check to run before believing anything about this
+step.
 
 **25. A strip too far from the hub failed four different ways and never once said "too far".** The
 whole of 21 September's evening on a real hub, in one log:
