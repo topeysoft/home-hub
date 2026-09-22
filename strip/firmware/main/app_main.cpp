@@ -40,6 +40,7 @@
 #include <nvs_flash.h>
 #include <nvs.h>
 #include <driver/gpio.h>
+#include <esp_task_wdt.h>
 #include <esp_wifi.h>
 #include <esp_timer.h>
 #include <mqtt_client.h>
@@ -363,6 +364,13 @@ static void blink_back() {
 }
 
 static void housekeeping(void *) {
+    // WATCHED, BECAUSE A LOOP THAT STOPS LOOKS EXACTLY LIKE A STRIP THAT IS FINE. Everything a
+    // person can do to this thing with their hands is read from here -- the press that lets the hub
+    // in, the five-second hold that forgets the house -- and when this task stopped, twice on
+    // 21 September, the strip went on glowing and advertising and answering Matter, and the only
+    // sign was a button that did nothing. Under the task watchdog a block is a panic with a stack
+    // trace in the log instead, which is a bad day somebody can actually read.
+    esp_task_wdt_add(nullptr);
     bool released = false, armed = false, was_lit = true;
     uint32_t loud_at = 0;
     uint32_t down = 0;
@@ -463,6 +471,7 @@ static void housekeeping(void *) {
         // yields to tasks at this priority or above -- never to the idle task at 0. This loop was
         // therefore a busy spin that starved IDLE0 and tripped the task watchdog every five seconds.
         // Anything under one tick here silently means "do not sleep at all".
+        esp_task_wdt_reset();
         vTaskDelay(pdMS_TO_TICKS(10));
     }
 }

@@ -21,6 +21,9 @@
 #include <string>
 #include <vector>
 
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+
 #include <esp_log.h>
 #include <esp_random.h>
 #include <esp_timer.h>
@@ -601,12 +604,29 @@ void tend_the_door() {
             ESP_LOGE(TAG, "the door would not reopen with a rhythm; this strip cannot be taken now");
         return;
     }
-    // The door is shut for good. Give the manager's memory back, from here, where no lock is held
-    // and this call can take the manager's own without meeting itself coming the other way.
+    // The door is shut for good. Give the manager's memory back -- ON A TASK OF ITS OWN, and that
+    // is the whole point of these four lines.
+    //
+    // THE BUTTON MUST NEVER BE BEHIND ANYTHING THAT CAN BLOCK. It is the way out of every other
+    // mistake in this firmware -- the factory reset lives on it -- and it is read from the same loop
+    // as this. network_prov_mgr_deinit() takes the manager's own lock, and the manager's cleanup
+    // timer holds that lock while it tells us the door has shut; it is exactly the call that already
+    // hung a task once. Worse, THIS line only runs after a session has actually completed, so it
+    // never ran on a bench whose Wi-Fi was a name that does not exist, and ran every time on a real
+    // house. Reported from one on 21 September as "holding BOOT does nothing until I press RESET
+    // first", which is what a housekeeping loop that is no longer running looks like from outside.
+    //
+    // On its own task, the worst a block costs is the manager's memory. On this one it costs the
+    // button, the fill, the light and the way out.
     if (gDoorIsShut && !gPc) {
         gDoorIsShut = false;
-        network_prov_mgr_deinit();
-        ESP_LOGI(TAG, "the door is shut and the manager is packed away");
+        auto pack_away = [](void *) {
+            network_prov_mgr_deinit();
+            ESP_LOGI(TAG, "the door is shut and the manager is packed away");
+            vTaskDelete(nullptr);
+        };
+        if (xTaskCreate(pack_away, "prov_pack", 4096, nullptr, 4, nullptr) != pdPASS)
+            ESP_LOGW(TAG, "could not pack the manager away; it keeps its memory and we keep going");
     }
 }
 

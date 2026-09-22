@@ -624,6 +624,28 @@ the house, which is how these things get returned. The camera route avoids all o
 pointed into a living room. **The cheap next step is neither: a capture stick and HyperHDR on a bench,
 to find out whether it feels like the screen extended or like a gimmick, before any of it is paid for.**
 
+**28. The button stopped working after a successful setup, and a strip with a dead housekeeping loop
+looks exactly like a strip that is fine.** Reported from a real house on 21 September as *"holding BOOT
+does nothing until I press RESET first"*, which is the only symptom this has.
+
+`tend_the_door()` calls `network_prov_mgr_deinit()` once the door has shut for good — and that line runs
+**only after a session has actually completed**, so it never ran on a bench whose Wi-Fi was a name that
+does not exist, and ran every time in a house. It is also the exact call item 22 is about: it takes the
+manager's own lock, and the manager's cleanup timer holds that lock while it tells us the door has shut.
+
+**What that costs is not the manager, it is the loop.** Everything a person can do to this thing with
+their hands is read from `housekeeping()`: the short press that lets the hub in, the five-second hold
+that forgets the house, the fill, the instrument, and `tend_the_door()` itself. The strip goes on
+glowing, advertising and answering Matter with all of it gone.
+
+**Two rules out of it, and they are both general:**
+
+- **The button must never be behind anything that can block.** It is the way out of every other mistake
+  in this firmware. The deinit now runs on a task of its own, where the worst a block costs is the
+  manager's memory.
+- **The loop that reads the hands is under the task watchdog.** A block is now a panic with a stack
+  trace, which is a bad day somebody can read, instead of a strip that has quietly gone deaf.
+
 **27. Two strips knocking, and the hub talked to the wrong one.** Our door's scan returned strips in
 the order they happened to advertise; Matter's side has sorted by signal since it was written. So a
 household standing over one strip, pressing its button, could be waited out by a hub holding a session
