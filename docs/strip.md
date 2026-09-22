@@ -624,6 +624,31 @@ the house, which is how these things get returned. The camera route avoids all o
 pointed into a living room. **The cheap next step is neither: a capture stick and HyperHDR on a bench,
 to find out whether it feels like the screen extended or like a gimmick, before any of it is paid for.**
 
+**27. Two strips knocking, and the hub talked to the wrong one.** Our door's scan returned strips in
+the order they happened to advertise; Matter's side has sorted by signal since it was written. So a
+household standing over one strip, pressing its button, could be waited out by a hub holding a session
+open with a different strip in another room — and then told *"that strip is a long way from the hub"*,
+which was perfectly accurate about the wrong strip. `look()` sorts within each door now. **Our door
+still wins over Matter's however faint it is** — it is the only one that can ask the two questions and
+hand over the broker — but which strip at our door is now the nearest one.
+
+**And the sentence the panel says while this happens cannot be made true by the panel.** `_label()`
+returns "A light strip" on the reasoning that "it is two meters of light and it is the only one lit",
+which is false the moment a second one is knocking. The brain now logs how many are, and at what
+signal; what the wall should SAY when there are two is a screen and wants a board.
+
+**The thing that made it hard to see:** a strip that has completed setup once **advertises nothing at
+all** — our door is shut by the `ours` flag and Matter's window is closed at boot (item 16). So a strip
+carried over to the hub and set up already is not "a strip near the hub that failed", it is not there,
+and the only strip in earshot is whichever other one is still knocking somewhere else. Nothing on the
+wall says a strip is spent; the five-second hold is the only way back and nobody is told it exists.
+**That belongs with the partial-commissioning bug at the top of the open list.**
+
+**Also learned, and it is a rule rather than a bug:** a scan filtered to the thing you are looking for
+cannot tell "it is not there" from "the radio is dead". Item 18 is exactly that failure and it still
+caught me: a filtered scan from the hub returned nothing twice and read as range, and the unfiltered
+one returned **29 devices**. Scan for everything first, then filter.
+
 **26. Every strip ever set up through our own door was handed a broker it could not log in to, and
 then asked a question on a topic nothing subscribes to.** Two bugs in a row, both on the last mile,
 and between them our door has never once completed. Found on a real hub on 21 September, with the

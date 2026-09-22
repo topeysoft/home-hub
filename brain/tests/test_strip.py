@@ -563,6 +563,21 @@ class OurOwnDoor(unittest.TestCase):
             self.assertNotIn("nearer", said)
         run(go())
 
+    def test_the_strip_you_are_standing_next_to_is_the_one_the_hub_talks_to(self):
+        """Two strips knocking is an ordinary evening -- somebody unpacks a pair. The hub used to
+        take whichever advertised first, so a household pressing the button on the one in front of
+        them could be waited out by a hub listening to the one upstairs. Matter's side has sorted by
+        signal since it was written; ours did not."""
+        async def go():
+            self.radio.ours = [
+                {"address": "FAR", "rssi": -81, "name": "PROV_far"},
+                {"address": "NEAR", "rssi": -34, "name": "PROV_near"},
+            ]
+            await self.strips.look()
+            self.assertEqual(self.strips.job["addr"], "NEAR")
+            self.assertEqual(self.strips.job["rssi"], -34)
+        run(go())
+
     # ---- and then it has to be found again, on the broker ----
 
     def test_the_strip_is_found_by_whoever_turns_up_on_the_broker(self):

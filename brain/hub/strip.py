@@ -545,7 +545,16 @@ class Strips:
         # One strip, two advertisements: if an address answered at both, it is the same board and
         # our door is the one worth having.
         at_ours = {o["addr"] for o in ours}
-        found = ours + [t for t in theirs if t["addr"] not in at_ours]
+        # NEAREST FIRST, WITHIN EACH DOOR. Our door still wins over Matter's however faint it is,
+        # because it is the only one that can ask the two questions and hand over the broker -- but
+        # WHICH strip at our door was whichever happened to advertise first, and two strips knocking
+        # is an ordinary evening: somebody unpacks a pair. A household standing over one of them
+        # pressing its button, while the hub waits on the other in a different room, is timed out
+        # and then told the strip is a long way from the hub -- perfectly accurate, about the wrong
+        # strip. Matter's side has sorted by signal since it was written; this side never did.
+        loud = lambda s: -(s.get("rssi") if s.get("rssi") is not None else -127)
+        found = sorted(ours, key=loud) + sorted(
+            (t for t in theirs if t["addr"] not in at_ours), key=loud)
         for s in found:
             if s["addr"] in self._dismissed: continue
             # No chip here: a Matter advertisement carries a discriminator and not an id of ours.
@@ -554,6 +563,12 @@ class Strips:
                         "discriminator": s.get("discriminator"), "vendor": s.get("vendor"),
                         "door": s.get("door", "matter"), "rssi": s.get("rssi"),
                         "label": self._label(s), "first": None}
+            # WHICH ONE, AND HOW WELL WE CAN HEAR IT. Without this the only record of why a setup
+            # was later called "a long way from the hub" is the sentence itself, and there is no way
+            # to tell a faint strip from a bug in the reading. It is one line and it has already
+            # been wanted three times in one evening.
+            log.info("strip: knocking at %s's door, heard at %s dBm%s", s.get("door", "matter"),
+                     s.get("rssi"), "" if len(found) == 1 else f" ({len(found)} are knocking)")
             self._set("knocking")
             break
         return self.status()
