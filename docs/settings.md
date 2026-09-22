@@ -90,12 +90,21 @@ Every service that needed a sign-in, with one of three states and two buttons.
 Already the product: room tiles, *New devices*, *Found nearby*. What is missing is the end of a device's life and its
 own settings.
 
-- **Forget.** Built, and **not** where this said it would be: `DELETE /devices/<id>` is reached from the room's
-  edit screen and from a fault report, and the tile's long-press still offers only rename and move. That gap is what
-  `design/forget/` argues about — the same question for a light strip, a wall switch on the mesh and a sensor with no
-  tile at all, none of which a per-device route can answer on its own. Two kinds do not go through the registry:
-  a mesh switch is forgotten at its bridge (`docs/brilliant.md`) because the puck re-announces it otherwise, and a
-  light strip is asked to forget the house as well (`docs/strip.md` item 37) so it can be set up somewhere else.
+- **Forget.** Built, and in two places rather than the one this said. `design/forget/` argued it out on
+  22 September and the answer was **C with A's row as its shortcut**: a door, *What this house has*, between
+  Accounts and Add, listing everything the hub knows **grouped by what brought it** — because what brought a
+  thing is exactly what decides whether it may leave alone, and the panel had nowhere to draw that fact. The
+  shortcut is the fourth quiet row on a thing's own pane, inside edit, beside *Show this as* and *Lead with*.
+  `brain/hub/things.py` writes every word of both, including the words on the buttons; the panel draws the acts
+  and invents nothing, the way *Needs a look* already does. `brain/tests/test_things.py` fails on purpose if the
+  arrangement drifts.
+  Two kinds never go through the registry: a mesh switch is forgotten at its bridge (`docs/brilliant.md`)
+  because the puck re-announces it otherwise, and a light strip is asked to forget the house as well
+  (`docs/strip.md` item 37) so it can be set up somewhere else. And a refusal is now a door rather than a dead
+  end — the brain names the account, and the thing is listed in the door under exactly that account.
+  **There is no undo on this one.** Everywhere else what you just touched keeps its place and *is* the undo;
+  here it cannot be, so the whole of the care is in asking first with the name in the question, and what is left
+  behind — the drained row on the door, the drained pane — says what happened and offers nothing.
 - **Settings.** The same long-press draws the device's options flow when its integration has one, through the form
   renderer in `onboarding.py`, in the integration's own English. No new vocabulary; most people never open it.
 - **Provisioning.** Keep *Found nearby* first. Add one line of "what to expect" per kind before a flow starts (a bridge

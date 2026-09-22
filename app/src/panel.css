@@ -5268,6 +5268,175 @@ select.input {
   border-color: rgba(var(--danger-rgb), 0.5);
   color: #f3c9c9;
 }
+/* ---------- what this house has ----------
+   One door holding everything the hub knows, grouped by what brought it
+   (design/forget/ThingsDoor.dc.html). The group header carries the bigger hammer -- remove the
+   account, forget the bridge -- because that is where the reason for it is visible; the rows carry
+   the ordinary way out. Every word in here is written in brain/hub/things.py. */
+.things {
+  margin-top: 22px;
+}
+.things:first-of-type {
+  margin-top: 8px;
+}
+.things-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--edge);
+}
+.things-k {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.things-k svg {
+  color: var(--ink-2);
+}
+/* The group's way out, and the one mark that says a quiet line is a control -- the same dotted
+   underline the pane uses for the decisions that are not taps. A button here would compete with
+   the rows' own, and the rows are the thing somebody came to read. */
+.things-a {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 13.5px;
+  color: var(--ink-2);
+  cursor: pointer;
+  text-align: right;
+  text-decoration: underline dotted;
+  text-decoration-color: var(--edge-hi);
+  text-underline-offset: 4px;
+}
+.things-a:hover {
+  color: var(--ink);
+  text-decoration-color: var(--ink-2);
+}
+.things-a.warn {
+  color: var(--danger);
+  text-decoration-color: rgba(var(--danger-rgb), 0.45);
+}
+.things-a.still {
+  cursor: default;
+  color: var(--muted);
+  text-decoration: none;
+}
+.things-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.things-rows li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) minmax(0, 190px) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 11px 10px;
+  border-radius: var(--r-sm);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+.things-rows li:last-child {
+  border-bottom: 0;
+}
+.things-rows li.armed {
+  background: rgba(var(--danger-rgb), 0.07);
+}
+/* Taken out, and still in its place. This is the one act in the panel with no undo, so what is left
+   behind says what happened and offers nothing -- the care went into the question instead. */
+.things-rows li.spent {
+  opacity: 0.5;
+}
+.things-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  background: var(--surface-hi);
+  color: var(--ink-2);
+}
+.things-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.things-name {
+  font-size: 15.5px;
+}
+.things-sub {
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.things-where {
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.things-do {
+  justify-self: end;
+  white-space: nowrap;
+}
+.things-do .button {
+  margin: 0;
+}
+/* Why this one has no way out of its own: it goes when the thing above it does. Said on every row
+   rather than once per group, because a row is what a finger lands on. */
+.things-why {
+  font-size: 13px;
+  color: var(--muted);
+}
+/* The one that does it. A plain .button is near-white with dark ink on it, so taking only the text
+   to the danger color put pale pink on white and the sentence a person is meant to read before an
+   act with no undo was the faintest thing on the screen. It gets a field of its own. */
+.things .button.warn {
+  background: rgba(var(--danger-rgb), 0.16);
+  border: 1px solid rgba(var(--danger-rgb), 0.55);
+  color: #f3c9c9;
+}
+.things .button.warn:hover {
+  background: rgba(var(--danger-rgb), 0.24);
+}
+/* What goes, said before it does, across the row rather than inside the button -- a button that grew
+   to hold the sentence would pull its own row out of line with every other one (.sort-forget-ask
+   made the same decision for the same reason). */
+.things-ask {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 6px 0 2px;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+.things-ask-do {
+  display: inline-flex;
+  gap: 8px;
+}
+/* On a phone the room and the way out drop under the name: four columns in 390px is a row where
+   every cell is one word wide. */
+@media (max-width: 720px) {
+  .things-rows li {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .things-where,
+  .things-do {
+    grid-column: 2;
+    justify-self: start;
+  }
+  .things-do {
+    margin-top: 4px;
+  }
+}
+
 .join .setup-lede b {
   color: var(--ink);
   font-weight: 500;
@@ -6161,6 +6330,24 @@ select.input {
   border-color: transparent;
   background: var(--lamp);
   color: var(--lamp-ink);
+}
+/* The last of the quiet rows, and the only one in --danger: the end of a thing's life in the house,
+   inside edit so it is never under somebody who opened the pane to turn a lamp off.
+   design/forget/OnTheThing.dc.html. */
+.opened-kind-say.end {
+  color: var(--danger);
+  text-decoration-color: rgba(var(--danger-rgb), 0.45);
+}
+.opened-kind-say.end:hover {
+  color: var(--danger);
+  text-decoration-color: var(--danger);
+}
+.opened-kind-one.danger {
+  border-color: rgba(var(--danger-rgb), 0.5);
+  color: #f3c9c9;
+}
+.opened-kind-one.danger:hover {
+  border-color: var(--danger);
 }
 .opened-kind-say.still {
   cursor: default;

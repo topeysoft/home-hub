@@ -39,11 +39,11 @@
  * See design/device for the boards all of that was drawn on.
  */
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { getDeviceEvents, getDeviceKinds, moveDevice, renameDevice, setDeviceKind, setDeviceLead, setDeviceShared, type Event, type Kinds } from './api'
+import { forgetDevice, getDeviceEvents, getDeviceKinds, moveDevice, renameDevice, setDeviceKind, setDeviceLead, setDeviceShared, type Event, type Kinds } from './api'
 import { partnerOf, partsOf, renameParts, renamesUnit } from './units'
 import { isMachine } from './machines'
 import MachinePane from './panes/MachinePane.vue'
-import { canShare, cap, defaultKind, deviceById, isDead, isShared, notify, perform, roomOf, shownAs, store } from './store'
+import { canShare, cap, defaultKind, deviceById, isDead, isShared, load, notify, perform, roomOf, shownAs, store } from './store'
 import { facts as factsOf, moments as momentsOf, paneKind, reading, verbs as verbsOf, whyLine } from './pane'
 import { useArm } from './twice'
 import { bulbColor } from './art'
@@ -214,6 +214,37 @@ async function leadWith(k: 'fan' | 'light') {
 
    A light called "Walkway Pathlight Light" on hardware called "Walkway Pathlight" is the unit, so renaming
    it renames the unit and its parts follow (units.ts). A fridge's "Ice Maker" is a feature: only itself. */
+/* ---------- the way out, on the thing itself ----------
+ *
+ * The shortcut chosen on 22 September beside the door under This house
+ * (design/forget/OnTheThing.dc.html). It is the fourth of the pane's quiet rows -- the same dotted
+ * line that opens a small choice with a sentence under it as "Show this as" and "Lead with" -- it
+ * is the only one in --danger, and it is INSIDE EDIT, so it is never on the screen of somebody who
+ * opened the pane to turn a lamp off.
+ *
+ * NOTHING VANISHES UNDER THE FINGER, and this is the one act in the panel that cannot be its own
+ * undo. So the pane does not close itself: it stays, drained, saying what it now is, and the person
+ * closes it. The asking carries the whole of the care instead, with the name in the question.
+ *
+ * And a refusal is a door rather than a dead end. Some integrations will not give a device up one
+ * at a time; the brain says which account it goes with, and this is where that sentence can be
+ * acted on -- "What this house has" groups the thing under exactly that account.
+ */
+const ending = ref(false), ended = ref(''), refused = ref('')
+watch(() => dev.value?.id, () => { ending.value = false; ended.value = ''; refused.value = '' })
+async function takeItOut() {
+  const d = dev.value; if (!d || saving.value) return
+  saving.value = true
+  try {
+    await forgetDevice(d.id)
+    ended.value = d.name
+    editing.value = false; ending.value = false
+    load()
+  } catch (e: any) { refused.value = e.message; ending.value = false }
+  saving.value = false
+}
+function toTheDoor() { close(); store.sheet = 'things' }
+
 const editing = ref(false), saving = ref(false)
 const newName = ref(''), newRoom = ref('')
 const rooms = computed(() => store.rooms.filter(r => r.id !== 'unassigned'))
@@ -328,6 +359,30 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
                   <button class="opened-kind-one" :class="{ on: !shared, busy: sharing }" :aria-pressed="!shared" @click="shareIt(false)">Kept home</button>
                 </div>
                 <p class="opened-kind-why">{{ shared ? 'Apple Home, Google Home and Alexa can see this one and ask their assistants for it.' : 'The rest of its kind still goes out; this one stays in the house.' }}</p>
+              </div>
+            </div>
+            <!-- the end of it, last of the quiet rows and only while the pane is being edited -->
+            <div class="opened-kind opened-end" v-if="editing && !ended">
+              <button class="opened-kind-say end" :aria-expanded="ending" @click="ending = !ending">Take it out of the house</button>
+              <div class="opened-kind-pick" v-if="ending">
+                <div class="opened-kind-row">
+                  <button class="opened-kind-one danger" :class="{ busy: saving }" @click="takeItOut">Forget {{ dev.name }}</button>
+                  <button class="opened-kind-one" @click="ending = false">Keep it</button>
+                </div>
+                <p class="opened-kind-why">It goes from the house and from whatever brought it. Its schedules go with it. Plug it back in one day and the house meets it as something new.</p>
+              </div>
+            </div>
+            <!-- taken out, and still here: the pane says what happened and the person closes it -->
+            <div class="opened-kind opened-end" v-if="ended">
+              <span class="opened-kind-say still">{{ ended }} is out of the house</span>
+              <p class="opened-kind-why">It is gone from here and from whatever brought it. Nothing else changed.</p>
+            </div>
+            <!-- ...or it would not go alone, and the brain named the account it goes with -->
+            <div class="opened-kind opened-end" v-if="refused">
+              <span class="opened-kind-say still">{{ refused }}</span>
+              <div class="opened-kind-pick">
+                <div class="opened-kind-row"><button class="opened-kind-one" @click="toTheDoor">What this house has</button></div>
+                <p class="opened-kind-why">It is listed there under the account that brought it, with the way to be done with both.</p>
               </div>
             </div>
             <!-- a fan with a light in it: which of the two is the tile. The same quiet row as the kind. -->

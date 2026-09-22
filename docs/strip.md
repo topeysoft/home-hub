@@ -684,9 +684,59 @@ box; refusing would be the panel arguing with them. `heard` comes back false, an
 cue to say the one fact that is left — the strip itself still believes it is ours, and its button is
 the only thing that can settle that now.
 
-`DELETE /strip/<id>`, gated like every other change to the house. The panel has the client and not
-yet the door: which screen it opens from is being drawn in `design/forget/`, which is the same
-question for a strip, a wall switch, a sensor with no tile and an account at once.
+`DELETE /strip/<id>`, gated like every other change to the house. The door it is reached from was
+settled the same day: **What this house has**, under This house, where a strip is a row under *Set
+up here* with its own sentence about being told to let go (`design/forget/ThingsDoor.dc.html`,
+`docs/settings.md`). A strip is the one row on that page that says something no other kind has to.
+
+**37. The end of the strip can be moved afterwards, which is the half of the length question that
+was decided in September and never built.** Reported 22 September: the fill is easy to get a bit
+less or a bit more than the strip really is, and there was no way to nudge it.
+
+**The fill is a measurement and a measurement has an error.** Its error is a person's reaction time,
+which `fill/stop` latches on purpose so that a busy evening does not measure differently from a
+quiet one. So it lands a few lights either side, and the two sides are not the same: **long is
+invisible**, because the surplus falls off the end of the wire, and anything needing the middle is
+quietly wrong; **short leaves the far end dark for ever**, and is the one a household reports.
+
+**It was already decided.** 20 September, on `design/strip/canvas.json`: *"A at setup, B afterwards
+... they are the same fact, asked once while somebody is standing there and editable for ever
+after."* The pane got the row. The row called `revisit('length')`, which restarts the fill from
+nothing &mdash; so correcting three lights meant sitting through a five-metre measurement, twice if
+the moment was missed. `design/strip/Again.dc.html` is what that cost.
+
+**Four boards, and the question they argue is not "buttons or a drag".** It is how you see the end
+while you move it, on a strip where everything past the real end is written to nothing and shows you
+nothing back. `Nudge` lights the whole strip and walks its end; `Handle` is Trim brought to the pane,
+whose own board admitted its metres readout is a tell; `Tail` darkens the strip and lights only the
+last few. **Chosen: A with C's tail** &mdash; the strip lights to the length it believes with the last
+six in a cool blue, because at sixty lights to the metre a warm lit strip is a glow and its end is a
+guess, while a short cool tail on a warm one is an edge. It also shows the direction nothing else
+can: **one light too far and the tail runs off the wire and disappears.**
+
+**Nothing is written down until it is over.** `tune/set` moves the count in memory and repaints;
+`count/set` is sent once at the end. Holding a button must not spend an NVS erase cycle a frame.
+
+**And a tap is exactly one light**, because being three out is the whole complaint; a hold walks,
+slowly at first so one light is still reachable by holding a moment too long, then faster, so being
+thirty out is a second rather than thirty taps. Those numbers are `app/src/walk.ts` and are pinned by
+a test, because a number that decides how something feels is worth one. Driven in a browser: a tap
+moved one light, a 1.6-second hold moved sixty-nine.
+
+**One line went back into setup with it**, and it is only honest because this exists: *"A light or
+two out is fine. You can move the end afterwards, on the strip's own screen."* Somebody who does not
+know it can be fixed will sit through the fill again trying to be exact, which is the beat's one
+known weakness being paid for twice.
+
+**A test had to change, and the change is worth reading.** `adds no effects, segments or zones` used
+to count the buttons in the strip part of the pane and expect two &mdash; the board's argument measured
+the easy way, and it stopped being true the moment one of the two rows learned to open in place. It
+asserts the set of handlers that region can call now, by name, so a row that grows a third question
+fails it and counting does not come into it.
+
+**What is not proven:** the firmware half has not run on silicon. It compiles; no board was attached.
+The thing to watch for is whether a cool tail on a warm strip reads as an edge *behind a television*,
+which is the one place this control is for and the one place a bench cannot stand in for.
 
 **36. The last beat, from a real house: it said "It's in" when it was not, and the rooms were a
 column twenty-three long.** Reported 22 September after a grafted run on a real hub, and the log had

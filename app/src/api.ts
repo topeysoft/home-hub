@@ -41,7 +41,7 @@ export type Status = { driver: Driver; reason: string; setup_done: boolean; lock
    panel does not know what it is looking at, so it draws `acts` and invents nothing. `with` is what went
    quiet behind this one fault -- fix the fault and they all come back, which is why they are not lines of
    their own. See brain/hub/health.py. */
-export type Act = { do: string; act: 'flow' | 'entry' | 'part' | 'check' | 'forget' | 'update' | 'restart' | 'bridge'; to: string | null
+export type Act = { do: string; act: 'flow' | 'entry' | 'part' | 'check' | 'forget' | 'update' | 'restart' | 'bridge' | 'account' | 'strip'; to: string | null
   ask?: string        // a question to answer first, where the doing is worth a second's thought
   yes?: string        // the words that answer it, with the name in them
   no?: string }       // ...and the ones that decline, where "Keep it" is not what is being kept
@@ -332,6 +332,20 @@ export async function forgetStrip(id: string): Promise<{ forgotten: string; hear
   const r = await request(`/strip/${encodeURIComponent(id)}`, { method: 'DELETE' }); if (!r.ok) await fail(r); return r.json()
 }
 export const stripDone = () => post<Strip>('/strip/done')
+/* ---------- what this house has ----------
+ *
+ * One door holding everything the hub knows, grouped by what brought it, because what brought a
+ * thing decides whether it may leave on its own. Chosen 22 September: design/forget/ThingsDoor.dc.html,
+ * with the row on a thing's own pane as the shortcut. brain/hub/things.py writes every word of it,
+ * including the words on the buttons and the question asked before the one act with no undo -- the
+ * panel draws `out` and `act` and invents nothing, the same way Needs a look draws its `acts`.
+ */
+export type Thing = { id: string; name: string; sub: string; where: string; out: Act | null; why?: string }
+export type ThingGroup = { id: string; kind: 'account' | 'here' | 'bridge' | 'engine'; name: string; act: Act | null; things: Thing[] }
+export async function getThings(): Promise<{ groups: ThingGroup[]; count: number }> {
+  const r = await request('/things'); if (!r.ok) await fail(r); return r.json()
+}
+
 /** Every strip the house has, for the rows that offer to ask one of them something again. */
 export type StripRow = {
   id: string; online: boolean; count: number | null; order: string | null

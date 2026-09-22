@@ -3,13 +3,14 @@
 import { reactive, watch } from 'vue'
 import { doRestart, type Rung, getBridge, type Bridge, getStrip, stripLooking, type Strip, getHome, getEvents, getAmbient, getScenes, getStatus, getDiscovered, getRoutines, getAssistant, getPresence, getHealth, getSounds, connect, act, setIntent, setHomeIntent, type Room, type Device, type Home, type Event, type Ambient, type Rules, type Status, type Found, type Intent, type Routine, type Assistant, type Presence, type Note, type Sound, requestUpdate, getPhones, type Phone, type Ask, getAccounts, type Account, getShare, type Share, getHappened, type Happened, getChanges, type Changes } from './api'
 import { lock } from './code'
+import { isPage } from './pages'
 import { sunPosition, sunGuess, moonPhase } from './sun'
 import { locale, setHouseLanguage } from './lang'
 
 /* The few soft sheets the panel has. Named rather than written out twice: the restart keeps the one
    it closed so it can come back to it, and `typeof store.sheet` there would make the store's own type
    circular -- which typescript answers by quietly making the whole store `any`. */
-export type Sheet = null | 'location' | 'add' | 'code' | 'why' | 'routines' | 'hub' | 'look' | 'house' | 'people' | 'accounts' | 'share' | 'notes' | 'happened' | 'changes'
+export type Sheet = null | 'location' | 'add' | 'code' | 'why' | 'routines' | 'hub' | 'look' | 'house' | 'people' | 'accounts' | 'things' | 'share' | 'notes' | 'happened' | 'changes'
 
 export const store = reactive({
   rooms: [] as Room[], linkUp: false, linkLost: false, error: '', loaded: false,   // linkLost: down long enough to be worth mentioning
@@ -29,8 +30,12 @@ export const store = reactive({
   /* ?sheet=location previews one. ?add=switch is not a preview but the wall's own handoff: the code
      on the wall opens the house on a phone, and it promised to land ON the step with the camera --
      which it never did, because nothing here opened the page it lives on. Now it does. */
+  /* The list this checked against was written out by hand beside PAGES in pages.ts, and the two had
+     to be edited together with nothing saying so -- a page added to one and not the other simply
+     would not open from a query string, silently, on the one route nobody tests. It asks pages.ts
+     now. 'why' is not a page of This house, so it stays named here. */
   sheet: (new URLSearchParams(location.search).has('add') ? 'add'
-    : ['location', 'add', 'code', 'why', 'routines', 'hub', 'look', 'house', 'people', 'accounts', 'share', 'notes', 'happened', 'changes'].includes(new URLSearchParams(location.search).get('sheet') ?? '') ? new URLSearchParams(location.search).get('sheet') : null) as Sheet,
+    : (v => v === 'why' || isPage(v) ? v : null)(new URLSearchParams(location.search).get('sheet') ?? '')) as Sheet,
   whyRoom: new URLSearchParams(location.search).get('room') as string | null,   // the room the why sheet is about; ?sheet=why&room=kitchen previews it
   resume: new URLSearchParams(location.search).get('signin') as string | null,   // a conversation already open in the house (signing an account in again); the add sheet picks it up. ?sheet=add&signin=<flow> previews it
   /* ...and what it is about, when whoever handed it over knows. The screen it lands on is headed by

@@ -122,6 +122,12 @@ for (let i = 0; i < Number(process.env.QUIET || 0); i++)
     intent: 'unknown', set_by: null, hold_until: null, devices: [dev(`qd${i}`, 'Lamp', `q${i}`, 'light', 'off')] })
 
 const home = { name: "Temi's house", temp_unit: '°F', rooms }
+
+/* The words on a row's way out, in the shape brain/hub/things.py writes them: the panel draws these
+   and invents none of them, so the mock has to speak the same sentences or the page reads wrong here
+   and right in a house. */
+const out = (t, act, tail) => ({ do: 'Take it out', act, to: t.id,
+  ask: `Take ${t.name} out of the house? ${tail}`, yes: `Yes, take ${t.name} out`, no: 'Keep it' })
 const status = { driver: process.env.ENGINE === 'down' ? 'down' : 'ready', reason: process.env.ENGINE === 'down' ? "The hub's engine is not answering yet." : '',
   version: 'v0.3.0',   // the build this mock is: the panel reloads itself when a status answers with another (store.ts, newBuild)
   setup_done: process.env.FRESH !== '1', owner: 'Temi', home: "Temi's house", location: true, rooms: 8, devices: 30, locked: process.env.LOCKED === '1',
@@ -710,6 +716,49 @@ const bridgeRows = process.env.BRIDGES === 'none' ? [] : [
   if (p === '/phone') return json(res, { ip: '192.168.1.40' })
   if (p === '/phones/me') return json(res, { locked: !!process.env.LOCKED, paired: true, home: 'Main Palace', phone: null })
   if (p === '/phones') return json(res, phones)
+  /* What this house has: one door holding everything, grouped by what brought it. Derived from the
+     mock house rather than written out, so the page cannot drift from the rooms beside it -- and so
+     that SWITCHES=11 fills the bridge group the way a real bridge does. brain/hub/things.py is the
+     real one and every word of the wording lives there; this is the same shapes. */
+  if (p === '/things') {
+    const title = { 'e-hue': 'Philips Hue bridge', 'e-ring': 'Ring', 'e-nest': 'Google Nest', 'e-tesla': 'Tesla' }
+    const units = new Map()
+    for (const r of rooms) for (const d of r.devices) {
+      const key = d.hw || `@${d.id}`
+      if (!units.has(key)) units.set(key, { lead: d, where: r.name, parts: [] })
+      units.get(key).parts.push(d)
+    }
+    const row = (u) => {
+      const name = u.lead.hw_name || u.lead.name
+      // a part called exactly what the thing is called IS the thing; see _unit() in hub/things.py
+      const sub = u.parts.length > 1
+        ? u.parts.map(x => (x.name.startsWith(name) ? x.name.slice(name.length).trim() : x.name))
+            .filter(Boolean).map(w => `its ${w.toLowerCase()}`).join(' · ') : ''
+      return { id: u.lead.id, name, sub, where: u.where }
+    }
+    const accounts = {}, here = [], mesh = []
+    for (const u of units.values()) {
+      const t = row(u)
+      if (u.lead.maker === 'Brilliant') { mesh.push({ ...t, out: out(t, 'forget', 'The wall switch itself keeps working; it stops being something this house can see or set.') }); continue }
+      const e = u.lead.entry
+      if (e && title[e]) (accounts[e] ??= []).push({ ...t, out: null, why: `Goes with ${title[e]}` })
+      else here.push({ ...t, out: out(t, 'forget', 'Its schedules go with it. Plug it back in one day and the house meets it as something new.') })
+    }
+    const groups = []
+    for (const [e, things] of Object.entries(accounts).sort((a, b) => title[a[0]].localeCompare(title[b[0]])))
+      groups.push({ id: e, kind: 'account', name: `${title[e]} · signed in`, things,
+        act: { do: `Remove ${title[e]}, and ${things.length === 1 ? 'the one thing with it' : `all ${things.length} with it`}`, act: 'account', to: e,
+               ask: `Remove ${title[e]}? Everything it brought goes with it: ${things.map(t => t.name).join(' and ')}.`,
+               yes: `Yes, remove ${title[e]}`, no: 'Keep it' } })
+    if (here.length) groups.push({ id: 'here', kind: 'here', name: 'Set up here', act: null, things: here.sort((a, b) => a.name.localeCompare(b.name)) })
+    if (mesh.length) groups.push({ id: 'mesh', kind: 'bridge', name: 'On the bridge in the hallway', things: mesh,
+      act: { do: `Forget the bridge, and all ${mesh.length} with it`, act: 'bridge', to: 'c8ebba',
+             ask: 'Forget the hallway bridge? Its switches stop working from here until a bridge is set up again.',
+             yes: 'Yes, forget it', no: 'Keep it' } })
+    groups.push({ id: 'engine', kind: 'engine', name: "The hub's own parts", act: null,
+      things: [{ id: 'engine', name: 'Messages, Z\u2011Wave radio and Matter', sub: '', where: 'In the hub', out: null, why: 'Part of the house' }] })
+    return json(res, { groups, count: groups.filter(g => g.kind !== 'engine').reduce((n, g) => n + g.things.length, 0) })
+  }
   /* the accounts page: one of each state, so the page can be read without a house behind it.
      ACCOUNTS=0 empties it (the nothing-signed-in-yet case). */
   if (p === '/accounts') return json(res, { accounts: process.env.ACCOUNTS === '0' ? [] : [

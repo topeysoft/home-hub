@@ -38,6 +38,8 @@ from .lock import Lock, needs_code
 from .pairing import Pairing
 from .bridge import Bridges
 from .strip import Strips, StripError
+from . import things
+from .things import Things
 from .share import Share
 from .nightlight import Nightlight
 from .relay import Relay
@@ -1060,19 +1062,6 @@ async def check_device(device_id: str):
             "text": f"{dev.name} is answering again." if answering else f"{dev.name} still is not answering."}
 
 
-# A wall switch on the Brilliant mesh, read off the identifier its bridge gave it
-# ("mesh_<network>_<address>", brilliant/esp32-bridge/src/main.cpp announce()). It is the one kind
-# of device the registry cannot let go of on its own -- see forget_device below.
-MESH_SWITCH = re.compile(r"^mesh_([0-9a-f]{16})_([0-9a-f]{4})$")
-
-
-def _mesh_switch(row: dict | None) -> tuple[str, str] | None:
-    for ident in (row or {}).get("identifiers") or []:
-        for x in (ident if isinstance(ident, (list, tuple)) else [ident]):
-            if (m := MESH_SWITCH.match(str(x))): return m.group(1), m.group(2)
-    return None
-
-
 @app.delete("/devices/{device_id}")
 async def forget_device(device_id: str):
     """Forget a device: out of the driver's registry, and out of the house with it.
@@ -1100,8 +1089,9 @@ async def forget_device(device_id: str):
             # again every time it connects, so taking it out here lasted only as long as the puck
             # stayed plugged in -- the row was back by morning and nothing said why. The house says
             # this to the bridge instead, where it holds; hub/bridge.py forget_switch().
-            if (mesh := _mesh_switch(row)):
-                await hub.bridge.forget_switch(*mesh)
+            mine = things.ours(row)
+            if mine and mine[0] == "switch":
+                await hub.bridge.forget_switch(*mine[1])
             else:
                 entries = list((row or {}).get("config_entries") or [])
                 if not entries: raise RuntimeError("nothing owns it")
@@ -1132,6 +1122,18 @@ async def _account_named(entries: list[str]) -> str:
     names = [r.get("title") or r.get("domain") for r in rows
              if r.get("entry_id") in entries and r.get("domain") not in PLUMBING]
     return names[0] if len(names) == 1 else generic
+
+
+@app.get("/things")
+async def what_this_house_has():
+    """Everything the hub knows about, grouped by what brought it. hub/things.py, design/forget/.
+
+    Every word on this page is written there, including the words on the buttons and the question
+    asked before the one act in this panel that cannot be undone. The panel draws what it is given
+    and invents nothing, because which kinds may leave on their own is the one thing only the brain
+    knows."""
+    hub.ready()
+    return await Things(hub).everything()
 
 
 # ---------- the accounts the house has signed into ----------

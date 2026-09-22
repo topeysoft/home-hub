@@ -27,6 +27,7 @@ import LookPage from './LookPage.vue'
 import RoutinesPage from './RoutinesPage.vue'
 import PeoplePage from './PeoplePage.vue'
 import AccountsPage from './AccountsPage.vue'
+import ThingsPage from './ThingsPage.vue'
 import AddPage from './AddPage.vue'
 import SharePage from './SharePage.vue'
 import HubPage from './HubPage.vue'
@@ -38,7 +39,7 @@ import AdvancedLink from './AdvancedLink.vue'
 import { isPage, LIT, type PageId } from './pages'
 
 const page = computed<PageId>(() => isPage(store.sheet) ? store.sheet : 'house')
-const PAGE: Record<Exclude<PageId, 'house'>, Component> = { location: LocationPage, look: LookPage, routines: RoutinesPage, people: PeoplePage, accounts: AccountsPage, add: AddPage, share: SharePage, hub: HubPage, code: CodePage, notes: NotesPage, happened: HappenedPage, changes: ChangesPage }
+const PAGE: Record<Exclude<PageId, 'house'>, Component> = { location: LocationPage, look: LookPage, routines: RoutinesPage, people: PeoplePage, accounts: AccountsPage, things: ThingsPage, add: AddPage, share: SharePage, hub: HubPage, code: CodePage, notes: NotesPage, happened: HappenedPage, changes: ChangesPage }
 
 /* a conversation the house already has open (signing an account in again) is
    handed to the Add page on the way in, once, so the page reads as that one job */
@@ -48,7 +49,7 @@ watch(page, p => { if (p === 'add') { resume.value = store.resume; store.resume 
 const ready = computed(updateReady)
 const locked = computed(() => !!store.status?.locked)
 const title = computed(() => ({
-  house: 'This house', location: 'Where is home?', look: 'How the house looks', routines: 'Routines', people: 'People', accounts: 'Accounts',
+  house: 'This house', location: 'Where is home?', look: 'How the house looks', routines: 'Routines', people: 'People', accounts: 'Accounts', things: 'What this house has',
   add: resume.value ? 'Sign in again' : 'Add to the house', share: 'Share this house', hub: 'This hub', code: locked.value ? 'Change the passcode' : 'Lock the settings',
   notes: 'Needs a look', happened: 'What happened', changes: 'Who changed what',
 }[page.value]))
@@ -81,6 +82,15 @@ const accounts = computed(() => {
   if (!want.length) return a.length === 1 ? '1 account, signed in' : `${a.length} accounts, all signed in`
   return want.length === 1 ? `${want[0].name} ${want[0].state === 'signin' ? 'needs signing in' : 'is not answering'}` : `${want.length} need a look`
 })
+/* Units, not entries: a pathlight with a light, a motion sensor and a brightness in it is one thing
+   somebody owns, and a door that said 3 would be counting Home Assistant rather than the house.
+   The page's own count is worked out the same way in brain/hub/things.py. */
+const things = computed(() => {
+  const hw = new Set<string>()
+  for (const r of store.rooms) for (const d of r.devices) hw.add(d.hw || `@${d.id}`)
+  if (!hw.size) return 'Nothing in the house yet'
+  return `${hw.size === 1 ? '1 thing' : `${hw.size} things`}, and what brought each of them`
+})
 const found = computed(() => store.found.length ? `${store.found.length === 1 ? '1 thing' : `${store.found.length} things`} found nearby` : 'Lights, plugs, cameras, locks')
 /* The one door that says what it WORKS WITH rather than how it stands, until it is on. Nobody knows
    they can do this, so the hint is the advertisement: naming the apps is what makes somebody open it.
@@ -107,6 +117,10 @@ const doors = computed(() => [
   { id: 'routines' as const, icon: 'sparkle', name: 'Routines', hint: routines.value },
   { id: 'people' as const, icon: 'people', name: 'People and phones', hint: people.value },
   { id: 'accounts' as const, icon: 'lock', name: 'Accounts', hint: accounts.value, attention: store.accounts.some(a => a.state !== 'on') },
+  /* The door that answers "what have I actually got, and how do I get rid of one of them". It sits
+     between Accounts and Add on purpose: those two are where things come from, and this is the
+     other end of the same life. design/forget/ThingsDoor.dc.html. */
+  { id: 'things' as const, icon: 'home', name: 'What this house has', hint: things.value },
   { id: 'add' as const, icon: 'plus', name: 'Add to the house', hint: found.value, attention: store.found.length > 0 },
   { id: 'share' as const, icon: 'share', name: 'Share this house', hint: share.value },
   { id: 'hub' as const, icon: 'home', name: 'The hub', hint: hub.value, attention: ready.value },

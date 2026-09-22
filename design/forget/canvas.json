@@ -6,7 +6,8 @@
       "y": 0,
       "w": 1440,
       "h": 900,
-      "title": "Today — four ways out, three of them hidden"
+      "title": "Today — four ways out, three of them hidden",
+      "page": "page-1"
     },
     {
       "file": "OnTheThing.dc.html",
@@ -14,23 +15,26 @@
       "y": 0,
       "w": 1440,
       "h": 900,
-      "title": "A — it ends where it lives"
+      "title": "A — it ends where it lives",
+      "page": "page-1"
     },
     {
       "file": "RoomIsTheList.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "B — the room is the list (not chosen, 22 September)",
+      "page": "page-2"
+    },
+    {
+      "file": "ThingsDoor.dc.html",
       "x": 3120,
       "y": 0,
       "w": 1440,
       "h": 900,
-      "title": "B — the room is the list"
-    },
-    {
-      "file": "ThingsDoor.dc.html",
-      "x": 4680,
-      "y": 0,
-      "w": 1440,
-      "h": 900,
-      "title": "C — one door: everything this house has"
+      "title": "C — one door: everything this house has",
+      "page": "page-1"
     }
   ],
   "annotations": [
@@ -53,25 +57,25 @@
       "x": 1560,
       "y": -700,
       "w": 560,
-      "text": "A -- IT ENDS WHERE IT LIVES\n\nForget becomes the third quiet row on the pane, under \"Show this as\" and \"Shared with other apps\", inside edit and nowhere else. Same dotted line, same small choice, same sentence underneath -- the only differences are that it is last and that it is the one in --danger.\n\nFOR: it is where a person looks. Holding the thing and ending the thing are the same gesture, and the sentence can name it because the pane knows which thing it is. It costs no new screen and almost no new vocabulary.\n\nAGAINST, AND IT IS REAL: a motion sensor, a thermometer and a door contact have no tile, so there is no pane to open -- design/device/Today.dc.html measured that already. Nor is a light strip or a puck a device in a room. A is the best answer for the common case and not an answer at all for the rest, which is why it reads as a shortcut rather than a home.\n\nTHE STATE ON THE RIGHT that matters most is the third: what is left in the room afterwards. Drained, in place, saying what it now is -- and with nothing to tap, because this is the one done card that cannot be undone."
+      "text": "A -- IT ENDS WHERE IT LIVES\n\nForget becomes the third quiet row on the pane, under \"Show this as\" and \"Shared with other apps\", inside edit and nowhere else. Same dotted line, same small choice, same sentence underneath -- the only differences are that it is last and that it is the one in --danger.\n\nFOR: it is where a person looks. Holding the thing and ending the thing are the same gesture, and the sentence can name it because the pane knows which thing it is. It costs no new screen and almost no new vocabulary.\n\nAGAINST, AND IT IS REAL: a motion sensor, a thermometer and a door contact have no tile, so there is no pane to open -- design/device/Today.dc.html measured that already. Nor is a light strip or a puck a device in a room. A is the best answer for the common case and not an answer at all for the rest, which is why it reads as a shortcut rather than a home.\n\nTHE STATE ON THE RIGHT that matters most is the third: what is left in the room afterwards. Drained, in place, saying what it now is -- and with nothing to tap, because this is the one done card that cannot be undone.\n\nCHOSEN AS THE SHORTCUT, 22 September, not as the home. A cannot reach a sensor with no tile, a strip or a puck, so it is the fast way to the common case and C is where everything can be reached. Built: Opened.vue, inside edit, with the drained \"is out of the house\" left in the pane rather than the pane closing itself -- there is no undo on this one, so nothing may vanish under the finger that did it."
     },
     {
       "id": "b",
-      "x": 3120,
+      "x": 0,
       "y": -700,
       "w": 560,
-      "text": "B -- THE ROOM IS THE LIST\n\nNothing moves. The screen that already lists what a household owns gets its three faults put right: the door in stops being an unlabeled pencil and says \"What's in here\"; the list stops leaving out everything with no tile, plus strips and mesh switches; and the thing's own pane carries one line saying where ending it lives.\n\nFOR: a household thinks room by room, and a room is the only container that already holds a lamp, a sensor with no tile, a light strip and a wall switch at the same time. It is far and away the least new code -- the screen exists, the two-tap ask exists and is good, the word changes and the list grows. And the words on it are already the best words anywhere in this feature: \"Walkway Pathlight, all three of its parts, goes from the house and from Ring with it.\"\n\nAGAINST: ending a thing stays two screens away from the thing. \"What's in here\" is a mode you enter and leave and the panel has almost none of those. And a puck and an account are still somewhere else, so it does not close the question either.\n\nIF ONLY ONE GETS BUILT, BUILD THIS ONE. It is a week of nobody's time and it turns the report from \"there is no way\" into \"there is a way and it is signposted\"."
+      "text": "NOT CHOSEN, 22 September. Kept because the case still stands and because the words on it were the best words in the whole exercise -- \"Walkway Pathlight, all three of its parts, goes from the house and from Ring with it\" is the sentence the shipped page is written against.\n\nWHAT WAS TAKEN FROM IT ANYWAY: parts under a name as one row rather than three; the two-tap ask with the name in the question; and the rule that a list of what a house HAS must include the things with no tile. What was not taken is the room as the container -- a room cannot hold an account or a puck, and that is what decided it.\n\nB -- THE ROOM IS THE LIST\n\nNothing moves. The screen that already lists what a household owns gets its three faults put right: the door in stops being an unlabeled pencil and says \"What's in here\"; the list stops leaving out everything with no tile, plus strips and mesh switches; and the thing's own pane carries one line saying where ending it lives.\n\nFOR: a household thinks room by room, and a room is the only container that already holds a lamp, a sensor with no tile, a light strip and a wall switch at the same time. It is far and away the least new code -- the screen exists, the two-tap ask exists and is good, the word changes and the list grows. And the words on it are already the best words anywhere in this feature: \"Walkway Pathlight, all three of its parts, goes from the house and from Ring with it.\"\n\nAGAINST: ending a thing stays two screens away from the thing. \"What's in here\" is a mode you enter and leave and the panel has almost none of those. And a puck and an account are still somewhere else, so it does not close the question either.\n\nIF ONLY ONE GETS BUILT, BUILD THIS ONE. It is a week of nobody's time and it turns the report from \"there is no way\" into \"there is a way and it is signposted\"."
     },
     {
       "id": "c",
-      "x": 4680,
+      "x": 3120,
       "y": -700,
       "w": 560,
-      "text": "C -- ONE DOOR: EVERYTHING THIS HOUSE HAS\n\nA list under This house, beside Bridges and Accounts, holding every thing the hub knows -- grouped by what brought it.\n\nTHE GROUPING IS THE ARGUMENT. What brought a thing is exactly what decides whether it may leave on its own; the brain says so today in a 502 the panel turns into a dead end. Here that answer is the row -- \"Goes with Ring\" -- with the door to Ring on the group header above it. Nothing has to be explained because the shape explains it.\n\nFOR: the only direction that holds all six kinds at once -- a lamp, a sensor with no tile, a strip, a mesh switch, a puck, an account. It is also the screen somebody actually wants when they are moving house or wondering what is still signed in.\n\nAGAINST: the most code, and an inventory is the closest this panel has ever come to the thing section 5 says the box is not for. Drawn badly it is Home Assistant's device page with nicer type, and the line between \"what this house has\" and \"a settings panel\" is drawn entirely in the words and the grouping. It is also still not where the person is looking.\n\nC AND A ARE NOT EXCLUSIVE, and the recommendation is both: the door is where everything can be reached, the row on the pane is the shortcut for the thing in your hand."
+      "text": "C -- ONE DOOR: EVERYTHING THIS HOUSE HAS\n\nA list under This house, beside Bridges and Accounts, holding every thing the hub knows -- grouped by what brought it.\n\nTHE GROUPING IS THE ARGUMENT. What brought a thing is exactly what decides whether it may leave on its own; the brain says so today in a 502 the panel turns into a dead end. Here that answer is the row -- \"Goes with Ring\" -- with the door to Ring on the group header above it. Nothing has to be explained because the shape explains it.\n\nFOR: the only direction that holds all six kinds at once -- a lamp, a sensor with no tile, a strip, a mesh switch, a puck, an account. It is also the screen somebody actually wants when they are moving house or wondering what is still signed in.\n\nAGAINST: the most code, and an inventory is the closest this panel has ever come to the thing section 5 says the box is not for. Drawn badly it is Home Assistant's device page with nicer type, and the line between \"what this house has\" and \"a settings panel\" is drawn entirely in the words and the grouping. It is also still not where the person is looking.\n\nC AND A ARE NOT EXCLUSIVE, and the recommendation is both: the door is where everything can be reached, the row on the pane is the shortcut for the thing in your hand.\n\nCHOSEN, 22 September: C, with A's row as its shortcut. Built the same day. The door is \"What this house has\", between Accounts and Add on This house; the row is the fourth quiet line on a thing's own pane, inside edit. brain/hub/things.py writes every word of both, and brain/tests/test_things.py fails on purpose if this arrangement drifts."
     },
     {
       "id": "brain",
-      "x": 6240,
+      "x": 4680,
       "y": 0,
       "w": 520,
       "text": "WHAT IS BEING BUILT WHATEVER IS CHOSEN\n\nThese three are not contested and do not wait for a board.\n\n1. A LIGHT STRIP CAN BE TAKEN OUT. Strips.forget(id): tell the strip to forget the house so it can be set up again anywhere, clear its retained topics, drop its device. Today Radio.forget() is `return None`.\n\n2. A FORGOTTEN SWITCH STAYS FORGOTTEN. The hub publishes a retained forget on the mesh address; every puck on that mesh honors it, keeps it across a reboot, and clears the discovery it published. Letting the same switch in again clears the forget, so there is a way back.\n\n3. A REFUSAL NAMES ITS DOOR. \"It goes when the account that brought it does\" already says the true thing; the panel has to be able to open that door from where it is said. Which screen that lands on is the one part of this that does wait for the choice."

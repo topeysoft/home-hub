@@ -918,6 +918,17 @@ class Bridges:
         room_of() is the same question where the caller would rather have the None."""
         return self.room_of(chip) or "A bridge"
 
+    def carrying(self, net: str) -> str | None:
+        """Which puck's chip carries this mesh, where exactly one does.
+
+        The switches on a mesh belong to whichever bridge is holding it, and that is how "What this
+        house has" groups them -- under a room rather than under a network id nobody has a word for.
+        Two pucks on one mesh cannot be told apart (see room_of), so this says nothing rather than
+        picking one, and the list falls back to saying the switches are simply on a bridge."""
+        mine = [c for c, p in self.pucks.items() if p.get("net") == net
+                and c in (self.hub.settings.get("bridges") or {})]
+        return mine[0] if len(mine) == 1 else None
+
     def each(self) -> list[dict]:
         """Every bridge this hub set up, in the words a household has for one.
 
