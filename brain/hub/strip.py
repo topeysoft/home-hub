@@ -393,11 +393,23 @@ class Strips:
 
     def _where_we_are(self) -> dict:
         """What a strip needs to find us again after it reboots, in the shape the `hub` endpoint
-        reads. Only sent through our own door, and only inside a session the strip authenticated."""
-        broker = (self.hub.settings.get("broker") or {}) if hasattr(self.hub, "settings") else {}
-        where = {"mhost": broker.get("host") or "hub", "base": BASE}
-        if broker.get("user"): where["muser"] = broker["user"]
-        if broker.get("pass"): where["mpass"] = broker["pass"]
+        reads. Only sent through our own door, and only inside a session the strip authenticated.
+
+        THE SAME THING A PUCK IS TOLD, FROM THE SAME PLACE. This used to read a `broker` key in the
+        settings that nothing in this hub has ever written, so it handed over the literal name "hub"
+        and no credentials at all -- and every strip we have ever set up joined the house, reached
+        the broker and was refused: `mqtt_client: Connection refused, not authorized`. On the wall
+        that read as "It joined your Wi-Fi but never found the hub. Try it nearer the router", which
+        sent somebody to move a strip that was already on their network. Seen on a real hub on
+        21 September, and it had been true since the day our own door was written."""
+        try:
+            mq = self.hub.bridge.broker()
+        except Exception as e:
+            log.warning("strip: no broker details to hand over (%s)", e)
+            mq = {}
+        where = {"mhost": mq.get("name") or mq.get("host") or "hub", "base": BASE}
+        if mq.get("user"): where["muser"] = mq["user"]
+        if mq.get("pass"): where["mpass"] = mq["pass"]
         return where
 
     def _rooms(self) -> list:
@@ -661,6 +673,8 @@ class Strips:
         if not j: return
         try:
             wifi = (self.hub.settings.get("wifi") or {}) if hasattr(self.hub, "settings") else {}
+            # Every strip the broker already knows about, so the one that turns up next is this one.
+            known = set(self.strips)
             if j.get("door") == "ours":
                 # OUR DOOR CARRIES EVERYTHING IN ONE SESSION, which is the whole difference. The
                 # Wi-Fi and where we are go together, so the strip comes out of setup already able
@@ -699,15 +713,43 @@ class Strips:
             # It is on the Wi-Fi now, so everything after this goes over the broker. Wait for it to
             # say so itself rather than assuming: a strip that joined and cannot find the hub is a
             # different failure from one that never joined, and the household can fix only one of them.
-            got = await self._ask(j["id"], "hello", "1", want="status", timeout=JOIN_WAIT)
-            if str(got or "").strip() != "online":
-                return self._fail("It joined your Wi‑Fi but never found the hub. Try it nearer the router.")
+            # WHO IS IT, ON THE BROKER? A strip that came through our door has told us nothing we
+            # can address it by -- a Matter advertisement carries a discriminator and not an id of
+            # ours -- so `id` is None here and has been since the day this was written. It used to
+            # ask `strip/None/hello`, a topic nothing has ever subscribed to, so EVERY strip adopted
+            # through our own door failed at this line however close it was standing.
+            #
+            # It says who it is the moment it reaches the broker, retained. So the answer is to wait
+            # for the one that was not there before rather than to ask for a name we do not have.
+            # One job at a time is what makes that unambiguous, and it is the rule this class opens
+            # with. Seen on a real hub on 21 September, where it read as "it never found the hub".
+            j["id"] = await self._whoever_just_arrived(known, timeout=JOIN_WAIT)
+            if not j["id"]:
+                return self._fail("It joined your Wi‑Fi but never reached the hub. "
+                                  "Try it nearer the router.")
             await self._show_red()
         except StripError as e:
             self._fail(str(e))
         except Exception as e:
             log.exception("strip setup failed")
             self._fail("Setting that light strip up did not work. Unplug it and try again.")
+
+    async def _whoever_just_arrived(self, known: set, timeout: float) -> str | None:
+        """The id of the first strip to reach the broker that was not there before.
+
+        It announces itself -- `strip/<id>/status` is published retained the moment it connects --
+        so there is nothing to ask and nothing to poll. `known` is the set taken before the session,
+        because a house may already have strips in it and every one of them is also online."""
+        self._woke = asyncio.Event()
+        end = time.monotonic() + timeout
+        while True:
+            for id_, s in list(self.strips.items()):
+                if id_ not in known and s.get("online"): return id_
+            left = end - time.monotonic()
+            if left <= 0: return None
+            try: await asyncio.wait_for(self._woke.wait(), timeout=max(0.01, left))
+            except TimeoutError: return None
+            self._woke.clear()
 
     # ---- the order the colors come in ----
     async def _show_red(self):

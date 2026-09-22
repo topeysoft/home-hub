@@ -97,12 +97,20 @@ class FakeHA:
             self.cb({"topic": f"strip/{id_}/{back_leaf}", "payload": back_payload})
 
 
+class FakeBridges:
+    """The one thing a strip asks the puck's half of the hub for: where the broker is and how to get
+    into it. Real `Bridges.broker()` reads exactly these out of the environment."""
+    def broker(self):
+        return {"host": "192.168.1.9", "name": "hub", "port": 1883, "user": "hub", "pass": "pw"}
+
+
 class FakeHub:
     def __init__(self, tmp, wifi=True):
         self.settings = Settings(Path(tmp) / "settings.json")
         self.settings.set(wifi={"ssid": "House", "pass": "hunter2 with space"} if wifi else None)
         self.env = {"MQTT_USER": "hub", "MQTT_PASSWORD": "pw"}
         self.hostname = "hub"
+        self.bridge = FakeBridges()
         self.ha = FakeHA()
         self.home = None
         self.pushed = []
@@ -534,8 +542,11 @@ class OurOwnDoor(unittest.TestCase):
             addr, rhythm, ssid, password, where = self.radio.adopted[0]
             # No secret of any kind went over that link: the press is the whole proof.
             self.assertEqual((addr, rhythm, ssid, password), ("AA:BB", "", "House", "secret"))
-            # The broker, in the same session. This is item 2a, which was an empty string for weeks.
+            # THE BROKER, WITH THE WAY IN. Not just where it is: a strip handed a host and no
+            # credentials joins the house, reaches the broker and is refused, and the wall then says
+            # it never found the hub. It is the same thing a puck is told, from the same place.
             self.assertEqual(where["mhost"], "hub")
+            self.assertEqual((where["muser"], where["mpass"]), ("hub", "pw"))
             self.assertIn("base", where)
             # And our door never goes near Matter's commissioner.
             self.assertEqual(self.radio.commissioned, [])
@@ -550,6 +561,37 @@ class OurOwnDoor(unittest.TestCase):
             said = self.strips.status()["text"]
             self.assertIn("Nobody pressed", said)
             self.assertNotIn("nearer", said)
+        run(go())
+
+    # ---- and then it has to be found again, on the broker ----
+
+    def test_the_strip_is_found_by_whoever_turns_up_on_the_broker(self):
+        """Our door leaves the hub with nothing to address the strip by -- a Matter advertisement
+        carries a discriminator, not an id of ours. It used to ask `strip/None/hello`, which nothing
+        subscribes to, so every strip taken through our own door failed here however close it was."""
+        async def go():
+            await self.waiting()
+            self.radio.hold = False
+            await turn()
+            # On the Wi-Fi, not yet on the broker: there is nothing to call it yet.
+            self.assertEqual(self.strips.status()["state"], "working")
+            self.strips._on_mqtt({"topic": "strip/52e204/status", "payload": "online"})
+            await turn()
+            self.assertEqual(self.strips.job["id"], "52e204")
+            self.assertEqual(self.strips.status()["state"], "order")   # on to the color question
+        run(go())
+
+    def test_a_strip_the_house_already_had_is_not_mistaken_for_the_new_one(self):
+        """A house with strips in it has every one of them online, and they are not this one."""
+        async def go():
+            self.strips._on_mqtt({"topic": "strip/olderone/status", "payload": "online"})
+            await self.waiting()
+            self.radio.hold = False
+            await turn()
+            self.assertIsNone(self.strips.job["id"])
+            self.strips._on_mqtt({"topic": "strip/52e204/status", "payload": "online"})
+            await turn()
+            self.assertEqual(self.strips.job["id"], "52e204")
         run(go())
 
     # ---- the rung below, reached one way only (design/strip/ReachRhythm.dc.html) ----

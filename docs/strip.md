@@ -624,6 +624,44 @@ the house, which is how these things get returned. The camera route avoids all o
 pointed into a living room. **The cheap next step is neither: a capture stick and HyperHDR on a bench,
 to find out whether it feels like the screen extended or like a gimmick, before any of it is paid for.**
 
+**26. Every strip ever set up through our own door was handed a broker it could not log in to, and
+then asked a question on a topic nothing subscribes to.** Two bugs in a row, both on the last mile,
+and between them our door has never once completed. Found on a real hub on 21 September, with the
+strip a foot from the Pi — so the distance was not it, and item 25's new sentence would have been
+wrong too.
+
+**One: the credentials were never sent.** `_where_we_are()` read a `broker` key in the settings that
+**nothing in this hub has ever written**, so every strip was handed the literal name `"hub"` and no
+user and no password. The strip joined the house, resolved the hub and reached the broker:
+
+    I (1543) strip: already set up, through our own door
+    I (5083) esp_netif_handlers: sta ip: 192.168.86.70
+    W (5913) mqtt_client: Connection refused, not authorized
+
+The tell was in plain sight on the bench all day and read as a success: *"the hub said where it is:
+**2 details taken**, 0 refused"* — mhost and base, and never muser or mpass. A puck is told the same
+four things and works, because `bridge.py` reads them out of the environment. There is one
+`Bridges.broker()` now and both halves call it: **two descriptions of one broker is how one of them
+comes to be wrong.**
+
+**Two: the hub had nothing to call the strip.** `id` is `None` for a strip at our door — a Matter
+advertisement carries a discriminator, not an id of ours — and the next line asked
+`_ask(j["id"], "hello", ...)`, which publishes to **`strip/None/hello`**. Nothing has ever subscribed
+to that. It could not have worked at any distance, and it had been there since the day our door was
+written. The strip announces itself retained as `strip/<chip>/status` the moment it connects, so the
+hub now waits for the one that was not there before rather than asking for a name it does not have;
+one job at a time is what makes that unambiguous.
+
+**And both failures wore item 25's sentence.** *"It joined your Wi-Fi but never found the hub. Try it
+nearer the router"* — for a strip that had joined the Wi-Fi, found the hub, and been turned away at
+the door. **Three times in one evening a true-sounding sentence sent somebody to check a thing that
+was not wrong**, which is the actual lesson of items 24, 25 and 26 together: a message about the
+household's house should be built from what the hub OBSERVED, not from where in the code the failure
+happened to surface.
+
+**Still not proven:** a strip reaching the broker and answering. Both fixes are tested and neither has
+run against a real broker yet.
+
 **25. A strip too far from the hub failed four different ways and never once said "too far".** The
 whole of 21 September's evening on a real hub, in one log:
 

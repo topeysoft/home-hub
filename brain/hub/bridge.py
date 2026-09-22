@@ -1038,19 +1038,34 @@ class Bridges:
                 ssid, password = state["ssid"], ""
         return {"ssid": ssid, "pass": password, "checked": checked, "known": bool(ssid and password)}
 
+    def broker(self) -> dict:
+        """Where our own broker is, and how to get into it.
+
+        ONE PLACE, because a puck and a strip are told the same thing and two descriptions of one
+        broker is how one of them comes to be wrong. It was: hub/strip.py read a `broker` key in the
+        settings that nothing in this hub has ever written, so every strip was handed the literal
+        name "hub" and no credentials at all. It joined the house, reached the broker, and was told
+        `Connection refused, not authorized` -- which the wall reported as "it never found the hub".
+        """
+        env = getattr(self.hub, "env", {}) or {}
+        return {
+            # A name AND a number. The name is tried first, over mDNS, so a DHCP reshuffle stops
+            # stranding every device in the house; the number is what answers in a house whose
+            # router filters multicast. docs/network.md, piece 1.
+            "host": lan_ip(), "name": _hostname(), "port": 1883,
+            "user": env.get("MQTT_USER") or os.environ.get("MQTT_USER", ""),
+            "pass": env.get("MQTT_PASSWORD") or os.environ.get("MQTT_PASSWORD", ""),
+        }
+
     def config(self) -> dict:
         """Everything a puck is told. The Wi‑Fi is the one thing the hub might not have (it may be on a cable)."""
-        env = getattr(self.hub, "env", {}) or {}
         keys = self.keys()
+        mq = self.broker()
         wifi = self.wifi_for_pucks()
         return {
             "ssid": wifi["ssid"] if wifi["known"] else "", "pass": wifi["pass"],
-            # A name AND a number. The name is tried first, over mDNS, so a DHCP reshuffle stops
-            # stranding every puck in the house; the number is what answers in a house whose router
-            # filters multicast. docs/network.md, piece 1.
-            "host": lan_ip(), "name": _hostname(), "port": 1883,
-            "user": env.get("MQTT_USER") or os.environ.get("MQTT_USER", ""),
-            "mqtt_pass": env.get("MQTT_PASSWORD") or os.environ.get("MQTT_PASSWORD", ""),
+            "host": mq["host"], "name": mq["name"], "port": mq["port"],
+            "user": mq["user"], "mqtt_pass": mq["pass"],
             "netkey": keys["netkey"], "appkey": keys["appkey"], "iv": keys["iv_index"], "base": BASE, "label": "Brilliant",
         }
 
