@@ -54,6 +54,10 @@ STEPS = ("letting",)
 # that waits out a real timeout teaches people to skip it.
 JOIN_WAIT = 60
 ANSWER_WAIT = 10
+# How long to keep looking for the light in the house's own device list after somebody has chosen a
+# room for it. The strip announces itself over MQTT discovery and Home Assistant makes the device a
+# moment later, so the room can be chosen before there is anything to put in it.
+PLACE_WAIT = 20
 
 # A strip nobody has told how long it is. The controller writes this many lights every frame and the
 # surplus falls off the end of the wire, so a strip shorter than this is simply right -- which is
@@ -489,7 +493,15 @@ class Strips:
         elif leaf == "order": s["order"] = str(payload).strip()
         # A fill that has reached the end says so itself, so the panel can stop asking somebody to
         # watch a thing that has finished happening.
-        if self.job and self.job.get("id") == id_ and leaf == "fill":
+        #
+        # ONLY WHILE THE FILL IS THE THING ON SCREEN. The strip publishes its progress as it goes and
+        # the last of those can land AFTER the household has said "that's the whole of it" -- and this
+        # then dragged the job back to `length` from whatever beat it had moved on to. What that looks
+        # like from the wall: you are asked for a room, you tap one, you are told there is no light
+        # waiting for a room, and you are back watching the fill. Reported from a real house on
+        # 21 September, three times in a row, which is exactly how often a late message lands.
+        if (self.job and self.job.get("id") == id_ and leaf == "fill"
+                and self.job.get("state") == "length"):
             try: self._set("length", lit=int(str(payload).strip()))
             except ValueError: pass
         if self._woke and not self._woke.is_set(): self._woke.set()
@@ -947,12 +959,46 @@ class Strips:
         j = self.job
         j["room"] = room_id
         await self._tell(j["id"], "room/set", room_id, retain=True)
-        try:
-            await self.hub.strip_placed(j["id"], room_id)
-        except AttributeError:
-            pass
+        if not await self._put_in_room(j["id"], room_id):
+            # It is a light in the house either way, so this does not fail the setup -- but somebody
+            # chose a room and it did not land, and the log is where that has to be said.
+            log.warning("strip %s: could not be put in %s; it is in the house but unplaced",
+                        j["id"], room_id)
         self._set("ready")
         return self.status()
+
+    async def _put_in_room(self, id_: str, room_id: str) -> bool:
+        """Move the light we announced into the room somebody chose.
+
+        THIS USED TO BE `self.hub.strip_placed(...)`, A METHOD NO HUB HAS EVER HAD, inside a
+        `try/except AttributeError: pass`. So every strip ever set up was left wherever Home Assistant
+        first put it, the wall said "It's in", and the household went and did it again by hand.
+
+        It is worth more than one try: the strip announces itself over MQTT discovery and Home
+        Assistant makes the device a moment later, so the room can be chosen before there is anything
+        to put in it."""
+        want = f"{BASE}_{id_}"
+        end = time.monotonic() + PLACE_WAIT
+        while True:
+            try:
+                rows = await self.hub.ha.send("config/device_registry/list") or []
+            except Exception as e:
+                log.info("strip: could not read the house's devices (%s)", e)
+                rows = []
+            for d in rows:
+                names = [str(x) for ident in (d.get("identifiers") or [])
+                         for x in (ident if isinstance(ident, (list, tuple)) else [ident])]
+                if want not in names: continue
+                try:
+                    await self.hub.ha.send("config/device_registry/update",
+                                           device_id=d["id"], area_id=room_id)
+                    log.info("strip %s: put in %s", id_, room_id)
+                    return True
+                except Exception as e:
+                    log.warning("strip %s: the house would not move it (%s)", id_, e)
+                    return False
+            if time.monotonic() >= end: return False
+            await asyncio.sleep(1.0)
 
     async def done(self) -> dict:
         """The sheet has been read. A finished job has nothing left to say, and until the brain is

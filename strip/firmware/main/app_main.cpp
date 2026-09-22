@@ -270,7 +270,18 @@ static void on_command(const std::string &leaf, const std::string &msg) {
             strip.raw3((uint8_t)b0, (uint8_t)b1, (uint8_t)b2);
             px::show(strip);
         } else if (msg == "fill") {
+            // THE FILL MEASURES THE WIRE, NOT THE LAST GUESS ABOUT IT, and that is the whole of this
+            // line. The fill is bounded by strip.count and it is the instrument that DISCOVERS
+            // strip.count -- so a strip that has come to believe it is one pixel long fills one
+            // pixel, for ever, and there is no way back to the truth from inside the panel.
+            //
+            // A household found it the hard way on 21 September: a strip that lit a single LED, a
+            // "start over" that filled nothing anybody could see because only that one pixel was
+            // being written, and a length question that could not be answered twice. Writing the
+            // whole wire is free -- the surplus falls off the end, which is why 300 is the assumed
+            // length in the first place -- and the real count is latched on fill/stop.
             instrument = true;
+            strip.set_count(PX_MOST);
             strip.clear();
             px::show(strip);
             fill.start(now_ms());

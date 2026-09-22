@@ -624,6 +624,37 @@ the house, which is how these things get returned. The camera route avoids all o
 pointed into a living room. **The cheap next step is neither: a capture stick and HyperHDR on a bench,
 to find out whether it feels like the screen extended or like a gimmick, before any of it is paid for.**
 
+**32. The three things a household found in the first run that reached the end.** Reported 21 September,
+all three real, and the first two are one bug.
+
+**The fill measured the wire against the length it already believed.** `fill.tick(now, strip.count)` —
+and the fill IS the instrument that discovers `strip.count`. So a strip that came to believe it was one
+pixel long filled one pixel, for ever: the "start over" ran and lit nothing anybody could see, because
+only that one pixel was being written, and the length question could not be answered a second time.
+**There was no way back to the truth from inside the panel.** It fills the whole wire now and latches
+the real count on stop — writing 600 is free, the surplus falls off the end, which is why 300 is the
+assumed length in the first place. Proven on a board deliberately told it was one pixel long: it filled
+past 240 and latched 247.
+
+**A late `fill` message dragged the job back to the measuring.** The strip publishes its progress as it
+goes and the last of those lands *after* somebody has said "that's the whole of it" — and `_on_mqtt`
+set the state to `length` whatever beat the job had moved on to. From the wall: you are asked for a
+room, you tap one, you are told there is no light waiting for a room, and you are back watching the
+fill. Three times in a row, which is exactly how often a late message lands. It only follows the fill
+while the fill is what is on screen.
+
+**And choosing a room never did anything.** `put()` called `self.hub.strip_placed(...)` — **a method no
+hub has ever had** — inside a `try/except AttributeError: pass`. So the wall said "It's in", the light
+stayed wherever Home Assistant first put it, and the household went and did it again by hand. It asks
+the device registry now, and keeps asking for twenty seconds, because discovery is a moment behind the
+room chip.
+
+**Still missing, and it is the other half of the first one:** `design/strip/Later.dc.html` is the pane
+row that asks a strip its length or its colors again, afterwards. The brain has `/strip/revisit` and the
+panel has `revisitStrip()` — and **nothing in the panel calls it**. So a household whose strip measured
+wrong has no way to say so, which is precisely what was reported. The board is drawn and chosen; the
+row was never built.
+
 **31. A strip that is set up is still not a light anybody can switch on — until now.** Everything before
 this item is setup, and setup is not the product. The household's own on/off, brightness and color
 arrived over **Matter and nowhere else**, and a strip taken through our own door never joins a Matter

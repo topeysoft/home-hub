@@ -84,8 +84,18 @@ class FakeHA:
         self.cb = None
         self.published = []
         self.answers = {}
+        self.devices = []      # what the house's device registry holds
+        self.moved = []        # (device_id, area_id) for every move we asked for
 
     async def subscribe(self, type_, cb, **kw): self.cb = cb; return 1
+
+    async def send(self, type_, **kw):
+        """Home Assistant's own registry, as much of it as a strip ever touches."""
+        if type_ == "config/device_registry/list": return getattr(self, "devices", [])
+        if type_ == "config/device_registry/update":
+            self.moved.append((kw.get("device_id"), kw.get("area_id")))
+            return {"ok": True}
+        return None
 
     async def call(self, domain, service, target, **kw):
         topic, payload = kw.get("topic"), kw.get("payload")
@@ -752,6 +762,60 @@ class WhichDoorTheStripIsTakenThrough(unittest.TestCase):
                                    "vendor": TEST_VID, "ours": True}]
         run(self.strips.look())
         self.assertEqual(self.strips.job["door"], "matter")
+
+
+class TheLastTwoBeats(unittest.TestCase):
+    """What a household actually reported after the first run that got this far, on 21 September:
+    asked for a room, tapped one, told there was no light waiting for a room, and put back in front
+    of the fill. Three times. And then, when it finally took, the light was not in the room."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.hub = FakeHub(self.tmp.name)
+        self.hub.home = type("H", (), {"rooms": {"den": type("R", (), {"id": "den", "name": "Den"})()}})()
+        self.radio = FakeRadio()
+        self.strips = Strips(self.hub, self.radio)
+
+    def tearDown(self): self.tmp.cleanup()
+
+    def at_the_room_beat(self):
+        self.strips.job = {"state": "room", "id": "2e4258", "label": "A light strip", "first": None}
+        return self.strips.job
+
+    def test_a_late_fill_message_cannot_drag_the_job_back_to_the_measuring(self):
+        """The strip publishes its progress as it goes, and the last of those lands after somebody
+        has already said "that's the whole of it"."""
+        self.at_the_room_beat()
+        self.strips._on_mqtt({"topic": "strip/2e4258/fill", "payload": "37"})
+        self.assertEqual(self.strips.status()["state"], "room")
+
+    def test_it_still_follows_the_fill_while_the_fill_is_what_is_on_screen(self):
+        self.strips.job = {"state": "length", "id": "2e4258", "label": "A light strip", "first": None}
+        self.strips._on_mqtt({"topic": "strip/2e4258/fill", "payload": "37"})
+        st = self.strips.status()
+        self.assertEqual((st["state"], st["lit"]), ("length", 37))
+
+    def test_choosing_a_room_actually_puts_the_light_in_it(self):
+        """It used to call hub.strip_placed(), a method no hub has ever had, inside a try/except
+        AttributeError: pass -- so the wall said "It's in" and the household went and did it by
+        hand."""
+        self.at_the_room_beat()
+        self.hub.ha.devices = [{"id": "dev1", "identifiers": [["mqtt", "strip_2e4258"]]},
+                               {"id": "other", "identifiers": [["mqtt", "strip_ffffff"]]}]
+        run(self.strips.put("den"))
+        self.assertIn(("dev1", "den"), self.hub.ha.moved)
+        self.assertEqual(self.strips.status()["state"], "ready")
+
+    def test_a_light_the_house_has_not_made_yet_does_not_fail_the_setup(self):
+        """Discovery is a moment behind the room chip, and a strip that is in the house but unplaced
+        is still a strip that is in the house."""
+        self.at_the_room_beat()
+        self.hub.ha.devices = []
+        import hub.strip as strip_mod
+        was, strip_mod.PLACE_WAIT = strip_mod.PLACE_WAIT, 0
+        try: run(self.strips.put("den"))
+        finally: strip_mod.PLACE_WAIT = was
+        self.assertEqual(self.strips.status()["state"], "ready")
 
 
 class TheRoomsItOffers(unittest.TestCase):
