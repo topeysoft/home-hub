@@ -716,12 +716,13 @@ shown this** — every test passed, and the types were right.
 
 **The conversation opened underneath the page that opened it.** A sheet sits at z-index 35 and This
 house at 40, which is correct everywhere else and wrong here, because Add *is* This house. Raised to
-45 for this one sheet only, in `StripSheet.vue`'s own scoped block, so no other screen's stacking
-moves. **`BridgeSheet.vue` has the same latent pair and is untouched** — a bridge knocking while Add
-is open would draw under it too.
+45 by a class the two arrival sheets set while This house is open, so no other screen's stacking
+moves. **`BridgeSheet.vue` had the same pair and it is fixed too** — somebody plugging a bridge into
+the hub is quite likely to be standing on Add when it knocks, which is the one place both faults
+show at once.
 
 **And one Escape closed both of them**, so putting the strip down also threw the household out of
-Add. `StripSheet` takes the key on the capture phase now and stops it there.
+Add. Both arrival sheets take the key on the capture phase now and stop it there.
 
 **The mock brain answers `{"ok":true}` to every POST it does not know**, and `keepLooking` was
 assigning the answer straight into `store.strip` — which wiped the knock the instant Add opened. It

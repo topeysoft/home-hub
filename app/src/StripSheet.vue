@@ -334,11 +334,6 @@ onUnmounted(() => window.removeEventListener('keydown', key, true))
 /* Scoped rather than added to panel.css: every name in here is about a strip and nothing else draws
    one, and panel.css is a flat global sheet where a repeated class silently restyles the other
    component (AGENTS.md §4). NetworkSheet.vue does the same for the same reason. */
-/* ABOVE THIS HOUSE, AND ONLY WHEN THIS HOUSE IS OPEN. A sheet sits at 35 and the house panel at 40,
-   which is right everywhere else and wrong here: a knock opens this from Add, and Add IS the house
-   panel, so the conversation was drawn underneath the page that opened it and nothing appeared to
-   happen. Raised only for this one sheet, so no other screen's stacking moves. */
-.sheet-back.over-panel { z-index: 45; }
 .stage {
   position: relative; padding: 46px 22px 40px; margin-bottom: 18px;
   border-radius: var(--r-lg); background: rgba(255, 255, 255, .03);

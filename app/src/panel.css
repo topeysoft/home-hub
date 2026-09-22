@@ -2901,6 +2901,13 @@ input:focus-visible {
   }
 }
 
+/* ABOVE THIS HOUSE, AND ONLY WHEN THIS HOUSE IS OPEN. A sheet sits below the house panel, which is
+   right everywhere else and wrong for an arrival: a knock opens its conversation from Add, and Add
+   IS the house panel, so the conversation drew underneath the page that opened it and nothing
+   appeared to happen. Set by the two arrival sheets only; nothing else's stacking moves. */
+.sheet-back.over-panel {
+  z-index: 45;
+}
 .sheet-back {
   position: fixed;
   inset: 0;
