@@ -624,6 +624,35 @@ the house, which is how these things get returned. The camera route avoids all o
 pointed into a living room. **The cheap next step is neither: a capture stick and HyperHDR on a bench,
 to find out whether it feels like the screen extended or like a gimmick, before any of it is paid for.**
 
+**31. A strip that is set up is still not a light anybody can switch on — until now.** Everything before
+this item is setup, and setup is not the product. The household's own on/off, brightness and color
+arrived over **Matter and nowhere else**, and a strip taken through our own door never joins a Matter
+fabric (item 16). So a strip that had been through the whole flow sat on the broker answering questions
+about itself and could not be turned on from the wall it had just been set up on.
+
+The panel draws whatever the house has, so the whole of "control it" is **be a light the house has**:
+one retained announcement on `homeassistant/light/strip_<chip>/config`, one command topic, one state
+topic — which is what the bridge puck already does for a switch. Availability follows the same `status`
+topic the last will already writes, so an unplugged strip goes unavailable rather than stale.
+
+**Proven end to end on an ESP32-S3 against a real house, 21 September:** a fresh board through the
+whole flow, `announced as a light the house can switch on`, and then
+
+    -> strip/2e4258/light/set {"state":"ON","brightness":200,"color":{"r":255,"g":60,"b":0}}
+    <- strip/2e4258/light     {"state":"ON","brightness":200,"color_mode":"rgb","color":{...}}
+
+**AND A TRAP FOUND IN THE SAME BREATH: a retained command is replayed for ever.** `count/set`,
+`order/set` and `room/set` are all published retained, so a strip relearns them when it reconnects. A
+**stale** one is then a second source of truth that silently wins: this board was carrying
+`count/set 1` from a bench test weeks of debugging ago, so it believed it was one pixel long, and
+switching it on lit exactly one LED — which looks precisely like a broken strip and nothing anywhere
+says why.
+
+**The strip already keeps all three in its own NVS**, so the retain is redundant as well as dangerous,
+and the honest fix is probably to stop retaining commands and let the device remember. That is a change
+to how a strip is told things and it is **not made here**; it is written down so the next person does
+not spend an evening on a light that works perfectly and shows one pixel.
+
 **30. "Where is it?" answered 500 to everything, in any real house.** The first beat past the fill, and
 the first one nobody had ever reached. `_rooms()` iterated `home.rooms` — **which is a dict of
 `id -> Room`**, so it walked the keys and asked a string for `string["id"]`. Everywhere else in the

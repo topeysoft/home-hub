@@ -40,6 +40,7 @@
 #include <nvs_flash.h>
 #include <nvs.h>
 #include <driver/gpio.h>
+#include <cJSON.h>
 #include <esp_event.h>
 #include <esp_netif.h>
 #include <esp_task_wdt.h>
@@ -170,6 +171,54 @@ static void say(const char *leaf, const char *payload, int retain = 0) {
     esp_mqtt_client_publish(mqtt, t, payload, 0, 1, retain);
 }
 
+// ---------------------------------------------------------------- an ordinary light in the house
+//
+// EVERYTHING ABOVE THIS LINE IS SETUP, AND SETUP IS NOT THE PRODUCT. A strip that has been through
+// our door knows its colors and its length and is still not a light anybody can switch on: the
+// household's own on/off, brightness and color arrived over MATTER and nowhere else, and a strip
+// taken through our own door never joins a Matter fabric (item 16). So it sat on the broker answering
+// questions about itself, and could not be turned on from the wall it had just been set up on.
+//
+// The panel draws whatever the house has, so the whole of "control it" is: be a light the house has.
+// That is one retained announcement, one command topic and one state topic -- which is exactly what
+// the bridge puck already does for a switch.
+
+// Its own topic tree is `base/chip/...`; the announcement lives outside it, where the house looks.
+static void say_at(const char *topic, const char *payload, int retain) {
+    if (!mqtt || !broker_up) return;
+    esp_mqtt_client_publish(mqtt, topic, payload, 0, 1, retain);
+}
+
+// What the household's light is doing. Retained, so the wall draws the right thing the moment it
+// looks rather than after the next change.
+static void say_light() {
+    char body[160];
+    snprintf(body, sizeof(body),
+             "{\"state\":\"%s\",\"brightness\":%d,\"color_mode\":\"rgb\","
+             "\"color\":{\"r\":%d,\"g\":%d,\"b\":%d}}",
+             want_on ? "ON" : "OFF", want_bri, want_r, want_g, want_b);
+    say("light", body, 1);
+}
+
+// SAID ONCE, WHEN WE ARRIVE, AND RETAINED. A house that reboots its broker finds the strip again
+// without the strip having to notice, and a strip that is unplugged goes unavailable rather than
+// stale -- availability follows the same `status` topic the last will already writes.
+static void announce_the_light() {
+    char topic[96], body[640];
+    snprintf(topic, sizeof(topic), "homeassistant/light/%s_%s/config", base, chipHex);
+    snprintf(body, sizeof(body),
+             "{\"schema\":\"json\",\"name\":\"Light strip\",\"unique_id\":\"%s_%s\","
+             "\"command_topic\":\"%s/%s/light/set\",\"state_topic\":\"%s/%s/light\","
+             "\"availability_topic\":\"%s/%s/status\","
+             "\"payload_available\":\"online\",\"payload_not_available\":\"offline\","
+             "\"brightness\":true,\"supported_color_modes\":[\"rgb\"],"
+             "\"device\":{\"identifiers\":[\"%s_%s\"],\"name\":\"Light strip\","
+             "\"model\":\"Light strip\",\"sw_version\":\"" FW "\"}}",
+             base, chipHex, base, chipHex, base, chipHex, base, chipHex, base, chipHex);
+    say_at(topic, body, 1);
+    ESP_LOGI(TAG, "announced as a light the house can switch on");
+}
+
 static void say_what_we_are() {
     char v[16];
     snprintf(v, sizeof(v), "%d", strip.count);
@@ -183,6 +232,32 @@ static void say_what_we_are() {
 
 static void on_command(const std::string &leaf, const std::string &msg) {
     if (leaf == "hello") { say_what_we_are(); return; }
+
+    // THE ONE COMMAND THAT IS NOT ABOUT SETTING UP. On, off, how bright, what color -- the same four
+    // things Matter carries, arriving the other way for a strip that came through our own door and so
+    // has no Matter fabric to carry them. paint() leaves an instrument alone: the fill and the color
+    // question own the strip while they run, and the household's color goes back the moment they stop.
+    if (leaf == "light/set") {
+        cJSON *j = cJSON_Parse(msg.c_str());
+        if (!j) return;
+        const cJSON *st = cJSON_GetObjectItemCaseSensitive(j, "state");
+        if (cJSON_IsString(st) && st->valuestring) want_on = !strcasecmp(st->valuestring, "ON");
+        const cJSON *br = cJSON_GetObjectItemCaseSensitive(j, "brightness");
+        if (cJSON_IsNumber(br)) want_bri = (uint8_t)br->valueint;
+        const cJSON *c = cJSON_GetObjectItemCaseSensitive(j, "color");
+        if (cJSON_IsObject(c)) {
+            const cJSON *r = cJSON_GetObjectItemCaseSensitive(c, "r");
+            const cJSON *g = cJSON_GetObjectItemCaseSensitive(c, "g");
+            const cJSON *b = cJSON_GetObjectItemCaseSensitive(c, "b");
+            if (cJSON_IsNumber(r)) want_r = (uint8_t)r->valueint;
+            if (cJSON_IsNumber(g)) want_g = (uint8_t)g->valueint;
+            if (cJSON_IsNumber(b)) want_b = (uint8_t)b->valueint;
+        }
+        cJSON_Delete(j);
+        paint();
+        say_light();
+        return;
+    }
 
     if (leaf == "show/set") {
         if (msg.rfind("raw ", 0) == 0) {
@@ -242,6 +317,8 @@ static void mqtt_event(void *arg, esp_event_base_t, int32_t id, void *data) {
             snprintf(sub, sizeof(sub), "%s/%s/#", base, chipHex);
             esp_mqtt_client_subscribe(mqtt, sub, 1);
             say_what_we_are();
+            announce_the_light();
+            say_light();
             break;
         }
         case MQTT_EVENT_DISCONNECTED: broker_up = false; break;
