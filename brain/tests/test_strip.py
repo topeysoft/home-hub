@@ -754,6 +754,37 @@ class WhichDoorTheStripIsTakenThrough(unittest.TestCase):
         self.assertEqual(self.strips.job["door"], "matter")
 
 
+class TheRoomsItOffers(unittest.TestCase):
+    """A real house keeps its rooms as a DICT of id -> Room, and iterating a dict gives you its keys.
+    So this asked a string for string["id"] and answered 500 to every request the sheet makes,
+    including the poll it lives on -- at the one beat that reaches it, which is the last one."""
+
+    class Room:
+        def __init__(self, id, name): self.id, self.name = id, name
+
+    def rooms_for(self, rooms):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        hub = FakeHub(tmp.name)
+        hub.home = type("H", (), {"rooms": rooms})()
+        return Strips(hub, FakeRadio())._rooms()
+
+    def test_a_real_house_keeps_them_in_a_dict_and_that_is_not_a_list_of_rooms(self):
+        got = self.rooms_for({"living": self.Room("living", "Living room"),
+                              "kitchen": self.Room("kitchen", "Kitchen")})
+        self.assertEqual(got, [{"id": "living", "name": "Living room"},
+                               {"id": "kitchen", "name": "Kitchen"}])
+
+    def test_unassigned_is_never_offered_as_somewhere_to_put_a_thing(self):
+        got = self.rooms_for({"unassigned": self.Room("unassigned", "Unassigned"),
+                              "hall": self.Room("hall", "Hall")})
+        self.assertEqual([r["id"] for r in got], ["hall"])
+
+    def test_a_house_with_no_rooms_at_all_is_not_an_error(self):
+        self.assertEqual(self.rooms_for({}), [])
+        self.assertEqual(self.rooms_for(None), [])
+
+
 class WhenTheRealAnswerIsTheDistance(unittest.TestCase):
     """A strip at the far end of a house fails in whatever way the radio fails that minute, and every
     one of those sentences sends somebody to check a thing that is not wrong. Seen on a real hub on

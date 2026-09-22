@@ -624,6 +624,21 @@ the house, which is how these things get returned. The camera route avoids all o
 pointed into a living room. **The cheap next step is neither: a capture stick and HyperHDR on a bench,
 to find out whether it feels like the screen extended or like a gimmick, before any of it is paid for.**
 
+**30. "Where is it?" answered 500 to everything, in any real house.** The first beat past the fill, and
+the first one nobody had ever reached. `_rooms()` iterated `home.rooms` — **which is a dict of
+`id -> Room`**, so it walked the keys and asked a string for `string["id"]`. Everywhere else in the
+brain says `.rooms.values()`.
+
+**It took the whole sheet down, not just that request.** `_rooms()` is called from `status()`, which is
+what `GET /strip` returns, which is the poll the panel lives on — so once the job reached `room` every
+request raised and the wall could not even draw what had gone wrong. The toast said *internal server
+error*, which is the only honest thing it could say.
+
+**No test caught it because the fake house is a list**, and a list of room objects is exactly the shape
+this code was written against. The suite now uses a dict, which is what a house is. `unassigned` is also
+a real room in that dict and is never somewhere to put a thing; every other caller skips it and this one
+now does too.
+
 **29. A strip set up through our own door never went to the broker until it was next switched off and
 on.** This is the one that failed all evening, and it is the last mile of item 2a.
 

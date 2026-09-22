@@ -414,10 +414,26 @@ class Strips:
         return where
 
     def _rooms(self) -> list:
-        home = getattr(self.hub, "home", None)
-        rooms = getattr(home, "rooms", None) or []
-        return [{"id": getattr(r, "id", None) or r["id"], "name": getattr(r, "name", None) or r["name"]}
-                for r in rooms]
+        """The rooms to offer, in the shape the panel draws as chips.
+
+        `home.rooms` IS A DICT of id -> Room, and iterating a dict gives you its keys -- which is how
+        this came to call `r["id"]` on a string and answer 500 to every request, including the poll
+        the sheet lives on. It had been that way since it was written and no test caught it because
+        the fake house is a list. Everywhere else in the brain says `.rooms.values()`. Seen on a real
+        house on 21 September, at the one beat that reaches this: "Where is it?".
+
+        `unassigned` is a real room in the dict and is never a place to put something; every other
+        caller skips it and so does this."""
+        rooms = getattr(getattr(self.hub, "home", None), "rooms", None) or []
+        if isinstance(rooms, dict): rooms = list(rooms.values())
+        out = []
+        for r in rooms:
+            got = r if isinstance(r, dict) else {}
+            rid = getattr(r, "id", None) or got.get("id")
+            name = getattr(r, "name", None) or got.get("name")
+            if not rid or rid == "unassigned": continue
+            out.append({"id": rid, "name": name or rid})
+        return out
 
     def _set(self, state, **more):
         if not self.job: return
