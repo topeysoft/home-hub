@@ -363,6 +363,7 @@ class Strips:
         self.strips: dict[str, dict] = {}      # what the broker says: id -> {"online", "count", "order"}
         self._heard: dict[str, dict] = {}      # the last retained value per (id, leaf)
         self._arrived: set[str] = set()        # said "online" since we last started listening
+        self._devices: dict[str, str] = {}     # our id for a strip -> the house's id for its hardware
         self._woke: asyncio.Event | None = None
         self._task: asyncio.Task | None = None
         # Set when the household says they cannot reach the button. The session waiting for a press
@@ -910,11 +911,39 @@ class Strips:
         return await self._fill()
 
     # ---- afterwards ----
-    def each(self) -> list[dict]:
-        """Every strip the house has, for the screen that offers to ask it something again."""
-        return [{"id": i, "online": bool(v.get("online")),
-                 "count": v.get("count"), "order": v.get("order")}
-                for i, v in sorted(self.strips.items())]
+    async def each(self) -> list[dict]:
+        """Every strip the house has, for the pane that offers to ask one something again.
+
+        `device` is the whole reason this is worth asking for: it is the house's own id for the
+        hardware, which every device the panel draws already carries, and it is how a light pane
+        knows that the light it is drawing IS one of these. Without it the panel would be guessing
+        from a model string."""
+        out = []
+        for i, v in sorted(self.strips.items()):
+            out.append({"id": i, "online": bool(v.get("online")), "count": v.get("count"),
+                        "order": v.get("order"), "device": await self._device_for(i)})
+        return out
+
+    async def _device_for(self, id_: str) -> str | None:
+        """The house's id for this strip's hardware, or None if it has not made one yet.
+
+        Cached once found and never cached when not: discovery is a moment behind everything else,
+        and remembering that a thing did not exist is how a panel comes to be permanently sure."""
+        known = self._devices.get(id_)
+        if known: return known
+        want = f"{BASE}_{id_}"
+        try:
+            rows = await self.hub.ha.send("config/device_registry/list") or []
+        except Exception as e:
+            log.info("strip: could not read the house's devices (%s)", e)
+            return None
+        for d in rows:
+            names = [str(x) for ident in (d.get("identifiers") or [])
+                     for x in (ident if isinstance(ident, (list, tuple)) else [ident])]
+            if want in names and d.get("id"):
+                self._devices[id_] = d["id"]
+                return d["id"]
+        return None
 
     REVISIT = ("colors", "length")
 
@@ -977,21 +1006,13 @@ class Strips:
         It is worth more than one try: the strip announces itself over MQTT discovery and Home
         Assistant makes the device a moment later, so the room can be chosen before there is anything
         to put in it."""
-        want = f"{BASE}_{id_}"
         end = time.monotonic() + PLACE_WAIT
         while True:
-            try:
-                rows = await self.hub.ha.send("config/device_registry/list") or []
-            except Exception as e:
-                log.info("strip: could not read the house's devices (%s)", e)
-                rows = []
-            for d in rows:
-                names = [str(x) for ident in (d.get("identifiers") or [])
-                         for x in (ident if isinstance(ident, (list, tuple)) else [ident])]
-                if want not in names: continue
+            dev = await self._device_for(id_)
+            if dev:
                 try:
                     await self.hub.ha.send("config/device_registry/update",
-                                           device_id=d["id"], area_id=room_id)
+                                           device_id=dev, area_id=room_id)
                     log.info("strip %s: put in %s", id_, room_id)
                     return True
                 except Exception as e:

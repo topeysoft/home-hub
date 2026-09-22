@@ -649,11 +649,22 @@ stayed wherever Home Assistant first put it, and the household went and did it a
 the device registry now, and keeps asking for twenty seconds, because discovery is a moment behind the
 room chip.
 
-**Still missing, and it is the other half of the first one:** `design/strip/Later.dc.html` is the pane
-row that asks a strip its length or its colors again, afterwards. The brain has `/strip/revisit` and the
-panel has `revisitStrip()` — and **nothing in the panel calls it**. So a household whose strip measured
-wrong has no way to say so, which is precisely what was reported. The board is drawn and chosen; the
-row was never built.
+**And the other half of the first one is now built.** `design/strip/Later.dc.html` was drawn and chosen
+on 20 September and the row was never made: the brain had `/strip/revisit` and the panel had
+`revisitStrip()`, and **nothing called it**. So a household whose strip measured wrong had no way to say
+so, which is exactly what came back. `LightPane.vue` carries the two rows now, at the foot, each one the
+setup question it came from and nothing else — the length in metres, because strips are bought by the
+metre, and the red question again for a strip that was replaced by a different make.
+
+**How the pane knows the light it is drawing is a strip:** `/strip/list` now carries `device`, the
+house's own id for the hardware, which every device the panel draws already has. Resolved from the
+device registry by the same lookup that puts a strip in its room, cached when found and never cached
+when missing — discovery is a moment behind everything else, and remembering that a thing did not exist
+is how a panel comes to be permanently sure of a wrong answer.
+
+**What is deliberately absent is the board's loudest argument**, and a test holds it: no effects, no
+segments, no zones. A strip with a hundred named animations is a maker's toy; this is an accent light a
+household should be able to forget about.
 
 **31. A strip that is set up is still not a light anybody can switch on — until now.** Everything before
 this item is setup, and setup is not the product. The household's own on/off, brightness and color

@@ -1329,7 +1329,7 @@ async def strip_done(): return await hub.strip.done()
 # wrong. design/strip/Later.dc.html. Reading the list is open, like every other read; asking a strip
 # to light itself up in somebody's room is a change, and is gated.
 @app.get("/strip/list")
-def strip_list(): return {"strips": hub.strip.each()}
+async def strip_list(): return {"strips": await hub.strip.each()}
 
 
 @app.post("/strip/revisit")

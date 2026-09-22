@@ -11,9 +11,9 @@
  * standing in front of it with a mouse. The three cards are for everyone who will never drag
  * anything: each one is a brightness the house can already send.
  */
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import type { Device } from '../api'
-import { keepColor } from '../api'
+import { keepColor, listStrips, revisitStrip, type StripRow } from '../api'
 import { guessNow, isDead, notify, perform, roomOf, store } from '../store'
 import { COLORS, WHITES, autoKelvin, dataFor, guessFor, handlesOf, hsRgb, same, swatchCss, wantedOf, wantedRgb, type Wanted } from '../color'
 import { rgb } from '../sky'
@@ -126,6 +126,41 @@ const amtSlide = useSlide({
   live: v => (tune.amount = v),
   settle: v => { tune.amount = v; sendTune() },
 })
+
+/* TWO THINGS THAT WERE SETTLED ONCE AND GO STALE (design/strip/Later.dc.html).
+ *
+ * A strip gets cut down to fit a shelf. Another gets soldered on to reach round a corner. One fails
+ * and is replaced by whatever was in stock, which is very often not the same make and so not the same
+ * channel order. None of that is unusual and none of it should mean setting the thing up again -- so
+ * each row is the setup question it came from, reopened, and nothing else.
+ *
+ * Everything above them is the ordinary light pane with no idea this is a strip, which is the point:
+ * the board's whole argument is that a strip is an ordinary light with two extra rows at the foot.
+ * Note what is NOT here -- no effects, no segments, no zones. A strip with a hundred named animations
+ * is a maker's toy; this is an accent light a household should be able to forget about.
+ */
+const strip = ref<StripRow | null>(null)
+onMounted(async () => {
+  // A hub too old to know what a strip is answers 404 and the rows simply never appear.
+  try {
+    const rows = (await listStrips()).strips
+    strip.value = rows.find(r => r.device && r.device === props.device.hw) ?? null
+  } catch { strip.value = null }
+})
+/* LEDs are sold by the metre and bought by the metre, so the length is said in metres even though
+   what was measured is lights. Sixty to the metre is the common density and this says "about". */
+const metres = computed(() => {
+  const n = strip.value?.count
+  return n ? `About ${(n / 60).toFixed(1)} m` : 'Measured once'
+})
+const asking = ref(false)
+async function askAgain(what: 'colors' | 'length') {
+  if (!strip.value || asking.value) return
+  asking.value = true
+  try { store.strip = await revisitStrip(strip.value.id, what) }
+  catch (e: any) { notify(e.message, 'error') }
+  asking.value = false
+}
 
 const narrow = useNarrow()          // a phone drags the same two things on their sides
 const dim = useSlide({ vertical: () => !narrow.value, live: v => (guess.value = v), settle: v => bright(v) })
@@ -262,6 +297,25 @@ async function level(l: typeof LEVELS[number]) {
         </button>
     </div>
 
+    <!-- The strip-shaped part, and the only part of this pane that knows what a strip is. -->
+    <div class="rig-levels" v-if="strip && !tuning">
+      <span class="rig-lbl">Because it is a strip</span>
+      <button class="rig-card" :disabled="dead || asking || !strip.online" @click="askAgain('length')">
+        <span class="rig-card-icon"><Icon name="pin" :size="18" /></span>
+        <span class="rig-card-text">
+          <span class="rig-card-name">Ends here</span>
+          <span class="rig-card-sub">{{ metres }} — say again if you cut it down or joined another on</span>
+        </span>
+      </button>
+      <button class="rig-card" :disabled="dead || asking || !strip.online" @click="askAgain('colors')">
+        <span class="rig-card-icon"><Icon name="light" :size="18" /></span>
+        <span class="rig-card-text">
+          <span class="rig-card-name">The colors look wrong</span>
+          <span class="rig-card-sub">Asks the red question again. A strip bought later may not be the same make.</span>
+        </span>
+      </button>
+    </div>
+
     <div class="rig-levels" v-if="!tuning">
       <span class="rig-lbl">The three it is used at</span>
       <button v-for="l in LEVELS" :key="l.id" class="rig-card" :class="{ on: here === l.id }" :disabled="dead" @click="level(l)">
@@ -274,3 +328,95 @@ async function level(l: typeof LEVELS[number]) {
     </div>
   </div>
 </template>
+
+<style scoped>
+/* LightPane's own insides. Every rule here matches something this template draws, so `scoped`
+   narrows it to the elements it already applied to, and these names can no longer collide with
+   another screen's by accident.
+
+   What stayed in panel.css, deliberately: anything on the component's outermost element, because
+   that is where the rest of the sheet does its cross-cutting work and scoping would make a moved
+   rule outrank the ones it used to tie with; any class another component also draws, which is
+   shared vocabulary rather than ours; and any rule reaching in from a container (`.bento`,
+   `.wall-stage`), which belongs to the arrangement rather than to this. */
+
+.rig-auto-dot {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  /* the whole range a lamp on Automatic moves through in a day, which is what
+     the word means here -- lamplight after dark, cooler while the sun is up */
+  background: linear-gradient(135deg, #ffa657, #ffe9d4 52%, #e2ecff);
+}
+.rig-auto-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.rig-auto-name {
+  font-size: 17px;
+  font-weight: 500;
+}
+.rig-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 13px;
+}
+.rig-levels {
+  flex: 1 1 0;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  justify-content: center;
+}
+.rig-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 84px;
+  padding: 0 22px;
+  border-radius: 24px;
+  border: 1px solid var(--edge);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--ink);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  transition: background 0.18s var(--ease);
+}
+.rig-card:hover {
+  background: rgba(255, 255, 255, 0.09);
+}
+.rig-card.on {
+  border-color: rgba(var(--lamp-rgb), 0.55);
+  background: rgba(var(--lamp-rgb), 0.14);
+}
+.rig-card:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.rig-card-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--lamp);
+  flex: 0 0 auto;
+}
+.rig-card-name {
+  display: block;
+  font-size: 19px;
+}
+.rig-card-sub {
+  display: block;
+  margin-top: 2px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.rig-card.on .rig-card-sub {
+  color: var(--ink-2);
+}</style>

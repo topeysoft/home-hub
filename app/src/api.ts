@@ -311,7 +311,12 @@ export const stripAgain = () => post<Strip>('/strip/again')
 export const stripRoom = (room: string) => post<Strip>('/strip/room', { room })
 export const stripDone = () => post<Strip>('/strip/done')
 /** Every strip the house has, for the rows that offer to ask one of them something again. */
-export type StripRow = { id: string; online: boolean; count: number | null; order: string | null }
+export type StripRow = {
+  id: string; online: boolean; count: number | null; order: string | null
+  /* The house's own id for the hardware, which is how a light pane knows the light it is drawing IS
+     one of these. Null until Home Assistant has made the device, which is a moment behind the rest. */
+  device?: string | null
+}
 export async function listStrips(): Promise<{ strips: StripRow[] }> {
   const r = await request('/strip/list'); if (!r.ok) await fail(r); return r.json()
 }

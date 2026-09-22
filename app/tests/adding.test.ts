@@ -167,3 +167,45 @@ describe('the press, and the rung below it', () => {
     expect(sheet.match(/@click="reach"/g) ?? []).toHaveLength(1)
   })
 })
+
+/* THE TWO ROWS THAT COME BACK AFTERWARDS (design/strip/Later.dc.html). Both answers a strip gives at
+   setup go stale -- it gets cut down, another is joined on, one is replaced by a different make -- and
+   none of that should mean setting the thing up again. The board was drawn and chosen on 20 September
+   and the row was never built, so a household whose strip measured wrong had no way to say so; that is
+   exactly what came back from a real house on 21 September.
+
+   What these hold is that it stays TWO rows and nothing more. The board's loudest argument is the one
+   about what is absent: no effects, no segments, no zones. */
+describe('asking a strip again, afterwards', () => {
+  const pane = readFileSync('src/panes/LightPane.vue', 'utf8')
+
+  it('offers both of the questions a strip is asked at setup, and only those', () => {
+    expect(pane).toContain("askAgain('length')")
+    expect(pane).toContain("askAgain('colors')")
+    expect(pane.match(/askAgain\('/g) ?? []).toHaveLength(2)
+  })
+
+  it('says the length in metres, because that is how strips are bought', () => {
+    expect(pane).toMatch(/\/ 60/)
+    expect(pane).toContain('About ')
+  })
+
+  it('shows nothing at all on a light that is not a strip', () => {
+    expect(pane).toContain('v-if="strip && !tuning"')
+  })
+
+  it('knows which strip it is by the house\'s own id and never by a model name', () => {
+    expect(pane).toContain('r.device === props.device.hw')
+    expect(pane.toLowerCase()).not.toContain('model ===')
+  })
+
+  it('adds no effects, segments or zones, which is the board\'s loudest argument', () => {
+    // The strip-shaped part of the pane only: "effect" is ordinary English everywhere else in a file
+    // about lighting, and a test that reads the whole file is a test about prose.
+    const at = pane.indexOf('v-if="strip && !tuning"')
+    const rows = pane.slice(at, pane.indexOf('rig-levels', at + 40))
+    expect(rows.match(/<button/g) ?? []).toHaveLength(2)
+    for (const no of ['effects', 'segment', 'zone', 'animation', 'preset'])
+      expect(rows.toLowerCase()).not.toContain(no)
+  })
+})

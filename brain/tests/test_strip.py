@@ -402,7 +402,19 @@ class Afterwards(unittest.TestCase):
         return [p for t, p in self.hub.ha.published if t.endswith("/" + leaf)]
 
     def test_the_house_can_list_what_it_has(self):
-        self.assertEqual(self.s.each(), [{"id": "c8ebba", "online": True, "count": 186, "order": "grb"}])
+        self.hub.ha.devices = [{"id": "dev1", "identifiers": [["mqtt", "strip_c8ebba"]]}]
+        self.assertEqual(run(self.s.each()),
+                         [{"id": "c8ebba", "online": True, "count": 186, "order": "grb",
+                           "device": "dev1"}])
+
+    def test_a_strip_the_house_has_not_made_a_device_for_yet_is_still_listed(self):
+        """Discovery is a moment behind everything else, and a strip with no hardware id yet is a
+        strip the pane simply cannot offer its two questions about -- not one it should hide."""
+        self.hub.ha.devices = []
+        self.assertEqual(run(self.s.each())[0]["device"], None)
+        # And the miss is not remembered: it would make the pane permanently sure of a wrong thing.
+        self.hub.ha.devices = [{"id": "dev1", "identifiers": [["mqtt", "strip_c8ebba"]]}]
+        self.assertEqual(run(self.s.each())[0]["device"], "dev1")
 
     def test_the_colors_can_be_asked_again(self):
         run(self.s.revisit("c8ebba", "colors"))
