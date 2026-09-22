@@ -1898,13 +1898,6 @@ input:focus-visible {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.media-sub {
-  color: var(--muted);
-  font-size: 14px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 .tile.media.off .media-title,
 .tile.media.dead .media-title {
   color: var(--muted);
@@ -1934,14 +1927,6 @@ input:focus-visible {
   height: 4px;
   border-radius: 2px;
   background: rgba(255, 255, 255, 0.72);
-}
-.media-when {
-  display: none;
-  font-size: 13.5px;
-  color: var(--muted);
-}
-.media-veil {
-  display: none;
 }
 .ctl {
   width: 40px;
@@ -2018,22 +2003,6 @@ input:focus-visible {
   height: 100%;
   object-fit: cover;
 }
-.camera-veil {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    180deg,
-    rgba(12, 13, 16, 0.35),
-    transparent 35%,
-    transparent 55%,
-    rgba(12, 13, 16, 0.8)
-  );
-}
-.camera-top {
-  position: absolute;
-  top: 14px;
-  right: 14px;
-}
 .camera-bottom {
   position: absolute;
   left: 16px;
@@ -2055,21 +2024,6 @@ input:focus-visible {
 .camera-bottom .tile-name {
   color: #fff;
   text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
-}
-.chip {
-  font-size: 11.5px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  padding: 5px 9px;
-  border-radius: 999px;
-  background: rgba(12, 13, 16, 0.55);
-  color: var(--ink-2);
-  backdrop-filter: blur(8px);
-}
-.chip.live {
-  background: var(--live);
-  color: #0b2216;
-  font-weight: 600;
 }
 
 /* ---------- reduced motion + small screens ---------- */
@@ -2429,16 +2383,6 @@ input:focus-visible {
   width: 280px;
   scroll-snap-align: start;
 }
-.camera-text {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-.camera-place {
-  font-size: 12.5px;
-  color: rgba(255, 255, 255, 0.7);
-  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
-}
 .tile.camera {
   cursor: pointer;
   width: 100%;
@@ -2506,11 +2450,6 @@ input:focus-visible {
 }
 .empty-actions .button {
   margin: 0;
-}
-.media-hint {
-  color: var(--muted);
-  font-size: 14px;
-  margin-left: 4px;
 }
 
 /* ---------- feedback: pending, toast, banner, offline ---------- */
@@ -5039,21 +4978,6 @@ select.input {
   align-items: center;
   gap: 6px;
   padding-top: 2px;
-}
-.snd-for {
-  height: 32px;
-  padding: 0 10px;
-  border-radius: 999px;
-  background: var(--surface-hi);
-  border: 1px solid var(--edge);
-  color: var(--ink-2);
-  font: inherit;
-  font-size: 13px;
-  -webkit-appearance: none;
-  appearance: none;
-}
-.snd-for:disabled {
-  opacity: 0.5;
 }
 .snd-left {
   font-size: 13px;
@@ -9548,24 +9472,6 @@ select.input {
   border-color: transparent;
   color: #1d1a22;
 }
-.rig-auto-dot {
-  width: 40px;
-  height: 40px;
-  flex: 0 0 auto;
-  border-radius: 50%;
-  /* the whole range a lamp on Automatic moves through in a day, which is what
-     the word means here -- lamplight after dark, cooler while the sun is up */
-  background: linear-gradient(135deg, #ffa657, #ffe9d4 52%, #e2ecff);
-}
-.rig-auto-text {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-.rig-auto-name {
-  font-size: 17px;
-  font-weight: 500;
-}
 .rig-auto-sub {
   font-size: 13.5px;
   margin-top: 1px;
@@ -9577,11 +9483,6 @@ select.input {
 .rig-auto-tick {
   margin-left: auto;
   flex: 0 0 auto;
-}
-.rig-swatches {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 13px;
 }
 /* 58px, because the hand that reaches for one of these is not looking -- the
    same reason the columns beside them are 168 wide. */
@@ -9737,63 +9638,6 @@ select.input {
   flex: 0 0 auto;
   border-radius: 50%;
 }
-.rig-levels {
-  flex: 1 1 0;
-  min-width: 200px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  justify-content: center;
-}
-.rig-card {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  height: 84px;
-  padding: 0 22px;
-  border-radius: 24px;
-  border: 1px solid var(--edge);
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--ink);
-  text-align: left;
-  font: inherit;
-  cursor: pointer;
-  transition: background 0.18s var(--ease);
-}
-.rig-card:hover {
-  background: rgba(255, 255, 255, 0.09);
-}
-.rig-card.on {
-  border-color: rgba(var(--lamp-rgb), 0.55);
-  background: rgba(var(--lamp-rgb), 0.14);
-}
-.rig-card:disabled {
-  opacity: 0.45;
-  cursor: default;
-}
-.rig-card-icon {
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--lamp);
-  flex: 0 0 auto;
-}
-.rig-card-name {
-  display: block;
-  font-size: 19px;
-}
-.rig-card-sub {
-  display: block;
-  margin-top: 2px;
-  font-size: 14px;
-  color: var(--muted);
-}
-.rig-card.on .rig-card-sub {
-  color: var(--ink-2);
-}
 
 /* ---- what is playing ---- */
 .rig-media {
@@ -9816,37 +9660,6 @@ select.input {
   height: 100%;
   object-fit: cover;
 }
-.rig-play {
-  flex: 1 1 0;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 20px;
-}
-.rig-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-.rig-chip {
-  display: inline-flex;
-  align-items: center;
-  height: 34px;
-  padding: 0 14px;
-  border-radius: 999px;
-  font-size: 13.5px;
-  color: var(--ink-2);
-  background: var(--surface-hi);
-  white-space: nowrap;
-  max-width: 18em;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.rig-chip.app {
-  background: rgba(122, 176, 232, 0.16);
-  color: #cfe3fa;
-}
 .rig-bar {
   height: 6px;
   border-radius: 3px;
@@ -9858,13 +9671,6 @@ select.input {
   height: 6px;
   border-radius: 3px;
   background: var(--lamp);
-}
-.rig-times {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 11px;
-  font-size: 14px;
-  color: var(--ink-2);
 }
 .rig-transport {
   display: flex;
@@ -9878,12 +9684,6 @@ select.input {
 .rig-transport .ctl.primary {
   background: var(--lamp);
   color: var(--lamp-ink);
-}
-.rig-volume {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  color: var(--ink-2);
 }
 .rig-slider {
   position: relative;
@@ -9912,11 +9712,6 @@ select.input {
   border-radius: 50%;
   background: var(--ink);
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
-}
-.rig-volume-n {
-  width: 3.2em;
-  text-align: right;
-  font-size: 15px;
 }
 .rig-sounds {
   display: flex;
@@ -9972,82 +9767,6 @@ select.input {
   font-style: normal;
   font-size: 32px;
   vertical-align: super;
-}
-.rig-dial-doing {
-  margin-top: 16px;
-  font-size: 15px;
-  color: var(--ink-2);
-}
-.rig-dial-btn {
-  position: absolute;
-  bottom: 0;
-  width: 68px;
-  height: 68px;
-}
-.rig-dial-btn.low {
-  left: 0;
-}
-.rig-dial-btn.high {
-  right: 0;
-}
-.rig-side {
-  flex: 1 1 0;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  justify-content: center;
-}
-.rig-modes {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  margin-top: 12px;
-}
-.rig-mode {
-  height: 48px;
-  border-radius: 999px;
-  border: 1px solid transparent;
-  background: var(--surface-hi);
-  color: var(--ink-2);
-  font: inherit;
-  font-size: 15.5px;
-  /* a chip, not a row: `button { text-align: left }` at the top of this file governs every button in
-     the panel, and these are the artboard's centered pills */
-  text-align: center;
-  cursor: pointer;
-  transition: background 0.15s var(--ease);
-}
-.rig-mode:hover {
-  background: var(--surface-press);
-}
-.rig-mode.on {
-  border-color: rgba(122, 176, 232, 0.45);
-}
-.rig-mode.on {
-  background: rgba(122, 176, 232, 0.22);
-  color: #d6e8fb;
-}
-.rig-row {
-  /* one surface with the choice inside it, the way the board drew the fan and the sensor: a loose
-     label above loose chips read as a settings list rather than as part of the dial */
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  min-height: 62px;
-  padding: 10px 16px;
-  border-radius: 20px;
-  border: 1px solid var(--edge);
-  background: rgba(255, 255, 255, 0.05);
-}
-.rig-row-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex: 0 0 auto;
-  font-size: 15.5px;
-  color: var(--ink-2);
-  white-space: nowrap;
 }
 .rig-row-acts {
   display: flex;
@@ -10111,31 +9830,6 @@ select.input {
   height: 3px;
   border-radius: 2px;
   background: rgba(var(--lamp-ink-rgb), 0.35);
-}
-.rig-scale {
-  position: relative;
-  flex: 0 0 auto;
-  width: 104px;
-  font-size: 14px;
-  color: var(--muted);
-}
-.rig-scale-line {
-  position: absolute;
-  left: 0;
-  top: 8px;
-  bottom: 8px;
-  width: 1px;
-  background: var(--edge-hi);
-}
-.rig-scale-top {
-  position: absolute;
-  left: 20px;
-  top: 0;
-}
-.rig-scale-bottom {
-  position: absolute;
-  left: 20px;
-  bottom: 0;
 }
 .rig-scale-now {
   position: absolute;
@@ -10239,10 +9933,6 @@ select.input {
   opacity: 1;
   transform: translateX(0);
 }
-.rig-lock-side {
-  flex: 1 1 0;
-  min-width: 0;
-}
 .rig-track {
   position: relative;
   height: 104px;
@@ -10290,16 +9980,6 @@ select.input {
   align-items: center;
   font-size: 18px;
   color: var(--ink-2);
-}
-.rig-note {
-  margin: 16px 0 0;
-  font-size: 14.5px;
-  color: var(--muted);
-}
-.rig-lock-acts {
-  display: flex;
-  gap: 12px;
-  margin-top: 26px;
 }
 
 /* ---- a camera, whose instrument is the picture ---- */
@@ -10371,20 +10051,6 @@ select.input {
 }
 .rig-still-tag.live i {
   background: var(--danger);
-}
-.rig-still-watch {
-  position: absolute;
-  right: 14px;
-  bottom: 12px;
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  height: 36px;
-  padding: 0 15px;
-  border-radius: 999px;
-  background: rgba(12, 14, 18, 0.62);
-  font-size: 14px;
-  color: var(--ink-2);
 }
 .rig-sightings {
   flex: 0 0 auto;

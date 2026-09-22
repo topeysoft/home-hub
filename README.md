@@ -218,6 +218,7 @@ tools/dev.sh          # a fresh clone: what this is, what each directory does, w
 tools/dev.sh up       # installs both halves, then the panel on the mock house — no hub needed
 tools/dev.sh hub      # the same against a real brain, replaced with your code first
 tools/dev.sh check    # what CI runs, minus the browser pass
+tools/dev.sh free     # let go of a port still held from yesterday — all of them, or free 5173
 ```
 
 `up` is the one to live in: `npm run dev:mock` with the install step in front of it, so a clone
@@ -226,9 +227,20 @@ two floors first (**node 22+, python 3.13+**) and names the version it found, be
 that is 3.9 — which is what pyenv or conda often puts first on a Mac — builds a venv happily and
 then fails in the tests in ways that read as bugs in the code.
 
+It claims :8399 first, the way `hub` claims :8300 — a mock left running from an hour ago, or one
+started by whoever else is in this checkout, otherwise ends `up` with a node stack that names
+neither. Only a mock of ours is replaced, and it says whose it was; anything else on the port
+is reported, and `PORT=8405 tools/dev.sh up` goes around it.
+
 `hub` goes through `brain/dev.py`, which stops whatever hub is holding :8300 and starts yours: a
 hub left running from before the break serves an older shape of `/home`, and the panel renders it
 without complaint, so it reads as a panel bug.
+
+`free` is the other half of that: the status report names anything still listening — a brain, a
+vite, the artboard viewer — and `free` stops it, so `address already in use` does not send you
+to an `lsof` and a `kill` aimed by hand. A port a container publishes is reported and left
+alone, because that pid is docker's and killing it takes docker's networking rather than the
+container.
 
 ## Developing on the Mac (until the Pi arrives)
 

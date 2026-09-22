@@ -86,3 +86,50 @@ const stopSound = () => perform(d(), 'sound_off', undefined, { state: 'idle', at
     </div>
   </div>
 </template>
+
+<style scoped>
+/* MediaTile's own insides. Every rule here matches something this template draws, so `scoped`
+   narrows it to the elements it already applied to, and these names can no longer collide with
+   another screen's by accident.
+
+   What stayed in panel.css, deliberately: anything on the component's outermost element, because
+   that is where the rest of the sheet does its cross-cutting work and scoping would make a moved
+   rule outrank the ones it used to tie with; any class another component also draws, which is
+   shared vocabulary rather than ours; and any rule reaching in from a container (`.bento`,
+   `.wall-stage`), which belongs to the arrangement rather than to this. */
+
+.media-sub {
+  color: var(--muted);
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.media-when {
+  display: none;
+  font-size: 13.5px;
+  color: var(--muted);
+}
+.media-veil {
+  display: none;
+}
+.media-hint {
+  color: var(--muted);
+  font-size: 14px;
+  margin-left: 4px;
+}
+.snd-for {
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--surface-hi);
+  border: 1px solid var(--edge);
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 13px;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.snd-for:disabled {
+  opacity: 0.5;
+}</style>

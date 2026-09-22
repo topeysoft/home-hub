@@ -76,3 +76,29 @@ const doorCam = computed(() => store.rooms.find(r => r.id === props.device.room_
     </div>
   </div>
 </template>
+
+<style scoped>
+/* LockPane's own insides. Every rule here matches something this template draws, so `scoped`
+   narrows it to the elements it already applied to, and these names can no longer collide with
+   another screen's by accident.
+
+   What stayed in panel.css, deliberately: anything on the component's outermost element, because
+   that is where the rest of the sheet does its cross-cutting work and scoping would make a moved
+   rule outrank the ones it used to tie with; any class another component also draws, which is
+   shared vocabulary rather than ours; and any rule reaching in from a container (`.bento`,
+   `.wall-stage`), which belongs to the arrangement rather than to this. */
+
+.rig-lock-side {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.rig-note {
+  margin: 16px 0 0;
+  font-size: 14.5px;
+  color: var(--muted);
+}
+.rig-lock-acts {
+  display: flex;
+  gap: 12px;
+  margin-top: 26px;
+}</style>

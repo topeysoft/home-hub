@@ -119,3 +119,29 @@ watch(() => props.device.id, () => { drop(); later() })
 
 </div>
 </template>
+
+<style scoped>
+/* CameraPane's own insides. Every rule here matches something this template draws, so `scoped`
+   narrows it to the elements it already applied to, and these names can no longer collide with
+   another screen's by accident.
+
+   What stayed in panel.css, deliberately: anything on the component's outermost element, because
+   that is where the rest of the sheet does its cross-cutting work and scoping would make a moved
+   rule outrank the ones it used to tie with; any class another component also draws, which is
+   shared vocabulary rather than ours; and any rule reaching in from a container (`.bento`,
+   `.wall-stage`), which belongs to the arrangement rather than to this. */
+
+.rig-still-watch {
+  position: absolute;
+  right: 14px;
+  bottom: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  height: 36px;
+  padding: 0 15px;
+  border-radius: 999px;
+  background: rgba(12, 14, 18, 0.62);
+  font-size: 14px;
+  color: var(--ink-2);
+}</style>
