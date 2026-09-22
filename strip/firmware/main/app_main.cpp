@@ -40,6 +40,8 @@
 #include <nvs_flash.h>
 #include <nvs.h>
 #include <driver/gpio.h>
+#include <esp_event.h>
+#include <esp_netif.h>
 #include <esp_task_wdt.h>
 #include <esp_wifi.h>
 #include <esp_timer.h>
@@ -255,11 +257,29 @@ static void mqtt_event(void *arg, esp_event_base_t, int32_t id, void *data) {
     }
 }
 
+// WHERE THE HOUSE IS, AND EVERY WAY OF ARRIVING AT IT.
+//
+// Safe to call as often as you like: it is the same question asked from three different moments, and
+// only the first one that can answer does anything.
+//
+// IT USED TO BE ASKED FROM TWO, AND OUR OWN DOOR WAS NEITHER. A strip set up through our door was
+// handed the Wi-Fi and the broker in one session, stored both, joined the house -- and then sat there
+// with a perfectly good broker it had never been told to go to, because find_hub() ran at boot and on
+// Matter's kCommissioningComplete and nowhere else. The hub waited sixty seconds for a hello that
+// could not come, and said the strip never reached it. It reached it on the NEXT POWER CYCLE, every
+// time, which is what made this look like anything but what it was. 21 September, and it is the last
+// mile of item 2a.
+static bool gHaveIp = false;
 static void find_hub() {
+    if (mqtt) return;                       // already on the way, or already there
+    // AND IT SAYS WHY IT IS NOT GOING, which the first version did not: three silent returns and a
+    // strip that has joined the house and gone quiet look identical from a serial console.
+    if (!gHaveIp) { ESP_LOGD(TAG, "no address yet; not looking for the hub"); return; }
     const std::string host = get_str("mhost", "");
     // Blank on a strip that has never met our hub, which is the ordinary case for one bought in a
     // shop. It is then simply a Matter light and none of this half ever runs.
-    if (host.empty()) return;
+    if (host.empty()) { ESP_LOGI(TAG, "no hub to look for; this is somebody else's light"); return; }
+    ESP_LOGI(TAG, "looking for the hub at %s.local", host.c_str());
     const std::string uri = "mqtt://" + host + ".local:1883";
     esp_mqtt_client_config_t cfg = {};
     cfg.broker.address.uri = uri.c_str();
@@ -575,6 +595,23 @@ extern "C" void app_main() {
     if (!ours && prov::reserve(prov_name) != ESP_OK)
         ESP_LOGE(TAG, "our own door will not open this boot");
 
+    // THE THIRD MOMENT, and the one that covers every path including our own door: an address on
+    // the house's network. It fires on the first join and again after a router reboot.
+    //
+    // THE LOOP HAS TO EXIST FIRST, and registering into one that does not is not an error anybody
+    // sees -- esp_event_handler_register returns ESP_ERR_INVALID_STATE and the handler simply never
+    // runs. Which is how this went in with the registration ahead of esp_matter::start(), looked
+    // right, built clean, and did nothing at all: the address arrived, the default handler printed
+    // it, and ours was never called. So the loop is made here if nobody has made one, and the
+    // return is READ. 21 September, and the third thing that evening to fail by being silent.
+    esp_event_loop_create_default();
+    const esp_err_t hooked = esp_event_handler_register(
+        IP_EVENT, IP_EVENT_STA_GOT_IP,
+        [](void *, esp_event_base_t, int32_t, void *) { gHaveIp = true; find_hub(); }, nullptr);
+    if (hooked != ESP_OK)
+        ESP_LOGE(TAG, "no hook on getting an address (%s) -- this strip will only look for the hub "
+                      "when it is next powered on", esp_err_to_name(hooked));
+
     heap("before Matter");
     esp_matter::start(on_event);
     heap("after Matter");
@@ -600,7 +637,13 @@ extern "C" void app_main() {
         prov::on_taken([](bool yes) { put_i32("ours", yes ? 1 : 0); });
         prov::on_hub_details([](const char *key, const char *value) {
             for (const char *k : {"mhost", "muser", "mpass", "base"})
-                if (!strcmp(key, k)) { put_str(key, value); return true; }
+                if (!strcmp(key, k)) {
+                    put_str(key, value);
+                    // The two halves can arrive in either order -- the address may already be up
+                    // when the hub says where it is, or the other way about -- so both ends ask.
+                    find_hub();
+                    return true;
+                }
             return false;
         });
         // A STRIP THAT TOOK CREDENTIALS AND NEVER JOINED CANNOT OPEN ITS DOOR AGAIN, and this is a

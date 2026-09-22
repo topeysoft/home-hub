@@ -624,6 +624,34 @@ the house, which is how these things get returned. The camera route avoids all o
 pointed into a living room. **The cheap next step is neither: a capture stick and HyperHDR on a bench,
 to find out whether it feels like the screen extended or like a gimmick, before any of it is paid for.**
 
+**29. A strip set up through our own door never went to the broker until it was next switched off and
+on.** This is the one that failed all evening, and it is the last mile of item 2a.
+
+`find_hub()` was called from exactly two places: at boot, and on Matter's `kCommissioningComplete`.
+**Our own door is neither.** So a strip taken through our door was handed the Wi-Fi and the broker in
+one session, stored both, joined the house — and then sat there with a perfectly good broker it had
+never been told to go to. The hub waited sixty seconds for a hello that could not come and reported
+*"It joined your Wi-Fi but never reached the hub"*, which was true in the most misleading way
+available. It reached the hub on the **next power cycle**, every time, which is what kept making the
+retained topics look like a strip that had worked.
+
+There is a third moment now, and it covers every path including ours: **an address on the house's
+network.** `IP_EVENT_STA_GOT_IP` fires on the first join and again after a router reboot, and
+`find_hub()` is safe to call from all three because only the first one that can answer does anything.
+
+**And the first version of that hook did nothing at all, silently.** It was registered ahead of
+`esp_matter::start()` on the reasoning that Matter is what brings the Wi-Fi up — but the default event
+loop does not exist that early, `esp_event_handler_register` returns `ESP_ERR_INVALID_STATE`, and
+**nothing says so**: the address arrived, the default handler printed it, and ours was never called.
+It built clean and read correctly. The loop is created here if nobody has made one, and the return is
+read. `find_hub()` also says why it is declining now — three silent returns and a strip that has joined
+the house and gone quiet look identical from a serial console.
+
+**Proven end to end on an ESP32-S3 against a real house and a real broker, 21 September:** factory
+reset, knock, press, Wi-Fi and **four** broker details (it was two — item 26), `looking for the hub at
+hub.local` in the same session, and `strip/52e204/status online`. No reboot. **That is the first time
+our own door has ever completed.**
+
 **28. The button stopped working after a successful setup, and a strip with a dead housekeeping loop
 looks exactly like a strip that is fine.** Reported from a real house on 21 September as *"holding BOOT
 does nothing until I press RESET first"*, which is the only symptom this has.
