@@ -647,6 +647,72 @@ the house, which is how these things get returned. The camera route avoids all o
 pointed into a living room. **The cheap next step is neither: a capture stick and HyperHDR on a bench,
 to find out whether it feels like the screen extended or like a gimmick, before any of it is paid for.**
 
+**34. A knock takes the whole screen, up to a hundred and eight seconds late, and the panel already
+had a politer way of saying it.** Reported 22 September after a night of setting strips up: powering a
+strip on is not always a moment anybody asked to be interrupted in, and when the sheet did arrive it was
+about two minutes behind, which read as the strip and the hub failing to talk to each other.
+
+**THE TWO MINUTES IS ARITHMETIC AND NOTHING IS BROKEN.** Up to 20 s asleep between scans
+(`watch(every=20.0)`); then `scan_ours(8)` and `scan(6)`, and a third scan at 14 s when Matter's door
+answered and ours did not; then up to 60 s before the wall asks, because `store.ts:698` polls `/strip`
+once a minute while nothing is live. **20 + 28 + 60 = 108 seconds**, worst case, and the last sixty of
+them are one number in the panel.
+
+**And instant is not available.** A strip is a passive advertiser; hearing one the moment it powers on
+means scanning without stopping, and `watch()`'s own comment says why that is not free — the hub is the
+Bluetooth end of every other device in the house. **So the delay and the interruption are one problem:**
+an interruption nobody asked for has to be instant or it reads as a fault, and this one cannot be.
+
+**THE PANEL SHIPS THE POLITE ANSWER ALREADY AND DOES NOT USE IT FOR A KNOCK.** A thing noticed on the
+network becomes *"Found 2 new things nearby"* — one line in the band (`Attention.vue`) and an 8px lamp
+dot on the `+` door in the bar (`panel.css` `.topbar-add.attention`), tap to open Add. A knock is drawn
+the instant `store.strip.state !== 'none'` with nothing gating it (`App.vue:325`). Three shipped ways of
+saying the same thing; two of them quiet, and the knock uses the third.
+
+**Decided, `design/knock/`, five boards: C with A.** The knock is a line and a dot everywhere except on
+Add, where it fills the page. The line is its own for an hour, then folds in with anything else waiting
+and goes when the thing stops knocking; the dot stays, so the house stops talking without forgetting.
+*Not mine* keeps the meaning `_dismissed` already gives it. **And `Look` is the one to build first:** Add
+scans while it is open, which is the only moment spending the radio is free, and that is what lets
+`watch(every=20.0)` be quietened. The two changes pay for each other.
+
+**A correction worth keeping:** the first drawing of these boards gave the panel a tab row reading
+Home / Rooms / This house / Add. There is no Add tab and there must not be one — the tabs are three
+(the time of day, Rooms, Cameras) and Add is its own round door in the bar, beside This house.
+
+**BUILT, 22 September**, and four things turned up in the building that the boards could not have.
+
+**The band lost a line the moment a strip knocked.** The first `waitingBand()` returned one line, so
+a house with something waiting on the network stopped being told about it as soon as a strip was
+plugged in. It returns a list now. **Nothing but opening the panel and reading the band would have
+shown this** — every test passed, and the types were right.
+
+**The conversation opened underneath the page that opened it.** A sheet sits at z-index 35 and This
+house at 40, which is correct everywhere else and wrong here, because Add *is* This house. Raised to
+45 for this one sheet only, in `StripSheet.vue`'s own scoped block, so no other screen's stacking
+moves. **`BridgeSheet.vue` has the same latent pair and is untouched** — a bridge knocking while Add
+is open would draw under it too.
+
+**And one Escape closed both of them**, so putting the strip down also threw the household out of
+Add. `StripSheet` takes the key on the capture phase now and stops it there.
+
+**The mock brain answers `{"ok":true}` to every POST it does not know**, and `keepLooking` was
+assigning the answer straight into `store.strip` — which wiped the knock the instant Add opened. It
+takes the answer only when it has a `state`. A hub older than `/strip/looking` answers 404, and the
+page then says nothing rather than claiming to listen: **`store.looking` is only true once the hub
+has said so**, because a page that says it is listening when nothing is is a comfortable lie.
+
+**What the boards asked for and did not get:** `design/knock/Look.dc.html` drew a progress bar under
+*Listening for anything new*. A scan here has no end — it runs until the page goes — and a bar that
+cannot say how far along it is is a picture of progress rather than progress, which is the argument
+`StripSheet.vue` already makes about its own single step. The board lost the bar rather than the
+code gaining one.
+
+**The numbers, as built:** `LOOK_EVERY` 60 s in the background, down from 20 — three times fewer
+scans all day. `LOOK_HOLD` 12 s, refreshed every 5 s while Add is open, so the loop runs back to
+back there and lapses by itself if the wall goes to rest. The panel's idle poll of `/strip` went
+from 60 s to 30, and to 2 s while Add is open. Suites: brain 1143, panel 516, 194 e2e, all green.
+
 **33. The distance is drawn and the courier is chosen; and the retain is gone, in two halves.**
 22 September, and neither half has run on a board — nothing was plugged into this machine.
 

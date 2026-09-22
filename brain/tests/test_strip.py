@@ -8,7 +8,7 @@ it joins the Wi-Fi, it says what color it is showing, it fills up and is stopped
 And the two questions only a strip has -- which color comes out first, and how far it goes -- both of
 which exist because nothing can be read back off a strip.
 """
-import asyncio, json, sqlite3, tempfile, unittest
+import asyncio, json, sqlite3, tempfile, time, unittest
 from pathlib import Path
 
 from hub.settings import Settings
@@ -786,6 +786,63 @@ class WhichDoorTheStripIsTakenThrough(unittest.TestCase):
                                    "vendor": TEST_VID, "ours": True}]
         run(self.strips.look())
         self.assertEqual(self.strips.job["door"], "matter")
+
+
+class LookingProperly(unittest.TestCase):
+    """HOW OFTEN THE HUB GOES LOOKING, AND WHO IS WAITING WHEN IT DOES.
+
+    A household measured about two minutes between plugging a strip in and the wall saying anything,
+    and read it as the strip and the hub failing to talk. Twenty of those seconds were this loop
+    asleep. The answer is not a tighter loop -- a scan is the radio going quiet for every other
+    device in the house, all day, to catch an event that happens when somebody is standing right
+    there. The answer is that the knock stopped taking the screen (design/knock/), so the loop can be
+    the quiet one, and Add is where the looking happens because that is the one moment it is free."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.hub = FakeHub(self.tmp.name)
+        self.radio = FakeRadio()
+        self.s = Strips(self.hub, radio=self.radio)
+
+    def tearDown(self): self.tmp.cleanup()
+
+    def test_nobody_is_looking_until_somebody_says_so(self):
+        self.assertFalse(self.s.being_watched())
+
+    def test_add_says_somebody_is_standing_there_and_waiting(self):
+        run(self.s.looking())
+        self.assertTrue(self.s.being_watched())
+
+    def test_and_it_lapses_by_itself_so_a_forgotten_wall_cannot_leave_it_scanning(self):
+        """A hold rather than a switch: a wall that goes to rest, is closed or is unplugged simply
+        stops saying it, and there is no way to leave a hub scanning for ever by leaving a page
+        open."""
+        import hub.strip as strip_mod
+        was, strip_mod.LOOK_HOLD = strip_mod.LOOK_HOLD, 0.0
+        try:
+            run(self.s.looking())
+            self.assertFalse(self.s.being_watched())
+        finally:
+            strip_mod.LOOK_HOLD = was
+
+    def test_the_quiet_speed_is_quiet_but_not_slower_than_a_minute(self):
+        """A line in the band may be a minute late and still be a line. Five would be the same lie
+        in a quieter voice, so the background loop has a floor as well as a ceiling."""
+        import hub.strip as strip_mod
+        self.assertGreaterEqual(strip_mod.LOOK_EVERY, 30.0)
+        self.assertLessEqual(strip_mod.LOOK_EVERY, 60.0)
+
+    def test_a_knock_says_when_it_started_so_the_band_can_stop_shouting(self):
+        """The line folds after an hour, and an age worked out by the brain is stale by the time it
+        is drawn -- a poll is half a minute apart and a wall reloads. So it is a moment, not an age."""
+        self.radio.ours = [{"address": "AA:BB", "rssi": -40, "name": "PROV_52e20"}]
+        run(self.s.look())
+        st = self.s.status()
+        self.assertEqual(st["state"], "knocking")
+        self.assertAlmostEqual(st["since"], time.time(), delta=5)
+
+    def test_and_nothing_says_since_when_there_is_nothing_knocking(self):
+        self.assertNotIn("since", self.s.status())
 
 
 class TheLastTwoBeats(unittest.TestCase):

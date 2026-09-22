@@ -8,6 +8,7 @@ import { store, notify, refreshStrip } from './store'
 import { adoptStrip, stripCounted, dismissStrip, readStripOnce, stripAgain, stripDone, stripEnds, stripReach, stripRoom, stripSaw, stripWifi } from './api'
 import Icon from './Icon.vue'
 import StripArt from './StripArt.vue'
+import { stripWaiting } from './adding'
 
 /*
  * Setting a light strip up, on the wall.
@@ -148,16 +149,32 @@ const tell = () => {
 function close() {
   other.value = false
   const was = b.value?.state
+  /* PUTTING A KNOCK DOWN IS NOT THROWING IT AWAY (design/knock/). A strip that is still asking goes
+     back to being a line in the band and a dot on the + door, exactly as it was before anybody
+     tapped -- so closing this is un-asking, and nothing of the strip's is forgotten. Blanking it
+     here would take the line away too, and the strip is still in the room, still knocking.
+     "Not mine" is how a household says they do not want it, and it is a button of its own. */
+  store.stripAsked = false
+  store.stripPutDown = true
+  if (stripWaiting(was)) return
   if (store.strip) store.strip = { ...store.strip, state: 'none' }
   if (readStripOnce(was)) run(stripDone)
 }
-function key(e: KeyboardEvent) { if (e.key === 'Escape' && b.value?.state !== 'working') close() }
-onMounted(() => window.addEventListener('keydown', key))
-onUnmounted(() => window.removeEventListener('keydown', key))
+/* ESCAPE PUTS THIS DOWN AND NOTHING ELSE. This can be open over This house -- a knock opens it from
+   Add -- and both listen on the window, so one press was closing the conversation AND throwing the
+   household out of the page they opened it from. Captured, so it is answered before the page
+   underneath hears it, and stopped there. */
+function key(e: KeyboardEvent) {
+  if (e.key !== 'Escape' || b.value?.state === 'working') return
+  e.stopImmediatePropagation()
+  close()
+}
+onMounted(() => window.addEventListener('keydown', key, true))
+onUnmounted(() => window.removeEventListener('keydown', key, true))
 </script>
 
 <template>
-  <div class="sheet-back" v-if="b" @click.self="b.state === 'working' || close()">
+  <div class="sheet-back" :class="{ 'over-panel': store.sheet }" v-if="b" @click.self="b.state === 'working' || close()">
     <div class="sheet strip" role="dialog" :aria-label="title">
       <div class="sheet-head">
         <h2 class="display">{{ title }}</h2>
@@ -317,6 +334,11 @@ onUnmounted(() => window.removeEventListener('keydown', key))
 /* Scoped rather than added to panel.css: every name in here is about a strip and nothing else draws
    one, and panel.css is a flat global sheet where a repeated class silently restyles the other
    component (AGENTS.md §4). NetworkSheet.vue does the same for the same reason. */
+/* ABOVE THIS HOUSE, AND ONLY WHEN THIS HOUSE IS OPEN. A sheet sits at 35 and the house panel at 40,
+   which is right everywhere else and wrong here: a knock opens this from Add, and Add IS the house
+   panel, so the conversation was drawn underneath the page that opened it and nothing appeared to
+   happen. Raised only for this one sheet, so no other screen's stacking moves. */
+.sheet-back.over-panel { z-index: 45; }
 .stage {
   position: relative; padding: 46px 22px 40px; margin-bottom: 18px;
   border-radius: var(--r-lg); background: rgba(255, 255, 255, .03);

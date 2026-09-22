@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it, beforeEach } from 'vitest'
 import { readFileSync, readdirSync } from 'node:fs'
-import { asThing, doors, kindOf, stripWaiting } from '../src/adding'
+import { SHOUTS_FOR, asThing, doors, kindOf, stripSheetOpen, stripWaiting, waitingBand } from '../src/adding'
 import { store } from '../src/store'
 
 /* The vocabulary of adding, pinned. Five screens used to say the same thing five ways -- six words
@@ -207,5 +207,104 @@ describe('asking a strip again, afterwards', () => {
     expect(rows.match(/<button/g) ?? []).toHaveLength(2)
     for (const no of ['effects', 'segment', 'zone', 'animation', 'preset'])
       expect(rows.toLowerCase()).not.toContain(no)
+  })
+})
+
+/* WHEN AN ARRIVAL MAY TAKE A SCREEN. design/knock/, direction C with A, chosen 22 September.
+   A household set several strips up in one evening and reported two things: the sheet takes the
+   whole screen when a strip is powered on, which is not always a moment anybody asked to be
+   interrupted in -- and it arrives up to a hundred and eight seconds late, which reads as the strip
+   and the hub failing to talk to each other. They are one problem: an interruption nobody asked for
+   has to be instant or it is a fault, and a passive advertiser cannot be heard instantly without
+   scanning for ever. So it stopped being an interruption. */
+describe('a knock does not take the screen', () => {
+  it('leaves the house alone while a strip is only asking', () => {
+    expect(stripSheetOpen('knocking', null)).toBe(false)
+    expect(stripSheetOpen('press', null)).toBe(false)
+    expect(stripSheetOpen('rhythm', null)).toBe(false)
+  })
+
+  it('opens when somebody taps the line in the band or the row on Add', () => {
+    expect(stripSheetOpen('knocking', null, true)).toBe(true)
+  })
+
+  it('opens by itself where somebody is already asking, and only there', () => {
+    expect(stripSheetOpen('knocking', 'add')).toBe(true)
+    expect(stripSheetOpen('knocking', 'hub')).toBe(false)
+    expect(stripSheetOpen('knocking', 'notes')).toBe(false)
+  })
+
+  it('lets it be put down again while still standing on Add', () => {
+    /* Without this the page that opens the conversation opens it again the instant it is closed,
+       and there is no way back to the list of everything else that is waiting. */
+    expect(stripSheetOpen('knocking', 'add', false, true)).toBe(false)
+  })
+
+  it('and tapping the row asks again, which wins', () => {
+    expect(stripSheetOpen('knocking', 'add', true, true)).toBe(true)
+  })
+
+  it('keeps the screen once it IS a conversation, wherever that began', () => {
+    /* Past the asking the household is answering questions about a thing they are holding, and
+       taking that away because they were not on Add would lose the conversation. */
+    for (const beat of ['working', 'order', 'length', 'room', 'ready', 'failed'])
+      expect(stripSheetOpen(beat, null), beat).toBe(true)
+  })
+
+  it('draws nothing at all when there is no strip', () => {
+    expect(stripSheetOpen('none', 'add', true)).toBe(false)
+    expect(stripSheetOpen(undefined, 'add', true)).toBe(false)
+  })
+})
+
+/* AND WHAT THE BAND SAYS INSTEAD. A knock shouts for an hour and then folds in with whatever else
+   is waiting, because a line that will not go away is the interruption again, slower -- and a strip
+   knocks for forty-eight hours (docs/strip.md item 17). */
+describe('the line in the band', () => {
+  const now = 1_700_000_000_000
+  const knock = (ago: number) => ({ state: 'knocking', since: (now - ago) / 1000 })
+  const hue = { title: 'a Hue bridge' }
+
+  it('says nothing when nothing is waiting', () => {
+    expect(waitingBand([], null, now)).toEqual([])
+    expect(waitingBand([], { state: 'ready' }, now)).toEqual([])
+  })
+
+  it('gives a fresh knock its own sentence, which opens the conversation', () => {
+    expect(waitingBand([], knock(5 * 60 * 1000), now))
+      .toEqual([{ id: 'knock', opens: 'strip', title: 'A light strip is here', sub: expect.any(String) }])
+  })
+
+  it('does not take the other line away while it shouts', () => {
+    /* The first version returned one line, so a house with something on the network lost the line
+       about it the moment a strip was plugged in. Found by opening the panel and looking. */
+    const w = waitingBand([hue], knock(5 * 60 * 1000), now)
+    expect(w.map(l => l.id)).toEqual(['knock', 'waiting'])
+    expect(w[1].title).toBe('Found a Hue bridge')
+  })
+
+  it('stops shouting after an hour, and still says it is there', () => {
+    expect(waitingBand([], knock(SHOUTS_FOR + 1), now))
+      .toEqual([{ id: 'waiting', opens: 'add', title: '1 thing waiting to be set up', sub: 'a light strip' }])
+  })
+
+  it('folds in with everything else rather than staying a second line', () => {
+    const w = waitingBand([hue], knock(SHOUTS_FOR + 1), now)
+    expect(w).toHaveLength(1)
+    expect(w[0]).toMatchObject({ title: '2 things waiting to be set up', sub: 'a Hue bridge, a light strip' })
+  })
+
+  it('shouts for a hub too old to say when the knocking started', () => {
+    /* An unknown age would otherwise fold the instant it appeared, which is the one case where
+       being wrong loses the sentence entirely. */
+    expect(waitingBand([], { state: 'knocking' }, now)[0].id).toBe('knock')
+  })
+
+  it('leaves a house with nothing knocking exactly as it was', () => {
+    /* The words for one thing found on the network are the panel's own and predate all of this. */
+    expect(waitingBand([{ title: 'a Sonos speaker' }], null, now))
+      .toEqual([{ id: 'waiting', opens: 'add', title: 'Found a Sonos speaker', sub: 'Tap to add it to the house.' }])
+    expect(waitingBand([hue, { title: 'a Sonos speaker' }], null, now)[0].title)
+      .toBe('Found 2 new things nearby')
   })
 })

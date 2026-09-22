@@ -29,6 +29,22 @@ import Icon from './Icon.vue'
 import Say from './Say.vue'
 import Asks from './Asks.vue'
 import PhoneSteps from './PhoneSteps.vue'
+import { type BandLine, stripWaiting, waitingBand } from './adding'
+
+/* What the band says about things waiting to be set up, as one line: found on the network, still
+   knocking over Bluetooth, or both. `tick` is here because the line folds with AGE and nothing else
+   changes when it does -- without something moving, a knock would keep shouting until the next poll
+   happened to land. Once a minute is as exact as an hour needs. */
+const tick = ref(Date.now())
+let t4: number | undefined
+const waiting = computed(() => waitingBand(store.found, store.strip, tick.value))
+/* Tapping a knock's own line is the asking that direction C is about: it opens the conversation,
+   here, now. A folded line has stopped being about any one thing, so it opens Add and lets the row
+   there be the choice -- which is what the found line has always done. */
+function openWaiting(w: BandLine) {
+  if (w.opens === 'strip' && stripWaiting(store.strip?.state)) { store.stripAsked = true; return }
+  store.sheet = 'add'
+}
 
 /* say: whether the command box is drawn here. With the tabs across the top it
    lives in the bar along the bottom instead (see App.vue) -- still on Home, still
@@ -63,8 +79,11 @@ const phoneSteps = ref(false)
 function dismissPhone() { phoneNudge.value = false; phoneSteps.value = false; try { localStorage.setItem('phone-nudge', 'done') } catch {} }
 
 let t3: number | undefined
-onMounted(() => { loadHealth(); t3 = window.setInterval(loadHealth, 60000) })
-onUnmounted(() => clearInterval(t3))
+onMounted(() => {
+  loadHealth(); t3 = window.setInterval(loadHealth, 60000)
+  t4 = window.setInterval(() => { tick.value = Date.now() }, 60000)
+})
+onUnmounted(() => { clearInterval(t3); clearInterval(t4) })
 
 defineExpose({ updateReady })
 </script>
@@ -91,9 +110,15 @@ defineExpose({ updateReady })
     <span class="nudge-icon"><Icon name="sparkle" :size="20" /></span>
     <span class="nudge-text"><span class="nudge-title">What's new</span><span class="nudge-sub">{{ whatsNew.what.join(' ') }}</span></span>
   </button>
-  <button class="nudge" v-if="store.found.length" @click="store.sheet = 'add'">
-    <span class="nudge-icon"><Icon name="sparkle" :size="20" /></span>
-    <span class="nudge-text"><span class="nudge-title">{{ store.found.length === 1 ? `Found ${store.found[0].title}` : `Found ${store.found.length} new things nearby` }}</span><span class="nudge-sub">{{ store.found.length === 1 ? 'Tap to add it to the house.' : store.found.slice(0, 3).map(f => f.title).join(', ') + (store.found.length > 3 ? '…' : '') }}</span></span>
+  <!-- SOMETHING NEW IS HERE, AND THIS IS THE ONLY WAY IT SAYS SO (design/knock/). A thing found on
+       the network has always been one line here; a knock over Bluetooth used to take the whole
+       screen instead, up to a hundred seconds after it was plugged in. It is this line now, and it
+       is the same line: a knock shouts for an hour, then folds in with whatever else is waiting,
+       because a line that will not go away is the interruption again, slower. Which of those it is
+       is waitingBand() in adding.ts, pinned by a test. -->
+  <button class="nudge" v-for="w in waiting" :key="w.id" @click="openWaiting(w)">
+    <span class="nudge-icon"><Icon :name="w.id === 'knock' ? 'light' : 'sparkle'" :size="20" /></span>
+    <span class="nudge-text"><span class="nudge-title">{{ w.title }}</span><span class="nudge-sub">{{ w.sub }}</span></span>
   </button>
   <button class="nudge" v-if="store.status?.setup_done && store.status.locked === false" @click="store.sheet = 'code'">
     <span class="nudge-icon"><Icon name="lock" :size="20" /></span>

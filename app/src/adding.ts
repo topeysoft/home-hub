@@ -122,14 +122,98 @@ export function asThing(text?: string): string | undefined {
 /*
  * IS A LIGHT STRIP STILL ASKING?
  *
- * A strip's own sheet covers the whole screen the moment one knocks, so the only time this page is
- * visible with a strip waiting is when something has outranked it -- a bridge, because somebody is
- * holding the bridge (App.vue). The row it drives says where the strip is in the queue rather than
- * offering a button, because nothing tappable could bring the sheet forward while the bridge has it.
- *
  * Only the beats where it is still ASKING. A strip that is being set up, or is set up, or has
  * failed, is not something waiting to be let in, and listing it as one would be a second place in
  * the panel claiming to know the same thing -- which is how two screens start disagreeing.
+ *
+ * THIS ROW USED TO HAVE NO BUTTON ON IT, and the comment here used to explain why: a strip's sheet
+ * covered the whole screen the moment one knocked, so the only way to be looking at this page with
+ * a strip waiting was for a bridge to have outranked it, and nothing tappable could have brought
+ * the sheet forward. The sheet does not open itself any more (design/knock/), so the row is now the
+ * ordinary way in and carries the ordinary button.
  */
 const STILL_ASKING = ['knocking', 'press', 'rhythm']
 export const stripWaiting = (state?: string) => STILL_ASKING.includes(state ?? '')
+
+/*
+ * WHEN AN ARRIVAL MAY TAKE A SCREEN, AND WHAT IT SAYS WHEN IT MAY NOT.
+ *
+ * design/knock/, direction C with A, chosen 22 September. A knock is one line in the band and a dot
+ * on the + door -- which is exactly what the panel already did for a thing noticed on the network,
+ * and never did for a knock. It fills a screen only where somebody was already asking.
+ *
+ * Both of the rules below are here rather than in a component because they are the decision, and a
+ * decision drawn on a board should be readable in one place and pinned by a test that fails if it
+ * drifts. app/tests/adding.test.ts.
+ */
+
+/** An hour. After this the knock's own line folds in with anything else waiting. */
+export const SHOUTS_FOR = 60 * 60 * 1000
+
+/**
+ * May the strip's sheet be on screen?
+ *
+ * `asked` is somebody having tapped the line in the band or the row on Add. Standing on Add IS the
+ * asking, so no tap is needed there -- that is the whole of direction C. Everything else in the
+ * house is direction A: nothing takes the screen, ever.
+ *
+ * `putDown` is closing it, and it has to be remembered or Add cannot be stood on: without it the
+ * page that opens the conversation opens it again the instant it is closed, and there is no way
+ * back to the list of what else is waiting. Tapping the row asks again and wins.
+ */
+export const stripSheetOpen = (state?: string, sheet?: string | null, asked = false, putDown = false) =>
+  !!state && state !== 'none' && (asked || (sheet === 'add' && !putDown) || !stripWaiting(state))
+
+/**
+ * What the band says about things waiting to be set up.
+ *
+ * A knock shouts for an hour -- its own line, its own sentence -- and then folds in with whatever
+ * else is waiting, because a line that will not go away is the interruption again, slower. It stops
+ * entirely when the thing stops knocking. The dot on the + door is not decided here and does not
+ * fold: the house goes quiet, it does not forget.
+ *
+ * IT RETURNS A LIST BECAUSE A FRESH KNOCK IS AN EXTRA LINE AND NOT A REPLACEMENT. The first
+ * version returned one, and a house with a Hue bridge on the network lost the line about it the
+ * moment a strip was plugged in -- found by opening the panel and looking at the band, which is the
+ * only instrument that would ever have shown it.
+ *
+ * `found` is the things noticed on the network, which have always been a line of this kind.
+ */
+export type BandLine = {
+  id: 'knock' | 'waiting'
+  title: string
+  sub: string
+  /** 'strip' is the conversation itself; 'waiting' opens Add and lets the rows there be the choice. */
+  opens: 'strip' | 'add'
+}
+
+const foundLine = (found: { title: string }[]): BandLine => found.length === 1
+  /* The words for one thing found nearby are the panel's own and predate all of this, so a house
+     with nothing knocking sees no change at all. */
+  ? { id: 'waiting', opens: 'add', title: `Found ${found[0].title}`, sub: 'Tap to add it to the house.' }
+  : { id: 'waiting', opens: 'add', title: `Found ${found.length} new things nearby`,
+      sub: found.slice(0, 3).map(f => f.title).join(', ') + (found.length > 3 ? '…' : '') }
+
+export function waitingBand(
+  found: { title: string }[], strip: { state?: string; since?: number } | null,
+  now = Date.now(),
+): BandLine[] {
+  const knocking = stripWaiting(strip?.state)
+  /* A hub too old to say when it started knocking has never said it, so the line would fold the
+     instant it appeared. An unknown age is a new one: shout, and let the next hub be exact. */
+  const fresh = knocking && (strip?.since == null || now - strip.since * 1000 < SHOUTS_FOR)
+  if (fresh) return [
+    { id: 'knock', opens: 'strip', title: 'A light strip is here',
+      sub: 'Tap to set it up. It is lit, so you can see which one.' },
+    ...(found.length ? [foundLine(found)] : []),
+  ]
+  if (!knocking) return found.length ? [foundLine(found)] : []
+  /* Folded: the knock has stopped being about itself and is one of the things waiting. */
+  const n = found.length + 1
+  const names = [...found.slice(0, 3).map(f => f.title), 'a light strip']
+  return [{
+    id: 'waiting', opens: 'add',
+    title: n === 1 ? '1 thing waiting to be set up' : `${n} things waiting to be set up`,
+    sub: names.join(', ') + (found.length > 3 ? '…' : ''),
+  }]
+}

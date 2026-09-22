@@ -279,6 +279,10 @@ export type Strip = {
   /* A strip no longer gets its Wi-Fi from us at all -- commissioning carries it -- so this is only
      still here for a hub older than that change. */
   needs?: 'wifi'
+  /* WHEN IT STARTED KNOCKING, in seconds since the epoch. The band's line stops shouting after an
+     hour of this and folds in with anything else waiting; the dot on the + door stays either way,
+     so the house goes quiet without forgetting (design/knock/). Absent on a hub older than that. */
+  since?: number
 }
 /* Ending a job is the brain's to know, exactly as it is for a bridge: a sheet that closes only its
    own copy goes away and the next poll brings it straight back. */
@@ -298,6 +302,12 @@ export const adoptStrip = (code = '') => post<Strip>('/strip/adopt', { code })
 export const stripReach = () => post<Strip>('/strip/reach')
 /** Not mine. Needs no code -- refusing gives nothing away, and nothing was ever sent. */
 export const dismissStrip = () => post<Strip>('/strip/dismiss')
+/** Somebody is standing on Add, waiting, which is the one moment a Bluetooth scan is free.
+ *
+ *  Said again every few seconds for as long as the page is open, because the brain holds it for
+ *  only a few: a wall that goes to rest or is unplugged mid-look must not leave a hub scanning for
+ *  ever. design/knock/Look.dc.html, and hub/strip.py LOOK_HOLD. */
+export const stripLooking = () => post<Strip>('/strip/looking')
 /** How many times it flashed, in four groups. The proof of possession on the rung below the press,
  *  read off the light rather than off a label -- so a wrong count is not a typo, it is having
  *  miscounted, and the strip mints a fresh set every time it is asked. design/strip/ReachRhythm.dc.html. */

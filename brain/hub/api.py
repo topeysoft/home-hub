@@ -1279,6 +1279,17 @@ async def strip_counted(body: dict):
     except StripError as e: raise HTTPException(409, str(e))
 
 
+@app.post("/strip/looking")
+async def strip_looking():
+    """Somebody is standing on Add, waiting. Scan back to back for as long as they keep saying so.
+
+    The one moment when a Bluetooth scan is free is the moment somebody asked for it, so this is
+    where the looking happens and the background loop can be the quiet one (design/knock/Look.dc.html
+    and hub/strip.py LOOK_HOLD). It lapses on its own: a wall that goes to rest simply stops saying
+    it."""
+    return await hub.strip.looking()
+
+
 @app.post("/strip/dismiss")
 async def strip_dismiss(): return await hub.strip.dismiss()
 

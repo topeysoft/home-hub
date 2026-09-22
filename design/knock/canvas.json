@@ -1,0 +1,101 @@
+{
+  "artboards": [
+    {
+      "file": "Today.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Today \u2014 the same event, two manners"
+    },
+    {
+      "file": "Never.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "A \u2014 nothing ever takes the screen"
+    },
+    {
+      "file": "Witnessed.dc.html",
+      "x": 3120,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "B \u2014 it takes the screen only when the hub saw you do it"
+    },
+    {
+      "file": "OnAdd.dc.html",
+      "x": 4680,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "C \u2014 it answers only where the question was asked"
+    },
+    {
+      "file": "Look.dc.html",
+      "x": 1560,
+      "y": 1080,
+      "w": 1440,
+      "h": 900,
+      "title": "Look \u2014 going to find it on purpose"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "why",
+      "x": -620,
+      "y": 0,
+      "w": 500,
+      "text": "TWO COMPLAINTS, AND THEY ARE ONE PROBLEM\n\nReported after a night of setting strips up: the sheet takes the whole screen when a strip is powered on, which is not always a moment anybody asked to be interrupted in -- and when it does arrive it is up to two minutes late, which reads as the strip and the hub failing to talk to each other.\n\nTHE TWO MINUTES IS ARITHMETIC AND NOTHING IS BROKEN. Up to 20 s asleep between scans (watch(every=20.0)); then scan_ours(8) and scan(6), and a third scan at 14 s when Matter's door answered and ours did not; then up to 60 s before the wall asks, because store.ts polls /strip every 60 s while nothing is live. 20 + 28 + 60 = 108 seconds, worst case, and about two minutes is what a real house measured.\n\nAND INSTANT IS NOT AVAILABLE. A strip is a passive advertiser; hearing one the moment it powers on means scanning without stopping, and watch()'s own comment says why that is not free -- the hub is the Bluetooth end of every other device in the house.\n\nSO THE DELAY AND THE INTERRUPTION ARE THE SAME PROBLEM. An interruption nobody asked for has to be instant or it reads as a fault, and this one cannot be. An arrival somebody went looking for may take ten seconds and feel like the house working, because a wait you started is patience and a screen that is taken a minute late is a bug.\n\nTHE PANEL ALREADY CONTAINS THE ANSWER AND DOES NOT USE IT FOR A KNOCK. A thing noticed on the network becomes \"Found 2 new things nearby\" -- one line in the band, tap to open Add. A thing that knocks over Bluetooth takes the whole screen. Same event, two manners, both shipping. Nothing here needs inventing: it needs one of them deleted.\n\nWHAT IS CONTESTED is not whether the knock becomes a line. It is WHETHER ANYTHING MAY EVER TAKE THE SCREEN, and the three boards are three whole answers: never (A), only when the arrival came through the hub itself (B), only where somebody is already asking (C).\n\nA SETTING WAS CONSIDERED AND IS NOT DRAWN. \"Tell me when something new turns up\", on or off, makes the household answer a question the house should be able to work out, and section 5 prefers a conversation on screen to a switch.\n\nRECOMMENDATION: C, with A as its everywhere-else -- which is to say, take the screen only on Add and put a line in the band the rest of the time. B's exception buys exactly one moment in a household's life, the first puck out of the box, and that moment is already special-cased by setup. BUT LOOK IS THE ONE TO BUILD FIRST whichever is chosen: it is what makes the delay stop mattering, it is the half that is missing today, and it pays for itself by letting the background scan be quietened right down.\n\nAND \"SOMETHING ELSE -- I'LL DESCRIBE IT\" IS A REAL OPTION, as ever.\n\nA CORRECTION MADE AFTER THE FIRST DRAWING, 22 September. These boards were first drawn with a tab row reading Home / Rooms / This house / Add, which is not the panel. The tabs are THREE -- the first named for the time of day (\"Your evening\"), then Rooms, then Cameras -- and Add is not among them. It is its own 40px round door on the right of the bar, beside This house, and it already wears an 8px lamp dot when something has been found nearby (TopBar.vue, panel.css .topbar-add.attention). So \"Add should not be another tab\" is already true, and the deliberate path already has a door in the right place.\n\nWHICH MAKES IT THREE SHIPPED WAYS OF SAYING SOMETHING IS HERE, NOT TWO: the band chip, the dot on the + door, and the sheet that takes the screen. The first two are quiet and are used for a thing noticed on the network. The third is used for a knock."
+    },
+    {
+      "id": "today",
+      "x": 0,
+      "y": -700,
+      "w": 560,
+      "text": "TODAY -- THE PANEL ARGUING WITH ITSELF\n\nBoth halves are drawn from what ships. The left is Attention.vue's band and panel.css's .nudge, unchanged, carrying the \"Found\" line for a thing noticed on the network. The right is App.vue:325, where StripSheet is drawn the instant store.strip.state !== 'none' with nothing gating it at all.\n\nThe bar along the foot is the hundred and eight seconds, to scale, in the three pieces it is actually made of. The last of the three -- the wall not having asked yet -- is sixty of them and is one number in store.ts.\n\n\"Something was plugged in nearby A MOMENT AGO\" is the sentence this board exists to indict."
+    },
+    {
+      "id": "a",
+      "x": 1560,
+      "y": -700,
+      "w": 560,
+      "text": "A -- NOTHING EVER TAKES THE SCREEN\n\nOne rule and no exceptions: an arrival is news, news goes in the band, and the sheet is only ever what a tap opens.\n\nFOR: it makes the delay harmless. A chip that turns up a minute late is a chip; a screen taken a minute late is a fault. There is no rule to get wrong when the fifth product ships, and it is already built -- one more line in a band the panel already draws, in a pill it already styles.\n\nAGAINST: it charges a tap for something that was already deliberate. Somebody who has just pushed a puck into the hub's own socket did the plugging in AS the act of setting it up. And the very first device in a new house is being added by somebody who has never seen this band and has no reason to look at it.\n\nAND A QUESTION ALL THREE SHARE: a strip knocks for forty-eight hours, so the chip needs a life. A chip that will not go away is the interruption again, slower."
+    },
+    {
+      "id": "b",
+      "x": 3120,
+      "y": -700,
+      "w": 560,
+      "text": "B -- ONLY WHEN THE HUB SAW YOU DO IT\n\nThe reported instinct, generalized so it survives the next product: the test is not which thing it is, it is whether the arrival came through the hub itself.\n\nA puck appearing on the hub's own socket is the operating system saying so, at once -- no radio, no scan, no delay, and a person standing at the hub with the thing in their hand. A radio heard from somewhere in the house is none of that.\n\nFOR: it is the household's own model, it costs one boolean the brain already has, and it keeps the out-of-the-box moment, where the hub answering on screen is the whole of what is happening.\n\nAGAINST: it is a rule with an exception, and exceptions are what the fifth product forgets. The same puck in a wall socket in the study behaves differently from the one in the hub -- correct, and impossible to explain to anybody who notices. And A and B differ for exactly one moment in a household's life, which is either the most important moment there is or not worth a rule."
+    },
+    {
+      "id": "c",
+      "x": 4680,
+      "y": -700,
+      "w": 560,
+      "text": "C -- ONLY WHERE THE QUESTION WAS ASKED\n\nStanding on Add IS the intent, so a knock fills the page already open and interrupts nothing anywhere else. No product rule, no socket rule; the test is where the person is.\n\nNOTE WHAT IS NOT ON THIS BOARD: no veil and no sheet. An arrival somebody asked for is not an interruption, so it does not borrow the shape the panel uses for interruptions -- and AddPage.vue already says this in its own comment, one surface per conversation with nothing under it.\n\nFOR: the truest test of intent available, needing no rule per product. It is also the only one that can honestly promise \"instant\", because it is the only one that knows when spending the radio is free -- on Add, and only there.\n\nAGAINST: it does nothing for the person who plugged a puck into the hub and walked to the wall; they are on Home, so they get a line, and B says that is the one moment worth an exception. And without Look it is A with extra steps.\n\nCHOSEN, 22 September: C with A as its everywhere-else. And to be exact about where \"on Add\" is -- Add is the + door in the top bar, opened with store.sheet = 'add', which is where the band chip already sends you. Nothing is added to the tab row."
+    },
+    {
+      "id": "look",
+      "x": 900,
+      "y": 1080,
+      "w": 500,
+      "text": "LOOK -- AND IT IS THE ONE TO BUILD FIRST\n\nAdd is a place you wait. It should be a thing you do. The shipped page says \"Plug the new thing in... then it turns up here\" and then does nothing, because nothing on that page asks the hub to go and look.\n\nTHE TWO CHANGES PAY FOR EACH OTHER, which is the argument that matters. watch(every=20.0) exists to catch an event its own comment describes as happening \"when somebody plugs a thing in and is standing right there\" -- which is this page. Move the scanning here and the background loop can be quietened right down or stopped: the radio gets cheaper all day AND the moment that matters gets faster.\n\nONE LIST, WHATEVER DOOR A THING CAME TO. A Bluetooth knock and a thing sitting on the Wi-Fi are the same sentence to a household -- something new, not set up yet -- and today they are two unrelated mechanisms with two different manners. Here they are rows in one list, which is also where design/ears/Deaf.dc.html's \"nothing could hear it\" finally lands in front of somebody who is looking for it.\n\nAND THE QUESTION TO SETTLE BEFORE ANY OF IT IS BUILT: how long a chip lives, given a strip knocks for forty-eight hours, and whether \"Not mine\" is still how it is retired.\n\nAND THE DOT IS WHAT IS LEFT WHEN THE CHIP FOLDS. Decided 22 September: a knock is its own line in the band for an hour, then folds in with anything else waiting (\"2 things waiting to be set up\"), and goes when the thing stops knocking. After the hour the + door still carries its lamp dot, so the house stops talking without forgetting. \"Not mine\" keeps the meaning _dismissed already gives it in strip.py: gone until the thing is power-cycled."
+    }
+  ],
+  "reading": [
+    "why",
+    "today",
+    "Today.dc.html",
+    "a",
+    "Never.dc.html",
+    "b",
+    "Witnessed.dc.html",
+    "c",
+    "OnAdd.dc.html",
+    "look",
+    "Look.dc.html"
+  ]
+}

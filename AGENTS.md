@@ -195,6 +195,16 @@ Do not reopen these, and do not propose around them.
 - **A typed command box came before voice, and the three-household field test is deferred
   indefinitely.** Do not schedule it. Simple commands stay deterministic — a fixed grammar, no model
   — and the model handles only the rest.
+- **An arrival announces itself quietly, and takes a screen only where it was asked for**
+  (22 September, `design/knock/`, direction C with A). A knock is one line in the band and a dot on the
+  `+` door, exactly as a thing found on the network already is; it fills the page only when somebody is
+  already on Add. The line is its own for an hour, then folds in with anything else waiting, and goes
+  when the thing stops knocking; the dot stays. **Add is not a tab and must not become one** — the tab
+  row is three (the time of day, Rooms, Cameras) and Add is its own round door in the bar, beside This
+  house. And **Add is a thing you do**: it scans while it is open, which is the one moment when spending
+  the radio is free, and is what lets the background scan be quietened. Built 22 September; the two
+  rules are `stripSheetOpen()` and `waitingBand()` in `app/src/adding.ts`, pinned by
+  `app/tests/adding.test.ts`, and the two speeds are `LOOK_EVERY`/`LOOK_HOLD` in `brain/hub/strip.py`.
 - **The Rooms tab is the ranked bento**, direction A, with quiet rooms as an index of rows and the
   bento (not the index) ending flush. `RoomGrid.vue` still serves the Stack home, Rail home and Wall
   view unchanged.

@@ -59,6 +59,23 @@ ANSWER_WAIT = 10
 # moment later, so the room can be chosen before there is anything to put in it.
 PLACE_WAIT = 20
 
+# HOW OFTEN TO GO LOOKING WHEN NOBODY ASKED, AND HOW HARD WHEN SOMEBODY DID (design/knock/).
+#
+# A knock used to be a sheet that took the whole screen, so being slow was a fault: a household
+# measured about two minutes between plugging a strip in and the wall saying anything, and read it
+# as the strip and the hub failing to talk to each other. It is a line in the band now, and a line
+# that arrives a minute late is a line -- so the background loop is no longer the thing that has to
+# be fast, and it costs the house's radio less than it did.
+#
+# WHAT HAS TO BE FAST IS ADD, and only Add: somebody standing on that page has asked, is waiting,
+# and is the only moment when spending the radio is free. `looking()` is the panel saying so, and
+# the loop then scans back to back for as long as it keeps saying it.
+LOOK_EVERY = 60.0
+# How long one `looking()` is good for. The panel says it again every few seconds while the page is
+# open; a wall that is closed, asleep or unplugged simply stops saying it and the loop goes quiet on
+# its own, which is why this is a hold rather than a switch somebody could leave on.
+LOOK_HOLD = 12.0
+
 # A strip nobody has told how long it is. The controller writes this many lights every frame and the
 # surplus falls off the end of the wire, so a strip shorter than this is simply right -- which is
 # what makes direction C on the canvas a real argument rather than a shortcut. We ask anyway, because
@@ -369,6 +386,9 @@ class Strips:
         # Set when the household says they cannot reach the button. The session waiting for a press
         # is holding a BLE link open, so this is how it is told to stop waiting and drop a rung.
         self._out_of_reach: asyncio.Event | None = None
+        # Until when somebody is standing on Add. Monotonic, because it is a duration and not a time
+        # of day, and a hub whose clock steps must not start scanning for an hour.
+        self._looking_until = 0.0
 
     # ---- what the panel sees ----
     def status(self) -> dict:
@@ -395,6 +415,10 @@ class Strips:
         if j["state"] == "room": out["rooms"] = self._rooms()
         if j.get("text"): out["text"] = j["text"]
         if j.get("needs"): out["needs"] = j["needs"]
+        # WHEN IT STARTED KNOCKING, in seconds since the epoch rather than "how long ago", because a
+        # wall reloads and a poll is a minute apart: an age computed here is stale by the time it is
+        # drawn, and a moment is not. The panel folds its line away after an hour of this.
+        if j.get("at"): out["since"] = j["at"]
         return out
 
     def _where_we_are(self) -> dict:
@@ -530,19 +554,46 @@ class Strips:
         return self._heard.get(f"{id_}/{want}")
 
     # ---- the knock ----
-    async def watch(self, every: float = 20.0):
+    async def watch(self, every: float = LOOK_EVERY):
         """Look for a strip that is knocking, for as long as the brain is up.
 
-        Not often, and never while a job is running. A BLE scan is a radio going quiet for other
-        things, and the hub is also the Bluetooth end of every OTHER device the house has; a scan
-        loop tight enough to feel instant is a scan loop that costs the house something all day, to
-        catch an event that happens when somebody plugs a thing in and is standing right there."""
+        TWO SPEEDS, AND THE FAST ONE IS BORROWED RATHER THAN KEPT. A BLE scan is the radio going
+        quiet for every other device in the house, so a loop tight enough to feel instant costs the
+        house all day to catch an event that happens when somebody plugs a thing in and is standing
+        right there -- which is exactly when the panel calls `looking()`. So: back to back while
+        somebody is on Add, and once a minute otherwise.
+
+        The slow speed is deliberately not slower than that. A knock is a line in the band now and a
+        late line is forgivable, but a household that plugs a strip in and sees nothing for five
+        minutes has been told the same lie in a quieter voice."""
         while True:
             try:
                 if not self.job: await self.look()
             except Exception as e:
                 log.info("strip: look failed (%s)", e)
-            await asyncio.sleep(every)
+            # `look()` is fourteen seconds of scanning on its own, so "back to back" needs no delay
+            # of its own -- only long enough to notice a job appearing or the watcher going away.
+            await asyncio.sleep(0.5 if self.being_watched() else every)
+
+    def being_watched(self) -> bool:
+        """Is somebody standing on Add right now? See LOOK_HOLD."""
+        return time.monotonic() < self._looking_until
+
+    async def looking(self) -> dict:
+        """The panel saying somebody is on Add and waiting. Holds the loop at its fast speed.
+
+        It is a HOLD and not a switch: it lapses by itself, so a wall that goes to rest, gets closed
+        or is unplugged mid-look cannot leave the hub scanning for ever. The panel says it again
+        every few seconds for as long as the page is open, and Add is also the one place a scan is
+        free, because the person it costs is the person who asked for it."""
+        was = self.being_watched()
+        self._looking_until = time.monotonic() + LOOK_HOLD
+        if not was:
+            log.info("strip: somebody is on Add; looking properly")
+            # Do not wait out whatever is left of the slow sleep -- that is up to a minute of
+            # somebody standing in front of a page that says it is listening and is not.
+            if self._woke and not self._woke.is_set(): self._woke.set()
+        return self.status()
 
     async def look(self) -> dict:
         """One scan. A strip that is advertising has never been set up, so anything found is a knock."""
@@ -600,7 +651,7 @@ class Strips:
             self.job = {"state": "knocking", "id": None, "addr": s["addr"],
                         "discriminator": s.get("discriminator"), "vendor": s.get("vendor"),
                         "door": s.get("door", "matter"), "rssi": s.get("rssi"),
-                        "label": self._label(s), "first": None}
+                        "label": self._label(s), "first": None, "at": time.time()}
             # WHICH ONE, AND HOW WELL WE CAN HEAR IT. Without this the only record of why a setup
             # was later called "a long way from the hub" is the sentence itself, and there is no way
             # to tell a faint strip from a bug in the reading. It is one line and it has already
