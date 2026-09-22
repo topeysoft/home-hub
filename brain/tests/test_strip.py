@@ -615,6 +615,24 @@ class OurOwnDoor(unittest.TestCase):
             self.assertEqual(self.strips.status()["state"], "order")
         run(go())
 
+    def test_a_strip_the_broker_still_thinks_is_online_is_still_found(self):
+        """A strip that goes away does not say so -- the broker says it for it, from the last will,
+        and only once the keepalive has run out. A factory reset, a reboot, a knock and a press all
+        happen well inside that, so the hub can still believe the old connection is alive while the
+        household is standing over the strip that replaced it. It says hello either way."""
+        async def go():
+            self.strips._on_mqtt({"topic": "strip/52e204/status", "payload": "online"})
+            await self.waiting()          # the will has still not fired
+            self.radio.hold = False
+            await turn()
+            self.assertIsNone(self.strips.job["id"])
+            # It joins and says hello, on a connection the hub thought it already had.
+            self.strips._on_mqtt({"topic": "strip/52e204/status", "payload": "online"})
+            await turn()
+            self.assertEqual(self.strips.job["id"], "52e204")
+            self.assertEqual(self.strips.status()["state"], "order")
+        run(go())
+
     def test_a_strip_the_house_already_had_is_not_mistaken_for_the_new_one(self):
         """A house with strips in it has every one of them online, and they are not this one."""
         async def go():

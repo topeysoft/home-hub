@@ -691,6 +691,19 @@ connected is already in that dict before the session starts, marked offline, and
 again. Which is precisely a strip somebody has just factory reset and is standing over. It waits for a
 strip to come **online** that was not online before, which is the fact it actually needs.
 
+**And that fix was wrong too, for a third reason, which is the one worth keeping.** Watching whether a
+strip is *online* cannot work here: **a strip that goes away never says so.** The broker says it for it,
+from the last will, and only once the keepalive has run out. A factory reset, a reboot, a knock and a
+press all happen well inside that window — so the hub is still holding `status: online` from the
+connection that has already died, the strip is excluded as "already here", and the household is standing
+over it reading that it never reached the hub. **A message arriving is a fact with a time on it; a
+retained "online" is only a guess about now.** The hub watches for the hello and keeps the state check
+as a second chance, because the two fail in different weather.
+
+**The exact fix is still not this.** The strip should say who it is **inside the session**, on the `hub`
+endpoint it already answers on — no broker state, no races, no window. That is a firmware change and it
+is the right one; everything above is the hub inferring an identity it could simply have been told.
+
 **The broker is the instrument that settled it**, and it was three commands away the whole evening:
 
     strip/52e204/count  300

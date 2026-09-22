@@ -358,6 +358,7 @@ class Strips:
         self._dismissed: set[str] = set()      # "not mine": left alone until it is power-cycled
         self.strips: dict[str, dict] = {}      # what the broker says: id -> {"online", "count", "order"}
         self._heard: dict[str, dict] = {}      # the last retained value per (id, leaf)
+        self._arrived: set[str] = set()        # said "online" since we last started listening
         self._woke: asyncio.Event | None = None
         self._task: asyncio.Task | None = None
         # Set when the household says they cannot reach the button. The session waiting for a press
@@ -458,7 +459,14 @@ class Strips:
         id_, leaf = parts[1], "/".join(parts[2:])
         self._heard[f"{id_}/{leaf}"] = payload
         s = self.strips.setdefault(id_, {})
-        if leaf == "status": s["online"] = str(payload).strip() == "online"
+        if leaf == "status":
+            s["online"] = str(payload).strip() == "online"
+            # THE ARRIVAL, NOT THE STATE. A strip that goes away does not say so: the broker says it
+            # for it, from the last will, and only once the keepalive has run out. A factory reset,
+            # a reboot, a knock and a press all happen well inside that, so the hub can still believe
+            # the old connection is alive while the household stands over the strip that replaced it.
+            # A message ARRIVING is a fact with a time on it; "online" is only a guess about now.
+            if s["online"]: self._arrived.add(id_)
         elif leaf == "count":
             try: s["count"] = int(str(payload).strip())
             except ValueError: pass
@@ -763,16 +771,24 @@ class Strips:
         when the session began, because a house may have strips in it and every one of them is also
         online. It is deliberately not "every strip the broker has heard of": those are retained and
         include every strip that has ever connected, which is exactly the strip being set up again."""
+        self._arrived.clear()
         self._woke = asyncio.Event()
         end = time.monotonic() + timeout
+        log.info("strip: waiting for it on the broker; %d already online", len(known))
         while True:
+            # Either is good enough, and they fail in different weather: one that says hello while
+            # we are listening, or one that is online now and was not when we started.
+            for id_ in list(self._arrived): return id_
             for id_, s in list(self.strips.items()):
                 if s.get("online") and id_ not in known: return id_
             left = end - time.monotonic()
-            if left <= 0: return None
+            if left <= 0: break
             try: await asyncio.wait_for(self._woke.wait(), timeout=max(0.01, left))
-            except TimeoutError: return None
+            except TimeoutError: break
             self._woke.clear()
+        log.warning("strip: nothing arrived on the broker in %ss. Known: %s", timeout,
+                    {i: bool(v.get("online")) for i, v in self.strips.items()})
+        return None
 
     # ---- the order the colors come in ----
     async def _show_red(self):
