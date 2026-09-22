@@ -371,9 +371,6 @@ class Radio:
             raise StripError("Those were not the flashes it is showing. Count them again \u2014 "
                              "and note it shows a new set every time it is plugged in.")
 
-    async def forget(self, id: str) -> None:
-        return None
-
 
 class Strips:
     """One job at a time, because it is a person standing in front of a thing."""
@@ -1025,6 +1022,104 @@ class Strips:
                 self._devices[id_] = d["id"]
                 return d["id"]
         return None
+
+    async def forget(self, id_: str) -> dict:
+        """Done with a strip: it goes from the house, and is told to forget the house with it.
+
+        THE SECOND HALF IS THE POINT, and it is the half a device registry cannot do. Dropping a
+        strip's light out of the house leaves the STRIP still holding our broker, our credentials
+        and its own answers -- adopted by a household that no longer has it. Plug it in and it
+        announces itself again, into a house that has just been told it is gone, and nobody has a
+        word for what is happening. So it is asked to let go too, which is exactly what the ten
+        second hold on its own button does; what is left is a strip anybody can set up again, here
+        or in whoever's house it was sold into.
+
+        WHAT IS SAID IS NOT RETAINED, so a strip that is unplugged never hears it. The house lets it
+        go anyway -- somebody is standing over a thing that is already in a box, and refusing would
+        be the panel arguing with them -- and `heard` comes back false so the panel can say the one
+        true thing left: the strip still believes it is ours, and its button is the only way to
+        settle that. The strip clears its own retained topics when it hears; this clears them from
+        this end for the strip that did not, because a retained `status` outlives the thing it was
+        about and would put a forgotten strip back in the house at the next broker restart.
+        """
+        known = self.strips.get(id_)
+        if not known:
+            raise StripError("That light strip is not one this hub knows about.")
+        if self.job and self.job.get("id") == id_:
+            raise StripError("That light strip is in the middle of being set up. Finish that first.")
+        heard = bool(known.get("online"))
+        label = self._label(known)
+        if heard:
+            await self._tell(id_, "forget", "1")
+            await asyncio.sleep(0.8)      # long enough for it to empty its own topics before we empty them
+        for leaf in ("status", "count", "order", "light", "fill", "white", "room"):
+            try:
+                await self.hub.ha.call("mqtt", "publish", {},
+                                       topic=f"{BASE}/{id_}/{leaf}", payload="", retain=True)
+            except Exception as e:
+                log.info("strip %s: could not clear %s (%s)", id_, leaf, e)
+        try:
+            await self.hub.ha.call("mqtt", "publish", {},
+                                   topic=f"homeassistant/light/{BASE}_{id_}/config", payload="", retain=True)
+        except Exception as e:
+            log.info("strip %s: could not clear its light (%s)", id_, e)
+        self.strips.pop(id_, None)
+        self._devices.pop(id_, None)
+        self._dismissed.discard(id_)
+        self._arrived.discard(id_)
+        for key in [k for k in self._heard if k.startswith(f"{id_}/")]:
+            self._heard.pop(key, None)
+        self.hub.log.add("strip", id_, None, "forgotten", source="user", detail={"name": label})
+        return {"forgotten": label, "heard": heard}
+
+    # ---- moving the end afterwards ----
+    #
+    # THE FILL IS A MEASUREMENT AND A MEASUREMENT HAS AN ERROR. A person's reaction time is the only
+    # one in it (see fill/stop in the firmware), so it lands a few lights either side: long, which is
+    # invisible because the surplus falls off the wire, or short, which leaves the far end of the
+    # strip dark for ever and is the one a household reports. This is the other half of the decision
+    # taken on 20 September -- "A at setup, B afterwards" -- and it lives on the strip's own pane
+    # rather than in setup, so setup stays one tap. design/strip/Nudge.dc.html.
+    #
+    # It is deliberately NOT a job. A job is the setup conversation, one at a time, on the wall; this
+    # is a control on a pane, on a strip that is already in the house, and a household turning a lamp
+    # up in another room must not be told a light strip is being set up.
+    async def tune(self, id_: str) -> dict:
+        """Light it at the length it believes, with a cool tail on the last few. See Nudge."""
+        known = self._for_tuning(id_)
+        await self._tell(id_, "show/set", "tune")
+        return {"id": id_, "count": known.get("count", ASSUMED), "tuning": True}
+
+    async def tune_by(self, id_: str, by: int) -> dict:
+        """Move the end by a few lights. Not written down until `tune_done`.
+
+        The strip answers with what it actually took -- it clamps to one at the bottom and to the
+        most it can drive at the top -- and that answer is what the wall shows, so a household
+        holding the button at either end sees it stop rather than a number that goes on moving."""
+        known = self._for_tuning(id_)
+        want = max(1, min(MOST, int(known.get("count", ASSUMED)) + int(by)))
+        got = await self._ask(id_, "tune/set", str(want), want="count", timeout=ANSWER_WAIT)
+        try: now = int(str(got).strip())
+        except (TypeError, ValueError): now = want
+        self.strips.setdefault(id_, {})["count"] = now
+        return {"id": id_, "count": now, "tuning": True}
+
+    async def tune_done(self, id_: str, keep: bool = True) -> dict:
+        """Put the strip back to being a light. `keep` writes the new length down."""
+        known = self.strips.get(id_) or {}
+        if keep: await self._tell(id_, "count/set", str(known.get("count", ASSUMED)))
+        await self._tell(id_, "show/set", "off")
+        return {"id": id_, "count": known.get("count", ASSUMED), "tuning": False}
+
+    def _for_tuning(self, id_: str) -> dict:
+        if self.job:
+            raise StripError("Something else is being set up just now. One at a time.")
+        known = self.strips.get(id_)
+        if not known:
+            raise StripError("That light strip is not one this hub knows about.")
+        if not known.get("online"):
+            raise StripError("That light strip is not answering just now.")
+        return known
 
     REVISIT = ("colors", "length")
 

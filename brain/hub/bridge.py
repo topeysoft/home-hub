@@ -861,6 +861,55 @@ class Bridges:
         self.hub.log.add("bridge", chip, None, "forgotten", source="user")
         return {"forgotten": where or "The bridge"}
 
+    # The three entities a puck publishes for one switch, and the four topics it keeps its state on.
+    # Both lists are the other half of announce()/publishState() in brilliant/esp32-bridge/src/main.cpp,
+    # and forgetting one means emptying every item in both.
+    SWITCH_CONFIGS = (("light", ""), ("binary_sensor", "_motion"), ("sensor", "_motion_level"))
+    SWITCH_LEAVES = ("state", "brightness", "motion", "motion_level")
+
+    async def forget_switch(self, net: str, addr: str) -> dict:
+        """Take one wall switch off the house, and make it stay off.
+
+        A PUCK IS NOT ASKED WHICH SWITCHES IT HAS. It says so, unprompted, every MQTT session, by
+        publishing their discovery again (`announced` in the firmware) -- which is what makes a
+        bridge recognizable after the brain restarts, and is also why taking a switch out through
+        the device registry lasted exactly as long as the puck stayed connected. The row came back
+        by morning and the household had no word for what was happening. So the house has to say
+        this to the BRIDGE, not to Home Assistant, and say it in a way that survives both of them.
+
+        A retained word on the switch's own address is that way. Every puck on the mesh hears it,
+        whether it is the one that announced the switch or the one that will next reconnect; a puck
+        that was unplugged during all this hears it when it comes back, which is the case the whole
+        bug was made of. The puck writes it down, so its own reboot does not undo it.
+
+        THE WAY BACK IS LETTING THE SWITCH IN AGAIN, and it needs no undo here: the house hands out
+        a fresh address every time (`_next_addr`), so a switch that is set up again is not the
+        address that was forgotten. let_in() clears this topic for the address it is about to use,
+        which covers the one case where an old address is deliberately restored.
+
+        The mesh node itself keeps this house's netkey either way. Nothing over the air can take
+        that back -- a factory reset at the wall is the only thing that does -- so this is not
+        claimed to be one. It is the house forgetting the switch, said in a way that holds.
+        """
+        if not net or not addr:
+            raise ValueError("The hub does not know that switch.")
+        for leaf in self.SWITCH_LEAVES:
+            with contextlib.suppress(Exception):
+                await self.hub.ha.call("mqtt", "publish", None,
+                                       topic=f"{BASE}/{net}/{addr}/{leaf}", payload="", retain=True)
+        for kind, tail in self.SWITCH_CONFIGS:
+            with contextlib.suppress(Exception):
+                await self.hub.ha.call("mqtt", "publish", None,
+                                       topic=f"homeassistant/{kind}/{BASE}_{net}_{addr}{tail}/config",
+                                       payload="", retain=True)
+        # Last, and retained: the standing instruction. After the clears, so a puck that acts on it
+        # the instant it lands is not racing the emptying of the topics it is about to stop writing.
+        await self.hub.ha.call("mqtt", "publish", None,
+                               topic=f"{BASE}/{net}/{addr}/forget", payload="1", retain=True)
+        self.switches.pop((net, addr), None)
+        self.hub.log.add("bridge", f"{net}/{addr}", None, "switch forgotten", source="user")
+        return {"forgotten": addr}
+
     def where(self, chip: str) -> str:
         """A bridge in the words a household has for it: the room it serves.
 
@@ -1232,6 +1281,14 @@ class Bridges:
         the codeless route, which the switches accept -- every switch on this
         house's network was claimed that way."""
         addr = self._next_addr()
+        # An address the house is about to use must not be carrying an old forget. It normally is
+        # not -- _next_addr() never hands the same one out twice -- but a switch restored to its
+        # former address by hand would otherwise come up already forgotten, which looks exactly
+        # like a switch that will not join.
+        if (net := (self.pucks.get(self._our_puck() or "") or {}).get("net")):
+            with contextlib.suppress(Exception):
+                await self.hub.ha.call("mqtt", "publish", None,
+                                       topic=f"{BASE}/{net}/{addr:04x}/forget", payload="", retain=True)
         cmd = f"add {uuid} {addr:04x}" + (f" {oob}" if oob else "")
         body = await self._ask(cmd, "claimed", CLAIM_WAIT)
         if body is None:

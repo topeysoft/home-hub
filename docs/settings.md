@@ -90,8 +90,12 @@ Every service that needed a sign-in, with one of three states and two buttons.
 Already the product: room tiles, *New devices*, *Found nearby*. What is missing is the end of a device's life and its
 own settings.
 
-- **Forget.** On the tile's long-press, next to rename and move. Removes it from Home Assistant's registry and the
-  brain's model; for a radio device, also offers to exclude it from the network so it can be paired elsewhere.
+- **Forget.** Built, and **not** where this said it would be: `DELETE /devices/<id>` is reached from the room's
+  edit screen and from a fault report, and the tile's long-press still offers only rename and move. That gap is what
+  `design/forget/` argues about — the same question for a light strip, a wall switch on the mesh and a sensor with no
+  tile at all, none of which a per-device route can answer on its own. Two kinds do not go through the registry:
+  a mesh switch is forgotten at its bridge (`docs/brilliant.md`) because the puck re-announces it otherwise, and a
+  light strip is asked to forget the house as well (`docs/strip.md` item 37) so it can be set up somewhere else.
 - **Settings.** The same long-press draws the device's options flow when its integration has one, through the form
   renderer in `onboarding.py`, in the integration's own English. No new vocabulary; most people never open it.
 - **Provisioning.** Keep *Found nearby* first. Add one line of "what to expect" per kind before a flow starts (a bridge

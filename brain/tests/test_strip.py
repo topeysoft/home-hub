@@ -107,6 +107,11 @@ class FakeHA:
             self.cb({"topic": f"strip/{id_}/{back_leaf}", "payload": back_payload})
 
 
+class FakeLog:
+    def __init__(self): self.rows = []
+    def add(self, *a, **k): self.rows.append((a, k))
+
+
 class FakeBridges:
     """The one thing a strip asks the puck's half of the hub for: where the broker is and how to get
     into it. Real `Bridges.broker()` reads exactly these out of the environment."""
@@ -122,6 +127,7 @@ class FakeHub:
         self.hostname = "hub"
         self.bridge = FakeBridges()
         self.ha = FakeHA()
+        self.log = FakeLog()
         self.home = None
         self.pushed = []
         self.steps = []
@@ -788,6 +794,76 @@ class WhichDoorTheStripIsTakenThrough(unittest.TestCase):
         self.assertEqual(self.strips.job["door"], "matter")
 
 
+class MovingTheEnd(unittest.TestCase):
+    """THE FILL IS A MEASUREMENT AND A MEASUREMENT HAS AN ERROR, which is somebody's reaction time.
+    It lands a few lights either side: long, which is invisible because the surplus falls off the
+    wire, or short, which leaves the far end dark for ever and is the one a household reports.
+
+    Reported 22 September, and it is the other half of a decision taken on 20 September -- "A at
+    setup, B afterwards". It lives on the strip's own pane, so setup stays one tap.
+    design/strip/Nudge.dc.html."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.hub = FakeHub(self.tmp.name)
+        self.s = Strips(self.hub, radio=FakeRadio())
+        run(self.s.listen())          # without it the fake broker has nobody to answer through
+        self.s.strips["c8ebba"] = {"online": True, "count": 186, "order": "grb"}
+
+    def tearDown(self): self.tmp.cleanup()
+
+    def said(self, leaf):
+        return [p for t, p, _ in self.hub.ha.published if t.endswith("/" + leaf)]
+
+    def test_it_lights_the_strip_at_the_length_it_believes(self):
+        self.assertEqual(run(self.s.tune("c8ebba"))["count"], 186)
+        self.assertEqual(self.said("show/set"), ["tune"])
+
+    def test_moving_it_is_not_written_down(self):
+        """Holding a button must not spend an NVS erase cycle a frame, so the moving is `tune/set`
+        and the writing is one `count/set` at the end."""
+        self.hub.ha.answers = {"tune/set": ("count", "189")}
+        run(self.s.tune("c8ebba"))
+        self.assertEqual(run(self.s.tune_by("c8ebba", 3))["count"], 189)
+        self.assertEqual(self.said("tune/set"), ["189"])
+        self.assertEqual(self.said("count/set"), [])
+
+    def test_and_the_strip_has_the_last_word_on_where_it_got_to(self):
+        """It clamps at both ends. A household holding the button at the bottom has to see it stop,
+        not a number that goes on moving."""
+        self.hub.ha.answers = {"tune/set": ("count", "1")}
+        run(self.s.tune("c8ebba"))
+        self.assertEqual(run(self.s.tune_by("c8ebba", -500))["count"], 1)
+
+    def test_keeping_it_writes_it_down_and_gives_the_strip_back(self):
+        self.hub.ha.answers = {"tune/set": ("count", "190")}
+        run(self.s.tune("c8ebba"))
+        run(self.s.tune_by("c8ebba", 4))
+        run(self.s.tune_done("c8ebba"))
+        self.assertEqual(self.said("count/set"), ["190"])
+        self.assertEqual(self.said("show/set"), ["tune", "off"])
+
+    def test_and_walking_away_from_it_still_gives_the_strip_back(self):
+        """Whatever else happens, a strip must not be left wearing a setup instrument."""
+        run(self.s.tune("c8ebba"))
+        run(self.s.tune_done("c8ebba", keep=False))
+        self.assertEqual(self.said("count/set"), [])
+        self.assertEqual(self.said("show/set"), ["tune", "off"])
+
+    def test_it_is_not_offered_while_something_is_being_set_up(self):
+        """One at a time: a household turning a lamp up in another room must not be told a light
+        strip is being set up, and a setup on the wall must not have its instrument taken."""
+        self.s.job = {"state": "room", "id": "2e4258", "label": "A light strip", "first": None}
+        with self.assertRaises(StripError):
+            run(self.s.tune("c8ebba"))
+
+    def test_nor_on_a_strip_that_is_not_answering(self):
+        """The whole control works by lighting the thing up, so there is nothing to look at."""
+        self.s.strips["c8ebba"]["online"] = False
+        with self.assertRaises(StripError):
+            run(self.s.tune("c8ebba"))
+
+
 class LookingProperly(unittest.TestCase):
     """HOW OFTEN THE HUB GOES LOOKING, AND WHO IS WAITING WHEN IT DOES.
 
@@ -1113,3 +1189,76 @@ class ThreeFailuresThatAreNotTheSame(unittest.TestCase):
         said = self.said_for("Unlikely Error", rhythm="")
         self.assertNotIn("Count them again", said)
         self.assertIn("Unplug it", said)
+
+
+class BeingDoneWithOne(unittest.TestCase):
+    """Selling it, binning it, or taking it to the next flat.
+
+    THE HALF THAT IS NOT THE DEVICE REGISTRY is the whole of this. A strip dropped out of Home
+    Assistant is still holding our broker and our credentials, and it announces itself again the
+    next time it is plugged in -- into a house that has just been told it is gone. So the strip is
+    asked to let go too, which is the ten second hold on its own button, said over the broker
+    because that button is very often taped behind a television.
+    """
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.hub = FakeHub(self.tmp.name)
+        self.s = Strips(self.hub, radio=FakeRadio())
+        run(self.s.listen())
+        self.s.strips["c8ebba"] = {"online": True, "count": 186, "order": "grb"}
+        self.s._devices["c8ebba"] = "dev1"
+        self.s._heard["c8ebba/status"] = "online"
+
+    def tearDown(self): self.tmp.cleanup()
+
+    def test_it_is_asked_to_let_go_and_every_retained_word_about_it_is_emptied(self):
+        out = run(self.s.forget("c8ebba"))
+        self.assertTrue(out["heard"])
+        told = [(t, p) for t, p, retain in self.hub.ha.published if not retain]
+        self.assertIn(("strip/c8ebba/forget", "1"), told)
+        # every topic a strip retains, emptied -- a retained `status` outlives the thing it is
+        # about, and would put a forgotten strip back in the house at the next broker restart
+        cleared = {t for t, p, retain in self.hub.ha.published if retain and p == ""}
+        for leaf in ("status", "count", "order", "light", "fill", "white", "room"):
+            self.assertIn(f"strip/c8ebba/{leaf}", cleared)
+        self.assertIn("homeassistant/light/strip_c8ebba/config", cleared)
+        # and nothing of it is left here either
+        self.assertNotIn("c8ebba", self.s.strips)
+        self.assertNotIn("c8ebba", self.s._devices)
+        self.assertEqual([k for k in self.s._heard if k.startswith("c8ebba/")], [])
+
+    def test_the_asking_is_never_retained(self):
+        """A retained forget is a recording of an evening weeks gone, replayed at every reconnect,
+        and this is the one command on a strip that cannot be taken back."""
+        run(self.s.forget("c8ebba"))
+        self.assertEqual([t for t, _, retain in self.hub.ha.published
+                          if t.endswith("/forget") and retain], [])
+
+    def test_one_that_is_unplugged_still_goes_and_the_house_says_it_was_not_heard(self):
+        """Somebody is standing over a thing that is already in a box. Refusing would be the panel
+        arguing with them -- so the house lets go, and `heard` is how the panel knows to say the one
+        fact that is left: the strip still believes it is ours, and only its button settles that."""
+        self.s.strips["c8ebba"]["online"] = False
+        out = run(self.s.forget("c8ebba"))
+        self.assertFalse(out["heard"])
+        self.assertEqual([t for t, _, _ in self.hub.ha.published if t.endswith("/forget")], [])
+        self.assertNotIn("c8ebba", self.s.strips)
+        # the retained words still go: they are what would have brought it back
+        self.assertIn("strip/c8ebba/status",
+                      {t for t, p, retain in self.hub.ha.published if retain and p == ""})
+
+    def test_one_in_the_middle_of_being_set_up_is_not_taken_out_from_under_the_person(self):
+        self.s.job = {"state": "length", "id": "c8ebba"}
+        with self.assertRaises(StripError) as e:
+            run(self.s.forget("c8ebba"))
+        self.assertIn("being set up", str(e.exception))
+        self.assertIn("c8ebba", self.s.strips)
+
+    def test_a_strip_the_hub_never_had(self):
+        with self.assertRaises(StripError):
+            run(self.s.forget("nosuch"))
+
+    def test_it_is_written_down(self):
+        run(self.s.forget("c8ebba"))
+        self.assertEqual(self.hub.log.rows[-1][0][:4], ("strip", "c8ebba", None, "forgotten"))

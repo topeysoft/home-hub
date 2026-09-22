@@ -551,6 +551,33 @@ MQTT base. One thing it shows plainly: that switch's motion field reads a flat 3
 draws no `Level Status` — the dimmer/PIR configuration the console wrote is what a reset loses, and finding those
 fields by diffing a configured switch against this one is the next job.
 
+### A switch the house is done with, and why the registry could not hold it (22 September)
+
+Taking a wall switch out of the house through Home Assistant's device registry lasted exactly as long
+as the puck stayed plugged in. The reason is two lines up from here: **the puck describes every switch
+it knows over MQTT discovery on every session**, and those messages are retained. `announced` is a
+per-session flag, cleared at each reconnect, so the row came back at the next reconnect or the next
+reboot and nothing anywhere said why. A household that had just got rid of a switch watched it return
+by morning.
+
+So the house says it to the **bridge**, not to the registry, and says it in a way that survives both.
+`mesh/<net>/<addr>/forget` is retained: every puck on that mesh hears it, including one that was
+unplugged while the household was getting rid of the switch, which is the case the whole bug was made
+of. The puck writes the address into NVS beside its switch list (`gone`, read before the switch list
+because `learnSwitch()` asks `excluded()`), drops the switch out of `switches[]`, and empties the
+three discovery configs and four state topics it had published for it. Its own reboot does not undo
+any of that.
+
+**The way back is letting the switch in again**, and it needs no undo: the house hands out a fresh
+unicast every time (`_next_addr`), so a switch set up again is not the address that was forgotten.
+`let_in()` clears the topic for the address it is about to use, which covers the one case where an old
+address is deliberately restored by hand (`brilliant/tools/restore_switch.py`).
+
+**What this is not.** The mesh node keeps this house's netkey. Nothing over the air takes that back —
+a factory reset at the wall is the only thing that does — so this is not claimed to be one. It is the
+house forgetting the switch, said in a way that holds. `hub/bridge.py forget_switch()`, reached from
+`DELETE /devices/<id>` whenever the device's identifier reads `mesh_<net>_<addr>`.
+
 ## The dimmer-mode diff, and what it turned up (16 September, night)
 
 With the panel appkey in hand, `tools/vendor_store.py` reads a switch's whole vendor store on either network,

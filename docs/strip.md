@@ -656,6 +656,38 @@ the house, which is how these things get returned. The camera route avoids all o
 pointed into a living room. **The cheap next step is neither: a capture stick and HyperHDR on a bench,
 to find out whether it feels like the screen extended or like a gimmick, before any of it is paid for.**
 
+**37. There was no way to get rid of one.** Reported 22 September, and it was the whole of the
+report: no route, and nothing to build one on. `Radio.forget()` was `return None` with no callers,
+and `DELETE /devices/<id>` — the only removal the panel had — dropped a strip's light out of Home
+Assistant and left the **strip** still holding our broker, our credentials and its own answers.
+Adopted by a household that no longer had it. Plug it in and it announces itself again, into a house
+that has just been told it is gone.
+
+**So forgetting a strip is two things, and the second is the one a device registry cannot do.** The
+strip is asked to let go too, on `strip/<id>/forget` — which is exactly what the ten second hold on
+its own button does, said over the broker because that button is very often taped behind a
+television, and a household that cannot reach it to set the strip up cannot reach it to let the
+strip go either. What comes back is a strip anybody can set up again, here or in whoever's house it
+was sold into.
+
+**The asking is never retained, and the clearing always is.** A retained `forget` is a recording of
+an evening weeks gone replayed at every reconnect, and this is the one command on a strip that
+cannot be taken back — the firmware retires a retained copy rather than obeying it, the same way it
+already retires a retained `count/set` (item 31). The retained words the strip has written about
+itself are the opposite case: `status`, `count`, `order`, `light`, and the discovery config. Left
+behind, any one of them puts a forgotten strip back in the house at the next broker restart, so the
+strip empties them before it goes and the hub empties them from this end for the strip that was
+never there to hear.
+
+**A strip that is unplugged still goes.** Somebody is standing over a thing that is already in a
+box; refusing would be the panel arguing with them. `heard` comes back false, and that is the panel's
+cue to say the one fact that is left — the strip itself still believes it is ours, and its button is
+the only thing that can settle that now.
+
+`DELETE /strip/<id>`, gated like every other change to the house. The panel has the client and not
+yet the door: which screen it opens from is being drawn in `design/forget/`, which is the same
+question for a strip, a wall switch, a sensor with no tile and an account at once.
+
 **36. The last beat, from a real house: it said "It's in" when it was not, and the rooms were a
 column twenty-three long.** Reported 22 September after a grafted run on a real hub, and the log had
 all of it:

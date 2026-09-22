@@ -1,0 +1,80 @@
+{
+  "artboards": [
+    {
+      "file": "Today.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Today — four ways out, three of them hidden"
+    },
+    {
+      "file": "OnTheThing.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "A — it ends where it lives"
+    },
+    {
+      "file": "RoomIsTheList.dc.html",
+      "x": 3120,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "B — the room is the list"
+    },
+    {
+      "file": "ThingsDoor.dc.html",
+      "x": 4680,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "C — one door: everything this house has"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "why",
+      "x": -620,
+      "y": 0,
+      "w": 500,
+      "text": "THE REPORT: \"THERE DOES NOT SEEM TO BE A WAY TO REMOVE A DEVICE THAT WAS PREVIOUSLY ADDED OR PROVISIONED.\"\n\nIt is nearly true, and the nearly is the interesting part. Four ways out ship. None of them is where a person looks, and three kinds of thing have no way out at all.\n\nWHAT SHIPS. A device goes through the room's pencil (SortView.vue:276) or through a fault report (health.py:91). A bridge puck goes from This house (BridgeCard.vue:152). An account goes from Accounts. Four routes, four vocabularies, and the word is Forget on three and Remove on the fourth.\n\nWHAT DOES NOT. A light strip has no forget anywhere -- Radio.forget() at strip.py:374 is `return None` and nothing calls it. A Brilliant wall switch accepts Forget and is back the next time the puck reconnects, because the puck republishes discovery every MQTT session (main.cpp:171) and the mesh node keeps our netkey regardless. A device whose account owns it is refused with the right sentence into a dead end with no door.\n\nWHY IT IS A DRAWING AND NOT A PATCH. The brain half of this is not contested: a strip needs a forget, a forgotten switch must be told to stay forgotten, and a refusal should name a door. Those are being built. What is contested is WHERE A HOUSEHOLD GOES TO END A THING, and that is a composition question, not a list of parts.\n\nTHE THREE ANSWERS. A puts it on the thing itself, in the pane's own quiet-row vocabulary. B keeps it in the room and makes the room's list honest and reachable. C opens one door under This house that holds everything the hub knows.\n\nTHE ONE THING ALL THREE MUST SAY. Forgetting is the single act in this panel with no undo -- section 4's rule is that what you just touched stays put and IS the undo, and here it cannot be. So the asking happens before, with the thing's name in the sentence, and what is left behind is a drained row that says what happened and offers nothing. Every board draws that state.\n\nRECOMMENDATION: C, with A's row as its shortcut. C is the only one that can hold a sensor with no tile, a strip, a mesh switch, a puck and an account at once, and the grouping by what brought a thing is the panel finally drawing the fact the brain already knows. A alone cannot reach three of those six. B is the least code and the best words, and it is the one to build first if only one gets built.\n\nAND \"SOMETHING ELSE -- I'LL DESCRIBE IT\" IS A REAL OPTION."
+    },
+    {
+      "id": "today",
+      "x": 0,
+      "y": -700,
+      "w": 560,
+      "text": "TODAY -- TRACED, NOT REMEMBERED\n\nThe left half is what the pane's own edit verb opens. The verb is called \"Rename or move it\" and the form is a room picker, a name field, Done and Cancel, with the three quiet rows under it. It keeps its promise exactly and there is no fourth thing on it.\n\nThe right half is every way out that ships, with the taps counted. Six of them for the common case, and the fifth is an unlabeled pencil.\n\nThe three cards along the foot are the ones with no way out. The middle one is the worst of the three, because it does not fail: it says the thing is forgotten, and the row is back by morning."
+    },
+    {
+      "id": "a",
+      "x": 1560,
+      "y": -700,
+      "w": 560,
+      "text": "A -- IT ENDS WHERE IT LIVES\n\nForget becomes the third quiet row on the pane, under \"Show this as\" and \"Shared with other apps\", inside edit and nowhere else. Same dotted line, same small choice, same sentence underneath -- the only differences are that it is last and that it is the one in --danger.\n\nFOR: it is where a person looks. Holding the thing and ending the thing are the same gesture, and the sentence can name it because the pane knows which thing it is. It costs no new screen and almost no new vocabulary.\n\nAGAINST, AND IT IS REAL: a motion sensor, a thermometer and a door contact have no tile, so there is no pane to open -- design/device/Today.dc.html measured that already. Nor is a light strip or a puck a device in a room. A is the best answer for the common case and not an answer at all for the rest, which is why it reads as a shortcut rather than a home.\n\nTHE STATE ON THE RIGHT that matters most is the third: what is left in the room afterwards. Drained, in place, saying what it now is -- and with nothing to tap, because this is the one done card that cannot be undone."
+    },
+    {
+      "id": "b",
+      "x": 3120,
+      "y": -700,
+      "w": 560,
+      "text": "B -- THE ROOM IS THE LIST\n\nNothing moves. The screen that already lists what a household owns gets its three faults put right: the door in stops being an unlabeled pencil and says \"What's in here\"; the list stops leaving out everything with no tile, plus strips and mesh switches; and the thing's own pane carries one line saying where ending it lives.\n\nFOR: a household thinks room by room, and a room is the only container that already holds a lamp, a sensor with no tile, a light strip and a wall switch at the same time. It is far and away the least new code -- the screen exists, the two-tap ask exists and is good, the word changes and the list grows. And the words on it are already the best words anywhere in this feature: \"Walkway Pathlight, all three of its parts, goes from the house and from Ring with it.\"\n\nAGAINST: ending a thing stays two screens away from the thing. \"What's in here\" is a mode you enter and leave and the panel has almost none of those. And a puck and an account are still somewhere else, so it does not close the question either.\n\nIF ONLY ONE GETS BUILT, BUILD THIS ONE. It is a week of nobody's time and it turns the report from \"there is no way\" into \"there is a way and it is signposted\"."
+    },
+    {
+      "id": "c",
+      "x": 4680,
+      "y": -700,
+      "w": 560,
+      "text": "C -- ONE DOOR: EVERYTHING THIS HOUSE HAS\n\nA list under This house, beside Bridges and Accounts, holding every thing the hub knows -- grouped by what brought it.\n\nTHE GROUPING IS THE ARGUMENT. What brought a thing is exactly what decides whether it may leave on its own; the brain says so today in a 502 the panel turns into a dead end. Here that answer is the row -- \"Goes with Ring\" -- with the door to Ring on the group header above it. Nothing has to be explained because the shape explains it.\n\nFOR: the only direction that holds all six kinds at once -- a lamp, a sensor with no tile, a strip, a mesh switch, a puck, an account. It is also the screen somebody actually wants when they are moving house or wondering what is still signed in.\n\nAGAINST: the most code, and an inventory is the closest this panel has ever come to the thing section 5 says the box is not for. Drawn badly it is Home Assistant's device page with nicer type, and the line between \"what this house has\" and \"a settings panel\" is drawn entirely in the words and the grouping. It is also still not where the person is looking.\n\nC AND A ARE NOT EXCLUSIVE, and the recommendation is both: the door is where everything can be reached, the row on the pane is the shortcut for the thing in your hand."
+    },
+    {
+      "id": "brain",
+      "x": 6240,
+      "y": 0,
+      "w": 520,
+      "text": "WHAT IS BEING BUILT WHATEVER IS CHOSEN\n\nThese three are not contested and do not wait for a board.\n\n1. A LIGHT STRIP CAN BE TAKEN OUT. Strips.forget(id): tell the strip to forget the house so it can be set up again anywhere, clear its retained topics, drop its device. Today Radio.forget() is `return None`.\n\n2. A FORGOTTEN SWITCH STAYS FORGOTTEN. The hub publishes a retained forget on the mesh address; every puck on that mesh honors it, keeps it across a reboot, and clears the discovery it published. Letting the same switch in again clears the forget, so there is a way back.\n\n3. A REFUSAL NAMES ITS DOOR. \"It goes when the account that brought it does\" already says the true thing; the panel has to be able to open that door from where it is said. Which screen that lands on is the one part of this that does wait for the choice."
+    }
+  ]
+}

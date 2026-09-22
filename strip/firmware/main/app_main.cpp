@@ -98,9 +98,33 @@ static uint16_t light_endpoint = 0;
 // a test pattern for ever -- and, on the Arduino version, the waiting glow was drawn and then wiped a
 // fraction of a second later by the first attribute sync, which from a bench looks like a dead strip.
 static bool instrument = false;
+// TUNING THE LENGTH, WHICH IS AN INSTRUMENT LIKE THE FILL AND NOT A SETTING.
+//
+// The fill measures the wire once, while somebody is standing there, and a person's reaction time
+// is the only error in it -- so it comes out a few lights long or a few lights short, and short is
+// the one a household notices, because the far end then stays dark for ever. This is how they move
+// it afterwards from the strip's own pane (design/strip/Nudge.dc.html).
+//
+// The strip lights to the length it believes AND PUTS THE LAST FEW IN A DIFFERENT COLOR, because at
+// sixty lights to the metre a warm lit strip is a glow and its end is a guess, while a short cool
+// tail on a warm one is an edge you can see from across the room. It is also the only way to show
+// the direction that is otherwise invisible: one light too far and the tail runs off the end of the
+// wire, so it shortens and then disappears, which nothing else about a strip can tell you.
+static bool tuning = false;
+#define TUNE_TAIL 6
+// A cool white-blue against the warm body. Saturated on purpose: an LED gives the eye no reference,
+// so a pastel reads as white and the tail would be invisible against the body (AGENTS.md §4).
+#define TUNE_R 0
+#define TUNE_G 120
+#define TUNE_B 255
 // The knocking is over and nobody took the strip. It keeps the light, drained, rather than going
 // dark, and the rhythm stops.
 static bool waiting_over = false;
+// Set when the house asks the strip to forget it. Acted on from housekeeping(), never here:
+// erasing NVS and restarting from inside the MQTT event callback tears down the task the
+// callback is running on, which is the same reason the door is reopened from there and not
+// from the handler that heard the question.
+static volatile bool forget_asked = false;
 static bool want_on = false;
 static uint8_t want_r = 255, want_g = 180, want_b = 110, want_bri = 200;
 
@@ -130,6 +154,19 @@ static int get_i32(const char *key, int fallback) {
 static void put_i32(const char *key, int v) { nvs_set_i32(nvs, key, v); nvs_commit(nvs); }
 
 // ---------------------------------------------------------------- what it is showing
+
+// The strip at the length it currently believes, with the last few lights cool. Drawn whenever the
+// count moves while tuning, and nowhere else.
+static void paint_tune() {
+    strip.clear();
+    const int n = strip.order.per_pixel();
+    for (int i = 0; i < strip.count; i++) {
+        const bool tail = i >= strip.count - TUNE_TAIL;
+        strip.order.bytes(tail ? TUNE_R : SIG_R, tail ? TUNE_G : SIG_G, tail ? TUNE_B : SIG_B,
+                          &strip.buf[i * n]);
+    }
+    px::show(strip);
+}
 
 static void paint() {
     if (instrument) return;
@@ -230,8 +267,53 @@ static void say_what_we_are() {
     say("status", "online", 1);
 }
 
+// THE WAY OUT, AND IT CLEARS UP AFTER ITSELF.
+//
+// Whether the household holds the button for ten seconds or the panel asks, the same thing has to
+// happen, and the order matters. The strip is the only thing that knows which topics it has
+// written, and every one of them is retained: `status`, `count`, `order`, `light`, and the
+// discovery config that makes it a light in the house at all. Left behind, they bring a forgotten
+// strip straight back the next time a broker restarts -- the bridge learned this the hard way and
+// says so in its own forget(). So they are emptied first, while there is still a broker to say it
+// to, and only then does the strip erase what it knows and start again new.
+static void forget_the_house(bool tidy_first) {
+    if (tidy_first) {
+        char topic[96];
+        snprintf(topic, sizeof(topic), "homeassistant/light/%s_%s/config", base, chipHex);
+        say_at(topic, "", 1);
+        for (const char *leaf : {"count", "order", "light", "fill", "status"}) say(leaf, "", 1);
+        vTaskDelay(pdMS_TO_TICKS(600));   // let them leave before the radio goes with everything else
+    }
+    strip.clear();
+    px::show(strip);
+    nvs_erase_all(nvs);
+    nvs_commit(nvs);
+    esp_matter::factory_reset();   // erases Matter's own storage and restarts
+    vTaskDelay(pdMS_TO_TICKS(2000));
+    esp_restart();
+}
+
 static void on_command(const std::string &leaf, const std::string &msg, bool retained) {
     if (leaf == "hello") { say_what_we_are(); return; }
+
+    // DONE WITH IT, ASKED FROM THE PANEL INSTEAD OF FROM THE BUTTON.
+    //
+    // The ten-second hold does this already and has been the only way. It means reaching a
+    // controller that is very often taped behind a television, for the one job nobody should have
+    // to crawl for -- and a household that cannot reach the button to set the strip up cannot
+    // reach it to let the strip go either. The hub may ask instead: it is holding this strip's
+    // credentials already, so there is nothing here it has not been trusted with. Proving
+    // possession is a rule about letting a thing IN (AGENTS.md); letting it go is the house
+    // speaking to something that is already its own.
+    //
+    // Never from a retained copy: that is a recording of an evening weeks gone, and the one command
+    // on this strip that cannot be taken back.
+    if (leaf == "forget") {
+        if (retained) { say("forget", "", 1); return; }
+        ESP_LOGW(TAG, "the house says it is done with us. Tidying up, then starting again new.");
+        forget_asked = true;
+        return;
+    }
 
     // A COMMAND WHOSE ANSWER IS ALREADY IN NVS IS NEVER TAKEN FROM A RETAINED MESSAGE.
     //
@@ -311,10 +393,30 @@ static void on_command(const std::string &leaf, const std::string &msg, bool ret
             strip.clear();
             px::show(strip);
             fill.start(now_ms());
+        } else if (msg == "tune") {
+            // The pane's fine-tune. Nothing is written down until it is over: `tune/set` moves the
+            // count in memory only, so holding a button does not spend an NVS erase cycle a frame.
+            instrument = true;
+            tuning = true;
+            fill.running = false;
+            paint_tune();
         } else if (msg == "off") {
             instrument = false;
+            tuning = false;
             paint();
         }
+        return;
+    }
+
+    // WHERE THE END IS, WHILE SOMEBODY IS MOVING IT. In memory and on the wire, never in NVS --
+    // the hub sends one `count/set` at the end, which is the write that keeps it.
+    if (leaf == "tune/set") {
+        if (!tuning) return;
+        strip.set_count(atoi(msg.c_str()));
+        paint_tune();
+        char v[16];
+        snprintf(v, sizeof(v), "%d", strip.count);
+        say("count", v, 1);
         return;
     }
 
@@ -341,7 +443,13 @@ static void on_command(const std::string &leaf, const std::string &msg, bool ret
         nvs_set_u8(nvs, "white", strip.order.white); nvs_commit(nvs);
         return;
     }
-    if (leaf == "count/set") { strip.set_count(atoi(msg.c_str())); put_i32("count", strip.count); return; }
+    if (leaf == "count/set") {
+        strip.set_count(atoi(msg.c_str()));
+        put_i32("count", strip.count);
+        // Sent as the last word of a tuning session, so what is on the strip has to agree with it.
+        if (tuning) paint_tune();
+        return;
+    }
     if (leaf == "room/set")  { put_str("room", msg); return; }
 }
 
@@ -540,6 +648,11 @@ static void housekeeping(void *) {
         // rung lower. It has to be driven from here rather than from the handler that heard it: that
         // one runs on the manager's own task, inside the manager it would be tearing down.
         prov::tend_the_door();
+        // The other way out (`forget` on the broker), driven from here for the reason the flag says.
+        if (forget_asked) {
+            forget_asked = false;
+            forget_the_house(true);
+        }
         // A hold only counts once the button has been seen let go; see BUTTON_PIN above.
         //
         // AND IT SAYS WHEN IT SEES ONE. A household holding the button and getting nothing has no
@@ -561,13 +674,7 @@ static void housekeeping(void *) {
             }
             if (held > HOLD_DONE) {
                 ESP_LOGW(TAG, "forgetting the house. It will come back new.");
-                strip.clear();
-                px::show(strip);
-                nvs_erase_all(nvs);
-                nvs_commit(nvs);
-                esp_matter::factory_reset();   // erases Matter's own storage and restarts
-                vTaskDelay(pdMS_TO_TICKS(2000));
-                esp_restart();
+                forget_the_house(false);
             }
         }
         if (gpio_get_level((gpio_num_t)BUTTON_PIN) && down) {

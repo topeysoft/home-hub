@@ -323,6 +323,14 @@ export const stripSaw = (saw: string) => post<Strip>('/strip/saw', { saw })
 export const stripEnds = () => post<Strip>('/strip/ends')
 export const stripAgain = () => post<Strip>('/strip/again')
 export const stripRoom = (room: string) => post<Strip>('/strip/room', { room })
+/** Done with a strip: it goes from the house, and is told to forget the house with it -- the same
+ *  thing the ten-second hold on its own button does, asked from here because that button is very
+ *  often taped behind a television. `heard` is false when the strip was unplugged: the house lets
+ *  go either way, and what is left to say is that the strip still believes it is ours and only its
+ *  button can settle that now. */
+export async function forgetStrip(id: string): Promise<{ forgotten: string; heard: boolean }> {
+  const r = await request(`/strip/${encodeURIComponent(id)}`, { method: 'DELETE' }); if (!r.ok) await fail(r); return r.json()
+}
 export const stripDone = () => post<Strip>('/strip/done')
 /** Every strip the house has, for the rows that offer to ask one of them something again. */
 export type StripRow = {
@@ -334,6 +342,19 @@ export type StripRow = {
 export async function listStrips(): Promise<{ strips: StripRow[] }> {
   const r = await request('/strip/list'); if (!r.ok) await fail(r); return r.json()
 }
+/** MOVING THE END OF A STRIP, AFTERWARDS. The fill is a measurement and a measurement has an error
+ *  -- a person's reaction time -- so it lands a few lights either side: long, which is invisible
+ *  because the surplus falls off the wire, or short, which leaves the far end dark for ever. These
+ *  three are the afterwards half of the length question, on the strip's own pane rather than in
+ *  setup, so setup stays one tap. design/strip/Nudge.dc.html.
+ *
+ *  `tune` lights it at the length it believes with a cool tail on the last few; `tuneBy` moves that
+ *  end and is not written down; `tuneDone` puts it back to being a light and keeps the answer. */
+export type Tuning = { id: string; count: number; tuning: boolean }
+export const tuneStrip = (id: string) => post<Tuning>('/strip/tune', { id })
+export const tuneStripBy = (id: string, by: number) => post<Tuning>('/strip/tune/by', { id, by })
+export const tuneStripDone = (id: string, keep = true) => post<Tuning>('/strip/tune/done', { id, keep })
+
 /** Ask a strip already in the house one of the two questions again. design/strip/Later.dc.html. */
 export const revisitStrip = (id: string, what: 'colors' | 'length') =>
   post<Strip>('/strip/revisit', { id, what })

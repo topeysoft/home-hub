@@ -228,11 +228,34 @@ static uint32_t txIv() { return ivUpdating ? ivIndex - 1 : ivIndex; }
 
 static bool isOurs(uint16_t a) { return a >= bridgeBase && a < bridgeBase + 16; }
 
+// SWITCHES THE HOUSE IS DONE WITH, and the reason this is written down rather than held in RAM.
+//
+// A puck announces every switch it knows to Home Assistant on every MQTT session -- that is what
+// makes a bridge recognizable after the brain restarts. It also meant that taking a switch out of
+// the house lasted exactly as long as this puck stayed plugged in: the row came back at the next
+// reconnect, or at the next reboot, and nothing anywhere said why. So the house says "done with
+// this one" on a retained topic, and the puck keeps it in NVS beside the switch list. Kept as
+// addresses and not as a flag on Switch because a forgotten switch is removed from that array
+// entirely, and it has to stay forgotten when its next press would otherwise teach it again.
+//
+// The way back is an empty payload on the same topic, which is what the house publishes for an
+// address it is about to hand out again.
+#define MAX_GONE 16
+static uint16_t gone[MAX_GONE];
+static uint8_t nGone = 0;
+
+static bool isGone(uint16_t a) {
+    for (uint8_t i = 0; i < nGone; i++) if (gone[i] == a) return true;
+    return false;
+}
+
+static void saveGoneList() { prefs.putBytes("gone", gone, nGone * sizeof(uint16_t)); }
+
 static bool excluded(uint16_t a) {
     static const uint16_t ex[] = SWITCH_EXCLUDE;
     for (size_t i = 0; i < sizeof(ex) / sizeof(ex[0]); i++)
         if (ex[i] == a) return true;
-    return false;
+    return isGone(a);
 }
 
 static void mqttPub(const char *topic, const char *payload, bool retain) {
@@ -283,12 +306,59 @@ static void saveSwitchList() {
     prefs.putBytes("sw", list, nSwitches * sizeof(uint16_t));
 }
 
+static void loadGoneList() {
+    // Read BEFORE the switch list: learnSwitch() consults excluded(), so a seed or a saved switch
+    // that the house has since let go must find this list already in place or it comes straight back.
+    size_t n = prefs.getBytes("gone", gone, sizeof(gone)) / sizeof(uint16_t);
+    nGone = (uint8_t)min(n, (size_t)MAX_GONE);
+    if (nGone) Serial.printf("[sw] %u switch(es) the house is done with\n", nGone);
+}
+
 static void loadSwitchList() {
     static const uint16_t seed[] = SWITCH_SEED;
     for (size_t i = 0; i < sizeof(seed) / sizeof(seed[0]); i++) learnSwitch(seed[i], false);
     uint16_t list[MAX_SWITCHES];
     size_t n = prefs.getBytes("sw", list, sizeof(list)) / sizeof(uint16_t);
     for (size_t i = 0; i < n; i++) learnSwitch(list[i], false);
+}
+
+// Done with one switch: out of the list, out of Home Assistant, and written down so it stays out.
+// The three configs and four state topics are exactly what announce() and publishState() put there,
+// and every one of them is retained -- left behind, they are the switch coming back on their own.
+static void forgetSwitch(uint16_t addr) {
+    if (!isGone(addr) && nGone < MAX_GONE) { gone[nGone++] = addr; saveGoneList(); }
+    char t[128];
+    static const char *kinds[] = {"light", "binary_sensor", "sensor"};
+    static const char *tails[] = {"", "_motion", "_motion_level"};
+    for (int i = 0; i < 3; i++) {
+        snprintf(t, sizeof(t), "%s/%s/%s_%s_%04x%s/config", HA_PREFIX, kinds[i],
+                 cfg.mqttBase, netHex, addr, tails[i]);
+        mqttPub(t, "", true);
+    }
+    for (const char *leaf : {"state", "brightness", "motion", "motion_level"}) {
+        swTopic(t, sizeof(t), addr, leaf);
+        mqttPub(t, "", true);
+    }
+    for (uint8_t i = 0; i < nSwitches; i++) {
+        if (switches[i].addr != addr) continue;
+        for (uint8_t j = i; j + 1 < nSwitches; j++) switches[j] = switches[j + 1];
+        nSwitches--;
+        saveSwitchList();
+        break;
+    }
+    Serial.printf("[sw] the house is done with 0x%04x -- forgotten, and it stays forgotten\n", addr);
+}
+
+// The house clearing the standing instruction, for an address it means to use again.
+static void unforgetSwitch(uint16_t addr) {
+    for (uint8_t i = 0; i < nGone; i++) {
+        if (gone[i] != addr) continue;
+        for (uint8_t j = i; j + 1 < nGone; j++) gone[j] = gone[j + 1];
+        nGone--;
+        saveGoneList();
+        Serial.printf("[sw] 0x%04x may come back\n", addr);
+        return;
+    }
 }
 
 static int briOf(int16_t level) { return (int)((level * 255L + 500) / 1000); }
@@ -1234,6 +1304,10 @@ static void mqttCb(char *topic, uint8_t *payload, unsigned int len) {
     } else if (!strcmp(leaf, "brightness/set")) {
         int bri = constrain(atoi(msg), 0, 255);
         cmdLevel(addr, (bri * 100 + 127) / 255);
+    } else if (!strcmp(leaf, "forget")) {
+        // Safe from here: this touches no radio and no BLE, only NVS and four publishes, so it does
+        // not need the queue that `claim` and `cfg` do. An empty payload is the house clearing it.
+        if (msg[0]) forgetSwitch((uint16_t)addr); else unforgetSwitch((uint16_t)addr);
     }
 }
 
@@ -1281,6 +1355,10 @@ static void mqttReconnect() {
     snprintf(sub, sizeof(sub), "%s/%s/+/set", cfg.mqttBase, netHex);
     mqtt.subscribe(sub);
     snprintf(sub, sizeof(sub), "%s/%s/+/brightness/set", cfg.mqttBase, netHex);
+    mqtt.subscribe(sub);
+    // Retained, so a puck that was unplugged while the household got rid of a switch hears about it
+    // the moment it comes back -- which is the case the whole bug was made of.
+    snprintf(sub, sizeof(sub), "%s/%s/+/forget", cfg.mqttBase, netHex);
     mqtt.subscribe(sub);
     bridgeTopic(sub, sizeof(sub), "claim");
     mqtt.subscribe(sub);
@@ -1372,6 +1450,7 @@ void setup() {
     txSeq = prefs.getUInt("seq", 0) + 512;  // skip past anything unsaved at the last reset
     prefs.putUInt("seq", txSeq);
     ivIndex = prefs.getUInt("iv", cfg.ivIndex);
+    loadGoneList();          // before loadSwitchList(): learnSwitch() asks excluded(), which asks this
     if (ivIndex < cfg.ivIndex) ivIndex = cfg.ivIndex;   // the config was rewritten with a newer IV
     // A switch claimed by this puck joins the network this puck carries, on the
     // keys it was given -- which is why the puck to send a claim to is the one
