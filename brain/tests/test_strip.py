@@ -99,7 +99,7 @@ class FakeHA:
 
     async def call(self, domain, service, target, **kw):
         topic, payload = kw.get("topic"), kw.get("payload")
-        self.published.append((topic, payload))
+        self.published.append((topic, payload, bool(kw.get("retain"))))
         leaf = "/".join(topic.split("/")[2:])
         if leaf in self.answers and self.cb:
             back_leaf, back_payload = self.answers[leaf]
@@ -399,7 +399,7 @@ class Afterwards(unittest.TestCase):
     def tearDown(self): self.tmp.cleanup()
 
     def said(self, leaf):
-        return [p for t, p in self.hub.ha.published if t.endswith("/" + leaf)]
+        return [p for t, p, _ in self.hub.ha.published if t.endswith("/" + leaf)]
 
     def test_the_house_can_list_what_it_has(self):
         self.hub.ha.devices = [{"id": "dev1", "identifiers": [["mqtt", "strip_c8ebba"]]}]
@@ -436,6 +436,18 @@ class Afterwards(unittest.TestCase):
         st = self.s.status()
         self.assertEqual((st["state"], st["count"]), ("ready", 240))
         self.assertEqual(self.said("count/set"), ["240"])
+
+    def test_and_neither_the_color_order_nor_the_length_is_left_on_the_broker(self):
+        """The other two of the three. See TheLastTwoBeats for why, and item 31."""
+        run(self.s.revisit("c8ebba", "colors"))
+        run(self.s.saw("red"))
+        run(self.s.done())
+        run(self.s.revisit("c8ebba", "length"))
+        run(self.s.ends())
+        said = [t.split("/", 2)[2] for t, _, _ in self.hub.ha.published]
+        self.assertIn("order/set", said)
+        self.assertIn("count/set", said)
+        self.assertEqual([t for t, _, retain in self.hub.ha.published if retain], [])
 
     def test_a_strip_the_hub_has_never_heard_of_is_refused(self):
         with self.assertRaises(StripError):
@@ -817,6 +829,24 @@ class TheLastTwoBeats(unittest.TestCase):
         run(self.strips.put("den"))
         self.assertIn(("dev1", "den"), self.hub.ha.moved)
         self.assertEqual(self.strips.status()["state"], "ready")
+
+    def test_nothing_a_strip_is_told_is_left_on_the_broker(self):
+        """A retained command is a recording of an evening that ended weeks ago, replayed at every
+        reconnect, and it wins silently when it is stale. A `count/set 1` from a bench test had a
+        board believing it was one pixel long -- and a one-pixel strip looks exactly like a broken
+        one, from the wall and from the room.
+
+        The strip writes its length, its color order and its room into its own NVS, so the retain
+        was redundant as well as dangerous, and these are only ever said to a strip that is online
+        with somebody standing in front of it. Item 31, decided 22 September. The other half is in
+        the firmware, which retires a retained one rather than obeying it."""
+        self.at_the_room_beat()
+        self.hub.ha.devices = [{"id": "dev1", "identifiers": [["mqtt", "strip_2e4258"]]}]
+        run(self.strips.put("den"))
+        said = [t.split("/", 2)[2] for t, _, _ in self.hub.ha.published]
+        self.assertIn("room/set", said)            # or this proves nothing
+        kept = [t for t, _, retain in self.hub.ha.published if retain]
+        self.assertEqual(kept, [], "a strip was told something the broker will replay for ever")
 
     def test_a_light_the_house_has_not_made_yet_does_not_fail_the_setup(self):
         """Discovery is a moment behind the room chip, and a strip that is in the house but unplaced

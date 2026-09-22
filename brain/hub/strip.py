@@ -39,7 +39,7 @@ not reporting. So a strip keeps whatever the household set it to, and the panel 
 The radio is behind `Radio` for the same reason bridge.py hides pyserial behind `Cable`: the machine
 is tested with a fake one, and nothing in here needs a strip on a desk to run.
 """
-import asyncio, json, logging, re, time
+import asyncio, json, logging, time
 
 log = logging.getLogger("hub.strip")
 
@@ -508,6 +508,7 @@ class Strips:
         if self._woke and not self._woke.is_set(): self._woke.set()
 
     async def _tell(self, id_: str, leaf: str, payload: str, retain: bool = False) -> None:
+        """Say something to one strip. Nothing a strip is TOLD is retained -- see below."""
         try:
             await self.hub.ha.call("mqtt", "publish", {},
                                    topic=f"{BASE}/{id_}/{leaf}", payload=payload, retain=retain)
@@ -524,7 +525,7 @@ class Strips:
             got = self._heard.get(f"{id_}/{want}")
             if got is not None: return str(got)
             try: await asyncio.wait_for(self._woke.wait(), timeout=max(0.01, end - time.monotonic()))
-            except asyncio.TimeoutError: break
+            except TimeoutError: break
             self._woke.clear()
         return self._heard.get(f"{id_}/{want}")
 
@@ -788,7 +789,7 @@ class Strips:
             await self._show_red()
         except StripError as e:
             self._fail(str(e))
-        except Exception as e:
+        except Exception:
             log.exception("strip setup failed")
             self._fail("Setting that light strip up did not work. Unplug it and try again.")
 
@@ -868,7 +869,12 @@ class Strips:
     async def _settled(self, order: str) -> dict:
         j = self.job
         j["order"] = order
-        await self._tell(j["id"], "order/set", order, retain=True)
+        # NOT RETAINED, and none of the three setup commands is (item 31, decided 22 September).
+        # The strip writes each of these into its own NVS, so a retained copy on the broker is a
+        # second source of truth that is replayed at every reconnect and silently wins when it is
+        # stale. These are only ever said to a strip that is online and standing in front of
+        # somebody, so there is nothing for a retain to rescue.
+        await self._tell(j["id"], "order/set", order)
         # Somebody who came back to fix the colors did not ask to be walked through the length again.
         if j.get("revisit"):
             self._set("ready")
@@ -898,7 +904,8 @@ class Strips:
             return self._fail("The strip did not say how long it is. Try that again.")
         n = max(1, min(MOST, n))
         j["count"] = n
-        await self._tell(j["id"], "count/set", str(n), retain=True)
+        # Not retained: the strip remembers its own length. See order/set above.
+        await self._tell(j["id"], "count/set", str(n))
         # A strip that is already in a room keeps it. Asking again would be the panel forgetting
         # something the household told it once.
         self._set("ready" if j.get("revisit") else "room")
@@ -987,7 +994,8 @@ class Strips:
             raise StripError("There is no light strip waiting for a room.")
         j = self.job
         j["room"] = room_id
-        await self._tell(j["id"], "room/set", room_id, retain=True)
+        # Not retained: the strip remembers its own room. See order/set above.
+        await self._tell(j["id"], "room/set", room_id)
         if not await self._put_in_room(j["id"], room_id):
             # It is a light in the house either way, so this does not fail the setup -- but somebody
             # chose a room and it did not land, and the log is where that has to be said.

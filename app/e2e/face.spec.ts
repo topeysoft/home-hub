@@ -13,15 +13,15 @@ import { expect, test, type Page } from '@playwright/test'
 
 /* the standard property and the old alias, because which one survives the build is exactly the
    thing in question -- a surface is frosted if the browser ended up with either */
-async function frost(page: Page, sel: string) {
-  return page.evaluate((s) => {
+async function frost(page: Page, sel: string, pseudo = '') {
+  return page.evaluate(([s, p]) => {
     const el = document.querySelector(s)
     if (!el) return 'no such element'
-    const cs = getComputedStyle(el)
+    const cs = getComputedStyle(el, p || undefined)
     const std = cs.getPropertyValue('backdrop-filter')
     const wk = cs.getPropertyValue('-webkit-backdrop-filter')
     return [std, wk].find((v) => v && v !== 'none') ?? 'none'
-  }, sel)
+  }, [sel, pseudo])
 }
 
 /* a room card on home, and a lamp inside a room: the two surfaces a person actually looks at.
@@ -42,10 +42,15 @@ test('glass keeps its blur once the house is set to it', async ({ page }) => {
   expect(await frost(page, '.tile.light')).toContain('blur')
 })
 
+/* On a ground layer of its own, because that is where the frost lives now: a backdrop-filter on
+   .house-panel itself made every page of This house a child of a filtered element, and the first
+   page long enough to scroll drew its rows as bare icons with the text left behind. The blur moved
+   one box down to ::before and the look did not change -- so this asks the ground, and the question
+   it is really asking, whether the built panel is frosted at all, is unchanged. */
 test('a pane is frosted too, which is what makes it a pane', async ({ page }) => {
   await page.goto('/?face=glass&sheet=house&at=19:40', { waitUntil: 'networkidle' })
   await expect(page.locator('.house-panel')).toBeVisible()
-  expect(await frost(page, '.house-panel')).toContain('blur')
+  expect(await frost(page, '.house-panel', '::before')).toContain('blur')
 })
 
 /* A face decides what the panel is made of. It does not get to move a control, and this is what

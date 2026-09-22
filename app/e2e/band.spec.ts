@@ -69,14 +69,24 @@ test('a band that cannot fit its chips scrolls rather than growing', async ({ pa
    never was, because Home led with a greeting and an attention strip and the row did not begin
    until well below where the pane stopped. */
 test('an opened device stops short of the row, so the row is still there above it', async ({ page }) => {
-  const card = (await page.locator('.bento-card').first().boundingBox())!
-  await page.mouse.move(card.x + card.width / 2, card.y + 60)
+  const press = (await page.locator('.bento-card').first().boundingBox())!
+  await page.mouse.move(press.x + press.width / 2, press.y + 60)
   await page.mouse.down()
   await page.waitForTimeout(900)
   await page.mouse.up()
   await expect(page.locator('.opened-panel')).toHaveCount(1)
   await page.waitForTimeout(900)
 
+  /* The TOP OF THE ROW, which is not the top of the first card in it: the tall cards are inset into
+     the band on purpose (design/nightfall page 4 -- they are 0.83 of it, centered), so the one that
+     comes first in the markup already starts 41px down and measuring from it measures the inset
+     rather than the pane. What has to survive the pane is the row, so this asks the card that
+     reaches highest, which is where the band begins. */
+  const card = await page.locator('.bento').evaluate((row) => {
+    const tops = [...row.querySelectorAll('.bento-card')].map((c) => c.getBoundingClientRect())
+    const highest = tops.reduce((a, b) => (b.top < a.top ? b : a))
+    return { y: highest.top, height: highest.height }
+  })
   const pane = (await page.locator('.opened-panel').boundingBox())!
   const showing = pane.y - card.y
   expect(showing, 'the pane covers the row it came from, which makes it a new screen')

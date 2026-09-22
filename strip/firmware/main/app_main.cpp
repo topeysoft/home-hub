@@ -230,8 +230,34 @@ static void say_what_we_are() {
     say("status", "online", 1);
 }
 
-static void on_command(const std::string &leaf, const std::string &msg) {
+static void on_command(const std::string &leaf, const std::string &msg, bool retained) {
     if (leaf == "hello") { say_what_we_are(); return; }
+
+    // A COMMAND WHOSE ANSWER IS ALREADY IN NVS IS NEVER TAKEN FROM A RETAINED MESSAGE.
+    //
+    // How long the strip is, which order its colors come out in, whether it has a white channel and
+    // which room it lives in are all told to it once, during setup, and it writes each one down. A
+    // retained copy on the broker is therefore not a second way of hearing the same thing: it is a
+    // recording of an evening that has been over for weeks, replayed at every reconnect, and it wins
+    // silently because it arrives before anybody can say otherwise. A `count/set 1` from a bench test
+    // had a board believing it was one pixel long -- which looks exactly like a broken strip, from
+    // the wall and from the room.
+    //
+    // So a retained one is retired rather than obeyed: an empty payload, published retained, deletes
+    // it from the broker for good. The brain stopped retaining these on 22 September (item 31); this
+    // is the half that clears what is already out there, and it is on the device because the device
+    // is the only thing that knows its own NVS is not empty. The clear comes back to us as an
+    // ordinary message with no payload, which the same line below drops.
+    const bool remembered = (leaf == "count/set" || leaf == "order/set"
+                             || leaf == "room/set" || leaf == "white/set");
+    if (remembered && (retained || msg.empty())) {
+        if (retained) {
+            ESP_LOGI(TAG, "a retained %s was waiting on the broker; retiring it, what is written down wins",
+                     leaf.c_str());
+            say(leaf.c_str(), "", 1);
+        }
+        return;
+    }
 
     // THE ONE COMMAND THAT IS NOT ABOUT SETTING UP. On, off, how bright, what color -- the same four
     // things Matter carries, arriving the other way for a strip that came through our own door and so
@@ -338,7 +364,7 @@ static void mqtt_event(void *arg, esp_event_base_t, int32_t id, void *data) {
             const std::string prefix = std::string(chipHex) + "/";
             const size_t cut = topic.find(prefix);
             if (cut == std::string::npos) break;
-            on_command(topic.substr(cut + prefix.size()), msg);
+            on_command(topic.substr(cut + prefix.size()), msg, e->retain);
             break;
         }
         default: break;

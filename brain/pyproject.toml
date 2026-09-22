@@ -10,7 +10,9 @@ requires-python = ">=3.13"
 [tool.ruff]
 line-length = 180          # the code is written wide on purpose; long lines are not the bug we are hunting
 target-version = "py313"
-exclude = [".venv", "__pycache__"]
+# vendor/ is Espressif's esp_prov, copied in as it ships. Linting somebody else's code only makes
+# the next copy of it a merge conflict, and its generated protobuf modules are most of the noise.
+exclude = [".venv", "__pycache__", "vendor"]
 
 [tool.ruff.lint]
 select = [

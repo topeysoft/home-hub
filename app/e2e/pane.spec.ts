@@ -85,11 +85,14 @@ test('a lamp is dimmed by dragging its column, and the house hears once', async 
   expect(Number(JSON.parse(posts[0].split(' ')[1]).brightness_pct)).toBeGreaterThan(60)
 })
 
+/* A preset is a BRIGHTNESS the house is used to. The ceiling light here is pinned to a color
+   somebody chose, and a preset does not undo that -- so one tap is one number and nothing else.
+   Which lamps do get a white with their brightness is color.spec's, not this file's. */
 test('the three levels a lamp is used at are one tap each', async ({ page }) => {
   const posts = await open(page, 'living', '.tile.light.dimmable', '.rig-light')
   await page.locator('.pane-rig').getByText('Night', { exact: true }).click()
   await page.waitForTimeout(400)
-  expect(posts).toEqual(['/devices/l1/on {"brightness_pct":5,"color_temp_kelvin":2200}'])
+  expect(posts).toEqual(['/devices/l1/on {"brightness_pct":5}'])
 })
 
 test('a blind is dragged to a position, and can be stopped on the way', async ({ page }) => {

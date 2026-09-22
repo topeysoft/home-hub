@@ -1,0 +1,101 @@
+{
+  "artboards": [
+    {
+      "file": "Today.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Today \u2014 one radio, and it is in the garage"
+    },
+    {
+      "file": "Errand.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "A \u2014 the puck runs the errand"
+    },
+    {
+      "file": "Anyone.dc.html",
+      "x": 3120,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "B \u2014 everything you already own is an ear"
+    },
+    {
+      "file": "InHand.dc.html",
+      "x": 4680,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "C \u2014 the glass already in the room does it"
+    },
+    {
+      "file": "Deaf.dc.html",
+      "x": 1560,
+      "y": 1080,
+      "w": 1440,
+      "h": 900,
+      "title": "The failure \u2014 nothing in the house can hear it"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "why",
+      "x": -620,
+      "y": 0,
+      "w": 500,
+      "text": "WHERE A HUB IS, AND WHERE A LIGHT IS\n\nA hub goes where the Ethernet and the socket are: a garage, a cupboard, under the stairs. A strip goes where the household wants light. Our own door is Bluetooth, from the one radio inside the box, and Bluetooth will not cross that.\n\nTHIS IS MEASURED, NOT FEARED. On a Pi on 21 September: at -51 dBm an SRP6a session establishes first try; at -64 dBm the link dies three to five seconds in, every attempt; at -25 dBm it completes. Thirteen decibels is the whole difference, and a real strip is taped behind a television, which is a metal plane, in another room. Two software levers were tried and neither closed it -- what is left looks like RF. docs/strip.md item 15.\n\nWHAT SHIPPED INSTEAD IS AN APOLOGY. The wall now says \"set it up in the same room as the hub, then put it where you want it\". It is honest, it is a real improvement on the four different sentences that preceded it, and it quietly repeals \"put the hub wherever you like\" -- which is a promise the box makes. It is also not always possible: a mini PC hub may have no Bluetooth radio at all.\n\nTHE SHAPE OF THE ANSWER IS ALREADY DECIDED, AND IT IS NOT UP FOR ARGUMENT HERE. Whatever hears the strip is a courier. The hub opens the SRP6a session and the strip closes it, so the courier carries bytes it cannot read, and the press gate stays on the strip where item 23 put it -- a proxy that cannot decrypt and cannot press a button adds no trust surface at all. What these three boards argue about is WHO the courier is.\n\nA IS THE PUCK, the thing we already ship that already has a radio, already speaks MQTT to the hub, and is already in the hallway because that is where it has to be for the wall switches. B IS EVERYTHING, every powered thing of ours reporting what it heard, with the hub asking the loudest. C IS THE GLASS, the wall panel doing it over Web Bluetooth, which needs no hardware and makes the household meet a chooser full of the vocabulary this whole design has been deleting.\n\nRECOMMENDATION: A now, built so that B is only a longer list later -- the hub asking \"who can hear this\" is the same question whether one thing answers or four. C stays drawn and unbuilt, as the record of why the wall is not the radio. And the failure board is not a rival: it is the screen all three end at, and it has to be one sentence.\n\nAND, AS EVER, \"SOMETHING ELSE -- I'LL DESCRIBE IT\" IS A REAL OPTION. The intended answer has been outside the candidate set on this canvas before."
+    },
+    {
+      "id": "today",
+      "x": 0,
+      "y": -640,
+      "w": 560,
+      "text": "TODAY -- AND IT IS THE PROMISE, NOT A BUG\n\nDrawn from what ships: the last branch of app/src/StripSheet.vue carrying the brain's own sentence from brain/hub/strip.py:460.\n\nThe floor plan and the -72 are illustrative; the three measurements underneath are real and are the only numbers on this canvas that are.\n\nThe log on the right is the evening this was learned. Four failures, four different true-sounding sentences, and every one of them sent somebody to check a thing that was not wrong. The hub had the signal strength the whole time and threw it away. It keeps it now and replaces whatever the radio said with the distance whenever the strip was under -60 dBm -- which is why the collection's failure board insists on one cause and one sentence."
+    },
+    {
+      "id": "a",
+      "x": 1560,
+      "y": -640,
+      "w": 560,
+      "text": "A -- THE PUCK RUNS THE ERRAND\n\nThe hub hands a job to something that CAN hear the strip, over the MQTT session that already exists between them, and the puck does the GATT work: scan, connect, write what it was given, report what came back.\n\nThe sealed tube across the middle of the board is the whole security argument. One SRP6a session, opened at the hub and closed at the strip; the puck is the corridor. It can drop an errand. That is all it can do.\n\nWHAT IT BUYS, and no other board buys this: the household does nothing differently and no screen ever says the word \"puck\". It also frees the hub's own radio entirely, which is what makes a NUC with no Bluetooth an ordinary hub rather than a broken one.\n\nWHAT IS UNPROVEN, and it is the whole of the risk: the puck's ESP32 would be a GATT central while it is already a mesh proxy client on the same radio. Nothing here has tried that. It is the first thing to find out and it is a bench question, not a design one.\n\nAND THE HOLE IN IT: a house whose first purchase is the strip has no puck, and that is the house most likely to be setting something up. That case is board B's argument and the failure board's second screen."
+    },
+    {
+      "id": "b",
+      "x": 3120,
+      "y": -640,
+      "w": 560,
+      "text": "B -- EVERYTHING YOU ALREADY OWN IS AN EAR\n\nThe same errand as A without the single courier. Every powered thing of ours reports the strength it heard a knock at; the hub ranks them and asks the loudest.\n\nWHAT IT BUYS OVER A is that it stops treating the hub's radio as special -- it becomes one ear that happens to be in the wrong room -- and it gets better the longer somebody has owned our things, with no particular thing required. The ranked list is also a measurement, which is what lets a failure name a ROOM instead of a distance.\n\nWHAT IT COSTS is that a GATT central and an errand loop go into the smallest thing we ship: into a plug, into a strip whose one job is to be a light and not to stutter while it runs somebody else's handshake. It is A's unproven risk taken four times over.\n\nAND IT DOES NOT FIX THE FIRST PURCHASE. A house with one of our things in it still has no ear.\n\nSO IT IS PROBABLY NOT A RIVAL. Build A's question as \"who can hear this\", answered by one thing today and by a list later, and B costs nothing extra to arrive at."
+    },
+    {
+      "id": "c",
+      "x": 4680,
+      "y": -640,
+      "w": 560,
+      "text": "C -- THE GLASS ALREADY IN THE ROOM\n\nWeb Bluetooth, in the browser the panel is already running in. No hardware, no firmware, and the screen is usually in the room being lit.\n\nTHE BOARD IS DRAWN AROUND THE ONE THING THAT CANNOT BE DESIGNED AWAY: the browser will not hand a page a radio without putting its own chooser in front of it first. That chooser is the screen the whole of design/door/ exists to avoid -- two strips in a box are PROV_52e20 and PROV_2e425, the addresses rotate between scans so the row is different every time, and the household is asked to identify their own light by a string. The object was supposed to be the identity: it is the one that is lit.\n\nTHREE THINGS HAVE TO BE TRUE AND NONE HAS BEEN TRIED HERE. A secure context, and the wall is served plain http on the LAN. A browser with the API, and the wall is an Android WebView, not Chrome. And somebody standing at the glass, because the gesture is the permission model -- so this cannot run at three in the morning and cannot run from a phone in another house.\n\nKEEP IT DRAWN AND UNBUILT, the way design/door/ShowMe.dc.html is kept: it is the record of why the wall is not the radio."
+    },
+    {
+      "id": "fail",
+      "x": 900,
+      "y": 1080,
+      "w": 560,
+      "text": "THE FAILURE, AND IT IS NOT A FOURTH DIRECTION\n\nEvery answer here fails the same way and all three end at this screen, so it is drawn once.\n\nTWO SHAPES, AND THEY ARE NOT THE SAME SCREEN. One is a thing that knocked too quietly to finish, which is a failure and is reported as one -- and the gain over the shipped sentence is that it can name the nearest ear, so the household is told WHICH ROOM rather than \"the hub\". The other is a house where nothing is listening at all, which is not a failure because nothing ever knocks: today it is a wall that stays empty while a strip advertises in the next room for forty-eight hours. That one is said in Add, before anything is tried.\n\nTHE RULE UNDERNEATH is the one this whole collection is downstream of. One cause and one sentence; below -60 dBm the distance IS the reason and whatever the radio said that minute is discarded; never two reasons, because that is the household checking both; and no dBm on the wall ever -- \"the nearest thing that can hear it is in the hall\" is a measurement in the only units a household has."
+    }
+  ],
+  "reading": [
+    "why",
+    "today",
+    "Today.dc.html",
+    "a",
+    "Errand.dc.html",
+    "b",
+    "Anyone.dc.html",
+    "c",
+    "InHand.dc.html",
+    "fail",
+    "Deaf.dc.html"
+  ]
+}

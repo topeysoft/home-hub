@@ -1,0 +1,140 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp-rgb: 233,184,114; --lamp: rgb(var(--lamp-rgb)); --lamp-ink: #2a1c07;
+      --live-rgb: 116,198,157; --live: rgb(var(--live-rgb));
+      --danger-rgb: 224,138,138; --danger: rgb(var(--danger-rgb));
+      --r-lg: 22px; --r-md: 16px;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .sheet { width: 560px; border-radius: 26px; background: rgba(22,24,30,.92);
+             border: 1px solid var(--edge-hi); box-shadow: 0 40px 100px -30px rgba(0,0,0,.9); overflow: hidden; }
+    .sheet h2 { margin: 0; font-size: 34px; line-height: 1.05; font-weight: 400; letter-spacing: -.025em; }
+    .lede { margin: 0 0 18px; color: var(--ink-2); font-size: 15px; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 26px;
+           border-radius: 999px; background: var(--ink); color: var(--bg); font-weight: 500; font-size: 17px; }
+    .btn.ghost { background: var(--surface-hi); color: var(--ink); border: 1px solid var(--edge); }
+    .t1 { font-size: 15.5px; font-weight: 500; }
+    .t2 { font-size: 13px; color: var(--muted); }
+    .box { border-radius: var(--r-lg); border: 1px solid var(--edge); background: rgba(255,255,255,.03); padding: 20px 22px; }
+    .box.for { border-color: rgba(var(--live-rgb),.3); background: linear-gradient(rgba(var(--live-rgb),.07), rgba(var(--live-rgb),.07)), rgba(255,255,255,.02); }
+    .box.against { border-color: rgba(var(--danger-rgb),.3); background: rgba(var(--danger-rgb),.05); }
+    .box p { margin: 10px 0 0; font-size: 14.5px; line-height: 1.6; color: var(--ink-2); }
+    .box p strong { font-weight: 500; color: var(--ink); }
+    .strip { height: 22px; border-radius: 4px;
+             background: repeating-linear-gradient(90deg, rgb(255,96,0) 0 4px, transparent 4px 7px);
+             filter: drop-shadow(0 0 9px rgba(255,140,40,.7)); }
+    .stage { position: relative; padding: 34px 24px 28px; border-radius: 20px;
+             background: rgba(255,255,255,.03); border: 1px solid var(--edge); overflow: hidden; }
+    .glow { position: absolute; left: 0; right: 0; top: -40px; height: 160px;
+            background: radial-gradient(42% 54% at 50% 50%, rgba(255,140,40,.26), transparent 72%); }
+    .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12.5px; letter-spacing: -.01em; }
+    .node { border-radius: var(--r-md); border: 1px solid var(--edge); background: var(--surface);
+            padding: 16px 18px; }
+    .node .t { font-size: 16px; font-weight: 500; }
+    .node .s { display: block; margin-top: 3px; font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+    .wire { display: flex; align-items: center; gap: 8px; color: var(--muted); }
+    .plan { position: relative; border-radius: var(--r-lg); border: 1px solid var(--edge);
+            background: rgba(255,255,255,.022); overflow: hidden; }
+    .rm { position: absolute; border: 1px solid var(--edge); border-radius: 10px; background: rgba(255,255,255,.02); }
+    .rm > span { position: absolute; left: 12px; top: 9px; font-size: 11.5px; letter-spacing: .1em;
+                 text-transform: uppercase; color: var(--muted); }
+    .dbm { font-variant-numeric: tabular-nums; font-weight: 500; }
+  </style>
+</helmet>
+
+<style>
+  .rule { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0; }
+  .rule > div { padding: 0 26px; border-left: 1px solid var(--edge); }
+  .rule > div:first-child { padding-left: 0; border-left: 0; }
+  .rule h4 { margin: 0 0 8px; font-size: 15.5px; font-weight: 500; }
+  .rule p { margin: 0; font-size: 14px; line-height: 1.6; color: var(--ink-2); }
+  .near { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 12px;
+          padding: 13px 15px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--edge); }
+</style>
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: var(--bg); color: var(--ink); font-size: 17px; line-height: 1.4;">
+  <div style="position: absolute; inset: 0; background: linear-gradient(rgb(29,33,46) 0%, rgb(41,42,63) 44%, rgb(92,63,57) 84%, rgb(62,44,42) 100%);"></div>
+  <div style="position: absolute; left: -222px; top: -135px; width: 1855px; height: 1156px; background: radial-gradient(58% 54% at 30% 64%, rgba(72,63,135,.4), transparent 68%), radial-gradient(62% 52% at 54% 110%, rgba(55,51,100,.44), transparent 72%);"></div>
+  <div style="position: absolute; inset: 0; background: rgba(6,7,9,.58);"></div>
+
+  <div class="cap" style="position: absolute; left: 60px; top: 44px;">The failure &mdash; nothing in the house can hear it</div>
+
+  <h3 class="dsp" style="position: absolute; left: 60px; top: 80px; width: 1100px; margin: 0; font-size: 32px; font-weight: 400;">Every answer on this canvas fails the same way, and it has to fail in one sentence.</h3>
+  <p style="position: absolute; left: 60px; top: 144px; width: 1320px; margin: 0; color: var(--ink-2); font-size: 15.5px; line-height: 1.6;">More ears make this rarer; none of them make it impossible. There are two shapes of it and they are not the same screen: <strong style="color: var(--ink); font-weight: 500;">one is a thing that knocked too quietly to finish</strong>, and <strong style="color: var(--ink); font-weight: 500;">one is a house where nothing will ever knock at all</strong> &mdash; which today shows up as a wall that stays empty and a household who thinks the strip is broken.</p>
+
+  <!-- 1: heard, but not well enough -->
+  <div class="cap" style="position: absolute; left: 60px; top: 236px;">One &mdash; heard, and not well enough to finish</div>
+  <div class="sheet" style="position: absolute; left: 60px; top: 268px;">
+    <div style="display: flex; align-items: flex-start; gap: 14px; padding: 24px 22px 6px 28px;">
+      <h2 class="dsp" style="flex: 1;">It is too far away to set up.</h2><div style="width: 38px; height: 38px; border-radius: 999px; background: var(--surface-hi); border: 1px solid var(--edge); display: grid; place-items: center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-2)" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
+    </div>
+    <div style="padding: 4px 28px 26px;">
+      <p class="lede">It is faint enough that the conversation keeps breaking off. Plug it in nearer, set it up there, and then put it where you want it &mdash; it stays set up once it is in.</p>
+      <div class="near" style="margin-bottom: 18px;">
+        <span style="width: 34px; height: 34px; border-radius: 10px; background: rgba(var(--live-rgb),.14); border: 1px solid rgba(var(--live-rgb),.3); display: grid; place-items: center;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--live)" stroke-width="2" stroke-linecap="round"><path d="M12 19v2M8 6a4 4 0 118 0v5a4 4 0 01-8 0z"/><path d="M5 11a7 7 0 0014 0"/></svg>
+        </span>
+        <span><span class="t1">The nearest thing that can hear it is in the hall</span><span class="t2" style="display: block; margin-top: 2px;">Anywhere on that side of the house will do</span></span>
+      </div>
+      <div style="display: flex; gap: 10px;"><span class="btn" style="flex: 1;">Try again</span><span class="btn ghost">Not now</span></div>
+    </div>
+  </div>
+  <div class="t2" style="position: absolute; left: 60px; top: 646px; width: 560px; line-height: 1.6;">Naming the nearest ear is the whole gain over the shipped sentence, which could only ever say &ldquo;the hub&rdquo;. A household told <em>which room</em> does not have to guess.</div>
+
+  <!-- 2: nothing will ever knock -->
+  <div class="cap" style="position: absolute; left: 700px; top: 236px;">Two &mdash; nothing here is listening at all</div>
+  <div class="sheet" style="position: absolute; left: 700px; top: 268px;">
+    <div style="display: flex; align-items: flex-start; gap: 14px; padding: 24px 22px 6px 28px;">
+      <h2 class="dsp" style="flex: 1;">This hub cannot hear new things arriving.</h2><div style="width: 38px; height: 38px; border-radius: 999px; background: var(--surface-hi); border: 1px solid var(--edge); display: grid; place-items: center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-2)" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
+    </div>
+    <div style="padding: 4px 28px 26px;">
+      <p class="lede">A light strip says hello over Bluetooth, and there is nothing in this house with an ear for it. Plug something of ours into a socket in the middle of the house and it will listen on the hub&rsquo;s behalf.</p>
+      <div class="near" style="margin-bottom: 18px; border-color: rgba(var(--danger-rgb),.3); background: rgba(var(--danger-rgb),.06);">
+        <span style="width: 34px; height: 34px; border-radius: 10px; background: rgba(var(--danger-rgb),.14); border: 1px solid rgba(var(--danger-rgb),.3); display: grid; place-items: center;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2" stroke-linecap="round"><path d="M4 4l16 16M12 19v2M8 6a4 4 0 017-2.6M16 11V6M5 11a7 7 0 0011.3 5.5"/></svg>
+        </span>
+        <span><span class="t1">No ears in this house</span><span class="t2" style="display: block; margin-top: 2px;">This box has no Bluetooth of its own</span></span>
+      </div>
+      <div style="display: flex; gap: 10px;"><span class="btn ghost" style="flex: 1;">Got it</span></div>
+    </div>
+  </div>
+  <div class="t2" style="position: absolute; left: 700px; top: 646px; width: 560px; line-height: 1.6;"><strong style="color: var(--ink); font-weight: 500;">Said in Add, before anything is tried</strong> &mdash; nothing ever knocks here, so there is no failure to report. Today it is a wall that stays empty.</div>
+
+  <div class="box" style="position: absolute; left: 60px; right: 60px; top: 706px;">
+    <span class="cap">The rule this whole collection is downstream of</span>
+    <div class="rule" style="margin-top: 16px;">
+      <div>
+        <h4>One cause, one sentence.</h4>
+        <p>Below &minus;60 dBm the distance <em>is</em> the reason, and whatever the radio said that minute is discarded. Four sentences in one evening, four things checked that were not wrong.</p>
+      </div>
+      <div>
+        <h4>Never two reasons.</h4>
+        <p>Giving the distance <em>and</em> the library&rsquo;s error is the household checking both. A log line that reads <span class="mono">()</span> told nobody anything.</p>
+      </div>
+      <div>
+        <h4>Say the room, not the radio.</h4>
+        <p>No dBm on the wall, ever. &ldquo;The nearest thing that can hear it is in the hall&rdquo; is a measurement in the only units a household has.</p>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

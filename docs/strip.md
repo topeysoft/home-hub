@@ -12,17 +12,17 @@ meant to be read.*
 ## Picking this up
 
 *The rest of this document is how it got here, which is worth reading before changing any of it. This section
-is where it stands, as of 21 September 2026.*
+is where it stands, as of 22 September 2026.*
 
 ### Where each piece is
 
 | | |
 |---|---|
-| **Design** | 27 boards in `design/strip/`, 3 in `design/door/`, 3 in `design/occasion/`. The last row of `design/strip/` is the press and the rung below it |
+| **Design** | 27 boards in `design/strip/`, 3 in `design/door/`, 3 in `design/occasion/`, 5 in `design/ears/`. The last row of `design/strip/` is the press and the rung below it; `design/ears/` is how a hub reaches a strip it cannot hear, and it is drawn and unbuilt |
 | **Firmware** | ESP-IDF + esp-matter, **commissionable over BLE, proven on an ESP32-S3** |
-| **Brain** | both doors: knock → adopt → (press → rhythm | code) → set up. 68 tests. Our door carries the broker |
+| **Brain** | both doors: knock → adopt → (press → rhythm | code) → set up. 71 tests. Our door carries the broker |
 | **Panel** | the beats including the press, previewable with `?strip=knocking\|press\|rhythm\|working\|ready`; and the two rows a strip adds to its own light pane |
-| **Suites** | brain 1135, panel 502, native firmware test, all green |
+| **Suites** | brain 1137, panel 502, native firmware test, all green |
 
 ### What is proven on hardware, and what is not
 
@@ -67,16 +67,14 @@ that did not exist, a fake home that was a list, and no broker.
 
 ### The next three things, in order
 
-1. **The distance between a hub and a device is unsolved, and it is the one that matters.** A hub goes
-   where the Ethernet and the access point are — a garage, a cupboard — and a strip goes where the
-   household wants light. BLE will not cross that, and "set it up in the same room as the hub" quietly
-   repeals "put the hub wherever you like". The answer is almost certainly the bridge puck as an errand
-   runner: the hub hands it a job over MQTT, it does the GATT work, and **the SRP6a session stays end to
-   end**, so the puck carries ciphertext it cannot read and the press gate stays on the device — a proxy
-   adds no trust surface at all. **Wants boards first** (`design/ears/`): the puck as errand runner, the
-   wall panel as proxy (Web Bluetooth, no new hardware, but it needs a chooser and a tap, which fights
-   "the object is the identity"), and the "nothing in your house can hear it" failure. Item 15's 13 dB is
-   the same problem measured on a bench; `hardware/` has still never had the conversation.
+1. **The distance between a hub and a device. Drawn and decided on 22 September; not built.**
+   `design/ears/` has five boards and the direction is **A, the bridge puck as an errand runner** — the
+   hub hands it a job over MQTT, it does the GATT work, and **the SRP6a session stays end to end**, so
+   the puck carries bytes it cannot read and the press gate stays on the strip. Item 33.
+   **The first thing to find out is a bench question and nothing should be designed past it:** can the
+   puck's ESP32 be a GATT central while it is already a mesh proxy client on the same radio? Nothing
+   here has ever tried. Item 15's 13 dB is the same problem measured on a bench; `hardware/` has still
+   never had the conversation.
 2. **The partial-commissioning bug.** A Matter adopt reported failure on the wall and left a fabric
    behind, which silently bricks a strip until somebody knows the five-second hold exists. Item 24 is its
    cousin and is fixed; this one is not, and neither is the fact that **nothing on the wall ever says a
@@ -85,10 +83,9 @@ that did not exist, a fake home that was a list, and no broker.
 3. **A button, reachable, on the outside of every product** (item 23). Our whole door rests on it and it
    has never been written down as a hardware requirement. Free now, impossible later.
 
-**And one decision waiting rather than a task:** retained command topics (`count/set`, `order/set`,
-`room/set`) are replayed to a strip for ever, and the strip already keeps all three in its own NVS. A
-stale one silently wins — a `count/set 1` had a board believing it was one pixel long. Dropping the
-retain is probably right and is a change to how a strip is told things, so it is item 31 and not done.
+**And the decision that was waiting is taken:** the three setup commands are no longer retained, and
+the strip retires a retained one rather than obeying it. Item 33. **It is written and it has not run on
+a board** — no ESP32 was plugged into the machine that wrote it.
 
 ### Decided, and not to be reopened without a reason
 
@@ -109,6 +106,14 @@ retain is probably right and is a change to how a strip is told things, so it is
   `design/door/ShowMe.dc.html` is the rung the door canvas names for out-of-reach things and it stays drawn
   and unbuilt: for a strip it would move the gate onto the hub.
 
+- **How a hub reaches a device it cannot hear: the bridge puck runs the errand** (22 September,
+  `design/ears/`, direction A). Whatever hears the strip is a courier and nothing more: the hub opens the
+  SRP6a session, the strip closes it, and the press gate stays on the strip. Build the hub's question as
+  *who can hear this*, so `Anyone` — every powered thing of ours answering, and the hub asking the
+  loudest — is only a longer list later rather than a second design. `InHand` (the wall over Web
+  Bluetooth) stays drawn and unbuilt, the way `design/door/ShowMe.dc.html` is: it is the record of why
+  the wall is not the radio, and its three preconditions are all false here today.
+- **Nothing a strip is told is retained** (22 September, item 33). The device's own NVS is the memory.
 - **ESP-IDF, not Arduino.** Arduino compiles Matter-over-BLE out on every target; a strip built that way cannot
   be set up by Apple or Google at all. Evidence both ways is in this document.
 - **The partition table** (`partitions-matter.csv`), sized for Matter with the certification partitions laid
@@ -641,6 +646,42 @@ real annual cost before a unit ships — and inserts the product into the most q
 the house, which is how these things get returned. The camera route avoids all of that and costs a camera
 pointed into a living room. **The cheap next step is neither: a capture stick and HyperHDR on a bench,
 to find out whether it feels like the screen extended or like a gimmick, before any of it is paid for.**
+
+**33. The distance is drawn and the courier is chosen; and the retain is gone, in two halves.**
+22 September, and neither half has run on a board — nothing was plugged into this machine.
+
+**`design/ears/`, five boards.** `Today` (one radio, and it is in the garage), `Errand` (A — the bridge
+puck runs the errand), `Anyone` (B — every powered thing of ours is an ear and the hub asks the loudest),
+`InHand` (C — the wall over Web Bluetooth) and `Deaf`, the failure all three end at. **A was chosen**, and
+the case for each is in `design/ears/canvas.json` beside its board. Two things the boards settled that the
+prose had not: *B is not a rival* — build A's question as "who can hear this" and B is a longer list later
+— and *C is dead here for three reasons rather than one*: Web Bluetooth needs a secure context and the
+wall gets plain `http://` on the LAN, it needs the API and the wall is an Android **WebView** rather than
+Chrome, and it needs a person standing at the glass because the gesture *is* the permission model.
+
+**And `Deaf` found a screen nobody had noticed was missing.** A house whose hub has no Bluetooth at all
+is not a failure to report — nothing ever knocks, so there is nothing to report on. Today that house is a
+wall that stays empty while a strip advertises in the next room for forty-eight hours. That sentence
+belongs in **Add**, before anything is tried, and it is not built.
+
+**The retain: `count/set`, `order/set` and `room/set` are published without it now.** The strip writes all
+three into its own NVS, so the retained copy was a second source of truth that is replayed at every
+reconnect and wins silently when it is stale — item 31's `count/set 1` from a bench test, and a board
+that believed it was one pixel long. Pinned by two tests that fail with the flag put back.
+
+**THE OBVIOUS WAY TO CLEAR WHAT IS ALREADY ON THE BROKER IS A TRAP, AND IT IS WORSE THAN THE BUG.** An
+empty retained payload is how a retained topic is deleted — and to the firmware that has been shipping,
+an empty `count/set` is `atoi("") == 0`, so the brain sweeping the broker clean would tell every strip in
+every house that it is zero pixels long. **So the clear is on the device, not in the brain:** a command
+whose answer is already in NVS is never taken from a retained message, and the strip publishes the empty
+payload itself to retire it. Only firmware that has this line ever sends one. `e->retain` off the MQTT
+event is what tells the two apart, and the broker delivers our own clear back with the flag off and no
+payload, which the same line drops.
+
+**What is not proven:** that the firmware half does what it says on silicon. It compiles (`0x1a3910`,
+56% free) and no board was attached. The thing to watch for is the log line
+*a retained count/set was waiting on the broker; retiring it* on a board that has one, the real count
+surviving it, and `mosquitto_sub -t 'strip/+/count/set' -v` coming back empty afterwards.
 
 **32. The three things a household found in the first run that reached the end.** Reported 21 September,
 all three real, and the first two are one bug.
