@@ -297,6 +297,18 @@ async function level(l: typeof LEVELS[number]) {
         </button>
     </div>
 
+
+    <div class="rig-levels" v-if="!tuning">
+      <span class="rig-lbl">The three it is used at</span>
+      <button v-for="l in LEVELS" :key="l.id" class="rig-card" :class="{ on: here === l.id }" :disabled="dead" @click="level(l)">
+        <span class="rig-card-icon"><Icon :name="l.icon" :size="18" /></span>
+        <span class="rig-card-text">
+          <span class="rig-card-name">{{ l.name }}</span>
+          <span class="rig-card-sub">{{ here === l.id ? 'Where it is now' : l.sub }}</span>
+        </span>
+      </button>
+    </div>
+
     <!-- The strip-shaped part, and the only part of this pane that knows what a strip is. AT THE
          FOOT and across the whole width, not a column beside the others: the board's argument is
          that a strip is an ordinary light with two extra rows, and a fourth column squeezes the
@@ -315,17 +327,6 @@ async function level(l: typeof LEVELS[number]) {
         <span class="rig-card-text">
           <span class="rig-card-name">The colors look wrong</span>
           <span class="rig-card-sub">Asks the red question again. A strip bought later may not be the same make.</span>
-        </span>
-      </button>
-    </div>
-
-    <div class="rig-levels" v-if="!tuning">
-      <span class="rig-lbl">The three it is used at</span>
-      <button v-for="l in LEVELS" :key="l.id" class="rig-card" :class="{ on: here === l.id }" :disabled="dead" @click="level(l)">
-        <span class="rig-card-icon"><Icon :name="l.icon" :size="18" /></span>
-        <span class="rig-card-text">
-          <span class="rig-card-name">{{ l.name }}</span>
-          <span class="rig-card-sub">{{ here === l.id ? 'Where it is now' : l.sub }}</span>
         </span>
       </button>
     </div>
