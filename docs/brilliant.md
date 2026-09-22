@@ -1199,3 +1199,60 @@ done, and nobody is sent to a wall. If it does not, pull the tab out and push it
 That is the correct shape for a step that is *sometimes* needed and cheap when it is — and it is how
 the person with the lamp in front of them described it, unprompted, which is the second time tonight
 that has beaten an instrument.
+
+### The load type governs the wall plate too, and the field is down to four candidates
+
+*22 September. One finding from a person at a wall, one from a file that had been sitting on disk since
+the 16th, and then the clean read that settles what the file could only suggest.*
+
+**The plate obeys the load type.** The open question at the foot of the adopt spec was whether the
+unidentified dimmer/switch field governs only the mesh `Level Set` path or the switch's own touch
+gesture as well. It governs both: our stairway pair was worked by hand and **both ends are on/off only
+from the switches themselves** — a slide on the plate does not move the lamp. Nothing was written and
+nothing was reset to learn this; somebody stood at the wall.
+
+That matters more for the product than for the protocol. A household that wants a light to behave as a
+plain switch — because the LED on it cannot dim, or because a stairway has no business having a
+brightness — cannot be served by hiding a slider in the panel, because the wall would still dim. It is
+one setting, written to the switch, or it is a lie about the light. **So the field that was a curiosity
+is now the whole feature**, and identifying it buys both cases at once.
+
+**The clean read, on our own network.** `0x0005` is the hallway dimmer and it dims; `0x0006` is the
+stairway load and it does not. Both were read with `vendor_store.py`, which writes nothing. Both carry
+`0x08 = 0`, so **both are mains with a load and neither is a companion** — which rules out the confound
+that the difference might be about pairing rather than dimming. Every field that differs, with the
+identity, counter and live-reading fields set aside:
+
+| Field | `0x0005` dims | `0x0006` on/off | |
+|---|---|---|---|
+| `0x4c` | 100 | **1000** | |
+| `0x4d` | 0 | **1800** | the candidates |
+| `0x52` | 100 | **1000** | |
+| `0x53` | 0 | **1800** | |
+| `0x1a` | 2 | 1 | already disproved — two working dimmers differed here |
+| `0x03` | 200 | 0 | a motion reporting threshold, not dimming — but see below |
+| `0x56` | 3 | 3 | **reads 3 on both**, confirming both that it is not the flag and that the 16 September capture's missing `0x56` was the dropped read |
+
+`0x4b` and `0x51` are identical on both (`e803010000`), and the shape is hard to miss: **`(0x4b, 0x4c,
+0x4d)` and `(0x51, 0x52, 0x53)` are two parallel triples**, differing only in the second and third
+member. `0x4c`/`0x52` sitting at **1000** on the non-dimmer is the suggestive part, because 1000 is the
+top of the dim scale — a level pinned to full would produce exactly a switch that echoes a level and
+never moves the lamp. `0x4d`/`0x53` at 1800 reads more like a time in milliseconds.
+
+**`0x53` is not replayed by the adopt.** `CONFIG_FIELDS` in `tools/restore_switch.py` is `1a 1b 48 4f 56
+03 07 4c 4d 52` — it carries `0x4c`, `0x4d` and `0x52` but not `0x53`, which on this evidence moves with
+`0x4d` and may well belong to the same setting. Worth adding whatever the bisect concludes.
+
+**What is left is one write and a person watching a lamp**, and it is cheap now in a way it never was,
+because the power cycle turned out to be a fallback rather than a step. Treating the two triples as two
+settings, it is at most two trials on `0x0006`: set `0x4c` and `0x52` to 100, try `Level Set`; if the
+lamp still will not move, set `0x4d` and `0x53` to 0 and try again. It is reversible in both directions
+— the original values are `0x4c`/`0x52` = `e803`, `0x4d`/`0x53` = `0807` — and the interesting direction
+for the product is the opposite one anyway: making a dimmer behave as a plain switch, which is the same
+write with the values swapped.
+
+**A side finding from the same reads, worth fixing whether or not the above pans out.** The stairway
+load carries `0x03 = 0` with `0x48` and `0x4f` both enabled, where the hallway dimmer has 200, and the
+spec above says a threshold of zero floods the mesh. Its capture had the zero too, so the adopt replayed
+it faithfully and that switch has most likely been publishing its motion field at full rate since it was
+claimed.
