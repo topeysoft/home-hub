@@ -905,6 +905,52 @@ class TheLastTwoBeats(unittest.TestCase):
         kept = [t for t, _, retain in self.hub.ha.published if retain]
         self.assertEqual(kept, [], "a strip was told something the broker will replay for ever")
 
+    def test_a_room_that_could_not_be_applied_yet_is_kept_rather_than_dropped(self):
+        """Reported from a real house on 22 September. The device had not been made yet, the twenty
+        seconds ran out, the placing was given up on -- and the wall said "It's in" with only a log
+        line to say otherwise. The household reset the strip and did the whole thing again, and the
+        second run worked because the device the first run had waited for existed by then.
+
+        A room somebody chose is a fact this brain holds, not a request that expires while Home
+        Assistant catches up."""
+        self.at_the_room_beat()
+        self.hub.ha.devices = []
+        import hub.strip as strip_mod
+        was, strip_mod.PLACE_WAIT = strip_mod.PLACE_WAIT, 0
+        try: run(self.strips.put("den"))
+        finally: strip_mod.PLACE_WAIT = was
+        self.assertEqual(self.strips._owed, {"2e4258": "den"})
+
+    def test_and_the_wall_says_so_instead_of_claiming_the_light_is_there(self):
+        """The sentence that sent somebody to set a working strip up a second time."""
+        self.at_the_room_beat()
+        self.hub.ha.devices = []
+        import hub.strip as strip_mod
+        was, strip_mod.PLACE_WAIT = strip_mod.PLACE_WAIT, 0
+        try: run(self.strips.put("den"))
+        finally: strip_mod.PLACE_WAIT = was
+        self.assertEqual(self.strips.status().get("placing"), "Den")
+
+    def test_and_nothing_is_said_when_the_light_did_land_in_its_room(self):
+        self.at_the_room_beat()
+        self.hub.ha.devices = [{"id": "dev1", "identifiers": [["mqtt", "strip_2e4258"]]}]
+        run(self.strips.put("den"))
+        self.assertEqual(self.strips._owed, {})
+        self.assertNotIn("placing", self.strips.status())
+
+    def test_and_it_lands_the_moment_the_house_has_made_the_device(self):
+        """Nothing is asked of the household. They answered the question once."""
+        self.at_the_room_beat()
+        self.hub.ha.devices = []
+        import hub.strip as strip_mod
+        was, strip_mod.PLACE_WAIT = strip_mod.PLACE_WAIT, 0
+        try: run(self.strips.put("den"))
+        finally: strip_mod.PLACE_WAIT = was
+        # the house catches up, the way it did a moment after the twenty seconds ran out
+        self.hub.ha.devices = [{"id": "dev1", "identifiers": [["mqtt", "strip_2e4258"]]}]
+        self.assertTrue(run(self.strips._put_in_room("2e4258", "den", tries_for=0)))
+        self.assertIn(("dev1", "den"), self.hub.ha.moved)
+
     def test_a_light_the_house_has_not_made_yet_does_not_fail_the_setup(self):
         """Discovery is a moment behind the room chip, and a strip that is in the house but unplaced
         is still a strip that is in the house."""

@@ -65,9 +65,16 @@ const lede = computed(() => {
     return 'Filling up again, from the end it plugs in at. Tap when it reaches the far end of the strip as it is now.'
   return ''
 })
+/* THE LAST BEAT DOES NOT CLAIM THE ROOM IT HAS NOT GOT. Putting a light in a room needs the house
+   to have made a device for it, and discovery is a moment behind the room chip -- in a real house on
+   22 September it was more than twenty seconds behind, the placing was given up on, and this line
+   said "in the room it lives in" anyway. The household read that, saw the light in the wrong place,
+   and set the whole strip up again. The brain keeps the choice now (hub/strip.py `_owed`), so this
+   only has to say which of the two is true. */
 const finished = computed(() =>
   back.value === 'colors' ? 'Its colors are right now.'
   : back.value === 'length' ? 'It knows where it ends now.'
+  : b.value?.placing ? `It is a light in the house now — on, dim, any color, on a schedule. It will be in ${b.value.placing} as soon as the house has finished noticing it.`
   : 'It is a light in the house now — on, dim, any color, on a schedule, in the room it lives in.')
 
 /* ONE STEP, where a bridge has three. The hub does not hand over the Wi-Fi any more and never sees
@@ -116,7 +123,15 @@ const dismiss = () => run(dismissStrip)
 const saw = (what: string) => { other.value = false; run(() => stripSaw(what)) }
 const ends = () => run(stripEnds)
 const again = () => run(stripAgain)
-const room = (id: string) => run(() => stripRoom(id))
+/* WHICH ONE WAS TAPPED, SAID AT ONCE AND BY THE THING THAT WAS TAPPED. The chips used to carry
+   `busy` -- which every chip got, so the whole row dimmed together and none of them said "you
+   picked me". They were also styled `chip`, which is the camera tile's status badge and not a
+   button at all: no press state, because it was never meant to be pressed. This is `chip-btn`, the
+   room picker the panel already uses for this same question under Add, and the answer is set before
+   the request goes out, because the person has to see their own tap land. Nothing vanishes under
+   the finger that touched it (AGENTS.md §4). */
+const chose = ref('')
+const room = (id: string) => { chose.value = id; run(() => stripRoom(id)) }
 
 /* A PRESS, ON THE THING (design/door/PressIt.dc.html, design/strip/Press.dc.html). The one thing our
    own door asks, and there is nothing on this screen to do: the session is already open, the strip is
@@ -305,8 +320,9 @@ onUnmounted(() => window.removeEventListener('keydown', key, true))
         <template v-else-if="b.state === 'room'">
           <p class="sheet-lede">That is the only thing left to say. It is lit, all of it, and it is yours.</p>
           <div class="stage"><StripArt show="lit" /></div>
-          <div class="rooms">
-            <button class="chip" v-for="r in b.rooms ?? []" :key="r.id" :class="{ busy }" @click="room(r.id)">{{ r.name }}</button>
+          <div class="press-rooms">
+            <button class="chip-btn" v-for="r in b.rooms ?? []" :key="r.id" :class="{ on: chose === r.id }"
+                    :aria-pressed="chose === r.id" @click="room(r.id)">{{ r.name }}</button>
           </div>
         </template>
 
@@ -354,7 +370,12 @@ onUnmounted(() => window.removeEventListener('keydown', key, true))
   background: var(--surface); border: 1px solid var(--edge); color: var(--ink);
 }
 .pick:active { background: var(--surface-press); }
-.rooms { display: flex; flex-wrap: wrap; gap: 10px; }
+/* The room chips are `press-rooms`, which is the picker Add already uses for this same question --
+   not a row of this screen's own. This used to be a `.rooms` block here, and `.rooms` in panel.css
+   is THE ROOMS TAB's container: `flex-direction: column`. A scoped block only overrides what it
+   names, so the wrap here was set and the direction came from the other screen, and every room in
+   the house was a full-width row. In a house with twenty-three of them that is the whole sheet.
+   AGENTS.md §4, and lint:css cannot see this one because the two blocks are not both in panel.css. */
 .button.wide { width: 100%; }
 /* a full-width primary with a small ghost beside it reads as an orphan, so they stack */
 .flow-actions.stack { flex-direction: column; align-items: stretch; }

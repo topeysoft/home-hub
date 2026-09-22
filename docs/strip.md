@@ -182,6 +182,12 @@ a board** — no ESP32 was plugged into the machine that wrote it.
   paired that reads as a broken strip rather than as a self test that forgot to put something back.
 - **The error text on the wall lied four times in a row** during bring-up, each time naming a confident wrong
   cause. If a strip screen tells you what is wrong, verify it before acting on it, and see item 11.
+- **A class name the panel already uses will silently restyle your screen, and `lint:css` will not see
+  it** when one of the two blocks is a component's scoped style. `class="rooms"` in the strip sheet got
+  `flex-direction: column` from the Rooms tab and turned the room picker into a column twenty-three long;
+  `class="chip"` got the camera tile's status badge, which is a label and has no press state. Item 36.
+  Grep every class name in a block before writing it, including the ones you are writing in a `<style
+  scoped>`, and then look at the screen.
 
 ## What it is, and what it is not
 
@@ -649,6 +655,48 @@ real annual cost before a unit ships — and inserts the product into the most q
 the house, which is how these things get returned. The camera route avoids all of that and costs a camera
 pointed into a living room. **The cheap next step is neither: a capture stick and HyperHDR on a bench,
 to find out whether it feels like the screen extended or like a gimmick, before any of it is paid for.**
+
+**36. The last beat, from a real house: it said "It's in" when it was not, and the rooms were a
+column twenty-three long.** Reported 22 September after a grafted run on a real hub, and the log had
+all of it:
+
+    16:44:59  strip 52e204: could not be put in living_room; it is in the house but unplaced
+    16:44:59  "POST /strip/room HTTP/1.1" 200 OK
+
+**So the wall said "It's in" and the light was not in the room.** The household did the only sensible
+thing — reset the strip and set it up again — and the second run worked, at 16:48:00, because the
+device the first run had waited twenty seconds for existed by then. **The twenty seconds was the
+whole bug.** `put()` gave up, logged a warning, and moved on to a beat whose words are *"in the room
+it lives in"*. The code even said so: *"the log is where that has to be said"*. The log is not where
+that has to be said when somebody is standing in front of the screen.
+
+**A room somebody chose is a fact this brain holds, not a request that expires while Home Assistant
+catches up.** It is kept in `_owed` now and applied whenever the device turns up, for ten minutes,
+asking nothing of anybody — and until it lands the last beat says *"It will be in the Living room as
+soon as the house has finished noticing it"* instead of claiming it is already there.
+
+**AND THE ROOM CHIPS WERE TWO BUGS WEARING EACH OTHER'S CLOTHES**, both of them AGENTS.md §4.
+
+**`class="chip"` is the camera tile's status badge** — the thing that says *Recording* or *Offline*.
+It is a label, not a button, so it had no press state and no selected state, which is why a tap gave
+nothing back. What the row also carried was `:class="{ busy }"`, and **every chip got it**, so the
+whole row dimmed together and none of them said *you picked me*.
+
+**And `class="rooms"` is the Rooms tab's own container**, which is `flex-direction: column`. A scoped
+block only overrides the properties it names, so this screen's `flex-wrap: wrap` was applied and the
+direction came from the other screen — **every room in the house was a full-width row**. In a house
+with twenty-three of them that is the entire sheet. `lint:css` cannot catch this one: the two blocks
+are not both in `panel.css`.
+
+Both are gone by using what the panel already has: `press-rooms` and `chip-btn`, the room picker Add
+uses for this same question, which brings the wrap, the sizing and — from its own comment — the fix
+for the trap where a chosen chip is ink on ink and its name vanishes. The tapped chip lights before
+the request goes out, because the person has to see their own tap land. Twenty-three rooms are now
+six wrapped rows and nothing scrolls.
+
+**Still open, and a design question rather than a bug:** twenty-three chips is a lot even wrapped,
+and they are in no particular order. Whether the list should lead with somewhere likely, be
+searchable, or be grouped is a screen, and wants boards.
 
 **35. The claim our door rests on is written down, and the puck already keeps it.** 22 September.
 Item 23 ended with *"a button, reachable, on the outside of every product is now a hardware claim

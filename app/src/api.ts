@@ -283,6 +283,10 @@ export type Strip = {
      hour of this and folds in with anything else waiting; the dot on the + door stays either way,
      so the house goes quiet without forgetting (design/knock/). Absent on a hub older than that. */
   since?: number
+  /* The room somebody chose, when the house has not made a device to put in it yet. Discovery is a
+     moment behind the room chip and sometimes a long moment; the brain keeps the choice and applies
+     it when it can, and the last beat says so rather than claiming the light is already there. */
+  placing?: string
 }
 /* Ending a job is the brain's to know, exactly as it is for a bridge: a sheet that closes only its
    own copy goes away and the next poll brings it straight back. */

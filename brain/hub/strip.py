@@ -58,6 +58,13 @@ ANSWER_WAIT = 10
 # room for it. The strip announces itself over MQTT discovery and Home Assistant makes the device a
 # moment later, so the room can be chosen before there is anything to put in it.
 PLACE_WAIT = 20
+# ...AND HOW LONG TO GO ON CARING AFTER THAT. Twenty seconds was not enough in a real house on
+# 22 September: the device had not appeared, the placing was given up on, and the wall said "It's in"
+# anyway with only a log line to say otherwise. The household did the only sensible thing and reset
+# the strip -- and the second run worked, because the device the first run had waited for existed by
+# then. A room somebody chose is a fact this brain holds, not a request that expires while Home
+# Assistant catches up; so it is remembered and applied whenever the device turns up.
+PLACE_KEEP = 600
 
 # HOW OFTEN TO GO LOOKING WHEN NOBODY ASKED, AND HOW HARD WHEN SOMEBODY DID (design/knock/).
 #
@@ -389,6 +396,10 @@ class Strips:
         # Until when somebody is standing on Add. Monotonic, because it is a duration and not a time
         # of day, and a hub whose clock steps must not start scanning for an hour.
         self._looking_until = 0.0
+        # Rooms somebody chose that Home Assistant had not made a device for yet: strip id -> room.
+        # Emptied as each one lands. See _place_later().
+        self._owed: dict[str, str] = {}
+        self._placer: asyncio.Task | None = None
 
     # ---- what the panel sees ----
     def status(self) -> dict:
@@ -413,6 +424,12 @@ class Strips:
             out["count"] = j.get("count", ASSUMED); out["order"] = j.get("order", ASSUME)
             out["white"] = bool(j.get("white"))
         if j["state"] == "room": out["rooms"] = self._rooms()
+        # THE ROOM IS CHOSEN AND THE HOUSE HAS NOT CAUGHT UP. The last beat used to say "It is a
+        # light in the house now -- ... in the room it lives in", which was not true whenever the
+        # placing had not landed, and a household reading it went and did the whole setup again.
+        # Named rather than flagged, because the sentence on the wall wants the room's own name.
+        if j.get("id") in self._owed:
+            out["placing"] = self._room_name(self._owed[j["id"]])
         if j.get("text"): out["text"] = j["text"]
         if j.get("needs"): out["needs"] = j["needs"]
         # WHEN IT STARTED KNOCKING, in seconds since the epoch rather than "how long ago", because a
@@ -420,6 +437,12 @@ class Strips:
         # drawn, and a moment is not. The panel folds its line away after an hour of this.
         if j.get("at"): out["since"] = j["at"]
         return out
+
+    def _room_name(self, room_id: str) -> str:
+        """What the household calls that room, for a sentence on the wall. Its id is not a name."""
+        rooms = getattr(getattr(self.hub, "home", None), "rooms", None) or {}
+        got = rooms.get(room_id) if hasattr(rooms, "get") else None
+        return getattr(got, "name", None) or "the room you chose"
 
     def _where_we_are(self) -> dict:
         """What a strip needs to find us again after it reboots, in the shape the `hub` endpoint
@@ -1048,14 +1071,43 @@ class Strips:
         # Not retained: the strip remembers its own room. See order/set above.
         await self._tell(j["id"], "room/set", room_id)
         if not await self._put_in_room(j["id"], room_id):
-            # It is a light in the house either way, so this does not fail the setup -- but somebody
-            # chose a room and it did not land, and the log is where that has to be said.
-            log.warning("strip %s: could not be put in %s; it is in the house but unplaced",
-                        j["id"], room_id)
+            # IT IS NOT GIVEN UP ON, AND THE WALL IS TOLD. This used to log a warning and say "It's
+            # in" -- the panel claiming something it knows to be untrue to somebody standing in
+            # front of it. The choice is kept and applied the moment the house has a device to apply
+            # it to, and until then the last beat says so in words.
+            log.info("strip %s: %s is chosen and the house has no device for it yet; holding on to it",
+                     j["id"], room_id)
+            self._owed[j["id"]] = room_id
+            self._keep_placing()
         self._set("ready")
         return self.status()
 
-    async def _put_in_room(self, id_: str, room_id: str) -> bool:
+    def _keep_placing(self) -> None:
+        """One task, for as long as any room is still owed."""
+        if self._placer and not self._placer.done(): return
+        self._placer = asyncio.create_task(self._place_later())
+
+    async def _place_later(self):
+        """Go on trying to put strips in the rooms somebody chose, until they land or time is up.
+
+        Discovery is a moment behind everything else and sometimes a long moment: in a house with a
+        hundred devices it took more than the twenty seconds `put()` waits. Nothing here is asked of
+        the household -- they answered the question once and the answer is kept."""
+        end = time.monotonic() + PLACE_KEEP
+        while self._owed and time.monotonic() < end:
+            await asyncio.sleep(3.0)
+            for id_, room_id in list(self._owed.items()):
+                if await self._put_in_room(id_, room_id, tries_for=0):
+                    self._owed.pop(id_, None)
+                    # The wall is saying "it will be in X once the house notices it"; this is the
+                    # moment that stops being true, so it is told rather than left to a poll.
+                    if self.job and self.job.get("id") == id_: self._set(self.job["state"])
+        for id_, room_id in self._owed.items():
+            log.warning("strip %s: gave up putting it in %s; it is in the house but unplaced",
+                        id_, room_id)
+        self._owed.clear()
+
+    async def _put_in_room(self, id_: str, room_id: str, tries_for: float | None = None) -> bool:
         """Move the light we announced into the room somebody chose.
 
         THIS USED TO BE `self.hub.strip_placed(...)`, A METHOD NO HUB HAS EVER HAD, inside a
@@ -1065,7 +1117,9 @@ class Strips:
         It is worth more than one try: the strip announces itself over MQTT discovery and Home
         Assistant makes the device a moment later, so the room can be chosen before there is anything
         to put in it."""
-        end = time.monotonic() + PLACE_WAIT
+        # PLACE_WAIT is read here rather than taken as a default, because a default is bound when
+        # this file is imported and the suite shrinks the constant to keep itself quick.
+        end = time.monotonic() + (PLACE_WAIT if tries_for is None else tries_for)
         while True:
             dev = await self._device_for(id_)
             if dev:
