@@ -80,8 +80,11 @@ that did not exist, a fake home that was a list, and no broker.
    cousin and is fixed; this one is not, and neither is the fact that **nothing on the wall ever says a
    strip is spent** — a strip that has completed setup advertises nothing at all, so it looks like a
    strip that is simply not there.
-3. **A button, reachable, on the outside of every product** (item 23). Our whole door rests on it and it
-   has never been written down as a hardware requirement. Free now, impossible later.
+3. ~~**A button, reachable, on the outside of every product**~~ — **written down, 22 September**, in
+   `hardware/README.md`, which is the page `hardware/` never had. Item 35. It also turned up the one
+   thing to get right on the strip's product board, which does not exist yet: the firmware's
+   `BUTTON_PIN` defaults to **0**, and GPIO0 is BOOT, a strapping pin, and the line the USB bridge's
+   auto-reset pulls from DTR.
 
 **And the decision that was waiting is taken:** the three setup commands are no longer retained, and
 the strip retires a retained one rather than obeying it. Item 33. **It is written and it has not run on
@@ -646,6 +649,30 @@ real annual cost before a unit ships — and inserts the product into the most q
 the house, which is how these things get returned. The camera route avoids all of that and costs a camera
 pointed into a living room. **The cheap next step is neither: a capture stick and HyperHDR on a bench,
 to find out whether it feels like the screen extended or like a gimmick, before any of it is paid for.**
+
+**35. The claim our door rests on is written down, and the puck already keeps it.** 22 September.
+Item 23 ended with *"a button, reachable, on the outside of every product is now a hardware claim
+this rests on. It is free to decide now and impossible later, and `hardware/` has never had the
+conversation."* It has had it now: `hardware/README.md` is a short page of the claims every board we
+make has to satisfy, with the button as the only one so far and the test written so it can be
+checked rather than argued — from outside the assembled shell, with a fingertip, no tools, in the
+state the product ships in, before it is placed, and **never on a strapping pin**.
+
+**The puck passes, and it passes by accident rather than by intent**, which is the part worth
+knowing. `SW3` sits on GPIO4 with the internal pull-up — module pin 4, `pinfunction "IO4_4"` in
+`puck-revA.net` — a side-actuated tact at the board edge at 180°, the face a person would tap,
+reached through a 3.6 mm hole cut through both the base wall and the skirt with a printed plunger
+whose head stops it falling in. All of that was laid out on 19 September to answer
+`docs/puck-light.md`'s question *"does the object want a button?"*, two days before the press became
+the proof of possession. The board was right for a reason that has since been replaced by a better
+one. `docs/puck-hardware.md` no longer calls it an open question.
+
+**And the strip's board, which does not exist yet, has one thing to get right.** `BUTTON_PIN` in the
+firmware defaults to **0** — BOOT on every devkit, a strapping pin, and the same line the USB
+bridge's auto-reset pulls from DTR. On the bench that is a feature and it is how the press has been
+tested with nobody in the room (item 23). On a product it means a finger on the adoption button at
+power-up can drop the chip into download mode. It is a `#ifndef`, so the board defines it; nothing
+anywhere said it had to until now.
 
 **34. A knock takes the whole screen, up to a hundred and eight seconds late, and the panel already
 had a politer way of saying it.** Reported 22 September after a night of setting strips up: powering a
