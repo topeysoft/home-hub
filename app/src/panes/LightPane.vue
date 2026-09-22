@@ -195,7 +195,7 @@ async function level(l: typeof LEVELS[number]) {
 </script>
 
 <template>
-  <div class="rig rig-light">
+  <div class="rig rig-light" :class="{ 'rig-has-strip': !!strip }">
     <div class="rig-slot" v-if="dimmable">
       <div class="rig-col" role="slider" tabindex="0" :aria-label="`${device.name} brightness`" aria-valuemin="0" aria-valuemax="100" :aria-valuenow="pct"
            :class="{ held: dim.held.value, dead, bar: narrow }" @pointerdown="dim.down" @pointermove="dim.move" @pointerup="dim.up" @pointercancel="dim.cancel"
@@ -297,14 +297,17 @@ async function level(l: typeof LEVELS[number]) {
         </button>
     </div>
 
-    <!-- The strip-shaped part, and the only part of this pane that knows what a strip is. -->
-    <div class="rig-levels" v-if="strip && !tuning">
+    <!-- The strip-shaped part, and the only part of this pane that knows what a strip is. AT THE
+         FOOT and across the whole width, not a column beside the others: the board's argument is
+         that a strip is an ordinary light with two extra rows, and a fourth column squeezes the
+         three things this pane is actually for. -->
+    <div class="rig-ask" v-if="strip && !tuning">
       <span class="rig-lbl">Because it is a strip</span>
       <button class="rig-card" :disabled="dead || asking || !strip.online" @click="askAgain('length')">
         <span class="rig-card-icon"><Icon name="pin" :size="18" /></span>
         <span class="rig-card-text">
-          <span class="rig-card-name">Ends here</span>
-          <span class="rig-card-sub">{{ metres }} — say again if you cut it down or joined another on</span>
+          <span class="rig-card-name">Ends here <em>{{ metres }}</em></span>
+          <span class="rig-card-sub">Say again if you cut it down, or joined another on.</span>
         </span>
       </button>
       <button class="rig-card" :disabled="dead || asking || !strip.online" @click="askAgain('colors')">
@@ -419,4 +422,35 @@ async function level(l: typeof LEVELS[number]) {
 }
 .rig-card.on .rig-card-sub {
   color: var(--ink-2);
+}
+
+/* THE TWO ROWS A STRIP ADDS, at the foot and across the whole width.
+   The wrap is switched on only when there IS a strip, so no other light's pane can be moved by a
+   rule it has no element for. And the card here grows to its text rather than standing at the
+   84px the three levels use: those are two short words and these are a sentence, and a fixed
+   height with a sentence in it is text lying across the card below -- which is what it did. */
+.rig-has-strip {
+  flex-wrap: wrap;
+}
+.rig-ask {
+  flex: 1 0 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.rig-ask .rig-card {
+  height: auto;
+  min-height: 76px;
+  padding: 16px 22px;
+}
+.rig-ask .rig-card-text {
+  min-width: 0;
+}
+.rig-ask .rig-card-name em {
+  font-style: normal;
+  color: var(--muted);
+}
+.rig-ask .rig-card-sub {
+  white-space: normal;
 }</style>
