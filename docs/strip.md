@@ -18,11 +18,11 @@ is where it stands, as of 21 September 2026.*
 
 | | |
 |---|---|
-| **Design** | 21 boards in `design/strip/`, 3 in `design/door/`, 3 in `design/occasion/`. The last row of `design/strip/` is the press and the rung below it |
+| **Design** | 27 boards in `design/strip/`, 3 in `design/door/`, 3 in `design/occasion/`. The last row of `design/strip/` is the press and the rung below it |
 | **Firmware** | ESP-IDF + esp-matter, **commissionable over BLE, proven on an ESP32-S3** |
-| **Brain** | both doors: knock → adopt → (press → rhythm | code) → set up. 51 tests. Our door carries the broker |
-| **Panel** | the beats including the press, previewable with `?strip=knocking\|press\|rhythm\|working\|ready` |
-| **Suites** | brain 1117, panel 497, native firmware test, all green |
+| **Brain** | both doors: knock → adopt → (press → rhythm | code) → set up. 68 tests. Our door carries the broker |
+| **Panel** | the beats including the press, previewable with `?strip=knocking\|press\|rhythm\|working\|ready`; and the two rows a strip adds to its own light pane |
+| **Suites** | brain 1135, panel 502, native firmware test, all green |
 
 ### What is proven on hardware, and what is not
 
@@ -56,21 +56,39 @@ unit test, and Alexa has not been tried. **And no strip has ever joined a real W
 the bench used a network name that does not exist, so `NETWORK_PROV_WIFI_CRED_SUCCESS` has never fired on
 this firmware and the `ours` flag it writes has never been written.
 
+### THE WHOLE THING WORKS, 21 September
+
+**A strip now goes from a box to a light on the wall, in a real house, with no phone and no app.** Knock,
+press the button, Wi-Fi and the broker in one session, "Is it red?", the fill, a room, and then a tile
+you can switch on, dim and color — with a way back to both setup answers afterwards. Every beat of that
+ran on an ESP32-S3 against a real hub and a real broker. Items 23 to 32 are what it cost, and **every
+bug past the BLE session was the first time that line had ever run in a house**: the bench had a Wi-Fi
+that did not exist, a fake home that was a list, and no broker.
+
 ### The next three things, in order
 
-1. **The partial-commissioning bug.** A Matter adopt reported failure on the wall and left a fabric behind,
-   which silently bricks a strip until somebody knows the reset exists.
-2. **The 13 dB range gap** (item 15). A session completes at −51 dBm and dies at −64 with NimBLE reason
-   `0x208`. Two software levers were tried and neither closed it; the evidence says RF, and `hardware/`
-   has never had the strip conversation.
-3. **A button, reachable, on the outside of every product** (item 23). Our whole door now rests on it and
-   it has never been written down as a hardware requirement. Free now, impossible later.
+1. **The distance between a hub and a device is unsolved, and it is the one that matters.** A hub goes
+   where the Ethernet and the access point are — a garage, a cupboard — and a strip goes where the
+   household wants light. BLE will not cross that, and "set it up in the same room as the hub" quietly
+   repeals "put the hub wherever you like". The answer is almost certainly the bridge puck as an errand
+   runner: the hub hands it a job over MQTT, it does the GATT work, and **the SRP6a session stays end to
+   end**, so the puck carries ciphertext it cannot read and the press gate stays on the device — a proxy
+   adds no trust surface at all. **Wants boards first** (`design/ears/`): the puck as errand runner, the
+   wall panel as proxy (Web Bluetooth, no new hardware, but it needs a chooser and a tap, which fights
+   "the object is the identity"), and the "nothing in your house can hear it" failure. Item 15's 13 dB is
+   the same problem measured on a bench; `hardware/` has still never had the conversation.
+2. **The partial-commissioning bug.** A Matter adopt reported failure on the wall and left a fabric
+   behind, which silently bricks a strip until somebody knows the five-second hold exists. Item 24 is its
+   cousin and is fixed; this one is not, and neither is the fact that **nothing on the wall ever says a
+   strip is spent** — a strip that has completed setup advertises nothing at all, so it looks like a
+   strip that is simply not there.
+3. **A button, reachable, on the outside of every product** (item 23). Our whole door rests on it and it
+   has never been written down as a hardware requirement. Free now, impossible later.
 
-**Not on this list and worth saying so:** the press path is built and proven end to end on an ESP32-S3 —
-no press refused, press accepted, out-of-reach dropping to a freshly minted rhythm, wrong rhythm refused.
-What it has *not* had is a run on a real hub against a real house, because that needs a real SSID; the
-bench used a name that does not exist, so `NETWORK_PROV_WIFI_CRED_SUCCESS` has never fired on this
-firmware and neither has the `ours` flag it writes.
+**And one decision waiting rather than a task:** retained command topics (`count/set`, `order/set`,
+`room/set`) are replayed to a strip for ever, and the strip already keeps all three in its own NVS. A
+stale one silently wins — a `count/set 1` had a board believing it was one pixel long. Dropping the
+retain is probably right and is a change to how a strip is told things, so it is item 31 and not done.
 
 ### Decided, and not to be reopened without a reason
 
