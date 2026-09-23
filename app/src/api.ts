@@ -10,15 +10,15 @@ export type Intent = { room: string; intent: string; set_by: string | null; hold
 export type Home = { name?: string | null; temp_unit?: string; entry?: string[]; rooms: Room[] }   // entry: the rooms people come in through
 export type Driver = 'down' | 'fresh' | 'needs-login' | 'connecting' | 'ready'
 export type Part = { id: string; name: string; state: 'unknown' | 'off' | 'adding' | 'ready' | 'failed' | 'sign-in' | 'waiting'; text: string; port: number }
-/* channel: which code this hub follows — 'release' (version tags, what a house runs) or 'main' (the
-   branch, for a hub being worked on). `available` is null when the hub genuinely cannot tell, and
+/* channel: which code this hub follows — 'release' (version tags, what a house runs), or 'main' or
+   'development' (that branch, for a hub being worked on). `available` is null when the hub genuinely cannot tell, and
    `offer` is the same answer minus a version that was installed, would not start, and was put back:
    the hub stops raising that one on its own, and the button under This hub still installs it. */
 /** What changed, in words a household reads. Written by hand into releases/<version>.md and shipped
    inside the brain's image, so these are the notes for the code this hub is actually running. */
 export type ReleaseNotes = { version: string; what: string[]; details: string }
 export type UpdateNotes = { notes: ReleaseNotes | null; history: ReleaseNotes[] }
-export type Update = { version: string; commit: string; channel: 'release' | 'main'; latest: { version: string; sha: string; when: string; title: string; what: string[] } | null; whats_new: ReleaseNotes | null; held: boolean; reached_us: boolean; available: boolean | null; offer: boolean | null; rejected: string | null; auto: boolean; verified: boolean; checked: number | null; requested: boolean; state: { state: 'running' | 'done' | 'failed' | 'reverted' | 'refused'; started?: number; finished?: number; commit?: string; to?: string; bad?: string; reverted?: boolean } | null; error: string | null
+export type Update = { version: string; commit: string; channel: 'release' | 'main' | 'development'; latest: { version: string; sha: string; when: string; title: string; what: string[] } | null; whats_new: ReleaseNotes | null; held: boolean; reached_us: boolean; available: boolean | null; offer: boolean | null; rejected: string | null; auto: boolean; verified: boolean; checked: number | null; requested: boolean; state: { state: 'running' | 'done' | 'failed' | 'reverted' | 'refused'; started?: number; finished?: number; commit?: string; to?: string; bad?: string; reverted?: boolean } | null; error: string | null
   /* Where the host has got to, while it is getting there. The brain is alive for nearly all of an
      update -- the code, the signature and the pull all happen with it running -- so this is a real
      answer for most of the wait rather than a spinner. null when nothing is happening. */

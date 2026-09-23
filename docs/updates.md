@@ -52,7 +52,7 @@ fixed in March. So this plan ends with the hub updating itself. Everything befor
 
 - `brain/hub/updates.py` — `HUB_VERSION` and `HUB_COMMIT` are baked into the image by CI (`brain-image.yml` passes
   them as build args). `Updates.check()` runs 90 seconds after start and every six hours, asks
-  `/repos/{repo}/releases/latest` on the `release` channel or `/commits/main` on `main`, and `available` is deliberately
+  `/repos/{repo}/releases/latest` on the `release` channel or `/commits/<branch>` on `main` and `development`, and `available` is deliberately
   three-valued: `None` when nobody can tell, because a panel saying *Up to date* when it does not know is a lie
   somebody acts on.
 - `POST /update` is behind the settings code (`brain/hub/lock.py`), and `request()` writes the file.

@@ -34,7 +34,7 @@ SETTLE="${HOME_HUB_UPDATE_SETTLE:-45}"   # ...and how long it then has to keep a
 
 [ -f "$REQ" ] || exit 0
 # The hub's channel lives in the compose .env. Without passing it on, install.sh would fall back to
-# its default and quietly move a hub that follows main onto releases.
+# its default and quietly move a hub that follows a branch onto releases.
 CHANNEL="$(sed -n 's/^HUB_CHANNEL=//p' "$ENVF" 2>/dev/null | tail -1)"
 CHANNEL="${CHANNEL:-release}"
 # Which version the panel was looking at, so a rejected one can be named. The request stays advisory:

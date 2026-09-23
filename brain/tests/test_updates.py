@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """Which build this is, whether there is a newer one, and how the panel is told.
 
-Two channels. A hub in someone's house follows releases: nothing reaches it until somebody tags it.
-A hub being worked on follows main, commit by commit. The important case in both is the third
+Three channels. A hub in someone's house follows releases: nothing reaches it until somebody tags it.
+A hub being worked on follows main or development, commit by commit. The important case in both is the third
 answer — "cannot tell" — because a panel that says "up to date" when it does not know is a lie
 somebody acts on.
 
@@ -53,6 +53,9 @@ class ChannelTests(UpdateTest):
     def test_a_hub_being_worked_on_can_follow_main_instead(self):
         self.assertEqual(self.make(channel="main").channel, "main")
         self.assertEqual(self.make(channel="MAIN").channel, "main")
+
+    def test_or_development_where_the_day_to_day_work_lands(self):
+        self.assertEqual(self.make(channel="development").channel, "development")
 
     def test_a_channel_nobody_has_heard_of_falls_back_to_releases(self):
         self.assertEqual(self.make(channel="nightly").channel, "release")
@@ -133,6 +136,24 @@ class MainChannelTests(UpdateTest):
         u = self.make(commit="", channel="main")
         u.fetch = self.commit()
         self.assertIsNone((await u.check())["available"])
+
+
+class DevelopmentChannelTests(UpdateTest):
+    def test_it_asks_github_about_its_own_branch_and_names_the_build_after_it(self):
+        u = self.make(version="development-aaaaaaa", channel="development")
+        with mock.patch.object(updates, "_get", return_value={"sha": "b" * 40, "commit": {
+                "committer": {"date": "2026-09-23T10:00:00Z"}, "message": "A thing\n\nwith a body"}}) as get:
+            latest = u.fetch()
+        self.assertTrue(get.call_args.args[0].endswith("/commits/development"))
+        self.assertEqual(latest["version"], "development-bbbbbbb")
+        self.assertEqual(latest["title"], "A thing")
+
+    async def test_it_compares_commits_exactly_as_main_does(self):
+        u = self.make(commit="a" * 40, channel="development")
+        u.fetch = MainChannelTests.commit("b" * 40)
+        self.assertTrue((await u.check())["available"])
+        u.fetch = MainChannelTests.commit("a" * 40)
+        self.assertFalse((await u.check())["available"])
 
 
 class WhenGitHubIsUnreachableTests(UpdateTest):

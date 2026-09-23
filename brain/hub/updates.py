@@ -15,10 +15,12 @@ image back. What arrives here is a fourth state, `reverted`, naming the version 
 is the one thing this module has to act on, because a rollback followed six hours later by the same
 install is a loop rather than a safety net. See docs/updates.md, piece 1.
 
-Two channels, because a hub in someone's house and the hub on the developer's desk want different
+Three channels, because a hub in someone's house and the hub on the developer's desk want different
 things. `release` (the default, and what every hub ships as) follows version tags: nothing reaches a
-family until it is tagged. `main` follows the branch, commit by commit, which is what a hub being
-worked on wants. install.sh writes HUB_CHANNEL into the compose environment; nothing else chooses.
+family until it is tagged. `main` and `development` follow those branches, commit by commit, which is
+what a hub being worked on wants -- `development` being the one day-to-day work lands on, and `main`
+what is about to be tagged. install.sh writes HUB_CHANNEL into the compose environment; nothing else
+chooses.
 """
 import asyncio, hashlib, json, logging, os, re, time, urllib.request
 from datetime import datetime
@@ -30,7 +32,8 @@ from .settings import DATA
 log = logging.getLogger("hub.updates")
 REPO = os.environ.get("HUB_REPO") or "topeysoft/home-hub"
 RELEASE_API = f"https://api.github.com/repos/{REPO}/releases/latest"
-MAIN_API = f"https://api.github.com/repos/{REPO}/commits/main"
+BRANCHES = ("main", "development")    # the channels that follow a branch rather than tags, each named for its branch
+COMMITS_API = f"https://api.github.com/repos/{REPO}/commits/{{branch}}"
 EVERY = 6 * 3600
 RECHECK = 5 * 60                      # how soon opening This hub can make the hub ask GitHub again
 TICK = 300                            # how often the loop looks at the clock, as against at GitHub
@@ -41,7 +44,7 @@ RETRY = 12 * 3600                     # one go a night, so a failing update does
 REQUEST = DATA / "update.request"     # the panel asked; the host's home-hub-update.path is watching for this file
 STATE = DATA / "update.json"          # written by the host's update.sh: running, done or failed
 CHANNEL = DATA / "channel.json"       # written by the host's channel.sh, after it checked the signature
-RELEASE = re.compile(r"^v?\d+\.\d+")  # what a version tag looks like, next to "dev" and "main-1a2b3c4"
+RELEASE = re.compile(r"^v?\d+\.\d+")  # what a version tag looks like, next to "dev" and "main-1a2b3c4"/"development-1a2b3c4"
 PROGRESS = DATA / "update.progress"   # the host says where it has got to, a line at a time
 TOOK = 3600                           # a run longer than this taught us nothing worth keeping
 STALE = 3600                          # ...and a run that finished longer ago than this is not news
@@ -78,9 +81,10 @@ def _get(url: str) -> dict:
 class Updates:
     def __init__(self, hub):
         self.hub = hub
-        self.version = os.environ.get("HUB_VERSION") or "dev"   # a tag, or main-<short sha>
+        self.version = os.environ.get("HUB_VERSION") or "dev"   # a tag, or <branch>-<short sha>
         self.commit = os.environ.get("HUB_COMMIT") or ""
-        self.channel = "main" if (os.environ.get("HUB_CHANNEL") or "release").lower() == "main" else "release"
+        channel = (os.environ.get("HUB_CHANNEL") or "release").lower()
+        self.channel = channel if channel in BRANCHES else "release"
         # Whether the host holds release keys, written into the compose environment by install.sh.
         # It decides the default below and nothing else; the checking itself is the host's, and this
         # being wrong would make the hub shy rather than reckless.
@@ -102,7 +106,7 @@ class Updates:
         for one. A panel showing "up to date" when it does not know would be a lie a person acts on.
         """
         if not self.latest: return None
-        if self.channel == "main":
+        if self.channel in BRANCHES:
             return self.latest["sha"] != self.commit if self.commit else None
         if not RELEASE.match(self.version): return None     # this build is not on the release channel at all
         return self._norm(self.latest["version"]) != self._norm(self.version)
@@ -409,9 +413,9 @@ class Updates:
                 "progress": self.progress(), "seconds": self.seconds(), "dark_seconds": self.seconds(dark=True)}
 
     def fetch(self) -> dict:
-        if self.channel == "main":
-            d = _get(MAIN_API)
-            return {"version": f"main-{d['sha'][:7]}", "sha": d["sha"], "when": d["commit"]["committer"]["date"],
+        if self.channel in BRANCHES:
+            d = _get(COMMITS_API.format(branch=self.channel))
+            return {"version": f"{self.channel}-{d['sha'][:7]}", "sha": d["sha"], "when": d["commit"]["committer"]["date"],
                     "title": d["commit"]["message"].splitlines()[0][:120]}
         d = _get(RELEASE_API)
         # A release with no title of its own is named by its tag; the panel puts this in a sentence.

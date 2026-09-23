@@ -16,10 +16,11 @@ REPO="${HOME_HUB_REPO:-https://github.com/topeysoft/home-hub.git}"
 DIR="${HOME_HUB_DIR:-/opt/home-hub}"
 HOSTNAME_WANTED="${HOME_HUB_HOSTNAME:-hub}"
 # Which code this hub follows. "release" is the newest version tag: nothing reaches a house until
-# somebody tags it. "main" follows the branch commit by commit, which is what a hub being worked on
-# wants — HOME_HUB_CHANNEL=main sudo ./install.sh. The brain is told, so the panel offers the same one.
+# somebody tags it. "main" and "development" follow those branches commit by commit, which is what a
+# hub being worked on wants — HOME_HUB_CHANNEL=development sudo ./install.sh. The brain is told, so
+# the panel offers the same one. Anything else is a typo, and a typo lands on releases.
 CHANNEL="${HOME_HUB_CHANNEL:-release}"
-[ "$CHANNEL" = "main" ] || CHANNEL="release"
+case "$CHANNEL" in main|development) BRANCH="$CHANNEL" ;; *) CHANNEL="release"; BRANCH="main" ;; esac
 
 say() { printf '\n\033[1m%s\033[0m\n' "$*"; }
 # Where this has got to, for the panel to draw. Only when update.sh asks for it: somebody running
@@ -53,7 +54,7 @@ VERSION=""
 # The newest version tag, by version order rather than by date, so a fix tagged on an older line
 # does not look newer than the release it came after.
 want_ref() {
-  [ "$CHANNEL" = "main" ] && { echo "origin/main"; return; }
+  [ "$CHANNEL" != "release" ] && { echo "origin/$BRANCH"; return; }
   git -C "$DIR" tag -l 'v*' --sort=-v:refname | head -1
 }
 # Whether a release is what the maker says it is, and what it says to run. host/verify.sh comes from
@@ -67,7 +68,7 @@ go_to_ref() {
     ref="origin/main"; echo "  nothing tagged yet, so: main"
   fi
   target="$ref"
-  # A hub following main is a hub being worked on: there are no manifests for commits, and an
+  # A hub following a branch is a hub being worked on: there are no manifests for commits, and an
   # override that skipped the check for releases would only end up pasted into a house.
   if [ "$CHANNEL" = "release" ] && command -v verify_release >/dev/null 2>&1; then
     verify_release "$ref" "$DIR"; case $? in
@@ -84,7 +85,7 @@ go_to_ref() {
 }
 if [ -d "$DIR/.git" ]; then
   command -v git >/dev/null 2>&1 || pkg git
-  if git -C "$DIR" fetch -q --tags --force origin main 2>/dev/null; then
+  if git -C "$DIR" fetch -q --tags --force origin "$BRANCH" 2>/dev/null; then
     # 3, not 1: a release that could not be checked is a different thing from an install that broke,
     # and a household tapping Try again cannot fix it. host/update.sh tells the two apart.
     go_to_ref || exit 3
@@ -102,10 +103,11 @@ fi
 cd "$DIR/driver-layer"
 # Code and container move together: a hub on v0.2.0 runs the 0.2.0 image, not whatever is newest. A
 # verified release has already said which image, by digest; this is the fallback for a hub following
-# main and for the first install of a release that predates the signing.
+# a branch, whose image is tagged with the branch's name, and for the first install of a release that
+# predates the signing.
 if [ -z "${HUB_BRAIN_IMAGE:-}" ]; then
   if [ -n "$VERSION" ]; then export HUB_BRAIN_IMAGE="ghcr.io/topeysoft/home-hub-brain:${VERSION}"
-  elif [ "$CHANNEL" = "main" ]; then export HUB_BRAIN_IMAGE="ghcr.io/topeysoft/home-hub-brain:main"
+  elif [ "$CHANNEL" != "release" ]; then export HUB_BRAIN_IMAGE="ghcr.io/topeysoft/home-hub-brain:${BRANCH}"
   fi
 fi
 # The Matter bridge is ours too, and it and the brain have a contract between them -- what the bridge
@@ -114,7 +116,7 @@ fi
 # is named by the release exactly the way the brain is rather than left on :latest. docs/matter.md.
 if [ -z "${HUB_BRIDGE_IMAGE:-}" ]; then
   if [ -n "$VERSION" ]; then export HUB_BRIDGE_IMAGE="ghcr.io/topeysoft/home-hub-matter-bridge:${VERSION}"
-  elif [ "$CHANNEL" = "main" ]; then export HUB_BRIDGE_IMAGE="ghcr.io/topeysoft/home-hub-matter-bridge:main"
+  elif [ "$CHANNEL" != "release" ]; then export HUB_BRIDGE_IMAGE="ghcr.io/topeysoft/home-hub-matter-bridge:${BRANCH}"
   fi
 fi
 export HUB_CHANNEL="$CHANNEL"
