@@ -81,6 +81,16 @@ that did not exist, a fake home that was a list, and no broker.
    adoption has gone through a puck, SRP6a and all — the Wi-Fi refused until the button was pressed,
    then taken, and the strip on the household's network without the machine that adopted it ever
    being in range of it. Nine exchanges, 17.5 s. Item 39.
+   **The protocol is drawn and direction A is chosen** (23 September, `design/ears/`, second row):
+   `Job` is today with every number measured, and `Tell`, `Hush` and `Twice` are three answers to the
+   one question the protocol is really about — **ninety-five per cent of an errand is waiting for a
+   finger, and the courier cannot do that waiting itself**, because the question and the answer are
+   encrypted with the session key. **A is the strip speaking**: the press characteristic gains a
+   notification, the hub asks once and subscribes, and nothing crosses the air until somebody touches
+   the thing. Seven exchanges instead of a hundred and seventy, and the notification is still
+   ciphertext the puck relays and cannot read. **C is its fallback** for a strip too old to have the
+   notification, because the hub has to re-find a rotating address anyway. `Hush` and `Twice` stay
+   drawn, with their cases, as the record of why. **Not built.**
    **Two things stand between that and shipping**, both in item 39: NimBLE leaks about two and a
    mbufs inside an established session and fails with `rc=6`, which looks exactly like a dropped
    link and kills any adoption where somebody takes their time pressing the button — though the
