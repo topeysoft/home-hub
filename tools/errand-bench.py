@@ -30,7 +30,11 @@ import os
 import sys
 import time
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'brain'))
+# BOTH PATHS, EXPLICITLY. strip_door adds brain/vendor itself, so this used to work by importing it
+# first -- and then a tidy-up sorted the imports and `esp_prov` was gone. Ordering is not a contract.
+_BRAIN = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'brain')
+sys.path.insert(0, _BRAIN)
+sys.path.insert(1, os.path.join(_BRAIN, 'vendor'))
 
 from esp_prov.transport.transport import Transport
 from hub import strip_door

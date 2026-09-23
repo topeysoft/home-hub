@@ -82,10 +82,11 @@ that did not exist, a fake home that was a list, and no broker.
    then taken, and the strip on the household's network without the machine that adopted it ever
    being in range of it. Nine exchanges, 17.5 s. Item 39.
    **Two things stand between that and shipping**, both in item 39: NimBLE leaks about two and a
-   half mbuf blocks per exchange and fails with `rc=6` at a fixed count, which looks exactly like a
-   dropped link and kills any adoption where somebody takes their time pressing the button; and a
-   knocking strip rotates its address and is missed by one scan in three, so the errand has to
-   carry a fresh sighting. **Neither is a reason to redraw the direction, and both belong in the
+   mbufs inside an established session and fails with `rc=6`, which looks exactly like a dropped
+   link and kills any adoption where somebody takes their time pressing the button — though the
+   pool comes back when the link closes, so it forbids one long session rather than a puck's whole
+   uptime; and a knocking strip rotates its address and is missed by one scan in three, so the
+   errand has to carry a fresh sighting. **Neither is a reason to redraw the direction, and both belong in the
    protocol, which is the next design step and per `AGENTS.md` §1 wants boards first** — what the
    MQTT job looks like, how a session is framed, how the press is waited for without a hundred and
    seventy round trips, and what happens when the puck drops one mid-handshake. Nothing was tested
@@ -699,16 +700,27 @@ taken, 0 refused`, `on the household's Wi-Fi, through our own door` and `Matter'
 this strip is ours`. **A strip went from a box to a household's network without the machine that
 adopted it ever being in radio range of it.**
 
-**THE FIRST THING THAT WILL STOP THIS SHIPPING IS A LEAK, AND IT LOOKS EXACTLY LIKE A DROPPED
-LINK.** NimBLE fails a write with `rc=6` after a fixed number of exchanges — that is
-`BLE_HS_ENOMEM`, the mbuf pool, **not a disconnect**, and the link is still up when it happens.
-It is linear in `CONFIG_BT_NIMBLE_MSYS1_BLOCK_COUNT`: **12 blocks dies at exchange 5, 40 at 15, 100
-at 41** — about two and a half blocks per exchange, never returned. Raising the pool only moves the
-cliff. **This matters because the press wait is the long part of an adoption**: 120 seconds polled
-every 0.7 s is some 170 exchanges, four times past where 100 blocks dies, so a household who takes
-their time walking to the strip fails today. Where it leaks is not found. Two things to weigh
-before drawing the protocol: find it, and *also* stop making the press wait a GATT round trip each
-time — a notify, or a single long-lived ask, costs one exchange instead of a hundred and seventy.
+**THE FIRST THING IN THE WAY IS A LEAK, AND IT LOOKS EXACTLY LIKE A DROPPED LINK** — but it is
+smaller than this item said when it was first written, and the correction is the point of the
+paragraph. NimBLE fails a write with `rc=6` partway through a session: that is `BLE_HS_ENOMEM`, the
+mbuf pool, **not a disconnect**, and the link is still up when it happens. It scales with
+`CONFIG_BT_NIMBLE_MSYS1_BLOCK_COUNT` — 12 blocks died at exchange 5, 40 at 8 to 15 across four
+runs, 100 at 41 — so raising the pool moves the cliff and does not remove it.
+
+**Two things were measured afterwards and both narrow it.** *It needs a session.* Two hundred and
+forty exchanges hammered down the same relay with **no** protocomm session established — long
+384-byte writes and short ones, on a 40-block pool — never produced it once, and the same pool dies
+around a dozen exchanges into a real one. Whatever is held is held per exchange **inside an
+established session**, which is where to look and was not known before. *And the pool comes back
+when the link closes.* Three adoptions on one puck boot, after a session that had already died at
+exchange 12, reached 8 and then **28** — up, not down. So this does **not** accumulate over a
+puck's uptime, it does not need a reboot between errands, and **a puck can run errands all day.**
+
+**What it does forbid is one long session**, which is exactly what the press wait is today: 120
+seconds polled every 0.7 s is some 170 exchanges, four times past where even 100 blocks dies. So
+the protocol question and the bug are the same question — **stop making the press wait a GATT round
+trip each time and the leak stops mattering**, because an adoption is then about six exchanges.
+Finding it is still worth doing; it is no longer what decides whether this ships.
 
 **THE SECOND IS THAT A KNOCKING STRIP IS HARD TO FIND, WHICH SHARPENS ITEM 38'S CONCLUSION.** The
 strip advertises a **random private address and rotates it**, so an address read off a scan seconds
