@@ -42,6 +42,7 @@ from . import things
 from .things import Things
 from .share import Share
 from .nightlight import Nightlight
+from .ears import Ears
 from .relay import Relay
 from .phones import Phones, COOKIE, holds_keys, open_to_strangers, from_away, away_refused, away_refusal
 from . import camera
@@ -121,6 +122,7 @@ class Hub:
         self.add = Onboarding(self)
         self.lock = Lock(self.settings)
         self.pair = Pairing(self)
+        self.ears = Ears()                 # who can hear a strip knocking: the hub's radio and every puck's
         self.bridge = Bridges(self)        # a puck on the cable, and the ones the house has
         self.strip = Strips(self)          # a light strip knocking over Bluetooth: hub/strip.py
         self.net = Network(self)           # how this hub is connected, and what it hands out: docs/network.md

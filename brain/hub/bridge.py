@@ -1164,6 +1164,12 @@ class Bridges:
                 except Exception: self._heard[leaf] = {"at": time.time(), "body": None, "chip": chip}
                 if self._woke: self._woke.set()
                 return
+            if leaf == "heard":
+                # A strip knocking near this puck (hub/ears.py). Not a state of the puck's, so it
+                # stops here rather than falling through to the puck's own bookkeeping.
+                ears = getattr(self.hub, "ears", None)
+                if ears: ears.from_puck(chip, payload)
+                return
             if leaf == "cfgack":
                 # Proof, not a promise. A puck can only publish this from the broker, and it can only
                 # reach the broker on a network it actually joined.

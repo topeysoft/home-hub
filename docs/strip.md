@@ -104,8 +104,14 @@ that did not exist, a fake home that was a list, and no broker.
    **And the puck can be the house's ear for knocks** (item 42): a passive listen at a tenth of the
    radio costs the mesh about 6% and hears a knocking strip twice a second, and the address it hears
    is one the errand can open at with no scan at all. **Decided: pucks listen, all day** (see the
-   list below). **What is left before this ships is building that ear and the errand runner into
-   the bridge proper, and teaching the hub to rank sightings — all of it still a bench build.** Nothing
+   list below). **The hub's half is built** (`brain/hub/ears.py`, 23 September): one table of which
+   ear heard which strip, how loud and how lately, fed by the hub's own scans and by a puck's
+   `mesh/bridge/<chip>/heard` report through the subscription the bridge already had, and one rule
+   for which ear talks to a strip — the hub's own radio wherever it is inside `FAINT`, a puck only
+   when it is clearly louder past that. The module's header is the contract a puck reports against.
+   **Deliberately not built:** a knock only a puck heard is recorded and not announced, because
+   the wall would then offer a strip the hub cannot yet take. **What is left:** the ear and the
+   errand runner in the bridge proper, then adoption asking `choose()`. Nothing
    has been tried at the distance item 15 is about, and `hardware/` has still never had the
    conversation.
 2. **The partial-commissioning bug.** A Matter adopt reported failure on the wall and left a fabric

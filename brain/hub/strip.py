@@ -651,6 +651,14 @@ class Strips:
             try: ours = await self.radio.scan_ours(14.0)
             except Exception as e: log.info("strip: our door still found nothing (%s)", e)
 
+        # THE HUB IS ONE EAR AMONG SEVERAL (hub/ears.py). What its own radio heard goes into the same
+        # table the pucks report into, so "who can hear this" has the hub's answer in it too.
+        ears = getattr(self.hub, "ears", None)
+        if ears:
+            ears.forget_stale()
+            for o in ours: ears.heard("hub", o["addr"], o.get("rssi"))
+            for t in theirs: ears.heard("hub", t["addr"], t.get("rssi"), what=t)
+
         # One strip, two advertisements: if an address answered at both, it is the same board and
         # our door is the one worth having.
         at_ours = {o["addr"] for o in ours}
