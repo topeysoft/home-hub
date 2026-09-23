@@ -91,6 +91,11 @@ that did not exist, a fake home that was a list, and no broker.
    ciphertext the puck relays and cannot read. **C is its fallback** for a strip too old to have the
    notification, because the hub has to re-find a rotating address anyway. `Hush` and `Twice` stay
    drawn, with their cases, as the record of why. **Not built.**
+   **And the question the boards left open is already answered in the firmware**: a dropped link calls
+   `prov::disconnected()`, which ends the protocomm session and drops buffered responses while the
+   door stays open and keeps advertising — and it does **not** clear the press. So a puck that drops
+   an errand mid-handshake costs a second SRP6a and **not a second press**, which is what a household
+   would expect and what nobody had written down. Never run; a test to write, not a decision to take.
    **Two things stand between that and shipping**, both in item 39: NimBLE leaks about two and a
    mbufs inside an established session and fails with `rc=6`, which looks exactly like a dropped
    link and kills any adoption where somebody takes their time pressing the button — though the
