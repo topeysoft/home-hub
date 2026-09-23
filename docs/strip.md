@@ -110,8 +110,10 @@ that did not exist, a fake home that was a list, and no broker.
    for which ear talks to a strip — the hub's own radio wherever it is inside `FAINT`, a puck only
    when it is clearly louder past that. The module's header is the contract a puck reports against.
    **Deliberately not built:** a knock only a puck heard is recorded and not announced, because
-   the wall would then offer a strip the hub cannot yet take. **What is left:** the ear and the
-   errand runner in the bridge proper, then adoption asking `choose()`. Nothing
+   the wall would then offer a strip the hub cannot yet take. **The puck's ear is built too** (item
+   43), in every image the hub ships. **What is left:** the errand runner in the bridge proper —
+   its MQTT format settled first, since the bench one was never a proposal — then adoption asking
+   `choose()`. Nothing
    has been tried at the distance item 15 is about, and `hardware/` has still never had the
    conversation.
 2. **The partial-commissioning bug.** A Matter adopt reported failure on the wall and left a fabric
@@ -705,6 +707,32 @@ real annual cost before a unit ships — and inserts the product into the most q
 the house, which is how these things get returned. The camera route avoids all of that and costs a camera
 pointed into a living room. **The cheap next step is neither: a capture stick and HyperHDR on a bench,
 to find out whether it feels like the screen extended or like a gimmick, before any of it is paid for.**
+
+**43. The ear is in the bridge firmware proper, and the hub's table has heard a real puck.** 23 September.
+
+**What was built.** `brilliant/esp32-bridge/src/ear.{h,cpp}`, beside `claim`, in every image the hub
+ships (checked in the binaries of `esp32s3`, `esp32s3-ship` and `esp32dev`): a passive scan, 10 ms of
+every 100, while the mesh link is up, reporting on `mesh/bridge/<chip>/heard` in exactly the shape
+`brain/hub/ears.py` documents. **One scanner has several users**, so the ear hands it back exactly as
+setup left it — active, results kept, no callbacks — before finding the proxy or claiming a switch.
+In the bench build it also stands aside for an errand, because NimBLE will not connect while
+scanning; the bench's own `listen` is gone.
+
+**What ran, on the bench puck.** The reports are the contract byte for byte — one copied off the
+broker is now a test fixture, so the hub is held to what a puck really says. **The mesh kept its full
+rate with the ear on: 260 PDUs a minute against 259 without.** Reports came every ten seconds.
+A claim survey borrowed the scanner and got its results; the proxy link came straight back; the
+ear started again by itself.
+
+**AND THE FIRST VERSION REPORTED NONSENSE, ON THE AIR, WHICH IS THE ONLY PLACE IT SHOWED.** NimBLE
+hands back **−8 dBm** for some adverts from a strip reading −37 either side of them. Taken at face
+value that sent eighteen reports a minute instead of six, and would have made this puck the loudest
+ear in the house. So a reading louder than −15 is not a reading — on the puck and again in the hub,
+which ranks — and the puck reports a moving average. Six a minute, steady at −37 to −38, after.
+
+**Not proven.** The survey found one switch and there is no count from before the ear to compare it
+with. No real puck's report has reached the *running* brain: the bench puck talks on `bench/`, and the
+brain listens on `mesh/`, on purpose. The first shipped puck in a house will be that test.
 
 **42. A puck can hear a strip knock all day for about 6% of its mesh, and what it hears is an
 address the errand can open at.** 23 September. The question the shipped errand actually turns on is

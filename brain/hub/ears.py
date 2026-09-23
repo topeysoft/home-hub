@@ -40,6 +40,10 @@ FRESH = 30.0
 # second link and no buffers to fill, so a puck that is merely as loud is not better -- only one that
 # is clearly louder while the hub is past the edge item 15 measured.
 MARGIN = 6
+# NOT A READING: NimBLE on an ESP32 hands back -8 dBm for some adverts from a strip that reads -37
+# either side of them, and that loud is only possible with the antennas touching. A puck discards
+# these itself (ear.cpp); this is the same rule on the side that ranks, for any puck that does not.
+LOUDEST_REAL = -15
 
 
 def _addr(a: str) -> str:
@@ -70,7 +74,7 @@ class Ears:
             rssi = int(body["rssi"])
         except Exception:
             return False
-        if not what or what["vendor"] != TEST_VID:
+        if not what or what["vendor"] != TEST_VID or rssi >= LOUDEST_REAL:
             return False
         self.heard(chip, body.get("addr", ""), rssi, body.get("type") or "random", what, now)
         return True

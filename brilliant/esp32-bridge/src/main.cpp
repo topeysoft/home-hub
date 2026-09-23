@@ -64,6 +64,7 @@
 #include "esp_coexist.h"
 #include "mesh_crypto.h"
 #include "claim.h"
+#include "ear.h"
 #include "config.h"
 #include "release_keys.h"
 #include "light.h"
@@ -1214,6 +1215,15 @@ static void cfgAck() {
 // ---------------------------------------------------------------- mqtt
 
 // Anything claim.cpp wants to say goes out under this puck's own bridge topic.
+// What the ear heard (ear.h). Not retained: a knock is news, and a strip that stops knocking must be
+// able to leave the hub's table just by not being heard again.
+static void earSay(const char *leaf, const char *payload) {
+    if (!mqtt.connected()) return;
+    char t[80];
+    bridgeTopic(t, sizeof(t), leaf);
+    mqtt.publish(t, payload, false);
+}
+
 static void claimSay(const char *leaf, const char *payload) {
     char t[80];
     bridgeTopic(t, sizeof(t), leaf);
@@ -1481,6 +1491,7 @@ void setup() {
     // keys it was given -- which is why the puck to send a claim to is the one
     // bridging the house's own mesh and not the one bridging an old panel's.
     claim_begin(cfg.netKey, ivIndex, claimSay);
+    ear_begin(earSay);
 
     Serial.println("crypto self-test:");
     if (!mesh_selftest(Serial)) Serial.println("  !! CRYPTO BROKEN -- do not trust results");
@@ -1627,6 +1638,7 @@ void loop() {
     // in the middle of a handshake -- the one moment it is least recoverable.
     if (claim_busy()) {
         if (connected) dropLink("letting a switch in");
+        ear_tick(false);    // claiming scans on the same scanner and reads what it keeps
         claim_tick();
         return;
     }
@@ -1647,6 +1659,7 @@ void loop() {
                 delay(500);      // no BLE activity in this window
             }
         }
+        ear_tick(false);    // finding the proxy is an active scan on the same scanner
         if (!haveTarget && !findProxy()) {
             if (emptyScans < 3) emptyScans++;
             lightRefresh();
@@ -1686,6 +1699,14 @@ void loop() {
         sweepAll();
     }
     if (resyncIdx != 0xFF) resyncStep();
+
+    // THE EAR, while the mesh link is up and nothing else wants the scanner (ear.h, docs/strip.md
+    // item 42). A strip knocking behind the television is heard here and not in the garage.
+#ifdef BENCH_ERRAND
+    ear_tick(!errandBusy());
+#else
+    ear_tick(true);
+#endif
 
 #ifdef BENCH_ERRAND
     errandTick();

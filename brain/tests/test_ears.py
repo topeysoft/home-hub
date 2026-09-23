@@ -42,6 +42,20 @@ class WhatAPuckSays(unittest.TestCase):
         for junk in ("", "{", '{"addr": "x"}', '{"addr": "x", "rssi": "loud", "svc": "00"}'):
             self.assertFalse(e.from_puck("08388e", junk, now=100), junk)
 
+    def test_a_report_exactly_as_a_puck_sent_it_on_the_air(self):
+        """Copied off the broker on 23 September, from ear.cpp on a real puck hearing a real strip --
+        so the two ends are held to what one of them actually says, not to what this file thinks."""
+        e = Ears()
+        wire = '{"addr":"d7:e4:af:b4:05:2b","type":"random","rssi":-37,"svc":"00000ff1ff008000"}'
+        self.assertTrue(e.from_puck("08388e", wire, now=100))
+        self.assertEqual(e.choose("d7:e4:af:b4:05:2b", now=100), "08388e")
+
+    def test_a_loudness_no_real_radio_could_hear_is_not_a_reading(self):
+        """-8 dBm from a strip a metre away, which NimBLE really does hand back now and then."""
+        e = Ears()
+        self.assertFalse(e.from_puck("08388e", report(rssi=-8), now=100))
+        self.assertEqual(e.who_can_hear("e7:38:84:e2:89:0a", now=100), [])
+
     def test_the_address_type_travels_with_the_address(self):
         """A strip's address is random, and one opened as public is six right bytes nobody answers
         -- which is the morning item 42 was written about."""
