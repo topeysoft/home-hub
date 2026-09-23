@@ -111,7 +111,7 @@ async def find(timeout: float = 8.0):
 
 async def adopt(address: str, ssid: str, passphrase: str, hub: dict | None = None,
                 rhythm: str = '', on_pressed=None, out_of_reach: "asyncio.Event | None" = None,
-                press_wait: float = PRESS_WAIT) -> str:
+                press_wait: float = PRESS_WAIT, transport: "Transport | None" = None) -> str:
     """Take a strip: wait for the press, hand over the Wi-Fi, then say where we are.
 
     `rhythm`, when there is one, is the four counts the household read off the light -- the rung below
@@ -120,51 +120,64 @@ async def adopt(address: str, ssid: str, passphrase: str, hub: dict | None = Non
     was touched, so the wall can stop saying it is waiting. `out_of_reach` is the household saying they
     cannot reach the button; setting it asks the strip for a rhythm instead and returns 'rhythm'.
 
+    `transport` is for something that is not our own radio -- a courier that carries the bytes to a
+    strip this machine cannot hear (docs/strip.md item 38). Nothing below changes when there is one:
+    the session is still opened here and closed at the strip, and the press gate is still on the strip.
+
     Returns 'done', or 'rhythm' if the strip was asked to drop a rung. Raises on any step, because a
     half-adopted strip is worse than one that never started.
     """
+    security = Security2(sec_patch_ver=1, username=USERNAME, password=rhythm or OPEN_SESAME, verbose=False)
+    if transport is not None:
+        return await _adopt_over(transport, security, ssid, passphrase, hub, rhythm,
+                                 on_pressed, out_of_reach, press_wait)
+
     from bleak import BleakClient
     _tolerate_corebluetooth()
-
-    security = Security2(sec_patch_ver=1, username=USERNAME, password=rhythm or OPEN_SESAME, verbose=False)
     async with BleakClient(address, timeout=20.0) as client:
-        transport = _Bleak(client)
+        return await _adopt_over(_Bleak(client), security, ssid, passphrase, hub, rhythm,
+                                 on_pressed, out_of_reach, press_wait)
 
-        # The handshake, until protocomm says there is nothing left to send. A wrong rhythm fails
-        # here, inside SRP6a, and ends the session: there is no offline guessing at four digits.
-        # With no rhythm the password is public, so this proves nothing and is not meant to -- it is
-        # the encrypted channel the rest of the conversation needs, and the strip's own gate is what
-        # the Wi-Fi is actually waiting on.
-        response = None
-        while True:
-            request = security.security_session(response)
-            if request is None:
-                break
-            response = await transport.send_session_data(request)
-        if security.session_state != security_state.FINISHED:
-            raise RuntimeError('the strip did not accept that rhythm')
 
-        if not rhythm and await _wait_for_the_press(transport, security, on_pressed,
-                                                   out_of_reach, press_wait) == 'rhythm':
-            return 'rhythm'
+async def _adopt_over(transport, security, ssid, passphrase, hub, rhythm,
+                      on_pressed, out_of_reach, press_wait) -> str:
+    """Everything an adoption is, once there is something to say it down. Split out from `adopt` so
+    that the same steps run whether the bytes go over our own radio or through a courier."""
+    # The handshake, until protocomm says there is nothing left to send. A wrong rhythm fails
+    # here, inside SRP6a, and ends the session: there is no offline guessing at four digits.
+    # With no rhythm the password is public, so this proves nothing and is not meant to -- it is
+    # the encrypted channel the rest of the conversation needs, and the strip's own gate is what
+    # the Wi-Fi is actually waiting on.
+    response = None
+    while True:
+        request = security.security_session(response)
+        if request is None:
+            break
+        response = await transport.send_session_data(request)
+    if security.session_state != security_state.FINISHED:
+        raise RuntimeError('the strip did not accept that rhythm')
 
-        sent = await transport.send_config_data(wifi_prov.config_set_config_request(security, ssid, passphrase))
-        if wifi_prov.config_set_config_response(security, sent) != 0:
-            raise RuntimeError('the strip would not take those Wi-Fi credentials')
+    if not rhythm and await _wait_for_the_press(transport, security, on_pressed,
+                                               out_of_reach, press_wait) == 'rhythm':
+        return 'rhythm'
 
-        applied = await transport.send_config_data(wifi_prov.config_apply_config_request(security))
-        if wifi_prov.config_apply_config_response(security, applied) != 0:
-            raise RuntimeError('the strip would not apply those Wi-Fi credentials')
+    sent = await transport.send_config_data(wifi_prov.config_set_config_request(security, ssid, passphrase))
+    if wifi_prov.config_set_config_response(security, sent) != 0:
+        raise RuntimeError('the strip would not take those Wi-Fi credentials')
 
-        # WHERE WE ARE, IN THE SESSION THAT IS ALREADY OPEN. This is the one moment it is safe to say:
-        # a session the strip authenticated, with somebody standing in the room. A strip that finishes
-        # without it is a Matter light and nothing more (docs/strip.md item 2a).
-        if hub:
-            body = ''.join(f'{k}={v}\n' for k, v in hub.items() if v is not None)
-            answer = await transport.send_data('hub', security.encrypt_data(body.encode('latin-1')).decode('latin-1'))
-            said = security.decrypt_data(answer.encode('latin-1')).decode('latin-1')
-            if said != 'ok':
-                raise RuntimeError(f'the strip answered "{said}" when told where we are')
+    applied = await transport.send_config_data(wifi_prov.config_apply_config_request(security))
+    if wifi_prov.config_apply_config_response(security, applied) != 0:
+        raise RuntimeError('the strip would not apply those Wi-Fi credentials')
+
+    # WHERE WE ARE, IN THE SESSION THAT IS ALREADY OPEN. This is the one moment it is safe to say:
+    # a session the strip authenticated, with somebody standing in the room. A strip that finishes
+    # without it is a Matter light and nothing more (docs/strip.md item 2a).
+    if hub:
+        body = ''.join(f'{k}={v}\n' for k, v in hub.items() if v is not None)
+        answer = await transport.send_data('hub', security.encrypt_data(body.encode('latin-1')).decode('latin-1'))
+        said = security.decrypt_data(answer.encode('latin-1')).decode('latin-1')
+        if said != 'ok':
+            raise RuntimeError(f'the strip answered "{said}" when told where we are')
     return 'done'
 
 

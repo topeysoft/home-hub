@@ -77,11 +77,19 @@ that did not exist, a fake home that was a list, and no broker.
    and 5 KB back, nothing dropped, a wall switch still obeying. The cost is that the mesh's PDU rate
    falls to about a fifth while an errand runs, and a six-second scan stops it dead — so the protocol
    must have an end, and the hub should hand over an **address** rather than ask the puck to go
-   looking. Item 38. **What is still unproven is the claim the direction rests on**: no real SRP6a
-   session has gone through the puck, and neither link was tested at the distance item 15 is about.
-   **The errand protocol is the next design step and per `AGENTS.md` §1 it wants boards first** — what
-   the MQTT job looks like, how a session is framed, and what happens when the puck drops one
-   mid-handshake. `hardware/` has still never had the conversation.
+   looking. Item 38. **And the claim the direction rests on is no longer an argument**: a whole
+   adoption has gone through a puck, SRP6a and all — the Wi-Fi refused until the button was pressed,
+   then taken, and the strip on the household's network without the machine that adopted it ever
+   being in range of it. Nine exchanges, 17.5 s. Item 39.
+   **Two things stand between that and shipping**, both in item 39: NimBLE leaks about two and a
+   half mbuf blocks per exchange and fails with `rc=6` at a fixed count, which looks exactly like a
+   dropped link and kills any adoption where somebody takes their time pressing the button; and a
+   knocking strip rotates its address and is missed by one scan in three, so the errand has to
+   carry a fresh sighting. **Neither is a reason to redraw the direction, and both belong in the
+   protocol, which is the next design step and per `AGENTS.md` §1 wants boards first** — what the
+   MQTT job looks like, how a session is framed, how the press is waited for without a hundred and
+   seventy round trips, and what happens when the puck drops one mid-handshake. Nothing was tested
+   at the distance item 15 is about, and `hardware/` has still never had the conversation.
 2. **The partial-commissioning bug.** A Matter adopt reported failure on the wall and left a fabric
    behind, which silently bricks a strip until somebody knows the five-second hold exists. Item 24 is its
    cousin and is fixed; this one is not, and neither is the fact that **nothing on the wall ever says a
@@ -662,6 +670,67 @@ real annual cost before a unit ships — and inserts the product into the most q
 the house, which is how these things get returned. The camera route avoids all of that and costs a camera
 pointed into a living room. **The cheap next step is neither: a capture stick and HyperHDR on a bench,
 to find out whether it feels like the screen extended or like a gimmick, before any of it is paid for.**
+
+**39. A WHOLE ADOPTION HAS NOW GONE THROUGH A PUCK, SRP6a AND ALL. The claim the direction
+rests on is measured.** 23 September, straight after item 38, and it is the other half of it:
+38 proved the radio would hold the link, and said in its own last paragraph that the thing the
+design actually rests on — that the courier carries bytes it cannot read — was still an argument.
+It is not any more.
+
+**What ran.** `tools/errand-bench.py` drives **`strip_door.adopt()` itself**, not a copy of it, with
+a transport that publishes each protocomm request to the puck over MQTT and waits for the answer.
+`adopt()` gained one optional argument and the steps were lifted into `_adopt_over()`; nothing else
+changed and the brain's 1182 tests pass either way. The puck does the GATT and reads none of it: it
+is told an endpoint index and a blob, and it hands back a blob.
+
+**It completed.** Nine exchanges, **711 bytes out and 655 back, seventeen and a half seconds**:
+
+| | |
+|---|---|
+| `prov-session` ×2 | 406 out / 416 back, then 75 / 89 — **the SRP6a handshake**, and protocomm said FINISHED |
+| `press` ×N | `waiting`… until the button was pressed on the strip, then `pressed` |
+| `prov-config` ×2 | 48 / 20 and 18 / 20 — the Wi-Fi, set and applied |
+| `hub` ×1 | 96 / 18 — where we are, inside the session that carried the Wi-Fi |
+
+**And the gate held where item 23 put it.** The Wi-Fi was refused until somebody pressed the button
+on the thing; the strip's own console says `pressed. Whoever is at the door has 120 seconds`, then
+`credentials for 'VirusBroadcast' arrived through our door`, `the hub said where it is: 4 details
+taken, 0 refused`, `on the household's Wi-Fi, through our own door` and `Matter's window is shut;
+this strip is ours`. **A strip went from a box to a household's network without the machine that
+adopted it ever being in radio range of it.**
+
+**THE FIRST THING THAT WILL STOP THIS SHIPPING IS A LEAK, AND IT LOOKS EXACTLY LIKE A DROPPED
+LINK.** NimBLE fails a write with `rc=6` after a fixed number of exchanges — that is
+`BLE_HS_ENOMEM`, the mbuf pool, **not a disconnect**, and the link is still up when it happens.
+It is linear in `CONFIG_BT_NIMBLE_MSYS1_BLOCK_COUNT`: **12 blocks dies at exchange 5, 40 at 15, 100
+at 41** — about two and a half blocks per exchange, never returned. Raising the pool only moves the
+cliff. **This matters because the press wait is the long part of an adoption**: 120 seconds polled
+every 0.7 s is some 170 exchanges, four times past where 100 blocks dies, so a household who takes
+their time walking to the strip fails today. Where it leaks is not found. Two things to weigh
+before drawing the protocol: find it, and *also* stop making the press wait a GATT round trip each
+time — a notify, or a single long-lived ask, costs one exchange instead of a hundred and seventy.
+
+**THE SECOND IS THAT A KNOCKING STRIP IS HARD TO FIND, WHICH SHARPENS ITEM 38'S CONCLUSION.** The
+strip advertises a **random private address and rotates it**, so an address read off a scan seconds
+ago is a connect that times out ten seconds later — which reads as a strip that has gone. And the
+door rides on Matter's own advertisement, so **a ten-second scan a metre away misses it roughly one
+time in three**; the bench needed three tries to be reliable. Item 38 said the hub should hand over
+an address rather than send the puck looking. It should hand over a **fresh** one, and there is a
+race under that which the boards have to answer.
+
+**AND IT IS SLOW, WHICH IS FINE HERE AND WOULD NOT BE ANYWHERE ELSE.** Every exchange is an MQTT
+hop, a GATT write, a GATT read and an MQTT hop back: **0.7 to 3.3 seconds**, against a fifth of a
+second on our own radio. Seventeen seconds for an adoption is nothing — somebody is standing there
+pressing a button. Nothing interactive should ever go this way.
+
+**One bug found on the way past, and it is not the errand's.** `find_hub()` in the strip's firmware
+appends `.local` to whatever `mhost` holds, unconditionally
+(`app_main.cpp:505`) — so a hub that hands over an **address** rather than a name produces
+`mqtt://192.168.86.53.local:1883`, which resolves to nothing, and the strip says *nobody came. Still
+here, no longer asking*. `brain/hub/strip.py:460` sends `name or host or "hub"`, so any house whose
+broker config has a host and no name adopts a strip that completes setup and never appears.
+The puck has three ways to find the hub for exactly this reason (`docs/network.md`); the strip has
+one, and it mangles two of the three things it might be given. **Not fixed.**
 
 **38. THE PUCK CAN RUN THE ERRAND. It holds a second link to a knocking strip without letting
 go of the mesh, and here is what it costs.** 23 September, on the bench, and it is the question

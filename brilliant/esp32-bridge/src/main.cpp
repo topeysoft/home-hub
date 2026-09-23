@@ -1251,6 +1251,13 @@ static void mqttCb(char *topic, uint8_t *payload, unsigned int len) {
         if (!errandQueue(payload, len)) Serial.println("[errand] busy -- ignoring");
         return;
     }
+    // Binary, and never read here: the relay job is queued whole and the radio work
+    // happens on the loop, like claim and like the notify path.
+    bridgeTopic(own, sizeof(own), "errand/tx");
+    if (!strcmp(t, own)) {
+        if (!errandTxQueue(payload, len)) Serial.println("[errand] tx dropped -- one at a time");
+        return;
+    }
 #endif
     bridgeTopic(own, sizeof(own), "claim");
     if (!strcmp(t, own)) {
@@ -1381,6 +1388,8 @@ static void mqttReconnect() {
     mqtt.subscribe(sub);
 #ifdef BENCH_ERRAND
     bridgeTopic(sub, sizeof(sub), "errand/set");
+    mqtt.subscribe(sub);
+    bridgeTopic(sub, sizeof(sub), "errand/tx");
     mqtt.subscribe(sub);
 #endif
     bridgeTopic(sub, sizeof(sub), "cfg");
