@@ -25,9 +25,8 @@ each: it says so when it first hears an address, again at most every REPORT_EVER
 if the loudness has moved by LOUDER dB. Anything not heard again within FRESH is forgotten, which is
 also how a strip that has been taken leaves the table: it stops knocking, and nothing has to say so.
 
-NOT BUILT YET, on purpose: a knock that only a puck heard is recorded here and is NOT announced on the
-wall. Announcing it would show a household a strip the hub cannot yet take, because taking one through
-a puck is still a bench build (tools/errand-bench.py). `choose` is what adoption will ask when it can.
+A knock that only a bridge heard is announced like any other (`knocking`, read by strip.look), and
+setup then runs as an errand on the bridge `choose` names (hub/errand.py, docs/strip.md item 45).
 """
 import json, time
 
@@ -105,6 +104,24 @@ class Ears:
         if pucks and (hub_rssi is None or pucks[0]["rssi"] >= hub_rssi + MARGIN):
             return pucks[0]["ear"]
         return "hub" if hub else (pucks[0]["ear"] if pucks else None)
+
+    def knocking(self, now: float | None = None) -> list[dict]:
+        """Every strip a BRIDGE has heard lately, at the loudest bridge that heard it -- the knocks the
+        hub's own radio may never reach. The hub's own sightings are left out: it announces those itself."""
+        now = time.time() if now is None else now
+        out = []
+        for a, ears in self._heard.items():
+            best = None
+            for e, h in ears.items():
+                if e == "hub" or now - h["at"] > FRESH:
+                    continue
+                if best is None or (h["rssi"] if h["rssi"] is not None else -127) > \
+                        (best[1]["rssi"] if best[1]["rssi"] is not None else -127):
+                    best = (e, h)
+            if best:
+                out.append({"addr": a, "ear": best[0], "rssi": best[1]["rssi"],
+                            "type": best[1]["type"], "what": best[1]["what"]})
+        return out
 
     def forget_stale(self, now: float | None = None) -> None:
         now = time.time() if now is None else now

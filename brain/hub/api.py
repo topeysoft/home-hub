@@ -123,6 +123,7 @@ class Hub:
         self.lock = Lock(self.settings)
         self.pair = Pairing(self)
         self.ears = Ears()                 # who can hear a strip knocking: the hub's radio and every puck's
+        self.errand = None                 # the one errand a bridge is running for us, if any: hub/errand.py
         self.bridge = Bridges(self)        # a puck on the cable, and the ones the house has
         self.strip = Strips(self)          # a light strip knocking over Bluetooth: hub/strip.py
         self.net = Network(self)           # how this hub is connected, and what it hands out: docs/network.md

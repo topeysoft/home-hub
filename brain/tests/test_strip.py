@@ -36,13 +36,15 @@ class FakeRadio:
         self.pressing = None      # the callback, kept so a test can press whenever it likes
         self.asked_rhythm = 0     # how many times the strip was asked to drop a rung
         self.not_pressed = False  # the two minutes ran out with nobody touching it
+        self.transports = []      # what each adoption was carried over: None for our own radio
 
     async def scan_ours(self, seconds=8.0):
         return [{"addr": s["address"], "rssi": s["rssi"], "name": s.get("name"),
                  "door": "ours", "ours": True} for s in self.ours]
 
     async def adopt_ours(self, addr, ssid, password, hub=None, rhythm="",
-                         on_pressed=None, out_of_reach=None):
+                         on_pressed=None, out_of_reach=None, transport=None):
+        self.transports.append(transport)          # None is our own radio; an Errand is a bridge's
         if self.adopt_fails:
             raise StripError(self.adopt_fails if isinstance(self.adopt_fails, str)
                              else "Those were not the flashes it is showing.")

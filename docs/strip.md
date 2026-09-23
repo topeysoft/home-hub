@@ -112,8 +112,10 @@ that did not exist, a fake home that was a list, and no broker.
    **Deliberately not built:** a knock only a puck heard is recorded and not announced, because
    the wall would then offer a strip the hub cannot yet take. **The puck's ear is built too** (item
    43), in every image the hub ships, and so is **the errand runner** (item 44), over a text format
-   that Home Assistant can carry. **What is left:** the brain speaking that format — adoption asking
-   `choose()` and running the errand through Home Assistant — and then a house. Nothing
+   that Home Assistant can carry, and **the brain speaks it** (item 45): setup asks which ear, runs
+   through a bridge when it should, and a hub with no Bluetooth finds strips through its bridges.
+   **What is left is a house**: every piece has run, but a bridge and the brain have not yet met
+   through Home Assistant on the air. Nothing
    has been tried at the distance item 15 is about, and `hardware/` has still never had the
    conversation.
 2. **The partial-commissioning bug.** A Matter adopt reported failure on the wall and left a fabric
@@ -707,6 +709,35 @@ real annual cost before a unit ships — and inserts the product into the most q
 the house, which is how these things get returned. The camera route avoids all of that and costs a camera
 pointed into a living room. **The cheap next step is neither: a capture stick and HyperHDR on a bench,
 to find out whether it feels like the screen extended or like a gimmick, before any of it is paid for.**
+
+**45. The brain sets a strip up through a bridge when the hub cannot hear it — and a hub with no
+Bluetooth of its own is an ordinary hub now.** 23 September.
+
+**What was built** (`brain/hub/errand.py`). An `Errand` is a `Transport`, like strip_door's own, that
+speaks item 44's words to a bridge through Home Assistant — `mqtt.publish` out, the bridge's existing
+`mesh/#` subscription in, handed to `hub.errand`, the one errand running. `strip_door.adopt()` runs
+above it unchanged. Setup asks `ears.choose()`: the hub's own radio wherever it is inside `FAINT`, a
+bridge that is clearly louder past that, with the address *type* the bridge heard. `look()` now
+announces a knock that only a bridge heard, at our door, and the errand's `open` is what proves the
+door is there.
+
+**Two things the tests found before any house did.** A HUB WITH NO BLUETOOTH used to stop at *this
+hub has no Bluetooth* before asking anyone else — the mini PC the product is sized for, the one that
+needs its bridges most. It now looks through its bridges and says that sentence only when nobody
+heard anything. And A BRIDGE'S FAILURE WAS BEING OVERWRITTEN by *set it up in the same room as the
+hub*, because the hub had heard the strip faintly — which is exactly the apology the bridge exists to
+retire, and wrong when the hub was not the one listening. A job run through a bridge keeps the
+bridge's own sentence, in the household's word for a puck, and never says *nearer the hub*.
+
+**Held by `brain/tests/test_errand.py`:** the words, against lines filled in from `errand.cpp`'s own
+format strings; an answer with another errand's id is never taken; a refused write is carried as the
+strip's refusal; a bridge losing the strip fails at once rather than waiting out a timeout; the three
+routing rules, on the real setup path with the press held open. The routing test **fails with the
+errand's hand-off removed**. Brain suite 1213.
+
+**Not run through Home Assistant on the air.** The bench puck talks on `bench/`, the brain listens
+on `mesh/`, on purpose — so the two halves have each been proven against the format and not against
+each other. The first bridge in a house running this firmware is that test, and it is the next one.
 
 **44. A strip went from a box to a light in the house through the errand protocol the bridge
 ships.** 23 September.

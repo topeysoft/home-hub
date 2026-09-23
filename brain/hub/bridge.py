@@ -1200,6 +1200,11 @@ class Bridges:
             if self.job and self.job.get("chip") == chip and self.job.get("quiet") and p.get("online"):
                 self.job.pop("quiet", None)
                 self._set("placing")
+        elif len(parts) == 5 and parts[1] == "bridge" and parts[3:] == ["errand", "tell"]:
+            # A bridge running an errand for a strip the hub cannot hear (hub/errand.py). Handed to
+            # the one errand running, and only if it is this bridge's: strips go one at a time.
+            errand = getattr(self.hub, "errand", None)
+            if errand and errand.chip == parts[2]: errand.on_tell(payload)
         elif len(parts) == 5 and parts[1] == "bridge" and parts[3:] == ["night", "brightness"]:
             with contextlib.suppress(ValueError):
                 self.pucks.setdefault(parts[2], {})["level"] = max(0, min(255, int(payload)))

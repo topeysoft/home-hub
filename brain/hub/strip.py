@@ -330,7 +330,7 @@ class Radio:
 
     async def adopt_ours(self, addr: str, ssid: str, password: str, hub: dict | None = None,
                          rhythm: str = "", on_pressed=None,
-                         out_of_reach: "asyncio.Event | None" = None) -> str:
+                         out_of_reach: "asyncio.Event | None" = None, transport=None) -> str:
         """Wait for the press, hand over the Wi-Fi, then say where we are -- one session, no phone.
 
         THE WI-FI DOES GO THROUGH US HERE, and unlike Matter's door there is no controller in the
@@ -338,9 +338,20 @@ class Radio:
         touching it. That is the handshake the first firmware should have had, and the reason this
         door exists. Returns 'done', or 'rhythm' when the household said they cannot reach it."""
         from . import strip_door
+        from .errand import ErrandFailed
         try:
             return await strip_door.adopt(addr, ssid, password, hub=hub, rhythm=rhythm,
-                                          on_pressed=on_pressed, out_of_reach=out_of_reach)
+                                          on_pressed=on_pressed, out_of_reach=out_of_reach,
+                                          transport=transport)
+        except ErrandFailed as e:
+            if e.why not in ("write",):
+                raise StripError(_through_a_bridge(e))
+            # A refused write is the strip saying no, exactly as an ATT error is on our own radio,
+            # and the lines below already say that one correctly for both rungs.
+            if not rhythm:
+                raise StripError("The strip would not finish letting us in. Unplug it and try again.")
+            raise StripError("Those were not the flashes it is showing. Count them again \u2014 "
+                             "and note it shows a new set every time it is plugged in.")
         except strip_door.NotPressed:
             # NOT A RADIO FAILURE, and it must never be dressed as one. Somebody is standing in the
             # right room; they have simply not touched the thing yet.
@@ -370,6 +381,18 @@ class Radio:
                 raise StripError("The strip would not finish letting us in. Unplug it and try again.")
             raise StripError("Those were not the flashes it is showing. Count them again \u2014 "
                              "and note it shows a new set every time it is plugged in.")
+
+
+def _through_a_bridge(e) -> str:          # e: hub.errand.ErrandFailed, imported lazily like the rest
+    """What to say when a bridge was running the errand and could not. Never "nearer the hub": the
+    hub was not the one listening. A bridge is the household's word for a puck (the panel says it)."""
+    if e.why == "busy":
+        return "A bridge is busy setting something else up. Try again in a minute."
+    if e.why in ("connect", "silent"):
+        return "The bridge that can hear the strip could not reach it. Try again."
+    if e.why == "nodoor":
+        return "That strip did not answer the way ours do. Unplug it and try again."
+    return "The bridge that was reaching the strip lost it part way through. Try again."
 
 
 class Strips:
@@ -506,7 +529,13 @@ class Strips:
         return self.status()
 
     def _faint(self) -> bool:
-        heard = (self.job or {}).get("rssi")
+        """Was the HUB the one straining to hear it? Not when a bridge was doing the talking: the hub's
+        distance was the reason for the errand, not the reason it failed, and "set it up in the same
+        room as the hub" is exactly the apology the bridge is there to retire (design/ears/)."""
+        j = self.job or {}
+        if j.get("via"):
+            return False
+        heard = j.get("rssi")
         return heard is not None and heard < FAINT
 
     # ---- the broker: strips the house already has ----
@@ -621,17 +650,22 @@ class Strips:
         found: list[dict] = []
         # OUR DOOR FIRST, because a strip that offers it can be asked more, and a strip offers both
         # until somebody takes it (design/strip/Both.dc.html).
+        #
+        # A HUB WITH NO BLUETOOTH IS AN ORDINARY HUB NOW, not a broken one: the mini PC the product is
+        # sized for may have none, and its bridges are its ears (hub/ears.py). So the hub's own radio
+        # failing is noted and not the end of the look -- it is only said if nobody heard anything.
+        deaf: str | None = None
         try: ours = await self.radio.scan_ours()
-        except StripError as e: return {**self.status(), "text": str(e)}
+        except StripError as e: deaf, ours = str(e), []
         except Exception as e:
             log.info("strip: our door found nothing (%s)", e); ours = []
         theirs: list[dict] = []
-        try: theirs = await self.radio.scan()
-        except StripError as e:
-            if not ours: return {**self.status(), "text": str(e)}
-        except Exception as e:
-            log.info("strip: scan failed (%s)", e)
-            if not ours: return self.status()
+        if not deaf:
+            try: theirs = await self.radio.scan()
+            except StripError as e:
+                if not ours: deaf = str(e)
+            except Exception as e:
+                log.info("strip: scan failed (%s)", e)
 
         # THE TWO DOORS ARE NOT EQUALLY EASY TO SEE, and that asymmetry sent a household down the
         # wrong one on 21 September. Matter's identity is in the ADVERTISEMENT; ours is in the SCAN
@@ -672,6 +706,14 @@ class Strips:
         loud = lambda s: -(s.get("rssi") if s.get("rssi") is not None else -127)
         found = sorted(ours, key=loud) + sorted(
             (t for t in theirs if t["addr"] not in at_ours), key=loud)
+        # AND WHAT THE BRIDGES HEARD THAT THE HUB DID NOT -- a strip behind a television in a house
+        # whose hub is in the garage (docs/strip.md item 15). A bridge reports only strips carrying
+        # our vendor id; a test vendor id alone is proof of nothing (item 6), so the proof is the
+        # errand's own `open`, which refuses a strip that has no door of ours on it.
+        heard_here = {str(f["addr"]).upper() for f in found}
+        found += sorted(self._heard_by_bridges(heard_here), key=loud)
+        if not found:
+            return {**self.status(), "text": deaf} if deaf else self.status()
         for s in found:
             if s["addr"] in self._dismissed: continue
             # No chip here: a Matter advertisement carries a discriminator and not an id of ours.
@@ -679,17 +721,30 @@ class Strips:
             self.job = {"state": "knocking", "id": None, "addr": s["addr"],
                         "discriminator": s.get("discriminator"), "vendor": s.get("vendor"),
                         "door": s.get("door", "matter"), "rssi": s.get("rssi"),
+                        "heard_by": s.get("heard_by"),
                         "label": self._label(s), "first": None, "at": time.time()}
             # WHICH ONE, AND HOW WELL WE CAN HEAR IT. Without this the only record of why a setup
             # was later called "a long way from the hub" is the sentence itself, and there is no way
             # to tell a faint strip from a bug in the reading. It is one line and it has already
             # been wanted three times in one evening.
-            log.info("strip: knocking at %s door, heard at %s dBm%s",
+            log.info("strip: knocking at %s door, heard at %s dBm%s%s",
                      "our own" if s.get("door") == "ours" else "Matter's", s.get("rssi"),
+                     f" by bridge {s['heard_by']}" if s.get("heard_by") else "",
                      "" if len(found) == 1 else f" ({len(found)} are knocking)")
             self._set("knocking")
             break
         return self.status()
+
+    def _heard_by_bridges(self, heard_here: set) -> list[dict]:
+        """Knocks a bridge heard and the hub's own radio did not, shaped like the hub's own."""
+        ears = getattr(self.hub, "ears", None)
+        if not ears:
+            return []
+        ears.forget_stale()
+        return [{"addr": k["addr"], "rssi": k["rssi"], "door": "ours", "ours": True,
+                 "discriminator": k["what"].get("discriminator"), "vendor": k["what"].get("vendor"),
+                 "heard_by": k["ear"]}
+                for k in ears.knocking() if k["addr"] not in heard_here]
 
     @staticmethod
     def _label(s: dict | None) -> str:
@@ -822,12 +877,22 @@ class Strips:
                 # The session opens at once and then holds, because the strip will not take the
                 # credentials until somebody presses the button on it. `pressed` is what moves the
                 # wall off that beat, and it comes from the strip rather than from a timer here.
-                went = await self.radio.adopt_ours(j["addr"], wifi.get("ssid", ""),
-                                                   wifi.get("pass") or "",
-                                                   hub=self._where_we_are(),
-                                                   rhythm=j.get("rhythm", ""),
-                                                   on_pressed=self._pressed,
-                                                   out_of_reach=self._out_of_reach)
+                # WHICH EAR (hub/ears.py). The hub's own radio wherever it is good enough; a bridge
+                # that hears the strip clearly better where it is not -- which is every strip behind
+                # a television in a house whose hub is in the garage (docs/strip.md item 15).
+                errand = await self._errand_for(j["addr"])
+                try:
+                    went = await self.radio.adopt_ours(j["addr"], wifi.get("ssid", ""),
+                                                       wifi.get("pass") or "",
+                                                       hub=self._where_we_are(),
+                                                       rhythm=j.get("rhythm", ""),
+                                                       on_pressed=self._pressed,
+                                                       out_of_reach=self._out_of_reach,
+                                                       transport=errand)
+                finally:
+                    if errand:
+                        await errand.close()
+                        if getattr(self.hub, "errand", None) is errand: self.hub.errand = None
                 # They could not reach it, so `reach()` has already moved the wall to the flashes and
                 # the strip is minting them. Nothing failed and nothing should be said.
                 if went == "rhythm":
@@ -871,6 +936,25 @@ class Strips:
         except Exception:
             log.exception("strip setup failed")
             self._fail("Setting that light strip up did not work. Unplug it and try again.")
+
+    async def _errand_for(self, addr: str):
+        """An open errand on the bridge that should talk to this strip, or None for our own radio."""
+        from .errand import Errand, ErrandFailed
+        ears = getattr(self.hub, "ears", None)
+        chip = ears.choose(addr) if ears else None
+        if not chip or chip == "hub":
+            return None
+        kind = next((h["type"] for h in ears.who_can_hear(addr) if h["ear"] == chip), "random")
+        errand = Errand(self.hub, chip)
+        self.hub.errand = errand            # where the bridge hands its answers (hub/bridge.py)
+        if self.job is not None: self.job["via"] = chip
+        log.info("strip: the hub cannot hear it well; bridge %s runs the errand", chip)
+        try:
+            await errand.open(addr, kind)
+        except ErrandFailed as e:
+            self.hub.errand = None
+            raise StripError(_through_a_bridge(e))
+        return errand
 
     async def _whoever_just_arrived(self, known: set, timeout: float) -> str | None:
         """The id of the first strip to COME ONLINE that was not online before.
