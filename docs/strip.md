@@ -733,7 +733,8 @@ not one. `BRIDGE_ADDR` in the secrets header, set to something fresh, is the fix
 
 **One more, about looking.** `brilliant/tools/census.py` reported a single Brilliant switch at the
 desk, at −87 dBm, and on that basis this looked like a test that could not be run here. An
-unfiltered scan found **eleven**, five of them on the panel network, the strongest at −50. The
+unfiltered scan found **eleven** — six of them naming a network in a forty-second window, three the
+panel's and three the house's own, the strongest of all at **−50 dBm** and on the panel's. The
 filter was not wrong; it answers a narrower question than the one being asked of it. Item 18's rule
 is about a radio that might be dead, and it turns out to be about coverage too.
 
