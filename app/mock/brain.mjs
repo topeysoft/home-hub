@@ -545,7 +545,7 @@ const bridgeRows = process.env.BRIDGES === 'none' ? [] : [
      `count` is lights, not metres -- the panel divides by sixty to say it in metres, because a
      household buys strip by the metre and has never counted a light. Nothing here talks to a real
      strip: tuning just moves the number the way the brain would. */
-  if (p === '/strip/list') return json(res, { strips: strips.map(({ was, ...row }) => row) })
+  if (p === '/strip/list') return json(res, { strips: strips.map(({ was: _was, ...row }) => row) })
   if (p.startsWith('/strip/tune') && req.method === 'POST') { let raw = ''; req.on('data', c => (raw += c)); return req.on('end', () => {
     let b = {}; try { b = JSON.parse(raw) } catch {}
     const row = strips.find(x => x.id === b.id)
