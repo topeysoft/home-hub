@@ -23,16 +23,8 @@
 //   go <addr> [secs]   the same, to one named BLE address
 //   drop               let go now
 //
-// And the relay, which is what a real handshake goes through. It is DELIBERATELY NOT
-// A PROPOSED PROTOCOL -- it is the shortest thing that lets the hub's own client
-// (brain/hub/strip_door.py) drive an SRP6a session through this puck, so that the
-// claim the whole direction rests on can be measured instead of argued. The wire
-// format that ships gets drawn first, per AGENTS.md section 1.
-//   errand/open  <ble address>     connect, walk the table, hold it
-//   errand/tx    [seq][ep][bytes]  write those bytes to that endpoint, read the reply
-//   errand/rx    [seq][ok][bytes]  ...and here it is
-//   errand/close                   let go
-// The puck reads none of it. `ep` is an index into DOOR_EP and the rest is opaque.
+// The relay that used to live here spoke a binary format the brain could never have sent. The one
+// that ships is errand.{h,cpp}, and it runs in this build too.
 
 #pragma once
 
@@ -57,7 +49,7 @@ static NimBLEUUID doorChr(uint16_t ep) {
 // handed us in all (`proxyPdus`). With POLL_MS at 250 and switches replying, the
 // age sits well under a second, so a climb is the thing to watch for.
 
-enum class Errand { Idle, Queued, Scanning, Connecting, Walking, Holding, Watching, Session };
+enum class Errand { Idle, Queued, Scanning, Connecting, Walking, Holding, Watching };
 static Errand errandState = Errand::Idle;
 static char errandCmd[64] = {0};
 static NimBLEClient *errandClient = nullptr;
@@ -69,31 +61,11 @@ static uint32_t errandWrites = 0, errandWroteBytes = 0, errandWriteFails = 0, er
 static uint32_t proxyPdusAtStart = 0;
 static uint8_t errandEp = 0;
 
-// One job at a time, because protocomm is strictly one request and one answer, and a
-// second in flight could only ever be a reply taken for the wrong question.
-#define ERRAND_MAX_BODY 600
-static uint8_t txBuf[ERRAND_MAX_BODY];
-static size_t txLen = 0;
-static volatile bool txWaiting = false;
-static uint32_t sessionUntil = 0;
-static uint32_t relayExchanges = 0, relayOut = 0, relayIn = 0;
-
-// THE RING (design/ears/Tell.dc.html): the one thing on this link that nobody asked for. The strip
-// notifies on its press characteristic when the button is pressed, carrying a single byte that means
-// "ask me now" and nothing else. It arrives on NimBLE's task, so it is only noted there and handed to
-// the hub from the loop, like everything else on the radio.
-// Below this many free blocks the mesh side stops queueing writes while an errand holds a link,
-// so the strip's exchange always finds room. A third of the pool: the mesh fills it at about five
-// a second and the proxy link empties it at about three, so this is several seconds of headroom.
-#define ERRAND_POOL_FLOOR (CONFIG_BT_NIMBLE_MSYS1_BLOCK_COUNT / 3)
 static bool errandHoldsLink();
 
 // A bench switch: while it is set the puck stops writing to the mesh (motion polls, sweeps), so a
 // drain that stops with it is the mesh side's writes and not the second link's.
 static bool meshQuiet = false;
-static volatile bool ringPending = false;
-static bool canRing = false;
-static void ringCb(NimBLERemoteCharacteristic *, uint8_t *, size_t, bool) { ringPending = true; }
 
 static void errandSay(const char *fmt, ...) {
     char line[200];
@@ -110,20 +82,11 @@ static void errandSay(const char *fmt, ...) {
 // Queue only -- every line of the radio work below runs on the loop, for the same
 // reason claim and the notify path do.
 static bool errandQueue(const uint8_t *payload, unsigned int len) {
-    if (errandState != Errand::Idle && errandState != Errand::Holding &&
-        errandState != Errand::Session) return false;
+    if (errandState != Errand::Idle && errandState != Errand::Holding) return false;
     size_t n = min((unsigned int)(sizeof(errandCmd) - 1), len);
     memcpy(errandCmd, payload, n);
     errandCmd[n] = 0;
     errandState = Errand::Queued;
-    return true;
-}
-
-static bool errandTxQueue(const uint8_t *payload, unsigned int len) {
-    if (txWaiting || len < 2 || len > ERRAND_MAX_BODY) return false;
-    memcpy(txBuf, payload, len);
-    txLen = len;
-    txWaiting = true;
     return true;
 }
 
@@ -247,52 +210,6 @@ static void errandRead() {
     errandBytes += v.length();
 }
 
-// One exchange: write what the hub gave us where it said, read what came back, hand it
-// over. The bytes are ciphertext from the second round on, and this code could not read
-// them if it wanted to -- which is the point of the whole arrangement.
-static void errandRelayStep() {
-    uint8_t seq = txBuf[0];
-    uint8_t epIdx = txBuf[1];
-    char rt[80];
-    bridgeTopic(rt, sizeof(rt), "errand/rx");
-    uint8_t out[ERRAND_MAX_BODY + 2];
-    out[0] = seq;
-
-    if (epIdx >= sizeof(DOOR_EP) / sizeof(DOOR_EP[0]) || !errandClient || !errandClient->isConnected()) {
-        out[1] = 0;
-        mqtt.publish(rt, out, 2, false);
-        txWaiting = false;
-        return;
-    }
-    NimBLERemoteService *svc = errandClient->getService(DOOR_SVC);
-    NimBLERemoteCharacteristic *c = svc ? svc->getCharacteristic(doorChr(DOOR_EP[epIdx])) : nullptr;
-    if (!c) {
-        out[1] = 0;
-        mqtt.publish(rt, out, 2, false);
-        txWaiting = false;
-        return;
-    }
-    size_t bodyLen = txLen - 2;
-    uint32_t t0 = millis();
-    bool ok = c->writeValue(txBuf + 2, bodyLen, true);
-    size_t n = 0;
-    if (ok) {
-        NimBLEAttValue v = c->readValue();
-        n = v.length();
-        if (n > ERRAND_MAX_BODY) n = ERRAND_MAX_BODY;
-        if (n) memcpy(out + 2, v.data(), n);
-    }
-    out[1] = ok ? 1 : 0;
-    mqtt.publish(rt, out, n + 2, false);
-    relayExchanges++;
-    relayOut += bodyLen;
-    relayIn += n;
-    errandSay("relay #%lu %s ep %s: %u out, %u back in %lums",
-              (unsigned long)relayExchanges, ok ? "ok" : "REFUSED", DOOR_EP_NAME[epIdx],
-              (unsigned)bodyLen, (unsigned)n, (unsigned long)(millis() - t0));
-    txWaiting = false;
-}
-
 static bool errandHoldsLink() { return errandClient && errandClient->isConnected(); }
 
 // The shipped ear (ear.cpp) owns the scanner whenever nothing else does. An errand scans, connects
@@ -326,75 +243,10 @@ static void errandTick() {
             errandState = Errand::Watching;
             return;
         }
-        if (!strcasecmp(verb, "open")) {
-            // With no address this finds the door itself. With one, it trusts it: a strip's address
-            // holds for the whole boot (docs/strip.md item 42).
-            if (a1 && strchr(a1, ':')) {
-                // A STRIP'S ADDRESS IS RANDOM, and an address read back from a string defaults to
-                // PUBLIC -- a connect to the right six bytes with the wrong type times out, and on
-                // 23 September that was taken for the strip having changed its address. It had not:
-                // a strip's random static address holds for the whole boot. "p" for a public one.
-                errandAddr = NimBLEAddress(std::string(a1),
-                                           (a2 && (a2[0] == 'p' || a2[0] == 'P')) ? BLE_ADDR_PUBLIC : BLE_ADDR_RANDOM);
-                errandRssi = 0;
-            // TEN SECONDS, not five. The door is advertised slowly enough that a five-second
-            // scan misses a strip sitting a metre away -- found by doing exactly that twice.
-            } else {
-                // THREE TRIES, because one is not enough. The door rides on Matter's own
-                // advertisement and a ten-second scan a metre away misses it perhaps one time
-                // in three -- which reads as "no strip is knocking" and is nothing of the kind.
-                bool got = false;
-                for (int attempt = 0; attempt < 3 && !got; attempt++)
-                    got = errandFind(&errandAddr, &errandRssi, a1 ? atoi(a1) : 10, false);
-                if (!got) {
-                    errandSay("no strip is knocking, after three tries");
-                    errandState = Errand::Idle;
-                    return;
-                }
-            }
-            relayExchanges = relayOut = relayIn = 0;
-            errandSample("before");
-            errandClient = NimBLEDevice::createClient();
-            if (!errandClient) {
-                errandSay("NO SECOND CLIENT: createClient() refused at %u of %d",
-                          (unsigned)NimBLEDevice::getClientListSize(), CONFIG_BT_NIMBLE_MAX_CONNECTIONS);
-                errandState = Errand::Idle;
-                return;
-            }
-            errandClient->setConnectionParams(24, 40, 0, 600);
-            errandClient->setConnectTimeout(10);
-            uint32_t t0 = millis();
-            bool ok = errandClient->connect(errandAddr);
-            errandSay("open %s in %lums; clients now %u", ok ? "OK" : "FAILED",
-                      (unsigned long)(millis() - t0), (unsigned)NimBLEDevice::getClientListSize());
-            if (!ok) { errandDrop("open failed"); return; }
-            errandClient->getServices(true);
-            // Listen for the ring if this strip can give one. An older strip cannot, and is then
-            // simply asked the old way -- the hub hears which from the line below.
-            ringPending = false;
-            canRing = false;
-            NimBLERemoteService *door = errandClient->getService(DOOR_SVC);
-            NimBLERemoteCharacteristic *bell = door ? door->getCharacteristic(doorChr(0xFF55)) : nullptr;
-            if (bell && bell->canNotify()) canRing = bell->subscribe(true, ringCb);
-            // A backstop only. A session nobody is driving must not hold the radio for ever.
-            sessionUntil = millis() + 180000UL;
-            errandSampleAt = millis();
-            errandState = Errand::Session;
-            errandSay(canRing ? "session open -- relaying, and it can ring"
-                              : "session open -- relaying, and it cannot ring");
-            return;
-        }
         if (!strcasecmp(verb, "quiet")) {
             meshQuiet = !(a1 && !strcasecmp(a1, "off"));
             errandSay("mesh writes %s", meshQuiet ? "paused" : "resumed");
-            errandState = errandClient && errandClient->isConnected() ? Errand::Session : Errand::Idle;
-            return;
-        }
-        if (!strcasecmp(verb, "close")) {
-            errandSay("session closed after %lu exchanges, %lu bytes out, %lu back",
-                      (unsigned long)relayExchanges, (unsigned long)relayOut, (unsigned long)relayIn);
-            errandDrop("asked to close");
-            errandSample("after");
+            errandState = Errand::Idle;
             return;
         }
         if (!strcasecmp(verb, "look")) {
@@ -463,33 +315,6 @@ static void errandTick() {
         errandSample("walked");
         errandSampleAt = now;
         errandState = Errand::Holding;
-        return;
-    }
-
-    if (errandState == Errand::Session) {
-        if (!errandClient->isConnected()) {
-            errandSay("THE SECOND LINK DROPPED by itself, mid-session, after %lu exchanges",
-                      (unsigned long)relayExchanges);
-            errandSample("dropped");
-            errandDrop("peer went");
-            return;
-        }
-        if (ringPending) {
-            ringPending = false;
-            char rt[80];
-            bridgeTopic(rt, sizeof(rt), "errand/ring");
-            mqtt.publish(rt, "1", false);
-            errandSay("the strip rang");
-        }
-        if (txWaiting) errandRelayStep();
-        if (now - errandSampleAt >= 1000) {
-            errandSampleAt = now;
-            errandSample("session");
-        }
-        if (now >= sessionUntil) {
-            errandSay("nobody drove this session for three minutes");
-            errandDrop("backstop");
-        }
         return;
     }
 

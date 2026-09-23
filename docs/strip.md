@@ -111,9 +111,9 @@ that did not exist, a fake home that was a list, and no broker.
    when it is clearly louder past that. The module's header is the contract a puck reports against.
    **Deliberately not built:** a knock only a puck heard is recorded and not announced, because
    the wall would then offer a strip the hub cannot yet take. **The puck's ear is built too** (item
-   43), in every image the hub ships. **What is left:** the errand runner in the bridge proper —
-   its MQTT format settled first, since the bench one was never a proposal — then adoption asking
-   `choose()`. Nothing
+   43), in every image the hub ships, and so is **the errand runner** (item 44), over a text format
+   that Home Assistant can carry. **What is left:** the brain speaking that format — adoption asking
+   `choose()` and running the errand through Home Assistant — and then a house. Nothing
    has been tried at the distance item 15 is about, and `hardware/` has still never had the
    conversation.
 2. **The partial-commissioning bug.** A Matter adopt reported failure on the wall and left a fabric
@@ -707,6 +707,44 @@ real annual cost before a unit ships — and inserts the product into the most q
 the house, which is how these things get returned. The camera route avoids all of that and costs a camera
 pointed into a living room. **The cheap next step is neither: a capture stick and HyperHDR on a bench,
 to find out whether it feels like the screen extended or like a gimmick, before any of it is paid for.**
+
+**44. A strip went from a box to a light in the house through the errand protocol the bridge
+ships.** 23 September.
+
+**The format was decided by one fact the bench had hidden.** The brain reaches MQTT only through
+Home Assistant — the `mqtt.publish` service out, the websocket's `mqtt/subscribe` in — and both
+carry text. The bench relay spoke binary frames, which worked only because its driver used paho
+directly; the brain could never have sent one. So the shipped format is words, the way `claim`
+already is, with the opaque bytes as base64 (`brilliant/esp32-bridge/src/errand.h`):
+
+    mesh/bridge/<chip>/errand/ask    open <id> <addr> <random|public>
+                                     send <id> <n> <ep> <base64>
+                                     close <id>
+    mesh/bridge/<chip>/errand/tell   open <id> ring|quiet     ok <id> <n> <base64>
+                                     fail <id> <n|-> <why>    ring <id>    closed <id> <why>
+
+One errand per puck, refused as `busy` otherwise; the hub's id on every line, so an answer can never
+be taken for another errand's; `ep` is protocomm's 16-bit endpoint id rather than an index into a list
+that could drift; an errand nobody sends to for thirty seconds is closed; nothing retained. Decided
+here rather than on a board, because it is not a screen and it was the constraint rather than a
+preference that settled it.
+
+**Built into every puck image**, beside the ear, with the rules item 40 found: the ear stands aside
+while an errand connects or holds a link, and the mesh's polls hold back when the long-write pool is
+under a third. **The pool is now 40 blocks in every image**, not NimBLE's 12 — twelve was where item
+39's first adoption died — and the bench no longer overrides it, so it measures what ships. The
+bench relay is gone; `tools/errand-bench.py` now drives the shipped protocol.
+
+**What ran.** The puck's ear heard the strip at −48 dBm; the driver took the address *and its type*
+from that report, as the hub will, with no scan. `open` answered `ring`. The handshake, two backstop
+asks ten seconds apart, the press at thirty seconds, **a ring**, one more ask, the Wi-Fi, the hub
+details: **done in 46.6 s over nine exchanges**, and the errand closed when asked. The strip's own log:
+*rang whoever is at the door*, *credentials … arrived through our door*, *looking for the hub at
+mqtt://192.168.86.53:1883*, *announced as a light the house can switch on*.
+
+**Not built.** The brain does not yet speak this format: `Strips.adopt` still uses only the hub's own
+radio, and asking `ears.choose()` and running an errand through Home Assistant is the next piece.
+Nothing has run at distance, and no puck in a house carries any of this yet.
 
 **43. The ear is in the bridge firmware proper, and the hub's table has heard a real puck.** 23 September.
 

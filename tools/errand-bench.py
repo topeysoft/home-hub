@@ -1,118 +1,119 @@
 #!/usr/bin/env python3
 # SPDX-FileCopyrightText: 2026 Temitope Adeyeri
 # SPDX-License-Identifier: AGPL-3.0-or-later
-"""Adopt a strip through a puck, to find out whether the session really does stay end to end.
+"""Adopt a strip through a puck, over the errand protocol the bridge ships.
 
-A BENCH INSTRUMENT. `design/ears/` chose direction A -- a hub that cannot hear a strip hands the job
-to a bridge puck that can -- and the claim the whole direction rests on is that the puck is only a
-corridor: the SRP6a session is opened here and closed at the strip, so the courier carries bytes it
-cannot read, and the press gate stays on the thing itself. docs/strip.md item 38 proved the radio
-will hold the second link. It did not prove this, because no handshake had ever gone through one.
+A BENCH DRIVER for brilliant/esp32-bridge/src/errand.{h,cpp}. It drives `strip_door.adopt()` -- the
+real one -- with a transport that speaks the shipped format to a puck, and takes the strip's address
+from what the puck's EAR reported (src/ear.h), exactly as the hub will: no scan, a sighting seconds
+old, and the address type that goes with it (docs/strip.md items 42 and 43). What it proves is the
+firmware half: that the format, the ids, the base64 and the ring all work on the air. The brain's half
+speaks the same format through Home Assistant rather than paho, and is tested against it separately.
 
-So this drives `strip_door.adopt()` -- THE REAL ONE, not a copy of it -- with a transport that
-publishes each protocomm request to a puck over MQTT and waits for the answer to come back. If the
-adoption completes, the claim is measured rather than argued: every byte of the session was made
-here, carried by something that never had the key, and unwrapped at the strip.
+    brain/.venv/bin/python -u tools/errand-bench.py --puck 08388e \\
+        --ssid VirusBroadcast --pass '...' --broker 192.168.86.53 --password '...'
 
-The wire format below is the shortest thing that answers the question and IS NOT A PROPOSAL. What
-ships gets drawn first, per AGENTS.md section 1.
-
-    brain/.venv/bin/python tools/errand-bench.py --puck 08388e \
-        --ssid VirusBroadcast --pass '...' --broker 192.168.86.53
-
-The puck finds the door itself unless `--strip <addr>` hands it one -- a sighting from the puck's
-passive ear (docs/strip.md item 42), which is what the shipped errand will carry. The address holds
-for the whole boot; what failed here once was opening a random address as a public one.
+`--base bench` by default, because the bench puck talks on its own base on purpose: nothing it says
+may land where a house is reading.
 """
 import argparse
 import asyncio
+import base64
 import os
+import secrets
 import sys
 import time
 
-# BOTH PATHS, EXPLICITLY. strip_door adds brain/vendor itself, so this used to work by importing it
-# first -- and then a tidy-up sorted the imports and `esp_prov` was gone. Ordering is not a contract.
+# Both paths, explicitly: strip_door adds brain/vendor itself, and ordering is not a contract.
 _BRAIN = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'brain')
 sys.path.insert(0, _BRAIN)
 sys.path.insert(1, os.path.join(_BRAIN, 'vendor'))
 
 from esp_prov.transport.transport import Transport
 from hub import strip_door
-
-# The endpoint order the puck's DOOR_EP knows. An index rather than a name because the puck must not
-# have to parse anything: it is told where to put the bytes, not what they are.
-EP_INDEX = {'prov-session': 0, 'prov-config': 1, 'proto-ver': 2, 'hub': 3, 'press': 4}
+from hub.ears import Ears
 
 
 class Errand(Transport):
-    """protocomm over somebody else's radio.
+    """protocomm over somebody else's radio, in the words errand.h defines.
 
-    Every method here is the same shape as `strip_door._Bleak`: hand the bytes to the endpoint and
-    give back what came out. The difference is two MQTT hops in the middle, and nothing else -- in
-    particular this class holds no key, does no crypto, and could not tell a handshake from a
-    shopping list. That is the property being tested.
-    """
+    Holds no key, does no crypto: every byte it carries was made by `adopt()` above it and is
+    unwrapped by the strip below it. That is the property the whole direction rests on."""
 
     def __init__(self, client, base, timeout=20.0):
-        self.client = client
-        self.base = base
-        self.timeout = timeout
-        self.seq = 0
-        self.waiting = {}
+        self.client, self.base, self.timeout = client, base, timeout
         self.loop = asyncio.get_running_loop()
-        self.exchanges = 0
-        self.out_bytes = 0
-        self.in_bytes = 0
-        self.slowest = 0.0
+        self.id = secrets.token_hex(4)
+        self.n = 0
+        self.waiting = {}                 # n -> future, and "open" -> future
         self.can_ring = False
         self.rung = asyncio.Event()
-        self.rings = 0
+        self.rings = self.exchanges = self.out_bytes = self.in_bytes = 0
+        self.slowest = 0.0
+        self.closed = None
 
-    def on_ring(self):
-        """From paho's thread, like on_rx."""
-        self.rings += 1
-        print('  -- the strip rang')
-        self.loop.call_soon_threadsafe(self.rung.set)
+    def ask(self, line):
+        self.client.publish(f'{self.base}/errand/ask', line, qos=0)
 
-    async def listen_for_ring(self) -> bool:
-        return self.can_ring
+    def on_tell(self, line: str):
+        """From paho's thread: hand each answer to the loop rather than touching a future here."""
+        words = line.split(' ')
+        if len(words) < 2 or words[1] != self.id:
+            return                        # somebody else's errand, or an old one of ours
+        verb = words[0]
+        if verb == 'open':
+            self._settle('open', ('open', words[2] if len(words) > 2 else 'quiet'))
+        elif verb == 'ok' and len(words) >= 3:
+            self._settle(words[2], ('ok', words[3] if len(words) > 3 else ''))
+        elif verb == 'fail' and len(words) >= 4:
+            self._settle('open' if words[2] == '-' else words[2], ('fail', words[3]))
+        elif verb == 'ring':
+            self.rings += 1
+            print('  -- the strip rang')
+            self.loop.call_soon_threadsafe(self.rung.set)
+        elif verb == 'closed':
+            self.closed = words[2] if len(words) > 2 else '?'
+            print(f'  -- the puck closed the errand: {self.closed}')
 
-    async def wait_for_ring(self):
-        await self.rung.wait()
-        self.rung.clear()
+    def _settle(self, key, value):
+        fut = self.waiting.pop(key, None)
+        if fut:
+            self.loop.call_soon_threadsafe(lambda: fut.done() or fut.set_result(value))
 
-    def on_rx(self, payload: bytes):
-        """Called from paho's thread, so it hands the answer back across to ours rather than
-        touching a future directly -- an asyncio future is not thread-safe and a handshake is
-        exactly the place a lost wakeup would look like a radio fault."""
-        if len(payload) < 2:
-            return
-        fut = self.waiting.pop(payload[0], None)
-        if fut and not fut.done():
-            self.loop.call_soon_threadsafe(fut.set_result, (payload[1], payload[2:]))
+    async def open(self, addr, kind):
+        fut = self.loop.create_future()
+        self.waiting['open'] = fut
+        self.ask(f'open {self.id} {addr} {kind}')
+        verb, said = await asyncio.wait_for(fut, 30)
+        if verb != 'open':
+            raise RuntimeError(f'the puck could not open the errand: {said}')
+        self.can_ring = said == 'ring'
+        return said
 
     async def send_data(self, ep_name, data):
-        self.seq = (self.seq + 1) % 256
-        seq = self.seq
+        self.n += 1
+        n = str(self.n)
         body = data.encode('latin-1')
         fut = self.loop.create_future()
-        self.waiting[seq] = fut
+        self.waiting[n] = fut
         started = time.monotonic()
-        self.client.publish(f'{self.base}/errand/tx', bytes([seq, EP_INDEX[ep_name]]) + body, qos=0)
+        self.ask(f'send {self.id} {n} 0x{strip_door.ENDPOINTS[ep_name]:04x} '
+                 f'{base64.b64encode(body).decode()}')
         try:
-            ok, reply = await asyncio.wait_for(fut, self.timeout)
+            verb, said = await asyncio.wait_for(fut, self.timeout)
         except asyncio.TimeoutError:
-            self.waiting.pop(seq, None)
+            self.waiting.pop(n, None)
             raise RuntimeError(f'the puck did not answer for {ep_name} within {self.timeout}s')
         took = time.monotonic() - started
+        if verb != 'ok':
+            print(f'  {ep_name:<13} {len(body):>4} out  refused: {said}')
+            raise RuntimeError(f'{ep_name}: {said}')
+        reply = base64.b64decode(said) if said else b''
         self.slowest = max(self.slowest, took)
         self.exchanges += 1
         self.out_bytes += len(body)
         self.in_bytes += len(reply)
-        print(f'  {ep_name:<13} {len(body):>4} out  {len(reply):>4} back  {took * 1000:>6.0f} ms'
-              f'{"" if ok else "   <- the strip refused it"}')
-        if not ok:
-            raise RuntimeError(f'the strip refused a write on {ep_name}')
+        print(f'  {ep_name:<13} {len(body):>4} out  {len(reply):>4} back  {took * 1000:>6.0f} ms')
         return reply.decode('latin-1')
 
     async def send_session_data(self, data):
@@ -121,65 +122,69 @@ class Errand(Transport):
     async def send_config_data(self, data):
         return await self.send_data('prov-config', data)
 
+    async def listen_for_ring(self) -> bool:
+        return self.can_ring
+
+    async def wait_for_ring(self):
+        await self.rung.wait()
+        self.rung.clear()
+
     async def disconnect(self):
         pass
 
 
 async def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--puck', required=True, help='the bench puck chip id, six hex digits')
-    ap.add_argument('--strip', default='', help='a warm BLE address; by default the puck finds the door')
+    ap.add_argument('--puck', required=True, help='the puck chip id, six hex digits')
     ap.add_argument('--ssid', required=True)
     ap.add_argument('--pass', dest='passphrase', required=True)
     ap.add_argument('--broker', default='hub.local')
     ap.add_argument('--user', default=os.environ.get('MQTT_USER', 'hub'))
     ap.add_argument('--password', default=os.environ.get('MQTT_PASSWORD', ''))
-    ap.add_argument('--base', default='bench', help='the puck MQTT base; bench, not mesh')
+    ap.add_argument('--base', default='bench', help="the puck's MQTT base; bench, not mesh")
     ap.add_argument('--press-wait', type=float, default=120.0)
     args = ap.parse_args()
 
     import paho.mqtt.client as mqtt
     base = f'{args.base}/bridge/{args.puck}'
-    transport_box = {}
-
+    ears = Ears()
+    box = {}
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
     if args.password:
         client.username_pw_set(args.user, args.password)
 
-    opened = asyncio.Event()
-    loop = asyncio.get_running_loop()
-
     def on_connect(c, u, flags, rc, props=None):
-        c.subscribe(f'{base}/errand/rx')
-        c.subscribe(f'{base}/errand/ring')
-        c.subscribe(f'{base}/errand')
+        c.subscribe(f'{base}/errand/tell')
+        c.subscribe(f'{base}/heard')
 
     def on_message(c, u, msg):
-        if msg.topic.endswith('/errand'):
-            said = msg.payload.decode('utf-8', 'replace')
-            print(f'  puck: {said}')
-            if 'session open' in said:
-                t = transport_box.get('t')
-                if t is not None:
-                    t.can_ring = 'can ring' in said
-                loop.call_soon_threadsafe(opened.set)
-            return
-        if msg.topic.endswith('/errand/ring'):
-            t = transport_box.get('t')
-            if t is not None:
-                t.on_ring()
-            return
-        t = transport_box.get('t')
-        if t is not None:
-            t.on_rx(msg.payload)
+        text = msg.payload.decode('utf-8', 'replace')
+        if msg.topic.endswith('/heard'):
+            ears.from_puck(args.puck, text)       # the hub's own table, fed as the hub feeds it
+        elif (t := box.get('t')) is not None:
+            t.on_tell(text)
 
-    client.on_connect = on_connect
-    client.on_message = on_message
+    client.on_connect, client.on_message = on_connect, on_message
     client.connect(args.broker, 1883, 30)
     client.loop_start()
 
-    # The same four keys brain/hub/strip.py:460 hands a strip, so the last step of the
-    # adoption is the real one rather than a shape that only exists in this script.
+    # THE ADDRESS COMES FROM THE EAR, the way it will in a house: wait for the puck to report a strip
+    # of ours, and take the loudest one it has heard.
+    print(f'waiting for {args.puck} to hear a strip knocking...')
+    addr = kind = None
+    for _ in range(60):
+        heard = [(a, h) for a in list(ears._heard) for h in ears.who_can_hear(a) if h['ear'] == args.puck]
+        if heard:
+            addr, h = max(heard, key=lambda ah: ah[1]['rssi'])
+            kind = h['type']
+            print(f'  heard {addr} ({kind}) at {h["rssi"]} dBm')
+            break
+        await asyncio.sleep(1)
+    if not addr:
+        print('the puck heard no strip knocking')
+        client.loop_stop()
+        return
+
     where = {'mhost': args.broker, 'base': 'strip'}
     if args.user:
         where['muser'] = args.user
@@ -187,40 +192,27 @@ async def main():
         where['mpass'] = args.password
 
     transport = Errand(client, base)
-    transport_box['t'] = transport
-
-    # No address by default: the puck finds the door itself. With one, it is opened as a RANDOM
-    # address, which a strip's is -- see "open" in errand_bench.h.
-    print(f'asking {args.puck} to open a link{" to " + args.strip if args.strip else ""}...')
-    client.publish(f'{base}/errand/set', f'open {args.strip}'.strip())
-    try:
-        await asyncio.wait_for(opened.wait(), 120)
-    except asyncio.TimeoutError:
-        print('the puck never got a link open; nothing to drive')
-        client.loop_stop()
-        return
-
+    box['t'] = transport
     started = time.monotonic()
     try:
+        said = await transport.open(addr.lower(), kind)
+        print(f'  errand {transport.id} open, and the strip {"can ring" if said == "ring" else "cannot ring"}')
         outcome = await strip_door.adopt(
-            args.strip or '(the puck found it)', args.ssid, args.passphrase,
-            hub=where,
+            addr, args.ssid, args.passphrase, hub=where,
             on_pressed=lambda: print('  -- the strip says it was pressed'),
-            press_wait=args.press_wait,
-            transport=transport,
-        )
+            press_wait=args.press_wait, transport=transport)
         print(f'\n{outcome.upper()} in {time.monotonic() - started:.1f}s')
     except strip_door.NotPressed:
-        print('\nNOBODY PRESSED IT. Not a radio failure: the session held the whole time.')
+        print('\nNOBODY PRESSED IT. Not a radio failure: the errand held the whole time.')
     except Exception as e:                                        # noqa: BLE001 -- a bench report
         print(f'\nFAILED after {time.monotonic() - started:.1f}s: {type(e).__name__}: {e}')
     finally:
         print(f'{transport.exchanges} exchanges through the puck '
-              f'({"it could ring, and rang " + str(transport.rings) + " time(s)" if transport.can_ring else "it could not ring"}), '
+              f'({"it rang " + str(transport.rings) + " time(s)" if transport.can_ring else "no ring"}), '
               f'{transport.out_bytes} bytes out, {transport.in_bytes} back, '
               f'slowest {transport.slowest * 1000:.0f} ms')
-        client.publish(f'{base}/errand/set', 'close')
-        await asyncio.sleep(1)
+        transport.ask(f'close {transport.id}')
+        await asyncio.sleep(1.5)
         client.loop_stop()
 
 

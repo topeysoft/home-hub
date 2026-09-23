@@ -65,6 +65,8 @@
 #include "mesh_crypto.h"
 #include "claim.h"
 #include "ear.h"
+#include "errand.h"
+#include "nimble/porting/nimble/include/os/os_mbuf.h"
 #include "config.h"
 #include "release_keys.h"
 #include "light.h"
@@ -1256,14 +1258,14 @@ static void mqttCb(char *topic, uint8_t *payload, unsigned int len) {
         if (!errandQueue(payload, len)) Serial.println("[errand] busy -- ignoring");
         return;
     }
-    // Binary, and never read here: the relay job is queued whole and the radio work
-    // happens on the loop, like claim and like the notify path.
-    bridgeTopic(own, sizeof(own), "errand/tx");
+#endif
+    // An errand for a hub that cannot hear a strip (errand.h). Queued whole, never read here: the
+    // radio work happens on the loop, like claim and like the notify path.
+    bridgeTopic(own, sizeof(own), "errand/ask");
     if (!strcmp(t, own)) {
-        if (!errandTxQueue(payload, len)) Serial.println("[errand] tx dropped -- one at a time");
+        if (!errand_queue(payload, len)) Serial.println("[errand] queue full -- dropped a command");
         return;
     }
-#endif
     bridgeTopic(own, sizeof(own), "claim");
     if (!strcmp(t, own)) {
         // Queue only. The radio work happens on the loop for the same reason the
@@ -1391,10 +1393,10 @@ static void mqttReconnect() {
     mqtt.subscribe(sub);
     bridgeTopic(sub, sizeof(sub), "claim");
     mqtt.subscribe(sub);
+    bridgeTopic(sub, sizeof(sub), "errand/ask");
+    mqtt.subscribe(sub);
 #ifdef BENCH_ERRAND
     bridgeTopic(sub, sizeof(sub), "errand/set");
-    mqtt.subscribe(sub);
-    bridgeTopic(sub, sizeof(sub), "errand/tx");
     mqtt.subscribe(sub);
 #endif
     bridgeTopic(sub, sizeof(sub), "cfg");
@@ -1492,6 +1494,7 @@ void setup() {
     // bridging the house's own mesh and not the one bridging an old panel's.
     claim_begin(cfg.netKey, ivIndex, claimSay);
     ear_begin(earSay);
+    errand_begin(earSay);   // the same: not retained, a leaf under the puck's own topic
 
     Serial.println("crypto self-test:");
     if (!mesh_selftest(Serial)) Serial.println("  !! CRYPTO BROKEN -- do not trust results");
@@ -1702,21 +1705,27 @@ void loop() {
 
     // THE EAR, while the mesh link is up and nothing else wants the scanner (ear.h, docs/strip.md
     // item 42). A strip knocking behind the television is heard here and not in the garage.
+    // It stands aside while an errand connects or holds a link: NimBLE will not connect while scanning.
 #ifdef BENCH_ERRAND
-    ear_tick(!errandBusy());
+    ear_tick(!errand_busy() && !errandBusy());
 #else
-    ear_tick(true);
+    ear_tick(!errand_busy());
 #endif
 
+    errand_tick();
 #ifdef BENCH_ERRAND
     errandTick();
     if (meshQuiet) { delay(5); return; }   // bench: no mesh writes while the switch is set
+#endif
     // BACKPRESSURE WHILE AN ERRAND HOLDS A SECOND LINK (docs/strip.md item 40). With two links on
     // one radio the proxy link gets fewer connection events, so the polls below queue up faster
     // than they go out -- and a full pool fails the NEXT write on either link, which is the strip's
-    // handshake as often as not. A poll is worth skipping; a household's adoption is not.
-    if (errandHoldsLink() && os_msys_num_free() < ERRAND_POOL_FLOOR) { delay(5); return; }
-#endif
+    // handshake as often as not. A poll is worth skipping; a household's adoption is not. A third of
+    // the pool: the mesh fills it at about five a second and the proxy empties it at about three.
+    if (errand_holds_link() && os_msys_num_free() < CONFIG_BT_NIMBLE_MSYS1_BLOCK_COUNT / 3) {
+        delay(5);
+        return;
+    }
 
     // One vendor Get per POLL_MS, round-robin over the switches, alternating whole sweeps between
     // occupancy and load. Occupancy takes ~30 s to trip and holds ~5 minutes, so polling each switch
