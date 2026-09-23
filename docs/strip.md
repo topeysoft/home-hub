@@ -740,8 +740,11 @@ bridge's `/share/bridge/status` with `401`, steadily, before the graft as well a
 chased here.
 
 **Left behind by the test, and undone:** the bench bridge was written into the house's `bridges`
-list when it came online, and the strip is now one of the house's lights. The graft is reverted with
-`docker compose up -d --force-recreate brain`.
+list when it came online, and the strip is now one of the house's lights. Undone: the bench board
+was erased, the bridge forgotten from the wall (which also clears its retained topics), and the graft
+reverted with `docker compose up -d --force-recreate brain` **run in `/opt/home-hub/driver-layer`** —
+from `/opt/home-hub` it says *no configuration file provided* and the graft quietly stays, which
+`tools/dev.sh graft` now says in its undo line.
 
 **45. The brain sets a strip up through a bridge when the hub cannot hear it — and a hub with no
 Bluetooth of its own is an ordinary hub now.** 23 September.

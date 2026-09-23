@@ -329,7 +329,9 @@ case "${1:-status}" in
          python3 -m compileall -q brain/hub >/dev/null || { echo "${Y}brain does not compile${R}" >&2; exit 1; }
          row "house" "$house"
          row "taps" "${Y}real${R} ${D}— their lights, their names, their Restart button${R}"
-         row "undo" "${D}docker compose up -d --force-recreate brain, or the next update${R}"
+         # The compose file is in driver-layer, not /opt/home-hub: from anywhere else `docker compose`
+         # says "no configuration file provided" and the graft quietly stays. Found undoing one.
+         row "undo" "${D}ssh pi@$house 'cd /opt/home-hub/driver-layer && sudo docker compose up -d --force-recreate brain', or the next update${R}"
          # --no-xattrs, because bsdtar on a Mac writes com.apple.provenance into every header and
          # GNU tar on the hub then prints a warning per file. Nothing is wrong; it just looks it.
          COPYFILE_DISABLE=1 tar --no-xattrs -czf - -C brain hub vendor 2>/dev/null \
