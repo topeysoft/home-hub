@@ -10,7 +10,8 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
-  workers: process.env.CI ? 2 : undefined,
+  // Four, because a public repository's runner has four cores and two left half of them idle.
+  workers: process.env.CI ? 4 : undefined,
   // The html reporter is what actually writes playwright-report/. Without it that directory never
   // exists, so ci.yml's `if: failure()` upload of it has always captured nothing -- a failing run
   // left no trace to open, and the only evidence of why was whatever fitted in the log.
