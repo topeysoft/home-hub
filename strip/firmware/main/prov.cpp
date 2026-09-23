@@ -98,6 +98,18 @@ int slot_for(uint16_t id) {
 constexpr uint32_t kNoSession = 0xFFFFFFFF;
 uint32_t gSession = kNoSession;
 
+// THE DOORBELL (design/ears/Tell.dc.html). The press characteristic notifies, so a hub that cannot
+// hear the strip -- one talking through a bridge puck -- asks once and is told, instead of asking a
+// hundred and seventy times across somebody else's radio for one bit of news.
+//
+// IT RINGS; IT DOES NOT SPEAK. One byte, the same every time, and no ciphertext. Security2 keeps a
+// single nonce counter that both ends step on every encrypt and every decrypt, so anything the strip
+// encrypted without being asked would step its counter behind the hub's back -- and if it crossed the
+// hub's own slow poll in flight, the two would disagree and the session would die. So the ring says
+// only "ask me now", and the answer comes back inside the session the ordinary way.
+uint16_t gPressHandle = 0;
+constexpr uint8_t kRing = 0x01;
+
 void end_session() {
     if (gPc && gSession != kNoSession) protocomm_close_session(gPc, gSession);
     gSession = kNoSession;
@@ -566,12 +578,28 @@ esp_err_t open() {
     return open_on(kOpenSesame, sizeof(kOpenSesame) - 1);
 }
 
+// Straight from the caller's task: this is a NimBLE call, not a CHIP one, and NimBLE takes its own
+// host lock for it. Nobody at the door, or a door that has no handle yet, is nothing to ring -- the
+// press still counts, and a hub that is asking the old way still hears it on its next ask.
+static void ring() {
+    if (gSession == kNoSession || !gPressHandle) return;
+    struct os_mbuf *om = ble_hs_mbuf_from_flat(&kRing, sizeof(kRing));
+    if (!om) {
+        ESP_LOGW(TAG, "no buffer to ring with; the next ask will hear it instead");
+        return;
+    }
+    const int rc = ble_gatts_notify_custom((uint16_t)gSession, gPressHandle, om);
+    if (rc != 0) ESP_LOGW(TAG, "the ring did not go (%d); the next ask will hear it instead", rc);
+    else ESP_LOGI(TAG, "rang whoever is at the door");
+}
+
 bool press() {
     if (!gPc || !gOpenedAt) return false;   // nothing is asking, so nothing to answer
     if (gRhythm[0]) return false;           // a rung down, the flashes are the proof and this is not
     gPressed = true;
     gPressedAt = esp_timer_get_time();
     ESP_LOGI(TAG, "pressed. Whoever is at the door has %d seconds", (int)(kPressGoodFor / 1000000));
+    ring();
     return true;
 }
 
@@ -713,6 +741,12 @@ esp_err_t reserve(const char *name) {
         gChrs[i].arg = (void *)(uintptr_t)kIds[i];
         gChrs[i].descriptors = gDscs[i];
         gChrs[i].flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_WRITE;
+        // NimBLE adds the client configuration descriptor itself for anything that can notify, so
+        // the only thing ours needs is the flag and somewhere to be told its handle.
+        if (kIds[i] == 0xFF55) {
+            gChrs[i].flags |= BLE_GATT_CHR_F_NOTIFY;
+            gChrs[i].val_handle = &gPressHandle;
+        }
     }
     gChrs[kCount] = {};
 

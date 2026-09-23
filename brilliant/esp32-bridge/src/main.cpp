@@ -1689,6 +1689,12 @@ void loop() {
 
 #ifdef BENCH_ERRAND
     errandTick();
+    if (meshQuiet) { delay(5); return; }   // bench: no mesh writes while the switch is set
+    // BACKPRESSURE WHILE AN ERRAND HOLDS A SECOND LINK (docs/strip.md item 40). With two links on
+    // one radio the proxy link gets fewer connection events, so the polls below queue up faster
+    // than they go out -- and a full pool fails the NEXT write on either link, which is the strip's
+    // handshake as often as not. A poll is worth skipping; a household's adoption is not.
+    if (errandHoldsLink() && os_msys_num_free() < ERRAND_POOL_FLOOR) { delay(5); return; }
 #endif
 
     // One vendor Get per POLL_MS, round-robin over the switches, alternating whole sweeps between

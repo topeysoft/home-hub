@@ -96,16 +96,14 @@ that did not exist, a fake home that was a list, and no broker.
    door stays open and keeps advertising — and it does **not** clear the press. So a puck that drops
    an errand mid-handshake costs a second SRP6a and **not a second press**, which is what a household
    would expect and what nobody had written down. Never run; a test to write, not a decision to take.
-   **Two things stand between that and shipping**, both in item 39: NimBLE leaks about two and a
-   mbufs inside an established session and fails with `rc=6`, which looks exactly like a dropped
-   link and kills any adoption where somebody takes their time pressing the button — though the
-   pool comes back when the link closes, so it forbids one long session rather than a puck's whole
-   uptime; and a knocking strip rotates its address and is missed by one scan in three, so the
-   errand has to carry a fresh sighting. **Neither is a reason to redraw the direction, and both belong in the
-   protocol, which is the next design step and per `AGENTS.md` §1 wants boards first** — what the
-   MQTT job looks like, how a session is framed, how the press is waited for without a hundred and
-   seventy round trips, and what happens when the puck drops one mid-handshake. Nothing was tested
-   at the distance item 15 is about, and `hardware/` has still never had the conversation.
+   **And A is built on all three pieces and has run** (item 40): the strip rings, the puck forwards
+   it, the hub asks once and then only every ten seconds, and a household that took ninety seconds
+   to press the button was adopted in 109. The buffer problem was never the protocol — it was the
+   puck's own mesh polls piling up while it held a second link — and backpressure on those polls
+   fixed it. **What is left before this ships is the errand runner itself, which is a bench build.**
+   **Still standing from item 39:** a knocking strip rotates its BLE address and one ten-second scan
+   in three misses it, so a shipped errand has to carry a sighting that is still warm. Nothing has
+   been tried at the distance item 15 is about, and `hardware/` has still never had the conversation.
 2. **The partial-commissioning bug.** A Matter adopt reported failure on the wall and left a fabric
    behind, which silently bricks a strip until somebody knows the five-second hold exists. Item 24 is its
    cousin and is fixed; this one is not, and neither is the fact that **nothing on the wall ever says a
@@ -687,6 +685,49 @@ the house, which is how these things get returned. The camera route avoids all o
 pointed into a living room. **The cheap next step is neither: a capture stick and HyperHDR on a bench,
 to find out whether it feels like the screen extended or like a gimmick, before any of it is paid for.**
 
+**40. THE STRIP RINGS, AND A HOUSEHOLD CAN TAKE ITS TIME. Direction A is built on all three
+pieces and has run.** 23 September, the day after it was chosen (`design/ears/Tell.dc.html`).
+
+**What was built.** *The strip:* the `press` characteristic can notify, and a press rings whoever
+holds the session — **one byte, "ask me now", and no ciphertext.** That is not caution for its own
+sake: Security2 keeps one nonce counter that both ends step on every encrypt and decrypt
+(`esp_prov/security/security2.py`), so anything the strip encrypted unasked would step its counter
+behind the hub's back and a crossing poll would kill the session. So it rings, and the answer still
+comes back inside the session the ordinary way. *The puck:* it subscribes to the ring when it opens
+a link and forwards it on its own topic — the first thing in the protocol that is not a reply.
+*The hub:* `strip_door` asks once, then waits on the ring with an ask every `RING_POLL` (ten
+seconds) behind it in case a ring is lost; a strip too old to ring is polled the old way; and "I
+cannot reach the button" still answers at once. Pinned by `brain/tests/test_strip_door.py`, whose
+first test **was run with the ring removed and failed** (four asks instead of two).
+
+**What ran.** Pressed four seconds in: **seven exchanges, 19.6 s**, the strip rang and was asked
+once more, and it joined the household's network. Pressed **ninety seconds** in: **fourteen
+exchanges, 109 s, done** — one backstop ask every ten seconds instead of one every 0.7.
+
+**AND THE BUFFER PROBLEM WAS NEVER THE PROTOCOL.** Sampling the puck's mbuf pool every second
+(`os_msys_num_free`) showed it at once, where two days of counting exchanges to failure had not:
+with a second link merely **held open and idle — zero exchanges on it —** the pool falls about six
+blocks a second from 100 to 0 in fourteen seconds, and sits there. One A/B/A on one held link
+settled the cause. With the mesh polls running, it drained 100 to 68. With them paused, it
+**refilled** to 100 at about three a second. With them resumed, it drained again. **Those are the
+puck's own occupancy and load polls to the proxy link, four or five a second, queueing faster than
+they go out** because two links now share its radio and the proxy link gets fewer connection
+events. When the pool is empty, the next write on *either* link fails — usually the strip's. So
+it was never a leak and it never cared about sessions or exchanges, which is why every theory
+built on those scattered.
+
+**The fix is on the puck and it is small**: while an errand holds a link, a mesh poll is skipped
+if the pool is below a third. Through the ninety-second wait the pool sat at **32 of 100** the whole
+time and never lower, and mesh traffic kept arriving. **The price is the mesh's poll rate during an
+errand**, which is the right way round: a poll is worth skipping and a household's adoption is not.
+It is in the bench build behind `BENCH_ERRAND`, because the errand runner still is; **the shipped
+one must carry it**, and it is the kind of rule that is invisible until it is missing.
+
+**Not proven.** The fallback for an old strip through a courier is the old polling, and **polling
+now has backpressure behind it but has not been run through a two-minute wait**. Nothing has been
+tried at distance. And the errand runner itself is still a bench build: the wire format in
+`tools/errand-bench.py` was never a proposal, and the one that ships wants its own board.
+
 **39. A WHOLE ADOPTION HAS NOW GONE THROUGH A PUCK, SRP6a AND ALL. The claim the direction
 rests on is measured.** 23 September, straight after item 38, and it is the other half of it:
 38 proved the radio would hold the link, and said in its own last paragraph that the thing the
@@ -715,27 +756,13 @@ taken, 0 refused`, `on the household's Wi-Fi, through our own door` and `Matter'
 this strip is ours`. **A strip went from a box to a household's network without the machine that
 adopted it ever being in radio range of it.**
 
-**THE FIRST THING IN THE WAY IS A LEAK, AND IT LOOKS EXACTLY LIKE A DROPPED LINK** — but it is
-smaller than this item said when it was first written, and the correction is the point of the
-paragraph. NimBLE fails a write with `rc=6` partway through a session: that is `BLE_HS_ENOMEM`, the
-mbuf pool, **not a disconnect**, and the link is still up when it happens. It scales with
-`CONFIG_BT_NIMBLE_MSYS1_BLOCK_COUNT` — 12 blocks died at exchange 5, 40 at 8 to 15 across four
-runs, 100 at 41 — so raising the pool moves the cliff and does not remove it.
-
-**Two things were measured afterwards and both narrow it.** *It needs a session.* Two hundred and
-forty exchanges hammered down the same relay with **no** protocomm session established — long
-384-byte writes and short ones, on a 40-block pool — never produced it once, and the same pool dies
-around a dozen exchanges into a real one. Whatever is held is held per exchange **inside an
-established session**, which is where to look and was not known before. *And the pool comes back
-when the link closes.* Three adoptions on one puck boot, after a session that had already died at
-exchange 12, reached 8 and then **28** — up, not down. So this does **not** accumulate over a
-puck's uptime, it does not need a reboot between errands, and **a puck can run errands all day.**
-
-**What it does forbid is one long session**, which is exactly what the press wait is today: 120
-seconds polled every 0.7 s is some 170 exchanges, four times past where even 100 blocks dies. So
-the protocol question and the bug are the same question — **stop making the press wait a GATT round
-trip each time and the leak stops mattering**, because an adoption is then about six exchanges.
-Finding it is still worth doing; it is no longer what decides whether this ships.
+**THE FIRST THING IN THE WAY LOOKED LIKE A LEAK, AND IS NOT ONE — item 40 has what it is.** NimBLE
+fails a write with `rc=6` (`BLE_HS_ENOMEM`, the mbuf pool, **not a disconnect**) some while into an
+errand, and this item's first two explanations of it were both wrong: it is not per exchange, and
+it does not need a protocomm session. It is **time a second link is held while the puck's own mesh
+polls keep going**, and it is fixed on the puck. Kept here in outline because the wrong turns are
+the record: a count to failure that scattered from 5 to 41 on the same pool size was the tell that
+the exchanges were not the variable.
 
 **THE SECOND IS THAT A KNOCKING STRIP IS HARD TO FIND, WHICH SHARPENS ITEM 38'S CONCLUSION.** The
 strip advertises a **random private address and rotates it**, so an address read off a scan seconds

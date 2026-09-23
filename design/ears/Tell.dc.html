@@ -72,26 +72,28 @@
 <div class="who" style="left: 150px;">The hub <span style="color: var(--muted); font-weight: 400;">&mdash; in the garage</span></div>
 <div class="who" style="left: 640px;">The puck <span style="color: var(--muted); font-weight: 400;">&mdash; in the hall</span></div>
 <div class="who" style="left: 1130px;">The strip <span style="color: var(--muted); font-weight: 400;">&mdash; behind the television</span></div>
-<div class="band good" style="left: 80px; top: 172px; width: 1120px; height: 112px;"></div>
-<div class="cap" style="position: absolute; left: 92px; top: 180px; color: rgba(var(--live-rgb),.9);">The wait &mdash; nothing crosses the air until the button is pressed</div>
+<div class="band good" style="left: 80px; top: 172px; width: 1120px; height: 94px;"></div>
+<div class="cap" style="position: absolute; left: 92px; top: 180px; color: rgba(var(--live-rgb),.9);">The wait &mdash; the strip rings, and one backstop ask every ten seconds</div>
 <div class="n" style="top: 59px; left: 106px;">1</div>
 <div class="step" style="left: 150px; top: 54px; width: 980px;"><div class="bar"></div><div class="lbl">prov-session &middot; <span class="mono">406&rarr;</span> <span class="mono">&larr;416</span></div></div>
 <div class="n" style="top: 89px; left: 106px;">2</div>
 <div class="step" style="left: 150px; top: 84px; width: 980px;"><div class="bar"></div><div class="lbl">prov-session &middot; <span class="mono">75&rarr;</span> <span class="mono">&larr;89</span></div></div>
 <div class="n" style="top: 145px; left: 106px;">3</div>
-<div class="step" style="left: 150px; top: 140px; width: 980px;"><div class="bar"></div><div class="lbl">press &middot; &ldquo;tell me&rdquo; &mdash; and subscribe</div></div>
+<div class="step" style="left: 150px; top: 140px; width: 980px;"><div class="bar"></div><div class="lbl">press &middot; &ldquo;?&rdquo; &mdash; subscribed at open</div></div>
 <div class="n" style="top: 219px; left: 596px;"></div>
-<div class="step" style="left: 640px; top: 214px; width: 490px;"><div class="bar back"></div><div class="lbl">notify &mdash; ciphertext, unasked for</div></div>
+<div class="step" style="left: 640px; top: 214px; width: 490px;"><div class="bar back"></div><div class="lbl">notify &mdash; one byte: ask me now</div></div>
 <div class="n" style="top: 249px; left: 106px;">4</div>
-<div class="step" style="left: 150px; top: 244px; width: 490px;"><div class="bar back"></div><div class="lbl">one message: something arrived</div></div>
-<div class="n" style="top: 305px; left: 106px;">5</div>
-<div class="step" style="left: 150px; top: 300px; width: 980px;"><div class="bar"></div><div class="lbl">prov-config &middot; the Wi&#8209;Fi</div></div>
-<div class="n" style="top: 335px; left: 106px;">6</div>
-<div class="step" style="left: 150px; top: 330px; width: 980px;"><div class="bar"></div><div class="lbl">prov-config &middot; apply</div></div>
-<div class="n" style="top: 365px; left: 106px;">7</div>
-<div class="step" style="left: 150px; top: 360px; width: 980px;"><div class="bar"></div><div class="lbl">hub &middot; where we are</div></div>
-<div class="t2" style="position: absolute; left: 0; top: 392px; width: 1320px; text-align: center; font-size: 13px;">The strip already has a GATT characteristic for the press. It gains a <strong style="color: var(--ink-2); font-weight: 500;">notification</strong> on it, and the job protocol gains one message type: something came back that nobody asked for.</div>
-</div><div style="position: absolute; left: 60px; top: 172px;"><span class="tally" style="margin-right: 12px;"><b>7</b><span>exchanges, always</span></span><span class="tally" style="margin-right: 12px;"><b>0</b><span>round trips while waiting</span></span><span class="tally" style="margin-right: 12px;"><b>1</b><span>new message type</span></span><span class="tally" style="margin-right: 12px;"><b>&mdash;</b><span>buffers never run out</span></span></div><div class="box for" style="position: absolute; left: 60px; top: 690px; width: 646px;"><span class="cap" style="color: rgba(var(--live-rgb),.85);">For</span><p><strong>The wait costs nothing at all</strong> &mdash; no traffic, no buffers, no MQTT, and the mesh gets its rate back while somebody walks to the strip. The notification is still ciphertext the puck cannot read, so <strong>the tube is as sealed as it ever was</strong>, and an adoption becomes seven exchanges, well inside even the stock buffer pool.</p></div><div class="box against" style="position: absolute; left: 734px; top: 690px; width: 646px;"><span class="cap" style="color: rgba(var(--danger-rgb),.85);">Against</span><p><strong>It needs firmware on the strip</strong>, which one already in a house will not have &mdash; so the hub needs a fallback, and there are two ways of waiting rather than one. It also makes the courier carry something <em>unsolicited</em>, the first thing here that is not a reply, and a dropped notification is a household at a strip that says nothing. <strong>A timeout has to sit behind it.</strong></p></div>
+<div class="step" style="left: 150px; top: 244px; width: 490px;"><div class="bar back"></div><div class="lbl">the strip rang</div></div>
+<div class="n" style="top: 279px; left: 106px;">5</div>
+<div class="step" style="left: 150px; top: 274px; width: 980px;"><div class="bar"></div><div class="lbl">press &middot; &ldquo;pressed&rdquo;</div></div>
+<div class="n" style="top: 323px; left: 106px;">6</div>
+<div class="step" style="left: 150px; top: 318px; width: 980px;"><div class="bar"></div><div class="lbl">prov-config &middot; the Wi&#8209;Fi</div></div>
+<div class="n" style="top: 349px; left: 106px;">7</div>
+<div class="step" style="left: 150px; top: 344px; width: 980px;"><div class="bar"></div><div class="lbl">prov-config &middot; apply</div></div>
+<div class="n" style="top: 375px; left: 106px;">8</div>
+<div class="step" style="left: 150px; top: 370px; width: 980px;"><div class="bar"></div><div class="lbl">hub &middot; where we are</div></div>
+<div class="t2" style="position: absolute; left: 0; top: 392px; width: 1320px; text-align: center; font-size: 13px;">Built and run, 23 September. <strong style="color: var(--ink-2); font-weight: 500;">A ring, not a word:</strong> the session&rsquo;s nonce counter moves on every encrypt at both ends, so the strip never encrypts anything unasked &mdash; it rings, and is asked.</div>
+</div><div style="position: absolute; left: 60px; top: 172px;"><span class="tally" style="margin-right: 12px;"><b>7</b><span>exchanges if pressed at once</span></span><span class="tally" style="margin-right: 12px;"><b>+1</b><span>every ten seconds of waiting</span></span><span class="tally" style="margin-right: 12px;"><b>1</b><span>new message type &mdash; a ring, not a word</span></span><span class="tally" style="margin-right: 12px;"><b>32</b><span>free blocks held, never zero</span></span></div><div class="box for" style="position: absolute; left: 60px; top: 690px; width: 646px;"><span class="cap" style="color: rgba(var(--live-rgb),.85);">For</span><p><strong>The wait is nearly free</strong> &mdash; one ask every ten seconds as a backstop instead of every 0.7, and the ring cuts it short the moment a finger lands. The ring carries no content and the answer still comes back inside the session, so <strong>the tube is exactly as sealed as it was</strong>. Measured: seven exchanges pressed at once, fourteen after a ninety-second wait.</p></div><div class="box against" style="position: absolute; left: 734px; top: 690px; width: 646px;"><span class="cap" style="color: rgba(var(--danger-rgb),.85);">Against</span><p><strong>It needs firmware on the strip</strong>, which one already in a house will not have &mdash; that strip is simply polled the old way. And <strong>holding the link is what costs, not asking</strong>: the puck&rsquo;s own mesh polls pile up while two links share its radio, so the puck must hold them back while an errand runs. It does now, and the pool sat at 32 of 100 through a ninety-second wait instead of reaching zero.</p></div>
 </div>
 </x-dc>
 </body>

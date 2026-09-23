@@ -64,6 +64,22 @@ class Errand(Transport):
         self.out_bytes = 0
         self.in_bytes = 0
         self.slowest = 0.0
+        self.can_ring = False
+        self.rung = asyncio.Event()
+        self.rings = 0
+
+    def on_ring(self):
+        """From paho's thread, like on_rx."""
+        self.rings += 1
+        print('  -- the strip rang')
+        self.loop.call_soon_threadsafe(self.rung.set)
+
+    async def listen_for_ring(self) -> bool:
+        return self.can_ring
+
+    async def wait_for_ring(self):
+        await self.rung.wait()
+        self.rung.clear()
 
     def on_rx(self, payload: bytes):
         """Called from paho's thread, so it hands the answer back across to ours rather than
@@ -135,6 +151,7 @@ async def main():
 
     def on_connect(c, u, flags, rc, props=None):
         c.subscribe(f'{base}/errand/rx')
+        c.subscribe(f'{base}/errand/ring')
         c.subscribe(f'{base}/errand')
 
     def on_message(c, u, msg):
@@ -142,7 +159,15 @@ async def main():
             said = msg.payload.decode('utf-8', 'replace')
             print(f'  puck: {said}')
             if 'session open' in said:
+                t = transport_box.get('t')
+                if t is not None:
+                    t.can_ring = 'can ring' in said
                 loop.call_soon_threadsafe(opened.set)
+            return
+        if msg.topic.endswith('/errand/ring'):
+            t = transport_box.get('t')
+            if t is not None:
+                t.on_ring()
             return
         t = transport_box.get('t')
         if t is not None:
@@ -191,7 +216,8 @@ async def main():
     except Exception as e:                                        # noqa: BLE001 -- a bench report
         print(f'\nFAILED after {time.monotonic() - started:.1f}s: {type(e).__name__}: {e}')
     finally:
-        print(f'{transport.exchanges} exchanges through the puck, '
+        print(f'{transport.exchanges} exchanges through the puck '
+              f'({"it could ring, and rang " + str(transport.rings) + " time(s)" if transport.can_ring else "it could not ring"}), '
               f'{transport.out_bytes} bytes out, {transport.in_bytes} back, '
               f'slowest {transport.slowest * 1000:.0f} ms')
         client.publish(f'{base}/errand/set', 'close')

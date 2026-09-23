@@ -36,6 +36,10 @@
 
 #pragma once
 
+// The pool that a held session runs dry (docs/strip.md item 39) -- sampled every second so the
+// slope can be read rather than inferred from where a write happened to fail.
+#include "nimble/porting/nimble/include/os/os_mbuf.h"
+
 // The door a strip opens for us. brain/hub/strip_door.py owns these: the service
 // is ours, and protocomm puts each endpoint's sixteen bits at byte 12 of it.
 static NimBLEUUID DOOR_SVC("1775244d-6b43-439b-877c-060f2d9bed07");
@@ -73,6 +77,23 @@ static size_t txLen = 0;
 static volatile bool txWaiting = false;
 static uint32_t sessionUntil = 0;
 static uint32_t relayExchanges = 0, relayOut = 0, relayIn = 0;
+
+// THE RING (design/ears/Tell.dc.html): the one thing on this link that nobody asked for. The strip
+// notifies on its press characteristic when the button is pressed, carrying a single byte that means
+// "ask me now" and nothing else. It arrives on NimBLE's task, so it is only noted there and handed to
+// the hub from the loop, like everything else on the radio.
+// Below this many free blocks the mesh side stops queueing writes while an errand holds a link,
+// so the strip's exchange always finds room. A third of the pool: the mesh fills it at about five
+// a second and the proxy link empties it at about three, so this is several seconds of headroom.
+#define ERRAND_POOL_FLOOR (CONFIG_BT_NIMBLE_MSYS1_BLOCK_COUNT / 3)
+static bool errandHoldsLink();
+
+// A bench switch: while it is set the puck stops writing to the mesh (motion polls, sweeps), so a
+// drain that stops with it is the mesh side's writes and not the second link's.
+static bool meshQuiet = false;
+static volatile bool ringPending = false;
+static bool canRing = false;
+static void ringCb(NimBLERemoteCharacteristic *, uint8_t *, size_t, bool) { ringPending = true; }
 
 static void errandSay(const char *fmt, ...) {
     char line[200];
@@ -122,14 +143,14 @@ static void errandDrop(const char *why) {
 static void errandSample(const char *phase) {
     uint32_t now = millis();
     int rssi = (errandClient && errandClient->isConnected()) ? errandClient->getRssi() : 0;
-    errandSay("%-8s t+%-5lu mesh %s age %lums pdus %lu | strip %s rssi %d wrote %lu/%lu read %lu/%lu refused %lu fails %lu/%lu | heap %u",
+    errandSay("%-8s t+%-5lu mesh %s age %lums pdus %lu | strip %s rssi %d wrote %lu/%lu read %lu/%lu refused %lu fails %lu/%lu | heap %u | msys free %d of %d",
               phase, (unsigned long)(now - errandStartedAt),
               linkUp ? "up" : "DOWN", (unsigned long)(now - lastRxAt), (unsigned long)proxyPdus,
               (errandClient && errandClient->isConnected()) ? "up" : "down", rssi,
               (unsigned long)errandWrites, (unsigned long)errandWroteBytes,
               (unsigned long)errandReads, (unsigned long)errandBytes, (unsigned long)errandRefused,
               (unsigned long)errandWriteFails, (unsigned long)errandReadFails,
-              (unsigned)ESP.getFreeHeap());
+              (unsigned)ESP.getFreeHeap(), os_msys_num_free(), os_msys_count());
 }
 
 // Scan for EVERYTHING and say what came back before saying which of it is a door.
@@ -272,6 +293,8 @@ static void errandRelayStep() {
     txWaiting = false;
 }
 
+static bool errandHoldsLink() { return errandClient && errandClient->isConnected(); }
+
 static void errandTick() {
     uint32_t now = millis();
 
@@ -339,11 +362,25 @@ static void errandTick() {
                       (unsigned long)(millis() - t0), (unsigned)NimBLEDevice::getClientListSize());
             if (!ok) { errandDrop("open failed"); return; }
             errandClient->getServices(true);
+            // Listen for the ring if this strip can give one. An older strip cannot, and is then
+            // simply asked the old way -- the hub hears which from the line below.
+            ringPending = false;
+            canRing = false;
+            NimBLERemoteService *door = errandClient->getService(DOOR_SVC);
+            NimBLERemoteCharacteristic *bell = door ? door->getCharacteristic(doorChr(0xFF55)) : nullptr;
+            if (bell && bell->canNotify()) canRing = bell->subscribe(true, ringCb);
             // A backstop only. A session nobody is driving must not hold the radio for ever.
             sessionUntil = millis() + 180000UL;
             errandSampleAt = millis();
             errandState = Errand::Session;
-            errandSay("session open -- relaying");
+            errandSay(canRing ? "session open -- relaying, and it can ring"
+                              : "session open -- relaying, and it cannot ring");
+            return;
+        }
+        if (!strcasecmp(verb, "quiet")) {
+            meshQuiet = !(a1 && !strcasecmp(a1, "off"));
+            errandSay("mesh writes %s", meshQuiet ? "paused" : "resumed");
+            errandState = errandClient && errandClient->isConnected() ? Errand::Session : Errand::Idle;
             return;
         }
         if (!strcasecmp(verb, "close")) {
@@ -429,6 +466,13 @@ static void errandTick() {
             errandSample("dropped");
             errandDrop("peer went");
             return;
+        }
+        if (ringPending) {
+            ringPending = false;
+            char rt[80];
+            bridgeTopic(rt, sizeof(rt), "errand/ring");
+            mqtt.publish(rt, "1", false);
+            errandSay("the strip rang");
         }
         if (txWaiting) errandRelayStep();
         if (now - errandSampleAt >= 1000) {

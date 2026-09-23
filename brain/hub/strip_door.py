@@ -56,6 +56,12 @@ OPEN_SESAME = 'press'
 # line is made of, so it is fast enough to feel like an answer and slow enough not to hold the link busy.
 PRESS_WAIT = 120.0
 PRESS_POLL = 0.7
+# AND WHEN THE STRIP CAN RING, HARDLY AT ALL (design/ears/Tell.dc.html). A strip that notifies on the
+# press is asked once, then again when it rings -- and every RING_POLL seconds in case a ring is lost,
+# because a household standing at a strip that has gone quiet is the one failure this must not have.
+# A hundred and seventy asks across a courier's radio become a dozen at most, which is also what
+# keeps a bridge puck inside its buffers (docs/strip.md item 39).
+RING_POLL = 10.0
 
 
 class NotPressed(Exception):
@@ -78,6 +84,20 @@ class _Bleak(Transport):
 
     def __init__(self, client):
         self.client = client
+        self._rung = asyncio.Event()
+
+    async def listen_for_ring(self) -> bool:
+        """Ask to be rung when the button is pressed. False from a strip too old to ring, which is not
+        an error: it is simply asked the old way."""
+        try:
+            await self.client.start_notify(_chrc_uuid('press'), lambda *_: self._rung.set())
+            return True
+        except Exception:                                        # noqa: BLE001 -- no notify, no ring
+            return False
+
+    async def wait_for_ring(self):
+        await self._rung.wait()
+        self._rung.clear()
 
     async def send_data(self, ep_name, data):
         await self.client.write_gatt_char(_chrc_uuid(ep_name), bytearray(data.encode('latin-1')), response=True)
@@ -193,7 +213,13 @@ async def _wait_for_the_press(transport, security, on_pressed, out_of_reach, wai
 
     NOTHING OF THE HOUSE'S HAS MOVED YET and that is the whole shape of this rung: the session is open,
     the strip is lit, and the credentials are still here. The only two ways out are a press and the
-    household saying they cannot reach it."""
+    household saying they cannot reach it.
+
+    The ring only ever says "ask now". The answer still comes back inside the session, the ordinary
+    way, so a strip that rings and a strip that does not are told apart by nothing but how often they
+    are asked."""
+    rings = await _listen(transport)
+    every = RING_POLL if rings else PRESS_POLL
     until = time.monotonic() + wait
     while True:
         if out_of_reach is not None and out_of_reach.is_set():
@@ -206,9 +232,30 @@ async def _wait_for_the_press(transport, security, on_pressed, out_of_reach, wai
             return 'pressed'
         if said != 'waiting':
             raise RuntimeError(f'the strip answered "{said}" when asked about the press')
-        if time.monotonic() >= until:
+        left = until - time.monotonic()
+        if left <= 0:
             raise NotPressed('nobody pressed the button on the strip')
-        await asyncio.sleep(PRESS_POLL)
+        await _rest(transport if rings else None, out_of_reach, min(every, left))
+
+
+async def _listen(transport) -> bool:
+    listen = getattr(transport, 'listen_for_ring', None)
+    return bool(listen and await listen())
+
+
+async def _rest(transport, out_of_reach, seconds: float):
+    """The pause between asks: the poll interval, cut short by a ring, or by somebody saying they
+    cannot reach the button -- which must answer at once however long the poll has become."""
+    waits = [asyncio.ensure_future(asyncio.sleep(seconds))]
+    if transport is not None:
+        waits.append(asyncio.ensure_future(transport.wait_for_ring()))
+    if out_of_reach is not None:
+        waits.append(asyncio.ensure_future(out_of_reach.wait()))
+    try:
+        await asyncio.wait(waits, return_when=asyncio.FIRST_COMPLETED)
+    finally:
+        for w in waits:
+            w.cancel()
 
 
 def _tolerate_corebluetooth() -> None:
