@@ -121,6 +121,15 @@ signatures() {
     *"sha256:aaaa HUB_IMG_CADDY HUB_IMG_MOSQUITTO"*) ok "...the brain digest and one HUB_IMG_ per service" ;;
     *) no "...the brain digest and one HUB_IMG_ per service" "got: $got" ;;
   esac
+
+  # install.sh calls this from inside go_to_ref, under set -u. A cleanup trap that outlived the check
+  # fired again when go_to_ref returned, found its variable gone, and stopped every verified install
+  # after the checkout had already moved -- so update.sh put it back, and the house never updated.
+  got="$( bash -c 'set -euo pipefail
+                   HOME_HUB_KEYS="$1" HOME_HUB_RELEASES="file://$2" . "$4/verify.sh" >/dev/null 2>&1
+                   hub="$3"; go() { verify_release v0.3.0 "$hub" >/dev/null 2>&1; }
+                   go; echo carried-on' _ "$keys" "$serve" "$dir" "$HERE" 2>&1 )"
+  is "the installer carries on past a verified release" "$got" carried-on
   rm -rf "$root"
 }
 

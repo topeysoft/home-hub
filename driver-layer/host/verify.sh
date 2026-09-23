@@ -69,7 +69,10 @@ verify_release() {
   local tag="$1" dir="$2" tmp want got
   [ "$(held_keys)" -gt 0 ] || return 2
   command -v openssl >/dev/null 2>&1 || { echo "  openssl is missing, so a release cannot be checked"; return 1; }
-  tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' RETURN
+  # The trap takes itself away as it runs. A RETURN trap is not local to the function that set it: left
+  # in place it fires again when the caller returns, where $tmp no longer exists, and under install.sh's
+  # set -u that stopped every verified install after the checkout had already moved.
+  tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"; trap - RETURN' RETURN
   if ! curl -fsSL "$RELEASES/$tag/release.json" -o "$tmp/release.json" \
     || ! curl -fsSL "$RELEASES/$tag/release.json.sig" -o "$tmp/release.json.sig"; then
     echo "  $tag has no signed record of what it is, so it is not being installed"; return 1
