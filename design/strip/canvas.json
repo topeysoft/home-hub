@@ -215,6 +215,118 @@
       "w": 1440,
       "h": 900,
       "title": "And only if it cannot be reached \u2014 the rhythm"
+    },
+    {
+      "file": "Again.dc.html",
+      "x": 0,
+      "y": 10800,
+      "w": 1440,
+      "h": 900,
+      "title": "Today \u2014 the row restarts the whole measurement"
+    },
+    {
+      "file": "Nudge.dc.html",
+      "x": 1560,
+      "y": 10800,
+      "w": 1440,
+      "h": 900,
+      "title": "A \u2014 the whole strip is lit, and you walk the end"
+    },
+    {
+      "file": "Handle.dc.html",
+      "x": 3120,
+      "y": 10800,
+      "w": 1440,
+      "h": 900,
+      "title": "B \u2014 Trim, as drawn: drag the end"
+    },
+    {
+      "file": "Tail.dc.html",
+      "x": 4680,
+      "y": 10800,
+      "w": 1440,
+      "h": 900,
+      "title": "C \u2014 only the end is lit, and it walks"
+    },
+    {
+      "file": "Foot.dc.html",
+      "x": 0,
+      "y": 12240,
+      "w": 1920,
+      "h": 1080,
+      "title": "The pane as it should be \u2014 the three kept, the strip's two at the foot right"
+    },
+    {
+      "file": "OneDoor.dc.html",
+      "x": 0,
+      "y": 13560,
+      "w": 1920,
+      "h": 1080,
+      "title": "A \u2014 one door, where the two rows were"
+    },
+    {
+      "file": "WithFacts.dc.html",
+      "x": 2040,
+      "y": 13560,
+      "w": 1920,
+      "h": 1080,
+      "title": "B \u2014 the door goes with the facts, and the rig is a light's"
+    },
+    {
+      "file": "OwnPage.dc.html",
+      "x": 4080,
+      "y": 13560,
+      "w": 1920,
+      "h": 1080,
+      "title": "C \u2014 not on this pane at all: it is a thing the house has"
+    },
+    {
+      "file": "Behind.dc.html",
+      "x": 6120,
+      "y": 13560,
+      "w": 1920,
+      "h": 1080,
+      "title": "What is behind the door \u2014 A and B open this"
+    },
+    {
+      "file": "Blocked.dc.html",
+      "x": 0,
+      "y": 14880,
+      "w": 1440,
+      "h": 900,
+      "title": "Today \u2014 five blocks before the strip's row"
+    },
+    {
+      "file": "OneGrid.dc.html",
+      "x": 1560,
+      "y": 14880,
+      "w": 1440,
+      "h": 900,
+      "title": "A \u2014 one grid under one label"
+    },
+    {
+      "file": "Smaller.dc.html",
+      "x": 3120,
+      "y": 14880,
+      "w": 1440,
+      "h": 900,
+      "title": "B \u2014 smaller swatches, more to a row"
+    },
+    {
+      "file": "Tighter.dc.html",
+      "x": 4680,
+      "y": 14880,
+      "w": 1440,
+      "h": 900,
+      "title": "A and B together"
+    },
+    {
+      "file": "Fewer.dc.html",
+      "x": 6240,
+      "y": 14880,
+      "w": 1440,
+      "h": 900,
+      "title": "C \u2014 only the eight, the rest behind the door"
     }
   ],
   "annotations": [
@@ -279,7 +391,7 @@
       "x": 3120,
       "y": 2160,
       "w": 500,
-      "text": "AFTERWARDS -- BOTH ANSWERS, ON ITS OWN PANE\n\nThe consequence of choosing A and B together, and of the color question existing at all: two things were settled once, while somebody stood in front of the strip, and both of them go stale.\n\nA strip gets cut down to fit a shelf. Another gets soldered on to reach round a corner. One fails and is replaced by whatever was in stock, which is very often not the same make and therefore not the same channel order. None of that is unusual and none of it should mean setting the thing up again.\n\nSo the pane carries both, and carries them quietly: everything above the two rows is the ordinary light pane, drawn by LightPane.vue with no knowledge that this is a strip. The strip-shaped part is two rows at the foot of the cluster, and each one is the setup question it came from, reopened.\n\nNOTE WHAT IS NOT HERE. No effects list, no segments, no zones. A strip with a hundred named animations is a maker's toy; this is an accent light that a household should be able to forget about. If the picture follower ever ships, it arrives as its own thing and argues for its own screens."
+      "text": "AFTERWARDS -- BOTH ANSWERS, ON ITS OWN PANE\n\nThe consequence of choosing A and B together, and of the color question existing at all: two things were settled once, while somebody stood in front of the strip, and both of them go stale.\n\nA strip gets cut down to fit a shelf. Another gets soldered on to reach round a corner. One fails and is replaced by whatever was in stock, which is very often not the same make and therefore not the same channel order. None of that is unusual and none of it should mean setting the thing up again.\n\nSo the pane carries both, and carries them quietly: everything above the two rows is the ordinary light pane, drawn by LightPane.vue with no knowledge that this is a strip. The strip-shaped part is two rows at the foot of the cluster, and each one is the setup question it came from, reopened.\n\nNOTE WHAT IS NOT HERE. No effects list, no segments, no zones. A strip with a hundred named animations is a maker's toy; this is an accent light that a household should be able to forget about. If the picture follower ever ships, it arrives as its own thing and argues for its own screens.\n\nSUPERSEDED IN PART, 22 SEPTEMBER, BY Foot.dc.html. The two rows and the words are this board's and stand; the arrangement is not, because this board was drawn without the three levels every light pane carries. The note beside Foot says what that cost."
     },
     {
       "id": "decided",
@@ -343,6 +455,62 @@
       "y": 9720,
       "w": 500,
       "text": "OUR DOOR ASKS FOR A PRESS, AND ONLY FALLS BACK TO THE LIGHT\n\nChosen 21 September, from design/door/PressIt.dc.html. The argument for the rung is on that canvas and is not repeated here; these two boards are the spec for the strip -- what the wall says, and what the strip itself does while it says it.\n\nTHE GATE IS ON THE STRIP. This is the whole of it, and it is the line that keeps the press from being decoration. Anything in radio range can open a session and get exactly as far as the Wi-Fi question, where it is refused until somebody in the room has touched the object. The hub does not decide this and cannot; it asks, and waits, and says so on the wall.\n\nWHAT THE PRESS BUYS, HONESTLY. Not a keyspace -- there is no secret any more, which is the point: nothing on a label, nothing derived from a chip, nothing to count. What it buys is possession, in the two minutes the gate is open. The residual risk is somebody in radio range at that exact moment, racing the household's own hub; it is the same trade every push-button pairing has ever made, and it is written down in docs/strip.md rather than left implied.\n\nTHE SECOND BOARD IS THE RUNG BELOW. It is reached one way only: by tapping 'It has no button I can reach'. The door canvas names ShowMe here, and for a strip that would move the gate off the strip and onto the hub, which re-admits exactly what this project paid to remove. The rhythm keeps the gate where it is and keeps a real secret behind SRP6a, so the rhythm is the fallback and ShowMe stays drawn and unbuilt.\n\nAND ONE THING THIS ROW CLAIMS THAT NO BOARD ELSEWHERE DOES: a button, reachable, on the outside of every product. It is free now and impossible later."
+    },
+    {
+      "id": "tune",
+      "x": -620,
+      "y": 10800,
+      "w": 500,
+      "text": "FINE-TUNING THE LENGTH, AND IT WAS ALREADY DECIDED\n\nReported 22 September from a real house: the fill is easy to get a bit less or a bit more than the strip really is, and there is no way to nudge it afterwards.\n\nTHIS IS THE SECOND HALF OF A DECISION ALREADY TAKEN. On 20 September the length question was settled as \"A at setup, B afterwards\" -- the fill while somebody is standing there, and the trim on the strip's own pane for ever after. The note beside Trim says it in as many words: \"they are the same fact, asked once while somebody is standing there and EDITABLE FOR EVER AFTER\". The pane got the row. The row calls revisit('length'), which starts the fill from nothing. So the editing half was never built, and Again.dc.html is what that costs.\n\nWHICH WAY IT IS WRONG IS NOT SYMMETRICAL, and it decides what the control has to show. Tapping a beat late reads LONG: the surplus falls off the end of the wire invisibly, so nothing looks wrong and anything needing the middle is. Tapping early reads SHORT: the last stretch stays dark for ever, which is the one a household notices and the one that was reported.\n\nSO THE QUESTION THESE THREE ARGUE IS NOT \"buttons or a drag\". It is HOW YOU SEE THE END WHILE YOU MOVE IT, on a strip where everything past the real end is written to nothing and shows you nothing back.\n\nA NUDGE lights the whole strip and walks its far end, one light a tap, faster on a hold. No number. B HANDLE is Trim exactly as drawn, brought to the pane: one drag whatever the size of the mistake, with the metres readout its own board admitted was a tell. C TAIL darkens the strip and lights only the last few, so the edge is unmistakable at sixty lights to the metre -- and one tap too far makes the tail vanish, which is the only honest way to show the direction you otherwise cannot see.\n\nRECOMMENDATION: A, with C's vanishing tail borrowed for the last few taps rather than built as a mode of its own -- but that is a guess about a strip behind a television and the board to trust is the one you can check against yours. B stays drawn either way: it is right for the household who cut a metre off, and \"Measure it again\" is on all three cards for that.\n\nAND \"SOMETHING ELSE -- I'LL DESCRIBE IT\" IS A REAL OPTION."
+    },
+    {
+      "id": "foot",
+      "x": -620,
+      "y": 12240,
+      "w": 500,
+      "text": "THE PANE'S ARRANGEMENT, CORRECTED FROM A PHOTOGRAPH OF THE REAL ONE\n\nReported 22 September: the strip's pane looks nothing like Later. Both of them were right about something and neither is what ships.\n\nWHAT THE CODE HAD DRIFTED INTO. The two rows went across the WHOLE rig, under the brightness column as well, which gives a question asked once a year the same width as the thing the pane is for -- and pushes the pane past one screen on the way down. The brightness column stopped at 293 pixels with its own lane empty beneath it. And the strip itself was drawn nowhere: a pin, a bulb and two sentences, which is a settings list, not the thing behind the television.\n\nWHAT LATER HAD WRONG. It was drawn without THE THREE IT IS USED AT, so its cluster was two questions where the real one has three. That is why the rows fit so neatly under the swatches there and do not here; the board never met the problem the code was solving. The three stay -- they are why anybody opens this pane.\n\nSO: THE BRIGHTNESS COLUMN RUNS THE FULL HEIGHT, as it does on every other light. Beside it, one column holding the light's own two questions on the first line and the strip's two on the line under them, at the foot, on the right. The strip's rows are below the light's and narrower than the rig, which is the whole of what they are: a thing a household touches when they cut the strip down or bought a second one that is not the same make.\n\nAND EACH CARD DRAWS THE STRIP AGAIN, which is Later's best idea and the one most worth having back. One card lights as far as the light goes; the other shows what red, green and blue actually come out as. Nothing else on this screen says 'strip' except the words.\n\nONE THING DELIBERATELY NOT CARRIED OVER. Later put a drag handle on Ends here -- that is direction B of the length question, and the control built on 22 September is A, two buttons that walk the end while you watch the strip (Nudge). So the card draws the strip and opens that; the handle is still on the canvas as Handle.dc.html if B wins after all.\n\nSTILL OPEN: 1440 x 900. This board is 1920 x 1080, which is the wall these screenshots came from. At 1440 the rig is only 694 wide, the three cannot sit beside the colors at all, and the pane scrolls -- it does today too, and worse. That is its own board.\n\nIF A DOOR WINS (the row below this one), this board is superseded: the two rows become one, and what is drawn here is only the arrangement they would have had. The brightness column running the full height and the three staying put are not in question either way."
+    },
+    {
+      "id": "doors",
+      "x": -620,
+      "y": 13560,
+      "w": 500,
+      "text": "ONE DOOR FOR BOTH, BECAUSE NEITHER IS USED OFTEN\n\nAsked 22 September, looking at Foot: the length and the color order are not things a household touches. Two rows on the pane for two once-a-year questions is two rows too many, and the pane is for the light.\n\nTHE QUESTION IS NOT WHETHER, IT IS WHERE THE DOOR LIVES. All three of these put both questions behind one door and all three open the same thing, which is drawn once beside them. What they disagree about is how much of the light's own pane a strip is allowed to take.\n\nA KEEPS IT IN THE INSTRUMENT, under the three, where the rows are today. One row, and it still draws the strip -- lit as far as the light goes -- so the pane says what this thing is without saying the word. Cheapest to build: it is the row that is already there, with one destination instead of two.\n\nB MOVES IT OUT OF THE INSTRUMENT and puts it with Made by and The room is on. Those are the other two facts about this light that are read rather than changed, and a strip's length is that kind of fact. The rig becomes EXACTLY the rig of an ordinary light, which is what a strip was argued to be on 20 September -- the purest form of the claim. Against: the left column is a reading, not a place anybody has been taught to press, and a door there may never be found.\n\nC TAKES IT OFF THE PANE ENTIRELY and puts it on the strip's row in What this house has -- the door built on 22 September for everything the house owns, which already carries Get rid of it. The argument is real: using the light and owning the thing are different jobs, and the second one already has a home. Against, and it is the heavy one: a household who can see the far end of the strip is dark has to leave the light, find This house, and read a list to fix it. The fault is in the room, and C answers it three screens away.\n\nCHOSEN 22 SEPTEMBER: A. The note below stands as the case for it.\n\nRECOMMENDATION WAS A. It is one row rather than two, it keeps the fix next to the thing that is wrong, and it costs the pane the least. B is the better idea if the pane's left column is ever taught to hold controls -- it is not today. C is worth taking anyway as well: whichever of these wins, the strip's row in What this house has could carry the same two acts for nothing, because that page's words already come from the brain.\n\nAND \"SOMETHING ELSE -- I'LL DESCRIBE IT\" IS A REAL OPTION."
+    },
+    {
+      "id": "door-a",
+      "x": 0,
+      "y": 14700,
+      "w": 600,
+      "text": "A. One row, in the instrument, under the three. It draws the strip rather than wearing a pin icon, so the only thing on this pane that knows what a strip is says so with a picture. \u201cSet up as a strip \u00b7 about 3.0 m\u201d reads as a fact with a door on it, which is what it is. The cheapest of the three and the one that keeps the fix nearest the fault.\n\nBUILT 22 SEPTEMBER, and two things came out of building it. The rig is now a brightness column and one column holding everything else, which is what lets the row start where the colors start -- and it turned out the three columns never fitted at 1440 at all: the third ran 18px off the side of the rig and was quietly clipped. It folds now instead. And the metres on the walking card say where the end is NOW rather than where it was when the door opened: the strip is behind a television two rooms of wall away, and a control whose only answer is over there is one somebody presses twice."
+    },
+    {
+      "id": "door-b",
+      "x": 2040,
+      "y": 14700,
+      "w": 600,
+      "text": "B. The door sits with Made by and The room is on, and the instrument goes back to being exactly a light's. This is the 20 September claim taken literally: a strip is an ordinary light, and nothing that belongs only to a strip is allowed into the rig. The cost is discoverability \u2014 that column has never held a control before, and a door nobody presses is a door nobody finds."
+    },
+    {
+      "id": "door-c",
+      "x": 4080,
+      "y": 14700,
+      "w": 600,
+      "text": "C. Neither the pane nor the rig carries anything: the two acts join the strip's row in What this house has, beside Get rid of it, with their words coming from the brain like every other act on that page. Using the light and owning the thing are different jobs. The cost is distance \u2014 the far end of the strip is dark in the room, and the fix is three screens away."
+    },
+    {
+      "id": "door-behind",
+      "x": 6120,
+      "y": 14700,
+      "w": 600,
+      "text": "What opens, for A and B alike. The setup conversation reopened, which is what revisit() already does; the only new thing is that the length is a walk rather than the whole measurement again, with \u201cMeasure it again\u201d kept for the household who cut a metre off. Note what is still not in here: no effects, no segments, no zones."
+    },
+    {
+      "id": "block",
+      "x": -620,
+      "y": 14880,
+      "w": 500,
+      "text": "THE COLOR BLOCK IS TOO TALL, AND IT IS THE LIGHT'S PROBLEM RATHER THAN THE STRIP'S\n\nReported 22 September, from a real house, on the pane the door was just built into: a bulb that can do color AND white, in a room with colors kept in it, pushes everything below it off the screen.\n\nMEASURED, at 1440 x 900, where the rig has about 426px to give the block: today 512. A, one grid under one label, 441. B, the swatches at 46 and more to a row, 424 -- which fits by two pixels, which is to say it does not. A and B together, 330. C, only the eight with the kept ones and the whites behind More colors, 323.\n\nWHAT WAS DONE THE SAME DAY, and it is not the fix: .pane-rig was overflow: hidden, so the row underneath was CUT OFF with no way to reach it. It scrolls now. A pane that scrolls says there is more; a pane that clips says the panel is broken. But a wall panel that has to be scrolled to reach a row is the thing this canvas keeps arguing against, so the block still has to get shorter.\n\nWHAT EACH ONE SPENDS. A spends nothing at all -- it is the argument already in the code for why a white is a swatch beside the colors rather than a mode, taken one step further -- and it is not enough on its own. B spends the panel's oldest rule: the columns are 168 wide because the hand that reaches for them is not looking, and 46px is the first time this panel has made a target smaller to fit something in. C spends the rule that is written down out loud: nothing appears or disappears when a lamp goes into a color mode, and the way back to white is where it always was.\n\nCHOSEN AND BUILT 22 SEPTEMBER: A AND B TOGETHER. The worst case a house can reach -- a bulb with colors and whites, six colors kept in the room, eighteen swatches -- measures 378px built, against 512 before, and the pane fits a 1440 wall with the day still under it. The 46 is written down in panel.css where somebody tidying numbers would see it.\n\nRECOMMENDATION WAS A and B together. It is the only one with slack left for a sixth kept color, and the only thing it costs is a question a drawing cannot answer -- whether 46px is still a target on a wall. That is a thing to check on the wall itself, in a minute, with a finger.\n\nAND \"SOMETHING ELSE -- I'LL DESCRIBE IT\" IS A REAL OPTION."
     }
   ],
   "reading": [
@@ -389,6 +557,24 @@
     "KnockAsked.dc.html",
     "door",
     "Press.dc.html",
-    "ReachRhythm.dc.html"
+    "ReachRhythm.dc.html",
+    "tune",
+    "Again.dc.html",
+    "Nudge.dc.html",
+    "Handle.dc.html",
+    "Tail.dc.html",
+    "foot",
+    "Foot.dc.html",
+    "doors",
+    "OneDoor.dc.html",
+    "WithFacts.dc.html",
+    "OwnPage.dc.html",
+    "Behind.dc.html",
+    "block",
+    "Blocked.dc.html",
+    "OneGrid.dc.html",
+    "Smaller.dc.html",
+    "Tighter.dc.html",
+    "Fewer.dc.html"
   ]
 }

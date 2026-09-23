@@ -1,0 +1,147 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp-rgb: 233,184,114; --lamp: rgb(var(--lamp-rgb)); --lamp-ink: #2a1c07;
+      --live-rgb: 116,198,157; --live: rgb(var(--live-rgb));
+      --danger-rgb: 224,138,138; --danger: rgb(var(--danger-rgb));
+      --r-lg: 22px; --r-md: 16px;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .sheet { width: 560px; border-radius: 26px; background: rgba(22,24,30,.92);
+             border: 1px solid var(--edge-hi); box-shadow: 0 40px 100px -30px rgba(0,0,0,.9); overflow: hidden; }
+    .sheet h2 { margin: 0; font-size: 34px; line-height: 1.05; font-weight: 400; letter-spacing: -.025em; }
+    .lede { margin: 0 0 18px; color: var(--ink-2); font-size: 15px; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 26px;
+           border-radius: 999px; background: var(--ink); color: var(--bg); font-weight: 500; font-size: 17px; }
+    .btn.ghost { background: var(--surface-hi); color: var(--ink); border: 1px solid var(--edge); }
+    .t1 { font-size: 15.5px; font-weight: 500; }
+    .t2 { font-size: 13px; color: var(--muted); }
+    .box { border-radius: var(--r-lg); border: 1px solid var(--edge); background: rgba(255,255,255,.03); padding: 20px 22px; }
+    .box.for { border-color: rgba(var(--live-rgb),.3); background: linear-gradient(rgba(var(--live-rgb),.07), rgba(var(--live-rgb),.07)), rgba(255,255,255,.02); }
+    .box.against { border-color: rgba(var(--danger-rgb),.3); background: rgba(var(--danger-rgb),.05); }
+    .box p { margin: 10px 0 0; font-size: 14.5px; line-height: 1.6; color: var(--ink-2); }
+    .box p strong { font-weight: 500; color: var(--ink); }
+    .strip { height: 22px; border-radius: 4px;
+             background: repeating-linear-gradient(90deg, rgb(255,96,0) 0 4px, transparent 4px 7px);
+             filter: drop-shadow(0 0 9px rgba(255,140,40,.7)); }
+    .stage { position: relative; padding: 34px 24px 28px; border-radius: 20px;
+             background: rgba(255,255,255,.03); border: 1px solid var(--edge); overflow: hidden; }
+    .glow { position: absolute; left: 0; right: 0; top: -40px; height: 160px;
+            background: radial-gradient(42% 54% at 50% 50%, rgba(255,140,40,.26), transparent 72%); }
+    .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12.5px; letter-spacing: -.01em; }
+    .node { border-radius: var(--r-md); border: 1px solid var(--edge); background: var(--surface);
+            padding: 16px 18px; }
+    .node .t { font-size: 16px; font-weight: 500; }
+    .node .s { display: block; margin-top: 3px; font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+    .wire { display: flex; align-items: center; gap: 8px; color: var(--muted); }
+    .plan { position: relative; border-radius: var(--r-lg); border: 1px solid var(--edge);
+            background: rgba(255,255,255,.022); overflow: hidden; }
+    .rm { position: absolute; border: 1px solid var(--edge); border-radius: 10px; background: rgba(255,255,255,.02); }
+    .rm > span { position: absolute; left: 12px; top: 9px; font-size: 11.5px; letter-spacing: .1em;
+                 text-transform: uppercase; color: var(--muted); }
+    .dbm { font-variant-numeric: tabular-nums; font-weight: 500; }
+  </style>
+</helmet>
+
+<style>
+  /* The light pane's foot, at its shipped values (LightPane.vue). */
+  .rig-lbl { font-size: 12.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+  .rig-card { display: flex; align-items: center; gap: 16px; min-height: 76px; padding: 16px 22px;
+              border-radius: 24px; border: 1px solid var(--edge); background: rgba(255,255,255,.05);
+              color: var(--ink); text-align: left; }
+  .rig-card.on { border-color: rgba(var(--lamp-rgb),.55); background: rgba(var(--lamp-rgb),.14); }
+  .rig-card-icon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%;
+                   background: rgba(255,255,255,.08); color: var(--lamp); flex: 0 0 auto; }
+  .rig-card-name { display: block; font-size: 19px; }
+  .rig-card-name em { font-style: normal; color: var(--muted); }
+  .rig-card-sub { display: block; margin-top: 2px; font-size: 14px; color: var(--muted); }
+  .rig-ask { display: flex; flex-direction: column; gap: 12px; }
+  /* a strip drawn at 60 lights to the metre, so an edge reads the way it does on a wall */
+  .px { display: flex; gap: 1px; }
+  .px i { display: block; width: 4px; height: 26px; border-radius: 1px; background: rgba(255,255,255,.06); }
+  .px i.on { background: rgb(255,164,60); box-shadow: 0 0 7px rgba(255,150,40,.85); }
+  .px i.tail { background: rgb(120,190,255); box-shadow: 0 0 9px rgba(110,180,255,.95); }
+  .px i.dead { background: rgba(255,255,255,.045); box-shadow: none; }
+  .stagec { border-radius: 20px; background: rgba(255,255,255,.03); border: 1px solid var(--edge);
+            padding: 26px 22px 20px; overflow: hidden; }
+  .step { display: inline-flex; align-items: center; justify-content: center; gap: 9px; height: 56px;
+          padding: 0 24px; border-radius: 999px; background: var(--surface-hi); border: 1px solid var(--edge);
+          font-size: 16px; color: var(--ink); }
+</style>
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: var(--bg); color: var(--ink); font-size: 17px; line-height: 1.4;">
+  <div style="position: absolute; inset: 0; background: linear-gradient(rgb(29,33,46) 0%, rgb(41,42,63) 44%, rgb(92,63,57) 84%, rgb(62,44,42) 100%);"></div>
+  <div style="position: absolute; left: -222px; top: -135px; width: 1855px; height: 1156px; background: radial-gradient(58% 54% at 30% 64%, rgba(72,63,135,.4), transparent 68%), radial-gradient(62% 52% at 54% 110%, rgba(55,51,100,.44), transparent 72%);"></div>
+  <div style="position: absolute; inset: 0; background: rgba(6,7,9,.58);"></div>
+
+  <div class="cap" style="position: absolute; left: 60px; top: 44px;">Today &mdash; the only way back is the whole measurement again</div>
+  <h3 class="dsp" style="position: absolute; left: 60px; top: 80px; width: 1120px; margin: 0; font-size: 32px; font-weight: 400;">The row is there, and it opens the wrong thing.</h3>
+  <p style="position: absolute; left: 60px; top: 148px; width: 1320px; margin: 0; color: var(--ink-2); font-size: 15.5px; line-height: 1.6;">The length was settled on 20 September as <strong style="color: var(--ink); font-weight: 500;">A at setup, B afterwards</strong> &mdash; the fill while somebody is standing there, and the trim on the strip&rsquo;s own pane for ever after. The pane got the row. The row calls <span class="mono">revisit('length')</span>, which starts the fill from nothing.</p>
+
+  <div class="cap" style="position: absolute; left: 60px; top: 226px;">The pane&rsquo;s foot, as it ships</div>
+  <div style="position: absolute; left: 60px; top: 258px; width: 620px;">
+    <span class="rig-lbl">Because it is a strip</span>
+    <div class="rig-ask" style="margin-top: 12px;">
+      <div class="rig-card">
+        <span class="rig-card-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 21s7-6.2 7-11a7 7 0 10-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.4"/></svg></span>
+        <span><span class="rig-card-name">Ends here <em>about 4.1 m</em></span><span class="rig-card-sub">Say again if you cut it down, or joined another on.</span></span>
+      </div>
+      <div class="rig-card">
+        <span class="rig-card-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9.5 18h5M10.5 21h3M12 3a6 6 0 00-3.7 10.7c.7.6 1.1 1.4 1.2 2.3h5c.1-.9.5-1.7 1.2-2.3A6 6 0 0012 3z"/></svg></span>
+        <span><span class="rig-card-name">The colors look wrong</span><span class="rig-card-sub">Asks the red question again. A strip bought later may not be the same make.</span></span>
+      </div>
+    </div>
+  </div>
+
+  <div style="position: absolute; left: 730px; top: 258px; display: flex; align-items: center; height: 76px; color: var(--muted);">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+  </div>
+
+  <div class="cap" style="position: absolute; left: 800px; top: 226px;">...and this is what opens</div>
+  <div class="sheet" style="position: absolute; left: 800px; top: 258px; width: 560px;">
+    <div style="padding: 22px 26px 4px;"><h2 class="dsp" style="font-size: 28px;">Let&rsquo;s measure it again.</h2></div>
+    <div style="padding: 4px 26px 24px;">
+      <p class="lede">Filling up again, from the end it plugs in at. Tap when it reaches the far end of the strip as it is now.</p>
+      <div class="stagec" style="margin-bottom: 16px;">
+        <div class="px "><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div style="display: flex; justify-content: space-between; margin-top: 12px; font-size: 13px; color: var(--muted);"><span>Where it plugs in</span><span>&hellip; still dark, still filling</span></div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <span class="btn" style="width: 100%;">That&rsquo;s the whole of it</span>
+        <span class="btn ghost" style="width: 100%;">Start again</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="box against" style="position: absolute; left: 60px; top: 632px; width: 640px;">
+    <span class="cap" style="color: rgba(var(--danger-rgb),.85);">What that costs, to move three lights</span>
+    <p><strong>The whole fill, timed, from nothing</strong> &mdash; and twice if the moment is missed, which is the one thing direction A was known to be bad at. A household that is four lights out is asked to redo the measurement that was four lights out.</p>
+  </div>
+
+  <div class="box" style="position: absolute; left: 740px; top: 632px; width: 620px;">
+    <span class="cap">And the canvas already said so</span>
+    <p style="margin-top: 9px;"><em>&ldquo;They are not a fork &mdash; they are the same fact, asked once while somebody is standing there and <strong>editable for ever after</strong>.&rdquo;</em></p>
+    <p><span class="mono">design/strip/canvas.json</span>, the note beside <em>Trim</em>, 20 September. The editing half is what is missing, and this row is the door it was meant to be behind.</p>
+  </div>
+
+  <div class="t2" style="position: absolute; left: 60px; top: 812px; width: 1320px; line-height: 1.6;"><strong style="color: var(--ink); font-weight: 500;">Which way it is wrong is not symmetrical.</strong> Tapping late reads LONG, and the surplus falls off the end of the wire invisibly &mdash; but anything that needs the middle is then wrong. Tapping early reads SHORT, and the last stretch of the strip stays dark for ever, which is the one somebody notices.</div>
+</div>
+</x-dc>
+</body>
+</html>
