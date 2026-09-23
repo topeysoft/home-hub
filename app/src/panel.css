@@ -5386,6 +5386,18 @@ select.input {
 .things-do .button {
   margin: 0;
 }
+/* NO GLASS ON A LIST THIS LONG, and this is a measurement rather than a preference.
+   `.button.ghost` carries backdrop-filter: blur(18px) saturate(1.3), which is right for a button
+   floating over the sky and costs a live compositing layer that re-samples what is behind it every
+   frame. Every other page under This house has four to six of those; this one has a button on every
+   row, and a real house's worth of rows made thirty-four -- inside a scroller, inside a rounded
+   overflow:hidden panel. Scrolling it dropped tiles and then took the page down with it. A row
+   button is not over the sky: it is on a list, and it wants the ghost's colors without its glass.
+   Reported 22 September, and headless Chromium cannot see it -- it does not composite, so the page
+   traced perfectly clean while a real browser fell over (AGENTS.md section 2). */
+.things .button {
+  backdrop-filter: none;
+}
 /* Why this one has no way out of its own: it goes when the thing above it does. Said on every row
    rather than once per group, because a row is what a finger lands on. */
 .things-why {

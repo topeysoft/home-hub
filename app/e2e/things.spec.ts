@@ -65,3 +65,22 @@ test('the door into it says how much is behind it, in things rather than in entr
   await expect(page.locator('.door', { hasText: 'What this house has' }))
     .toContainText(/\d+ things, and what brought each of them/)
 })
+
+test('nothing on the list is glass, which is what made it unusable to scroll', async ({ page }) => {
+  /* REPORTED 22 SEPTEMBER: scrolling this page dropped rows and then took the whole view down.
+     Nothing was wrong with the DOM -- a per-frame trace found all 37 rows present and none of them
+     zero height -- because it was never a layout problem. `.button.ghost` carries a backdrop-filter,
+     which is a live compositing layer that re-samples what is behind it on every frame; every other
+     page under This house has four to six, and a row button on a real house's worth of rows made
+     thirty-four, inside a scroller inside a rounded overflow:hidden panel.
+
+     Headless Chromium does not composite, so it renders this perfectly and can never catch the bug.
+     Counting the glass is the thing it CAN do, so that is what is pinned here. */
+  await page.goto(DOOR, { waitUntil: 'networkidle' })
+  const frosted = await page_(page).evaluate((el) =>
+    [...el.querySelectorAll('*')].filter(n => {
+      const v = getComputedStyle(n).backdropFilter
+      return !!v && v !== 'none'
+    }).map(n => n.className))
+  expect(frosted, 'a row on a long list is not glass over the sky').toEqual([])
+})
