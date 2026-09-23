@@ -114,8 +114,10 @@ that did not exist, a fake home that was a list, and no broker.
    43), in every image the hub ships, and so is **the errand runner** (item 44), over a text format
    that Home Assistant can carry, and **the brain speaks it** (item 45): setup asks which ear, runs
    through a bridge when it should, and a hub with no Bluetooth finds strips through its bridges.
-   **What is left is a house**: every piece has run, but a bridge and the brain have not yet met
-   through Home Assistant on the air. Nothing
+   **And they have met in a house** (item 46): through Home Assistant, on the air, a strip the hub
+   heard at −62 was set up through a bridge that heard it at −49, with a tap on the wall and a press
+   on the strip. **What is left is shipping it**: a release, so a house's own bridges carry this
+   firmware and its brain carries this code. Nothing
    has been tried at the distance item 15 is about, and `hardware/` has still never had the
    conversation.
 2. **The partial-commissioning bug.** A Matter adopt reported failure on the wall and left a fabric
@@ -709,6 +711,37 @@ real annual cost before a unit ships — and inserts the product into the most q
 the house, which is how these things get returned. The camera route avoids all of that and costs a camera
 pointed into a living room. **The cheap next step is neither: a capture stick and HyperHDR on a bench,
 to find out whether it feels like the screen extended or like a gimmick, before any of it is paid for.**
+
+**46. IN A REAL HOUSE, THROUGH HOME ASSISTANT, ON THE AIR: a strip the hub could barely hear was set
+up through a bridge, with a tap on the wall and nothing else.** 23 September.
+
+**What ran.** A spare S3 carrying the *shipped* bridge firmware (`esp32s3-house-test`: no bench code)
+joined the house's own mesh beside `c0e33a`, which was not touched; this tree's brain was grafted onto
+the hub. The strip knocked. The hub's own radio heard it at **−62 dBm**, just past `FAINT`; the
+bridge's ear heard it at **−49**. The household said yes on the wall, and the brain's log said *the hub
+cannot hear it well; bridge 08388e runs the errand*. On the broker, in the shipped words: `open` →
+`open … ring`; two handshake exchanges on `0xff51`; the press asked about on `0xff55` in ciphertext; the
+button pressed; **`ring`**; one more ask; the Wi-Fi on `0xff52` twice; where we are on `0xff54`;
+`close` → `closed … asked`. The strip's own log: *pressed*, *rang whoever is at the door*, *credentials
+… arrived through our door*, *looking for the hub at mqtt://hub.local:1883*, *announced as a light the
+house can switch on*. It came online on the broker and **the wall moved on to the colour question**.
+Every piece since item 38 met every other piece, for the first time, in one run.
+
+**What went wrong on the way, and it was not the protocol.** The first "yes" was refused on the
+hub's own radio — *device not found* — because the strip had fallen off the air: it had rebooted
+into its ROM download mode (two power-on resets with the boot pin low) before the tap. The ear had
+gone quiet for the same reason, so the brain had no fresh bridge sighting and correctly fell back to
+its own radio. What reset the strip is not known; a supply dip on the bench USB is the likely shape.
+The rule that chose the hub was right given what it knew, and the knock came back by itself within a
+minute of the strip being reset.
+
+**Seen and not ours.** The live brain refuses websocket connections with `403` and the Matter
+bridge's `/share/bridge/status` with `401`, steadily, before the graft as well as after. Neither was
+chased here.
+
+**Left behind by the test, and undone:** the bench bridge was written into the house's `bridges`
+list when it came online, and the strip is now one of the house's lights. The graft is reverted with
+`docker compose up -d --force-recreate brain`.
 
 **45. The brain sets a strip up through a bridge when the hub cannot hear it — and a hub with no
 Bluetooth of its own is an ordinary hub now.** 23 September.
