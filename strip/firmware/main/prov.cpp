@@ -21,6 +21,9 @@
 #include <string>
 #include <vector>
 
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+
 #include <esp_log.h>
 #include <esp_random.h>
 #include <esp_timer.h>
@@ -94,6 +97,18 @@ int slot_for(uint16_t id) {
 // opened on the first write from a connection instead, and closed when CHIP says the link went.
 constexpr uint32_t kNoSession = 0xFFFFFFFF;
 uint32_t gSession = kNoSession;
+
+// THE DOORBELL (design/ears/Tell.dc.html). The press characteristic notifies, so a hub that cannot
+// hear the strip -- one talking through a bridge puck -- asks once and is told, instead of asking a
+// hundred and seventy times across somebody else's radio for one bit of news.
+//
+// IT RINGS; IT DOES NOT SPEAK. One byte, the same every time, and no ciphertext. Security2 keeps a
+// single nonce counter that both ends step on every encrypt and every decrypt, so anything the strip
+// encrypted without being asked would step its counter behind the hub's back -- and if it crossed the
+// hub's own slow poll in flight, the two would disagree and the session would die. So the ring says
+// only "ask me now", and the answer comes back inside the session the ordinary way.
+uint16_t gPressHandle = 0;
+constexpr uint8_t kRing = 0x01;
 
 void end_session() {
     if (gPc && gSession != kNoSession) protocomm_close_session(gPc, gSession);
@@ -563,12 +578,28 @@ esp_err_t open() {
     return open_on(kOpenSesame, sizeof(kOpenSesame) - 1);
 }
 
+// Straight from the caller's task: this is a NimBLE call, not a CHIP one, and NimBLE takes its own
+// host lock for it. Nobody at the door, or a door that has no handle yet, is nothing to ring -- the
+// press still counts, and a hub that is asking the old way still hears it on its next ask.
+static void ring() {
+    if (gSession == kNoSession || !gPressHandle) return;
+    struct os_mbuf *om = ble_hs_mbuf_from_flat(&kRing, sizeof(kRing));
+    if (!om) {
+        ESP_LOGW(TAG, "no buffer to ring with; the next ask will hear it instead");
+        return;
+    }
+    const int rc = ble_gatts_notify_custom((uint16_t)gSession, gPressHandle, om);
+    if (rc != 0) ESP_LOGW(TAG, "the ring did not go (%d); the next ask will hear it instead", rc);
+    else ESP_LOGI(TAG, "rang whoever is at the door");
+}
+
 bool press() {
     if (!gPc || !gOpenedAt) return false;   // nothing is asking, so nothing to answer
     if (gRhythm[0]) return false;           // a rung down, the flashes are the proof and this is not
     gPressed = true;
     gPressedAt = esp_timer_get_time();
     ESP_LOGI(TAG, "pressed. Whoever is at the door has %d seconds", (int)(kPressGoodFor / 1000000));
+    ring();
     return true;
 }
 
@@ -601,12 +632,29 @@ void tend_the_door() {
             ESP_LOGE(TAG, "the door would not reopen with a rhythm; this strip cannot be taken now");
         return;
     }
-    // The door is shut for good. Give the manager's memory back, from here, where no lock is held
-    // and this call can take the manager's own without meeting itself coming the other way.
+    // The door is shut for good. Give the manager's memory back -- ON A TASK OF ITS OWN, and that
+    // is the whole point of these four lines.
+    //
+    // THE BUTTON MUST NEVER BE BEHIND ANYTHING THAT CAN BLOCK. It is the way out of every other
+    // mistake in this firmware -- the factory reset lives on it -- and it is read from the same loop
+    // as this. network_prov_mgr_deinit() takes the manager's own lock, and the manager's cleanup
+    // timer holds that lock while it tells us the door has shut; it is exactly the call that already
+    // hung a task once. Worse, THIS line only runs after a session has actually completed, so it
+    // never ran on a bench whose Wi-Fi was a name that does not exist, and ran every time on a real
+    // house. Reported from one on 21 September as "holding BOOT does nothing until I press RESET
+    // first", which is what a housekeeping loop that is no longer running looks like from outside.
+    //
+    // On its own task, the worst a block costs is the manager's memory. On this one it costs the
+    // button, the fill, the light and the way out.
     if (gDoorIsShut && !gPc) {
         gDoorIsShut = false;
-        network_prov_mgr_deinit();
-        ESP_LOGI(TAG, "the door is shut and the manager is packed away");
+        auto pack_away = [](void *) {
+            network_prov_mgr_deinit();
+            ESP_LOGI(TAG, "the door is shut and the manager is packed away");
+            vTaskDelete(nullptr);
+        };
+        if (xTaskCreate(pack_away, "prov_pack", 4096, nullptr, 4, nullptr) != pdPASS)
+            ESP_LOGW(TAG, "could not pack the manager away; it keeps its memory and we keep going");
     }
 }
 
@@ -693,6 +741,12 @@ esp_err_t reserve(const char *name) {
         gChrs[i].arg = (void *)(uintptr_t)kIds[i];
         gChrs[i].descriptors = gDscs[i];
         gChrs[i].flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_WRITE;
+        // NimBLE adds the client configuration descriptor itself for anything that can notify, so
+        // the only thing ours needs is the flag and somewhere to be told its handle.
+        if (kIds[i] == 0xFF55) {
+            gChrs[i].flags |= BLE_GATT_CHR_F_NOTIFY;
+            gChrs[i].val_handle = &gPressHandle;
+        }
     }
     gChrs[kCount] = {};
 

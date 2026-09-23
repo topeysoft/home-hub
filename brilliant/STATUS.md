@@ -12,7 +12,7 @@ mesh keys and can now **read and control the real wall switches directly over BL
 |---|---|---|
 | Read on/off | `Generic OnOff Status` | ✅ |
 | Read dim level | `Generic Level Status` | ✅ |
-| Read motion (PIR) | vendor field **`0x13`**: a walk-past adds ~5 counts on top of a baseline that tracks the load (~2 lamp off, ~130 lamp full); the bridge learns the baseline per switch | ✅ |
+| Read motion (PIR) | **No.** Vendor field **`0x13`** is the lamp, settled by measurement on 22 September — see *What `0x13` actually reads*. There is no motion signal from these switches yet | ❌ |
 | Write on/off | `Generic OnOff Set` | ✅ light obeyed |
 | Write dimming | `Generic Level Set` on a **0–1000 scale** (not SIG −32768…32767) | ✅ full→2%→full, confirmed |
 | Restore a reset switch to a dimmer | provision + bind (incl. vendor `0x0820/0x0001`) + write config; **power cycle only if it does not dim** | ✅ confirmed; two later adoptions needed no boot at all |
@@ -77,7 +77,7 @@ the MQTT session held for the whole soak.
 | Per switch, in HA | From |
 |---|---|
 | `light.brilliant_switch_<addr>` with brightness | `Generic OnOff/Level Status`, published by the switch on touch and polled every 10 min |
-| `binary_sensor..._motion` (device class motion) | vendor field `0x13` polled round-robin every 250 ms, ON while it sits 4 above the switch's learned floor, 20 s hold; plus any switch's own publication of field `0x0c = 1` |
+| `binary_sensor..._motion` (device class motion) | **Currently a lie; rebuild it on `0x0c` as occupancy.** Vendor field `0x13` polled round-robin every 250 ms, ON while it sits 4 above the switch's learned floor, 20 s hold. `0x13` is the load, so this reports the lamp and the dim level, plus noise: five reports in seven minutes in an empty room. Also ON for any switch's own publication of field `0x0c = 1`, which is still a guess |
 | `sensor..._motion_level` (diagnostic) | the raw `0x13` value |
 | `sensor.brilliant_bridge_proxy_node` | which switch the puck is linked to, and its RSSI |
 
@@ -107,9 +107,16 @@ Full contract at the top of `esp32-bridge/src/main.cpp`; the story of building i
   The exact ordered sequence, written as a spec a firmware provisioner can replay (and which fields do what), is
   **Spec: adopting a switch** in [`../docs/brilliant.md`](../docs/brilliant.md); `tools/restore_switch.py` is the
   reference implementation (`adopt <captured.json>`, then power-cycle, then `verify <addr>`).
-- ~~Confirm motion with a body.~~ Done: a walk past `0x000b` raised `0x13` from ~5 to 8 and the bridge reported motion.
-- **Bisect the recipe** (optional): which of the seven fields is the selector; `0x48`/`0x4f` are the reporting enable,
-  `0x03`/`0x07` its thresholds, so `0x1a`/`0x1b`/`0x56` are the mode candidates. Nobody walked past a switch during the build. Field `0x13` rests at different
+- **Confirm motion with a body. Not done, and the earlier tick was wrong.** The walk past `0x000b` that raised
+  `0x13` from ~5 to 8 is inside the noise this field shows with nobody in the room (dark baseline on `0x0007`
+  ranged 3-11 against a threshold of 4 over the floor). It proved nothing. See *What `0x13` actually reads*.
+- **Bisect the recipe** — *no longer optional*: the dimmer/switch selector is the whole of a product feature, because
+  the load type governs the wall plate's own gesture and not just the mesh (22 Sep: both stairway ends were worked by
+  hand and are on/off only from the switches themselves). `0x1a`, `0x1b` and `0x56` are each disproved — `0x56` reads
+  `03` on a dimmer and a non-dimmer alike. A live read of `0x0005` (dims) against `0x0006` (does not), both mains with
+  a load, leaves `0x4c`/`0x52` (100 vs 1000) and `0x4d`/`0x53` (0 vs 1800) as two parallel triples. What is left is at
+  most two writes on `0x0006` and somebody watching the lamp. Note `0x53` is NOT in `restore_switch.py`'s
+  `CONFIG_FIELDS`. See *The load type governs the wall plate too* in [`../docs/brilliant.md`](../docs/brilliant.md). Nobody walked past a switch during the build. Field `0x13` rests at different
   levels per switch (0x000a ~130, 0x0010 ~285, most 0-2, 0x000b 4-11), which is why the floor is learned rather than
   fixed. Switch `0x0016` publishes vendor field `0x0c = 1` on its own every ~20 s; that is treated as motion too but is
   a guess. Run `bridge_watch.py`, walk past a switch, and see which of the two moves.
@@ -374,13 +381,127 @@ flaky install, not to the protocol.
 **Field `0x13` is a load detector and it is not subtle.** Measured on `0x0005` with the lamp switched by
 hand: dark 1-3, lit 92-97, settling within ~2 s in both directions. So a provisioner can find which of two
 new switches has the lamp by trying each and watching, and never has to ask anybody. Key it on the **jump**,
-never on an absolute threshold -- resting values differ per switch across this house.
+never on an absolute threshold -- resting values differ per switch across this house. *(Confirmed clean on
+22 September, with the confound removed: see the next section. The load reading stands; what does not is
+the belief that the same field also sees people.)*
 
 **`0x1b` is the ANNOUNCE flag, not a role.** Our stairway load `0x0006` was written to `0x1b = 03`, power
 cycled and pressed: the lamp came on. So `03` does not stop a switch driving its own load; it adds the
 `0403` to the partner in `0x08`. The old "00 drives a load, 03 is a companion" reading is retired, and the
 adopt spec's field table is corrected. Our stairway pair is `0x0004 -> 0x0006`; earlier notes saying
 `0x0003` are out of date.
+
+## What `0x13` actually reads (22 September, settled)
+
+`tools/load_or_pir.py` on `0x0007` (the Main Bedroom Dimmer), driven over the mesh from another room so
+nobody was near the sensor at any point. Five windows, about seven minutes. This is the clean confirmation
+`docs/brilliant.md` has been admitting it owed.
+
+| Window | n | Range | Median |
+|---|---|---|---|
+| dark baseline | 22 | 3-11 | 8.5 |
+| lit, empty room | 15 | 66-68 | 67.0 |
+| dark again | 20 | 4-10 | 7.0 |
+| dim 20% | 16 | 21-26 | 23.0 |
+| dim 100% | 11 | 67-68 | 67.0 |
+
+**It is the load.** +59.5 counts at switch-on, +58.5 still there two minutes later, -1.5 back in the dark.
+A held plateau in an empty room is not a body, and no finger in front of a PIR can explain it. **And it
+tracks brightness**, which the old reading did not say: 20% rests at 23, 100% at 67. The baseline moves
+with the dim level.
+
+**So these switches do not report motion, and the `binary_sensor` that says they do is wrong.** Not
+approximately wrong -- it fired five times in seven minutes with the room empty, twice during a dark
+window where the lamp was not even moving, because the floor is learned once and the field's own noise
+(3-11 in the dark) clears the 4-count threshold by itself.
+
+**The dim leg found a second bug on top of the first.** The bridge re-learns its floor on a Generic OnOff
+Status but not on a Level Status (`main.cpp`, the `0x8204` branch), so dimming moves the baseline with no
+re-learn and motion latches on. One of the five false reports landed in the dim leg, exactly as predicted.
+
+**What this costs upstream.** Anything that consumes motion from a Brilliant switch is consuming the lamp:
+
+- `brain/hub/nightlight.py` -- the motion lift swells a puck's glow when the *light in that room changes*,
+  not when somebody walks past. In a room whose lamp is on, the lift would also sit latched on.
+- The `{"motion": "on"}` and `{"idle": <n>}` triggers in `brain/hub/rules.py`, wherever a Brilliant switch
+  is the sensor in that room. `idle` is the dangerous one: a false report restamps `motion_at`, so a room
+  that has genuinely been still for an hour reads as busy and the rule that should turn it off never fires.
+
+Neither is a bug in that code. Both are correct over a signal that is not what it claims to be.
+
+**In this house, today, nothing is actually misfiring — and that is luck, not design.** The only enabled
+motion rules are the two backyard ones, and the backyard's sensors are real PIRs (`binary_sensor.backyard_motion`
+and the two floodlights), not mesh switches. But four fake motion sensors are assigned to rooms and are
+restamping `motion_at` every time those lamps move: `0x0003` Kitchen, `0x0005` Theater, `0x0006` Stairway,
+`0x0007` Main Bedroom. Any `idle` or `quiet` rule written for one of those rooms would be wrong from the
+first day, and would look like a rules bug rather than a sensor one.
+
+**What is still open.** Whether these switches have a usable PIR at all. Field `0x0c = 1`, published by
+`0x0016` on its own every ~20 s, is the remaining candidate and is currently treated as motion on a guess.
+`0x1a`/`0x1b`/`0x56` were the mode candidates for enabling reporting, and `0x1b` is now known to be the
+announce flag, which leaves `0x1a` and `0x56`. Until one of them is shown to move for a body and not for a
+lamp, the honest answer is that this hardware gives us no motion. *(Answered the same evening: there is a
+PIR behind a lens on the faceplate, and `0x0c` is what it feeds. See the next section.)*
+
+## `0x0c` is occupancy, and the hold is about five minutes (22 September, measured)
+
+The faceplate has a **sensor lens** on it -- looked at, not inferred -- so the hardware was never the
+question. The question was which field the PIR feeds, and it is `0x0c`.
+
+**It was nearly missed twice.** `tools/walk_past.py` compared three thirty-second walk-pasts against
+three sixty-second empty gaps and found nothing: `0x0c` read `0100` on every single poll of all six
+minutes, so every window looked identical and the tool reported no difference. The gaps were far too
+short for a field that holds for five minutes. Before that, this document had two flatly contradictory
+readings of `0x0c` -- "a state notice, not motion" from a bench test where nobody was moving, and "tracks
+a person" from a live capture where somebody was. Both were right about what they saw. `0x0c` is set by
+either a command *or* a person, and a bench with nobody in the room can only ever show the first half.
+
+**What settled it** was watching it over an afternoon rather than trying to catch an edge by luck. With
+the lamp never commanded once: `00` at the desk, `01` after walking to the switch, `01` through six
+minutes of moving about, `00` again after some minutes away. Then `tools/presence_hold.py` timed both
+edges properly -- five minutes of genuinely empty room, one short visit, six minutes to fall again:
+
+```
+16:57:18  0x0c -> 00     empty room, held all 5 minutes (37 reads, every one 00)
+17:02:57  0x0c -> 01     somebody had gone in
+17:07:39  0x0c -> 00     they had been gone ~5 minutes
+```
+
+**Trip: 25-42 s after entry. Release: 4m 40s to 4m 54s after leaving.** Both are brackets rather than
+numbers, and deliberately so -- 39 reads went unanswered and gaps reached 28 s, so an edge is known only
+to lie between the read that missed it and the read that caught it. The release is well constrained (39
+reads across that leg) and lands close enough to a flat 300 s that a fixed timer from last detection is
+the obvious guess; the trip is barely constrained at all, because only three reads landed inside a
+thirty-second visit.
+
+**So it is occupancy, not motion, and the distinction is the whole product question.**
+
+- Publish it as `device_class: occupancy`. Never as `motion` -- a five-minute tail on something labeled
+  motion is exactly what makes a hallway light feel broken.
+- It suits what the rules actually ask for: `idle`, `quiet`, how long a floor has been still. An `idle`
+  threshold has to clear the hold, so `{"idle": 600}` is fine and `{"idle": 60}` is meaningless here.
+- **It cannot serve the nightlight lift.** That needs "somebody is walking past *now*", and a signal that
+  takes up to 40 s to notice and five minutes to forget cannot give it. Step 5 of `docs/puck-light.md`
+  still has no sensor.
+
+**Before a household sees this**, repeat it with a two-minute visit. One visit on one switch is what is
+on file, the trip bracket is wide, and nobody has tested whether the hold restarts on continued presence
+or runs from first detection -- which changes what an `idle` rule means.
+
+**A tool bug worth not re-learning.** `presence_hold.py` first cried wolf on its own control: it flagged
+"the lamp moved" because `0x13` showed more than one distinct value, when `0x13` wanders 5-9 by itself
+with nothing touching the light. A lit lamp is about +60, not a wobble of four counts. A control that
+fires on noise is worse than none, because it discredits a clean run.
+
+
+
+**One thing the run fixed in the tool itself.** `load_or_pir.py` could not get past its own startup here:
+paho's `loop()` reads one packet per call, and this mesh publishes `motion_level` for seventeen switches
+every 250 ms, so a 0.5 s `loop()` drained two messages a second out of dozens and the retained backlog
+never finished arriving. It now runs a background network thread. Worth knowing generally -- a run that
+had got past that would have sampled progressively behind the lamp it was driving, and reported windows
+that looked plausible and were not.
+
 
 ### New tools
 

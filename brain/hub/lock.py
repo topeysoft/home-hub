@@ -56,6 +56,7 @@ def needs_code(method: str, path: str) -> bool:
     # ...and taking one off the house is the same size of decision as letting it on: its switches
     # stop appearing on the panel, and getting them back is the cable again.
     if path in ("/bridge/adopt", "/bridge/wifi", "/bridge/forget") and m == "POST": return True
+    if path.startswith("/strip/") and m == "DELETE": return True   # letting a strip go is a change to the house
     # Changing the network the house runs on is the same giveaway again, and worse in one way: it can
     # leave the hub somewhere nothing can reach it. Looking at what the hub is connected to is not
     # gated -- a household should be able to read its own situation without typing anything -- and

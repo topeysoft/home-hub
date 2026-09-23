@@ -12,17 +12,17 @@ meant to be read.*
 ## Picking this up
 
 *The rest of this document is how it got here, which is worth reading before changing any of it. This section
-is where it stands, as of 21 September 2026.*
+is where it stands, as of 22 September 2026.*
 
 ### Where each piece is
 
 | | |
 |---|---|
-| **Design** | 21 boards in `design/strip/`, 3 in `design/door/`, 3 in `design/occasion/`. The last row of `design/strip/` is the press and the rung below it |
+| **Design** | 27 boards in `design/strip/`, 3 in `design/door/`, 3 in `design/occasion/`, 5 in `design/ears/`. The last row of `design/strip/` is the press and the rung below it; `design/ears/` is how a hub reaches a strip it cannot hear, and it is drawn and unbuilt |
 | **Firmware** | ESP-IDF + esp-matter, **commissionable over BLE, proven on an ESP32-S3** |
-| **Brain** | both doors: knock → adopt → (press → rhythm | code) → set up. 51 tests. Our door carries the broker |
-| **Panel** | the beats including the press, previewable with `?strip=knocking\|press\|rhythm\|working\|ready` |
-| **Suites** | brain 1117, panel 497, native firmware test, all green |
+| **Brain** | both doors: knock → adopt → (press → rhythm | code) → set up. 71 tests. Our door carries the broker |
+| **Panel** | the beats including the press, previewable with `?strip=knocking\|press\|rhythm\|working\|ready`; and the ONE row a strip adds to its own light pane, with both questions behind it and the end walked rather than measured again (22 September, `design/strip/OneDoor.dc.html`) |
+| **Suites** | brain 1137, panel 502, native firmware test, all green |
 
 ### What is proven on hardware, and what is not
 
@@ -56,21 +56,84 @@ unit test, and Alexa has not been tried. **And no strip has ever joined a real W
 the bench used a network name that does not exist, so `NETWORK_PROV_WIFI_CRED_SUCCESS` has never fired on
 this firmware and the `ours` flag it writes has never been written.
 
+### THE WHOLE THING WORKS, 21 September
+
+**A strip now goes from a box to a light on the wall, in a real house, with no phone and no app.** Knock,
+press the button, Wi-Fi and the broker in one session, "Is it red?", the fill, a room, and then a tile
+you can switch on, dim and color — with a way back to both setup answers afterwards. Every beat of that
+ran on an ESP32-S3 against a real hub and a real broker. Items 23 to 32 are what it cost, and **every
+bug past the BLE session was the first time that line had ever run in a house**: the bench had a Wi-Fi
+that did not exist, a fake home that was a list, and no broker.
+
 ### The next three things, in order
 
-1. **The partial-commissioning bug.** A Matter adopt reported failure on the wall and left a fabric behind,
-   which silently bricks a strip until somebody knows the reset exists.
-2. **The 13 dB range gap** (item 15). A session completes at −51 dBm and dies at −64 with NimBLE reason
-   `0x208`. Two software levers were tried and neither closed it; the evidence says RF, and `hardware/`
-   has never had the strip conversation.
-3. **A button, reachable, on the outside of every product** (item 23). Our whole door now rests on it and
-   it has never been written down as a hardware requirement. Free now, impossible later.
+1. **The distance between a hub and a device. Drawn and decided on 22 September; not built.**
+   `design/ears/` has five boards and the direction is **A, the bridge puck as an errand runner** — the
+   hub hands it a job over MQTT, it does the GATT work, and **the SRP6a session stays end to end**, so
+   the puck carries bytes it cannot read and the press gate stays on the strip. Item 33.
+   **The bench question is answered and direction A survives.** It was never whether the puck could be
+   a GATT central — it already is one, because the mesh proxy link *is* a GATT connection. It was
+   whether it could hold a **second** one, and it can: 61 seconds beside a live mesh link, 16 KB out
+   and 5 KB back, nothing dropped, a wall switch still obeying. The cost is that the mesh's PDU rate
+   falls to about a fifth while an errand runs, and a six-second scan stops it dead — so the protocol
+   must have an end, and the hub should hand over an **address** rather than ask the puck to go
+   looking. Item 38. **And the claim the direction rests on is no longer an argument**: a whole
+   adoption has gone through a puck, SRP6a and all — the Wi-Fi refused until the button was pressed,
+   then taken, and the strip on the household's network without the machine that adopted it ever
+   being in range of it. Nine exchanges, 17.5 s. Item 39.
+   **The protocol is drawn and direction A is chosen** (23 September, `design/ears/`, second row):
+   `Job` is today with every number measured, and `Tell`, `Hush` and `Twice` are three answers to the
+   one question the protocol is really about — **ninety-five per cent of an errand is waiting for a
+   finger, and the courier cannot do that waiting itself**, because the question and the answer are
+   encrypted with the session key. **A is the strip speaking**: the press characteristic gains a
+   notification, the hub asks once and subscribes, and nothing crosses the air until somebody touches
+   the thing. Seven exchanges instead of a hundred and seventy, and the notification is still
+   ciphertext the puck relays and cannot read. **C is its fallback** for a strip too old to have the
+   notification. `Hush` and `Twice` stay
+   drawn, with their cases, as the record of why. **Not built.**
+   **And the question the boards left open is already answered in the firmware**: a dropped link calls
+   `prov::disconnected()`, which ends the protocomm session and drops buffered responses while the
+   door stays open and keeps advertising — and it does **not** clear the press. So a puck that drops
+   an errand mid-handshake costs a second SRP6a and **not a second press**, which is what a household
+   would expect and what nobody had written down. Never run; a test to write, not a decision to take.
+   **And A is built on all three pieces and has run** (item 40): the strip rings, the puck forwards
+   it, the hub asks once and then only every ten seconds, and a household that took ninety seconds
+   to press the button was adopted in 109. The buffer problem was never the protocol — it was the
+   puck's own mesh polls piling up while it held a second link — and backpressure on those polls
+   fixed it. **What is left before this ships is the errand runner itself, which is a bench build.**
+   **And the puck can be the house's ear for knocks** (item 42): a passive listen at a tenth of the
+   radio costs the mesh about 6% and hears a knocking strip twice a second, and the address it hears
+   is one the errand can open at with no scan at all. **Decided: pucks listen, all day** (see the
+   list below). **The hub's half is built** (`brain/hub/ears.py`, 23 September): one table of which
+   ear heard which strip, how loud and how lately, fed by the hub's own scans and by a puck's
+   `mesh/bridge/<chip>/heard` report through the subscription the bridge already had, and one rule
+   for which ear talks to a strip — the hub's own radio wherever it is inside `FAINT`, a puck only
+   when it is clearly louder past that. The module's header is the contract a puck reports against.
+   **Deliberately not built:** a knock only a puck heard is recorded and not announced, because
+   the wall would then offer a strip the hub cannot yet take. **The puck's ear is built too** (item
+   43), in every image the hub ships, and so is **the errand runner** (item 44), over a text format
+   that Home Assistant can carry, and **the brain speaks it** (item 45): setup asks which ear, runs
+   through a bridge when it should, and a hub with no Bluetooth finds strips through its bridges.
+   **And they have met in a house** (item 46): through Home Assistant, on the air, a strip the hub
+   heard at −62 was set up through a bridge that heard it at −49, with a tap on the wall and a press
+   on the strip. **What is left is shipping it**: a release, so a house's own bridges carry this
+   firmware and its brain carries this code. Nothing
+   has been tried at the distance item 15 is about, and `hardware/` has still never had the
+   conversation.
+2. **The partial-commissioning bug.** A Matter adopt reported failure on the wall and left a fabric
+   behind, which silently bricks a strip until somebody knows the five-second hold exists. Item 24 is its
+   cousin and is fixed; this one is not, and neither is the fact that **nothing on the wall ever says a
+   strip is spent** — a strip that has completed setup advertises nothing at all, so it looks like a
+   strip that is simply not there.
+3. ~~**A button, reachable, on the outside of every product**~~ — **written down, 22 September**, in
+   `hardware/README.md`, which is the page `hardware/` never had. Item 35. It also turned up the one
+   thing to get right on the strip's product board, which does not exist yet: the firmware's
+   `BUTTON_PIN` defaults to **0**, and GPIO0 is BOOT, a strapping pin, and the line the USB bridge's
+   auto-reset pulls from DTR.
 
-**Not on this list and worth saying so:** the press path is built and proven end to end on an ESP32-S3 —
-no press refused, press accepted, out-of-reach dropping to a freshly minted rhythm, wrong rhythm refused.
-What it has *not* had is a run on a real hub against a real house, because that needs a real SSID; the
-bench used a name that does not exist, so `NETWORK_PROV_WIFI_CRED_SUCCESS` has never fired on this
-firmware and neither has the `ours` flag it writes.
+**And the decision that was waiting is taken:** the three setup commands are no longer retained, and
+the strip retires a retained one rather than obeying it. Item 33, **and it has now run on a board**
+(item 41): three retained commands retired on connect, the strip's own count kept.
 
 ### Decided, and not to be reopened without a reason
 
@@ -91,6 +154,25 @@ firmware and neither has the `ours` flag it writes.
   `design/door/ShowMe.dc.html` is the rung the door canvas names for out-of-reach things and it stays drawn
   and unbuilt: for a strip it would move the gate onto the hub.
 
+- **How a hub reaches a device it cannot hear: the bridge puck runs the errand** (22 September,
+  `design/ears/`, direction A). Whatever hears the strip is a courier and nothing more: the hub opens the
+  SRP6a session, the strip closes it, and the press gate stays on the strip. Build the hub's question as
+  *who can hear this*, so `Anyone` — every powered thing of ours answering, and the hub asking the
+  loudest — is only a longer list later rather than a second design. `InHand` (the wall over Web
+  Bluetooth) stays drawn and unbuilt, the way `design/door/ShowMe.dc.html` is: it is the record of why
+  the wall is not the radio, and its three preconditions are all false here today.
+- **Nothing a strip is told is retained** (22 September, item 33). The device's own NVS is the memory.
+- **A puck hears knocks by listening, not by looking** (23 September, item 42 — decided on the
+  measurements, with the user's leave). Every puck runs a passive scan, 10 ms of every 100, all day,
+  for the Matter commissionable advert, filtered to our vendor and discriminator, and reports each
+  sighting — address *and address type*, loudness, when — to the hub, which ranks them: the hub's
+  question is *who can hear this*, so one puck today and every ear later is the same code. The
+  listen stops for the connect of an errand and resumes after it. **Why not the others:** an active
+  look like the hub's own leaves the mesh deaf fourteen seconds a minute; listening only while Add is
+  open is free and means a house whose hub cannot hear the strip is never told it knocked, which
+  undoes the knock that announces itself (`design/knock/`, AGENTS.md §5). **What would reopen it:**
+  a house whose mesh cannot spare 6%, or a distance test in which a passive ear misses a strip an
+  active look would have found.
 - **ESP-IDF, not Arduino.** Arduino compiles Matter-over-BLE out on every target; a strip built that way cannot
   be set up by Apple or Google at all. Evidence both ways is in this document.
 - **The partition table** (`partitions-matter.csv`), sized for Matter with the certification partitions laid
@@ -156,6 +238,12 @@ firmware and neither has the `ours` flag it writes.
   paired that reads as a broken strip rather than as a self test that forgot to put something back.
 - **The error text on the wall lied four times in a row** during bring-up, each time naming a confident wrong
   cause. If a strip screen tells you what is wrong, verify it before acting on it, and see item 11.
+- **A class name the panel already uses will silently restyle your screen, and `lint:css` will not see
+  it** when one of the two blocks is a component's scoped style. `class="rooms"` in the strip sheet got
+  `flex-direction: column` from the Rooms tab and turned the room picker into a column twenty-three long;
+  `class="chip"` got the camera tile's status badge, which is a label and has no press state. Item 36.
+  Grep every class name in a block before writing it, including the ones you are writing in a `<style
+  scoped>`, and then look at the screen.
 
 ## What it is, and what it is not
 
@@ -624,6 +712,881 @@ the house, which is how these things get returned. The camera route avoids all o
 pointed into a living room. **The cheap next step is neither: a capture stick and HyperHDR on a bench,
 to find out whether it feels like the screen extended or like a gimmick, before any of it is paid for.**
 
+**46. IN A REAL HOUSE, THROUGH HOME ASSISTANT, ON THE AIR: a strip the hub could barely hear was set
+up through a bridge, with a tap on the wall and nothing else.** 23 September.
+
+**What ran.** A spare S3 carrying the *shipped* bridge firmware (`esp32s3-house-test`: no bench code)
+joined the house's own mesh beside `c0e33a`, which was not touched; this tree's brain was grafted onto
+the hub. The strip knocked. The hub's own radio heard it at **−62 dBm**, just past `FAINT`; the
+bridge's ear heard it at **−49**. The household said yes on the wall, and the brain's log said *the hub
+cannot hear it well; bridge 08388e runs the errand*. On the broker, in the shipped words: `open` →
+`open … ring`; two handshake exchanges on `0xff51`; the press asked about on `0xff55` in ciphertext; the
+button pressed; **`ring`**; one more ask; the Wi-Fi on `0xff52` twice; where we are on `0xff54`;
+`close` → `closed … asked`. The strip's own log: *pressed*, *rang whoever is at the door*, *credentials
+… arrived through our door*, *looking for the hub at mqtt://hub.local:1883*, *announced as a light the
+house can switch on*. It came online on the broker and **the wall moved on to the colour question**.
+Every piece since item 38 met every other piece, for the first time, in one run.
+
+**What went wrong on the way, and it was not the protocol.** The first "yes" was refused on the
+hub's own radio — *device not found* — because the strip had fallen off the air: it had rebooted
+into its ROM download mode (two power-on resets with the boot pin low) before the tap. The ear had
+gone quiet for the same reason, so the brain had no fresh bridge sighting and correctly fell back to
+its own radio. What reset the strip is not known; a supply dip on the bench USB is the likely shape.
+The rule that chose the hub was right given what it knew, and the knock came back by itself within a
+minute of the strip being reset.
+
+**Seen and not ours.** The live brain refuses websocket connections with `403` and the Matter
+bridge's `/share/bridge/status` with `401`, steadily, before the graft as well as after. Neither was
+chased here.
+
+**Left behind by the test, and undone:** the bench bridge was written into the house's `bridges`
+list when it came online, and the strip is now one of the house's lights. Undone: the bench board
+was erased, the bridge forgotten from the wall (which also clears its retained topics), and the graft
+reverted with `docker compose up -d --force-recreate brain` **run in `/opt/home-hub/driver-layer`** —
+from `/opt/home-hub` it says *no configuration file provided* and the graft quietly stays, which
+`tools/dev.sh graft` now says in its undo line.
+
+**45. The brain sets a strip up through a bridge when the hub cannot hear it — and a hub with no
+Bluetooth of its own is an ordinary hub now.** 23 September.
+
+**What was built** (`brain/hub/errand.py`). An `Errand` is a `Transport`, like strip_door's own, that
+speaks item 44's words to a bridge through Home Assistant — `mqtt.publish` out, the bridge's existing
+`mesh/#` subscription in, handed to `hub.errand`, the one errand running. `strip_door.adopt()` runs
+above it unchanged. Setup asks `ears.choose()`: the hub's own radio wherever it is inside `FAINT`, a
+bridge that is clearly louder past that, with the address *type* the bridge heard. `look()` now
+announces a knock that only a bridge heard, at our door, and the errand's `open` is what proves the
+door is there.
+
+**Two things the tests found before any house did.** A HUB WITH NO BLUETOOTH used to stop at *this
+hub has no Bluetooth* before asking anyone else — the mini PC the product is sized for, the one that
+needs its bridges most. It now looks through its bridges and says that sentence only when nobody
+heard anything. And A BRIDGE'S FAILURE WAS BEING OVERWRITTEN by *set it up in the same room as the
+hub*, because the hub had heard the strip faintly — which is exactly the apology the bridge exists to
+retire, and wrong when the hub was not the one listening. A job run through a bridge keeps the
+bridge's own sentence, in the household's word for a puck, and never says *nearer the hub*.
+
+**Held by `brain/tests/test_errand.py`:** the words, against lines filled in from `errand.cpp`'s own
+format strings; an answer with another errand's id is never taken; a refused write is carried as the
+strip's refusal; a bridge losing the strip fails at once rather than waiting out a timeout; the three
+routing rules, on the real setup path with the press held open. The routing test **fails with the
+errand's hand-off removed**. Brain suite 1213.
+
+**Not run through Home Assistant on the air.** The bench puck talks on `bench/`, the brain listens
+on `mesh/`, on purpose — so the two halves have each been proven against the format and not against
+each other. The first bridge in a house running this firmware is that test, and it is the next one.
+
+**44. A strip went from a box to a light in the house through the errand protocol the bridge
+ships.** 23 September.
+
+**The format was decided by one fact the bench had hidden.** The brain reaches MQTT only through
+Home Assistant — the `mqtt.publish` service out, the websocket's `mqtt/subscribe` in — and both
+carry text. The bench relay spoke binary frames, which worked only because its driver used paho
+directly; the brain could never have sent one. So the shipped format is words, the way `claim`
+already is, with the opaque bytes as base64 (`brilliant/esp32-bridge/src/errand.h`):
+
+    mesh/bridge/<chip>/errand/ask    open <id> <addr> <random|public>
+                                     send <id> <n> <ep> <base64>
+                                     close <id>
+    mesh/bridge/<chip>/errand/tell   open <id> ring|quiet     ok <id> <n> <base64>
+                                     fail <id> <n|-> <why>    ring <id>    closed <id> <why>
+
+One errand per puck, refused as `busy` otherwise; the hub's id on every line, so an answer can never
+be taken for another errand's; `ep` is protocomm's 16-bit endpoint id rather than an index into a list
+that could drift; an errand nobody sends to for thirty seconds is closed; nothing retained. Decided
+here rather than on a board, because it is not a screen and it was the constraint rather than a
+preference that settled it.
+
+**Built into every puck image**, beside the ear, with the rules item 40 found: the ear stands aside
+while an errand connects or holds a link, and the mesh's polls hold back when the long-write pool is
+under a third. **The pool is now 40 blocks in every image**, not NimBLE's 12 — twelve was where item
+39's first adoption died — and the bench no longer overrides it, so it measures what ships. The
+bench relay is gone; `tools/errand-bench.py` now drives the shipped protocol.
+
+**What ran.** The puck's ear heard the strip at −48 dBm; the driver took the address *and its type*
+from that report, as the hub will, with no scan. `open` answered `ring`. The handshake, two backstop
+asks ten seconds apart, the press at thirty seconds, **a ring**, one more ask, the Wi-Fi, the hub
+details: **done in 46.6 s over nine exchanges**, and the errand closed when asked. The strip's own log:
+*rang whoever is at the door*, *credentials … arrived through our door*, *looking for the hub at
+mqtt://192.168.86.53:1883*, *announced as a light the house can switch on*.
+
+**Not built.** The brain does not yet speak this format: `Strips.adopt` still uses only the hub's own
+radio, and asking `ears.choose()` and running an errand through Home Assistant is the next piece.
+Nothing has run at distance, and no puck in a house carries any of this yet.
+
+**43. The ear is in the bridge firmware proper, and the hub's table has heard a real puck.** 23 September.
+
+**What was built.** `brilliant/esp32-bridge/src/ear.{h,cpp}`, beside `claim`, in every image the hub
+ships (checked in the binaries of `esp32s3`, `esp32s3-ship` and `esp32dev`): a passive scan, 10 ms of
+every 100, while the mesh link is up, reporting on `mesh/bridge/<chip>/heard` in exactly the shape
+`brain/hub/ears.py` documents. **One scanner has several users**, so the ear hands it back exactly as
+setup left it — active, results kept, no callbacks — before finding the proxy or claiming a switch.
+In the bench build it also stands aside for an errand, because NimBLE will not connect while
+scanning; the bench's own `listen` is gone.
+
+**What ran, on the bench puck.** The reports are the contract byte for byte — one copied off the
+broker is now a test fixture, so the hub is held to what a puck really says. **The mesh kept its full
+rate with the ear on: 260 PDUs a minute against 259 without.** Reports came every ten seconds.
+A claim survey borrowed the scanner and got its results; the proxy link came straight back; the
+ear started again by itself.
+
+**AND THE FIRST VERSION REPORTED NONSENSE, ON THE AIR, WHICH IS THE ONLY PLACE IT SHOWED.** NimBLE
+hands back **−8 dBm** for some adverts from a strip reading −37 either side of them. Taken at face
+value that sent eighteen reports a minute instead of six, and would have made this puck the loudest
+ear in the house. So a reading louder than −15 is not a reading — on the puck and again in the hub,
+which ranks — and the puck reports a moving average. Six a minute, steady at −37 to −38, after.
+
+**Not proven.** The survey found one switch and there is no count from before the ear to compare it
+with. No real puck's report has reached the *running* brain: the bench puck talks on `bench/`, and the
+brain listens on `mesh/`, on purpose. The first shipped puck in a house will be that test.
+
+**42. A puck can hear a strip knock all day for about 6% of its mesh, and what it hears is an
+address the errand can open at.** 23 September. The question the shipped errand actually turns on is
+not the wire format — the bench has mostly settled that — but **who hears a knock when the hub is
+in the garage**. Something must, or a knock is never a line in the band at all.
+
+**What was measured.** A *passive* scan — no scan requests — left running at a low duty cycle,
+counting adverts, on one proxy link, a minute each:
+
+| | mesh PDUs a minute | the strip's Matter advert heard |
+|---|---|---|
+| no ear | 259 | — |
+| 10 ms of every 100 | 244 (−6%) | **109 a minute** |
+| 30 ms of every 100 | 245 (−5%) | 431 a minute |
+
+Against an active look like the hub's own — fourteen seconds a minute, during which item 38 says
+the mesh hears nothing — that is a different order of cost. **It hears Matter's advert and never our
+door**, as predicted, because a passive scan asks for no scan response; a knocking strip makes both,
+so hearing one is hearing the other, and the Matter advert carries the vendor and discriminator to
+tell ours from somebody's plug in pairing mode.
+
+**And the address is good.** Opened with the right address type, the one the ear heard **eight
+minutes earlier** connected in 114 ms with no scan at all, and the strip still had it after a
+connect and disconnect. Items 38 and 39 said a strip rotates its address; the connects that failed
+were the puck opening a random address as a public one (`NimBLEAddress` from a string defaults to
+public). Fixed in the bench runner, and the shipped one must carry the type with the address.
+
+**What this changes.** A shipped errand needs no scan. The ear has a sighting seconds old whenever
+the hub wants one, so "hand over a warm address" is free, the mesh never goes deaf for a look, and
+the one-in-three miss of our door stops mattering because nothing is looking for our door.
+
+**Not measured.** Whether the Matter advert's address survives the commissioning window being
+reopened at fifteen minutes (`keep_knocking`); the ear would hear the new one within a second
+either way. And a passive ear running *alongside* a held errand link — the shipped runner would
+stop it for the connect and resume it after.
+
+**41. A strip given an address now finds the hub — and item 33's retained-command half has run on
+silicon at last.** 23 September.
+
+**The bug, found in passing in item 39.** `find_hub()` appended `.local` to whatever `mhost` held,
+so a hub that handed over its *address* produced `mqtt://192.168.86.53.local:1883`, which is nowhere,
+and the strip joined the Wi-Fi, said *nobody came*, and never appeared. `brain/hub/strip.py:460` sends
+`name or host or "hub"`, so any house whose broker is known by address was affected — and the native
+test found it was worse than that: a name that already said `.local` became `hub.local.local`. The
+rule is now `strip/firmware/main/hub_uri.h`: a bare name gets `.local`, anything with a dot in it is
+used as given, IPv6 is bracketed. `test_hub_uri_native.cpp` holds it there and **fails four of its
+six cases against the old rule**.
+
+**Proven on the board that had the bug.** Strip `2e4258` had been adopted three times today and the
+broker still had it `offline`. Reflashed with the app only, NVS untouched, it said *looking for the
+hub at mqtt://192.168.86.53:1883*, then *announced as a light the house can switch on*, and the
+broker shows it `online`.
+
+**AND ITEM 33'S FIRMWARE HALF RAN, BECAUSE THE BUG HAD KEPT IT FROM EVER TRYING.** A retained
+`count/set 251` and `order/set grb` had been waiting on the broker since the first run that reached the
+end. On connecting, the strip said *a retained count/set was waiting on the broker; retiring it, what
+is written down wins* — and the same for `order/set` and `room/set` — kept its own count of 300 rather
+than obeying 251, and the broker holds neither retained command any more. That is exactly the three
+things item 33 said to watch for.
+
+**A bench fact that costs an hour.** On this machine the native tests do not link: the Command Line
+Tools' linker cannot read its own macOS 27 SDK (*unknown architecture arm64e.x1*). Build them against
+the 26.5 SDK — `c++ -std=c++17 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk …` —
+and both pass. Neither native test is in CI; both are run by hand.
+
+**40. THE STRIP RINGS, AND A HOUSEHOLD CAN TAKE ITS TIME. Direction A is built on all three
+pieces and has run.** 23 September, the day after it was chosen (`design/ears/Tell.dc.html`).
+
+**What was built.** *The strip:* the `press` characteristic can notify, and a press rings whoever
+holds the session — **one byte, "ask me now", and no ciphertext.** That is not caution for its own
+sake: Security2 keeps one nonce counter that both ends step on every encrypt and decrypt
+(`esp_prov/security/security2.py`), so anything the strip encrypted unasked would step its counter
+behind the hub's back and a crossing poll would kill the session. So it rings, and the answer still
+comes back inside the session the ordinary way. *The puck:* it subscribes to the ring when it opens
+a link and forwards it on its own topic — the first thing in the protocol that is not a reply.
+*The hub:* `strip_door` asks once, then waits on the ring with an ask every `RING_POLL` (ten
+seconds) behind it in case a ring is lost; a strip too old to ring is polled the old way; and "I
+cannot reach the button" still answers at once. Pinned by `brain/tests/test_strip_door.py`, whose
+first test **was run with the ring removed and failed** (four asks instead of two).
+
+**What ran.** Pressed four seconds in: **seven exchanges, 19.6 s**, the strip rang and was asked
+once more, and it joined the household's network. Pressed **ninety seconds** in: **fourteen
+exchanges, 109 s, done** — one backstop ask every ten seconds instead of one every 0.7.
+
+**AND THE BUFFER PROBLEM WAS NEVER THE PROTOCOL.** Sampling the puck's mbuf pool every second
+(`os_msys_num_free`) showed it at once, where two days of counting exchanges to failure had not:
+with a second link merely **held open and idle — zero exchanges on it —** the pool falls about six
+blocks a second from 100 to 0 in fourteen seconds, and sits there. One A/B/A on one held link
+settled the cause. With the mesh polls running, it drained 100 to 68. With them paused, it
+**refilled** to 100 at about three a second. With them resumed, it drained again. **Those are the
+puck's own occupancy and load polls to the proxy link, four or five a second, queueing faster than
+they go out** because two links now share its radio and the proxy link gets fewer connection
+events. When the pool is empty, the next write on *either* link fails — usually the strip's. So
+it was never a leak and it never cared about sessions or exchanges, which is why every theory
+built on those scattered.
+
+**The fix is on the puck and it is small**: while an errand holds a link, a mesh poll is skipped
+if the pool is below a third. Through the ninety-second wait the pool sat at **32 of 100** the whole
+time and never lower, and mesh traffic kept arriving. **The price is the mesh's poll rate during an
+errand**, which is the right way round: a poll is worth skipping and a household's adoption is not.
+It is in the bench build behind `BENCH_ERRAND`, because the errand runner still is; **the shipped
+one must carry it**, and it is the kind of rule that is invisible until it is missing.
+
+**Not proven.** The fallback for an old strip through a courier is the old polling, and **polling
+now has backpressure behind it but has not been run through a two-minute wait**. Nothing has been
+tried at distance. And the errand runner itself is still a bench build: the wire format in
+`tools/errand-bench.py` was never a proposal, and the one that ships wants its own board.
+
+**39. A WHOLE ADOPTION HAS NOW GONE THROUGH A PUCK, SRP6a AND ALL. The claim the direction
+rests on is measured.** 23 September, straight after item 38, and it is the other half of it:
+38 proved the radio would hold the link, and said in its own last paragraph that the thing the
+design actually rests on — that the courier carries bytes it cannot read — was still an argument.
+It is not any more.
+
+**What ran.** `tools/errand-bench.py` drives **`strip_door.adopt()` itself**, not a copy of it, with
+a transport that publishes each protocomm request to the puck over MQTT and waits for the answer.
+`adopt()` gained one optional argument and the steps were lifted into `_adopt_over()`; nothing else
+changed and the brain's 1182 tests pass either way. The puck does the GATT and reads none of it: it
+is told an endpoint index and a blob, and it hands back a blob.
+
+**It completed.** Nine exchanges, **711 bytes out and 655 back, seventeen and a half seconds**:
+
+| | |
+|---|---|
+| `prov-session` ×2 | 406 out / 416 back, then 75 / 89 — **the SRP6a handshake**, and protocomm said FINISHED |
+| `press` ×N | `waiting`… until the button was pressed on the strip, then `pressed` |
+| `prov-config` ×2 | 48 / 20 and 18 / 20 — the Wi-Fi, set and applied |
+| `hub` ×1 | 96 / 18 — where we are, inside the session that carried the Wi-Fi |
+
+**And the gate held where item 23 put it.** The Wi-Fi was refused until somebody pressed the button
+on the thing; the strip's own console says `pressed. Whoever is at the door has 120 seconds`, then
+`credentials for 'VirusBroadcast' arrived through our door`, `the hub said where it is: 4 details
+taken, 0 refused`, `on the household's Wi-Fi, through our own door` and `Matter's window is shut;
+this strip is ours`. **A strip went from a box to a household's network without the machine that
+adopted it ever being in radio range of it.**
+
+**THE FIRST THING IN THE WAY LOOKED LIKE A LEAK, AND IS NOT ONE — item 40 has what it is.** NimBLE
+fails a write with `rc=6` (`BLE_HS_ENOMEM`, the mbuf pool, **not a disconnect**) some while into an
+errand, and this item's first two explanations of it were both wrong: it is not per exchange, and
+it does not need a protocomm session. It is **time a second link is held while the puck's own mesh
+polls keep going**, and it is fixed on the puck. Kept here in outline because the wrong turns are
+the record: a count to failure that scattered from 5 to 41 on the same pool size was the tell that
+the exchanges were not the variable.
+
+**THE SECOND WAS THAT A KNOCKING STRIP IS HARD TO FIND — half right, and item 42 has which half.** A
+ten-second active scan a metre away misses our door about one time in three, and that is real: the
+door lives in the SCAN RESPONSE (item 12), which only arrives if the scanner's request is answered.
+But this item also said the strip **rotates its address**, and that was wrong. The connects that
+timed out were the puck opening a *random* address as a *public* one — `NimBLEAddress` read from a
+string defaults to public — and an address with the wrong type is six right bytes nobody answers.
+Opened with the right type, an address heard eight minutes earlier connected in 114 ms.
+
+**AND IT IS SLOW, WHICH IS FINE HERE AND WOULD NOT BE ANYWHERE ELSE.** Every exchange is an MQTT
+hop, a GATT write, a GATT read and an MQTT hop back: **0.7 to 3.3 seconds**, against a fifth of a
+second on our own radio. Seventeen seconds for an adoption is nothing — somebody is standing there
+pressing a button. Nothing interactive should ever go this way.
+
+**One bug found on the way past, and it is not the errand's.** `find_hub()` in the strip's firmware
+appends `.local` to whatever `mhost` holds, unconditionally
+(`app_main.cpp:505`) — so a hub that hands over an **address** rather than a name produces
+`mqtt://192.168.86.53.local:1883`, which resolves to nothing, and the strip says *nobody came. Still
+here, no longer asking*. `brain/hub/strip.py:460` sends `name or host or "hub"`, so any house whose
+broker config has a host and no name adopts a strip that completes setup and never appears.
+The puck has three ways to find the hub for exactly this reason (`docs/network.md`); the strip has
+one, and it mangles two of the three things it might be given. **Fixed in item 41.**
+
+**38. THE PUCK CAN RUN THE ERRAND. It holds a second link to a knocking strip without letting
+go of the mesh, and here is what it costs.** 23 September, on the bench, and it is the question
+`design/ears/` direction A rests on — nothing past this should have been designed before it.
+
+**The question was narrower than the board asked.** `Errand.dc.html` said the risk was whether the
+puck's ESP32 could be a GATT central while it is a mesh proxy client. It is already a GATT central:
+the mesh proxy link *is* a GATT connection to a Brilliant switch, and has been since the bridge was
+written. The real question was a **second concurrent** central link. The board has been corrected.
+
+**What ran.** One S3 as the errand runner (`esp32s3-bench`: the shipped bridge with
+`src/errand_bench.h` compiled in, on its own MQTT base and its own discovery prefix so nothing it
+says lands where a house is reading), proxying the panel network and speaking MQTT to the real hub
+throughout. A second S3, factory reset, knocking as `PROV_2e425`. The errand is driven from the
+broker and reports once a second on both links at once, because a before-and-after cannot tell a
+link that survived from one that was rebuilt while nobody was watching.
+
+**It holds, and the numbers are these.** The second link opened in **129–421 ms**, took the client
+count from **1 to 2 of NimBLE's 3**, and stayed up for **61 seconds** — far longer than a handshake.
+The strip's whole GATT table was walked: four services, and our own
+`1775244d-6b43-439b-877c-060f2d9bed07` with all seven characteristics, `prov-session` through
+`press`. Across 42 exchanges it carried **16,128 bytes out and 4,872 bytes back, with no failures**
+— the outbound half in **384-byte writes over an MTU of 69**, which is a long write split across
+several callbacks, the same shape as the first round of SRP6a. **The big writes reached the strip's
+own protocomm handler**, which is not an inference: the strip's console says
+`prov-session refused the request: ESP_ERR_INVALID_ARG` forty-two times, once per write, because the
+bytes were deliberately garbage. An application refusing a payload is a payload that arrived. And
+the whole time the mesh link stayed up, the puck stayed on the broker, and **a wall switch obeyed
+three on/off cycles over MQTT with every one echoed back** to the puck's own unicast.
+
+**Nothing dropped. Not once, in any run.** No `dropping link`, no disconnect, no reconnect, no
+`no proxy traffic` — the only NimBLE errors in the whole session were the forty-two expected
+refusals.
+
+**THE COST IS REAL AND IT IS IN THE MESH'S RATE, NOT ITS LIFE.** Measured back to back on the same
+proxy link, one minute each with nothing else changed: **idle, 291 mesh PDUs; with the errand
+running, 64** — the errand takes roughly four fifths of the mesh's traffic while it runs. The age of
+the last proxy PDU goes from 11–583 ms at rest to **1.1–1.5 s** during the hold. So the switches
+keep answering and keep obeying, but the puck is slower at hearing them for as long as the errand
+lasts, and an errand that never ends would be a puck that is permanently slow. **The errand protocol
+has to have an end.**
+
+**AND THE SCAN IS WORSE THAN THE LINK, WHICH IS THE OPPOSITE OF WHAT WAS FEARED.** A six-second
+active scan for a knocking strip stops the mesh dead: **zero PDUs arrive** and the last-PDU age
+climbs to the full six seconds. The held link is cheap by comparison. Whatever the errand protocol
+turns out to be, the hub should hand the puck an **address**, not ask it to go looking — the
+knocking strip has already been seen by something, and Add is the one moment when spending the
+radio is free.
+
+**What is NOT proven, and it matters.** No SRP6a session has run through the puck: the bytes here
+were the right size and the right cadence, not a real handshake, and the hub's own client
+(`brain/hub/strip_door.py`) has never spoken through a courier. The end-to-end claim the whole
+direction rests on — that the puck carries ciphertext it cannot read — is still an argument, not a
+measurement. Nor has anything been tried at a distance: both links here were **−43 to −70 dBm**, and
+item 15's cliff sits at −64. What a strip behind a television does to a puck in the hall is unknown.
+And this ran with one errand at a time; two at once would be the third client of three.
+
+**Three bench facts that cost an hour each and are not written down anywhere else.**
+The two strip-bench S3s carry **8 MB of flash**, not the 16 MB the puck boards have, so
+`partitions-ota.csv` on them boots into `Detected size(8192k) smaller than the size in the binary
+image header(16384k)` and reset-loops — which reads exactly like a bad build. A change to a secrets
+header **does not always rebuild the object that used it**: the bench puck kept talking to a hub
+address that had not been in the file for two flashes, and `-t clean` was the only thing that fixed
+it, so verify with `strings .pio/build/<env>/firmware.bin` rather than trusting the build.
+And **every switch keeps a replay high-water mark per source address**, so a bench puck that keeps
+its unicast across an NVS erase sends from a sequence number the switches have already seen: reads
+keep working and every write is dropped in silence, which looks precisely like a write bug and is
+not one. `BRIDGE_ADDR` in the secrets header, set to something fresh, is the fix.
+
+**One more, about looking.** `brilliant/tools/census.py` reported a single Brilliant switch at the
+desk, at −87 dBm, and on that basis this looked like a test that could not be run here. An
+unfiltered scan found **eleven** — six of them naming a network in a forty-second window, three the
+panel's and three the house's own, the strongest of all at **−50 dBm** and on the panel's. The
+filter was not wrong; it answers a narrower question than the one being asked of it. Item 18's rule
+is about a radio that might be dead, and it turns out to be about coverage too.
+
+**37. There was no way to get rid of one.** Reported 22 September, and it was the whole of the
+report: no route, and nothing to build one on. `Radio.forget()` was `return None` with no callers,
+and `DELETE /devices/<id>` — the only removal the panel had — dropped a strip's light out of Home
+Assistant and left the **strip** still holding our broker, our credentials and its own answers.
+Adopted by a household that no longer had it. Plug it in and it announces itself again, into a house
+that has just been told it is gone.
+
+**So forgetting a strip is two things, and the second is the one a device registry cannot do.** The
+strip is asked to let go too, on `strip/<id>/forget` — which is exactly what the ten second hold on
+its own button does, said over the broker because that button is very often taped behind a
+television, and a household that cannot reach it to set the strip up cannot reach it to let the
+strip go either. What comes back is a strip anybody can set up again, here or in whoever's house it
+was sold into.
+
+**The asking is never retained, and the clearing always is.** A retained `forget` is a recording of
+an evening weeks gone replayed at every reconnect, and this is the one command on a strip that
+cannot be taken back — the firmware retires a retained copy rather than obeying it, the same way it
+already retires a retained `count/set` (item 31). The retained words the strip has written about
+itself are the opposite case: `status`, `count`, `order`, `light`, and the discovery config. Left
+behind, any one of them puts a forgotten strip back in the house at the next broker restart, so the
+strip empties them before it goes and the hub empties them from this end for the strip that was
+never there to hear.
+
+**A strip that is unplugged still goes.** Somebody is standing over a thing that is already in a
+box; refusing would be the panel arguing with them. `heard` comes back false, and that is the panel's
+cue to say the one fact that is left — the strip itself still believes it is ours, and its button is
+the only thing that can settle that now.
+
+`DELETE /strip/<id>`, gated like every other change to the house. The door it is reached from was
+settled the same day: **What this house has**, under This house, where a strip is a row under *Set
+up here* with its own sentence about being told to let go (`design/forget/ThingsDoor.dc.html`,
+`docs/settings.md`). A strip is the one row on that page that says something no other kind has to.
+
+**37. The end of the strip can be moved afterwards, which is the half of the length question that
+was decided in September and never built.** Reported 22 September: the fill is easy to get a bit
+less or a bit more than the strip really is, and there was no way to nudge it.
+
+**The fill is a measurement and a measurement has an error.** Its error is a person's reaction time,
+which `fill/stop` latches on purpose so that a busy evening does not measure differently from a
+quiet one. So it lands a few lights either side, and the two sides are not the same: **long is
+invisible**, because the surplus falls off the end of the wire, and anything needing the middle is
+quietly wrong; **short leaves the far end dark for ever**, and is the one a household reports.
+
+**It was already decided.** 20 September, on `design/strip/canvas.json`: *"A at setup, B afterwards
+... they are the same fact, asked once while somebody is standing there and editable for ever
+after."* The pane got the row. The row called `revisit('length')`, which restarts the fill from
+nothing &mdash; so correcting three lights meant sitting through a five-metre measurement, twice if
+the moment was missed. `design/strip/Again.dc.html` is what that cost.
+
+**Four boards, and the question they argue is not "buttons or a drag".** It is how you see the end
+while you move it, on a strip where everything past the real end is written to nothing and shows you
+nothing back. `Nudge` lights the whole strip and walks its end; `Handle` is Trim brought to the pane,
+whose own board admitted its metres readout is a tell; `Tail` darkens the strip and lights only the
+last few. **Chosen: A with C's tail** &mdash; the strip lights to the length it believes with the last
+six in a cool blue, because at sixty lights to the metre a warm lit strip is a glow and its end is a
+guess, while a short cool tail on a warm one is an edge. It also shows the direction nothing else
+can: **one light too far and the tail runs off the wire and disappears.**
+
+**Nothing is written down until it is over.** `tune/set` moves the count in memory and repaints;
+`count/set` is sent once at the end. Holding a button must not spend an NVS erase cycle a frame.
+
+**And a tap is exactly one light**, because being three out is the whole complaint; a hold walks,
+slowly at first so one light is still reachable by holding a moment too long, then faster, so being
+thirty out is a second rather than thirty taps. Those numbers are `app/src/walk.ts` and are pinned by
+a test, because a number that decides how something feels is worth one. Driven in a browser: a tap
+moved one light, a 1.6-second hold moved sixty-nine.
+
+**One line went back into setup with it**, and it is only honest because this exists: *"A light or
+two out is fine. You can move the end afterwards, on the strip's own screen."* Somebody who does not
+know it can be fixed will sit through the fill again trying to be exact, which is the beat's one
+known weakness being paid for twice.
+
+**A test had to change, and the change is worth reading.** `adds no effects, segments or zones` used
+to count the buttons in the strip part of the pane and expect two &mdash; the board's argument measured
+the easy way, and it stopped being true the moment one of the two rows learned to open in place. It
+asserts the set of handlers that region can call now, by name, so a row that grows a third question
+fails it and counting does not come into it.
+
+**What is not proven:** the firmware half has not run on silicon. It compiles; no board was attached.
+The thing to watch for is whether a cool tail on a warm strip reads as an edge *behind a television*,
+which is the one place this control is for and the one place a bench cannot stand in for.
+
+**36. The last beat, from a real house: it said "It's in" when it was not, and the rooms were a
+column twenty-three long.** Reported 22 September after a grafted run on a real hub, and the log had
+all of it:
+
+    16:44:59  strip 52e204: could not be put in living_room; it is in the house but unplaced
+    16:44:59  "POST /strip/room HTTP/1.1" 200 OK
+
+**So the wall said "It's in" and the light was not in the room.** The household did the only sensible
+thing — reset the strip and set it up again — and the second run worked, at 16:48:00, because the
+device the first run had waited twenty seconds for existed by then. **The twenty seconds was the
+whole bug.** `put()` gave up, logged a warning, and moved on to a beat whose words are *"in the room
+it lives in"*. The code even said so: *"the log is where that has to be said"*. The log is not where
+that has to be said when somebody is standing in front of the screen.
+
+**A room somebody chose is a fact this brain holds, not a request that expires while Home Assistant
+catches up.** It is kept in `_owed` now and applied whenever the device turns up, for ten minutes,
+asking nothing of anybody — and until it lands the last beat says *"It will be in the Living room as
+soon as the house has finished noticing it"* instead of claiming it is already there.
+
+**AND THE ROOM CHIPS WERE TWO BUGS WEARING EACH OTHER'S CLOTHES**, both of them AGENTS.md §4.
+
+**`class="chip"` is the camera tile's status badge** — the thing that says *Recording* or *Offline*.
+It is a label, not a button, so it had no press state and no selected state, which is why a tap gave
+nothing back. What the row also carried was `:class="{ busy }"`, and **every chip got it**, so the
+whole row dimmed together and none of them said *you picked me*.
+
+**And `class="rooms"` is the Rooms tab's own container**, which is `flex-direction: column`. A scoped
+block only overrides the properties it names, so this screen's `flex-wrap: wrap` was applied and the
+direction came from the other screen — **every room in the house was a full-width row**. In a house
+with twenty-three of them that is the entire sheet. `lint:css` cannot catch this one: the two blocks
+are not both in `panel.css`.
+
+Both are gone by using what the panel already has: `press-rooms` and `chip-btn`, the room picker Add
+uses for this same question, which brings the wrap, the sizing and — from its own comment — the fix
+for the trap where a chosen chip is ink on ink and its name vanishes. The tapped chip lights before
+the request goes out, because the person has to see their own tap land. Twenty-three rooms are now
+six wrapped rows and nothing scrolls.
+
+**Still open, and a design question rather than a bug:** twenty-three chips is a lot even wrapped,
+and they are in no particular order. Whether the list should lead with somewhere likely, be
+searchable, or be grouped is a screen, and wants boards.
+
+**35. The claim our door rests on is written down, and the puck already keeps it.** 22 September.
+Item 23 ended with *"a button, reachable, on the outside of every product is now a hardware claim
+this rests on. It is free to decide now and impossible later, and `hardware/` has never had the
+conversation."* It has had it now: `hardware/README.md` is a short page of the claims every board we
+make has to satisfy, with the button as the only one so far and the test written so it can be
+checked rather than argued — from outside the assembled shell, with a fingertip, no tools, in the
+state the product ships in, before it is placed, and **never on a strapping pin**.
+
+**The puck passes, and it passes by accident rather than by intent**, which is the part worth
+knowing. `SW3` sits on GPIO4 with the internal pull-up — module pin 4, `pinfunction "IO4_4"` in
+`puck-revA.net` — a side-actuated tact at the board edge at 180°, the face a person would tap,
+reached through a 3.6 mm hole cut through both the base wall and the skirt with a printed plunger
+whose head stops it falling in. All of that was laid out on 19 September to answer
+`docs/puck-light.md`'s question *"does the object want a button?"*, two days before the press became
+the proof of possession. The board was right for a reason that has since been replaced by a better
+one. `docs/puck-hardware.md` no longer calls it an open question.
+
+**And the strip's board, which does not exist yet, has one thing to get right.** `BUTTON_PIN` in the
+firmware defaults to **0** — BOOT on every devkit, a strapping pin, and the same line the USB
+bridge's auto-reset pulls from DTR. On the bench that is a feature and it is how the press has been
+tested with nobody in the room (item 23). On a product it means a finger on the adoption button at
+power-up can drop the chip into download mode. It is a `#ifndef`, so the board defines it; nothing
+anywhere said it had to until now.
+
+**34. A knock takes the whole screen, up to a hundred and eight seconds late, and the panel already
+had a politer way of saying it.** Reported 22 September after a night of setting strips up: powering a
+strip on is not always a moment anybody asked to be interrupted in, and when the sheet did arrive it was
+about two minutes behind, which read as the strip and the hub failing to talk to each other.
+
+**THE TWO MINUTES IS ARITHMETIC AND NOTHING IS BROKEN.** Up to 20 s asleep between scans
+(`watch(every=20.0)`); then `scan_ours(8)` and `scan(6)`, and a third scan at 14 s when Matter's door
+answered and ours did not; then up to 60 s before the wall asks, because `store.ts:698` polls `/strip`
+once a minute while nothing is live. **20 + 28 + 60 = 108 seconds**, worst case, and the last sixty of
+them are one number in the panel.
+
+**And instant is not available.** A strip is a passive advertiser; hearing one the moment it powers on
+means scanning without stopping, and `watch()`'s own comment says why that is not free — the hub is the
+Bluetooth end of every other device in the house. **So the delay and the interruption are one problem:**
+an interruption nobody asked for has to be instant or it reads as a fault, and this one cannot be.
+
+**THE PANEL SHIPS THE POLITE ANSWER ALREADY AND DOES NOT USE IT FOR A KNOCK.** A thing noticed on the
+network becomes *"Found 2 new things nearby"* — one line in the band (`Attention.vue`) and an 8px lamp
+dot on the `+` door in the bar (`panel.css` `.topbar-add.attention`), tap to open Add. A knock is drawn
+the instant `store.strip.state !== 'none'` with nothing gating it (`App.vue:325`). Three shipped ways of
+saying the same thing; two of them quiet, and the knock uses the third.
+
+**Decided, `design/knock/`, five boards: C with A.** The knock is a line and a dot everywhere except on
+Add, where it fills the page. The line is its own for an hour, then folds in with anything else waiting
+and goes when the thing stops knocking; the dot stays, so the house stops talking without forgetting.
+*Not mine* keeps the meaning `_dismissed` already gives it. **And `Look` is the one to build first:** Add
+scans while it is open, which is the only moment spending the radio is free, and that is what lets
+`watch(every=20.0)` be quietened. The two changes pay for each other.
+
+**A correction worth keeping:** the first drawing of these boards gave the panel a tab row reading
+Home / Rooms / This house / Add. There is no Add tab and there must not be one — the tabs are three
+(the time of day, Rooms, Cameras) and Add is its own round door in the bar, beside This house.
+
+**BUILT, 22 September**, and four things turned up in the building that the boards could not have.
+
+**The band lost a line the moment a strip knocked.** The first `waitingBand()` returned one line, so
+a house with something waiting on the network stopped being told about it as soon as a strip was
+plugged in. It returns a list now. **Nothing but opening the panel and reading the band would have
+shown this** — every test passed, and the types were right.
+
+**The conversation opened underneath the page that opened it.** A sheet sits at z-index 35 and This
+house at 40, which is correct everywhere else and wrong here, because Add *is* This house. Raised to
+45 by a class the two arrival sheets set while This house is open, so no other screen's stacking
+moves. **`BridgeSheet.vue` had the same pair and it is fixed too** — somebody plugging a bridge into
+the hub is quite likely to be standing on Add when it knocks, which is the one place both faults
+show at once.
+
+**And one Escape closed both of them**, so putting the strip down also threw the household out of
+Add. Both arrival sheets take the key on the capture phase now and stop it there.
+
+**The mock brain answers `{"ok":true}` to every POST it does not know**, and `keepLooking` was
+assigning the answer straight into `store.strip` — which wiped the knock the instant Add opened. It
+takes the answer only when it has a `state`. A hub older than `/strip/looking` answers 404, and the
+page then says nothing rather than claiming to listen: **`store.looking` is only true once the hub
+has said so**, because a page that says it is listening when nothing is is a comfortable lie.
+
+**What the boards asked for and did not get:** `design/knock/Look.dc.html` drew a progress bar under
+*Listening for anything new*. A scan here has no end — it runs until the page goes — and a bar that
+cannot say how far along it is is a picture of progress rather than progress, which is the argument
+`StripSheet.vue` already makes about its own single step. The board lost the bar rather than the
+code gaining one.
+
+**The numbers, as built:** `LOOK_EVERY` 60 s in the background, down from 20 — three times fewer
+scans all day. `LOOK_HOLD` 12 s, refreshed every 5 s while Add is open, so the loop runs back to
+back there and lapses by itself if the wall goes to rest. The panel's idle poll of `/strip` went
+from 60 s to 30, and to 2 s while Add is open. Suites: brain 1143, panel 516, 194 e2e, all green.
+
+**33. The distance is drawn and the courier is chosen; and the retain is gone, in two halves.**
+22 September, and neither half has run on a board — nothing was plugged into this machine.
+
+**`design/ears/`, five boards.** `Today` (one radio, and it is in the garage), `Errand` (A — the bridge
+puck runs the errand), `Anyone` (B — every powered thing of ours is an ear and the hub asks the loudest),
+`InHand` (C — the wall over Web Bluetooth) and `Deaf`, the failure all three end at. **A was chosen**, and
+the case for each is in `design/ears/canvas.json` beside its board. Two things the boards settled that the
+prose had not: *B is not a rival* — build A's question as "who can hear this" and B is a longer list later
+— and *C is dead here for three reasons rather than one*: Web Bluetooth needs a secure context and the
+wall gets plain `http://` on the LAN, it needs the API and the wall is an Android **WebView** rather than
+Chrome, and it needs a person standing at the glass because the gesture *is* the permission model.
+
+**And `Deaf` found a screen nobody had noticed was missing.** A house whose hub has no Bluetooth at all
+is not a failure to report — nothing ever knocks, so there is nothing to report on. Today that house is a
+wall that stays empty while a strip advertises in the next room for forty-eight hours. That sentence
+belongs in **Add**, before anything is tried, and it is not built.
+
+**The retain: `count/set`, `order/set` and `room/set` are published without it now.** The strip writes all
+three into its own NVS, so the retained copy was a second source of truth that is replayed at every
+reconnect and wins silently when it is stale — item 31's `count/set 1` from a bench test, and a board
+that believed it was one pixel long. Pinned by two tests that fail with the flag put back.
+
+**THE OBVIOUS WAY TO CLEAR WHAT IS ALREADY ON THE BROKER IS A TRAP, AND IT IS WORSE THAN THE BUG.** An
+empty retained payload is how a retained topic is deleted — and to the firmware that has been shipping,
+an empty `count/set` is `atoi("") == 0`, so the brain sweeping the broker clean would tell every strip in
+every house that it is zero pixels long. **So the clear is on the device, not in the brain:** a command
+whose answer is already in NVS is never taken from a retained message, and the strip publishes the empty
+payload itself to retire it. Only firmware that has this line ever sends one. `e->retain` off the MQTT
+event is what tells the two apart, and the broker delivers our own clear back with the flag off and no
+payload, which the same line drops.
+
+**What is not proven:** that the firmware half does what it says on silicon. It compiles (`0x1a3910`,
+56% free) and no board was attached. The thing to watch for is the log line
+*a retained count/set was waiting on the broker; retiring it* on a board that has one, the real count
+surviving it, and `mosquitto_sub -t 'strip/+/count/set' -v` coming back empty afterwards.
+
+**32. The three things a household found in the first run that reached the end.** Reported 21 September,
+all three real, and the first two are one bug.
+
+**The fill measured the wire against the length it already believed.** `fill.tick(now, strip.count)` —
+and the fill IS the instrument that discovers `strip.count`. So a strip that came to believe it was one
+pixel long filled one pixel, for ever: the "start over" ran and lit nothing anybody could see, because
+only that one pixel was being written, and the length question could not be answered a second time.
+**There was no way back to the truth from inside the panel.** It fills the whole wire now and latches
+the real count on stop — writing 600 is free, the surplus falls off the end, which is why 300 is the
+assumed length in the first place. Proven on a board deliberately told it was one pixel long: it filled
+past 240 and latched 247.
+
+**A late `fill` message dragged the job back to the measuring.** The strip publishes its progress as it
+goes and the last of those lands *after* somebody has said "that's the whole of it" — and `_on_mqtt`
+set the state to `length` whatever beat the job had moved on to. From the wall: you are asked for a
+room, you tap one, you are told there is no light waiting for a room, and you are back watching the
+fill. Three times in a row, which is exactly how often a late message lands. It only follows the fill
+while the fill is what is on screen.
+
+**And choosing a room never did anything.** `put()` called `self.hub.strip_placed(...)` — **a method no
+hub has ever had** — inside a `try/except AttributeError: pass`. So the wall said "It's in", the light
+stayed wherever Home Assistant first put it, and the household went and did it again by hand. It asks
+the device registry now, and keeps asking for twenty seconds, because discovery is a moment behind the
+room chip.
+
+**And the other half of the first one is now built.** `design/strip/Later.dc.html` was drawn and chosen
+on 20 September and the row was never made: the brain had `/strip/revisit` and the panel had
+`revisitStrip()`, and **nothing called it**. So a household whose strip measured wrong had no way to say
+so, which is exactly what came back. `LightPane.vue` carries the two rows now, at the foot, each one the
+setup question it came from and nothing else — the length in metres, because strips are bought by the
+metre, and the red question again for a strip that was replaced by a different make.
+
+**How the pane knows the light it is drawing is a strip:** `/strip/list` now carries `device`, the
+house's own id for the hardware, which every device the panel draws already has. Resolved from the
+device registry by the same lookup that puts a strip in its room, cached when found and never cached
+when missing — discovery is a moment behind everything else, and remembering that a thing did not exist
+is how a panel comes to be permanently sure of a wrong answer.
+
+**What is deliberately absent is the board's loudest argument**, and a test holds it: no effects, no
+segments, no zones. A strip with a hundred named animations is a maker's toy; this is an accent light a
+household should be able to forget about.
+
+**31. A strip that is set up is still not a light anybody can switch on — until now.** Everything before
+this item is setup, and setup is not the product. The household's own on/off, brightness and color
+arrived over **Matter and nowhere else**, and a strip taken through our own door never joins a Matter
+fabric (item 16). So a strip that had been through the whole flow sat on the broker answering questions
+about itself and could not be turned on from the wall it had just been set up on.
+
+The panel draws whatever the house has, so the whole of "control it" is **be a light the house has**:
+one retained announcement on `homeassistant/light/strip_<chip>/config`, one command topic, one state
+topic — which is what the bridge puck already does for a switch. Availability follows the same `status`
+topic the last will already writes, so an unplugged strip goes unavailable rather than stale.
+
+**Proven end to end on an ESP32-S3 against a real house, 21 September:** a fresh board through the
+whole flow, `announced as a light the house can switch on`, and then
+
+    -> strip/2e4258/light/set {"state":"ON","brightness":200,"color":{"r":255,"g":60,"b":0}}
+    <- strip/2e4258/light     {"state":"ON","brightness":200,"color_mode":"rgb","color":{...}}
+
+**AND A TRAP FOUND IN THE SAME BREATH: a retained command is replayed for ever.** `count/set`,
+`order/set` and `room/set` are all published retained, so a strip relearns them when it reconnects. A
+**stale** one is then a second source of truth that silently wins: this board was carrying
+`count/set 1` from a bench test weeks of debugging ago, so it believed it was one pixel long, and
+switching it on lit exactly one LED — which looks precisely like a broken strip and nothing anywhere
+says why.
+
+**The strip already keeps all three in its own NVS**, so the retain is redundant as well as dangerous,
+and the honest fix is probably to stop retaining commands and let the device remember. That is a change
+to how a strip is told things and it is **not made here**; it is written down so the next person does
+not spend an evening on a light that works perfectly and shows one pixel.
+
+**30. "Where is it?" answered 500 to everything, in any real house.** The first beat past the fill, and
+the first one nobody had ever reached. `_rooms()` iterated `home.rooms` — **which is a dict of
+`id -> Room`**, so it walked the keys and asked a string for `string["id"]`. Everywhere else in the
+brain says `.rooms.values()`.
+
+**It took the whole sheet down, not just that request.** `_rooms()` is called from `status()`, which is
+what `GET /strip` returns, which is the poll the panel lives on — so once the job reached `room` every
+request raised and the wall could not even draw what had gone wrong. The toast said *internal server
+error*, which is the only honest thing it could say.
+
+**No test caught it because the fake house is a list**, and a list of room objects is exactly the shape
+this code was written against. The suite now uses a dict, which is what a house is. `unassigned` is also
+a real room in that dict and is never somewhere to put a thing; every other caller skips it and this one
+now does too.
+
+**29. A strip set up through our own door never went to the broker until it was next switched off and
+on.** This is the one that failed all evening, and it is the last mile of item 2a.
+
+`find_hub()` was called from exactly two places: at boot, and on Matter's `kCommissioningComplete`.
+**Our own door is neither.** So a strip taken through our door was handed the Wi-Fi and the broker in
+one session, stored both, joined the house — and then sat there with a perfectly good broker it had
+never been told to go to. The hub waited sixty seconds for a hello that could not come and reported
+*"It joined your Wi-Fi but never reached the hub"*, which was true in the most misleading way
+available. It reached the hub on the **next power cycle**, every time, which is what kept making the
+retained topics look like a strip that had worked.
+
+There is a third moment now, and it covers every path including ours: **an address on the house's
+network.** `IP_EVENT_STA_GOT_IP` fires on the first join and again after a router reboot, and
+`find_hub()` is safe to call from all three because only the first one that can answer does anything.
+
+**And the first version of that hook did nothing at all, silently.** It was registered ahead of
+`esp_matter::start()` on the reasoning that Matter is what brings the Wi-Fi up — but the default event
+loop does not exist that early, `esp_event_handler_register` returns `ESP_ERR_INVALID_STATE`, and
+**nothing says so**: the address arrived, the default handler printed it, and ours was never called.
+It built clean and read correctly. The loop is created here if nobody has made one, and the return is
+read. `find_hub()` also says why it is declining now — three silent returns and a strip that has joined
+the house and gone quiet look identical from a serial console.
+
+**Proven end to end on an ESP32-S3 against a real house and a real broker, 21 September:** factory
+reset, knock, press, Wi-Fi and **four** broker details (it was two — item 26), `looking for the hub at
+hub.local` in the same session, and `strip/52e204/status online`. No reboot. **That is the first time
+our own door has ever completed.**
+
+**28. The button stopped working after a successful setup, and a strip with a dead housekeeping loop
+looks exactly like a strip that is fine.** Reported from a real house on 21 September as *"holding BOOT
+does nothing until I press RESET first"*, which is the only symptom this has.
+
+`tend_the_door()` calls `network_prov_mgr_deinit()` once the door has shut for good — and that line runs
+**only after a session has actually completed**, so it never ran on a bench whose Wi-Fi was a name that
+does not exist, and ran every time in a house. It is also the exact call item 22 is about: it takes the
+manager's own lock, and the manager's cleanup timer holds that lock while it tells us the door has shut.
+
+**What that costs is not the manager, it is the loop.** Everything a person can do to this thing with
+their hands is read from `housekeeping()`: the short press that lets the hub in, the five-second hold
+that forgets the house, the fill, the instrument, and `tend_the_door()` itself. The strip goes on
+glowing, advertising and answering Matter with all of it gone.
+
+**Two rules out of it, and they are both general:**
+
+- **The button must never be behind anything that can block.** It is the way out of every other mistake
+  in this firmware. The deinit now runs on a task of its own, where the worst a block costs is the
+  manager's memory.
+- **The loop that reads the hands is under the task watchdog.** A block is now a panic with a stack
+  trace, which is a bad day somebody can read, instead of a strip that has quietly gone deaf.
+
+**27. Two strips knocking, and the hub talked to the wrong one.** Our door's scan returned strips in
+the order they happened to advertise; Matter's side has sorted by signal since it was written. So a
+household standing over one strip, pressing its button, could be waited out by a hub holding a session
+open with a different strip in another room — and then told *"that strip is a long way from the hub"*,
+which was perfectly accurate about the wrong strip. `look()` sorts within each door now. **Our door
+still wins over Matter's however faint it is** — it is the only one that can ask the two questions and
+hand over the broker — but which strip at our door is now the nearest one.
+
+**And the sentence the panel says while this happens cannot be made true by the panel.** `_label()`
+returns "A light strip" on the reasoning that "it is two meters of light and it is the only one lit",
+which is false the moment a second one is knocking. The brain now logs how many are, and at what
+signal; what the wall should SAY when there are two is a screen and wants a board.
+
+**The thing that made it hard to see:** a strip that has completed setup once **advertises nothing at
+all** — our door is shut by the `ours` flag and Matter's window is closed at boot (item 16). So a strip
+carried over to the hub and set up already is not "a strip near the hub that failed", it is not there,
+and the only strip in earshot is whichever other one is still knocking somewhere else. Nothing on the
+wall says a strip is spent; the five-second hold is the only way back and nobody is told it exists.
+**That belongs with the partial-commissioning bug at the top of the open list.**
+
+**Also learned, and it is a rule rather than a bug:** a scan filtered to the thing you are looking for
+cannot tell "it is not there" from "the radio is dead". Item 18 is exactly that failure and it still
+caught me: a filtered scan from the hub returned nothing twice and read as range, and the unfiltered
+one returned **29 devices**. Scan for everything first, then filter.
+
+**26. Every strip ever set up through our own door was handed a broker it could not log in to, and
+then asked a question on a topic nothing subscribes to.** Two bugs in a row, both on the last mile,
+and between them our door has never once completed. Found on a real hub on 21 September, with the
+strip a foot from the Pi — so the distance was not it, and item 25's new sentence would have been
+wrong too.
+
+**One: the credentials were never sent.** `_where_we_are()` read a `broker` key in the settings that
+**nothing in this hub has ever written**, so every strip was handed the literal name `"hub"` and no
+user and no password. The strip joined the house, resolved the hub and reached the broker:
+
+    I (1543) strip: already set up, through our own door
+    I (5083) esp_netif_handlers: sta ip: 192.168.86.70
+    W (5913) mqtt_client: Connection refused, not authorized
+
+The tell was in plain sight on the bench all day and read as a success: *"the hub said where it is:
+**2 details taken**, 0 refused"* — mhost and base, and never muser or mpass. A puck is told the same
+four things and works, because `bridge.py` reads them out of the environment. There is one
+`Bridges.broker()` now and both halves call it: **two descriptions of one broker is how one of them
+comes to be wrong.**
+
+**Two: the hub had nothing to call the strip.** `id` is `None` for a strip at our door — a Matter
+advertisement carries a discriminator, not an id of ours — and the next line asked
+`_ask(j["id"], "hello", ...)`, which publishes to **`strip/None/hello`**. Nothing has ever subscribed
+to that. It could not have worked at any distance, and it had been there since the day our door was
+written. The strip announces itself retained as `strip/<chip>/status` the moment it connects, so the
+hub now waits for the one that was not there before rather than asking for a name it does not have;
+one job at a time is what makes that unambiguous.
+
+**And both failures wore item 25's sentence.** *"It joined your Wi-Fi but never found the hub. Try it
+nearer the router"* — for a strip that had joined the Wi-Fi, found the hub, and been turned away at
+the door. **Three times in one evening a true-sounding sentence sent somebody to check a thing that
+was not wrong**, which is the actual lesson of items 24, 25 and 26 together: a message about the
+household's house should be built from what the hub OBSERVED, not from where in the code the failure
+happened to surface.
+
+**And the fix for the second one was wrong on its first try, in a way only a real broker shows.** It
+waited for an id that **was not there before** — but the broker keeps what a strip said last, retained,
+and the brain reads all of it the moment it subscribes to `strip/#`. So a strip that has *ever*
+connected is already in that dict before the session starts, marked offline, and can never be "new"
+again. Which is precisely a strip somebody has just factory reset and is standing over. It waits for a
+strip to come **online** that was not online before, which is the fact it actually needs.
+
+**And that fix was wrong too, for a third reason, which is the one worth keeping.** Watching whether a
+strip is *online* cannot work here: **a strip that goes away never says so.** The broker says it for it,
+from the last will, and only once the keepalive has run out. A factory reset, a reboot, a knock and a
+press all happen well inside that window — so the hub is still holding `status: online` from the
+connection that has already died, the strip is excluded as "already here", and the household is standing
+over it reading that it never reached the hub. **A message arriving is a fact with a time on it; a
+retained "online" is only a guess about now.** The hub watches for the hello and keeps the state check
+as a second chance, because the two fail in different weather.
+
+**The exact fix is still not this.** The strip should say who it is **inside the session**, on the `hub`
+endpoint it already answers on — no broker state, no races, no window. That is a firmware change and it
+is the right one; everything above is the hub inferring an identity it could simply have been told.
+
+**The broker is the instrument that settled it**, and it was three commands away the whole evening:
+
+    strip/52e204/count  300
+    strip/52e204/order  grb
+    strip/52e204/status offline
+
+That is a strip that reached the broker, said what it was, and later dropped — while the wall was
+saying it never reached the hub. `mosquitto_sub -t "strip/#" -v` inside the `mosquitto` container, with
+the brain's own `MQTT_USER`/`MQTT_PASSWORD`, is the check to run before believing anything about this
+step.
+
+**25. A strip too far from the hub failed four different ways and never once said "too far".** The
+whole of 21 September's evening on a real hub, in one log:
+
+    16:29  something that might be ours is at Matter's door; asking ours again
+    16:33  commissioning failed (Commission with code failed for node 2.)
+    16:35  our own door did not open (BleakDeviceNotFoundError: Device with address ... was not found)
+    16:40  a twenty-second scan from the hub: nothing at either door, at all
+
+Nothing was wrong with the code. The strip was on a desk at the other end of the house and the hub
+could not hear it. Each attempt failed in whatever way the radio happened to fail that minute — the
+setup code refused, a device that answered a scan not connectable a moment later, our scan response
+arriving when the advertisement did not (item 19) — and **every one of those sentences sent somebody
+to check a thing that was not wrong.** The worst of them was on the wall: *"The strip did not take the
+code. Check it, and that the strip is still lit."*
+
+**The hub knew all along.** `scan_ours()` and `scan()` both return an RSSI and the job threw it away.
+It is kept now, and `_fail()` replaces whatever the radio said with the distance whenever the strip was
+under **−60 dBm** when it knocked — measured, not guessed: item 15 has a session establishing first try
+at −51 and the link dying three to five seconds in at −64, every time. Below that, the distance *is* the
+reason, and giving two reasons is the household checking both.
+
+**And the sentence is the product's own model of the order**, which `design/door/` had to correct once
+already: a thing is unboxed, plugged in, **set up**, and *then* placed. So the wall says *set it up in
+the same room as the hub, then put it where you want it* — which is what somebody should have been told
+at 16:29.
+
+**What this does not do is close item 15.** Telling a household their strip is too far is honest, and it
+is still a strip they cannot use where they want it. The 13 dB is a product problem and `hardware/` has
+still never had the conversation.
+
 **24. A strip that took credentials and never joined could not open its door again, ever.** Found on a
 real hub on 21 September, minutes after the press shipped, and it read on the wall as *"The hub could not
 finish setting it up"* with nothing anywhere saying why.
@@ -906,6 +1869,9 @@ was installed into `/opt/home-hub`.
 **And the BLE address rotates.** Two scans minutes apart returned `F3:EE:DA:BB:CD:5A` and then
 `CC:57:3B:B4:71:80` for the same strip, so the hub must never cache an address — the service UUID and
 the name are the identity, which is what `find()` already returns.
+*23 September: narrower than this reads (item 42). Within one boot the address held for eleven
+minutes, across advertising restarts and a connection; it changes when the strip restarts. Whether
+anything else moves it was not seen. The identity advice stands either way.*
 
 **13. How the second door actually gets built, read out of the source rather than guessed.** Three facts, and
 together they decide the shape:

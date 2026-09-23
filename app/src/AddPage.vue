@@ -24,7 +24,9 @@ const busy = ref(false)
   <div class="page">
     <template v-if="!busy">
       <p class="page-lede" v-if="resume">The house remembers everything else about this one. This is the part only you can do.</p>
-      <p class="page-lede" v-else>Plug the new thing in and put it on the Wi‑Fi with its own app if it needs that. Then it turns up here.</p>
+      <!-- "Then it turns up here" was a promise this page could not keep: nothing on it asked the
+           hub to go and look, so it waited. It looks now, for as long as it is open. design/knock/. -->
+      <p class="page-lede" v-else>Plug the new thing in and put it on the Wi‑Fi with its own app if it needs that. If it is already on, this will find it.</p>
     </template>
     <Adding :resume="resume" @busy="busy = $event" />
     <p class="add-elsewhere" v-if="!busy && !resume">

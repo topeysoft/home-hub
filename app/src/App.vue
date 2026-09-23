@@ -18,6 +18,7 @@ import Viewer from './Viewer.vue'
 import WhySheet from './WhySheet.vue'
 import BridgeSheet from './BridgeSheet.vue'
 import StripSheet from './StripSheet.vue'
+import { stripSheetOpen } from './adding'
 import HousePanel from './HousePanel.vue'
 import AskPane from './AskPane.vue'
 import { isPage } from './pages'
@@ -321,8 +322,15 @@ onUnmounted(() => {
          is standing here. It is not a place in the house to navigate to. -->
     <Transition name="sheet"><BridgeSheet v-if="store.bridge && store.bridge.state !== 'none'" /></Transition>
     <!-- One arrival at a time: a bridge on the cable outranks a strip knocking over the air, because
-         somebody is holding the bridge. -->
-    <Transition name="sheet"><StripSheet v-if="store.strip && store.strip.state !== 'none' && !(store.bridge && store.bridge.state !== 'none')" /></Transition>
+         somebody is holding the bridge.
+         AND A KNOCK NO LONGER OPENS THIS BY ITSELF (design/knock/, direction C with A). Powering a
+         strip on is not always a moment somebody asked to be interrupted in, and the hub can be a
+         hundred seconds behind the plugging-in -- an interruption nobody asked for has to be
+         instant or it reads as a fault, and this one cannot be. So a knock is a line in the band
+         and a dot on the + door, and this opens when somebody taps one of those or is already
+         standing on Add. Once it IS a conversation, it keeps the screen the way it always did:
+         stripSheetOpen() only gates the beats that are still asking. -->
+    <Transition name="sheet"><StripSheet v-if="store.strip && stripSheetOpen(store.strip.state, store.sheet, store.stripAsked, store.stripPutDown) && !(store.bridge && store.bridge.state !== 'none')" /></Transition>
     <Transition name="sheet"><CodePrompt v-if="lock.prompt" /></Transition>
 
     <Transition name="toast">

@@ -40,6 +40,10 @@
 #include <nvs_flash.h>
 #include <nvs.h>
 #include <driver/gpio.h>
+#include <cJSON.h>
+#include <esp_event.h>
+#include <esp_netif.h>
+#include <esp_task_wdt.h>
 #include <esp_wifi.h>
 #include <esp_timer.h>
 #include <mqtt_client.h>
@@ -52,6 +56,7 @@
 #include <app/server/Server.h>
 #include <setup_payload/OnboardingCodesUtil.h>
 
+#include "hub_uri.h"
 #include "pixels.h"
 #include "prov.h"
 
@@ -94,9 +99,33 @@ static uint16_t light_endpoint = 0;
 // a test pattern for ever -- and, on the Arduino version, the waiting glow was drawn and then wiped a
 // fraction of a second later by the first attribute sync, which from a bench looks like a dead strip.
 static bool instrument = false;
+// TUNING THE LENGTH, WHICH IS AN INSTRUMENT LIKE THE FILL AND NOT A SETTING.
+//
+// The fill measures the wire once, while somebody is standing there, and a person's reaction time
+// is the only error in it -- so it comes out a few lights long or a few lights short, and short is
+// the one a household notices, because the far end then stays dark for ever. This is how they move
+// it afterwards from the strip's own pane (design/strip/Nudge.dc.html).
+//
+// The strip lights to the length it believes AND PUTS THE LAST FEW IN A DIFFERENT COLOR, because at
+// sixty lights to the metre a warm lit strip is a glow and its end is a guess, while a short cool
+// tail on a warm one is an edge you can see from across the room. It is also the only way to show
+// the direction that is otherwise invisible: one light too far and the tail runs off the end of the
+// wire, so it shortens and then disappears, which nothing else about a strip can tell you.
+static bool tuning = false;
+#define TUNE_TAIL 6
+// A cool white-blue against the warm body. Saturated on purpose: an LED gives the eye no reference,
+// so a pastel reads as white and the tail would be invisible against the body (AGENTS.md §4).
+#define TUNE_R 0
+#define TUNE_G 120
+#define TUNE_B 255
 // The knocking is over and nobody took the strip. It keeps the light, drained, rather than going
 // dark, and the rhythm stops.
 static bool waiting_over = false;
+// Set when the house asks the strip to forget it. Acted on from housekeeping(), never here:
+// erasing NVS and restarting from inside the MQTT event callback tears down the task the
+// callback is running on, which is the same reason the door is reopened from there and not
+// from the handler that heard the question.
+static volatile bool forget_asked = false;
 static bool want_on = false;
 static uint8_t want_r = 255, want_g = 180, want_b = 110, want_bri = 200;
 
@@ -126,6 +155,19 @@ static int get_i32(const char *key, int fallback) {
 static void put_i32(const char *key, int v) { nvs_set_i32(nvs, key, v); nvs_commit(nvs); }
 
 // ---------------------------------------------------------------- what it is showing
+
+// The strip at the length it currently believes, with the last few lights cool. Drawn whenever the
+// count moves while tuning, and nowhere else.
+static void paint_tune() {
+    strip.clear();
+    const int n = strip.order.per_pixel();
+    for (int i = 0; i < strip.count; i++) {
+        const bool tail = i >= strip.count - TUNE_TAIL;
+        strip.order.bytes(tail ? TUNE_R : SIG_R, tail ? TUNE_G : SIG_G, tail ? TUNE_B : SIG_B,
+                          &strip.buf[i * n]);
+    }
+    px::show(strip);
+}
 
 static void paint() {
     if (instrument) return;
@@ -167,6 +209,54 @@ static void say(const char *leaf, const char *payload, int retain = 0) {
     esp_mqtt_client_publish(mqtt, t, payload, 0, 1, retain);
 }
 
+// ---------------------------------------------------------------- an ordinary light in the house
+//
+// EVERYTHING ABOVE THIS LINE IS SETUP, AND SETUP IS NOT THE PRODUCT. A strip that has been through
+// our door knows its colors and its length and is still not a light anybody can switch on: the
+// household's own on/off, brightness and color arrived over MATTER and nowhere else, and a strip
+// taken through our own door never joins a Matter fabric (item 16). So it sat on the broker answering
+// questions about itself, and could not be turned on from the wall it had just been set up on.
+//
+// The panel draws whatever the house has, so the whole of "control it" is: be a light the house has.
+// That is one retained announcement, one command topic and one state topic -- which is exactly what
+// the bridge puck already does for a switch.
+
+// Its own topic tree is `base/chip/...`; the announcement lives outside it, where the house looks.
+static void say_at(const char *topic, const char *payload, int retain) {
+    if (!mqtt || !broker_up) return;
+    esp_mqtt_client_publish(mqtt, topic, payload, 0, 1, retain);
+}
+
+// What the household's light is doing. Retained, so the wall draws the right thing the moment it
+// looks rather than after the next change.
+static void say_light() {
+    char body[160];
+    snprintf(body, sizeof(body),
+             "{\"state\":\"%s\",\"brightness\":%d,\"color_mode\":\"rgb\","
+             "\"color\":{\"r\":%d,\"g\":%d,\"b\":%d}}",
+             want_on ? "ON" : "OFF", want_bri, want_r, want_g, want_b);
+    say("light", body, 1);
+}
+
+// SAID ONCE, WHEN WE ARRIVE, AND RETAINED. A house that reboots its broker finds the strip again
+// without the strip having to notice, and a strip that is unplugged goes unavailable rather than
+// stale -- availability follows the same `status` topic the last will already writes.
+static void announce_the_light() {
+    char topic[96], body[640];
+    snprintf(topic, sizeof(topic), "homeassistant/light/%s_%s/config", base, chipHex);
+    snprintf(body, sizeof(body),
+             "{\"schema\":\"json\",\"name\":\"Light strip\",\"unique_id\":\"%s_%s\","
+             "\"command_topic\":\"%s/%s/light/set\",\"state_topic\":\"%s/%s/light\","
+             "\"availability_topic\":\"%s/%s/status\","
+             "\"payload_available\":\"online\",\"payload_not_available\":\"offline\","
+             "\"brightness\":true,\"supported_color_modes\":[\"rgb\"],"
+             "\"device\":{\"identifiers\":[\"%s_%s\"],\"name\":\"Light strip\","
+             "\"model\":\"Light strip\",\"sw_version\":\"" FW "\"}}",
+             base, chipHex, base, chipHex, base, chipHex, base, chipHex, base, chipHex);
+    say_at(topic, body, 1);
+    ESP_LOGI(TAG, "announced as a light the house can switch on");
+}
+
 static void say_what_we_are() {
     char v[16];
     snprintf(v, sizeof(v), "%d", strip.count);
@@ -178,8 +268,105 @@ static void say_what_we_are() {
     say("status", "online", 1);
 }
 
-static void on_command(const std::string &leaf, const std::string &msg) {
+// THE WAY OUT, AND IT CLEARS UP AFTER ITSELF.
+//
+// Whether the household holds the button for ten seconds or the panel asks, the same thing has to
+// happen, and the order matters. The strip is the only thing that knows which topics it has
+// written, and every one of them is retained: `status`, `count`, `order`, `light`, and the
+// discovery config that makes it a light in the house at all. Left behind, they bring a forgotten
+// strip straight back the next time a broker restarts -- the bridge learned this the hard way and
+// says so in its own forget(). So they are emptied first, while there is still a broker to say it
+// to, and only then does the strip erase what it knows and start again new.
+static void forget_the_house(bool tidy_first) {
+    if (tidy_first) {
+        char topic[96];
+        snprintf(topic, sizeof(topic), "homeassistant/light/%s_%s/config", base, chipHex);
+        say_at(topic, "", 1);
+        for (const char *leaf : {"count", "order", "light", "fill", "status"}) say(leaf, "", 1);
+        vTaskDelay(pdMS_TO_TICKS(600));   // let them leave before the radio goes with everything else
+    }
+    strip.clear();
+    px::show(strip);
+    nvs_erase_all(nvs);
+    nvs_commit(nvs);
+    esp_matter::factory_reset();   // erases Matter's own storage and restarts
+    vTaskDelay(pdMS_TO_TICKS(2000));
+    esp_restart();
+}
+
+static void on_command(const std::string &leaf, const std::string &msg, bool retained) {
     if (leaf == "hello") { say_what_we_are(); return; }
+
+    // DONE WITH IT, ASKED FROM THE PANEL INSTEAD OF FROM THE BUTTON.
+    //
+    // The ten-second hold does this already and has been the only way. It means reaching a
+    // controller that is very often taped behind a television, for the one job nobody should have
+    // to crawl for -- and a household that cannot reach the button to set the strip up cannot
+    // reach it to let the strip go either. The hub may ask instead: it is holding this strip's
+    // credentials already, so there is nothing here it has not been trusted with. Proving
+    // possession is a rule about letting a thing IN (AGENTS.md); letting it go is the house
+    // speaking to something that is already its own.
+    //
+    // Never from a retained copy: that is a recording of an evening weeks gone, and the one command
+    // on this strip that cannot be taken back.
+    if (leaf == "forget") {
+        if (retained) { say("forget", "", 1); return; }
+        ESP_LOGW(TAG, "the house says it is done with us. Tidying up, then starting again new.");
+        forget_asked = true;
+        return;
+    }
+
+    // A COMMAND WHOSE ANSWER IS ALREADY IN NVS IS NEVER TAKEN FROM A RETAINED MESSAGE.
+    //
+    // How long the strip is, which order its colors come out in, whether it has a white channel and
+    // which room it lives in are all told to it once, during setup, and it writes each one down. A
+    // retained copy on the broker is therefore not a second way of hearing the same thing: it is a
+    // recording of an evening that has been over for weeks, replayed at every reconnect, and it wins
+    // silently because it arrives before anybody can say otherwise. A `count/set 1` from a bench test
+    // had a board believing it was one pixel long -- which looks exactly like a broken strip, from
+    // the wall and from the room.
+    //
+    // So a retained one is retired rather than obeyed: an empty payload, published retained, deletes
+    // it from the broker for good. The brain stopped retaining these on 22 September (item 31); this
+    // is the half that clears what is already out there, and it is on the device because the device
+    // is the only thing that knows its own NVS is not empty. The clear comes back to us as an
+    // ordinary message with no payload, which the same line below drops.
+    const bool remembered = (leaf == "count/set" || leaf == "order/set"
+                             || leaf == "room/set" || leaf == "white/set");
+    if (remembered && (retained || msg.empty())) {
+        if (retained) {
+            ESP_LOGI(TAG, "a retained %s was waiting on the broker; retiring it, what is written down wins",
+                     leaf.c_str());
+            say(leaf.c_str(), "", 1);
+        }
+        return;
+    }
+
+    // THE ONE COMMAND THAT IS NOT ABOUT SETTING UP. On, off, how bright, what color -- the same four
+    // things Matter carries, arriving the other way for a strip that came through our own door and so
+    // has no Matter fabric to carry them. paint() leaves an instrument alone: the fill and the color
+    // question own the strip while they run, and the household's color goes back the moment they stop.
+    if (leaf == "light/set") {
+        cJSON *j = cJSON_Parse(msg.c_str());
+        if (!j) return;
+        const cJSON *st = cJSON_GetObjectItemCaseSensitive(j, "state");
+        if (cJSON_IsString(st) && st->valuestring) want_on = !strcasecmp(st->valuestring, "ON");
+        const cJSON *br = cJSON_GetObjectItemCaseSensitive(j, "brightness");
+        if (cJSON_IsNumber(br)) want_bri = (uint8_t)br->valueint;
+        const cJSON *c = cJSON_GetObjectItemCaseSensitive(j, "color");
+        if (cJSON_IsObject(c)) {
+            const cJSON *r = cJSON_GetObjectItemCaseSensitive(c, "r");
+            const cJSON *g = cJSON_GetObjectItemCaseSensitive(c, "g");
+            const cJSON *b = cJSON_GetObjectItemCaseSensitive(c, "b");
+            if (cJSON_IsNumber(r)) want_r = (uint8_t)r->valueint;
+            if (cJSON_IsNumber(g)) want_g = (uint8_t)g->valueint;
+            if (cJSON_IsNumber(b)) want_b = (uint8_t)b->valueint;
+        }
+        cJSON_Delete(j);
+        paint();
+        say_light();
+        return;
+    }
 
     if (leaf == "show/set") {
         if (msg.rfind("raw ", 0) == 0) {
@@ -192,14 +379,45 @@ static void on_command(const std::string &leaf, const std::string &msg) {
             strip.raw3((uint8_t)b0, (uint8_t)b1, (uint8_t)b2);
             px::show(strip);
         } else if (msg == "fill") {
+            // THE FILL MEASURES THE WIRE, NOT THE LAST GUESS ABOUT IT, and that is the whole of this
+            // line. The fill is bounded by strip.count and it is the instrument that DISCOVERS
+            // strip.count -- so a strip that has come to believe it is one pixel long fills one
+            // pixel, for ever, and there is no way back to the truth from inside the panel.
+            //
+            // A household found it the hard way on 21 September: a strip that lit a single LED, a
+            // "start over" that filled nothing anybody could see because only that one pixel was
+            // being written, and a length question that could not be answered twice. Writing the
+            // whole wire is free -- the surplus falls off the end, which is why 300 is the assumed
+            // length in the first place -- and the real count is latched on fill/stop.
             instrument = true;
+            strip.set_count(PX_MOST);
             strip.clear();
             px::show(strip);
             fill.start(now_ms());
+        } else if (msg == "tune") {
+            // The pane's fine-tune. Nothing is written down until it is over: `tune/set` moves the
+            // count in memory only, so holding a button does not spend an NVS erase cycle a frame.
+            instrument = true;
+            tuning = true;
+            fill.running = false;
+            paint_tune();
         } else if (msg == "off") {
             instrument = false;
+            tuning = false;
             paint();
         }
+        return;
+    }
+
+    // WHERE THE END IS, WHILE SOMEBODY IS MOVING IT. In memory and on the wire, never in NVS --
+    // the hub sends one `count/set` at the end, which is the write that keeps it.
+    if (leaf == "tune/set") {
+        if (!tuning) return;
+        strip.set_count(atoi(msg.c_str()));
+        paint_tune();
+        char v[16];
+        snprintf(v, sizeof(v), "%d", strip.count);
+        say("count", v, 1);
         return;
     }
 
@@ -226,7 +444,13 @@ static void on_command(const std::string &leaf, const std::string &msg) {
         nvs_set_u8(nvs, "white", strip.order.white); nvs_commit(nvs);
         return;
     }
-    if (leaf == "count/set") { strip.set_count(atoi(msg.c_str())); put_i32("count", strip.count); return; }
+    if (leaf == "count/set") {
+        strip.set_count(atoi(msg.c_str()));
+        put_i32("count", strip.count);
+        // Sent as the last word of a tuning session, so what is on the strip has to agree with it.
+        if (tuning) paint_tune();
+        return;
+    }
     if (leaf == "room/set")  { put_str("room", msg); return; }
 }
 
@@ -239,6 +463,8 @@ static void mqtt_event(void *arg, esp_event_base_t, int32_t id, void *data) {
             snprintf(sub, sizeof(sub), "%s/%s/#", base, chipHex);
             esp_mqtt_client_subscribe(mqtt, sub, 1);
             say_what_we_are();
+            announce_the_light();
+            say_light();
             break;
         }
         case MQTT_EVENT_DISCONNECTED: broker_up = false; break;
@@ -247,19 +473,39 @@ static void mqtt_event(void *arg, esp_event_base_t, int32_t id, void *data) {
             const std::string prefix = std::string(chipHex) + "/";
             const size_t cut = topic.find(prefix);
             if (cut == std::string::npos) break;
-            on_command(topic.substr(cut + prefix.size()), msg);
+            on_command(topic.substr(cut + prefix.size()), msg, e->retain);
             break;
         }
         default: break;
     }
 }
 
+// WHERE THE HOUSE IS, AND EVERY WAY OF ARRIVING AT IT.
+//
+// Safe to call as often as you like: it is the same question asked from three different moments, and
+// only the first one that can answer does anything.
+//
+// IT USED TO BE ASKED FROM TWO, AND OUR OWN DOOR WAS NEITHER. A strip set up through our door was
+// handed the Wi-Fi and the broker in one session, stored both, joined the house -- and then sat there
+// with a perfectly good broker it had never been told to go to, because find_hub() ran at boot and on
+// Matter's kCommissioningComplete and nowhere else. The hub waited sixty seconds for a hello that
+// could not come, and said the strip never reached it. It reached it on the NEXT POWER CYCLE, every
+// time, which is what made this look like anything but what it was. 21 September, and it is the last
+// mile of item 2a.
+static bool gHaveIp = false;
 static void find_hub() {
+    if (mqtt) return;                       // already on the way, or already there
+    // AND IT SAYS WHY IT IS NOT GOING, which the first version did not: three silent returns and a
+    // strip that has joined the house and gone quiet look identical from a serial console.
+    if (!gHaveIp) { ESP_LOGD(TAG, "no address yet; not looking for the hub"); return; }
     const std::string host = get_str("mhost", "");
     // Blank on a strip that has never met our hub, which is the ordinary case for one bought in a
     // shop. It is then simply a Matter light and none of this half ever runs.
-    if (host.empty()) return;
-    const std::string uri = "mqtt://" + host + ".local:1883";
+    if (host.empty()) { ESP_LOGI(TAG, "no hub to look for; this is somebody else's light"); return; }
+    // A NAME GETS .local AND AN ADDRESS DOES NOT -- see hub_uri.h for the strip that finished setup
+    // and never appeared because it was looking for 192.168.86.53.local.
+    const std::string uri = broker_uri(host);
+    ESP_LOGI(TAG, "looking for the hub at %s", uri.c_str());
     esp_mqtt_client_config_t cfg = {};
     cfg.broker.address.uri = uri.c_str();
     cfg.credentials.username = strdup(get_str("muser", "").c_str());
@@ -363,6 +609,13 @@ static void blink_back() {
 }
 
 static void housekeeping(void *) {
+    // WATCHED, BECAUSE A LOOP THAT STOPS LOOKS EXACTLY LIKE A STRIP THAT IS FINE. Everything a
+    // person can do to this thing with their hands is read from here -- the press that lets the hub
+    // in, the five-second hold that forgets the house -- and when this task stopped, twice on
+    // 21 September, the strip went on glowing and advertising and answering Matter, and the only
+    // sign was a button that did nothing. Under the task watchdog a block is a panic with a stack
+    // trace in the log instead, which is a bad day somebody can actually read.
+    esp_task_wdt_add(nullptr);
     bool released = false, armed = false, was_lit = true;
     uint32_t loud_at = 0;
     uint32_t down = 0;
@@ -398,6 +651,11 @@ static void housekeeping(void *) {
         // rung lower. It has to be driven from here rather than from the handler that heard it: that
         // one runs on the manager's own task, inside the manager it would be tearing down.
         prov::tend_the_door();
+        // The other way out (`forget` on the broker), driven from here for the reason the flag says.
+        if (forget_asked) {
+            forget_asked = false;
+            forget_the_house(true);
+        }
         // A hold only counts once the button has been seen let go; see BUTTON_PIN above.
         //
         // AND IT SAYS WHEN IT SEES ONE. A household holding the button and getting nothing has no
@@ -419,13 +677,7 @@ static void housekeeping(void *) {
             }
             if (held > HOLD_DONE) {
                 ESP_LOGW(TAG, "forgetting the house. It will come back new.");
-                strip.clear();
-                px::show(strip);
-                nvs_erase_all(nvs);
-                nvs_commit(nvs);
-                esp_matter::factory_reset();   // erases Matter's own storage and restarts
-                vTaskDelay(pdMS_TO_TICKS(2000));
-                esp_restart();
+                forget_the_house(false);
             }
         }
         if (gpio_get_level((gpio_num_t)BUTTON_PIN) && down) {
@@ -463,6 +715,7 @@ static void housekeeping(void *) {
         // yields to tasks at this priority or above -- never to the idle task at 0. This loop was
         // therefore a busy spin that starved IDLE0 and tripped the task watchdog every five seconds.
         // Anything under one tick here silently means "do not sleep at all".
+        esp_task_wdt_reset();
         vTaskDelay(pdMS_TO_TICKS(10));
     }
 }
@@ -566,6 +819,23 @@ extern "C" void app_main() {
     if (!ours && prov::reserve(prov_name) != ESP_OK)
         ESP_LOGE(TAG, "our own door will not open this boot");
 
+    // THE THIRD MOMENT, and the one that covers every path including our own door: an address on
+    // the house's network. It fires on the first join and again after a router reboot.
+    //
+    // THE LOOP HAS TO EXIST FIRST, and registering into one that does not is not an error anybody
+    // sees -- esp_event_handler_register returns ESP_ERR_INVALID_STATE and the handler simply never
+    // runs. Which is how this went in with the registration ahead of esp_matter::start(), looked
+    // right, built clean, and did nothing at all: the address arrived, the default handler printed
+    // it, and ours was never called. So the loop is made here if nobody has made one, and the
+    // return is READ. 21 September, and the third thing that evening to fail by being silent.
+    esp_event_loop_create_default();
+    const esp_err_t hooked = esp_event_handler_register(
+        IP_EVENT, IP_EVENT_STA_GOT_IP,
+        [](void *, esp_event_base_t, int32_t, void *) { gHaveIp = true; find_hub(); }, nullptr);
+    if (hooked != ESP_OK)
+        ESP_LOGE(TAG, "no hook on getting an address (%s) -- this strip will only look for the hub "
+                      "when it is next powered on", esp_err_to_name(hooked));
+
     heap("before Matter");
     esp_matter::start(on_event);
     heap("after Matter");
@@ -591,7 +861,13 @@ extern "C" void app_main() {
         prov::on_taken([](bool yes) { put_i32("ours", yes ? 1 : 0); });
         prov::on_hub_details([](const char *key, const char *value) {
             for (const char *k : {"mhost", "muser", "mpass", "base"})
-                if (!strcmp(key, k)) { put_str(key, value); return true; }
+                if (!strcmp(key, k)) {
+                    put_str(key, value);
+                    // The two halves can arrive in either order -- the address may already be up
+                    // when the hub says where it is, or the other way about -- so both ends ask.
+                    find_hub();
+                    return true;
+                }
             return false;
         });
         // A STRIP THAT TOOK CREDENTIALS AND NEVER JOINED CANNOT OPEN ITS DOOR AGAIN, and this is a

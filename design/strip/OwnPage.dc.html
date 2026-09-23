@@ -1,0 +1,113 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      --bg: #0c0d10; --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp-rgb: 233,184,114; --lamp: rgb(var(--lamp-rgb));
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; }
+    .lbl { font-size: 12.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-2); }
+    .card { display: flex; align-items: center; gap: 16px; height: 84px; padding: 0 22px;
+            border-radius: 24px; border: 1px solid var(--edge); background: rgba(255,255,255,.05); color: var(--ink); }
+    .card.on { border-color: rgba(var(--lamp-rgb),.55); background: rgba(var(--lamp-rgb),.14); }
+    .ico { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%;
+           background: rgba(255,255,255,.08); color: var(--lamp); flex: 0 0 auto; }
+    .nm { display: block; font-size: 19px; }
+    .nm em { font-style: normal; color: var(--muted); }
+    .sb { display: block; margin-top: 2px; font-size: 14px; color: var(--muted); }
+    .card.on .sb { color: var(--ink-2); }
+    /* a strip at sixty lights to the metre: thin marks, close together, so the end reads as an edge */
+    .px { position: relative; height: 22px; border-radius: 4px;
+          background: repeating-linear-gradient(90deg, rgba(255,255,255,.13) 0 4px, transparent 4px 7px); }
+    .px span { position: absolute; left: 0; top: 0; bottom: 0; overflow: hidden; border-radius: 4px;
+               filter: drop-shadow(0 0 8px rgba(var(--lamp-rgb),.65)); }
+    .px span i { display: block; width: 640px; height: 22px; border-radius: 4px;
+                 background: repeating-linear-gradient(90deg, var(--lamp) 0 4px, transparent 4px 7px); }
+    .chan { height: 22px; border-radius: 4px; flex: 1; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 9px; height: 56px;
+           padding: 0 26px; border-radius: 999px; background: var(--ink); color: #14151a; font-size: 17px; font-weight: 500; }
+    .btn.ghost { background: var(--surface-hi); color: var(--ink); border: 1px solid var(--edge); font-weight: 400; }
+  </style>
+</helmet>
+<div style="position:relative;width:1920px;height:1080px;overflow:hidden;background:var(--bg);color:var(--ink);font-size:17px;line-height:1.4;">
+  <div style="position:absolute;inset:0;background:linear-gradient(rgb(20,22,31) 0%, rgb(28,29,42) 52%, rgb(34,30,38) 100%);"></div>
+
+  <!-- THIS HOUSE, on the page the + door already opens. Nothing here is invented: the rows, the
+       groups and the words are brain/hub/things.py's, and this board only adds two acts to one row. -->
+  <div style="position:absolute;left:0;top:0;right:0;height:96px;display:flex;align-items:center;gap:20px;padding:0 60px;">
+    <span style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.08);display:grid;place-items:center;color:var(--ink-2);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></span>
+    <span style="font-size:17px;color:var(--ink-2);">This house</span>
+  </div>
+
+  <div style="position:absolute;left:60px;top:132px;width:1100px;">
+    <h1 class="dsp" style="margin:0;font-size:52px;font-weight:400;">What this house has</h1>
+    <p style="margin:16px 0 0;font-size:16.5px;color:var(--ink-2);line-height:1.6;">Everything the hub knows about, and where it came from. This is also where a thing is got rid of.</p>
+  </div>
+
+  <div style="position:absolute;left:60px;top:320px;width:1800px;">
+    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:16px;padding-bottom:8px;border-bottom:1px solid var(--edge);">
+      <span style="display:inline-flex;align-items:center;gap:8px;font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);"><span style="color:var(--ink-2);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-6.5 8 6.5V20H4z"/></svg></span>Set up here</span>
+    </div>
+    <ul style="list-style:none;margin:0;padding:0;">
+        <li style="display:grid;grid-template-columns:auto minmax(0,1fr) minmax(0,190px) auto;align-items:center;gap:14px;padding:11px 10px;border-radius:14px;border-bottom:1px solid rgba(255,255,255,.05);">
+          <span style="width:34px;height:34px;border-radius:11px;display:grid;place-items:center;background:var(--surface-hi);color:var(--ink-2);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.2 7-11a7 7 0 10-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.4"/></svg></span>
+          <span style="display:flex;flex-direction:column;min-width:0;"><span style="font-size:15.5px;">Shelf lights</span><span style="margin-top:2px;font-size:13px;color:var(--muted);">A light strip &middot; about 3.0 m, colors checked</span></span>
+          <span style="font-size:14px;color:var(--ink-2);">Living room</span>
+          <span style="justify-self:end;white-space:nowrap;"><span style="display:inline-grid;place-items:center;height:38px;padding:0 18px;border-radius:999px;border:1px solid var(--edge);background:var(--surface-hi);color:var(--ink);font-size:14.5px;">Measure it again</span> <span style="display:inline-grid;place-items:center;height:38px;padding:0 18px;border-radius:999px;border:1px solid var(--edge);background:var(--surface-hi);color:var(--ink);font-size:14.5px;">Check its colors</span> <span style="display:inline-grid;place-items:center;height:38px;padding:0 18px;border-radius:999px;border:1px solid var(--edge);background:var(--surface-hi);color:var(--ink);font-size:14.5px;">Get rid of it</span></span>
+        </li>
+
+        <li style="display:grid;grid-template-columns:auto minmax(0,1fr) minmax(0,190px) auto;align-items:center;gap:14px;padding:11px 10px;border-radius:14px;border-bottom:1px solid rgba(255,255,255,.05);">
+          <span style="width:34px;height:34px;border-radius:11px;display:grid;place-items:center;background:var(--surface-hi);color:var(--ink-2);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 18h5M10.5 21h3M12 3a6 6 0 00-3.7 10.7c.7.6 1.1 1.4 1.2 2.3h5c.1-.9.5-1.7 1.2-2.3A6 6 0 0012 3z"/></svg></span>
+          <span style="display:flex;flex-direction:column;min-width:0;"><span style="font-size:15.5px;">Reading lamp</span><span style="margin-top:2px;font-size:13px;color:var(--muted);">A light</span></span>
+          <span style="font-size:14px;color:var(--ink-2);">Living room</span>
+          <span style="justify-self:end;white-space:nowrap;"><span style="display:inline-grid;place-items:center;height:38px;padding:0 18px;border-radius:999px;border:1px solid var(--edge);background:var(--surface-hi);color:var(--ink);font-size:14.5px;">Get rid of it</span></span>
+        </li>
+
+        <li style="display:grid;grid-template-columns:auto minmax(0,1fr) minmax(0,190px) auto;align-items:center;gap:14px;padding:11px 10px;border-radius:14px;">
+          <span style="width:34px;height:34px;border-radius:11px;display:grid;place-items:center;background:var(--surface-hi);color:var(--ink-2);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 18h5M10.5 21h3M12 3a6 6 0 00-3.7 10.7c.7.6 1.1 1.4 1.2 2.3h5c.1-.9.5-1.7 1.2-2.3A6 6 0 0012 3z"/></svg></span>
+          <span style="display:flex;flex-direction:column;min-width:0;"><span style="font-size:15.5px;">Hallway puck</span><span style="margin-top:2px;font-size:13px;color:var(--muted);">A bridge &middot; two switches</span></span>
+          <span style="font-size:14px;color:var(--ink-2);">Hallway</span>
+          <span style="justify-self:end;white-space:nowrap;"><span style="display:inline-grid;place-items:center;height:38px;padding:0 18px;border-radius:999px;border:1px solid var(--edge);background:var(--surface-hi);color:var(--ink);font-size:14.5px;">Get rid of it</span></span>
+        </li>
+
+    </ul>
+  </div>
+
+  <!-- what the light's own pane looks like when this is where the two live: exactly an ordinary
+       light. Drawn small because it is the CONSEQUENCE of this board, not the board's subject. -->
+  <div style="position:absolute;right:60px;bottom:64px;width:700px;">
+    <span class="lbl" style="display:block;margin-bottom:14px;">And the strip&rsquo;s own pane, then</span>
+    <div style="border-radius:22px;border:1px solid var(--edge);background:rgba(255,255,255,.035);padding:18px;display:flex;gap:16px;">
+      <div style="width:74px;border-radius:37px;background:linear-gradient(180deg, rgba(255,255,255,.07) 26%, rgba(var(--lamp-rgb),.85) 26%);height:210px;"></div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:8px;">
+        <div style="height:44px;border-radius:14px;background:rgba(var(--lamp-rgb),.14);border:1px solid rgba(var(--lamp-rgb),.45);"></div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;">
+          <span style="width:34px;height:34px;border-radius:50%;background:#e2686f;"></span><span style="width:34px;height:34px;border-radius:50%;background:#e28a4e;"></span><span style="width:34px;height:34px;border-radius:50%;background:#e2cb4e;"></span><span style="width:34px;height:34px;border-radius:50%;background:#9ad25e;"></span><span style="width:34px;height:34px;border-radius:50%;background:#5fd2a0;"></span><span style="width:34px;height:34px;border-radius:50%;background:#5aabe2;"></span>
+        </div>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:8px;">
+        <div style="height:62px;border-radius:16px;border:1px solid var(--edge);background:rgba(255,255,255,.05);"></div>
+        <div style="height:62px;border-radius:16px;border:1px solid rgba(var(--lamp-rgb),.45);background:rgba(var(--lamp-rgb),.14);"></div>
+        <div style="height:62px;border-radius:16px;border:1px solid var(--edge);background:rgba(255,255,255,.05);"></div>
+      </div>
+    </div>
+    <p style="margin:14px 0 0;font-size:14px;color:var(--muted);line-height:1.6;">No row, no door, nothing strip-shaped. It is a light.</p>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

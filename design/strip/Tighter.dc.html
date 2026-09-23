@@ -1,0 +1,93 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      --bg: #0c0d10; --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp-rgb: 233,184,114; --lamp: rgb(var(--lamp-rgb));
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; }
+    .lbl { font-size: 12.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-2); }
+    .card { display: flex; align-items: center; gap: 16px; height: 84px; padding: 0 22px;
+            border-radius: 24px; border: 1px solid var(--edge); background: rgba(255,255,255,.05); color: var(--ink); }
+    .card.on { border-color: rgba(var(--lamp-rgb),.55); background: rgba(var(--lamp-rgb),.14); }
+    .ico { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%;
+           background: rgba(255,255,255,.08); color: var(--lamp); flex: 0 0 auto; }
+    .nm { display: block; font-size: 19px; }
+    .nm em { font-style: normal; color: var(--muted); }
+    .sb { display: block; margin-top: 2px; font-size: 14px; color: var(--muted); }
+    .card.on .sb { color: var(--ink-2); }
+    /* a strip at sixty lights to the metre: thin marks, close together, so the end reads as an edge */
+    .px { position: relative; height: 22px; border-radius: 4px;
+          background: repeating-linear-gradient(90deg, rgba(255,255,255,.13) 0 4px, transparent 4px 7px); }
+    .px span { position: absolute; left: 0; top: 0; bottom: 0; overflow: hidden; border-radius: 4px;
+               filter: drop-shadow(0 0 8px rgba(var(--lamp-rgb),.65)); }
+    .px span i { display: block; width: 640px; height: 22px; border-radius: 4px;
+                 background: repeating-linear-gradient(90deg, var(--lamp) 0 4px, transparent 4px 7px); }
+    .chan { height: 22px; border-radius: 4px; flex: 1; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 9px; height: 56px;
+           padding: 0 26px; border-radius: 999px; background: var(--ink); color: #14151a; font-size: 17px; font-weight: 500; }
+    .btn.ghost { background: var(--surface-hi); color: var(--ink); border: 1px solid var(--edge); font-weight: 400; }
+  </style>
+</helmet>
+<div style="position:relative;width:1440px;height:900px;overflow:hidden;background:var(--bg);color:var(--ink);font-size:17px;line-height:1.4;">
+  <div style="position:absolute;inset:0;background:linear-gradient(rgb(24,26,37) 0%, rgb(34,35,52) 46%, rgb(58,44,48) 88%, rgb(44,34,38) 100%);"></div>
+  <div style="position:absolute;inset:0;background:rgba(6,7,9,.5);"></div>
+  <div class="lbl" style="position:absolute;left:49px;top:40px;">A and B together</div>
+  <h3 class="dsp" style="position:absolute;left:49px;top:68px;width:1340px;margin:0;font-size:30px;font-weight:400;">One grid, and the swatches at 46.</h3>
+  <p style="position:absolute;left:49px;top:118px;width:1340px;margin:0;font-size:15px;color:var(--ink-2);line-height:1.6;">The two cheap moves at once, and the only one of these that leaves the pane room to spare. Whether it is the right answer depends on the one thing a drawing cannot settle: whether a 46px circle is still a target for somebody standing at a wall not looking at their hand. MEASURED: 330px against today’s 512, which leaves the pane about a hundred pixels of slack — enough for a sixth kept color, which none of the others have.</p>
+
+  <div style="position:absolute;left:0;top:225px;width:1440px;height:675px;border-radius:34px 34px 0 0;
+              background:linear-gradient(rgba(26,28,34,.8), rgba(16,17,21,.94));overflow:hidden;">
+    <div style="position:absolute;left:49px;top:45px;width:540px;">
+      <div style="font-size:15px;color:var(--ink-2);">Kitchen</div>
+      <h1 class="dsp" style="margin:6px 0 0;font-size:52px;font-weight:400;">Under-cabinet strip</h1>
+      <div class="dsp" style="margin-top:40px;font-size:70px;line-height:1;">Off</div>
+    </div>
+
+    <div style="position:absolute;left:643px;top:73px;width:748px;height:552px;border-radius:32px;
+                border:1px solid var(--edge);background:rgba(255,255,255,.035);padding:26px;display:flex;gap:26px;">
+      <div style="width:168px;flex:0 0 auto;display:flex;flex-direction:column;gap:16px;">
+        <div style="flex:1;border-radius:84px;background:rgba(255,255,255,.06);border:1px solid var(--edge);"></div>
+        <div class="lbl" style="text-align:center;">Brightness</div>
+      </div>
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:24px;justify-content:center;">
+        <div style="display:flex;gap:26px;flex-wrap:wrap;min-width:0;">
+          <div id="colblock" style="width:292px;flex:0 0 auto;display:flex;flex-direction:column;gap:11px;"><div style="display:flex;align-items:center;gap:13px;height:66px;padding:0 16px;border-radius:20px;
+                border:1px solid rgba(var(--lamp-rgb),.55);background:rgba(var(--lamp-rgb),.14);">
+      <span style="width:38px;height:38px;border-radius:50%;background:conic-gradient(#ffa955,#ffe7d0,#dfebff,#ffa955);flex:0 0 auto;"></span>
+      <span style="flex:1;"><span style="display:block;font-size:17px;font-weight:500;">Automatic</span><span style="display:block;font-size:13.5px;color:var(--ink-2);">Follows the light</span></span>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--lamp)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+    </div><span class="lbl" style="margin-top:9px;">Colors</span><div style="display:flex;flex-wrap:wrap;gap:11px;"><span style="width:46px;height:46px;border-radius:50%;background:#e28a4e;box-shadow:inset 0 -2px 6px rgba(0,0,0,.24);"></span><span style="width:46px;height:46px;border-radius:50%;background:#5fd2a0;box-shadow:inset 0 -2px 6px rgba(0,0,0,.24);"></span><span style="width:46px;height:46px;border-radius:50%;background:#e2686f;box-shadow:inset 0 -2px 6px rgba(0,0,0,.24);"></span><span style="width:46px;height:46px;border-radius:50%;background:#e28a4e;box-shadow:inset 0 -2px 6px rgba(0,0,0,.24);"></span><span style="width:46px;height:46px;border-radius:50%;background:#e2cb4e;box-shadow:inset 0 -2px 6px rgba(0,0,0,.24);"></span><span style="width:46px;height:46px;border-radius:50%;background:#9ad25e;box-shadow:inset 0 -2px 6px rgba(0,0,0,.24);"></span><span style="width:46px;height:46px;border-radius:50%;background:#5fd2a0;box-shadow:inset 0 -2px 6px rgba(0,0,0,.24);"></span><span style="width:46px;height:46px;border-radius:50%;background:#5aabe2;box-shadow:inset 0 -2px 6px rgba(0,0,0,.24);"></span><span style="width:46px;height:46px;border-radius:50%;background:#8b7ae2;box-shadow:inset 0 -2px 6px rgba(0,0,0,.24);"></span><span style="width:46px;height:46px;border-radius:50%;background:#d26fd2;box-shadow:inset 0 -2px 6px rgba(0,0,0,.24);"></span><span style="width:46px;height:46px;border-radius:50%;background:#e2a668;box-shadow:inset 0 -2px 6px rgba(0,0,0,.24);"></span><span style="width:46px;height:46px;border-radius:50%;background:#e8bc8c;box-shadow:inset 0 -2px 6px rgba(0,0,0,.24);"></span><span style="width:46px;height:46px;border-radius:50%;background:#f1e4d2;box-shadow:inset 0 -2px 6px rgba(0,0,0,.24);"></span><span style="width:46px;height:46px;border-radius:50%;background:#dfe9f5;box-shadow:inset 0 -2px 6px rgba(0,0,0,.24);"></span></div><span style="align-self:flex-start;height:44px;padding:0 18px;border-radius:999px;border:1px solid var(--edge);color:var(--ink-2);font-size:15px;display:grid;place-items:center;">More colors</span></div>
+          <div style="flex:1;min-width:170px;display:flex;flex-direction:column;gap:12px;justify-content:center;"><span class="lbl">The three it is used at</span><div class="card"><span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2.8v2.4M12 18.8v2.4M4.6 4.6l1.7 1.7M17.7 17.7l1.7 1.7M2.8 12h2.4M18.8 12h2.4M4.6 19.4l1.7-1.7M17.7 6.3l1.7-1.7"/></svg></span><span><span class="nm">Reading</span><span class="sb">Bright, and cooler</span></span></div><div class="card on"><span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 18h5M10.5 21h3M12 3a6 6 0 00-3.7 10.7c.7.6 1.1 1.4 1.2 2.3h5c.1-.9.5-1.7 1.2-2.3A6 6 0 0012 3z"/></svg></span><span><span class="nm">Evening</span><span class="sb">Where it is now</span></span></div><div class="card"><span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg></span><span><span class="nm">Night</span><span class="sb">Enough to see by</span></span></div></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+      <span class="lbl">Because it is a strip</span>
+      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;border-radius:24px;border:1px solid var(--edge);background:rgba(255,255,255,.05);padding:16px 22px;">
+        <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.2 7-11a7 7 0 10-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.4"/></svg></span>
+        <span style="flex:1 1 200px;min-width:0;"><span class="nm">Set up as a strip <em>about 3.0 m</em></span><span class="sb">How long it is, and how its colors come out.</span></span>
+        <span style="flex:1 1 120px;max-width:230px;position:relative;height:22px;border-radius:4px;background:repeating-linear-gradient(90deg, rgba(255,255,255,.13) 0 4px, transparent 4px 7px);">
+          <i style="position:absolute;left:0;top:0;bottom:0;width:60%;border-radius:4px;background:repeating-linear-gradient(90deg, var(--lamp) 0 4px, transparent 4px 7px);filter:drop-shadow(0 0 8px rgba(var(--lamp-rgb),.65));"></i></span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>
+      </div>
+    </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

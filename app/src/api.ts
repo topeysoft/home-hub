@@ -41,7 +41,7 @@ export type Status = { driver: Driver; reason: string; setup_done: boolean; lock
    panel does not know what it is looking at, so it draws `acts` and invents nothing. `with` is what went
    quiet behind this one fault -- fix the fault and they all come back, which is why they are not lines of
    their own. See brain/hub/health.py. */
-export type Act = { do: string; act: 'flow' | 'entry' | 'part' | 'check' | 'forget' | 'update' | 'restart' | 'bridge'; to: string | null
+export type Act = { do: string; act: 'flow' | 'entry' | 'part' | 'check' | 'forget' | 'update' | 'restart' | 'bridge' | 'account' | 'strip'; to: string | null
   ask?: string        // a question to answer first, where the doing is worth a second's thought
   yes?: string        // the words that answer it, with the name in them
   no?: string }       // ...and the ones that decline, where "Keep it" is not what is being kept
@@ -279,6 +279,14 @@ export type Strip = {
   /* A strip no longer gets its Wi-Fi from us at all -- commissioning carries it -- so this is only
      still here for a hub older than that change. */
   needs?: 'wifi'
+  /* WHEN IT STARTED KNOCKING, in seconds since the epoch. The band's line stops shouting after an
+     hour of this and folds in with anything else waiting; the dot on the + door stays either way,
+     so the house goes quiet without forgetting (design/knock/). Absent on a hub older than that. */
+  since?: number
+  /* The room somebody chose, when the house has not made a device to put in it yet. Discovery is a
+     moment behind the room chip and sometimes a long moment; the brain keeps the choice and applies
+     it when it can, and the last beat says so rather than claiming the light is already there. */
+  placing?: string
 }
 /* Ending a job is the brain's to know, exactly as it is for a bridge: a sheet that closes only its
    own copy goes away and the next poll brings it straight back. */
@@ -298,6 +306,12 @@ export const adoptStrip = (code = '') => post<Strip>('/strip/adopt', { code })
 export const stripReach = () => post<Strip>('/strip/reach')
 /** Not mine. Needs no code -- refusing gives nothing away, and nothing was ever sent. */
 export const dismissStrip = () => post<Strip>('/strip/dismiss')
+/** Somebody is standing on Add, waiting, which is the one moment a Bluetooth scan is free.
+ *
+ *  Said again every few seconds for as long as the page is open, because the brain holds it for
+ *  only a few: a wall that goes to rest or is unplugged mid-look must not leave a hub scanning for
+ *  ever. design/knock/Look.dc.html, and hub/strip.py LOOK_HOLD. */
+export const stripLooking = () => post<Strip>('/strip/looking')
 /** How many times it flashed, in four groups. The proof of possession on the rung below the press,
  *  read off the light rather than off a label -- so a wrong count is not a typo, it is having
  *  miscounted, and the strip mints a fresh set every time it is asked. design/strip/ReachRhythm.dc.html. */
@@ -309,12 +323,52 @@ export const stripSaw = (saw: string) => post<Strip>('/strip/saw', { saw })
 export const stripEnds = () => post<Strip>('/strip/ends')
 export const stripAgain = () => post<Strip>('/strip/again')
 export const stripRoom = (room: string) => post<Strip>('/strip/room', { room })
+/** Done with a strip: it goes from the house, and is told to forget the house with it -- the same
+ *  thing the ten-second hold on its own button does, asked from here because that button is very
+ *  often taped behind a television. `heard` is false when the strip was unplugged: the house lets
+ *  go either way, and what is left to say is that the strip still believes it is ours and only its
+ *  button can settle that now. */
+export async function forgetStrip(id: string): Promise<{ forgotten: string; heard: boolean }> {
+  const r = await request(`/strip/${encodeURIComponent(id)}`, { method: 'DELETE' }); if (!r.ok) await fail(r); return r.json()
+}
 export const stripDone = () => post<Strip>('/strip/done')
+/* ---------- what this house has ----------
+ *
+ * One door holding everything the hub knows, grouped by what brought it, because what brought a
+ * thing decides whether it may leave on its own. Chosen 22 September: design/forget/ThingsDoor.dc.html,
+ * with the row on a thing's own pane as the shortcut. brain/hub/things.py writes every word of it,
+ * including the words on the buttons and the question asked before the one act with no undo -- the
+ * panel draws `out` and `act` and invents nothing, the same way Needs a look draws its `acts`.
+ */
+export type Thing = { id: string; name: string; sub: string; where: string; out: Act | null; why?: string }
+export type ThingGroup = { id: string; kind: 'account' | 'here' | 'bridge' | 'engine'; name: string; act: Act | null; things: Thing[] }
+export async function getThings(): Promise<{ groups: ThingGroup[]; count: number }> {
+  const r = await request('/things'); if (!r.ok) await fail(r); return r.json()
+}
+
 /** Every strip the house has, for the rows that offer to ask one of them something again. */
-export type StripRow = { id: string; online: boolean; count: number | null; order: string | null }
+export type StripRow = {
+  id: string; online: boolean; count: number | null; order: string | null
+  /* The house's own id for the hardware, which is how a light pane knows the light it is drawing IS
+     one of these. Null until Home Assistant has made the device, which is a moment behind the rest. */
+  device?: string | null
+}
 export async function listStrips(): Promise<{ strips: StripRow[] }> {
   const r = await request('/strip/list'); if (!r.ok) await fail(r); return r.json()
 }
+/** MOVING THE END OF A STRIP, AFTERWARDS. The fill is a measurement and a measurement has an error
+ *  -- a person's reaction time -- so it lands a few lights either side: long, which is invisible
+ *  because the surplus falls off the wire, or short, which leaves the far end dark for ever. These
+ *  three are the afterwards half of the length question, on the strip's own pane rather than in
+ *  setup, so setup stays one tap. design/strip/Nudge.dc.html.
+ *
+ *  `tune` lights it at the length it believes with a cool tail on the last few; `tuneBy` moves that
+ *  end and is not written down; `tuneDone` puts it back to being a light and keeps the answer. */
+export type Tuning = { id: string; count: number; tuning: boolean }
+export const tuneStrip = (id: string) => post<Tuning>('/strip/tune', { id })
+export const tuneStripBy = (id: string, by: number) => post<Tuning>('/strip/tune/by', { id, by })
+export const tuneStripDone = (id: string, keep = true) => post<Tuning>('/strip/tune/done', { id, keep })
+
 /** Ask a strip already in the house one of the two questions again. design/strip/Later.dc.html. */
 export const revisitStrip = (id: string, what: 'colors' | 'length') =>
   post<Strip>('/strip/revisit', { id, what })

@@ -861,6 +861,62 @@ class Bridges:
         self.hub.log.add("bridge", chip, None, "forgotten", source="user")
         return {"forgotten": where or "The bridge"}
 
+    # The entities a puck publishes for one switch, and the topics it keeps their state on. Both lists
+    # are the other half of announce()/publishState() in brilliant/esp32-bridge/src/main.cpp, and
+    # forgetting one means emptying every item in both.
+    #
+    # The last two of each are RETIRED, and stay here on purpose. A puck used to publish a motion
+    # sensor fed by vendor field 0x13, which turned out to be the lamp's own draw rather than a PIR
+    # (brilliant/STATUS.md). Their discovery is retained, so a household that never updates a puck --
+    # or one whose switch is forgotten by a brain newer than its puck -- still has those entities
+    # sitting in Home Assistant. Dropping them from this list would strand them there forever.
+    SWITCH_CONFIGS = (("light", ""), ("binary_sensor", "_occupancy"), ("sensor", "_load"),
+                      ("binary_sensor", "_motion"), ("sensor", "_motion_level"))
+    SWITCH_LEAVES = ("state", "brightness", "occupancy", "load", "motion", "motion_level")
+
+    async def forget_switch(self, net: str, addr: str) -> dict:
+        """Take one wall switch off the house, and make it stay off.
+
+        A PUCK IS NOT ASKED WHICH SWITCHES IT HAS. It says so, unprompted, every MQTT session, by
+        publishing their discovery again (`announced` in the firmware) -- which is what makes a
+        bridge recognizable after the brain restarts, and is also why taking a switch out through
+        the device registry lasted exactly as long as the puck stayed connected. The row came back
+        by morning and the household had no word for what was happening. So the house has to say
+        this to the BRIDGE, not to Home Assistant, and say it in a way that survives both of them.
+
+        A retained word on the switch's own address is that way. Every puck on the mesh hears it,
+        whether it is the one that announced the switch or the one that will next reconnect; a puck
+        that was unplugged during all this hears it when it comes back, which is the case the whole
+        bug was made of. The puck writes it down, so its own reboot does not undo it.
+
+        THE WAY BACK IS LETTING THE SWITCH IN AGAIN, and it needs no undo here: the house hands out
+        a fresh address every time (`_next_addr`), so a switch that is set up again is not the
+        address that was forgotten. let_in() clears this topic for the address it is about to use,
+        which covers the one case where an old address is deliberately restored.
+
+        The mesh node itself keeps this house's netkey either way. Nothing over the air can take
+        that back -- a factory reset at the wall is the only thing that does -- so this is not
+        claimed to be one. It is the house forgetting the switch, said in a way that holds.
+        """
+        if not net or not addr:
+            raise ValueError("The hub does not know that switch.")
+        for leaf in self.SWITCH_LEAVES:
+            with contextlib.suppress(Exception):
+                await self.hub.ha.call("mqtt", "publish", None,
+                                       topic=f"{BASE}/{net}/{addr}/{leaf}", payload="", retain=True)
+        for kind, tail in self.SWITCH_CONFIGS:
+            with contextlib.suppress(Exception):
+                await self.hub.ha.call("mqtt", "publish", None,
+                                       topic=f"homeassistant/{kind}/{BASE}_{net}_{addr}{tail}/config",
+                                       payload="", retain=True)
+        # Last, and retained: the standing instruction. After the clears, so a puck that acts on it
+        # the instant it lands is not racing the emptying of the topics it is about to stop writing.
+        await self.hub.ha.call("mqtt", "publish", None,
+                               topic=f"{BASE}/{net}/{addr}/forget", payload="1", retain=True)
+        self.switches.pop((net, addr), None)
+        self.hub.log.add("bridge", f"{net}/{addr}", None, "switch forgotten", source="user")
+        return {"forgotten": addr}
+
     def where(self, chip: str) -> str:
         """A bridge in the words a household has for it: the room it serves.
 
@@ -868,6 +924,17 @@ class Bridges:
         thinking otherwise. `A bridge` is what honesty looks like when the room cannot be worked out;
         room_of() is the same question where the caller would rather have the None."""
         return self.room_of(chip) or "A bridge"
+
+    def carrying(self, net: str) -> str | None:
+        """Which puck's chip carries this mesh, where exactly one does.
+
+        The switches on a mesh belong to whichever bridge is holding it, and that is how "What this
+        house has" groups them -- under a room rather than under a network id nobody has a word for.
+        Two pucks on one mesh cannot be told apart (see room_of), so this says nothing rather than
+        picking one, and the list falls back to saying the switches are simply on a bridge."""
+        mine = [c for c, p in self.pucks.items() if p.get("net") == net
+                and c in (self.hub.settings.get("bridges") or {})]
+        return mine[0] if len(mine) == 1 else None
 
     def each(self) -> list[dict]:
         """Every bridge this hub set up, in the words a household has for one.
@@ -1038,19 +1105,34 @@ class Bridges:
                 ssid, password = state["ssid"], ""
         return {"ssid": ssid, "pass": password, "checked": checked, "known": bool(ssid and password)}
 
+    def broker(self) -> dict:
+        """Where our own broker is, and how to get into it.
+
+        ONE PLACE, because a puck and a strip are told the same thing and two descriptions of one
+        broker is how one of them comes to be wrong. It was: hub/strip.py read a `broker` key in the
+        settings that nothing in this hub has ever written, so every strip was handed the literal
+        name "hub" and no credentials at all. It joined the house, reached the broker, and was told
+        `Connection refused, not authorized` -- which the wall reported as "it never found the hub".
+        """
+        env = getattr(self.hub, "env", {}) or {}
+        return {
+            # A name AND a number. The name is tried first, over mDNS, so a DHCP reshuffle stops
+            # stranding every device in the house; the number is what answers in a house whose
+            # router filters multicast. docs/network.md, piece 1.
+            "host": lan_ip(), "name": _hostname(), "port": 1883,
+            "user": env.get("MQTT_USER") or os.environ.get("MQTT_USER", ""),
+            "pass": env.get("MQTT_PASSWORD") or os.environ.get("MQTT_PASSWORD", ""),
+        }
+
     def config(self) -> dict:
         """Everything a puck is told. The Wi‑Fi is the one thing the hub might not have (it may be on a cable)."""
-        env = getattr(self.hub, "env", {}) or {}
         keys = self.keys()
+        mq = self.broker()
         wifi = self.wifi_for_pucks()
         return {
             "ssid": wifi["ssid"] if wifi["known"] else "", "pass": wifi["pass"],
-            # A name AND a number. The name is tried first, over mDNS, so a DHCP reshuffle stops
-            # stranding every puck in the house; the number is what answers in a house whose router
-            # filters multicast. docs/network.md, piece 1.
-            "host": lan_ip(), "name": _hostname(), "port": 1883,
-            "user": env.get("MQTT_USER") or os.environ.get("MQTT_USER", ""),
-            "mqtt_pass": env.get("MQTT_PASSWORD") or os.environ.get("MQTT_PASSWORD", ""),
+            "host": mq["host"], "name": mq["name"], "port": mq["port"],
+            "user": mq["user"], "mqtt_pass": mq["pass"],
             "netkey": keys["netkey"], "appkey": keys["appkey"], "iv": keys["iv_index"], "base": BASE, "label": "Brilliant",
         }
 
@@ -1082,6 +1164,12 @@ class Bridges:
                 except Exception: self._heard[leaf] = {"at": time.time(), "body": None, "chip": chip}
                 if self._woke: self._woke.set()
                 return
+            if leaf == "heard":
+                # A strip knocking near this puck (hub/ears.py). Not a state of the puck's, so it
+                # stops here rather than falling through to the puck's own bookkeeping.
+                ears = getattr(self.hub, "ears", None)
+                if ears: ears.from_puck(chip, payload)
+                return
             if leaf == "cfgack":
                 # Proof, not a promise. A puck can only publish this from the broker, and it can only
                 # reach the broker on a network it actually joined.
@@ -1112,6 +1200,11 @@ class Bridges:
             if self.job and self.job.get("chip") == chip and self.job.get("quiet") and p.get("online"):
                 self.job.pop("quiet", None)
                 self._set("placing")
+        elif len(parts) == 5 and parts[1] == "bridge" and parts[3:] == ["errand", "tell"]:
+            # A bridge running an errand for a strip the hub cannot hear (hub/errand.py). Handed to
+            # the one errand running, and only if it is this bridge's: strips go one at a time.
+            errand = getattr(self.hub, "errand", None)
+            if errand and errand.chip == parts[2]: errand.on_tell(payload)
         elif len(parts) == 5 and parts[1] == "bridge" and parts[3:] == ["night", "brightness"]:
             with contextlib.suppress(ValueError):
                 self.pucks.setdefault(parts[2], {})["level"] = max(0, min(255, int(payload)))
@@ -1217,6 +1310,14 @@ class Bridges:
         the codeless route, which the switches accept -- every switch on this
         house's network was claimed that way."""
         addr = self._next_addr()
+        # An address the house is about to use must not be carrying an old forget. It normally is
+        # not -- _next_addr() never hands the same one out twice -- but a switch restored to its
+        # former address by hand would otherwise come up already forgotten, which looks exactly
+        # like a switch that will not join.
+        if (net := (self.pucks.get(self._our_puck() or "") or {}).get("net")):
+            with contextlib.suppress(Exception):
+                await self.hub.ha.call("mqtt", "publish", None,
+                                       topic=f"{BASE}/{net}/{addr:04x}/forget", payload="", retain=True)
         cmd = f"add {uuid} {addr:04x}" + (f" {oob}" if oob else "")
         body = await self._ask(cmd, "claimed", CLAIM_WAIT)
         if body is None:

@@ -1067,3 +1067,52 @@ class WhichOnesAreBehind(unittest.TestCase):
         self.have(c8ebba="0.2.0", f4a9f3="0.2.0")
         self.assertEqual(len(self.b.behind()), 2)
         self.assertEqual([x["online"] for x in self.b.behind()], [False, False])
+
+
+class BeingDoneWithOneSwitch(unittest.TestCase):
+    """Taking one wall switch off the house, and making it stay off.
+
+    THE ROW USED TO COME BACK BY MORNING. A puck announces every switch it knows on every MQTT
+    session -- which is what makes a bridge recognizable after the brain restarts -- so forgetting a
+    switch through Home Assistant's device registry lasted exactly as long as the puck stayed
+    plugged in, and nothing anywhere said why it had returned. The house has to say this to the
+    BRIDGE, and say it in a way that survives both of them.
+    """
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.dev = Path(self.tmp.name) / "by-id"; self.dev.mkdir()
+        self.hub = FakeHub(self.tmp.name)
+        self.b = Bridges(self.hub, cable=FakeCable(), devdir=self.dev)
+        self.b.switches[("0123456789abcdef", "0021")] = "ON"
+
+    def tearDown(self): self.tmp.cleanup()
+
+    def test_the_three_entities_and_the_four_state_topics_are_emptied(self):
+        run(self.b.forget_switch("0123456789abcdef", "0021"))
+        said = dict(self.hub.ha.published)
+        for kind, tail in (("light", ""), ("binary_sensor", "_occupancy"), ("sensor", "_load"),
+                           ("binary_sensor", "_motion"), ("sensor", "_motion_level")):
+            t = f"homeassistant/{kind}/mesh_0123456789abcdef_0021{tail}/config"
+            self.assertEqual(said.get(t), "", t)
+        for leaf in ("state", "brightness", "occupancy", "load", "motion", "motion_level"):
+            self.assertEqual(said.get(f"mesh/0123456789abcdef/0021/{leaf}"), "")
+        self.assertNotIn(("0123456789abcdef", "0021"), self.b.switches)
+
+    def test_the_standing_instruction_is_retained_and_goes_last(self):
+        """Retained, so a puck that was unplugged while the household got rid of the switch hears it
+        the moment it comes back -- which is the case the whole bug was made of. Last, so a puck
+        acting on it the instant it lands is not racing the emptying of the topics it writes."""
+        run(self.b.forget_switch("0123456789abcdef", "0021"))
+        topic, payload = self.hub.ha.published[-1]
+        self.assertEqual((topic, payload), ("mesh/0123456789abcdef/0021/forget", "1"))
+        self.assertTrue(self.hub.ha.calls[-1].get("retain"))
+
+    def test_it_is_written_down(self):
+        run(self.b.forget_switch("0123456789abcdef", "0021"))
+        self.assertEqual(self.hub.log.rows[-1][0][:4],
+                         ("bridge", "0123456789abcdef/0021", None, "switch forgotten"))
+
+    def test_a_switch_the_hub_cannot_name(self):
+        with self.assertRaises(ValueError):
+            run(self.b.forget_switch("", "0021"))

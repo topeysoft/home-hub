@@ -149,9 +149,16 @@ The LEDs run from 5 V directly, not from the 3.3 V rail.
 
 - **BOOT** on GPIO0 and **RESET** on EN. Both needed while prototyping even though USB-CDC handles normal flashing,
   because the time you need them is when USB-CDC is what is broken.
-- **One user button**, on a free GPIO with the internal pull-up. This is `docs/puck-light.md`'s open question —
-  *"does the object want a button?"* — turned into something you can find out. A tap for "dark until morning" is the
-  obvious gesture, and adoption and factory reset may want it anyway.
+- **One user button**, on GPIO4 with the internal pull-up, and **it is no longer optional**. It went on the board as
+  `docs/puck-light.md`'s open question — *"does the object want a button?"* — turned into something you could find
+  out. On 21 September the answer stopped being a matter of taste: **the proof that a thing is in your house is a
+  press on it** (`docs/strip.md` item 23, `design/door/PressIt.dc.html`), the gate lives on the device and not on
+  the hub, and a product with no reachable button cannot be adopted through our own door at all. See
+  `hardware/README.md`, which is where that claim now lives for every board rather than only this one.
+
+  GPIO4 is deliberately not one of the strapping pins below, so a finger resting on it at power-up cannot change
+  how the chip boots. A tap for "dark until morning" is still the obvious second gesture, and factory reset wants
+  it too.
 
   The three switches are C&K KMR2 side-actuated tacts (4.2 × 2.8 × 1.4 mm), not the 5.7 mm-deep SKQG first
   specified: once the ring was on the board there was nowhere the bigger part would go. The user button sits at
@@ -263,6 +270,7 @@ argument that `Shape.dc.html` deliberately left open.
   before anything is tooled.
 - **Whether the light sensor gets populated**, which is really the question of how much the object should do with
   the hub down.
-- **The button's gesture**, which is what rev A is for.
+- **The button's gesture**, which is what rev A is for. *That it exists and can be reached is no longer open* — see
+  above and `hardware/README.md`. What a short press, a long press and a hold should each mean is.
 - **Whether the hub seat survives `docs/shipping.md`**, above. It changes rev B's connector, not rev A's.
 

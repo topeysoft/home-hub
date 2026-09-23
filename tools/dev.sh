@@ -9,6 +9,7 @@
 #   tools/dev.sh live     the panel against a house that is up and lived in, its brain answering
 #   tools/dev.sh check    what CI runs, here, before pushing
 #   tools/dev.sh design   every artboard in a browser, on the canvas they were drawn on
+#   tools/dev.sh free     let go of a port something is still listening on from yesterday
 #   tools/dev.sh graft    this tree's brain onto a hub, without a release
 #   tools/dev.sh says     what a hub's brain is saying, with its request log taken out
 #
@@ -31,6 +32,59 @@ n() { if [ "$1" = 1 ]; then printf '%s %s' "$1" "$2"; else printf '%s %ss' "$1" 
 # with nothing on it is the ordinary case here rather than an error.
 holder() { lsof -ti tcp:"$1" -sTCP:LISTEN 2>/dev/null | head -1 || true; }
 uptime_of() { ps -o etime= -p "$1" 2>/dev/null | tr -d ' ' || true; }
+
+# The ports this project puts things on. The leftovers in the status report and `free` both read
+# this list, so a new one is named here once rather than in two places that drift apart.
+known_ports() { cat <<'PORTS'
+8300 the brain
+8399 the mock brain
+5173 vite
+8123 home assistant
+8402 the artboards
+PORTS
+}
+what_is_on() { known_ports | awk -v p="$1" '$1 == p { $1 = ""; sub(/^ /, ""); print }'; }
+
+# ---- letting go of a port ----------------------------------------------------------------------
+# The brain from this morning is still on :8300, or a vite from a window you closed still holds
+# 5173, and the thing you are trying to start says `address already in use` and names neither the
+# process nor what to do about it. The cure is an lsof and a kill, and the kill is easy to aim at
+# the pid above the one you meant, so it is here with the aiming already done.
+#
+# Two cares are borrowed from brain/dev.py, both learned the hard way. A port that a container
+# publishes is held by docker's proxy rather than by the thing inside the container, so killing it
+# takes docker's networking down and leaves the container running: those are named and left alone.
+# And it looks more than once, because a server with a reloader on is two processes and the
+# survivor can be back on the port before the next look.
+free_port() {
+  local port=$1 what pid cmd base age waited hard='' stopped=''
+  what=$(what_is_on "$port")
+  for _pass in 1 2 3; do
+    pid=$(holder "$port"); [ -n "$pid" ] || break
+    cmd=$(ps -ww -o command= -p "$pid" 2>/dev/null || true)
+    base=${cmd%% *}; base=${base##*/}
+    case "$base" in
+      *docker*|*vpnkit*|qemu*)
+        row ":$port" "${Y}docker holds it${R} ${D}— pid $pid only publishes a container's port; docker stop it instead${R}"
+        return 0 ;;
+    esac
+    age=$(uptime_of "$pid")
+    kill -TERM "$pid" 2>/dev/null || {
+      row ":$port" "${Y}cannot stop pid $pid${R} ${D}— ${base:-it} belongs to somebody else; sudo kill $pid${R}"
+      return 1; }
+    waited=0                               # four seconds: a reloader has children to take with it
+    while kill -0 "$pid" 2>/dev/null && [ $waited -lt 40 ]; do sleep 0.1; waited=$((waited + 1)); done
+    if kill -0 "$pid" 2>/dev/null; then kill -KILL "$pid" 2>/dev/null || true; sleep 0.2
+      hard=" ${D}(it ignored the polite one)${R}"; fi
+    stopped="${what:-$base} ${D}pid $pid, up $age${R}$hard"
+  done
+  if [ -n "$(holder "$port")" ]; then
+    row ":$port" "${Y}still listening${R} ${D}— something keeps putting it back; lsof -i tcp:$port${R}"
+    return 1
+  fi
+  if [ -n "$stopped" ]; then row ":$port" "stopped $stopped"
+  else row ":$port" "${D}nothing was listening${R}"; fi
+}
 
 # ---- what this machine needs before anything here can run -------------------------------------
 # Both floors are CI's (ci.yml: python 3.13, node 22) and brain/pyproject.toml's requires-python.
@@ -150,16 +204,12 @@ where_you_were() {
   [ -n "$others" ] && row "also" "$D$others$R"
 
   # Anything still running from before the break, and how old it is.
+  held=
   while read -r port what; do
     pid=$(holder "$port")
-    if [ -n "$pid" ]; then row ":$port" "$what ${D}pid $pid, up $(uptime_of "$pid")${R}"; fi
-  done <<'PORTS'
-8300 the brain
-8399 the mock brain
-5173 vite
-8123 home assistant
-8402 the artboards
-PORTS
+    if [ -n "$pid" ]; then held=1; row ":$port" "$what ${D}pid $pid, up $(uptime_of "$pid")${R}"; fi
+  done < <(known_ports)
+  [ -n "$held" ] && row "free" "${D}tools/dev.sh free${R} ${D}stops those — or free 8300 for one of them${R}"
 
   missing=()
   [ -n "$(prereqs)" ] && missing+=("$(prereqs)")
@@ -176,13 +226,35 @@ PORTS
   echo "  ${D}tools/dev.sh design${R} — the artboards, before any of it is code"
 }
 
-usage() { sed -n '4,11p' "$0" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '4,12p' "$0" | sed 's/^# \{0,1\}//'; }
 
 case "${1:-status}" in
   status|"") if fresh; then first_time; else where_you_were; fi ;;
   # Vite prints the address it actually took, so this does not guess one. PORT=8405 moves the mock
   # if something already holds :8399.
-  up)    ensure panel; cd app && exec npm run dev:mock ;;
+  #
+  # The mock's port is claimed first, for the reason brain/dev.py claims :8300: a mock left running
+  # from an hour ago -- or started by whoever else is working in this checkout -- makes this exit
+  # with `EADDRINUSE :::8399` and a node stack, which names neither the process nor what to do. And
+  # the same restraint as dev.py: only one of OUR mocks is replaced, and it is said out loud whose
+  # it was. Anything else on the port is reported and left alone.
+  up)    ensure panel
+         port=${PORT:-8399}
+         pid=$(holder "$port")
+         if [ -n "$pid" ]; then
+           cmd=$(ps -ww -o command= -p "$pid" 2>/dev/null || true)
+           case "$cmd" in
+             *mock/brain.mjs*|*mock/dev.mjs*)
+               row ":$port" "${D}replacing a mock brain — pid $pid, up $(uptime_of "$pid")${R}"
+               free_port "$port" >/dev/null || { row ":$port" "${Y}it would not let go${R}"; exit 1; } ;;
+             *)
+               base=${cmd%% *}
+               row ":$port" "${Y}held by ${base##*/}${R} ${D}— pid $pid, up $(uptime_of "$pid"), not a mock of ours${R}"
+               echo "  ${D}tools/dev.sh free $port to stop it, or PORT=8405 tools/dev.sh up to go around it${R}" >&2
+               exit 1 ;;
+           esac
+         fi
+         cd app && exec env PORT="$port" npm run dev:mock ;;
   # The boards are static HTML and the viewer is dependency-free node, so this deliberately does
   # NOT call ensure: looking at the design is the one thing here that should work in a clone
   # where nothing has been installed. Extra flags (--port, --no-open) pass straight through.
@@ -257,7 +329,9 @@ case "${1:-status}" in
          python3 -m compileall -q brain/hub >/dev/null || { echo "${Y}brain does not compile${R}" >&2; exit 1; }
          row "house" "$house"
          row "taps" "${Y}real${R} ${D}— their lights, their names, their Restart button${R}"
-         row "undo" "${D}docker compose up -d --force-recreate brain, or the next update${R}"
+         # The compose file is in driver-layer, not /opt/home-hub: from anywhere else `docker compose`
+         # says "no configuration file provided" and the graft quietly stays. Found undoing one.
+         row "undo" "${D}ssh pi@$house 'cd /opt/home-hub/driver-layer && sudo docker compose up -d --force-recreate brain', or the next update${R}"
          # --no-xattrs, because bsdtar on a Mac writes com.apple.provenance into every header and
          # GNU tar on the hub then prints a warning per file. Nothing is wrong; it just looks it.
          COPYFILE_DISABLE=1 tar --no-xattrs -czf - -C brain hub vendor 2>/dev/null \
@@ -286,6 +360,21 @@ case "${1:-status}" in
          if [ -d matter-bridge/node_modules ]; then ( cd matter-bridge && npm run check && npm test )
          else echo "${D}matter-bridge skipped: cd matter-bridge && npm install${R}"; fi
          echo "${D}e2e is the slow half: cd app && npm run build && npm run e2e${R}" ;;
+  # What is listening, gone. No argument means everything this project is known to put something
+  # on, which is the state the status report has just described; naming ports frees only those.
+  #
+  #   tools/dev.sh free              8300, 8399, 5173, 8123, 8402 — whichever are held
+  #   tools/dev.sh free 5173 8300    only these
+  free)  shift || true
+         if [ $# -eq 0 ]; then while read -r port _; do set -- "$@" "$port"; done < <(known_ports); fi
+         rc=0
+         for port in "$@"; do
+           case "$port" in ''|*[!0-9]*)
+             echo "${Y}not a port: $port${R}" >&2; echo "  ${D}tools/dev.sh free [port ...]${R}" >&2; exit 1 ;;
+           esac
+           free_port "$port" || rc=1
+         done
+         exit $rc ;;
   help|-h|--help) usage ;;
   *)     usage; exit 1 ;;
 esac

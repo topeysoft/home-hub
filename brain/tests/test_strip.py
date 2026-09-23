@@ -8,7 +8,7 @@ it joins the Wi-Fi, it says what color it is showing, it fills up and is stopped
 And the two questions only a strip has -- which color comes out first, and how far it goes -- both of
 which exist because nothing can be read back off a strip.
 """
-import asyncio, json, sqlite3, tempfile, unittest
+import asyncio, json, sqlite3, tempfile, time, unittest
 from pathlib import Path
 
 from hub.settings import Settings
@@ -36,13 +36,15 @@ class FakeRadio:
         self.pressing = None      # the callback, kept so a test can press whenever it likes
         self.asked_rhythm = 0     # how many times the strip was asked to drop a rung
         self.not_pressed = False  # the two minutes ran out with nobody touching it
+        self.transports = []      # what each adoption was carried over: None for our own radio
 
     async def scan_ours(self, seconds=8.0):
         return [{"addr": s["address"], "rssi": s["rssi"], "name": s.get("name"),
                  "door": "ours", "ours": True} for s in self.ours]
 
     async def adopt_ours(self, addr, ssid, password, hub=None, rhythm="",
-                         on_pressed=None, out_of_reach=None):
+                         on_pressed=None, out_of_reach=None, transport=None):
+        self.transports.append(transport)          # None is our own radio; an Errand is a bridge's
         if self.adopt_fails:
             raise StripError(self.adopt_fails if isinstance(self.adopt_fails, str)
                              else "Those were not the flashes it is showing.")
@@ -84,17 +86,39 @@ class FakeHA:
         self.cb = None
         self.published = []
         self.answers = {}
+        self.devices = []      # what the house's device registry holds
+        self.moved = []        # (device_id, area_id) for every move we asked for
 
     async def subscribe(self, type_, cb, **kw): self.cb = cb; return 1
 
+    async def send(self, type_, **kw):
+        """Home Assistant's own registry, as much of it as a strip ever touches."""
+        if type_ == "config/device_registry/list": return getattr(self, "devices", [])
+        if type_ == "config/device_registry/update":
+            self.moved.append((kw.get("device_id"), kw.get("area_id")))
+            return {"ok": True}
+        return None
+
     async def call(self, domain, service, target, **kw):
         topic, payload = kw.get("topic"), kw.get("payload")
-        self.published.append((topic, payload))
+        self.published.append((topic, payload, bool(kw.get("retain"))))
         leaf = "/".join(topic.split("/")[2:])
         if leaf in self.answers and self.cb:
             back_leaf, back_payload = self.answers[leaf]
             id_ = topic.split("/")[1]
             self.cb({"topic": f"strip/{id_}/{back_leaf}", "payload": back_payload})
+
+
+class FakeLog:
+    def __init__(self): self.rows = []
+    def add(self, *a, **k): self.rows.append((a, k))
+
+
+class FakeBridges:
+    """The one thing a strip asks the puck's half of the hub for: where the broker is and how to get
+    into it. Real `Bridges.broker()` reads exactly these out of the environment."""
+    def broker(self):
+        return {"host": "192.168.1.9", "name": "hub", "port": 1883, "user": "hub", "pass": "pw"}
 
 
 class FakeHub:
@@ -103,7 +127,9 @@ class FakeHub:
         self.settings.set(wifi={"ssid": "House", "pass": "hunter2 with space"} if wifi else None)
         self.env = {"MQTT_USER": "hub", "MQTT_PASSWORD": "pw"}
         self.hostname = "hub"
+        self.bridge = FakeBridges()
         self.ha = FakeHA()
+        self.log = FakeLog()
         self.home = None
         self.pushed = []
         self.steps = []
@@ -381,10 +407,22 @@ class Afterwards(unittest.TestCase):
     def tearDown(self): self.tmp.cleanup()
 
     def said(self, leaf):
-        return [p for t, p in self.hub.ha.published if t.endswith("/" + leaf)]
+        return [p for t, p, _ in self.hub.ha.published if t.endswith("/" + leaf)]
 
     def test_the_house_can_list_what_it_has(self):
-        self.assertEqual(self.s.each(), [{"id": "c8ebba", "online": True, "count": 186, "order": "grb"}])
+        self.hub.ha.devices = [{"id": "dev1", "identifiers": [["mqtt", "strip_c8ebba"]]}]
+        self.assertEqual(run(self.s.each()),
+                         [{"id": "c8ebba", "online": True, "count": 186, "order": "grb",
+                           "device": "dev1"}])
+
+    def test_a_strip_the_house_has_not_made_a_device_for_yet_is_still_listed(self):
+        """Discovery is a moment behind everything else, and a strip with no hardware id yet is a
+        strip the pane simply cannot offer its two questions about -- not one it should hide."""
+        self.hub.ha.devices = []
+        self.assertEqual(run(self.s.each())[0]["device"], None)
+        # And the miss is not remembered: it would make the pane permanently sure of a wrong thing.
+        self.hub.ha.devices = [{"id": "dev1", "identifiers": [["mqtt", "strip_c8ebba"]]}]
+        self.assertEqual(run(self.s.each())[0]["device"], "dev1")
 
     def test_the_colors_can_be_asked_again(self):
         run(self.s.revisit("c8ebba", "colors"))
@@ -406,6 +444,18 @@ class Afterwards(unittest.TestCase):
         st = self.s.status()
         self.assertEqual((st["state"], st["count"]), ("ready", 240))
         self.assertEqual(self.said("count/set"), ["240"])
+
+    def test_and_neither_the_color_order_nor_the_length_is_left_on_the_broker(self):
+        """The other two of the three. See TheLastTwoBeats for why, and item 31."""
+        run(self.s.revisit("c8ebba", "colors"))
+        run(self.s.saw("red"))
+        run(self.s.done())
+        run(self.s.revisit("c8ebba", "length"))
+        run(self.s.ends())
+        said = [t.split("/", 2)[2] for t, _, _ in self.hub.ha.published]
+        self.assertIn("order/set", said)
+        self.assertIn("count/set", said)
+        self.assertEqual([t for t, _, retain in self.hub.ha.published if retain], [])
 
     def test_a_strip_the_hub_has_never_heard_of_is_refused(self):
         with self.assertRaises(StripError):
@@ -534,8 +584,11 @@ class OurOwnDoor(unittest.TestCase):
             addr, rhythm, ssid, password, where = self.radio.adopted[0]
             # No secret of any kind went over that link: the press is the whole proof.
             self.assertEqual((addr, rhythm, ssid, password), ("AA:BB", "", "House", "secret"))
-            # The broker, in the same session. This is item 2a, which was an empty string for weeks.
+            # THE BROKER, WITH THE WAY IN. Not just where it is: a strip handed a host and no
+            # credentials joins the house, reaches the broker and is refused, and the wall then says
+            # it never found the hub. It is the same thing a puck is told, from the same place.
             self.assertEqual(where["mhost"], "hub")
+            self.assertEqual((where["muser"], where["mpass"]), ("hub", "pw"))
             self.assertIn("base", where)
             # And our door never goes near Matter's commissioner.
             self.assertEqual(self.radio.commissioned, [])
@@ -550,6 +603,89 @@ class OurOwnDoor(unittest.TestCase):
             said = self.strips.status()["text"]
             self.assertIn("Nobody pressed", said)
             self.assertNotIn("nearer", said)
+        run(go())
+
+    def test_the_strip_you_are_standing_next_to_is_the_one_the_hub_talks_to(self):
+        """Two strips knocking is an ordinary evening -- somebody unpacks a pair. The hub used to
+        take whichever advertised first, so a household pressing the button on the one in front of
+        them could be waited out by a hub listening to the one upstairs. Matter's side has sorted by
+        signal since it was written; ours did not."""
+        async def go():
+            self.radio.ours = [
+                {"address": "FAR", "rssi": -81, "name": "PROV_far"},
+                {"address": "NEAR", "rssi": -34, "name": "PROV_near"},
+            ]
+            await self.strips.look()
+            self.assertEqual(self.strips.job["addr"], "NEAR")
+            self.assertEqual(self.strips.job["rssi"], -34)
+        run(go())
+
+    # ---- and then it has to be found again, on the broker ----
+
+    def test_the_strip_is_found_by_whoever_turns_up_on_the_broker(self):
+        """Our door leaves the hub with nothing to address the strip by -- a Matter advertisement
+        carries a discriminator, not an id of ours. It used to ask `strip/None/hello`, which nothing
+        subscribes to, so every strip taken through our own door failed here however close it was."""
+        async def go():
+            await self.waiting()
+            self.radio.hold = False
+            await turn()
+            # On the Wi-Fi, not yet on the broker: there is nothing to call it yet.
+            self.assertEqual(self.strips.status()["state"], "working")
+            self.strips._on_mqtt({"topic": "strip/52e204/status", "payload": "online"})
+            await turn()
+            self.assertEqual(self.strips.job["id"], "52e204")
+            self.assertEqual(self.strips.status()["state"], "order")   # on to the color question
+        run(go())
+
+    def test_a_strip_being_set_up_a_SECOND_time_is_still_found(self):
+        """The broker keeps what a strip said last, retained, and the brain reads all of it the
+        moment it subscribes. So a strip that has ever connected is in the list before the session
+        starts -- marked offline -- and "an id that was not there before" can never match it again.
+        That is a strip somebody has just factory reset and is standing over."""
+        async def go():
+            # It has been here before: the broker still holds its last word, and it is offline.
+            self.strips._on_mqtt({"topic": "strip/52e204/status", "payload": "offline"})
+            self.strips._on_mqtt({"topic": "strip/52e204/order", "payload": "grb"})
+            await self.waiting()
+            self.radio.hold = False
+            await turn()
+            self.assertIsNone(self.strips.job["id"])
+            self.strips._on_mqtt({"topic": "strip/52e204/status", "payload": "online"})
+            await turn()
+            self.assertEqual(self.strips.job["id"], "52e204")
+            self.assertEqual(self.strips.status()["state"], "order")
+        run(go())
+
+    def test_a_strip_the_broker_still_thinks_is_online_is_still_found(self):
+        """A strip that goes away does not say so -- the broker says it for it, from the last will,
+        and only once the keepalive has run out. A factory reset, a reboot, a knock and a press all
+        happen well inside that, so the hub can still believe the old connection is alive while the
+        household is standing over the strip that replaced it. It says hello either way."""
+        async def go():
+            self.strips._on_mqtt({"topic": "strip/52e204/status", "payload": "online"})
+            await self.waiting()          # the will has still not fired
+            self.radio.hold = False
+            await turn()
+            self.assertIsNone(self.strips.job["id"])
+            # It joins and says hello, on a connection the hub thought it already had.
+            self.strips._on_mqtt({"topic": "strip/52e204/status", "payload": "online"})
+            await turn()
+            self.assertEqual(self.strips.job["id"], "52e204")
+            self.assertEqual(self.strips.status()["state"], "order")
+        run(go())
+
+    def test_a_strip_the_house_already_had_is_not_mistaken_for_the_new_one(self):
+        """A house with strips in it has every one of them online, and they are not this one."""
+        async def go():
+            self.strips._on_mqtt({"topic": "strip/olderone/status", "payload": "online"})
+            await self.waiting()
+            self.radio.hold = False
+            await turn()
+            self.assertIsNone(self.strips.job["id"])
+            self.strips._on_mqtt({"topic": "strip/52e204/status", "payload": "online"})
+            await turn()
+            self.assertEqual(self.strips.job["id"], "52e204")
         run(go())
 
     # ---- the rung below, reached one way only (design/strip/ReachRhythm.dc.html) ----
@@ -660,6 +796,333 @@ class WhichDoorTheStripIsTakenThrough(unittest.TestCase):
         self.assertEqual(self.strips.job["door"], "matter")
 
 
+class MovingTheEnd(unittest.TestCase):
+    """THE FILL IS A MEASUREMENT AND A MEASUREMENT HAS AN ERROR, which is somebody's reaction time.
+    It lands a few lights either side: long, which is invisible because the surplus falls off the
+    wire, or short, which leaves the far end dark for ever and is the one a household reports.
+
+    Reported 22 September, and it is the other half of a decision taken on 20 September -- "A at
+    setup, B afterwards". It lives on the strip's own pane, so setup stays one tap.
+    design/strip/Nudge.dc.html."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.hub = FakeHub(self.tmp.name)
+        self.s = Strips(self.hub, radio=FakeRadio())
+        run(self.s.listen())          # without it the fake broker has nobody to answer through
+        self.s.strips["c8ebba"] = {"online": True, "count": 186, "order": "grb"}
+
+    def tearDown(self): self.tmp.cleanup()
+
+    def said(self, leaf):
+        return [p for t, p, _ in self.hub.ha.published if t.endswith("/" + leaf)]
+
+    def test_it_lights_the_strip_at_the_length_it_believes(self):
+        self.assertEqual(run(self.s.tune("c8ebba"))["count"], 186)
+        self.assertEqual(self.said("show/set"), ["tune"])
+
+    def test_moving_it_is_not_written_down(self):
+        """Holding a button must not spend an NVS erase cycle a frame, so the moving is `tune/set`
+        and the writing is one `count/set` at the end."""
+        self.hub.ha.answers = {"tune/set": ("count", "189")}
+        run(self.s.tune("c8ebba"))
+        self.assertEqual(run(self.s.tune_by("c8ebba", 3))["count"], 189)
+        self.assertEqual(self.said("tune/set"), ["189"])
+        self.assertEqual(self.said("count/set"), [])
+
+    def test_and_the_strip_has_the_last_word_on_where_it_got_to(self):
+        """It clamps at both ends. A household holding the button at the bottom has to see it stop,
+        not a number that goes on moving."""
+        self.hub.ha.answers = {"tune/set": ("count", "1")}
+        run(self.s.tune("c8ebba"))
+        self.assertEqual(run(self.s.tune_by("c8ebba", -500))["count"], 1)
+
+    def test_keeping_it_writes_it_down_and_gives_the_strip_back(self):
+        self.hub.ha.answers = {"tune/set": ("count", "190")}
+        run(self.s.tune("c8ebba"))
+        run(self.s.tune_by("c8ebba", 4))
+        run(self.s.tune_done("c8ebba"))
+        self.assertEqual(self.said("count/set"), ["190"])
+        self.assertEqual(self.said("show/set"), ["tune", "off"])
+
+    def test_and_walking_away_from_it_still_gives_the_strip_back(self):
+        """Whatever else happens, a strip must not be left wearing a setup instrument."""
+        run(self.s.tune("c8ebba"))
+        run(self.s.tune_done("c8ebba", keep=False))
+        self.assertEqual(self.said("count/set"), [])
+        self.assertEqual(self.said("show/set"), ["tune", "off"])
+
+    def test_it_is_not_offered_while_something_is_being_set_up(self):
+        """One at a time: a household turning a lamp up in another room must not be told a light
+        strip is being set up, and a setup on the wall must not have its instrument taken."""
+        self.s.job = {"state": "room", "id": "2e4258", "label": "A light strip", "first": None}
+        with self.assertRaises(StripError):
+            run(self.s.tune("c8ebba"))
+
+    def test_nor_on_a_strip_that_is_not_answering(self):
+        """The whole control works by lighting the thing up, so there is nothing to look at."""
+        self.s.strips["c8ebba"]["online"] = False
+        with self.assertRaises(StripError):
+            run(self.s.tune("c8ebba"))
+
+
+class LookingProperly(unittest.TestCase):
+    """HOW OFTEN THE HUB GOES LOOKING, AND WHO IS WAITING WHEN IT DOES.
+
+    A household measured about two minutes between plugging a strip in and the wall saying anything,
+    and read it as the strip and the hub failing to talk. Twenty of those seconds were this loop
+    asleep. The answer is not a tighter loop -- a scan is the radio going quiet for every other
+    device in the house, all day, to catch an event that happens when somebody is standing right
+    there. The answer is that the knock stopped taking the screen (design/knock/), so the loop can be
+    the quiet one, and Add is where the looking happens because that is the one moment it is free."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.hub = FakeHub(self.tmp.name)
+        self.radio = FakeRadio()
+        self.s = Strips(self.hub, radio=self.radio)
+
+    def tearDown(self): self.tmp.cleanup()
+
+    def test_nobody_is_looking_until_somebody_says_so(self):
+        self.assertFalse(self.s.being_watched())
+
+    def test_add_says_somebody_is_standing_there_and_waiting(self):
+        run(self.s.looking())
+        self.assertTrue(self.s.being_watched())
+
+    def test_and_it_lapses_by_itself_so_a_forgotten_wall_cannot_leave_it_scanning(self):
+        """A hold rather than a switch: a wall that goes to rest, is closed or is unplugged simply
+        stops saying it, and there is no way to leave a hub scanning for ever by leaving a page
+        open."""
+        import hub.strip as strip_mod
+        was, strip_mod.LOOK_HOLD = strip_mod.LOOK_HOLD, 0.0
+        try:
+            run(self.s.looking())
+            self.assertFalse(self.s.being_watched())
+        finally:
+            strip_mod.LOOK_HOLD = was
+
+    def test_the_quiet_speed_is_quiet_but_not_slower_than_a_minute(self):
+        """A line in the band may be a minute late and still be a line. Five would be the same lie
+        in a quieter voice, so the background loop has a floor as well as a ceiling."""
+        import hub.strip as strip_mod
+        self.assertGreaterEqual(strip_mod.LOOK_EVERY, 30.0)
+        self.assertLessEqual(strip_mod.LOOK_EVERY, 60.0)
+
+    def test_a_knock_says_when_it_started_so_the_band_can_stop_shouting(self):
+        """The line folds after an hour, and an age worked out by the brain is stale by the time it
+        is drawn -- a poll is half a minute apart and a wall reloads. So it is a moment, not an age."""
+        self.radio.ours = [{"address": "AA:BB", "rssi": -40, "name": "PROV_52e20"}]
+        run(self.s.look())
+        st = self.s.status()
+        self.assertEqual(st["state"], "knocking")
+        self.assertAlmostEqual(st["since"], time.time(), delta=5)
+
+    def test_and_nothing_says_since_when_there_is_nothing_knocking(self):
+        self.assertNotIn("since", self.s.status())
+
+
+class TheLastTwoBeats(unittest.TestCase):
+    """What a household actually reported after the first run that got this far, on 21 September:
+    asked for a room, tapped one, told there was no light waiting for a room, and put back in front
+    of the fill. Three times. And then, when it finally took, the light was not in the room."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.hub = FakeHub(self.tmp.name)
+        self.hub.home = type("H", (), {"rooms": {"den": type("R", (), {"id": "den", "name": "Den"})()}})()
+        self.radio = FakeRadio()
+        self.strips = Strips(self.hub, self.radio)
+
+    def tearDown(self): self.tmp.cleanup()
+
+    def at_the_room_beat(self):
+        self.strips.job = {"state": "room", "id": "2e4258", "label": "A light strip", "first": None}
+        return self.strips.job
+
+    def test_a_late_fill_message_cannot_drag_the_job_back_to_the_measuring(self):
+        """The strip publishes its progress as it goes, and the last of those lands after somebody
+        has already said "that's the whole of it"."""
+        self.at_the_room_beat()
+        self.strips._on_mqtt({"topic": "strip/2e4258/fill", "payload": "37"})
+        self.assertEqual(self.strips.status()["state"], "room")
+
+    def test_it_still_follows_the_fill_while_the_fill_is_what_is_on_screen(self):
+        self.strips.job = {"state": "length", "id": "2e4258", "label": "A light strip", "first": None}
+        self.strips._on_mqtt({"topic": "strip/2e4258/fill", "payload": "37"})
+        st = self.strips.status()
+        self.assertEqual((st["state"], st["lit"]), ("length", 37))
+
+    def test_choosing_a_room_actually_puts_the_light_in_it(self):
+        """It used to call hub.strip_placed(), a method no hub has ever had, inside a try/except
+        AttributeError: pass -- so the wall said "It's in" and the household went and did it by
+        hand."""
+        self.at_the_room_beat()
+        self.hub.ha.devices = [{"id": "dev1", "identifiers": [["mqtt", "strip_2e4258"]]},
+                               {"id": "other", "identifiers": [["mqtt", "strip_ffffff"]]}]
+        run(self.strips.put("den"))
+        self.assertIn(("dev1", "den"), self.hub.ha.moved)
+        self.assertEqual(self.strips.status()["state"], "ready")
+
+    def test_nothing_a_strip_is_told_is_left_on_the_broker(self):
+        """A retained command is a recording of an evening that ended weeks ago, replayed at every
+        reconnect, and it wins silently when it is stale. A `count/set 1` from a bench test had a
+        board believing it was one pixel long -- and a one-pixel strip looks exactly like a broken
+        one, from the wall and from the room.
+
+        The strip writes its length, its color order and its room into its own NVS, so the retain
+        was redundant as well as dangerous, and these are only ever said to a strip that is online
+        with somebody standing in front of it. Item 31, decided 22 September. The other half is in
+        the firmware, which retires a retained one rather than obeying it."""
+        self.at_the_room_beat()
+        self.hub.ha.devices = [{"id": "dev1", "identifiers": [["mqtt", "strip_2e4258"]]}]
+        run(self.strips.put("den"))
+        said = [t.split("/", 2)[2] for t, _, _ in self.hub.ha.published]
+        self.assertIn("room/set", said)            # or this proves nothing
+        kept = [t for t, _, retain in self.hub.ha.published if retain]
+        self.assertEqual(kept, [], "a strip was told something the broker will replay for ever")
+
+    def test_a_room_that_could_not_be_applied_yet_is_kept_rather_than_dropped(self):
+        """Reported from a real house on 22 September. The device had not been made yet, the twenty
+        seconds ran out, the placing was given up on -- and the wall said "It's in" with only a log
+        line to say otherwise. The household reset the strip and did the whole thing again, and the
+        second run worked because the device the first run had waited for existed by then.
+
+        A room somebody chose is a fact this brain holds, not a request that expires while Home
+        Assistant catches up."""
+        self.at_the_room_beat()
+        self.hub.ha.devices = []
+        import hub.strip as strip_mod
+        was, strip_mod.PLACE_WAIT = strip_mod.PLACE_WAIT, 0
+        try: run(self.strips.put("den"))
+        finally: strip_mod.PLACE_WAIT = was
+        self.assertEqual(self.strips._owed, {"2e4258": "den"})
+
+    def test_and_the_wall_says_so_instead_of_claiming_the_light_is_there(self):
+        """The sentence that sent somebody to set a working strip up a second time."""
+        self.at_the_room_beat()
+        self.hub.ha.devices = []
+        import hub.strip as strip_mod
+        was, strip_mod.PLACE_WAIT = strip_mod.PLACE_WAIT, 0
+        try: run(self.strips.put("den"))
+        finally: strip_mod.PLACE_WAIT = was
+        self.assertEqual(self.strips.status().get("placing"), "Den")
+
+    def test_and_nothing_is_said_when_the_light_did_land_in_its_room(self):
+        self.at_the_room_beat()
+        self.hub.ha.devices = [{"id": "dev1", "identifiers": [["mqtt", "strip_2e4258"]]}]
+        run(self.strips.put("den"))
+        self.assertEqual(self.strips._owed, {})
+        self.assertNotIn("placing", self.strips.status())
+
+    def test_and_it_lands_the_moment_the_house_has_made_the_device(self):
+        """Nothing is asked of the household. They answered the question once."""
+        self.at_the_room_beat()
+        self.hub.ha.devices = []
+        import hub.strip as strip_mod
+        was, strip_mod.PLACE_WAIT = strip_mod.PLACE_WAIT, 0
+        try: run(self.strips.put("den"))
+        finally: strip_mod.PLACE_WAIT = was
+        # the house catches up, the way it did a moment after the twenty seconds ran out
+        self.hub.ha.devices = [{"id": "dev1", "identifiers": [["mqtt", "strip_2e4258"]]}]
+        self.assertTrue(run(self.strips._put_in_room("2e4258", "den", tries_for=0)))
+        self.assertIn(("dev1", "den"), self.hub.ha.moved)
+
+    def test_a_light_the_house_has_not_made_yet_does_not_fail_the_setup(self):
+        """Discovery is a moment behind the room chip, and a strip that is in the house but unplaced
+        is still a strip that is in the house."""
+        self.at_the_room_beat()
+        self.hub.ha.devices = []
+        import hub.strip as strip_mod
+        was, strip_mod.PLACE_WAIT = strip_mod.PLACE_WAIT, 0
+        try: run(self.strips.put("den"))
+        finally: strip_mod.PLACE_WAIT = was
+        self.assertEqual(self.strips.status()["state"], "ready")
+
+
+class TheRoomsItOffers(unittest.TestCase):
+    """A real house keeps its rooms as a DICT of id -> Room, and iterating a dict gives you its keys.
+    So this asked a string for string["id"] and answered 500 to every request the sheet makes,
+    including the poll it lives on -- at the one beat that reaches it, which is the last one."""
+
+    class Room:
+        def __init__(self, id, name): self.id, self.name = id, name
+
+    def rooms_for(self, rooms):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        hub = FakeHub(tmp.name)
+        hub.home = type("H", (), {"rooms": rooms})()
+        return Strips(hub, FakeRadio())._rooms()
+
+    def test_a_real_house_keeps_them_in_a_dict_and_that_is_not_a_list_of_rooms(self):
+        got = self.rooms_for({"living": self.Room("living", "Living room"),
+                              "kitchen": self.Room("kitchen", "Kitchen")})
+        self.assertEqual(got, [{"id": "living", "name": "Living room"},
+                               {"id": "kitchen", "name": "Kitchen"}])
+
+    def test_unassigned_is_never_offered_as_somewhere_to_put_a_thing(self):
+        got = self.rooms_for({"unassigned": self.Room("unassigned", "Unassigned"),
+                              "hall": self.Room("hall", "Hall")})
+        self.assertEqual([r["id"] for r in got], ["hall"])
+
+    def test_a_house_with_no_rooms_at_all_is_not_an_error(self):
+        self.assertEqual(self.rooms_for({}), [])
+        self.assertEqual(self.rooms_for(None), [])
+
+
+class WhenTheRealAnswerIsTheDistance(unittest.TestCase):
+    """A strip at the far end of a house fails in whatever way the radio fails that minute, and every
+    one of those sentences sends somebody to check a thing that is not wrong. Seen on a real hub on
+    21 September: the hub could not hear the strip at all on a twenty-second scan, and the wall said
+    "the strip did not take the code". The hub knew how faint it was when it knocked."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.hub = FakeHub(self.tmp.name)
+        self.radio = FakeRadio()
+        self.strips = Strips(self.hub, self.radio)
+        self.hub.settings.set(wifi={"ssid": "House", "pass": "secret"})
+
+    def tearDown(self): self.tmp.cleanup()
+
+    def said_at(self, rssi: int) -> str:
+        async def go():
+            self.radio.ours = [{"address": "AA:BB", "rssi": rssi, "name": "PROV_1"}]
+            await self.strips.look()
+            self.radio.adopt_fails = "The strip did not take the code."
+            await self.strips.adopt()
+            await turn()
+            return self.strips.status()["text"]
+        return run(go())
+
+    def test_a_strip_barely_heard_is_told_it_is_too_far_and_nothing_else(self):
+        said = self.said_at(-78)
+        self.assertIn("long way from the hub", said)
+        self.assertIn("same room", said)
+        # And NOT the library's reason as well: two answers is the household checking both.
+        self.assertNotIn("did not take the code", said)
+
+    def test_a_strip_right_next_to_the_hub_gets_the_real_reason(self):
+        said = self.said_at(-38)
+        self.assertIn("did not take the code", said)
+        self.assertNotIn("long way", said)
+
+    def test_a_strip_with_no_signal_reported_is_not_guessed_about(self):
+        """Matter's door does not always give one, and inventing a distance is worse than saying
+        what actually failed."""
+        async def go():
+            self.radio.advertising = [{"addr": "CC:DD", "discriminator": 3840, "vendor": TEST_VID,
+                                       "ours": True, "rssi": None}]
+            await self.strips.look()
+            self.radio.commission_fails = "The strip did not take the code."
+            await self.strips.adopt()
+            await turn()
+            return self.strips.status()["text"]
+        self.assertIn("did not take the code", run(go()))
+
+
 class ThreeFailuresThatAreNotTheSame(unittest.TestCase):
     """A wrong count and a dropped radio both used to say "check the flashes", which sends somebody
     to count again and again at the far end of a room where the real answer was to move nearer. The
@@ -728,3 +1191,76 @@ class ThreeFailuresThatAreNotTheSame(unittest.TestCase):
         said = self.said_for("Unlikely Error", rhythm="")
         self.assertNotIn("Count them again", said)
         self.assertIn("Unplug it", said)
+
+
+class BeingDoneWithOne(unittest.TestCase):
+    """Selling it, binning it, or taking it to the next flat.
+
+    THE HALF THAT IS NOT THE DEVICE REGISTRY is the whole of this. A strip dropped out of Home
+    Assistant is still holding our broker and our credentials, and it announces itself again the
+    next time it is plugged in -- into a house that has just been told it is gone. So the strip is
+    asked to let go too, which is the ten second hold on its own button, said over the broker
+    because that button is very often taped behind a television.
+    """
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.hub = FakeHub(self.tmp.name)
+        self.s = Strips(self.hub, radio=FakeRadio())
+        run(self.s.listen())
+        self.s.strips["c8ebba"] = {"online": True, "count": 186, "order": "grb"}
+        self.s._devices["c8ebba"] = "dev1"
+        self.s._heard["c8ebba/status"] = "online"
+
+    def tearDown(self): self.tmp.cleanup()
+
+    def test_it_is_asked_to_let_go_and_every_retained_word_about_it_is_emptied(self):
+        out = run(self.s.forget("c8ebba"))
+        self.assertTrue(out["heard"])
+        told = [(t, p) for t, p, retain in self.hub.ha.published if not retain]
+        self.assertIn(("strip/c8ebba/forget", "1"), told)
+        # every topic a strip retains, emptied -- a retained `status` outlives the thing it is
+        # about, and would put a forgotten strip back in the house at the next broker restart
+        cleared = {t for t, p, retain in self.hub.ha.published if retain and p == ""}
+        for leaf in ("status", "count", "order", "light", "fill", "white", "room"):
+            self.assertIn(f"strip/c8ebba/{leaf}", cleared)
+        self.assertIn("homeassistant/light/strip_c8ebba/config", cleared)
+        # and nothing of it is left here either
+        self.assertNotIn("c8ebba", self.s.strips)
+        self.assertNotIn("c8ebba", self.s._devices)
+        self.assertEqual([k for k in self.s._heard if k.startswith("c8ebba/")], [])
+
+    def test_the_asking_is_never_retained(self):
+        """A retained forget is a recording of an evening weeks gone, replayed at every reconnect,
+        and this is the one command on a strip that cannot be taken back."""
+        run(self.s.forget("c8ebba"))
+        self.assertEqual([t for t, _, retain in self.hub.ha.published
+                          if t.endswith("/forget") and retain], [])
+
+    def test_one_that_is_unplugged_still_goes_and_the_house_says_it_was_not_heard(self):
+        """Somebody is standing over a thing that is already in a box. Refusing would be the panel
+        arguing with them -- so the house lets go, and `heard` is how the panel knows to say the one
+        fact that is left: the strip still believes it is ours, and only its button settles that."""
+        self.s.strips["c8ebba"]["online"] = False
+        out = run(self.s.forget("c8ebba"))
+        self.assertFalse(out["heard"])
+        self.assertEqual([t for t, _, _ in self.hub.ha.published if t.endswith("/forget")], [])
+        self.assertNotIn("c8ebba", self.s.strips)
+        # the retained words still go: they are what would have brought it back
+        self.assertIn("strip/c8ebba/status",
+                      {t for t, p, retain in self.hub.ha.published if retain and p == ""})
+
+    def test_one_in_the_middle_of_being_set_up_is_not_taken_out_from_under_the_person(self):
+        self.s.job = {"state": "length", "id": "c8ebba"}
+        with self.assertRaises(StripError) as e:
+            run(self.s.forget("c8ebba"))
+        self.assertIn("being set up", str(e.exception))
+        self.assertIn("c8ebba", self.s.strips)
+
+    def test_a_strip_the_hub_never_had(self):
+        with self.assertRaises(StripError):
+            run(self.s.forget("nosuch"))
+
+    def test_it_is_written_down(self):
+        run(self.s.forget("c8ebba"))
+        self.assertEqual(self.hub.log.rows[-1][0][:4], ("strip", "c8ebba", None, "forgotten"))

@@ -10,6 +10,7 @@
  * Chosen in How the house looks; see layout.ts.
  */
 import { computed } from 'vue'
+import { stripWaiting } from './adding'
 import { store, updateReady, weatherParts } from './store'
 import Icon from './Icon.vue'
 import WeatherArt from './WeatherArt.vue'
@@ -29,6 +30,10 @@ const yours = computed(() => {
    where the widths are. The number only: the drawing IS the condition, and the
    words do not fit a 390px bar on the day the forecast says "Unusual weather". */
 const temp = computed(() => weatherParts().temp)
+
+/* Things waiting to be set up: found on the network, and a strip still knocking. One number,
+   because to a household they are the same sentence -- something new, not set up yet. */
+const waiting = computed(() => store.found.length + (stripWaiting(store.strip?.state) ? 1 : 0))
 
 const tabs = computed(() => [
   { id: 'home' as const, label: yours.value, icon: 'home' },
@@ -55,7 +60,10 @@ const tabs = computed(() => [
         <span class="topbar-temp">{{ temp }}</span>
       </span>
       <span class="link" :class="{ up: store.linkUp }">{{ store.linkUp ? 'Connected' : 'Reconnecting' }}</span>
-      <button class="topbar-add" :class="{ attention: store.found.length }" @click="store.sheet = 'add'" :aria-label="store.found.length ? `Add to the house, ${store.found.length} found nearby` : 'Add to the house'">
+      <!-- The dot is the quiet half of an arrival and it does not fold: a knock's line in the band
+           stops shouting after an hour, and this stays for as long as the thing is knocking, so the
+           house goes quiet without forgetting. design/knock/. -->
+      <button class="topbar-add" :class="{ attention: waiting }" @click="store.sheet = 'add'" :aria-label="waiting ? `Add to the house, ${waiting} waiting` : 'Add to the house'">
         <Icon name="plus" :size="18" />
       </button>
       <button class="topbar-add topbar-house" :class="{ attention: updateReady() }" @click="store.sheet = 'house'" :aria-label="updateReady() ? 'This house, an update is ready' : 'This house'">

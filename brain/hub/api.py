@@ -38,8 +38,11 @@ from .lock import Lock, needs_code
 from .pairing import Pairing
 from .bridge import Bridges
 from .strip import Strips, StripError
+from . import things
+from .things import Things
 from .share import Share
 from .nightlight import Nightlight
+from .ears import Ears
 from .relay import Relay
 from .phones import Phones, COOKIE, holds_keys, open_to_strangers, from_away, away_refused, away_refusal
 from . import camera
@@ -119,6 +122,8 @@ class Hub:
         self.add = Onboarding(self)
         self.lock = Lock(self.settings)
         self.pair = Pairing(self)
+        self.ears = Ears()                 # who can hear a strip knocking: the hub's radio and every puck's
+        self.errand = None                 # the one errand a bridge is running for us, if any: hub/errand.py
         self.bridge = Bridges(self)        # a puck on the cable, and the ones the house has
         self.strip = Strips(self)          # a light strip knocking over Bluetooth: hub/strip.py
         self.net = Network(self)           # how this hub is connected, and what it hands out: docs/network.md
@@ -1078,21 +1083,60 @@ async def forget_device(device_id: str):
     dev = hub.home.devices.get(device_id)
     if not dev: raise HTTPException(404, "unknown device")
     name = dev.name
+    entries: list[str] = []
     try:
         if dev.hw:
             rows = await hub.ha.send("config/device_registry/list") or []
             row = next((d for d in rows if d.get("id") == dev.hw), None)
-            entries = list((row or {}).get("config_entries") or [])
-            if not entries: raise RuntimeError("nothing owns it")
-            for entry in entries:
-                await hub.ha.send("config/device_registry/remove_config_entry_from_device", device_id=dev.hw, config_entry_id=entry)
+            # A wall switch on the mesh is not the registry's to let go. Its bridge announces it
+            # again every time it connects, so taking it out here lasted only as long as the puck
+            # stayed plugged in -- the row was back by morning and nothing said why. The house says
+            # this to the bridge instead, where it holds; hub/bridge.py forget_switch().
+            mine = things.ours(row)
+            if mine and mine[0] == "switch":
+                await hub.bridge.forget_switch(*mine[1])
+            else:
+                entries = list((row or {}).get("config_entries") or [])
+                if not entries: raise RuntimeError("nothing owns it")
+                for entry in entries:
+                    await hub.ha.send("config/device_registry/remove_config_entry_from_device", device_id=dev.hw, config_entry_id=entry)
         else:
             await hub.ha.send("config/entity_registry/remove", entity_id=dev.id)
     except Exception as e:
         log.warning("could not forget %s: %s", device_id, e)
-        raise HTTPException(502, f"{name} cannot be forgotten on its own. It goes when the account that brought it does.")
+        raise HTTPException(502, f"{name} cannot be forgotten on its own. "
+                                 f"It goes when {await _account_named(entries)} does, on the Accounts page.")
     hub.log.add("home", dev.id, dev.room_id, "forgotten", source="user", detail={"name": name})
     return {"ok": True}
+
+
+async def _account_named(entries: list[str]) -> str:
+    """What brought a device, in the words the Accounts page uses for it.
+
+    The refusal above has always said the true thing -- some integrations will not give a device up
+    one at a time -- and then left somebody standing on a row with no idea which of their accounts
+    was being talked about. "It goes when Ring does" is the same sentence with the one fact in it
+    that makes it actionable. "the account that brought it" is the honest fallback when the engine
+    will not say, and it is what the sentence said before."""
+    generic = "the account that brought it"
+    if not entries: return generic
+    try: rows = list(await hub.ha.send("config_entries/get"))
+    except Exception: return generic
+    names = [r.get("title") or r.get("domain") for r in rows
+             if r.get("entry_id") in entries and r.get("domain") not in PLUMBING]
+    return names[0] if len(names) == 1 else generic
+
+
+@app.get("/things")
+async def what_this_house_has():
+    """Everything the hub knows about, grouped by what brought it. hub/things.py, design/forget/.
+
+    Every word on this page is written there, including the words on the buttons and the question
+    asked before the one act in this panel that cannot be undone. The panel draws what it is given
+    and invents nothing, because which kinds may leave on their own is the one thing only the brain
+    knows."""
+    hub.ready()
+    return await Things(hub).everything()
 
 
 # ---------- the accounts the house has signed into ----------
@@ -1279,6 +1323,39 @@ async def strip_counted(body: dict):
     except StripError as e: raise HTTPException(409, str(e))
 
 
+@app.post("/strip/looking")
+async def strip_looking():
+    """Somebody is standing on Add, waiting. Scan back to back for as long as they keep saying so.
+
+    The one moment when a Bluetooth scan is free is the moment somebody asked for it, so this is
+    where the looking happens and the background loop can be the quiet one (design/knock/Look.dc.html
+    and hub/strip.py LOOK_HOLD). It lapses on its own: a wall that goes to rest simply stops saying
+    it."""
+    return await hub.strip.looking()
+
+
+@app.post("/strip/tune")
+async def strip_tune(body: dict):
+    """Light a strip at the length it believes, with a cool tail on the last few, so somebody can
+    move its end (design/strip/Nudge.dc.html). The afterwards half of the length question."""
+    try: return await hub.strip.tune(str(body.get("id") or ""))
+    except StripError as e: raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/strip/tune/by")
+async def strip_tune_by(body: dict):
+    """Move the end by a few lights. Nothing is written down until /strip/tune/done."""
+    try: return await hub.strip.tune_by(str(body.get("id") or ""), int(body.get("by") or 0))
+    except StripError as e: raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/strip/tune/done")
+async def strip_tune_done(body: dict):
+    """Put it back to being a light, keeping the new length unless asked not to."""
+    try: return await hub.strip.tune_done(str(body.get("id") or ""), bool(body.get("keep", True)))
+    except StripError as e: raise HTTPException(status_code=400, detail=str(e))
+
+
 @app.post("/strip/dismiss")
 async def strip_dismiss(): return await hub.strip.dismiss()
 
@@ -1329,13 +1406,32 @@ async def strip_done(): return await hub.strip.done()
 # wrong. design/strip/Later.dc.html. Reading the list is open, like every other read; asking a strip
 # to light itself up in somebody's room is a change, and is gated.
 @app.get("/strip/list")
-def strip_list(): return {"strips": hub.strip.each()}
+async def strip_list(): return {"strips": await hub.strip.each()}
 
 
 @app.post("/strip/revisit")
 async def strip_revisit(body: dict):
     hub.ready()
     try: return await hub.strip.revisit(str(body.get("id") or ""), str(body.get("what") or ""))
+    except StripError as e: raise HTTPException(409, str(e))
+
+
+@app.delete("/strip/{strip_id}")
+async def strip_forget(strip_id: str):
+    """Done with a light strip: it goes from the house, and is told to forget the house with it.
+
+    The one way out a strip has had is a ten second hold on a button that is very often taped behind
+    a television -- and a household that cannot reach it to set the strip up cannot reach it to let
+    the strip go either. This is that hold, asked over the broker by a hub the strip is already
+    holding the credentials of.
+
+    `heard` says whether the strip was there to be told. False is not a failure: the house lets go
+    of a thing that is already in a box either way, and what the panel owes somebody then is the one
+    fact that is left -- the strip itself still believes it is ours, and its button is the only
+    thing that can settle that now.
+    """
+    hub.ready()
+    try: return await hub.strip.forget(strip_id)
     except StripError as e: raise HTTPException(409, str(e))
 
 

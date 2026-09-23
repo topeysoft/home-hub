@@ -1,0 +1,131 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp: #e9b872; --lamp-deep: #b8863e; --lamp-ink: #2a1c07;
+      --live: #74c69d; --danger: #e08a8a;
+      --edge: rgba(255,255,255,.10); --edge-hi: rgba(255,255,255,.18);
+      --surface-hi: rgba(255,255,255,.08);
+      --mark: #e0685f;
+    }
+    .dsp { font-family: inherit; font-weight: 400; letter-spacing: -.025em; }
+    .lbl { font-size: 12.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    /* panel.css .opened-* at their own sizes */
+    .edit-room { height: 40px; min-width: 200px; display: inline-flex; align-items: center; justify-content: space-between; gap: 14px; padding: 0 12px; border-radius: 12px; background: var(--surface-hi); border: 1px solid var(--edge); color: var(--ink); font-size: 15px; }
+    .edit-name { padding: 6px 14px; border-radius: 14px; border: 1px solid var(--lamp); background: var(--surface-hi); color: var(--ink); font-size: 36px; font-weight: 500; letter-spacing: -.01em; }
+    .btn { display: inline-flex; align-items: center; height: 36px; padding: 0 16px; border-radius: 999px; background: var(--lamp); color: var(--lamp-ink); font-size: 15px; font-weight: 500; }
+    .btn.ghost { background: transparent; border: 1px solid var(--edge); color: var(--ink-2); font-weight: 400; }
+    .kind-say { font-size: 14px; color: var(--muted); text-decoration: underline dotted; text-decoration-color: var(--edge-hi); text-underline-offset: 4px; }
+    .kind-say.still { text-decoration: none; }
+    .kind-one { display: inline-flex; align-items: center; padding: 7px 15px; border: 1px solid var(--edge); border-radius: 999px; background: var(--surface-hi); font-size: 14px; color: var(--ink-2); }
+    .kind-one.danger { border-color: rgba(224,138,138,.5); color: var(--danger); }
+    .kind-why { margin: 10px 0 0; max-width: 44ch; font-size: 13px; line-height: 1.45; color: var(--muted); }
+    /* a crop of the pane, at 1:1, on the pane's own glass */
+    .crop { border-radius: 16px; border: 1px solid var(--edge); background: linear-gradient(rgba(26,28,34,.8), rgba(16,17,21,.94)); padding: 17px 22px 19px; }
+    .crop-n { font-size: 12.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--lamp); }
+    .note { font-size: 14.5px; color: var(--ink-2); line-height: 1.6; }
+    .note b { color: var(--ink); font-weight: 500; }
+  </style>
+</helmet>
+
+<!-- A -- Forget joins the pane's own edit, in the vocabulary the pane already has for quiet decisions. -->
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: #0c0d10; color: var(--ink); font-size: 17px; line-height: 1.4;">
+
+  <div style="position: absolute; inset: 0; background: linear-gradient(rgb(20,23,38) 0%, rgb(35,36,58) 42%, rgb(78,55,52) 86%, rgb(54,40,40) 100%);"></div>
+  <div style="position: absolute; inset: 0; background: radial-gradient(90% 70% at 62% 78%, rgba(233,184,114,.10), transparent 66%);"></div>
+  <div style="position: absolute; inset: 0; opacity: .5; background-image: url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.035'/%3E%3C/svg%3E&quot;);"></div>
+
+  <div style="position: absolute; left: 48px; top: 38px; width: 1160px;">
+    <div class="lbl">Direction A</div>
+    <h1 class="dsp" style="margin: 9px 0 0; font-size: 42px; line-height: 1.06;">It ends where it lives</h1>
+    <p style="margin: 10px 0 0; font-size: 16px; color: var(--ink-2); max-width: 1120px; line-height: 1.5;">The thing you want gone is already on the screen in front of you. Its edit carries the room and the name; the last thing a person can say about a thing joins them, in the quiet row the pane already keeps for decisions that are not taps.</p>
+  </div>
+
+  <!-- the pane's edit, at its own size, with the row on it -->
+  <div class="lbl" style="position: absolute; left: 48px; top: 186px;">The same edit, at its own size, with the row on it</div>
+  <div class="crop" style="position: absolute; left: 48px; top: 208px; width: 652px; height: 318px;">
+    <div style="position: absolute; right: -30px; bottom: -46px; opacity: .45;"><svg width="200" height="200" viewBox="0 0 24 24" fill="none" stroke="rgba(233,184,114,.3)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.4.3.5.7.5 1.1h6c0-.4.1-.8.5-1.1A6 6 0 0 0 12 3z"/></svg></div>
+    <div style="position: relative; display: flex; flex-direction: column; gap: 10px; max-width: 470px;">
+      <div class="edit-room" style="align-self: flex-start;"><span>Living room</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b9b5ad" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5l6 6 6-6"/></svg></div>
+      <div class="edit-name">Ceiling light</div>
+      <div style="display: flex; gap: 8px; margin-top: 2px;"><span class="btn">Done</span><span class="btn ghost">Cancel</span></div>
+    </div>
+    <div style="position: relative; margin-top: 20px; display: flex; flex-direction: column; gap: 11px;">
+      <span class="kind-say" style="align-self: flex-start;">Show this as</span>
+      <span class="kind-say still" style="align-self: flex-start;">Shared with other apps</span>
+      <span class="kind-say still" style="align-self: flex-start;">Lead with</span>
+      <!-- THE NEW ROW, in the same shape as the three above it -->
+      <span class="kind-say" style="align-self: flex-start; color: var(--danger); text-decoration-color: rgba(224,138,138,.45);">Take it out of the house</span>
+    </div>
+  </div>
+
+  <div style="position: absolute; left: 48px; top: 544px; width: 652px;" class="note">
+    Nothing new is invented. <b>Show this as</b> and <b>Lead with</b> are already a dotted line that opens a small choice with a sentence under it, and this is the fourth of them. It is last, it is the only one in <b style="white-space: nowrap;">--danger</b>, and it is inside edit &mdash; so it is never on the screen of somebody who opened the pane to turn a lamp off.
+  </div>
+
+  <div class="lbl" style="position: absolute; left: 48px; top: 660px;">The case</div>
+  <div style="position: absolute; left: 48px; top: 686px; width: 652px;" class="note">
+    It is where a person looks. Holding the thing and ending the thing become the same gesture, it costs no new screen, and the sentence can name what goes because the pane knows which thing it is.
+    <br><br>
+    <b>Against, and it is real.</b> A motion sensor, a thermometer and a door contact have no tile, so there is no pane to open &mdash; design/device/Today.dc.html measured that already. Nor is a light strip or a puck a device in a room. A is the best answer for the common case and no answer at all for the rest.
+  </div>
+
+  <!-- the three states, 1:1 -->
+  <div class="lbl" style="position: absolute; left: 740px; top: 186px;">The row, at its own size</div>
+  <div style="position: absolute; left: 740px; top: 208px; width: 652px; display: flex; flex-direction: column; gap: 12px;">
+
+    <div class="crop">
+      <div class="crop-n">Closed</div>
+      <div style="margin-top: 12px;"><span class="kind-say" style="color: var(--danger); text-decoration-color: rgba(224,138,138,.45);">Take it out of the house</span></div>
+    </div>
+
+    <div class="crop">
+      <div class="crop-n">Opened &mdash; what goes, before it goes</div>
+      <div style="margin-top: 12px;"><span class="kind-say still" style="color: var(--danger);">Take it out of the house</span></div>
+      <div style="margin-top: 10px; display: flex; gap: 8px;">
+        <span class="kind-one danger">Forget Ceiling light</span>
+        <span class="kind-one">Keep it</span>
+      </div>
+      <p class="kind-why">It goes from the house, and from whatever brought it. Its schedules go with it. Plug it back in one day and the house meets it as something new.</p>
+    </div>
+
+    <div class="crop">
+      <div class="crop-n">Afterwards &mdash; in the room it was in</div>
+      <div style="margin-top: 12px; display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 16px; border: 1px solid var(--edge); background: rgba(255,255,255,.03); opacity: .55;">
+        <div style="width: 40px; height: 40px; border-radius: 13px; display: grid; place-items: center; background: var(--surface-hi); color: var(--muted);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.4.3.5.7.5 1.1h6c0-.4.1-.8.5-1.1A6 6 0 0 0 12 3z"/></svg></div>
+        <div>
+          <div style="font-size: 16px;">Ceiling light</div>
+          <div style="margin-top: 2px; font-size: 13.5px; color: var(--muted);">Taken out of the house &middot; just now</div>
+        </div>
+      </div>
+      <p class="kind-why" style="max-width: none;">Drained, in place, saying what it now is &mdash; the <b style="color: var(--ink-2); font-weight: 400;">done</b> map in store.ts, swept when the wall goes to rest. The one done card with nothing to tap, which is why the asking happens first.</p>
+    </div>
+
+    <div class="crop" style="border-color: rgba(224,104,95,.28); background: rgba(224,104,95,.045);">
+      <div class="crop-n" style="color: var(--mark);">And the three it cannot reach</div>
+      <div style="margin-top: 13px; display: flex; flex-direction: column; gap: 9px;">
+        <div style="display: flex; align-items: baseline; gap: 12px; font-size: 14.5px; color: var(--ink-2);"><span style="flex: 0 0 168px; color: var(--ink);">Hallway motion</span><span style="font-size: 13.5px; color: var(--muted);">no tile, so no pane to open</span></div>
+        <div style="display: flex; align-items: baseline; gap: 12px; font-size: 14.5px; color: var(--ink-2);"><span style="flex: 0 0 168px; color: var(--ink);">Shelf strip</span><span style="font-size: 13.5px; color: var(--muted);">a strip is not a device in a room</span></div>
+        <div style="display: flex; align-items: baseline; gap: 12px; font-size: 14.5px; color: var(--ink-2);"><span style="flex: 0 0 168px; color: var(--ink);">The hallway bridge</span><span style="font-size: 13.5px; color: var(--muted);">already has its own door, elsewhere</span></div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

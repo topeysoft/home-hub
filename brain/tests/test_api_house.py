@@ -217,6 +217,44 @@ class ForgettingTests(ApiTest):
         self.registry({"id": "hw-ceiling", "config_entries": []})
         self.assertEqual(self.client.delete("/devices/light.ceiling").status_code, 502)
 
+    def test_a_wall_switch_on_the_mesh_is_said_to_the_bridge_and_not_to_the_registry(self):
+        """The row used to come back by morning. A puck announces every switch it knows on every
+        MQTT session, so taking one out through the device registry lasted only as long as the puck
+        stayed plugged in -- and nothing said why it had returned. hub/bridge.py forget_switch()."""
+        self.registry({"id": "hw-ceiling", "config_entries": ["entry-hw-ceiling"],
+                       "identifiers": [["mqtt", "mesh_0123456789abcdef_0021"]]})
+        self.assertEqual(self.client.delete("/devices/light.ceiling").status_code, 200)
+        # not through the registry, which cannot make it stick
+        self.assertEqual([ty for ty, _ in self.ha.sent
+                          if ty == "config/device_registry/remove_config_entry_from_device"], [])
+        said = {d.get("topic"): d.get("payload") for _dom, _svc, _e, d in self.ha.calls}
+        self.assertEqual(said.get("mesh/0123456789abcdef/0021/forget"), "1")
+        self.assertEqual(said.get("homeassistant/light/mesh_0123456789abcdef_0021/config"), "")
+
+    def test_anything_else_with_an_identifier_still_goes_the_ordinary_way(self):
+        self.registry({"id": "hw-ceiling", "config_entries": ["entry-hw-ceiling"],
+                       "identifiers": [["mqtt", "strip_c8ebba"]]})
+        self.assertEqual(self.client.delete("/devices/light.ceiling").status_code, 200)
+        self.assertIn(("config/device_registry/remove_config_entry_from_device",
+                       {"device_id": "hw-ceiling", "config_entry_id": "entry-hw-ceiling"}), self.ha.sent)
+
+    def test_what_will_not_go_names_the_account_it_goes_with(self):
+        """The refusal has always said the true thing and then left somebody on a row with no idea
+        which of their accounts it meant. The name is the one fact that makes it actionable."""
+        self.registry({"id": "hw-ceiling", "config_entries": ["entry-hw-ceiling"]})
+        self.ha.answers["config_entries/get"] = [{"entry_id": "entry-hw-ceiling", "domain": "ring",
+                                                  "title": "Ring"}]
+        self.ha.fail["config/device_registry/remove_config_entry_from_device"] = RuntimeError("nope")
+        detail = self.client.delete("/devices/light.ceiling").json()["detail"]
+        self.assertIn("It goes when Ring does", detail)
+        self.assertIn("Accounts", detail)
+
+    def test_and_falls_back_to_the_words_it_used_before_when_the_engine_will_not_say(self):
+        self.registry({"id": "hw-ceiling", "config_entries": ["entry-a", "entry-b"]})
+        self.ha.fail["config/device_registry/remove_config_entry_from_device"] = RuntimeError("nope")
+        self.assertIn("the account that brought it",
+                      self.client.delete("/devices/light.ceiling").json()["detail"])
+
     def test_forgetting_something_that_is_not_there(self):
         self.assertEqual(self.client.delete("/devices/light.nowhere").status_code, 404)
 

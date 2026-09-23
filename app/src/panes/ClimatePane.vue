@@ -200,3 +200,91 @@ async function sense(id: string | null) {
     </div>
   </div>
 </template>
+
+<style scoped>
+/* ClimatePane's own insides. Every rule here matches something this template draws, so `scoped`
+   narrows it to the elements it already applied to, and these names can no longer collide with
+   another screen's by accident.
+
+   What stayed in panel.css, deliberately: anything on the component's outermost element, because
+   that is where the rest of the sheet does its cross-cutting work and scoping would make a moved
+   rule outrank the ones it used to tie with; any class another component also draws, which is
+   shared vocabulary rather than ours; and any rule reaching in from a container (`.bento`,
+   `.wall-stage`), which belongs to the arrangement rather than to this. */
+
+.rig-dial-doing {
+  margin-top: 16px;
+  font-size: 15px;
+  color: var(--ink-2);
+}
+.rig-dial-btn {
+  position: absolute;
+  bottom: 0;
+  width: 68px;
+  height: 68px;
+}
+.rig-dial-btn.low {
+  left: 0;
+}
+.rig-dial-btn.high {
+  right: 0;
+}
+.rig-side {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  justify-content: center;
+}
+.rig-modes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+.rig-mode {
+  height: 48px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: var(--surface-hi);
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 15.5px;
+  /* a chip, not a row: `button { text-align: left }` at the top of this file governs every button in
+     the panel, and these are the artboard's centered pills */
+  text-align: center;
+  cursor: pointer;
+  transition: background 0.15s var(--ease);
+}
+.rig-mode:hover {
+  background: var(--surface-press);
+}
+.rig-mode.on {
+  border-color: rgba(122, 176, 232, 0.45);
+}
+.rig-mode.on {
+  background: rgba(122, 176, 232, 0.22);
+  color: #d6e8fb;
+}
+.rig-row {
+  /* one surface with the choice inside it, the way the board drew the fan and the sensor: a loose
+     label above loose chips read as a settings list rather than as part of the dial */
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 62px;
+  padding: 10px 16px;
+  border-radius: 20px;
+  border: 1px solid var(--edge);
+  background: rgba(255, 255, 255, 0.05);
+}
+.rig-row-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+  font-size: 15.5px;
+  color: var(--ink-2);
+  white-space: nowrap;
+}</style>

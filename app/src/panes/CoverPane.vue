@@ -62,3 +62,40 @@ const slide = useSlide({
     </div>
   </div>
 </template>
+
+<style scoped>
+/* CoverPane's own insides. Every rule here matches something this template draws, so `scoped`
+   narrows it to the elements it already applied to, and these names can no longer collide with
+   another screen's by accident.
+
+   What stayed in panel.css, deliberately: anything on the component's outermost element, because
+   that is where the rest of the sheet does its cross-cutting work and scoping would make a moved
+   rule outrank the ones it used to tie with; any class another component also draws, which is
+   shared vocabulary rather than ours; and any rule reaching in from a container (`.bento`,
+   `.wall-stage`), which belongs to the arrangement rather than to this. */
+
+.rig-scale {
+  position: relative;
+  flex: 0 0 auto;
+  width: 104px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.rig-scale-line {
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 1px;
+  background: var(--edge-hi);
+}
+.rig-scale-top {
+  position: absolute;
+  left: 20px;
+  top: 0;
+}
+.rig-scale-bottom {
+  position: absolute;
+  left: 20px;
+  bottom: 0;
+}</style>

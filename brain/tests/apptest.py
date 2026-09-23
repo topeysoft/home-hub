@@ -32,11 +32,17 @@ def area(area_id, name):
     return {"area_id": area_id, "name": name}
 
 
-def hardware(id, area_id=None, name="", manufacturer="Acme", model="Thing", config_entries=None):
+def hardware(id, area_id=None, name="", manufacturer="Acme", model="Thing", config_entries=None,
+             identifiers=None):
     """`config_entries` is what a real registry row carries and what forgetting a device works through:
-    a thing goes by being taken off whatever brought it."""
+    a thing goes by being taken off whatever brought it.
+
+    `identifiers` is the other half of the same row, and it is how the house recognizes the two
+    things it makes itself: a wall switch on the mesh and a light strip both write their own
+    (hub/things.py), and neither of them can be let go of through the registry."""
     return {"id": id, "area_id": area_id, "name": name, "manufacturer": manufacturer, "model": model,
-            "name_by_user": None, "config_entries": config_entries if config_entries is not None else [f"entry-{id}"]}
+            "name_by_user": None, "identifiers": identifiers or [],
+            "config_entries": config_entries if config_entries is not None else [f"entry-{id}"]}
 
 
 def entity(entity_id, device_id=None, area_id=None, **kw):

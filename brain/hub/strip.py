@@ -39,7 +39,7 @@ not reporting. So a strip keeps whatever the household set it to, and the panel 
 The radio is behind `Radio` for the same reason bridge.py hides pyserial behind `Cable`: the machine
 is tested with a fake one, and nothing in here needs a strip on a desk to run.
 """
-import asyncio, json, logging, re, time
+import asyncio, json, logging, time
 
 log = logging.getLogger("hub.strip")
 
@@ -54,6 +54,34 @@ STEPS = ("letting",)
 # that waits out a real timeout teaches people to skip it.
 JOIN_WAIT = 60
 ANSWER_WAIT = 10
+# How long to keep looking for the light in the house's own device list after somebody has chosen a
+# room for it. The strip announces itself over MQTT discovery and Home Assistant makes the device a
+# moment later, so the room can be chosen before there is anything to put in it.
+PLACE_WAIT = 20
+# ...AND HOW LONG TO GO ON CARING AFTER THAT. Twenty seconds was not enough in a real house on
+# 22 September: the device had not appeared, the placing was given up on, and the wall said "It's in"
+# anyway with only a log line to say otherwise. The household did the only sensible thing and reset
+# the strip -- and the second run worked, because the device the first run had waited for existed by
+# then. A room somebody chose is a fact this brain holds, not a request that expires while Home
+# Assistant catches up; so it is remembered and applied whenever the device turns up.
+PLACE_KEEP = 600
+
+# HOW OFTEN TO GO LOOKING WHEN NOBODY ASKED, AND HOW HARD WHEN SOMEBODY DID (design/knock/).
+#
+# A knock used to be a sheet that took the whole screen, so being slow was a fault: a household
+# measured about two minutes between plugging a strip in and the wall saying anything, and read it
+# as the strip and the hub failing to talk to each other. It is a line in the band now, and a line
+# that arrives a minute late is a line -- so the background loop is no longer the thing that has to
+# be fast, and it costs the house's radio less than it did.
+#
+# WHAT HAS TO BE FAST IS ADD, and only Add: somebody standing on that page has asked, is waiting,
+# and is the only moment when spending the radio is free. `looking()` is the panel saying so, and
+# the loop then scans back to back for as long as it keeps saying it.
+LOOK_EVERY = 60.0
+# How long one `looking()` is good for. The panel says it again every few seconds while the page is
+# open; a wall that is closed, asleep or unplugged simply stops saying it and the loop goes quiet on
+# its own, which is why this is a hold rather than a switch somebody could leave on.
+LOOK_HOLD = 12.0
 
 # A strip nobody has told how long it is. The controller writes this many lights every frame and the
 # surplus falls off the end of the wire, so a strip shorter than this is simply right -- which is
@@ -61,6 +89,12 @@ ANSWER_WAIT = 10
 # anything that needs to know where the MIDDLE is comes out wrong without it.
 ASSUMED = 300
 MOST = 1200
+
+# HOW FAINT IS TOO FAINT, MEASURED RATHER THAN GUESSED (docs/strip.md item 15). From a real hub a
+# session establishes first try at -51 dBm and the link dies three to five seconds in at -64, every
+# time. So anything heard below this is a strip we may well fail to set up, and the reason will be
+# the distance rather than anything the household did.
+FAINT = -60
 
 
 # ---------------------------------------------------------------- the order the colors come in
@@ -296,7 +330,7 @@ class Radio:
 
     async def adopt_ours(self, addr: str, ssid: str, password: str, hub: dict | None = None,
                          rhythm: str = "", on_pressed=None,
-                         out_of_reach: "asyncio.Event | None" = None) -> str:
+                         out_of_reach: "asyncio.Event | None" = None, transport=None) -> str:
         """Wait for the press, hand over the Wi-Fi, then say where we are -- one session, no phone.
 
         THE WI-FI DOES GO THROUGH US HERE, and unlike Matter's door there is no controller in the
@@ -304,9 +338,20 @@ class Radio:
         touching it. That is the handshake the first firmware should have had, and the reason this
         door exists. Returns 'done', or 'rhythm' when the household said they cannot reach it."""
         from . import strip_door
+        from .errand import ErrandFailed
         try:
             return await strip_door.adopt(addr, ssid, password, hub=hub, rhythm=rhythm,
-                                          on_pressed=on_pressed, out_of_reach=out_of_reach)
+                                          on_pressed=on_pressed, out_of_reach=out_of_reach,
+                                          transport=transport)
+        except ErrandFailed as e:
+            if e.why not in ("write",):
+                raise StripError(_through_a_bridge(e))
+            # A refused write is the strip saying no, exactly as an ATT error is on our own radio,
+            # and the lines below already say that one correctly for both rungs.
+            if not rhythm:
+                raise StripError("The strip would not finish letting us in. Unplug it and try again.")
+            raise StripError("Those were not the flashes it is showing. Count them again \u2014 "
+                             "and note it shows a new set every time it is plugged in.")
         except strip_door.NotPressed:
             # NOT A RADIO FAILURE, and it must never be dressed as one. Somebody is standing in the
             # right room; they have simply not touched the thing yet.
@@ -337,8 +382,17 @@ class Radio:
             raise StripError("Those were not the flashes it is showing. Count them again \u2014 "
                              "and note it shows a new set every time it is plugged in.")
 
-    async def forget(self, id: str) -> None:
-        return None
+
+def _through_a_bridge(e) -> str:          # e: hub.errand.ErrandFailed, imported lazily like the rest
+    """What to say when a bridge was running the errand and could not. Never "nearer the hub": the
+    hub was not the one listening. A bridge is the household's word for a puck (the panel says it)."""
+    if e.why == "busy":
+        return "A bridge is busy setting something else up. Try again in a minute."
+    if e.why in ("connect", "silent"):
+        return "The bridge that can hear the strip could not reach it. Try again."
+    if e.why == "nodoor":
+        return "That strip did not answer the way ours do. Unplug it and try again."
+    return "The bridge that was reaching the strip lost it part way through. Try again."
 
 
 class Strips:
@@ -352,11 +406,20 @@ class Strips:
         self._dismissed: set[str] = set()      # "not mine": left alone until it is power-cycled
         self.strips: dict[str, dict] = {}      # what the broker says: id -> {"online", "count", "order"}
         self._heard: dict[str, dict] = {}      # the last retained value per (id, leaf)
+        self._arrived: set[str] = set()        # said "online" since we last started listening
+        self._devices: dict[str, str] = {}     # our id for a strip -> the house's id for its hardware
         self._woke: asyncio.Event | None = None
         self._task: asyncio.Task | None = None
         # Set when the household says they cannot reach the button. The session waiting for a press
         # is holding a BLE link open, so this is how it is told to stop waiting and drop a rung.
         self._out_of_reach: asyncio.Event | None = None
+        # Until when somebody is standing on Add. Monotonic, because it is a duration and not a time
+        # of day, and a hub whose clock steps must not start scanning for an hour.
+        self._looking_until = 0.0
+        # Rooms somebody chose that Home Assistant had not made a device for yet: strip id -> room.
+        # Emptied as each one lands. See _place_later().
+        self._owed: dict[str, str] = {}
+        self._placer: asyncio.Task | None = None
 
     # ---- what the panel sees ----
     def status(self) -> dict:
@@ -381,24 +444,68 @@ class Strips:
             out["count"] = j.get("count", ASSUMED); out["order"] = j.get("order", ASSUME)
             out["white"] = bool(j.get("white"))
         if j["state"] == "room": out["rooms"] = self._rooms()
+        # THE ROOM IS CHOSEN AND THE HOUSE HAS NOT CAUGHT UP. The last beat used to say "It is a
+        # light in the house now -- ... in the room it lives in", which was not true whenever the
+        # placing had not landed, and a household reading it went and did the whole setup again.
+        # Named rather than flagged, because the sentence on the wall wants the room's own name.
+        if j.get("id") in self._owed:
+            out["placing"] = self._room_name(self._owed[j["id"]])
         if j.get("text"): out["text"] = j["text"]
         if j.get("needs"): out["needs"] = j["needs"]
+        # WHEN IT STARTED KNOCKING, in seconds since the epoch rather than "how long ago", because a
+        # wall reloads and a poll is a minute apart: an age computed here is stale by the time it is
+        # drawn, and a moment is not. The panel folds its line away after an hour of this.
+        if j.get("at"): out["since"] = j["at"]
         return out
+
+    def _room_name(self, room_id: str) -> str:
+        """What the household calls that room, for a sentence on the wall. Its id is not a name."""
+        rooms = getattr(getattr(self.hub, "home", None), "rooms", None) or {}
+        got = rooms.get(room_id) if hasattr(rooms, "get") else None
+        return getattr(got, "name", None) or "the room you chose"
 
     def _where_we_are(self) -> dict:
         """What a strip needs to find us again after it reboots, in the shape the `hub` endpoint
-        reads. Only sent through our own door, and only inside a session the strip authenticated."""
-        broker = (self.hub.settings.get("broker") or {}) if hasattr(self.hub, "settings") else {}
-        where = {"mhost": broker.get("host") or "hub", "base": BASE}
-        if broker.get("user"): where["muser"] = broker["user"]
-        if broker.get("pass"): where["mpass"] = broker["pass"]
+        reads. Only sent through our own door, and only inside a session the strip authenticated.
+
+        THE SAME THING A PUCK IS TOLD, FROM THE SAME PLACE. This used to read a `broker` key in the
+        settings that nothing in this hub has ever written, so it handed over the literal name "hub"
+        and no credentials at all -- and every strip we have ever set up joined the house, reached
+        the broker and was refused: `mqtt_client: Connection refused, not authorized`. On the wall
+        that read as "It joined your Wi-Fi but never found the hub. Try it nearer the router", which
+        sent somebody to move a strip that was already on their network. Seen on a real hub on
+        21 September, and it had been true since the day our own door was written."""
+        try:
+            mq = self.hub.bridge.broker()
+        except Exception as e:
+            log.warning("strip: no broker details to hand over (%s)", e)
+            mq = {}
+        where = {"mhost": mq.get("name") or mq.get("host") or "hub", "base": BASE}
+        if mq.get("user"): where["muser"] = mq["user"]
+        if mq.get("pass"): where["mpass"] = mq["pass"]
         return where
 
     def _rooms(self) -> list:
-        home = getattr(self.hub, "home", None)
-        rooms = getattr(home, "rooms", None) or []
-        return [{"id": getattr(r, "id", None) or r["id"], "name": getattr(r, "name", None) or r["name"]}
-                for r in rooms]
+        """The rooms to offer, in the shape the panel draws as chips.
+
+        `home.rooms` IS A DICT of id -> Room, and iterating a dict gives you its keys -- which is how
+        this came to call `r["id"]` on a string and answer 500 to every request, including the poll
+        the sheet lives on. It had been that way since it was written and no test caught it because
+        the fake house is a list. Everywhere else in the brain says `.rooms.values()`. Seen on a real
+        house on 21 September, at the one beat that reaches this: "Where is it?".
+
+        `unassigned` is a real room in the dict and is never a place to put something; every other
+        caller skips it and so does this."""
+        rooms = getattr(getattr(self.hub, "home", None), "rooms", None) or []
+        if isinstance(rooms, dict): rooms = list(rooms.values())
+        out = []
+        for r in rooms:
+            got = r if isinstance(r, dict) else {}
+            rid = getattr(r, "id", None) or got.get("id")
+            name = getattr(r, "name", None) or got.get("name")
+            if not rid or rid == "unassigned": continue
+            out.append({"id": rid, "name": name or rid})
+        return out
 
     def _set(self, state, **more):
         if not self.job: return
@@ -406,8 +513,30 @@ class Strips:
         self.hub._broadcast(json.dumps({"type": "strip", "strip": self.status()}))
 
     def _fail(self, text: str) -> dict:
+        """Why it did not work, in words for the wall.
+
+        AND WHEN THE REAL ANSWER IS THE DISTANCE, THAT IS THE ONLY ANSWER WORTH GIVING. A strip at
+        the far end of a house fails in whatever way the radio happens to fail that minute -- the
+        setup code is refused, a link dies in the middle, a device that answered a scan cannot be
+        connected to a moment later -- and every one of those sentences sends somebody to check a
+        thing that is not wrong. The hub heard how faint it was when it knocked and has known all
+        along. Seen on a real hub on 21 September: a strip the hub could not hear at all on a
+        twenty-second scan, and the wall said "the strip did not take the code"."""
+        if self._faint():
+            text = ("That strip is a long way from the hub \u2014 it was only just audible when it "
+                    "knocked. Set it up in the same room as the hub, then put it where you want it.")
         self._set("failed", text=text)
         return self.status()
+
+    def _faint(self) -> bool:
+        """Was the HUB the one straining to hear it? Not when a bridge was doing the talking: the hub's
+        distance was the reason for the errand, not the reason it failed, and "set it up in the same
+        room as the hub" is exactly the apology the bridge is there to retire (design/ears/)."""
+        j = self.job or {}
+        if j.get("via"):
+            return False
+        heard = j.get("rssi")
+        return heard is not None and heard < FAINT
 
     # ---- the broker: strips the house already has ----
     async def listen(self):
@@ -424,19 +553,35 @@ class Strips:
         id_, leaf = parts[1], "/".join(parts[2:])
         self._heard[f"{id_}/{leaf}"] = payload
         s = self.strips.setdefault(id_, {})
-        if leaf == "status": s["online"] = str(payload).strip() == "online"
+        if leaf == "status":
+            s["online"] = str(payload).strip() == "online"
+            # THE ARRIVAL, NOT THE STATE. A strip that goes away does not say so: the broker says it
+            # for it, from the last will, and only once the keepalive has run out. A factory reset,
+            # a reboot, a knock and a press all happen well inside that, so the hub can still believe
+            # the old connection is alive while the household stands over the strip that replaced it.
+            # A message ARRIVING is a fact with a time on it; "online" is only a guess about now.
+            if s["online"]: self._arrived.add(id_)
         elif leaf == "count":
             try: s["count"] = int(str(payload).strip())
             except ValueError: pass
         elif leaf == "order": s["order"] = str(payload).strip()
         # A fill that has reached the end says so itself, so the panel can stop asking somebody to
         # watch a thing that has finished happening.
-        if self.job and self.job.get("id") == id_ and leaf == "fill":
+        #
+        # ONLY WHILE THE FILL IS THE THING ON SCREEN. The strip publishes its progress as it goes and
+        # the last of those can land AFTER the household has said "that's the whole of it" -- and this
+        # then dragged the job back to `length` from whatever beat it had moved on to. What that looks
+        # like from the wall: you are asked for a room, you tap one, you are told there is no light
+        # waiting for a room, and you are back watching the fill. Reported from a real house on
+        # 21 September, three times in a row, which is exactly how often a late message lands.
+        if (self.job and self.job.get("id") == id_ and leaf == "fill"
+                and self.job.get("state") == "length"):
             try: self._set("length", lit=int(str(payload).strip()))
             except ValueError: pass
         if self._woke and not self._woke.is_set(): self._woke.set()
 
     async def _tell(self, id_: str, leaf: str, payload: str, retain: bool = False) -> None:
+        """Say something to one strip. Nothing a strip is TOLD is retained -- see below."""
         try:
             await self.hub.ha.call("mqtt", "publish", {},
                                    topic=f"{BASE}/{id_}/{leaf}", payload=payload, retain=retain)
@@ -453,24 +598,51 @@ class Strips:
             got = self._heard.get(f"{id_}/{want}")
             if got is not None: return str(got)
             try: await asyncio.wait_for(self._woke.wait(), timeout=max(0.01, end - time.monotonic()))
-            except asyncio.TimeoutError: break
+            except TimeoutError: break
             self._woke.clear()
         return self._heard.get(f"{id_}/{want}")
 
     # ---- the knock ----
-    async def watch(self, every: float = 20.0):
+    async def watch(self, every: float = LOOK_EVERY):
         """Look for a strip that is knocking, for as long as the brain is up.
 
-        Not often, and never while a job is running. A BLE scan is a radio going quiet for other
-        things, and the hub is also the Bluetooth end of every OTHER device the house has; a scan
-        loop tight enough to feel instant is a scan loop that costs the house something all day, to
-        catch an event that happens when somebody plugs a thing in and is standing right there."""
+        TWO SPEEDS, AND THE FAST ONE IS BORROWED RATHER THAN KEPT. A BLE scan is the radio going
+        quiet for every other device in the house, so a loop tight enough to feel instant costs the
+        house all day to catch an event that happens when somebody plugs a thing in and is standing
+        right there -- which is exactly when the panel calls `looking()`. So: back to back while
+        somebody is on Add, and once a minute otherwise.
+
+        The slow speed is deliberately not slower than that. A knock is a line in the band now and a
+        late line is forgivable, but a household that plugs a strip in and sees nothing for five
+        minutes has been told the same lie in a quieter voice."""
         while True:
             try:
                 if not self.job: await self.look()
             except Exception as e:
                 log.info("strip: look failed (%s)", e)
-            await asyncio.sleep(every)
+            # `look()` is fourteen seconds of scanning on its own, so "back to back" needs no delay
+            # of its own -- only long enough to notice a job appearing or the watcher going away.
+            await asyncio.sleep(0.5 if self.being_watched() else every)
+
+    def being_watched(self) -> bool:
+        """Is somebody standing on Add right now? See LOOK_HOLD."""
+        return time.monotonic() < self._looking_until
+
+    async def looking(self) -> dict:
+        """The panel saying somebody is on Add and waiting. Holds the loop at its fast speed.
+
+        It is a HOLD and not a switch: it lapses by itself, so a wall that goes to rest, gets closed
+        or is unplugged mid-look cannot leave the hub scanning for ever. The panel says it again
+        every few seconds for as long as the page is open, and Add is also the one place a scan is
+        free, because the person it costs is the person who asked for it."""
+        was = self.being_watched()
+        self._looking_until = time.monotonic() + LOOK_HOLD
+        if not was:
+            log.info("strip: somebody is on Add; looking properly")
+            # Do not wait out whatever is left of the slow sleep -- that is up to a minute of
+            # somebody standing in front of a page that says it is listening and is not.
+            if self._woke and not self._woke.is_set(): self._woke.set()
+        return self.status()
 
     async def look(self) -> dict:
         """One scan. A strip that is advertising has never been set up, so anything found is a knock."""
@@ -478,17 +650,22 @@ class Strips:
         found: list[dict] = []
         # OUR DOOR FIRST, because a strip that offers it can be asked more, and a strip offers both
         # until somebody takes it (design/strip/Both.dc.html).
+        #
+        # A HUB WITH NO BLUETOOTH IS AN ORDINARY HUB NOW, not a broken one: the mini PC the product is
+        # sized for may have none, and its bridges are its ears (hub/ears.py). So the hub's own radio
+        # failing is noted and not the end of the look -- it is only said if nobody heard anything.
+        deaf: str | None = None
         try: ours = await self.radio.scan_ours()
-        except StripError as e: return {**self.status(), "text": str(e)}
+        except StripError as e: deaf, ours = str(e), []
         except Exception as e:
             log.info("strip: our door found nothing (%s)", e); ours = []
         theirs: list[dict] = []
-        try: theirs = await self.radio.scan()
-        except StripError as e:
-            if not ours: return {**self.status(), "text": str(e)}
-        except Exception as e:
-            log.info("strip: scan failed (%s)", e)
-            if not ours: return self.status()
+        if not deaf:
+            try: theirs = await self.radio.scan()
+            except StripError as e:
+                if not ours: deaf = str(e)
+            except Exception as e:
+                log.info("strip: scan failed (%s)", e)
 
         # THE TWO DOORS ARE NOT EQUALLY EASY TO SEE, and that asymmetry sent a household down the
         # wrong one on 21 September. Matter's identity is in the ADVERTISEMENT; ours is in the SCAN
@@ -508,21 +685,66 @@ class Strips:
             try: ours = await self.radio.scan_ours(14.0)
             except Exception as e: log.info("strip: our door still found nothing (%s)", e)
 
+        # THE HUB IS ONE EAR AMONG SEVERAL (hub/ears.py). What its own radio heard goes into the same
+        # table the pucks report into, so "who can hear this" has the hub's answer in it too.
+        ears = getattr(self.hub, "ears", None)
+        if ears:
+            ears.forget_stale()
+            for o in ours: ears.heard("hub", o["addr"], o.get("rssi"))
+            for t in theirs: ears.heard("hub", t["addr"], t.get("rssi"), what=t)
+
         # One strip, two advertisements: if an address answered at both, it is the same board and
         # our door is the one worth having.
         at_ours = {o["addr"] for o in ours}
-        found = ours + [t for t in theirs if t["addr"] not in at_ours]
+        # NEAREST FIRST, WITHIN EACH DOOR. Our door still wins over Matter's however faint it is,
+        # because it is the only one that can ask the two questions and hand over the broker -- but
+        # WHICH strip at our door was whichever happened to advertise first, and two strips knocking
+        # is an ordinary evening: somebody unpacks a pair. A household standing over one of them
+        # pressing its button, while the hub waits on the other in a different room, is timed out
+        # and then told the strip is a long way from the hub -- perfectly accurate, about the wrong
+        # strip. Matter's side has sorted by signal since it was written; this side never did.
+        loud = lambda s: -(s.get("rssi") if s.get("rssi") is not None else -127)
+        found = sorted(ours, key=loud) + sorted(
+            (t for t in theirs if t["addr"] not in at_ours), key=loud)
+        # AND WHAT THE BRIDGES HEARD THAT THE HUB DID NOT -- a strip behind a television in a house
+        # whose hub is in the garage (docs/strip.md item 15). A bridge reports only strips carrying
+        # our vendor id; a test vendor id alone is proof of nothing (item 6), so the proof is the
+        # errand's own `open`, which refuses a strip that has no door of ours on it.
+        heard_here = {str(f["addr"]).upper() for f in found}
+        found += sorted(self._heard_by_bridges(heard_here), key=loud)
+        if not found:
+            return {**self.status(), "text": deaf} if deaf else self.status()
         for s in found:
             if s["addr"] in self._dismissed: continue
             # No chip here: a Matter advertisement carries a discriminator and not an id of ours.
             # `id` arrives later, from the broker, if the strip ever finds it (item 2a).
             self.job = {"state": "knocking", "id": None, "addr": s["addr"],
                         "discriminator": s.get("discriminator"), "vendor": s.get("vendor"),
-                        "door": s.get("door", "matter"),
-                        "label": self._label(s), "first": None}
+                        "door": s.get("door", "matter"), "rssi": s.get("rssi"),
+                        "heard_by": s.get("heard_by"),
+                        "label": self._label(s), "first": None, "at": time.time()}
+            # WHICH ONE, AND HOW WELL WE CAN HEAR IT. Without this the only record of why a setup
+            # was later called "a long way from the hub" is the sentence itself, and there is no way
+            # to tell a faint strip from a bug in the reading. It is one line and it has already
+            # been wanted three times in one evening.
+            log.info("strip: knocking at %s door, heard at %s dBm%s%s",
+                     "our own" if s.get("door") == "ours" else "Matter's", s.get("rssi"),
+                     f" by bridge {s['heard_by']}" if s.get("heard_by") else "",
+                     "" if len(found) == 1 else f" ({len(found)} are knocking)")
             self._set("knocking")
             break
         return self.status()
+
+    def _heard_by_bridges(self, heard_here: set) -> list[dict]:
+        """Knocks a bridge heard and the hub's own radio did not, shaped like the hub's own."""
+        ears = getattr(self.hub, "ears", None)
+        if not ears:
+            return []
+        ears.forget_stale()
+        return [{"addr": k["addr"], "rssi": k["rssi"], "door": "ours", "ours": True,
+                 "discriminator": k["what"].get("discriminator"), "vendor": k["what"].get("vendor"),
+                 "heard_by": k["ear"]}
+                for k in ears.knocking() if k["addr"] not in heard_here]
 
     @staticmethod
     def _label(s: dict | None) -> str:
@@ -639,6 +861,13 @@ class Strips:
         if not j: return
         try:
             wifi = (self.hub.settings.get("wifi") or {}) if hasattr(self.hub, "settings") else {}
+            # Every strip that is ON THE BROKER RIGHT NOW, so the one that comes online next is
+            # this one. NOT every strip the broker has heard of: it keeps what a strip said last,
+            # retained, and the brain reads all of it the moment it subscribes -- so a strip being
+            # set up for the second time is already in this dict, marked offline, and "an id that
+            # was not there before" can never match it again. Which is a strip somebody factory
+            # reset and is standing over, watching the wall say it never reached the hub. 21 Sep.
+            known = {id_ for id_, s in self.strips.items() if s.get("online")}
             if j.get("door") == "ours":
                 # OUR DOOR CARRIES EVERYTHING IN ONE SESSION, which is the whole difference. The
                 # Wi-Fi and where we are go together, so the strip comes out of setup already able
@@ -648,12 +877,22 @@ class Strips:
                 # The session opens at once and then holds, because the strip will not take the
                 # credentials until somebody presses the button on it. `pressed` is what moves the
                 # wall off that beat, and it comes from the strip rather than from a timer here.
-                went = await self.radio.adopt_ours(j["addr"], wifi.get("ssid", ""),
-                                                   wifi.get("pass") or "",
-                                                   hub=self._where_we_are(),
-                                                   rhythm=j.get("rhythm", ""),
-                                                   on_pressed=self._pressed,
-                                                   out_of_reach=self._out_of_reach)
+                # WHICH EAR (hub/ears.py). The hub's own radio wherever it is good enough; a bridge
+                # that hears the strip clearly better where it is not -- which is every strip behind
+                # a television in a house whose hub is in the garage (docs/strip.md item 15).
+                errand = await self._errand_for(j["addr"])
+                try:
+                    went = await self.radio.adopt_ours(j["addr"], wifi.get("ssid", ""),
+                                                       wifi.get("pass") or "",
+                                                       hub=self._where_we_are(),
+                                                       rhythm=j.get("rhythm", ""),
+                                                       on_pressed=self._pressed,
+                                                       out_of_reach=self._out_of_reach,
+                                                       transport=errand)
+                finally:
+                    if errand:
+                        await errand.close()
+                        if getattr(self.hub, "errand", None) is errand: self.hub.errand = None
                 # They could not reach it, so `reach()` has already moved the wall to the flashes and
                 # the strip is minting them. Nothing failed and nothing should be said.
                 if went == "rhythm":
@@ -677,15 +916,72 @@ class Strips:
             # It is on the Wi-Fi now, so everything after this goes over the broker. Wait for it to
             # say so itself rather than assuming: a strip that joined and cannot find the hub is a
             # different failure from one that never joined, and the household can fix only one of them.
-            got = await self._ask(j["id"], "hello", "1", want="status", timeout=JOIN_WAIT)
-            if str(got or "").strip() != "online":
-                return self._fail("It joined your Wi‑Fi but never found the hub. Try it nearer the router.")
+            # WHO IS IT, ON THE BROKER? A strip that came through our door has told us nothing we
+            # can address it by -- a Matter advertisement carries a discriminator and not an id of
+            # ours -- so `id` is None here and has been since the day this was written. It used to
+            # ask `strip/None/hello`, a topic nothing has ever subscribed to, so EVERY strip adopted
+            # through our own door failed at this line however close it was standing.
+            #
+            # It says who it is the moment it reaches the broker, retained. So the answer is to wait
+            # for the one that was not there before rather than to ask for a name we do not have.
+            # One job at a time is what makes that unambiguous, and it is the rule this class opens
+            # with. Seen on a real hub on 21 September, where it read as "it never found the hub".
+            j["id"] = await self._whoever_just_arrived(known, timeout=JOIN_WAIT)
+            if not j["id"]:
+                return self._fail("It joined your Wi‑Fi but never reached the hub. "
+                                  "Try it nearer the router.")
             await self._show_red()
         except StripError as e:
             self._fail(str(e))
-        except Exception as e:
+        except Exception:
             log.exception("strip setup failed")
             self._fail("Setting that light strip up did not work. Unplug it and try again.")
+
+    async def _errand_for(self, addr: str):
+        """An open errand on the bridge that should talk to this strip, or None for our own radio."""
+        from .errand import Errand, ErrandFailed
+        ears = getattr(self.hub, "ears", None)
+        chip = ears.choose(addr) if ears else None
+        if not chip or chip == "hub":
+            return None
+        kind = next((h["type"] for h in ears.who_can_hear(addr) if h["ear"] == chip), "random")
+        errand = Errand(self.hub, chip)
+        self.hub.errand = errand            # where the bridge hands its answers (hub/bridge.py)
+        if self.job is not None: self.job["via"] = chip
+        log.info("strip: the hub cannot hear it well; bridge %s runs the errand", chip)
+        try:
+            await errand.open(addr, kind)
+        except ErrandFailed as e:
+            self.hub.errand = None
+            raise StripError(_through_a_bridge(e))
+        return errand
+
+    async def _whoever_just_arrived(self, known: set, timeout: float) -> str | None:
+        """The id of the first strip to COME ONLINE that was not online before.
+
+        It announces itself -- `strip/<id>/status` is published retained the moment it connects --
+        so there is nothing to ask and nothing to poll. `known` is the set of strips already online
+        when the session began, because a house may have strips in it and every one of them is also
+        online. It is deliberately not "every strip the broker has heard of": those are retained and
+        include every strip that has ever connected, which is exactly the strip being set up again."""
+        self._arrived.clear()
+        self._woke = asyncio.Event()
+        end = time.monotonic() + timeout
+        log.info("strip: waiting for it on the broker; %d already online", len(known))
+        while True:
+            # Either is good enough, and they fail in different weather: one that says hello while
+            # we are listening, or one that is online now and was not when we started.
+            for id_ in list(self._arrived): return id_
+            for id_, s in list(self.strips.items()):
+                if s.get("online") and id_ not in known: return id_
+            left = end - time.monotonic()
+            if left <= 0: break
+            try: await asyncio.wait_for(self._woke.wait(), timeout=max(0.01, left))
+            except TimeoutError: break
+            self._woke.clear()
+        log.warning("strip: nothing arrived on the broker in %ss. Known: %s", timeout,
+                    {i: bool(v.get("online")) for i, v in self.strips.items()})
+        return None
 
     # ---- the order the colors come in ----
     async def _show_red(self):
@@ -736,7 +1032,12 @@ class Strips:
     async def _settled(self, order: str) -> dict:
         j = self.job
         j["order"] = order
-        await self._tell(j["id"], "order/set", order, retain=True)
+        # NOT RETAINED, and none of the three setup commands is (item 31, decided 22 September).
+        # The strip writes each of these into its own NVS, so a retained copy on the broker is a
+        # second source of truth that is replayed at every reconnect and silently wins when it is
+        # stale. These are only ever said to a strip that is online and standing in front of
+        # somebody, so there is nothing for a retain to rescue.
+        await self._tell(j["id"], "order/set", order)
         # Somebody who came back to fix the colors did not ask to be walked through the length again.
         if j.get("revisit"):
             self._set("ready")
@@ -766,7 +1067,8 @@ class Strips:
             return self._fail("The strip did not say how long it is. Try that again.")
         n = max(1, min(MOST, n))
         j["count"] = n
-        await self._tell(j["id"], "count/set", str(n), retain=True)
+        # Not retained: the strip remembers its own length. See order/set above.
+        await self._tell(j["id"], "count/set", str(n))
         # A strip that is already in a room keeps it. Asking again would be the panel forgetting
         # something the household told it once.
         self._set("ready" if j.get("revisit") else "room")
@@ -779,11 +1081,137 @@ class Strips:
         return await self._fill()
 
     # ---- afterwards ----
-    def each(self) -> list[dict]:
-        """Every strip the house has, for the screen that offers to ask it something again."""
-        return [{"id": i, "online": bool(v.get("online")),
-                 "count": v.get("count"), "order": v.get("order")}
-                for i, v in sorted(self.strips.items())]
+    async def each(self) -> list[dict]:
+        """Every strip the house has, for the pane that offers to ask one something again.
+
+        `device` is the whole reason this is worth asking for: it is the house's own id for the
+        hardware, which every device the panel draws already carries, and it is how a light pane
+        knows that the light it is drawing IS one of these. Without it the panel would be guessing
+        from a model string."""
+        out = []
+        for i, v in sorted(self.strips.items()):
+            out.append({"id": i, "online": bool(v.get("online")), "count": v.get("count"),
+                        "order": v.get("order"), "device": await self._device_for(i)})
+        return out
+
+    async def _device_for(self, id_: str) -> str | None:
+        """The house's id for this strip's hardware, or None if it has not made one yet.
+
+        Cached once found and never cached when not: discovery is a moment behind everything else,
+        and remembering that a thing did not exist is how a panel comes to be permanently sure."""
+        known = self._devices.get(id_)
+        if known: return known
+        want = f"{BASE}_{id_}"
+        try:
+            rows = await self.hub.ha.send("config/device_registry/list") or []
+        except Exception as e:
+            log.info("strip: could not read the house's devices (%s)", e)
+            return None
+        for d in rows:
+            names = [str(x) for ident in (d.get("identifiers") or [])
+                     for x in (ident if isinstance(ident, (list, tuple)) else [ident])]
+            if want in names and d.get("id"):
+                self._devices[id_] = d["id"]
+                return d["id"]
+        return None
+
+    async def forget(self, id_: str) -> dict:
+        """Done with a strip: it goes from the house, and is told to forget the house with it.
+
+        THE SECOND HALF IS THE POINT, and it is the half a device registry cannot do. Dropping a
+        strip's light out of the house leaves the STRIP still holding our broker, our credentials
+        and its own answers -- adopted by a household that no longer has it. Plug it in and it
+        announces itself again, into a house that has just been told it is gone, and nobody has a
+        word for what is happening. So it is asked to let go too, which is exactly what the ten
+        second hold on its own button does; what is left is a strip anybody can set up again, here
+        or in whoever's house it was sold into.
+
+        WHAT IS SAID IS NOT RETAINED, so a strip that is unplugged never hears it. The house lets it
+        go anyway -- somebody is standing over a thing that is already in a box, and refusing would
+        be the panel arguing with them -- and `heard` comes back false so the panel can say the one
+        true thing left: the strip still believes it is ours, and its button is the only way to
+        settle that. The strip clears its own retained topics when it hears; this clears them from
+        this end for the strip that did not, because a retained `status` outlives the thing it was
+        about and would put a forgotten strip back in the house at the next broker restart.
+        """
+        known = self.strips.get(id_)
+        if not known:
+            raise StripError("That light strip is not one this hub knows about.")
+        if self.job and self.job.get("id") == id_:
+            raise StripError("That light strip is in the middle of being set up. Finish that first.")
+        heard = bool(known.get("online"))
+        label = self._label(known)
+        if heard:
+            await self._tell(id_, "forget", "1")
+            await asyncio.sleep(0.8)      # long enough for it to empty its own topics before we empty them
+        for leaf in ("status", "count", "order", "light", "fill", "white", "room"):
+            try:
+                await self.hub.ha.call("mqtt", "publish", {},
+                                       topic=f"{BASE}/{id_}/{leaf}", payload="", retain=True)
+            except Exception as e:
+                log.info("strip %s: could not clear %s (%s)", id_, leaf, e)
+        try:
+            await self.hub.ha.call("mqtt", "publish", {},
+                                   topic=f"homeassistant/light/{BASE}_{id_}/config", payload="", retain=True)
+        except Exception as e:
+            log.info("strip %s: could not clear its light (%s)", id_, e)
+        self.strips.pop(id_, None)
+        self._devices.pop(id_, None)
+        self._dismissed.discard(id_)
+        self._arrived.discard(id_)
+        for key in [k for k in self._heard if k.startswith(f"{id_}/")]:
+            self._heard.pop(key, None)
+        self.hub.log.add("strip", id_, None, "forgotten", source="user", detail={"name": label})
+        return {"forgotten": label, "heard": heard}
+
+    # ---- moving the end afterwards ----
+    #
+    # THE FILL IS A MEASUREMENT AND A MEASUREMENT HAS AN ERROR. A person's reaction time is the only
+    # one in it (see fill/stop in the firmware), so it lands a few lights either side: long, which is
+    # invisible because the surplus falls off the wire, or short, which leaves the far end of the
+    # strip dark for ever and is the one a household reports. This is the other half of the decision
+    # taken on 20 September -- "A at setup, B afterwards" -- and it lives on the strip's own pane
+    # rather than in setup, so setup stays one tap. design/strip/Nudge.dc.html.
+    #
+    # It is deliberately NOT a job. A job is the setup conversation, one at a time, on the wall; this
+    # is a control on a pane, on a strip that is already in the house, and a household turning a lamp
+    # up in another room must not be told a light strip is being set up.
+    async def tune(self, id_: str) -> dict:
+        """Light it at the length it believes, with a cool tail on the last few. See Nudge."""
+        known = self._for_tuning(id_)
+        await self._tell(id_, "show/set", "tune")
+        return {"id": id_, "count": known.get("count", ASSUMED), "tuning": True}
+
+    async def tune_by(self, id_: str, by: int) -> dict:
+        """Move the end by a few lights. Not written down until `tune_done`.
+
+        The strip answers with what it actually took -- it clamps to one at the bottom and to the
+        most it can drive at the top -- and that answer is what the wall shows, so a household
+        holding the button at either end sees it stop rather than a number that goes on moving."""
+        known = self._for_tuning(id_)
+        want = max(1, min(MOST, int(known.get("count", ASSUMED)) + int(by)))
+        got = await self._ask(id_, "tune/set", str(want), want="count", timeout=ANSWER_WAIT)
+        try: now = int(str(got).strip())
+        except (TypeError, ValueError): now = want
+        self.strips.setdefault(id_, {})["count"] = now
+        return {"id": id_, "count": now, "tuning": True}
+
+    async def tune_done(self, id_: str, keep: bool = True) -> dict:
+        """Put the strip back to being a light. `keep` writes the new length down."""
+        known = self.strips.get(id_) or {}
+        if keep: await self._tell(id_, "count/set", str(known.get("count", ASSUMED)))
+        await self._tell(id_, "show/set", "off")
+        return {"id": id_, "count": known.get("count", ASSUMED), "tuning": False}
+
+    def _for_tuning(self, id_: str) -> dict:
+        if self.job:
+            raise StripError("Something else is being set up just now. One at a time.")
+        known = self.strips.get(id_)
+        if not known:
+            raise StripError("That light strip is not one this hub knows about.")
+        if not known.get("online"):
+            raise StripError("That light strip is not answering just now.")
+        return known
 
     REVISIT = ("colors", "length")
 
@@ -827,13 +1255,71 @@ class Strips:
             raise StripError("There is no light strip waiting for a room.")
         j = self.job
         j["room"] = room_id
-        await self._tell(j["id"], "room/set", room_id, retain=True)
-        try:
-            await self.hub.strip_placed(j["id"], room_id)
-        except AttributeError:
-            pass
+        # Not retained: the strip remembers its own room. See order/set above.
+        await self._tell(j["id"], "room/set", room_id)
+        if not await self._put_in_room(j["id"], room_id):
+            # IT IS NOT GIVEN UP ON, AND THE WALL IS TOLD. This used to log a warning and say "It's
+            # in" -- the panel claiming something it knows to be untrue to somebody standing in
+            # front of it. The choice is kept and applied the moment the house has a device to apply
+            # it to, and until then the last beat says so in words.
+            log.info("strip %s: %s is chosen and the house has no device for it yet; holding on to it",
+                     j["id"], room_id)
+            self._owed[j["id"]] = room_id
+            self._keep_placing()
         self._set("ready")
         return self.status()
+
+    def _keep_placing(self) -> None:
+        """One task, for as long as any room is still owed."""
+        if self._placer and not self._placer.done(): return
+        self._placer = asyncio.create_task(self._place_later())
+
+    async def _place_later(self):
+        """Go on trying to put strips in the rooms somebody chose, until they land or time is up.
+
+        Discovery is a moment behind everything else and sometimes a long moment: in a house with a
+        hundred devices it took more than the twenty seconds `put()` waits. Nothing here is asked of
+        the household -- they answered the question once and the answer is kept."""
+        end = time.monotonic() + PLACE_KEEP
+        while self._owed and time.monotonic() < end:
+            await asyncio.sleep(3.0)
+            for id_, room_id in list(self._owed.items()):
+                if await self._put_in_room(id_, room_id, tries_for=0):
+                    self._owed.pop(id_, None)
+                    # The wall is saying "it will be in X once the house notices it"; this is the
+                    # moment that stops being true, so it is told rather than left to a poll.
+                    if self.job and self.job.get("id") == id_: self._set(self.job["state"])
+        for id_, room_id in self._owed.items():
+            log.warning("strip %s: gave up putting it in %s; it is in the house but unplaced",
+                        id_, room_id)
+        self._owed.clear()
+
+    async def _put_in_room(self, id_: str, room_id: str, tries_for: float | None = None) -> bool:
+        """Move the light we announced into the room somebody chose.
+
+        THIS USED TO BE `self.hub.strip_placed(...)`, A METHOD NO HUB HAS EVER HAD, inside a
+        `try/except AttributeError: pass`. So every strip ever set up was left wherever Home Assistant
+        first put it, the wall said "It's in", and the household went and did it again by hand.
+
+        It is worth more than one try: the strip announces itself over MQTT discovery and Home
+        Assistant makes the device a moment later, so the room can be chosen before there is anything
+        to put in it."""
+        # PLACE_WAIT is read here rather than taken as a default, because a default is bound when
+        # this file is imported and the suite shrinks the constant to keep itself quick.
+        end = time.monotonic() + (PLACE_WAIT if tries_for is None else tries_for)
+        while True:
+            dev = await self._device_for(id_)
+            if dev:
+                try:
+                    await self.hub.ha.send("config/device_registry/update",
+                                           device_id=dev, area_id=room_id)
+                    log.info("strip %s: put in %s", id_, room_id)
+                    return True
+                except Exception as e:
+                    log.warning("strip %s: the house would not move it (%s)", id_, e)
+                    return False
+            if time.monotonic() >= end: return False
+            await asyncio.sleep(1.0)
 
     async def done(self) -> dict:
         """The sheet has been read. A finished job has nothing left to say, and until the brain is

@@ -1,0 +1,175 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp: #e9b872; --lamp-ink: #2a1c07;
+      --live: #74c69d; --danger: #e08a8a;
+      --edge: rgba(255,255,255,.10); --edge-hi: rgba(255,255,255,.18);
+      --surface-hi: rgba(255,255,255,.08);
+      --mark: #e0685f;
+    }
+    .dsp { font-family: inherit; font-weight: 400; letter-spacing: -.025em; }
+    .lbl { font-size: 12.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    /* the door's own rows, in This house's vocabulary (panel.css .hub-*) */
+    .grp { margin-top: 24px; }
+    .grp-h { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding-bottom: 9px; border-bottom: 1px solid var(--edge); }
+    .grp-k { font-size: 11.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .grp-a { font-size: 14px; color: var(--ink-2); text-decoration: underline dotted; text-decoration-color: var(--edge-hi); text-underline-offset: 4px; }
+    .row { display: grid; grid-template-columns: 34px minmax(0,1fr) 210px 124px; gap: 14px; align-items: center; padding: 11px 0; border-bottom: 1px solid rgba(255,255,255,.05); }
+    .row-i { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; background: var(--surface-hi); color: var(--ink-2); }
+    .row-n { font-size: 16px; }
+    .row-s { margin-top: 2px; font-size: 13px; color: var(--muted); }
+    .row-w { font-size: 14.5px; color: var(--ink-2); }
+    .out { display: inline-flex; align-items: center; justify-content: center; height: 34px; padding: 0 15px; border-radius: 999px; background: transparent; border: 1px solid var(--edge); color: var(--ink-2); font-size: 14px; white-space: nowrap; }
+    .out.warn { border-color: rgba(224,138,138,.55); color: var(--danger); }
+    .out.none { border-color: transparent; color: var(--muted); font-size: 13px; }
+    .ask { grid-column: 2 / -1; margin: 0 0 4px; font-size: 14px; color: var(--ink-2); }
+    .ask b { color: var(--ink); font-weight: 500; }
+    .note { font-size: 14px; color: var(--ink-2); line-height: 1.6; }
+    .note b { color: var(--ink); font-weight: 500; }
+  </style>
+</helmet>
+
+<!-- C -- one door, under This house, holding everything the hub knows about. -->
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: #0c0d10; color: var(--ink); font-size: 17px; line-height: 1.4;">
+
+  <div style="position: absolute; inset: 0; background: linear-gradient(rgb(20,23,38) 0%, rgb(35,36,58) 42%, rgb(78,55,52) 86%, rgb(54,40,40) 100%);"></div>
+  <div style="position: absolute; inset: 0; background: radial-gradient(90% 70% at 62% 78%, rgba(233,184,114,.10), transparent 66%);"></div>
+  <div style="position: absolute; inset: 0; opacity: .5; background-image: url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.035'/%3E%3C/svg%3E&quot;);"></div>
+
+  <div style="position: absolute; left: 48px; top: 40px; width: 980px;">
+    <div class="lbl">Direction C</div>
+    <h1 class="dsp" style="margin: 10px 0 0; font-size: 44px; line-height: 1.06;">One door: everything this house has</h1>
+    <p style="margin: 11px 0 0; font-size: 16.5px; color: var(--ink-2); max-width: 900px; line-height: 1.5;">A list under This house, beside Bridges and Accounts, holding every single thing the hub knows about &mdash; grouped by what brought it, because what brought it is what decides whether it may leave alone.</p>
+  </div>
+
+  <!-- the door itself, cropped at .68 -->
+  <div style="position: absolute; left: 48px; top: 196px; width: 980px; height: 590px; overflow: hidden; border-radius: 18px; border: 1px solid var(--edge); background: rgba(12,13,16,.42);">
+    <div style="position: absolute; left: 0; top: 0; width: 1441px; transform: scale(.68); transform-origin: 0 0; padding: 34px 44px 40px;">
+
+      <div style="display: flex; align-items: center; gap: 16px;">
+        <div style="width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-hi); border: 1px solid var(--edge); color: var(--ink-2);"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 5.5L8 12l6.5 6.5"/></svg></div>
+        <div>
+          <h2 class="dsp" style="margin: 0; font-size: 40px; line-height: 1.05;">What this house has</h2>
+          <p style="margin: 6px 0 0; font-size: 16px; color: var(--ink-2);">Twenty&ndash;three things, and what brought each of them. This is also where a thing goes when you are done with it.</p>
+        </div>
+      </div>
+
+      <!-- brought by an account -->
+      <div class="grp">
+        <div class="grp-h">
+          <span class="grp-k">Ring &middot; signed in</span>
+          <span class="grp-a">Remove Ring, and all four with it</span>
+        </div>
+        <div class="row">
+          <div class="row-i"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5h17v10h-17zM12 16.5a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM8.5 8.5l1.5-3h4l1.5 3"/></svg></div>
+          <div><div class="row-n">Backyard cam</div></div>
+          <div class="row-w">Backyard</div>
+          <div><span class="out none">Goes with Ring</span></div>
+        </div>
+        <div class="row">
+          <div class="row-i"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.4.3.5.7.5 1.1h6c0-.4.1-.8.5-1.1A6 6 0 0 0 12 3z"/></svg></div>
+          <div><div class="row-n">Walkway Pathlight</div><div class="row-s">Its light, its motion, its brightness</div></div>
+          <div class="row-w">Front garden</div>
+          <div><span class="out none">Goes with Ring</span></div>
+        </div>
+      </div>
+
+      <!-- set up here -->
+      <div class="grp">
+        <div class="grp-h"><span class="grp-k">Set up here</span></div>
+        <div class="row">
+          <div class="row-i"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.4.3.5.7.5 1.1h6c0-.4.1-.8.5-1.1A6 6 0 0 0 12 3z"/></svg></div>
+          <div><div class="row-n">Ceiling light</div></div>
+          <div class="row-w">Living room</div>
+          <div><span class="out">Take it out</span></div>
+        </div>
+        <div class="row" style="background: rgba(224,138,138,.06); border-radius: 12px; padding-left: 10px; padding-right: 10px; grid-template-columns: 34px minmax(0,1fr) 200px 124px;">
+          <div class="row-i" style="color: var(--lamp);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18M6 9v6M10 9v6M14 9v6M18 9v6"/></svg></div>
+          <div><div class="row-n">Shelf strip</div><div class="row-s">A light strip &middot; 60 lights &middot; answering</div></div>
+          <div class="row-w">Living room</div>
+          <div><span class="out warn">Take it out?</span></div>
+          <p class="ask"><b>Shelf strip</b> goes from the house, and is told to forget the house too &mdash; so it can be set up again here or anywhere else. Tap again to do it.</p>
+        </div>
+        <div class="row">
+          <div class="row-i"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v5M12 20v-3M4.9 7.5l4.3 2.5M19.1 16.5l-4.3-2.5M4.9 16.5l4.3-2.5M19.1 7.5l-4.3 2.5"/></svg></div>
+          <div><div class="row-n">Hallway motion</div><div class="row-s">No tile on the wall &mdash; it is only ever a reason</div></div>
+          <div class="row-w">Hallway</div>
+          <div><span class="out">Take it out</span></div>
+        </div>
+      </div>
+
+      <!-- on a bridge -->
+      <div class="grp">
+        <div class="grp-h">
+          <span class="grp-k">On the bridge in the hallway</span>
+          <span class="grp-a">Forget the bridge, and all three with it</span>
+        </div>
+        <div class="row">
+          <div class="row-i" style="color: var(--lamp);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10v16H7zM12 9.5v.01M9.5 14h5"/></svg></div>
+          <div><div class="row-n">Stairway switch</div><div class="row-s">Works with the one upstairs</div></div>
+          <div class="row-w">Hallway</div>
+          <div><span class="out">Take it out</span></div>
+        </div>
+        <div class="row">
+          <div class="row-i" style="color: var(--lamp);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10v16H7zM12 9.5v.01M9.5 14h5"/></svg></div>
+          <div><div class="row-n">Landing switch</div><div class="row-s">Works with the one downstairs</div></div>
+          <div class="row-w">Landing</div>
+          <div><span class="out">Take it out</span></div>
+        </div>
+      </div>
+
+      <!-- the engine -->
+      <div class="grp">
+        <div class="grp-h"><span class="grp-k">The hub&rsquo;s own parts</span></div>
+        <div class="row" style="opacity: .55;">
+          <div class="row-i"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5h14v14H5zM9 9h6v6H9z"/></svg></div>
+          <div><div class="row-n">Z&ndash;Wave radio, Matter, Messages</div></div>
+          <div class="row-w">In the hub</div>
+          <div><span class="out none">Part of the house</span></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div style="position: absolute; left: 48px; top: 806px; width: 980px; font-size: 14.5px; color: var(--ink-2); line-height: 1.6;">
+    This is also the screen somebody actually wants when they are moving house, selling a camera, or wondering what on earth is still signed in &mdash; which is the test of whether a list is an inventory or a settings panel.
+  </div>
+
+  <!-- the case -->
+  <div class="lbl" style="position: absolute; left: 1060px; top: 196px;">The case</div>
+  <div style="position: absolute; left: 1060px; top: 222px; width: 332px;" class="note">
+    It is the only direction that can hold <b>all of it</b>: a lamp, a sensor with no tile, a light strip, a wall switch on a mesh, a puck, an account. Every other direction leaves two or three of those somewhere else.
+    <br><br>
+    The grouping is not decoration. What brought a thing is exactly what decides whether it may leave alone &mdash; the brain says so in its own words today and the panel has nowhere to draw it. Here the answer is the row: <b>Goes with Ring</b>, with the door to Ring on the group above it.
+  </div>
+
+  <div class="lbl" style="position: absolute; left: 1060px; top: 524px;">Against</div>
+  <div style="position: absolute; left: 1060px; top: 550px; width: 332px;" class="note">
+    It is a new screen, and the most code of the three.
+    <br><br>
+    It is also an <b>inventory</b>, and an inventory is close to the thing section 5 says the box is not for: a list of everything, in one place, that reads like a settings panel. Drawn badly it becomes Home Assistant&rsquo;s device page with nicer type.
+    <br><br>
+    And it is still not where the person is looking. Somebody holding the tile for a lamp they just unscrewed has to walk to This house to end it.
+    <br><br>
+    <b>Which is why C and A are not exclusive.</b> The door is the place everything can be reached; the row on the pane is the shortcut for the thing in your hand.
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

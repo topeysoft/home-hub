@@ -108,3 +108,64 @@ const stopSound = () => perform(props.device, 'sound_off', undefined, { state: '
     </div>
   </div>
 </template>
+
+<style scoped>
+/* MediaPane's own insides. Every rule here matches something this template draws, so `scoped`
+   narrows it to the elements it already applied to, and these names can no longer collide with
+   another screen's by accident.
+
+   What stayed in panel.css, deliberately: anything on the component's outermost element, because
+   that is where the rest of the sheet does its cross-cutting work and scoping would make a moved
+   rule outrank the ones it used to tie with; any class another component also draws, which is
+   shared vocabulary rather than ours; and any rule reaching in from a container (`.bento`,
+   `.wall-stage`), which belongs to the arrangement rather than to this. */
+
+.rig-play {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 20px;
+}
+.rig-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.rig-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  font-size: 13.5px;
+  color: var(--ink-2);
+  background: var(--surface-hi);
+  white-space: nowrap;
+  max-width: 18em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rig-chip.app {
+  background: rgba(122, 176, 232, 0.16);
+  color: #cfe3fa;
+}
+.rig-times {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 11px;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.rig-volume {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  color: var(--ink-2);
+}
+.rig-volume-n {
+  width: 3.2em;
+  text-align: right;
+  font-size: 15px;
+}</style>

@@ -202,7 +202,6 @@ class WhoChangedWhat(ApiTest):
         self.assertEqual(rows[0]["text"], "let Sam's phone into the house for the weekend.")
 
     def test_before_the_code_nothing_can_be_named_and_the_page_says_so(self):
-        api = __import__("hub.api", fromlist=["api"])
         self.client.post("/setup/pin", json={"pin": "4321"})
         page = self.client.get("/happened/changes", headers={"x-hub-code": "4321"}).json()
         self.assertIsNotNone(page["coded_since"])

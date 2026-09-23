@@ -56,6 +56,12 @@ OPEN_SESAME = 'press'
 # line is made of, so it is fast enough to feel like an answer and slow enough not to hold the link busy.
 PRESS_WAIT = 120.0
 PRESS_POLL = 0.7
+# AND WHEN THE STRIP CAN RING, HARDLY AT ALL (design/ears/Tell.dc.html). A strip that notifies on the
+# press is asked once, then again when it rings -- and every RING_POLL seconds in case a ring is lost,
+# because a household standing at a strip that has gone quiet is the one failure this must not have.
+# A hundred and seventy asks across a courier's radio become a dozen at most, which is also what
+# keeps a bridge puck inside its buffers (docs/strip.md item 39).
+RING_POLL = 10.0
 
 
 class NotPressed(Exception):
@@ -78,6 +84,20 @@ class _Bleak(Transport):
 
     def __init__(self, client):
         self.client = client
+        self._rung = asyncio.Event()
+
+    async def listen_for_ring(self) -> bool:
+        """Ask to be rung when the button is pressed. False from a strip too old to ring, which is not
+        an error: it is simply asked the old way."""
+        try:
+            await self.client.start_notify(_chrc_uuid('press'), lambda *_: self._rung.set())
+            return True
+        except Exception:                                        # noqa: BLE001 -- no notify, no ring
+            return False
+
+    async def wait_for_ring(self):
+        await self._rung.wait()
+        self._rung.clear()
 
     async def send_data(self, ep_name, data):
         await self.client.write_gatt_char(_chrc_uuid(ep_name), bytearray(data.encode('latin-1')), response=True)
@@ -111,7 +131,7 @@ async def find(timeout: float = 8.0):
 
 async def adopt(address: str, ssid: str, passphrase: str, hub: dict | None = None,
                 rhythm: str = '', on_pressed=None, out_of_reach: "asyncio.Event | None" = None,
-                press_wait: float = PRESS_WAIT) -> str:
+                press_wait: float = PRESS_WAIT, transport: "Transport | None" = None) -> str:
     """Take a strip: wait for the press, hand over the Wi-Fi, then say where we are.
 
     `rhythm`, when there is one, is the four counts the household read off the light -- the rung below
@@ -120,51 +140,64 @@ async def adopt(address: str, ssid: str, passphrase: str, hub: dict | None = Non
     was touched, so the wall can stop saying it is waiting. `out_of_reach` is the household saying they
     cannot reach the button; setting it asks the strip for a rhythm instead and returns 'rhythm'.
 
+    `transport` is for something that is not our own radio -- a courier that carries the bytes to a
+    strip this machine cannot hear (docs/strip.md item 38). Nothing below changes when there is one:
+    the session is still opened here and closed at the strip, and the press gate is still on the strip.
+
     Returns 'done', or 'rhythm' if the strip was asked to drop a rung. Raises on any step, because a
     half-adopted strip is worse than one that never started.
     """
+    security = Security2(sec_patch_ver=1, username=USERNAME, password=rhythm or OPEN_SESAME, verbose=False)
+    if transport is not None:
+        return await _adopt_over(transport, security, ssid, passphrase, hub, rhythm,
+                                 on_pressed, out_of_reach, press_wait)
+
     from bleak import BleakClient
     _tolerate_corebluetooth()
-
-    security = Security2(sec_patch_ver=1, username=USERNAME, password=rhythm or OPEN_SESAME, verbose=False)
     async with BleakClient(address, timeout=20.0) as client:
-        transport = _Bleak(client)
+        return await _adopt_over(_Bleak(client), security, ssid, passphrase, hub, rhythm,
+                                 on_pressed, out_of_reach, press_wait)
 
-        # The handshake, until protocomm says there is nothing left to send. A wrong rhythm fails
-        # here, inside SRP6a, and ends the session: there is no offline guessing at four digits.
-        # With no rhythm the password is public, so this proves nothing and is not meant to -- it is
-        # the encrypted channel the rest of the conversation needs, and the strip's own gate is what
-        # the Wi-Fi is actually waiting on.
-        response = None
-        while True:
-            request = security.security_session(response)
-            if request is None:
-                break
-            response = await transport.send_session_data(request)
-        if security.session_state != security_state.FINISHED:
-            raise RuntimeError('the strip did not accept that rhythm')
 
-        if not rhythm and await _wait_for_the_press(transport, security, on_pressed,
-                                                   out_of_reach, press_wait) == 'rhythm':
-            return 'rhythm'
+async def _adopt_over(transport, security, ssid, passphrase, hub, rhythm,
+                      on_pressed, out_of_reach, press_wait) -> str:
+    """Everything an adoption is, once there is something to say it down. Split out from `adopt` so
+    that the same steps run whether the bytes go over our own radio or through a courier."""
+    # The handshake, until protocomm says there is nothing left to send. A wrong rhythm fails
+    # here, inside SRP6a, and ends the session: there is no offline guessing at four digits.
+    # With no rhythm the password is public, so this proves nothing and is not meant to -- it is
+    # the encrypted channel the rest of the conversation needs, and the strip's own gate is what
+    # the Wi-Fi is actually waiting on.
+    response = None
+    while True:
+        request = security.security_session(response)
+        if request is None:
+            break
+        response = await transport.send_session_data(request)
+    if security.session_state != security_state.FINISHED:
+        raise RuntimeError('the strip did not accept that rhythm')
 
-        sent = await transport.send_config_data(wifi_prov.config_set_config_request(security, ssid, passphrase))
-        if wifi_prov.config_set_config_response(security, sent) != 0:
-            raise RuntimeError('the strip would not take those Wi-Fi credentials')
+    if not rhythm and await _wait_for_the_press(transport, security, on_pressed,
+                                               out_of_reach, press_wait) == 'rhythm':
+        return 'rhythm'
 
-        applied = await transport.send_config_data(wifi_prov.config_apply_config_request(security))
-        if wifi_prov.config_apply_config_response(security, applied) != 0:
-            raise RuntimeError('the strip would not apply those Wi-Fi credentials')
+    sent = await transport.send_config_data(wifi_prov.config_set_config_request(security, ssid, passphrase))
+    if wifi_prov.config_set_config_response(security, sent) != 0:
+        raise RuntimeError('the strip would not take those Wi-Fi credentials')
 
-        # WHERE WE ARE, IN THE SESSION THAT IS ALREADY OPEN. This is the one moment it is safe to say:
-        # a session the strip authenticated, with somebody standing in the room. A strip that finishes
-        # without it is a Matter light and nothing more (docs/strip.md item 2a).
-        if hub:
-            body = ''.join(f'{k}={v}\n' for k, v in hub.items() if v is not None)
-            answer = await transport.send_data('hub', security.encrypt_data(body.encode('latin-1')).decode('latin-1'))
-            said = security.decrypt_data(answer.encode('latin-1')).decode('latin-1')
-            if said != 'ok':
-                raise RuntimeError(f'the strip answered "{said}" when told where we are')
+    applied = await transport.send_config_data(wifi_prov.config_apply_config_request(security))
+    if wifi_prov.config_apply_config_response(security, applied) != 0:
+        raise RuntimeError('the strip would not apply those Wi-Fi credentials')
+
+    # WHERE WE ARE, IN THE SESSION THAT IS ALREADY OPEN. This is the one moment it is safe to say:
+    # a session the strip authenticated, with somebody standing in the room. A strip that finishes
+    # without it is a Matter light and nothing more (docs/strip.md item 2a).
+    if hub:
+        body = ''.join(f'{k}={v}\n' for k, v in hub.items() if v is not None)
+        answer = await transport.send_data('hub', security.encrypt_data(body.encode('latin-1')).decode('latin-1'))
+        said = security.decrypt_data(answer.encode('latin-1')).decode('latin-1')
+        if said != 'ok':
+            raise RuntimeError(f'the strip answered "{said}" when told where we are')
     return 'done'
 
 
@@ -180,7 +213,13 @@ async def _wait_for_the_press(transport, security, on_pressed, out_of_reach, wai
 
     NOTHING OF THE HOUSE'S HAS MOVED YET and that is the whole shape of this rung: the session is open,
     the strip is lit, and the credentials are still here. The only two ways out are a press and the
-    household saying they cannot reach it."""
+    household saying they cannot reach it.
+
+    The ring only ever says "ask now". The answer still comes back inside the session, the ordinary
+    way, so a strip that rings and a strip that does not are told apart by nothing but how often they
+    are asked."""
+    rings = await _listen(transport)
+    every = RING_POLL if rings else PRESS_POLL
     until = time.monotonic() + wait
     while True:
         if out_of_reach is not None and out_of_reach.is_set():
@@ -193,9 +232,30 @@ async def _wait_for_the_press(transport, security, on_pressed, out_of_reach, wai
             return 'pressed'
         if said != 'waiting':
             raise RuntimeError(f'the strip answered "{said}" when asked about the press')
-        if time.monotonic() >= until:
+        left = until - time.monotonic()
+        if left <= 0:
             raise NotPressed('nobody pressed the button on the strip')
-        await asyncio.sleep(PRESS_POLL)
+        await _rest(transport if rings else None, out_of_reach, min(every, left))
+
+
+async def _listen(transport) -> bool:
+    listen = getattr(transport, 'listen_for_ring', None)
+    return bool(listen and await listen())
+
+
+async def _rest(transport, out_of_reach, seconds: float):
+    """The pause between asks: the poll interval, cut short by a ring, or by somebody saying they
+    cannot reach the button -- which must answer at once however long the poll has become."""
+    waits = [asyncio.ensure_future(asyncio.sleep(seconds))]
+    if transport is not None:
+        waits.append(asyncio.ensure_future(transport.wait_for_ring()))
+    if out_of_reach is not None:
+        waits.append(asyncio.ensure_future(out_of_reach.wait()))
+    try:
+        await asyncio.wait(waits, return_when=asyncio.FIRST_COMPLETED)
+    finally:
+        for w in waits:
+            w.cancel()
 
 
 def _tolerate_corebluetooth() -> None:

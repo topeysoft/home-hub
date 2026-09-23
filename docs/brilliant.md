@@ -551,6 +551,33 @@ MQTT base. One thing it shows plainly: that switch's motion field reads a flat 3
 draws no `Level Status` — the dimmer/PIR configuration the console wrote is what a reset loses, and finding those
 fields by diffing a configured switch against this one is the next job.
 
+### A switch the house is done with, and why the registry could not hold it (22 September)
+
+Taking a wall switch out of the house through Home Assistant's device registry lasted exactly as long
+as the puck stayed plugged in. The reason is two lines up from here: **the puck describes every switch
+it knows over MQTT discovery on every session**, and those messages are retained. `announced` is a
+per-session flag, cleared at each reconnect, so the row came back at the next reconnect or the next
+reboot and nothing anywhere said why. A household that had just got rid of a switch watched it return
+by morning.
+
+So the house says it to the **bridge**, not to the registry, and says it in a way that survives both.
+`mesh/<net>/<addr>/forget` is retained: every puck on that mesh hears it, including one that was
+unplugged while the household was getting rid of the switch, which is the case the whole bug was made
+of. The puck writes the address into NVS beside its switch list (`gone`, read before the switch list
+because `learnSwitch()` asks `excluded()`), drops the switch out of `switches[]`, and empties the
+three discovery configs and four state topics it had published for it. Its own reboot does not undo
+any of that.
+
+**The way back is letting the switch in again**, and it needs no undo: the house hands out a fresh
+unicast every time (`_next_addr`), so a switch set up again is not the address that was forgotten.
+`let_in()` clears the topic for the address it is about to use, which covers the one case where an old
+address is deliberately restored by hand (`brilliant/tools/restore_switch.py`).
+
+**What this is not.** The mesh node keeps this house's netkey. Nothing over the air takes that back —
+a factory reset at the wall is the only thing that does — so this is not claimed to be one. It is the
+house forgetting the switch, said in a way that holds. `hub/bridge.py forget_switch()`, reached from
+`DELETE /devices/<id>` whenever the device's identifier reads `mesh_<net>_<addr>`.
+
 ## The dimmer-mode diff, and what it turned up (16 September, night)
 
 With the panel appkey in hand, `tools/vendor_store.py` reads a switch's whole vendor store on either network,
@@ -1199,3 +1226,60 @@ done, and nobody is sent to a wall. If it does not, pull the tab out and push it
 That is the correct shape for a step that is *sometimes* needed and cheap when it is — and it is how
 the person with the lamp in front of them described it, unprompted, which is the second time tonight
 that has beaten an instrument.
+
+### The load type governs the wall plate too, and the field is down to four candidates
+
+*22 September. One finding from a person at a wall, one from a file that had been sitting on disk since
+the 16th, and then the clean read that settles what the file could only suggest.*
+
+**The plate obeys the load type.** The open question at the foot of the adopt spec was whether the
+unidentified dimmer/switch field governs only the mesh `Level Set` path or the switch's own touch
+gesture as well. It governs both: our stairway pair was worked by hand and **both ends are on/off only
+from the switches themselves** — a slide on the plate does not move the lamp. Nothing was written and
+nothing was reset to learn this; somebody stood at the wall.
+
+That matters more for the product than for the protocol. A household that wants a light to behave as a
+plain switch — because the LED on it cannot dim, or because a stairway has no business having a
+brightness — cannot be served by hiding a slider in the panel, because the wall would still dim. It is
+one setting, written to the switch, or it is a lie about the light. **So the field that was a curiosity
+is now the whole feature**, and identifying it buys both cases at once.
+
+**The clean read, on our own network.** `0x0005` is the hallway dimmer and it dims; `0x0006` is the
+stairway load and it does not. Both were read with `vendor_store.py`, which writes nothing. Both carry
+`0x08 = 0`, so **both are mains with a load and neither is a companion** — which rules out the confound
+that the difference might be about pairing rather than dimming. Every field that differs, with the
+identity, counter and live-reading fields set aside:
+
+| Field | `0x0005` dims | `0x0006` on/off | |
+|---|---|---|---|
+| `0x4c` | 100 | **1000** | |
+| `0x4d` | 0 | **1800** | the candidates |
+| `0x52` | 100 | **1000** | |
+| `0x53` | 0 | **1800** | |
+| `0x1a` | 2 | 1 | already disproved — two working dimmers differed here |
+| `0x03` | 200 | 0 | a motion reporting threshold, not dimming — but see below |
+| `0x56` | 3 | 3 | **reads 3 on both**, confirming both that it is not the flag and that the 16 September capture's missing `0x56` was the dropped read |
+
+`0x4b` and `0x51` are identical on both (`e803010000`), and the shape is hard to miss: **`(0x4b, 0x4c,
+0x4d)` and `(0x51, 0x52, 0x53)` are two parallel triples**, differing only in the second and third
+member. `0x4c`/`0x52` sitting at **1000** on the non-dimmer is the suggestive part, because 1000 is the
+top of the dim scale — a level pinned to full would produce exactly a switch that echoes a level and
+never moves the lamp. `0x4d`/`0x53` at 1800 reads more like a time in milliseconds.
+
+**`0x53` is not replayed by the adopt.** `CONFIG_FIELDS` in `tools/restore_switch.py` is `1a 1b 48 4f 56
+03 07 4c 4d 52` — it carries `0x4c`, `0x4d` and `0x52` but not `0x53`, which on this evidence moves with
+`0x4d` and may well belong to the same setting. Worth adding whatever the bisect concludes.
+
+**What is left is one write and a person watching a lamp**, and it is cheap now in a way it never was,
+because the power cycle turned out to be a fallback rather than a step. Treating the two triples as two
+settings, it is at most two trials on `0x0006`: set `0x4c` and `0x52` to 100, try `Level Set`; if the
+lamp still will not move, set `0x4d` and `0x53` to 0 and try again. It is reversible in both directions
+— the original values are `0x4c`/`0x52` = `e803`, `0x4d`/`0x53` = `0807` — and the interesting direction
+for the product is the opposite one anyway: making a dimmer behave as a plain switch, which is the same
+write with the values swapped.
+
+**A side finding from the same reads, worth fixing whether or not the above pans out.** The stairway
+load carries `0x03 = 0` with `0x48` and `0x4f` both enabled, where the hallway dimmer has 200, and the
+spec above says a threshold of zero floods the mesh. Its capture had the zero too, so the adopt replayed
+it faithfully and that switch has most likely been publishing its motion field at full rate since it was
+claimed.

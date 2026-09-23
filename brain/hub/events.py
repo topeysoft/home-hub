@@ -154,7 +154,9 @@ class EventLog:
         return dict(rows)
 
     # ---- keeping it a diary rather than an archive ----
-    KEEPERS_SQL = ("SELECT MAX(rowid) FROM events WHERE kind IN "
+    # The f-strings here and in prune() interpolate a row of `?` and nothing else -- every value
+    # still arrives as a bound parameter -- which is why S608 is answered rather than obeyed.
+    KEEPERS_SQL = ("SELECT MAX(rowid) FROM events WHERE kind IN "  # noqa: S608
                    f"({','.join('?' * len(KEEPERS))}) GROUP BY kind, subject, new")
 
     def prune(self, now=None) -> int:
@@ -179,7 +181,7 @@ class EventLog:
                 over = self.db.execute("SELECT COUNT(*) FROM events").fetchone()[0] - CAP
                 if over > 0:
                     cur = self.db.execute(
-                        f"DELETE FROM events WHERE rowid IN (SELECT rowid FROM events "
+                        f"DELETE FROM events WHERE rowid IN (SELECT rowid FROM events "  # noqa: S608
                         f"WHERE rowid NOT IN ({self.KEEPERS_SQL}) ORDER BY ts LIMIT ?)",
                         tuple(KEEPERS) + (over,))
                     gone += cur.rowcount

@@ -119,13 +119,21 @@ function close() {
   if (store.bridge) store.bridge = { ...store.bridge, state: 'none' }
   if (readOnce(was)) run(dismissBridge)
 }
-function key(e: KeyboardEvent) { if (e.key === 'Escape' && b.value?.state !== 'working') close() }
-onMounted(() => window.addEventListener('keydown', key))
-onUnmounted(() => window.removeEventListener('keydown', key))
+/* ESCAPE PUTS THIS DOWN AND NOTHING ELSE. Somebody plugging a bridge into the hub is quite likely to
+   be standing on Add when it knocks, and Add is This house -- so both were listening on the window
+   and one press closed the conversation AND threw them out of the page. Captured, so it is answered
+   before the page underneath hears it, and stopped there. StripSheet.vue does the same. */
+function key(e: KeyboardEvent) {
+  if (e.key !== 'Escape' || b.value?.state === 'working') return
+  e.stopImmediatePropagation()
+  close()
+}
+onMounted(() => window.addEventListener('keydown', key, true))
+onUnmounted(() => window.removeEventListener('keydown', key, true))
 </script>
 
 <template>
-  <div class="sheet-back" v-if="b" @click.self="b.state === 'working' || close()">
+  <div class="sheet-back" :class="{ 'over-panel': store.sheet }" v-if="b" @click.self="b.state === 'working' || close()">
     <div class="sheet bridge" role="dialog" :aria-label="title">
       <div class="sheet-head">
         <h2 class="display">{{ title }}</h2>

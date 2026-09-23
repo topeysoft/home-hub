@@ -3,9 +3,9 @@
   SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { moveDevice, renameDevice } from './api'
-import { store, notify, refreshFound, loadHealth } from './store'
+import { store, notify, refreshFound, loadHealth, keepLooking } from './store'
 import { doors, stripWaiting, type Act, type Caught, type Door, type Proof, type Working } from './adding'
 import Icon from './Icon.vue'
 import Blink from './prove/Blink.vue'
@@ -137,6 +137,30 @@ function intoRooms() { store.goRoom = 'unassigned'; store.sheet = null }
 /* A strip still asking, while something else has the screen. The predicate is in adding.ts with
    the rest of this screen's vocabulary, and is pinned by a test. */
 const waitingStrip = computed(() => stripWaiting(store.strip?.state))
+/* One arrival at a time, the way App.vue orders them: a bridge on the cable outranks a strip
+   knocking over the air, because somebody is holding the bridge. While that is true the row has
+   nothing to offer, so it says where it is in the queue instead of a button that would do nothing. */
+const heldUp = computed(() => !!store.bridge && store.bridge.state !== 'none')
+
+/* WHILE THIS PAGE IS OPEN, THE HUB LOOKS PROPERLY.
+   Everywhere else in the house a scan is the radio going quiet for every other device, to catch an
+   event that happens when somebody plugs a thing in and is standing right there -- which is here.
+   So this is the one place it is worth spending, and it is what lets the background loop be the
+   quiet one. It stops the moment the page goes: keepLooking is a hold the brain lets lapse, so a
+   wall left at rest cannot leave a hub scanning. design/knock/Look.dc.html. */
+const since = ref(0)
+let ears: number | undefined
+/* How long it has been listening, in the house's words rather than a clock's. It matters because a
+   page that says it is listening and shows nothing moving is a page nobody believes. */
+const listening = computed(() => since.value < 1 ? 'just started'
+  : since.value < 60 ? `${since.value} seconds in`
+  : `${Math.round(since.value / 60)} ${Math.round(since.value / 60) === 1 ? 'minute' : 'minutes'} in`)
+onMounted(() => {
+  keepLooking(true)
+  const from = Date.now()
+  ears = window.setInterval(() => { since.value = Math.round((Date.now() - from) / 1000) }, 1000)
+})
+onUnmounted(() => { keepLooking(false); clearInterval(ears) })
 
 /* What is already waiting is the whole job most of the time, so it is asked for on the way in
    rather than whenever the house next gets round to it. */
@@ -155,6 +179,20 @@ if (props.resume) open_('signin', props.resume, store.resumeName || 'Sign in aga
   <div class="add adding">
     <!-- ===== beat one: what have you got ===== -->
     <template v-if="beat === 'choose'">
+      <!-- WHILE THIS PAGE IS OPEN, THE HUB IS LISTENING, AND IT SAYS SO. Everywhere else a scan is
+           the radio going quiet for every other device in the house; here somebody asked, so it is
+           worth spending and worth admitting. No progress bar: this has no end -- it runs until the
+           page goes -- and a bar that cannot say how far along it is is a picture of progress
+           rather than progress (StripSheet.vue says the same thing about its one step). -->
+      <div class="ears" v-if="store.looking">
+        <div class="ears-head">
+          <span class="pulse-dot"></span>
+          <span class="ears-what">Listening for anything new</span>
+          <span class="ears-since">{{ listening }}</span>
+        </div>
+        <p class="ears-sub">Keeping it up while this page is open. Leave the page and the hub goes quiet again.</p>
+      </div>
+
       <div class="add-block" v-if="store.found.length || (store.bridge?.waiting ?? 0) > 0 || waitingStrip">
         <h3 class="label">Already waiting</h3>
         <ul class="found">
@@ -171,18 +209,19 @@ if (props.resume) open_('signin', props.resume, store.resumeName || 'Sign in aga
             </span>
             <button class="button small" @click="open_('blink', null, 'A switch on the wall')">Have a look</button>
           </li>
-          <!-- A KNOCKING STRIP, AND ONLY WHEN SOMETHING ELSE IS AHEAD OF IT. Its own sheet covers
-               the whole screen the moment one knocks, so the only time this page is visible with a
-               strip waiting is when a bridge has outranked it (App.vue: somebody is holding the
-               bridge). There is nothing to tap, because tapping could not bring the sheet forward
-               while the bridge still has it -- so the row says where it is in the queue instead of
-               offering a button that would do nothing. -->
+          <!-- A KNOCKING STRIP, AND IT IS AN ORDINARY ROW NOW (design/knock/). It used to have no
+               button on it: the strip's sheet covered the whole screen the moment one knocked, so
+               the only way to be looking at this page with a strip waiting was for a bridge to have
+               outranked it, and nothing tappable could have brought the sheet forward. The sheet
+               waits to be asked now, and this row is one of the two ways of asking. The other is
+               the line in the band. -->
           <li v-if="waitingStrip">
             <span class="found-icon"><Icon name="light" :size="18" /></span>
             <span class="found-text">
-              <span class="found-title">A light strip is asking to be let in</span>
-              <span class="found-kind">It will ask as soon as the one on screen is done</span>
+              <span class="found-title">A light strip is here</span>
+              <span class="found-kind">{{ heldUp ? 'It will ask as soon as the one on screen is done' : 'Knocking, and it is lit' }}</span>
             </span>
+            <button class="button small" v-if="!heldUp" @click="store.stripAsked = true">Have a look</button>
           </li>
         </ul>
       </div>

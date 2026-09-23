@@ -8,6 +8,7 @@ import { store, notify, refreshStrip } from './store'
 import { adoptStrip, stripCounted, dismissStrip, readStripOnce, stripAgain, stripDone, stripEnds, stripReach, stripRoom, stripSaw, stripWifi } from './api'
 import Icon from './Icon.vue'
 import StripArt from './StripArt.vue'
+import { stripWaiting } from './adding'
 
 /*
  * Setting a light strip up, on the wall.
@@ -64,9 +65,16 @@ const lede = computed(() => {
     return 'Filling up again, from the end it plugs in at. Tap when it reaches the far end of the strip as it is now.'
   return ''
 })
+/* THE LAST BEAT DOES NOT CLAIM THE ROOM IT HAS NOT GOT. Putting a light in a room needs the house
+   to have made a device for it, and discovery is a moment behind the room chip -- in a real house on
+   22 September it was more than twenty seconds behind, the placing was given up on, and this line
+   said "in the room it lives in" anyway. The household read that, saw the light in the wrong place,
+   and set the whole strip up again. The brain keeps the choice now (hub/strip.py `_owed`), so this
+   only has to say which of the two is true. */
 const finished = computed(() =>
   back.value === 'colors' ? 'Its colors are right now.'
   : back.value === 'length' ? 'It knows where it ends now.'
+  : b.value?.placing ? `It is a light in the house now — on, dim, any color, on a schedule. It will be in ${b.value.placing} as soon as the house has finished noticing it.`
   : 'It is a light in the house now — on, dim, any color, on a schedule, in the room it lives in.')
 
 /* ONE STEP, where a bridge has three. The hub does not hand over the Wi-Fi any more and never sees
@@ -115,7 +123,15 @@ const dismiss = () => run(dismissStrip)
 const saw = (what: string) => { other.value = false; run(() => stripSaw(what)) }
 const ends = () => run(stripEnds)
 const again = () => run(stripAgain)
-const room = (id: string) => run(() => stripRoom(id))
+/* WHICH ONE WAS TAPPED, SAID AT ONCE AND BY THE THING THAT WAS TAPPED. The chips used to carry
+   `busy` -- which every chip got, so the whole row dimmed together and none of them said "you
+   picked me". They were also styled `chip`, which is the camera tile's status badge and not a
+   button at all: no press state, because it was never meant to be pressed. This is `chip-btn`, the
+   room picker the panel already uses for this same question under Add, and the answer is set before
+   the request goes out, because the person has to see their own tap land. Nothing vanishes under
+   the finger that touched it (AGENTS.md §4). */
+const chose = ref('')
+const room = (id: string) => { chose.value = id; run(() => stripRoom(id)) }
 
 /* A PRESS, ON THE THING (design/door/PressIt.dc.html, design/strip/Press.dc.html). The one thing our
    own door asks, and there is nothing on this screen to do: the session is already open, the strip is
@@ -148,16 +164,32 @@ const tell = () => {
 function close() {
   other.value = false
   const was = b.value?.state
+  /* PUTTING A KNOCK DOWN IS NOT THROWING IT AWAY (design/knock/). A strip that is still asking goes
+     back to being a line in the band and a dot on the + door, exactly as it was before anybody
+     tapped -- so closing this is un-asking, and nothing of the strip's is forgotten. Blanking it
+     here would take the line away too, and the strip is still in the room, still knocking.
+     "Not mine" is how a household says they do not want it, and it is a button of its own. */
+  store.stripAsked = false
+  store.stripPutDown = true
+  if (stripWaiting(was)) return
   if (store.strip) store.strip = { ...store.strip, state: 'none' }
   if (readStripOnce(was)) run(stripDone)
 }
-function key(e: KeyboardEvent) { if (e.key === 'Escape' && b.value?.state !== 'working') close() }
-onMounted(() => window.addEventListener('keydown', key))
-onUnmounted(() => window.removeEventListener('keydown', key))
+/* ESCAPE PUTS THIS DOWN AND NOTHING ELSE. This can be open over This house -- a knock opens it from
+   Add -- and both listen on the window, so one press was closing the conversation AND throwing the
+   household out of the page they opened it from. Captured, so it is answered before the page
+   underneath hears it, and stopped there. */
+function key(e: KeyboardEvent) {
+  if (e.key !== 'Escape' || b.value?.state === 'working') return
+  e.stopImmediatePropagation()
+  close()
+}
+onMounted(() => window.addEventListener('keydown', key, true))
+onUnmounted(() => window.removeEventListener('keydown', key, true))
 </script>
 
 <template>
-  <div class="sheet-back" v-if="b" @click.self="b.state === 'working' || close()">
+  <div class="sheet-back" :class="{ 'over-panel': store.sheet }" v-if="b" @click.self="b.state === 'working' || close()">
     <div class="sheet strip" role="dialog" :aria-label="title">
       <div class="sheet-head">
         <h2 class="display">{{ title }}</h2>
@@ -282,14 +314,22 @@ onUnmounted(() => window.removeEventListener('keydown', key))
             <button class="button wide" :class="{ busy }" @click="ends">That’s the whole of it</button>
             <button class="button ghost wide" @click="again">Start again</button>
           </div>
+          <!-- CLOSE ENOUGH IS FINE, AND SAYING SO IS WHAT KEEPS THIS BEAT ONE TAP. Tapping a beat
+               late or early is a few lights out either way, and somebody who does not know it can
+               be fixed afterwards will sit through the fill again to get it exact. It can be fixed
+               afterwards -- on the strip's own light pane, which is where the length was decided to
+               live for ever after (design/strip/Nudge.dc.html). This line is only honest because
+               that control exists; it went in with it. -->
+          <p class="after">A light or two out is fine. You can move the end afterwards, on the strip’s own screen.</p>
         </template>
 
         <!-- the ordinary room chips every other new device gets. Nothing here is invented. -->
         <template v-else-if="b.state === 'room'">
           <p class="sheet-lede">That is the only thing left to say. It is lit, all of it, and it is yours.</p>
           <div class="stage"><StripArt show="lit" /></div>
-          <div class="rooms">
-            <button class="chip" v-for="r in b.rooms ?? []" :key="r.id" :class="{ busy }" @click="room(r.id)">{{ r.name }}</button>
+          <div class="press-rooms">
+            <button class="chip-btn" v-for="r in b.rooms ?? []" :key="r.id" :class="{ on: chose === r.id }"
+                    :aria-pressed="chose === r.id" @click="room(r.id)">{{ r.name }}</button>
           </div>
         </template>
 
@@ -337,13 +377,26 @@ onUnmounted(() => window.removeEventListener('keydown', key))
   background: var(--surface); border: 1px solid var(--edge); color: var(--ink);
 }
 .pick:active { background: var(--surface-press); }
-.rooms { display: flex; flex-wrap: wrap; gap: 10px; }
+/* The room chips are `press-rooms`, which is the picker Add already uses for this same question --
+   not a row of this screen's own. This used to be a `.rooms` block here, and `.rooms` in panel.css
+   is THE ROOMS TAB's container: `flex-direction: column`. A scoped block only overrides what it
+   names, so the wrap here was set and the direction came from the other screen, and every room in
+   the house was a full-width row. In a house with twenty-three of them that is the whole sheet.
+   AGENTS.md §4, and lint:css cannot see this one because the two blocks are not both in panel.css. */
 .button.wide { width: 100%; }
 /* a full-width primary with a small ghost beside it reads as an orphan, so they stack */
 .flow-actions.stack { flex-direction: column; align-items: stretch; }
 /* The line that says nothing is happening yet, and that nothing is meant to be. It sits between the
    strip and the only button, where a primary would be on every other beat -- because on this one the
    thing to press is not on the wall. */
+/* The line under the two ways out, quieter than either of them: it is not an instruction and not a
+   third thing to press, it is permission to stop worrying about the tap. */
+.after {
+  margin: 14px 0 0;
+  text-align: center;
+  font-size: 13px;
+  color: var(--muted);
+}
 .waiting {
   display: flex; align-items: center; justify-content: center; gap: 9px;
   margin: 0 0 16px; font-size: 13.5px; color: var(--ink-2);

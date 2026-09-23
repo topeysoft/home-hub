@@ -1,15 +1,16 @@
 // SPDX-FileCopyrightText: 2026 Temitope Adeyeri
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { reactive, watch } from 'vue'
-import { doRestart, type Rung, getBridge, type Bridge, getStrip, type Strip, getHome, getEvents, getAmbient, getScenes, getStatus, getDiscovered, getRoutines, getAssistant, getPresence, getHealth, getSounds, connect, act, setIntent, setHomeIntent, type Room, type Device, type Home, type Event, type Ambient, type Rules, type Status, type Found, type Intent, type Routine, type Assistant, type Presence, type Note, type Sound, requestUpdate, getPhones, type Phone, type Ask, getAccounts, type Account, getShare, type Share, getHappened, type Happened, getChanges, type Changes } from './api'
+import { doRestart, type Rung, getBridge, type Bridge, getStrip, stripLooking, type Strip, getHome, getEvents, getAmbient, getScenes, getStatus, getDiscovered, getRoutines, getAssistant, getPresence, getHealth, getSounds, connect, act, setIntent, setHomeIntent, type Room, type Device, type Home, type Event, type Ambient, type Rules, type Status, type Found, type Intent, type Routine, type Assistant, type Presence, type Note, type Sound, requestUpdate, getPhones, type Phone, type Ask, getAccounts, type Account, getShare, type Share, getHappened, type Happened, getChanges, type Changes } from './api'
 import { lock } from './code'
+import { isPage } from './pages'
 import { sunPosition, sunGuess, moonPhase } from './sun'
 import { locale, setHouseLanguage } from './lang'
 
 /* The few soft sheets the panel has. Named rather than written out twice: the restart keeps the one
    it closed so it can come back to it, and `typeof store.sheet` there would make the store's own type
    circular -- which typescript answers by quietly making the whole store `any`. */
-export type Sheet = null | 'location' | 'add' | 'code' | 'why' | 'routines' | 'hub' | 'look' | 'house' | 'people' | 'accounts' | 'share' | 'notes' | 'happened' | 'changes'
+export type Sheet = null | 'location' | 'add' | 'code' | 'why' | 'routines' | 'hub' | 'look' | 'house' | 'people' | 'accounts' | 'things' | 'share' | 'notes' | 'happened' | 'changes'
 
 export const store = reactive({
   rooms: [] as Room[], linkUp: false, linkLost: false, error: '', loaded: false,   // linkLost: down long enough to be worth mentioning
@@ -29,8 +30,12 @@ export const store = reactive({
   /* ?sheet=location previews one. ?add=switch is not a preview but the wall's own handoff: the code
      on the wall opens the house on a phone, and it promised to land ON the step with the camera --
      which it never did, because nothing here opened the page it lives on. Now it does. */
+  /* The list this checked against was written out by hand beside PAGES in pages.ts, and the two had
+     to be edited together with nothing saying so -- a page added to one and not the other simply
+     would not open from a query string, silently, on the one route nobody tests. It asks pages.ts
+     now. 'why' is not a page of This house, so it stays named here. */
   sheet: (new URLSearchParams(location.search).has('add') ? 'add'
-    : ['location', 'add', 'code', 'why', 'routines', 'hub', 'look', 'house', 'people', 'accounts', 'share', 'notes', 'happened', 'changes'].includes(new URLSearchParams(location.search).get('sheet') ?? '') ? new URLSearchParams(location.search).get('sheet') : null) as Sheet,
+    : (v => v === 'why' || isPage(v) ? v : null)(new URLSearchParams(location.search).get('sheet') ?? '')) as Sheet,
   whyRoom: new URLSearchParams(location.search).get('room') as string | null,   // the room the why sheet is about; ?sheet=why&room=kitchen previews it
   resume: new URLSearchParams(location.search).get('signin') as string | null,   // a conversation already open in the house (signing an account in again); the add sheet picks it up. ?sheet=add&signin=<flow> previews it
   /* ...and what it is about, when whoever handed it over knows. The screen it lands on is headed by
@@ -83,6 +88,18 @@ export const store = reactive({
      the same thing and is why this is not cleared to null -- see refreshBridge(). */
   bridge: null as Bridge | null,
   strip: null as Strip | null,   // a light strip being set up; hub/strip.py. One at a time, same as a bridge
+  /* SOMEBODY ASKED FOR THE STRIP SHEET -- tapped its line in the band, or its row on Add. A knock
+     does not open a screen on its own any more (design/knock/, direction C with A): it is a line
+     and a dot, and this is the tap that turns one into the conversation. Standing on Add counts as
+     asking without it; see stripSheetOpen() in adding.ts, which is where both rules live. */
+  stripAsked: false,
+  /* ...and put back down again. Closing the conversation while standing on Add has to stick, or the
+     page that opened it opens it again straight away. Lives and dies with the knock, the same as
+     stripAsked. */
+  stripPutDown: false,
+  /* The hub is scanning right now because this wall asked it to. Only ever true while Add is open
+     AND the hub has answered, so the page never claims to be listening on an older hub. */
+  looking: false,
   /* A room the panel has been asked to open from somewhere else -- New devices, after an account
      brought in six things at once. App.vue takes it and clears it; nothing else reads it. */
   goRoom: null as string | null,
@@ -690,12 +707,50 @@ const previewStrip = (beat: string): Strip => ({
     : [{ id: 'living', name: 'Living room' }, { id: 'kitchen', name: 'Kitchen' },
        { id: 'bedroom', name: 'Bedroom' }, { id: 'study', name: 'Study' }],
 })
+/* HOW OFTEN TO ASK, AND IT IS THREE SPEEDS RATHER THAN TWO.
+   The idle one used to be sixty seconds, and it was sixty of the hundred and eight a household
+   measured between plugging a strip in and the wall saying anything (docs/strip.md item 34). It is
+   not the fast path any more -- Add is -- but it was also the cheapest of those seconds to give
+   back, so: fast while a conversation is running, fast while somebody is on Add and waiting for
+   something to turn up, and half a minute otherwise. */
 export async function refreshStrip() {
   clearTimeout(stripTimer)
-  if (STRIP_PREVIEW) { store.strip = previewStrip(STRIP_PREVIEW); return }
+  /* ?strip= is asking to LOOK AT a beat, which is the asking (AGENTS.md §4). Without this the one
+     documented way to hold a strip screen still would draw the band's line and nothing else. */
+  if (STRIP_PREVIEW) { store.strip = previewStrip(STRIP_PREVIEW); store.stripAsked = true; return }
   try { store.strip = await getStrip() } catch { store.strip = null }
+  /* A tap belongs to the knock it answered. A strip that stops knocking while nobody is looking
+     ends the job, and leaving this set would open the NEXT one by itself -- which is the whole of
+     what design/knock/ took away. */
+  if (!store.strip || store.strip.state === 'none') { store.stripAsked = false; store.stripPutDown = false }
   const live = !!store.strip && !['none', 'ready'].includes(store.strip.state)
-  stripTimer = window.setTimeout(refreshStrip, live ? 2000 : 60000)
+  stripTimer = window.setTimeout(refreshStrip, live || store.sheet === 'add' ? 2000 : 30000)
+}
+
+/* KEEP THE HUB LOOKING WHILE ADD IS OPEN.
+   The brain holds one of these for a few seconds only, so this has to keep saying it -- which is
+   the point: a wall that goes to rest, gets closed or is unplugged simply stops, and the hub goes
+   quiet on its own rather than scanning for ever because a page was left open. It is also the one
+   moment when a Bluetooth scan costs only the person who asked for it. design/knock/Look.dc.html. */
+let lookTimer: number | undefined
+export function keepLooking(on: boolean) {
+  clearInterval(lookTimer)
+  store.looking = false
+  if (!on) return
+  /* The answer is a free, fresh status -- but only if it IS one. A hub older than this route, or
+     anything else standing in for one, can answer 200 with something that is not a strip, and
+     taking it would wipe the knock this page exists to show. The mock brain answers every POST it
+     does not know with {ok:true}, which is how this was found: the row vanished from Add the moment
+     the page opened it. */
+  const tick = () => {
+    stripLooking()
+      .then(v => { store.looking = true; if (v && typeof v.state === 'string') store.strip = v })
+      /* A hub older than this route answers 404, and a page that says it is listening when nothing
+         is listening is the panel telling the household a comfortable lie. Say nothing instead. */
+      .catch(() => { store.looking = false })
+  }
+  tick()
+  lookTimer = window.setInterval(tick, 5000)
 }
 
 let foundTimer: number | undefined
