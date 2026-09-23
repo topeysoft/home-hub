@@ -1,0 +1,98 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp-rgb: 233,184,114; --lamp: rgb(var(--lamp-rgb)); --lamp-ink: #2a1c07;
+      --live-rgb: 116,198,157; --live: rgb(var(--live-rgb));
+      --danger-rgb: 224,138,138; --danger: rgb(var(--danger-rgb));
+      --r-lg: 22px; --r-md: 16px;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12.5px; letter-spacing: -.01em; }
+    .t2 { font-size: 13px; color: var(--muted); }
+    .box { border-radius: var(--r-lg); border: 1px solid var(--edge); background: rgba(255,255,255,.03); padding: 18px 20px; }
+    .box.for { border-color: rgba(var(--live-rgb),.3); background: linear-gradient(rgba(var(--live-rgb),.07), rgba(var(--live-rgb),.07)), rgba(255,255,255,.02); }
+    .box.against { border-color: rgba(var(--danger-rgb),.3); background: rgba(var(--danger-rgb),.05); }
+    .box p { margin: 8px 0 0; font-size: 13.5px; line-height: 1.5; color: var(--ink-2); }
+    .box p strong { font-weight: 500; color: var(--ink); }
+    /* the ladder: one row per thing that crosses the air */
+    .lane { position: absolute; top: 24px; bottom: 0; width: 1px; background: rgba(255,255,255,.09); }
+    .who { position: absolute; top: 0; font-size: 13px; font-weight: 500; color: var(--ink);
+           transform: translateX(-50%); white-space: nowrap; }
+    .step { position: absolute; height: 26px; display: flex; align-items: center; }
+    .step .bar { flex: 1; height: 1px; background: rgba(var(--lamp-rgb),.42); position: relative; }
+    .step .bar::after { content: ""; position: absolute; right: -1px; top: -3px; border: 3.5px solid transparent;
+                        border-left-color: rgba(var(--lamp-rgb),.7); }
+    .step .bar.back { background: rgba(255,255,255,.2); }
+    .step .bar.back::after { right: auto; left: -1px; border-left-color: transparent; border-right-color: rgba(255,255,255,.4); }
+    .step .lbl { position: absolute; left: 50%; transform: translateX(-50%); top: -3px; white-space: nowrap;
+                 background: rgba(12,13,16,.86); padding: 0 8px; font-size: 12px; color: var(--ink-2); }
+    .n { position: absolute; left: 0; width: 26px; text-align: right; font-size: 11.5px; color: var(--muted);
+         font-variant-numeric: tabular-nums; }
+    .band { position: absolute; border-radius: 12px; border: 1px dashed rgba(var(--danger-rgb),.5);
+            background: rgba(var(--danger-rgb),.07); }
+    .band.good { border-color: rgba(var(--live-rgb),.5); background: rgba(var(--live-rgb),.07); border-style: solid; }
+    .tally { display: inline-flex; align-items: baseline; gap: 7px; padding: 7px 14px; border-radius: 999px;
+             border: 1px solid var(--edge-hi); background: rgba(255,255,255,.04); }
+    .tally b { font-size: 21px; font-weight: 500; color: var(--ink); font-variant-numeric: tabular-nums; }
+    .tally span { font-size: 12.5px; color: var(--muted); }
+    .strip { height: 14px; border-radius: 4px;
+             background: repeating-linear-gradient(90deg, rgb(255,96,0) 0 4px, transparent 4px 7px);
+             filter: drop-shadow(0 0 9px rgba(255,140,40,.7)); }
+  </style>
+</helmet>
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: var(--bg); color: var(--ink); font-size: 17px; line-height: 1.4;">
+  <div style="position: absolute; inset: 0; background: linear-gradient(rgb(29,33,46) 0%, rgb(41,42,63) 44%, rgb(92,63,57) 84%, rgb(62,44,42) 100%);"></div>
+  <div style="position: absolute; left: -222px; top: -135px; width: 1855px; height: 1156px; background: radial-gradient(58% 54% at 30% 64%, rgba(72,63,135,.4), transparent 68%), radial-gradient(62% 52% at 54% 110%, rgba(55,51,100,.44), transparent 72%);"></div>
+  <div style="position: absolute; inset: 0; background: rgba(6,7,9,.58);"></div>
+
+  <div class="cap" style="position: absolute; left: 60px; top: 44px;">The errand protocol &mdash; direction A</div>
+  <h3 class="dsp" style="position: absolute; left: 60px; top: 78px; width: 1180px; margin: 0; font-size: 31px; font-weight: 400;">A &mdash; the strip says when it is pressed</h3>
+  <p style="position: absolute; left: 60px; top: 130px; width: 1320px; margin: 0; color: var(--ink-2); font-size: 15px; line-height: 1.6;">Stop asking. The thing with the button on it is the thing that knows, so let it speak once rather than be questioned a hundred and seventy times.</p>
+<div style="position: absolute; left: 60px; top: 232px; width: 1320px; height: 410px;">
+<div class="lane" style="left: 150px;"></div>
+<div class="lane" style="left: 640px;"></div>
+<div class="lane" style="left: 1130px;"></div>
+<div class="who" style="left: 150px;">The hub <span style="color: var(--muted); font-weight: 400;">&mdash; in the garage</span></div>
+<div class="who" style="left: 640px;">The puck <span style="color: var(--muted); font-weight: 400;">&mdash; in the hall</span></div>
+<div class="who" style="left: 1130px;">The strip <span style="color: var(--muted); font-weight: 400;">&mdash; behind the television</span></div>
+<div class="band good" style="left: 80px; top: 172px; width: 1120px; height: 112px;"></div>
+<div class="cap" style="position: absolute; left: 92px; top: 180px; color: rgba(var(--live-rgb),.9);">The wait &mdash; nothing crosses the air until the button is pressed</div>
+<div class="n" style="top: 59px; left: 106px;">1</div>
+<div class="step" style="left: 150px; top: 54px; width: 980px;"><div class="bar"></div><div class="lbl">prov-session &middot; <span class="mono">406&rarr;</span> <span class="mono">&larr;416</span></div></div>
+<div class="n" style="top: 89px; left: 106px;">2</div>
+<div class="step" style="left: 150px; top: 84px; width: 980px;"><div class="bar"></div><div class="lbl">prov-session &middot; <span class="mono">75&rarr;</span> <span class="mono">&larr;89</span></div></div>
+<div class="n" style="top: 145px; left: 106px;">3</div>
+<div class="step" style="left: 150px; top: 140px; width: 980px;"><div class="bar"></div><div class="lbl">press &middot; &ldquo;tell me&rdquo; &mdash; and subscribe</div></div>
+<div class="n" style="top: 219px; left: 596px;"></div>
+<div class="step" style="left: 640px; top: 214px; width: 490px;"><div class="bar back"></div><div class="lbl">notify &mdash; ciphertext, unasked for</div></div>
+<div class="n" style="top: 249px; left: 106px;">4</div>
+<div class="step" style="left: 150px; top: 244px; width: 490px;"><div class="bar back"></div><div class="lbl">one message: something arrived</div></div>
+<div class="n" style="top: 305px; left: 106px;">5</div>
+<div class="step" style="left: 150px; top: 300px; width: 980px;"><div class="bar"></div><div class="lbl">prov-config &middot; the Wi&#8209;Fi</div></div>
+<div class="n" style="top: 335px; left: 106px;">6</div>
+<div class="step" style="left: 150px; top: 330px; width: 980px;"><div class="bar"></div><div class="lbl">prov-config &middot; apply</div></div>
+<div class="n" style="top: 365px; left: 106px;">7</div>
+<div class="step" style="left: 150px; top: 360px; width: 980px;"><div class="bar"></div><div class="lbl">hub &middot; where we are</div></div>
+<div class="t2" style="position: absolute; left: 0; top: 392px; width: 1320px; text-align: center; font-size: 13px;">The strip already has a GATT characteristic for the press. It gains a <strong style="color: var(--ink-2); font-weight: 500;">notification</strong> on it, and the job protocol gains one message type: something came back that nobody asked for.</div>
+</div><div style="position: absolute; left: 60px; top: 172px;"><span class="tally" style="margin-right: 12px;"><b>7</b><span>exchanges, always</span></span><span class="tally" style="margin-right: 12px;"><b>0</b><span>round trips while waiting</span></span><span class="tally" style="margin-right: 12px;"><b>1</b><span>new message type</span></span><span class="tally" style="margin-right: 12px;"><b>&mdash;</b><span>buffers never run out</span></span></div><div class="box for" style="position: absolute; left: 60px; top: 690px; width: 646px;"><span class="cap" style="color: rgba(var(--live-rgb),.85);">For</span><p><strong>The wait costs nothing at all</strong> &mdash; no traffic, no buffers, no MQTT, and the mesh gets its rate back while somebody walks to the strip. The notification is still ciphertext the puck cannot read, so <strong>the tube is as sealed as it ever was</strong>, and an adoption becomes seven exchanges, well inside even the stock buffer pool.</p></div><div class="box against" style="position: absolute; left: 734px; top: 690px; width: 646px;"><span class="cap" style="color: rgba(var(--danger-rgb),.85);">Against</span><p><strong>It needs firmware on the strip</strong>, which one already in a house will not have &mdash; so the hub needs a fallback, and there are two ways of waiting rather than one. It also makes the courier carry something <em>unsolicited</em>, the first thing here that is not a reply, and a dropped notification is a household at a strip that says nothing. <strong>A timeout has to sit behind it.</strong></p></div>
+</div>
+</x-dc>
+</body>
+</html>

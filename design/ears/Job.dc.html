@@ -1,0 +1,104 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp-rgb: 233,184,114; --lamp: rgb(var(--lamp-rgb)); --lamp-ink: #2a1c07;
+      --live-rgb: 116,198,157; --live: rgb(var(--live-rgb));
+      --danger-rgb: 224,138,138; --danger: rgb(var(--danger-rgb));
+      --r-lg: 22px; --r-md: 16px;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12.5px; letter-spacing: -.01em; }
+    .t2 { font-size: 13px; color: var(--muted); }
+    .box { border-radius: var(--r-lg); border: 1px solid var(--edge); background: rgba(255,255,255,.03); padding: 18px 20px; }
+    .box.for { border-color: rgba(var(--live-rgb),.3); background: linear-gradient(rgba(var(--live-rgb),.07), rgba(var(--live-rgb),.07)), rgba(255,255,255,.02); }
+    .box.against { border-color: rgba(var(--danger-rgb),.3); background: rgba(var(--danger-rgb),.05); }
+    .box p { margin: 8px 0 0; font-size: 13.5px; line-height: 1.5; color: var(--ink-2); }
+    .box p strong { font-weight: 500; color: var(--ink); }
+    /* the ladder: one row per thing that crosses the air */
+    .lane { position: absolute; top: 24px; bottom: 0; width: 1px; background: rgba(255,255,255,.09); }
+    .who { position: absolute; top: 0; font-size: 13px; font-weight: 500; color: var(--ink);
+           transform: translateX(-50%); white-space: nowrap; }
+    .step { position: absolute; height: 26px; display: flex; align-items: center; }
+    .step .bar { flex: 1; height: 1px; background: rgba(var(--lamp-rgb),.42); position: relative; }
+    .step .bar::after { content: ""; position: absolute; right: -1px; top: -3px; border: 3.5px solid transparent;
+                        border-left-color: rgba(var(--lamp-rgb),.7); }
+    .step .bar.back { background: rgba(255,255,255,.2); }
+    .step .bar.back::after { right: auto; left: -1px; border-left-color: transparent; border-right-color: rgba(255,255,255,.4); }
+    .step .lbl { position: absolute; left: 50%; transform: translateX(-50%); top: -3px; white-space: nowrap;
+                 background: rgba(12,13,16,.86); padding: 0 8px; font-size: 12px; color: var(--ink-2); }
+    .n { position: absolute; left: 0; width: 26px; text-align: right; font-size: 11.5px; color: var(--muted);
+         font-variant-numeric: tabular-nums; }
+    .band { position: absolute; border-radius: 12px; border: 1px dashed rgba(var(--danger-rgb),.5);
+            background: rgba(var(--danger-rgb),.07); }
+    .band.good { border-color: rgba(var(--live-rgb),.5); background: rgba(var(--live-rgb),.07); border-style: solid; }
+    .tally { display: inline-flex; align-items: baseline; gap: 7px; padding: 7px 14px; border-radius: 999px;
+             border: 1px solid var(--edge-hi); background: rgba(255,255,255,.04); }
+    .tally b { font-size: 21px; font-weight: 500; color: var(--ink); font-variant-numeric: tabular-nums; }
+    .tally span { font-size: 12.5px; color: var(--muted); }
+    .strip { height: 14px; border-radius: 4px;
+             background: repeating-linear-gradient(90deg, rgb(255,96,0) 0 4px, transparent 4px 7px);
+             filter: drop-shadow(0 0 9px rgba(255,140,40,.7)); }
+  </style>
+</helmet>
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: var(--bg); color: var(--ink); font-size: 17px; line-height: 1.4;">
+  <div style="position: absolute; inset: 0; background: linear-gradient(rgb(29,33,46) 0%, rgb(41,42,63) 44%, rgb(92,63,57) 84%, rgb(62,44,42) 100%);"></div>
+  <div style="position: absolute; left: -222px; top: -135px; width: 1855px; height: 1156px; background: radial-gradient(58% 54% at 30% 64%, rgba(72,63,135,.4), transparent 68%), radial-gradient(62% 52% at 54% 110%, rgba(55,51,100,.44), transparent 72%);"></div>
+  <div style="position: absolute; inset: 0; background: rgba(6,7,9,.58);"></div>
+
+  <div class="cap" style="position: absolute; left: 60px; top: 44px;">The errand protocol &mdash; where it stands</div>
+  <h3 class="dsp" style="position: absolute; left: 60px; top: 78px; width: 1180px; margin: 0; font-size: 31px; font-weight: 400;">Today &mdash; the ladder, as measured</h3>
+  <p style="position: absolute; left: 60px; top: 130px; width: 1320px; margin: 0; color: var(--ink-2); font-size: 15px; line-height: 1.6;">It works. Nine exchanges when somebody is standing at the strip, and a hundred and seventy when they are not.</p>
+<div style="position: absolute; left: 60px; top: 232px; width: 1320px; height: 460px;">
+<div class="lane" style="left: 150px;"></div>
+<div class="lane" style="left: 640px;"></div>
+<div class="lane" style="left: 1130px;"></div>
+<div class="who" style="left: 150px;">The hub <span style="color: var(--muted); font-weight: 400;">&mdash; in the garage</span></div>
+<div class="who" style="left: 640px;">The puck <span style="color: var(--muted); font-weight: 400;">&mdash; in the hall</span></div>
+<div class="who" style="left: 1130px;">The strip <span style="color: var(--muted); font-weight: 400;">&mdash; behind the television</span></div>
+<div class="band" style="left: 80px; top: 198px; width: 1120px; height: 140px;"></div>
+<div class="cap" style="position: absolute; left: 92px; top: 206px; color: rgba(var(--danger-rgb),.9);">The wait &mdash; and every beat of it is a round trip</div>
+<div class="n" style="top: 53px; left: 106px;"></div>
+<div class="step" style="left: 150px; top: 48px; width: 490px;"><div class="bar"></div><div class="lbl">open &mdash; find the door</div></div>
+<div class="n" style="top: 83px; left: 596px;"></div>
+<div class="step" style="left: 640px; top: 78px; width: 490px;"><div class="bar"></div><div class="lbl">scan 10&thinsp;s, up to three times &middot; connect 129&ndash;868&thinsp;ms</div></div>
+<div class="n" style="top: 135px; left: 106px;">1</div>
+<div class="step" style="left: 150px; top: 130px; width: 980px;"><div class="bar"></div><div class="lbl">prov-session &middot; <span class="mono">406&rarr;</span> <span class="mono">&larr;416</span> &middot; 2.0&ndash;2.8&thinsp;s</div></div>
+<div class="n" style="top: 165px; left: 106px;">2</div>
+<div class="step" style="left: 150px; top: 160px; width: 980px;"><div class="bar"></div><div class="lbl">prov-session &middot; <span class="mono">75&rarr;</span> <span class="mono">&larr;89</span> &middot; 0.6&ndash;0.8&thinsp;s</div></div>
+<div class="n" style="top: 221px; left: 106px;">3</div>
+<div class="step" style="left: 150px; top: 216px; width: 980px;"><div class="bar"></div><div class="lbl">press &middot; <span class="mono">17&rarr;</span> <span class="mono">&larr;23</span> &ldquo;waiting&rdquo;</div></div>
+<div class="n" style="top: 251px; left: 106px;">4</div>
+<div class="step" style="left: 150px; top: 246px; width: 980px;"><div class="bar"></div><div class="lbl">press &middot; &ldquo;waiting&rdquo;</div></div>
+<div class="n" style="top: 281px; left: 106px;">&hellip;</div>
+<div class="step" style="left: 150px; top: 276px; width: 980px;"><div class="bar"></div><div class="lbl">every 0.7&thinsp;s, for up to 120 seconds</div></div>
+<div class="n" style="top: 311px; left: 106px;">170</div>
+<div class="step" style="left: 150px; top: 306px; width: 980px;"><div class="bar"></div><div class="lbl">press &middot; &ldquo;pressed&rdquo;</div></div>
+<div class="n" style="top: 355px; left: 106px;">171</div>
+<div class="step" style="left: 150px; top: 350px; width: 980px;"><div class="bar"></div><div class="lbl">prov-config &middot; <span class="mono">48&rarr;</span> <span class="mono">&larr;20</span> &middot; the Wi&#8209;Fi</div></div>
+<div class="n" style="top: 385px; left: 106px;">172</div>
+<div class="step" style="left: 150px; top: 380px; width: 980px;"><div class="bar"></div><div class="lbl">prov-config &middot; <span class="mono">18&rarr;</span> <span class="mono">&larr;20</span> &middot; apply</div></div>
+<div class="n" style="top: 415px; left: 106px;">173</div>
+<div class="step" style="left: 150px; top: 410px; width: 980px;"><div class="bar"></div><div class="lbl">hub &middot; <span class="mono">96&rarr;</span> <span class="mono">&larr;18</span> &middot; where we are</div></div>
+<div class="t2" style="position: absolute; left: 0; top: 442px; width: 1320px; text-align: center; font-size: 13px;">Measured on the bench, 23 September. Each exchange is an MQTT hop, a GATT write, a GATT read and an MQTT hop back: <strong style="color: var(--ink-2); font-weight: 500;">0.7 to 3.3 seconds</strong>.</div>
+</div><div style="position: absolute; left: 60px; top: 172px;"><span class="tally" style="margin-right: 12px;"><b>9</b><span>exchanges, pressed at once</span></span><span class="tally" style="margin-right: 12px;"><b>17.5s</b><span>end to end</span></span><span class="tally" style="margin-right: 12px;"><b>~170</b><span>exchanges if they take their time</span></span><span class="tally" style="margin-right: 12px;"><b>12</b><span>before NimBLE runs out</span></span></div><div class="box for" style="position: absolute; left: 60px; top: 716px; width: 646px;"><span class="cap" style="color: rgba(var(--live-rgb),.85);">For</span><p><strong>It works, today, unchanged.</strong> A whole adoption went down this exact ladder and a strip joined the household&rsquo;s network, with the hub never in radio range of it. The puck read none of it.</p></div><div class="box against" style="position: absolute; left: 734px; top: 716px; width: 646px;"><span class="cap" style="color: rgba(var(--danger-rgb),.85);">Against</span><p><strong>A hundred and seventy round trips for one bit of news.</strong> The wait is 95% of the traffic; it is what exhausts NimBLE&rsquo;s buffers mid-session (<span class="mono">rc=6</span>, which reads as a dropped link and is not one); and it holds the second radio open the whole time somebody is walking across the house. <strong>Everything else on this row argues about this band.</strong></p></div>
+</div>
+</x-dc>
+</body>
+</html>
