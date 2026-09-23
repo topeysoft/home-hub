@@ -71,10 +71,17 @@ that did not exist, a fake home that was a list, and no broker.
    `design/ears/` has five boards and the direction is **A, the bridge puck as an errand runner** — the
    hub hands it a job over MQTT, it does the GATT work, and **the SRP6a session stays end to end**, so
    the puck carries bytes it cannot read and the press gate stays on the strip. Item 33.
-   **The first thing to find out is a bench question and nothing should be designed past it:** can the
-   puck's ESP32 be a GATT central while it is already a mesh proxy client on the same radio? Nothing
-   here has ever tried. Item 15's 13 dB is the same problem measured on a bench; `hardware/` has still
-   never had the conversation.
+   **The bench question is answered and direction A survives.** It was never whether the puck could be
+   a GATT central — it already is one, because the mesh proxy link *is* a GATT connection. It was
+   whether it could hold a **second** one, and it can: 61 seconds beside a live mesh link, 16 KB out
+   and 5 KB back, nothing dropped, a wall switch still obeying. The cost is that the mesh's PDU rate
+   falls to about a fifth while an errand runs, and a six-second scan stops it dead — so the protocol
+   must have an end, and the hub should hand over an **address** rather than ask the puck to go
+   looking. Item 38. **What is still unproven is the claim the direction rests on**: no real SRP6a
+   session has gone through the puck, and neither link was tested at the distance item 15 is about.
+   **The errand protocol is the next design step and per `AGENTS.md` §1 it wants boards first** — what
+   the MQTT job looks like, how a session is framed, and what happens when the puck drops one
+   mid-handshake. `hardware/` has still never had the conversation.
 2. **The partial-commissioning bug.** A Matter adopt reported failure on the wall and left a fabric
    behind, which silently bricks a strip until somebody knows the five-second hold exists. Item 24 is its
    cousin and is fixed; this one is not, and neither is the fact that **nothing on the wall ever says a
@@ -655,6 +662,80 @@ real annual cost before a unit ships — and inserts the product into the most q
 the house, which is how these things get returned. The camera route avoids all of that and costs a camera
 pointed into a living room. **The cheap next step is neither: a capture stick and HyperHDR on a bench,
 to find out whether it feels like the screen extended or like a gimmick, before any of it is paid for.**
+
+**38. THE PUCK CAN RUN THE ERRAND. It holds a second link to a knocking strip without letting
+go of the mesh, and here is what it costs.** 23 September, on the bench, and it is the question
+`design/ears/` direction A rests on — nothing past this should have been designed before it.
+
+**The question was narrower than the board asked.** `Errand.dc.html` said the risk was whether the
+puck's ESP32 could be a GATT central while it is a mesh proxy client. It is already a GATT central:
+the mesh proxy link *is* a GATT connection to a Brilliant switch, and has been since the bridge was
+written. The real question was a **second concurrent** central link. The board has been corrected.
+
+**What ran.** One S3 as the errand runner (`esp32s3-bench`: the shipped bridge with
+`src/errand_bench.h` compiled in, on its own MQTT base and its own discovery prefix so nothing it
+says lands where a house is reading), proxying the panel network and speaking MQTT to the real hub
+throughout. A second S3, factory reset, knocking as `PROV_2e425`. The errand is driven from the
+broker and reports once a second on both links at once, because a before-and-after cannot tell a
+link that survived from one that was rebuilt while nobody was watching.
+
+**It holds, and the numbers are these.** The second link opened in **129–421 ms**, took the client
+count from **1 to 2 of NimBLE's 3**, and stayed up for **61 seconds** — far longer than a handshake.
+The strip's whole GATT table was walked: four services, and our own
+`1775244d-6b43-439b-877c-060f2d9bed07` with all seven characteristics, `prov-session` through
+`press`. Across 42 exchanges it carried **16,128 bytes out and 4,872 bytes back, with no failures**
+— the outbound half in **384-byte writes over an MTU of 69**, which is a long write split across
+several callbacks, the same shape as the first round of SRP6a. **The big writes reached the strip's
+own protocomm handler**, which is not an inference: the strip's console says
+`prov-session refused the request: ESP_ERR_INVALID_ARG` forty-two times, once per write, because the
+bytes were deliberately garbage. An application refusing a payload is a payload that arrived. And
+the whole time the mesh link stayed up, the puck stayed on the broker, and **a wall switch obeyed
+three on/off cycles over MQTT with every one echoed back** to the puck's own unicast.
+
+**Nothing dropped. Not once, in any run.** No `dropping link`, no disconnect, no reconnect, no
+`no proxy traffic` — the only NimBLE errors in the whole session were the forty-two expected
+refusals.
+
+**THE COST IS REAL AND IT IS IN THE MESH'S RATE, NOT ITS LIFE.** Measured back to back on the same
+proxy link, one minute each with nothing else changed: **idle, 291 mesh PDUs; with the errand
+running, 64** — the errand takes roughly four fifths of the mesh's traffic while it runs. The age of
+the last proxy PDU goes from 11–583 ms at rest to **1.1–1.5 s** during the hold. So the switches
+keep answering and keep obeying, but the puck is slower at hearing them for as long as the errand
+lasts, and an errand that never ends would be a puck that is permanently slow. **The errand protocol
+has to have an end.**
+
+**AND THE SCAN IS WORSE THAN THE LINK, WHICH IS THE OPPOSITE OF WHAT WAS FEARED.** A six-second
+active scan for a knocking strip stops the mesh dead: **zero PDUs arrive** and the last-PDU age
+climbs to the full six seconds. The held link is cheap by comparison. Whatever the errand protocol
+turns out to be, the hub should hand the puck an **address**, not ask it to go looking — the
+knocking strip has already been seen by something, and Add is the one moment when spending the
+radio is free.
+
+**What is NOT proven, and it matters.** No SRP6a session has run through the puck: the bytes here
+were the right size and the right cadence, not a real handshake, and the hub's own client
+(`brain/hub/strip_door.py`) has never spoken through a courier. The end-to-end claim the whole
+direction rests on — that the puck carries ciphertext it cannot read — is still an argument, not a
+measurement. Nor has anything been tried at a distance: both links here were **−43 to −70 dBm**, and
+item 15's cliff sits at −64. What a strip behind a television does to a puck in the hall is unknown.
+And this ran with one errand at a time; two at once would be the third client of three.
+
+**Three bench facts that cost an hour each and are not written down anywhere else.**
+The two strip-bench S3s carry **8 MB of flash**, not the 16 MB the puck boards have, so
+`partitions-ota.csv` on them boots into `Detected size(8192k) smaller than the size in the binary
+image header(16384k)` and reset-loops — which reads exactly like a bad build. A change to a secrets
+header **does not always rebuild the object that used it**: the bench puck kept talking to a hub
+address that had not been in the file for two flashes, and `-t clean` was the only thing that fixed
+it, so verify with `strings .pio/build/<env>/firmware.bin` rather than trusting the build.
+And **every switch keeps a replay high-water mark per source address**, so a bench puck that keeps
+its unicast across an NVS erase sends from a sequence number the switches have already seen: reads
+keep working and every write is dropped in silence, which looks precisely like a write bug and is
+not one. `BRIDGE_ADDR` in the secrets header, set to something fresh, is the fix.
+
+**One more, about looking.** `brilliant/tools/census.py` reported a single Brilliant switch at the
+desk, at −87 dBm, and on that basis this looked like a test that could not be run here. An
+unfiltered scan found **eleven**, five of them on the panel network, the strongest at −50. The
+filter was not wrong; it answers a narrower question than the one being asked of it. Item 18's rule
+is about a radio that might be dead, and it turns out to be about coverage too.
 
 **37. There was no way to get rid of one.** Reported 22 September, and it was the whole of the
 report: no route, and nothing to build one on. `Radio.forget()` was `return None` with no callers,

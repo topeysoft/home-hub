@@ -137,6 +137,9 @@ static bool linkUp = false;              // filter opened, ready to talk
 static char proxyDesc[40] = "none";
 static uint32_t lastRxAt = 0, lastFilterAt = 0, lastResyncAt = 0, lastPollAt = 0;
 static uint32_t linkUpAt = 0;
+#ifdef BENCH_ERRAND
+static volatile uint32_t proxyPdus = 0;   // bench only, and only counted there: src/errand_bench.h
+#endif
 static uint8_t sweepsDone = 0;
 static uint8_t resyncIdx = 0xFF;         // walking the switch list with unicast Gets; 0xFF = idle
 static void lightRefresh();              // defined beside emptyScans, which it reads
@@ -928,6 +931,9 @@ static void drainRx() {
     RxItem it;
     while (xQueueReceive(rxq, &it, 0) == pdTRUE) {
         lastRxAt = millis();
+#ifdef BENCH_ERRAND
+        proxyPdus++;
+#endif
         switch (it.type) {
         case 0x00: handleNetworkPdu(it.data, it.len); break;
         case 0x01: handleBeacon(it.data, it.len); break;
@@ -1219,6 +1225,10 @@ static void claimSay(const char *leaf, const char *payload) {
     mqtt.publish(t, payload, false);
 }
 
+#ifdef BENCH_ERRAND
+#include "errand_bench.h"
+#endif
+
 static void mqttCb(char *topic, uint8_t *payload, unsigned int len) {
     char msg[32] = {0};
     memcpy(msg, payload, min((unsigned int)31, len));
@@ -1235,6 +1245,13 @@ static void mqttCb(char *topic, uint8_t *payload, unsigned int len) {
         cfgWaiting = true;              // acted on from the loop; see cfgApply()
         return;
     }
+#ifdef BENCH_ERRAND
+    bridgeTopic(own, sizeof(own), "errand/set");
+    if (!strcmp(t, own)) {
+        if (!errandQueue(payload, len)) Serial.println("[errand] busy -- ignoring");
+        return;
+    }
+#endif
     bridgeTopic(own, sizeof(own), "claim");
     if (!strcmp(t, own)) {
         // Queue only. The radio work happens on the loop for the same reason the
@@ -1362,6 +1379,10 @@ static void mqttReconnect() {
     mqtt.subscribe(sub);
     bridgeTopic(sub, sizeof(sub), "claim");
     mqtt.subscribe(sub);
+#ifdef BENCH_ERRAND
+    bridgeTopic(sub, sizeof(sub), "errand/set");
+    mqtt.subscribe(sub);
+#endif
     bridgeTopic(sub, sizeof(sub), "cfg");
     mqtt.subscribe(sub);
     bridgeTopic(sub, sizeof(sub), "night/set");
@@ -1662,6 +1683,10 @@ void loop() {
         sweepAll();
     }
     if (resyncIdx != 0xFF) resyncStep();
+
+#ifdef BENCH_ERRAND
+    errandTick();
+#endif
 
     // Motion: one vendor Get per POLL_MS, round-robin over known switches.
     if (nSwitches && now - lastPollAt >= POLL_MS) {
