@@ -80,9 +80,24 @@ schedules, "good night", all-off, the room tile it appears on. None of it has to
 to live in firmware, which is the point: firmware holds one setting in NVS and the precedence, and nothing that
 needs to know what time it is.
 
-The free win: these pucks sit next to switches that already report motion on vendor field `0x13`. A rule that
+~~The free win: these pucks sit next to switches that already report motion on vendor field `0x13`. A rule that
 lifts the glow from a floor-marker to something you can walk by when the switch beside it sees someone, then
-lets it settle, is a brain rule over data that already works.
+lets it settle, is a brain rule over data that already works.~~
+
+**It was not free, because the data does not work.** Measured on 22 September with nobody in the room
+(`brilliant/tools/load_or_pir.py` on `0x0007`): `0x13` is the lamp, not a person -- it holds +58.5 counts
+for as long as the light is lit, tracks the dim level, and falls back when it goes off. The bridge reported
+motion five times in seven minutes in an empty room. The lift below is built and tested and correct; it is
+simply driven by a signal that means something else. See **What `0x13` actually reads** in
+`brilliant/STATUS.md`. Step 5 does not ship until these switches have a motion signal that is real.
+
+**And the signal that was found is the wrong shape for this.** The switches do have a PIR -- there is a
+lens on the faceplate -- and it feeds vendor field `0x0c`. But `0x0c` is *occupancy*: it takes 25-42 s to
+notice somebody and holds for about five minutes after they leave (measured 22 September, **`0x0c` is
+occupancy** in `brilliant/STATUS.md`). A lift wants "somebody is walking past right now" and gets a glow
+that comes up half a minute late and stays up for five minutes, which is not a lift, it is a lamp on a
+timer. So step 5 is blocked on a sensor this house does not have yet, rather than on a field nobody has
+identified -- a different and smaller problem, but not a solved one.
 
 ## The one question, and where it is asked
 
@@ -190,7 +205,10 @@ shipping.
    should decide what to do with the difference. `BridgeArt` gains a fourth light, `warm`, its four states now a
    lookup rather than a ternary per attribute. Three e2e cases hold it: the question is asked and nothing is sent
    until it is answered, both answers place the bridge, and walking away places nothing.
-5. ~~**Motion.**~~ **Built and tested (19 September), with one thing still owed — see below.**
+5. ~~**Motion.**~~ **Built and tested (19 September), and then blocked on 22 September: the sensor is not a
+   sensor.** The code below is right and the measurement underneath it was not — `0x13` is the lamp. Nothing
+   here needs rewriting yet, and nothing here can be turned on for a household until a real motion signal
+   exists. See **What `0x13` actually reads** in `brilliant/STATUS.md`.
    `brain/hub/nightlight.py`: motion arriving in a bridge's room swells its glow to something you can walk by,
    and it settles once the room has been quiet. Three decisions, each of which was nearly made the other way:
 

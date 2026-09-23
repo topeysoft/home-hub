@@ -67,6 +67,14 @@ class Run:
         self.c.on_connect = lambda cl, *_: cl.subscribe(f"{BASE}/#")
         try:
             self.c.connect(HOST, 1883, 30)
+            # A background network thread, not loop() in the callers' waits. paho's loop() reads ONE
+            # packet per call, and this mesh publishes motion_level for every switch it can hear every
+            # 250 ms -- so a 0.5 s loop() drains two messages a second out of a stream of dozens. The
+            # retained backlog never finished arriving (the netid was never learned, on a house where
+            # the topic is plainly there), and a run that got past that would have sampled further and
+            # further behind the lamp it was driving. The windows must be wall-clock honest or the
+            # verdict is meaningless.
+            self.c.loop_start()
         except OSError as e:
             sys.exit(f"cannot reach the broker at {HOST}:1883 ({e}). Pass the host as the second "
                      f"argument, and check MQTT_USER / MQTT_PASSWORD or driver-layer/.env.")
@@ -89,7 +97,7 @@ class Run:
     def wait(self, secs, label):
         end = time.monotonic() + secs
         while time.monotonic() < end:
-            self.c.loop(0.5)
+            time.sleep(0.5)
             left = int(end - time.monotonic())
             print(f"\r  {label}: {left:3d}s   level {self.levels[-1][1] if self.levels else '?':>5}"
                   f"   motion {self.motion[-1][1] if self.motion else '?':<4}", end="", flush=True)
@@ -125,7 +133,7 @@ def main():
     r = Run()
     print(f"connecting to {HOST} … ", end="", flush=True)
     for _ in range(20):                      # retained topics arrive at once; we only need the netid
-        r.c.loop(0.5)
+        time.sleep(0.5)
         if r.net:
             break
     if not r.net:
@@ -135,7 +143,7 @@ def main():
 
     print("\nLeave the room now. Nothing should walk past this switch until the run ends (~7 min).")
     for n in range(20, 0, -1):
-        r.c.loop(0.5)
+        time.sleep(0.5)
         print(f"\r  starting in {n:2d}s …", end="", flush=True)
     print("\n")
 
@@ -218,6 +226,7 @@ def main():
             print("\n  At least one landed in a dim leg. A Level Status does not re-learn the floor (only the")
             print("  0x8204 branch does), so a brightness change is the case that latches. That is the bug.")
 
+    r.c.loop_stop()
     r.c.disconnect()
 
 

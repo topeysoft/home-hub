@@ -77,7 +77,7 @@ the MQTT session held for the whole soak.
 | Per switch, in HA | From |
 |---|---|
 | `light.brilliant_switch_<addr>` with brightness | `Generic OnOff/Level Status`, published by the switch on touch and polled every 10 min |
-| `binary_sensor..._motion` (device class motion) | **Currently a lie.** Vendor field `0x13` polled round-robin every 250 ms, ON while it sits 4 above the switch's learned floor, 20 s hold. `0x13` is the load, so this reports the lamp and the dim level, plus noise: five reports in seven minutes in an empty room. Also ON for any switch's own publication of field `0x0c = 1`, which is still a guess |
+| `binary_sensor..._motion` (device class motion) | **Currently a lie; rebuild it on `0x0c` as occupancy.** Vendor field `0x13` polled round-robin every 250 ms, ON while it sits 4 above the switch's learned floor, 20 s hold. `0x13` is the load, so this reports the lamp and the dim level, plus noise: five reports in seven minutes in an empty room. Also ON for any switch's own publication of field `0x0c = 1`, which is still a guess |
 | `sensor..._motion_level` (diagnostic) | the raw `0x13` value |
 | `sensor.brilliant_bridge_proxy_node` | which switch the puck is linked to, and its RSSI |
 
@@ -440,7 +440,60 @@ first day, and would look like a rules bug rather than a sensor one.
 `0x0016` on its own every ~20 s, is the remaining candidate and is currently treated as motion on a guess.
 `0x1a`/`0x1b`/`0x56` were the mode candidates for enabling reporting, and `0x1b` is now known to be the
 announce flag, which leaves `0x1a` and `0x56`. Until one of them is shown to move for a body and not for a
-lamp, the honest answer is that this hardware gives us no motion.
+lamp, the honest answer is that this hardware gives us no motion. *(Answered the same evening: there is a
+PIR behind a lens on the faceplate, and `0x0c` is what it feeds. See the next section.)*
+
+## `0x0c` is occupancy, and the hold is about five minutes (22 September, measured)
+
+The faceplate has a **sensor lens** on it -- looked at, not inferred -- so the hardware was never the
+question. The question was which field the PIR feeds, and it is `0x0c`.
+
+**It was nearly missed twice.** `tools/walk_past.py` compared three thirty-second walk-pasts against
+three sixty-second empty gaps and found nothing: `0x0c` read `0100` on every single poll of all six
+minutes, so every window looked identical and the tool reported no difference. The gaps were far too
+short for a field that holds for five minutes. Before that, this document had two flatly contradictory
+readings of `0x0c` -- "a state notice, not motion" from a bench test where nobody was moving, and "tracks
+a person" from a live capture where somebody was. Both were right about what they saw. `0x0c` is set by
+either a command *or* a person, and a bench with nobody in the room can only ever show the first half.
+
+**What settled it** was watching it over an afternoon rather than trying to catch an edge by luck. With
+the lamp never commanded once: `00` at the desk, `01` after walking to the switch, `01` through six
+minutes of moving about, `00` again after some minutes away. Then `tools/presence_hold.py` timed both
+edges properly -- five minutes of genuinely empty room, one short visit, six minutes to fall again:
+
+```
+16:57:18  0x0c -> 00     empty room, held all 5 minutes (37 reads, every one 00)
+17:02:57  0x0c -> 01     somebody had gone in
+17:07:39  0x0c -> 00     they had been gone ~5 minutes
+```
+
+**Trip: 25-42 s after entry. Release: 4m 40s to 4m 54s after leaving.** Both are brackets rather than
+numbers, and deliberately so -- 39 reads went unanswered and gaps reached 28 s, so an edge is known only
+to lie between the read that missed it and the read that caught it. The release is well constrained (39
+reads across that leg) and lands close enough to a flat 300 s that a fixed timer from last detection is
+the obvious guess; the trip is barely constrained at all, because only three reads landed inside a
+thirty-second visit.
+
+**So it is occupancy, not motion, and the distinction is the whole product question.**
+
+- Publish it as `device_class: occupancy`. Never as `motion` -- a five-minute tail on something labeled
+  motion is exactly what makes a hallway light feel broken.
+- It suits what the rules actually ask for: `idle`, `quiet`, how long a floor has been still. An `idle`
+  threshold has to clear the hold, so `{"idle": 600}` is fine and `{"idle": 60}` is meaningless here.
+- **It cannot serve the nightlight lift.** That needs "somebody is walking past *now*", and a signal that
+  takes up to 40 s to notice and five minutes to forget cannot give it. Step 5 of `docs/puck-light.md`
+  still has no sensor.
+
+**Before a household sees this**, repeat it with a two-minute visit. One visit on one switch is what is
+on file, the trip bracket is wide, and nobody has tested whether the hold restarts on continued presence
+or runs from first detection -- which changes what an `idle` rule means.
+
+**A tool bug worth not re-learning.** `presence_hold.py` first cried wolf on its own control: it flagged
+"the lamp moved" because `0x13` showed more than one distinct value, when `0x13` wanders 5-9 by itself
+with nothing touching the light. A lit lamp is about +60, not a wobble of four counts. A control that
+fires on noise is worse than none, because it discredits a clean run.
+
+
 
 **One thing the run fixed in the tool itself.** `load_or_pir.py` could not get past its own startup here:
 paho's `loop()` reads one packet per call, and this mesh publishes `motion_level` for seventeen switches
