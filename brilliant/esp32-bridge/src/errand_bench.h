@@ -88,6 +88,33 @@ static uint32_t relayExchanges = 0, relayOut = 0, relayIn = 0;
 #define ERRAND_POOL_FLOOR (CONFIG_BT_NIMBLE_MSYS1_BLOCK_COUNT / 3)
 static bool errandHoldsLink();
 
+// LISTENING, NOT LOOKING. A passive scan at a low duty cycle, left running, that counts what it
+// hears of a knocking strip. The question it answers is whether a puck can be the house's ear for
+// knocks all day without costing the switches what an active look costs them (item 38: a six-second
+// active scan stops the mesh dead). Passive means no scan requests, so our door -- which lives in the
+// SCAN RESPONSE -- is invisible to it; what it can hear is Matter's commissionable advertisement,
+// which a strip makes in its primary advertisement for as long as either door is open.
+static NimBLEUUID MATTER_SVC((uint16_t)0xFFF6);
+static volatile uint32_t heardAll = 0, heardMatter = 0, heardDoor = 0;
+static volatile int heardRssi = 0;
+static char heardAddr[18] = "";
+static bool listening = false;
+
+class Ear : public NimBLEAdvertisedDeviceCallbacks {
+    void onResult(NimBLEAdvertisedDevice *d) override {
+        heardAll++;
+        bool matter = false;
+        for (int k = 0; k < (int)d->getServiceDataCount(); k++)
+            if (d->getServiceDataUUID(k).equals(MATTER_SVC)) matter = true;
+        if (d->isAdvertisingService(DOOR_SVC)) heardDoor++;
+        if (!matter) return;
+        heardMatter++;
+        heardRssi = d->getRSSI();
+        strlcpy(heardAddr, d->getAddress().toString().c_str(), sizeof(heardAddr));
+    }
+};
+static Ear ear;
+
 // A bench switch: while it is set the puck stops writing to the mesh (motion polls, sweeps), so a
 // drain that stops with it is the mesh side's writes and not the second link's.
 static bool meshQuiet = false;
@@ -314,6 +341,7 @@ static void errandTick() {
         // The baseline. Without it a rate measured during an errand is a number
         // with nothing to be compared against, and the cost of the errand is a guess.
         if (!strcasecmp(verb, "idle")) {
+            heardAll = heardMatter = heardDoor = 0;
             uint32_t secs = a1 ? atoi(a1) : 60;
             if (secs < 5) secs = 60;
             errandUntil = now + secs * 1000UL;
@@ -323,12 +351,15 @@ static void errandTick() {
             return;
         }
         if (!strcasecmp(verb, "open")) {
-            // AN ADDRESS GOES STALE. A knocking strip advertises a random private address and
-            // rotates it, so one read off a scan a few seconds ago is a connect that times out
-            // ten seconds later -- which looks exactly like a strip that has gone. With no
-            // address this finds the door itself; with one, it is expected to be warm.
+            // With no address this finds the door itself. With one, it trusts it: a strip's address
+            // holds for the whole boot (docs/strip.md item 42).
             if (a1 && strchr(a1, ':')) {
-                errandAddr = NimBLEAddress(std::string(a1));
+                // A STRIP'S ADDRESS IS RANDOM, and an address read back from a string defaults to
+                // PUBLIC -- a connect to the right six bytes with the wrong type times out, and on
+                // 23 September that was taken for the strip having changed its address. It had not:
+                // a strip's random static address holds for the whole boot. "p" for a public one.
+                errandAddr = NimBLEAddress(std::string(a1),
+                                           (a2 && (a2[0] == 'p' || a2[0] == 'P')) ? BLE_ADDR_PUBLIC : BLE_ADDR_RANDOM);
                 errandRssi = 0;
             // TEN SECONDS, not five. The door is advertised slowly enough that a five-second
             // scan misses a strip sitting a metre away -- found by doing exactly that twice.
@@ -377,6 +408,30 @@ static void errandTick() {
                               : "session open -- relaying, and it cannot ring");
             return;
         }
+        if (!strcasecmp(verb, "listen")) {
+            NimBLEScan *scan = NimBLEDevice::getScan();
+            if (a1 && !strcasecmp(a1, "off")) {
+                scan->stop();
+                listening = false;
+                errandSay("listening stopped");
+            } else {
+                // window and interval in ms: 10 of every 100 unless told otherwise
+                const int win = a1 ? atoi(a1) : 10, itv = a2 ? atoi(a2) : 100;
+                scan->stop();
+                scan->setActiveScan(false);
+                scan->setInterval(itv);
+                scan->setWindow(win);
+                scan->setMaxResults(0);            // count, never keep: this runs all day
+                scan->setAdvertisedDeviceCallbacks(&ear, true);
+                heardAll = heardMatter = heardDoor = 0;
+                listening = scan->start(0, nullptr, false);
+                errandSay("listening passively, %d ms of every %d: %s", win, itv, listening ? "on" : "FAILED");
+            }
+            errandStartedAt = now;
+            proxyPdusAtStart = proxyPdus;
+            errandState = Errand::Idle;
+            return;
+        }
         if (!strcasecmp(verb, "quiet")) {
             meshQuiet = !(a1 && !strcasecmp(a1, "off"));
             errandSay("mesh writes %s", meshQuiet ? "paused" : "resumed");
@@ -408,7 +463,7 @@ static void errandTick() {
 
         errandSample("before");
         if (named) {
-            errandAddr = NimBLEAddress(std::string(a1));
+            errandAddr = NimBLEAddress(std::string(a1), BLE_ADDR_RANDOM);   // see "open" below
             errandRssi = 0;
         } else if (!errandFind(&errandAddr, &errandRssi, 6, false)) {
             errandSay("no strip is knocking -- nothing to run an errand to");
@@ -492,9 +547,12 @@ static void errandTick() {
             errandSample("idle");
         }
         if (now >= errandUntil) {
-            errandSay("idle %lums; mesh PDUs during: %lu",
+            errandSay("idle %lums; mesh PDUs during: %lu; %s heard %lu adverts, %lu of them a strip's Matter "
+                      "advert (last %s rssi %d), %lu with our door",
                       (unsigned long)(now - errandStartedAt),
-                      (unsigned long)(proxyPdus - proxyPdusAtStart));
+                      (unsigned long)(proxyPdus - proxyPdusAtStart), listening ? "listening," : "not listening,",
+                      (unsigned long)heardAll, (unsigned long)heardMatter, heardAddr, heardRssi,
+                      (unsigned long)heardDoor);
             errandState = Errand::Idle;
         }
         return;

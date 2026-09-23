@@ -20,9 +20,9 @@ ships gets drawn first, per AGENTS.md section 1.
     brain/.venv/bin/python tools/errand-bench.py --puck 08388e \
         --ssid VirusBroadcast --pass '...' --broker 192.168.86.53
 
-The puck finds the door itself, because a knocking strip rotates its BLE address and one read off a
-scan seconds ago is a connect that times out. `--strip <addr>` is there for a sighting that is still
-warm, which is what the shipped errand will be carrying.
+The puck finds the door itself unless `--strip <addr>` hands it one -- a sighting from the puck's
+passive ear (docs/strip.md item 42), which is what the shipped errand will carry. The address holds
+for the whole boot; what failed here once was opening a random address as a public one.
 """
 import argparse
 import asyncio
@@ -189,9 +189,8 @@ async def main():
     transport = Errand(client, base)
     transport_box['t'] = transport
 
-    # NO ADDRESS BY DEFAULT, and that is a finding rather than a convenience: a knocking strip
-    # rotates its BLE address, so one read off a scan a few seconds ago is a connect that times
-    # out -- which looks exactly like a strip that has gone. The puck finds the door itself.
+    # No address by default: the puck finds the door itself. With one, it is opened as a RANDOM
+    # address, which a strip's is -- see "open" in errand_bench.h.
     print(f'asking {args.puck} to open a link{" to " + args.strip if args.strip else ""}...')
     client.publish(f'{base}/errand/set', f'open {args.strip}'.strip())
     try:

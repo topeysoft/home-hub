@@ -89,7 +89,7 @@ that did not exist, a fake home that was a list, and no broker.
    notification, the hub asks once and subscribes, and nothing crosses the air until somebody touches
    the thing. Seven exchanges instead of a hundred and seventy, and the notification is still
    ciphertext the puck relays and cannot read. **C is its fallback** for a strip too old to have the
-   notification, because the hub has to re-find a rotating address anyway. `Hush` and `Twice` stay
+   notification. `Hush` and `Twice` stay
    drawn, with their cases, as the record of why. **Not built.**
    **And the question the boards left open is already answered in the firmware**: a dropped link calls
    `prov::disconnected()`, which ends the protocomm session and drops buffered responses while the
@@ -101,9 +101,12 @@ that did not exist, a fake home that was a list, and no broker.
    to press the button was adopted in 109. The buffer problem was never the protocol — it was the
    puck's own mesh polls piling up while it held a second link — and backpressure on those polls
    fixed it. **What is left before this ships is the errand runner itself, which is a bench build.**
-   **Still standing from item 39:** a knocking strip rotates its BLE address and one ten-second scan
-   in three misses it, so a shipped errand has to carry a sighting that is still warm. Nothing has
-   been tried at the distance item 15 is about, and `hardware/` has still never had the conversation.
+   **And the puck can be the house's ear for knocks** (item 42): a passive listen at a tenth of the
+   radio costs the mesh about 6% and hears a knocking strip twice a second, and the address it hears
+   is one the errand can open at with no scan at all. **What is left before this ships is deciding
+   how pucks hear knocks, then the errand runner itself, which is still a bench build.** Nothing
+   has been tried at the distance item 15 is about, and `hardware/` has still never had the
+   conversation.
 2. **The partial-commissioning bug.** A Matter adopt reported failure on the wall and left a fabric
    behind, which silently bricks a strip until somebody knows the five-second hold exists. Item 24 is its
    cousin and is fixed; this one is not, and neither is the fact that **nothing on the wall ever says a
@@ -685,6 +688,41 @@ the house, which is how these things get returned. The camera route avoids all o
 pointed into a living room. **The cheap next step is neither: a capture stick and HyperHDR on a bench,
 to find out whether it feels like the screen extended or like a gimmick, before any of it is paid for.**
 
+**42. A puck can hear a strip knock all day for about 6% of its mesh, and what it hears is an
+address the errand can open at.** 23 September. The question the shipped errand actually turns on is
+not the wire format — the bench has mostly settled that — but **who hears a knock when the hub is
+in the garage**. Something must, or a knock is never a line in the band at all.
+
+**What was measured.** A *passive* scan — no scan requests — left running at a low duty cycle,
+counting adverts, on one proxy link, a minute each:
+
+| | mesh PDUs a minute | the strip's Matter advert heard |
+|---|---|---|
+| no ear | 259 | — |
+| 10 ms of every 100 | 244 (−6%) | **109 a minute** |
+| 30 ms of every 100 | 245 (−5%) | 431 a minute |
+
+Against an active look like the hub's own — fourteen seconds a minute, during which item 38 says
+the mesh hears nothing — that is a different order of cost. **It hears Matter's advert and never our
+door**, as predicted, because a passive scan asks for no scan response; a knocking strip makes both,
+so hearing one is hearing the other, and the Matter advert carries the vendor and discriminator to
+tell ours from somebody's plug in pairing mode.
+
+**And the address is good.** Opened with the right address type, the one the ear heard **eight
+minutes earlier** connected in 114 ms with no scan at all, and the strip still had it after a
+connect and disconnect. Items 38 and 39 said a strip rotates its address; the connects that failed
+were the puck opening a random address as a public one (`NimBLEAddress` from a string defaults to
+public). Fixed in the bench runner, and the shipped one must carry the type with the address.
+
+**What this changes.** A shipped errand needs no scan. The ear has a sighting seconds old whenever
+the hub wants one, so "hand over a warm address" is free, the mesh never goes deaf for a look, and
+the one-in-three miss of our door stops mattering because nothing is looking for our door.
+
+**Not measured.** Whether the Matter advert's address survives the commissioning window being
+reopened at fifteen minutes (`keep_knocking`); the ear would hear the new one within a second
+either way. And a passive ear running *alongside* a held errand link — the shipped runner would
+stop it for the connect and resume it after.
+
 **41. A strip given an address now finds the hub — and item 33's retained-command half has run on
 silicon at last.** 23 September.
 
@@ -793,13 +831,13 @@ polls keep going**, and it is fixed on the puck. Kept here in outline because th
 the record: a count to failure that scattered from 5 to 41 on the same pool size was the tell that
 the exchanges were not the variable.
 
-**THE SECOND IS THAT A KNOCKING STRIP IS HARD TO FIND, WHICH SHARPENS ITEM 38'S CONCLUSION.** The
-strip advertises a **random private address and rotates it**, so an address read off a scan seconds
-ago is a connect that times out ten seconds later — which reads as a strip that has gone. And the
-door rides on Matter's own advertisement, so **a ten-second scan a metre away misses it roughly one
-time in three**; the bench needed three tries to be reliable. Item 38 said the hub should hand over
-an address rather than send the puck looking. It should hand over a **fresh** one, and there is a
-race under that which the boards have to answer.
+**THE SECOND WAS THAT A KNOCKING STRIP IS HARD TO FIND — half right, and item 42 has which half.** A
+ten-second active scan a metre away misses our door about one time in three, and that is real: the
+door lives in the SCAN RESPONSE (item 12), which only arrives if the scanner's request is answered.
+But this item also said the strip **rotates its address**, and that was wrong. The connects that
+timed out were the puck opening a *random* address as a *public* one — `NimBLEAddress` read from a
+string defaults to public — and an address with the wrong type is six right bytes nobody answers.
+Opened with the right type, an address heard eight minutes earlier connected in 114 ms.
 
 **AND IT IS SLOW, WHICH IS FINE HERE AND WOULD NOT BE ANYWHERE ELSE.** Every exchange is an MQTT
 hop, a GATT write, a GATT read and an MQTT hop back: **0.7 to 3.3 seconds**, against a fifth of a
@@ -1680,6 +1718,9 @@ was installed into `/opt/home-hub`.
 **And the BLE address rotates.** Two scans minutes apart returned `F3:EE:DA:BB:CD:5A` and then
 `CC:57:3B:B4:71:80` for the same strip, so the hub must never cache an address — the service UUID and
 the name are the identity, which is what `find()` already returns.
+*23 September: narrower than this reads (item 42). Within one boot the address held for eleven
+minutes, across advertising restarts and a connection; it changes when the strip restarts. Whether
+anything else moves it was not seen. The identity advice stands either way.*
 
 **13. How the second door actually gets built, read out of the source rather than guessed.** Three facts, and
 together they decide the shape:
