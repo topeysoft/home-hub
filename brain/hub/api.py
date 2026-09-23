@@ -1095,6 +1095,17 @@ async def forget_device(device_id: str):
             mine = things.ours(row)
             if mine and mine[0] == "switch":
                 await hub.bridge.forget_switch(*mine[1])
+            elif mine and mine[0] == "strip":
+                # A LIGHT STRIP IS OURS, NOT AN ACCOUNT'S, and it leaves the way things.py already
+                # offers on the page of everything the house has: the strip is told to forget the
+                # house, and its retained topics and its Home Assistant entry go with it. Asked from
+                # the light's own pane it used to fall through to the line below, find no account to
+                # take it off, and tell the household to remove "the account that brought it" --
+                # which does not exist (reported 23 September).
+                try:
+                    await hub.strip.forget(mine[1][0])
+                except StripError as e:
+                    raise HTTPException(409, str(e))
             else:
                 entries = list((row or {}).get("config_entries") or [])
                 if not entries: raise RuntimeError("nothing owns it")
@@ -1102,6 +1113,8 @@ async def forget_device(device_id: str):
                     await hub.ha.send("config/device_registry/remove_config_entry_from_device", device_id=dev.hw, config_entry_id=entry)
         else:
             await hub.ha.send("config/entity_registry/remove", entity_id=dev.id)
+    except HTTPException:
+        raise                  # already in the house's own words, and not about an account
     except Exception as e:
         log.warning("could not forget %s: %s", device_id, e)
         raise HTTPException(502, f"{name} cannot be forgotten on its own. "
