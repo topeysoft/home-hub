@@ -8,11 +8,12 @@
 //
 // What it does, per switch it hears from:
 //   reads   Generic OnOff Status / Generic Level Status the switches publish
-//           whenever someone touches them, and polls vendor field 0x13 (the
-//           PIR's analogue motion level) the way the panel itself does
+//           whenever someone touches them; polls vendor 0x0c (occupancy) and
+//           0x13 (the lamp's draw), and acts on an unsolicited 0x0c, which is
+//           how the Brilliant panels themselves hear that somebody is there
 //   writes  Generic OnOff Set and Generic Level Set (0-1000 scale) on command
 //   tells   Home Assistant about each switch over MQTT discovery: a light with
-//           brightness, a motion binary_sensor, and a diagnostic motion level
+//           brightness, an occupancy binary_sensor, and a diagnostic load level
 //
 // Identity. A switch belongs to a mesh network, not to whichever puck relays
 // it, so switches are keyed by <net> (the network id, 16 hex) + <addr> (their
@@ -36,13 +37,13 @@
 //   mesh/bridge/<chip>/settled/set     1 | 0
 //   mesh/<net>/<addr>/state            ON | OFF                 (retained)
 //   mesh/<net>/<addr>/brightness       0-255                    (retained)
-//   mesh/<net>/<addr>/motion           ON | OFF                 (retained)
-//   mesh/<net>/<addr>/motion_level     raw vendor 0x13 value    (retained)
+//   mesh/<net>/<addr>/occupancy        ON | OFF                 (retained)
+//   mesh/<net>/<addr>/load             raw vendor 0x13 value    (retained)
 //   mesh/<net>/<addr>/event            {json} every decoded message that is
-//                                      not a motion poll reply  (not retained)
+//                                      not a vendor poll reply  (not retained)
 //   mesh/<net>/<addr>/set              ON | OFF | on | off | dim:<0-100>
 //   mesh/<net>/<addr>/brightness/set   0-255
-// HA discovery: homeassistant/<component>/mesh_<net>_<addr>[_motion|_motion_level]/config,
+// HA discovery: homeassistant/<component>/mesh_<net>_<addr>[_occupancy|_load]/config,
 // entity ids mesh_<net4>_<addr>, device "<label> switch <addr>", via mesh_bridge_<chip>.
 // The puck's own device mesh_bridge_<chip> carries three: the proxy node it is
 // linked to, its Nightlight (a light with brightness -- docs/puck-light.md), and
@@ -98,7 +99,7 @@
 #define POLL_MS 250              // one motion poll per this many ms, round-robin
 #endif
 #ifndef MOTION_ON_ABOVE
-#define MOTION_ON_ABOVE 4        // vendor 0x13 sits ~2 at rest, 7-8 on a walk-past
+#define MOTION_ON_ABOVE 4        // unused: kept so an old build flag does not fail the compile
 #endif
 #ifndef MOTION_HOLD_MS
 #define MOTION_HOLD_MS 20000     // motion stays ON this long after the last active sample
@@ -116,7 +117,13 @@
 #define LINK_DEAD_MS 120000                // no proxy PDU at all for this long: reconnect
 
 static const uint16_t VENDOR_CID = 0x0820;
-static const uint8_t VENDOR_MOTION_FIELD = 0x13;   // polled: analogue motion level
+// Field 0x13 was read as a PIR level for months and it is not one: driven over the mesh from another
+// room with nobody near the switch, it held +58.5 counts for two minutes lit, tracked the dim level,
+// and fell back when the lamp went off. It is the LOAD. The PIR -- there is a lens on the faceplate --
+// feeds field 0x0c, which is occupancy rather than motion: ~30 s to notice somebody, and about five
+// minutes of hold after they leave. Measured 22 September; see brilliant/STATUS.md.
+static const uint8_t VENDOR_LOAD_FIELD = 0x13;        // polled: how much current the lamp is drawing
+static const uint8_t VENDOR_OCCUPANCY_FIELD = 0x0C;   // polled AND published: somebody is in the room
 
 // ---------------------------------------------------------------- state
 
@@ -165,17 +172,15 @@ struct Switch {
     uint16_t addr;
     int8_t onoff;          // -1 unknown
     int16_t level;         // -1 unknown, else 0..1000
-    int16_t motionLevel;   // -1 unknown
-    int16_t motionFloor;   // slow-tracking minimum of motionLevel: the switch's own resting value
-    uint32_t floorAt;      // when the floor last crept up
-    bool motionOn;
-    uint32_t motionActiveAt;
+    int16_t loadLevel;     // -1 unknown: raw vendor 0x13, the lamp's draw
+    int8_t occupied;       // -1 unknown, else 0/1 from vendor 0x0c
     uint32_t seenAt;
     bool announced;        // HA discovery published this MQTT session
 };
 static Switch switches[MAX_SWITCHES];
 static uint8_t nSwitches = 0;
 static uint8_t pollIdx = 0;
+static bool pollLoadPass = false;    // sweeps alternate: occupancy, then load
 
 // replay / relay-duplicate cache, per source
 struct SeqSeen { uint16_t src; uint32_t seq; };
@@ -295,8 +300,8 @@ static Switch *learnSwitch(uint16_t addr, bool persist) {
     s->addr = addr;
     s->onoff = -1;
     s->level = -1;
-    s->motionLevel = -1;
-    s->motionFloor = -1;
+    s->loadLevel = -1;
+    s->occupied = -1;
     Serial.printf("[sw] learned switch 0x%04x (%u known)\n", addr, nSwitches);
     if (persist) saveSwitchList();
     announce(*s);
@@ -331,14 +336,14 @@ static void loadSwitchList() {
 static void forgetSwitch(uint16_t addr) {
     if (!isGone(addr) && nGone < MAX_GONE) { gone[nGone++] = addr; saveGoneList(); }
     char t[128];
-    static const char *kinds[] = {"light", "binary_sensor", "sensor"};
-    static const char *tails[] = {"", "_motion", "_motion_level"};
-    for (int i = 0; i < 3; i++) {
+    static const char *kinds[] = {"light", "binary_sensor", "sensor", "binary_sensor", "sensor"};
+    static const char *tails[] = {"", "_occupancy", "_load", "_motion", "_motion_level"};
+    for (int i = 0; i < 5; i++) {   // the last two are the retired motion entities
         snprintf(t, sizeof(t), "%s/%s/%s_%s_%04x%s/config", HA_PREFIX, kinds[i],
                  cfg.mqttBase, netHex, addr, tails[i]);
         mqttPub(t, "", true);
     }
-    for (const char *leaf : {"state", "brightness", "motion", "motion_level"}) {
+    for (const char *leaf : {"state", "brightness", "occupancy", "load", "motion", "motion_level"}) {
         swTopic(t, sizeof(t), addr, leaf);
         mqttPub(t, "", true);
     }
@@ -377,11 +382,13 @@ static void publishState(Switch &s) {
         snprintf(v, sizeof(v), "%d", briOf(s.level));
         mqttPub(t, v, true);
     }
-    if (s.motionLevel >= 0) {
-        swTopic(t, sizeof(t), s.addr, "motion");
-        mqttPub(t, s.motionOn ? "ON" : "OFF", true);
-        swTopic(t, sizeof(t), s.addr, "motion_level");
-        snprintf(v, sizeof(v), "%d", s.motionLevel);
+    if (s.occupied >= 0) {
+        swTopic(t, sizeof(t), s.addr, "occupancy");
+        mqttPub(t, s.occupied ? "ON" : "OFF", true);
+    }
+    if (s.loadLevel >= 0) {
+        swTopic(t, sizeof(t), s.addr, "load");
+        snprintf(v, sizeof(v), "%d", s.loadLevel);
         mqttPub(t, v, true);
     }
 }
@@ -405,20 +412,37 @@ static void announce(Switch &s) {
              cfg.mqttBase, netHex, s.addr, cfg.mqttBase, netShort, s.addr, cfg.mqttBase, netHex, s.addr, avty, devj);
     mqtt.publish(topic, payload, true);
 
-    snprintf(topic, sizeof(topic), "%s/binary_sensor/%s_%s_%04x_motion/config", HA_PREFIX, cfg.mqttBase, netHex, s.addr);
+    // Occupancy, NOT motion. The hold is about five minutes, and a five-minute tail on something
+    // labeled motion is what makes a hallway light feel broken.
+    snprintf(topic, sizeof(topic), "%s/binary_sensor/%s_%s_%04x_occupancy/config", HA_PREFIX, cfg.mqttBase, netHex, s.addr);
     snprintf(payload, sizeof(payload),
-             "{\"name\":\"Motion\",\"uniq_id\":\"%s_%s_%04x_motion\",\"obj_id\":\"%s_%s_%04x_motion\","
-             "\"dev_cla\":\"motion\",\"stat_t\":\"%s/%s/%04x/motion\",\"avty_t\":\"%s\",%s}",
+             "{\"name\":\"Occupancy\",\"uniq_id\":\"%s_%s_%04x_occupancy\",\"obj_id\":\"%s_%s_%04x_occupancy\","
+             "\"dev_cla\":\"occupancy\",\"stat_t\":\"%s/%s/%04x/occupancy\",\"avty_t\":\"%s\",%s}",
              cfg.mqttBase, netHex, s.addr, cfg.mqttBase, netShort, s.addr, cfg.mqttBase, netHex, s.addr, avty, devj);
     mqtt.publish(topic, payload, true);
 
-    snprintf(topic, sizeof(topic), "%s/sensor/%s_%s_%04x_motion_level/config", HA_PREFIX, cfg.mqttBase, netHex, s.addr);
+    snprintf(topic, sizeof(topic), "%s/sensor/%s_%s_%04x_load/config", HA_PREFIX, cfg.mqttBase, netHex, s.addr);
     snprintf(payload, sizeof(payload),
-             "{\"name\":\"Motion level\",\"uniq_id\":\"%s_%s_%04x_motion_level\","
-             "\"obj_id\":\"%s_%s_%04x_motion_level\",\"ent_cat\":\"diagnostic\",\"stat_cla\":\"measurement\","
-             "\"stat_t\":\"%s/%s/%04x/motion_level\",\"avty_t\":\"%s\",%s}",
+             "{\"name\":\"Load\",\"uniq_id\":\"%s_%s_%04x_load\","
+             "\"obj_id\":\"%s_%s_%04x_load\",\"ent_cat\":\"diagnostic\",\"stat_cla\":\"measurement\","
+             "\"stat_t\":\"%s/%s/%04x/load\",\"avty_t\":\"%s\",%s}",
              cfg.mqttBase, netHex, s.addr, cfg.mqttBase, netShort, s.addr, cfg.mqttBase, netHex, s.addr, avty, devj);
     mqtt.publish(topic, payload, true);
+
+    // Retire the two entities this firmware used to publish. They said "motion" and meant "the lamp",
+    // and a household that keeps them has a sensor in Home Assistant that a future rule will trust.
+    // An empty retained payload on a discovery topic is how HA is told to forget one.
+    for (const char *dead : {"binary_sensor/%s_%s_%04x_motion", "sensor/%s_%s_%04x_motion_level"}) {
+        char which[96];
+        snprintf(which, sizeof(which), dead, cfg.mqttBase, netHex, s.addr);
+        snprintf(topic, sizeof(topic), "%s/%s/config", HA_PREFIX, which);
+        mqtt.publish(topic, "", true);
+    }
+    for (const char *leaf : {"motion", "motion_level"}) {
+        char t2[80];
+        swTopic(t2, sizeof(t2), s.addr, leaf);
+        mqttPub(t2, "", true);
+    }
 
     s.announced = true;
     publishState(s);
@@ -506,60 +530,38 @@ static void publishLight(bool force) {
     ever = true;
 }
 
-static void setMotion(Switch &s, int level) {
-    uint32_t now = millis();
-    bool changedLevel = (s.motionLevel != level);
-    bool first = (s.motionLevel < 0);
-    s.motionLevel = level;
-    if (s.motionFloor < 0 || level < s.motionFloor) {
-        s.motionFloor = level;
-        s.floorAt = now;
-    } else if (now - s.floorAt > 60000 && s.motionFloor < level) {
-        s.motionFloor++;
-        s.floorAt = now;
-    }
-    bool wasOn = s.motionOn;
-    if (level - s.motionFloor > MOTION_ON_ABOVE) {
-        s.motionActiveAt = now;
-        s.motionOn = true;
-    }
-    char t[64], v[16];
-    if (changedLevel) {
-        swTopic(t, sizeof(t), s.addr, "motion_level");
-        snprintf(v, sizeof(v), "%d", level);
-        mqttPub(t, v, true);
-    }
-    if (s.motionOn != wasOn) {
-        Serial.printf("[motion] 0x%04x ON (level %d, floor %d)\n", s.addr, level, s.motionFloor);
-        swTopic(t, sizeof(t), s.addr, "motion");
-        mqttPub(t, "ON", true);
-    } else if (first) {
-        swTopic(t, sizeof(t), s.addr, "motion");
-        mqttPub(t, s.motionOn ? "ON" : "OFF", true);
-    }
+static void setOccupancy(Switch &s, int value) {
+    int8_t now = value ? 1 : 0;
+    if (s.occupied == now) return;
+    s.occupied = now;
+    Serial.printf("[occupancy] 0x%04x %s\n", s.addr, now ? "ON" : "OFF");
+    char t[64];
+    swTopic(t, sizeof(t), s.addr, "occupancy");
+    mqttPub(t, now ? "ON" : "OFF", true);
 }
 
-// A switch published a vendor field on its own (to all-nodes). Logged, not
-// acted on: field 0x0c turned out to be an on/off notice (0 on off, 1 on on or
-// on any command received), and the motion signal is the polled/published
-// field 0x13 handled by setMotion().
+// The lamp's draw. Diagnostic only -- no thresholds, no learned floor, and above all no motion
+// derived from it. Every one of those was built on this field meaning something it does not mean.
+static void setLoad(Switch &s, int level) {
+    if (s.loadLevel == level) return;
+    s.loadLevel = level;
+    char t[64], v[16];
+    swTopic(t, sizeof(t), s.addr, "load");
+    snprintf(v, sizeof(v), "%d", level);
+    mqttPub(t, v, true);
+}
+
+// A switch published a vendor field on its own, to all-nodes. This is how Brilliant's own panels hear
+// about a person: their poll list does not contain 0x13 at all, and 0x0c arrives unsolicited. So an
+// unsolicited 0x0c is acted on here, not merely logged -- it is the fastest notice we get.
 static void vendorPublished(Switch &s, uint8_t field, int value) {
+    if (field == VENDOR_OCCUPANCY_FIELD) { setOccupancy(s, value); return; }
     Serial.printf("[vendor] 0x%04x published field 0x%02x = %d\n", s.addr, field, value);
 }
 
-static void expireMotion() {
-    uint32_t now = millis();
-    for (uint8_t i = 0; i < nSwitches; i++) {
-        Switch &s = switches[i];
-        if (s.motionOn && now - s.motionActiveAt > MOTION_HOLD_MS) {
-            s.motionOn = false;
-            Serial.printf("[motion] 0x%04x off\n", s.addr);
-            char t[64];
-            swTopic(t, sizeof(t), s.addr, "motion");
-            mqttPub(t, "OFF", true);
-        }
-    }
-}
+// There is no expiry here any more. The old one dropped motion 20 s after the last over-floor sample,
+// which was this firmware inventing a hold for a reading that was never a sensor. 0x0c holds itself for
+// about five minutes and clears on its own, so the switch is left to say when somebody has gone.
 
 // ---------------------------------------------------------------- tx
 
@@ -658,9 +660,9 @@ static void cmdLevel(uint16_t dst, int pct) {
     Serial.printf("[cmd] 0x%04x -> dim %d%% (raw %u)\n", dst, pct, lvl);
 }
 
-static void pollMotion(uint16_t dst) {
+static void pollField(uint16_t dst, uint8_t field) {
     uint8_t a[5] = {0xC1, (uint8_t)(VENDOR_CID & 0xFF), (uint8_t)(VENDOR_CID >> 8), 0x11,
-                    VENDOR_MOTION_FIELD};
+                    field};
     sendAccess(dst, a, sizeof(a));
 }
 
@@ -747,10 +749,6 @@ static void handleAccess(uint16_t src, uint16_t dst, const uint8_t *a, size_t n)
     if (op == 0x8204 && plen >= 1 && s) {            // Generic OnOff Status
         int8_t now = p[0] ? 1 : 0;
         if (s->onoff != now) {
-            // The motion level's resting value moves with the load (the PIR sits
-            // next to the triac: ~0 lamp off, ~130 lamp full), so the floor is
-            // re-learned after any on/off rather than crept toward.
-            s->motionFloor = -1;
         }
         s->onoff = now;
         char t[64];
@@ -766,17 +764,14 @@ static void handleAccess(uint16_t src, uint16_t dst, const uint8_t *a, size_t n)
     } else if (vendor && a[1] == (VENDOR_CID & 0xFF) && a[2] == (VENDOR_CID >> 8) && plen >= 3) {
         uint8_t cmd = p[0], field = p[1];
         int value = p[2] | (plen >= 4 ? (p[3] << 8) : 0);
-        if ((cmd == 0x13 || cmd == 0x03) && field == VENDOR_MOTION_FIELD && s) {
+        if ((cmd == 0x13 || cmd == 0x03) && field == VENDOR_LOAD_FIELD && s) {
             if (value >= 0xFF00) return;                 // 0xffff: the switch has no reading right now
-            static int lastRaw[MAX_SWITCHES];
-            if (lastRaw[s - switches] != value) {
-                char hex[24];
-                hexstr(p + 2, min(plen - 2, (size_t)8), hex);
-                Serial.printf("[motion raw] 0x%04x field 13 = %s\n", src, hex);
-                lastRaw[s - switches] = value;
-            }
-            setMotion(*s, value);
+            setLoad(*s, value);
             return;                                  // poll replies are not events
+        }
+        if ((cmd == 0x13 || cmd == 0x03) && field == VENDOR_OCCUPANCY_FIELD && s) {
+            setOccupancy(*s, value);
+            return;
         }
         if (cmd == 0x13 && dst >= 0xC000 && s) vendorPublished(*s, field, value);
     }
@@ -1667,7 +1662,6 @@ void loop() {
     }
 
     drainRx();
-    expireMotion();
     lightRefresh();     // every pass: the broker can go while the proxy link stays up
     publishLight(false); // ...and say so, but only when it really moved
 
@@ -1697,12 +1691,16 @@ void loop() {
     errandTick();
 #endif
 
-    // Motion: one vendor Get per POLL_MS, round-robin over known switches.
+    // One vendor Get per POLL_MS, round-robin over the switches, alternating whole sweeps between
+    // occupancy and load. Occupancy takes ~30 s to trip and holds ~5 minutes, so polling each switch
+    // every other sweep is far finer than the signal it is chasing -- and the unsolicited 0x0c above
+    // usually gets there first anyway.
     if (nSwitches && now - lastPollAt >= POLL_MS) {
         lastPollAt = now;
         if (pollIdx >= nSwitches) pollIdx = 0;
-        pollMotion(switches[pollIdx].addr);
+        pollField(switches[pollIdx].addr, pollLoadPass ? VENDOR_LOAD_FIELD : VENDOR_OCCUPANCY_FIELD);
         pollIdx++;
+        if (pollIdx >= nSwitches) { pollIdx = 0; pollLoadPass = !pollLoadPass; }
     }
     delay(5);
 }

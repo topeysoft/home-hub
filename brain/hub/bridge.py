@@ -861,11 +861,18 @@ class Bridges:
         self.hub.log.add("bridge", chip, None, "forgotten", source="user")
         return {"forgotten": where or "The bridge"}
 
-    # The three entities a puck publishes for one switch, and the four topics it keeps its state on.
-    # Both lists are the other half of announce()/publishState() in brilliant/esp32-bridge/src/main.cpp,
-    # and forgetting one means emptying every item in both.
-    SWITCH_CONFIGS = (("light", ""), ("binary_sensor", "_motion"), ("sensor", "_motion_level"))
-    SWITCH_LEAVES = ("state", "brightness", "motion", "motion_level")
+    # The entities a puck publishes for one switch, and the topics it keeps their state on. Both lists
+    # are the other half of announce()/publishState() in brilliant/esp32-bridge/src/main.cpp, and
+    # forgetting one means emptying every item in both.
+    #
+    # The last two of each are RETIRED, and stay here on purpose. A puck used to publish a motion
+    # sensor fed by vendor field 0x13, which turned out to be the lamp's own draw rather than a PIR
+    # (brilliant/STATUS.md). Their discovery is retained, so a household that never updates a puck --
+    # or one whose switch is forgotten by a brain newer than its puck -- still has those entities
+    # sitting in Home Assistant. Dropping them from this list would strand them there forever.
+    SWITCH_CONFIGS = (("light", ""), ("binary_sensor", "_occupancy"), ("sensor", "_load"),
+                      ("binary_sensor", "_motion"), ("sensor", "_motion_level"))
+    SWITCH_LEAVES = ("state", "brightness", "occupancy", "load", "motion", "motion_level")
 
     async def forget_switch(self, net: str, addr: str) -> dict:
         """Take one wall switch off the house, and make it stay off.

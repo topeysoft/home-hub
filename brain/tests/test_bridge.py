@@ -1091,10 +1091,11 @@ class BeingDoneWithOneSwitch(unittest.TestCase):
     def test_the_three_entities_and_the_four_state_topics_are_emptied(self):
         run(self.b.forget_switch("0123456789abcdef", "0021"))
         said = dict(self.hub.ha.published)
-        for kind, tail in (("light", ""), ("binary_sensor", "_motion"), ("sensor", "_motion_level")):
+        for kind, tail in (("light", ""), ("binary_sensor", "_occupancy"), ("sensor", "_load"),
+                           ("binary_sensor", "_motion"), ("sensor", "_motion_level")):
             t = f"homeassistant/{kind}/mesh_0123456789abcdef_0021{tail}/config"
             self.assertEqual(said.get(t), "", t)
-        for leaf in ("state", "brightness", "motion", "motion_level"):
+        for leaf in ("state", "brightness", "occupancy", "load", "motion", "motion_level"):
             self.assertEqual(said.get(f"mesh/0123456789abcdef/0021/{leaf}"), "")
         self.assertNotIn(("0123456789abcdef", "0021"), self.b.switches)
 
