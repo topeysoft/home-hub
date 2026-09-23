@@ -103,8 +103,9 @@ that did not exist, a fake home that was a list, and no broker.
    fixed it. **What is left before this ships is the errand runner itself, which is a bench build.**
    **And the puck can be the house's ear for knocks** (item 42): a passive listen at a tenth of the
    radio costs the mesh about 6% and hears a knocking strip twice a second, and the address it hears
-   is one the errand can open at with no scan at all. **What is left before this ships is deciding
-   how pucks hear knocks, then the errand runner itself, which is still a bench build.** Nothing
+   is one the errand can open at with no scan at all. **Decided: pucks listen, all day** (see the
+   list below). **What is left before this ships is building that ear and the errand runner into
+   the bridge proper, and teaching the hub to rank sightings — all of it still a bench build.** Nothing
    has been tried at the distance item 15 is about, and `hardware/` has still never had the
    conversation.
 2. **The partial-commissioning bug.** A Matter adopt reported failure on the wall and left a fabric
@@ -149,6 +150,17 @@ the strip retires a retained one rather than obeying it. Item 33, **and it has n
   Bluetooth) stays drawn and unbuilt, the way `design/door/ShowMe.dc.html` is: it is the record of why
   the wall is not the radio, and its three preconditions are all false here today.
 - **Nothing a strip is told is retained** (22 September, item 33). The device's own NVS is the memory.
+- **A puck hears knocks by listening, not by looking** (23 September, item 42 — decided on the
+  measurements, with the user's leave). Every puck runs a passive scan, 10 ms of every 100, all day,
+  for the Matter commissionable advert, filtered to our vendor and discriminator, and reports each
+  sighting — address *and address type*, loudness, when — to the hub, which ranks them: the hub's
+  question is *who can hear this*, so one puck today and every ear later is the same code. The
+  listen stops for the connect of an errand and resumes after it. **Why not the others:** an active
+  look like the hub's own leaves the mesh deaf fourteen seconds a minute; listening only while Add is
+  open is free and means a house whose hub cannot hear the strip is never told it knocked, which
+  undoes the knock that announces itself (`design/knock/`, AGENTS.md §5). **What would reopen it:**
+  a house whose mesh cannot spare 6%, or a distance test in which a passive ear misses a strip an
+  active look would have found.
 - **ESP-IDF, not Arduino.** Arduino compiles Matter-over-BLE out on every target; a strip built that way cannot
   be set up by Apple or Google at all. Evidence both ways is in this document.
 - **The partition table** (`partitions-matter.csv`), sized for Matter with the certification partitions laid
