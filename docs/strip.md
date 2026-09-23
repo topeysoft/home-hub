@@ -116,8 +116,8 @@ that did not exist, a fake home that was a list, and no broker.
    auto-reset pulls from DTR.
 
 **And the decision that was waiting is taken:** the three setup commands are no longer retained, and
-the strip retires a retained one rather than obeying it. Item 33. **It is written and it has not run on
-a board** — no ESP32 was plugged into the machine that wrote it.
+the strip retires a retained one rather than obeying it. Item 33, **and it has now run on a board**
+(item 41): three retained commands retired on connect, the strip's own count kept.
 
 ### Decided, and not to be reopened without a reason
 
@@ -685,6 +685,35 @@ the house, which is how these things get returned. The camera route avoids all o
 pointed into a living room. **The cheap next step is neither: a capture stick and HyperHDR on a bench,
 to find out whether it feels like the screen extended or like a gimmick, before any of it is paid for.**
 
+**41. A strip given an address now finds the hub — and item 33's retained-command half has run on
+silicon at last.** 23 September.
+
+**The bug, found in passing in item 39.** `find_hub()` appended `.local` to whatever `mhost` held,
+so a hub that handed over its *address* produced `mqtt://192.168.86.53.local:1883`, which is nowhere,
+and the strip joined the Wi-Fi, said *nobody came*, and never appeared. `brain/hub/strip.py:460` sends
+`name or host or "hub"`, so any house whose broker is known by address was affected — and the native
+test found it was worse than that: a name that already said `.local` became `hub.local.local`. The
+rule is now `strip/firmware/main/hub_uri.h`: a bare name gets `.local`, anything with a dot in it is
+used as given, IPv6 is bracketed. `test_hub_uri_native.cpp` holds it there and **fails four of its
+six cases against the old rule**.
+
+**Proven on the board that had the bug.** Strip `2e4258` had been adopted three times today and the
+broker still had it `offline`. Reflashed with the app only, NVS untouched, it said *looking for the
+hub at mqtt://192.168.86.53:1883*, then *announced as a light the house can switch on*, and the
+broker shows it `online`.
+
+**AND ITEM 33'S FIRMWARE HALF RAN, BECAUSE THE BUG HAD KEPT IT FROM EVER TRYING.** A retained
+`count/set 251` and `order/set grb` had been waiting on the broker since the first run that reached the
+end. On connecting, the strip said *a retained count/set was waiting on the broker; retiring it, what
+is written down wins* — and the same for `order/set` and `room/set` — kept its own count of 300 rather
+than obeying 251, and the broker holds neither retained command any more. That is exactly the three
+things item 33 said to watch for.
+
+**A bench fact that costs an hour.** On this machine the native tests do not link: the Command Line
+Tools' linker cannot read its own macOS 27 SDK (*unknown architecture arm64e.x1*). Build them against
+the 26.5 SDK — `c++ -std=c++17 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk …` —
+and both pass. Neither native test is in CI; both are run by hand.
+
 **40. THE STRIP RINGS, AND A HOUSEHOLD CAN TAKE ITS TIME. Direction A is built on all three
 pieces and has run.** 23 September, the day after it was chosen (`design/ears/Tell.dc.html`).
 
@@ -784,7 +813,7 @@ appends `.local` to whatever `mhost` holds, unconditionally
 here, no longer asking*. `brain/hub/strip.py:460` sends `name or host or "hub"`, so any house whose
 broker config has a host and no name adopts a strip that completes setup and never appears.
 The puck has three ways to find the hub for exactly this reason (`docs/network.md`); the strip has
-one, and it mangles two of the three things it might be given. **Not fixed.**
+one, and it mangles two of the three things it might be given. **Fixed in item 41.**
 
 **38. THE PUCK CAN RUN THE ERRAND. It holds a second link to a knocking strip without letting
 go of the mesh, and here is what it costs.** 23 September, on the bench, and it is the question

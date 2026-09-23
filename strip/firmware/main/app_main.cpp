@@ -56,6 +56,7 @@
 #include <app/server/Server.h>
 #include <setup_payload/OnboardingCodesUtil.h>
 
+#include "hub_uri.h"
 #include "pixels.h"
 #include "prov.h"
 
@@ -501,8 +502,10 @@ static void find_hub() {
     // Blank on a strip that has never met our hub, which is the ordinary case for one bought in a
     // shop. It is then simply a Matter light and none of this half ever runs.
     if (host.empty()) { ESP_LOGI(TAG, "no hub to look for; this is somebody else's light"); return; }
-    ESP_LOGI(TAG, "looking for the hub at %s.local", host.c_str());
-    const std::string uri = "mqtt://" + host + ".local:1883";
+    // A NAME GETS .local AND AN ADDRESS DOES NOT -- see hub_uri.h for the strip that finished setup
+    // and never appeared because it was looking for 192.168.86.53.local.
+    const std::string uri = broker_uri(host);
+    ESP_LOGI(TAG, "looking for the hub at %s", uri.c_str());
     esp_mqtt_client_config_t cfg = {};
     cfg.broker.address.uri = uri.c_str();
     cfg.credentials.username = strdup(get_str("muser", "").c_str());
