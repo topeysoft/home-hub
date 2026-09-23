@@ -21,7 +21,7 @@ is where it stands, as of 22 September 2026.*
 | **Design** | 27 boards in `design/strip/`, 3 in `design/door/`, 3 in `design/occasion/`, 5 in `design/ears/`. The last row of `design/strip/` is the press and the rung below it; `design/ears/` is how a hub reaches a strip it cannot hear, and it is drawn and unbuilt |
 | **Firmware** | ESP-IDF + esp-matter, **commissionable over BLE, proven on an ESP32-S3** |
 | **Brain** | both doors: knock → adopt → (press → rhythm | code) → set up. 71 tests. Our door carries the broker |
-| **Panel** | the beats including the press, previewable with `?strip=knocking\|press\|rhythm\|working\|ready`; and the two rows a strip adds to its own light pane |
+| **Panel** | the beats including the press, previewable with `?strip=knocking\|press\|rhythm\|working\|ready`; and the ONE row a strip adds to its own light pane, with both questions behind it and the end walked rather than measured again (22 September, `design/strip/OneDoor.dc.html`) |
 | **Suites** | brain 1137, panel 502, native firmware test, all green |
 
 ### What is proven on hardware, and what is not

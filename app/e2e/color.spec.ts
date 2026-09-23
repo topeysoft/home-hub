@@ -45,13 +45,15 @@ test('a light that can do color says so, and a tap reaches the house', async ({ 
   await openLight(page, 'Desk lamp', 'office')
 
   await expect(page.locator('.rig-color')).toBeVisible()
-  /* by row rather than by total: this room may already have colors somebody kept, and a spec that
-     counts every swatch on the screen is a spec that passes or fails on what the last one did */
-  const rows = page.locator('.rig-color .rig-swatches')
-  expect(await rows.nth(await rows.count() - 2).locator('.rig-swatch').count(), 'eight colors').toBe(8)
-  expect(await rows.last().locator('.rig-swatch').count(), 'four whites').toBe(4)
+  /* ONE GRID since 22 September (design/strip/Both.dc.html): the kept colors, the twelve and the
+     whites are one row of swatches under one label, because three labeled blocks pushed everything
+     under them off a 1440 wall. So this counts by KIND rather than by row -- the kept ones vary with
+     what the last run did, and counting the lot would pass or fail on that. */
+  expect(await page.locator('.rig-color .rig-swatches').count(), 'one grid, not three').toBe(1)
+  expect(await page.locator('.rig-color .rig-swatch[aria-label^="Color,"]').count(), 'eight colors').toBe(8)
+  expect(await page.locator('.rig-color .rig-swatch.white').count(), 'four whites').toBe(4)
 
-  await page.locator('.rig-swatch').first().click()
+  await page.locator('.rig-color .rig-swatch[aria-label^="Color,"]').first().click()
   await expect.poll(() => sent.length).toBeGreaterThan(0)
   expect(sent[0], 'a swatch asks for a hue and an amount').toContain('hs_color')
 })
@@ -64,7 +66,7 @@ test('white is reachable from a lamp that is currently a color', async ({ page }
   const sent = watchCalls(page)
   await openLight(page, 'Ceiling light')          // pinned to a color in the mock
 
-  const whites = page.locator('.rig-color .rig-swatches').last().locator('.rig-swatch')
+  const whites = page.locator('.rig-color .rig-swatch.white')
   await expect(whites.first()).toBeVisible()
   await whites.nth(2).click()
   await expect.poll(() => sent.length).toBeGreaterThan(0)
@@ -128,7 +130,8 @@ test('a color tuned against the room can be kept, and comes back in the grid', a
 
   await page.locator('.rig-back').click()
   await expect(page.locator('.rig-color')).toBeVisible()
-  await expect(page.locator('.rig-color .rig-lbl').first(), 'the kept color joins the grid').toHaveText('This room')
+  /* it joins the SAME grid as the twelve now, at the front, rather than getting a block of its own */
+  await expect(page.locator('.rig-color .rig-swatch[aria-label^="Kept color"]').first(), 'the kept color joins the grid').toBeVisible()
 })
 
 /* The pane is assembled from a shell and a rig, and --lamp -- the accent for the power button, the

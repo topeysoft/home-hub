@@ -9259,7 +9259,18 @@ select.input {
   display: flex;
   min-height: 340px;
   max-height: 100%;
-  overflow: hidden;
+  /* IT SCROLLS RATHER THAN CUTTING ITSELF OFF. This was overflow: hidden, which is right until an
+     instrument is taller than the pane can give it -- a light in a room with colors kept in it grows
+     a label and a row of swatches, and on a 1440 wall the foot of the rig went under the edge of the
+     pane with no way to reach it. Reported 22 September. Hidden is the worse failure: a pane that
+     scrolls says there is more, and a pane that clips says the panel is broken. */
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+.pane-rig::-webkit-scrollbar {
+  display: none;
 }
 .pane-rig > * {
   flex: 1 1 auto;
@@ -9722,9 +9733,15 @@ select.input {
 }
 /* 58px, because the hand that reaches for one of these is not looking -- the
    same reason the columns beside them are 168 wide. */
+/* 46, not 58, and this is the first time this panel has made a target smaller to fit something in.
+   What forced it: the kept colors, the twelve and the whites are one grid now, and on a 1440 wall the
+   block still has to come in under about 426px or the row beneath it goes off the screen
+   (design/strip/Both.dc.html, chosen 22 September). A 46px circle with 11px between is still a good
+   deal bigger than a finger's own 40 -- but it is the panel's oldest rule being spent, so it is
+   written down here rather than left as a number somebody tidied. */
 .rig-swatch {
-  width: 58px;
-  height: 58px;
+  width: 46px;
+  height: 46px;
   border-radius: 50%;
   border: 0;
   cursor: pointer;

@@ -178,6 +178,15 @@ describe('the press, and the rung below it', () => {
    about what is absent: no effects, no segments, no zones. */
 describe('asking a strip again, afterwards', () => {
   const pane = readFileSync('src/panes/LightPane.vue', 'utf8')
+  /* The strip-shaped part of the pane: the one row, and the sheet behind it. It runs to the end of
+     the template now rather than as far as the three levels -- the three come FIRST since 22
+     September, and the strip's row sits under them (design/strip/OneDoor.dc.html). A boundary drawn
+     from the old arrangement measured most of the file and said nothing. */
+  const stripPart = () => pane.slice(pane.indexOf('v-if="strip && !tuning"'), pane.lastIndexOf('</template>'))
+  /* Without its comments, for the checks about what is OFFERED: the comment above the sheet says in
+     as many words that there are no effects, segments or zones in it, and a test that reads prose
+     fails on the sentence promising the thing it is looking for. */
+  const stripMarkup = () => stripPart().replace(/<!--[\s\S]*?-->/g, '')
 
   it('offers both of the questions a strip is asked at setup, and only those', () => {
     expect(pane).toContain("askAgain('length')")
@@ -188,6 +197,16 @@ describe('asking a strip again, afterwards', () => {
   it('says the length in metres, because that is how strips are bought', () => {
     expect(pane).toMatch(/\/ 60/)
     expect(pane).toContain('About ')
+  })
+
+  it('puts both questions behind ONE row, because neither is used twice a year', () => {
+    const rows = stripMarkup()
+    expect(rows.match(/class="rig-card sd-door"/g) ?? []).toHaveLength(1)
+    expect(rows).toContain('Set up as a strip')
+    // and what opens is the sheet, with the length walked in it and the colors handed to setup
+    expect(rows).toContain('sd-sheet')
+    expect(rows).toContain('Ends here')
+    expect(rows).toContain('The colors look wrong')
   })
 
   it('shows nothing at all on a light that is not a strip', () => {
@@ -202,11 +221,19 @@ describe('asking a strip again, afterwards', () => {
   it('adds no effects, segments or zones, which is the board\'s loudest argument', () => {
     // The strip-shaped part of the pane only: "effect" is ordinary English everywhere else in a file
     // about lighting, and a test that reads the whole file is a test about prose.
-    const at = pane.indexOf('v-if="strip && !tuning"')
-    const rows = pane.slice(at, pane.indexOf('rig-levels', at + 40))
-    expect(rows.match(/<button/g) ?? []).toHaveLength(2)
+    const rows = stripMarkup()
     for (const no of ['effects', 'segment', 'zone', 'animation', 'preset'])
       expect(rows.toLowerCase()).not.toContain(no)
+  })
+
+  it('and offers nothing in those rows but the two questions they are about', () => {
+    /* This used to count the buttons in the region and expect two, which was the same argument
+       measured the easy way -- and it stopped being true the moment one of the two rows learned to
+       open in place so the end can be moved (design/strip/Nudge.dc.html). Counting is not the
+       point; WHAT IS OFFERED is. So: every handler this region can call, by name. A row that grows
+       a third question, or anything at all that is not length or color, fails here. */
+    const calls = new Set([...stripPart().matchAll(/@(?:click|pointerdown|pointerup|pointerleave|pointercancel)="([a-zA-Z]+)/g)].map(m => m[1]))
+    expect([...calls].sort()).toEqual(['askAgain', 'closeDoor', 'closeTune', 'openDoor', 'startWalk', 'stopWalk'])
   })
 })
 

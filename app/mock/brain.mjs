@@ -30,6 +30,7 @@ const rooms = [
         color_pinned: true, supported_color_modes: ['color_temp', 'hs'] }, 'Philips Hue'),
     dev('l2', 'Floor lamp', 'living', 'light', 'on', { brightness: 60, supported_color_modes: ['brightness'] }),
     dev('l3', 'Reading lamp', 'living', 'light', 'off', { supported_color_modes: ['onoff'] }),
+
     dev('m1', 'Living room TV', 'living', 'media', 'playing', { media_title: 'The Bear', media_artist: 'Season 3, Episode 4', app_name: 'Disney+', volume_level: 0.35, entity_picture: '/x.jpg', media_position: 1421, media_duration: 3740 }),
     dev('s1', 'Sonos', 'living', 'media', 'paused', { media_title: 'Blue in Green', media_artist: 'Miles Davis', volume_level: 0.2 }),
     dev('c1', 'Blinds', 'living', 'cover', 'open', { current_position: 70 }, 'IKEA'),
@@ -39,7 +40,12 @@ const rooms = [
   ] },
   { id: 'kitchen', name: 'Kitchen', intent: 'occupied', set_by: null, hold_until: now + 4700, devices: [
     dev('k1', 'Kitchen lights', 'kitchen', 'light', 'on', { brightness: 255, supported_color_modes: ['brightness'] }),
-    dev('k2', 'Under-cabinet strip', 'kitchen', 'light', 'off', { brightness: 0, supported_color_modes: ['brightness'] }),
+    /* THE HOUSE'S LIGHT STRIP, and it has been one in name only. `hw` is what makes it one: the hub
+       knows the hardware behind it and /strip/list names that hardware, which is how a light pane
+       knows the light it is drawing is a strip. Without this the strip's own row could not be looked
+       at or tested at all -- and it is a row that took a wrong shape for a week. Colors, because a
+       strip is RGB and its channel order is half of what that row asks about. */
+    dev('k2', 'Under-cabinet strip', 'kitchen', 'light', 'off', { brightness: 0, supported_color_modes: ['hs'] }, null, { hw: 'hw-strip-1' }),
     dev('k3', 'Coffee maker', 'kitchen', 'switch', 'off', {}),
     feature('k7', 'Refrigerator Ice Maker', 'kitchen', 'on', 'hw-fridge', 'Refrigerator'),
     feature('k8', 'Refrigerator Ice Bites', 'kitchen', 'off', 'hw-fridge', 'Refrigerator'),
@@ -452,6 +458,12 @@ const BRAIN = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..'
    nothing. It is honest about being a picture only in this name. */
 const FAKE_QR = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 29 29'><rect width='29' height='29' fill='#fff'/><path d='M2 2h7v7H2zM3 3v5h5V3zM4 4h3v3H4zM20 2h7v7h-7zM21 3v5h5V3zM22 4h3v3h-3zM2 20h7v7H2zM3 21v5h5v-5zM4 22h3v3H4zM11 2h2v2h-2zM14 3h2v2h-2zM11 6h3v2h-3zM16 7h2v2h-2zM2 11h2v2H2zM5 12h2v2H5zM8 11h2v3H8zM11 10h2v3h-2zM14 11h3v2h-3zM18 10h2v3h-2zM21 11h2v2h-2zM24 12h3v2h-3zM3 15h3v2H3zM7 16h2v2H7zM11 14h2v3h-2zM14 15h2v3h-2zM17 14h3v2h-3zM21 15h2v3h-2zM24 16h3v2h-3zM11 19h2v2h-2zM14 20h3v2h-3zM18 19h2v3h-2zM21 20h2v2h-2zM24 19h3v3h-3zM11 23h3v2h-3zM15 24h2v3h-2zM18 23h3v2h-3zM22 24h2v2h-2zM25 23h2v4h-2z'/></svg>`
 
+/* The strips this house has. `device` is the hub's own id for the hardware, which is how a light
+   pane knows the light it is drawing IS one of these. OUT HERE, not inside the handler: a strip
+   being walked has to remember where it got to between requests, and everything declared in there
+   is built again for every one of them. */
+const strips = [{ id: 's-cabinet', online: true, count: 180, order: 'grb', device: 'hw-strip-1', was: null }]
+
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://x')
   const p = url.pathname
@@ -529,6 +541,22 @@ const bridgeRows = process.env.BRIDGES === 'none' ? [] : [
   { chip: 'd21e04', room: null, where: 'A bridge', online: false, signal: 'none', switches: 0,
     fw: '0.5.0', behind: false, shipped: '0.5.0', night: null, level: null, lift: false },
 ]
+  /* THE STRIPS THE HOUSE HAS, and the end of one being walked (design/strip/Nudge.dc.html).
+     `count` is lights, not metres -- the panel divides by sixty to say it in metres, because a
+     household buys strip by the metre and has never counted a light. Nothing here talks to a real
+     strip: tuning just moves the number the way the brain would. */
+  if (p === '/strip/list') return json(res, { strips: strips.map(({ was, ...row }) => row) })
+  if (p.startsWith('/strip/tune') && req.method === 'POST') { let raw = ''; req.on('data', c => (raw += c)); return req.on('end', () => {
+    let b = {}; try { b = JSON.parse(raw) } catch {}
+    const row = strips.find(x => x.id === b.id)
+    if (!row) return json(res, { error: 'The hub does not know that strip.' }, 400)
+    if (p === '/strip/tune') row.was = row.count
+    if (p === '/strip/tune/by') row.count = Math.max(1, row.count + (Number(b.by) || 0))
+    /* Walking away without keeping puts the strip back to what it was, as the brain does: nothing is
+       written down until somebody says that is it. */
+    if (p === '/strip/tune/done' && b.keep === false && row.was != null) row.count = row.was
+    json(res, { id: row.id, count: row.count, tuning: p !== '/strip/tune/done' })
+  }) }
   if (p === '/bridge/list') return json(res, { bridges: bridgeRows })
   if (p === '/bridge/light' && req.method === 'POST') { let raw = ''; req.on('data', c => (raw += c)); return req.on('end', () => {
     let b = {}; try { b = JSON.parse(raw) } catch {}

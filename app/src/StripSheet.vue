@@ -314,6 +314,13 @@ onUnmounted(() => window.removeEventListener('keydown', key, true))
             <button class="button wide" :class="{ busy }" @click="ends">That’s the whole of it</button>
             <button class="button ghost wide" @click="again">Start again</button>
           </div>
+          <!-- CLOSE ENOUGH IS FINE, AND SAYING SO IS WHAT KEEPS THIS BEAT ONE TAP. Tapping a beat
+               late or early is a few lights out either way, and somebody who does not know it can
+               be fixed afterwards will sit through the fill again to get it exact. It can be fixed
+               afterwards -- on the strip's own light pane, which is where the length was decided to
+               live for ever after (design/strip/Nudge.dc.html). This line is only honest because
+               that control exists; it went in with it. -->
+          <p class="after">A light or two out is fine. You can move the end afterwards, on the strip’s own screen.</p>
         </template>
 
         <!-- the ordinary room chips every other new device gets. Nothing here is invented. -->
@@ -382,6 +389,14 @@ onUnmounted(() => window.removeEventListener('keydown', key, true))
 /* The line that says nothing is happening yet, and that nothing is meant to be. It sits between the
    strip and the only button, where a primary would be on every other beat -- because on this one the
    thing to press is not on the wall. */
+/* The line under the two ways out, quieter than either of them: it is not an instruction and not a
+   third thing to press, it is permission to stop worrying about the tap. */
+.after {
+  margin: 14px 0 0;
+  text-align: center;
+  font-size: 13px;
+  color: var(--muted);
+}
 .waiting {
   display: flex; align-items: center; justify-content: center; gap: 9px;
   margin: 0 0 16px; font-size: 13.5px; color: var(--ink-2);
