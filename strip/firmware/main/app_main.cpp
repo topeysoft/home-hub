@@ -37,6 +37,7 @@
 #include <esp_system.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
+#include <freertos/semphr.h>
 #include <nvs_flash.h>
 #include <nvs.h>
 #include <driver/gpio.h>
@@ -89,6 +90,35 @@ static constexpr uint8_t SIG_R = 255, SIG_G = 96, SIG_B = 0;
 
 static px::Pixels strip;
 static px::Fill fill;
+// ONE HAND ON THE STRIP AT A TIME. Three tasks draw on it: the MQTT task (every command -- `light/set`,
+// the setup instruments, `fill/stop`), this file's own loop (the fill and the waiting glow), and
+// CHIP's (Matter's light callbacks, and the glow when the knocking stops). They shared one buffer and
+// one RMT channel with nothing between them, and px::show() waits for its frame with no timeout. When
+// two overlapped, the MQTT task waited for a frame that never finished: the strip stopped hearing
+// commands and stopped sending keep-alives, the broker dropped it three minutes later, and the loop
+// -- the one task under the watchdog -- carried on logging, so nothing panicked and nothing said why.
+// Found on 23 September: a strip that went silent seconds after setup, whose last step (`fill/stop`)
+// repaints from the MQTT task while the loop may still be drawing the fill's last frame; reproduced by
+// `show/set off` during a fill (docs/strip.md item 48). Recursive, because paint() takes it too and is
+// called from places that already hold it.
+// Nothing but the MQTT task itself publishes while holding it: a publish takes the MQTT client's lock,
+// and that task may be waiting on this one.
+static SemaphoreHandle_t gPx = nullptr;
+struct Hold {
+    Hold() { if (gPx) xSemaphoreTakeRecursive(gPx, portMAX_DELAY); }
+    ~Hold() { if (gPx) xSemaphoreGiveRecursive(gPx); }
+};
+// A FILL NOBODY FINISHES MUST STILL END. It runs until the hub says where the end is, and wraps round
+// if somebody misses it -- which is right while a person is watching and wrong when nobody is: left
+// running it publishes a progress message per light, twenty a second, for ever, into a send queue
+// that only grows. Found on 23 September by a replay that never said stop (docs/strip.md item 48).
+// So it ends on the commands that mean the measuring is over, and on its own after FILL_MOST_MS; and it
+// tells the wall how far it has got four times a second, not once per light -- the wall draws progress
+// from it and nothing more, because the length itself comes back from `fill/stop`.
+static constexpr uint32_t FILL_MOST_MS = 5 * 60 * 1000;
+static constexpr uint32_t FILL_SAY_EVERY_MS = 250;
+static uint32_t fill_began = 0, fill_said_at = 0;
+static int fill_said = -1;
 static nvs_handle_t nvs;
 static char chipHex[13];
 static char base[16] = "strip";
@@ -129,6 +159,35 @@ static volatile bool forget_asked = false;
 static bool want_on = false;
 static uint8_t want_r = 255, want_g = 180, want_b = 110, want_bri = 200;
 
+// THE LIGHT COMES BACK AS IT WAS LEFT. A power cut, a breaker, a strip unplugged to move it: a lamp
+// that came back on comes back on, in the color somebody chose, the way every bulb in the house
+// does -- and this one came back off, warm white, every time, because nothing was written down
+// (asked for on 23 September). Kept in NVS a moment after the last change rather than on every one,
+// because a brightness slider being dragged is dozens of changes a second and each write is an erase
+// cycle on the flash. A strip that has never been told anything starts as it always has: off.
+static constexpr uint32_t LIGHT_KEEP_AFTER_MS = 2000;
+static bool light_dirty = false;
+static uint32_t light_changed_at = 0;
+static void light_changed() { light_dirty = true; light_changed_at = (uint32_t)(esp_timer_get_time() / 1000); }
+static void keep_light() {
+    nvs_set_u8(nvs, "lon", want_on);
+    nvs_set_u8(nvs, "lbri", want_bri);
+    nvs_set_u32(nvs, "lrgb", ((uint32_t)want_r << 16) | ((uint32_t)want_g << 8) | want_b);
+    nvs_commit(nvs);
+}
+static void restore_light() {
+    uint8_t on = 0, bri = want_bri;
+    uint32_t rgb = ((uint32_t)want_r << 16) | ((uint32_t)want_g << 8) | want_b;
+    nvs_get_u8(nvs, "lon", &on);
+    nvs_get_u8(nvs, "lbri", &bri);
+    nvs_get_u32(nvs, "lrgb", &rgb);
+    want_on = on;
+    want_bri = bri;
+    want_r = (uint8_t)(rgb >> 16);
+    want_g = (uint8_t)(rgb >> 8);
+    want_b = (uint8_t)rgb;
+}
+
 static esp_mqtt_client_handle_t mqtt = nullptr;
 static bool broker_up = false;
 
@@ -159,6 +218,7 @@ static void put_i32(const char *key, int v) { nvs_set_i32(nvs, key, v); nvs_comm
 // The strip at the length it currently believes, with the last few lights cool. Drawn whenever the
 // count moves while tuning, and nowhere else.
 static void paint_tune() {
+    Hold h;
     strip.clear();
     const int n = strip.order.per_pixel();
     for (int i = 0; i < strip.count; i++) {
@@ -170,6 +230,7 @@ static void paint_tune() {
 }
 
 static void paint() {
+    Hold h;
     if (instrument) return;
     if (!want_on) strip.clear();
     else {
@@ -277,6 +338,17 @@ static void say_what_we_are() {
 // strip straight back the next time a broker restarts -- the bridge learned this the hard way and
 // says so in its own forget(). So they are emptied first, while there is still a broker to say it
 // to, and only then does the strip erase what it knows and start again new.
+// Over, without an answer: the fill borrowed the whole wire (`show/set fill` sets PX_MOST), so the
+// length that was written down before it comes back, rather than wherever the fill had wandered to.
+static void end_fill(const char *why) {
+    if (!fill.running) return;
+    fill.running = false;
+    strip.set_count(get_i32("count", PX_ASSUMED));
+    instrument = false;
+    paint();
+    ESP_LOGI(TAG, "the fill is over (%s); back to %d lights", why, strip.count);
+}
+
 static void forget_the_house(bool tidy_first) {
     if (tidy_first) {
         char topic[96];
@@ -285,6 +357,7 @@ static void forget_the_house(bool tidy_first) {
         for (const char *leaf : {"count", "order", "light", "fill", "status"}) say(leaf, "", 1);
         vTaskDelay(pdMS_TO_TICKS(600));   // let them leave before the radio goes with everything else
     }
+    Hold h;             // after the goodbyes: nothing publishes while holding the strip (see gPx)
     strip.clear();
     px::show(strip);
     nvs_erase_all(nvs);
@@ -295,6 +368,7 @@ static void forget_the_house(bool tidy_first) {
 }
 
 static void on_command(const std::string &leaf, const std::string &msg, bool retained) {
+    Hold h;             // every command that touches the strip, from the MQTT task: see gPx
     if (leaf == "hello") { say_what_we_are(); return; }
 
     // DONE WITH IT, ASKED FROM THE PANEL INSTEAD OF FROM THE BUTTON.
@@ -363,6 +437,7 @@ static void on_command(const std::string &leaf, const std::string &msg, bool ret
             if (cJSON_IsNumber(b)) want_b = (uint8_t)b->valueint;
         }
         cJSON_Delete(j);
+        light_changed();
         paint();
         say_light();
         return;
@@ -394,6 +469,8 @@ static void on_command(const std::string &leaf, const std::string &msg, bool ret
             strip.clear();
             px::show(strip);
             fill.start(now_ms());
+            fill_began = now_ms();
+            fill_said = -1;
         } else if (msg == "tune") {
             // The pane's fine-tune. Nothing is written down until it is over: `tune/set` moves the
             // count in memory only, so holding a button does not spend an NVS erase cycle a frame.
@@ -402,6 +479,7 @@ static void on_command(const std::string &leaf, const std::string &msg, bool ret
             fill.running = false;
             paint_tune();
         } else if (msg == "off") {
+            end_fill("asked to stop");      // "off" used to leave a fill running under the paint
             instrument = false;
             tuning = false;
             paint();
@@ -422,6 +500,14 @@ static void on_command(const std::string &leaf, const std::string &msg, bool ret
     }
 
     if (leaf == "fill/stop") {
+        // A fill that is already over -- stopped, or given up on -- has nothing to latch, and latching
+        // anyway would write down wherever it last was. Say the length the strip has instead.
+        if (!fill.running) {
+            char v[16];
+            snprintf(v, sizeof(v), "%d", strip.count);
+            say("count", v, 1);
+            return;
+        }
         // Latched HERE, at the moment the message lands. A person's reaction time is already the only
         // error in this answer; adding however busy the Wi-Fi is would make a strip measure short on a
         // busy evening and right on a quiet one, which is the worst kind of wrong.
@@ -445,10 +531,14 @@ static void on_command(const std::string &leaf, const std::string &msg, bool ret
         return;
     }
     if (leaf == "count/set") {
+        // A length being said is the measuring being over, so a fill still running ends here.
+        const bool was_filling = fill.running;
+        fill.running = false;
         strip.set_count(atoi(msg.c_str()));
         put_i32("count", strip.count);
         // Sent as the last word of a tuning session, so what is on the strip has to agree with it.
         if (tuning) paint_tune();
+        else if (was_filling) { instrument = false; paint(); }
         return;
     }
     if (leaf == "room/set")  { put_str("room", msg); return; }
@@ -539,6 +629,7 @@ static esp_err_t on_attribute(attribute::callback_type_t type, uint16_t endpoint
     } else {
         return ESP_OK;
     }
+    light_changed();
     paint();
     return ESP_OK;
 }
@@ -563,6 +654,7 @@ static void on_event(const ChipDeviceEvent *event, intptr_t) {
         !waiting_over) {
         if (prov::keep_knocking()) return;
         waiting_over = true;
+        Hold h;
         strip.solid(SIG_R / 6, SIG_G / 6, SIG_B / 6);
         px::show(strip);
         ESP_LOGI(TAG, "nobody came. Still here, no longer asking -- power it off and on to ask again");
@@ -601,6 +693,7 @@ static bool rhythm_lit(uint32_t t) {
 // in another room has nothing else to tell them it worked, and "nothing happened" is what a dead
 // button and a button that is not wired both look like.
 static void blink_back() {
+    Hold h;
     strip.solid(255, 255, 255);
     px::show(strip);
     vTaskDelay(pdMS_TO_TICKS(120));
@@ -642,6 +735,7 @@ static void housekeeping(void *) {
         if (instrument && !waiting_over && !armed && !fill.running) {
             const bool lit = prov::busy() || !prov::rhythm()[0] || rhythm_lit(now_ms());
             if (lit != was_lit) {
+                Hold h;
                 if (lit) strip.solid(SIG_R, SIG_G, SIG_B); else strip.clear();
                 px::show(strip);
                 was_lit = lit;
@@ -698,23 +792,38 @@ static void housekeeping(void *) {
             }
         }
 
+        if (fill.running && now_ms() - fill_began > FILL_MOST_MS) end_fill("nobody stopped it");
         if (fill.running) {
-            const int was = fill.at;
-            fill.tick(now_ms(), strip.count);
-            if (fill.at != was) {
-                strip.clear();
-                for (int i = 0; i < fill.at; i++)
-                    strip.order.bytes(SIG_R, SIG_G, SIG_B, &strip.buf[i * strip.order.per_pixel()]);
-                px::show(strip);
-                char v[16];
-                snprintf(v, sizeof(v), "%d", fill.at);
-                say("fill", v);
+            Hold h;
+            if (fill.running) {     // asked again under the lock: a command may have ended the fill
+                const int was = fill.at;
+                fill.tick(now_ms(), strip.count);
+                if (fill.at != was) {
+                    strip.clear();
+                    for (int i = 0; i < fill.at; i++)
+                        strip.order.bytes(SIG_R, SIG_G, SIG_B, &strip.buf[i * strip.order.per_pixel()]);
+                    px::show(strip);
+                }
             }
+        }
+        // Drawn every step, said four times a second (FILL_SAY_EVERY_MS) -- and said OUTSIDE the lock.
+        // A publish takes the MQTT client's own lock, and the MQTT task may be waiting for ours inside
+        // a command: holding one while asking for the other is how a fix for a hang makes a new one.
+        if (fill.running && fill.at != fill_said && now_ms() - fill_said_at >= FILL_SAY_EVERY_MS) {
+            char v[16];
+            snprintf(v, sizeof(v), "%d", fill.at);
+            say("fill", v);
+            fill_said = fill.at;
+            fill_said_at = now_ms();
         }
         // TEN, NOT FIVE. The tick is 100 Hz, so pdMS_TO_TICKS(5) is 0 ticks, and vTaskDelay(0) only
         // yields to tasks at this priority or above -- never to the idle task at 0. This loop was
         // therefore a busy spin that starved IDLE0 and tripped the task watchdog every five seconds.
         // Anything under one tick here silently means "do not sleep at all".
+        if (light_dirty && now_ms() - light_changed_at >= LIGHT_KEEP_AFTER_MS) {
+            light_dirty = false;
+            keep_light();
+        }
         esp_task_wdt_reset();
         vTaskDelay(pdMS_TO_TICKS(10));
     }
@@ -760,6 +869,7 @@ static void heap(const char *when) {
 }
 
 extern "C" void app_main() {
+    gPx = xSemaphoreCreateRecursiveMutex();   // before anything can draw: see gPx
     heap("at boot");
     nvs_flash_init();
     nvs_open("strip", NVS_READWRITE, &nvs);
@@ -769,6 +879,7 @@ extern "C" void app_main() {
     snprintf(chipHex, sizeof(chipHex), "%02x%02x%02x", mac[3], mac[4], mac[5]);
 
     strip.set_count(get_i32("count", PX_ASSUMED));
+    restore_light();        // before anything paints: the light comes back as it was left
     uint8_t w = 0;
     nvs_get_u8(nvs, "white", &w);
     strip.order.white = w;

@@ -712,6 +712,46 @@ the house, which is how these things get returned. The camera route avoids all o
 pointed into a living room. **The cheap next step is neither: a capture stick and HyperHDR on a bench,
 to find out whether it feels like the screen extended or like a gimmick, before any of it is paid for.**
 
+**48. A strip that went silent seconds after setup: three tasks were drawing on it with no lock.
+And its light now comes back as it was left.** 23 September, from a house: *provisioning is
+successful this time but I can't control the light.*
+
+**What was seen.** The strip finished setup at 19:55:31 and its last message reached the broker
+about three seconds earlier; it never sent a keep-alive, the broker dropped it at 19:58:28, and it
+stayed gone until it was power-cycled. No crash dump from this firmware, so nothing panicked. On the
+bench, with its serial attached, it froze the same way on the first `show/set off` sent during a
+fill — seen as a strip that answered one fill and then nothing, not even `hello`.
+
+**Why.** Three tasks draw on the strip: the MQTT task (every command, including the last step of
+setup, `fill/stop`, which repaints), the firmware's own loop (the fill and the waiting glow) and CHIP's
+(Matter's light callbacks, and the *nobody came* glow — which fires in the middle of a successful
+setup). They shared one buffer and one RMT channel with nothing between them, and `px::show()` waits
+for its frame with no timeout. When two overlapped, the MQTT task waited for a frame that never
+finished: no more commands, no more keep-alives. The loop — the one task under the watchdog — carried
+on, which is why nothing panicked and the serial log kept going. **Fixed with one recursive lock**
+(`gPx` in `app_main.cpp`) around every writer, and nothing but the MQTT task itself publishes while
+holding it, because a publish takes the MQTT client's own lock and that task may be waiting on ours.
+**Twenty-four rounds** of a fill ended every way there is — `off`, `fill/stop`, `light/set` — at varied
+timings, and it answered every time; before the lock, the first `off` froze it.
+
+**Not proven:** that this was the only cause in the house. It is the cause the bench reproduced, and it
+fits every sign the house showed.
+
+**The fill, which could run for ever.** It ends on `fill/stop` and nothing else — `off` left it
+running under the paint (and left the strip believing it was 600 lights long until it restarted) and a
+length being said did not end it either — and it published one message per light, twenty a second.
+Found by a replay of setup that did not say stop, which ran it for minutes. Now `off` and `count/set`
+end it, a fill nobody finishes ends by itself after five minutes and hands back the length that was
+written down, `fill/stop` with no fill running answers the strip's length instead of latching wherever
+it last was, and progress goes out four times a second — the wall only draws it; the length comes back
+from `fill/stop`.
+
+**And the light comes back as it was left** (asked for the same evening). On/off, brightness and color
+were never written down, so every restart came back off and warm white. They are kept in NVS two
+seconds after the last change — a slider being dragged is dozens a second, each an erase cycle — from
+the hub's `light/set` and from Matter's callbacks alike, and restored before the first paint at boot.
+Seen: on, 150, blue, through a power-on restart; and off, with the blue kept for next time.
+
 **47. After a deploy, the brain heard no strip at all — and it had been that way since 17
 September.** Reported 23 September: adding a strip "failed right before the colour check", three
 times running. The strip had done everything right: the broker's own log shows it connecting as
