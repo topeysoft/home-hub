@@ -10580,9 +10580,6 @@ select.input {
   flex: 0 0 auto;
   border-radius: 50%;
 }
-.rig-levels {
-    min-width: 0;
-  }
   .rig-art {
     width: 100%;
     max-width: none;
