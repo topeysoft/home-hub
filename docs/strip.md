@@ -605,6 +605,20 @@ container like the puck's, so there is still one trust anchor. Strips and pucks 
 two things dark. What happened says "updated the light strip in the living room", in the words the panel
 already uses for it.
 
+### Proven on `2e4258`, 24 September
+
+Cable-flashed from 0.3.0 to 0.4.0 with a plain `idf.py flash`: new bootloader, same strip -- "already set up,
+through our own door", 159 lights, the maker's keys in the boot line. Then through the hub with
+`tools/dev.sh strip`: a working-tree build fetched in 13 seconds, restarted, and was on the broker again eight
+seconds later, and confirmed itself. A build that is never allowed to confirm was whole from nine seconds in and
+went back at 180 seconds exactly, twice, and the hub had taken the offer back before a third.
+
+Two things the run found. A test build of the release a strip already runs is refused as older, which is the
+scheme working, so `STRIP_FW` moved on to 0.4.1 the moment 0.4.0 was cut and the tool now says so before it
+builds anything. And `docker exec` on the hub stalled for minutes at a time, which made the first install look
+seven minutes slow when the strip had confirmed in seconds; every step the tool takes on the hub is now under a
+timeout, and the image goes over by `scp` and `docker cp` rather than a pipe.
+
 ### Not in this proposal
 
 - **Secure boot and flash encryption.** Both burn eFuses and are irreversible per chip. They matter for a

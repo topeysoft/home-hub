@@ -24,7 +24,7 @@
 // The NEXT release, from the moment the last one is cut. A working-tree build is this plus
 // "-d<minutes>" (tools/dev.sh strip), passed in as -DSTRIP_FW; see main/versions.h for the order.
 #ifndef STRIP_FW
-#define STRIP_FW "0.4.0"
+#define STRIP_FW "0.4.1"
 #endif
 
 namespace fwupdate {
