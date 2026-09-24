@@ -7345,7 +7345,7 @@ select.input {
   text-align: center;
 }
 /* the fourth line: thinner than the transport so the eye lands on pause first,
-   and it thickens and says its number only while a finger is on it */
+   and it thickens while a finger is on it. No number: the line is the reading */
 [data-face='glass'] .wall-stage .bento .tile.media .vol {
   flex: 0 0 100%;
   margin-top: 16px;
@@ -7404,14 +7404,6 @@ select.input {
 [data-face='glass'] .wall-stage .bento .tile.media .vol.vol-held input::-moz-range-thumb {
   width: 22px;
   height: 22px;
-}
-[data-face='glass'] .wall-stage .bento .tile.media .vol.vol-held .vol-n {
-  display: block;
-  width: 26px;
-  text-align: right;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--ink);
 }
 /* the row takes everything the weather does not, and bleeds off the right edge
    only -- its left edge is a real edge here, because something is beside it */

@@ -64,16 +64,19 @@ test('nothing the board left out: no off button, no "Playing" word, no heart', a
   await expect(page.locator(`${CARD} [aria-label*="ike"]`)).toHaveCount(0)
 })
 
-test('the volume says its number while a finger is on it, and the speaker hears the new level', async ({ page }) => {
-  const input = page.locator(`${CARD} .vol input`).first()
-  await expect(page.locator(`${CARD} .vol-n`).first()).toBeHidden()
+test('the volume thickens under a finger, says no number, and the speaker hears the new level', async ({ page }) => {
+  /* No figure beside it, held or not: the first build said one, and a number changing under the
+     finger read as more confusing than the line on its own (24 September). */
+  const vol = page.locator(`${CARD} .vol`).first()
+  const input = vol.locator('input')
   const sent = page.waitForRequest(r => r.method() === 'POST' && /\/volume$/.test(r.url()))
   const b = (await input.boundingBox())!
   await page.mouse.move(b.x + b.width * 0.35, b.y + b.height / 2)
   await page.mouse.down()
   await page.mouse.move(b.x + b.width * 0.2, b.y + b.height / 2, { steps: 4 })
-  await expect(page.locator(`${CARD} .vol-n`).first()).toBeVisible()
+  await expect(vol).toHaveClass(/vol-held/)
+  expect((await vol.innerText()).trim(), 'the volume is saying a number').toBe('')
   await page.mouse.up()
   await sent
-  await expect(page.locator(`${CARD} .vol-n`).first()).toBeHidden()
+  await expect(vol).not.toHaveClass(/vol-held/)
 })

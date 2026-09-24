@@ -40,8 +40,7 @@ const power = () => off.value ? perform(d(), 'on', undefined, { state: 'idle' })
 const setVolume = (pct: number) => { const v = pct / 100; perform(d(), 'volume', { volume_level: v }, { attrs: { volume_level: v } }) }
 /* The finger drives the slider rather than the browser, the same as the pane's: a native range
    inside a card that rides a scrolling row did not follow a drag at all. What moves while it is
-   held is the drawing, and the speaker hears the level once, on release. The wall's card also says
-   the number while it is held (design/player/RowA.dc.html); every other arrangement ignores that. */
+   held is the drawing, and the speaker hears the level once, on release. */
 const shown = ref(volume.value)
 const vol = useSlide({ vertical: false, live: v => (shown.value = v), settle: v => { shown.value = v; setVolume(v) } })
 watch(volume, v => { if (!vol.held.value) shown.value = v })
@@ -89,7 +88,6 @@ const stopSound = () => perform(d(), 'sound_off', undefined, { state: 'idle', at
                @pointerdown.prevent="vol.down" @pointermove="vol.move" @pointerup="vol.up" @pointercancel="vol.cancel"
                @change="keyed" />
         <Icon name="volume" :size="16" class="vol-hi" />
-        <span class="vol-n" aria-hidden="true">{{ shown }}</span>
       </label>
       <button class="ctl power" @click="power" aria-label="Turn off"><Icon name="power" :size="20" /></button>
     </div>
@@ -161,7 +159,6 @@ const stopSound = () => perform(d(), 'sound_off', undefined, { state: 'idle', at
 }
 .media-which,
 .vol-lo,
-.vol-hi,
-.vol-n {
+.vol-hi {
   display: none;
 }</style>
