@@ -357,6 +357,8 @@ class Bridges:
         self._sub: int | None = None
         # what the broker says: chip -> {"online", "net", "rssi"}; (net, addr) -> state
         self.pucks: dict[str, dict] = {}
+        # How long a change to a bridge's light waits for the puck to say it back; see light().
+        self.echo_wait = 3.0
         self.switches: dict[tuple, str] = {}
         self._heard: dict[str, dict] = {}       # the last answer to a claim command, per leaf
         self.moving: dict | None = None         # every bridge being handed a new Wi-Fi at once
@@ -1006,7 +1008,26 @@ class Bridges:
             nl = getattr(self.hub, "nightlight", None)
             if nl: nl.on_command(chip, "ON" if lift else "OFF")
         self.hub.log.add("bridge", chip, None, "light changed", source="user")
+        await self._said_back(chip, night, None if night is False else level)
         return self.each()
+
+    async def _said_back(self, chip: str, night: bool | None, level: int | None):
+        """Wait, briefly, for the puck to say the change back before answering the panel.
+
+        What each() reports is what the puck last SAID, not what it was asked -- that is the rule
+        that keeps "off" from being a claim about a thing nobody heard. But the panel has no stream
+        for bridges: the answer to this call is all it gets, and answered straight after the telling
+        it was the state from before the tap, so the switch sprang back and stayed there until the
+        page was opened again. The puck says it back well inside a second; a puck that does not is
+        answered with what it last said, which is still the honest thing to draw."""
+        p = self.pucks.setdefault(chip, {})
+        want_level = None if level is None else int(level)
+        def landed():
+            return ((night is None or p.get("night") == night)
+                    and (want_level is None or p.get("level") == want_level))
+        until = time.monotonic() + self.echo_wait
+        while not landed() and time.monotonic() < until:
+            await asyncio.sleep(0.05)
 
     def move_status(self) -> dict | None:
         """What the panel draws while a move is on, and after it. None when nothing has happened."""

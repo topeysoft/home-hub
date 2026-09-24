@@ -388,8 +388,27 @@ class LookingAtABridgeThatIsFine(unittest.TestCase):
                                        "f4a9f3": {"since": 2, "fw": "0.5.0"}})
         self.b.pucks = {"c8ebba": {"online": True, "rssi": -53, "night": True, "level": 110},
                         "f4a9f3": {"online": False}}
+        self.b.echo_wait = 0   # nothing says anything back here, except where a test does
 
     def each(self): return {x["chip"]: x for x in self.b.each()}
+
+    def test_the_answer_is_what_the_puck_said_back_not_the_state_before_the_tap(self):
+        """The panel has no stream for bridges, so this answer is all it draws. Answered before the
+        puck spoke, the Brightness row sprang back to Soft after a tap on Bright (24 September)."""
+        self.b.echo_wait = 2.0
+        async def go():
+            async def puck():
+                await asyncio.sleep(0.1)
+                self.b._on_mqtt({"topic": "mesh/bridge/c8ebba/night/brightness", "payload": "200"})
+            asyncio.get_running_loop().create_task(puck())
+            return await self.b.light("c8ebba", level=200)
+        rows = {x["chip"]: x for x in run(go())}
+        self.assertEqual(rows["c8ebba"]["level"], 200)
+
+    def test_a_puck_that_says_nothing_back_is_answered_with_what_it_last_said(self):
+        self.b.echo_wait = 0.2
+        rows = {x["chip"]: x for x in run(self.b.light("c8ebba", night=False))}
+        self.assertTrue(rows["c8ebba"]["night"], "a claim about a light nobody heard go off")
 
     def test_every_bridge_is_listed_whether_or_not_anything_is_wrong_with_it(self):
         self.assertEqual(set(self.each()), {"c8ebba", "f4a9f3"})
