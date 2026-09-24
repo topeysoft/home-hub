@@ -1421,3 +1421,78 @@ class ABuildFromAWorkingTreeNow(unittest.TestCase):
         self.fw.list_for_tool()
         self.assertEqual(json.loads((self.push / "bridges.json").read_text()),
                          [{"chip": "c0e33a", "room": "Hallway", "fw": "0.6.0", "online": True}])
+
+
+class AStripTakesItsFixesTheSameWay(unittest.TestCase):
+    """docs/strip.md, "Updates, the puck's way": a strip is a second kind for the same updater, with its
+    own image and its own records, and one-at-a-time holds across the whole house."""
+
+    class FakeStrips:
+        def __init__(self): self.strips, self._devices = {}, {}
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.dev = Path(self.tmp.name) / "by-id"; self.dev.mkdir()
+        self.hub = FakeHub(self.tmp.name)
+        self.hub.updates = FakeUpdates()
+        self.hub.strip = self.FakeStrips()
+        self.cable = FakeCable(); self.cable.ships("0.6.0")
+        self.cable.image.write_bytes(merged_image())
+        # releases/strip/ beside releases/bridge/, which is where StripKind looks
+        self._ship = bridge_mod.SHIP
+        bridge_mod.SHIP = self.cable.image.parent / "bridge"
+        strip_dir = self.cable.image.parent / "strip"; strip_dir.mkdir()
+        (strip_dir / "esp32s3-ship.bin").write_bytes(merged_image(b"\xe9" + b"strip" * 50))
+        (strip_dir / "esp32s3-ship.json").write_text(json.dumps({"fw": "0.4.0"}))
+        self.b = Bridges(self.hub, cable=self.cable, devdir=self.dev)
+        self.fw = self.b.firmware
+
+    def tearDown(self):
+        bridge_mod.SHIP = self._ship; self.tmp.cleanup()
+
+    def strip(self, id_="2e4258", fw="0.4.0-d1", online=True):
+        self.hub.strip.strips[id_] = {"online": online}
+        self.fw.heard_fw(id_, fw, kind="strip")
+
+    def offers(self):
+        return [(t, p) for t, p in self.hub.ha.published if t and t.endswith("/offer")]
+
+    def test_a_strip_behind_is_offered_its_own_image_on_its_own_topic(self):
+        self.strip(fw="0.3.9")
+        run(self.fw.tick(now=1000))
+        img = self.fw.image("strip")
+        self.assertEqual(self.offers(), [("strip/2e4258/offer",
+                                          f"0.4.0 {img['size']} {img['sha256']} 8300 /bridge/firmware/{img['sha256']}.bin")])
+        self.assertEqual(self.fw.served(f"{img['sha256']}.bin"), img["body"])
+
+    def test_a_strip_that_never_said_what_it_runs_is_left_alone(self):
+        """One from before updates: it has nothing that could take one."""
+        self.hub.strip.strips["2e4258"] = {"online": True}
+        run(self.fw.tick(now=1000))
+        self.assertEqual(self.offers(), [])
+
+    def test_one_at_a_time_across_the_house(self):
+        self.hub.settings.set(bridges={"c0e33a": {"since": 1, "fw": "0.5.0"}})
+        self.b.pucks["c0e33a"] = {"online": True}
+        self.strip(fw="0.3.9")
+        run(self.fw.tick(now=1000)); run(self.fw.tick(now=1300))
+        self.assertEqual([t for t, p in self.offers() if p], ["mesh/bridge/c0e33a/offer"])
+
+    def test_what_a_strip_did_is_written_down_as_a_strip(self):
+        self.strip(fw="0.3.9")
+        run(self.fw.tick(now=1000))
+        run(self.fw.heard("2e4258", '{"state":"installed","fw":"0.4.0","why":""}', kind="strip"))
+        (kind, subject, _, new), _ = self.hub.log.rows[-1]
+        self.assertEqual((kind, subject, new), ("strip", "2e4258", "updated"))
+        self.assertNotIn("offer", self.hub.settings.get("strip_fw")["2e4258"])
+
+    def test_the_tool_lists_strips_too(self):
+        push = Path(self.tmp.name) / "bridge-push"
+        was, bridge_mod_updates.PUSH = bridge_mod_updates.PUSH, push
+        try:
+            self.strip()
+            self.fw.list_for_tool(kind="strip")
+            self.assertEqual(json.loads((push / "strips.json").read_text()),
+                             [{"chip": "2e4258", "room": None, "fw": "0.4.0-d1", "online": True}])
+        finally:
+            bridge_mod_updates.PUSH = was

@@ -39,7 +39,7 @@ not reporting. So a strip keeps whatever the household set it to, and the panel 
 The radio is behind `Radio` for the same reason bridge.py hides pyserial behind `Cable`: the machine
 is tested with a fake one, and nothing in here needs a strip on a desk to run.
 """
-import asyncio, json, logging, time
+import asyncio, contextlib, json, logging, time
 
 log = logging.getLogger("hub.strip")
 
@@ -607,6 +607,13 @@ class Strips:
             try: s["count"] = int(str(payload).strip())
             except ValueError: pass
         elif leaf == "order": s["order"] = str(payload).strip()
+        # What it runs and what it did with an update: the updater's business (hub/bridge_updates.py),
+        # which keeps its own record per strip because this class keeps none in settings.
+        elif leaf in ("fw", "update") and (fw := getattr(getattr(self.hub, "bridge", None), "firmware", None)):
+            if leaf == "fw": fw.heard_fw(id_, str(payload or "").strip(), kind="strip")
+            else:
+                with contextlib.suppress(RuntimeError):
+                    asyncio.get_running_loop().create_task(fw.heard(id_, str(payload or ""), kind="strip"))
         # A fill that has reached the end says so itself, so the panel can stop asking somebody to
         # watch a thing that has finished happening.
         #
@@ -1229,6 +1236,8 @@ class Strips:
             log.info("strip %s: could not clear its light (%s)", id_, e)
         self.strips.pop(id_, None)
         self._devices.pop(id_, None)
+        if id_ in (self.hub.settings.get("strip_fw") or {}):     # the updater's record goes with it
+            self.hub.settings.set(strip_fw={k: v for k, v in self.hub.settings.get("strip_fw").items() if k != id_})
         self._dismissed.discard(id_)
         self._arrived.discard(id_)
         for key in [k for k in self._heard if k.startswith(f"{id_}/")]:

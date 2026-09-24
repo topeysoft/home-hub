@@ -236,7 +236,7 @@ class Happened:
 # The kinds that are a change to the HOUSE rather than a use of it. Deliberately the same shape as
 # lock.needs_code(): if a route needed the code to do it, the record of it having been done belongs
 # here. Turning a light on is not on this list, which is also what keeps the page short enough to read.
-AUDIT = ("home", "phone", "share", "bridge", "draft")
+AUDIT = ("home", "phone", "share", "bridge", "strip", "draft")
 # What a device is treated as, in the words the panel uses for it rather than the engine's.
 KIND_AS = {"light": "a light", "switch": "a plug", "fan": "a fan", "media": "a speaker", "cover": "a blind",
            "climate": "a thermostat", "lock": "a lock", "camera": "a camera", "vacuum": "a vacuum",
@@ -319,6 +319,15 @@ class Changes:
                     "sent a test build": f"offered the bridge {subject} a test build.",
                     "went back": f"saw the bridge {subject} go back to what it had, after an update did not work.",
                     "refused an update": f"saw the bridge {subject} turn down an update that did not check out.",
+                    }.get(new) or self.fallback(r, detail)
+        if kind == "strip":
+            # Named by where it is, because a strip has no other name a household would know it by.
+            it = f"the light strip in the {detail['room']}" if detail.get("room") else "a light strip"
+            return {"updated": f"updated {it}.",
+                    "went back": f"saw {it} go back to what it had, after an update did not work.",
+                    "refused an update": f"saw {it} turn down an update that did not check out.",
+                    "sent a test build": f"offered {it} a test build.",
+                    "forgotten": f"took {detail.get('name') or it} off the house.",
                     }.get(new) or self.fallback(r, detail)
         if kind == "share":
             if subject == "settings": return f"turned sharing with other apps {new}."

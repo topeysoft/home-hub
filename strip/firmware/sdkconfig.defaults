@@ -31,7 +31,16 @@ CONFIG_ENABLE_WIFI_AP=n
 CONFIG_ESP_WIFI_SOFTAP_SUPPORT=n
 CONFIG_ESP_MATTER_MAX_DYNAMIC_ENDPOINT_COUNT=2
 CONFIG_MBEDTLS_HKDF_C=y
-CONFIG_ENABLE_OTA_REQUESTOR=y
+# ONE WAY IN, AND IT IS OURS (docs/strip.md, "Updates, the puck's way"). Matter's own updates reach a
+# device only through a certified product in Matter's ledger or through a provider on the household's
+# fabric, and we have neither and want neither. Updates come from the hub instead: main/fwupdate.h.
+CONFIG_ENABLE_OTA_REQUESTOR=n
+
+# ROLLBACK IN THE BOOTLOADER, WHICH ONLY A CABLE CAN PUT THERE. A new image boots on trial and is
+# confirmed by main/fwupdate.cpp once it has reached the hub; one that never does -- or crashes before
+# our code runs at all -- is taken back by the bootloader. A strip flashed without this can take an
+# update and can never be saved from one, so it is here from the first flash, before any strip leaves.
+CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE=y
 CONFIG_MAX_GROUP_KEYS_PER_FABRIC=4
 
 # TWO DAYS OF KNOCKING, NOT FIFTEEN MINUTES (design/strip/KnockTwoDays.dc.html), AND NOT THE WAY THE

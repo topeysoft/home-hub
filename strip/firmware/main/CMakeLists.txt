@@ -11,3 +11,10 @@ foreach(opt DATA_PIN BUTTON_PIN SELFTEST)
         target_compile_definitions(${COMPONENT_LIB} PRIVATE ${opt}=${${opt}})
     endif()
 endforeach()
+
+# A working-tree build's version, from tools/dev.sh strip: `idf.py -DSTRIP_FW=0.4.0-d384085 build`.
+# Quoted here because it is a string in C, which the loop above does not do. Unset it the same way:
+# `idf.py -USTRIP_FW build`, or the next plain build carries the last test build's name.
+if(DEFINED STRIP_FW AND NOT "${STRIP_FW}" STREQUAL "")
+    target_compile_definitions(${COMPONENT_LIB} PRIVATE STRIP_FW="${STRIP_FW}")
+endif()

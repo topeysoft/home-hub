@@ -53,11 +53,12 @@
 
 #include <esp_matter.h>
 #include <esp_matter_console.h>
-#include <esp_matter_ota.h>
 #include <app/server/Server.h>
 #include <setup_payload/OnboardingCodesUtil.h>
 
 #include "hub_uri.h"
+#include "fwupdate.h"
+#include "release_keys.h"
 #include "pixels.h"
 #include "prov.h"
 
@@ -66,7 +67,6 @@ using namespace esp_matter::attribute;
 using namespace esp_matter::endpoint;
 using namespace chip::app::Clusters;
 
-#define FW "0.3.0"
 #ifndef DATA_PIN
 #define DATA_PIN 5
 #endif
@@ -190,6 +190,7 @@ static void restore_light() {
 
 static esp_mqtt_client_handle_t mqtt = nullptr;
 static bool broker_up = false;
+static bool g_lit = false;          // the light driver started: part of what a new image has to prove
 
 static inline uint32_t now_ms() { return (uint32_t)(esp_timer_get_time() / 1000); }
 
@@ -312,7 +313,7 @@ static void announce_the_light() {
              "\"payload_available\":\"online\",\"payload_not_available\":\"offline\","
              "\"brightness\":true,\"supported_color_modes\":[\"rgb\"],"
              "\"device\":{\"identifiers\":[\"%s_%s\"],\"name\":\"Light strip\","
-             "\"model\":\"Light strip\",\"sw_version\":\"" FW "\"}}",
+             "\"model\":\"Light strip\",\"sw_version\":\"" STRIP_FW "\"}}",
              base, chipHex, base, chipHex, base, chipHex, base, chipHex, base, chipHex);
     say_at(topic, body, 1);
     ESP_LOGI(TAG, "announced as a light the house can switch on");
@@ -327,6 +328,7 @@ static void say_what_we_are() {
     for (int c = 0; c < 3; c++) ord[strip.order.at[c]] = letters[c];
     say("order", ord, 1);
     say("status", "online", 1);
+    say("fw", STRIP_FW, 1);         // what it runs, so the hub can count who has a fix
 }
 
 // THE WAY OUT, AND IT CLEARS UP AFTER ITSELF.
@@ -370,6 +372,12 @@ static void forget_the_house(bool tidy_first) {
 static void on_command(const std::string &leaf, const std::string &msg, bool retained) {
     Hold h;             // every command that touches the strip, from the MQTT task: see gPx
     if (leaf == "hello") { say_what_we_are(); return; }
+
+    // AN OFFER IS RETAINED, AND IT IS NOT A RECORDING. Everything below retires a retained command,
+    // because a command is an evening weeks gone. An offer is a standing statement the hub makes and
+    // withdraws itself (brain/hub/bridge_updates.py), and retained is how a strip that was off when
+    // it was made still hears it. So it is taken here, by name, before any of that. main/fwupdate.h.
+    if (leaf == "offer") { fwupdate::offer(msg, broker_host(get_str("mhost", ""))); return; }
 
     // DONE WITH IT, ASKED FROM THE PANEL INSTEAD OF FROM THE BUTTON.
     //
@@ -824,6 +832,8 @@ static void housekeeping(void *) {
             light_dirty = false;
             keep_light();
         }
+        // A new image proves itself by doing the job a strip has: an address, the broker, a light.
+        fwupdate::tick(gHaveIp && broker_up && g_lit, broker_up);
         esp_task_wdt_reset();
         vTaskDelay(pdMS_TO_TICKS(10));
     }
@@ -873,6 +883,7 @@ extern "C" void app_main() {
     heap("at boot");
     nvs_flash_init();
     nvs_open("strip", NVS_READWRITE, &nvs);
+    fwupdate::begin(say);   // before anything can restart us: it notices a rollback
 
     uint8_t mac[6] = {0};
     esp_read_mac(mac, ESP_MAC_WIFI_STA);
@@ -887,6 +898,7 @@ extern "C" void app_main() {
     snprintf(base, sizeof(base), "%s", get_str("base", "strip").c_str());
 
     const bool lit = px::begin(DATA_PIN);
+    g_lit = lit;
     gpio_config_t btn = {};
     btn.pin_bit_mask = 1ULL << BUTTON_PIN;
     btn.mode = GPIO_MODE_INPUT;
@@ -899,9 +911,15 @@ extern "C" void app_main() {
     const char letters[3] = {'r', 'g', 'b'};
     char ord[4] = {0, 0, 0, 0};
     for (int c = 0; c < 3; c++) ord[strip.order.at[c]] = letters[c];
-    ESP_LOGI(TAG, FW "  chip %s  pin %d  %d lights, order %s%s", chipHex, DATA_PIN, strip.count, ord,
+    ESP_LOGI(TAG, STRIP_FW "  chip %s  pin %d  %d lights, order %s%s", chipHex, DATA_PIN, strip.count, ord,
              strip.order.white ? "w" : "");
     if (!lit) ESP_LOGE(TAG, "THE LIGHT DRIVER DID NOT START -- nothing will light. Check the pin.");
+    // Said, not decoration: reading the keys is what keeps them in the image (release_keys.h), and
+    // the line is how a bench can tell a strip that carries them from one that does not.
+    char keys[8 * N_RELEASE_KEYS] = "";
+    for (int i = 0, at = 0; i < N_RELEASE_KEYS; i++)
+        at += snprintf(keys + at, sizeof(keys) - at, "%s%02x%02x", i ? "," : "", RELEASE_KEYS[i][0], RELEASE_KEYS[i][1]);
+    ESP_LOGI(TAG, "maker's keys %s", keys);
 
 #ifdef SELFTEST
     selftest();

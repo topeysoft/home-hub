@@ -543,6 +543,74 @@ it. Moving to ESP-IDF gives back about 880 KB *and* does more.
 
 ---
 
+## Updates, the puck's way
+
+*Proposed and approved 24 September 2026. Item 7 below said "no updates story";
+this is the story. It is short because almost all of it already exists: `docs/puck-updates.md` designed
+it, and on 24 September it was built and proven on a puck in this house, both halves.*
+
+**A strip takes its fixes exactly as a puck does.** The hub offers an image over the broker, naming its
+version, size and SHA-256. The strip downloads it from the hub's own address, checks the hash as it writes,
+restarts into it, and has three minutes to prove itself or the bootloader puts back what it had. It keeps a
+floor and never takes an older version, and it gives up on a version that came back twice. The hub offers to
+one device at a time, in its own part of the night, only in a house that lets it update itself, and writes
+down what happened. `tools/dev.sh` gets a `strip` beside `puck` for a working-tree build, now.
+
+**Not Matter's updates.** Matter has its own path (an OTA Requestor, compiled in today), but it reaches a
+device only through a certified product listed in Matter's ledger, or through an update server run on each
+household's own Matter fabric. The first is off the table (*Decided*, 21 September: certification is off
+indefinitely), and the second is a second trust path into the device, run by us, in somebody's Apple Home.
+**So `CONFIG_ENABLE_OTA_REQUESTOR` goes off:** one way in, and it is ours. Turning it back on later is an
+update like any other, because the slots do not change.
+
+The price, said plainly: a strip in a house with no hub of ours gets no updates. That follows from *ours
+first* rather than being a new decision, and it is the same for a puck.
+
+### What the first flash has to carry, because nothing can add it later
+
+1. **Rollback in the bootloader.** Today `CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE` is **not set**. The bootloader
+   is written only by a cable, so a strip flashed without it can take updates but can never be saved from one
+   that crashes before our code runs: nothing would ever go back. This is the one line that has to change
+   before a strip leaves this house. **Every strip already flashed needs one cable reflash** to get it; they
+   are all devkits on this bench, which makes now the cheapest moment there will ever be.
+2. **The maker's two public keys**, primary and spare, from `driver-layer/host/release-keys.d`, the same way
+   the puck carries them (`tools/puck-keys.py`, kept alive with `volatile` and checked for in the binary). The
+   first version checks the hash, not a signature, exactly as the puck does. But a key that is not in the image
+   at the first flash can never be in it.
+3. **The partition table is already right.** Two slots of 3.75 MB, sized for Matter, laid down on 20
+   September for precisely this. Nothing to do.
+
+### What changes in the firmware, and what stays
+
+- An `offer` leaf under `strip/<chip>/`, retained. The strip retires retained *commands* on connect (items 31,
+  33 and 41: a retained command is a recording of an evening weeks gone). An offer is not a command; it is a
+  standing statement the hub withdraws itself. So it is exempt, by name, and the reason goes beside the
+  exemption.
+- `fw` published retained on every connect, beside `status`. The version moves from `#define FW "0.3.0"` to
+  the same scheme as the puck: the next release, overridable, with `-d<minutes>` for working-tree builds.
+- **Proving itself means the job a strip has:** on the Wi-Fi, on the broker, and its light driver started.
+  There is no mesh to ask about.
+- The download goes through `esp_ota_ops` and `esp_http_client`, hashing as it writes, as the puck's does.
+  `esp_https_ota` would want `CONFIG_ESP_HTTPS_OTA_ALLOW_HTTP`, and the hash on the authenticated channel is
+  what makes plain HTTP from the hub acceptable, not the transport.
+- The image is about twice a puck's, since Matter is most of it. That is a few seconds more on a LAN, and the
+  slot has room for years of growth.
+
+### What changes in the hub
+
+`bridge_updates.py` learns a second kind of device rather than being copied. It gets the image from
+`releases/strip/`, built by a `tools/build-strip.sh` beside `build-bridge.sh`, and inside the brain's
+container like the puck's, so there is still one trust anchor. Strips and pucks share the night window and
+**one-at-a-time applies across the whole house**, not per kind: two different things dark at once is still
+two things dark. What happened says "updated the light strip in the living room", in the words the panel
+already uses for it.
+
+### Not in this proposal
+
+- **Secure boot and flash encryption.** Both burn eFuses and are irreversible per chip. They matter for a
+  product that is sold, not for this one, and deciding them is a separate question.
+- The urgent tiers and the *Needs a look* line, which are the puck's open items too. Built once, for both.
+
 ## What is not built, and what is not safe yet
 
 Everything under this line is honest. None of it is done.
@@ -694,8 +762,9 @@ chip there at boot, which is the same id the strip publishes all its MQTT topics
 stored after the Basic Information cluster has already been built, so the first boot after a flash still
 reports the default and the one after it should be right. Nobody has looked yet.
 
-**7. No updates story.** `docs/puck-updates.md` is about pucks. A strip in a living room has the same problem
-and none of the answer.
+**7. Updates: approved 24 September, being built.** See *Updates, the puck's way* above. Two things in it cannot wait
+for the rest, because they are fixed at a strip's first flash: rollback in the bootloader, and the maker's
+keys in the image.
 
 **8. Occasions and movement.** Drawn in `design/occasion/`, no code.
 
