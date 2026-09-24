@@ -414,7 +414,28 @@ class LookingAtABridgeThatIsFine(unittest.TestCase):
         sent = {c["topic"]: c for c in self.hub.ha.calls}
         self.assertEqual(sent["mesh/bridge/c8ebba/night/set"]["payload"], "ON")
         self.assertEqual(sent["mesh/bridge/c8ebba/night/brightness/set"]["payload"], "40")
-        self.assertFalse(any(c.get("retain") for c in self.hub.ha.calls))
+        self.assertFalse(any(c.get("retain") for c in self.hub.ha.calls if "/night" in c["topic"]))
+
+    def test_asking_for_its_nightlight_places_it_or_it_would_stay_green(self):
+        """The firmware shows the nightlight only on a settled puck, and settled came from setup's
+        "Leave it here" alone. A bridge that skipped that took every setting here and stayed the
+        placing green (24 September, in a real hallway). Retained, as placed() sends it."""
+        run(self.b.light("c8ebba", night=True))
+        sent = {c["topic"]: c for c in self.hub.ha.calls}
+        self.assertEqual(sent["mesh/bridge/c8ebba/settled/set"]["payload"], "1")
+        self.assertTrue(sent["mesh/bridge/c8ebba/settled/set"]["retain"])
+
+    def test_a_brightness_alone_places_it_too(self):
+        run(self.b.light("c8ebba", level=200))
+        self.assertIn("mesh/bridge/c8ebba/settled/set", [c["topic"] for c in self.hub.ha.calls])
+
+    def test_turning_the_nightlight_off_does_not_place_anything(self):
+        """Off is not an answer about where it lives, and a puck that is still being placed keeps
+        its green."""
+        run(self.b.light("c8ebba", night=False))
+        self.assertNotIn("mesh/bridge/c8ebba/settled/set", [c["topic"] for c in self.hub.ha.calls])
+        run(self.b.light("c8ebba", lift=True))
+        self.assertNotIn("mesh/bridge/c8ebba/settled/set", [c["topic"] for c in self.hub.ha.calls])
 
     def test_turning_it_off_does_not_also_send_a_brightness(self):
         """A brightness would turn it back on: the firmware reads any level above zero as an on."""

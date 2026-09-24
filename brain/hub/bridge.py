@@ -990,6 +990,14 @@ class Bridges:
             raise ValueError("The hub does not know that bridge.")
         if level is not None and not 0 <= int(level) <= 255:
             raise ValueError("A brightness is 0 to 255.")
+        if night or (night is None and level is not None):
+            # Asking for its nightlight is saying where it lives. The firmware only glows once the
+            # puck is settled -- until then its light is the placing instrument, steady green -- and
+            # settled was only ever sent by "Leave it here" in setup. A bridge that never went
+            # through that (adopted on sight, or set up before the question existed) took every
+            # nightlight setting here, said so back, and stayed green. Retained and idempotent,
+            # exactly as placed() sends it.
+            await self._tell(chip, "settled/set", "1", retain=True)
         if night is not None:
             await self._tell(chip, "night/set", "ON" if night else "OFF")
         if level is not None and (night is None or night):
