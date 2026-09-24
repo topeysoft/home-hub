@@ -357,13 +357,38 @@ case "${1:-status}" in
   # ssh, and follows what the puck says. Only a hub on a branch channel takes it. The puck keeps every
   # rule it has: the hash, three minutes to prove itself, and back to what it had if it does not.
   #
-  #   tools/dev.sh puck c0e33a              through hub.local
-  #   tools/dev.sh puck c0e33a 192.168.86.53
-  puck)  chip=${2:-}; house=${3:-hub.local}
-         [ -n "$chip" ] || { echo "${Y}which puck?${R}  ${D}tools/dev.sh puck <chip> [house]${R}" >&2; exit 1; }
-         command -v pio >/dev/null 2>&1 || { echo "${Y}no pio on PATH${R} ${D}— PlatformIO builds the firmware${R}" >&2; exit 1; }
+  #   tools/dev.sh puck                     the one bridge on the broker, or a list to pick from
+  #   tools/dev.sh puck list                every bridge the hub set up: room, chip, version, online
+  #   tools/dev.sh puck hallway             by the room it serves...
+  #   tools/dev.sh puck c0e33a              ...or by its chip
+  #   tools/dev.sh puck hallway 192.168.86.53   through a hub other than hub.local
+  puck)  which=${2:-}; house=${3:-hub.local}
          ssh -o BatchMode=yes -o SetEnv=LC_ALL=C -o ConnectTimeout=8 "pi@$house" true 2>/dev/null || {
            echo "${Y}cannot ssh to pi@$house${R}" >&2; exit 1; }
+         SSH=(ssh -o BatchMode=yes -o SetEnv=LC_ALL=C "pi@$house")
+         # Which puck, in the words the hub has for it. The brain keeps this list (bridge_updates.py,
+         # list_for_tool) because the room is worked out from the house, and only the brain has that.
+         known=$("${SSH[@]}" 'sudo -n docker exec brain cat /data/bridge-push/bridges.json 2>/dev/null' || true)
+         [ -n "$known" ] || { echo "${Y}$house's brain keeps no list of bridges${R} ${D}— it is older than this tool; put the development brain on it first${R}" >&2; exit 1; }
+         set +e
+         chip=$(KNOWN="$known" WHICH="$which" python3 - <<'PY'
+import json, os, sys
+bs, w = json.loads(os.environ["KNOWN"]), os.environ["WHICH"].strip().lower()
+def line(b):
+    return f"  {(b['room'] or '(no room)'):<16} {b['chip']}  {(b['fw'] or '?'):<16} {'online' if b['online'] else 'not on the broker'}"
+if w == "list" or not bs:
+    print("\n".join(map(line, bs)) or "  this hub has not set up a bridge", file=sys.stderr); sys.exit(2)
+hits = [b for b in bs if w in (b["chip"].lower(), (b["room"] or "").lower())] if w else [b for b in bs if b["online"]]
+if len(hits) == 1: print(hits[0]["chip"]); sys.exit(0)
+print(f"no bridge is {w!r}:" if w and not hits else "which one?" if hits else "none of them is on the broker:", file=sys.stderr)
+print("\n".join(map(line, hits or bs)), file=sys.stderr)
+print("  tools/dev.sh puck <room or chip>", file=sys.stderr); sys.exit(1)
+PY
+         ); rc=$?
+         set -e
+         [ $rc -eq 2 ] && exit 0
+         [ $rc -eq 0 ] || exit 1
+         command -v pio >/dev/null 2>&1 || { echo "${Y}no pio on PATH${R} ${D}— PlatformIO builds the firmware${R}" >&2; exit 1; }
          base=$(sed -n 's/^#define BRIDGE_FW "\(.*\)"/\1/p' brilliant/esp32-bridge/src/config.h)
          fw="$base-d$(( ($(date -u +%s) - 1767225600) / 60 ))"     # minutes since 2026: short, and always rising
          row "puck" "$chip ${D}via $house${R}"
@@ -372,7 +397,6 @@ case "${1:-status}" in
            || { echo "${Y}the build failed${R} ${D}— cd brilliant/esp32-bridge && pio run -e esp32s3-ship${R}" >&2; exit 1; }
          img=brilliant/esp32-bridge/.pio/build/esp32s3-ship/firmware.bin
          grep -aq "bridge $fw ===" "$img" || { echo "${Y}the image does not carry $fw${R} ${D}— BRIDGE_FW did not take${R}" >&2; exit 1; }
-         SSH=(ssh -o BatchMode=yes -o SetEnv=LC_ALL=C "pi@$house")
          "${SSH[@]}" 'sudo -n docker exec brain sh -c "mkdir -p /data/bridge-push && rm -f /data/bridge-push/state.json"'
          "${SSH[@]}" 'sudo -n docker exec -i brain sh -c "cat > /data/bridge-push/image.bin"' < "$img"
          # The request goes last: it is what the brain looks for, so the image is whole by then.

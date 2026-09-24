@@ -1375,3 +1375,9 @@ class ABuildFromAWorkingTreeNow(unittest.TestCase):
     def test_a_puck_that_ran_test_builds_is_still_behind_the_release(self):
         self.hub.settings.set(bridges={"c0e33a": {"since": 1, "fw": "0.6.0-d382417"}})
         self.assertEqual([b["chip"] for b in self.b.behind()], ["c0e33a"])
+
+    def test_the_tool_can_find_a_bridge_without_knowing_its_chip(self):
+        self.hub.settings.set(bridges={"c0e33a": {"since": 1, "fw": "0.6.0", "where": "Hallway"}})
+        self.fw.list_for_tool()
+        self.assertEqual(json.loads((self.push / "bridges.json").read_text()),
+                         [{"chip": "c0e33a", "room": "Hallway", "fw": "0.6.0", "online": True}])

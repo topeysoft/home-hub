@@ -200,11 +200,24 @@ class Firmware:
 
     async def watch(self) -> None:
         """Look for a parked build every couple of seconds. Started once, with the rest of the house."""
+        listed = None
         while True:
             try:
                 if (PUSH / "request.json").exists(): await self.take_push()
+                listed = self.list_for_tool(listed)
             except Exception: log.exception("bridge: taking a pushed build")
             await asyncio.sleep(PUSH_EVERY)
+
+    def list_for_tool(self, was: str | None = None) -> str:
+        """The bridges as the tool needs them -- which chip is in which room, what it runs, whether it is
+        on the broker -- so a developer can say "hallway" and never has to know a chip id. Written
+        only when it changes: the room is the brain's to work out, and nothing outside it can."""
+        now = json.dumps([{k: b.get(k) for k in ("chip", "room", "fw", "online")} for b in self.b.each()])
+        if now != was:
+            with contextlib.suppress(OSError):
+                PUSH.mkdir(parents=True, exist_ok=True)
+                (PUSH / "bridges.json").write_text(now)
+        return now
 
     async def take_push(self, now: float | None = None) -> None:
         req_file, body_file = PUSH / "request.json", PUSH / "image.bin"

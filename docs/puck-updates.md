@@ -45,8 +45,8 @@ The routine tier is written, both halves. What exists:
 Not built: the important and critical tiers (`urgent` is still not carried), the *Needs a look* line
 for a puck that went back twice or could not be reached, and the morning card's line. **And 0.3.x cannot
 take an update** -- it has the slots and the keys but no code to use them -- so every puck still on it
-needs one cable visit to 0.6.0 (`c0e33a` in this house has had its, below) (`puck_cable.py <port> upgrade`, which
-keeps its identity). That is the last one.
+needs one cable visit to 0.6.0 (`puck_cable.py <port> upgrade`, which keeps its identity). That is the
+last one. `c0e33a` in this house has had its, below.
 
 **Proven on `c0e33a`, 24 September**, at a desk, against the house's own broker, with the images served
 from the hub's address by a stand-in server (the running brain predates the route). Cable to 0.5.0 by
@@ -56,9 +56,10 @@ eleven seconds, confirmed itself inside its trial. Offered a 0.5.2 built never t
 at 10:21:48, said `rolledback 2`, and has refused it since with `came back twice`. Two fetches in the
 server's log, not three.
 
-**A working-tree build, now, for a hub being worked on.** `tools/dev.sh puck <chip>` builds this
-checkout's firmware as `BRIDGE_FW-d<minutes>`, parks it in the brain's data over ssh, and follows
-what the puck says. The hub offers it at once, day or night, and only if it follows a branch; a
+**A working-tree build, now, for a hub being worked on.** `tools/dev.sh puck` sends this checkout's
+firmware to the one bridge on the broker, or to the one named by its room or chip; `puck list` shows
+them all, from a list the brain keeps because only it knows the rooms. It builds the firmware as
+`BRIDGE_FW-d<minutes>`, parks it in the brain's data over ssh, and follows what the puck says. The hub offers it at once, day or night, and only if it follows a branch; a
 release hub refuses. A tagged build sorts after the release before it and before its own
 (`0.6.0 < 0.6.1-d384085 < 0.6.1`), so `BRIDGE_FW` names the *next* release from the moment the last
 one is cut, and a puck used for development still takes the real thing. A 0.6.0 puck reads only the
