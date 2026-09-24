@@ -712,6 +712,30 @@ the house, which is how these things get returned. The camera route avoids all o
 pointed into a living room. **The cheap next step is neither: a capture stick and HyperHDR on a bench,
 to find out whether it feels like the screen extended or like a gimmick, before any of it is paid for.**
 
+**49. A strip that restarted between its knock and the yes is found again, and nobody is told to
+move nearer a strip the hub heard perfectly well.** 24 September.
+
+**The trap.** A strip gets a new Bluetooth address every time it restarts, and a knock remembers the
+address it was heard at. Unplugged and plugged back in between the knock and the yes -- which is what a
+household does to a strip that "did not seem to work" -- or a power blip, or the strip itself falling
+over (item 48), and the yes went to an address nobody answers. That came back as *not found*, which was
+read as the distance: a household holding a strip the hub heard at −35 a minute earlier was told to try
+again nearer the hub. Seen twice on 23 September, when the bench's own serial capture restarted the
+strip under a knock the wall was still showing.
+
+**Fixed in the brain** (`brain/hub/strip.py`). *Not found is not dropped*: a link that dies part way is
+still the distance, but nobody answering at all raises `StripGone`, and setup looks once more -- for
+the same name, which survives a restart (`PROV_` and the chip), or, for a knock only a bridge heard
+(Matter's advertisement carries no name), for the one strip of ours a bridge has just heard knocking --
+and carries on at the new address, through whichever ear now hears it best. Only if it is nowhere does
+the wall say *the strip stopped knocking before it could be set up; if it was unplugged, plug it back
+in*. A knock that was faint when it came still gets the distance sentence, which is still right then.
+
+**Held by** `AStripThatRestartedSinceItKnocked` in `brain/tests/test_strip.py`: found again by name and
+set up where it is now; really gone and told so, never *nearer the hub*; faint and gone and told the
+distance; and a deaf hub finding it again through a bridge. The first **fails with the second look
+removed**. Two older tests pinned *nearer the hub* for *not found* and now pin the opposite.
+
 **48. A strip that went silent seconds after setup: three tasks were drawing on it with no lock.
 And its light now comes back as it was left.** 23 September, from a house: *provisioning is
 successful this time but I can't control the light.*

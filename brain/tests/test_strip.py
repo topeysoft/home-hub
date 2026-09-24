@@ -12,7 +12,7 @@ import asyncio, json, sqlite3, tempfile, time, unittest
 from pathlib import Path
 
 from hub.settings import Settings
-from hub.strip import (ASSUME, DEV_CODE, ORDERS, TEST_VID, Radio, StripError, Strips,
+from hub.strip import (ASSUME, DEV_CODE, ORDERS, TEST_VID, Radio, StripError, StripGone, Strips,
                        lit_index, narrow, probe, resolve)
 
 
@@ -37,6 +37,7 @@ class FakeRadio:
         self.asked_rhythm = 0     # how many times the strip was asked to drop a rung
         self.not_pressed = False  # the two minutes ran out with nobody touching it
         self.transports = []      # what each adoption was carried over: None for our own radio
+        self.gone = set()         # addresses nobody answers at any more: a strip that restarted
 
     async def scan_ours(self, seconds=8.0):
         return [{"addr": s["address"], "rssi": s["rssi"], "name": s.get("name"),
@@ -45,6 +46,8 @@ class FakeRadio:
     async def adopt_ours(self, addr, ssid, password, hub=None, rhythm="",
                          on_pressed=None, out_of_reach=None, transport=None):
         self.transports.append(transport)          # None is our own radio; an Errand is a bridge's
+        if addr in self.gone:
+            raise StripGone(StripGone.GONE)
         if self.adopt_fails:
             raise StripError(self.adopt_fails if isinstance(self.adopt_fails, str)
                              else "Those were not the flashes it is showing.")
@@ -1155,8 +1158,7 @@ class ThreeFailuresThatAreNotTheSame(unittest.TestCase):
         self.assertNotIn("nearer", said)
 
     def test_a_dropped_link_is_told_to_move_nearer_and_not_to_recount(self):
-        for boom in ("failed to discover services, device disconnected",
-                     "Device not found", "TimeoutError"):
+        for boom in ("failed to discover services, device disconnected", "TimeoutError"):
             said = self.said_for(boom)
             self.assertIn("nearer the hub", said)
             self.assertNotIn("Count them again", said)
@@ -1179,11 +1181,15 @@ class ThreeFailuresThatAreNotTheSame(unittest.TestCase):
         self.assertIn("nearer the hub", said)
         self.assertNotIn("Unplug it", said)
 
-    def test_a_strip_the_radio_never_reached_is_not_blamed_on_the_strip(self):
-        """bleak names the class and says nothing else, and a class name has no spaces in it."""
+    def test_nobody_at_the_address_is_not_told_to_move_nearer(self):
+        """bleak names the class and says nothing else, and a class name has no spaces in it. And NOT
+        FOUND IS NOT DROPPED: a strip gets a new address every time it restarts, so an address nobody
+        answers is as often a strip that was unplugged and plugged back in (docs/strip.md item 49).
+        The distance is still said when the knock itself was faint -- see AStripThatRestarted."""
         class BleakDeviceNotFoundError(Exception): pass
         said = self.said_for(BleakDeviceNotFoundError(), rhythm="")
-        self.assertIn("nearer the hub", said)
+        self.assertIn("stopped knocking", said)
+        self.assertNotIn("nearer the hub", said)
 
     def test_a_strip_that_will_not_finish_a_press_session_is_not_told_to_recount(self):
         """There are no flashes on this rung, so "count them again" is an instruction about a thing
@@ -1191,6 +1197,58 @@ class ThreeFailuresThatAreNotTheSame(unittest.TestCase):
         said = self.said_for("Unlikely Error", rhythm="")
         self.assertNotIn("Count them again", said)
         self.assertIn("Unplug it", said)
+
+
+class AStripThatRestartedSinceItKnocked(unittest.TestCase):
+    """Plugged out and back in between the knock and the yes -- the thing a household does to a strip
+    that "did not seem to work" -- and so at a new address. Its name is the part that survives."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.hub = FakeHub(self.tmp.name)
+        self.radio = FakeRadio()
+        self.strips = Strips(self.hub, self.radio)
+        self.hub.settings.set(wifi={"ssid": "House", "pass": "secret"})
+
+    def tearDown(self): self.tmp.cleanup()
+
+    def restart(self, rssi=-40, comes_back=True):
+        async def go():
+            self.radio.ours = [{"address": "AA:BB", "rssi": rssi, "name": "PROV_2e425"}]
+            await self.strips.look()
+            self.radio.gone = {"AA:BB"}
+            self.radio.ours = [{"address": "CC:DD", "rssi": rssi, "name": "PROV_2e425"}] if comes_back else []
+            await self.strips.adopt()
+            for _ in range(8): await turn()
+            return self.strips.status()
+        return run(go())
+
+    def test_it_is_found_again_by_its_name_and_set_up_where_it_is_now(self):
+        st = self.restart()
+        self.assertEqual([a[0] for a in self.radio.adopted], ["CC:DD"])
+        self.assertNotEqual(st["state"], "failed")
+
+    def test_a_strip_that_is_really_gone_is_told_so_and_not_to_move_nearer(self):
+        st = self.restart(comes_back=False)
+        self.assertEqual(st["state"], "failed")
+        self.assertIn("stopped knocking", st["text"])
+        self.assertNotIn("nearer the hub", st["text"])
+
+    def test_a_hub_that_heard_it_only_through_a_bridge_finds_it_there_again(self):
+        """No name to go on -- a bridge hears Matter's advertisement, which carries none -- and no
+        radio of its own: the one strip of ours a bridge has just heard knocking is the one."""
+        from hub.ears import Ears
+        self.hub.ears = Ears()
+        self.hub.ears.heard("08388e", "11:22:33:44:55:66", -50, "random", {"vendor": TEST_VID})
+        j = {"addr": "AA:BB:CC:DD:EE:FF", "name": None}
+        self.assertTrue(run(self.strips._found_again(j)))
+        self.assertEqual(j["addr"], "11:22:33:44:55:66")
+
+    def test_one_that_only_just_reached_us_is_still_the_distance(self):
+        """Faint when it knocked and gone now is the far end of the house, and the sentence that
+        says so is still the right one."""
+        st = self.restart(rssi=-75, comes_back=False)
+        self.assertIn("long way from the hub", st["text"])
 
 
 class BeingDoneWithOne(unittest.TestCase):

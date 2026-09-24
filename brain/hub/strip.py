@@ -157,6 +157,15 @@ class StripError(RuntimeError):
     true about their bridge."""
 
 
+class StripGone(StripError):
+    """Nothing answered at the address the strip knocked from. Not the same as a link that dropped:
+    a strip gets a new Bluetooth address every time it restarts, so this is as often a strip that was
+    unplugged and plugged back in as one that is out of reach -- and it is worth one more look before
+    anybody is told anything (docs/strip.md item 49)."""
+    GONE = ("The strip stopped knocking before it could be set up. If it was unplugged, plug it "
+            "back in \u2014 it will knock again.")
+
+
 # The service a commissionable Matter device advertises under, and how to read what it says.
 MATTER_SVC = "0000fff6-0000-1000-8000-00805f9b34fb"
 # Our own, until there is a real Vendor ID to replace it. docs/strip.md item 2b.
@@ -374,7 +383,14 @@ class Radio:
             said = f"{type(e).__name__} {e}".lower()
             # "notfound" as well as "not found": a class name has no spaces in it, and
             # BleakDeviceNotFoundError is exactly the case this branch exists for.
-            if any(k in said for k in ("disconnect", "not found", "notfound", "timeout", "unreachable")):
+            # NOT FOUND IS NOT DROPPED. A link that died part way is the distance; an address nobody
+            # answers at all is as often a strip that restarted since it knocked -- and told to move
+            # nearer, a household holding a strip the hub heard at -35 a minute ago goes and fixes
+            # nothing. _setup looks for it once more before this is said; _fail still says the
+            # distance when the knock itself was faint.
+            if "not found" in said or "notfound" in said:
+                raise StripGone(StripGone.GONE)
+            if any(k in said for k in ("disconnect", "timeout", "unreachable")):
                 raise StripError("The strip stopped answering part way through. "
                                  "Try again a little nearer the hub.")
             if not rhythm:
@@ -748,6 +764,8 @@ class Strips:
                         "discriminator": s.get("discriminator"), "vendor": s.get("vendor"),
                         "door": s.get("door", "matter"), "rssi": s.get("rssi"),
                         "heard_by": s.get("heard_by"),
+                        # What survives a restart when the address does not: PROV_ and the chip.
+                        "name": s.get("name"),
                         "label": self._label(s), "first": None, "at": time.time()}
             # WHICH ONE, AND HOW WELL WE CAN HEAR IT. Without this the only record of why a setup
             # was later called "a long way from the hub" is the sentence itself, and there is no way
@@ -906,19 +924,24 @@ class Strips:
                 # WHICH EAR (hub/ears.py). The hub's own radio wherever it is good enough; a bridge
                 # that hears the strip clearly better where it is not -- which is every strip behind
                 # a television in a house whose hub is in the garage (docs/strip.md item 15).
-                errand = await self._errand_for(j["addr"])
-                try:
-                    went = await self.radio.adopt_ours(j["addr"], wifi.get("ssid", ""),
-                                                       wifi.get("pass") or "",
-                                                       hub=self._where_we_are(),
-                                                       rhythm=j.get("rhythm", ""),
-                                                       on_pressed=self._pressed,
-                                                       out_of_reach=self._out_of_reach,
-                                                       transport=errand)
-                finally:
-                    if errand:
-                        await errand.close()
-                        if getattr(self.hub, "errand", None) is errand: self.hub.errand = None
+                # AND ONCE MORE IF NOBODY ANSWERED AT THAT ADDRESS: see StripGone.
+                for tries_left in (1, 0):
+                    errand = await self._errand_for(j["addr"])
+                    try:
+                        went = await self.radio.adopt_ours(j["addr"], wifi.get("ssid", ""),
+                                                           wifi.get("pass") or "",
+                                                           hub=self._where_we_are(),
+                                                           rhythm=j.get("rhythm", ""),
+                                                           on_pressed=self._pressed,
+                                                           out_of_reach=self._out_of_reach,
+                                                           transport=errand)
+                        break
+                    except StripGone:
+                        if not tries_left or not await self._found_again(j): raise
+                    finally:
+                        if errand:
+                            await errand.close()
+                            if getattr(self.hub, "errand", None) is errand: self.hub.errand = None
                 # They could not reach it, so `reach()` has already moved the wall to the flashes and
                 # the strip is minting them. Nothing failed and nothing should be said.
                 if went == "rhythm":
@@ -962,6 +985,29 @@ class Strips:
         except Exception:
             log.exception("strip setup failed")
             self._fail("Setting that light strip up did not work. Unplug it and try again.")
+
+    async def _found_again(self, j: dict) -> bool:
+        """The same strip, at whatever address it has now. Its name survives a restart (PROV_ and its
+        chip); failing that, the one strip of ours a bridge has just heard knocking -- one job at a
+        time is what makes "the one" unambiguous. True, with `j["addr"]` moved, if it is still here."""
+        old = j["addr"]
+        try: ours = await self.radio.scan_ours(8.0)
+        except Exception as e:
+            log.info("strip: could not look again (%s)", e); ours = []
+        same = [o for o in ours if j.get("name") and o.get("name") == j["name"]]
+        if not same and not j.get("name") and len(ours) == 1:
+            same = ours
+        ears = getattr(self.hub, "ears", None)
+        if not same and ears:
+            others = [k for k in ears.knocking() if k["addr"] != str(old).upper()]
+            if len(others) == 1:
+                same = [{"addr": others[0]["addr"]}]
+        if not same or same[0]["addr"] == old:
+            log.info("strip: nobody answers at %s, and it is not knocking anywhere else", old)
+            return False
+        j["addr"] = same[0]["addr"]
+        log.info("strip: it moved from %s to %s -- restarted since it knocked; trying there", old, j["addr"])
+        return True
 
     async def _errand_for(self, addr: str):
         """An open errand on the bridge that should talk to this strip, or None for our own radio."""
