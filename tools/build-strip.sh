@@ -31,10 +31,13 @@ if [ -n "$DIRTY" ]; then
 fi
 
 export IDF_PYTHON_ENV_PATH="${IDF_PYTHON_ENV_PATH:-$HOME/.espressif/python_env/idf6.0_py3.10_env}"
+# Not under -u: esp-matter's export.sh reads ESP_MATTER_PATH before it sets it.
+set +u
 # shellcheck disable=SC1091
-. "${IDF_PATH:-$HOME/esp/esp-idf-v6.0.2}/export.sh" >/dev/null
+. "${IDF_PATH:-$HOME/esp/esp-idf-v6.0.2}/export.sh" >/dev/null 2>&1
 # shellcheck disable=SC1091
-. "$HOME/esp/esp-matter/export.sh" >/dev/null
+. "$HOME/esp/esp-matter/export.sh" >/dev/null 2>&1
+set -u
 
 # A release is never a test build and never a board's pin. sdkconfig is not in git, so a checkout that
 # built before a default changed still carries the old answer; the two settings a release cannot ship

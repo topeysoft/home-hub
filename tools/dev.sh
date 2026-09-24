@@ -411,7 +411,8 @@ PY
            # version is a CMake cache entry and would stick, so the next plain build is told it is
            # not a test build any more (-DSTRIP_FW= is read as unset by main/CMakeLists.txt).
            ( export IDF_PYTHON_ENV_PATH="${IDF_PYTHON_ENV_PATH:-$HOME/.espressif/python_env/idf6.0_py3.10_env}"
-             . "${IDF_PATH:-$HOME/esp/esp-idf-v6.0.2}/export.sh" >/dev/null && . "$HOME/esp/esp-matter/export.sh" >/dev/null \
+             set +u                          # esp-matter's export.sh reads ESP_MATTER_PATH before setting it
+             . "${IDF_PATH:-$HOME/esp/esp-idf-v6.0.2}/export.sh" >/dev/null 2>&1 && . "$HOME/esp/esp-matter/export.sh" >/dev/null 2>&1 \
              && cd strip/firmware && idf.py -DSTRIP_FW="$fw" build >/dev/null; rc=$?
              idf.py -DSTRIP_FW= reconfigure >/dev/null 2>&1; exit $rc ) \
              || { echo "${Y}the build failed${R} ${D}— cd strip/firmware && idf.py build${R}" >&2; exit 1; }
