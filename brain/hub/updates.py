@@ -162,6 +162,11 @@ class Updates:
         if not self.reached_us(): return False
         if now - self.asked_at < RETRY: return False                     # it has had its go tonight
         if REQUEST.exists() or (self.state() or {}).get("state") == "running": return False
+        return self.quiet_hours(now)
+
+    def quiet_hours(self, now: float) -> bool:
+        """This hub's part of the night, with nobody up. The bridges wait for the same moment
+        (hub/bridge_updates.py): one window, one number, in one place."""
         here = datetime.fromtimestamp(now, self.hub.tz)
         minute = (here.hour - WINDOW[0]) * 60 + here.minute
         # Anywhere from this hub's minute to the end of the window: one that was busy at its own
@@ -459,6 +464,11 @@ class Updates:
                     log.info("installing %s without being asked: the house has been quiet and it is this hub's minute",
                              (self.latest or {}).get("version"))
                     self.request(source="hub")
+                # The bridges' fixes ride the same clock. Their own try: a puck that cannot be reached
+                # must not stop the hub updating itself, nor the other way round.
+                if (bridge := getattr(self.hub, "bridge", None)):
+                    try: await bridge.firmware.tick()
+                    except Exception: log.exception("bridge update tick")
                 self._learn()          # the run this build came from is marked finished after we started
             except Exception: log.exception("update tick")
             # While an update is happening the panel wants the phase the moment it changes, and five

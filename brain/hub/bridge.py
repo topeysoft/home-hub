@@ -363,6 +363,8 @@ class Bridges:
         self._move_task: asyncio.Task | None = None
         self._woke: asyncio.Event | None = None  # made per question, inside the loop asking it
         self._first = True
+        from .bridge_updates import Firmware
+        self.firmware = Firmware(self)          # a fix that reaches a bridge where it is
 
     # ---- what the panel sees ----
     def status(self) -> dict:
@@ -1187,6 +1189,10 @@ class Bridges:
                 p["online"] = payload == "online"
                 self._saw(chip, p["online"], was)
             elif leaf == "net": p["net"] = payload
+            elif leaf == "fw": self.firmware.heard_fw(chip, payload)
+            elif leaf == "update":
+                with contextlib.suppress(RuntimeError): asyncio.get_running_loop().create_task(self.firmware.heard(chip, payload))
+                return
             # The nightlight's own setting, retained by the puck. Kept because a bridge whose light
             # is off has nothing to lift, and lifting it would turn it on -- which nobody asked for.
             elif leaf == "night": p["night"] = payload == "ON"

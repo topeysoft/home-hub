@@ -21,7 +21,47 @@ The LED bug is the honest illustration. It shipped white, and a puck adopted las
 about what it is doing. The fix exists, is committed, is in `releases/bridge/`, and cannot reach a single puck
 already in a house.
 
-## What is true today (18 September 2026)
+## Built, 24 September 2026: the first version
+
+The routine tier is written, both halves. What exists:
+
+- **The puck** (`brilliant/esp32-bridge/src/fwupdate.{h,cpp}`, firmware 0.6.0). Takes a retained offer on
+  `<base>/bridge/<chip>/offer` -- version, size, SHA-256, port, path -- fetches the app from the address
+  the broker last answered on, hashes it while writing, and restarts into it. The new image is on trial
+  for three minutes and confirms itself only with Wi-Fi, broker and a proxy link all up; otherwise it
+  asks the bootloader to take it back. It keeps a floor (the highest version it has confirmed) and gives
+  up on a version that came back twice. It publishes `fw` retained on every connect, and `update` with
+  what it did. The bootloader already on 0.3.x pucks was built with rollback on, so nothing about the
+  boot side needs another visit.
+- **The hub** (`brain/hub/bridge_updates.py`). Cuts the app out of the merged image by the partition
+  table inside it, serves it at `/bridge/firmware/<sha>.bin` and nothing else, and offers it to one
+  behind, online puck at a time in the hub's own part of the night (`Updates.quiet_hours`), only where
+  the household lets the hub update itself. Offers are withdrawn on success, on failure, after fifteen
+  minutes, and at the end of the window. Updated, went back, and refused-by-hash are written down.
+- **The open decisions, as taken:** the puck checks the hash, not the signature; the hub's six-hour
+  clock and night window, not a second one; the route is the brain's. The image rides inside the brain's
+  container, which the host verifies against the maker's key, so there is still one trust anchor.
+
+Not built: the important and critical tiers (`urgent` is still not carried), the *Needs a look* line
+for a puck that went back twice or could not be reached, and the morning card's line. **And 0.3.x cannot
+take an update** -- it has the slots and the keys but no code to use them -- so every puck still on it
+needs one cable visit to 0.6.0 (`c0e33a` in this house has had its, below) (`puck_cable.py <port> upgrade`, which
+keeps its identity). That is the last one.
+
+**Proven on `c0e33a`, 24 September**, at a desk, against the house's own broker, with the images served
+from the hub's address by a stand-in server (the running brain predates the route). Cable to 0.5.0 by
+writing only otadata and the app: identity, Wi-Fi and mesh kept. Offered 0.5.1: fetched, restarted in
+eleven seconds, confirmed itself inside its trial. Offered a 0.5.2 built never to confirm: on trial at
+10:14:57, back on 0.5.1 by the bootloader at 10:17:57, said `rolledback 1`, tried once more, back again
+at 10:21:48, said `rolledback 2`, and has refused it since with `came back twice`. Two fetches in the
+server's log, not three.
+
+**Which is why the first release is 0.6.0, not 0.5.x.** That puck's floor is now 0.5.1 and 0.5.2 is
+marked bad on it, so a release numbered anything up to 0.5.2 would be refused as older, or as the
+image that came back twice. A bench test on a puck in a wall leaves marks like these; a bench board
+does not.
+
+## What was true on 18 September 2026
 
 - **No OTA code in the firmware.** Nothing under `brilliant/esp32-bridge/src/` references `esp_ota`, `Update`,
   `ArduinoOTA` or `esp_https_ota`.

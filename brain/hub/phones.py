@@ -195,7 +195,10 @@ class Phones:
 
 
 # ---- which requests a phone may make before it belongs ----
-OPEN_PREFIXES = ("/phones/claim/", "/assets/", "/sounds/", "/icons/")
+# /bridge/firmware/ is a puck, not a phone: it has broker credentials and no cookie. What it fetches
+# carries no secret -- the shipped image is blank until the cable writes to it -- and the only name
+# that answers is the hash the hub is offering today (hub/bridge_updates.py).
+OPEN_PREFIXES = ("/phones/claim/", "/assets/", "/sounds/", "/icons/", "/bridge/firmware/")
 OPEN_PATHS = {"/", "/alive", "/phones/me", "/phones/ask", "/phones/code", "/qr.svg", "/phone", "/index.html", "/manifest.webmanifest", "/sw.js", "/favicon.ico", "/favicon.svg", "/robots.txt"}
 OPEN_SUFFIXES = (".js", ".css", ".svg", ".png", ".ico", ".woff2", ".webmanifest", ".json", ".html", ".txt", ".map")
 

@@ -35,6 +35,9 @@
 //   mesh/bridge/<chip>/night/brightness/set  0-255
 //   mesh/bridge/<chip>/night/lift/set  0-255, transient: see below
 //   mesh/bridge/<chip>/settled/set     1 | 0
+//   mesh/bridge/<chip>/fw              the version it runs      (retained)
+//   mesh/bridge/<chip>/offer           an image from the hub    (retained; src/fwupdate.h)
+//   mesh/bridge/<chip>/update          what it did with one     {json}
 //   mesh/<net>/<addr>/state            ON | OFF                 (retained)
 //   mesh/<net>/<addr>/brightness       0-255                    (retained)
 //   mesh/<net>/<addr>/occupancy        ON | OFF                 (retained)
@@ -70,6 +73,7 @@
 #include "config.h"
 #include "release_keys.h"
 #include "light.h"
+#include "fwupdate.h"
 // The compiled-in fallback for everything in cfg, plus the tunables below. One
 // header per puck (-DSECRETS_FILE='"secrets-s3.h"' in platformio.ini), and
 // OPTIONAL: the image the hub ships is built without one and comes up blank,
@@ -1232,6 +1236,13 @@ static void claimSay(const char *leaf, const char *payload) {
     mqtt.publish(t, payload, false);
 }
 
+static void updateSay(const char *leaf, const char *payload, bool retain) {
+    if (!mqtt.connected()) return;
+    char t[80];
+    bridgeTopic(t, sizeof(t), leaf);
+    mqtt.publish(t, payload, retain);
+}
+
 #ifdef BENCH_ERRAND
 #include "errand_bench.h"
 #endif
@@ -1246,6 +1257,12 @@ static void mqttCb(char *topic, uint8_t *payload, unsigned int len) {
     // switches on it, so it arrives on the bridge's own topic and has to be
     // matched before the per-switch parsing below throws it away.
     char own[80];   // the puck's own topics, matched before the per-switch parsing
+    // Before `msg` is used for anything: an offer is longer than the 31 bytes it keeps.
+    bridgeTopic(own, sizeof(own), "offer");
+    if (!strcmp(t, own)) {
+        update_offer(payload, len);     // decided on the loop; see update.h
+        return;
+    }
     bridgeTopic(own, sizeof(own), "cfg");
     if (!strcmp(t, own)) {
         strlcpy(cfgLine, (const char *)msg, sizeof(cfgLine));
@@ -1409,6 +1426,9 @@ static void mqttReconnect() {
     mqtt.subscribe(sub);
     bridgeTopic(sub, sizeof(sub), "settled/set");
     mqtt.subscribe(sub);
+    // Last, so the retained offer that arrives with it lands after everything above is listening.
+    bridgeTopic(sub, sizeof(sub), "offer");
+    mqtt.subscribe(sub);
     cfgAck();
     Serial.printf("[mqtt] connected as %s, commands on %s\n", id, sub);
     announceBridge();
@@ -1422,6 +1442,9 @@ static void mqttReconnect() {
     // another's (brain/hub/bridge.py reads it off the broker while the puck is being placed).
     bridgeTopic(t, sizeof(t), "net");
     mqtt.publish(t, netHex, true);
+    // What this puck runs, so the hub can count who has a fix without waiting for a cable.
+    bridgeTopic(t, sizeof(t), "fw");
+    mqtt.publish(t, BRIDGE_FW, true);
     publishNight();
     publishLight(true);   // forced: a fresh session has nothing retained from this boot
     for (uint8_t i = 0; i < nSwitches; i++) {
@@ -1482,6 +1505,7 @@ void setup() {
     lightNightLevel(cfg.nightLevel);   // before anything can reach Light::Night
     lightSet(Light::Looking);
 
+    update_begin(updateSay);   // before anything else can restart: it notices a rollback
     prefs.begin("meshbridge", false);
     addrGen = prefs.getUShort("gen", 0);
     txSeq = prefs.getUInt("seq", 0) + 512;  // skip past anything unsaved at the last reset
@@ -1629,6 +1653,16 @@ void loop() {
     if (WiFi.status() == WL_CONNECTED) {
         mqttReconnect();
         mqtt.loop();
+    }
+    // A new image proves itself by doing the whole job: a puck with no mesh yet has no switch to
+    // reach, so for it the broker is the whole job.
+    bool brokerUp = WiFi.status() == WL_CONNECTED && mqtt.connected();
+    update_tick(brokerUp && (linkUp || !cfg.haveKeys), brokerUp);
+    // Taking an update waits for anything a household started -- a switch being let in, a strip being
+    // set up -- and then has the radio to itself. It restarts on success and returns otherwise.
+    if (brokerUp && update_ready() && !claim_busy() && !errand_busy()) {
+        if (connected) dropLink("taking an update");
+        update_run(cfg.lastIp);
     }
     if (!cfg.haveKeys) {   // on the Wi-Fi, nothing to say on the mesh yet
         delay(200);

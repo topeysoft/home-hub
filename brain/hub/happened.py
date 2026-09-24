@@ -315,6 +315,9 @@ class Changes:
                     "nightlight off": f"turned the bridge {subject}'s nightlight off.",
                     "light changed": f"changed the bridge {subject}'s light.",
                     "recognised": f"recognized the bridge {subject}.", "recognized": f"recognized the bridge {subject}.",
+                    "updated": f"updated the bridge {subject}.",
+                    "went back": f"saw the bridge {subject} go back to what it had, after an update did not work.",
+                    "refused an update": f"saw the bridge {subject} turn down an update that did not check out.",
                     }.get(new) or self.fallback(r, detail)
         if kind == "share":
             if subject == "settings": return f"turned sharing with other apps {new}."

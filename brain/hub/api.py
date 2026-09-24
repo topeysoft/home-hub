@@ -1278,6 +1278,15 @@ async def cancel_flow(flow_id: str):
 def bridge_status(): return hub.bridge.status()
 
 
+@app.get("/bridge/firmware/{name}")
+def bridge_firmware(name: str):
+    """The image a bridge was offered over the broker, fetched by the hash it was told. Anything else
+    is a 404: this is not a file server, and yesterday's image is not on it."""
+    body = hub.bridge.firmware.served(name)
+    if body is None: raise HTTPException(404)
+    return Response(body, media_type="application/octet-stream", headers={"Cache-Control": "no-store"})
+
+
 @app.post("/bridge/adopt")
 async def bridge_adopt():
     hub.ready()

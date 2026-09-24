@@ -39,7 +39,7 @@
 
 #include <Arduino.h>
 
-#define BRIDGE_FW "0.4.0"
+#define BRIDGE_FW "0.6.0"   // the first that can take the next one over the air (src/fwupdate.h)
 
 // TWO KEYS ON THE RING, AND A NAME RATHER THAN A NUMBER (docs/network.md, pieces 1 and 3).
 //
