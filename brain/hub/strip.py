@@ -395,6 +395,28 @@ def _through_a_bridge(e) -> str:          # e: hub.errand.ErrandFailed, imported
     return "The bridge that was reaching the strip lost it part way through. Try again."
 
 
+# How long to wait before asking the broker again, doubling up to the second. A test shrinks the first.
+RETRY_FIRST, RETRY_MOST = 2.0, 30.0
+
+
+async def subscribe_until_answered(hub, who: str, cb, topic: str):
+    """Subscribe to the broker through Home Assistant, asking again until it answers.
+
+    Said once when it is not there yet and once when it is, so a slow start is one pair of lines in
+    the log rather than a line every few seconds. Never gives up: a brain that cannot see the broker
+    cannot see a strip or a bridge, and there is nothing more useful for it to be doing instead."""
+    first = wait = RETRY_FIRST
+    while True:
+        try:
+            sub = await hub.ha.subscribe("mqtt/subscribe", cb, topic=topic)
+            if wait > first: log.info("%s: the broker view is here now", who)
+            return sub
+        except Exception as e:
+            if wait == first: log.info("%s: no broker view yet (%s); asking again", who, e)
+            await asyncio.sleep(wait)
+            wait = min(wait * 2, RETRY_MOST)
+
+
 class Strips:
     """One job at a time, because it is a person standing in front of a thing."""
 
@@ -540,10 +562,14 @@ class Strips:
 
     # ---- the broker: strips the house already has ----
     async def listen(self):
-        try:
-            self._sub = await self.hub.ha.subscribe("mqtt/subscribe", self._on_mqtt, topic=f"{BASE}/#")
-        except Exception as e:
-            log.info("strip: no broker view yet (%s)", e)
+        """The broker's view of every strip. Keeps asking until Home Assistant's MQTT will answer.
+
+        A DEPLOY RESTARTS HOME ASSISTANT AND THE BRAIN TOGETHER, and the brain is ready first: until
+        HA's MQTT integration has loaded, `mqtt/subscribe` answers "Unknown command". This used to ask
+        once, so after a deploy the brain never heard a strip again until it was restarted by hand --
+        reported 23 September as a strip that joined the Wi-Fi, reached the broker in five seconds,
+        and "failed right before the colour check" three times, because nothing was listening."""
+        self._sub = await subscribe_until_answered(self.hub, "strip", self._on_mqtt, f"{BASE}/#")
 
     def _on_mqtt(self, ev):
         topic = (ev or {}).get("topic") or ""

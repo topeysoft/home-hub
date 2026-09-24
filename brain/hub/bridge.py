@@ -393,15 +393,16 @@ class Bridges:
 
     # ---- the cable: noticing a puck ----
     async def listen(self):
-        """The broker's view of every bridge, through the engine's own MQTT link."""
-        try:
-            self._sub = await self.hub.ha.subscribe("mqtt/subscribe", self._on_mqtt, topic=f"{BASE}/#")
-        except Exception as e:
-            log.info("bridge: no broker view yet (%s)", e)
+        """The broker's view of every bridge, through the engine's own MQTT link -- asked for until it
+        is given, for the reason hub/strip.py's listen() gives: after a deploy HA's MQTT is not there
+        yet, and a brain that asked once saw no bridge, no switch and no errand until restarted."""
+        from .strip import subscribe_until_answered
+        self._sub = await subscribe_until_answered(self.hub, "bridge", self._on_mqtt, f"{BASE}/#")
 
     async def watch(self):
         """Every few seconds: what is on the USB now that was not before. Runs for the life of the brain."""
-        await self.listen()
+        # Not awaited: the cable is worth watching while the broker is still coming up.
+        asyncio.ensure_future(self.listen())
         while True:
             try: await self.scan()
             except Exception as e: log.warning("bridge scan: %s", e)

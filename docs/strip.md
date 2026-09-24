@@ -712,6 +712,24 @@ the house, which is how these things get returned. The camera route avoids all o
 pointed into a living room. **The cheap next step is neither: a capture stick and HyperHDR on a bench,
 to find out whether it feels like the screen extended or like a gimmick, before any of it is paid for.**
 
+**47. After a deploy, the brain heard no strip at all — and it had been that way since 17
+September.** Reported 23 September: adding a strip "failed right before the colour check", three
+times running. The strip had done everything right: the broker's own log shows it connecting as
+`hub` five seconds after each handoff and publishing `status online`, which the broker still held.
+The brain said *nothing arrived on the broker in 60s. Known: {}* — it knew of no strip at all.
+
+**Why.** A deploy restarts Home Assistant and the brain together, and the brain is ready first. Its
+one `mqtt/subscribe` was answered *Unknown command* because HA's MQTT integration had not loaded,
+it logged *no broker view yet*, and it never asked again — for strips or for bridges. Nothing on the
+broker reached it until it was restarted by hand, which is what unblocked the house that evening.
+
+**Fixed:** both views now ask until they are answered (`subscribe_until_answered` in
+`brain/hub/strip.py`), saying so once when the broker is not there and once when it is; the bridge's
+cable watcher no longer waits on it. `brain/tests/test_broker_view.py` holds a Home Assistant that
+says *Unknown command* twice, and **fails against the old ask-once**. Not ours today: this was
+latent in every deploy since the bridge's view was written, and only ever needed the two restarts to
+race.
+
 **46. IN A REAL HOUSE, THROUGH HOME ASSISTANT, ON THE AIR: a strip the hub could barely hear was set
 up through a bridge, with a tap on the wall and nothing else.** 23 September.
 
