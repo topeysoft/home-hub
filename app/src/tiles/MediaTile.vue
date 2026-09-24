@@ -8,6 +8,7 @@ import { imageUrl, type Device } from '../api'
 import { perform, shortName, roomOf, store, isDead } from '../store'
 import Icon from '../Icon.vue'
 import DeviceArt from '../DeviceArt.vue'
+import { useSlide } from '../panes/slide'
 
 const props = defineProps<{ device: Device }>()
 const s = computed(() => props.device.state)
@@ -36,7 +37,15 @@ watch(() => props.device.attrs.entity_picture, (p) => { art.value = p ? imageUrl
 const d = () => props.device
 const toggle = () => playing.value ? perform(d(), 'pause', undefined, { state: 'paused' }) : perform(d(), 'play', undefined, { state: 'playing' })
 const power = () => off.value ? perform(d(), 'on', undefined, { state: 'idle' }) : perform(d(), 'off', undefined, { state: 'off' })
-const setVolume = (e: Event) => { const v = Number((e.target as HTMLInputElement).value) / 100; perform(d(), 'volume', { volume_level: v }, { attrs: { volume_level: v } }) }
+const setVolume = (pct: number) => { const v = pct / 100; perform(d(), 'volume', { volume_level: v }, { attrs: { volume_level: v } }) }
+/* The finger drives the slider rather than the browser, the same as the pane's: a native range
+   inside a card that rides a scrolling row did not follow a drag at all. What moves while it is
+   held is the drawing, and the speaker hears the level once, on release. The wall's card also says
+   the number while it is held (design/player/RowA.dc.html); every other arrangement ignores that. */
+const shown = ref(volume.value)
+const vol = useSlide({ vertical: false, live: v => (shown.value = v), settle: v => { shown.value = v; setVolume(v) } })
+watch(volume, v => { if (!vol.held.value) shown.value = v })
+const keyed = (e: Event) => setVolume(Number((e.target as HTMLInputElement).value))
 
 /* sounds: noise and rain from the hub, looped by the brain, with a sleep timer */
 const sound = computed(() => (props.device.attrs.sound as string | undefined) || '')
@@ -56,6 +65,12 @@ const stopSound = () => perform(d(), 'sound_off', undefined, { state: 'idle', at
     </div>
     <!-- laid over the artwork at full height, where the words sit on it -->
     <div class="media-veil" aria-hidden="true"></div>
+    <!-- which player, because a house has several. Only the wall draws it; everywhere else the
+         name is the line above the title, as it was -->
+    <span class="media-which" aria-hidden="true">{{ name }}</span>
+    <!-- the pane of glass the wall lays over the cover's foot. Nothing to any other arrangement:
+         it is display: contents there, so the words and the buttons are the grid's own children -->
+    <div class="media-foot">
     <div class="media-text">
       <span class="tile-name">{{ name }}</span>
       <span class="media-title">{{ title }}</span>
@@ -67,14 +82,21 @@ const stopSound = () => perform(d(), 'sound_off', undefined, { state: 'idle', at
       <span class="media-when">{{ when }}</span>
       <div class="media-bar" v-if="progress != null" aria-hidden="true"><i :style="{ width: progress + '%' }"></i></div>
       <button v-if="!isTv" class="ctl" @click="perform(device, 'next')" aria-label="Next"><Icon name="next" :size="20" /></button>
-      <label class="vol"><Icon name="volume" :size="18" />
-        <input type="range" min="0" max="100" :value="volume" aria-label="Volume" @change="setVolume" />
+      <label class="vol" :class="{ 'vol-held': vol.held.value }" :style="{ '--v': shown + '%' }">
+        <Icon name="volume" :size="18" class="vol-ic" />
+        <Icon name="volume-low" :size="16" class="vol-lo" />
+        <input type="range" min="0" max="100" :value="shown" aria-label="Volume"
+               @pointerdown.prevent="vol.down" @pointermove="vol.move" @pointerup="vol.up" @pointercancel="vol.cancel"
+               @change="keyed" />
+        <Icon name="volume" :size="16" class="vol-hi" />
+        <span class="vol-n" aria-hidden="true">{{ shown }}</span>
       </label>
       <button class="ctl power" @click="power" aria-label="Turn off"><Icon name="power" :size="20" /></button>
     </div>
     <div class="media-controls" v-else-if="!dead">
       <button class="ctl primary" @click="power" aria-label="Turn on"><Icon name="power" :size="22" /></button>
       <span class="media-hint">Tap to turn on</span>
+    </div>
     </div>
     <div class="sounds" v-if="!isTv && !dead && store.sounds.length">
       <button v-for="s in store.sounds" :key="s.id" class="clim-chip" :class="{ on: sound === s.id }" @click="sound === s.id ? stopSound() : playSound(s.id)">{{ s.name }}</button>
@@ -132,4 +154,14 @@ const stopSound = () => perform(d(), 'sound_off', undefined, { state: 'idle', at
 }
 .snd-for:disabled {
   opacity: 0.5;
+}
+/* the wall's card only: panel.css draws these under .wall-stage, and nowhere else has them */
+.media-foot {
+  display: contents;
+}
+.media-which,
+.vol-lo,
+.vol-hi,
+.vol-n {
+  display: none;
 }</style>

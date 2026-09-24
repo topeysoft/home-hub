@@ -266,6 +266,8 @@ input:focus-visible {
 [data-face='glass'] .wall-loz,
 [data-face='glass'] .topbar-add,
 [data-face='glass'] .tabs,
+[data-face='glass'] .wall-stage .tile.media .media-foot,
+[data-face='glass'] .wall-stage .tile.media .media-which,
 [data-face='glass'] .bottombar .say-box {
   background-color: transparent;
   background-image: var(--glass-sweep), var(--glass);
@@ -300,6 +302,8 @@ input:focus-visible {
 [data-face='glass'] .wall-loz,
 [data-face='glass'] .topbar-add,
 [data-face='glass'] .tabs,
+[data-face='glass'] .wall-stage .tile.media .media-foot,
+[data-face='glass'] .wall-stage .tile.media .media-which,
 [data-face='glass'] .bottombar .say-box {
   backdrop-filter: blur(var(--glass-blur, 26px)) saturate(var(--glass-sat, 1.7))
     brightness(var(--glass-br, 1.06));
@@ -349,6 +353,8 @@ input:focus-visible {
 [data-face='glass'] .bottombar .say-hint::after,
 [data-face='glass'] .bottombar .say-note::after,
 [data-face='glass'] .bottombar .say-answer::after,
+[data-face='glass'] .wall-stage .tile.media .media-foot::after,
+[data-face='glass'] .wall-stage .tile.media .media-which::after,
 [data-face='glass'] .bottombar .drafts::after {
   content: '';
   position: absolute;
@@ -386,6 +392,8 @@ input:focus-visible {
 [data-face='glass'][data-flat] .banner,
 [data-face='glass'][data-flat] .topbar-add,
 [data-face='glass'][data-flat] .tabs,
+[data-face='glass'][data-flat] .wall-stage .tile.media .media-foot,
+[data-face='glass'][data-flat] .wall-stage .tile.media .media-which,
 [data-face='glass'][data-flat] .bottombar .say-box {
   background-image: var(--glass-sweep), var(--glass-flat);
 }
@@ -400,6 +408,8 @@ input:focus-visible {
 [data-face='glass'][data-flat] .rail,
 [data-face='glass'][data-flat] .topbar-add,
 [data-face='glass'][data-flat] .tabs,
+[data-face='glass'][data-flat] .wall-stage .tile.media .media-foot,
+[data-face='glass'][data-flat] .wall-stage .tile.media .media-which,
 [data-face='glass'][data-flat] .bottombar .say-box {
   backdrop-filter: none;
 }
@@ -1972,6 +1982,8 @@ input:focus-visible {
   margin: 0;
   accent-color: var(--lamp);
   background: transparent;
+  /* sideways is the slider's, so the row it rides in does not take the drag for a swipe */
+  touch-action: pan-y;
 }
 
 /* a cover's own bar: the picture of the number beside it */
@@ -7217,6 +7229,189 @@ select.input {
 .wall-stage .bento .tile.camera,
 .wall-stage .bento .tile.climate {
   width: calc(var(--row) * 0.957);
+}
+
+/* ---------- what is playing, on glass ----------
+   design/player/RowA.dc.html, chosen 24 September: the cover is the card, and
+   everything you can do to it rides on one pane of glass across its foot --
+   the title, a hairline for where it is up to, the transport, and how loud as
+   a fourth line. Which player it is goes to a chip at the top, because a house
+   has several and the title line is the song's. No off button, which is the
+   pane's; no heart, which most players cannot honor. The glass itself comes
+   from the lists at the top of this sheet, so it is the same material as every
+   other pane and follows the sky with it. e2e/player.spec.ts pins the order. */
+[data-face='glass'] .wall-stage .bento .tile.media {
+  padding: 14px;
+}
+[data-face='glass'] .wall-stage .bento .tile.media .media-which {
+  position: absolute;
+  z-index: 1;
+  left: 16px;
+  top: 16px;
+  display: flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 13px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.86);
+  max-width: calc(100% - 32px);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+[data-face='glass'] .wall-stage .bento .tile.media .media-foot {
+  display: block;
+  position: relative;
+  z-index: 1;
+  border-radius: var(--r-lg);
+  padding: 18px 20px 20px;
+}
+[data-face='glass'] .wall-stage .bento .tile.media .media-text {
+  gap: 3px;
+}
+[data-face='glass'] .wall-stage .bento .tile.media .media-text .tile-name {
+  display: none;
+}
+[data-face='glass'] .wall-stage .bento .tile.media .media-title {
+  display: block;
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  white-space: nowrap;
+}
+[data-face='glass'] .wall-stage .bento .tile.media .media-sub {
+  color: var(--ink-2);
+}
+[data-face='glass'] .wall-stage .bento .tile.media .media-controls {
+  margin-top: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0 30px;
+}
+[data-face='glass'] .wall-stage .bento .tile.media .media-bar {
+  display: block;
+  position: relative;
+  order: -1;
+  flex: 0 0 100%;
+  height: 3px;
+  margin-bottom: 18px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.24);
+}
+[data-face='glass'] .wall-stage .bento .tile.media .media-bar i {
+  position: relative;
+  height: 3px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.95);
+}
+[data-face='glass'] .wall-stage .bento .tile.media .media-bar i::after {
+  content: '';
+  position: absolute;
+  right: -4.5px;
+  top: 50%;
+  width: 9px;
+  height: 9px;
+  margin-top: -4.5px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(6, 5, 28, 0.5);
+}
+[data-face='glass'] .wall-stage .bento .tile.media .ctl {
+  width: 44px;
+  height: 44px;
+  background: none;
+  color: rgba(255, 255, 255, 0.88);
+}
+[data-face='glass'] .wall-stage .bento .tile.media .ctl.primary {
+  width: 56px;
+  height: 56px;
+  background: #fff;
+  color: #141238;
+  box-shadow:
+    0 8px 22px -6px rgba(6, 5, 28, 0.6),
+    inset 0 -2px 4px rgba(20, 16, 50, 0.12);
+}
+[data-face='glass'] .wall-stage .bento .tile.media .ctl.power:not(.primary),
+[data-face='glass'] .wall-stage .bento .tile.media .media-when {
+  display: none;
+}
+[data-face='glass'] .wall-stage .bento .tile.media .media-hint {
+  flex: 0 0 100%;
+  margin: 10px 0 0;
+  text-align: center;
+}
+/* the fourth line: thinner than the transport so the eye lands on pause first,
+   and it thickens and says its number only while a finger is on it */
+[data-face='glass'] .wall-stage .bento .tile.media .vol {
+  flex: 0 0 100%;
+  margin-top: 16px;
+  padding: 0;
+  gap: 12px;
+  color: rgba(255, 255, 255, 0.62);
+}
+[data-face='glass'] .wall-stage .bento .tile.media .vol .vol-ic {
+  display: none;
+}
+[data-face='glass'] .wall-stage .bento .tile.media .vol .vol-lo,
+[data-face='glass'] .wall-stage .bento .tile.media .vol .vol-hi {
+  display: block;
+  flex: 0 0 auto;
+}
+[data-face='glass'] .wall-stage .bento .tile.media .vol input {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 22px;
+  background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.9) var(--v),
+      rgba(255, 255, 255, 0.2) var(--v)
+    )
+    center / 100% 4px no-repeat;
+  border-radius: 4px;
+  transition: background-size 0.2s var(--ease);
+}
+[data-face='glass'] .wall-stage .bento .tile.media .vol.vol-held input {
+  background-size: 100% 8px;
+}
+[data-face='glass'] .wall-stage .bento .tile.media .vol input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(6, 5, 28, 0.5);
+  transition:
+    width 0.2s var(--ease),
+    height 0.2s var(--ease);
+}
+[data-face='glass'] .wall-stage .bento .tile.media .vol input::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(6, 5, 28, 0.5);
+}
+[data-face='glass'] .wall-stage .bento .tile.media .vol.vol-held input::-webkit-slider-thumb {
+  width: 22px;
+  height: 22px;
+}
+[data-face='glass'] .wall-stage .bento .tile.media .vol.vol-held input::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+}
+[data-face='glass'] .wall-stage .bento .tile.media .vol.vol-held .vol-n {
+  display: block;
+  width: 26px;
+  text-align: right;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
 }
 /* the row takes everything the weather does not, and bleeds off the right edge
    only -- its left edge is a real edge here, because something is beside it */
