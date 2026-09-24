@@ -25,16 +25,37 @@ static char g_owed[160] = "";      // something to say once the broker is up (a 
 static char g_offer[200];
 static volatile bool g_offered = false;
 static bool g_ready = false;       // accepted: fw, size, sha, port and path parsed below
-static char o_fw[16], o_sha[65], o_path[96];
+static char o_fw[24], o_sha[65], o_path[96];
 static uint32_t o_size = 0;
 static uint16_t o_port = 0;
 
-// "0.4.1" -> comparable. Anything that is not three numbers is treated as zero, which is older than
+// Versions, compared: "0.6.1" and a development build of it, "0.6.1-d382417". A build with a tag
+// sorts after the release before it and before its own release, so a puck that ran working-tree
+// builds still takes the real thing. Anything that is not three numbers reads as 0.0.0, older than
 // every real version, so a malformed offer is refused rather than taken.
-static uint32_t vnum(const char *v) {
-    unsigned a = 0, b = 0, c = 0;
-    if (!v || sscanf(v, "%u.%u.%u", &a, &b, &c) != 3) return 0;
-    return (a << 20) | ((b & 0x3FF) << 10) | (c & 0x3FF);
+struct Ver { uint32_t a, b, c; bool tagged; uint32_t n; };
+
+static Ver vparse(const char *v) {
+    Ver r = {0, 0, 0, false, 0};
+    int used = 0;
+    if (!v || sscanf(v, "%u.%u.%u%n", &r.a, &r.b, &r.c, &used) != 3) return {0, 0, 0, false, 0};
+    if (v[used] == '-') {
+        r.tagged = true;
+        const char *p = v + used + 1;
+        while (*p && !isdigit((unsigned char)*p)) p++;
+        r.n = strtoul(p, nullptr, 10);
+    }
+    return r;
+}
+
+static int vcmp(const char *x, const char *y) {
+    Ver a = vparse(x), b = vparse(y);
+    if (a.a != b.a) return a.a < b.a ? -1 : 1;
+    if (a.b != b.b) return a.b < b.b ? -1 : 1;
+    if (a.c != b.c) return a.c < b.c ? -1 : 1;
+    if (a.tagged != b.tagged) return a.tagged ? -1 : 1;      // the release beats its own builds
+    if (a.n != b.n) return a.n < b.n ? -1 : 1;
+    return 0;
 }
 
 static void say(const char *state, const char *fw, const char *why) {
@@ -88,21 +109,22 @@ static void consider() {
     g_offered = false;
     g_ready = false;
     if (!g_offer[0]) return;               // withdrawn
-    char fw[16], sha[65], path[96];
+    char fw[24], sha[65], path[96];
     unsigned long size = 0, port = 0;
-    if (sscanf(g_offer, "%15s %lu %64s %lu %95s", fw, &size, sha, &port, path) != 5 || strlen(sha) != 64 ||
+    if (sscanf(g_offer, "%23s %lu %64s %lu %95s", fw, &size, sha, &port, path) != 5 || strlen(sha) != 64 ||
         !size || !port || port > 65535 || path[0] != '/') {
         say("refused", "", "unreadable");
         return;
     }
-    uint32_t want = vnum(fw), have = vnum(BRIDGE_FW), floor = vnum(nv.getString("floor", "0.0.0").c_str());
-    if (want <= have) {
+    String floor = nv.getString("floor", "0.0.0");
+    int vsHave = vcmp(fw, BRIDGE_FW);
+    if (vsHave <= 0) {
         // Not a fault: the hub has an old idea of what we run. Saying our version again fixes that.
-        if (want != have) say("refused", fw, "older");
+        if (vsHave < 0) say("refused", fw, "older");
         if (g_publish) g_publish("fw", BRIDGE_FW, true);
         return;
     }
-    if (want < floor) { say("refused", fw, "below the floor"); return; }
+    if (vcmp(fw, floor.c_str()) < 0) { say("refused", fw, "below the floor"); return; }
     if (g_trial) { say("refused", fw, "on trial"); return; }   // prove this one first
     if (nv.getString("bad", "") == fw && nv.getUChar("badn", 0) >= GIVE_UP_AFTER) {
         say("refused", fw, "came back twice");
@@ -131,7 +153,7 @@ void update_tick(bool whole, bool brokerUp) {
         esp_ota_mark_app_valid_cancel_rollback();
         g_trial = false;
         // The floor only ever rises, and only on an image that has proved itself.
-        if (vnum(BRIDGE_FW) > vnum(nv.getString("floor", "0.0.0").c_str())) nv.putString("floor", BRIDGE_FW);
+        if (vcmp(BRIDGE_FW, nv.getString("floor", "0.0.0").c_str()) > 0) nv.putString("floor", BRIDGE_FW);
         nv.remove("try");
         if (nv.getString("bad", "") == BRIDGE_FW) { nv.remove("bad"); nv.remove("badn"); }
         say("installed", BRIDGE_FW, "");
@@ -149,7 +171,7 @@ bool update_ready() { return g_ready && !g_offered; }
 
 void update_run(const char *hubIp) {
     g_ready = false;
-    char fw[16];
+    char fw[24];
     strlcpy(fw, o_fw, sizeof(fw));
     if (!hubIp || !hubIp[0] || WiFi.status() != WL_CONNECTED) { say("failed", fw, "no hub"); return; }
     say("fetching", fw, "");

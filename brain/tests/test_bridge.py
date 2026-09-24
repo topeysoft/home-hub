@@ -7,7 +7,7 @@ of states a person would see: a puck appears and knocks, nothing of the house's 
 say yes, the three steps in order, then the walk, then the count. And the ways it goes wrong that
 have a sentence for the wall: unplugged halfway, a hub with no Wi‑Fi to give.
 """
-import asyncio, json, sqlite3, tempfile, unittest
+import asyncio, hashlib, json, sqlite3, tempfile, unittest
 from pathlib import Path
 
 from hub import bridge as bridge_mod
@@ -1290,3 +1290,88 @@ class AFixReachesABridgeWhereItIs(unittest.TestCase):
 
 from hub.bridge_updates import app_image as bridge_mod_app_image  # noqa: E402
 from hub import bridge_updates as bridge_mod_updates  # noqa: E402
+
+
+class ABuildFromAWorkingTreeNow(unittest.TestCase):
+    """tools/dev.sh puck: a developer hands one puck a build from their checkout, over ssh, and the
+    hub offers it at once -- on a hub that follows a branch, and on no other."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.dev = Path(self.tmp.name) / "by-id"; self.dev.mkdir()
+        self.hub = FakeHub(self.tmp.name)
+        self.hub.updates = FakeUpdates(); self.hub.updates.channel = "development"
+        self.hub.updates.quiet = False                    # the middle of the day
+        self.cable = FakeCable(); self.cable.ships("0.6.0")
+        self.cable.image.write_bytes(merged_image())
+        self.b = Bridges(self.hub, cable=self.cable, devdir=self.dev)
+        self.fw = self.b.firmware
+        self.push = Path(self.tmp.name) / "bridge-push"
+        self._was = bridge_mod_updates.PUSH; bridge_mod_updates.PUSH = self.push
+        self.hub.settings.set(bridges={"c0e33a": {"since": 1, "fw": "0.6.0"}})
+        self.b.pucks["c0e33a"] = {"online": True}
+
+    def tearDown(self):
+        bridge_mod_updates.PUSH = self._was; self.tmp.cleanup()
+
+    def park(self, chip="c0e33a", fw="0.6.1-d382417", body=b"\xe9" + b"x" * 64):
+        self.push.mkdir(exist_ok=True)
+        (self.push / "image.bin").write_bytes(body)
+        (self.push / "request.json").write_text(json.dumps({"chip": chip, "fw": fw}))
+        run(self.fw.take_push(now=1000))
+
+    def state(self): return json.loads((self.push / "state.json").read_text())
+    def offers(self): return [p for t, p in self.hub.ha.published if t and t.endswith("/offer")]
+    def rec(self): return self.hub.settings.get("bridges")["c0e33a"]
+
+    def test_it_is_offered_at_once_and_served_by_its_hash(self):
+        body = b"\xe9" + b"x" * 64
+        self.park(body=body)
+        sha = hashlib.sha256(body).hexdigest()
+        self.assertEqual(self.offers(), [f"0.6.1-d382417 65 {sha} 8300 /bridge/firmware/{sha}.bin"])
+        self.assertEqual(self.fw.served(f"{sha}.bin"), body)
+        self.assertEqual(self.state()["state"], "offered")
+        self.assertFalse((self.push / "request.json").exists())    # taken once
+
+    def test_a_release_hub_refuses_whoever_asks(self):
+        self.hub.updates.channel = "release"
+        self.park()
+        self.assertEqual(self.offers(), [])
+        self.assertEqual(self.state()["state"], "refused")
+        self.assertIn("releases", self.state()["why"])
+
+    def test_what_is_refused_says_why(self):
+        for kw, why in [({"chip": "0badd0"}, "not a bridge"), ({"fw": "tuesday"}, "not a version"),
+                        ({"body": b"MZ-not-an-app"}, "not an ESP32 app")]:
+            self.park(**kw)
+            self.assertIn(why, self.state()["why"])
+        self.b.pucks["c0e33a"] = {"online": False}
+        self.park()
+        self.assertIn("not on the broker", self.state()["why"])
+        self.assertEqual(self.offers(), [])
+
+    def test_the_night_does_not_take_it_back_and_the_tool_hears_how_it_went(self):
+        self.park()
+        run(self.fw.tick(now=1060))
+        self.assertIn("offer", self.rec())                           # not withdrawn in the day
+        run(self.fw.heard("c0e33a", '{"state":"fetching","fw":"0.6.1-d382417","why":""}', now=1070))
+        self.assertEqual(self.state()["state"], "fetching")
+        run(self.fw.heard("c0e33a", '{"state":"installed","fw":"0.6.1-d382417","why":""}', now=1200))
+        self.assertEqual(self.state()["state"], "installed")
+        self.assertNotIn("offer", self.rec())
+
+    def test_a_test_build_that_went_back_is_not_held_against_anything(self):
+        self.park()
+        run(self.fw.heard("c0e33a", '{"state":"rolledback","fw":"0.6.1-d382417","why":"1"}', now=1300))
+        self.assertEqual(self.state()["state"], "rolledback")
+        self.assertNotIn("tries", self.rec())
+
+    def test_silence_ends_it(self):
+        self.park()
+        run(self.fw.tick(now=1000 + bridge_mod_updates.OFFER_FOR + 1))
+        self.assertEqual((self.state()["state"], self.state()["why"]), ("failed", "no answer"))
+        self.assertNotIn("offer", self.rec())
+
+    def test_a_puck_that_ran_test_builds_is_still_behind_the_release(self):
+        self.hub.settings.set(bridges={"c0e33a": {"since": 1, "fw": "0.6.0-d382417"}})
+        self.assertEqual([b["chip"] for b in self.b.behind()], ["c0e33a"])

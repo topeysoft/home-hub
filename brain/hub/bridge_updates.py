@@ -21,8 +21,18 @@ on its own count, so the two cannot disagree into a loop.
 What the house writes down: a bridge updated, a bridge that went back to what it had, and a bridge
 that refused an image because the bytes were not the ones it was told about. Nothing else -- a puck
 that was asleep all night is not news.
+
+A BUILD FROM A WORKING TREE, NOW. On a hub that follows a branch -- a hub being worked on -- a
+developer can hand one puck a build straight from their checkout (tools/dev.sh puck) and have it
+offered at once rather than at three in the morning. It arrives over ssh, not over HTTP: the tool
+parks the image and a request in PUSH, and whoever can do that is already root on this machine, so
+it adds no way in that was not there. A hub on releases refuses it, whoever asks. Everything the
+puck does with it is unchanged -- hash, trial, rollback, floor -- and the hub writes where it has
+got to in PUSH/state.json for the tool to read back.
 """
-import contextlib, hashlib, json, logging, os, time
+import asyncio, contextlib, hashlib, json, logging, os, re, time
+
+from .settings import DATA
 
 log = logging.getLogger("hub.bridge")
 
@@ -30,6 +40,9 @@ PATH = "/bridge/firmware/"
 OFFER_FOR = 15 * 60          # fetch, write, restart and prove itself take about four minutes
 TRIES = 2                    # the puck's GIVE_UP_AFTER, the same number
 RETRY = 12 * 3600            # a try a night, as the hub gives itself
+PUSH = DATA / "bridge-push"   # request.json + image.bin from tools/dev.sh puck; state.json back
+PUSH_EVERY = 2
+DEV_VERSION = re.compile(r"^\d+\.\d+\.\d+(-d\d+)?$")
 PART_TABLE, PART_MAGIC = 0x8000, b"\xaa\x50"
 IMAGE_MAGIC = 0xE9
 
@@ -55,6 +68,7 @@ class Firmware:
     def __init__(self, bridges):
         self.b = bridges
         self._cache: tuple | None = None       # (stamp, image) so a 1 MB file is not re-read every tick
+        self.dev: dict | None = None           # a working-tree build being offered to one puck
 
     @property
     def hub(self): return self.b.hub
@@ -79,8 +93,9 @@ class Firmware:
     def served(self, name: str) -> bytes | None:
         """The bytes at PATH<sha>.bin -- the current image and no other, so a puck can only ever be
         handed what the hub is offering today."""
-        img = self.image()
-        return img["body"] if img and name == f"{img['sha256']}.bin" else None
+        for img in (self.image(), self.dev):
+            if img and name == f"{img['sha256']}.bin": return img["body"]
+        return None
 
     # ---- what the pucks say ----
     def heard_fw(self, chip: str, fw: str) -> None:
@@ -99,6 +114,7 @@ class Firmware:
         rec = known.get(chip)
         if rec is None: return
         offer = rec.get("offer") or {}
+        if offer.get("dev"): self._tell_tool(chip, fw, state, str(said.get("why") or ""))
         if state == "installed":
             self.hub.log.add("bridge", chip, None, "updated", source="hub", detail={"fw": fw})
             if offer.get("fw") == fw: await self.withdraw(chip)
@@ -111,7 +127,8 @@ class Firmware:
             self.hub.log.add("bridge", chip, None, "refused an update", source="hub", detail={"fw": fw})
         # Whatever the reason, this offer is done with, and it counts: a puck that will not take a
         # version tonight is not asked again tonight.
-        if offer and state in ("rolledback", "failed", "refused"): await self.withdraw(chip, failed=True, now=now)
+        if offer and state in ("rolledback", "failed", "refused"):
+            await self.withdraw(chip, failed=not offer.get("dev"), now=now)
 
     # ---- offering ----
     def _may(self, now: float) -> bool:
@@ -124,11 +141,12 @@ class Firmware:
             await self.hub.ha.call("mqtt", "publish", None,
                                    topic=f"{BASE}/bridge/{chip}/offer", payload=payload, retain=True)
 
-    async def offer(self, chip: str, img: dict, now: float | None = None) -> None:
+    async def offer(self, chip: str, img: dict, now: float | None = None, dev: bool = False) -> None:
         port = os.environ.get("HUB_PORT", "8300")
         await self._say(chip, f"{img['fw']} {img['size']} {img['sha256']} {port} {PATH}{img['sha256']}.bin")
         known = self.hub.settings.get("bridges") or {}
-        self.hub.settings.set(bridges={**known, chip: {**known[chip], "offer": {"fw": img["fw"], "at": now or time.time()}}})
+        o = {"fw": img["fw"], "at": now or time.time(), **({"dev": True} if dev else {})}
+        self.hub.settings.set(bridges={**known, chip: {**known[chip], "offer": o}})
         log.info("bridge: offered %s to %s", img["fw"], chip)
 
     async def withdraw(self, chip: str, failed: bool = False, now: float | None = None) -> None:
@@ -152,6 +170,14 @@ class Firmware:
         for chip, rec in (self.hub.settings.get("bridges") or {}).items():
             o = rec.get("offer")
             if not o: continue
+            # A working-tree build is not the shipped image and does not wait for the night: only
+            # silence ends it, and silence is not held against the version.
+            if o.get("dev"):
+                if now - o.get("at", 0) > OFFER_FOR:
+                    self._tell_tool(chip, o.get("fw", ""), "failed", "no answer")
+                    await self.withdraw(chip, now=now)
+                else: busy = True
+                continue
             if not img or o.get("fw") != img["fw"]: await self.withdraw(chip, now=now)
             elif now - o.get("at", 0) > OFFER_FOR: await self.withdraw(chip, failed=True, now=now)
             # Past the window it is taken back, uncounted: the puck was not given its chance.
@@ -164,3 +190,48 @@ class Firmware:
             if t.get("fw") == img["fw"] and (t.get("n", 0) >= TRIES or now - t.get("at", 0) < RETRY): continue
             await self.offer(b["chip"], img, now)
             return
+
+    # ---- a build from a working tree, now ----
+    def _tell_tool(self, chip: str, fw: str, state: str, why: str = "") -> None:
+        with contextlib.suppress(OSError):
+            PUSH.mkdir(parents=True, exist_ok=True)
+            (PUSH / "state.json").write_text(json.dumps(
+                {"chip": chip, "fw": fw, "state": state, "why": why, "at": time.time()}))
+
+    async def watch(self) -> None:
+        """Look for a parked build every couple of seconds. Started once, with the rest of the house."""
+        while True:
+            try:
+                if (PUSH / "request.json").exists(): await self.take_push()
+            except Exception: log.exception("bridge: taking a pushed build")
+            await asyncio.sleep(PUSH_EVERY)
+
+    async def take_push(self, now: float | None = None) -> None:
+        req_file, body_file = PUSH / "request.json", PUSH / "image.bin"
+        try:
+            req = json.loads(req_file.read_text())
+            body = body_file.read_bytes()
+        except (OSError, ValueError):
+            req, body = {}, b""
+        # Taken once, whatever happens next: a request left lying about is one somebody forgot.
+        for f in (req_file, body_file):
+            with contextlib.suppress(OSError): f.unlink()
+        chip, fw = str(req.get("chip") or ""), str(req.get("fw") or "")
+        rec = (self.hub.settings.get("bridges") or {}).get(chip)
+        u = getattr(self.hub, "updates", None)
+        from .updates import BRANCHES
+        why = ("this hub follows releases, and a release hub takes only released firmware"
+               if not (u and u.channel in BRANCHES) else
+               f"{chip or 'that'} is not a bridge this hub set up" if rec is None else
+               f"{chip} is not on the broker right now" if not (self.b.pucks.get(chip) or {}).get("online") else
+               f"{fw!r} is not a version (0.6.1, or 0.6.1-d<n>)" if not DEV_VERSION.match(fw) else
+               "that is not an ESP32 app image" if body[:1] != bytes([IMAGE_MAGIC]) else "")
+        if why:
+            log.info("bridge: refused a pushed build for %s: %s", chip, why)
+            self._tell_tool(chip, fw, "refused", why)
+            return
+        if rec.get("offer"): await self.withdraw(chip, now=now)       # tonight's can wait; this was asked for
+        self.dev = {"fw": fw, "sha256": hashlib.sha256(body).hexdigest(), "size": len(body), "body": body}
+        await self.offer(chip, self.dev, now, dev=True)
+        self._tell_tool(chip, fw, "offered")
+        self.hub.log.add("bridge", chip, None, "sent a test build", source="hub", detail={"fw": fw})

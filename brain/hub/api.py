@@ -241,6 +241,7 @@ class Hub:
         asyncio.create_task(self.provision.refresh())   # look at the driver layer now, not at the next half-minute
         asyncio.create_task(self.sounds.ensure())        # the generated noises, once
         asyncio.create_task(self.bridge.watch())         # what appears on the USB from now on
+        asyncio.create_task(self.bridge.firmware.watch())   # a build parked by tools/dev.sh puck
         asyncio.create_task(self.strip.listen())         # the strips the house already has
         asyncio.create_task(self.strip.watch())          # and any that start knocking
         self._broadcast(json.dumps({"type": "home", "home": self.home_dict()}))

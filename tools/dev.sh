@@ -12,6 +12,7 @@
 #   tools/dev.sh free     let go of a port something is still listening on from yesterday
 #   tools/dev.sh graft    this tree's brain onto a hub, without a release
 #   tools/dev.sh says     what a hub's brain is saying, with its request log taken out
+#   tools/dev.sh puck     this tree's bridge firmware onto one puck, now, through the hub
 #
 # Two audiences, one report. Somebody coming back wants the half hour deleted that goes: which
 # branch was I on, what is that uncommitted file, is that stash mine, is anything still listening on
@@ -226,7 +227,7 @@ where_you_were() {
   echo "  ${D}tools/dev.sh design${R} — the artboards, before any of it is code"
 }
 
-usage() { sed -n '4,12p' "$0" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '4,15p' "$0" | sed 's/^# \{0,1\}//'; }
 
 case "${1:-status}" in
   status|"") if fresh; then first_time; else where_you_were; fi ;;
@@ -350,6 +351,46 @@ case "${1:-status}" in
         row "house" "$house ${D}— its own lines only, following${R}"
         exec ssh -o BatchMode=yes -o SetEnv=LC_ALL=C "pi@$house" \
           'sudo -n docker logs -f --tail 200 brain 2>&1 | grep --line-buffered -avE "HTTP/1.1|WebSocket|connection (open|closed|rejected)"' ;;
+  # A PUCK ON THIS TREE'S FIRMWARE, WITHOUT WAITING FOR THE NIGHT (brain/hub/bridge_updates.py).
+  # Builds the shipped env with a development version -- BRIDGE_FW plus "-d<minutes>", which the puck
+  # sorts after the last release and before BRIDGE_FW itself -- parks it in the brain's data over
+  # ssh, and follows what the puck says. Only a hub on a branch channel takes it. The puck keeps every
+  # rule it has: the hash, three minutes to prove itself, and back to what it had if it does not.
+  #
+  #   tools/dev.sh puck c0e33a              through hub.local
+  #   tools/dev.sh puck c0e33a 192.168.86.53
+  puck)  chip=${2:-}; house=${3:-hub.local}
+         [ -n "$chip" ] || { echo "${Y}which puck?${R}  ${D}tools/dev.sh puck <chip> [house]${R}" >&2; exit 1; }
+         command -v pio >/dev/null 2>&1 || { echo "${Y}no pio on PATH${R} ${D}— PlatformIO builds the firmware${R}" >&2; exit 1; }
+         ssh -o BatchMode=yes -o SetEnv=LC_ALL=C -o ConnectTimeout=8 "pi@$house" true 2>/dev/null || {
+           echo "${Y}cannot ssh to pi@$house${R}" >&2; exit 1; }
+         base=$(sed -n 's/^#define BRIDGE_FW "\(.*\)"/\1/p' brilliant/esp32-bridge/src/config.h)
+         fw="$base-d$(( ($(date -u +%s) - 1767225600) / 60 ))"     # minutes since 2026: short, and always rising
+         row "puck" "$chip ${D}via $house${R}"
+         row "build" "$fw ${D}— esp32s3-ship, from this tree as it is${R}"
+         ( cd brilliant/esp32-bridge && PLATFORMIO_BUILD_FLAGS="-DBRIDGE_FW=\\\"$fw\\\"" pio run -e esp32s3-ship >/dev/null ) \
+           || { echo "${Y}the build failed${R} ${D}— cd brilliant/esp32-bridge && pio run -e esp32s3-ship${R}" >&2; exit 1; }
+         img=brilliant/esp32-bridge/.pio/build/esp32s3-ship/firmware.bin
+         grep -aq "bridge $fw ===" "$img" || { echo "${Y}the image does not carry $fw${R} ${D}— BRIDGE_FW did not take${R}" >&2; exit 1; }
+         SSH=(ssh -o BatchMode=yes -o SetEnv=LC_ALL=C "pi@$house")
+         "${SSH[@]}" 'sudo -n docker exec brain sh -c "mkdir -p /data/bridge-push && rm -f /data/bridge-push/state.json"'
+         "${SSH[@]}" 'sudo -n docker exec -i brain sh -c "cat > /data/bridge-push/image.bin"' < "$img"
+         # The request goes last: it is what the brain looks for, so the image is whole by then.
+         printf '{"chip": "%s", "fw": "%s"}' "$chip" "$fw" \
+           | "${SSH[@]}" 'sudo -n docker exec -i brain sh -c "cat > /data/bridge-push/request.json"'
+         row "sent" "$(wc -c < "$img" | tr -d ' ') bytes ${D}— following what the puck says${R}"
+         said=""; t0=$(date +%s)
+         while :; do
+           now=$("${SSH[@]}" 'sudo -n docker exec brain cat /data/bridge-push/state.json 2>/dev/null' || true)
+           if [ -n "$now" ] && [ "$now" != "$said" ]; then
+             said=$now
+             st=$(printf '%s' "$now" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d["state"], d.get("why") or "")')
+             row "$(date +%T)" "$st"
+             case "$st" in installed*) exit 0 ;; refused*|failed*|rolledback*) exit 1 ;; esac
+           fi
+           [ $(( $(date +%s) - t0 )) -lt 480 ] || { row "gave up" "${Y}nothing final in eight minutes${R} ${D}— tools/dev.sh says $house${R}"; exit 1; }
+           sleep 3
+         done ;;
   # CI's jobs, in CI's order, minus the ones that need a browser or a container. The sheet checks
   # are in here because they catch what nothing else does: a drawing changed in src/art.ts or
   # src/sky.ts and not in the design sheet generated from it.

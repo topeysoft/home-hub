@@ -39,7 +39,12 @@
 
 #include <Arduino.h>
 
-#define BRIDGE_FW "0.6.0"   // the first that can take the next one over the air (src/fwupdate.h)
+// The NEXT release, from the moment the last one is cut: a working-tree build pushed to a puck is
+// this plus "-d<minutes>" (tools/dev.sh puck), which sorts after the release before it and before
+// this one, so a puck used for development still takes the release it was developing.
+#ifndef BRIDGE_FW
+#define BRIDGE_FW "0.6.1"
+#endif
 
 // TWO KEYS ON THE RING, AND A NAME RATHER THAN A NUMBER (docs/network.md, pieces 1 and 3).
 //

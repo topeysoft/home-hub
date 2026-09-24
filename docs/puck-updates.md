@@ -56,6 +56,14 @@ eleven seconds, confirmed itself inside its trial. Offered a 0.5.2 built never t
 at 10:21:48, said `rolledback 2`, and has refused it since with `came back twice`. Two fetches in the
 server's log, not three.
 
+**A working-tree build, now, for a hub being worked on.** `tools/dev.sh puck <chip>` builds this
+checkout's firmware as `BRIDGE_FW-d<minutes>`, parks it in the brain's data over ssh, and follows
+what the puck says. The hub offers it at once, day or night, and only if it follows a branch; a
+release hub refuses. A tagged build sorts after the release before it and before its own
+(`0.6.0 < 0.6.1-d384085 < 0.6.1`), so `BRIDGE_FW` names the *next* release from the moment the last
+one is cut, and a puck used for development still takes the real thing. A 0.6.0 puck reads only the
+three numbers, which is enough for its first test build to be newer.
+
 **Which is why the first release is 0.6.0, not 0.5.x.** That puck's floor is now 0.5.1 and 0.5.2 is
 marked bad on it, so a release numbered anything up to 0.5.2 would be refused as older, or as the
 image that came back twice. A bench test on a puck in a wall leaves marks like these; a bench board

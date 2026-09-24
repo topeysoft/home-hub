@@ -762,13 +762,20 @@ class Bridges:
 
         Anything that is not a version at all -- a hand-built puck calling itself "dev" -- is never
         older than anything. A line telling somebody their bench board is out of date is noise.
+
+        A development build of a version ("0.6.1-d382417", tools/dev.sh puck) comes before that
+        version and after the one before it -- the puck's own order (src/fwupdate.cpp) -- so a puck
+        that ran working-tree builds is still counted behind the release it was developing.
         """
         def parts(v):
+            head, dash, tag = str(v or "").partition("-")
             out = []
-            for piece in str(v or "").split("."):
+            for piece in head.split("."):
                 if not piece.isdigit(): return None
                 out.append(int(piece))
-            return tuple(out) or None
+            if not out: return None
+            n = re.sub(r"\D", "", tag)
+            return (*out, 0, int(n or 0)) if dash else (*out, 1, 0)
         pa, pb = parts(a), parts(b)
         return bool(pa and pb and pa < pb)
 
