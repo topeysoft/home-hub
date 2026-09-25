@@ -88,8 +88,18 @@ function outcomeWords(r: Routine): string {
     if ('intent' in th) return `Sets ${place} to ${label(th.intent, house)}.`
     if ('device' in th) return `${cap1(devName(th.device))}: ${th.action}.`
     if ('notify' in th) return `Sends a note: “${th.notify}”.`
+    if ('signal' in th) return signalWords(th)
     return ''
   }).filter(Boolean).join(' ')
+}
+/* A signal a routine shows, as a person would say it: what the lights do, not what the motion is called. */
+function signalWords(th: Record<string, any>): string {
+  const who = th.device ? cap1(devName(th.device)) : 'The lights'
+  if (th.signal === 'way') return `${who} show the way ${th.toward === 'out' ? 'out' : 'in'}.`
+  if (th.signal === 'call') return `${who} ask for attention.`
+  if (th.signal === 'fill') return `${who} show how far along.`
+  if (th.signal === 'end') return `${who} mark the ${th.end === 'out' ? 'far' : 'near'} end.`
+  return ''
 }
 /** One line under a routine's name: "When there's motion, after dark. Sets the room to Here." */
 export function routineWords(r: Routine): string {

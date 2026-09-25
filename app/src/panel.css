@@ -4836,6 +4836,276 @@ select.input {
 .routines li.off .routine-name {
   color: var(--ink-2);
 }
+
+/* ---------- What the lights tell you (SignalsPage.vue, design/signal/Chosen.dc.html) ----------
+   A row is the routine row's shape with two more columns: a preview of the signal, drawn in the
+   EMITTER color the strip is sent (--c, set per row -- never a palette token, because an LED is not a
+   screen), and a Try. A try opens in place, under its row, and the row grows to hold it. */
+.sig-list {
+  list-style: none;
+  margin: 0 0 18px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  border: 1px solid var(--edge);
+}
+.sig-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 140px auto auto;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+.sig-row:first-child {
+  border-top: 0;
+}
+.sig-row.sig-off .routine-name {
+  color: var(--ink-2);
+}
+.sig-row.sig-na .sig-run {
+  opacity: 0.35;
+}
+.sig-row .toggle {
+  margin: 0;
+}
+.sig-tried {
+  color: var(--live);
+}
+.sig-tried.sig-bad {
+  color: var(--danger);
+}
+.sig-try {
+  white-space: nowrap;
+}
+/* The strip, as dots, running the way it will run. A picture of the signal, not a recording of it:
+   the strip draws its own frames (strip/firmware/main/pixels.h). */
+.sig-run {
+  position: relative;
+  height: 12px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.1);
+  filter: drop-shadow(0 0 6px var(--c));
+  mask-image: repeating-linear-gradient(90deg, #000 0 4px, transparent 4px 7px);
+}
+.sig-run > span {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+}
+.sig-run.pv-way > span,
+.sig-run.pv-back > span {
+  width: 38%;
+  background: linear-gradient(90deg, transparent, var(--c) 80%, #fff 92%, transparent);
+  animation: sig-way 2.2s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+}
+.sig-run.pv-back > span {
+  background: linear-gradient(270deg, transparent, var(--c) 80%, #fff 92%, transparent);
+  animation-name: sig-back;
+}
+.sig-run.pv-call > span {
+  right: 0;
+  background: var(--c);
+  animation: sig-call 1.6s ease-in-out infinite;
+}
+.sig-run.pv-fill > span {
+  width: 0;
+  background: var(--c);
+  animation: sig-fill 3s ease-out infinite;
+}
+.sig-run.pv-end > span {
+  left: auto;
+  right: 0;
+  width: 14%;
+  background: var(--c);
+  animation: sig-call 1s steps(2, jump-none) infinite;
+}
+@keyframes sig-way {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(265%);
+  }
+}
+@keyframes sig-back {
+  from {
+    transform: translateX(265%);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+@keyframes sig-call {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  30%,
+  55% {
+    opacity: 1;
+  }
+}
+@keyframes sig-fill {
+  0% {
+    width: 0;
+    opacity: 1;
+  }
+  70% {
+    width: 64%;
+    opacity: 1;
+  }
+  100% {
+    width: 64%;
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sig-run > span {
+    animation: none;
+    width: 38%;
+    opacity: 1;
+  }
+}
+.sig-open {
+  grid-column: 1 / -1;
+  margin: 2px 0;
+  padding: 16px;
+  border-radius: var(--r-md);
+  background: rgba(0, 0, 0, 0.22);
+  box-shadow: inset 0 0 0 1px rgba(var(--lamp-rgb), 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.sig-ways {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.sig-way {
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  gap: 14px;
+  align-items: start;
+  padding: 16px;
+  border-radius: var(--r-md);
+  text-align: left;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.035);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+  transition: background 0.18s var(--ease);
+}
+.sig-way:active {
+  background: var(--surface-press);
+}
+.sig-way.busy {
+  box-shadow: inset 0 0 0 1px rgba(var(--lamp-rgb), 0.45);
+}
+.sig-way-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 13px;
+  display: grid;
+  place-items: center;
+  background: var(--surface-hi);
+  color: var(--ink-2);
+}
+.sig-step {
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.3;
+}
+.sig-aside {
+  margin: 0 2px;
+}
+.sig-ends {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  background: rgba(var(--lamp-rgb), 0.08);
+}
+.sig-again {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.sig-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sig-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.sig-steps > li {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+  padding: 11px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+.sig-steps > li:first-child {
+  border-top: 0;
+}
+.sig-mark {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 600;
+}
+.sig-steps > li.st-ok .sig-mark {
+  background: rgba(var(--live-rgb), 0.18);
+  color: var(--live);
+}
+.sig-steps > li.st-no .sig-mark {
+  background: rgba(var(--danger-rgb), 0.18);
+  color: var(--danger);
+}
+.sig-steps > li.st-skip .sig-mark {
+  background: var(--surface-hi);
+  color: var(--muted);
+}
+.sig-steps > li.st-wait .sig-mark {
+  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.2);
+}
+.sig-steps > li.st-wait .sig-step {
+  color: var(--muted);
+}
+.sig-steps > li.st-no .routine-sub {
+  color: var(--ink-2);
+}
+.sig-at {
+  font-size: 12.5px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+@media (max-width: 860px) {
+  .sig-row {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+  .sig-run {
+    grid-column: 1 / -1;
+    order: 5;
+  }
+  .sig-ways {
+    grid-template-columns: 1fr;
+  }
+}
 .toggle {
   position: relative;
   flex-shrink: 0;

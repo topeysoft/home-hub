@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Temitope Adeyeri
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { reactive, watch } from 'vue'
-import { doRestart, type Rung, getBridge, type Bridge, getStrip, stripLooking, type Strip, getHome, getEvents, getAmbient, getScenes, getStatus, getDiscovered, getRoutines, getAssistant, getPresence, getHealth, getSounds, connect, act, setIntent, setHomeIntent, type Room, type Device, type Home, type Event, type Ambient, type Rules, type Status, type Found, type Intent, type Routine, type Assistant, type Presence, type Note, type Sound, requestUpdate, getPhones, type Phone, type Ask, getAccounts, type Account, getShare, type Share, getHappened, type Happened, getChanges, type Changes } from './api'
+import { doRestart, type Rung, getBridge, type Bridge, getStrip, stripLooking, type Strip, getHome, getEvents, getAmbient, getScenes, getStatus, getDiscovered, getRoutines, getAssistant, getPresence, getHealth, getSounds, connect, act, setIntent, setHomeIntent, type Room, type Device, type Home, type Event, type Ambient, type Rules, type Status, type Found, type Intent, type Routine, type Assistant, type Presence, type Note, type Sound, requestUpdate, getPhones, type Phone, type Ask, getAccounts, type Account, getShare, type Share, getHappened, type Happened, getChanges, type Changes, getSignals, type SignalsPage, type TryBrief } from './api'
 import { lock } from './code'
 import { isPage } from './pages'
 import { sunPosition, sunGuess, moonPhase } from './sun'
@@ -10,7 +10,7 @@ import { locale, setHouseLanguage } from './lang'
 /* The few soft sheets the panel has. Named rather than written out twice: the restart keeps the one
    it closed so it can come back to it, and `typeof store.sheet` there would make the store's own type
    circular -- which typescript answers by quietly making the whole store `any`. */
-export type Sheet = null | 'location' | 'add' | 'code' | 'why' | 'routines' | 'hub' | 'look' | 'house' | 'people' | 'accounts' | 'things' | 'share' | 'notes' | 'happened' | 'changes'
+export type Sheet = null | 'location' | 'add' | 'code' | 'why' | 'routines' | 'signals' | 'hub' | 'look' | 'house' | 'people' | 'accounts' | 'things' | 'share' | 'notes' | 'happened' | 'changes'
 
 export const store = reactive({
   rooms: [] as Room[], linkUp: false, linkLost: false, error: '', loaded: false,   // linkLost: down long enough to be worth mentioning
@@ -43,6 +43,8 @@ export const store = reactive({
      title already says. Empty when a note handed it over and only the flow was known. */
   resumeName: '' as string,
   routines: [] as Routine[],                 // the brain's rules, for the routines sheet and to name a rule on a room
+  signals: null as SignalsPage | null,       // what the lights tell you, and the try running now; null until asked
+  signalTry: null as TryBrief | null,        // a try somebody is running, heard by every panel so its band can say so
   routineErrors: [] as string[],             // rules the brain could not read, in its own words
   drafts: [] as Routine[],                   // routines the assistant wrote that wait for a person's OK
   entry: [] as string[],                     // the rooms people come in through; routines for "entry" run there
@@ -407,12 +409,14 @@ const WOKEN = new Set(['on', 'open', 'unlock', 'play'])
    reach by turning off the lights in four rooms would take the earliest card back out from under them,
    which is the very thing this exists to stop; Home clips what it can draw at its own end. */
 const DONE_KEEP = 24, DONE_FOR = 30 * 60 * 1000
-function markDone(id: string, verb: string) {
-  done[id] = { verb, at: Date.now() }
+function markDone(id: string, verb: string, at = Date.now()) {
+  done[id] = { verb, at }
   const ids = Object.keys(done)
   if (ids.length > DONE_KEEP)
     for (const old of ids.sort((a, b) => done[a].at - done[b].at).slice(0, ids.length - DONE_KEEP)) delete done[old]
 }
+/** Something other than a device that should stay on screen the same way: a signal's last try. */
+export const keepDone = (id: string, line: string, at?: number) => markDone(id, line, at)
 /** The panel looked away (all), or has simply been holding one too long (the rest). */
 export function forgetDone(all = false) {
   const now = Date.now()
@@ -526,6 +530,23 @@ export async function loadChanges() {
 }
 export async function loadRoutines() {
   try { const f = await getRoutines(); store.routines = f.rules ?? []; store.routineErrors = f.errors ?? []; store.drafts = f.drafts ?? [] } catch {}
+}
+/* What the lights tell you. A try that has just finished leaves its line on its row -- "Tried 8:14 pm ·
+   everything answered" -- through the same `done` map a card somebody just quieted stays in, so it goes
+   when the panel looks away and not on a timer of its own (AGENTS.md section 4). Keyed `signal:<row>`,
+   which no device id can be, so Home's kept cards never see it. */
+const triesKept = new Set<string>()
+export async function loadSignals() {
+  try {
+    const page = await getSignals()
+    store.signals = page
+    const t = page.trying
+    if (t && t.ended && (t.state === 'passed' || t.state === 'failed') && !triesKept.has(t.id)) {
+      triesKept.add(t.id)
+      const bad = t.steps.find(s => s.state === 'no')
+      keepDone(`signal:${t.of}`, t.state === 'passed' ? 'everything answered' : bad ? bad.text.charAt(0).toLowerCase() + bad.text.slice(1) : 'it did not finish', t.ended * 1000)
+    }
+  } catch {}
 }
 export async function loadAssistant() {
   try { store.assistant = await getAssistant() } catch {}
@@ -824,7 +845,7 @@ export async function start() {
   clearInterval(foundPoll); foundPoll = window.setInterval(refreshFound, 60000)
   refreshBridge()
   refreshStrip()
-  stop = connect({ device: applyDevice, home: applyHome, intent: applyIntent, drafts: d => { store.drafts = d; eventsSoon() }, presence: p => { store.presence = p; eventsSoon() }, phones: () => loadPhones(true), share: () => { store.shareTick++; loadShare() }, ambient: a => { store.ambient = a; updateSky() }, status: s => {
+  stop = connect({ device: applyDevice, home: applyHome, intent: applyIntent, drafts: d => { store.drafts = d; eventsSoon() }, presence: p => { store.presence = p; eventsSoon() }, phones: () => loadPhones(true), share: () => { store.shareTick++; loadShare() }, signals: t => { store.signalTry = t; if (store.signals) loadSignals() }, ambient: a => { store.ambient = a; updateSky() }, status: s => {
     const was = store.status?.driver, version = store.status?.version
     store.status = s
     if (newBuild(version, s.version)) {

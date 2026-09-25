@@ -599,6 +599,29 @@ export async function getChanges(limit = 200): Promise<Changes> {
   const r = await request(`/happened/changes?limit=${limit}`); if (!r.ok) await fail(r); return r.json()
 }
 export const setEntry = (rooms: string[]) => post<{ entry: string[] }>('/home/entry', { rooms })
+/* What the lights tell you (brain/hub/signals.py, design/signal/). A signal is one of four motions along
+   the lights -- a run, a breath, a fill, one end -- that MEANS something and is over. The house has four of
+   its own; a household's own come from routines. `rgb` is the EMITTER color the strip is sent, which the
+   page draws its preview in too: it is not a screen color and never a palette token. */
+export type SignalKind = 'way' | 'call' | 'fill' | 'end'
+export type Tried = { line: string; ok: boolean; at: number }
+export type SignalRow = { id: string; name: string; kind: SignalKind; toward?: 'house' | 'out' | null; rgb: number[]; on: boolean; available: boolean; hint?: string; lights: string[]; tried?: Tried }
+export type OwnSignal = { id: string; key: string; name: string; kind: SignalKind; toward?: 'house' | 'out' | null; rgb: number[]; on: boolean; tried?: Tried }
+export type StepState = 'ok' | 'no' | 'wait' | 'skip'
+export type TryStep = { key: string; state: StepState; text: string; sub?: string; at?: number }
+export type Trying = { id: string; of: string; name: string; how: 'now' | 'watch'; state: 'running' | 'watching' | 'passed' | 'failed' | 'stopped'; started: number; ends: number; ended?: number; steps: TryStep[] }
+/* What every panel hears about a try, for the band: enough to say one is on and to open it. */
+export type TryBrief = { of: string; name: string; state: Trying['state']; ends: number }
+export type SignalStrip = { id: string; online: boolean; house_end: 'plug' | 'far' | null; device: string | null }
+export type SignalsPage = { meanings: SignalRow[]; own: OwnSignal[]; strips: SignalStrip[]; trying: Trying | null }
+export async function getSignals(): Promise<SignalsPage> {
+  const r = await request('/signals'); if (!r.ok) await fail(r); return r.json()
+}
+export const trySignal = (of: string, how: 'now' | 'watch') => post<Trying>('/signals/try', { of, how })
+export const stopTrying = () => post('/signals/try/stop')
+export const setSignalOn = (id: string, on: boolean) => post<SignalsPage>(`/signals/${encodeURIComponent(id)}/on`, { on })
+export const showEnd = (strip: string) => post('/signals/ends/show', { strip })
+export const setHouseEnd = (strip: string, house: 'plug' | 'far') => post<SignalsPage>('/signals/ends', { strip, house })
 export const enableRoutine = (id: string, enabled: boolean) => post<{ ok: boolean; enabled: boolean }>(`/rules/${encodeURIComponent(id)}/enable`, { enabled })
 /* The assistant: it writes drafts and explains from the log. It has no call that changes a device. */
 export type Assistant = { available: boolean; configured: boolean; source: 'panel' | 'env' | null; model: string }
@@ -641,7 +664,7 @@ export async function setHomeIntent(state: string) {
 export const imageUrl = (id: string) => `/devices/${encodeURIComponent(id)}/image?t=${Date.now()}`
 
 /** Live updates from the brain. Reconnects with backoff; reports link state. */
-export function connect(on: { device: (d: Device) => void; home: (h: Home) => void; ambient: (a: Ambient) => void; status: (s: Status) => void; intent: (i: Intent) => void; drafts: (d: Routine[]) => void; presence: (p: Presence) => void; phones: () => void; share: () => void; link: (up: boolean) => void }) {
+export function connect(on: { device: (d: Device) => void; home: (h: Home) => void; ambient: (a: Ambient) => void; status: (s: Status) => void; intent: (i: Intent) => void; drafts: (d: Routine[]) => void; presence: (p: Presence) => void; phones: () => void; share: () => void; signals: (t: TryBrief | null) => void; link: (up: boolean) => void }) {
   let delay = 1000, ws: WebSocket | null = null, closed = false
   const open = () => {
     const proto = location.protocol === 'https:' ? 'wss' : 'ws'
@@ -658,6 +681,7 @@ export function connect(on: { device: (d: Device) => void; home: (h: Home) => vo
       else if (m.type === 'presence') on.presence(m.presence)
       else if (m.type === 'phones') on.phones()   // a nudge, not the roster: what this phone may see is /phones' answer to ask for
       else if (m.type === 'share') on.share()    // the same shape: what is shared, and who holds it, is /share's answer to give
+      else if (m.type === 'signals') on.signals(m.trying ?? null)   // a try moved on, or a row was switched; the brief is for the band
     }
     ws.onclose = () => { on.link(false); if (!closed) setTimeout(open, delay = Math.min(delay * 2, 15000)) }
     ws.onerror = () => ws?.close()

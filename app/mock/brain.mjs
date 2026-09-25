@@ -270,6 +270,8 @@ const rules = { rules: [
   { id: 'kitchen-motion', name: 'Kitchen lights when someone walks in', room: 'kitchen', when: { motion: true }, if: [['sun', 'below', 0]], then: { intent: 'occupied' }, enabled: true },
   { id: 'bed-off', name: 'Bedroom off after 20 minutes of nothing', room: 'bedroom', when: { idle: 1200 }, then: { intent: 'empty' }, enabled: false },
   { id: 'backyard-evening', name: 'Backyard light on when someone is out there after dark', room: 'backyard', when: { motion: true }, then: { light: 'on' }, enabled: true },
+  /* a household's own signal, so "Your own" on What the lights tell you has a row */
+  { id: 'garage-open', name: 'Garage left open', room: 'kitchen', when: { device: 'g2', state: 'open', for: 600 }, then: { signal: 'end', end: 'out', rgb: [30, 107, 255] }, enabled: true },
 ], drafts: [], valid: true, errors: [] }
 const why = [
   { ts: now - 900, kind: 'intent', subject: 'living', old: 'occupied', new: 'movie', source: 'rule:evening-lights', detail: JSON.stringify({ rule: 'evening-lights', when: { sun: 'set', offset: -1200 }, if: [] }) },
@@ -464,6 +466,64 @@ const FAKE_QR = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 29 29'><re
    is built again for every one of them. */
 const strips = [{ id: 's-cabinet', online: true, count: 180, order: 'grb', device: 'hw-strip-1', was: null }]
 
+/* WHAT THE LIGHTS TELL YOU (brain/hub/signals.py, design/signal/). The house's four and the try that
+   runs on one of them. Nothing here talks to a strip: "Show me now" answers after a beat as the brain
+   does when every light says it started, and "Wait for the real thing" plays the chain out on a timer
+   -- arriving passes, leaving breaks at the drive's motion sensor, which is the failure the Walked
+   board draws, so both reports can be looked at without a house. */
+const sig = {
+  on: { arriving: true, leaving: true, open: false, done: false },
+  ends: {},
+  trying: null,
+}
+const sigRows = () => [
+  { id: 'arriving', name: 'Someone\u2019s arriving', kind: 'way', toward: 'house', rgb: [255, 138, 0], on: sig.on.arriving, available: true, lights: ['Under-cabinet strip'], hint: 'Under-cabinet strip shows the way in \u00b7 after dark' },
+  { id: 'leaving', name: 'Someone\u2019s leaving', kind: 'way', toward: 'out', rgb: [30, 107, 255], on: sig.on.leaving, available: true, lights: ['Under-cabinet strip'], hint: 'Under-cabinet strip shows the way out \u00b7 after dark' },
+  { id: 'open', name: 'A door\u2019s been left open', kind: 'call', rgb: [255, 42, 74], on: sig.on.open, available: true, lights: ['Under-cabinet strip'], hint: 'Lights in the room it opens off, until it is shut' },
+  { id: 'done', name: 'Something\u2019s nearly done', kind: 'fill', rgb: [0, 208, 106], on: false, available: false, lights: [], hint: 'Nothing in this house says how far along it is yet' },
+]
+const sigOwn = () => rules.rules.filter(r => [].concat(r.then).some(t => t && 'signal' in t)).map(r => {
+  const t = [].concat(r.then).find(x => 'signal' in x)
+  return { id: r.id, key: `rule:${r.id}`, name: r.name, kind: t.signal, toward: t.toward ?? null, rgb: t.rgb ?? [255, 138, 0], on: r.enabled !== false }
+})
+const sigPage = () => ({ meanings: sigRows(), own: sigOwn(), strips: strips.map(s => ({ id: s.id, online: s.online, house_end: sig.ends[s.id] ?? null, device: s.device })), trying: sig.trying })
+const sigNudge = () => push({ type: 'signals', trying: sig.trying && { of: sig.trying.of, name: sig.trying.name, state: sig.trying.state, ends: sig.trying.ends } })
+function sigStep(key, state, text, sub) {
+  const w = sig.trying; if (!w) return
+  const row = { key, state, text, ...(sub ? { sub } : {}), ...(state === 'ok' ? { at: Date.now() / 1000 } : {}) }
+  const i = w.steps.findIndex(s => s.key === key); if (i >= 0) w.steps[i] = row; else w.steps.push(row)
+}
+function sigTry(of, how) {
+  const row = [...sigRows(), ...sigOwn().map(o => ({ ...o, id: o.key }))].find(r => r.id === of)
+  const now = Date.now() / 1000, id = Math.random().toString(16).slice(2, 10)
+  sig.trying = { id, of, name: row?.name ?? of, how, state: how === 'now' ? 'running' : 'watching', started: now, ends: now + (how === 'now' ? 0 : 600), steps: [] }
+  const light = of === 'leaving' ? 'Under-cabinet strip showed the way out' : of === 'arriving' ? 'Under-cabinet strip showed the way in' : 'Under-cabinet strip'
+  const end = ok => { if (sig.trying?.id !== id) return; Object.assign(sig.trying, { state: ok ? 'passed' : 'failed', ended: Date.now() / 1000 }); sigNudge() }
+  if (how === 'now') {
+    sigStep('decide', 'ok', 'Shown now, whatever the time', '\u201cAfter dark\u201d and every other condition set aside while you try.')
+    sigStep('light:k2', 'wait', light)
+    setTimeout(() => { sigStep('light:k2', 'ok', light, 'Answered in 0.2 s'); end(true) }, 700)
+    return sig.trying
+  }
+  sigStep('heard', 'wait', of === 'leaving' ? 'Somebody moves by a door where you come in, then it opens' : 'A door or gate where you come in opens, or a phone comes home')
+  sigStep('decide', 'wait', of === 'leaving' ? 'The house decides: leaving' : 'The house decides: arriving')
+  sigStep('light:k2', 'wait', 'Under-cabinet strip')
+  setTimeout(() => {
+    if (sig.trying?.id !== id) return
+    sigStep('heard', 'ok', 'Back door opened'); sigNudge()
+    setTimeout(() => {
+      if (sig.trying?.id !== id) return
+      if (of === 'leaving') {
+        sigStep('decide', 'no', 'The house decided: arriving', 'Because Back door opened with nobody moving by it first. Going out is motion by the door, then the door. Kitchen motion was last heard from 3 days ago; its battery is the likely reason.')
+        return end(false)
+      }
+      sigStep('decide', 'ok', `The house decided: ${of === 'open' ? 'left open' : 'arriving'}`, 'Because Back door opened with nobody moving by it first.')
+      sigStep('light:k2', 'ok', light, 'Answered in 0.2 s'); end(true)
+    }, 1500)
+  }, 5000)
+  return sig.trying
+}
+
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://x')
   const p = url.pathname
@@ -527,6 +587,17 @@ const server = http.createServer((req, res) => {
     const all = [...pressEvent(), ...events, ...perDevice].sort((a, b) => b.ts - a.ts)
     return json(res, (subject ? all.filter(e => e.subject === subject) : all).slice(0, limit))
   }
+  if (p === '/signals') return json(res, sigPage())
+  if (p.startsWith('/signals/') && req.method === 'POST') { let raw = ''; req.on('data', c => (raw += c)); return req.on('end', () => {
+    let b = {}; try { b = JSON.parse(raw) } catch {}
+    if (p === '/signals/try') { const w = sigTry(b.of, b.how === 'watch' ? 'watch' : 'now'); sigNudge(); return json(res, w) }
+    if (p === '/signals/try/stop') { if (sig.trying?.state === 'watching') sig.trying.state = 'stopped'; sigNudge(); return json(res, { trying: sig.trying }) }
+    if (p === '/signals/ends/show') return json(res, { ok: true })
+    if (p === '/signals/ends') { sig.ends[b.strip] = b.house; sigNudge(); return json(res, sigPage()) }
+    const m = p.match(/^\/signals\/([^/]+)\/on$/)
+    if (m && m[1] in sig.on) { sig.on[m[1]] = !!b.on; sigNudge(); return json(res, sigPage()) }
+    json(res, { detail: 'That is not one of the things the lights can tell you.' }, 404)
+  }) }
   if (p === '/rules') return json(res, rules)
   if (p === '/discovered') return json(res, discovered)
 /* The bridges This hub lists, and what a household can change about one (docs/puck-light.md).
