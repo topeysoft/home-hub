@@ -1,0 +1,163 @@
+{
+  "artboards": [
+    {
+      "file": "Today.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Today \u2014 a light can be told to be something, not to say something",
+      "page": "directions"
+    },
+    {
+      "file": "SaidA.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "A \u2014 a signal is a thing a routine does",
+      "page": "directions"
+    },
+    {
+      "file": "JobB.dc.html",
+      "x": 3120,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "B \u2014 the strip is given a job",
+      "page": "directions"
+    },
+    {
+      "file": "MeaningC.dc.html",
+      "x": 4680,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "C \u2014 the house has a few things it can say",
+      "page": "directions"
+    },
+    {
+      "file": "Chosen.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Chosen \u2014 C's four, A's routines underneath, and a Try on each",
+      "page": "chosen"
+    },
+    {
+      "file": "Walked.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Waiting for the real thing \u2014 which link broke",
+      "page": "chosen"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "why",
+      "x": -620,
+      "y": 0,
+      "w": 500,
+      "text": "WHY THIS EXISTS\n\nFrom \"we designed against a strip with many effects, but I have uses that need a pattern on a specific strip\" -- the driveway being the first: a run of light from one edge to the other that says which way somebody is going, in or out.\n\nThis is not the question design/occasion/ answered, and it should not be answered by reopening it. That collection split \"effects\" into ambient motion, occasions and the zoo, and said no to the zoo because an effect takes the household's color away to show off. A run down the drive does something else: it TELLS somebody something. That is the puck's LED, not Christmas. So this collection gives it its own word -- a signal -- and every direction here keeps the rule that nothing on the strip's pane is an effect, and keeps the test that holds it.\n\nA signal, in every direction: a short, fixed vocabulary of motions that each MEAN something (show the way, get your attention, show how far along, mark an end); started by something happening, never picked from a menu; over in seconds, and hands the light back exactly as it was.",
+      "page": "directions"
+    },
+    {
+      "id": "today",
+      "x": -620,
+      "y": 560,
+      "w": 500,
+      "text": "TODAY -- THE WHEN IS HERE, THE THEN IS NOT\n\nDrawn from RoutinesPage.vue and why.ts. A routine's triggers already cover a driveway: a gate is a door that opens, a car is motion, a phone is someone coming home. What a routine can do to a light is a STATE -- on, off, a level, a color, a room's scene -- and a signal is an EVENT: it happens along the strip and is over. There is no outcome shaped like that.\n\nThe second finding is smaller and every direction inherits it: a strip does not know which end is which. Setup asks how long it is and which order its colors come in. \"Toward the house\" needs a third answer, and nothing asks it because until now nothing needed it. All three directions ask it the way setup asks everything about a strip -- by lighting one end and asking what it is nearest -- so nobody ever sees the word \"reverse\".\n\nAnd one gap in the trigger half that only A exposes: \"the front door opens, THEN motion on the drive\" is a sequence, and routines today have one trigger each. Leaving is the case that needs it.",
+      "page": "directions"
+    },
+    {
+      "id": "a",
+      "x": 0,
+      "y": 960,
+      "w": 1440,
+      "text": "A -- A SIGNAL IS A THING A ROUTINE DOES\n\nThe smallest change to the product: one new kind of outcome beside \"sets the room to\" and \"sends a note\". The household never builds it by hand -- the panel never edits a rule by hand -- they say it, the assistant drafts it, and the draft PLAYS: the strip in the draft runs on the wall and on the drive at the same time, so approving it is approving something seen.\n\nFor it: it reaches every use you have not thought of yet with no new screen. Charging, laundry, a door left open are all \"when X, the strip says Y\". The vocabulary is the only thing we own, and it stays four.\n\nAgainst: it depends on the assistant (or on the hub noticing a habit) to exist at all, and a household without a model key has no way to ask. The meaning lives in a sentence per routine, so \"arriving\" is written twice -- once for the gate, once for the phone -- and can disagree with itself.",
+      "page": "directions"
+    },
+    {
+      "id": "b",
+      "x": 1560,
+      "y": 960,
+      "w": 1440,
+      "text": "B -- THE STRIP IS GIVEN A JOB\n\nThe strip's pane grows one question: what is it for. A light (every strip, until told otherwise), a path, a sign. Choosing a path asks the three things a path needs -- which end is the house, what means arriving, what means leaving -- from the sensors this house actually has near it, and then it does the right thing with no routine at all. No speed, no color, no count: the job decides.\n\nFor it: it is how a person thinks about the thing. Nobody thinks \"a rule with a sweep outcome\"; they think \"that's the driveway light\". Setup-shaped, no assistant needed, and the fewest decisions.\n\nAgainst, and it is drawn on the board: every new use is a new job. Path, sign, gauge, stair -- each is reasonable, and a list of jobs is a slower way of arriving at a list of effects. It also puts a behavior on the strip that the rest of the house cannot join: the porch bulb does not know the drive is a path.",
+      "page": "directions"
+    },
+    {
+      "id": "c",
+      "x": 3120,
+      "y": 960,
+      "w": 1440,
+      "text": "C -- THE HOUSE HAS A FEW THINGS IT CAN SAY\n\nThe occasion argument, applied to signals. The meaning belongs to the house -- someone's arriving, someone's leaving, a door left open, something nearly done -- and every light near where it is happening shows it the best way it can. The strip runs toward the house because it has a length and knows its ends; a color bulb breathes; a white-only light comes up to half and says so on its room; the wall gets a line in the band. The strip is not getting a feature. The house is.\n\nFor it: \"arriving\" is worked out ONCE, from everything the house knows -- a phone coming home, a gate, the order two things fire in -- and that is the hard part of the whole idea. Four meanings, drawn by us, switched on or off, nothing to author.\n\nAgainst: four is our list, not theirs. A household's own (\"the garage is open\", \"the baby monitor\") goes to Routines -- which means C still needs A's outcome underneath it for anything off the list. And a wrong \"arriving\" is wrong on every light at once.\n\nTwo rules from the occasion boards carry over and need deciding here, not later: an occasion turns nothing on that was not already on, and a signal MUST be allowed to, or a 2 a.m. driveway is dark. Say so on the room, the way a light that cannot do color does.",
+      "page": "directions"
+    },
+    {
+      "id": "wire",
+      "x": 4680,
+      "y": 0,
+      "w": 500,
+      "text": "WHERE A SIGNAL RUNS -- THE SAME IN ALL THREE\n\nOn the strip. The hub sends one message -- show the way, toward the house end, this color, this long -- and the ESP32 draws the frames. design/occasion/ said the brain streams everything but the three ambient motions; a signal is the case that argument did not meet. A run down a drive is a fast motion people watch with intent, and a Wi-Fi hiccup in the middle of it reads as a broken light, where the same hiccup in a slow occasion is invisible. It also keeps the WS2812 rule: the wire is written when a frame changes, from a clock on the part, not from packets arriving.\n\nIt rides MQTT beside order and length, because Matter's color light is one color for the whole fitting and has no word for any of this. So signals are a thing a strip does in a house with our hub -- which is what the firmware already says it is.\n\nColors: saturated emitter colors, drawn here as --em-*. Never the panel's pastels; a pastel signal on an LED reads as white. The four hues on these boards are placeholders for a later board, not a choice.",
+      "page": "directions"
+    },
+    {
+      "id": "pick",
+      "x": 4680,
+      "y": 700,
+      "w": 500,
+      "text": "PICKED -- 24 SEPTEMBER\n\nA with C: the four meanings are the house's, ready to switch on, and a routine is where a household's own signal comes from -- asked for in words, approved, and listed under the four. B is kept here as the record of why a strip is not given a job: every new use would have been a new job.\n\nAdded at the pick: every signal can be test-run. See the Chosen page.",
+      "page": "directions"
+    },
+    {
+      "id": "chosen",
+      "x": 0,
+      "y": 960,
+      "w": 1440,
+      "page": "chosen",
+      "text": "CHOSEN -- A WITH C, AND A TRY ON EVERY ONE\n\nThe page is C's: four meanings the house has, each with its switch. Under them, \"Your own\", the routines from A that end in a signal -- asked for in Routines, in words, and listed here once approved, so there is one place that answers \"what can the lights tell me\". Every row, ours or theirs, carries the same Try.\n\nIt is drawn inside This house as it really sits -- the doors on the left, a page no wider than 760px -- so Try opens IN PLACE under its row rather than as a second sheet beside the list: there is no room beside it, and a sheet over a sheet is a way to lose your place. The same space then holds the step-by-step report from the next board.\n\nTry asks one question, because \"is it working\" is two questions. SHOW ME NOW plays the signal on the lights it uses, once, whatever the time, and puts them back exactly as they were -- it checks the lights. WAIT FOR THE REAL THING watches for ten minutes for the actual event and reports every step -- it checks the chain, from the sensor to the last light, which is the only test that catches a flat battery in a gate sensor.\n\nWhile either runs, conditions like \"after dark\" are set aside: a test at noon must not fail for being at noon. The wall says so in its band, so somebody else in the house is not surprised by the drive lighting up at lunch.\n\nThe row keeps its result -- \"Tried 8:14 pm, the gate, the strip and the porch all answered\" -- until the wall rests. That is the done map in store.ts, not a new timer (AGENTS.md section 4)."
+    },
+    {
+      "id": "walked",
+      "x": 1560,
+      "y": 960,
+      "w": 1440,
+      "page": "chosen",
+      "text": "WAITING FOR THE REAL THING -- A FAILURE NAMES ITS LINK\n\nBoth outcomes, side by side, because the failing one is the reason this mode exists. A signal is a chain: a sensor is heard, the house decides what it means, each light answers. \"It didn't work\" is useless to a household; \"the drive's motion sensor was last heard from 3 days ago\" is a thing they can go and fix, and the button under it takes them there.\n\nSteps after the broken one are drawn empty, not failed -- the strip is not at fault for a message it was never sent, and it says the last \"Show me now\" worked, so nobody goes and looks at the wrong thing.\n\nA light that had nothing to show (already on) is its own mark, neither a pass nor a fail.\n\nWHAT THIS ASKS OF THE BRAIN, noted so it is not discovered later: every link has to be observable. The house must record why it decided \"leaving\" (the order two things fired in), when each sensor was last heard, and an acknowledgment from each light -- the strip answering over MQTT that it played, not just that it was sent. A step we cannot observe cannot be a row here, and should not be drawn as passing."
+    }
+  ],
+  "reading": [
+    "chosen",
+    "Chosen.dc.html",
+    "walked",
+    "Walked.dc.html",
+    "why",
+    "today",
+    "Today.dc.html",
+    "a",
+    "SaidA.dc.html",
+    "b",
+    "JobB.dc.html",
+    "c",
+    "MeaningC.dc.html",
+    "wire",
+    "pick"
+  ],
+  "pages": [
+    {
+      "id": "chosen",
+      "name": "Chosen"
+    },
+    {
+      "id": "directions",
+      "name": "The directions"
+    }
+  ],
+  "launch": {
+    "view": "canvas",
+    "page": "chosen"
+  }
+}

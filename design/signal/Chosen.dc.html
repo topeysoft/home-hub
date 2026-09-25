@@ -1,0 +1,150 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --ink-3: #8d8a84; --muted: #7f7d77;
+      --lamp-rgb: 233,184,114; --lamp: rgb(var(--lamp-rgb)); --lamp-ink: #2a1c07;
+      --live-rgb: 134,207,160; --live: rgb(var(--live-rgb));
+      --r-lg: 22px; --r-md: 16px; --r-sm: 12px;
+      /* emitter colors -- what the strip is sent, never the panel's pastels */
+      --em-in: #ff8a00; --em-out: #1e6bff; --em-call: #ff2a4a; --em-fill: #00d06a;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .lbl { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); }
+    .rs { font-size: 13.5px; color: var(--muted); line-height: 1.45; }
+    .t1 { font-size: 16px; font-weight: 500; }
+    .sheet { border-radius: 28px; background: rgba(20,22,27,.86); border: 1px solid var(--edge); box-shadow: 0 40px 90px -40px rgba(0,0,0,.9); }
+    .list { border-radius: var(--r-lg); background: var(--surface); border: 1px solid var(--edge); }
+    .mean { display: grid; grid-template-columns: 1fr 150px auto 52px; gap: 18px; align-items: center; padding: 14px 20px; border-top: 1px solid rgba(255,255,255,.06); }
+    .mean:first-child { border-top: 0; }
+    .toggle { width: 52px; height: 30px; border-radius: 999px; background: var(--lamp); position: relative; }
+    .toggle::after { content: ""; position: absolute; right: 3px; top: 3px; width: 24px; height: 24px; border-radius: 50%; background: var(--lamp-ink); }
+    .toggle.off { background: rgba(255,255,255,.14); }
+    .toggle.off::after { right: auto; left: 3px; }
+    .try { font-size: 14px; font-weight: 500; padding: 8px 16px; border-radius: 999px; background: rgba(255,255,255,.07); color: var(--ink); white-space: nowrap; }
+    .try.on { background: rgba(var(--lamp-rgb),.18); box-shadow: inset 0 0 0 1px rgba(var(--lamp-rgb),.5); }
+    .tried { color: var(--live); }
+    .button { font-size: 14.5px; font-weight: 500; padding: 11px 18px; border-radius: 999px; background: var(--lamp); color: var(--lamp-ink); display: inline-block; }
+    .button.ghost { background: rgba(255,255,255,.07); color: var(--ink); }
+    .glow { filter: drop-shadow(0 0 6px var(--c)); }
+    .run { position: relative; height: 12px; border-radius: 3px; background: rgba(255,255,255,.1); overflow: hidden;
+           -webkit-mask-image: repeating-linear-gradient(90deg, #000 0 4px, transparent 4px 7px);
+                   mask-image: repeating-linear-gradient(90deg, #000 0 4px, transparent 4px 7px); }
+    .run::after { content: ""; position: absolute; top: 0; bottom: 0; }
+    .way::after  { left: 0; width: 38%; background: linear-gradient(90deg, transparent, var(--c) 80%, #fff 92%, transparent); animation: way 2.2s cubic-bezier(.45,.05,.55,.95) infinite; }
+    .back::after { left: 0; width: 38%; background: linear-gradient(270deg, transparent, var(--c) 80%, #fff 92%, transparent); animation: back 2.2s cubic-bezier(.45,.05,.55,.95) infinite; }
+    .call::after { inset: 0; background: var(--c); animation: call 1.6s ease-in-out infinite; }
+    .fill::after { left: 0; width: 0; background: var(--c); animation: fill 3s ease-out infinite; }
+    @keyframes way  { from { transform: translateX(-100%); } to { transform: translateX(265%); } }
+    @keyframes back { from { transform: translateX(265%); } to { transform: translateX(-100%); } }
+    @keyframes call { 0%, 100% { opacity: 0; } 30%, 55% { opacity: 1; } }
+    @keyframes fill { 0% { width: 0; opacity: 1; } 70% { width: 64%; opacity: 1; } 100% { width: 64%; opacity: 0; } }
+    .way2 { display: grid; grid-template-columns: 40px 1fr; gap: 14px; align-items: start; padding: 16px; border-radius: var(--r-md); background: rgba(255,255,255,.035); box-shadow: inset 0 0 0 1px rgba(255,255,255,.07); }
+    .way2.on { background: linear-gradient(rgba(var(--lamp-rgb),.12), rgba(var(--lamp-rgb),.12)), rgba(255,255,255,.035); box-shadow: inset 0 0 0 1px rgba(var(--lamp-rgb),.45); }
+    .ic { width: 40px; height: 40px; border-radius: 13px; display: grid; place-items: center; background: var(--surface-hi); color: var(--ink-2); }
+      .panel { position: absolute; left: 0; right: 0; bottom: 0; top: 100px; display: grid; grid-template-columns: 320px 1fr;
+             border-radius: 34px 34px 0 0; border: 1px solid var(--edge-hi); border-bottom: 0; background: rgba(20,22,27,.9); overflow: hidden; }
+    .doors { padding: 30px 18px 22px 30px; border-right: 1px solid var(--edge); background: rgba(12,13,16,.22); display: flex; flex-direction: column; gap: 2px; }
+    .door { display: grid; grid-template-columns: 36px 1fr; gap: 12px; align-items: center; padding: 10px 12px 10px 10px; border-radius: 14px; color: var(--ink-2); }
+    .door.on { background: var(--surface-hi); color: var(--ink); }
+    .door .di { width: 36px; height: 36px; border-radius: 12px; background: var(--surface-hi); display: grid; place-items: center; }
+    .door.on .di { background: var(--ink); color: var(--bg); }
+    .dn { font-size: 15.5px; font-weight: 500; display: block; }
+    .dh { font-size: 12.5px; color: var(--muted); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .open { grid-column: 1 / -1; margin: 4px 0 2px; padding: 16px; border-radius: var(--r-md); background: rgba(0,0,0,.22); box-shadow: inset 0 0 0 1px rgba(var(--lamp-rgb),.3); }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: var(--bg); color: var(--ink); font-size: 17px; line-height: 1.4;">
+
+  <div style="position: absolute; inset: 0; background: linear-gradient(rgb(22,25,36) 0%, rgb(33,34,52) 50%, rgb(58,45,48) 100%);"></div>
+  <div style="position: absolute; inset: 0; background: rgba(6,7,9,.55);"></div>
+
+  <div style="position: absolute; left: 40px; top: 26px; right: 40px;">
+    <span class="cap">Chosen &mdash; C&rsquo;s four, A&rsquo;s routines underneath, a Try on each, opened in place</span>
+    <div class="dsp" style="font-size: 28px; margin-top: 6px;">Every signal has a Try beside its switch.</div>
+  </div>
+
+  <div class="panel">
+    <aside class="doors">
+      <div style="font-size: 15px; color: var(--ink-2); margin: 0 0 12px 12px;">This house</div>
+      <div class="door"><span class="di"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/></svg></span><span style="min-width:0"><span class="dn">Where home is</span><span class="dh">Hollin Lane</span></span></div><div class="door"><span class="di"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/></svg></span><span style="min-width:0"><span class="dn">How it looks</span><span class="dh">Nightfall</span></span></div><div class="door"><span class="di"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/></svg></span><span style="min-width:0"><span class="dn">Routines</span><span class="dh">6 routines</span></span></div><div class="door on"><span class="di"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/></svg></span><span style="min-width:0"><span class="dn">What the lights tell you</span><span class="dh">3 of 4 on · 1 of your own</span></span></div><div class="door"><span class="di"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/></svg></span><span style="min-width:0"><span class="dn">People and phones</span><span class="dh">2 people, 1 home</span></span></div><div class="door"><span class="di"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/></svg></span><span style="min-width:0"><span class="dn">Accounts</span><span class="dh">2 accounts, all signed in</span></span></div><div class="door"><span class="di"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/></svg></span><span style="min-width:0"><span class="dn">What this house has</span><span class="dh">23 things, and what brought each of them</span></span></div><div class="door"><span class="di"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/></svg></span><span style="min-width:0"><span class="dn">Add to the house</span><span class="dh">Lights, plugs, cameras, locks</span></span></div><div class="door"><span class="di"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/></svg></span><span style="min-width:0"><span class="dn">Share this house</span><span class="dh">Apple Home, Google Home, Alexa</span></span></div><div class="door"><span class="di"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/></svg></span><span style="min-width:0"><span class="dn">The hub</span><span class="dh">Development build</span></span></div><div class="door"><span class="di"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/></svg></span><span style="min-width:0"><span class="dn">What happened</span><span class="dh">What the house did while you were out</span></span></div>
+    </aside>
+
+    <section style="padding: 26px 48px; overflow: hidden;">
+      <div class="dsp" style="font-size: 30px;">What the lights tell you</div>
+      <div style="max-width: 760px; margin-top: 8px;">
+        <p class="rs" style="font-size: 15px; margin: 0 0 16px;">A few things worth knowing without looking at a screen. Each shows on the lights near where it happens, then they go back to how they were.</p>
+
+        <div class="list">
+          <div class="mean">
+            <span><span class="t1" style="display: block;">Someone&rsquo;s arriving</span><span class="rs tried">Tried 8:14 pm &middot; everything answered</span></span>
+            <div class="glow" style="--c: var(--em-in);"><div class="run way" style="--c: var(--em-in);"></div></div>
+            <span class="try">Try again</span>
+            <span class="toggle"></span>
+          </div>
+          <div class="mean">
+            <span><span class="t1" style="display: block;">Someone&rsquo;s leaving</span><span class="rs">The drive shows the way to the gate &middot; after dark</span></span>
+            <div class="glow" style="--c: var(--em-out);"><div class="run back" style="--c: var(--em-out);"></div></div>
+            <span class="try on">Close</span>
+            <span class="toggle"></span>
+            <div class="open">
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div class="way2">
+                  <span class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5v14l11-7z"/></svg></span>
+                  <span><span class="t1" style="display: block;">Show me now</span><span class="rs">Plays it once on its lights, even in daylight, then puts them back. Checks the lights.</span></span>
+                </div>
+                <div class="way2 on">
+                  <span class="ic" style="color: var(--lamp);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></span>
+                  <span><span class="t1" style="display: block;">Wait for the real thing</span><span class="rs">For 10 minutes the house watches for somebody leaving, and tells you each step it saw. Checks everything.</span></span>
+                </div>
+              </div>
+              <p class="rs" style="margin: 12px 2px 0; color: var(--ink-2);">&ldquo;After dark&rdquo; is set aside while you try, and the wall says so, so nobody is surprised by the drive lighting up at lunch.</p>
+            </div>
+          </div>
+          <div class="mean">
+            <span><span class="t1" style="display: block;">A door&rsquo;s been left open</span><span class="rs">Lights in the room it opens off, until it is shut</span></span>
+            <div class="glow" style="--c: var(--em-call);"><div class="run call" style="--c: var(--em-call);"></div></div>
+            <span class="try">Try</span>
+            <span class="toggle"></span>
+          </div>
+          <div class="mean">
+            <span><span class="t1" style="display: block;">Something&rsquo;s nearly done</span><span class="rs">The car charging, the wash &middot; lights in the room it is in</span></span>
+            <div class="glow" style="--c: var(--em-fill);"><div class="run fill" style="--c: var(--em-fill);"></div></div>
+            <span class="try">Try</span>
+            <span class="toggle off"></span>
+          </div>
+        </div>
+
+        <div class="lbl" style="margin: 20px 0 10px;">Your own &middot; from Routines</div>
+        <div class="list">
+          <div class="mean">
+            <span><span class="t1" style="display: block;">Garage left open</span><span class="rs">When the garage door is open for 10 min. Hall strip marks the garage end.</span></span>
+            <div class="glow" style="--c: var(--em-out);"><div class="run" style="--c: var(--em-out); background: linear-gradient(90deg, rgba(255,255,255,.1) 86%, var(--em-out) 86%);"></div></div>
+            <span class="try">Try</span>
+            <span class="toggle"></span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

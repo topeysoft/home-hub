@@ -1,0 +1,126 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --ink-3: #8d8a84; --muted: #7f7d77;
+      --lamp-rgb: 233,184,114; --lamp: rgb(var(--lamp-rgb)); --lamp-ink: #2a1c07;
+      --live-rgb: 134,207,160;
+      --r-lg: 22px; --r-md: 16px; --r-sm: 12px;
+      --em-in: #ff8a00; --em-out: #1e6bff; --em-call: #ff2a4a; --em-fill: #00d06a;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .lbl { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); }
+    .rs { font-size: 13.5px; color: var(--muted); line-height: 1.45; }
+    .t1 { font-size: 16px; font-weight: 500; }
+    .sheet { border-radius: 28px; background: rgba(20,22,27,.86); border: 1px solid var(--edge); box-shadow: 0 40px 90px -40px rgba(0,0,0,.9); }
+    .mean { display: grid; grid-template-columns: 1fr 190px 52px; gap: 20px; align-items: center; padding: 16px 20px; border-top: 1px solid rgba(255,255,255,.06); }
+    .mean:first-child { border-top: 0; }
+    .toggle { width: 52px; height: 30px; border-radius: 999px; background: rgba(var(--live-rgb),.9); position: relative; }
+    .toggle::after { content: ""; position: absolute; right: 3px; top: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff; }
+    .toggle.off { background: rgba(255,255,255,.14); }
+    .toggle.off::after { right: auto; left: 3px; }
+    .glow { filter: drop-shadow(0 0 6px var(--c)); }
+    .run { position: relative; height: 12px; border-radius: 3px; background: rgba(255,255,255,.1); overflow: hidden;
+           -webkit-mask-image: repeating-linear-gradient(90deg, #000 0 4px, transparent 4px 7px);
+                   mask-image: repeating-linear-gradient(90deg, #000 0 4px, transparent 4px 7px); }
+    .run::after { content: ""; position: absolute; top: 0; bottom: 0; }
+    .way::after  { left: 0; width: 38%; background: linear-gradient(90deg, transparent, var(--c) 80%, #fff 92%, transparent); animation: way 2.2s cubic-bezier(.45,.05,.55,.95) infinite; }
+    .back::after { left: 0; width: 38%; background: linear-gradient(270deg, transparent, var(--c) 80%, #fff 92%, transparent); animation: back 2.2s cubic-bezier(.45,.05,.55,.95) infinite; }
+    .call::after { inset: 0; background: var(--c); animation: call 1.6s ease-in-out infinite; }
+    .fill::after { left: 0; width: 0; background: var(--c); animation: fill 3s ease-out infinite; }
+    @keyframes way  { from { transform: translateX(-100%); } to { transform: translateX(265%); } }
+    @keyframes back { from { transform: translateX(265%); } to { transform: translateX(-100%); } }
+    @keyframes call { 0%, 100% { opacity: 0; } 30%, 55% { opacity: 1; } }
+    @keyframes fill { 0% { width: 0; opacity: 1; } 70% { width: 64%; opacity: 1; } 100% { width: 64%; opacity: 0; } }
+    /* a bulb has one color and no length, so the same meaning is a breath */
+    .bulb { width: 34px; height: 34px; border-radius: 50%; background: var(--c); animation: call 1.6s ease-in-out infinite; box-shadow: 0 0 18px var(--c); }
+    .how { display: grid; grid-template-columns: 120px 1fr; gap: 16px; align-items: center; padding: 12px 0; border-top: 1px solid rgba(255,255,255,.06); font-size: 14.5px; }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: var(--bg); color: var(--ink); font-size: 17px; line-height: 1.4;">
+
+  <div style="position: absolute; inset: 0; background: linear-gradient(rgb(22,25,36) 0%, rgb(33,34,52) 50%, rgb(58,45,48) 100%);"></div>
+  <div style="position: absolute; inset: 0; background: rgba(6,7,9,.5);"></div>
+
+  <div style="position: absolute; left: 48px; top: 40px; right: 48px;">
+    <span class="cap">C &mdash; the house has a few things it can say</span>
+    <h1 class="dsp" style="margin: 10px 0 0; font-size: 40px;">The meaning is the house&rsquo;s. The strip just shows it best.</h1>
+  </div>
+
+  <!-- ==================== left: This house, a new page ==================== -->
+  <div class="sheet" style="position: absolute; left: 48px; top: 176px; width: 760px; padding: 26px 30px 28px;">
+    <div style="display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 14.5px;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg>
+      This house
+    </div>
+    <div class="dsp" style="font-size: 34px; margin-top: 8px;">What the lights tell you</div>
+    <p class="rs" style="margin: 6px 0 20px; font-size: 14.5px;">A few things worth knowing without looking at a screen. Each one shows on the lights near where it is happening, then they go back to how they were.</p>
+
+    <div style="border-radius: var(--r-lg); background: var(--surface); border: 1px solid var(--edge);">
+      <div class="mean">
+        <span><span class="t1" style="display: block;">Someone&rsquo;s arriving</span><span class="rs">The drive shows the way to the door &middot; after dark</span></span>
+        <div class="glow" style="--c: var(--em-in);"><div class="run way" style="--c: var(--em-in);"></div></div>
+        <span class="toggle"></span>
+      </div>
+      <div class="mean">
+        <span><span class="t1" style="display: block;">Someone&rsquo;s leaving</span><span class="rs">The drive shows the way to the gate &middot; after dark</span></span>
+        <div class="glow" style="--c: var(--em-out);"><div class="run back" style="--c: var(--em-out);"></div></div>
+        <span class="toggle"></span>
+      </div>
+      <div class="mean">
+        <span><span class="t1" style="display: block;">A door&rsquo;s been left open</span><span class="rs">Lights in the room it opens off, until it is shut</span></span>
+        <div class="glow" style="--c: var(--em-call);"><div class="run call" style="--c: var(--em-call);"></div></div>
+        <span class="toggle"></span>
+      </div>
+      <div class="mean">
+        <span><span class="t1" style="display: block;">Something&rsquo;s nearly done</span><span class="rs">The car charging, the wash &middot; lights in the room it is in</span></span>
+        <div class="glow" style="--c: var(--em-fill);"><div class="run fill" style="--c: var(--em-fill);"></div></div>
+        <span class="toggle off"></span>
+      </div>
+    </div>
+    <p class="rs" style="margin: 16px 4px 0; line-height: 1.6;">Four, drawn by us, and the list does not grow from this screen. A household that wants its own goes to Routines, which is where a sentence becomes a rule.</p>
+  </div>
+
+  <!-- ==================== right: one meaning, every kind of light ==================== -->
+  <div style="position: absolute; left: 848px; top: 176px; width: 544px;">
+    <span class="cap">&ldquo;Someone&rsquo;s arriving&rdquo;, on each thing that can say it</span>
+    <div style="margin-top: 12px; border-radius: var(--r-lg); background: rgba(255,255,255,.035); border: 1px solid var(--edge); padding: 8px 22px;">
+      <div class="how" style="border-top: 0;"><span class="t1">Driveway strip</span>
+        <div><div class="glow" style="--c: var(--em-in);"><div class="run way" style="--c: var(--em-in); height: 16px;"></div></div><div class="rs" style="margin-top: 6px;">Runs toward the house &mdash; it has a length and knows its ends</div></div></div>
+      <div class="how"><span class="t1">Porch bulb</span>
+        <div style="display: flex; align-items: center; gap: 16px;"><span class="bulb" style="--c: var(--em-in);"></span><span class="rs">One color, no length &mdash; so it breathes</span></div></div>
+      <div class="how"><span class="t1">Hall light</span>
+        <div class="rs">White only &mdash; comes up to half, if it was off, and says so on the room</div></div>
+      <div class="how"><span class="t1">The wall</span>
+        <div class="rs">One line in the band: &ldquo;Someone&rsquo;s at the gate&rdquo;</div></div>
+    </div>
+
+    <div style="margin-top: 16px; border-radius: var(--r-lg); border: 1px solid rgba(var(--lamp-rgb),.3); background: linear-gradient(rgba(var(--lamp-rgb),.07), rgba(var(--lamp-rgb),.07)), rgba(255,255,255,.02); padding: 18px 22px;">
+      <span class="cap">Where &ldquo;arriving&rdquo; comes from</span>
+      <p style="margin: 10px 0 0; font-size: 14.5px; line-height: 1.6;">
+        From the house, once, not from each strip: a phone coming home, a gate opening, the order two things fire in. Knowing
+        in from out is the hard part of this whole idea, and here it is solved in one place &mdash; and wrong in one place when it is wrong.
+      </p>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

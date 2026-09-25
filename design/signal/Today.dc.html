@@ -1,0 +1,136 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      /* the panel's own tokens -- app/src/panel.css */
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --ink-3: #8d8a84; --muted: #7f7d77;
+      --lamp-rgb: 233,184,114; --lamp: rgb(var(--lamp-rgb)); --lamp-ink: #2a1c07;
+      --live-rgb: 134,207,160; --live: rgb(var(--live-rgb));
+      --r-lg: 22px; --r-md: 16px; --r-sm: 12px;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .lbl { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); }
+    .sheet { border-radius: 28px; background: rgba(20,22,27,.86); border: 1px solid var(--edge);
+             box-shadow: 0 40px 90px -40px rgba(0,0,0,.9); }
+    .routines { list-style: none; margin: 0; padding: 0; border-radius: var(--r-lg); background: var(--surface); border: 1px solid var(--edge); }
+    .routines li { display: flex; align-items: center; gap: 16px; padding: 15px 18px; border-top: 1px solid rgba(255,255,255,.06); }
+    .routines li:first-child { border-top: 0; }
+    .rt { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+    .rn { font-size: 16px; font-weight: 500; }
+    .rs { font-size: 13.5px; color: var(--muted); line-height: 1.4; }
+    .toggle { width: 52px; height: 30px; border-radius: 999px; background: rgba(var(--live-rgb),.9); position: relative; flex: none; }
+    .toggle::after { content: ""; position: absolute; right: 3px; top: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff; }
+    .hl { color: var(--ink); background: rgba(var(--lamp-rgb),.16); box-shadow: 0 0 0 3px rgba(var(--lamp-rgb),.16); border-radius: 4px; }
+    /* the strip, as dots: the same drawing the strip collection uses */
+    .run { height: 18px; border-radius: 4px; background: rgba(255,255,255,.1);
+           -webkit-mask-image: repeating-linear-gradient(90deg, #000 0 5px, transparent 5px 9px);
+                   mask-image: repeating-linear-gradient(90deg, #000 0 5px, transparent 5px 9px); }
+    .sw { width: 38px; height: 38px; border-radius: 50%; }
+    .row { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-top: 1px solid rgba(255,255,255,.06); font-size: 15px; }
+    .can { display: flex; gap: 8px; flex-wrap: wrap; }
+    .can span { font-size: 13.5px; padding: 6px 12px; border-radius: 999px; background: rgba(255,255,255,.06); color: var(--ink-2); }
+    .cant span { background: none; border: 1px dashed rgba(224,138,138,.4); color: rgba(224,138,138,.8); }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: var(--bg); color: var(--ink); font-size: 17px; line-height: 1.4;">
+
+  <div style="position: absolute; inset: 0; background: linear-gradient(rgb(22,25,36) 0%, rgb(33,34,52) 50%, rgb(58,45,48) 100%);"></div>
+  <div style="position: absolute; inset: 0; background: rgba(6,7,9,.5);"></div>
+
+  <div style="position: absolute; left: 48px; top: 40px; right: 48px;">
+    <span class="cap">Today &mdash; what the house can already tell a strip to do</span>
+    <h1 class="dsp" style="margin: 10px 0 0; font-size: 40px;">A light can be told to <em>be</em> something. It cannot be told to <em>say</em> something.</h1>
+  </div>
+
+  <!-- ==================== left: the Routines page, as it ships ==================== -->
+  <div class="sheet" style="position: absolute; left: 48px; top: 176px; width: 700px; height: 680px; padding: 26px 30px;">
+    <div style="display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 14.5px;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg>
+      This house
+    </div>
+    <div class="dsp" style="font-size: 34px; margin-top: 8px;">Routines</div>
+    <p class="rs" style="margin: 6px 0 22px; font-size: 14.5px;">Small things the house does on its own. Switch one off and it stops until you switch it back. A scene you pick by hand always wins for a while.</p>
+
+    <div class="lbl" style="margin-bottom: 10px;">Driveway</div>
+    <ul class="routines">
+      <li>
+        <span class="rt"><span class="rn">Driveway lights for arrivals</span>
+        <span class="rs">When a door or window opens, after dark. <span class="hl">Driveway strip: on.</span></span></span>
+        <span class="toggle"></span>
+      </li>
+      <li>
+        <span class="rt"><span class="rn">Driveway off again</span>
+        <span class="rs">After 5 min of nothing. Sets the room to Off.</span></span>
+        <span class="toggle"></span>
+      </li>
+    </ul>
+
+    <div class="lbl" style="margin: 24px 0 10px;">Hallway</div>
+    <ul class="routines">
+      <li>
+        <span class="rt"><span class="rn">Hall at night</span>
+        <span class="rs">When there&rsquo;s motion, after dark. Sets the room to Low.</span></span>
+        <span class="toggle"></span>
+      </li>
+    </ul>
+
+    <div style="position: absolute; left: 30px; right: 30px; bottom: 26px; border-radius: var(--r-md); background: rgba(255,255,255,.03); border: 1px solid var(--edge); padding: 16px 18px;">
+      <span class="cap">What the driveway strip does when the gate opens</span>
+      <div style="margin-top: 14px; filter: drop-shadow(0 0 8px rgba(var(--lamp-rgb),.5));">
+        <div class="run" style="background: var(--lamp);"></div>
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 12.5px; color: var(--muted);"><span>Gate</span><span>All of it, at once, the same color it always is</span><span>House</span></div>
+    </div>
+  </div>
+
+  <!-- ==================== right: the vocabulary, and the gap ==================== -->
+  <div style="position: absolute; left: 788px; top: 176px; width: 604px;">
+    <div style="border-radius: var(--r-lg); border: 1px solid var(--edge); background: rgba(255,255,255,.03); padding: 22px 24px;">
+      <span class="cap">The half that is already here &mdash; &ldquo;when&rdquo;</span>
+      <div class="can" style="margin-top: 14px;">
+        <span>There&rsquo;s motion</span><span>A door or window opens</span><span>Someone comes home</span>
+        <span>Everyone has left</span><span>A switch goes on</span><span>At sunset</span><span>After 5 min of nothing</span>
+      </div>
+      <p class="rs" style="margin: 14px 0 0; line-height: 1.6;">Every trigger a driveway needs exists: a gate is a door that opens, a car is motion, a phone is someone coming home. None of this collection is about noticing things.</p>
+    </div>
+
+    <div style="margin-top: 16px; border-radius: var(--r-lg); border: 1px solid var(--edge); background: rgba(255,255,255,.03); padding: 22px 24px;">
+      <span class="cap">The half that is missing &mdash; &ldquo;then&rdquo;, for a light</span>
+      <div class="can" style="margin-top: 14px;">
+        <span>On</span><span>Off</span><span>A level</span><span>A color</span><span>A room&rsquo;s scene</span><span>Send a note</span>
+      </div>
+      <div class="can cant" style="margin-top: 10px;">
+        <span>Run toward the house</span><span>Run toward the gate</span><span>Get someone&rsquo;s attention</span><span>Show how far along</span>
+      </div>
+      <p class="rs" style="margin: 14px 0 0; line-height: 1.6;">Every outcome a routine has is a <em>state</em>: the light ends up somewhere and stays. What the driveway wants is an <em>event</em> &mdash; something that happens along the strip, means one thing, and is over.</p>
+    </div>
+
+    <div style="margin-top: 16px; border-radius: var(--r-lg); border: 1px solid rgba(var(--lamp-rgb),.3); background: linear-gradient(rgba(var(--lamp-rgb),.07), rgba(var(--lamp-rgb),.07)), rgba(255,255,255,.02); padding: 20px 24px;">
+      <span class="cap">And the strip has never been told which end is which</span>
+      <p style="margin: 12px 0 0; font-size: 15px; line-height: 1.6;">
+        Setup asks two things &mdash; how long, and which order the colors come in. A strip that runs <em>toward</em> something
+        needs a third: which end is the house. Nothing asks it today, because until now nothing needed it.
+      </p>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

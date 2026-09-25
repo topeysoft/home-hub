@@ -1,0 +1,117 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --ink-3: #8d8a84; --muted: #7f7d77;
+      --lamp-rgb: 233,184,114; --lamp: rgb(var(--lamp-rgb)); --lamp-ink: #2a1c07;
+      --live-rgb: 134,207,160; --live: rgb(var(--live-rgb));
+      --r-lg: 22px; --r-md: 16px; --r-sm: 12px;
+      /* emitter colors -- what the strip is sent, never the panel's pastels */
+      --em-in: #ff8a00; --em-out: #1e6bff; --em-call: #ff2a4a; --em-fill: #00d06a;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .lbl { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); }
+    .rs { font-size: 13.5px; color: var(--muted); line-height: 1.45; }
+    .t1 { font-size: 16px; font-weight: 500; }
+    .sheet { border-radius: 28px; background: rgba(20,22,27,.86); border: 1px solid var(--edge); box-shadow: 0 40px 90px -40px rgba(0,0,0,.9); }
+    .list { border-radius: var(--r-lg); background: var(--surface); border: 1px solid var(--edge); }
+    .mean { display: grid; grid-template-columns: 1fr 150px auto 52px; gap: 18px; align-items: center; padding: 14px 20px; border-top: 1px solid rgba(255,255,255,.06); }
+    .mean:first-child { border-top: 0; }
+    .toggle { width: 52px; height: 30px; border-radius: 999px; background: rgba(var(--live-rgb),.9); position: relative; }
+    .toggle::after { content: ""; position: absolute; right: 3px; top: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff; }
+    .toggle.off { background: rgba(255,255,255,.14); }
+    .toggle.off::after { right: auto; left: 3px; }
+    .try { font-size: 14px; font-weight: 500; padding: 8px 16px; border-radius: 999px; background: rgba(255,255,255,.07); color: var(--ink); white-space: nowrap; }
+    .try.on { background: rgba(var(--lamp-rgb),.18); box-shadow: inset 0 0 0 1px rgba(var(--lamp-rgb),.5); }
+    .tried { color: var(--live); }
+    .button { font-size: 14.5px; font-weight: 500; padding: 11px 18px; border-radius: 999px; background: var(--lamp); color: var(--lamp-ink); display: inline-block; }
+    .button.ghost { background: rgba(255,255,255,.07); color: var(--ink); }
+    .glow { filter: drop-shadow(0 0 6px var(--c)); }
+    .run { position: relative; height: 12px; border-radius: 3px; background: rgba(255,255,255,.1); overflow: hidden;
+           -webkit-mask-image: repeating-linear-gradient(90deg, #000 0 4px, transparent 4px 7px);
+                   mask-image: repeating-linear-gradient(90deg, #000 0 4px, transparent 4px 7px); }
+    .run::after { content: ""; position: absolute; top: 0; bottom: 0; }
+    .way::after  { left: 0; width: 38%; background: linear-gradient(90deg, transparent, var(--c) 80%, #fff 92%, transparent); animation: way 2.2s cubic-bezier(.45,.05,.55,.95) infinite; }
+    .back::after { left: 0; width: 38%; background: linear-gradient(270deg, transparent, var(--c) 80%, #fff 92%, transparent); animation: back 2.2s cubic-bezier(.45,.05,.55,.95) infinite; }
+    .call::after { inset: 0; background: var(--c); animation: call 1.6s ease-in-out infinite; }
+    .fill::after { left: 0; width: 0; background: var(--c); animation: fill 3s ease-out infinite; }
+    @keyframes way  { from { transform: translateX(-100%); } to { transform: translateX(265%); } }
+    @keyframes back { from { transform: translateX(265%); } to { transform: translateX(-100%); } }
+    @keyframes call { 0%, 100% { opacity: 0; } 30%, 55% { opacity: 1; } }
+    @keyframes fill { 0% { width: 0; opacity: 1; } 70% { width: 64%; opacity: 1; } 100% { width: 64%; opacity: 0; } }
+    .way2 { display: grid; grid-template-columns: 40px 1fr; gap: 14px; align-items: start; padding: 16px; border-radius: var(--r-md); background: rgba(255,255,255,.035); box-shadow: inset 0 0 0 1px rgba(255,255,255,.07); }
+    .way2.on { background: linear-gradient(rgba(var(--lamp-rgb),.12), rgba(var(--lamp-rgb),.12)), rgba(255,255,255,.035); box-shadow: inset 0 0 0 1px rgba(var(--lamp-rgb),.45); }
+    .ic { width: 40px; height: 40px; border-radius: 13px; display: grid; place-items: center; background: var(--surface-hi); color: var(--ink-2); }
+      .step { display: grid; grid-template-columns: 28px 1fr auto; gap: 14px; align-items: start; padding: 14px 0; border-top: 1px solid rgba(255,255,255,.06); }
+    .step:first-child { border-top: 0; }
+    .dot { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 600; }
+    .ok { background: rgba(var(--live-rgb),.18); color: var(--live); }
+    .no { background: rgba(224,138,138,.18); color: #e08a8a; }
+    .wait { box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.2); }
+    .skip { background: rgba(255,255,255,.07); color: var(--muted); }
+    .when { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: var(--bg); color: var(--ink); font-size: 17px; line-height: 1.4;">
+
+  <div style="position: absolute; inset: 0; background: linear-gradient(rgb(22,25,36) 0%, rgb(33,34,52) 50%, rgb(58,45,48) 100%);"></div>
+  <div style="position: absolute; inset: 0; background: rgba(6,7,9,.5);"></div>
+
+  <div style="position: absolute; left: 48px; top: 40px; right: 48px;">
+    <span class="cap">Waiting for the real thing &mdash; what the house tells you, step by step</span>
+    <h1 class="dsp" style="margin: 10px 0 0; font-size: 40px;">A test that fails says which link broke, not just that it did.</h1>
+  </div>
+
+  <!-- ==================== left: it worked ==================== -->
+  <div class="sheet" style="position: absolute; left: 48px; top: 164px; width: 652px; padding: 24px 28px 22px;">
+    <span class="cap">Someone&rsquo;s arriving &middot; watched 8:12&ndash;8:14 pm</span>
+    <div class="dsp" style="font-size: 26px; margin-top: 8px;">It worked, all the way through.</div>
+    <div style="margin-top: 14px;">
+      <div class="step"><span class="dot ok">&#10003;</span><span><span class="t1" style="display: block;">The gate opened</span><span class="rs">Heard from the gate straight away.</span></span><span class="when">8:13:40</span></div>
+      <div class="step"><span class="dot ok">&#10003;</span><span><span class="t1" style="display: block;">The house decided: arriving</span><span class="rs">The gate opened before the front door did.</span></span><span class="when">8:13:40</span></div>
+      <div class="step"><span class="dot ok">&#10003;</span><span><span class="t1" style="display: block;">Driveway strip showed the way in</span>
+        <div class="glow" style="--c: var(--em-in); margin: 8px 0 4px; width: 300px;"><div class="run way" style="--c: var(--em-in);"></div></div>
+        <span class="rs">Answered in a fifth of a second, toward the house end.</span></span><span class="when">8:13:40</span></div>
+      <div class="step"><span class="dot ok">&#10003;</span><span><span class="t1" style="display: block;">Porch light breathed</span><span class="rs">Then went back to off.</span></span><span class="when">8:13:41</span></div>
+      <div class="step"><span class="dot skip">&ndash;</span><span><span class="t1" style="display: block;">Hall light left alone</span><span class="rs">It was already on, so there was nothing to show.</span></span><span class="when"></span></div>
+    </div>
+    <div style="display: flex; gap: 10px; margin-top: 14px;"><span class="button ghost">Done</span></div>
+  </div>
+
+  <!-- ==================== right: it did not ==================== -->
+  <div class="sheet" style="position: absolute; left: 740px; top: 164px; width: 652px; padding: 24px 28px 22px; border-color: rgba(224,138,138,.3);">
+    <span class="cap">Someone&rsquo;s leaving &middot; watching, 7 min left</span>
+    <div class="dsp" style="font-size: 26px; margin-top: 8px;">Nothing showed. The drive never saw you.</div>
+    <div style="margin-top: 14px;">
+      <div class="step"><span class="dot ok">&#10003;</span><span><span class="t1" style="display: block;">The front door opened</span><span class="rs">Heard straight away.</span></span><span class="when">8:21:04</span></div>
+      <div class="step"><span class="dot no">!</span><span><span class="t1" style="display: block;">No motion on the drive</span><span class="rs" style="color: var(--ink-2);">The drive&rsquo;s motion sensor was last heard from <strong style="font-weight: 500; color: var(--ink);">3 days ago</strong>. Its battery is the likely reason.</span></span><span class="when">&mdash;</span></div>
+      <div class="step"><span class="dot wait"></span><span><span class="t1" style="display: block; color: var(--muted);">The house decides: leaving</span><span class="rs">Leaving is the door, then the drive. It had the first and not the second.</span></span><span class="when"></span></div>
+      <div class="step"><span class="dot wait"></span><span><span class="t1" style="display: block; color: var(--muted);">Driveway strip shows the way out</span><span class="rs">Not asked, so not shown &mdash; the strip itself is fine: &ldquo;Show me now&rdquo; ran at 8:19.</span></span><span class="when"></span></div>
+    </div>
+    <div style="display: flex; gap: 10px; margin-top: 14px;"><span class="button">Open the drive sensor</span><span class="button ghost">Keep watching</span></div>
+  </div>
+
+  <div style="position: absolute; left: 48px; right: 48px; bottom: 36px; font-size: 14px; line-height: 1.6; color: var(--ink-2);">
+    The result stays on the row it was tried from &mdash; &ldquo;Tried 8:14 pm &middot; all answered&rdquo; or &ldquo;Tried 8:21 pm &middot; the drive sensor did not answer&rdquo; &mdash; until the wall rests, the same as anything else a person just touched.
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>
