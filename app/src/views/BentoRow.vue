@@ -20,7 +20,7 @@
  * the difference between that and a room is the one small column.
  */
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
-import { ago, cap, done, justDone, scenesFor, store, whatsOn } from '../store'
+import { ago, cap, deviceById, done, justDone, scenesFor, store, whatsOn } from '../store'
 import { leave } from '../leaving'
 import type { Device, Room } from '../api'
 import SceneBar from '../SceneBar.vue'
@@ -56,19 +56,31 @@ const live = computed(() => whatsOn().filter(d => cap(d) !== 'camera' && cap(d) 
 const going = reactive<Record<string, true>>({})   // still in the row, on its way out
 const gone = reactive<Record<string, true>>({})    // and now faded
 const on = ref<Device[]>([])
+const lead = ref<string | null>(null)   // the speaker holding the tall first card
 function close(now: Device[]) {
   const rest = new Map(now.map(d => [d.id, d]))
   const kept: Device[] = []
   for (const d of on.value) {
     const still = rest.get(d.id)
     if (still) { kept.push(still); rest.delete(d.id) }
-    else if (going[d.id] || done[d.id]) kept.push(d)
+    /* The house's copy, not the one this row was holding. The hub answers a tap by sending the device
+       again as a new object, so the held one is left behind the moment the light says "off" -- and the
+       tap that turns it back on then guessed "on" into that orphan, the store never saw the light come
+       on, the kept mark came off, and the card left with a finger still on it. */
+    else if (going[d.id] || done[d.id]) kept.push(deviceById(d.id) ?? d)
   }
   /* Kept cards this row has never held: Home was left and come back to while one was standing. They
      join at the end rather than being lost, so what you did is still here however you got back. */
   const held = new Set([...kept, ...rest.values()].map(d => d.id))
   const back = justDone().filter(d => !held.has(d.id) && cap(d) !== 'camera' && cap(d) !== 'climate')
   on.value = [...kept, ...rest.values(), ...back]
+  /* The tall first card is a speaker's, and it STAYS that speaker's while its card is in the row. It
+     used to be picked afresh on every change -- the first one playing -- so pausing the TV while the
+     Sonos played put the Sonos where the TV had been, under the finger that had just paused it, and
+     sent the TV to the far end. Only when its card leaves does the slot go to someone else. */
+  const media = on.value.filter(d => cap(d) === 'media')
+  if (!media.some(d => d.id === lead.value))
+    lead.value = (media.find(d => d.state === 'playing') ?? media[0])?.id ?? null
 }
 watch(live, (now, was) => {
   for (const d of was ?? []) {
@@ -92,7 +104,7 @@ const keptLine = (d: Device) => done[d.id] && !live.value.some(x => x.id === d.i
 const scenes = computed(() => scenesFor(null).length > 0)
 const cards = computed<Card[]>(() => {
   const dev = (d: Device): Card => ({ key: d.id, kind: 'device', device: d })
-  const playing = on.value.find(d => cap(d) === 'media' && d.state === 'playing') ?? on.value.find(d => cap(d) === 'media')
+  const playing = on.value.find(d => d.id === lead.value)
   const tall = on.value.filter(d => d !== playing).slice(0, 8)
   /* the glance cards, two to a column: the first column pairs a camera with the
      thermostat, as drawn, and the rest follow in their own columns at the end */

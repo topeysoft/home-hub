@@ -5,7 +5,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import type { Device } from './api'
-import { whatsOn, cap, done, doneLine, isActive, justDone, perform, shortName, roomOf, store } from './store'
+import { whatsOn, cap, deviceById, done, doneLine, isActive, justDone, perform, shortName, roomOf, store } from './store'
 import Icon from './Icon.vue'
 
 /* Everything that is on across the house, each a chip that turns it off with one tap. The house line says "something is
@@ -26,7 +26,7 @@ function sync(now: Device[]) {
   for (const d of rows.value) {
     const still = rest.get(d.id)
     if (still) { kept.push(still); rest.delete(d.id) }
-    else if (done[d.id]) kept.push(d)                // off, and still saying so
+    else if (done[d.id]) kept.push(deviceById(d.id) ?? d)   // off, and still saying so -- the house's copy, which the hub replaces on every answer (BentoRow says why)
   }
   /* quieted somewhere else, or before Home was come back to: still this person's own doing, so still here */
   const held = new Set([...kept, ...rest.values()].map(d => d.id))
