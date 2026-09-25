@@ -30,6 +30,7 @@ services:
     environment:
       - TZ=${TZ}
       - ZIGBEE2MQTT_CONFIG_SERIAL_PORT=${ZIGBEE_PORT:-/dev/zigbee}
+      - ZIGBEE2MQTT_CONFIG_SERIAL_ADAPTER=${ZIGBEE_ADAPTER:-ember}   # the chip family; .env.example says which stick wants which
       - ZIGBEE2MQTT_CONFIG_MQTT_USER=${MQTT_USER:-}            # the broker's password, from mqtt-auth.sh
       - ZIGBEE2MQTT_CONFIG_MQTT_PASSWORD=${MQTT_PASSWORD:-}
 
