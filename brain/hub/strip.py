@@ -607,6 +607,8 @@ class Strips:
             try: s["count"] = int(str(payload).strip())
             except ValueError: pass
         elif leaf == "order": s["order"] = str(payload).strip()
+        # A signal it started, by id: how "Try" can say the strip itself answered (hub/signals.py).
+        elif leaf == "signal" and (sg := getattr(self.hub, "signals", None)): sg.heard(id_, str(payload or ""))
         # What it runs and what it did with an update: the updater's business (hub/bridge_updates.py),
         # which keeps its own record per strip because this class keeps none in settings.
         elif leaf in ("fw", "update") and (fw := getattr(getattr(self.hub, "bridge", None), "firmware", None)):

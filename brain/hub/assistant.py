@@ -67,6 +67,12 @@ VOCABULARY = """A rule is one JSON object: {"id", "name", "room", "when", "if", 
   {"device": "<speaker id>", "action": "sound", "data": {"sound": "<sound id>", "minutes": <optional>}}   a sound on a speaker
   {"device": "<speaker id>", "action": "sound_off"}
   {"notify": "<short text>"}
+  {"signal": "way" | "call" | "fill" | "end", "toward": "house" | "out", "rgb": [r, g, b], "device": "<light id>"}
+      something SHOWN along the lights in the room for a few seconds, then the lights go back as they were.
+      "way" runs from one end to the other ("toward" the house, or out); "call" breathes to get attention;
+      "fill" shows how far along ("level": 0-1); "end" lights one end ("end": "house" | "out"). "rgb" is a
+      strong color with the others near 0 (an LED shows pastel as white); "device" names one light, else
+      every light in the room that can show it. Use it only when somebody asks the lights to SAY something.
 States and what they do in a room: occupied = lights on; empty = lights off, media paused; asleep = lights and
 media off, doors locked; away = everything off, doors locked; movie = lights low, screen on; guests = lights bright.
 A rule says one thing. Exceptions ("everything off except the porch"), several steps, or anything outside this

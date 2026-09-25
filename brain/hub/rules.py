@@ -14,6 +14,7 @@ from . import sun
 from .intents import RoomState, SERVICE
 from .presence import word as presence_word
 from .settings import DATA
+from .signals import KINDS as SIGNAL_KINDS, TOWARD as SIGNAL_TOWARD
 
 log = logging.getLogger("hub.rules")
 SEED = Path(__file__).resolve().parent.parent / "rules.json"   # the repo's copy: a new hub starts from it
@@ -21,7 +22,7 @@ RULES_PATH = DATA / "rules.json"                                # the hub's own,
 ENTRY = "entry"   # a rule's room may be "entry": every room the family comes in through, chosen on the panel
 
 TRIGGERS = ("motion", "contact", "device", "idle", "time", "sun", "presence", "intent")
-OUTCOMES = ("intent", "device", "notify")
+OUTCOMES = ("intent", "device", "notify", "signal")
 SUBJECTS = ("sun", "time", "weekday", "intent", "home", "presence", "light", "device", "quiet")
 OPS = ("is", "not", "below", "above", "between", "in")
 WEEKDAYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
@@ -87,6 +88,23 @@ def _condition_parts(c):
     if c[0] == "quiet" and len(c) >= 4:
         return "quiet", c[1], c[2], c[3]
     return c[0], None, c[1], c[2]
+
+
+def _signal_ok(t):
+    """A routine's `{"signal": ...}`: something shown along the lights and over (hub/signals.py). Held to
+    the same four the house's own use, so an assistant's draft cannot invent a fifth motion."""
+    if t["signal"] not in SIGNAL_KINDS: raise ValueError(f"a signal is one of {', '.join(SIGNAL_KINDS)}")
+    for k in ("toward", "end"):
+        if k in t and t[k] not in SIGNAL_TOWARD: raise ValueError(f'a signal’s "{k}" is house or out')
+    rgb = t.get("rgb")
+    if rgb is not None and not (isinstance(rgb, list) and len(rgb) == 3 and all(isinstance(x, int) and not isinstance(x, bool) and 0 <= x <= 255 for x in rgb)):
+        raise ValueError('a signal’s "rgb" is three numbers from 0 to 255')
+    times = t.get("times")
+    if times is not None and (isinstance(times, bool) or not isinstance(times, int) or not 1 <= times <= 20):
+        raise ValueError('a signal’s "times" is 1 to 20')
+    level = t.get("level")
+    if level is not None and (isinstance(level, bool) or not isinstance(level, (int, float)) or not 0 <= level <= 1):
+        raise ValueError('a signal’s "level" is from 0 to 1')
 
 
 def validate(raw, rooms: set) -> tuple[list, list]:
@@ -155,6 +173,7 @@ def validate(raw, rooms: set) -> tuple[list, list]:
                 if len(outs) != 1: raise ValueError('each outcome in "then" is exactly one of ' + ", ".join(OUTCOMES))
                 if outs[0] == "intent": RoomState(t["intent"])
                 if outs[0] == "device" and not t.get("action"): raise ValueError("a device outcome needs an action")
+                if outs[0] == "signal": _signal_ok(t)
         except (ValueError, KeyError, TypeError) as e:
             errors.append(f"{label}: {e}"); continue
         seen.add(rid); good.append(r)
@@ -295,10 +314,21 @@ class Engine:
         hold. "held" and "shadowed" mean the room has already spoken, and asking again each second would
         only write the same line to the log over and over."""
         now, ts, taken, out = self.now(), time.time(), set(), []
+        sg = getattr(self.hub, "signals", None)
         for r in rules:
             target = self.hub.home.rooms.get(r["room"])          # None for "home"
             checked = [self.check(c, target, now) for c in r.get("if") or []]
             why = {"rule": r["id"], "trigger": trigger, "checked": checked}
+            # SOMEBODY IS TRYING THIS ONE ("What the lights tell you", wait for the real thing). Its
+            # trigger is a step they are watching for, and its conditions are set aside -- a test at noon
+            # must not fail for being at noon -- but only its SIGNAL runs then: a try is not a licence for
+            # the rest of the rule to set a room at lunchtime.
+            watched = bool(sg and sg.watching_rule(r["id"]))
+            if watched: sg.rule_heard(r, trigger)
+            if watched and not all(c[-1] for c in checked):
+                shown = [t for t in outcomes_of(r) if "signal" in t]
+                if shown:
+                    out.append(({**r, "then": shown}, {**why, "set_aside": True}, "fire")); continue
             if not all(c[-1] for c in checked):
                 log.debug("rule %s: conditions not met %s", r["id"], checked)
                 out.append((r, why, "wait")); continue
@@ -381,6 +411,8 @@ class Engine:
                     domain, service = SERVICE[key]
                     await self.hub.ha.call(domain, service, d.id, **data)
                     self.hub.log.add("action", d.id, None, then["action"], source="rule", detail=why)
+                elif "signal" in then:
+                    await self.hub.signals.outcome(rule, then, why, set_aside=bool(why.get("set_aside")))
                 elif "notify" in then:
                     self.hub.log.add("notify", rule["room"], None, then["notify"], source="rule", detail=why)
                     self.hub._broadcast(json.dumps({"type": "notify", "text": then["notify"], "rule": rule["id"]}))

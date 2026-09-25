@@ -37,6 +37,9 @@ def needs_code(method: str, path: str) -> bool:
     # names people and what they did to the house, which is the same size of fact as the settings
     # those people changed, so it sits on the same side of the door.
     if path == "/happened/changes": return True
+    # Which of the house's four signals are on, and which end of a strip is the house: what the house
+    # does on its own, like a routine's switch. Trying one is a tap -- it shows and puts back.
+    if path == "/signals/ends" or (path.startswith("/signals/") and path.endswith("/on")): return True
     if path == "/drafts/suggest": return False                                   # looking for habits changes nothing
     if path.startswith("/drafts/") and m in ("POST", "DELETE"): return True   # approving or discarding a suggestion; asking for one stays open
     if path == "/assistant/key": return True
