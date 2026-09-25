@@ -149,7 +149,7 @@ The LEDs run from 5 V directly, not from the 3.3 V rail.
 
 - **BOOT** on GPIO0 and **RESET** on EN. Both needed while prototyping even though USB-CDC handles normal flashing,
   because the time you need them is when USB-CDC is what is broken.
-- **One user button**, on GPIO4 with the internal pull-up, and **it is no longer optional**. It went on the board as
+- **One user button**, on GPIO4 with a 2.2 kΩ external pull-up (R7), and **it is no longer optional**. It went on the board as
   `docs/puck-light.md`'s open question — *"does the object want a button?"* — turned into something you could find
   out. On 21 September the answer stopped being a matter of taste: **the proof that a thing is in your house is a
   press on it** (`docs/strip.md` item 23, `design/door/PressIt.dc.html`), the gate lives on the device and not on
@@ -160,12 +160,16 @@ The LEDs run from 5 V directly, not from the 3.3 V rail.
   how the chip boots. A tap for "dark until morning" is still the obvious second gesture, and factory reset wants
   it too.
 
-  The three switches are C&K KMR2 side-actuated tacts (4.2 × 2.8 × 1.4 mm), not the 5.7 mm-deep SKQG first
-  specified: once the ring was on the board there was nowhere the bigger part would go. The user button sits at
-  the board edge at 180° — the front of the shelf variant, where a person would tap — and is reached through a
-  **printed plunger** dropped into the shell's button hole, because a side switch at the board edge sits 2.4 mm
-  behind the base wall and a fingertip cannot get there. `enclosure/puck.scad` prints the plunger
-  (`show = "plunger"`). BOOT and RESET are the same part and are reached with the shell off.
+  B2 uses a side-actuated C&K KMS223G LFG (Y28B22310FP, gold contacts, no pegs) for USER/SW3.
+  BOOT and RESET remain top-actuated KMR2 switches and are reached with the shell off. The previous
+  description of KMR2 as side-actuated was incorrect. R7 provides about 1.5 mA when USER is pressed,
+  meeting the KMS's stated 1 mA minimum; the USER shield pad is grounded explicitly.
+
+  SW3 remains at KiCad (78.8935,106.8817), -71.9417°, about 18° away from opposite USB-C. The
+  approved 58 × 20 mm B2 enclosure uses a captive printed side plunger. Its assumed switch actuator
+  center height (0.75 mm above PCB) and 7.95 mm bore height remain provisional until checked against
+  the exact component drawing/sample. The routed PCB, not the old 180° placement seed, defines alignment.
+  See `hardware/puck-revA/PCB-STATUS.md` for verification and remaining release blockers.
 - **A 4-pin UART header**: GND, GPIO43 (TX), GPIO44 (RX), 3V3. Native USB is not a debug path when native USB is the
   fault.
 - **A 6-pad expansion header** at the board edge, inside the shell: 3V3, 5 V, GND and three spare GPIOs, one pair of
@@ -250,14 +254,14 @@ argument that `Shape.dc.html` deliberately left open.
 
 ## The build order
 
-1. **KiCad project**, schematic first: module, USB-C with its CC resistors, LDO, level shifter, three LEDs, two
+1. **KiCad project**, schematic first: module, USB-C with its CC resistors, LDO, level shifter, eleven RGBW LEDs, three
    buttons, the header, the sensor footprint. Symbols and footprints checked against the real datasheets, not
    against memory.
-2. **Layout**, antenna keepout first and everything else arranged around it. Board outline and the M2 bolt circle
+2. **Layout**, external flex-antenna placement and metal clearance reviewed with the selected antenna. Board outline and the M2 bolt circle
    frozen at the end of this step, because the shells depend on them.
 3. **A shell around the frozen outline**, printed and fitted to nothing — just to confirm the board drops in, the
    USB-C is reachable and the buttons land where fingers go.
-4. **Order five**, assembled.
+4. **Resolve the blockers in `hardware/puck-revA/PCB-STATUS.md` before ordering assembled prototypes.**
 5. **Bring-up in order**: 3.3 V rail before anything, then USB enumeration, then flash the existing `esp32s3-ship`
    image with `-DBRIDGE_RGB_PIN=38`, then the light, then a BLE scan next to a real switch with `tools/bridge_watch.py`
    open.

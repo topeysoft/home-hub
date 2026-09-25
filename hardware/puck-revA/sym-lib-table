@@ -1,0 +1,1 @@
+(sym_lib_table (version 7) (lib (name "Puck")(type "KiCad")(uri "${KIPRJMOD}/Puck.kicad_sym")(options "")(descr "Project-owned shielded USER switch")))
