@@ -93,3 +93,27 @@ test('both questions are behind the one door, and the end can be walked', async 
   await sheet.getByText('That’s it').click()
   await expect(page.locator('.rig-ask')).toContainText(said)
 })
+
+/* THE QUESTION OPENS ON TOP OF THE DOOR THAT ASKED IT. "The colors look wrong" hands the strip back
+   to the setup conversation, which is a sheet of the whole panel -- and it drew underneath the pane
+   holding the door, so the tap looked like it had done nothing. Asked of the browser rather than of
+   the stylesheet: whatever is at the middle of the screen is what somebody would be looking at.
+   The mock does not revisit, so the brain's answer is given here in the shape hub/strip.py returns. */
+test('asking the colors again comes up over the door, not under it', async ({ page }) => {
+  const asking = { state: 'order', asking: 'red', revisit: 'colors', name: 'Under-cabinet strip' }
+  let revisited = false
+  await page.route('**/strip/revisit', r => { revisited = true; return r.fulfill({ json: asking }) })
+  await page.route(/\/strip$/, r => (revisited ? r.fulfill({ json: asking }) : r.fallback()))
+
+  await openStrip(page)
+  await page.locator('.rig-ask .rig-card').click()
+  await expect(page.locator('.sd-sheet')).toBeVisible()
+  await page.locator('.sd-sheet').getByText('The colors look wrong').click()
+
+  await expect(page.getByText('Are the colors right?')).toHaveCount(1)
+  const onTop = await page.evaluate(() => {
+    const at = document.elementFromPoint(innerWidth / 2, innerHeight / 2)
+    return { strip: !!at?.closest('.sheet:not(.sd-sheet)'), door: !!at?.closest('.sd-sheet'), pane: !!at?.closest('.opened') }
+  })
+  expect(onTop).toEqual({ strip: true, door: false, pane: false })
+})

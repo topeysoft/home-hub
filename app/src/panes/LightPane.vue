@@ -455,7 +455,7 @@ async function level(l: typeof LEVELS[number]) {
        measured again from nothing -- "Measure it again" is still the way back to the fill for the
        household who cut a metre off -- and the colors question hands over to the sheet it came
        from, which is the screen that asks it properly. -->
-  <div class="sheet-back sd-back" v-if="door" @click.self="closeDoor()">
+  <div class="sheet-back" v-if="door" @click.self="closeDoor()">
     <div class="sheet sd-sheet" role="dialog" aria-label="Set up as a strip">
       <div class="sheet-head">
         <h2 class="display">Set up as a strip</h2>
@@ -745,12 +745,6 @@ async function level(l: typeof LEVELS[number]) {
   background: repeating-linear-gradient(90deg, #4b86e8 0 4px, transparent 4px 7px), rgba(255, 255, 255, 0.03);
 }
 
-/* BEHIND THE DOOR. A sheet, because this is a conversation the strip was set up in and it is the
-   shell every other one of those uses. It is raised over the opened pane, which is z-index 40 and
-   would otherwise draw on top of it -- the same fix the arrival sheets needed over This house. */
-.sd-back {
-  z-index: 45;
-}
 .sd-card {
   display: flex;
   flex-direction: column;

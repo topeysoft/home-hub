@@ -2486,7 +2486,7 @@ input:focus-visible {
   left: 50%;
   bottom: calc(28px + env(safe-area-inset-bottom));
   transform: translateX(-50%);
-  z-index: 40;
+  z-index: 48;
   max-width: min(90vw, 520px);
   display: flex;
   align-items: center;
@@ -2913,17 +2913,25 @@ input:focus-visible {
   }
 }
 
-/* ABOVE THIS HOUSE, AND ONLY WHEN THIS HOUSE IS OPEN. A sheet sits below the house panel, which is
-   right everywhere else and wrong for an arrival: a knock opens its conversation from Add, and Add
-   IS the house panel, so the conversation drew underneath the page that opened it and nothing
-   appeared to happen. Set by the two arrival sheets only; nothing else's stacking moves. */
-.sheet-back.over-panel {
-  z-index: 45;
-}
+/* A SHEET IS ALWAYS ON TOP OF WHAT OPENED IT. Everything that opens over the house is on one
+   ladder, and this is the whole of it:
+
+     30  the camera viewer
+     40  a thing's pane, Outside, a join request, This house
+     45  a sheet -- a conversation somebody started, or one that asked for the screen
+     48  the toast, so a sheet's own "that didn't work" is not blurred out behind it
+     50  the rest screen
+     60  the code prompt, which the rest screen must not hide
+
+   Sheets used to sit at 35, under the panes, and were lifted one at a time as each was caught
+   drawing underneath the page that opened it: a knock under Add, a strip under the pane whose
+   "Colors look wrong" asked for it. Each looked like a tap that did nothing. A sheet opened from
+   inside a pane (the strip door, a bridge card) is inside that pane's layer and needs nothing here.
+   tests/layers.test.ts reads these numbers back. */
 .sheet-back {
   position: fixed;
   inset: 0;
-  z-index: 35;
+  z-index: 45;
   background: rgba(6, 7, 9, 0.55);
   backdrop-filter: blur(10px);
   display: grid;
