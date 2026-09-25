@@ -79,13 +79,20 @@ go_to_ref() {
          return 1 ;;
     esac
   fi
-  git -C "$DIR" reset -q --hard "$target" && git -C "$DIR" clean -qfd -e driver-layer/
+  # A reset that fails is a failed install, not a line to print past: this used to fall through to the
+  # echo below, return 0, and leave a branch hub on its old checkout while update.sh reported "done".
+  # Exit 1 and not a return, because the caller's 3 means "refused", and this was not refused.
+  git -C "$DIR" reset -q --hard "$target" || { echo "  could not move the code to $target"; exit 1; }
+  git -C "$DIR" clean -qfd -e driver-layer/
   case "$ref" in v*) VERSION="${ref#v}" ;; esac
   echo "  $CHANNEL: ${ref} — $(git -C "$DIR" log -1 --format='%h %s' | cut -c1-60)"
 }
 if [ -d "$DIR/.git" ]; then
   command -v git >/dev/null 2>&1 || pkg git
-  if git -C "$DIR" fetch -q --tags --force origin "$BRANCH" 2>/dev/null; then
+  # The refspec is spelled out because a hub cloned from main tracks nothing else: a bare
+  # `fetch origin development` lands in FETCH_HEAD only, origin/development never exists, and a
+  # development hub's checkout stood still through every update.
+  if git -C "$DIR" fetch -q --tags --force origin "+refs/heads/$BRANCH:refs/remotes/origin/$BRANCH" 2>/dev/null; then
     # 3, not 1: a release that could not be checked is a different thing from an install that broke,
     # and a household tapping Try again cannot fix it. host/update.sh tells the two apart.
     go_to_ref || exit 3

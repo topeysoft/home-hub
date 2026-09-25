@@ -33,7 +33,13 @@ log = logging.getLogger("hub.updates")
 REPO = os.environ.get("HUB_REPO") or "topeysoft/home-hub"
 RELEASE_API = f"https://api.github.com/repos/{REPO}/releases/latest"
 BRANCHES = ("main", "development")    # the channels that follow a branch rather than tags, each named for its branch
-COMMITS_API = f"https://api.github.com/repos/{REPO}/commits/{{branch}}"
+# A branch hub is offered the newest commit whose BRAIN IMAGE finished building, not the branch's head.
+# The head is on GitHub the moment it is pushed and the image lands a few minutes later, and install
+# can only pull what exists: a tap in between restarted the hub on the build it already had, said
+# "done", and offered the same update again -- two or three taps before one took. The runs are
+# pushes that built; brain-image.yml's paths are the files a hub runs, so every commit that changes
+# a hub gets one.
+BUILDS_API = f"https://api.github.com/repos/{REPO}/actions/workflows/brain-image.yml/runs?branch={{branch}}&event=push&status=success&per_page=1"
 EVERY = 6 * 3600
 RECHECK = 5 * 60                      # how soon opening This hub can make the hub ask GitHub again
 TICK = 300                            # how often the loop looks at the clock, as against at GitHub
@@ -419,9 +425,11 @@ class Updates:
 
     def fetch(self) -> dict:
         if self.channel in BRANCHES:
-            d = _get(COMMITS_API.format(branch=self.channel))
-            return {"version": f"{self.channel}-{d['sha'][:7]}", "sha": d["sha"], "when": d["commit"]["committer"]["date"],
-                    "title": d["commit"]["message"].splitlines()[0][:120]}
+            runs = _get(BUILDS_API.format(branch=self.channel)).get("workflow_runs") or []
+            if not runs: raise ValueError(f"nothing has been built for {self.channel} yet")
+            r = runs[0]; c = r.get("head_commit") or {}
+            return {"version": f"{self.channel}-{r['head_sha'][:7]}", "sha": r["head_sha"], "when": c.get("timestamp") or r.get("updated_at") or "",
+                    "title": (c.get("message") or "").splitlines()[0][:120] if c.get("message") else ""}
         d = _get(RELEASE_API)
         # A release with no title of its own is named by its tag; the panel puts this in a sentence.
         # `what` is the same lines that ship inside the next image, taken here from the release body

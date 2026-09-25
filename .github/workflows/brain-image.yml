@@ -13,7 +13,10 @@ on:
   push:
     branches: [main, development]
     tags: ["v*"]
-    paths: ["brain/**", "app/**", "sounds/**", ".github/workflows/brain-image.yml"]
+    # Every file a hub runs, not only the ones inside the image: a branch hub is offered the newest
+    # commit that built here (brain/hub/updates.py), so a change to the host scripts or the compose
+    # file that built nothing was offered forever and installed by no tap. The rebuild is all cache.
+    paths: ["brain/**", "app/**", "sounds/**", "driver-layer/**", "install.sh", ".github/workflows/brain-image.yml"]
   workflow_dispatch:
 
 permissions:

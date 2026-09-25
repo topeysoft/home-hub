@@ -141,12 +141,21 @@ class MainChannelTests(UpdateTest):
 class DevelopmentChannelTests(UpdateTest):
     def test_it_asks_github_about_its_own_branch_and_names_the_build_after_it(self):
         u = self.make(version="development-aaaaaaa", channel="development")
-        with mock.patch.object(updates, "_get", return_value={"sha": "b" * 40, "commit": {
-                "committer": {"date": "2026-09-23T10:00:00Z"}, "message": "A thing\n\nwith a body"}}) as get:
+        with mock.patch.object(updates, "_get", return_value={"workflow_runs": [{"head_sha": "b" * 40, "updated_at": "2026-09-23T10:04:00Z",
+                "head_commit": {"timestamp": "2026-09-23T10:00:00Z", "message": "A thing\n\nwith a body"}}]}) as get:
             latest = u.fetch()
-        self.assertTrue(get.call_args.args[0].endswith("/commits/development"))
+        self.assertIn("/brain-image.yml/runs?branch=development", get.call_args.args[0])
         self.assertEqual(latest["version"], "development-bbbbbbb")
         self.assertEqual(latest["title"], "A thing")
+
+    def test_it_is_offered_what_has_been_built_not_what_was_just_pushed(self):
+        """The head is on GitHub minutes before its image is. Only a finished, successful build of a
+        push counts, because install pulls the image: anything newer is a tap that installs nothing."""
+        u = self.make(channel="development")
+        with mock.patch.object(updates, "_get", return_value={"workflow_runs": []}) as get:
+            with self.assertRaises(ValueError): u.fetch()
+        url = get.call_args.args[0]
+        for part in ("status=success", "event=push", "per_page=1"): self.assertIn(part, url)
 
     async def test_it_compares_commits_exactly_as_main_does(self):
         u = self.make(commit="a" * 40, channel="development")
