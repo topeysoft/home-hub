@@ -479,7 +479,7 @@ static void announceBridge() {
     bridgeTopic(px, sizeof(px), "proxy");
     snprintf(devj, sizeof(devj),
              "\"dev\":{\"ids\":[\"%s_bridge_%s\"],\"name\":\"%s bridge %s\","
-             "\"mf\":\"home-hub\",\"mdl\":\"ESP32 mesh proxy client\",\"sw\":\"net %s\"}",
+             "\"mf\":\"Elyir\",\"mdl\":\"ESP32 mesh proxy client\",\"sw\":\"net %s\"}",
              cfg.mqttBase, chipHex, cfg.label, chipHex, netHex);
 
     snprintf(topic, sizeof(topic), "%s/sensor/%s_bridge_%s_proxy/config", HA_PREFIX, cfg.mqttBase, chipHex);

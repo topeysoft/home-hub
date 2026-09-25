@@ -9,6 +9,11 @@ import re, time
 from dataclasses import dataclass, field, asdict
 from datetime import datetime
 
+# Things we make answer to the maker's name, whatever older firmware still calls itself. A bridge
+# puck flashed before September announces its maker as the project's working name; the house should
+# not have to wait for a reflash to stop reading it.
+OUR_OLD_NAMES = {"home-hub": "Elyir"}
+
 CAP_BY_DOMAIN = {"light": "light", "switch": "switch", "media_player": "media", "cover": "cover",
                  "climate": "climate", "lock": "lock", "fan": "fan", "camera": "camera", "vacuum": "vacuum"}
 MOTION_CLASSES = {"motion", "occupancy", "presence"}
@@ -236,7 +241,7 @@ class Home:
         dev_area = {d["id"]: d.get("area_id") for d in ha_devices}
         dev_words = {d["id"]: " ".join(str(d.get(k) or "") for k in ("name_by_user", "name", "model", "manufacturer")) for d in ha_devices}
         dev_entry = {d["id"]: next(iter(d.get("config_entries") or []), None) for d in ha_devices}   # what brought the hardware, for entries that do not name it themselves
-        self.hardware = {d["id"]: {"name": d.get("name_by_user") or d.get("name") or "", "manufacturer": d.get("manufacturer") or "", "model": d.get("model") or ""} for d in ha_devices}
+        self.hardware = {d["id"]: {"name": d.get("name_by_user") or d.get("name") or "", "manufacturer": OUR_OLD_NAMES.get(d.get("manufacturer") or "", d.get("manufacturer") or ""), "model": d.get("model") or ""} for d in ha_devices}
         reg = {e["entity_id"]: e for e in entities}
         st = {s["entity_id"]: s for s in states}
         camera_devices = {e["device_id"] for e in entities if e["entity_id"].startswith("camera.") and e.get("device_id")}

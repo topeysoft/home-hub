@@ -322,7 +322,7 @@ static void announce_the_light() {
              "\"payload_available\":\"online\",\"payload_not_available\":\"offline\","
              "\"brightness\":true,\"supported_color_modes\":[\"rgb\"],"
              "\"device\":{\"identifiers\":[\"%s_%s\"],\"name\":\"Light strip\","
-             "\"model\":\"Light strip\",\"sw_version\":\"" STRIP_FW "\"}}",
+             "\"manufacturer\":\"Elyir\",\"model\":\"Light strip\",\"sw_version\":\"" STRIP_FW "\"}}",
              base, chipHex, base, chipHex, base, chipHex, base, chipHex, base, chipHex);
     say_at(topic, body, 1);
     ESP_LOGI(TAG, "announced as a light the house can switch on");
