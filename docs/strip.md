@@ -780,7 +780,7 @@ reports the default and the one after it should be right. Nobody has looked yet.
 for the rest, because they are fixed at a strip's first flash: rollback in the bootloader, and the maker's
 keys in the image.
 
-**8. Occasions and movement.** Drawn in `design/occasion/`, no code.
+**8. Occasions and movement.** Drawn in `design/occasion/`, no code. Signals — a strip saying something, briefly — are a different thing and are built: item 50.
 
 **9. The hardware is a devkit.** The product board needs, at minimum: a level shifter (**not optional** — a
 fill writes every frame, so the bridge puck's write-on-change workaround does not survive here), power
@@ -794,6 +794,29 @@ real annual cost before a unit ships — and inserts the product into the most q
 the house, which is how these things get returned. The camera route avoids all of that and costs a camera
 pointed into a living room. **The cheap next step is neither: a capture stick and HyperHDR on a bench,
 to find out whether it feels like the screen extended or like a gimmick, before any of it is paid for.**
+
+**50. Signals: the strip can say something now, and every one can be tried.** 24 September,
+`design/signal/`, direction A with C. Not an occasion and not an effect: one of four motions that each mean
+something — a run toward one end (`way`), a breath (`call`), a fill to a level (`fill`), one end lit (`end`) —
+started by something happening and over in seconds, then the household's light back exactly as it was.
+
+- **Firmware** draws every frame itself (`px::Signal` in `main/pixels.h`, native-tested): the hub sends one
+  `strip/<chip>/signal/set` — `{"id", "kind", "dir", "rgb", "ms", "times", "level", "end"}`, or `"kind": "stop"`
+  — and the strip answers on `strip/<chip>/signal` with the id the moment it starts, or `busy <id>` while a
+  setup instrument owns it. Never obeyed from a retained copy. Anything that paints the household's own light
+  ends it at once; `step()` changes only when the picture does, so a frame is written only when it differs.
+- **Brain** is `hub/signals.py`: the house's four (arriving, leaving, a door left open, something nearly done;
+  all start **off**), in-or-out decided in one place (a phone home, or a way-in door that opens with or without
+  motion by it in the 45 s before), and a routine outcome `{"signal": ...}` for a household's own.
+- **Try** is "Show me now" (the lights, each saying it answered) and "Wait for the real thing" (ten minutes,
+  "after dark" set aside, every link of the chain written down — and a broken link names its sensor's last word).
+- **Which end is the house** is asked once per strip by lighting the plug end; until then a run goes away from
+  the plug and says it guessed.
+
+**Unproven:** none of it has run on silicon. It compiles for the S3 and the native tests pass. The things to
+watch on a real drive are whether 2.2 s a pass reads from a moving car, and whether the white-hot head is
+what makes the direction legible at a distance or merely looks hot. "Something nearly done" is drawn and
+honest about having nothing to read yet.
 
 **49. A strip that restarted between its knock and the yes is found again, and nobody is told to
 move nearer a strip the hub heard perfectly well.** 24 September.

@@ -171,6 +171,168 @@ namespace px
         }
     };
 
+    // A SIGNAL: SOMETHING THAT HAPPENS ALONG THE STRIP, MEANS ONE THING, AND IS OVER (design/signal/).
+    //
+    // Not an effect. An effect takes the household's color away to show off; a signal tells somebody
+    // something -- which way to go, that a door is open, how far along a thing is -- and then hands the
+    // light back exactly as it was. Four of them and no fifth without a meaning:
+    //
+    //   WAY    a run of light from one end to the other, `times` passes of `ms` each. `dir` 1 runs away
+    //          from the plug end, -1 toward it; the hub turns "toward the house" into one of those.
+    //   CALL   the whole strip breathing, period `ms`, for `times` breaths -- a door left open.
+    //   FILL   lit from the plug end to `level` of the way along, then gone, `times` over -- how far.
+    //   END    one end lit, `end` 0 the plug end and 1 the far one; blinking at `ms`, or steady when
+    //          `ms` is 0 -- which is how "which end is nearer the house?" is asked.
+    //
+    // DRAWN ON THE STRIP, NOT STREAMED TO IT. A run down a drive is fast motion somebody watches with
+    // intent, and a Wi-Fi hiccup halfway through reads as a broken light. So the hub sends one message
+    // and this draws every frame from a clock on the part.
+    //
+    // `step()` is the reason the caller can obey the WS2812 rule (AGENTS.md section 4): it changes only
+    // when the picture would, so a frame is written only when there is a different one to write.
+    struct Signal
+    {
+        enum Kind : uint8_t { NONE, WAY, CALL, FILL, END };
+        Kind kind = NONE;
+        int8_t dir = 1;
+        uint8_t r = 0, g = 0, b = 0;
+        uint32_t ms = 2200;
+        uint16_t times = 3;
+        uint8_t level = 255; // FILL: how far, out of 255
+        uint8_t end = 0;     // END: 0 the plug end, 1 the far end
+        uint32_t began = 0;
+        bool running = false;
+
+        static Kind kind_of(const char *s)
+        {
+            if (!s) return NONE;
+            if (!strcmp(s, "way")) return WAY;
+            if (!strcmp(s, "call")) return CALL;
+            if (!strcmp(s, "fill")) return FILL;
+            if (!strcmp(s, "end")) return END;
+            return NONE;
+        }
+
+        void start(uint32_t now)
+        {
+            began = now;
+            running = kind != NONE;
+            if (times < 1) times = 1;
+            if (kind != END && ms < 200) ms = 200; // a signal nobody can see is not a signal
+        }
+
+        // Past its last pass. A steady END lasts until something else is shown.
+        bool over(uint32_t now) const
+        {
+            if (!running) return true;
+            if (kind == END && ms == 0) return false;
+            return (now - began) >= (uint64_t)ms * times;
+        }
+
+        // How long the run's glowing tail is: a quarter of the strip, never under three lights, so a
+        // short strip still shows a direction rather than a dot.
+        static int tail(int count) { const int t = count / 4; return t < 3 ? 3 : t; }
+
+        // A number that changes when, and only when, the picture does.
+        uint32_t step(uint32_t now, int count) const
+        {
+            if (!running || count < 1) return 0;
+            const uint32_t t = now - began;
+            const uint32_t pass = kind == END && ms == 0 ? 0 : t / ms, in = kind == END && ms == 0 ? 0 : t % ms;
+            switch (kind)
+            {
+            case WAY: return pass * 100000u + head(in, count) + 1;
+            case CALL: return pass * 1000u + breath(in) / 4 + 1; // 64 levels: smooth, and not a frame a millisecond
+            case FILL: { const int lit = filled(in, count); return pass * 100000u + (uint32_t)lit * 64u + fade(in) / 4 + 1; }
+            case END: return ms == 0 ? 1 : pass * 2 + (in < ms / 2 ? 1 : 2);
+            default: return 0;
+            }
+        }
+
+        // The frame at `now`, into `p`. Everything not part of the signal is dark: a signal is shown on
+        // its own and the household's light comes back whole when it ends, rather than being mixed into.
+        void draw(Pixels &p, uint32_t now) const
+        {
+            p.clear();
+            if (!running || p.count < 1) return;
+            const uint32_t t = now - began;
+            const uint32_t in = kind == END && ms == 0 ? 0 : t % ms;
+            const int n = p.order.per_pixel(), count = p.count;
+            switch (kind)
+            {
+            case WAY:
+            {
+                const int h = head(in, count), tl = tail(count);
+                for (int k = 0; k < tl; k++)
+                {
+                    const int at = h - k;              // in run order: 0 is where the run starts
+                    if (at < 0 || at >= count) continue;
+                    const int i = dir < 0 ? count - 1 - at : at;
+                    const int amt = 255 * (tl - k) / tl;   // brightest at the head, fading behind it
+                    put(p, i, n, amt, k == 0);
+                }
+                break;
+            }
+            case CALL:
+            {
+                const int amt = breath(in);
+                for (int i = 0; i < count; i++) put(p, i, n, amt, false);
+                break;
+            }
+            case FILL:
+            {
+                const int lit = filled(in, count), amt = fade(in);
+                for (int i = 0; i < lit && i < count; i++) put(p, i, n, amt, false);
+                break;
+            }
+            case END:
+            {
+                if (ms != 0 && in >= ms / 2) break;
+                int span = count / 8; if (span < 3) span = 3; if (span > count) span = count;
+                for (int k = 0; k < span; k++) put(p, end ? count - 1 - k : k, n, 255, false);
+                break;
+            }
+            default: break;
+            }
+        }
+
+    private:
+        // Where the head of the run is, in run order. It enters before the first light and leaves past
+        // the last, so the tail runs off the far end rather than stopping on it -- a run that stops is a
+        // bar, and a bar has no direction.
+        int head(uint32_t in, int count) const { return (int)((uint64_t)in * (uint64_t)(count + tail(count)) / ms); }
+        // 0..255 and back, eased, once per `ms`.
+        int breath(uint32_t in) const
+        {
+            const uint32_t half = ms / 2;
+            const uint32_t x = in < half ? in : ms - in;          // 0..half..0
+            const uint64_t lin = (uint64_t)x * 255 / (half ? half : 1);
+            return (int)(lin * lin / 255);                        // squared: a breath dwells low and rises
+        }
+        // A fill rises over the first 70% of a pass, holds, and fades over the last 15%.
+        int filled(uint32_t in, int count) const
+        {
+            const int most = (int)((uint32_t)count * level / 255);
+            const uint32_t rise = ms * 7 / 10;
+            return in >= rise ? most : (int)((uint64_t)most * in / rise);
+        }
+        int fade(uint32_t in) const
+        {
+            const uint32_t from = ms * 85 / 100;
+            if (in < from) return 255;
+            const uint32_t left = ms - in, span = ms - from;
+            return (int)((uint64_t)255 * left / (span ? span : 1));
+        }
+        // One light at `amt` of the signal's color. The head of a run goes white-hot, which is what
+        // makes the direction readable from across a drive rather than only up close.
+        void put(Pixels &p, int i, int n, int amt, bool hot) const
+        {
+            uint8_t rr = (uint8_t)(r * amt / 255), gg = (uint8_t)(g * amt / 255), bb = (uint8_t)(b * amt / 255);
+            if (hot) { rr = (uint8_t)((rr + 255) / 2); gg = (uint8_t)((gg + 255) / 2); bb = (uint8_t)((bb + 255) / 2); }
+            p.order.bytes(rr, gg, bb, &p.buf[i * n]);
+        }
+    };
+
     // The two that touch hardware, declared here and defined in pixels.cpp. Declarations only, so
     // nothing above them needs a framework and the native test still compiles this header on a Mac --
     // which is the whole reason the rest of the file is written the way it is.

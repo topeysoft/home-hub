@@ -124,6 +124,12 @@ static char chipHex[13];
 static char base[16] = "strip";
 static uint16_t light_endpoint = 0;
 
+// WHAT THE HOUSE IS SAYING WITH THE STRIP, IF ANYTHING (design/signal/, px::Signal). Drawn from the
+// housekeeping loop and ended by anything that paints the household's own light. `sig_step` is the
+// frame last written, so a frame goes down the wire only when it is a different one.
+static px::Signal sig;
+static uint32_t sig_step = 0;
+
 // The setup instruments own the strip while they run, and the household's own color goes back the
 // moment they stop. Without this a fill that was never stopped leaves somebody's living room running
 // a test pattern for ever -- and, on the Arduino version, the waiting glow was drawn and then wiped a
@@ -233,6 +239,9 @@ static void paint_tune() {
 static void paint() {
     Hold h;
     if (instrument) return;
+    // The household's own light, drawn, is a signal over: a hand on the light -- the panel, their
+    // Matter app -- wins over anything the house was saying with it, at once.
+    sig.running = false;
     if (!want_on) strip.clear();
     else {
         const uint16_t k = want_bri ? want_bri : 1;
@@ -448,6 +457,65 @@ static void on_command(const std::string &leaf, const std::string &msg, bool ret
         light_changed();
         paint();
         say_light();
+        return;
+    }
+
+    // A SIGNAL: something to show along the strip, briefly, and then the light as it was
+    // (design/signal/). One JSON message; this strip draws every frame of it (px::Signal says why).
+    //
+    //   {"id": "...", "kind": "way|call|fill|end|stop", "dir": 1|-1, "rgb": [r, g, b],
+    //    "ms": 2200, "times": 3, "level": 0-255, "end": 0|1}
+    //
+    // It answers on `signal` with the id the moment it starts, which is how the hub's "Try" can say
+    // the strip itself answered rather than only that it was asked. A strip in the middle of being set
+    // up answers "busy <id>" and shows nothing: the setup instruments are a person measuring something,
+    // and a run of light across them would be a wrong answer they could not see was wrong.
+    //
+    // Never from a retained copy. A signal is a moment; replaying one at every reconnect would be a
+    // drive that lights up whenever the Wi-Fi comes back.
+    if (leaf == "signal/set") {
+        if (retained || msg.empty()) return;
+        cJSON *j = cJSON_Parse(msg.c_str());
+        if (!j) return;
+        const cJSON *id = cJSON_GetObjectItemCaseSensitive(j, "id");
+        const cJSON *kind = cJSON_GetObjectItemCaseSensitive(j, "kind");
+        char said[48];
+        snprintf(said, sizeof(said), "%s", cJSON_IsString(id) && id->valuestring ? id->valuestring : "");
+        if (cJSON_IsString(kind) && kind->valuestring && !strcmp(kind->valuestring, "stop")) {
+            if (sig.running) { sig.running = false; paint(); }
+            cJSON_Delete(j);
+            say("signal", said);
+            return;
+        }
+        if (instrument) {
+            char busy[64];
+            snprintf(busy, sizeof(busy), "busy %s", said);
+            cJSON_Delete(j);
+            say("signal", busy);
+            return;
+        }
+        px::Signal next;
+        next.kind = px::Signal::kind_of(cJSON_IsString(kind) ? kind->valuestring : nullptr);
+        const cJSON *v;
+        if (cJSON_IsNumber(v = cJSON_GetObjectItemCaseSensitive(j, "dir"))) next.dir = v->valueint < 0 ? -1 : 1;
+        if (cJSON_IsNumber(v = cJSON_GetObjectItemCaseSensitive(j, "ms"))) next.ms = (uint32_t)(v->valueint < 0 ? 0 : v->valueint);
+        if (cJSON_IsNumber(v = cJSON_GetObjectItemCaseSensitive(j, "times"))) next.times = (uint16_t)(v->valueint < 1 ? 1 : v->valueint > 3600 ? 3600 : v->valueint);
+        if (cJSON_IsNumber(v = cJSON_GetObjectItemCaseSensitive(j, "level"))) next.level = (uint8_t)(v->valueint < 0 ? 0 : v->valueint > 255 ? 255 : v->valueint);
+        if (cJSON_IsNumber(v = cJSON_GetObjectItemCaseSensitive(j, "end"))) next.end = v->valueint ? 1 : 0;
+        const cJSON *rgb = cJSON_GetObjectItemCaseSensitive(j, "rgb");
+        if (cJSON_IsArray(rgb) && cJSON_GetArraySize(rgb) == 3) {
+            next.r = (uint8_t)cJSON_GetArrayItem(rgb, 0)->valueint;
+            next.g = (uint8_t)cJSON_GetArrayItem(rgb, 1)->valueint;
+            next.b = (uint8_t)cJSON_GetArrayItem(rgb, 2)->valueint;
+        }
+        cJSON_Delete(j);
+        if (next.kind == px::Signal::NONE) return;
+        next.start(now_ms());
+        sig = next;
+        sig_step = sig.step(now_ms(), strip.count);
+        sig.draw(strip, now_ms());
+        px::show(strip);
+        say("signal", said);
         return;
     }
 
@@ -797,6 +865,25 @@ static void housekeeping(void *) {
             else if (held < HOLD_ARMED && prov::press()) {
                 blink_back();
                 was_lit = true;
+            }
+        }
+
+        // A signal, drawn a frame at a time, and only when the frame is a different one. It gives way
+        // to the setup instruments -- somebody measuring the strip owns it -- and when its last pass is
+        // over the household's own light comes back exactly as it was.
+        if (sig.running) {
+            Hold h;
+            const uint32_t now = now_ms();
+            // asked again under the lock, like the fill below: a command may have ended it
+            if (sig.running && instrument) sig.running = false;
+            else if (sig.running && sig.over(now)) paint();
+            else if (sig.running) {
+                const uint32_t k = sig.step(now, strip.count);
+                if (k != sig_step) {
+                    sig_step = k;
+                    sig.draw(strip, now);
+                    px::show(strip);
+                }
             }
         }
 
