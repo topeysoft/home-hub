@@ -440,6 +440,13 @@ class Afterwards(unittest.TestCase):
         self.assertEqual(self.s.status()["state"], "ready")
         self.assertEqual(self.said("order/set"), ["grb"])
 
+    def test_and_the_strip_goes_back_to_being_the_light_it_was(self):
+        """At first setup the fill takes over from the red; on a revisit nothing does, so the
+        probe has to be put away or the strip stays red after the sheet says it is done."""
+        run(self.s.revisit("c8ebba", "colors"))
+        run(self.s.saw("red"))
+        self.assertEqual(self.said("show/set")[-1], "off")
+
     def test_the_length_can_be_asked_again_and_keeps_its_room(self):
         run(self.s.revisit("c8ebba", "length"))
         self.assertEqual(self.s.status()["state"], "length")

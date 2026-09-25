@@ -639,6 +639,27 @@ export function restartLink(up: boolean): boolean {
   return true
 }
 
+/* WHEN THE HUB GOES AWAY, EVERYTHING OPEN OVER THE HOUSE GOES WITH IT. The waiting screen ("Updating
+   the hub", "Restarting...") is drawn on the page under the panes and sheets, so anything left open
+   covered the one thing worth reading, and every control on it answers to a hub that is not there.
+   This is the moment `nothing vanishes under a tap` allows: what the person is looking at now is the
+   countdown, not the card. Only the panel's own copies go. A bridge or strip still being set up is
+   read back from the hub when it returns and reopens where it was, a phone asking to join asks again,
+   and a restart still puts the person back on the page they asked from (`restarting.from`). */
+export const hubAway = () => !!(store.restarting?.lost || store.updating?.lost || (store.restoring && store.linkLost))
+export function clearForAway() {
+  store.sheet = null
+  store.opened = null
+  store.outside = false
+  store.viewer = null
+  store.bridge = null
+  store.strip = null
+  store.stripAsked = false
+  store.askAside = true
+  if (lock.prompt) { lock.prompt.resolve(false); lock.prompt = null }
+}
+watch(hubAway, away => { if (away) clearForAway() })
+
 export function openWhy(roomId: string) { store.whyRoom = roomId; store.sheet = 'why' }
 /** Pick up a conversation the house already has open, on the sheet that draws every other one. */
 export function openFlow(flowId: string, name = '') { store.resume = flowId; store.resumeName = name; store.sheet = 'add' }

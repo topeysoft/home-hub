@@ -1120,7 +1120,10 @@ class Strips:
         # somebody, so there is nothing for a retain to rescue.
         await self._tell(j["id"], "order/set", order)
         # Somebody who came back to fix the colors did not ask to be walked through the length again.
+        # And the probe is handed back: at first setup the fill that follows takes the strip over, but
+        # here nothing follows, so without this the strip stays the red it was asked about.
         if j.get("revisit"):
+            await self._tell(j["id"], "show/set", "off")
             self._set("ready")
             return self.status()
         return await self._fill()
