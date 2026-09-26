@@ -1,7 +1,3 @@
-## Current revision — common side switches, 26 September 2026
-
-SW1/SW2/SW3 now use KMS221GLFS / C221698. BOOT/RESET pull-ups, C7 and the RESET series resistor have been revised. The matching manufacturing package is `manufacturing/20260926-common-switches/`. Read its `REVISION-NOTES.md`. Earlier root-level Gerber, CSV and STEP exports are superseded. Final DRC, unrouted count, schematic parity and ERC all report zero issues under the existing project rules. This does not replace the remaining prototype and firmware tests below.
-
 # Puck rev A — current working design
 
 Open **puck-revA.kicad_pro** in KiCad. This is the promoted pass20 design: six warm-white RGBW LEDs, four copper layers, nominal 1.6 mm thickness, and a 50 mm round board.

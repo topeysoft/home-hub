@@ -259,7 +259,7 @@
 				)
 			)
 		)
-		(property "ki_fp_filters" "LED*WS2812*PLCC*5.0x5.0mm*P3.2mm* LED_SKC6812RGBW_WS_5050"
+		(property "ki_fp_filters" "LED*WS2812*PLCC*5.0x5.0mm*P3.2mm*"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)

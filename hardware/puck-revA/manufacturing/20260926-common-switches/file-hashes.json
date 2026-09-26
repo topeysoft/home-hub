@@ -1,0 +1,12 @@
+{
+  "puck-revA.kicad_pcb": "35ac4371d87ae11534800b4abc406954c5b5052167cdcb791b8f057245ab99e0",
+  "puck-revA.kicad_sch": "37d237c1aab5cb7e6e4c7c7720fb58d9907c29c405a7f4c47fab5e03c2436c6f",
+  "puck-revA.kicad_pro": "26607da9e6436646efdc46441a0b585ad3dfc7022867d2d5b1f0631b70842dda",
+  "Puck.kicad_sym": "644fad6f4150cc69b8fd12abb124f7d86a07aa22d3473556cb72ceb33071a550",
+  "BOM-review.csv": "cf0245b6e707055603300199e9d66b68b565725fb2d8ceda6b18cef7a6e5c147",
+  "puck-revA-JLCPCB-BOM.xlsx": "ada3fcda7dde013dca17967555c96fc414155ff0cd8bc5d4fe517ea8ed385791",
+  "puck-revA-JLCPCB-CPL.xlsx": "6d049824f29af01d8044612f4b0602c631d4b5412114f0d5ebd9dff6257d59ec",
+  "puck-revA-Gerbers-common-switches.zip": "c084abcbdc9c8a52f30500c3931fc0b756aae8e1a38f64b7babfb9dd21b8c1b9",
+  "final-drc.json": "0060573cd49afd42ca637c2f3fc0aa7dc4b682d6bab8624e1ca17c3fc7a7b4cd",
+  "erc.json": "790fd9cd080c7d91e27fa3c5af040cb2aecac4e233aa0aca87b448092c6749b5"
+}
