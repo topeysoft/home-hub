@@ -26,6 +26,7 @@ from . import notes as notes_mod
 from .updates import Updates
 from .health import Health
 from .happened import Happened, Changes
+from .healed import Healed
 from .backup import Backup
 from .network import Network
 from .restart import Restart
@@ -140,6 +141,7 @@ class Hub:
         self.updates = Updates(self)                   # which build this is, whether a newer one exists, and the panel's ask
         self.health = Health(self)                     # what needs a look, as sentences
         self.happened = Happened(self)                 # what the house did while nobody watched
+        self.healed = Healed(self)                     # a part the host had to start again, said once and then when it repeats
         self.changes = Changes(self)                   # who changed what, behind the code
         self.backup = Backup(self)                     # the house as one file, and back
         self.restart = Restart(self)                   # turning it off and on again, at the smallest rung that could help

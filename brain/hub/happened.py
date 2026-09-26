@@ -143,6 +143,12 @@ class Happened:
         since, _ = self.window(now)
         rows, tz = self._rows(since, now), self.hub.tz
         still, over = [], []
+        # A part the hub had to start again itself. Over by the time anybody reads it, so it is a span
+        # here and nothing more; healed.py says it on Needs a look only once it keeps happening.
+        healed = getattr(self.hub, "healed", None)
+        if healed:
+            healed.take()
+            over += healed.over(since, now)
         for d, kind in self._watched():
             value, word = LEFT[kind]
             long_enough = LONG[kind]
@@ -244,10 +250,11 @@ KIND_AS = {"light": "a light", "switch": "a plug", "fan": "a fan", "media": "a s
 
 
 # Rows that are the house doing housekeeping to itself rather than anybody changing anything:
-# re-reading Home Assistant's registry (36 of 134 rows in one real log), and a suggestion the
-# assistant merely offered. Named here, as a list somebody wrote down, rather than falling out of
-# `sentence()` having no words for them.
-SKIP = {("home", "registry"), ("draft", "proposed")}
+# re-reading Home Assistant's registry (36 of 134 rows in one real log), a suggestion the assistant
+# merely offered, and the hub starting a part of itself again (said on What happened; healed.py).
+# Named here, as a list somebody wrote down, rather than falling out of `sentence()` having no words
+# for them.
+SKIP = {("home", "registry"), ("draft", "proposed"), ("home", "healed")}
 
 
 class Changes:

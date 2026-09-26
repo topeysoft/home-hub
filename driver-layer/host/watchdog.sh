@@ -57,8 +57,20 @@ down() {
 gone=()
 while read -r s; do [ -n "$s" ] && gone+=("$s"); done < <(down)
 if [ "${#gone[@]}" -gt 0 ]; then
+  # When each one stopped, read BEFORE starting it, because starting it is what wipes that. Docker's
+  # own words for it; the brain turns them into a time. Empty for a part that was never created.
+  parts=""
+  for s in "${gone[@]}"; do
+    id="$(cd "$DL" && docker compose ps -a -q "$s" 2>/dev/null | head -n1)"
+    stopped="$( [ -n "$id" ] && docker inspect -f '{{.State.FinishedAt}}' "$id" 2>/dev/null )"
+    parts="$parts${parts:+,}{\"service\":\"$s\",\"stopped\":\"$stopped\"}"
+  done
+  boot="$(awk '/^btime/ { print $2 }' /proc/stat 2>/dev/null)"
   # Only those, so nothing that is working is bounced; and no restart.json, because the brain has not
-  # stopped and would read it at its next start as a restart that never happened. The log says so.
+  # stopped and would read it at its next start as a restart that never happened. healed.jsonl is what
+  # it reads instead: one line per time this happened, which the brain moves into the house's diary --
+  # What happened says it once, and Needs a look says it when it keeps happening (design/healed/).
+  printf '{"at":%s,"boot":%s,"parts":[%s]}\n' "$(date +%s)" "${boot:-null}" "$parts" >> "$DATA/healed.jsonl"
   {
     echo "--- $(date -Is) not running: ${gone[*]}; starting them"
     cd "$DL" && docker compose up -d "${gone[@]}"

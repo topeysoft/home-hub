@@ -41,12 +41,13 @@ export type Status = { driver: Driver; reason: string; setup_done: boolean; lock
    panel does not know what it is looking at, so it draws `acts` and invents nothing. `with` is what went
    quiet behind this one fault -- fix the fault and they all come back, which is why they are not lines of
    their own. See brain/hub/health.py. */
-export type Act = { do: string; act: 'flow' | 'entry' | 'part' | 'check' | 'forget' | 'update' | 'restart' | 'bridge' | 'account' | 'strip'; to: string | null
+export type Act = { do: string; act: 'flow' | 'entry' | 'part' | 'check' | 'forget' | 'update' | 'restart' | 'bridge' | 'account' | 'strip' | 'backup'; to: string | null
   ask?: string        // a question to answer first, where the doing is worth a second's thought
   yes?: string        // the words that answer it, with the name in them
   no?: string }       // ...and the ones that decline, where "Keep it" is not what is being kept
 export type Quiet = { id: string; name: string; where: string }
-export type Note = { kind: 'offline' | 'storage' | 'driver' | 'update' | 'restart' | 'bridge'; text: string; since: number | null; subject: string | null
+export type Note = { kind: 'offline' | 'storage' | 'driver' | 'update' | 'restart' | 'bridge' | 'healed'; text: string; since: number | null; subject: string | null
+  more?: string       // the second sentence, quieter: what a pattern means, under the line that names it
   where?: string      // an offline thing: which room, and what sort of thing it is -- enough to go and look at it
   name?: string       // an offline thing: what it is called, apart from the sentence it is in
   with?: Quiet[]      // what went quiet with this fault
@@ -579,7 +580,7 @@ export type HappenedItem = {
   kind: 'still' | 'over' | 'phone'; subject: string; text: string; when: string; ts: number
   where?: string        // which room and what sort of thing: enough to walk to it
   seconds?: number      // how long it has been that way; the sort order, already applied
-  word?: string         // on | open | unlocked -- what the group heading was built from
+  word?: string         // on | open | unlocked -- what the group heading was built from; hub for the hub starting a part of itself
   acts: HappenedAct[] } // empty on anything already over: there is nothing left to do about it
 export type HappenedGroup = { id: 'still' | 'over' | 'people'; label: string; items: HappenedItem[] }
 export type Happened = {

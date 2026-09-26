@@ -1,31 +1,77 @@
 {
   "artboards": [
-    { "file": "Today.dc.html", "x": 0, "y": 0, "w": 1440, "h": 900, "title": "Today — fixed, and said nowhere", "page": "page-1" },
-    { "file": "SaidA.dc.html", "x": 1560, "y": 0, "w": 1440, "h": 900, "title": "A — a restart line, naming the part", "page": "page-1" },
-    { "file": "LostB.dc.html", "x": 3120, "y": 0, "w": 1440, "h": 900, "title": "B — a restart line, naming what was lost", "page": "page-1" },
-    { "file": "OverC.dc.html", "x": 4680, "y": 0, "w": 1440, "h": 900, "title": "C — news once, a job when it repeats", "page": "page-1" }
+    {
+      "file": "Today.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Today — fixed, and said nowhere",
+      "page": "page-1"
+    },
+    {
+      "file": "SaidA.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "A — a restart line, naming the part",
+      "page": "page-2"
+    },
+    {
+      "file": "LostB.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "B — a restart line, naming what was lost",
+      "page": "page-2"
+    },
+    {
+      "file": "OverC.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "C — news once, a job when it repeats (chosen)",
+      "page": "page-1"
+    }
   ],
   "annotations": [
     {
       "id": "today",
-      "x": -540, "y": 40, "w": 440, "page": "page-1",
+      "x": -540,
+      "y": 40,
+      "w": 440,
+      "page": "page-1",
       "text": "Today, with the watchdog that shipped on 26 September.\n\nThe hub was unplugged and moved to the garage. It came back, but Messages (the broker) did not: Docker could not restore it and its restart policy never tried again. Every bridge puck and light strip sat outside a locked door. The watchdog now starts it within about ten minutes of boot.\n\nAnd then says nothing. By the time anybody looks, Needs a look has emptied and its door is gone, and What happened has no line for it. The only record is a line in restart.log on the hub's card.\n\ndocs/restart.md piece 8 rules that out: self-healing must say so, because silent self-healing is how a household runs on a dying card for a year. The three boards are three ways of saying it."
     },
     {
       "id": "said",
-      "x": 1560, "y": 940, "w": 440, "page": "page-1",
+      "x": 0,
+      "y": 940,
+      "w": 440,
+      "page": "page-2",
       "text": "A — a restart line, naming the part.\n\nThe smallest change: health.restarts() already writes \"The hub stopped answering at … and started itself again. Nobody asked it to.\" for the brain. This is the same line for a part, in the same place, for the same hour, with what was cut off underneath in the same with-list a dead radio uses.\n\nIt costs nothing new on the panel. What it gets wrong is the page it is on: the lede above it says these are things that have STOPPED answering, and this one has started again. For an hour the band on Home says Something needs a look about a thing that needs nothing, and a row with no button is, by NotesPage's own rule, a gap in the brain.\n\nAnd \"Messages\" is the part's name on The hub page, but it is not a word anybody in the house used about this evening. They noticed the hall switch."
     },
     {
       "id": "lost",
-      "x": 3120, "y": 940, "w": 440, "page": "page-1",
+      "x": 1560,
+      "y": 940,
+      "w": 440,
+      "page": "page-2",
       "text": "B — the same line, led by what the household lost.\n\nSame place, same hour, same lack of a button. The difference is the sentence: it opens with the Hall bridge and the Shelf light strip, the two things somebody in the house would actually have noticed, and says for how long. Messages drops to the small line, where it is the explanation rather than the headline.\n\nThat is the right order and it is worth keeping whichever board wins. But it inherits A's problem whole: a finished thing on a page of jobs, and a chip on Home asking for a look at something that has already been looked after."
     },
     {
       "id": "over",
-      "x": 4680, "y": 940, "w": 460, "page": "page-1",
-      "text": "C — news once, a job when it repeats. RECOMMENDED.\n\nOnce, it is something that happened: a span on What happened, in B's words, with the times it began and ended. That is the page built for exactly this — design/happened ruled that a finding is a span, and that Needs a look is for things that have stopped answering. Nothing on Home, no chip for an hour, no row without a button.\n\nIt stops being news and becomes a job when it repeats: the third time in a week, a line on Needs a look that says what the pattern means and carries the one thing that helps from the wall, Back up. That is the case piece 8 actually fears — not one power cut, but a card slowly failing while the house quietly patches over it — and it is the only version of this that ever asks somebody to do anything.\n\nThe host writes a record the brain can read (what it started, when); the brain puts it in the event log, and happened.py and health.py read it from there. Three in a week and the wording are guesses to rule on."
+      "x": 1560,
+      "y": 940,
+      "w": 460,
+      "page": "page-1",
+      "text": "C — news once, a job when it repeats. CHOSEN, 26 September. Built: brain/hub/healed.py, pinned by brain/tests/test_healed.py.\n\nOnce, it is something that happened: a span on What happened, in B's words, with the times it began and ended. That is the page built for exactly this — design/happened ruled that a finding is a span, and that Needs a look is for things that have stopped answering. Nothing on Home, no chip for an hour, no row without a button.\n\nIt stops being news and becomes a job when it repeats: the third time in a week, a line on Needs a look that says what the pattern means and carries the one thing that helps from the wall, Back up. That is the case piece 8 actually fears — not one power cut, but a card slowly failing while the house quietly patches over it — and it is the only version of this that ever asks somebody to do anything.\n\nThe host writes a record the brain can read (what it started, when); the brain puts it in the event log, and happened.py and health.py read it from there. Three in a week and the wording are guesses to rule on."
     }
   ],
-  "launch": { "view": "canvas" }
+  "launch": {
+    "view": "canvas"
+  }
 }

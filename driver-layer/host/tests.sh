@@ -302,7 +302,8 @@ watchdog() {
 [ -f "$FAKE/no-daemon" ] && exit 1
 case "$1 ${2:-} ${3:-}" in
   "compose config --services") printf 'mosquitto\nhomeassistant\nbrain\n' ;;
-  "compose ps -a")             cat "$FAKE/states" ;;
+  "compose ps -a")             [ "${4:-}" = -q ] && echo "id-$5" || cat "$FAKE/states" ;;
+  "inspect -f {{.State.FinishedAt}}") echo "2026-09-26T22:29:45.477055085Z" ;;
   "compose up -d")             shift 3; echo "$*" >> "$FAKE/up" ;;
 esac
 D
@@ -313,7 +314,7 @@ C
   chmod +x "$bin/docker" "$bin/curl"
 
   run() {  # states, one "service state" per line
-    printf '%b' "$1" > "$fake/states"; rm -f "$fake/up" "$data/restart.json"
+    printf '%b' "$1" > "$fake/states"; rm -f "$fake/up" "$data/restart.json" "$data/healed.jsonl"
     PATH="$bin:$PATH" FAKE="$fake" HOME_HUB_DIR="$dir" HOME_HUB_WATCHDOG_GAP=0 "$HERE/watchdog.sh" >/dev/null 2>&1
   }
   up() { cat "$fake/up" 2>/dev/null || echo nothing; }
@@ -323,6 +324,10 @@ C
   is "the broker left exited is started, and only it" "$(up)" mosquitto
   [ -f "$data/restart.json" ] && no "...without telling the brain it restarted" "restart.json was written" \
                               || ok "...without telling the brain it restarted, because it did not"
+  # What the brain reads to say so on What happened: the part, and when Docker says it stopped.
+  python3 -c 'import json,sys; r=json.loads(open(sys.argv[1]).read()); print(r["parts"][0]["service"], r["parts"][0]["stopped"][:19], "at" in r)' \
+    "$data/healed.jsonl" > "$fake/said" 2>&1
+  is "...and writes down what it started, and when that stopped" "$(cat "$fake/said")" "mosquitto 2026-09-26T22:29:45 True"
 
   run 'homeassistant running\nbrain running\n'
   is "a part that was never created is started" "$(up)" mosquitto
@@ -332,6 +337,7 @@ C
 
   run 'mosquitto running\nhomeassistant running\nbrain running\n'
   is "a whole house is left alone" "$(up)" nothing
+  [ -f "$data/healed.jsonl" ] && no "...and writes nothing down" "healed.jsonl was written" || ok "...and writes nothing down"
 
   touch "$data/update.request"
   run 'mosquitto exited\nhomeassistant running\nbrain running\n'

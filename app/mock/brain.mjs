@@ -337,6 +337,12 @@ const notes = process.env.NEEDSLOOK ? [
              ask: 'Remove the Hallway bridge? Its switches stop appearing on the panel; they keep working on the wall.' }] },
   { kind: 'storage', subject: null, since: null, acts: [], text: "The hub's storage is nearly full: 35.5 GB left." },
 ] : []
+// HEALED=1: the hub has had to start Messages itself for the third time this week (healed.py,
+// design/healed/ direction C). Once is a line on What happened and nothing here; this is the repeat.
+if (process.env.HEALED === '1') notes.push({ kind: 'healed', subject: null, since: now - 3600,
+  text: 'The hub has lost power 3 times this week, and each time Messages did not start again by itself.',
+  more: "A power cut can wear out the hub's memory card. A backup now means nothing is lost if it goes.",
+  acts: [{ do: 'Back up', act: 'backup', to: null }] })
 // NEEDSLOOK=many: a house where a lot has gone quiet with nothing in common, for the fold on the page.
 if (process.env.NEEDSLOOK === 'many') {
   for (const q of quietOnes.concat(quietOnes.map(q => ({ ...q, id: q.id + 'b', name: q.name + ' 2' })))) {
@@ -661,6 +667,10 @@ const bridgeRows = process.env.BRIDGES === 'none' ? [] : [
         { kind: 'over', subject: 'f1', seconds: 27420, ts: Date.now() / 1000 - 12 * 3600, word: 'unlocked', when: 'last night',
           text: 'Front door was unlocked for 7 hours overnight, 11:03pm to 6:40am. It is locked now.',
           where: 'Front door · a lock', acts: [] },
+        // The hub starting a part of itself again (healed.py): a span like any other, and no button.
+        { kind: 'over', subject: 'healed:mosquitto', seconds: 600, ts: Date.now() / 1000 - 7 * 3600, word: 'hub', when: '11:29am – 11:39am',
+          text: 'The hub lost power at 11:29am. When it came back, Messages did not, so Hallway switch and Landing light were cut off until the hub started it again itself.',
+          acts: [] },
         { kind: 'over', subject: 'cover.garage', seconds: 7200, ts: Date.now() / 1000 - 5 * 3600, word: 'open', when: '1:12pm',
           text: 'Garage door was open for 2 hours, 1:12pm to 3:12pm. It is closed now.',
           where: 'Garage · a blind', acts: [] },
