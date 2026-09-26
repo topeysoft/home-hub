@@ -286,9 +286,68 @@ radios() {
 }
 
 
+# ------------------------------------------------------- a part left stopped after the plug was pulled
+# The broker came back from a power cut marked exited and nothing started it; the brain kept answering,
+# so the watchdog, which only asked the brain, saw a healthy house while every puck was locked out.
+watchdog() {
+  group "A part that did not come back after a power cut is started"
+  local root; root="$(mktemp -d)"
+  local dir="$root/hub" bin="$root/bin" fake="$root/fake" data
+  data="$dir/driver-layer/brain-data"
+  mkdir -p "$bin" "$fake" "$data"
+
+  # $FAKE/states is what `compose ps -a` would print; `compose up` is written down, not done.
+  cat > "$bin/docker" <<'D'
+#!/usr/bin/env bash
+[ -f "$FAKE/no-daemon" ] && exit 1
+case "$1 ${2:-} ${3:-}" in
+  "compose config --services") printf 'mosquitto\nhomeassistant\nbrain\n' ;;
+  "compose ps -a")             cat "$FAKE/states" ;;
+  "compose up -d")             shift 3; echo "$*" >> "$FAKE/up" ;;
+esac
+D
+  cat > "$bin/curl" <<'C'
+#!/usr/bin/env bash
+[ -f "$FAKE/answering" ]
+C
+  chmod +x "$bin/docker" "$bin/curl"
+
+  run() {  # states, one "service state" per line
+    printf '%b' "$1" > "$fake/states"; rm -f "$fake/up" "$data/restart.json"
+    PATH="$bin:$PATH" FAKE="$fake" HOME_HUB_DIR="$dir" HOME_HUB_WATCHDOG_GAP=0 "$HERE/watchdog.sh" >/dev/null 2>&1
+  }
+  up() { cat "$fake/up" 2>/dev/null || echo nothing; }
+  touch "$fake/answering"
+
+  run 'mosquitto exited\nhomeassistant running\nbrain running\n'
+  is "the broker left exited is started, and only it" "$(up)" mosquitto
+  [ -f "$data/restart.json" ] && no "...without telling the brain it restarted" "restart.json was written" \
+                              || ok "...without telling the brain it restarted, because it did not"
+
+  run 'homeassistant running\nbrain running\n'
+  is "a part that was never created is started" "$(up)" mosquitto
+
+  run 'mosquitto restarting\nhomeassistant running\nbrain running\n'
+  is "a part compose is already restarting is left to compose" "$(up)" nothing
+
+  run 'mosquitto running\nhomeassistant running\nbrain running\n'
+  is "a whole house is left alone" "$(up)" nothing
+
+  touch "$data/update.request"
+  run 'mosquitto exited\nhomeassistant running\nbrain running\n'
+  is "an update in flight is not raced" "$(up)" nothing
+  rm -f "$data/update.request"
+
+  touch "$fake/no-daemon"
+  run 'mosquitto exited\n'
+  is "a docker that does not answer starts nothing" "$(up)" nothing
+  rm -rf "$root"
+}
+
+
 for need in git openssl curl python3; do
   command -v "$need" >/dev/null 2>&1 || { echo "these tests need $need"; exit 2; }
 done
-signatures; holds; undo; radios
+signatures; holds; undo; radios; watchdog
 printf '\n%s passed, %s failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
