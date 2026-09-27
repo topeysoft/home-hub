@@ -1,0 +1,135 @@
+{
+  "artboards": [
+    {
+      "file": "Today.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 964,
+      "title": "Today — the sky, and nothing else",
+      "is_interactive": true
+    },
+    {
+      "file": "AmbientA.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 964,
+      "title": "A — a field of slow color, fed by the house",
+      "is_interactive": true
+    },
+    {
+      "file": "GlowB.dc.html",
+      "x": 3120,
+      "y": 0,
+      "w": 1440,
+      "h": 964,
+      "title": "B — the sky stays; a light glows behind its card",
+      "is_interactive": true
+    },
+    {
+      "file": "StillC.dc.html",
+      "x": 4680,
+      "y": 0,
+      "w": 1440,
+      "h": 964,
+      "title": "C — still; the room colors the wall, then it holds",
+      "is_interactive": true
+    },
+    {
+      "file": "PoolsD.dc.html",
+      "x": 1560,
+      "y": 1700,
+      "w": 1440,
+      "h": 964,
+      "title": "D — a dark room with pools of light",
+      "is_interactive": true
+    },
+    {
+      "file": "RoomE.dc.html",
+      "x": 3120,
+      "y": 1700,
+      "w": 1440,
+      "h": 964,
+      "title": "E — a room, and your lights light it",
+      "is_interactive": true
+    },
+    {
+      "file": "GlareF.dc.html",
+      "x": 4680,
+      "y": 1700,
+      "w": 1440,
+      "h": 964,
+      "title": "F — slanted light, like glare",
+      "is_interactive": true
+    }
+  ],
+  "annotations": [
+    {
+      "id": "why",
+      "x": -620,
+      "y": 0,
+      "w": 500,
+      "text": "THE ASK, 26 SEPTEMBER\n\nBeing able to choose what is behind the cards, instead of always getting the weather and the time of day. Something that moves slowly and is beautiful, and that reacts to the house: an RGB light set to a color, or whatever color is strongest on screen, showing up as a soft glow or gradient behind everything. So the wall always looks good.\n\nWHAT MAKES THIS CHEAP. A card never has a fixed color. tone.ts gives it a distance from the field behind it, and it reads that field from the same three sky colors Sky.vue paints with. Any backdrop that can give three colors keeps every card readable without touching a card.\n\nTHREE RULES ALL THE DIRECTIONS KEEP.\n\nTamed, not copied. A bulb's color is an emitter color. On a screen at full strength a red bulb paints the wall like an alarm. So a source keeps only its hue, its lightness is set a fixed distance above the hour's field, and its chroma is capped. Flip Light to Red on any board to see the cap working.\n\nThe house, not the screen. \"The strongest color on screen\" is circular: cards take their color from the background, so a background that takes its color from the cards would feed on itself. What counts is outside the panel: lights that are on, and the art of whatever is playing.\n\nThe hour still counts. Even with the sky gone, the field is dark after dark and open by day. A wall glowing like noon at 3am is wrong in any direction.\n\nEVERY BOARD RUNS. The chips under each screen are board chrome, not panel. Speed 6x is only so the path can be seen on a board. Real speed is the speed it would ship at.\n\nWHERE THE CHOICE WOULD LIVE is How it looks, which today asks one question on purpose. Whether this becomes a second question there, or a fourth answer beside the three feels, is for after a direction is picked, and gets its own board."
+    },
+    {
+      "id": "today",
+      "x": 0,
+      "y": -560,
+      "w": 560,
+      "text": "TODAY: THE SKY, AND NOTHING ELSE\n\nDrawn from the evening home screen on the mock house. The sky follows the sun and the weather (Sky.vue), the veil darkens it toward the ground (.sky-veil), and the glass cards take their color through it.\n\nNothing in the house reaches the sky. Turn the ceiling light to red, turn the shelf strip on, pause the TV: the wall behind the cards does not change. The only colored thing in the room that the screen shows is the card for it.\n\nThis is also the reference for how the three directions are judged. The sky is already beautiful at dusk. Whatever replaces it has to be at least as good at 7pm, and much better at noon on a gray day and at 11pm, when today's sky is a flat dark field."
+    },
+    {
+      "id": "a",
+      "x": 1560,
+      "y": -560,
+      "w": 560,
+      "text": "A: A FIELD OF SLOW COLOR, FED BY THE HOUSE\n\nThe sky is replaced. Six soft shapes of color drift on paths three to ten minutes long, too slow to catch out of the corner of an eye. Each colored thing that is on claims two of them in its own hue, strongest first, four at most. The rest keep the hour's colors: indigo after dark, violet and ember at dusk, open blue by day.\n\nFOR: this is the ask, as it was said. The wall is always moving, always different, and a lamp you can't see on screen (the shelf strip, scrolled off the edge) still colors the whole room. With everything off it still has a mood, taken from the hour.\n\nAGAINST: it throws away the weather. The sky is how the wall says \"it is raining\" without a word. It is also the most expensive: a canvas redrawn every frame, though at a tenth of the wall's resolution, which a Pi 5 carries easily. And two or three colors on at once can turn a field muddy. Warm white at noon, on this board, is the case to look at.\n\nTHE KNOB IT NEEDS: none past choosing it. Speed and strength are fixed."
+    },
+    {
+      "id": "b",
+      "x": 3120,
+      "y": -560,
+      "w": 560,
+      "text": "B: THE SKY STAYS; A LIGHT GLOWS BEHIND ITS CARD\n\nNothing is taken away. The sky ships as it is, and a colored thing that is on lights the wall behind its own card, the way a lamp against a real wall would. The glow sits over the veil and under the glass, breathes on a twenty-second cycle, and fades over two seconds when the light turns off.\n\nFOR: it keeps the weather, it adds the house, and it is the only direction where the glow means something. It is always where the thing is, so it doubles as a pointer: the red corner of the wall is the red light. A strip scrolled off the edge glows in from that edge. It is also not a new setting: it could simply be how the sky behaves.\n\nAGAINST: it is the answer to half the ask. The background is still the sky, not a choice. And a glow is tied to where cards are, so it moves when the layout moves: on Rooms it glows behind rooms, not lamps, which needs its own rule."
+    },
+    {
+      "id": "c",
+      "x": 4680,
+      "y": -560,
+      "w": 560,
+      "text": "C: STILL; THE ROOM COLORS THE WALL, THEN IT HOLDS\n\nNothing moves, ever. The wall is a quiet gradient in the hour's colors, and the one thing it reacts to is what is on. The strongest colored thing takes the lower left, the next the upper right, and a change crossfades over three seconds and then holds.\n\nFOR: the calmest and cheapest. It costs nothing to draw, so it suits the smallest host and a wall at rest all night. It still does the part of the ask that people notice first: turn the lights purple and the wall goes purple.\n\nAGAINST: it gives up \"subtly moving\", which was half of what was asked for. And with nothing on it is a plain gradient, handsome but plain, where today's sky and A both have something to look at.\n\nA POSSIBLE PAIRING, NOT DRAWN: C as what A and B fall back to at rest, or on a host too small to animate."
+    },
+    {
+      "id": "ref",
+      "x": -620,
+      "y": 1700,
+      "w": 500,
+      "text": "SECOND ROUND, 26 SEPTEMBER: A AND C WERE CLOSEST, BUT NOT THERE\n\nThe reference given was a wall panel whose background is a dark room lit from inside: a lamp with a glowing shade in the middle, a vivid green edge of light by a wardrobe, and everything else near black. The cards are glass over it.\n\nWHAT THAT PICTURE DOES THAT A AND C DO NOT. A and C spread color evenly across the whole wall, and color spread evenly goes flat, then muddy. The reference keeps the wall dark and puts its color in a few small places, each with a source and a long falloff. Contrast is what makes it look rich, not saturation. A vivid color is fine when it covers a small part of the wall.\n\nSo the taming rule changes for both new boards. Before, a color's strength was capped. Now the area it covers is capped, and its core may be vivid.\n\nD is that idea kept abstract: A's motion, pools instead of a wash. E takes the reference literally: the background is a room. A MOTION chip on both has STILL, which is C's answer: the same picture, held."
+    },
+    {
+      "id": "d",
+      "x": 1560,
+      "y": 1140,
+      "w": 560,
+      "text": "D: A DARK ROOM WITH POOLS OF LIGHT\n\nThe wall stays near black, leaning toward the hour's hue. Each thing that is on is a pool of its own color: a soft core and a long falloff. Quietened after the first look (26 September): the core keeps the lamp's hue at about half its first strength, a little taller than wide because light falls. Every pool has a home on the wall near its card (the ceiling light high on the right, the strip at the right edge, the TV low on the left) and drifts a short way around it on a path minutes long.\n\nWith nothing on, the hour keeps one pool: moonlight high on the left at night, a low ember at dusk, broad pale daylight from above at noon. The wall is never flat.\n\nFOR: A's motion and C's calm, without the mud. Two or three colors on at once stay apart because they live in different places. It is cheap: a handful of gradients drawn at half resolution.\n\nAGAINST: it is still abstract. It's light, but not a place, and the weather is down to the illustration in the corner."
+    },
+    {
+      "id": "e",
+      "x": 3120,
+      "y": 1140,
+      "w": 560,
+      "text": "E: A ROOM, AND YOUR LIGHTS LIGHT IT\n\nThe reference, taken at its word. A dark interior sits behind the cards: an arched window on the left, a floor lamp on the right, a shelf with a strip on the far edge, a floor. The ceiling light's color is the lamp's shade and the pool it throws on the wall and floor. The strip is a neon edge with its wash. A playing TV flickers in from off the bottom left in the color of what is on.\n\nAND THE SKY GOES INTO THE WINDOW. Dusk is ember through the glass, noon is blue and spills daylight on the floor, night is dark with stars. The weather keeps a place, the one place a room would show it.\n\nFOR: the most beautiful at its best, and the only direction where the background means something at a glance. A lamp on the wall means a lamp is on.\n\nAGAINST: it is a drawing of a room, not your room. Its lamp is not your lamp, and a house with no floor lamp still sees one. A drawn room goes stale the way a wallpaper does. It is also the most work to make well: this board is a sketch, and the shipped one would want real rendered art, like the reference, not canvas shapes."
+    },
+    {
+      "id": "f",
+      "x": 4680,
+      "y": 1140,
+      "w": 560,
+      "text": "F: SLANTED LIGHT, LIKE GLARE\n\nAsked for after D was quietened (26 September): D's dark room and quiet colors, with the light falling as shafts running from the top of the wall down and to the right, like sun through a high window or glare on glass.\n\nEach thing that is on is a wide, diffused band of its color leaning 24 degrees, with a faint brighter seam inside it, which is the glare. Diffused after the first look (26 September): the shafts are about half again as wide, blurred so no edge can be found, and the seam is a soft brightening rather than a line. Every shaft fades out toward the floor, so the light lives at the top of the wall and the bottom stays dark under the orb and the people. Shafts slide sideways a short way on paths minutes long and breathe a little in width. With nothing on, the hour keeps one shaft: cool at night, ember at dusk, pale at noon.\n\nFOR: it has a direction, which D's pools do not. The wall reads as lit from somewhere, and all the shafts lean the same way, so two or three colors look like one light source through one window rather than scattered spots. The glare seam gives the glass cards something to catch.\n\nONE SHAFT LEADS (26 September, after a second look). The strongest thing that is on takes the middle of the wall, wider and a little brighter (brought down a step after a look, 26 September), and only it carries the glare seam. Everything else stands to either side at about half strength. With nothing on, the hour takes the middle. Turn a stronger light on and the shafts walk to their new places over a couple of seconds.\n\nAGAINST: a shaft no longer sits near its card, so it doesn't say where the thing is. Where it stands says how much it counts instead. The strip's shaft is not beside the strip."
+    }
+  ],
+  "launch": {
+    "view": "canvas"
+  }
+}

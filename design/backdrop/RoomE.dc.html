@@ -1,0 +1,97 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Room E</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500&family=Plus+Jakarta+Sans:wght@200;300;400;500&display=swap">
+<link rel="stylesheet" href="scene.css">
+</head>
+<body>
+<div class="board"></div>
+<script src="scene.js"></script>
+<script>
+/* E: the background is a room, and your lights light it. A dark interior is drawn
+   behind the cards: a window on the left, a long sideboard, a floor lamp, a shelf
+   with a strip on the right. The ceiling light's color is the lamp's shade and the
+   pool it throws on the wall; the strip is a neon edge and its wash; a playing TV
+   flickers in from off the bottom left in the color of what is on.
+
+   The sky is not thrown away. It moves into the window: dusk is ember through the
+   glass, noon is blue and lights the floor, night is dark with stars. So the weather
+   still has a place, and it is the one place a room would show it. */
+window.Backdrop = {
+  mount(el, over) {
+    const mk = (parent, blend) => { const c = document.createElement('canvas'); c.width = 1440; c.height = 900; c.style.cssText = 'position:absolute;inset:0;' + (blend ? 'mix-blend-mode:screen' : ''); parent.appendChild(c); return c.getContext('2d') }
+    this.r = mk(el); this.l = mk(over, true); this.lights = {}; this.last = performance.now()
+  },
+  update({ hour, sources, s }) {
+    this.hour = hour; this.H = s.hour
+    for (const id of ['lamp', 'strip', 'tv']) { const o = sources.find((x) => x.id === id); const L = this.lights[id] ??= { a: 0, col: [0, 0, 0] }; L.ta = o ? o.strength : 0; if (o) { const [, C, h] = Scene.oklch(o.rgb); L.to = Scene.rgbOf([.7, Math.min(C, .19), h]) } }
+  },
+  frame(t) {
+    const now = performance.now(), k = 1 - Math.exp(-(now - this.last) / 700); this.last = now
+    for (const L of Object.values(this.lights)) { L.a += (L.ta - L.a) * k; if (L.to) for (let j = 0; j < 3; j++) L.col[j] += (L.to[j] - L.col[j]) * k }
+    const x = this.r, H = this.H, day = H === 'noon', css = Scene.css
+    const wallL = { night: .1, dusk: .12, noon: .22 }[H]
+    // wall and floor
+    let g = x.createLinearGradient(0, 0, 0, 780)
+    g.addColorStop(0, css(Scene.rgbOf([wallL * .8, .012, 4.6]))); g.addColorStop(1, css(Scene.rgbOf([wallL, .014, 4.9])))
+    x.fillStyle = g; x.fillRect(0, 0, 1440, 780)
+    g = x.createLinearGradient(0, 780, 0, 900); g.addColorStop(0, css(Scene.rgbOf([wallL * .7, .01, 1.2]))); g.addColorStop(1, css(Scene.rgbOf([wallL * .45, .01, 1.2])))
+    x.fillStyle = g; x.fillRect(0, 780, 1440, 120)
+    // the window, with the hour's sky in it
+    const [a, b, c] = this.hour.sky
+    g = x.createLinearGradient(0, 140, 0, 700); g.addColorStop(0, css(a)); g.addColorStop(.6, css(b)); g.addColorStop(1, css(c))
+    x.fillStyle = g; x.beginPath(); x.roundRect(40, 140, 230, 580, [115, 115, 4, 4]); x.fill()
+    if (!day) for (let i = 0; i < 40; i++) { const sx = 50 + (i * 97) % 210, sy = 170 + (i * 53) % 330; x.fillStyle = `rgba(255,255,255,${(H === 'night' ? .7 : .25) * (.5 + .5 * Math.sin(t * .7 + i))})`; x.fillRect(sx, sy, 1.6, 1.6) }
+    x.strokeStyle = css(Scene.rgbOf([wallL * .5, .01, 4.6])); x.lineWidth = 10
+    x.beginPath(); x.roundRect(40, 140, 230, 580, [115, 115, 4, 4]); x.stroke()
+    x.lineWidth = 6; x.beginPath(); x.moveTo(155, 140); x.lineTo(155, 720); x.moveTo(40, 440); x.lineTo(270, 440); x.stroke()
+    // sideboard
+    x.fillStyle = css(Scene.rgbOf([wallL * .55, .01, 1])); x.fillRect(320, 712, 800, 80)
+    x.fillStyle = css(Scene.rgbOf([wallL * .4, .01, 1])); x.fillRect(340, 792, 12, 30); x.fillRect(1088, 792, 12, 30)
+    // shelf on the right
+    x.fillStyle = css(Scene.rgbOf([wallL * .6, .01, 1])); x.fillRect(1392, 120, 48, 680)
+    // floor lamp: pole, base, drum shade
+    x.fillStyle = css(Scene.rgbOf([wallL * .5, .005, 1])); x.fillRect(1247, 190, 6, 610)
+    x.beginPath(); x.ellipse(1250, 802, 46, 8, 0, 0, 7); x.fill()
+    const lamp = this.lights.lamp
+    const shade = new Path2D('M1182 100 L1318 100 L1352 196 L1148 196 Z')
+    x.fillStyle = css(Scene.rgbOf([wallL * .9, .01, 1])); x.fill(shade)
+
+    // light, on its own layer so it adds rather than covers
+    const l = this.l; l.clearRect(0, 0, 1440, 900); l.globalCompositeOperation = 'lighter'
+    const pool = (cx, cy, rx, ry, col, a, core = .75) => {
+      l.save(); l.translate(cx, cy); l.scale(1, ry / rx)
+      const q = l.createRadialGradient(0, 0, 0, 0, 0, rx)
+      q.addColorStop(0, css(col, core * a)); q.addColorStop(.18, css(col, .35 * a)); q.addColorStop(.5, css(col, .1 * a)); q.addColorStop(1, css(col, 0))
+      l.fillStyle = q; l.fillRect(-rx, -rx, 2 * rx, 2 * rx); l.restore()
+    }
+    // daylight or dusk through the window, spilling onto the floor
+    const win = Scene.tame(c, day ? .8 : .6, day ? .05 : .12), wa = { night: .12, dusk: .55, noon: .9 }[H]
+    pool(155, 560, 300, 420, win, wa, .3)
+    pool(260, 860, 380, 70, win, wa * .8, .5)
+    if (lamp.a > .01) {
+      const a = lamp.a * (1 + .03 * Math.sin(t / 3.1))
+      // a fabric shade lit from inside: dim at the top, brightest at the lower rim
+      const sg = l.createLinearGradient(0, 100, 0, 196)
+      sg.addColorStop(0, css(lamp.col, .28 * a)); sg.addColorStop(.75, css(lamp.col, .55 * a)); sg.addColorStop(1, css(Scene.tame(lamp.col, .9, .06), .8 * a))
+      l.fillStyle = sg; l.fill(shade)
+      pool(1250, 200, 460, 380, lamp.col, a * .8, .5)          // the wall around the shade
+      pool(1250, 800, 300, 60, lamp.col, a * .9, .6)   // its pool on the floor
+    }
+    const st = this.lights.strip
+    if (st.a > .01) {
+      l.fillStyle = css(st.col, .95 * st.a); l.fillRect(1394, 130, 6, 660)
+      pool(1400, 460, 260, 520, st.col, st.a, .9)
+    }
+    const tv = this.lights.tv
+    if (tv.a > .01) {
+      // a screen's light is never steady: a slow swell with a quicker flicker riding on it
+      const f = .75 + .15 * Math.sin(t * 1.3) + .1 * Math.sin(t * 5.7 + Math.sin(t * 2.1))
+      pool(-40, 930, 620, 360, tv.col, tv.a * f, .55)
+    }
+  },
+}
+Scene.init({ groups: ['hour', 'lamp', 'strip', 'tv', 'speed'], tag: 'E — a room, and your lights light it', defaults: { speed: 1 } })
+</script>
+</body>
+</html>

@@ -1,0 +1,75 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Pools D</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500&family=Plus+Jakarta+Sans:wght@200;300;400;500&display=swap">
+<link rel="stylesheet" href="scene.css">
+</head>
+<body>
+<div class="board"></div>
+<script src="scene.js"></script>
+<script>
+/* D: a dark room with a few pools of light in it. Where A washed the whole wall in
+   color, this keeps the wall near black and puts the color in a few small places,
+   each with a core and a long falloff, the way a lamp lights a wall at night. Kept
+   quiet on purpose (26 September): a core is a hint of the lamp's hue, not the lamp,
+   so a red bulb reads as a warm red corner rather than a red light.
+
+   Each thing that is on is a pool with a home on the wall, and drifts a little way
+   around it on a path minutes long. With nothing on, the hour keeps one pool of its
+   own: moonlight high on the left at night, a low ember at dusk, a broad pale
+   daylight from above at noon. Motion: Still holds every pool where it is. */
+window.Backdrop = {
+  mount(el, over) {
+    const mk = (parent, blend) => { const c = document.createElement('canvas'); c.width = 720; c.height = 450; c.style.cssText = 'position:absolute;inset:0;width:1440px;height:900px;' + (blend ? 'mix-blend-mode:screen' : ''); parent.appendChild(c); return c.getContext('2d') }
+    this.base = mk(el); this.x = mk(over, true)
+    this.pools = {}; this.last = performance.now()
+  },
+  update({ hour, sources, s }) {
+    const D = Math.PI / 180, H = s.hour
+    /* the room itself: almost black, leaning to the hour's hue */
+    const b = this.base, top = Scene.rgbOf([{ night: .1, dusk: .13, noon: .24 }[H], .02, { night: 265, dusk: 290, noon: 240 }[H] * D]),
+          bot = Scene.rgbOf([{ night: .07, dusk: .09, noon: .17 }[H], .015, { night: 260, dusk: 300, noon: 230 }[H] * D])
+    const g = b.createLinearGradient(0, 0, 0, 450); g.addColorStop(0, Scene.css(top)); g.addColorStop(1, Scene.css(bot))
+    b.fillStyle = g; b.fillRect(0, 0, 720, 450)
+    /* where each thing's light lives on the wall: near its card, but not pinned to it */
+    const HOME = { lamp: [600, 70, 1], strip: [712, 300, 1.25], tv: [150, 410, 1.1] }
+    const OWN = {
+      night: { at: [110, 40, 1.6], c: [.55, .07, 250] },
+      dusk: { at: [560, 440, 2], c: [.56, .08, 45] },
+      noon: { at: [360, -60, 3], c: [.85, .06, 230] },
+    }[H]
+    const want = sources.map((o) => {
+      const [L, C, h] = Scene.oklch(o.rgb)
+      return { id: o.id, at: HOME[o.id], core: Scene.rgbOf([.58, Math.min(C, .1), h]), a: o.strength }
+    })
+    if (!want.length) want.push({ id: 'hour', at: OWN.at, core: Scene.rgbOf([OWN.c[0], OWN.c[1], OWN.c[2] * D]), a: .8 })
+    else want.push({ id: 'hour', at: OWN.at, core: Scene.rgbOf([OWN.c[0], OWN.c[1], OWN.c[2] * D]), a: .3 })
+    for (const p of Object.values(this.pools)) p.ta = 0
+    want.forEach((w, i) => {
+      const p = this.pools[w.id] ??= { a: 0, col: w.core.slice(), ph: i * 2.1 + w.id.length }
+      Object.assign(p, { at: w.at, to: w.core, ta: w.a })
+    })
+  },
+  frame(t) {
+    const now = performance.now(), k = 1 - Math.exp(-(now - this.last) / 900); this.last = now
+    const x = this.x
+    x.clearRect(0, 0, 720, 450); x.globalCompositeOperation = 'lighter'
+    for (const p of Object.values(this.pools)) {
+      p.a += (p.ta - p.a) * k; for (let j = 0; j < 3; j++) p.col[j] += (p.to[j] - p.col[j]) * k
+      if (p.a < .01) continue
+      const [hx, hy, sz] = p.at
+      const cx = hx + 34 * Math.sin(t / 190 + p.ph), cy = hy + 22 * Math.sin(t / 260 + p.ph * 1.7)
+      const R = 300 * sz * (1 + .05 * Math.sin(t / 23 + p.ph))
+      x.save(); x.translate(cx, cy); x.scale(1, 1.25)     // light falls, so a pool is taller than wide
+      const g = x.createRadialGradient(0, 0, 0, 0, 0, R)
+      const c = p.col, a = p.a
+      g.addColorStop(0, Scene.css(c, .6 * a)); g.addColorStop(.06, Scene.css(c, .42 * a)); g.addColorStop(.2, Scene.css(c, .2 * a))
+      g.addColorStop(.45, Scene.css(c, .07 * a)); g.addColorStop(1, Scene.css(c, 0))
+      x.fillStyle = g; x.fillRect(-R, -R, 2 * R, 2 * R); x.restore()
+    }
+  },
+}
+Scene.init({ groups: ['hour', 'lamp', 'strip', 'tv', 'speed'], tag: 'D — a dark room with pools of light' })
+</script>
+</body>
+</html>
