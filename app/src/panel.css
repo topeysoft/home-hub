@@ -2745,13 +2745,25 @@ input:focus-visible {
   text-shadow: 0 2px 24px rgba(0, 0, 0, 0.55);
 }
 /* The resting wall is read from across the room, so the facts are the big type and the clock gives up a
-   little size to pay for it. design/rest/LedgerB2.dc.html, and resting.ts for what the facts say. */
+   little size to pay for it. design/rest/CornerF.dc.html, and resting.ts for what the facts say. */
 .idle-time {
   font-size: clamp(96px, 12.5vw, 180px);
   line-height: 1;
   letter-spacing: -0.04em;
   color: var(--ink);
   font-variant-numeric: tabular-nums;
+}
+/* AM and PM at about a third of the digits, on their baseline: the hour is what is read from across the room */
+.idle-period {
+  margin-left: 0.07em;
+  font-size: 0.31em;
+  font-weight: 300;
+  letter-spacing: 0;
+}
+.idle-fact-period {
+  margin-left: 6px;
+  font-size: 0.46em;
+  letter-spacing: 0;
 }
 .idle-day {
   margin-top: 4px;
@@ -2762,7 +2774,7 @@ input:focus-visible {
 }
 .idle-facts {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   margin-top: 64px;
   max-width: calc(100vw - 64px);
 }
@@ -2771,7 +2783,8 @@ input:focus-visible {
   flex-direction: column;
   align-items: center;
   min-width: 0;
-  padding: 0 clamp(20px, 3vw, 44px);
+  max-width: 330px;
+  padding: 0 clamp(20px, 3vw, 40px);
   color: var(--ink);
 }
 .idle-fact + .idle-fact {
@@ -2792,15 +2805,52 @@ input:focus-visible {
 .idle-fact-value svg {
   flex: none;
 }
+/* A long routine name wraps to two lines under its time and then ends in an ellipsis, rather than
+   pushing the row off both edges of the wall. The padding is room for the resting screen's text
+   shadow, which the clipped span inside would otherwise cut into a visible box. */
 .idle-fact-where {
   max-width: 100%;
-  margin-top: 12px;
+  margin-top: 4px;
+  padding: 8px 10px;
   font-size: 21px;
+  line-height: 1.3;
+  text-align: center;
   color: var(--ink);
   opacity: 0.85;
-  white-space: nowrap;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.5);
+}
+.idle-fact-where span {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
+}
+/* the weather, drawn as Home draws it, in the top right corner and as large as the facts */
+.idle-wx {
+  position: absolute;
+  top: 56px;
+  right: 64px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  color: var(--ink);
+}
+.idle-wx svg {
+  width: 170px;
+  height: auto;
+  overflow: visible;
+}
+.idle-wx-temp {
+  font-size: 84px;
+  font-weight: 300;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+.idle-wx-label {
+  margin-top: 6px;
+  font-size: 22px;
+  opacity: 0.85;
 }
 .idle-line {
   margin-top: 14px;

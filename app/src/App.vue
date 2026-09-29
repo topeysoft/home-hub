@@ -25,7 +25,8 @@ import { isPage } from './pages'
 import Opened from './Opened.vue'
 import WeatherPane from './WeatherPane.vue'
 import Icon from './Icon.vue'
-import { dayLine, restClock, restingFacts } from './resting'
+import { clockParts, restingFacts, restWeather } from './resting'
+import WeatherArt from './WeatherArt.vue'
 import { glassVars, isTone, toneVars, type ToneName } from './tone'
 import { isFace, isLayout, isNav, type FaceName, type LayoutName, type NavName } from './layout'
 import { feelFrom, placeOf, TOUCHED_AT, READ_AT } from './look'
@@ -133,6 +134,8 @@ const previewAt = new URLSearchParams(location.search).get('at')   // ?at=19:30 
 const shown = computed(() => { if (!previewAt) return now.value; const d = new Date(now.value); const [h, m] = previewAt.split(':').map(Number); d.setHours(h || 0, m || 0, 0, 0); return d })
 const clock = computed(() => shown.value.toLocaleTimeString(locale(), { hour: 'numeric', minute: '2-digit' }))
 const facts = computed(() => idle.value ? restingFacts(shown.value) : [])   // only worked out while the panel rests
+const restWx = computed(() => idle.value ? restWeather() : null)
+const restTime = computed(() => clockParts(shown.value))
 const day = computed(() => shown.value.toLocaleDateString(locale(), { weekday: 'long', month: 'long', day: 'numeric' }))
 
 /* The wall panel rests after a few minutes: a clock, the date, and a row of facts about the house big
@@ -343,12 +346,16 @@ onUnmounted(() => {
 
     <Transition name="idle">
       <div class="idle" v-if="idle" aria-label="Tap to wake">
-        <div class="idle-time display">{{ restClock(shown) }}</div>
-        <div class="idle-day">{{ dayLine(day) }}</div>
+        <div class="idle-wx" v-if="restWx">
+          <WeatherArt />
+          <div><div class="idle-wx-temp display">{{ restWx.temp }}</div><div class="idle-wx-label">{{ restWx.label }}</div></div>
+        </div>
+        <div class="idle-time display">{{ restTime.time }}<span class="idle-period" v-if="restTime.period">{{ restTime.period }}</span></div>
+        <div class="idle-day">{{ day }}</div>
         <div class="idle-facts" v-if="facts.length">
           <div class="idle-fact" v-for="f in facts" :key="f.key" :class="{ live: f.live }">
-            <div class="idle-fact-value"><Icon :name="f.icon" :size="38" /><span>{{ f.value }}</span></div>
-            <div class="idle-fact-where">{{ f.where }}</div>
+            <div class="idle-fact-value"><Icon :name="f.icon" :size="38" /><span>{{ f.value }}<span class="idle-fact-period" v-if="f.period">{{ f.period }}</span></span></div>
+            <div class="idle-fact-where"><span>{{ f.where }}</span></div>
           </div>
         </div>
         <div class="idle-line" v-else>{{ houseLine() }}</div>
