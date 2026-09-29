@@ -73,6 +73,10 @@ that the shipped shape. A PoE Zigbee coordinator (an SMLIGHT SLZB-06 or similar)
 which is never next to an NVMe and a USB 3 port, and the instruction about the extension cable disappears with it. It
 also means a hub with no USB at all, which is what a CM5 box or a mini PC wants to be.
 
+*26 September: the unit with a screen on it puts all three radios on its own board instead, for the same reason this
+section gives, that the radio belongs where the house needs it. `docs/wall-hardware.md` in the hardware repository,
+"The radios on the board". The network coordinator stays the shape for a hub in a closet.*
+
 Z-Wave stays an add-on rather than a bundle: it needs a regional radio per market (US, EU, ANZ and more), which is a
 SKU per region for a feature not every house uses.
 
