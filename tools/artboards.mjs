@@ -49,7 +49,8 @@ async function collections() {
   const out = []
   if (await exists(path.join(DESIGN, 'canvas.json'))) out.push('')
   for (const e of await readdir(DESIGN, { withFileTypes: true })) {
-    if (e.isDirectory() && await exists(path.join(DESIGN, e.name, 'canvas.json'))) out.push(e.name)
+    // A linked directory counts: the wall's boards are linked in from the hardware repository.
+    if ((e.isDirectory() || e.isSymbolicLink()) && await exists(path.join(DESIGN, e.name, 'canvas.json'))) out.push(e.name)
   }
   return out
 }

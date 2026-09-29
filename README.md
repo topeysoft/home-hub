@@ -94,6 +94,10 @@ container before the Pi's first start so the two do not fight over Ring's token.
   before it is code. One directory per area, each with a `canvas.json` placing every board and the
   note that argues it. `tools/dev.sh design` opens the lot in a browser, on the canvas they were
   drawn on. A UI change starts here — see [`AGENTS.md`](AGENTS.md#1-a-screen-is-drawn-before-it-is-built).
+- Boards and enclosures — the puck, the wall panel and their studies — live in a separate, private
+  repository, [`topeysoft/home-hub-hardware`](https://github.com/topeysoft/home-hub-hardware). Every
+  hub clones this one, and no house needs megabytes of board files. Its README says how to view the
+  wall boards here through `design/wall`, which this repository ignores.
 - `matter-bridge/` — the house as Apple Home, Google Home and Alexa see it: a Matter bridge (matter.js on Node)
   with one endpoint per shared thing, so this house's lights and plugs become Matter devices in those apps. It
   decides nothing — `brain/hub/share.py` hands it the list, and the rules about what may leave the house have tests
