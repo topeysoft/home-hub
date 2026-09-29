@@ -1,3 +1,0 @@
-(fp_lib_table
- (lib (name "Puck")(type "KiCad")(uri "${KIPRJMOD}/Puck.pretty")(options "")(descr "Project land patterns"))
-)

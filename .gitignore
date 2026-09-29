@@ -56,3 +56,7 @@ strip/firmware/.vscode
 
 # Bench scratch, and it has a household Wi-Fi password in it. Never committed.
 test.sh
+
+# The wall panel's boards live in the hardware repository; a checkout may link them in here to view
+# them with tools/dev.sh design, and the link must never be committed.
+design/wall

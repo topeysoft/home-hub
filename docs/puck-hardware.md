@@ -154,7 +154,7 @@ The LEDs run from 5 V directly, not from the 3.3 V rail.
   out. On 21 September the answer stopped being a matter of taste: **the proof that a thing is in your house is a
   press on it** (`docs/strip.md` item 23, `design/door/PressIt.dc.html`), the gate lives on the device and not on
   the hub, and a product with no reachable button cannot be adopted through our own door at all. See
-  `hardware/README.md`, which is where that claim now lives for every board rather than only this one.
+  `BOARDS.md` in the hardware repository, which is where that claim now lives for every board rather than only this one.
 
   GPIO4 is deliberately not one of the strapping pins below, so a finger resting on it at power-up cannot change
   how the chip boots. A tap for "dark until morning" is still the obvious second gesture, and factory reset wants
@@ -169,7 +169,7 @@ The LEDs run from 5 V directly, not from the 3.3 V rail.
   approved 58 × 20 mm B2 enclosure uses a captive printed side plunger. Its assumed switch actuator
   center height (0.75 mm above PCB) and 7.95 mm bore height remain provisional until checked against
   the exact component drawing/sample. The routed PCB, not the old 180° placement seed, defines alignment.
-  See `hardware/puck-revA/PCB-STATUS.md` for verification and remaining release blockers.
+  See `puck/puck-revA/PCB-STATUS.md` in the hardware repository for verification and remaining release blockers.
 - **A 4-pin UART header**: GND, GPIO43 (TX), GPIO44 (RX), 3V3. Native USB is not a debug path when native USB is the
   fault.
 - **A 6-pad expansion header** at the board edge, inside the shell: 3V3, 5 V, GND and three spare GPIOs, one pair of
@@ -232,7 +232,7 @@ matter, it is a separate object that gets to be mounted and aimed properly, not 
 - 2-layer, 1.6 mm, and a round outline of roughly 50 mm so a 55 mm shell has wall to be made of.
 - **Three M2 mounting holes on a 44.8 mm bolt circle at {45°, 165°, 285°}, identical in every shell.** Outside
   the ring, 7.4 mm from the nearest LED, and their heads land below the opaque base rim so they cast no shadow
-  on the glow. Solved against the real board by `hardware/puck-revA/gen_pcb.py` rather than chosen. Frozen.
+  on the glow. Solved against the real board by `puck/puck-revA/gen_pcb.py` (hardware repository) rather than chosen. Frozen.
 
 ## The enclosure: FDM is an advantage here, not a compromise
 
@@ -261,7 +261,7 @@ argument that `Shape.dc.html` deliberately left open.
    frozen at the end of this step, because the shells depend on them.
 3. **A shell around the frozen outline**, printed and fitted to nothing — just to confirm the board drops in, the
    USB-C is reachable and the buttons land where fingers go.
-4. **Resolve the blockers in `hardware/puck-revA/PCB-STATUS.md` before ordering assembled prototypes.**
+4. **Resolve the blockers in `puck/puck-revA/PCB-STATUS.md` in the hardware repository before ordering assembled prototypes.**
 5. **Bring-up in order**: 3.3 V rail before anything, then USB enumeration, then flash the existing `esp32s3-ship`
    image with `-DBRIDGE_RGB_PIN=38`, then the light, then a BLE scan next to a real switch with `tools/bridge_watch.py`
    open.
@@ -275,6 +275,6 @@ argument that `Shape.dc.html` deliberately left open.
 - **Whether the light sensor gets populated**, which is really the question of how much the object should do with
   the hub down.
 - **The button's gesture**, which is what rev A is for. *That it exists and can be reached is no longer open* — see
-  above and `hardware/README.md`. What a short press, a long press and a hold should each mean is.
+  above and `BOARDS.md` in the hardware repository. What a short press, a long press and a hold should each mean is.
 - **Whether the hub seat survives `docs/shipping.md`**, above. It changes rev B's connector, not rev A's.
 

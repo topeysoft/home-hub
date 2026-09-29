@@ -1,1 +1,0 @@
-Root-level Gerber.zip, Gerber/, puck-revA-bom.csv, puck-revA-all-pos.csv, puck-revA-all.pos and puck-revA.step predate the common-switch revision. Use manufacturing/20260926-common-switches/ for the matching new BOM, CPL and fabrication ZIP. Source project files are current. Previous files are preserved in the archive backup.
