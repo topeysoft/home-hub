@@ -1,6 +1,0 @@
-# Local KiCad session files; design and validation evidence stay versionable.
-*.kicad_prl
-*.lck
-*-backups/
-.history/
-.DS_Store
