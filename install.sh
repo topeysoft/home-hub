@@ -102,10 +102,16 @@ if [ -d "$DIR/.git" ]; then
 elif [ -f "$HERE/driver-layer/docker-compose.yml" ] && [ "$HERE" != "$DIR" ]; then
   mkdir -p "$DIR"; cp -R "$HERE/." "$DIR/"     # a first install from a copied checkout, without internet
 else
-  # A full clone rather than --depth 1: the tags are how a release is found, and they are only
-  # a few megabytes here.
+  # The whole history rather than --depth 1, because the tags are how a release is found. Only this
+  # hub's own branch, though: a plain clone brings every branch anybody has pushed, and an
+  # experiment on one of them would land in every house installed while it existed. The single
+  # branch carries only the tags inside its own history, and a release can be tagged off it (v0.5.0
+  # was on development, not main), so every tag is fetched straight after. Without that fetch a new
+  # hub would install the release before the newest one.
   command -v git >/dev/null 2>&1 || pkg git
-  git clone -q "$REPO" "$DIR" && { go_to_ref || exit 3; }
+  git clone -q --single-branch --branch "$BRANCH" "$REPO" "$DIR" \
+    && git -C "$DIR" fetch -q --tags --force origin \
+    && { go_to_ref || exit 3; }
 fi
 cd "$DIR/driver-layer"
 # Code and container move together: a hub on v0.2.0 runs the 0.2.0 image, not whatever is newest. A
