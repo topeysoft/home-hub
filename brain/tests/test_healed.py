@@ -6,7 +6,7 @@ The hub starting a part of itself again, as design/healed/ direction C says it: 
 happened and nothing anywhere else; the third time in a week, a job on Needs a look with Back up on it.
 """
 import json, time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from hub.healed import stamp
 from tests.apptest import ApiTest
@@ -14,7 +14,7 @@ from tests.apptest import ApiTest
 
 def docker(ts: float) -> str:
     """A time the way Docker writes FinishedAt: nine digits of fraction and a Z."""
-    return datetime.fromtimestamp(ts, timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.123456789Z")
+    return datetime.fromtimestamp(ts, UTC).strftime("%Y-%m-%dT%H:%M:%S.123456789Z")
 
 
 class Healed(ApiTest):
