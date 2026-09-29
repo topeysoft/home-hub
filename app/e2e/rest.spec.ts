@@ -88,9 +88,11 @@ test('the house at rest takes a sheet that opened itself with it', async ({ page
   const sheet = page.locator('.sheet-back')
   await expect(sheet, 'the clock had been landing on top of live text').toHaveCSS('opacity', '0')
   await expect(sheet, 'and the first press must wake the wall, not answer the bridge').toHaveCSS('pointer-events', 'none')
-  /* the whole point of the resting screen: the sky is behind it again, not the sheet's own veil */
+  /* the whole point of the resting screen: the sky is behind it again, not the sheet's own veil.
+     The weather rides on the date line and the house is a row of facts (resting.ts). */
   await expect(page.locator('.idle-time')).toBeVisible()
-  await expect(page.locator('.idle-weather')).toBeVisible()
+  await expect(page.locator('.idle-day')).toContainText('°')
+  await expect(page.locator('.idle-facts')).toBeVisible()
 })
 
 test('waking brings the knock back, because the bridge is still knocking', async ({ page }) => {
