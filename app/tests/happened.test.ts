@@ -18,6 +18,10 @@ describe('which glyph a finding wears', () => {
     expect(iconFor(item({ word: 'open' }))).toBe('home')
   })
 
+  it('draws the hub for the hub starting a part of itself again, not a light', () => {
+    expect(iconFor(item({ kind: 'over', subject: 'healed:mosquitto', word: 'hub' }))).toBe('home')
+  })
+
   it('draws a phone for the people group', () => {
     expect(iconFor(item({ kind: 'phone', word: undefined }))).toBe('phone')
   })

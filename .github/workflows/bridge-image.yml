@@ -10,7 +10,7 @@ name: bridge image
 
 on:
   push:
-    branches: [main]
+    branches: [main, development]
     tags: ["v*"]
     paths: ["matter-bridge/**", ".github/workflows/bridge-image.yml"]
   workflow_dispatch:
@@ -22,14 +22,17 @@ permissions:
 
 jobs:
   # Tags bypass branch protection, so a release is verified here before it is published. Pushes to
-  # main skip this: they arrived through a protected branch and were verified on the way in.
+  # main skip this: they arrived through a protected branch and were verified on the way in. Pushes
+  # to development skip it too, for a different reason: ci.yml checks the same commit through the
+  # pull request development always has open to main, and the only hub that follows it is the one on
+  # the desk of whoever pushed.
   verify:
     if: github.ref_type == 'tag'
     uses: ./.github/workflows/ci.yml
 
   build:
     needs: verify
-    # `always()` so a push to main, where verify is skipped rather than run, still builds.
+    # `always()` so a push to a branch, where verify is skipped rather than run, still builds.
     if: always() && needs.verify.result != 'failure' && needs.verify.result != 'cancelled'
     runs-on: ubuntu-latest
     steps:
@@ -49,7 +52,7 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=raw,value=latest,enable=${{ github.ref_type == 'tag' }}
-            type=raw,value=main,enable={{is_default_branch}}
+            type=ref,event=branch
             type=sha
       - uses: docker/build-push-action@v6
         id: build

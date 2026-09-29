@@ -25,7 +25,7 @@ import { isPage } from './pages'
 import Opened from './Opened.vue'
 import WeatherPane from './WeatherPane.vue'
 import Icon from './Icon.vue'
-import { upcomingLine } from './upcoming'
+import { dayLine, restClock, restingFacts } from './resting'
 import { glassVars, isTone, toneVars, type ToneName } from './tone'
 import { isFace, isLayout, isNav, type FaceName, type LayoutName, type NavName } from './layout'
 import { feelFrom, placeOf, TOUCHED_AT, READ_AT } from './look'
@@ -132,10 +132,11 @@ const wxIcon = computed(() => WX_ICON[store.sky.condition] ?? 'cloud')
 const previewAt = new URLSearchParams(location.search).get('at')   // ?at=19:30 previews an hour; the clock follows the sky so a preview agrees with itself
 const shown = computed(() => { if (!previewAt) return now.value; const d = new Date(now.value); const [h, m] = previewAt.split(':').map(Number); d.setHours(h || 0, m || 0, 0, 0); return d })
 const clock = computed(() => shown.value.toLocaleTimeString(locale(), { hour: 'numeric', minute: '2-digit' }))
-const nextLine = computed(() => idle.value ? upcomingLine(shown.value) : '')   // only worked out while the panel rests
+const facts = computed(() => idle.value ? restingFacts(shown.value) : [])   // only worked out while the panel rests
 const day = computed(() => shown.value.toLocaleDateString(locale(), { weekday: 'long', month: 'long', day: 'numeric' }))
 
-/* The wall panel rests after a few minutes: a clock, the date, one line about the house. A touch brings it back to Home. */
+/* The wall panel rests after a few minutes: a clock, the date, and a row of facts about the house big
+   enough to read across the room (resting.ts). A touch brings it back to Home. */
 const IDLE_AFTER = 3 * 60 * 1000
 const idle = ref(new URLSearchParams(location.search).get('rest') === '1')   // ?rest=1 previews the resting screen
 let lastTouch = Date.now()
@@ -342,11 +343,15 @@ onUnmounted(() => {
 
     <Transition name="idle">
       <div class="idle" v-if="idle" aria-label="Tap to wake">
-        <div class="idle-time display">{{ clock }}</div>
-        <div class="idle-day">{{ day }}</div>
-        <div class="idle-weather" v-if="weather"><Icon :name="wxIcon" :size="22" /><span>{{ weather }}</span></div>
-        <div class="idle-line">{{ houseLine() }}</div>
-        <div class="idle-next" v-if="nextLine">{{ nextLine }}</div>
+        <div class="idle-time display">{{ restClock(shown) }}</div>
+        <div class="idle-day">{{ dayLine(day) }}</div>
+        <div class="idle-facts" v-if="facts.length">
+          <div class="idle-fact" v-for="f in facts" :key="f.key" :class="{ live: f.live }">
+            <div class="idle-fact-value"><Icon :name="f.icon" :size="38" /><span>{{ f.value }}</span></div>
+            <div class="idle-fact-where">{{ f.where }}</div>
+          </div>
+        </div>
+        <div class="idle-line" v-else>{{ houseLine() }}</div>
       </div>
     </Transition>
   </div>

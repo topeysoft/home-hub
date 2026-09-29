@@ -1,0 +1,25 @@
+/* The resting wall, shared by every board in this collection: the dusk sky the panel draws behind
+   the clock (Sky.vue at 7:40pm, partly cloudy), and the type the resting screen is set in. The
+   boards differ only in what sits on top of it. */
+* { box-sizing: border-box; }
+body { margin: 0; font-family: "Plus Jakarta Sans", -apple-system, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+
+.wall { position: relative; width: 1440px; height: 900px; overflow: hidden; color: #f1eee8; background: #0c0d10; }
+.sky { position: absolute; inset: 0; background: linear-gradient(180deg, #16203a 0%, #2a3150 34%, #6b5566 62%, #c58a6a 80%, #d9a174 88%); }
+.glow { position: absolute; inset: 0; background: radial-gradient(38% 24% at 70% 84%, rgba(255, 196, 140, .45), transparent 70%); }
+.cloud { position: absolute; border-radius: 50%; background: rgba(40, 42, 64, .55); filter: blur(28px); }
+.hills { position: absolute; left: 0; right: 0; bottom: 0; height: 300px; }
+.veil { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(12, 13, 16, .08), rgba(12, 13, 16, .22) 60%, rgba(12, 13, 16, .55)); }
+
+.time { font-weight: 200; letter-spacing: -.04em; line-height: 1; font-variant-numeric: tabular-nums; text-shadow: 0 2px 24px rgba(0, 0, 0, .45); }
+.day { font-size: 22px; color: #d6d2ca; letter-spacing: .01em; text-shadow: 0 1px 12px rgba(0, 0, 0, .5); }
+.ink2 { color: #b9b5ad; }
+
+/* the glance card: the house's own card material, one step darker so it sits on a lit sky */
+.glance { border-radius: 22px; background: rgba(18, 19, 24, .52); border: 1px solid rgba(255, 255, 255, .1);
+          backdrop-filter: blur(18px) saturate(1.1); -webkit-backdrop-filter: blur(18px) saturate(1.1); }
+.gi { color: #f1eee8; }
+.gi.lamp { color: #e9b872; }
+.gn { font-size: 21px; font-weight: 500; letter-spacing: -.01em; }
+.gs { font-size: 16px; color: #b9b5ad; }
+.gs.lamp { color: #e9b872; }

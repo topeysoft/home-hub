@@ -42,6 +42,7 @@ brilliant/tools/pairs-*.json
 brilliant/tools/plan-*.json
 brilliant/esp32-bridge/.vscode
 brain/mesh-keys.json
+brain/bridge-push/
 strip/firmware/.vscode/extensions.json
 strip/firmware/build
 

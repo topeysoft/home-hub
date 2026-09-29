@@ -8,12 +8,14 @@ from hub.model import Home
 def snap():
     areas = [{"area_id": "living", "name": "Living room"}]
     devices = [{"id": "hue1", "area_id": "living", "name": "Hue color lamp", "manufacturer": "Signify Netherlands B.V.", "model": "LCA001"},
-               {"id": "plug1", "area_id": "living", "name": "Smart plug"}]                       # a maker the registry does not know
+               {"id": "plug1", "area_id": "living", "name": "Smart plug"},                       # a maker the registry does not know
+               {"id": "puck1", "area_id": "living", "name": "Hall bridge", "manufacturer": "home-hub"}]  # our own, flashed under the old name
     entities = [{"entity_id": "light.floor_lamp", "device_id": "hue1"},
                 {"entity_id": "switch.desk_plug", "device_id": "plug1"},
-                {"entity_id": "light.orphan", "device_id": None}]                               # no hardware at all: a group, a template
+                {"entity_id": "light.orphan", "device_id": None},                               # no hardware at all: a group, a template
+                {"entity_id": "light.hall_bridge", "device_id": "puck1"}]
     st = lambda eid, name: {"entity_id": eid, "state": "on", "attributes": {"friendly_name": name}}
-    states = [st("light.floor_lamp", "Floor lamp"), st("switch.desk_plug", "Desk plug"), st("light.orphan", "All lamps")]
+    states = [st("light.floor_lamp", "Floor lamp"), st("switch.desk_plug", "Desk plug"), st("light.orphan", "All lamps"), st("light.hall_bridge", "Nightlight")]
     return areas, devices, entities, states
 
 
@@ -27,6 +29,9 @@ class MakerTests(unittest.TestCase):
         """A tile shows a maker chip only when there is a name; an empty string would draw an empty chip."""
         self.assertIsNone(self.home.devices["switch.desk_plug"].maker)
         self.assertIsNone(self.home.devices["light.orphan"].maker)
+
+    def test_our_own_things_say_elyir_even_under_old_firmware(self):
+        self.assertEqual(self.home.devices["light.hall_bridge"].maker, "Elyir")
 
     def test_it_is_in_what_the_panel_receives(self):
         devs = {d["id"]: d for r in self.home.to_dict()["rooms"] for d in r["devices"]}

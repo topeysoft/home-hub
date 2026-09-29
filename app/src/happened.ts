@@ -12,6 +12,7 @@ import type { HappenedItem } from './api'
    that has since been removed could not draw at all. */
 export function iconFor(i: HappenedItem): string {
   if (i.kind === 'phone') return 'phone'
+  if (i.word === 'hub') return 'home'        // the hub starting a part of itself again (healed.py)
   if (i.word === 'unlocked') return 'lock'
   if (i.word === 'open') return 'home'
   return 'light'

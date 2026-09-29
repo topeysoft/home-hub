@@ -65,14 +65,16 @@ PARTS = {
         "Connector_PinHeader_1.27mm:PinHeader_1x06_P1.27mm_Vertical",
         {"1":"+3V3", "2":"VBUS", "3":"GND", "4":"EXP_A", "5":"EXP_B", "6":"EXP_C"}),
 
+ # Mechanical holes are in the schematic to allow complete board parity checks.
+ **{f"H{i}": ("Mechanical","MountingHole","M2","MountingHole:MountingHole_2.2mm_M2", {}) for i in range(1,4)},
+
  # LEDs: generated below, N_LEDS of them in a chain. See gen_pcb.py for the ring.
 
- # KMR2 side-actuated, 4.2 x 2.8 x 1.4: the SKQG it replaces is 5.7 mm deep and fits nowhere once the
- # ring is on the board. Its SH pad is a mechanical ground tab the SW_Push symbol has no pin for; it is
- # left floating, which the datasheet allows.
+ # BOOT/RESET remain top-actuated KMR2. USER uses a side-actuated KMS223G LFG.
+ # The custom USER symbol makes its shield-to-ground connection explicit.
  "SW1": ("Switch","SW_Push","BOOT","Button_Switch_SMD:SW_Push_1P1T-SH_NO_CK_KMR2xxG",   {"1":"IO0","2":"GND"}),
  "SW2": ("Switch","SW_Push","RESET","Button_Switch_SMD:SW_Push_1P1T-SH_NO_CK_KMR2xxG",  {"1":"EN","2":"GND"}),
- "SW3": ("Switch","SW_Push","USER","Button_Switch_SMD:SW_Push_1P1T-SH_NO_CK_KMR2xxG",   {"1":"USER_BTN","2":"GND"}),
+ "SW3": ("Puck","SW_Push_Shield","KMS223G LFG","Button_Switch_SMD:SW_SPST_CK_KMS2xxG", {"1":"USER_BTN","2":"GND","SH":"GND"}),
 
  "R1": ("Device","R","5k1","Resistor_SMD:R_0603_1608Metric", {"1":"CC1","2":"GND"}),
  "R2": ("Device","R","5k1","Resistor_SMD:R_0603_1608Metric", {"1":"CC2","2":"GND"}),
@@ -80,6 +82,9 @@ PARTS = {
  "R4": ("Device","R","300", "Resistor_SMD:R_0603_1608Metric", {"1":"LED_DATA_5V","2":"LED_D1_IN"}),
  "R5": ("Device","R","4k7","Resistor_SMD:R_0603_1608Metric", {"1":"+3V3","2":"SDA"}),
  "R6": ("Device","R","4k7","Resistor_SMD:R_0603_1608Metric", {"1":"+3V3","2":"SCL"}),
+
+ # 1.5 mA nominal pressed current exceeds the KMS minimum 1 mA rating.
+ "R7": ("Device","R","2k2","Resistor_SMD:R_0402_1005Metric", {"1":"+3V3","2":"USER_BTN"}),
 
  "C1": ("Device","C","22u","Capacitor_SMD:C_0805_2012Metric", {"1":"VBUS","2":"GND"}),
  "C2": ("Device","C","10u","Capacitor_SMD:C_0603_1608Metric", {"1":"+3V3","2":"GND"}),
@@ -92,14 +97,14 @@ PARTS = {
  "#FLG2": ("power","PWR_FLAG","","", {"1":"GND"}),
 }
 
-# The ring: 11 SK6812-RGBW 5050 on r=17 at 30 deg spacing, one chain, one 100 nF each. Eleven
+# The ring: 11 SK6812-RGBW 5050 on r=17 at 30 deg spacing, one chain, four distributed 100 nF capacitors. Eleven
 # rather than twelve because the twelfth would sit in the USB-C, and it is at r=17 rather than the
 # rim because the object is meant to GLOW, not to wear a light ring: ~9 mm from emitter to roof
 # and to wall blurs eleven dice into one warm body. gen_pcb.py fixes the angles.
 #
 # Current, so nobody is surprised: 11 x 4 dice x ~15 mA is ~0.66 A at full white on every die, on
 # top of the module's ~0.3 A Wi-Fi bursts -- right at a 1 A cube's limit. The nightlight runs the W
-# die alone at ~110/255 (~70 mA) and the instrument states are single colours; firmware caps the
+# die alone at ~110/255 (~70 mA) and the instrument states are single colors; firmware caps the
 # total rather than the cube browning out.
 N_LEDS = 11
 for _i in range(1, N_LEDS + 1):
@@ -138,7 +143,8 @@ def sexp_block(text, header):
 _libcache = {}
 def lib_text(lib):
     if lib not in _libcache:
-        p = SYMDIR / f"{lib}.kicad_sym"
+        p = HERE / f"{lib}.kicad_sym"
+        if not p.exists(): p = SYMDIR / f"{lib}.kicad_sym"
         if not p.exists(): sys.exit(f"no such symbol library: {p}")
         _libcache[lib] = p.read_text()
     return _libcache[lib]
@@ -188,7 +194,10 @@ def build():
     extents = {}
     for ref, (lib, name, *_rest) in PARTS.items():
         ps = pins_of(lib, name)
-        if not ps: sys.exit(f"{ref}: {lib}:{name} resolved to zero pins")
+        if not ps:
+            if lib != "Mechanical": sys.exit(f"{ref}: {lib}:{name} resolved to zero pins")
+            extents[ref] = (58, 42)
+            continue
         xs = [p[0] for p in ps.values()]; ys = [p[1] for p in ps.values()]
         extents[ref] = (max(xs) - min(xs) + 58, max(ys) - min(ys) + 42)
 
@@ -220,7 +229,7 @@ def build():
         placed.append(
             f'\t(symbol\n\t\t(lib_id "{lib}:{name}")\n\t\t(at {mm(ox)} {mm(oy)} 0)\n\t\t(unit 1)\n'
             f'\t\t(exclude_from_sim no)\n\t\t(in_bom yes)\n\t\t(on_board yes)\n\t\t(dnp no)\n'
-            f'\t\t(uuid "{uid()}")\n' + "\n".join(body) + "\n" + pinrefs +
+            f'\t\t(uuid "{SYMBOL_IDS.get(ref, str(uuid.uuid5(uuid.UUID(SHEET_UUID), ref)))}")\n' + "\n".join(body) + "\n" + pinrefs +
             f'\t\t(instances\n\t\t\t(project "{PROJECT}"\n\t\t\t\t(path "/{SHEET_UUID}"\n'
             f'\t\t\t\t\t(reference "{ref}")\n\t\t\t\t\t(unit 1)\n\t\t\t\t)\n\t\t\t)\n\t\t)\n\t)')
 
@@ -293,7 +302,17 @@ def replace_property(block, pname, ptext):
     return block.replace(cur, ptext, 1) if cur else block
 
 
-SHEET_UUID = uid()
+# Preserve schematic identity so regeneration cannot orphan routed footprints.
+_existing = HERE / f"{PROJECT}.kicad_sch"
+_old = _existing.read_text() if _existing.exists() else ""
+_root = re.search(r'\(uuid "([^"]+)"\)', _old)
+SHEET_UUID = _root.group(1) if _root else str(uuid.uuid5(uuid.NAMESPACE_URL, "home-hub/puck-revA"))
+SYMBOL_IDS = {}
+for _m in re.finditer(r'\(symbol\s+\(lib_id ', _old):
+    _block = sexp_block(_old[_m.start():], "(symbol")
+    _ref = re.search(r'\(property "Reference" "([^"]+)"', _block)
+    _id = re.search(r'\(uuid "([^"]+)"', _block)
+    if _ref and _id: SYMBOL_IDS[_ref.group(1)] = _id.group(1)
 
 def main():
     ap = argparse.ArgumentParser()

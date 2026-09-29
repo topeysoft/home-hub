@@ -1,0 +1,71 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Ambient A</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500&family=Plus+Jakarta+Sans:wght@200;300;400;500&display=swap">
+<link rel="stylesheet" href="scene.css">
+</head>
+<body>
+<div class="board"></div>
+<script src="scene.js"></script>
+<script>
+/* A: the sky is swapped for a field of slow color. Six soft shapes drift on paths three to
+   ten minutes long, so no two minutes of the wall look the same and no movement is ever
+   quick enough to catch the eye. Each colored thing that is on claims two of them in
+   its own hue; whatever is left over takes the hour's colors, so with everything off
+   the field is still alive, and after dark it is still dark. */
+window.Backdrop = {
+  mount(el) {
+    const c = this.c = document.createElement('canvas')
+    c.width = 144; c.height = 90                     // a tenth of the wall: the blur is the detail
+    c.style.cssText = 'width:1440px;height:900px;filter:blur(14px) saturate(1.15);transform:scale(1.12)'
+    el.appendChild(c); this.x = c.getContext('2d')
+    /* each slot: where it wanders, and what it is now versus what it is heading for */
+    this.slots = Array.from({ length: 6 }, (_, i) => ({
+      px: 210 + i * 70, py: 290 + i * 90, ph: i * 1.7, r: [.55, .5, .62, .45, .58, .5][i],
+      col: [30, 30, 40], to: [30, 30, 40], a: 0, ta: 0,
+    }))
+    this.last = performance.now()
+  },
+  update({ hour, sources }) {
+    this.hour = hour
+    const H = Scene.s.hour, D = Math.PI / 180
+    /* the hour's own colors, for whatever the house leaves unclaimed: indigo after dark,
+       violet and ember at dusk, open blue by day, so an empty house still has a sky's mood */
+    const own = {
+      night: [[.26, .06, 275], [.24, .05, 225], [.22, .05, 305]],
+      dusk: [[.36, .09, 300], [.42, .1, 45], [.32, .08, 265]],
+      noon: [[.64, .09, 240], [.72, .07, 205], [.68, .05, 85]],
+    }[H].map(([L, C, h]) => Scene.rgbOf([L, C, h * D]))
+    /* a thing that is on claims two slots, the strongest first; four at most, so the
+       hour always keeps a third of the field */
+    const claims = []
+    for (const s of [...sources].sort((a, b) => b.strength - a.strength)) claims.push({ c: s.glow, a: .7 * s.strength }, { c: s.glow, a: .5 * s.strength })
+    claims.length = Math.min(claims.length, 4)
+    this.slots.forEach((sl, i) => {
+      const k = claims[i] ?? { c: own[i % 3], a: .55 }
+      sl.to = k.c; sl.ta = k.a
+    })
+    this.base = [Scene.rgbOf([hour.L * .7, .03, { night: 270, dusk: 285, noon: 240 }[H] * D]), Scene.rgbOf([hour.L * .85, .035, { night: 260, dusk: 300, noon: 225 }[H] * D])]
+  },
+  frame(t) {
+    const now = performance.now(), k = 1 - Math.exp(-(now - this.last) / 900); this.last = now   // a change arrives over ~2s
+    const x = this.x, W = 144, H = 90
+    const g = x.createLinearGradient(0, 0, 0, H); g.addColorStop(0, Scene.css(this.base[0])); g.addColorStop(1, Scene.css(this.base[1]))
+    x.fillStyle = g; x.fillRect(0, 0, W, H)
+    /* painted over one another rather than added: added light sums to beige, laid
+       light keeps each hue its own */
+    for (const sl of this.slots) {
+      for (let j = 0; j < 3; j++) sl.col[j] += (sl.to[j] - sl.col[j]) * k
+      sl.a += (sl.ta - sl.a) * k
+      const cx = W * (.5 + .46 * Math.sin(t / sl.px * 6.28 + sl.ph)), cy = H * (.5 + .44 * Math.sin(t / sl.py * 6.28 + sl.ph * 1.3))
+      const r = W * sl.r * .8 * (1 + .15 * Math.sin(t / 41 + sl.ph))
+      const rg = x.createRadialGradient(cx, cy, 0, cx, cy, r)
+      rg.addColorStop(0, Scene.css(sl.col, sl.a)); rg.addColorStop(.45, Scene.css(sl.col, sl.a * .55)); rg.addColorStop(1, Scene.css(sl.col, 0))
+      x.fillStyle = rg; x.fillRect(0, 0, W, H)
+    }
+  },
+}
+Scene.init({ groups: ['hour', 'lamp', 'strip', 'tv', 'speed'], tag: 'A — a field of slow color, fed by the house' })
+</script>
+</body>
+</html>

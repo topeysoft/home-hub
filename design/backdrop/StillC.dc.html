@@ -1,0 +1,41 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Still C</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500&family=Plus+Jakarta+Sans:wght@200;300;400;500&display=swap">
+<link rel="stylesheet" href="scene.css">
+</head>
+<body>
+<div class="board"></div>
+<script src="scene.js"></script>
+<script>
+/* C: a still field. Nothing moves, ever: the wall is a quiet gradient in the hour's
+   colors, and the one thing it reacts to is what is on. The strongest colored thing
+   takes the lower left, the next takes the upper right, and a change crossfades over
+   three seconds and then holds. It is the backdrop that costs nothing to draw and
+   cannot be caught moving out of the corner of an eye. */
+window.Backdrop = {
+  mount(el) {
+    el.style.transition = 'background 3s'
+    this.layers = [0, 1].map(() => { const d = document.createElement('div'); d.style.cssText = 'position:absolute;inset:0;transition:opacity 3s'; el.appendChild(d); return d })
+    this.front = 0
+  },
+  update({ hour, sources }) {
+    const [top, mid, hor] = hour.sky, L = hour.L
+    const ranked = [...sources].sort((a, b) => b.strength - a.strength)
+    const one = ranked[0]?.glow ?? Scene.tame(hor, L + .1, .07), two = ranked[1]?.glow ?? Scene.tame(mid, L + .08, .06)
+    const a1 = ranked[0] ? .8 : .55, a2 = ranked[1] ? .65 : .45
+    const bg = [
+      `radial-gradient(90% 85% at 12% 100%, ${Scene.css(one, a1)}, ${Scene.css(one, 0)} 70%)`,
+      `radial-gradient(70% 70% at 92% 8%, ${Scene.css(two, a2)}, ${Scene.css(two, 0)} 70%)`,
+      `linear-gradient(170deg, ${Scene.css(Scene.tame(top, L * .6, .03))}, ${Scene.css(Scene.tame(mid, L * .8, .04))})`,
+    ].join(',')
+    /* crossfade: paint the back layer, then swap which one is showing */
+    const back = this.layers[1 - this.front]
+    back.style.background = bg; back.style.opacity = 1; this.layers[this.front].style.opacity = 0
+    this.front = 1 - this.front
+  },
+}
+Scene.init({ groups: ['hour', 'lamp', 'strip', 'tv'], tag: 'C — still; the room colors the wall, then it holds' })
+</script>
+</body>
+</html>

@@ -15,10 +15,12 @@ image back. What arrives here is a fourth state, `reverted`, naming the version 
 is the one thing this module has to act on, because a rollback followed six hours later by the same
 install is a loop rather than a safety net. See docs/updates.md, piece 1.
 
-Two channels, because a hub in someone's house and the hub on the developer's desk want different
+Three channels, because a hub in someone's house and the hub on the developer's desk want different
 things. `release` (the default, and what every hub ships as) follows version tags: nothing reaches a
-family until it is tagged. `main` follows the branch, commit by commit, which is what a hub being
-worked on wants. install.sh writes HUB_CHANNEL into the compose environment; nothing else chooses.
+family until it is tagged. `main` and `development` follow those branches, commit by commit, which is
+what a hub being worked on wants -- `development` being the one day-to-day work lands on, and `main`
+what is about to be tagged. install.sh writes HUB_CHANNEL into the compose environment; nothing else
+chooses.
 """
 import asyncio, hashlib, json, logging, os, re, time, urllib.request
 from datetime import datetime
@@ -30,7 +32,14 @@ from .settings import DATA
 log = logging.getLogger("hub.updates")
 REPO = os.environ.get("HUB_REPO") or "topeysoft/home-hub"
 RELEASE_API = f"https://api.github.com/repos/{REPO}/releases/latest"
-MAIN_API = f"https://api.github.com/repos/{REPO}/commits/main"
+BRANCHES = ("main", "development")    # the channels that follow a branch rather than tags, each named for its branch
+# A branch hub is offered the newest commit whose BRAIN IMAGE finished building, not the branch's head.
+# The head is on GitHub the moment it is pushed and the image lands a few minutes later, and install
+# can only pull what exists: a tap in between restarted the hub on the build it already had, said
+# "done", and offered the same update again -- two or three taps before one took. The runs are
+# pushes that built; brain-image.yml's paths are the files a hub runs, so every commit that changes
+# a hub gets one.
+BUILDS_API = f"https://api.github.com/repos/{REPO}/actions/workflows/brain-image.yml/runs?branch={{branch}}&event=push&status=success&per_page=1"
 EVERY = 6 * 3600
 RECHECK = 5 * 60                      # how soon opening This hub can make the hub ask GitHub again
 TICK = 300                            # how often the loop looks at the clock, as against at GitHub
@@ -41,7 +50,7 @@ RETRY = 12 * 3600                     # one go a night, so a failing update does
 REQUEST = DATA / "update.request"     # the panel asked; the host's home-hub-update.path is watching for this file
 STATE = DATA / "update.json"          # written by the host's update.sh: running, done or failed
 CHANNEL = DATA / "channel.json"       # written by the host's channel.sh, after it checked the signature
-RELEASE = re.compile(r"^v?\d+\.\d+")  # what a version tag looks like, next to "dev" and "main-1a2b3c4"
+RELEASE = re.compile(r"^v?\d+\.\d+")  # what a version tag looks like, next to "dev" and "main-1a2b3c4"/"development-1a2b3c4"
 PROGRESS = DATA / "update.progress"   # the host says where it has got to, a line at a time
 TOOK = 3600                           # a run longer than this taught us nothing worth keeping
 STALE = 3600                          # ...and a run that finished longer ago than this is not news
@@ -78,9 +87,10 @@ def _get(url: str) -> dict:
 class Updates:
     def __init__(self, hub):
         self.hub = hub
-        self.version = os.environ.get("HUB_VERSION") or "dev"   # a tag, or main-<short sha>
+        self.version = os.environ.get("HUB_VERSION") or "dev"   # a tag, or <branch>-<short sha>
         self.commit = os.environ.get("HUB_COMMIT") or ""
-        self.channel = "main" if (os.environ.get("HUB_CHANNEL") or "release").lower() == "main" else "release"
+        channel = (os.environ.get("HUB_CHANNEL") or "release").lower()
+        self.channel = channel if channel in BRANCHES else "release"
         # Whether the host holds release keys, written into the compose environment by install.sh.
         # It decides the default below and nothing else; the checking itself is the host's, and this
         # being wrong would make the hub shy rather than reckless.
@@ -102,7 +112,7 @@ class Updates:
         for one. A panel showing "up to date" when it does not know would be a lie a person acts on.
         """
         if not self.latest: return None
-        if self.channel == "main":
+        if self.channel in BRANCHES:
             return self.latest["sha"] != self.commit if self.commit else None
         if not RELEASE.match(self.version): return None     # this build is not on the release channel at all
         return self._norm(self.latest["version"]) != self._norm(self.version)
@@ -158,6 +168,11 @@ class Updates:
         if not self.reached_us(): return False
         if now - self.asked_at < RETRY: return False                     # it has had its go tonight
         if REQUEST.exists() or (self.state() or {}).get("state") == "running": return False
+        return self.quiet_hours(now)
+
+    def quiet_hours(self, now: float) -> bool:
+        """This hub's part of the night, with nobody up. The bridges wait for the same moment
+        (hub/bridge_updates.py): one window, one number, in one place."""
         here = datetime.fromtimestamp(now, self.hub.tz)
         minute = (here.hour - WINDOW[0]) * 60 + here.minute
         # Anywhere from this hub's minute to the end of the window: one that was busy at its own
@@ -409,10 +424,12 @@ class Updates:
                 "progress": self.progress(), "seconds": self.seconds(), "dark_seconds": self.seconds(dark=True)}
 
     def fetch(self) -> dict:
-        if self.channel == "main":
-            d = _get(MAIN_API)
-            return {"version": f"main-{d['sha'][:7]}", "sha": d["sha"], "when": d["commit"]["committer"]["date"],
-                    "title": d["commit"]["message"].splitlines()[0][:120]}
+        if self.channel in BRANCHES:
+            runs = _get(BUILDS_API.format(branch=self.channel)).get("workflow_runs") or []
+            if not runs: raise ValueError(f"nothing has been built for {self.channel} yet")
+            r = runs[0]; c = r.get("head_commit") or {}
+            return {"version": f"{self.channel}-{r['head_sha'][:7]}", "sha": r["head_sha"], "when": c.get("timestamp") or r.get("updated_at") or "",
+                    "title": (c.get("message") or "").splitlines()[0][:120] if c.get("message") else ""}
         d = _get(RELEASE_API)
         # A release with no title of its own is named by its tag; the panel puts this in a sentence.
         # `what` is the same lines that ship inside the next image, taken here from the release body
@@ -455,6 +472,11 @@ class Updates:
                     log.info("installing %s without being asked: the house has been quiet and it is this hub's minute",
                              (self.latest or {}).get("version"))
                     self.request(source="hub")
+                # The bridges' fixes ride the same clock. Their own try: a puck that cannot be reached
+                # must not stop the hub updating itself, nor the other way round.
+                if (bridge := getattr(self.hub, "bridge", None)):
+                    try: await bridge.firmware.tick()
+                    except Exception: log.exception("bridge update tick")
                 self._learn()          # the run this build came from is marked finished after we started
             except Exception: log.exception("update tick")
             # While an update is happening the panel wants the phase the moment it changes, and five

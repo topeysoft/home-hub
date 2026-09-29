@@ -7,7 +7,7 @@ of states a person would see: a puck appears and knocks, nothing of the house's 
 say yes, the three steps in order, then the walk, then the count. And the ways it goes wrong that
 have a sentence for the wall: unplugged halfway, a hub with no Wi‑Fi to give.
 """
-import asyncio, json, sqlite3, tempfile, unittest
+import asyncio, hashlib, json, sqlite3, tempfile, unittest
 from pathlib import Path
 
 from hub import bridge as bridge_mod
@@ -388,8 +388,27 @@ class LookingAtABridgeThatIsFine(unittest.TestCase):
                                        "f4a9f3": {"since": 2, "fw": "0.5.0"}})
         self.b.pucks = {"c8ebba": {"online": True, "rssi": -53, "night": True, "level": 110},
                         "f4a9f3": {"online": False}}
+        self.b.echo_wait = 0   # nothing says anything back here, except where a test does
 
     def each(self): return {x["chip"]: x for x in self.b.each()}
+
+    def test_the_answer_is_what_the_puck_said_back_not_the_state_before_the_tap(self):
+        """The panel has no stream for bridges, so this answer is all it draws. Answered before the
+        puck spoke, the Brightness row sprang back to Soft after a tap on Bright (24 September)."""
+        self.b.echo_wait = 2.0
+        async def go():
+            async def puck():
+                await asyncio.sleep(0.1)
+                self.b._on_mqtt({"topic": "mesh/bridge/c8ebba/night/brightness", "payload": "200"})
+            asyncio.get_running_loop().create_task(puck())
+            return await self.b.light("c8ebba", level=200)
+        rows = {x["chip"]: x for x in run(go())}
+        self.assertEqual(rows["c8ebba"]["level"], 200)
+
+    def test_a_puck_that_says_nothing_back_is_answered_with_what_it_last_said(self):
+        self.b.echo_wait = 0.2
+        rows = {x["chip"]: x for x in run(self.b.light("c8ebba", night=False))}
+        self.assertTrue(rows["c8ebba"]["night"], "a claim about a light nobody heard go off")
 
     def test_every_bridge_is_listed_whether_or_not_anything_is_wrong_with_it(self):
         self.assertEqual(set(self.each()), {"c8ebba", "f4a9f3"})
@@ -414,7 +433,28 @@ class LookingAtABridgeThatIsFine(unittest.TestCase):
         sent = {c["topic"]: c for c in self.hub.ha.calls}
         self.assertEqual(sent["mesh/bridge/c8ebba/night/set"]["payload"], "ON")
         self.assertEqual(sent["mesh/bridge/c8ebba/night/brightness/set"]["payload"], "40")
-        self.assertFalse(any(c.get("retain") for c in self.hub.ha.calls))
+        self.assertFalse(any(c.get("retain") for c in self.hub.ha.calls if "/night" in c["topic"]))
+
+    def test_asking_for_its_nightlight_places_it_or_it_would_stay_green(self):
+        """The firmware shows the nightlight only on a settled puck, and settled came from setup's
+        "Leave it here" alone. A bridge that skipped that took every setting here and stayed the
+        placing green (24 September, in a real hallway). Retained, as placed() sends it."""
+        run(self.b.light("c8ebba", night=True))
+        sent = {c["topic"]: c for c in self.hub.ha.calls}
+        self.assertEqual(sent["mesh/bridge/c8ebba/settled/set"]["payload"], "1")
+        self.assertTrue(sent["mesh/bridge/c8ebba/settled/set"]["retain"])
+
+    def test_a_brightness_alone_places_it_too(self):
+        run(self.b.light("c8ebba", level=200))
+        self.assertIn("mesh/bridge/c8ebba/settled/set", [c["topic"] for c in self.hub.ha.calls])
+
+    def test_turning_the_nightlight_off_does_not_place_anything(self):
+        """Off is not an answer about where it lives, and a puck that is still being placed keeps
+        its green."""
+        run(self.b.light("c8ebba", night=False))
+        self.assertNotIn("mesh/bridge/c8ebba/settled/set", [c["topic"] for c in self.hub.ha.calls])
+        run(self.b.light("c8ebba", lift=True))
+        self.assertNotIn("mesh/bridge/c8ebba/settled/set", [c["topic"] for c in self.hub.ha.calls])
 
     def test_turning_it_off_does_not_also_send_a_brightness(self):
         """A brightness would turn it back on: the firmware reads any level above zero as an on."""
@@ -1116,3 +1156,343 @@ class BeingDoneWithOneSwitch(unittest.TestCase):
     def test_a_switch_the_hub_cannot_name(self):
         with self.assertRaises(ValueError):
             run(self.b.forget_switch("", "0021"))
+
+
+def merged_image(app: bytes = b"\xe9" + b"app" * 100, off: int = 0x10000) -> bytes:
+    """A bootloader, a partition table and an app, the way releases/bridge/ carries them."""
+    img = bytearray(b"\xff" * off)
+    def entry(kind, sub, at, size, name):
+        return b"\xaa\x50" + bytes([kind, sub]) + at.to_bytes(4, "little") + size.to_bytes(4, "little") + name.ljust(16, b"\0") + b"\0" * 4
+    table = entry(1, 2, 0x9000, 0x5000, b"nvs") + entry(1, 0, 0xE000, 0x2000, b"otadata") \
+        + entry(0, 0x10, off, 0x400000, b"app0") + entry(0, 0x11, off + 0x400000, 0x400000, b"app1")
+    img[0x8000:0x8000 + len(table)] = table
+    return bytes(img) + app
+
+
+class FakeUpdates:
+    def __init__(self): self.auto, self.quiet = True, True
+    def quiet_hours(self, now): return self.quiet
+
+
+class AFixReachesABridgeWhereItIs(unittest.TestCase):
+    """The hub's half of docs/puck-updates.md: which puck is offered what, when, and what the house
+    writes down about it. The puck's half is brilliant/esp32-bridge/src/fwupdate.h."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.dev = Path(self.tmp.name) / "by-id"; self.dev.mkdir()
+        self.hub = FakeHub(self.tmp.name)
+        self.hub.updates = FakeUpdates()
+        self.cable = FakeCable(); self.cable.ships("0.5.1")
+        self.cable.image.write_bytes(merged_image())
+        self.b = Bridges(self.hub, cable=self.cable, devdir=self.dev)
+        self.fw = self.b.firmware
+
+    def tearDown(self): self.tmp.cleanup()
+
+    def have(self, online=(), **pucks):
+        self.hub.settings.set(bridges={c: {"since": 1, "fw": fw} for c, fw in pucks.items()})
+        for c in online: self.b.pucks[c] = {"online": True}
+
+    def offers(self):
+        return [(t.split("/")[2], p) for t, p in self.hub.ha.published if t and t.endswith("/offer")]
+
+    def rec(self, chip): return self.hub.settings.get("bridges")[chip]
+
+    def said(self): return [a[3] for a, _ in self.hub.log.rows]
+
+    # ---- the image ----
+    def test_the_app_is_cut_out_of_the_merged_image_where_its_own_table_says(self):
+        self.assertEqual(bridge_mod_app_image(merged_image(b"\xe9abc")), b"\xe9abc")
+
+    def test_something_that_is_not_an_app_is_not_offered(self):
+        self.cable.image.write_bytes(merged_image(b"\x00abc"))
+        self.assertIsNone(self.fw.image())
+
+    def test_the_image_the_house_actually_ships_has_an_app_in_it(self):
+        """Read the real file, so a change to how releases/bridge/ is built cannot quietly leave the
+        hub with nothing to offer."""
+        real = bridge_mod.SHIP / "esp32s3-ship.bin"
+        if not real.exists(): self.skipTest("no shipped image in this checkout")
+        app = bridge_mod_app_image(real.read_bytes())
+        self.assertIsNotNone(app)
+        self.assertGreater(len(app), 500_000)
+
+    def test_only_todays_image_is_served_and_only_by_its_hash(self):
+        img = self.fw.image()
+        self.assertEqual(self.fw.served(f"{img['sha256']}.bin"), img["body"])
+        self.assertIsNone(self.fw.served("esp32s3-ship.bin"))
+        self.assertIsNone(self.fw.served(f"{'0' * 64}.bin"))
+
+    def test_a_puck_fetches_without_a_phones_cookie(self):
+        from hub.phones import open_to_strangers
+        self.assertTrue(open_to_strangers("GET", "/bridge/firmware/ab.bin"))
+
+    # ---- when, and to whom ----
+    def test_one_behind_puck_that_is_awake_is_offered_the_image_by_its_hash(self):
+        self.have(online=["c8ebba"], c8ebba="0.5.0")
+        run(self.fw.tick(now=1000))
+        img = self.fw.image()
+        self.assertEqual(self.offers(), [("c8ebba", f"0.5.1 {img['size']} {img['sha256']} 8300 /bridge/firmware/{img['sha256']}.bin")])
+        self.assertEqual(self.rec("c8ebba")["offer"], {"fw": "0.5.1", "at": 1000})
+
+    def test_one_at_a_time(self):
+        """A bad image on one puck is a dark corner. On all of them it is a dead mesh."""
+        self.have(online=["c8ebba", "f4a9f3"], c8ebba="0.5.0", f4a9f3="0.5.0")
+        run(self.fw.tick(now=1000)); run(self.fw.tick(now=1300))
+        self.assertEqual(len(self.offers()), 1)
+
+    def test_a_household_that_turned_updates_off_is_not_overruled_for_a_bridge(self):
+        self.hub.updates.auto = False
+        self.have(online=["c8ebba"], c8ebba="0.5.0")
+        run(self.fw.tick(now=1000))
+        self.assertEqual(self.offers(), [])
+
+    def test_nothing_is_offered_in_the_day(self):
+        self.hub.updates.quiet = False
+        self.have(online=["c8ebba"], c8ebba="0.5.0")
+        run(self.fw.tick(now=1000))
+        self.assertEqual(self.offers(), [])
+
+    def test_a_puck_that_is_asleep_is_not_offered_anything(self):
+        """A retained offer would wait for it -- and it would wake at noon and take it then."""
+        self.have(c8ebba="0.5.0")
+        run(self.fw.tick(now=1000))
+        self.assertEqual(self.offers(), [])
+
+    def test_a_puck_already_current_is_left_alone(self):
+        self.have(online=["c8ebba"], c8ebba="0.5.1")
+        run(self.fw.tick(now=1000))
+        self.assertEqual(self.offers(), [])
+
+    # ---- what comes back ----
+    def test_a_puck_that_proves_itself_is_written_down_and_the_offer_is_taken_back(self):
+        self.have(online=["c8ebba"], c8ebba="0.5.0")
+        run(self.fw.tick(now=1000))
+        self.b._on_mqtt({"topic": "mesh/bridge/c8ebba/fw", "payload": "0.5.1"})
+        run(self.fw.heard("c8ebba", '{"state":"installed","fw":"0.5.1","why":""}'))
+        self.assertEqual(self.offers()[-1], ("c8ebba", ""))
+        self.assertNotIn("offer", self.rec("c8ebba"))
+        self.assertIn("updated", self.said())
+        self.assertEqual(self.b.behind(), [])
+
+    def test_what_a_puck_runs_is_learned_from_the_broker_and_not_only_the_cable(self):
+        self.have(c8ebba="0.5.0")
+        self.b._on_mqtt({"topic": "mesh/bridge/c8ebba/fw", "payload": "0.5.1"})
+        self.assertEqual(self.rec("c8ebba")["fw"], "0.5.1")
+
+    def test_a_puck_the_house_never_set_up_is_not_written_down_by_its_version(self):
+        self.have(c8ebba="0.5.0")
+        self.b._on_mqtt({"topic": "mesh/bridge/0badd0/fw", "payload": "0.5.1"})
+        self.assertNotIn("0badd0", self.hub.settings.get("bridges"))
+
+    def test_a_puck_that_went_back_is_said_and_not_asked_again_tonight(self):
+        self.have(online=["c8ebba"], c8ebba="0.5.0")
+        run(self.fw.tick(now=1000))
+        run(self.fw.heard("c8ebba", '{"state":"rolledback","fw":"0.5.1","why":"1"}', now=1100))
+        self.assertIn("went back", self.said())
+        self.assertEqual(self.rec("c8ebba")["tries"]["n"], 1)
+        run(self.fw.tick(now=2000))
+        self.assertEqual([p for _, p in self.offers() if p], [self.offers()[0][1]])   # no second offer
+
+    def test_twice_is_not_bad_luck(self):
+        """The same count the puck keeps, so neither can talk the other into a loop."""
+        self.have(online=["c8ebba"], c8ebba="0.5.0")
+        day = bridge_mod_updates.RETRY + 1
+        for n in range(3):
+            run(self.fw.tick(now=1000 + n * day))
+            if self.rec("c8ebba").get("offer"):
+                run(self.fw.heard("c8ebba", '{"state":"rolledback","fw":"0.5.1","why":"1"}', now=1000 + n * day))
+        self.assertEqual(len([p for _, p in self.offers() if p]), 2)
+
+    def test_bytes_that_did_not_check_out_are_written_down(self):
+        self.have(online=["c8ebba"], c8ebba="0.5.0")
+        run(self.fw.tick(now=1000))
+        run(self.fw.heard("c8ebba", '{"state":"refused","fw":"0.5.1","why":"hash"}'))
+        self.assertIn("refused an update", self.said())
+        self.assertNotIn("offer", self.rec("c8ebba"))
+
+    def test_an_offer_nobody_finished_with_is_taken_back_and_counted(self):
+        self.have(online=["c8ebba"], c8ebba="0.5.0")
+        run(self.fw.tick(now=1000))
+        run(self.fw.tick(now=1000 + bridge_mod_updates.OFFER_FOR + 1))
+        self.assertEqual(self.offers()[-1], ("c8ebba", ""))
+        self.assertEqual(self.rec("c8ebba")["tries"]["n"], 1)
+
+    def test_the_morning_takes_an_offer_back_without_holding_it_against_the_puck(self):
+        self.have(online=["c8ebba"], c8ebba="0.5.0")
+        run(self.fw.tick(now=1000))
+        self.hub.updates.quiet = False
+        run(self.fw.tick(now=1300))
+        self.assertEqual(self.offers()[-1], ("c8ebba", ""))
+        self.assertNotIn("tries", self.rec("c8ebba"))
+
+
+from hub.bridge_updates import app_image as bridge_mod_app_image  # noqa: E402
+from hub import bridge_updates as bridge_mod_updates  # noqa: E402
+
+
+class ABuildFromAWorkingTreeNow(unittest.TestCase):
+    """tools/dev.sh puck: a developer hands one puck a build from their checkout, over ssh, and the
+    hub offers it at once -- on a hub that follows a branch, and on no other."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.dev = Path(self.tmp.name) / "by-id"; self.dev.mkdir()
+        self.hub = FakeHub(self.tmp.name)
+        self.hub.updates = FakeUpdates(); self.hub.updates.channel = "development"
+        self.hub.updates.quiet = False                    # the middle of the day
+        self.cable = FakeCable(); self.cable.ships("0.6.0")
+        self.cable.image.write_bytes(merged_image())
+        self.b = Bridges(self.hub, cable=self.cable, devdir=self.dev)
+        self.fw = self.b.firmware
+        self.push = Path(self.tmp.name) / "bridge-push"
+        self._was = bridge_mod_updates.PUSH; bridge_mod_updates.PUSH = self.push
+        self.hub.settings.set(bridges={"c0e33a": {"since": 1, "fw": "0.6.0"}})
+        self.b.pucks["c0e33a"] = {"online": True}
+
+    def tearDown(self):
+        bridge_mod_updates.PUSH = self._was; self.tmp.cleanup()
+
+    def park(self, chip="c0e33a", fw="0.6.1-d382417", body=b"\xe9" + b"x" * 64):
+        self.push.mkdir(exist_ok=True)
+        (self.push / "image.bin").write_bytes(body)
+        (self.push / "request.json").write_text(json.dumps({"chip": chip, "fw": fw}))
+        run(self.fw.take_push(now=1000))
+
+    def state(self): return json.loads((self.push / "state.json").read_text())
+    def offers(self): return [p for t, p in self.hub.ha.published if t and t.endswith("/offer")]
+    def rec(self): return self.hub.settings.get("bridges")["c0e33a"]
+
+    def test_it_is_offered_at_once_and_served_by_its_hash(self):
+        body = b"\xe9" + b"x" * 64
+        self.park(body=body)
+        sha = hashlib.sha256(body).hexdigest()
+        self.assertEqual(self.offers(), [f"0.6.1-d382417 65 {sha} 8300 /bridge/firmware/{sha}.bin"])
+        self.assertEqual(self.fw.served(f"{sha}.bin"), body)
+        self.assertEqual(self.state()["state"], "offered")
+        self.assertFalse((self.push / "request.json").exists())    # taken once
+
+    def test_a_release_hub_refuses_whoever_asks(self):
+        self.hub.updates.channel = "release"
+        self.park()
+        self.assertEqual(self.offers(), [])
+        self.assertEqual(self.state()["state"], "refused")
+        self.assertIn("releases", self.state()["why"])
+
+    def test_what_is_refused_says_why(self):
+        for kw, why in [({"chip": "0badd0"}, "not a bridge"), ({"fw": "tuesday"}, "not a version"),
+                        ({"body": b"MZ-not-an-app"}, "not an ESP32 app")]:
+            self.park(**kw)
+            self.assertIn(why, self.state()["why"])
+        self.b.pucks["c0e33a"] = {"online": False}
+        self.park()
+        self.assertIn("not on the broker", self.state()["why"])
+        self.assertEqual(self.offers(), [])
+
+    def test_the_night_does_not_take_it_back_and_the_tool_hears_how_it_went(self):
+        self.park()
+        run(self.fw.tick(now=1060))
+        self.assertIn("offer", self.rec())                           # not withdrawn in the day
+        run(self.fw.heard("c0e33a", '{"state":"fetching","fw":"0.6.1-d382417","why":""}', now=1070))
+        self.assertEqual(self.state()["state"], "fetching")
+        run(self.fw.heard("c0e33a", '{"state":"installed","fw":"0.6.1-d382417","why":""}', now=1200))
+        self.assertEqual(self.state()["state"], "installed")
+        self.assertNotIn("offer", self.rec())
+
+    def test_a_test_build_that_went_back_is_not_held_against_anything(self):
+        self.park()
+        run(self.fw.heard("c0e33a", '{"state":"rolledback","fw":"0.6.1-d382417","why":"1"}', now=1300))
+        self.assertEqual(self.state()["state"], "rolledback")
+        self.assertNotIn("tries", self.rec())
+
+    def test_silence_ends_it(self):
+        self.park()
+        run(self.fw.tick(now=1000 + bridge_mod_updates.OFFER_FOR + 1))
+        self.assertEqual((self.state()["state"], self.state()["why"]), ("failed", "no answer"))
+        self.assertNotIn("offer", self.rec())
+
+    def test_a_puck_that_ran_test_builds_is_still_behind_the_release(self):
+        self.hub.settings.set(bridges={"c0e33a": {"since": 1, "fw": "0.6.0-d382417"}})
+        self.assertEqual([b["chip"] for b in self.b.behind()], ["c0e33a"])
+
+    def test_the_tool_can_find_a_bridge_without_knowing_its_chip(self):
+        self.hub.settings.set(bridges={"c0e33a": {"since": 1, "fw": "0.6.0", "where": "Hallway"}})
+        self.fw.list_for_tool()
+        self.assertEqual(json.loads((self.push / "bridges.json").read_text()),
+                         [{"chip": "c0e33a", "room": "Hallway", "fw": "0.6.0", "online": True}])
+
+
+class AStripTakesItsFixesTheSameWay(unittest.TestCase):
+    """docs/strip.md, "Updates, the puck's way": a strip is a second kind for the same updater, with its
+    own image and its own records, and one-at-a-time holds across the whole house."""
+
+    class FakeStrips:
+        def __init__(self): self.strips, self._devices = {}, {}
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.dev = Path(self.tmp.name) / "by-id"; self.dev.mkdir()
+        self.hub = FakeHub(self.tmp.name)
+        self.hub.updates = FakeUpdates()
+        self.hub.strip = self.FakeStrips()
+        self.cable = FakeCable(); self.cable.ships("0.6.0")
+        self.cable.image.write_bytes(merged_image())
+        # releases/strip/ beside releases/bridge/, which is where StripKind looks
+        self._ship = bridge_mod.SHIP
+        bridge_mod.SHIP = self.cable.image.parent / "bridge"
+        strip_dir = self.cable.image.parent / "strip"; strip_dir.mkdir()
+        (strip_dir / "esp32s3-ship.bin").write_bytes(merged_image(b"\xe9" + b"strip" * 50))
+        (strip_dir / "esp32s3-ship.json").write_text(json.dumps({"fw": "0.4.0"}))
+        self.b = Bridges(self.hub, cable=self.cable, devdir=self.dev)
+        self.fw = self.b.firmware
+
+    def tearDown(self):
+        bridge_mod.SHIP = self._ship; self.tmp.cleanup()
+
+    def strip(self, id_="2e4258", fw="0.4.0-d1", online=True):
+        self.hub.strip.strips[id_] = {"online": online}
+        self.fw.heard_fw(id_, fw, kind="strip")
+
+    def offers(self):
+        return [(t, p) for t, p in self.hub.ha.published if t and t.endswith("/offer")]
+
+    def test_a_strip_behind_is_offered_its_own_image_on_its_own_topic(self):
+        self.strip(fw="0.3.9")
+        run(self.fw.tick(now=1000))
+        img = self.fw.image("strip")
+        self.assertEqual(self.offers(), [("strip/2e4258/offer",
+                                          f"0.4.0 {img['size']} {img['sha256']} 8300 /bridge/firmware/{img['sha256']}.bin")])
+        self.assertEqual(self.fw.served(f"{img['sha256']}.bin"), img["body"])
+
+    def test_a_strip_that_never_said_what_it_runs_is_left_alone(self):
+        """One from before updates: it has nothing that could take one."""
+        self.hub.strip.strips["2e4258"] = {"online": True}
+        run(self.fw.tick(now=1000))
+        self.assertEqual(self.offers(), [])
+
+    def test_one_at_a_time_across_the_house(self):
+        self.hub.settings.set(bridges={"c0e33a": {"since": 1, "fw": "0.5.0"}})
+        self.b.pucks["c0e33a"] = {"online": True}
+        self.strip(fw="0.3.9")
+        run(self.fw.tick(now=1000)); run(self.fw.tick(now=1300))
+        self.assertEqual([t for t, p in self.offers() if p], ["mesh/bridge/c0e33a/offer"])
+
+    def test_what_a_strip_did_is_written_down_as_a_strip(self):
+        self.strip(fw="0.3.9")
+        run(self.fw.tick(now=1000))
+        run(self.fw.heard("2e4258", '{"state":"installed","fw":"0.4.0","why":""}', kind="strip"))
+        (kind, subject, _, new), _ = self.hub.log.rows[-1]
+        self.assertEqual((kind, subject, new), ("strip", "2e4258", "updated"))
+        self.assertNotIn("offer", self.hub.settings.get("strip_fw")["2e4258"])
+
+    def test_the_tool_lists_strips_too(self):
+        push = Path(self.tmp.name) / "bridge-push"
+        was, bridge_mod_updates.PUSH = bridge_mod_updates.PUSH, push
+        try:
+            self.strip()
+            self.fw.list_for_tool(kind="strip")
+            self.assertEqual(json.loads((push / "strips.json").read_text()),
+                             [{"chip": "2e4258", "room": None, "fw": "0.4.0-d1", "online": True}])
+        finally:
+            bridge_mod_updates.PUSH = was

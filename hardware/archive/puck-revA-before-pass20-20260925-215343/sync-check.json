@@ -1,0 +1,13 @@
+{
+  "component_count": 40,
+  "functional_nets": 30,
+  "exported_pin_assignments": 171,
+  "errors": [],
+  "mechanical_anchors": {
+    "SW3": "78.8935 106.8817 -71.9417",
+    "J1": "121.33 100 90",
+    "H1": "115.8392 84.1608",
+    "H2": "78.3633 94.2025",
+    "H3": "105.7975 121.6367"
+  }
+}

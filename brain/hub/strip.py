@@ -39,7 +39,7 @@ not reporting. So a strip keeps whatever the household set it to, and the panel 
 The radio is behind `Radio` for the same reason bridge.py hides pyserial behind `Cable`: the machine
 is tested with a fake one, and nothing in here needs a strip on a desk to run.
 """
-import asyncio, json, logging, time
+import asyncio, contextlib, json, logging, time
 
 log = logging.getLogger("hub.strip")
 
@@ -155,6 +155,15 @@ class StripError(RuntimeError):
     like saying. Those must not reach a screen. bridge.py learned this the expensive way: a bridge
     once failed with "database is locked" on the wall, which tells nobody anything and was not even
     true about their bridge."""
+
+
+class StripGone(StripError):
+    """Nothing answered at the address the strip knocked from. Not the same as a link that dropped:
+    a strip gets a new Bluetooth address every time it restarts, so this is as often a strip that was
+    unplugged and plugged back in as one that is out of reach -- and it is worth one more look before
+    anybody is told anything (docs/strip.md item 49)."""
+    GONE = ("The strip stopped knocking before it could be set up. If it was unplugged, plug it "
+            "back in \u2014 it will knock again.")
 
 
 # The service a commissionable Matter device advertises under, and how to read what it says.
@@ -374,7 +383,14 @@ class Radio:
             said = f"{type(e).__name__} {e}".lower()
             # "notfound" as well as "not found": a class name has no spaces in it, and
             # BleakDeviceNotFoundError is exactly the case this branch exists for.
-            if any(k in said for k in ("disconnect", "not found", "notfound", "timeout", "unreachable")):
+            # NOT FOUND IS NOT DROPPED. A link that died part way is the distance; an address nobody
+            # answers at all is as often a strip that restarted since it knocked -- and told to move
+            # nearer, a household holding a strip the hub heard at -35 a minute ago goes and fixes
+            # nothing. _setup looks for it once more before this is said; _fail still says the
+            # distance when the knock itself was faint.
+            if "not found" in said or "notfound" in said:
+                raise StripGone(StripGone.GONE)
+            if any(k in said for k in ("disconnect", "timeout", "unreachable")):
                 raise StripError("The strip stopped answering part way through. "
                                  "Try again a little nearer the hub.")
             if not rhythm:
@@ -393,6 +409,28 @@ def _through_a_bridge(e) -> str:          # e: hub.errand.ErrandFailed, imported
     if e.why == "nodoor":
         return "That strip did not answer the way ours do. Unplug it and try again."
     return "The bridge that was reaching the strip lost it part way through. Try again."
+
+
+# How long to wait before asking the broker again, doubling up to the second. A test shrinks the first.
+RETRY_FIRST, RETRY_MOST = 2.0, 30.0
+
+
+async def subscribe_until_answered(hub, who: str, cb, topic: str):
+    """Subscribe to the broker through Home Assistant, asking again until it answers.
+
+    Said once when it is not there yet and once when it is, so a slow start is one pair of lines in
+    the log rather than a line every few seconds. Never gives up: a brain that cannot see the broker
+    cannot see a strip or a bridge, and there is nothing more useful for it to be doing instead."""
+    first = wait = RETRY_FIRST
+    while True:
+        try:
+            sub = await hub.ha.subscribe("mqtt/subscribe", cb, topic=topic)
+            if wait > first: log.info("%s: the broker view is here now", who)
+            return sub
+        except Exception as e:
+            if wait == first: log.info("%s: no broker view yet (%s); asking again", who, e)
+            await asyncio.sleep(wait)
+            wait = min(wait * 2, RETRY_MOST)
 
 
 class Strips:
@@ -540,10 +578,14 @@ class Strips:
 
     # ---- the broker: strips the house already has ----
     async def listen(self):
-        try:
-            self._sub = await self.hub.ha.subscribe("mqtt/subscribe", self._on_mqtt, topic=f"{BASE}/#")
-        except Exception as e:
-            log.info("strip: no broker view yet (%s)", e)
+        """The broker's view of every strip. Keeps asking until Home Assistant's MQTT will answer.
+
+        A DEPLOY RESTARTS HOME ASSISTANT AND THE BRAIN TOGETHER, and the brain is ready first: until
+        HA's MQTT integration has loaded, `mqtt/subscribe` answers "Unknown command". This used to ask
+        once, so after a deploy the brain never heard a strip again until it was restarted by hand --
+        reported 23 September as a strip that joined the Wi-Fi, reached the broker in five seconds,
+        and "failed right before the colour check" three times, because nothing was listening."""
+        self._sub = await subscribe_until_answered(self.hub, "strip", self._on_mqtt, f"{BASE}/#")
 
     def _on_mqtt(self, ev):
         topic = (ev or {}).get("topic") or ""
@@ -565,6 +607,15 @@ class Strips:
             try: s["count"] = int(str(payload).strip())
             except ValueError: pass
         elif leaf == "order": s["order"] = str(payload).strip()
+        # A signal it started, by id: how "Try" can say the strip itself answered (hub/signals.py).
+        elif leaf == "signal" and (sg := getattr(self.hub, "signals", None)): sg.heard(id_, str(payload or ""))
+        # What it runs and what it did with an update: the updater's business (hub/bridge_updates.py),
+        # which keeps its own record per strip because this class keeps none in settings.
+        elif leaf in ("fw", "update") and (fw := getattr(getattr(self.hub, "bridge", None), "firmware", None)):
+            if leaf == "fw": fw.heard_fw(id_, str(payload or "").strip(), kind="strip")
+            else:
+                with contextlib.suppress(RuntimeError):
+                    asyncio.get_running_loop().create_task(fw.heard(id_, str(payload or ""), kind="strip"))
         # A fill that has reached the end says so itself, so the panel can stop asking somebody to
         # watch a thing that has finished happening.
         #
@@ -722,6 +773,8 @@ class Strips:
                         "discriminator": s.get("discriminator"), "vendor": s.get("vendor"),
                         "door": s.get("door", "matter"), "rssi": s.get("rssi"),
                         "heard_by": s.get("heard_by"),
+                        # What survives a restart when the address does not: PROV_ and the chip.
+                        "name": s.get("name"),
                         "label": self._label(s), "first": None, "at": time.time()}
             # WHICH ONE, AND HOW WELL WE CAN HEAR IT. Without this the only record of why a setup
             # was later called "a long way from the hub" is the sentence itself, and there is no way
@@ -880,19 +933,24 @@ class Strips:
                 # WHICH EAR (hub/ears.py). The hub's own radio wherever it is good enough; a bridge
                 # that hears the strip clearly better where it is not -- which is every strip behind
                 # a television in a house whose hub is in the garage (docs/strip.md item 15).
-                errand = await self._errand_for(j["addr"])
-                try:
-                    went = await self.radio.adopt_ours(j["addr"], wifi.get("ssid", ""),
-                                                       wifi.get("pass") or "",
-                                                       hub=self._where_we_are(),
-                                                       rhythm=j.get("rhythm", ""),
-                                                       on_pressed=self._pressed,
-                                                       out_of_reach=self._out_of_reach,
-                                                       transport=errand)
-                finally:
-                    if errand:
-                        await errand.close()
-                        if getattr(self.hub, "errand", None) is errand: self.hub.errand = None
+                # AND ONCE MORE IF NOBODY ANSWERED AT THAT ADDRESS: see StripGone.
+                for tries_left in (1, 0):
+                    errand = await self._errand_for(j["addr"])
+                    try:
+                        went = await self.radio.adopt_ours(j["addr"], wifi.get("ssid", ""),
+                                                           wifi.get("pass") or "",
+                                                           hub=self._where_we_are(),
+                                                           rhythm=j.get("rhythm", ""),
+                                                           on_pressed=self._pressed,
+                                                           out_of_reach=self._out_of_reach,
+                                                           transport=errand)
+                        break
+                    except StripGone:
+                        if not tries_left or not await self._found_again(j): raise
+                    finally:
+                        if errand:
+                            await errand.close()
+                            if getattr(self.hub, "errand", None) is errand: self.hub.errand = None
                 # They could not reach it, so `reach()` has already moved the wall to the flashes and
                 # the strip is minting them. Nothing failed and nothing should be said.
                 if went == "rhythm":
@@ -936,6 +994,29 @@ class Strips:
         except Exception:
             log.exception("strip setup failed")
             self._fail("Setting that light strip up did not work. Unplug it and try again.")
+
+    async def _found_again(self, j: dict) -> bool:
+        """The same strip, at whatever address it has now. Its name survives a restart (PROV_ and its
+        chip); failing that, the one strip of ours a bridge has just heard knocking -- one job at a
+        time is what makes "the one" unambiguous. True, with `j["addr"]` moved, if it is still here."""
+        old = j["addr"]
+        try: ours = await self.radio.scan_ours(8.0)
+        except Exception as e:
+            log.info("strip: could not look again (%s)", e); ours = []
+        same = [o for o in ours if j.get("name") and o.get("name") == j["name"]]
+        if not same and not j.get("name") and len(ours) == 1:
+            same = ours
+        ears = getattr(self.hub, "ears", None)
+        if not same and ears:
+            others = [k for k in ears.knocking() if k["addr"] != str(old).upper()]
+            if len(others) == 1:
+                same = [{"addr": others[0]["addr"]}]
+        if not same or same[0]["addr"] == old:
+            log.info("strip: nobody answers at %s, and it is not knocking anywhere else", old)
+            return False
+        j["addr"] = same[0]["addr"]
+        log.info("strip: it moved from %s to %s -- restarted since it knocked; trying there", old, j["addr"])
+        return True
 
     async def _errand_for(self, addr: str):
         """An open errand on the bridge that should talk to this strip, or None for our own radio."""
@@ -1039,7 +1120,10 @@ class Strips:
         # somebody, so there is nothing for a retain to rescue.
         await self._tell(j["id"], "order/set", order)
         # Somebody who came back to fix the colors did not ask to be walked through the length again.
+        # And the probe is handed back: at first setup the fill that follows takes the strip over, but
+        # here nothing follows, so without this the strip stays the red it was asked about.
         if j.get("revisit"):
+            await self._tell(j["id"], "show/set", "off")
             self._set("ready")
             return self.status()
         return await self._fill()
@@ -1157,6 +1241,8 @@ class Strips:
             log.info("strip %s: could not clear its light (%s)", id_, e)
         self.strips.pop(id_, None)
         self._devices.pop(id_, None)
+        if id_ in (self.hub.settings.get("strip_fw") or {}):     # the updater's record goes with it
+            self.hub.settings.set(strip_fw={k: v for k, v in self.hub.settings.get("strip_fw").items() if k != id_})
         self._dismissed.discard(id_)
         self._arrived.discard(id_)
         for key in [k for k in self._heard if k.startswith(f"{id_}/")]:

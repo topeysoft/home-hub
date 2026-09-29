@@ -543,6 +543,88 @@ it. Moving to ESP-IDF gives back about 880 KB *and* does more.
 
 ---
 
+## Updates, the puck's way
+
+*Proposed and approved 24 September 2026. Item 7 below said "no updates story";
+this is the story. It is short because almost all of it already exists: `docs/puck-updates.md` designed
+it, and on 24 September it was built and proven on a puck in this house, both halves.*
+
+**A strip takes its fixes exactly as a puck does.** The hub offers an image over the broker, naming its
+version, size and SHA-256. The strip downloads it from the hub's own address, checks the hash as it writes,
+restarts into it, and has three minutes to prove itself or the bootloader puts back what it had. It keeps a
+floor and never takes an older version, and it gives up on a version that came back twice. The hub offers to
+one device at a time, in its own part of the night, only in a house that lets it update itself, and writes
+down what happened. `tools/dev.sh` gets a `strip` beside `puck` for a working-tree build, now.
+
+**Not Matter's updates.** Matter has its own path (an OTA Requestor, compiled in today), but it reaches a
+device only through a certified product listed in Matter's ledger, or through an update server run on each
+household's own Matter fabric. The first is off the table (*Decided*, 21 September: certification is off
+indefinitely), and the second is a second trust path into the device, run by us, in somebody's Apple Home.
+**So `CONFIG_ENABLE_OTA_REQUESTOR` goes off:** one way in, and it is ours. Turning it back on later is an
+update like any other, because the slots do not change.
+
+The price, said plainly: a strip in a house with no hub of ours gets no updates. That follows from *ours
+first* rather than being a new decision, and it is the same for a puck.
+
+### What the first flash has to carry, because nothing can add it later
+
+1. **Rollback in the bootloader.** Today `CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE` is **not set**. The bootloader
+   is written only by a cable, so a strip flashed without it can take updates but can never be saved from one
+   that crashes before our code runs: nothing would ever go back. This is the one line that has to change
+   before a strip leaves this house. **Every strip already flashed needs one cable reflash** to get it; they
+   are all devkits on this bench, which makes now the cheapest moment there will ever be.
+2. **The maker's two public keys**, primary and spare, from `driver-layer/host/release-keys.d`, the same way
+   the puck carries them (`tools/puck-keys.py`, kept alive with `volatile` and checked for in the binary). The
+   first version checks the hash, not a signature, exactly as the puck does. But a key that is not in the image
+   at the first flash can never be in it.
+3. **The partition table is already right.** Two slots of 3.75 MB, sized for Matter, laid down on 20
+   September for precisely this. Nothing to do.
+
+### What changes in the firmware, and what stays
+
+- An `offer` leaf under `strip/<chip>/`, retained. The strip retires retained *commands* on connect (items 31,
+  33 and 41: a retained command is a recording of an evening weeks gone). An offer is not a command; it is a
+  standing statement the hub withdraws itself. So it is exempt, by name, and the reason goes beside the
+  exemption.
+- `fw` published retained on every connect, beside `status`. The version moves from `#define FW "0.3.0"` to
+  the same scheme as the puck: the next release, overridable, with `-d<minutes>` for working-tree builds.
+- **Proving itself means the job a strip has:** on the Wi-Fi, on the broker, and its light driver started.
+  There is no mesh to ask about.
+- The download goes through `esp_ota_ops` and `esp_http_client`, hashing as it writes, as the puck's does.
+  `esp_https_ota` would want `CONFIG_ESP_HTTPS_OTA_ALLOW_HTTP`, and the hash on the authenticated channel is
+  what makes plain HTTP from the hub acceptable, not the transport.
+- The image is about twice a puck's, since Matter is most of it. That is a few seconds more on a LAN, and the
+  slot has room for years of growth.
+
+### What changes in the hub
+
+`bridge_updates.py` learns a second kind of device rather than being copied. It gets the image from
+`releases/strip/`, built by a `tools/build-strip.sh` beside `build-bridge.sh`, and inside the brain's
+container like the puck's, so there is still one trust anchor. Strips and pucks share the night window and
+**one-at-a-time applies across the whole house**, not per kind: two different things dark at once is still
+two things dark. What happened says "updated the light strip in the living room", in the words the panel
+already uses for it.
+
+### Proven on `2e4258`, 24 September
+
+Cable-flashed from 0.3.0 to 0.4.0 with a plain `idf.py flash`: new bootloader, same strip -- "already set up,
+through our own door", 159 lights, the maker's keys in the boot line. Then through the hub with
+`tools/dev.sh strip`: a working-tree build fetched in 13 seconds, restarted, and was on the broker again eight
+seconds later, and confirmed itself. A build that is never allowed to confirm was whole from nine seconds in and
+went back at 180 seconds exactly, twice, and the hub had taken the offer back before a third.
+
+Two things the run found. A test build of the release a strip already runs is refused as older, which is the
+scheme working, so `STRIP_FW` moved on to 0.4.1 the moment 0.4.0 was cut and the tool now says so before it
+builds anything. And `docker exec` on the hub stalled for minutes at a time, which made the first install look
+seven minutes slow when the strip had confirmed in seconds; every step the tool takes on the hub is now under a
+timeout, and the image goes over by `scp` and `docker cp` rather than a pipe.
+
+### Not in this proposal
+
+- **Secure boot and flash encryption.** Both burn eFuses and are irreversible per chip. They matter for a
+  product that is sold, not for this one, and deciding them is a separate question.
+- The urgent tiers and the *Needs a look* line, which are the puck's open items too. Built once, for both.
+
 ## What is not built, and what is not safe yet
 
 Everything under this line is honest. None of it is done.
@@ -694,10 +776,11 @@ chip there at boot, which is the same id the strip publishes all its MQTT topics
 stored after the Basic Information cluster has already been built, so the first boot after a flash still
 reports the default and the one after it should be right. Nobody has looked yet.
 
-**7. No updates story.** `docs/puck-updates.md` is about pucks. A strip in a living room has the same problem
-and none of the answer.
+**7. Updates: approved 24 September, being built.** See *Updates, the puck's way* above. Two things in it cannot wait
+for the rest, because they are fixed at a strip's first flash: rollback in the bootloader, and the maker's
+keys in the image.
 
-**8. Occasions and movement.** Drawn in `design/occasion/`, no code.
+**8. Occasions and movement.** Drawn in `design/occasion/`, no code. Signals — a strip saying something, briefly — are a different thing and are built: item 50.
 
 **9. The hardware is a devkit.** The product board needs, at minimum: a level shifter (**not optional** — a
 fill writes every frame, so the bridge puck's write-on-change workaround does not survive here), power
@@ -711,6 +794,111 @@ real annual cost before a unit ships — and inserts the product into the most q
 the house, which is how these things get returned. The camera route avoids all of that and costs a camera
 pointed into a living room. **The cheap next step is neither: a capture stick and HyperHDR on a bench,
 to find out whether it feels like the screen extended or like a gimmick, before any of it is paid for.**
+
+**50. Signals: the strip can say something now, and every one can be tried.** 24 September,
+`design/signal/`, direction A with C. Not an occasion and not an effect: one of four motions that each mean
+something — a run toward one end (`way`), a breath (`call`), a fill to a level (`fill`), one end lit (`end`) —
+started by something happening and over in seconds, then the household's light back exactly as it was.
+
+- **Firmware** draws every frame itself (`px::Signal` in `main/pixels.h`, native-tested): the hub sends one
+  `strip/<chip>/signal/set` — `{"id", "kind", "dir", "rgb", "ms", "times", "level", "end"}`, or `"kind": "stop"`
+  — and the strip answers on `strip/<chip>/signal` with the id the moment it starts, or `busy <id>` while a
+  setup instrument owns it. Never obeyed from a retained copy. Anything that paints the household's own light
+  ends it at once; `step()` changes only when the picture does, so a frame is written only when it differs.
+- **Brain** is `hub/signals.py`: the house's four (arriving, leaving, a door left open, something nearly done;
+  all start **off**), in-or-out decided in one place (a phone home, or a way-in door that opens with or without
+  motion by it in the 45 s before), and a routine outcome `{"signal": ...}` for a household's own.
+- **Try** is "Show me now" (the lights, each saying it answered) and "Wait for the real thing" (ten minutes,
+  "after dark" set aside, every link of the chain written down — and a broken link names its sensor's last word).
+- **Which end is the house** is asked once per strip by lighting the plug end; until then a run goes away from
+  the plug and says it guessed.
+
+**Unproven:** none of it has run on silicon. It compiles for the S3 and the native tests pass. The things to
+watch on a real drive are whether 2.2 s a pass reads from a moving car, and whether the white-hot head is
+what makes the direction legible at a distance or merely looks hot. "Something nearly done" is drawn and
+honest about having nothing to read yet.
+
+**49. A strip that restarted between its knock and the yes is found again, and nobody is told to
+move nearer a strip the hub heard perfectly well.** 24 September.
+
+**The trap.** A strip gets a new Bluetooth address every time it restarts, and a knock remembers the
+address it was heard at. Unplugged and plugged back in between the knock and the yes -- which is what a
+household does to a strip that "did not seem to work" -- or a power blip, or the strip itself falling
+over (item 48), and the yes went to an address nobody answers. That came back as *not found*, which was
+read as the distance: a household holding a strip the hub heard at −35 a minute earlier was told to try
+again nearer the hub. Seen twice on 23 September, when the bench's own serial capture restarted the
+strip under a knock the wall was still showing.
+
+**Fixed in the brain** (`brain/hub/strip.py`). *Not found is not dropped*: a link that dies part way is
+still the distance, but nobody answering at all raises `StripGone`, and setup looks once more -- for
+the same name, which survives a restart (`PROV_` and the chip), or, for a knock only a bridge heard
+(Matter's advertisement carries no name), for the one strip of ours a bridge has just heard knocking --
+and carries on at the new address, through whichever ear now hears it best. Only if it is nowhere does
+the wall say *the strip stopped knocking before it could be set up; if it was unplugged, plug it back
+in*. A knock that was faint when it came still gets the distance sentence, which is still right then.
+
+**Held by** `AStripThatRestartedSinceItKnocked` in `brain/tests/test_strip.py`: found again by name and
+set up where it is now; really gone and told so, never *nearer the hub*; faint and gone and told the
+distance; and a deaf hub finding it again through a bridge. The first **fails with the second look
+removed**. Two older tests pinned *nearer the hub* for *not found* and now pin the opposite.
+
+**48. A strip that went silent seconds after setup: three tasks were drawing on it with no lock.
+And its light now comes back as it was left.** 23 September, from a house: *provisioning is
+successful this time but I can't control the light.*
+
+**What was seen.** The strip finished setup at 19:55:31 and its last message reached the broker
+about three seconds earlier; it never sent a keep-alive, the broker dropped it at 19:58:28, and it
+stayed gone until it was power-cycled. No crash dump from this firmware, so nothing panicked. On the
+bench, with its serial attached, it froze the same way on the first `show/set off` sent during a
+fill — seen as a strip that answered one fill and then nothing, not even `hello`.
+
+**Why.** Three tasks draw on the strip: the MQTT task (every command, including the last step of
+setup, `fill/stop`, which repaints), the firmware's own loop (the fill and the waiting glow) and CHIP's
+(Matter's light callbacks, and the *nobody came* glow — which fires in the middle of a successful
+setup). They shared one buffer and one RMT channel with nothing between them, and `px::show()` waits
+for its frame with no timeout. When two overlapped, the MQTT task waited for a frame that never
+finished: no more commands, no more keep-alives. The loop — the one task under the watchdog — carried
+on, which is why nothing panicked and the serial log kept going. **Fixed with one recursive lock**
+(`gPx` in `app_main.cpp`) around every writer, and nothing but the MQTT task itself publishes while
+holding it, because a publish takes the MQTT client's own lock and that task may be waiting on ours.
+**Twenty-four rounds** of a fill ended every way there is — `off`, `fill/stop`, `light/set` — at varied
+timings, and it answered every time; before the lock, the first `off` froze it.
+
+**Not proven:** that this was the only cause in the house. It is the cause the bench reproduced, and it
+fits every sign the house showed.
+
+**The fill, which could run for ever.** It ends on `fill/stop` and nothing else — `off` left it
+running under the paint (and left the strip believing it was 600 lights long until it restarted) and a
+length being said did not end it either — and it published one message per light, twenty a second.
+Found by a replay of setup that did not say stop, which ran it for minutes. Now `off` and `count/set`
+end it, a fill nobody finishes ends by itself after five minutes and hands back the length that was
+written down, `fill/stop` with no fill running answers the strip's length instead of latching wherever
+it last was, and progress goes out four times a second — the wall only draws it; the length comes back
+from `fill/stop`.
+
+**And the light comes back as it was left** (asked for the same evening). On/off, brightness and color
+were never written down, so every restart came back off and warm white. They are kept in NVS two
+seconds after the last change — a slider being dragged is dozens a second, each an erase cycle — from
+the hub's `light/set` and from Matter's callbacks alike, and restored before the first paint at boot.
+Seen: on, 150, blue, through a power-on restart; and off, with the blue kept for next time.
+
+**47. After a deploy, the brain heard no strip at all — and it had been that way since 17
+September.** Reported 23 September: adding a strip "failed right before the colour check", three
+times running. The strip had done everything right: the broker's own log shows it connecting as
+`hub` five seconds after each handoff and publishing `status online`, which the broker still held.
+The brain said *nothing arrived on the broker in 60s. Known: {}* — it knew of no strip at all.
+
+**Why.** A deploy restarts Home Assistant and the brain together, and the brain is ready first. Its
+one `mqtt/subscribe` was answered *Unknown command* because HA's MQTT integration had not loaded,
+it logged *no broker view yet*, and it never asked again — for strips or for bridges. Nothing on the
+broker reached it until it was restarted by hand, which is what unblocked the house that evening.
+
+**Fixed:** both views now ask until they are answered (`subscribe_until_answered` in
+`brain/hub/strip.py`), saying so once when the broker is not there and once when it is; the bridge's
+cable watcher no longer waits on it. `brain/tests/test_broker_view.py` holds a Home Assistant that
+says *Unknown command* twice, and **fails against the old ask-once**. Not ours today: this was
+latent in every deploy since the bridge's view was written, and only ever needed the two restarts to
+race.
 
 **46. IN A REAL HOUSE, THROUGH HOME ASSISTANT, ON THE AIR: a strip the hub could barely hear was set
 up through a bridge, with a tap on the wall and nothing else.** 23 September.

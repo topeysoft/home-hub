@@ -62,7 +62,7 @@ for n, (ref, th) in enumerate(zip(LED_ORDER, LED_ANGLES), 1):
 # widths with a 0.4 mm gap -- hand-estimated half-angles overlapped the headers, measured ones do
 # not. The outer band is under the diffuser's skirt, which starts 1.6 mm above the board: the 4.3 mm
 # headers must stay inside r=23.15, so they ride a smaller radius than the 1.4 mm switches and the
-# SOT-23s. The user button is pinned at 180, the front of the shelf variant, where you would tap it,
+# SOT-23s. The original USER preference was 180 degrees; B2 now fixes its actual routed coordinates,
 # with its actuator (local +Y) pointing out through the wall. Passives are left to the packer: it
 # only ever failed on big parts, and where a 0603 lands is a routing convenience, not a decision.
 # The outer ring, assigned by CIRCUIT rather than packed by index. The first version packed parts
@@ -351,7 +351,11 @@ LAYERS = """\t(layers
 \t)"""
 
 def main():
-    real = {r: v for r, v in PARTS.items() if not r.startswith("#")}
+    # Refuse before placement calculations: the routed board is the B2 mechanical authority.
+    existing = HERE / f"{PROJECT}.kicad_pcb"
+    if existing.exists() and not FORCE and routing_count(existing.read_text()):
+        sys.exit("Routed board preserved. Use KiCad for edits; --force is only for a separate redesign copy.")
+    real = {r: v for r, v in PARTS.items() if not r.startswith(("#", "H"))}
     nets = {"": 0}
     for _r, (_l, _n, _v, _f, nm) in sorted(real.items()):
         for net in nm.values(): nets.setdefault(net, len(nets))
@@ -388,6 +392,9 @@ def main():
         r = OUTER_R.get(ref, 22.2)
         x, y = polar(th, r); FIXED[ref] = (x, y, tangential(real[ref][3], th))
         cursor = th + span[ref]
+    # B2 enclosure alignment is taken from the routed board, not the old preferred angle.
+    FIXED["SW3"] = (78.8935, 106.8817, -71.9417)
+    FIXED["R7"] = (89.75, 95.95, 90)
     # Inboard, the annulus is not an annulus. The module's courtyard reaches r=10.1 off its flat
     # faces but 14.0 at its corners, and the LED ring's inner edge is 14.25 -- so there is room near
     # 0/90/180/270 and none at all diagonally. Preferences here say what each part wants to be near;
@@ -471,7 +478,7 @@ def main():
     p.write_text(out)
     print(f"{p.name}: {len(real)} parts + {len(BOLT_ANGLES)} holes, {len(nets) - 1} nets, "
           f"board {BOARD_R * 2:.1f} mm")
-    print(f"  U1 at the centre; J1 mouth at x={mm(CX + BOARD_R)} (0 deg); user button at 180 deg")
+    print(f"  U1 at the centre; J1 mouth at x={mm(CX + BOARD_R)} (0 deg); USER fixed to B2 coordinates (78.8935,106.8817)")
     print(f"  LEDs r={LED_R} at {LED_ANGLES}; M2 r={BOLT_R} at {BOLT_ANGLES}")
 
 FORCE = False

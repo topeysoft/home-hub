@@ -1,0 +1,44 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Glow B</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500&family=Plus+Jakarta+Sans:wght@200;300;400;500&display=swap">
+<link rel="stylesheet" href="scene.css">
+</head>
+<body>
+<div class="board"></div>
+<script src="scene.js"></script>
+<script>
+/* B: the sky stays exactly as it ships, and a colored thing that is on lights the wall
+   behind its own card, the way a lamp against a real wall would. The glow sits over the
+   veil and under the glass, breathes on a twenty-second cycle, and is always where the
+   thing is, so it doubles as a pointer. A light scrolled off the edge still glows in
+   from that edge. */
+window.Backdrop = {
+  mount(el, over) {
+    this.c = document.createElement('canvas'); this.c.width = 1440; this.c.height = 900; el.appendChild(this.c); this.x = this.c.getContext('2d')
+    this.over = over; this.glows = {}
+  },
+  update({ hour, sources }) {
+    this.hour = hour
+    const want = new Set(sources.map((s) => s.id))
+    for (const s of sources) {
+      let g = this.glows[s.id]
+      if (!g) { g = this.glows[s.id] = document.createElement('div'); g.style.cssText = 'position:absolute;border-radius:50%;mix-blend-mode:screen;transition:opacity 2s, background 2s;opacity:0'; this.over.appendChild(g) }
+      const R = s.id === 'tv' ? 460 : 640
+      g.style.left = s.where[0] - R + 'px'; g.style.top = s.where[1] - R + 'px'; g.style.width = g.style.height = 2 * R + 'px'
+      g.style.background = `radial-gradient(closest-side, ${Scene.css(s.glow, .95 * s.strength)}, ${Scene.css(s.glow, .45 * s.strength)} 40%, transparent)`
+      g.dataset.base = 1
+      requestAnimationFrame(() => (g.style.opacity = g.dataset.base))
+    }
+    for (const id in this.glows) if (!want.has(id)) this.glows[id].style.opacity = 0
+  },
+  frame(t) {
+    Scene.sky(this.x, this.hour, t)
+    let i = 0
+    for (const id in this.glows) { const g = this.glows[id]; if (g.style.opacity !== '0') g.style.transform = `scale(${1 + .06 * Math.sin(t / 20 * 6.28 + i++ * 2)})` }
+  },
+}
+Scene.init({ groups: ['hour', 'lamp', 'strip', 'tv', 'speed'], tag: 'B — the sky stays; a light glows behind its card' })
+</script>
+</body>
+</html>

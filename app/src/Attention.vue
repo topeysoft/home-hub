@@ -120,6 +120,13 @@ defineExpose({ updateReady })
     <span class="nudge-icon"><Icon :name="w.id === 'knock' ? 'light' : 'sparkle'" :size="20" /></span>
     <span class="nudge-text"><span class="nudge-title">{{ w.title }}</span><span class="nudge-sub">{{ w.sub }}</span></span>
   </button>
+  <!-- SOMEBODY IS TRYING A SIGNAL, and every wall says so -- not only the one they started it from --
+       because "after dark" is set aside while they do, and a drive lighting up at lunch should not
+       surprise whoever is in the kitchen. design/signal/Chosen.dc.html. -->
+  <button class="nudge quiet" v-if="store.signalTry?.state === 'watching'" @click="store.sheet = 'signals'">
+    <span class="nudge-icon pulse"><Icon name="light" :size="20" /></span>
+    <span class="nudge-text"><span class="nudge-title">Trying “{{ store.signalTry.name }}”</span><span class="nudge-sub">The lights may show it in daylight for the next few minutes. Tap to see what the house has seen.</span></span>
+  </button>
   <button class="nudge" v-if="store.status?.setup_done && store.status.locked === false" @click="store.sheet = 'code'">
     <span class="nudge-icon"><Icon name="lock" :size="20" /></span>
     <span class="nudge-text"><span class="nudge-title">Lock the settings</span><span class="nudge-sub">Anyone on the Wi‑Fi can change the house right now. A passcode keeps the controls open and the settings yours.</span></span>

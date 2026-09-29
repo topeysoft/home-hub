@@ -10,15 +10,15 @@ export type Intent = { room: string; intent: string; set_by: string | null; hold
 export type Home = { name?: string | null; temp_unit?: string; entry?: string[]; rooms: Room[] }   // entry: the rooms people come in through
 export type Driver = 'down' | 'fresh' | 'needs-login' | 'connecting' | 'ready'
 export type Part = { id: string; name: string; state: 'unknown' | 'off' | 'adding' | 'ready' | 'failed' | 'sign-in' | 'waiting'; text: string; port: number }
-/* channel: which code this hub follows — 'release' (version tags, what a house runs) or 'main' (the
-   branch, for a hub being worked on). `available` is null when the hub genuinely cannot tell, and
+/* channel: which code this hub follows — 'release' (version tags, what a house runs), or 'main' or
+   'development' (that branch, for a hub being worked on). `available` is null when the hub genuinely cannot tell, and
    `offer` is the same answer minus a version that was installed, would not start, and was put back:
    the hub stops raising that one on its own, and the button under This hub still installs it. */
 /** What changed, in words a household reads. Written by hand into releases/<version>.md and shipped
    inside the brain's image, so these are the notes for the code this hub is actually running. */
 export type ReleaseNotes = { version: string; what: string[]; details: string }
 export type UpdateNotes = { notes: ReleaseNotes | null; history: ReleaseNotes[] }
-export type Update = { version: string; commit: string; channel: 'release' | 'main'; latest: { version: string; sha: string; when: string; title: string; what: string[] } | null; whats_new: ReleaseNotes | null; held: boolean; reached_us: boolean; available: boolean | null; offer: boolean | null; rejected: string | null; auto: boolean; verified: boolean; checked: number | null; requested: boolean; state: { state: 'running' | 'done' | 'failed' | 'reverted' | 'refused'; started?: number; finished?: number; commit?: string; to?: string; bad?: string; reverted?: boolean } | null; error: string | null
+export type Update = { version: string; commit: string; channel: 'release' | 'main' | 'development'; latest: { version: string; sha: string; when: string; title: string; what: string[] } | null; whats_new: ReleaseNotes | null; held: boolean; reached_us: boolean; available: boolean | null; offer: boolean | null; rejected: string | null; auto: boolean; verified: boolean; checked: number | null; requested: boolean; state: { state: 'running' | 'done' | 'failed' | 'reverted' | 'refused'; started?: number; finished?: number; commit?: string; to?: string; bad?: string; reverted?: boolean } | null; error: string | null
   /* Where the host has got to, while it is getting there. The brain is alive for nearly all of an
      update -- the code, the signature and the pull all happen with it running -- so this is a real
      answer for most of the wait rather than a spinner. null when nothing is happening. */
@@ -41,12 +41,13 @@ export type Status = { driver: Driver; reason: string; setup_done: boolean; lock
    panel does not know what it is looking at, so it draws `acts` and invents nothing. `with` is what went
    quiet behind this one fault -- fix the fault and they all come back, which is why they are not lines of
    their own. See brain/hub/health.py. */
-export type Act = { do: string; act: 'flow' | 'entry' | 'part' | 'check' | 'forget' | 'update' | 'restart' | 'bridge' | 'account' | 'strip'; to: string | null
+export type Act = { do: string; act: 'flow' | 'entry' | 'part' | 'check' | 'forget' | 'update' | 'restart' | 'bridge' | 'account' | 'strip' | 'backup'; to: string | null
   ask?: string        // a question to answer first, where the doing is worth a second's thought
   yes?: string        // the words that answer it, with the name in them
   no?: string }       // ...and the ones that decline, where "Keep it" is not what is being kept
 export type Quiet = { id: string; name: string; where: string }
-export type Note = { kind: 'offline' | 'storage' | 'driver' | 'update' | 'restart' | 'bridge'; text: string; since: number | null; subject: string | null
+export type Note = { kind: 'offline' | 'storage' | 'driver' | 'update' | 'restart' | 'bridge' | 'healed'; text: string; since: number | null; subject: string | null
+  more?: string       // the second sentence, quieter: what a pattern means, under the line that names it
   where?: string      // an offline thing: which room, and what sort of thing it is -- enough to go and look at it
   name?: string       // an offline thing: what it is called, apart from the sentence it is in
   with?: Quiet[]      // what went quiet with this fault
@@ -579,7 +580,7 @@ export type HappenedItem = {
   kind: 'still' | 'over' | 'phone'; subject: string; text: string; when: string; ts: number
   where?: string        // which room and what sort of thing: enough to walk to it
   seconds?: number      // how long it has been that way; the sort order, already applied
-  word?: string         // on | open | unlocked -- what the group heading was built from
+  word?: string         // on | open | unlocked -- what the group heading was built from; hub for the hub starting a part of itself
   acts: HappenedAct[] } // empty on anything already over: there is nothing left to do about it
 export type HappenedGroup = { id: 'still' | 'over' | 'people'; label: string; items: HappenedItem[] }
 export type Happened = {
@@ -599,6 +600,29 @@ export async function getChanges(limit = 200): Promise<Changes> {
   const r = await request(`/happened/changes?limit=${limit}`); if (!r.ok) await fail(r); return r.json()
 }
 export const setEntry = (rooms: string[]) => post<{ entry: string[] }>('/home/entry', { rooms })
+/* What the lights tell you (brain/hub/signals.py, design/signal/). A signal is one of four motions along
+   the lights -- a run, a breath, a fill, one end -- that MEANS something and is over. The house has four of
+   its own; a household's own come from routines. `rgb` is the EMITTER color the strip is sent, which the
+   page draws its preview in too: it is not a screen color and never a palette token. */
+export type SignalKind = 'way' | 'call' | 'fill' | 'end'
+export type Tried = { line: string; ok: boolean; at: number }
+export type SignalRow = { id: string; name: string; kind: SignalKind; toward?: 'house' | 'out' | null; rgb: number[]; on: boolean; available: boolean; hint?: string; lights: string[]; tried?: Tried }
+export type OwnSignal = { id: string; key: string; name: string; kind: SignalKind; toward?: 'house' | 'out' | null; rgb: number[]; on: boolean; tried?: Tried }
+export type StepState = 'ok' | 'no' | 'wait' | 'skip'
+export type TryStep = { key: string; state: StepState; text: string; sub?: string; at?: number }
+export type Trying = { id: string; of: string; name: string; how: 'now' | 'watch'; state: 'running' | 'watching' | 'passed' | 'failed' | 'stopped'; started: number; ends: number; ended?: number; steps: TryStep[] }
+/* What every panel hears about a try, for the band: enough to say one is on and to open it. */
+export type TryBrief = { of: string; name: string; state: Trying['state']; ends: number }
+export type SignalStrip = { id: string; online: boolean; house_end: 'plug' | 'far' | null; device: string | null }
+export type SignalsPage = { meanings: SignalRow[]; own: OwnSignal[]; strips: SignalStrip[]; trying: Trying | null }
+export async function getSignals(): Promise<SignalsPage> {
+  const r = await request('/signals'); if (!r.ok) await fail(r); return r.json()
+}
+export const trySignal = (of: string, how: 'now' | 'watch') => post<Trying>('/signals/try', { of, how })
+export const stopTrying = () => post('/signals/try/stop')
+export const setSignalOn = (id: string, on: boolean) => post<SignalsPage>(`/signals/${encodeURIComponent(id)}/on`, { on })
+export const showEnd = (strip: string) => post('/signals/ends/show', { strip })
+export const setHouseEnd = (strip: string, house: 'plug' | 'far') => post<SignalsPage>('/signals/ends', { strip, house })
 export const enableRoutine = (id: string, enabled: boolean) => post<{ ok: boolean; enabled: boolean }>(`/rules/${encodeURIComponent(id)}/enable`, { enabled })
 /* The assistant: it writes drafts and explains from the log. It has no call that changes a device. */
 export type Assistant = { available: boolean; configured: boolean; source: 'panel' | 'env' | null; model: string }
@@ -641,7 +665,7 @@ export async function setHomeIntent(state: string) {
 export const imageUrl = (id: string) => `/devices/${encodeURIComponent(id)}/image?t=${Date.now()}`
 
 /** Live updates from the brain. Reconnects with backoff; reports link state. */
-export function connect(on: { device: (d: Device) => void; home: (h: Home) => void; ambient: (a: Ambient) => void; status: (s: Status) => void; intent: (i: Intent) => void; drafts: (d: Routine[]) => void; presence: (p: Presence) => void; phones: () => void; share: () => void; link: (up: boolean) => void }) {
+export function connect(on: { device: (d: Device) => void; home: (h: Home) => void; ambient: (a: Ambient) => void; status: (s: Status) => void; intent: (i: Intent) => void; drafts: (d: Routine[]) => void; presence: (p: Presence) => void; phones: () => void; share: () => void; signals: (t: TryBrief | null) => void; link: (up: boolean) => void }) {
   let delay = 1000, ws: WebSocket | null = null, closed = false
   const open = () => {
     const proto = location.protocol === 'https:' ? 'wss' : 'ws'
@@ -658,6 +682,7 @@ export function connect(on: { device: (d: Device) => void; home: (h: Home) => vo
       else if (m.type === 'presence') on.presence(m.presence)
       else if (m.type === 'phones') on.phones()   // a nudge, not the roster: what this phone may see is /phones' answer to ask for
       else if (m.type === 'share') on.share()    // the same shape: what is shared, and who holds it, is /share's answer to give
+      else if (m.type === 'signals') on.signals(m.trying ?? null)   // a try moved on, or a row was switched; the brief is for the band
     }
     ws.onclose = () => { on.link(false); if (!closed) setTimeout(open, delay = Math.min(delay * 2, 15000)) }
     ws.onerror = () => ws?.close()

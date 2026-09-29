@@ -231,9 +231,33 @@ class ForgettingTests(ApiTest):
         self.assertEqual(said.get("mesh/0123456789abcdef/0021/forget"), "1")
         self.assertEqual(said.get("homeassistant/light/mesh_0123456789abcdef_0021/config"), "")
 
+    def test_a_light_strip_is_told_to_forget_the_house_and_not_sent_to_an_account(self):
+        """Reported from a real house on 23 September: taking a strip out from its own pane said "it
+        goes when the account that brought it does, on the Accounts page" -- and no account brought
+        it. A strip is ours: it leaves the way the page of everything the house has already offers,
+        told to forget the house, with its retained topics and its light gone from Home Assistant."""
+        self.registry({"id": "hw-ceiling", "config_entries": ["entry-mqtt"],
+                       "identifiers": [["mqtt", "strip_2e4258"]]})
+        self.hub.strip.strips["2e4258"] = {"online": True}
+        r = self.client.delete("/devices/light.ceiling")
+        self.assertEqual(r.status_code, 200, r.text)
+        self.assertEqual([ty for ty, _ in self.ha.sent
+                          if ty == "config/device_registry/remove_config_entry_from_device"], [])
+        said = {d.get("topic"): d.get("payload") for _dom, _svc, _e, d in self.ha.calls}
+        self.assertEqual(said.get("strip/2e4258/forget"), "1")
+        self.assertEqual(said.get("homeassistant/light/strip_2e4258/config"), "")
+        self.assertNotIn("2e4258", self.hub.strip.strips)
+
+    def test_a_strip_that_cannot_go_yet_says_why_and_never_blames_an_account(self):
+        self.registry({"id": "hw-ceiling", "config_entries": ["entry-mqtt"],
+                       "identifiers": [["mqtt", "strip_2e4258"]]})
+        r = self.client.delete("/devices/light.ceiling")          # a strip this hub has never heard of
+        self.assertEqual(r.status_code, 409)
+        self.assertNotIn("account", r.json()["detail"].lower())
+
     def test_anything_else_with_an_identifier_still_goes_the_ordinary_way(self):
         self.registry({"id": "hw-ceiling", "config_entries": ["entry-hw-ceiling"],
-                       "identifiers": [["mqtt", "strip_c8ebba"]]})
+                       "identifiers": [["zha", "00:17:88:01:0b:2c:4d:6e"]]})
         self.assertEqual(self.client.delete("/devices/light.ceiling").status_code, 200)
         self.assertIn(("config/device_registry/remove_config_entry_from_device",
                        {"device_id": "hw-ceiling", "config_entry_id": "entry-hw-ceiling"}), self.ha.sent)

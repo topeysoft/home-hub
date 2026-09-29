@@ -3,10 +3,12 @@
 /* The house as the panel understands it: what a room is doing, what a scene means, and the names
    people read off tiles. These all end up as words on a wall. */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { nextTick } from 'vue'
 import type { Device, Room } from '../src/api'
+import { lock } from '../src/code'
 import {
   activity, cap, capsOf, currentScene, doneLine, forgetDone, houseLine, isActive, isDead, justDone, newBuild,
-  perform, reloadOnto, restingLine, restingParts, roomActive, sayUpdated, sceneHolds, scenesFor, shortName, store,
+  hubAway, perform, reloadOnto, restingLine, restingParts, roomActive, sayUpdated, sceneHolds, scenesFor, shortName, store,
   updateReady, visibleRooms, whatsOn,
 } from '../src/store'
 
@@ -390,5 +392,57 @@ describe('the page follows the hub onto a new build', () => {
     expect(reload).toHaveBeenCalledTimes(1)
     expect(() => sayUpdated()).not.toThrow()
     vi.unstubAllGlobals()
+  })
+})
+
+/* The waiting screen for an update or a restart is drawn under the panes and sheets, so anything left
+   open covers the one thing worth reading, and every control on it talks to a hub that is not there. */
+describe('when the hub goes away', () => {
+  const openEverything = () => {
+    store.sheet = 'house'
+    store.opened = dev('l', 'Lamp', 'light', 'on')
+    store.outside = true
+    store.viewer = dev('c', 'Door', 'camera', 'idle')
+    store.bridge = { state: 'order' } as any
+    store.strip = { state: 'order' } as any
+    store.stripAsked = true
+    store.askAside = false
+  }
+  afterEach(() => { store.updating = null; store.restarting = null; store.restoring = false; store.linkLost = false })
+
+  it('is only while the screen is actually dark', () => {
+    store.updating = { at: 0, dark: 60, left: 60, lost: false }
+    expect(hubAway()).toBe(false)          // downloading: the house still works, a line says so
+    store.updating.lost = true
+    expect(hubAway()).toBe(true)
+  })
+
+  it('closes everything open over the house the moment an update goes dark', async () => {
+    openEverything()
+    let answered: boolean | null = null
+    lock.prompt = { resolve: ok => (answered = ok), wrong: false, note: '' }
+    store.updating = { at: 0, dark: 60, left: 60, lost: false }
+    await nextTick()
+    expect(store.opened).not.toBeNull()    // not yet: nothing has gone away
+    store.updating.lost = true
+    await nextTick()
+    expect([store.sheet, store.opened, store.outside, store.viewer, store.bridge, store.strip]).toEqual([null, null, false, null, null, null])
+    expect(store.askAside).toBe(true)
+    expect(lock.prompt).toBeNull()
+    expect(answered).toBe(false)           // whatever asked for the code hears no, rather than waiting forever
+  })
+
+  it('does the same for a restart and a restore', async () => {
+    openEverything()
+    store.restarting = { rung: 'hub', at: 0, seconds: 30, left: 30, lost: true, from: 'hub' as any }
+    await nextTick()
+    expect(store.opened).toBeNull()
+    store.restarting = null
+    await nextTick()
+    openEverything()
+    store.restoring = true
+    store.linkLost = true
+    await nextTick()
+    expect(store.sheet).toBeNull()
   })
 })

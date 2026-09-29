@@ -1,0 +1,156 @@
+[
+  {
+    "net": "+3V3",
+    "ref": "U1",
+    "pin": "2",
+    "pinfunction": "3V3_2",
+    "pintype": "power_in"
+  },
+  {
+    "net": "EN",
+    "ref": "U1",
+    "pin": "3",
+    "pinfunction": "EN_3",
+    "pintype": "input"
+  },
+  {
+    "net": "EXP_A",
+    "ref": "U1",
+    "pin": "10",
+    "pinfunction": "IO17_10",
+    "pintype": "bidirectional"
+  },
+  {
+    "net": "EXP_B",
+    "ref": "U1",
+    "pin": "11",
+    "pinfunction": "IO18_11",
+    "pintype": "bidirectional"
+  },
+  {
+    "net": "EXP_C",
+    "ref": "U1",
+    "pin": "9",
+    "pinfunction": "IO16_9",
+    "pintype": "bidirectional"
+  },
+  {
+    "net": "GND",
+    "ref": "U1",
+    "pin": "1",
+    "pinfunction": "GND_1",
+    "pintype": "power_in"
+  },
+  {
+    "net": "GND",
+    "ref": "U1",
+    "pin": "40",
+    "pinfunction": "GND_40",
+    "pintype": "passive"
+  },
+  {
+    "net": "GND",
+    "ref": "U1",
+    "pin": "41",
+    "pinfunction": "GND_41",
+    "pintype": "passive"
+  },
+  {
+    "net": "INPUT_FAULT_N",
+    "ref": "U1",
+    "pin": "19",
+    "pinfunction": "IO11_19",
+    "pintype": "bidirectional"
+  },
+  {
+    "net": "INPUT_HIGH_EN",
+    "ref": "U1",
+    "pin": "18",
+    "pinfunction": "IO10_18",
+    "pintype": "bidirectional"
+  },
+  {
+    "net": "IO0",
+    "ref": "U1",
+    "pin": "27",
+    "pinfunction": "IO0_27",
+    "pintype": "bidirectional"
+  },
+  {
+    "net": "LED_DATA_3V3",
+    "ref": "U1",
+    "pin": "31",
+    "pinfunction": "IO38_31",
+    "pintype": "bidirectional"
+  },
+  {
+    "net": "LED_DATA_EN",
+    "ref": "U1",
+    "pin": "7",
+    "pinfunction": "IO7_7",
+    "pintype": "bidirectional"
+  },
+  {
+    "net": "LED_PWR_EN",
+    "ref": "U1",
+    "pin": "6",
+    "pinfunction": "IO6_6",
+    "pintype": "bidirectional"
+  },
+  {
+    "net": "SCL",
+    "ref": "U1",
+    "pin": "17",
+    "pinfunction": "IO9_17",
+    "pintype": "bidirectional"
+  },
+  {
+    "net": "SDA",
+    "ref": "U1",
+    "pin": "12",
+    "pinfunction": "IO8_12",
+    "pintype": "bidirectional"
+  },
+  {
+    "net": "UART0_RX",
+    "ref": "U1",
+    "pin": "36",
+    "pinfunction": "RXD0_36",
+    "pintype": "bidirectional"
+  },
+  {
+    "net": "UART0_TX",
+    "ref": "U1",
+    "pin": "37",
+    "pinfunction": "TXD0_37",
+    "pintype": "bidirectional"
+  },
+  {
+    "net": "USB_CC_INT_N",
+    "ref": "U1",
+    "pin": "5",
+    "pinfunction": "IO5_5",
+    "pintype": "bidirectional"
+  },
+  {
+    "net": "USB_DM",
+    "ref": "U1",
+    "pin": "13",
+    "pinfunction": "USB_D-_13",
+    "pintype": "bidirectional"
+  },
+  {
+    "net": "USB_DP",
+    "ref": "U1",
+    "pin": "14",
+    "pinfunction": "USB_D+_14",
+    "pintype": "bidirectional"
+  },
+  {
+    "net": "USER_BTN",
+    "ref": "U1",
+    "pin": "4",
+    "pinfunction": "IO4_4",
+    "pintype": "bidirectional"
+  }
+]

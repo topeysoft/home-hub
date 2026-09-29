@@ -50,6 +50,11 @@ Once per checkout, because `sdkconfig` and `build/` are not in git:
 
     idf.py set-target esp32s3
 
+**A checkout that built before 24 September has a stale `sdkconfig`.** `sdkconfig.defaults` only fills in
+settings `sdkconfig` has never had an answer for, and "not set" is an answer, so turning rollback on and
+Matter's own updates off there does not reach an existing `sdkconfig`. Remove it and run `set-target`
+again; `tools/build-strip.sh` refuses to build a release from one that is still wrong.
+
 Then, with the board on USB:
 
     idf.py -p /dev/cu.usbserial-XXXX build flash monitor
@@ -87,7 +92,8 @@ It exists because the first dead strip here turned out to be a power problem aft
 
 ## What a healthy boot says
 
-    I (610)  strip: 0.3.0  chip 2e4258  pin 5  300 lights, order grb
+    I (610)  strip: 0.4.0  chip 2e4258  pin 5  300 lights, order grb
+    I (612)  strip: maker's keys d123,0604
     I (1470) chip[DL]: CHIPoBLE advertising started
 
 Two lines you will also see and can ignore: `OTA app partition slot 1 is not bootable` is the empty spare
@@ -95,6 +101,21 @@ update slot, which is what an unflashed one looks like; and Wi-Fi connect failur
 Matter retrying a network it has not been given yet.
 
 If it says **`THE LIGHT DRIVER DID NOT START`**, the RMT peripheral refused the pin. Change it.
+
+## Updates
+
+A strip takes its fixes from the hub, the way a bridge puck does (`docs/strip.md`, "Updates, the puck's way";
+`main/fwupdate.h`). The version is `STRIP_FW` in `main/fwupdate.h` and names the *next* release.
+
+    tools/build-strip.sh          the release image, into releases/strip/
+    tools/dev.sh strip            this tree, onto a strip in a house whose hub follows a branch, now
+
+A test build is `STRIP_FW-d<minutes>`, passed as `idf.py -DSTRIP_FW=...`. That is a CMake cache entry, so it
+sticks until it is cleared with `idf.py -DSTRIP_FW= build`; `tools/dev.sh strip` clears it itself.
+
+A new image has three minutes to reach the hub or the bootloader puts back the one before. Only a bootloader
+built with `CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE` can do that, and only a cable writes a bootloader, so a strip
+flashed before 24 September needs flashing once more over USB (a plain `idf.py flash` writes the bootloader).
 
 ## Commissioning it
 

@@ -26,6 +26,7 @@ from . import notes as notes_mod
 from .updates import Updates
 from .health import Health
 from .happened import Happened, Changes
+from .healed import Healed
 from .backup import Backup
 from .network import Network
 from .restart import Restart
@@ -38,6 +39,7 @@ from .lock import Lock, needs_code
 from .pairing import Pairing
 from .bridge import Bridges
 from .strip import Strips, StripError
+from .signals import Signals
 from . import things
 from .things import Things
 from .share import Share
@@ -133,11 +135,13 @@ class Hub:
         self.nightlight = Nightlight(self)  # a bridge's own light, lifted when somebody walks past it
         self.phones = Phones(self)                     # which phones belong to the house, once it has a code
         self.engine = Engine(self)                     # rules: signals in, room intents out
+        self.signals = Signals(self)                   # what the lights tell you: arriving, leaving, a door left open
         self.presence = Presence(self)                 # who is home, from HA's persons and the alarm's mode
         self.assistant = Assistant(self)               # writes drafts and explains from the log; never runs anything
         self.updates = Updates(self)                   # which build this is, whether a newer one exists, and the panel's ask
         self.health = Health(self)                     # what needs a look, as sentences
         self.happened = Happened(self)                 # what the house did while nobody watched
+        self.healed = Healed(self)                     # a part the host had to start again, said once and then when it repeats
         self.changes = Changes(self)                   # who changed what, behind the code
         self.backup = Backup(self)                     # the house as one file, and back
         self.restart = Restart(self)                   # turning it off and on again, at the smallest rung that could help
@@ -241,6 +245,7 @@ class Hub:
         asyncio.create_task(self.provision.refresh())   # look at the driver layer now, not at the next half-minute
         asyncio.create_task(self.sounds.ensure())        # the generated noises, once
         asyncio.create_task(self.bridge.watch())         # what appears on the USB from now on
+        asyncio.create_task(self.bridge.firmware.watch())   # a build parked by tools/dev.sh puck
         asyncio.create_task(self.strip.listen())         # the strips the house already has
         asyncio.create_task(self.strip.watch())          # and any that start knocking
         self._broadcast(json.dumps({"type": "home", "home": self.home_dict()}))
@@ -458,8 +463,10 @@ class Hub:
                 self._broadcast(json.dumps({"type": "ambient", "ambient": self.ambient()}))
             return
         if d["entity_id"].startswith(WATCHED):
-            was = self.presence.somebody
-            if self.presence.on_state(d["entity_id"], d.get("new_state")):
+            was, people = self.presence.somebody, {k: dict(v) for k, v in self.presence.people.items()}
+            changed = self.presence.on_state(d["entity_id"], d.get("new_state"))
+            self.signals.on_people(people, self.presence.people)    # one phone coming home, not only the house's answer
+            if changed:
                 self.log.add("presence", "home", presence_word(was), presence_word(self.presence.somebody), source="device", detail=self.presence.as_dict())
                 self._broadcast(json.dumps({"type": "presence", "presence": self.presence.as_dict()}))
                 self.engine.on_presence()
@@ -475,6 +482,7 @@ class Hub:
             self.log.add("state", dev.id, old, dev.state, source="device", detail=dev.attrs)
         self._broadcast(json.dumps({"type": "device", "device": dev.__dict__}))
         self.engine.on_state(dev, old)
+        self.signals.on_state(dev, old)     # after the engine: it stamps a room's motion, which decides in from out
         self.sounds.on_state(dev, old)
         self.nightlight.on_state(dev, old)
         if dev.capability in ("climate", "sensor.temperature"): asyncio.create_task(self.comfort.on_state(dev))
@@ -673,6 +681,7 @@ async def lifespan(app):
     hub._loop = asyncio.get_running_loop()
     hub._loop_task = asyncio.create_task(hub.run())
     hub._tick_task = asyncio.create_task(hub.engine.run())
+    hub._signals_task = asyncio.create_task(hub.signals.run())
     hub._drivers_task = asyncio.create_task(hub.provision.run())
     hub._comfort_task = asyncio.create_task(hub._comfort_loop())
     hub._forecast_ticker = asyncio.create_task(hub._forecast_loop())
@@ -680,7 +689,7 @@ async def lifespan(app):
     hub._suggest_task = asyncio.create_task(hub.assistant.run())
     hub._prune_task = asyncio.create_task(hub.log.run())      # the diary, kept a diary: events.py
     yield
-    for t in (hub._loop_task, hub._tick_task, hub._drivers_task, hub._comfort_task, hub._update_task,
+    for t in (hub._loop_task, hub._tick_task, hub._signals_task, hub._drivers_task, hub._comfort_task, hub._update_task,
               hub._suggest_task, hub._prune_task): t.cancel()
     if hub.ha: await hub.ha.close()
 
@@ -1095,6 +1104,17 @@ async def forget_device(device_id: str):
             mine = things.ours(row)
             if mine and mine[0] == "switch":
                 await hub.bridge.forget_switch(*mine[1])
+            elif mine and mine[0] == "strip":
+                # A LIGHT STRIP IS OURS, NOT AN ACCOUNT'S, and it leaves the way things.py already
+                # offers on the page of everything the house has: the strip is told to forget the
+                # house, and its retained topics and its Home Assistant entry go with it. Asked from
+                # the light's own pane it used to fall through to the line below, find no account to
+                # take it off, and tell the household to remove "the account that brought it" --
+                # which does not exist (reported 23 September).
+                try:
+                    await hub.strip.forget(mine[1][0])
+                except StripError as e:
+                    raise HTTPException(409, str(e))
             else:
                 entries = list((row or {}).get("config_entries") or [])
                 if not entries: raise RuntimeError("nothing owns it")
@@ -1102,6 +1122,8 @@ async def forget_device(device_id: str):
                     await hub.ha.send("config/device_registry/remove_config_entry_from_device", device_id=dev.hw, config_entry_id=entry)
         else:
             await hub.ha.send("config/entity_registry/remove", entity_id=dev.id)
+    except HTTPException:
+        raise                  # already in the house's own words, and not about an account
     except Exception as e:
         log.warning("could not forget %s: %s", device_id, e)
         raise HTTPException(502, f"{name} cannot be forgotten on its own. "
@@ -1263,6 +1285,15 @@ async def cancel_flow(flow_id: str):
 # only noticed a thing on its USB, and none of the house's keys have gone anywhere.
 @app.get("/bridge")
 def bridge_status(): return hub.bridge.status()
+
+
+@app.get("/bridge/firmware/{name}")
+def bridge_firmware(name: str):
+    """The image a bridge was offered over the broker, fetched by the hash it was told. Anything else
+    is a 404: this is not a file server, and yesterday's image is not on it."""
+    body = hub.bridge.firmware.served(name)
+    if body is None: raise HTTPException(404)
+    return Response(body, media_type="application/octet-stream", headers={"Cache-Control": "no-store"})
 
 
 @app.post("/bridge/adopt")
@@ -2366,6 +2397,46 @@ def presence():
 # ---------- rules ----------
 @app.get("/rules")
 def get_rules(): return hub.engine.as_data()
+
+
+# ---------- what the lights tell you (hub/signals.py, design/signal/) ----------
+# Reading the page and trying a row are open, like any tap on a light: a try shows something and puts
+# it back. Switching one of the house's four on or off, and saying which end of a strip is the house,
+# change what the house does on its own -- gated like a routine's switch.
+@app.get("/signals")
+async def signals_page(): return await hub.signals.page()
+
+
+@app.post("/signals/try")
+async def signals_try(body: dict):
+    hub.ready()
+    try: return await hub.signals.try_(str(body.get("of") or ""), str(body.get("how") or "now"))
+    except ValueError as e: raise HTTPException(409, str(e))
+
+
+@app.post("/signals/try/stop")
+def signals_stop(): return hub.signals.stop()
+
+
+@app.post("/signals/ends/show")
+async def signals_show_end(body: dict):
+    hub.ready()
+    try: return await hub.signals.show_end(str(body.get("strip") or ""))
+    except ValueError as e: raise HTTPException(404, str(e))
+
+
+@app.post("/signals/ends")
+async def signals_set_end(body: dict):
+    try: await hub.signals.set_house_end(str(body.get("strip") or ""), str(body.get("house") or ""))
+    except ValueError as e: raise HTTPException(422, str(e))
+    return await hub.signals.page()
+
+
+@app.post("/signals/{mid}/on")
+async def signals_on(mid: str, body: dict):
+    try: hub.signals.set_on(mid, bool(body.get("on", True)))
+    except ValueError as e: raise HTTPException(404, str(e))
+    return await hub.signals.page()
 
 
 @app.put("/rules")

@@ -391,12 +391,14 @@ failure: nothing moved, and the panel says so without offering a *Try again* tha
 is not verified, deliberately: there are no manifests for commits, a hub following a branch is a hub being worked on,
 and an override that skipped the check for releases would only end up pasted into a house.
 
-Every hub follows one of two channels, written into `driver-layer/.env` by `install.sh`:
+Every hub follows one of three channels, written into `driver-layer/.env` by `install.sh`:
 
 - **`release`** — the default, and what every hub ships as. Follows version tags. The panel offers an
   update when there is a newer release than the one it is on.
-- **`main`** — the branch, commit by commit, for a hub being worked on:
-  `HOME_HUB_CHANNEL=main sudo ./install.sh`.
+- **`main`** or **`development`** — that branch, commit by commit, for a hub being worked on:
+  `HOME_HUB_CHANNEL=development sudo ./install.sh`. The choice sticks: every update after it,
+  including the ones the panel installs, follows the same branch. Run it again with
+  `HOME_HUB_CHANNEL=release` to put the hub back on releases.
 
 Code and container move together: a hub on `v0.2.0` runs the `0.2.0` image, not whatever is newest.
 The panel's *Install the update* tap parks a request file; the host's `update.sh` runs `install.sh`,

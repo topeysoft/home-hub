@@ -121,6 +121,15 @@ signatures() {
     *"sha256:aaaa HUB_IMG_CADDY HUB_IMG_MOSQUITTO"*) ok "...the brain digest and one HUB_IMG_ per service" ;;
     *) no "...the brain digest and one HUB_IMG_ per service" "got: $got" ;;
   esac
+
+  # install.sh calls this from inside go_to_ref, under set -u. A cleanup trap that outlived the check
+  # fired again when go_to_ref returned, found its variable gone, and stopped every verified install
+  # after the checkout had already moved -- so update.sh put it back, and the house never updated.
+  got="$( bash -c 'set -euo pipefail
+                   HOME_HUB_KEYS="$1" HOME_HUB_RELEASES="file://$2" . "$4/verify.sh" >/dev/null 2>&1
+                   hub="$3"; go() { verify_release v0.3.0 "$hub" >/dev/null 2>&1; }
+                   go; echo carried-on' _ "$keys" "$serve" "$dir" "$HERE" 2>&1 )"
+  is "the installer carries on past a verified release" "$got" carried-on
   rm -rf "$root"
 }
 
@@ -277,9 +286,74 @@ radios() {
 }
 
 
+# ------------------------------------------------------- a part left stopped after the plug was pulled
+# The broker came back from a power cut marked exited and nothing started it; the brain kept answering,
+# so the watchdog, which only asked the brain, saw a healthy house while every puck was locked out.
+watchdog() {
+  group "A part that did not come back after a power cut is started"
+  local root; root="$(mktemp -d)"
+  local dir="$root/hub" bin="$root/bin" fake="$root/fake" data
+  data="$dir/driver-layer/brain-data"
+  mkdir -p "$bin" "$fake" "$data"
+
+  # $FAKE/states is what `compose ps -a` would print; `compose up` is written down, not done.
+  cat > "$bin/docker" <<'D'
+#!/usr/bin/env bash
+[ -f "$FAKE/no-daemon" ] && exit 1
+case "$1 ${2:-} ${3:-}" in
+  "compose config --services") printf 'mosquitto\nhomeassistant\nbrain\n' ;;
+  "compose ps -a")             [ "${4:-}" = -q ] && echo "id-$5" || cat "$FAKE/states" ;;
+  "inspect -f {{.State.FinishedAt}}") echo "2026-09-26T22:29:45.477055085Z" ;;
+  "compose up -d")             shift 3; echo "$*" >> "$FAKE/up" ;;
+esac
+D
+  cat > "$bin/curl" <<'C'
+#!/usr/bin/env bash
+[ -f "$FAKE/answering" ]
+C
+  chmod +x "$bin/docker" "$bin/curl"
+
+  run() {  # states, one "service state" per line
+    printf '%b' "$1" > "$fake/states"; rm -f "$fake/up" "$data/restart.json" "$data/healed.jsonl"
+    PATH="$bin:$PATH" FAKE="$fake" HOME_HUB_DIR="$dir" HOME_HUB_WATCHDOG_GAP=0 "$HERE/watchdog.sh" >/dev/null 2>&1
+  }
+  up() { cat "$fake/up" 2>/dev/null || echo nothing; }
+  touch "$fake/answering"
+
+  run 'mosquitto exited\nhomeassistant running\nbrain running\n'
+  is "the broker left exited is started, and only it" "$(up)" mosquitto
+  [ -f "$data/restart.json" ] && no "...without telling the brain it restarted" "restart.json was written" \
+                              || ok "...without telling the brain it restarted, because it did not"
+  # What the brain reads to say so on What happened: the part, and when Docker says it stopped.
+  python3 -c 'import json,sys; r=json.loads(open(sys.argv[1]).read()); print(r["parts"][0]["service"], r["parts"][0]["stopped"][:19], "at" in r)' \
+    "$data/healed.jsonl" > "$fake/said" 2>&1
+  is "...and writes down what it started, and when that stopped" "$(cat "$fake/said")" "mosquitto 2026-09-26T22:29:45 True"
+
+  run 'homeassistant running\nbrain running\n'
+  is "a part that was never created is started" "$(up)" mosquitto
+
+  run 'mosquitto restarting\nhomeassistant running\nbrain running\n'
+  is "a part compose is already restarting is left to compose" "$(up)" nothing
+
+  run 'mosquitto running\nhomeassistant running\nbrain running\n'
+  is "a whole house is left alone" "$(up)" nothing
+  [ -f "$data/healed.jsonl" ] && no "...and writes nothing down" "healed.jsonl was written" || ok "...and writes nothing down"
+
+  touch "$data/update.request"
+  run 'mosquitto exited\nhomeassistant running\nbrain running\n'
+  is "an update in flight is not raced" "$(up)" nothing
+  rm -f "$data/update.request"
+
+  touch "$fake/no-daemon"
+  run 'mosquitto exited\n'
+  is "a docker that does not answer starts nothing" "$(up)" nothing
+  rm -rf "$root"
+}
+
+
 for need in git openssl curl python3; do
   command -v "$need" >/dev/null 2>&1 || { echo "these tests need $need"; exit 2; }
 done
-signatures; holds; undo; radios
+signatures; holds; undo; radios; watchdog
 printf '\n%s passed, %s failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

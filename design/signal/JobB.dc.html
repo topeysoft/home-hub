@@ -1,0 +1,130 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --ink-3: #8d8a84; --muted: #7f7d77;
+      --lamp-rgb: 233,184,114; --lamp: rgb(var(--lamp-rgb)); --lamp-ink: #2a1c07;
+      --r-lg: 22px; --r-md: 16px; --r-sm: 12px;
+      --em-in: #ff8a00; --em-out: #1e6bff;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .lbl { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); }
+    .rs { font-size: 13.5px; color: var(--muted); line-height: 1.45; }
+    .sheet { border-radius: 28px; background: rgba(20,22,27,.86); border: 1px solid var(--edge); box-shadow: 0 40px 90px -40px rgba(0,0,0,.9); }
+    .opt { flex: 1; border-radius: var(--r-md); padding: 14px 16px; background: rgba(255,255,255,.04); box-shadow: inset 0 0 0 1px rgba(255,255,255,.07); display: flex; flex-direction: column; gap: 4px; }
+    .opt.on { background: linear-gradient(rgba(var(--lamp-rgb),.14), rgba(var(--lamp-rgb),.14)), rgba(255,255,255,.04); box-shadow: inset 0 0 0 1px rgba(var(--lamp-rgb),.45); }
+    .t1 { font-size: 15.5px; font-weight: 500; }
+    .chip { font-size: 14px; padding: 8px 14px; border-radius: 999px; background: rgba(255,255,255,.06); color: var(--ink-2); }
+    .chip.on { background: rgba(var(--lamp-rgb),.18); color: var(--ink); box-shadow: inset 0 0 0 1px rgba(var(--lamp-rgb),.5); }
+    .q { padding: 16px 0; border-top: 1px solid rgba(255,255,255,.06); }
+    .glow { filter: drop-shadow(0 0 7px var(--c)); }
+    .run { position: relative; height: 18px; border-radius: 4px; background: rgba(255,255,255,.1); overflow: hidden;
+           -webkit-mask-image: repeating-linear-gradient(90deg, #000 0 5px, transparent 5px 9px);
+                   mask-image: repeating-linear-gradient(90deg, #000 0 5px, transparent 5px 9px); }
+    .run::after { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 38%; }
+    .way::after  { background: linear-gradient(90deg, transparent, var(--c) 80%, #fff 92%, transparent); animation: way 2.2s cubic-bezier(.45,.05,.55,.95) infinite; }
+    .back::after { background: linear-gradient(270deg, transparent, var(--c) 80%, #fff 92%, transparent); animation: back 2.2s cubic-bezier(.45,.05,.55,.95) infinite; }
+    .endlit::after { left: auto; right: 0; width: 6%; background: #fff; }
+    @keyframes way  { from { transform: translateX(-100%); } to { transform: translateX(265%); } }
+    @keyframes back { from { transform: translateX(265%); } to { transform: translateX(-100%); } }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: var(--bg); color: var(--ink); font-size: 17px; line-height: 1.4;">
+
+  <div style="position: absolute; inset: 0; background: linear-gradient(rgb(22,25,36) 0%, rgb(33,34,52) 50%, rgb(58,45,48) 100%);"></div>
+  <div style="position: absolute; inset: 0; background: rgba(6,7,9,.5);"></div>
+
+  <div style="position: absolute; left: 48px; top: 40px; right: 48px;">
+    <span class="cap">B &mdash; the strip is given a job</span>
+    <h1 class="dsp" style="margin: 10px 0 0; font-size: 40px;">Say what it is for, once, and it knows what to do without a single routine.</h1>
+  </div>
+
+  <!-- ==================== the strip's own pane ==================== -->
+  <div class="sheet" style="position: absolute; left: 48px; top: 176px; width: 820px; padding: 26px 30px 12px;">
+    <div style="display: flex; align-items: baseline; justify-content: space-between;">
+      <div class="dsp" style="font-size: 34px;">Driveway strip</div>
+      <span class="rs">Driveway &middot; on, warm white</span>
+    </div>
+
+    <div class="lbl" style="margin: 22px 0 12px;">What it&rsquo;s for</div>
+    <div style="display: flex; gap: 12px;">
+      <div class="opt"><span class="t1">A light</span><span class="rs">Just light. What every strip is until you say otherwise.</span></div>
+      <div class="opt on"><span class="t1">A path</span><span class="rs">Shows people which way to go along it.</span></div>
+      <div class="opt"><span class="t1">A sign</span><span class="rs">Stays dark until something needs you.</span></div>
+    </div>
+
+    <div style="margin-top: 22px;">
+      <div class="q">
+        <div style="display: grid; grid-template-columns: 260px 1fr; gap: 24px; align-items: center;">
+          <div><div class="t1">Which end is the house?</div><div class="rs">One end is lit, on the drive, right now.</div></div>
+          <div>
+            <div class="glow" style="--c: #fff;"><div class="run endlit"></div></div>
+            <div style="display: flex; gap: 8px; margin-top: 12px;"><span class="chip on">The lit end</span><span class="chip">The other end</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="q">
+        <div style="display: grid; grid-template-columns: 260px 1fr; gap: 24px; align-items: center;">
+          <div><div class="t1">Someone is arriving when&hellip;</div><div class="rs">Things this house has near the drive.</div></div>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;"><span class="chip on">The gate opens</span><span class="chip">Motion by the gate</span><span class="chip on">Someone comes home</span></div>
+        </div>
+      </div>
+      <div class="q">
+        <div style="display: grid; grid-template-columns: 260px 1fr; gap: 24px; align-items: center;">
+          <div><div class="t1">Someone is leaving when&hellip;</div><div class="rs">&nbsp;</div></div>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;"><span class="chip on">The front door opens</span><span class="chip">Motion by the house</span></div>
+        </div>
+      </div>
+      <div class="q">
+        <div style="display: grid; grid-template-columns: 260px 1fr; gap: 24px; align-items: center;">
+          <div><div class="t1">Only after dark</div><div class="rs">A path in daylight is a light nobody sees.</div></div>
+          <div><span style="display: inline-block; width: 52px; height: 30px; border-radius: 999px; background: rgba(134,207,160,.9); position: relative; vertical-align: middle;"><span style="position: absolute; right: 3px; top: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff;"></span></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== right: what the job does ==================== -->
+  <div style="position: absolute; left: 908px; top: 176px; width: 484px;">
+    <span class="cap">What &ldquo;a path&rdquo; does, with nothing else set</span>
+    <div style="margin-top: 14px; border-radius: var(--r-lg); background: rgba(255,255,255,.035); border: 1px solid var(--edge); padding: 20px 22px;">
+      <div class="t1">Someone arriving</div>
+      <div class="glow" style="margin-top: 12px; --c: var(--em-in);"><div class="run way" style="--c: var(--em-in);"></div></div>
+      <div style="display: flex; justify-content: space-between; margin-top: 7px; font-size: 12.5px; color: var(--muted);"><span>Gate</span><span>House</span></div>
+
+      <div class="t1" style="margin-top: 22px;">Someone leaving</div>
+      <div class="glow" style="margin-top: 12px; --c: var(--em-out);"><div class="run back" style="--c: var(--em-out);"></div></div>
+      <div style="display: flex; justify-content: space-between; margin-top: 7px; font-size: 12.5px; color: var(--muted);"><span>Gate</span><span>House</span></div>
+
+      <p class="rs" style="margin: 18px 0 0; line-height: 1.6;">Then it stays lit, at its own color, for as long as a path should, and goes back to how it was. Nobody chooses a speed, a color or a count; the job decides.</p>
+    </div>
+
+    <div style="margin-top: 16px; border-radius: var(--r-lg); border: 1px dashed rgba(224,138,138,.35); background: rgba(224,138,138,.04); padding: 18px 22px;">
+      <span class="cap" style="color: rgba(224,138,138,.8);">The cost</span>
+      <p style="margin: 10px 0 0; font-size: 14.5px; line-height: 1.6; color: var(--ink-2);">
+        Every new use is a new job. A path, a sign, a gauge, a stair&hellip; the list grows one reasonable request at a time, and a
+        list of jobs is a slower way of arriving at a list of effects.
+      </p>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

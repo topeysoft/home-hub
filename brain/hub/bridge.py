@@ -357,12 +357,16 @@ class Bridges:
         self._sub: int | None = None
         # what the broker says: chip -> {"online", "net", "rssi"}; (net, addr) -> state
         self.pucks: dict[str, dict] = {}
+        # How long a change to a bridge's light waits for the puck to say it back; see light().
+        self.echo_wait = 3.0
         self.switches: dict[tuple, str] = {}
         self._heard: dict[str, dict] = {}       # the last answer to a claim command, per leaf
         self.moving: dict | None = None         # every bridge being handed a new Wi-Fi at once
         self._move_task: asyncio.Task | None = None
         self._woke: asyncio.Event | None = None  # made per question, inside the loop asking it
         self._first = True
+        from .bridge_updates import Firmware
+        self.firmware = Firmware(self)          # a fix that reaches a bridge where it is
 
     # ---- what the panel sees ----
     def status(self) -> dict:
@@ -393,15 +397,16 @@ class Bridges:
 
     # ---- the cable: noticing a puck ----
     async def listen(self):
-        """The broker's view of every bridge, through the engine's own MQTT link."""
-        try:
-            self._sub = await self.hub.ha.subscribe("mqtt/subscribe", self._on_mqtt, topic=f"{BASE}/#")
-        except Exception as e:
-            log.info("bridge: no broker view yet (%s)", e)
+        """The broker's view of every bridge, through the engine's own MQTT link -- asked for until it
+        is given, for the reason hub/strip.py's listen() gives: after a deploy HA's MQTT is not there
+        yet, and a brain that asked once saw no bridge, no switch and no errand until restarted."""
+        from .strip import subscribe_until_answered
+        self._sub = await subscribe_until_answered(self.hub, "bridge", self._on_mqtt, f"{BASE}/#")
 
     async def watch(self):
         """Every few seconds: what is on the USB now that was not before. Runs for the life of the brain."""
-        await self.listen()
+        # Not awaited: the cable is worth watching while the broker is still coming up.
+        asyncio.ensure_future(self.listen())
         while True:
             try: await self.scan()
             except Exception as e: log.warning("bridge scan: %s", e)
@@ -759,13 +764,20 @@ class Bridges:
 
         Anything that is not a version at all -- a hand-built puck calling itself "dev" -- is never
         older than anything. A line telling somebody their bench board is out of date is noise.
+
+        A development build of a version ("0.6.1-d382417", tools/dev.sh puck) comes before that
+        version and after the one before it -- the puck's own order (src/fwupdate.cpp) -- so a puck
+        that ran working-tree builds is still counted behind the release it was developing.
         """
         def parts(v):
+            head, dash, tag = str(v or "").partition("-")
             out = []
-            for piece in str(v or "").split("."):
+            for piece in head.split("."):
                 if not piece.isdigit(): return None
                 out.append(int(piece))
-            return tuple(out) or None
+            if not out: return None
+            n = re.sub(r"\D", "", tag)
+            return (*out, 0, int(n or 0)) if dash else (*out, 1, 0)
         pa, pb = parts(a), parts(b)
         return bool(pa and pb and pa < pb)
 
@@ -980,6 +992,14 @@ class Bridges:
             raise ValueError("The hub does not know that bridge.")
         if level is not None and not 0 <= int(level) <= 255:
             raise ValueError("A brightness is 0 to 255.")
+        if night or (night is None and level is not None):
+            # Asking for its nightlight is saying where it lives. The firmware only glows once the
+            # puck is settled -- until then its light is the placing instrument, steady green -- and
+            # settled was only ever sent by "Leave it here" in setup. A bridge that never went
+            # through that (adopted on sight, or set up before the question existed) took every
+            # nightlight setting here, said so back, and stayed green. Retained and idempotent,
+            # exactly as placed() sends it.
+            await self._tell(chip, "settled/set", "1", retain=True)
         if night is not None:
             await self._tell(chip, "night/set", "ON" if night else "OFF")
         if level is not None and (night is None or night):
@@ -988,7 +1008,26 @@ class Bridges:
             nl = getattr(self.hub, "nightlight", None)
             if nl: nl.on_command(chip, "ON" if lift else "OFF")
         self.hub.log.add("bridge", chip, None, "light changed", source="user")
+        await self._said_back(chip, night, None if night is False else level)
         return self.each()
+
+    async def _said_back(self, chip: str, night: bool | None, level: int | None):
+        """Wait, briefly, for the puck to say the change back before answering the panel.
+
+        What each() reports is what the puck last SAID, not what it was asked -- that is the rule
+        that keeps "off" from being a claim about a thing nobody heard. But the panel has no stream
+        for bridges: the answer to this call is all it gets, and answered straight after the telling
+        it was the state from before the tap, so the switch sprang back and stayed there until the
+        page was opened again. The puck says it back well inside a second; a puck that does not is
+        answered with what it last said, which is still the honest thing to draw."""
+        p = self.pucks.setdefault(chip, {})
+        want_level = None if level is None else int(level)
+        def landed():
+            return ((night is None or p.get("night") == night)
+                    and (want_level is None or p.get("level") == want_level))
+        until = time.monotonic() + self.echo_wait
+        while not landed() and time.monotonic() < until:
+            await asyncio.sleep(0.05)
 
     def move_status(self) -> dict | None:
         """What the panel draws while a move is on, and after it. None when nothing has happened."""
@@ -1186,6 +1225,10 @@ class Bridges:
                 p["online"] = payload == "online"
                 self._saw(chip, p["online"], was)
             elif leaf == "net": p["net"] = payload
+            elif leaf == "fw": self.firmware.heard_fw(chip, payload)
+            elif leaf == "update":
+                with contextlib.suppress(RuntimeError): asyncio.get_running_loop().create_task(self.firmware.heard(chip, payload))
+                return
             # The nightlight's own setting, retained by the puck. Kept because a bridge whose light
             # is off has nothing to lift, and lifting it would turn it on -- which nobody asked for.
             elif leaf == "night": p["night"] = payload == "ON"

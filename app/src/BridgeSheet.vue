@@ -133,7 +133,7 @@ onUnmounted(() => window.removeEventListener('keydown', key, true))
 </script>
 
 <template>
-  <div class="sheet-back" :class="{ 'over-panel': store.sheet }" v-if="b" @click.self="b.state === 'working' || close()">
+  <div class="sheet-back" v-if="b" @click.self="b.state === 'working' || close()">
     <div class="sheet bridge" role="dialog" :aria-label="title">
       <div class="sheet-head">
         <h2 class="display">{{ title }}</h2>

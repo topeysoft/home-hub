@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """Which build this is, whether there is a newer one, and how the panel is told.
 
-Two channels. A hub in someone's house follows releases: nothing reaches it until somebody tags it.
-A hub being worked on follows main, commit by commit. The important case in both is the third
+Three channels. A hub in someone's house follows releases: nothing reaches it until somebody tags it.
+A hub being worked on follows main or development, commit by commit. The important case in both is the third
 answer — "cannot tell" — because a panel that says "up to date" when it does not know is a lie
 somebody acts on.
 
@@ -53,6 +53,9 @@ class ChannelTests(UpdateTest):
     def test_a_hub_being_worked_on_can_follow_main_instead(self):
         self.assertEqual(self.make(channel="main").channel, "main")
         self.assertEqual(self.make(channel="MAIN").channel, "main")
+
+    def test_or_development_where_the_day_to_day_work_lands(self):
+        self.assertEqual(self.make(channel="development").channel, "development")
 
     def test_a_channel_nobody_has_heard_of_falls_back_to_releases(self):
         self.assertEqual(self.make(channel="nightly").channel, "release")
@@ -133,6 +136,33 @@ class MainChannelTests(UpdateTest):
         u = self.make(commit="", channel="main")
         u.fetch = self.commit()
         self.assertIsNone((await u.check())["available"])
+
+
+class DevelopmentChannelTests(UpdateTest):
+    def test_it_asks_github_about_its_own_branch_and_names_the_build_after_it(self):
+        u = self.make(version="development-aaaaaaa", channel="development")
+        with mock.patch.object(updates, "_get", return_value={"workflow_runs": [{"head_sha": "b" * 40, "updated_at": "2026-09-23T10:04:00Z",
+                "head_commit": {"timestamp": "2026-09-23T10:00:00Z", "message": "A thing\n\nwith a body"}}]}) as get:
+            latest = u.fetch()
+        self.assertIn("/brain-image.yml/runs?branch=development", get.call_args.args[0])
+        self.assertEqual(latest["version"], "development-bbbbbbb")
+        self.assertEqual(latest["title"], "A thing")
+
+    def test_it_is_offered_what_has_been_built_not_what_was_just_pushed(self):
+        """The head is on GitHub minutes before its image is. Only a finished, successful build of a
+        push counts, because install pulls the image: anything newer is a tap that installs nothing."""
+        u = self.make(channel="development")
+        with mock.patch.object(updates, "_get", return_value={"workflow_runs": []}) as get:
+            with self.assertRaises(ValueError): u.fetch()
+        url = get.call_args.args[0]
+        for part in ("status=success", "event=push", "per_page=1"): self.assertIn(part, url)
+
+    async def test_it_compares_commits_exactly_as_main_does(self):
+        u = self.make(commit="a" * 40, channel="development")
+        u.fetch = MainChannelTests.commit("b" * 40)
+        self.assertTrue((await u.check())["available"])
+        u.fetch = MainChannelTests.commit("a" * 40)
+        self.assertFalse((await u.check())["available"])
 
 
 class WhenGitHubIsUnreachableTests(UpdateTest):

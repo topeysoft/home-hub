@@ -37,10 +37,10 @@
  */
 import { computed, ref } from 'vue'
 import { installUpdate, loadHealth, notify, openFlow, restartHub, store } from './store'
-import { checkDevice, forgetBridge, forgetDevice, retryEntry, retryPart, type Act, type Note, type Rung } from './api'
+import { checkDevice, downloadBackup, forgetBridge, forgetDevice, retryEntry, retryPart, type Act, type Note, type Rung } from './api'
 import Icon from './Icon.vue'
 
-const noteIcon = (k: string) => k === 'offline' || k === 'restart' ? 'refresh' : k === 'storage' ? 'home' : k === 'driver' ? 'switch' : k === 'bridge' ? 'wifi' : 'sparkle'
+const noteIcon = (k: string) => k === 'offline' || k === 'restart' ? 'refresh' : k === 'storage' || k === 'healed' ? 'home' : k === 'driver' ? 'switch' : k === 'bridge' ? 'wifi' : 'sparkle'
 
 /* A long list of quiet things folds, because five is enough to see the shape of it -- but the fold opens.
    The old list stopped at five in the BRAIN and ended with "And 3 more things are offline", a sentence
@@ -73,6 +73,16 @@ async function run(n: Note, a: Act, id: string) {
      mark busy: the overlay is up before the tap has finished. The rung is the brain's -- this page
      offers whichever one it was given, and the question above it came from there too. */
   if (a.act === 'restart') return void restartHub(a.to as Rung)
+  /* The hub that keeps having to start itself (healed.py). The line stays after the tap: it is a
+     pattern, and one backup does not make it stop being one. */
+  if (a.act === 'backup') {
+    if (busy.value) return
+    busy.value = id
+    try { await downloadBackup(); notify('Your backup is on its way. Keep it somewhere safe; it holds the house’s keys.') }
+    catch (e: any) { notify(e.message, 'error') }
+    busy.value = ''
+    return
+  }
   if (busy.value) return
   busy.value = id
   try {
@@ -111,6 +121,7 @@ async function run(n: Note, a: Act, id: string) {
           {{ n.text }}
           <!-- where to go and look: the room and what sort of thing it is. A name on its own is a riddle. -->
           <small class="note-where" v-if="n.where">{{ n.where }}</small>
+          <small class="note-where" v-if="n.more">{{ n.more }}</small>
           <!-- what went quiet behind this one fault; put the fault right and these come back together -->
           <small class="note-with" v-if="n.with?.length">
             {{ n.with.length === 1 ? 'One thing went quiet with it:' : `${n.with.length} things went quiet with it:` }}

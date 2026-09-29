@@ -1,0 +1,14 @@
+{
+  "DRC-pass20-single-via-trial.rpt": "da04a6d340a866a1678c8e0a79e5388eec8717ff9eb669850f1016ea577acc5d",
+  "DRC-pass20-final.rpt": "f8b65e272c37edd7c6e9c8add510e3ae2c1fac0cadeb99c3ad5d34df5df58681",
+  "puck-revA.kicad_pcb": "9d1757c75ef0e32e0dfac02b43bc66baf37a6f626d0c3c6acded1466b6d53d32",
+  "DRC-pass20-detour-trial.rpt": "0165fd1a7c381af78e0526ca8bfb4a95a3dacc930e23b2747c13f478ddd1491f",
+  "DRC-pass20-clearance-trial.rpt": "6024bc7792da05d476aa4bd4f307b37589bad4c0002dcd240029d0102c67708f",
+  "DRC-pass20-via-trial.rpt": "fa98ca3b534c86f108fea362d570494f472aba60f0db664c034c3211f3e2de90",
+  "puck-revA.kicad_pro": "f6152abc751ccc0400cd8143c76b3218419ac48a413f8bb42acaa893d988cddc",
+  "DRC-pass20-routing-trial.rpt": "04d395d63dab228c3c1a98d93338941cf54bca2b08a2d1e211bf33f856cd5166",
+  "DRC-pass20-initial.rpt": "9ee0ccc38dfe3cde601bd5c5ac89b6f1cb3c74aae73dc2a884455f7471928a62",
+  "BOM-review.csv": "113602371b851c414a5df49643571d2d038a2d89bfd83fa705a7ec6557f9ff83",
+  "ERC.rpt": "d872e12ea1a3c20352e170fe992d1ed6921b7f0fc0f022a3867f647c10d6515b",
+  "puck-revA.kicad_sch": "9dd9314da74261bef6afc949635a88829b9c1093272a8330958335e884b78294"
+}

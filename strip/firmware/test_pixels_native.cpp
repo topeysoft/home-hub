@@ -165,6 +165,84 @@ static void all_six_are_settled_by_what_somebody_can_see() {
     }
 }
 
+// ---- signals (design/signal/) ----
+
+// Where the brightest lit pixel is, in strip order, reading the red channel through the mapping.
+static int brightest(const px::Pixels &p) {
+    int best = -1, most = 0;
+    const int n = p.order.per_pixel();
+    for (int i = 0; i < p.count; i++) {
+        const int v = p.buf[i * n + p.order.at[0]];
+        if (v > most) { most = v; best = i; }
+    }
+    return best;
+}
+
+static px::Signal way(int8_t dir) {
+    px::Signal s; s.kind = px::Signal::WAY; s.dir = dir; s.r = 255; s.g = 138; s.b = 0; s.ms = 2000; s.times = 3;
+    s.start(1000);
+    return s;
+}
+
+static void a_run_goes_the_way_it_was_asked() {
+    printf("a run goes the way it was asked, and the two ways mirror\n");
+    px::Pixels p; p.set_count(60);
+    // Away from the plug end: the head moves up the strip as time passes.
+    px::Signal s = way(1);
+    s.draw(p, 1000 + 500); const int a = brightest(p);
+    s.draw(p, 1000 + 1000); const int b = brightest(p);
+    CHECK(a >= 0 && b > a, "a run away from the plug should climb, went %d then %d", a, b);
+    // Toward it: the same moments, mirrored.
+    px::Signal t = way(-1);
+    t.draw(p, 1000 + 500); const int c = brightest(p);
+    t.draw(p, 1000 + 1000); const int d = brightest(p);
+    CHECK(c >= 0 && d < c, "a run toward the plug should fall, went %d then %d", c, d);
+    CHECK(a + c == 59, "the two directions should mirror each other: %d and %d", a, c);
+}
+
+static void a_run_ends_and_says_so() {
+    printf("a signal is over when its passes are, and a steady end is not\n");
+    px::Signal s = way(1);
+    CHECK(!s.over(1000 + 5999), "three passes of two seconds are not over at 5.999 s");
+    CHECK(s.over(1000 + 6000), "and are over at 6 s");
+    px::Signal e; e.kind = px::Signal::END; e.ms = 0; e.start(0);
+    CHECK(!e.over(0xFFFFFF), "a steady end lasts until something else is shown");
+}
+
+static void a_frame_is_written_only_when_it_changes() {
+    printf("a frame is written only when the picture changes\n");
+    // The WS2812 rule: count how many distinct frames a breath asks for over one second at 100 Hz.
+    // It must be far fewer than 100 -- and more than a handful, or it is not a breath.
+    px::Signal s; s.kind = px::Signal::CALL; s.r = 255; s.ms = 1600; s.times = 1; s.start(0);
+    uint32_t was = 0; int writes = 0;
+    for (uint32_t t = 0; t < 1600; t += 10) { const uint32_t k = s.step(t, 60); if (k != was) { writes++; was = k; } }
+    CHECK(writes > 20 && writes < 140, "a breath should ask for a few dozen frames, asked for %d", writes);
+    // And a steady end asks for exactly one.
+    px::Signal e; e.kind = px::Signal::END; e.ms = 0; e.start(0);
+    was = 0; writes = 0;
+    for (uint32_t t = 0; t < 5000; t += 10) { const uint32_t k = e.step(t, 60); if (k != was) { writes++; was = k; } }
+    CHECK(writes == 1, "a steady end should be written once, was written %d times", writes);
+}
+
+static void the_end_is_the_end_it_was_asked_for() {
+    printf("the end that lights is the end that was asked for\n");
+    px::Pixels p; p.set_count(40);
+    px::Signal e; e.kind = px::Signal::END; e.ms = 0; e.r = 255; e.end = 0; e.start(0);
+    e.draw(p, 10);
+    CHECK(p.buf[0 * 3 + p.order.at[0]] == 255 && p.buf[39 * 3 + p.order.at[0]] == 0, "end 0 is the plug end");
+    e.end = 1; e.draw(p, 10);
+    CHECK(p.buf[0 * 3 + p.order.at[0]] == 0 && p.buf[39 * 3 + p.order.at[0]] == 255, "end 1 is the far end");
+}
+
+static void a_fill_stops_at_its_level() {
+    printf("a fill stops at its level\n");
+    px::Pixels p; p.set_count(100);
+    px::Signal f; f.kind = px::Signal::FILL; f.g = 208; f.level = 128; f.ms = 3000; f.times = 1; f.start(0);
+    f.draw(p, 2200);                                     // risen and holding
+    int lit = 0; for (int i = 0; i < 100; i++) if (p.buf[i * 3 + p.order.at[1]]) lit++;
+    CHECK(lit == 50, "half a fill on a hundred lights is fifty, got %d", lit);
+}
+
 int main() {
     the_mapping_matches_the_brains_convention();
     a_half_applied_ordering_is_never_left_behind();
@@ -172,6 +250,11 @@ int main() {
     three_bytes_into_a_four_byte_part_is_the_stripe();
     the_fill_latches_where_it_was();
     all_six_are_settled_by_what_somebody_can_see();
+    a_run_goes_the_way_it_was_asked();
+    a_run_ends_and_says_so();
+    a_frame_is_written_only_when_it_changes();
+    the_end_is_the_end_it_was_asked_for();
+    a_fill_stops_at_its_level();
     printf(failures ? "\n%d failed\n" : "\nall good\n", failures);
     return failures ? 1 : 0;
 }

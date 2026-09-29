@@ -19,12 +19,14 @@
  * They kept their code; only the frame changed.
  */
 import { computed, onMounted, onUnmounted, ref, watch, type Component } from 'vue'
-import { store, updateReady } from './store'
+import { store, updateReady, loadSignals } from './store'
 import { adjusted, feelFrom } from './look'
 import Icon from './Icon.vue'
 import LocationPage from './LocationPage.vue'
 import LookPage from './LookPage.vue'
 import RoutinesPage from './RoutinesPage.vue'
+import SignalsPage from './SignalsPage.vue'
+import { doorHint } from './signals'
 import PeoplePage from './PeoplePage.vue'
 import AccountsPage from './AccountsPage.vue'
 import ThingsPage from './ThingsPage.vue'
@@ -39,7 +41,7 @@ import AdvancedLink from './AdvancedLink.vue'
 import { isPage, LIT, type PageId } from './pages'
 
 const page = computed<PageId>(() => isPage(store.sheet) ? store.sheet : 'house')
-const PAGE: Record<Exclude<PageId, 'house'>, Component> = { location: LocationPage, look: LookPage, routines: RoutinesPage, people: PeoplePage, accounts: AccountsPage, things: ThingsPage, add: AddPage, share: SharePage, hub: HubPage, code: CodePage, notes: NotesPage, happened: HappenedPage, changes: ChangesPage }
+const PAGE: Record<Exclude<PageId, 'house'>, Component> = { location: LocationPage, look: LookPage, routines: RoutinesPage, signals: SignalsPage, people: PeoplePage, accounts: AccountsPage, things: ThingsPage, add: AddPage, share: SharePage, hub: HubPage, code: CodePage, notes: NotesPage, happened: HappenedPage, changes: ChangesPage }
 
 /* a conversation the house already has open (signing an account in again) is
    handed to the Add page on the way in, once, so the page reads as that one job */
@@ -49,7 +51,7 @@ watch(page, p => { if (p === 'add') { resume.value = store.resume; store.resume 
 const ready = computed(updateReady)
 const locked = computed(() => !!store.status?.locked)
 const title = computed(() => ({
-  house: 'This house', location: 'Where is home?', look: 'How the house looks', routines: 'Routines', people: 'People', accounts: 'Accounts', things: 'What this house has',
+  house: 'This house', location: 'Where is home?', look: 'How the house looks', routines: 'Routines', signals: 'What the lights tell you', people: 'People', accounts: 'Accounts', things: 'What this house has',
   add: resume.value ? 'Sign in again' : 'Add to the house', share: 'Share this house', hub: 'This hub', code: locked.value ? 'Change the passcode' : 'Lock the settings',
   notes: 'Needs a look', happened: 'What happened', changes: 'Who changed what',
 }[page.value]))
@@ -115,6 +117,9 @@ const doors = computed(() => [
   { id: 'location' as const, icon: 'pin', name: 'Where home is', hint: store.ambient.location?.name ?? 'Not set yet' },
   { id: 'look' as const, icon: 'sun', name: 'How it looks', hint: look.value },
   { id: 'routines' as const, icon: 'sparkle', name: 'Routines', hint: routines.value },
+  /* Beside Routines because a household's own signals ARE routines, listed again on this page under
+     the house's four. design/signal/Chosen.dc.html. */
+  { id: 'signals' as const, icon: 'light', name: 'What the lights tell you', hint: doorHint(store.signals) },
   { id: 'people' as const, icon: 'people', name: 'People and phones', hint: people.value },
   { id: 'accounts' as const, icon: 'lock', name: 'Accounts', hint: accounts.value, attention: store.accounts.some(a => a.state !== 'on') },
   /* The door that answers "what have I actually got, and how do I get rid of one of them". It sits
@@ -145,7 +150,7 @@ const homeLine = computed(() => {
 function go(id: PageId) { store.sheet = id }
 function close() { store.sheet = null }
 function key(e: KeyboardEvent) { if (e.key === 'Escape') close() }
-onMounted(() => window.addEventListener('keydown', key))
+onMounted(() => { window.addEventListener('keydown', key); loadSignals() })
 onUnmounted(() => window.removeEventListener('keydown', key))
 </script>
 

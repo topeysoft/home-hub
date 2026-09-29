@@ -1,0 +1,82 @@
+{
+  "pages": [
+    {
+      "id": "page-1",
+      "name": "The pick"
+    },
+    {
+      "id": "page-2",
+      "name": "Not chosen"
+    }
+  ],
+  "artboards": [
+    {
+      "file": "Today.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Today \u2014 what ships, beside what was drawn"
+    },
+    {
+      "file": "RowA.dc.html",
+      "x": 0,
+      "y": 1080,
+      "w": 1440,
+      "h": 900,
+      "title": "A \u2014 Row: volume is a fourth line on the glass"
+    },
+    {
+      "file": "SwapB.dc.html",
+      "page": "page-2",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "B \u2014 Swap: the corner turns the line into volume"
+    },
+    {
+      "file": "EdgeC.dc.html",
+      "page": "page-2",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "C \u2014 Edge: a rail down the picture"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "why",
+      "page": "page-1",
+      "x": 1560,
+      "y": 0,
+      "w": 560,
+      "text": "THE ASK\n\nThe card on the wall is not the card on the board (design/nightfall/Main.dc.html, \"what is playing\"), and the person wants the board's card -- its glass, its controls -- and volume on top, which the board never drew.\n\nWHAT THE HOUSE ALREADY HAS. The payload carries volume_level, and the brain already takes a 'volume' action: the shipped card and the pane both use it. So all three directions are panel work only.\n\nTHE HEART. The board draws one, but most players have no 'like this track' the house can reach. A and C keep it as drawn and it needs an answer before it is built; B spends its corner on volume instead, which settles it.\n\nPOWER. The shipped card has an off button; the board does not. Every direction follows the board and leaves off to the pane a long press opens.\n\nSIZE. The shipped card is 274x453 because the wall's row is shorter than the board's 548. That is the row's sizing, not this card's, and is left alone here."
+    },
+    {
+      "id": "a",
+      "page": "page-1",
+      "x": 0,
+      "y": 2000,
+      "w": 1440,
+      "text": "A -- ROW, CHOSEN 24 SEPTEMBER, WITH THE HEART DROPPED.  The obvious answer and the cheapest to learn: nothing hidden, nothing to discover, one drag. The cost is 50px more glass over the cover, on a card whose whole argument is that the cover is the card."
+    },
+    {
+      "id": "b",
+      "page": "page-2",
+      "x": 0,
+      "y": 920,
+      "w": 1440,
+      "text": "B -- SWAP. Keeps the board exactly as drawn, and uses the heart's corner -- the one control the house mostly cannot honor -- for the one it can. The cost is a mode: volume is a tap away rather than in view, and a line that means two things has to say which it means (the artist line does)."
+    },
+    {
+      "id": "c",
+      "page": "page-2",
+      "x": 1560,
+      "y": 920,
+      "w": 1440,
+      "text": "C -- EDGE. The most travel and the most direct: always there, and portrait gives it the long axis. The cost is glass laid on the picture itself, which the board never does -- its rule is that controls ride on glass over the cover's foot, not across it -- and a vertical drag inside a row that swipes sideways."
+    }
+  ]
+}

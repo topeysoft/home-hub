@@ -12,6 +12,8 @@
 #   tools/dev.sh free     let go of a port something is still listening on from yesterday
 #   tools/dev.sh graft    this tree's brain onto a hub, without a release
 #   tools/dev.sh says     what a hub's brain is saying, with its request log taken out
+#   tools/dev.sh puck     this tree's bridge firmware onto one puck, now, through the hub
+#   tools/dev.sh strip    the same for a light strip
 #
 # Two audiences, one report. Somebody coming back wants the half hour deleted that goes: which
 # branch was I on, what is that uncommitted file, is that stash mine, is anything still listening on
@@ -226,7 +228,7 @@ where_you_were() {
   echo "  ${D}tools/dev.sh design${R} — the artboards, before any of it is code"
 }
 
-usage() { sed -n '4,12p' "$0" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '4,16p' "$0" | sed 's/^# \{0,1\}//'; }
 
 case "${1:-status}" in
   status|"") if fresh; then first_time; else where_you_were; fi ;;
@@ -350,6 +352,116 @@ case "${1:-status}" in
         row "house" "$house ${D}— its own lines only, following${R}"
         exec ssh -o BatchMode=yes -o SetEnv=LC_ALL=C "pi@$house" \
           'sudo -n docker logs -f --tail 200 brain 2>&1 | grep --line-buffered -avE "HTTP/1.1|WebSocket|connection (open|closed|rejected)"' ;;
+  # A PUCK -- OR A STRIP -- ON THIS TREE'S FIRMWARE, WITHOUT WAITING FOR THE NIGHT (brain/hub/bridge_updates.py).
+  # Builds the shipped env with a development version -- BRIDGE_FW plus "-d<minutes>", which the puck
+  # sorts after the last release and before BRIDGE_FW itself -- parks it in the brain's data over
+  # ssh, and follows what the puck says. Only a hub on a branch channel takes it. The puck keeps every
+  # rule it has: the hash, three minutes to prove itself, and back to what it had if it does not.
+  #
+  #   tools/dev.sh puck                     the one bridge on the broker, or a list to pick from
+  #   tools/dev.sh puck list                every bridge the hub set up: room, chip, version, online
+  #   tools/dev.sh puck hallway             by the room it serves...
+  #   tools/dev.sh puck c0e33a              ...or by its chip
+  #   tools/dev.sh puck hallway 192.168.86.53   through a hub other than hub.local
+  #   tools/dev.sh strip [list|room|chip] [house]   the same, for a light strip (strip/firmware, ESP-IDF)
+  puck|strip)
+         kind=$1; which=${2:-}; house=${3:-hub.local}
+         if [ "$kind" = puck ]; then thing=bridge; list=bridges.json; else thing="light strip"; list=strips.json; fi
+         ssh -o BatchMode=yes -o SetEnv=LC_ALL=C -o ConnectTimeout=8 "pi@$house" true 2>/dev/null || {
+           echo "${Y}cannot ssh to pi@$house${R}" >&2; exit 1; }
+         SSH=(ssh -o BatchMode=yes -o SetEnv=LC_ALL=C "pi@$house")
+         # Which puck, in the words the hub has for it. The brain keeps this list (bridge_updates.py,
+         # list_for_tool) because the room is worked out from the house, and only the brain has that.
+         known=$("${SSH[@]}" "sudo -n timeout 15 docker exec brain cat /data/bridge-push/$list 2>/dev/null" || true)
+         [ -n "$known" ] || { echo "${Y}$house's brain keeps no list of ${thing}s${R} ${D}— it is older than this tool; put the development brain on it first${R}" >&2; exit 1; }
+         set +e
+         chip=$(KNOWN="$known" WHICH="$which" THING="$thing" KIND="$kind" python3 - <<'PY'
+import json, os, sys
+bs, w = json.loads(os.environ["KNOWN"]), os.environ["WHICH"].strip().lower()
+thing, kind = os.environ["THING"], os.environ["KIND"]
+def line(b):
+    return f"  {(b['room'] or '(no room)'):<16} {b['chip']}  {(b['fw'] or '?'):<16} {'online' if b['online'] else 'not on the broker'}"
+if w == "list" or not bs:
+    print("\n".join(map(line, bs)) or f"  this hub knows no {thing}", file=sys.stderr); sys.exit(2)
+hits = [b for b in bs if w in (b["chip"].lower(), (b["room"] or "").lower())] if w else [b for b in bs if b["online"]]
+if len(hits) == 1: print(hits[0]["chip"], hits[0]["fw"] or ""); sys.exit(0)
+print(f"no {thing} is {w!r}:" if w and not hits else "which one?" if hits else "none of them is on the broker:", file=sys.stderr)
+print("\n".join(map(line, hits or bs)), file=sys.stderr)
+print(f"  tools/dev.sh {kind} <room or chip>", file=sys.stderr); sys.exit(1)
+PY
+         ); rc=$?
+         set -e
+         [ $rc -eq 2 ] && exit 0
+         [ $rc -eq 0 ] || exit 1
+         read -r chip runs <<< "$chip"
+         stamp="-d$(( ($(date -u +%s) - 1767225600) / 60 ))"     # minutes since 2026: short, and always rising
+         # A test build of a version comes BEFORE that version, so one built on the release a device
+         # already runs is refused as older -- after a whole build and a send. Said here instead.
+         # The fix is the one the scheme asks for anyway: bump to the next version once one is cut.
+         if [ "$kind" = puck ]; then src=brilliant/esp32-bridge/src/config.h; name=BRIDGE_FW
+         else src=strip/firmware/main/fwupdate.h; name=STRIP_FW; fi
+         base=$(sed -n "s/^#define $name \"\(.*\)\"/\1/p" "$src")
+         if [ -n "$runs" ] && ! python3 - "$base$stamp" "$runs" <<'PY'
+import re, sys
+def v(s):
+    m = re.match(r"(\d+)\.(\d+)\.(\d+)(-\D*(\d+))?", s)
+    return (0, 0, 0, 0, 0) if not m else (*map(int, m.group(1, 2, 3)), 0 if m.group(4) else 1, int(m.group(5) or 0))
+sys.exit(0 if v(sys.argv[1]) > v(sys.argv[2]) else 1)
+PY
+         then
+           echo "${Y}$chip already runs $runs${R}, and a test build of $base comes before it." >&2
+           echo "  ${D}$name in $src names the NEXT release; bump it past $runs.${R}" >&2; exit 1
+         fi
+         if [ "$kind" = puck ]; then
+           command -v pio >/dev/null 2>&1 || { echo "${Y}no pio on PATH${R} ${D}— PlatformIO builds the firmware${R}" >&2; exit 1; }
+           fw="$base$stamp"
+           row "puck" "$chip ${D}via $house${R}"
+           row "build" "$fw ${D}— esp32s3-ship, from this tree as it is${R}"
+           ( cd brilliant/esp32-bridge && PLATFORMIO_BUILD_FLAGS="-DBRIDGE_FW=\\\"$fw\\\"" pio run -e esp32s3-ship >/dev/null ) \
+             || { echo "${Y}the build failed${R} ${D}— cd brilliant/esp32-bridge && pio run -e esp32s3-ship${R}" >&2; exit 1; }
+           img=brilliant/esp32-bridge/.pio/build/esp32s3-ship/firmware.bin
+           grep -aq "bridge $fw ===" "$img" || { echo "${Y}the image does not carry $fw${R} ${D}— BRIDGE_FW did not take${R}" >&2; exit 1; }
+         else
+           fw="$base$stamp"
+           row "strip" "$chip ${D}via $house${R}"
+           row "build" "$fw ${D}— strip/firmware, from this tree as it is${R}"
+           # The environment strip/firmware/README.md sets up, in a subshell so it does not leak. The
+           # version is a CMake cache entry and would stick, so the next plain build is told it is
+           # not a test build any more (-DSTRIP_FW= is read as unset by main/CMakeLists.txt).
+           ( export IDF_PYTHON_ENV_PATH="${IDF_PYTHON_ENV_PATH:-$HOME/.espressif/python_env/idf6.0_py3.10_env}"
+             set +u                          # esp-matter's export.sh reads ESP_MATTER_PATH before setting it
+             . "${IDF_PATH:-$HOME/esp/esp-idf-v6.0.2}/export.sh" >/dev/null 2>&1 && . "$HOME/esp/esp-matter/export.sh" >/dev/null 2>&1 \
+             && cd strip/firmware && idf.py -DSTRIP_FW="$fw" build >/dev/null 2>&1; rc=$?
+             idf.py -DSTRIP_FW= reconfigure >/dev/null 2>&1; exit $rc ) \
+             || { echo "${Y}the build failed${R} ${D}— cd strip/firmware && idf.py build${R}" >&2; exit 1; }
+           img=strip/firmware/build/strip.bin
+           grep -aq "$fw  chip" "$img" || { echo "${Y}the image does not carry $fw${R} ${D}— STRIP_FW did not take${R}" >&2; exit 1; }
+         fi
+         # Copied to the hub first and then into the brain, and every step on the hub under a timeout:
+         # piping into `docker exec -i` stalled for minutes on a hub that was otherwise fine, and a
+         # tool that hangs in silence is worse than one that says it could not get through.
+         late() { echo "${Y}the hub did not answer in time${R} ${D}— $1; try again, or tools/dev.sh says $house${R}" >&2; exit 1; }
+         scp -q -o BatchMode=yes "$img" "pi@$house:/tmp/fw-push.bin" || late "copying the image"
+         printf '{"chip": "%s", "fw": "%s", "kind": "%s"}' "$chip" "$fw" "$([ "$kind" = puck ] && echo bridge || echo strip)" \
+           | "${SSH[@]}" 'cat > /tmp/fw-push.json' || late "copying the request"
+         # The request goes last: it is what the brain looks for, so the image is whole by then.
+         "${SSH[@]}" 'sudo -n timeout 60 docker exec brain sh -c "mkdir -p /data/bridge-push && rm -f /data/bridge-push/state.json" \
+           && sudo -n timeout 60 docker cp /tmp/fw-push.bin brain:/data/bridge-push/image.bin \
+           && sudo -n timeout 60 docker cp /tmp/fw-push.json brain:/data/bridge-push/request.json \
+           && rm -f /tmp/fw-push.bin /tmp/fw-push.json' || late "handing the image to the brain"
+         row "sent" "$(wc -c < "$img" | tr -d ' ') bytes ${D}— following what the $kind says${R}"
+         said=""; t0=$(date +%s)
+         while :; do
+           now=$("${SSH[@]}" 'sudo -n timeout 15 docker exec brain cat /data/bridge-push/state.json 2>/dev/null' || true)
+           if [ -n "$now" ] && [ "$now" != "$said" ]; then
+             said=$now
+             st=$(printf '%s' "$now" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d["state"], d.get("why") or "")')
+             row "$(date +%T)" "$st"
+             case "$st" in installed*) exit 0 ;; refused*|failed*|rolledback*) exit 1 ;; esac
+           fi
+           [ $(( $(date +%s) - t0 )) -lt 480 ] || { row "gave up" "${Y}nothing final in eight minutes${R} ${D}— tools/dev.sh says $house${R}"; exit 1; }
+           sleep 3
+         done ;;
   # CI's jobs, in CI's order, minus the ones that need a browser or a container. The sheet checks
   # are in here because they catch what nothing else does: a drawing changed in src/art.ts or
   # src/sky.ts and not in the design sheet generated from it.

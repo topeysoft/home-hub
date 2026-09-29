@@ -58,13 +58,15 @@ class Health:
     def notes(self) -> list:
         """The jobs, causes first. A fault that explains a device takes it out of the list of its own, so
         a house with one dead radio has one line and not nine."""
+        healed = getattr(self.hub, "healed", None)
+        if healed: healed.take()
         gone = [d for d in self.hub.home.devices.values() if d.state == "unavailable" and d.room_id != "unassigned"]
         since = self.hub.log.last_by_subject("state", "unavailable") if gone else {}
         gone.sort(key=lambda d: since.get(d.id, float("inf")))
         faults = self.drivers(gone)
         claimed = {w["id"] for f in faults for w in f.get("with", ())}
         return (faults + self.offline([d for d in gone if d.id not in claimed], since)
-                + self.bridges() + self.storage() + self.restarts() + self.update())
+                + self.bridges() + self.storage() + self.restarts() + (healed.notes() if healed else []) + self.update())
 
     def where(self, d) -> str:
         """Which room, and what sort of thing -- the two facts somebody needs to go and look at it. A name
