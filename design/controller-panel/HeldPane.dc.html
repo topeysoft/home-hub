@@ -1,0 +1,246 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      /* the panel's own tokens -- app/src/panel.css -- and the two pane inks it computes */
+      --bg: #0c0d10; --surface-rgb: 26,28,34; --surface: rgba(var(--surface-rgb),.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --ink-3: oklch(0.68 0.01 242); --ink-4: oklch(0.76 0.006 242);
+      --lamp-rgb: 233,184,114; --lamp: rgb(var(--lamp-rgb)); --lamp-ink: #2a1c07;
+      --live-rgb: 116,198,157; --live: rgb(var(--live-rgb));
+      --r-lg: 22px; --r-md: 16px; --r-sm: 12px;
+    }
+    .screen { position: relative; width: 1440px; height: 900px; overflow: hidden; background: var(--bg); color: var(--ink); font-size: 17px; line-height: 1.4; }
+    .abs { position: absolute; }
+    .dsp { font-weight: 400; letter-spacing: -.025em; }
+    svg.i { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+    /* the glass the bar and the round buttons are made of (.tabs, .back, .topbar-add) */
+    .glass { background-image: linear-gradient(112deg, transparent 26%, rgba(255,255,255,.11) 45%, rgba(255,255,255,.02) 56%, transparent 64%),
+                               linear-gradient(148deg, oklch(0.545 0.014 242 / .34), oklch(0.475 0.012 242 / .12) 46%, oklch(0.505 0.014 242 / .24));
+             box-shadow: inset 0 -46px 56px -48px rgba(22,43,68,.9), 0 23px 53px -26px rgba(17,35,60,.58), 0 2px 10px rgba(17,35,60,.37); }
+    .round { position: absolute; border-radius: 50%; display: grid; place-items: center; color: var(--ink-2); }
+    .tab { display: inline-flex; align-items: center; gap: 10px; height: 44px; padding: 0 22px; border-radius: 999px; font-size: 15.5px; color: var(--ink-2); }
+    .tab.on { background: rgba(255,255,255,.1); color: var(--ink); font-weight: 500; }
+    /* a card in a room, at night: the tile's glass (.tile-body is 17 18 15) */
+    .tile { position: absolute; border-radius: 24px; background: rgba(var(--surface-rgb),.62); border: 1px solid var(--edge);
+            box-shadow: 0 24px 50px -32px rgba(0,0,0,.85); padding: 17px 18px 15px; overflow: hidden; }
+    .tile .tn { display: flex; align-items: center; gap: 11px; font-size: 16px; font-weight: 500; letter-spacing: -.005em; }
+    .tile .tn svg { color: var(--ink-2); }
+    .tile .ts { position: absolute; left: 18px; right: 18px; bottom: 15px; font-size: 14.5px; color: var(--ink-2); }
+    .tile.lit { background: linear-gradient(165deg, rgba(246,226,192,.94), rgba(var(--lamp-rgb),.8) 75%); border-color: rgba(255,240,214,.5); box-shadow: 0 0 40px -10px rgba(var(--lamp-rgb),.35), 0 24px 50px -32px rgba(0,0,0,.85); }
+    .tile.lit .tn svg { color: var(--lamp-ink); }
+    .row { display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 12px; border-radius: 12px; font-size: 14.5px;
+           border: 1px solid var(--edge); background: rgba(255,255,255,.04); }
+    .row.on { background: rgba(var(--lamp-rgb),.9); color: var(--lamp-ink); border-color: transparent; font-weight: 500; }
+    .row .v { margin-left: auto; color: var(--muted); }
+    .row.on .v { color: var(--lamp-ink); }
+    .scene { height: 62px; border-radius: 16px; border: 1px solid var(--edge); background: rgba(255,255,255,.035); display: flex; align-items: center; gap: 14px; padding: 0 16px; }
+    .scene b { display: block; font-weight: 400; font-size: 16.5px; }
+    .scene small { display: block; font-size: 13px; color: var(--muted); }
+    /* the room's own line of chips (.why-line, .reading) */
+    .chipline { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px 0 12px; border-radius: 999px; font-size: 13.5px;
+                color: var(--ink-2); background: rgba(255,255,255,.08); border: 1px solid var(--edge); white-space: nowrap; }
+    .chipline .ask { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+    .reading { display: inline-flex; align-items: center; gap: 8px; height: 39px; padding: 0 14px 0 11px; border-radius: 999px; font-size: 14px; color: var(--ink-2);
+               background: rgba(var(--surface-rgb),.68); border: 1px solid var(--edge); white-space: nowrap; }
+    .reading b { color: var(--ink); font-weight: 500; }
+    /* the band (.nudge) */
+    .nudge { display: inline-flex; align-items: center; gap: 12px; height: 56px; padding: 8px 18px 8px 8px; border-radius: 26px;
+             background: linear-gradient(rgba(var(--lamp-rgb),.1), rgba(var(--lamp-rgb),.1)), rgba(var(--surface-rgb),.68); border: 1px solid rgba(var(--lamp-rgb),.3); }
+    .nudge .ni { width: 32px; height: 32px; border-radius: 10px; background: var(--lamp); color: var(--lamp-ink); display: grid; place-items: center; flex: none; }
+    .nudge b { display: block; font-size: 15px; font-weight: 500; line-height: 21px; }
+    .nudge small { display: block; font-size: 13px; line-height: 17px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    /* the setup sheet (.sheet.strip), at its shipped values */
+    .sheet { position: absolute; width: 560px; border-radius: 26px; background: rgba(22,24,30,.92); border: 1px solid var(--edge-hi);
+             box-shadow: 0 40px 100px -30px rgba(0,0,0,.9); }
+    .sheet-head { display: flex; align-items: flex-start; gap: 14px; padding: 26px 22px 6px 28px; }
+    .sheet h2 { margin: 0; flex: 1; font-size: 36px; font-weight: 400; letter-spacing: -.025em; line-height: 1.05; }
+    .sheet .over { display: block; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--lamp); margin-bottom: 8px; }
+    .x { width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,.14); display: grid; place-items: center; color: #fff; flex: none; }
+    .sheet-body { padding: 4px 28px 24px; }
+    .lede { margin: 6px 0 20px; font-size: 15px; line-height: 21px; color: var(--ink-2); }
+    .stage { position: relative; border-radius: 28px; border: 1px solid var(--edge); background: rgba(255,255,255,.03); padding: 20px 22px; margin-bottom: 18px; overflow: hidden; }
+    .caption { display: block; text-align: center; margin-top: 18px; font-size: 13px; color: var(--muted); }
+    .acts { display: flex; gap: 10px; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 49px; padding: 0 20px; border-radius: 999px;
+           background: var(--ink); color: var(--bg); font-weight: 500; font-size: 17px; white-space: nowrap; }
+    .btn.ghost { background: rgba(255,255,255,.08); color: var(--ink); border: 1px solid var(--edge); }
+    .btn.wide { display: flex; justify-content: flex-start; width: 100%; }
+    .btn.small { height: 40px; padding: 0 16px; font-size: 15px; }
+    .steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+    .steps li { display: flex; align-items: center; gap: 12px; font-size: 15px; color: var(--ink-2); }
+    .steps li.live { color: var(--ink); }
+    .tick { width: 24px; height: 24px; border-radius: 999px; border: 1px solid var(--edge-hi); display: grid; place-items: center; flex: none; }
+    .live .tick { border-color: var(--lamp); }
+    .live .tick::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--lamp); }
+    .done .tick { background: rgba(var(--live-rgb),.18); border-color: rgba(var(--live-rgb),.5); color: var(--live); }
+    /* a choice made by looking at the thing (.pick in the strip sheet) */
+    .pick { border-radius: 18px; border: 1px solid var(--edge); background: rgba(255,255,255,.03); padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+    .pick.on { border-color: rgba(var(--lamp-rgb),.6); background: rgba(var(--lamp-rgb),.1); }
+    .pick b { font-weight: 500; font-size: 15.5px; }
+    .pick small { font-size: 13px; color: var(--muted); margin-top: -6px; }
+    /* A STRIP, DRAWN THE WAY THE PANEL DRAWS ONE: 4px lights, 3px apart. --c is the light, --g its glow. */
+    .px { position: relative; height: 26px; border-radius: 4px; background: repeating-linear-gradient(90deg, rgba(255,255,255,.13) 0 4px, transparent 4px 7px); }
+    .px > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px;
+              background: repeating-linear-gradient(90deg, var(--c) 0 4px, transparent 4px 7px); filter: drop-shadow(0 0 9px var(--g)); }
+    .px.s { height: 18px; }
+    .px.xs { height: 12px; }
+    /* the pane (.opened-panel, .pane-rig, .rig-card), at the values the shipped panel computes at 1440 */
+    .pane { position: absolute; left: 0; top: 225px; width: 1440px; height: 675px; border-radius: 34px 34px 0 0; overflow: hidden;
+            background: linear-gradient(rgba(26,28,34,.8), rgba(16,17,21,.94)); box-shadow: inset 0 1.4px 0 rgba(255,255,255,.38), 0 -18px 40px -14px rgba(17,35,60,.53); }
+    .lbl { font-size: 12.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); }
+    .ctl { width: 56px; height: 56px; border-radius: 50%; background: rgba(255,255,255,.08); display: grid; place-items: center; color: var(--ink-4); }
+    .card { display: flex; align-items: center; gap: 16px; border-radius: 24px; border: 1px solid var(--edge); background: rgba(255,255,255,.05); padding: 0 22px; }
+    .card .ci { width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,.08); color: var(--lamp); display: grid; place-items: center; flex: none; }
+    .card b { display: block; font-weight: 400; font-size: 19px; line-height: 1.3; }
+    .card b em { font-style: normal; color: var(--ink-3); }
+    .card small { display: block; font-size: 14px; color: var(--ink-3); line-height: 1.4; margin-top: 2px; }
+    .sw { width: 46px; height: 46px; border-radius: 50%; box-shadow: inset 0 -2px 6px rgba(0,0,0,.24); }
+    /* ANNOTATION, NEVER PANEL: dashed, and in the board's own voice. Nothing inside one is a screen. */
+    .note { position: absolute; border: 1px dashed rgba(255,255,255,.24); border-radius: 18px; padding: 16px 18px; background: rgba(8,9,12,.8);
+            font-size: 13.5px; line-height: 1.5; color: var(--ink-2); }
+    .note b { color: var(--ink); font-weight: 500; }
+    .note .cap, .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .note p { margin: 8px 0 0; }
+    .tag { position: absolute; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .key { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11.5px; color: var(--muted); letter-spacing: 0; text-transform: none; }
+    .beats { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; }
+    .beat { height: 34px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--edge); background: rgba(255,255,255,.04); font-size: 13.5px;
+            color: var(--ink-2); display: inline-flex; align-items: center; white-space: nowrap; }
+    .beat.new { border-color: rgba(var(--lamp-rgb),.55); background: rgba(var(--lamp-rgb),.12); color: var(--ink); }
+    .beat.gone { border-style: dashed; color: var(--muted); background: none; }
+    .beats .sep { color: var(--muted); font-size: 13px; }
+    .finger { position: absolute; width: 58px; height: 58px; border-radius: 50%; background: rgba(255,255,255,.16); border: 2px solid rgba(255,255,255,.5);
+              box-shadow: 0 0 0 10px rgba(255,255,255,.06); }
+    .foot { position: absolute; border-radius: 20px; border: 1px solid var(--edge); background: rgba(255,255,255,.025); padding: 18px 22px;
+            font-size: 14.5px; line-height: 1.55; color: var(--ink-2); }
+    .foot strong { color: var(--ink); font-weight: 500; }
+  </style>
+</helmet>
+<!-- WHAT OPENS -- the same pane for A, B and C: the light's own pane, saying why it is dark and what to do. -->
+<div class="screen">
+
+  <!-- the sky at dusk, as Sky.vue draws it, and the hills the panel lays along the foot -->
+  <div class="abs" style="inset: 0; background: linear-gradient(rgb(26,30,44) 0%, rgb(39,40,60) 46%, rgb(86,60,56) 86%, rgb(60,43,42) 100%);"></div>
+  <div class="abs" style="left: -222px; top: -135px; width: 1855px; height: 1156px; background: radial-gradient(58% 54% at 30% 64%, rgba(72,63,135,.36), transparent 68%), radial-gradient(62% 52% at 54% 110%, rgba(55,51,100,.4), transparent 72%);"></div>
+  <svg class="abs" style="left: 0; top: 600px;" width="1440" height="300" viewBox="0 0 1440 300" preserveAspectRatio="none">
+    <path d="M0 110 C 220 60, 420 70, 640 104 S 1080 96, 1240 70 S 1400 66, 1440 72 V300 H0z" fill="rgb(30,31,30)"/>
+    <path d="M0 150 C 300 120, 600 150, 900 132 S 1300 118, 1440 130 V300 H0z" fill="rgb(22,23,23)"/>
+  </svg>
+  <div class="abs" style="inset: 0; background: rgba(6,7,9,0.42);"></div>
+  <div class="abs" style="inset: 0; opacity: .5;">
+
+  <!-- the bar, as it ships: the time, the three tabs, Connected, the + door and This house -->
+  <div class="abs" style="left: 0; top: 0; width: 1440px; height: 84px; opacity: 1.0;">
+    <div class="abs" style="left: 40px; top: 28px; display: flex; align-items: baseline; gap: 12px;">
+      <span style="font-size: 27px; font-weight: 400; letter-spacing: -.03em; line-height: 27px;">7:42 PM</span>
+      <span style="font-size: 13.5px; color: var(--muted);">Thursday, October 1</span>
+    </div>
+    <div class="abs glass" style="left: 522px; top: 15px; width: 394px; height: 54px; border-radius: 999px; padding: 4px; display: flex; gap: 0;">
+      <span class="tab"><svg class="i" width="16" height="16" viewBox="0 0 24 24" stroke-width="1.8"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>Your evening</span><span class="tab">Rooms</span><span class="tab">Cameras</span>
+    </div>
+    <div class="abs" style="left: 1196px; top: 33px; display: flex; align-items: center; gap: 8px; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted);">
+      <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--live);"></span>Connected</div>
+    <span class="round glass" style="left: 1306px; top: 22px; width: 40px; height: 40px;"><svg class="i" width="18" height="18" viewBox="0 0 24 24" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg></span>
+    <span class="round glass" style="left: 1360px; top: 22px; width: 40px; height: 40px;"><svg class="i" width="18" height="18" viewBox="0 0 24 24" stroke-width="1.8"><path d="M5 7h14M5 12h14M5 17h9"/></svg></span>
+  </div>
+
+  <!-- the room's head, as it ships: back, the name, how many are on, and the room's own line -->
+  <span class="round glass" style="left: 40px; top: 112px; width: 44px; height: 44px;"><svg class="i" width="22" height="22" viewBox="0 0 24 24" stroke-width="1.8"><path d="M15 5l-7 7 7 7"/></svg></span>
+  <div class="abs" style="left: 98px; top: 104px; width: 1244px;">
+    <div style="font-size: 56px; letter-spacing: -.025em; line-height: 57px;">Kitchen</div>
+    <div style="margin-top: 10px; font-size: 18px; color: var(--ink-2);">1 light on</div>
+    <div style="margin-top: 12px; display: flex; gap: 10px; align-items: center;"><span class="chipline"><svg class="i" width="15" height="15" viewBox="0 0 24 24" stroke-width="2" style="color: var(--lamp);"><path d="M20 6L9 17l-5-5"/></svg>Used by hand &middot; routines stay out for 1 h 18 min <span class="ask">Why?</span></span><span class="reading"><svg class="i" width="15" height="15" viewBox="0 0 24 24" stroke-width="1.8"><path d="M6 21V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17M4 21h16M14.5 12h.01"/></svg>Back door <b>Closed</b></span><span class="reading"><svg class="i" width="15" height="15" viewBox="0 0 24 24" stroke-width="1.8"><path d="M12 3s6 6.4 6 11a6 6 0 0 1-12 0c0-4.6 6-11 6-11z"/></svg>Humidity <b>51%</b></span></div>
+  </div>
+  <span class="round glass" style="left: 1356px; top: 112px; width: 44px; height: 44px; opacity: .7;"><svg class="i" width="20" height="20" viewBox="0 0 24 24" stroke-width="1.8"><path d="M4 20l4-1 9.5-9.5a2.1 2.1 0 0 0-3-3L5 16z"/></svg></span>
+  </div>
+  <div class="abs" style="inset: 0; background: rgba(6,7,9,.35);"></div>
+
+  <!-- THE PANE, at the shipped panel's geometry for 1440 x 900: .opened-panel 0,225; the words at 49,270, 560 wide; .pane-rig 643,298 -->
+  <div class="pane">
+    <span class="round glass" style="left: 1365px; top: 35px; width: 44px; height: 44px;"><svg class="i" width="18" height="18" viewBox="0 0 24 24" stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
+
+    <!-- what is said: the left column, and this is where all of it lives -->
+    <div class="abs" style="left: 49px; top: 45px; width: 560px;">
+      <div style="font-size: 15px; color: var(--ink-4);">Kitchen</div>
+      <div class="dsp" style="font-size: 56px; line-height: 58px; margin-top: 4px;">Under-cabinet strip</div>
+      <div style="margin-top: 10px; font-size: 14px; color: var(--ink-3); text-decoration: underline; text-decoration-style: dashed; text-underline-offset: 4px;">Show this as</div>
+      <div style="display: flex; gap: 12px; margin-top: 24px;">
+        <span class="ctl" style="background: rgba(255,255,255,.04); color: rgba(255,255,255,.28);"><svg class="i" width="22" height="22" viewBox="0 0 24 24" stroke-width="1.8"><path d="M12 3v9M18.4 6.6a9 9 0 1 1-12.8 0"/></svg></span>
+        <span class="ctl"><svg class="i" width="20" height="20" viewBox="0 0 24 24" stroke-width="1.8"><path d="M12 3l1.8 5.4L19 10l-5.2 1.6L12 17l-1.8-5.4L5 10l5.2-1.6z"/></svg></span>
+        <span class="ctl"><svg class="i" width="20" height="20" viewBox="0 0 24 24" stroke-width="1.8"><path d="M4 20l4-1 9.5-9.5a2.1 2.1 0 0 0-3-3L5 16z"/></svg></span>
+      </div>
+      <div class="dsp" style="margin-top: 38px; font-size: 76px; line-height: 76px; letter-spacing: -.04em;">Staying off</div>
+      <p style="margin: 18px 0 0; width: 500px; font-size: 15.5px; line-height: 1.5; color: var(--ink-4);">It was set up on a 12 V power supply, and it&rsquo;s on a 24 V one now.
+        A 12 V strip would burn on 24 V, so the controller is keeping it off.</p>
+
+      <!-- the two supplies, as the labels on the bricks say them -->
+      <div style="display: flex; align-items: center; gap: 14px; margin-top: 20px;">
+        <span style="display: inline-flex; align-items: baseline; gap: 10px; height: 44px; padding: 0 16px; align-items: center; border-radius: 14px; border: 1px solid var(--edge); background: rgba(255,255,255,.04);">
+          <span style="font-size: 13px; color: var(--ink-3);">Set up on</span><span style="font-size: 19px;">12 V</span></span>
+        <span style="color: var(--muted);"><svg class="i" width="16" height="16" viewBox="0 0 24 24" stroke-width="1.8"><path d="M9 5l7 7-7 7"/></svg></span>
+        <span style="display: inline-flex; gap: 10px; height: 44px; padding: 0 16px; align-items: center; border-radius: 14px; border: 1px solid rgba(var(--lamp-rgb),.5); background: rgba(var(--lamp-rgb),.1);">
+          <span style="font-size: 13px; color: var(--ink-2);">Plugged into now</span><span style="font-size: 19px; color: var(--lamp);">24 V</span></span>
+      </div>
+
+      <!-- what to do: one thing, and it is done at the controller, not here -->
+      <div class="card" style="margin-top: 18px; width: 500px; height: 76px;">
+        <span class="ci"><svg class="i" width="18" height="18" viewBox="0 0 24 24" stroke-width="1.8"><path d="M9 2.5v5M15 2.5v5M6 7.5h12v3.5a6 6 0 0 1-12 0zM12 17v4.5"/></svg></span>
+        <span><b>Plug the 12 V supply back in</b><small>It comes on by itself as soon as it has the right one.</small></span>
+      </div>
+      <div style="margin-top: 14px; font-size: 14px; color: var(--ink-3); text-decoration: underline; text-underline-offset: 4px;">The strip is new as well</div>
+    </div>
+
+    <!-- the instrument, left in place at half strength: what is chosen now is what it comes back as -->
+    <div class="abs" style="left: 643px; top: 73px; width: 748px; height: 640px; border-radius: 32px; border: 1px solid var(--edge); background: rgba(255,255,255,.035); padding: 26px; display: flex; gap: 26px; opacity: .5;">
+      <div style="width: 168px; flex: none;">
+        <div style="position: relative; height: 514px; border-radius: 84px; background: rgba(255,255,255,.06); border: 1px solid var(--edge);">
+          <span class="abs" style="left: 0; right: 0; top: 22px; display: grid; place-items: center; color: rgba(255,255,255,.3);"><svg class="i" width="21" height="21" viewBox="0 0 24 24" stroke-width="1.8"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M4.3 4.3l1.6 1.6M18.1 18.1l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.3 19.7l1.6-1.6M18.1 5.9l1.6-1.6"/></svg></span>
+          <span class="abs" style="left: 0; right: 0; bottom: 20px; display: grid; place-items: center; color: rgba(255,255,255,.3);"><svg class="i" width="19" height="19" viewBox="0 0 24 24" stroke-width="1.8"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg></span>
+        </div>
+      </div>
+      <div style="flex: 1; min-width: 0;">
+        <div style="display: flex; gap: 26px;">
+          <div style="width: 292px; flex: none; padding-top: 21px;">
+            <div style="display: flex; align-items: center; gap: 13px; height: 66px; padding: 0 16px; border-radius: 20px; background: var(--ink); color: #1d1a22;">
+              <span style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #ffa657, #ffe9d4 52%, #e2ecff);"></span>
+              <span style="flex: 1;"><span style="display: block; font-size: 17px; font-weight: 500;">Automatic</span><span style="display: block; font-size: 13.5px; opacity: .66;">Follows the light</span></span>
+              <svg class="i" width="18" height="18" viewBox="0 0 24 24" stroke-width="2.2"><path d="M20 6L9 17l-5-5"/></svg>
+            </div>
+            <div class="lbl" style="margin: 11px 0 12px;">Colors</div>
+            <div style="display: flex; flex-wrap: wrap; gap: 11px;"><span class="sw" style="background: #e45870;"></span><span class="sw" style="background: #ef884d;"></span><span class="sw" style="background: #f7d445;"></span><span class="sw" style="background: #91de5e;"></span><span class="sw" style="background: #62daa2;"></span><span class="sw" style="background: #5cb0e0;"></span><span class="sw" style="background: #8866d6;"></span><span class="sw" style="background: #de5eda;"></span></div>
+          </div>
+          <div style="flex: 1; padding-top: 21px;">
+            <div class="lbl" style="margin-bottom: 12px;">The three it is used at</div>
+            <div class="card" style="height: 84px; margin-bottom: 12px;"><span class="ci"><svg class="i" width="18" height="18" viewBox="0 0 24 24" stroke-width="1.8"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M4.3 4.3l1.6 1.6M18.1 18.1l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.3 19.7l1.6-1.6M18.1 5.9l1.6-1.6"/></svg></span><span><b>Reading</b></span></div>
+            <div class="card" style="height: 84px; margin-bottom: 12px;"><span class="ci"><svg class="i" width="18" height="18" viewBox="0 0 24 24" stroke-width="1.8"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/></svg></span><span><b>Evening</b></span></div>
+            <div class="card" style="height: 84px;"><span class="ci"><svg class="i" width="18" height="18" viewBox="0 0 24 24" stroke-width="1.8"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg></span><span><b>Night</b></span></div>
+          </div>
+        </div>
+        <div class="lbl" style="margin: 24px 0 12px;">Because it is a strip</div>
+        <div class="card" style="height: 128px;">
+          <span class="ci"><svg class="i" width="18" height="18" viewBox="0 0 24 24" stroke-width="1.8"><path d="M12 21s-7-6.2-7-11a7 7 0 1 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></span>
+          <span style="flex: 1;"><b>Set up as a strip <em>About 3.0 m</em></b><small>How long it is, and how its colors come out.</small></span>
+          <div class="px " style="width: 130px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>
