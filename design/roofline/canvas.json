@@ -1,0 +1,350 @@
+{
+  "artboards": [
+    {
+      "file": "TodayMoves.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Today \u2014 a strip has colors, and nothing on it moves",
+      "page": "moves"
+    },
+    {
+      "file": "OwnsA.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "A \u2014 the occasion owns its motion",
+      "page": "moves"
+    },
+    {
+      "file": "FourthB.dc.html",
+      "x": 3120,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "B \u2014 a fourth way for a light to be: Chasing",
+      "page": "moves"
+    },
+    {
+      "file": "SaidC.dc.html",
+      "x": 4680,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "C \u2014 a look is said, not chosen",
+      "page": "moves"
+    },
+    {
+      "file": "TodayEvenings.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Today \u2014 an occasion turns nothing on, and a routine knows no season",
+      "page": "evenings"
+    },
+    {
+      "file": "SeasonA.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "A \u2014 the occasion has a season, and an evening",
+      "page": "evenings"
+    },
+    {
+      "file": "EveningsB.dc.html",
+      "x": 3120,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "B \u2014 the roofline has evenings of its own",
+      "page": "evenings"
+    },
+    {
+      "file": "AskC.dc.html",
+      "x": 4680,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "C \u2014 the house asks, at dusk",
+      "page": "evenings"
+    },
+    {
+      "file": "TodayThree.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Today \u2014 three boxes, three lights",
+      "page": "one"
+    },
+    {
+      "file": "OneLight.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Shared \u2014 one Roofline on the wall, however many boxes",
+      "page": "one"
+    },
+    {
+      "file": "TapA.dc.html",
+      "x": 3120,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "A \u2014 tap them in the order they go round",
+      "page": "one"
+    },
+    {
+      "file": "MountB.dc.html",
+      "x": 4680,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "B \u2014 the order comes from putting them up",
+      "page": "one"
+    },
+    {
+      "file": "NoneC.dc.html",
+      "x": 6240,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "C \u2014 the order is never asked",
+      "page": "one"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "why",
+      "x": -620,
+      "y": 0,
+      "w": 500,
+      "text": "WHY THIS EXISTS\n\nFrom a household, 30 September and 1 October 2026: an addressable strip along their roofline, set every Christmas, Halloween, Easter and July 4th to colors and effects -- \"red and green chasing each other on Christmas\", something else for Halloween, something else again for July 4th -- on a Bluetooth SP107E they are replacing with ours. They asked for it done the right way, with no shortcuts. Halloween 2026 is a wish, not a deadline.\n\nTwo earlier rulings collide with that, and the hardware adds a third question. design/occasion/ said there are three ambient motions and no fourth, and struck out Theater chase with the zoo; it also said an occasion turns nothing on that was not already on. A roofline is a chase, and a roofline comes on at dusk. And the controller chosen in the hardware repository (strip/README.md, direction C, one per run) makes a roof several boxes that the wall has to show as one light.\n\nEach question is its own page: Today, then three directions, each a whole answer, each with its case on the board and beside it. Every board can be flipped -- the dashed chips at its top right change the occasion, the motion, the moment or the step, and the roof redraws. None is picked yet. When one is, the others move to a Not chosen page with their cases intact.",
+      "page": "moves"
+    },
+    {
+      "id": "collection",
+      "x": -620,
+      "y": 720,
+      "w": 500,
+      "text": "WHY A COLLECTION OF ITS OWN, AND NOT MORE PAGES IN design/occasion/\n\ndesign/occasion/ lives apart from design/strip/ on purpose: an occasion is a house feature that a strip happens to render best. Two of these three questions are about occasions, but all three are asked by one object -- a light outside the house, made of several boxes -- and the third is not about occasions at all. Adopting three controllers as one light would be the same question in a year with no holidays in it.\n\nSo the questions that amend occasion's rulings are drawn here, against the roof that raised them, and design/occasion/ carries one note pointing here. Whatever is picked updates that collection's rulings in place; its boards stay as the record of the rule before the roof.\n\nEvery board draws the same house, so the directions can be laid side by side: a gable over the door and a long eave to the garage, three boxes, four runs -- two of them running against the way you would walk round, because a run always leaves its box, which is true of nearly every real roof.",
+      "page": "moves"
+    },
+    {
+      "id": "moves-today",
+      "x": 0,
+      "y": 960,
+      "w": 1440,
+      "text": "TODAY -- A STRIP HAS COLORS, AND NOTHING ON IT MOVES\n\nDrawn from the shipped light pane for a strip (the mock house's Under-cabinet strip, opened with a hold, at 1440x900), renamed for the roof: brightness, Automatic, the colors, the three it is used at, and the strip's own row at the foot. Nothing on it moves. The Movement row -- Still, Drifting, Candlelight -- is drawn in design/occasion/Drift.dc.html and unbuilt.\n\nThe two facts in the pane's empty foot are the collision. The household's Christmas is a chase, and Drift's list of what not to build struck out Theater chase by name. The question this page answers is whether that line was drawn in the right place, and if a chase comes in, through which door.",
+      "page": "moves"
+    },
+    {
+      "id": "owns-a",
+      "x": 1560,
+      "y": 960,
+      "w": 1440,
+      "text": "A -- THE OCCASION OWNS ITS MOTION\n\nThe occasion argument carried one step further. design/occasion/ made Christmas a chip that brings its colors to every light that can show them; A lets it bring its motion too, to the one light that can show motion -- the roofline -- and nowhere else. Four occasions, each drawn once by us: Christmas chases, Halloween is unsteady like embers, Easter drifts, July 4th twinkles. Flip them on the board; the scene card is the shipped Tonight card with the occasion in it.\n\nThe zoo stays out because there is nowhere for it to stand: no list of motions is ever shown, only holidays. The household's one control is Hold it still, for a house that wants the colors without the movement. Strips inside take the colors and hold them still -- a chase is for the street, not the sofa.\n\nThe cost is that the look is ours. A household whose Christmas has always been red and white has no way to say so here, which is exactly the gap C fills.",
+      "page": "moves"
+    },
+    {
+      "id": "fourth-b",
+      "x": 3120,
+      "y": 960,
+      "w": 1440,
+      "text": "B -- A FOURTH WAY FOR A LIGHT TO BE\n\nReopens \"three, and there is no fourth\" on its own test: each motion is a way for the household's colors to be, and none takes the color away. A chase passes -- it is their colors, traveling -- and Theater chase was struck out for the company it kept in a list of eighty, not for what it does. So Chasing joins the Movement row on the light's pane, and the occasion brings only its colors.\n\nFlip occasion and movement independently: every combination is one the household could set. That is the strength -- a team's colors chasing on game day, no holiday needed -- and the weakness: Halloween with Candlelight is the household's job to set each October and unset each November, on the light.\n\nDrawn because it is the smallest change; not recommended, because it puts a holiday's motion in a light's settings, which is the walk to every light that the occasion chip was invented to save, and it puts Chasing on every strip indoors too.",
+      "page": "moves"
+    },
+    {
+      "id": "said-c",
+      "x": 4680,
+      "y": 960,
+      "w": 1440,
+      "text": "C -- A LOOK IS SAID, NOT CHOSEN\n\nThe household's own words are the interface. \"Christmas: red and green, chasing\" is read by a fixed grammar -- colors, one of five words of motion, slowly or quickly -- with no model, the way simple commands already stay deterministic. The house drafts it, plays it on the roof while the draft is open, and keeps it only when told; walking away puts the roof back as it was.\n\nThe five words are the three ambient motions under plainer names, plus chasing and twinkling. Asked for \"meteor\" or \"rainbow\", the house answers with the five it has rather than guessing, so the vocabulary cannot grow from the screen -- the zoo's door shut a different way. Flip the colors and the word on the board.\n\nOn its own it is the least discoverable of the three: a household that never thinks to type gets nothing. It is drawn as a whole answer and recommended as half of one.",
+      "page": "moves"
+    },
+    {
+      "id": "moves-given",
+      "x": 6240,
+      "y": 0,
+      "w": 500,
+      "text": "WHERE A CHASE RUNS -- THE SAME IN ALL THREE\n\nOn the boxes, not streamed from the hub. design/occasion/ said firmware holds the three ambient motions and the brain streams everything else. design/signal/ found the case that argument did not meet -- a fast motion people watch with intent, where a Wi-Fi hiccup reads as a broken light -- and put the drawing on the strip. A chase is that case again, and across several boxes it is harder: each box must know the time and its place along the roof.\n\nSo the hub sends each box one description -- colors, motion, speed, a start time, and where its runs sit in the whole -- and each box draws its own frames from a clock the hub keeps them all on (the One light page). A frame is written only when it differs, as the WS2812 rule asks. The roof is given emitter colors, saturated, never the panel's pastels: the boards draw what the LED is asked for.",
+      "page": "moves"
+    },
+    {
+      "id": "moves-rec",
+      "x": 6240,
+      "y": 760,
+      "w": 500,
+      "text": "RECOMMENDED -- A, WITH C AS THE WAY TO CHANGE ONE\n\nA, because the household's own sentence names a holiday before it names a motion, and because it keeps the reasons behind both earlier rulings: on an ordinary night the roof has Still, Drifting and Candlelight and nothing else, and \"chase\" never becomes a choice anybody scrolls past.\n\nIts one weakness is that the look is ours, and C answers exactly that and nothing more: on an occasion's own pane, \"Make it ours\" opens the sentence -- their colors, one of the five words -- drafted, played on the roof, kept. The household that does red and white gets red and white, and still never sees a list.\n\nB is the one not to pick. It reopens \"no fourth\" for every light in the house to solve something that happens in December, outside.\n\nOpen: whether strips inside should hold still at Christmas, or chase too when they are long enough to read as a line.",
+      "page": "moves"
+    },
+    {
+      "id": "ev-q",
+      "x": -620,
+      "y": 0,
+      "w": 500,
+      "text": "THE QUESTION ON THIS PAGE\n\n\"An occasion turns nothing on that was not already on\" was written so that a house never lights itself at midnight because it is December. A roofline for Halloween wants to come on at dusk and go off later, every evening of the season, with nobody at the wall.\n\nEvery board on this page can be flipped to the same four moments -- Halloween's first dusk, the same night at 11:20 PM, an ordinary July evening, and 3 AM in December -- so the directions answer the same four questions. The last one is the test.",
+      "page": "evenings"
+    },
+    {
+      "id": "ev-today",
+      "x": 0,
+      "y": 960,
+      "w": 1440,
+      "text": "TODAY -- TWO WAYS A ROOF COULD COME ON, AND NEITHER KNOWS THE SEASON\n\nThe Tonight card is the shipped one with design/occasion's chip drawn into it; the routine is the shipped Routines page's shape and words (why.ts writes \"At sunset\"). Flip the moment, and the routine on and off. The occasion alone leaves the roof dark every Halloween evening. The routine alone lights it every evening of the year, in whatever colors it was last left in -- orange in July -- and nothing turns it off, so at 3 AM in December it is on.\n\nThe finding is that the rule's reason and its wording have come apart. The reason is surprise: a light on when nobody expected it, inside, at an hour nobody chose. A roofline at dusk in October is not a surprise; it is the point. At 3 AM in December it is.",
+      "page": "evenings"
+    },
+    {
+      "id": "season-a",
+      "x": 1560,
+      "y": 960,
+      "w": 1440,
+      "text": "A -- THE OCCASION HAS A SEASON, AND AN EVENING\n\nHalloween becomes a stretch of evenings: Oct 24 to Nov 1, every year, the roofline on at dusk and off at 11:00. The rule changes from \"an occasion turns nothing on\" to \"an occasion may turn on only the outside lights it was given, only inside its own hours\", and the band says so two days before and again as it happens, so the first evening is never a surprise.\n\nFlip the moments: on Halloween's first dusk the roof is lit; at 11:20 PM it is off; on a July evening nothing comes on; at 3 AM in December the house is dark.\n\nWhat it costs is the shape of the rule. An exception lives inside every occasion, and the roof's hours belong to Halloween instead of to the roof -- a household that wants it lit every evening has to invent an occasion called Evenings.",
+      "page": "evenings"
+    },
+    {
+      "id": "evenings-b",
+      "x": 3120,
+      "y": 960,
+      "w": 1440,
+      "text": "B -- THE ROOFLINE HAS EVENINGS OF ITS OWN\n\nSeparates the two questions A ties together. WHEN is the light's: an outside light is asked once, at the end of its setup, whether it keeps evenings -- \"Most rooflines are on from dusk until bedtime. Shall this one?\" -- and the answer lives on its pane, like a porch light's. WHAT IT LOOKS LIKE is the season's: whatever occasion is on colors it, and on an ordinary evening it is warm white.\n\nThe rule stays exactly as written. An occasion turns nothing on; the roof turns on because it was asked to keep evenings, by the household, in words, once. Flip the moments and the three settings: \"Only in an occasion\" is A's answer as a setting, for a roof nobody wants lit in March.\n\nThe cost is two places to look when the roof does something, and the answer to \"why is it on?\" has to name the right one.",
+      "page": "evenings"
+    },
+    {
+      "id": "ask-c",
+      "x": 4680,
+      "y": 960,
+      "w": 1440,
+      "text": "C -- THE HOUSE ASKS, AT DUSK\n\nThe strictest reading: nothing ever comes on by itself. At dusk inside an occasion the band offers the roofline once -- \"It's dusk, and it's Halloween. Light the roofline until 11:00?\" -- on the wall and every phone at home. Tap Light it on the board to see the roof lit; flip the moment to see that nothing is asked in July or at night.\n\nIt keeps the rule without a single exception, and it is the cheapest to build. But it hands the household back the chore they asked to be rid of, nine evenings in a row, and the one evening they are out is the one the street sees dark.\n\nDrawn as the record of the strictest answer, and kept as the rung below B for a household that says no to evenings.",
+      "page": "evenings"
+    },
+    {
+      "id": "ev-given",
+      "x": 6240,
+      "y": 0,
+      "w": 500,
+      "text": "WHAT ALL THREE KEEP\n\nNothing inside the house ever comes on for an occasion. Dusk is the house's own -- it already knows sunset for routines, and dusk is a little after it, so the roof does not light in daylight. Every time the roof comes on by itself the band says so, and the line is the undo, as every arrival's line is. An evening ends at a time the household can see and change, 11:00 unless told otherwise, never \"until sunrise\".\n\nAnd whichever is picked, the wall can always answer \"why is it on?\" in one sentence, which is the sentence each board prints under its timeline.",
+      "page": "evenings"
+    },
+    {
+      "id": "ev-rec",
+      "x": 6240,
+      "y": 700,
+      "w": 500,
+      "text": "RECOMMENDED -- B, WITH A'S SEASONS FOR WHAT IT LOOKS LIKE\n\nB, because it keeps the rule whole and its reason true: an occasion still turns nothing on, and the roof keeps evenings because the roof was asked to, once, on its own pane, the way a porch light is. When is the light's, all year; how it looks is the season's.\n\nA's dates are then how a season starts and ends itself -- Halloween's colors from Oct 24 to Nov 1 with nobody touching the chip -- which is A's best part without A's exception.\n\nC is kept as the strictest answer and as the rung below: a household that says no to evenings at setup can still be offered the roof at dusk, in the band.\n\nOpen: whether \"Only in an occasion\" should be the default for a roofline, since most households do not light the eaves in March.",
+      "page": "evenings"
+    },
+    {
+      "id": "one-q",
+      "x": -620,
+      "y": 0,
+      "w": 500,
+      "text": "THE QUESTION ON THIS PAGE\n\nThe roof is two or three controllers, each with up to two runs, each installed where its runs start. The wall has to show them as one light; a chase has to travel from one to the next in order; and the household has to tell the house that order -- which run comes after which, and which way each one runs -- without ever meeting the words output, data, segment or offset.\n\nThe second board is what all three directions share. The three after it differ on one thing only: how the house learns the way round.",
+      "page": "one"
+    },
+    {
+      "id": "one-today",
+      "x": 0,
+      "y": 960,
+      "w": 1440,
+      "text": "TODAY -- THREE BOXES, THREE LIGHTS\n\nWhat the house would do now with three controllers: adopt each as its own strip -- Light strip, Light strip 2, Light strip 3 -- each with its own pane, its own Off and its own name, and (docs/strip.md, item 51) a second run that shows what the first does until told otherwise.\n\nFlip \"Asked for a chase\": each box chasing from its own first light, on its own clock. Two runs crash at the peak, two over the garage, and none of the three is in step. The roof the household thinks of as one thing is three things to the house, and nothing in the house knows the order of the runs or which way one goes.",
+      "page": "one"
+    },
+    {
+      "id": "one-given",
+      "x": 1560,
+      "y": 960,
+      "w": 1440,
+      "text": "WHAT ALL THREE SHARE -- ONE ROOFLINE ON THE WALL\n\nWhatever answers the order, the wall shows one Roofline: one tile, one pane, one Off, the occasion's look across all of it. The boxes appear only on the pane, named by where they are, and only to say something -- Fine, or why one part is dark, in the words its guard already reports (item 51: a supply of the wrong kind, a switch that tripped, a miswired line). Flip \"Garage end dark\": the tile stays one light, and the dark part says what to check.\n\nA second box joins at the last beat of its own setup, which is otherwise unchanged: \"Is this more of the Roofline, or a light of its own?\" The hub keeps every box on one clock and tells each where its runs sit along the roof and which way each goes. That last fact is the only thing the three directions disagree about.",
+      "page": "one"
+    },
+    {
+      "id": "tap-a",
+      "x": 3120,
+      "y": 960,
+      "w": 1440,
+      "text": "A -- TAP THEM IN THE ORDER THEY GO ROUND\n\nThe roof is put on show: every run lit in its own color, with a white light running along it the way it goes. Standing in the yard with a phone, the household taps the colors in the order they would walk past them; a run whose white light comes back toward where they started is tapped twice to turn it round. Then one white light goes round the whole roof, the way they said, and they say whether it goes the right way.\n\nFlip Before, Halfway and Done. Nothing is named but colors -- no word about data, ends, outputs or boxes. It is the same screen for two boxes or six, for a roof that went up in any order, and the same screen the day a fourth box is added.\n\nIt needs the roof in view, which a roof that wraps the house is not from any one spot.",
+      "page": "one"
+    },
+    {
+      "id": "mount-b",
+      "x": 4680,
+      "y": 960,
+      "w": 1440,
+      "text": "B -- THE ORDER COMES FROM PUTTING THEM UP\n\nEach box is set up on the ground (the press, as for any strip), clicked onto its rail, and when it powers up the house asks two things: more of the Roofline? and -- by running one white light round from the start and into the new box -- did it carry on? The guess is that a box continues from the one added before it, which is right whenever a person puts the roof up in order. Flip the guess to the wrong one: the light jumps to the far end and runs back.\n\nIt learns the order in the moment it is made and asks nothing at the end. But it asks on a ladder, and it does nothing for a roof that is already up -- every box of a household moving from an SP107E is already up, so for them it is A, asked three times.",
+      "page": "one"
+    },
+    {
+      "id": "none-c",
+      "x": 6240,
+      "y": 960,
+      "w": 1440,
+      "text": "C -- THE ORDER IS NEVER ASKED\n\nEvery run moves away from its own box, which the house knows as a fact, not a guess: a run's first light is always at its board. Nobody is asked anything, and setup is the indoor strip's, box after box.\n\nFlip the occasions to see the finding: only a chase shows it. Flickering, twinkling, still and drifting look the same with or without an order, because they have no direction. A chase shows the seams -- two runs meeting head on at the peak and over the garage, two bursts leaving the middle box both ways -- marked on the roof.\n\nSo C is the right answer until a chase is wanted, and the wrong one after. That is why it is part of the recommendation: it is what the roof does before the question is asked.",
+      "page": "one"
+    },
+    {
+      "id": "one-rec",
+      "x": 7800,
+      "y": 0,
+      "w": 500,
+      "text": "RECOMMENDED -- A, STARTED FROM B'S GUESS, WITH C UNTIL IT IS ANSWERED\n\nC is what the roof does before anybody says anything: every run away from its box, never wrong, only not continuous -- and for every motion but a chase it is indistinguishable from the order being known. So the question is only needed for a chase, and it can wait until a chase is first wanted: \"Christmas goes round the house. Show it which way round?\"\n\nWhen it is asked, A: the household looks at their own roof and taps colors, with the order filled in from B's guess (the order the boxes were added), so the common case is one look and one tap.\n\nB alone is not picked: it asks at the top of a ladder and fails every roof already up -- which is this household's.\n\nOpen: a roof that wraps the house, where no one spot sees every run. A handles it in two passes; whether the phone should lead the household round the corner is a board of its own.",
+      "page": "one"
+    }
+  ],
+  "pages": [
+    {
+      "id": "moves",
+      "name": "Movement \u2014 a chase"
+    },
+    {
+      "id": "evenings",
+      "name": "Evenings \u2014 dusk to late"
+    },
+    {
+      "id": "one",
+      "name": "One light \u2014 several boxes"
+    }
+  ],
+  "reading": [
+    "why",
+    "collection",
+    "moves-today",
+    "TodayMoves.dc.html",
+    "owns-a",
+    "OwnsA.dc.html",
+    "fourth-b",
+    "FourthB.dc.html",
+    "said-c",
+    "SaidC.dc.html",
+    "moves-given",
+    "moves-rec",
+    "ev-q",
+    "ev-today",
+    "TodayEvenings.dc.html",
+    "season-a",
+    "SeasonA.dc.html",
+    "evenings-b",
+    "EveningsB.dc.html",
+    "ask-c",
+    "AskC.dc.html",
+    "ev-given",
+    "ev-rec",
+    "one-q",
+    "one-today",
+    "TodayThree.dc.html",
+    "one-given",
+    "OneLight.dc.html",
+    "tap-a",
+    "TapA.dc.html",
+    "mount-b",
+    "MountB.dc.html",
+    "none-c",
+    "NoneC.dc.html",
+    "one-rec"
+  ]
+}
