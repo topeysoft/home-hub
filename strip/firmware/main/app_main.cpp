@@ -56,8 +56,11 @@
 #include <app/server/Server.h>
 #include <setup_payload/OnboardingCodesUtil.h>
 
+#include "board.h"
+#include "guard.h"
 #include "hub_uri.h"
 #include "fwupdate.h"
+#include "press.h"
 #include "release_keys.h"
 #include "pixels.h"
 #include "prov.h"
@@ -67,15 +70,7 @@ using namespace esp_matter::attribute;
 using namespace esp_matter::endpoint;
 using namespace chip::app::Clusters;
 
-#ifndef DATA_PIN
-#define DATA_PIN 5
-#endif
-// GPIO 0 is BOOT on every devkit and an ordinary input once running. A hold only counts once it has
-// been seen let go: it is held down to flash, it is a strapping pin, and on some boards it sits low,
-// and any of those would otherwise factory-reset the device five seconds into every boot for ever.
-#ifndef BUTTON_PIN
-#define BUTTON_PIN 0
-#endif
+// The pins -- the data pin, the button, and on rev A everything else -- are board.h's, in one place.
 #define HOLD_ARMED 1000
 #define HOLD_DONE 5000
 
@@ -88,7 +83,12 @@ static const char *TAG = "strip";
 // deliberately untouched by this: that one is lighting a room rather than signalling.
 static constexpr uint8_t SIG_R = 255, SIG_G = 96, SIG_B = 0;
 
-static px::Pixels strip;
+// ONE PICTURE PER OUTPUT. A devkit has one and rev A two (board.h); `strip` is the first, which is the
+// strip the hub has always known, and every topic it has always spoken is about that one. The second
+// is reached by putting `run2/` in front of the same topics (on_command), and otherwise shows the
+// household's light exactly as the first does: one light in the house, on two runs of wire.
+static px::Pixels outs[board::OUTPUTS];
+static px::Pixels &strip = outs[0];
 static px::Fill fill;
 // ONE HAND ON THE STRIP AT A TIME. Three tasks draw on it: the MQTT task (every command -- `light/set`,
 // the setup instruments, `fill/stop`), this file's own loop (the fill and the waiting glow), and
@@ -124,11 +124,23 @@ static char chipHex[13];
 static char base[16] = "strip";
 static uint16_t light_endpoint = 0;
 
+// Which output the setup instruments are measuring. They measure one run at a time and the other is
+// dark while they do: somebody counting lights to the end of a strip must not be looking at two.
+static int fill_run = 0, tune_run = 0;
+
+// Each output's settings live under the first output's names with the run's number after them, so the
+// first is stored exactly where it always was: "count", then "count2".
+struct Key {
+    char s[16];
+    Key(int run, const char *k) { snprintf(s, sizeof(s), "%s%s", k, run ? "2" : ""); }
+    operator const char *() const { return s; }
+};
+
 // WHAT THE HOUSE IS SAYING WITH THE STRIP, IF ANYTHING (design/signal/, px::Signal). Drawn from the
 // housekeeping loop and ended by anything that paints the household's own light. `sig_step` is the
 // frame last written, so a frame goes down the wire only when it is a different one.
 static px::Signal sig;
-static uint32_t sig_step = 0;
+static uint32_t sig_step[board::OUTPUTS] = {};   // per output: two runs of different lengths step apart
 
 // The setup instruments own the strip while they run, and the household's own color goes back the
 // moment they stop. Without this a fill that was never stopped leaves somebody's living room running
@@ -222,18 +234,38 @@ static void put_i32(const char *key, int v) { nvs_set_i32(nvs, key, v); nvs_comm
 
 // ---------------------------------------------------------------- what it is showing
 
+// EVERY OUTPUT, AT ONCE, AND PAST THE GUARD. Whatever each picture holds goes out together, so two
+// runs cost one frame's time rather than two (pixels.h). On rev A each one goes only to a run that
+// is switched on, dimmed if it would draw more than that run may (guard.h); on a devkit the guard
+// says yes to everything and the picture goes out exactly as it always did.
+static void show() {
+    Hold h;
+    const px::Pixels *ps[board::OUTPUTS];
+    uint16_t scale[board::OUTPUTS];
+    for (int i = 0; i < board::OUTPUTS; i++) {
+        ps[i] = guard::live(i) ? &outs[i] : nullptr;
+        scale[i] = ps[i] ? guard::scale(i, outs[i]) : 0;
+    }
+    px::show(ps, scale, board::OUTPUTS);
+}
+static void solid_all(uint8_t r, uint8_t g, uint8_t b) { for (auto &o : outs) o.solid(r, g, b); }
+static void clear_all() { for (auto &o : outs) o.clear(); }
+// Only this run lit, for an instrument measuring it.
+static void alone(int run) { for (int i = 0; i < board::OUTPUTS; i++) if (i != run) outs[i].clear(); }
+
 // The strip at the length it currently believes, with the last few lights cool. Drawn whenever the
 // count moves while tuning, and nowhere else.
 static void paint_tune() {
     Hold h;
-    strip.clear();
-    const int n = strip.order.per_pixel();
-    for (int i = 0; i < strip.count; i++) {
-        const bool tail = i >= strip.count - TUNE_TAIL;
-        strip.order.bytes(tail ? TUNE_R : SIG_R, tail ? TUNE_G : SIG_G, tail ? TUNE_B : SIG_B,
-                          &strip.buf[i * n]);
+    px::Pixels &t = outs[tune_run];
+    alone(tune_run);
+    t.clear();
+    const int n = t.order.per_pixel();
+    for (int i = 0; i < t.count; i++) {
+        const bool tail = i >= t.count - TUNE_TAIL;
+        t.order.bytes(tail ? TUNE_R : SIG_R, tail ? TUNE_G : SIG_G, tail ? TUNE_B : SIG_B, &t.buf[i * n]);
     }
-    px::show(strip);
+    show();
 }
 
 static void paint() {
@@ -242,12 +274,12 @@ static void paint() {
     // The household's own light, drawn, is a signal over: a hand on the light -- the panel, their
     // Matter app -- wins over anything the house was saying with it, at once.
     sig.running = false;
-    if (!want_on) strip.clear();
+    if (!want_on) clear_all();
     else {
         const uint16_t k = want_bri ? want_bri : 1;
-        strip.solid((uint8_t)(want_r * k / 255), (uint8_t)(want_g * k / 255), (uint8_t)(want_b * k / 255));
+        solid_all((uint8_t)(want_r * k / 255), (uint8_t)(want_g * k / 255), (uint8_t)(want_b * k / 255));
     }
-    px::show(strip);
+    show();
 }
 
 // Matter carries color as hue and saturation, 0-254 each. Value is the level, which is its own
@@ -279,6 +311,26 @@ static void say(const char *leaf, const char *payload, int retain = 0) {
     snprintf(t, sizeof(t), "%s/%s/%s", base, chipHex, leaf);
     esp_mqtt_client_publish(mqtt, t, payload, 0, 1, retain);
 }
+
+// A run's own topics: the first output's are the ones there have always been, and the second's are
+// the same with `run2/` in front, so a hub that has never heard of a second run hears nothing new
+// about the first.
+static void say_run(int run, const char *leaf, const char *payload, int retain = 0) {
+    char l[32];
+    snprintf(l, sizeof(l), "%s%s", run ? "run2/" : "", leaf);
+    say(l, payload, retain);
+}
+static bool two_wire_possible(int run) { return board::RUNS[run].clock >= 0 && board::RUNS[run].spi; }
+
+// WHAT THE BOARD IS DOING TO KEEP ITSELF SAFE, on rev A (guard.h): the supply and its kind, each run's
+// current and how far it is being dimmed, and why a run is dark if one is. Retained, like `light`, so
+// the wall can say why without waiting. Never on a devkit, which measures none of it.
+#if defined(STRIP_BOARD_REVA)
+static void say_power(bool now) {
+    char j[512];
+    if (guard::report(j, sizeof(j), now_ms(), now)) say("power", j, 1);
+}
+#endif
 
 // ---------------------------------------------------------------- an ordinary light in the house
 //
@@ -328,16 +380,31 @@ static void announce_the_light() {
     ESP_LOGI(TAG, "announced as a light the house can switch on");
 }
 
-static void say_what_we_are() {
-    char v[16];
-    snprintf(v, sizeof(v), "%d", strip.count);
-    say("count", v, 1);
+// The order a run's colors come out in, as the three letters the hub uses.
+static void order_word(const px::Pixels &p, char ord[4]) {
     const char letters[3] = {'r', 'g', 'b'};
-    char ord[4] = {0, 0, 0, 0};
-    for (int c = 0; c < 3; c++) ord[strip.order.at[c]] = letters[c];
-    say("order", ord, 1);
+    ord[3] = 0;
+    for (int c = 0; c < 3; c++) ord[p.order.at[c]] = letters[c];
+}
+
+static void say_what_we_are() {
+    for (int i = 0; i < board::OUTPUTS; i++) {
+        char v[16];
+        snprintf(v, sizeof(v), "%d", outs[i].count);
+        say_run(i, "count", v, 1);
+        char ord[4];
+        order_word(outs[i], ord);
+        say_run(i, "order", ord, 1);
+        // One wire or two, said only by an output that can be either, so a devkit says what it said.
+        if (two_wire_possible(i)) say_run(i, "type", px::wire(i) == px::Wire::TWO ? "two" : "one", 1);
+    }
     say("status", "online", 1);
     say("fw", STRIP_FW, 1);         // what it runs, so the hub can count who has a fix
+#if defined(STRIP_BOARD_REVA)
+    // Which board, because an update for one is not an update for the other (fwupdate.cpp).
+    say("board", board::NAME, 1);
+    say_power(true);
+#endif
 }
 
 // THE WAY OUT, AND IT CLEARS UP AFTER ITSELF.
@@ -354,10 +421,10 @@ static void say_what_we_are() {
 static void end_fill(const char *why) {
     if (!fill.running) return;
     fill.running = false;
-    strip.set_count(get_i32("count", PX_ASSUMED));
+    outs[fill_run].set_count(get_i32(Key(fill_run, "count"), PX_ASSUMED));
     instrument = false;
     paint();
-    ESP_LOGI(TAG, "the fill is over (%s); back to %d lights", why, strip.count);
+    ESP_LOGI(TAG, "the fill is over (%s); back to %d lights", why, outs[fill_run].count);
 }
 
 static void forget_the_house(bool tidy_first) {
@@ -366,11 +433,18 @@ static void forget_the_house(bool tidy_first) {
         snprintf(topic, sizeof(topic), "homeassistant/light/%s_%s/config", base, chipHex);
         say_at(topic, "", 1);
         for (const char *leaf : {"count", "order", "light", "fill", "status"}) say(leaf, "", 1);
+        for (int i = 0; i < board::OUTPUTS; i++) {
+            if (i) for (const char *leaf : {"count", "order", "fill"}) say_run(i, leaf, "", 1);
+            if (two_wire_possible(i)) say_run(i, "type", "", 1);
+        }
+#if defined(STRIP_BOARD_REVA)
+        for (const char *leaf : {"board", "power"}) say(leaf, "", 1);
+#endif
         vTaskDelay(pdMS_TO_TICKS(600));   // let them leave before the radio goes with everything else
     }
     Hold h;             // after the goodbyes: nothing publishes while holding the strip (see gPx)
-    strip.clear();
-    px::show(strip);
+    clear_all();
+    show();
     nvs_erase_all(nvs);
     nvs_commit(nvs);
     esp_matter::factory_reset();   // erases Matter's own storage and restarts
@@ -378,8 +452,41 @@ static void forget_the_house(bool tidy_first) {
     esp_restart();
 }
 
-static void on_command(const std::string &leaf, const std::string &msg, bool retained) {
+// An instrument moving to the other run puts back what the first run had written down: the fill
+// borrows the whole wire and the fine-tune moves the length in memory only, and neither is an answer.
+static void hand_over(int run) {
+    if (board::OUTPUTS < 2) return;   // one run: there is nothing to hand over to
+    if (fill.running && fill_run != run) {
+        fill.running = false;
+        outs[fill_run].set_count(get_i32(Key(fill_run, "count"), PX_ASSUMED));
+    }
+    if (tuning && tune_run != run) {
+        tuning = false;
+        outs[tune_run].set_count(get_i32(Key(tune_run, "count"), PX_ASSUMED));
+    }
+}
+
+static void on_command(const std::string &full, const std::string &msg, bool retained) {
     Hold h;             // every command that touches the strip, from the MQTT task: see gPx
+
+    // THE SECOND RUN, ON REV A, IS THE SAME WORDS WITH `run2/` IN FRONT -- and only the words that are
+    // about one run of wire: how long it is, which order its colors come in, whether it has a white or
+    // a clock, and the instruments that find those out. The household's light, a signal, an update and
+    // forgetting are about the strip as a whole and have no second copy. On a devkit, or for any other
+    // word, a `run2/` is not something this strip can answer and is left alone, as it always was.
+    int run = 0;
+    std::string leaf = full;
+    if (full.rfind("run2/", 0) == 0) {
+        if (board::OUTPUTS < 2) return;
+        run = 1;
+        leaf = full.substr(5);
+        bool per_run = false;
+        for (const char *k : {"show/set", "tune/set", "fill/stop", "count/set", "order/set", "white/set", "type/set"})
+            if (leaf == k) per_run = true;
+        if (!per_run) return;
+    }
+    px::Pixels &S = outs[run];
+
     if (leaf == "hello") { say_what_we_are(); return; }
 
     // AN OFFER IS RETAINED, AND IT IS NOT A RECORDING. Everything below retires a retained command,
@@ -423,12 +530,13 @@ static void on_command(const std::string &leaf, const std::string &msg, bool ret
     // is the only thing that knows its own NVS is not empty. The clear comes back to us as an
     // ordinary message with no payload, which the same line below drops.
     const bool remembered = (leaf == "count/set" || leaf == "order/set"
-                             || leaf == "room/set" || leaf == "white/set");
+                             || leaf == "room/set" || leaf == "white/set"
+                             || (leaf == "type/set" && two_wire_possible(run)));
     if (remembered && (retained || msg.empty())) {
         if (retained) {
             ESP_LOGI(TAG, "a retained %s was waiting on the broker; retiring it, what is written down wins",
-                     leaf.c_str());
-            say(leaf.c_str(), "", 1);
+                     full.c_str());
+            say(full.c_str(), "", 1);
         }
         return;
     }
@@ -512,9 +620,11 @@ static void on_command(const std::string &leaf, const std::string &msg, bool ret
         if (next.kind == px::Signal::NONE) return;
         next.start(now_ms());
         sig = next;
-        sig_step = sig.step(now_ms(), strip.count);
-        sig.draw(strip, now_ms());
-        px::show(strip);
+        for (int i = 0; i < board::OUTPUTS; i++) {
+            sig_step[i] = sig.step(now_ms(), outs[i].count);
+            sig.draw(outs[i], now_ms());
+        }
+        show();
         say("signal", said);
         return;
     }
@@ -523,12 +633,14 @@ static void on_command(const std::string &leaf, const std::string &msg, bool ret
         if (msg.rfind("raw ", 0) == 0) {
             int b0 = 0, b1 = 0, b2 = 0;
             if (sscanf(msg.c_str() + 4, "%d %d %d", &b0, &b1, &b2) != 3) return;
+            hand_over(run);
             instrument = true;
             fill.running = false;
             // Exactly as given. Putting these through the strip's mapping would be applying the very
             // guess the question exists to test (pixels.h, raw3).
-            strip.raw3((uint8_t)b0, (uint8_t)b1, (uint8_t)b2);
-            px::show(strip);
+            alone(run);
+            S.raw3((uint8_t)b0, (uint8_t)b1, (uint8_t)b2);
+            show();
         } else if (msg == "fill") {
             // THE FILL MEASURES THE WIRE, NOT THE LAST GUESS ABOUT IT, and that is the whole of this
             // line. The fill is bounded by strip.count and it is the instrument that DISCOVERS
@@ -540,18 +652,23 @@ static void on_command(const std::string &leaf, const std::string &msg, bool ret
             // being written, and a length question that could not be answered twice. Writing the
             // whole wire is free -- the surplus falls off the end, which is why 300 is the assumed
             // length in the first place -- and the real count is latched on fill/stop.
+            hand_over(run);
             instrument = true;
-            strip.set_count(PX_MOST);
-            strip.clear();
-            px::show(strip);
+            fill_run = run;
+            S.set_count(PX_MOST);
+            alone(run);
+            S.clear();
+            show();
             fill.start(now_ms());
             fill_began = now_ms();
             fill_said = -1;
         } else if (msg == "tune") {
             // The pane's fine-tune. Nothing is written down until it is over: `tune/set` moves the
             // count in memory only, so holding a button does not spend an NVS erase cycle a frame.
+            hand_over(run);
             instrument = true;
             tuning = true;
+            tune_run = run;
             fill.running = false;
             paint_tune();
         } else if (msg == "off") {
@@ -566,54 +683,70 @@ static void on_command(const std::string &leaf, const std::string &msg, bool ret
     // WHERE THE END IS, WHILE SOMEBODY IS MOVING IT. In memory and on the wire, never in NVS --
     // the hub sends one `count/set` at the end, which is the write that keeps it.
     if (leaf == "tune/set") {
-        if (!tuning) return;
-        strip.set_count(atoi(msg.c_str()));
+        if (!tuning || run != tune_run) return;
+        S.set_count(atoi(msg.c_str()));
         paint_tune();
         char v[16];
-        snprintf(v, sizeof(v), "%d", strip.count);
-        say("count", v, 1);
+        snprintf(v, sizeof(v), "%d", S.count);
+        say_run(run, "count", v, 1);
         return;
     }
 
     if (leaf == "fill/stop") {
         // A fill that is already over -- stopped, or given up on -- has nothing to latch, and latching
         // anyway would write down wherever it last was. Say the length the strip has instead.
-        if (!fill.running) {
+        if (!fill.running || run != fill_run) {
             char v[16];
-            snprintf(v, sizeof(v), "%d", strip.count);
-            say("count", v, 1);
+            snprintf(v, sizeof(v), "%d", S.count);
+            say_run(run, "count", v, 1);
             return;
         }
         // Latched HERE, at the moment the message lands. A person's reaction time is already the only
         // error in this answer; adding however busy the Wi-Fi is would make a strip measure short on a
         // busy evening and right on a quiet one, which is the worst kind of wrong.
         const int n = fill.stop();
-        strip.set_count(n);
-        put_i32("count", n);
+        S.set_count(n);
+        put_i32(Key(run, "count"), n);
         char v[16];
         snprintf(v, sizeof(v), "%d", n);
-        say("count", v, 1);
+        say_run(run, "count", v, 1);
         instrument = false;
         paint();
         return;
     }
     if (leaf == "order/set") {
-        if (strip.order.set(msg.c_str())) { put_str("order", msg); say("order", msg.c_str(), 1); }
+        if (S.order.set(msg.c_str())) { put_str(Key(run, "order"), msg); say_run(run, "order", msg.c_str(), 1); }
         return;
     }
     if (leaf == "white/set") {
-        strip.order.white = (msg == "1");
-        nvs_set_u8(nvs, "white", strip.order.white); nvs_commit(nvs);
+        S.order.white = (msg == "1");
+        nvs_set_u8(nvs, Key(run, "white"), S.order.white); nvs_commit(nvs);
+        return;
+    }
+    // ONE WIRE OR TWO (pixels.h), told once like the order and kept like it: "one" or "two". Only an
+    // output with a clock line can be either -- on a devkit with no CLOCK_PIN this is not a word it
+    // knows, which is exactly what it was before there was a second kind of strip.
+    if (leaf == "type/set") {
+        if (!two_wire_possible(run)) return;
+        const bool two = msg == "two";
+        if (!two && msg != "one") return;
+        if (!px::rewire(run, two ? px::Wire::TWO : px::Wire::ONE)) {
+            ESP_LOGE(TAG, "run %d could not change to %s wire%s", run + 1, two ? "two" : "one", two ? "s" : "");
+            return;
+        }
+        nvs_set_u8(nvs, Key(run, "type"), two ? 2 : 1); nvs_commit(nvs);
+        say_run(run, "type", two ? "two" : "one", 1);
+        show();     // whatever was showing, on the wire it now has
         return;
     }
     if (leaf == "count/set") {
         // A length being said is the measuring being over, so a fill still running ends here.
-        const bool was_filling = fill.running;
-        fill.running = false;
-        strip.set_count(atoi(msg.c_str()));
-        put_i32("count", strip.count);
+        const bool was_filling = fill.running && fill_run == run;
+        if (was_filling) fill.running = false;
+        S.set_count(atoi(msg.c_str()));
+        put_i32(Key(run, "count"), S.count);
         // Sent as the last word of a tuning session, so what is on the strip has to agree with it.
-        if (tuning) paint_tune();
+        if (tuning && tune_run == run) paint_tune();
         else if (was_filling) { instrument = false; paint(); }
         return;
     }
@@ -731,8 +864,8 @@ static void on_event(const ChipDeviceEvent *event, intptr_t) {
         if (prov::keep_knocking()) return;
         waiting_over = true;
         Hold h;
-        strip.solid(SIG_R / 6, SIG_G / 6, SIG_B / 6);
-        px::show(strip);
+        solid_all(SIG_R / 6, SIG_G / 6, SIG_B / 6);
+        show();
         ESP_LOGI(TAG, "nobody came. Still here, no longer asking -- power it off and on to ask again");
     }
     if (event->Type == chip::DeviceLayer::DeviceEventType::kCommissioningComplete) {
@@ -770,11 +903,11 @@ static bool rhythm_lit(uint32_t t) {
 // button and a button that is not wired both look like.
 static void blink_back() {
     Hold h;
-    strip.solid(255, 255, 255);
-    px::show(strip);
+    solid_all(255, 255, 255);
+    show();
     vTaskDelay(pdMS_TO_TICKS(120));
-    strip.solid(SIG_R, SIG_G, SIG_B);
-    px::show(strip);
+    solid_all(SIG_R, SIG_G, SIG_B);
+    show();
 }
 
 static void housekeeping(void *) {
@@ -785,9 +918,12 @@ static void housekeeping(void *) {
     // sign was a button that did nothing. Under the task watchdog a block is a panic with a stack
     // trace in the log instead, which is a bad day somebody can actually read.
     esp_task_wdt_add(nullptr);
-    bool released = false, armed = false, was_lit = true;
+    bool was_lit = true;
     uint32_t loud_at = 0;
-    uint32_t down = 0;
+    Press button;
+    button.armed_after = HOLD_ARMED;
+    button.done_after = HOLD_DONE;
+    button.shortest = board::PRESS_SHORTEST_MS;
     for (;;) {
         // While the strip is waiting through our door it flashes its rhythm; once credentials have
         // arrived it holds the steady glow until the manager is done with the Wi-Fi.
@@ -808,12 +944,12 @@ static void housekeeping(void *) {
         // secret -- which is what rhythm()[0] distinguishes. Written on a change of state only,
         // because a WS2812 latches and rewriting a steady frame is how the bridge puck turned one
         // misread into twenty-five a second (AGENTS.md).
-        if (instrument && !waiting_over && !armed && !fill.running) {
+        if (instrument && !waiting_over && !button.armed && !fill.running) {
             const bool lit = prov::busy() || !prov::rhythm()[0] || rhythm_lit(now_ms());
             if (lit != was_lit) {
                 Hold h;
-                if (lit) strip.solid(SIG_R, SIG_G, SIG_B); else strip.clear();
-                px::show(strip);
+                if (lit) solid_all(SIG_R, SIG_G, SIG_B); else clear_all();
+                show();
                 was_lit = lit;
             }
         }
@@ -826,7 +962,7 @@ static void housekeeping(void *) {
             forget_asked = false;
             forget_the_house(true);
         }
-        // A hold only counts once the button has been seen let go; see BUTTON_PIN above.
+        // A hold only counts once the button has been seen let go (press.h says why).
         //
         // AND IT SAYS WHEN IT SEES ONE. A household holding the button and getting nothing has no
         // way to tell a button that is not wired from a hold that is not long enough from the wrong
@@ -834,39 +970,46 @@ static void housekeeping(void *) {
         // a five-second hold produced a reboot and no log line at all, which is what the wrong
         // button looks like and what a dead pin looks like, and there was no way to tell them apart
         // without a flash cycle. One line at the press ends that for good.
-        if (gpio_get_level((gpio_num_t)BUTTON_PIN)) released = true;
-        else if (released) {
-            if (!down) { down = now_ms(); ESP_LOGI(TAG, "button down -- hold %d s to forget the house", HOLD_DONE / 1000); }
-            const uint32_t held = now_ms() - down;
-            if (!armed && held > HOLD_ARMED) {
-                armed = true;
-                instrument = true;
-                strip.solid(255, 0, 0);
-                px::show(strip);
-                ESP_LOGW(TAG, "keep holding to forget the house...");
-            }
-            if (held > HOLD_DONE) {
-                ESP_LOGW(TAG, "forgetting the house. It will come back new.");
-                forget_the_house(false);
-            }
+        const uint8_t pressed = button.tick(gpio_get_level((gpio_num_t)board::BUTTON), now_ms());
+        if (pressed & Press::DOWN) ESP_LOGI(TAG, "button down -- hold %d s to forget the house", HOLD_DONE / 1000);
+        if (pressed & Press::ARMED) {
+            Hold h;
+            instrument = true;
+            solid_all(255, 0, 0);
+            show();
+            ESP_LOGW(TAG, "keep holding to forget the house...");
         }
-        if (gpio_get_level((gpio_num_t)BUTTON_PIN) && down) {
-            const uint32_t held = now_ms() - down;
-            down = 0;
-            if (armed) { armed = false; instrument = !chip::Server::GetInstance().GetFabricTable().FabricCount();
-                         if (instrument) { strip.solid(SIG_R, SIG_G, SIG_B); px::show(strip); } else paint(); }
-            // A SHORT PRESS IS THE WHOLE HANDSHAKE (design/door/PressIt.dc.html). It is counted on the
-            // way UP and only if the hold never armed, so the two lengths of the same button cannot be
-            // confused by anybody doing either of them on purpose: under a second lets somebody in,
-            // five forgets the house, and one second turns the strip red to say which is coming.
-            //
-            // AND THE THING THAT WAS PRESSED IS WHAT ANSWERS. One bright blink on the strip itself,
-            // because the wall may be in another room and the person is looking at their hand.
-            else if (held < HOLD_ARMED && prov::press()) {
-                blink_back();
-                was_lit = true;
-            }
+        if (pressed & Press::DONE) {
+            ESP_LOGW(TAG, "forgetting the house. It will come back new.");
+            forget_the_house(false);
         }
+        if (pressed & Press::LET_GO) {
+            Hold h;
+            instrument = !chip::Server::GetInstance().GetFabricTable().FabricCount();
+            if (instrument) { solid_all(SIG_R, SIG_G, SIG_B); show(); } else paint();
+        }
+        // A SHORT PRESS IS THE WHOLE HANDSHAKE (design/door/PressIt.dc.html). It is counted on the
+        // way UP and only if the hold never armed, so the two lengths of the same button cannot be
+        // confused by anybody doing either of them on purpose: under a second lets somebody in,
+        // five forgets the house, and one second turns the strip red to say which is coming.
+        //
+        // AND THE THING THAT WAS PRESSED IS WHAT ANSWERS. One bright blink on the strip itself,
+        // because the wall may be in another room and the person is looking at their hand.
+        if ((pressed & Press::PRESSED) && prov::press()) {
+            blink_back();
+            was_lit = true;
+        }
+
+        // THE BOARD KEEPING ITSELF SAFE (guard.h), every pass, holding the strip because it may have to
+        // send what is showing again: dimmer, or to a run that has just come on. Not on a devkit, which
+        // has nothing to guard and should not wait for a lock it never used to take here.
+#if defined(STRIP_BOARD_REVA)
+        {
+            Hold h;
+            if (guard::tick(now_ms())) show();
+        }
+        say_power(false);    // outside the lock, like every publish from here
+#endif
 
         // A signal, drawn a frame at a time, and only when the frame is a different one. It gives way
         // to the setup instruments -- somebody measuring the strip owns it -- and when its last pass is
@@ -878,12 +1021,16 @@ static void housekeeping(void *) {
             if (sig.running && instrument) sig.running = false;
             else if (sig.running && sig.over(now)) paint();
             else if (sig.running) {
-                const uint32_t k = sig.step(now, strip.count);
-                if (k != sig_step) {
-                    sig_step = k;
-                    sig.draw(strip, now);
-                    px::show(strip);
+                bool changed = false;
+                for (int i = 0; i < board::OUTPUTS; i++) {
+                    const uint32_t k = sig.step(now, outs[i].count);
+                    if (k != sig_step[i]) {
+                        sig_step[i] = k;
+                        sig.draw(outs[i], now);
+                        changed = true;
+                    }
                 }
+                if (changed) show();
             }
         }
 
@@ -892,12 +1039,13 @@ static void housekeeping(void *) {
             Hold h;
             if (fill.running) {     // asked again under the lock: a command may have ended the fill
                 const int was = fill.at;
-                fill.tick(now_ms(), strip.count);
+                px::Pixels &f = outs[fill_run];
+                fill.tick(now_ms(), f.count);
                 if (fill.at != was) {
-                    strip.clear();
+                    f.clear();
                     for (int i = 0; i < fill.at; i++)
-                        strip.order.bytes(SIG_R, SIG_G, SIG_B, &strip.buf[i * strip.order.per_pixel()]);
-                    px::show(strip);
+                        f.order.bytes(SIG_R, SIG_G, SIG_B, &f.buf[i * f.order.per_pixel()]);
+                    show();
                 }
             }
         }
@@ -907,7 +1055,7 @@ static void housekeeping(void *) {
         if (fill.running && fill.at != fill_said && now_ms() - fill_said_at >= FILL_SAY_EVERY_MS) {
             char v[16];
             snprintf(v, sizeof(v), "%d", fill.at);
-            say("fill", v);
+            say_run(fill_run, "fill", v);
             fill_said = fill.at;
             fill_said_at = now_ms();
         }
@@ -937,18 +1085,19 @@ static void selftest() {
     // the rest of its life and lights exactly one LED however long it really is -- which on a board
     // somebody has just paired reads as a broken strip rather than as a self test that forgot.
     const int saved = strip.count;
-    ESP_LOGW(TAG, "SELF TEST on pin %d, one light, borrowing what is saved", DATA_PIN);
+    ESP_LOGW(TAG, "SELF TEST on pin %d, one light, borrowing what is saved", board::RUNS[0].data);
     strip.set_count(1);
+    alone(0);
     const struct { const char *name; uint8_t r, g, b; } steps[] = {
         {"RED", 255, 0, 0}, {"GREEN", 0, 255, 0}, {"BLUE", 0, 0, 255}, {"warm white", 255, 180, 110}};
     for (const auto &st : steps) {
         ESP_LOGW(TAG, "  now showing %s", st.name);
         strip.solid(st.r, st.g, st.b);
-        px::show(strip);
+        show();
         vTaskDelay(pdMS_TO_TICKS(1500));
     }
     strip.clear();
-    px::show(strip);
+    show();
     strip.set_count(saved);
     ESP_LOGW(TAG, "SELF TEST over, %d lights restored. Four colors in that order means the fault is "
                   "on the bench.", strip.count);
@@ -976,18 +1125,31 @@ extern "C" void app_main() {
     esp_read_mac(mac, ESP_MAC_WIFI_STA);
     snprintf(chipHex, sizeof(chipHex), "%02x%02x%02x", mac[3], mac[4], mac[5]);
 
-    strip.set_count(get_i32("count", PX_ASSUMED));
+    for (int i = 0; i < board::OUTPUTS; i++) {
+        outs[i].set_count(get_i32(Key(i, "count"), PX_ASSUMED));
+        uint8_t w = 0;
+        nvs_get_u8(nvs, Key(i, "white"), &w);
+        outs[i].order.white = w;
+        outs[i].order.set(get_str(Key(i, "order"), "grb").c_str());
+    }
     restore_light();        // before anything paints: the light comes back as it was left
-    uint8_t w = 0;
-    nvs_get_u8(nvs, "white", &w);
-    strip.order.white = w;
-    strip.order.set(get_str("order", "grb").c_str());
     snprintf(base, sizeof(base), "%s", get_str("base", "strip").c_str());
 
-    const bool lit = px::begin(DATA_PIN);
+    // Rev A: both runs held off, the supply measured and each run's case decided, BEFORE any driver is
+    // started or anything is drawn (guard.h). Nothing at all on a devkit.
+    guard::begin(nvs);
+
+    bool lit = true;
+    for (int i = 0; i < board::OUTPUTS; i++) {
+        lit = px::begin(i, board::RUNS[i]) && lit;
+        uint8_t type = 1;
+        if (two_wire_possible(i) && nvs_get_u8(nvs, Key(i, "type"), &type) == ESP_OK && type == 2 &&
+            !px::rewire(i, px::Wire::TWO))
+            ESP_LOGE(TAG, "run %d is a two-wire strip and SPI would not start for it", i + 1);
+    }
     g_lit = lit;
     gpio_config_t btn = {};
-    btn.pin_bit_mask = 1ULL << BUTTON_PIN;
+    btn.pin_bit_mask = 1ULL << board::BUTTON;
     btn.mode = GPIO_MODE_INPUT;
     btn.pull_up_en = GPIO_PULLUP_ENABLE;
     gpio_config(&btn);
@@ -995,11 +1157,15 @@ extern "C" void app_main() {
     // One console, which the Arduino version could not manage: there, the framework logs came out of
     // UART0 while our own Serial was the native USB port, so a bring-up log full of errors and not one
     // word from us was the ordinary experience and read as a board that never ran our code.
-    const char letters[3] = {'r', 'g', 'b'};
-    char ord[4] = {0, 0, 0, 0};
-    for (int c = 0; c < 3; c++) ord[strip.order.at[c]] = letters[c];
-    ESP_LOGI(TAG, STRIP_FW "  chip %s  pin %d  %d lights, order %s%s", chipHex, DATA_PIN, strip.count, ord,
-             strip.order.white ? "w" : "");
+    char ord[4];
+    order_word(strip, ord);
+    ESP_LOGI(TAG, STRIP_FW "  chip %s  pin %d  %d lights, order %s%s", chipHex, board::RUNS[0].data, strip.count,
+             ord, strip.order.white ? "w" : "");
+#if defined(STRIP_BOARD_REVA)
+    order_word(outs[1], ord);
+    ESP_LOGI(TAG, "board %s  run 2 on pin %d  %d lights, order %s%s", board::NAME, board::RUNS[1].data,
+             outs[1].count, ord, outs[1].order.white ? "w" : "");
+#endif
     if (!lit) ESP_LOGE(TAG, "THE LIGHT DRIVER DID NOT START -- nothing will light. Check the pin.");
     // Said, not decoration: reading the keys is what keeps them in the image (release_keys.h), and
     // the line is how a bench can tell a strip that carries them from one that does not.
@@ -1068,8 +1234,8 @@ extern "C" void app_main() {
     // was not. "Ours" is remembered in NVS beside everything else the household chose.
     if (chip::Server::GetInstance().GetFabricTable().FabricCount() == 0 && !ours) {
         instrument = true;
-        strip.solid(SIG_R, SIG_G, SIG_B);
-        px::show(strip);
+        solid_all(SIG_R, SIG_G, SIG_B);
+        show();
         ESP_LOGI(TAG, "nobody has taken this strip yet -- both doors are open");
         // The four things a strip needs to find us again after a reboot. Anything else the hub
         // offers is refused out loud rather than silently dropped, so a mismatch between the two

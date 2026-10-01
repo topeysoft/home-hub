@@ -20,11 +20,16 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "board.h"
+
 // The most lights one controller will drive. Not a software limit and not a limit anybody should
 // meet: a 5 m strip at 60/m is 300, and somewhere past that the 5 V rail is what gives out, not this.
 // It also sets the RMT symbol buffer in pixels.cpp -- 600 rgbw pixels is 76 KB of symbols, which is
 // already a lot to ask of a part that is holding Matter and Wi-Fi at the same time.
+// (Rev A sets its own, per output, in board.h, with the reasons.)
+#ifndef PX_MOST
 #define PX_MOST 600
+#endif
 
 // How many lights to write before the household has said. A strip shorter than this simply does not
 // receive the rest -- the surplus falls off the end of the wire and nobody ever sees it -- which is
@@ -333,10 +338,92 @@ namespace px
         }
     };
 
-    // The two that touch hardware, declared here and defined in pixels.cpp. Declarations only, so
+    // TWO KINDS OF WIRE. A one-wire strip (WS2812, SK6812, WS2811, WS2815) takes its timing from the
+    // data line alone and goes out on RMT. A two-wire strip (APA102, SK9822) has a clock beside its
+    // data, takes any speed it is given, and goes out on SPI. Nothing about a strip says which it is:
+    // the hub says so, and the answer lives in NVS like the order and the length.
+    enum class Wire : uint8_t { ONE = 1, TWO = 2 };
+
+    // WHAT GOES DOWN THE WIRE IS NOT ALWAYS THE PICTURE. On a board that measures its own current the
+    // picture is sent dimmed when it would draw more than a run may carry, and a two-wire strip wants
+    // its bytes framed. Either way it is a COPY: the picture stays as it was drawn, so dimming it
+    // twice is impossible and lifting the dimming later puts back exactly what was there.
+    //
+    // `scale` is out of 256, and 256 is the picture untouched -- byte for byte, not merely close.
+    static inline uint8_t dim(uint8_t b, uint16_t scale)
+    {
+        return scale >= 256 ? b : (uint8_t)(((uint32_t)b * scale + 128) >> 8);
+    }
+
+    // The size a copy has to be for `count` lights on either wire: the two-wire framing is the larger.
+    static inline size_t wire_most(int count)
+    {
+        return 4 + (size_t)count * 4 + 4 + ((size_t)count + 15) / 16;
+    }
+
+    // One-wire: the picture's own bytes, dimmed.
+    static inline size_t one_wire(const Pixels &p, uint16_t scale, uint8_t *out)
+    {
+        const size_t n = p.bytes_used();
+        for (size_t i = 0; i < n; i++)
+            out[i] = dim(p.buf[i], scale);
+        return n;
+    }
+
+    // Two-wire, which is the APA102 frame and also the SK9822's, because the SK9822 differs in one
+    // place and this covers both:
+    //   four bytes of zeros                    the start of a frame
+    //   per light: 0xFF, then three colors     0xE0 and a five-bit brightness, here always the most;
+    //                                          the colors in the order this strip wants them, which
+    //                                          is the same question and the same answer as one-wire
+    //   four bytes of zeros                    the SK9822's latch: without it, it shows each frame
+    //                                          one frame late. An APA102 reads it as nothing
+    //   a zero bit per two lights, rounded up  the clock edges the last lights need to pass the data on
+    // A white byte, if the strip was ever told it had one, is skipped: no two-wire part carries one.
+    static inline size_t two_wire(const Pixels &p, uint16_t scale, uint8_t *out)
+    {
+        size_t at = 0;
+        for (int i = 0; i < 4; i++)
+            out[at++] = 0;
+        const int n = p.order.per_pixel();
+        for (int i = 0; i < p.count; i++)
+        {
+            out[at++] = 0xFF;
+            for (int c = 0; c < 3; c++)
+                out[at++] = dim(p.buf[i * n + c], scale);
+        }
+        const size_t tail = 4 + ((size_t)p.count + 15) / 16;
+        for (size_t i = 0; i < tail; i++)
+            out[at++] = 0;
+        return at;
+    }
+
+    // HOW MUCH LIGHT A PICTURE ASKS FOR: every color byte that will go out, summed. A strip's current
+    // is very nearly this times what one full channel draws, plus what its chips draw dark, which is
+    // what the limiter on rev A predicts from (guard.h).
+    static inline uint32_t load(const Pixels &p, Wire w)
+    {
+        uint32_t sum = 0;
+        const int n = p.order.per_pixel();
+        const int used = w == Wire::TWO ? 3 : n;
+        for (int i = 0; i < p.count; i++)
+            for (int c = 0; c < used; c++)
+                sum += p.buf[i * n + c];
+        return sum;
+    }
+
+    // The ones that touch hardware, declared here and defined in pixels.cpp. Declarations only, so
     // nothing above them needs a framework and the native test still compiles this header on a Mac --
     // which is the whole reason the rest of the file is written the way it is.
-    bool begin(int pin);
-    void show(const Pixels &p);
+    //
+    // `out` is which output, 0 first. An output starts as one-wire; rewire() moves it to the other
+    // peripheral, and refuses on an output with no clock pin.
+    bool begin(int out, const board::Run &pins);
+    bool rewire(int out, Wire w);
+    Wire wire(int out);
+    // EVERY OUTPUT AT ONCE: each one's frame is started, and only then are they waited for, so two
+    // runs cost the longer of the two rather than both. `ps[i]` null sends nothing on output i (its
+    // run is off); `scale[i]` is out of 256 as above.
+    void show(const Pixels *const ps[], const uint16_t scale[], int n);
 
 } // namespace px
