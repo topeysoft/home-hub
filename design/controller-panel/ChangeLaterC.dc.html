@@ -1,0 +1,318 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      /* the panel's own tokens -- app/src/panel.css -- and the two pane inks it computes */
+      --bg: #0c0d10; --surface-rgb: 26,28,34; --surface: rgba(var(--surface-rgb),.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --ink-3: oklch(0.68 0.01 242); --ink-4: oklch(0.76 0.006 242);
+      --lamp-rgb: 233,184,114; --lamp: rgb(var(--lamp-rgb)); --lamp-ink: #2a1c07;
+      --live-rgb: 116,198,157; --live: rgb(var(--live-rgb));
+      --r-lg: 22px; --r-md: 16px; --r-sm: 12px;
+    }
+    .screen { position: relative; width: 1440px; height: 900px; overflow: hidden; background: var(--bg); color: var(--ink); font-size: 17px; line-height: 1.4; }
+    .abs { position: absolute; }
+    .dsp { font-weight: 400; letter-spacing: -.025em; }
+    svg.i { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+    /* the glass the bar and the round buttons are made of (.tabs, .back, .topbar-add) */
+    .glass { background-image: linear-gradient(112deg, transparent 26%, rgba(255,255,255,.11) 45%, rgba(255,255,255,.02) 56%, transparent 64%),
+                               linear-gradient(148deg, oklch(0.545 0.014 242 / .34), oklch(0.475 0.012 242 / .12) 46%, oklch(0.505 0.014 242 / .24));
+             box-shadow: inset 0 -46px 56px -48px rgba(22,43,68,.9), 0 23px 53px -26px rgba(17,35,60,.58), 0 2px 10px rgba(17,35,60,.37); }
+    .round { position: absolute; border-radius: 50%; display: grid; place-items: center; color: var(--ink-2); }
+    .tab { display: inline-flex; align-items: center; gap: 10px; height: 44px; padding: 0 22px; border-radius: 999px; font-size: 15.5px; color: var(--ink-2); }
+    .tab.on { background: rgba(255,255,255,.1); color: var(--ink); font-weight: 500; }
+    /* a card in a room, at night: the tile's glass (.tile-body is 17 18 15) */
+    .tile { position: absolute; border-radius: 24px; background: rgba(var(--surface-rgb),.62); border: 1px solid var(--edge);
+            box-shadow: 0 24px 50px -32px rgba(0,0,0,.85); padding: 17px 18px 15px; overflow: hidden; }
+    .tile .tn { display: flex; align-items: center; gap: 11px; font-size: 16px; font-weight: 500; letter-spacing: -.005em; }
+    .tile .tn svg { color: var(--ink-2); }
+    .tile .ts { position: absolute; left: 18px; right: 18px; bottom: 15px; font-size: 14.5px; color: var(--ink-2); }
+    .tile.lit { background: linear-gradient(165deg, rgba(246,226,192,.94), rgba(var(--lamp-rgb),.8) 75%); border-color: rgba(255,240,214,.5); box-shadow: 0 0 40px -10px rgba(var(--lamp-rgb),.35), 0 24px 50px -32px rgba(0,0,0,.85); }
+    .tile.lit .tn svg { color: var(--lamp-ink); }
+    .row { display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 12px; border-radius: 12px; font-size: 14.5px;
+           border: 1px solid var(--edge); background: rgba(255,255,255,.04); }
+    .row.on { background: rgba(var(--lamp-rgb),.9); color: var(--lamp-ink); border-color: transparent; font-weight: 500; }
+    .row .v { margin-left: auto; color: var(--muted); }
+    .row.on .v { color: var(--lamp-ink); }
+    .scene { height: 62px; border-radius: 16px; border: 1px solid var(--edge); background: rgba(255,255,255,.035); display: flex; align-items: center; gap: 14px; padding: 0 16px; }
+    .scene b { display: block; font-weight: 400; font-size: 16.5px; }
+    .scene small { display: block; font-size: 13px; color: var(--muted); }
+    /* the room's own line of chips (.why-line, .reading) */
+    .chipline { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px 0 12px; border-radius: 999px; font-size: 13.5px;
+                color: var(--ink-2); background: rgba(255,255,255,.08); border: 1px solid var(--edge); white-space: nowrap; }
+    .chipline .ask { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+    .reading { display: inline-flex; align-items: center; gap: 8px; height: 39px; padding: 0 14px 0 11px; border-radius: 999px; font-size: 14px; color: var(--ink-2);
+               background: rgba(var(--surface-rgb),.68); border: 1px solid var(--edge); white-space: nowrap; }
+    .reading b { color: var(--ink); font-weight: 500; }
+    /* the band (.nudge) */
+    .nudge { display: inline-flex; align-items: center; gap: 12px; height: 56px; padding: 8px 18px 8px 8px; border-radius: 26px;
+             background: linear-gradient(rgba(var(--lamp-rgb),.1), rgba(var(--lamp-rgb),.1)), rgba(var(--surface-rgb),.68); border: 1px solid rgba(var(--lamp-rgb),.3); }
+    .nudge .ni { width: 32px; height: 32px; border-radius: 10px; background: var(--lamp); color: var(--lamp-ink); display: grid; place-items: center; flex: none; }
+    .nudge b { display: block; font-size: 15px; font-weight: 500; line-height: 21px; }
+    .nudge small { display: block; font-size: 13px; line-height: 17px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    /* the setup sheet (.sheet.strip), at its shipped values */
+    .sheet { position: absolute; width: 560px; border-radius: 26px; background: rgba(22,24,30,.92); border: 1px solid var(--edge-hi);
+             box-shadow: 0 40px 100px -30px rgba(0,0,0,.9); }
+    .sheet-head { display: flex; align-items: flex-start; gap: 14px; padding: 26px 22px 6px 28px; }
+    .sheet h2 { margin: 0; flex: 1; font-size: 36px; font-weight: 400; letter-spacing: -.025em; line-height: 1.05; }
+    .sheet .over { display: block; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--lamp); margin-bottom: 8px; }
+    .x { width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,.14); display: grid; place-items: center; color: #fff; flex: none; }
+    .sheet-body { padding: 4px 28px 24px; }
+    .lede { margin: 6px 0 20px; font-size: 15px; line-height: 21px; color: var(--ink-2); }
+    .stage { position: relative; border-radius: 28px; border: 1px solid var(--edge); background: rgba(255,255,255,.03); padding: 20px 22px; margin-bottom: 18px; overflow: hidden; }
+    .caption { display: block; text-align: center; margin-top: 18px; font-size: 13px; color: var(--muted); }
+    .acts { display: flex; gap: 10px; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 49px; padding: 0 20px; border-radius: 999px;
+           background: var(--ink); color: var(--bg); font-weight: 500; font-size: 17px; white-space: nowrap; }
+    .btn.ghost { background: rgba(255,255,255,.08); color: var(--ink); border: 1px solid var(--edge); }
+    .btn.wide { display: flex; justify-content: flex-start; width: 100%; }
+    .btn.small { height: 40px; padding: 0 16px; font-size: 15px; }
+    .steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+    .steps li { display: flex; align-items: center; gap: 12px; font-size: 15px; color: var(--ink-2); }
+    .steps li.live { color: var(--ink); }
+    .tick { width: 24px; height: 24px; border-radius: 999px; border: 1px solid var(--edge-hi); display: grid; place-items: center; flex: none; }
+    .live .tick { border-color: var(--lamp); }
+    .live .tick::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--lamp); }
+    .done .tick { background: rgba(var(--live-rgb),.18); border-color: rgba(var(--live-rgb),.5); color: var(--live); }
+    /* a choice made by looking at the thing (.pick in the strip sheet) */
+    .pick { border-radius: 18px; border: 1px solid var(--edge); background: rgba(255,255,255,.03); padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+    .pick.on { border-color: rgba(var(--lamp-rgb),.6); background: rgba(var(--lamp-rgb),.1); }
+    .pick b { font-weight: 500; font-size: 15.5px; }
+    .pick small { font-size: 13px; color: var(--muted); margin-top: -6px; }
+    /* A STRIP, DRAWN THE WAY THE PANEL DRAWS ONE: 4px lights, 3px apart. --c is the light, --g its glow. */
+    .px { position: relative; height: 26px; border-radius: 4px; background: repeating-linear-gradient(90deg, rgba(255,255,255,.13) 0 4px, transparent 4px 7px); }
+    .px > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px;
+              background: repeating-linear-gradient(90deg, var(--c) 0 4px, transparent 4px 7px); filter: drop-shadow(0 0 9px var(--g)); }
+    .px.s { height: 18px; }
+    .px.xs { height: 12px; }
+    /* the pane (.opened-panel, .pane-rig, .rig-card), at the values the shipped panel computes at 1440 */
+    .pane { position: absolute; left: 0; top: 225px; width: 1440px; height: 675px; border-radius: 34px 34px 0 0; overflow: hidden;
+            background: linear-gradient(rgba(26,28,34,.8), rgba(16,17,21,.94)); box-shadow: inset 0 1.4px 0 rgba(255,255,255,.38), 0 -18px 40px -14px rgba(17,35,60,.53); }
+    .lbl { font-size: 12.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); }
+    .ctl { width: 56px; height: 56px; border-radius: 50%; background: rgba(255,255,255,.08); display: grid; place-items: center; color: var(--ink-4); }
+    .card { display: flex; align-items: center; gap: 16px; border-radius: 24px; border: 1px solid var(--edge); background: rgba(255,255,255,.05); padding: 0 22px; }
+    .card .ci { width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,.08); color: var(--lamp); display: grid; place-items: center; flex: none; }
+    .card b { display: block; font-weight: 400; font-size: 19px; line-height: 1.3; }
+    .card b em { font-style: normal; color: var(--ink-3); }
+    .card small { display: block; font-size: 14px; color: var(--ink-3); line-height: 1.4; margin-top: 2px; }
+    .sw { width: 46px; height: 46px; border-radius: 50%; box-shadow: inset 0 -2px 6px rgba(0,0,0,.24); }
+    /* ANNOTATION, NEVER PANEL: dashed, and in the board's own voice. Nothing inside one is a screen. */
+    .note { position: absolute; border: 1px dashed rgba(255,255,255,.24); border-radius: 18px; padding: 16px 18px; background: rgba(8,9,12,.8);
+            font-size: 13.5px; line-height: 1.5; color: var(--ink-2); }
+    .note b { color: var(--ink); font-weight: 500; }
+    .note .cap, .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .note p { margin: 8px 0 0; }
+    .tag { position: absolute; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .key { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11.5px; color: var(--muted); letter-spacing: 0; text-transform: none; }
+    .beats { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; }
+    .beat { height: 34px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--edge); background: rgba(255,255,255,.04); font-size: 13.5px;
+            color: var(--ink-2); display: inline-flex; align-items: center; white-space: nowrap; }
+    .beat.new { border-color: rgba(var(--lamp-rgb),.55); background: rgba(var(--lamp-rgb),.12); color: var(--ink); }
+    .beat.gone { border-style: dashed; color: var(--muted); background: none; }
+    .beats .sep { color: var(--muted); font-size: 13px; }
+    .finger { position: absolute; width: 58px; height: 58px; border-radius: 50%; background: rgba(255,255,255,.16); border: 2px solid rgba(255,255,255,.5);
+              box-shadow: 0 0 0 10px rgba(255,255,255,.06); }
+    .foot { position: absolute; border-radius: 20px; border: 1px solid var(--edge); background: rgba(255,255,255,.025); padding: 18px 22px;
+            font-size: 14.5px; line-height: 1.55; color: var(--ink-2); }
+    .foot strong { color: var(--ink); font-weight: 500; }
+    /* BEHIND THE STRIP ROW (strip/Behind.dc.html): one line per strip, and the line that is open is the strip that is lit */
+    .line { border-radius: 24px; border: 1px solid var(--edge); background: rgba(255,255,255,.05); padding: 16px 20px; }
+    .line.open { border-color: rgba(var(--lamp-rgb),.5); background: rgba(var(--lamp-rgb),.12); }
+    .line-head { display: flex; align-items: center; gap: 16px; }
+    .line-head b { display: block; font-weight: 400; font-size: 19px; line-height: 1.3; }
+    .line-head b em { font-style: normal; color: var(--ink-3); }
+    .line-head small { display: block; font-size: 14px; color: var(--ink-3); margin-top: 2px; }
+    .line.open .line-head small { color: var(--ink-2); }
+    .q { display: flex; align-items: center; gap: 14px; height: 52px; padding: 0 8px 0 16px; border-radius: 16px; background: rgba(255,255,255,.05); border: 1px solid var(--edge); }
+    .q .qn { width: 64px; font-size: 15.5px; }
+    .q .qv { flex: 1; font-size: 14px; color: var(--ink-2); display: flex; align-items: center; gap: 10px; }
+    .chan { height: 14px; width: 34px; border-radius: 3px; }
+    .act { display: flex; flex-direction: column; gap: 6px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--edge); }
+    .act small { font-size: 13px; color: var(--ink-2); padding-left: 4px; }
+    /* the room question, as setup's Where? asks it */
+    .room { display: inline-flex; align-items: center; height: 40px; padding: 0 16px; border-radius: 999px; font-size: 14.5px;
+            border: 1px solid var(--edge); background: rgba(255,255,255,.05); color: var(--ink); white-space: nowrap; }
+    .room.on { background: rgba(var(--lamp-rgb),.9); color: var(--lamp-ink); border-color: transparent; font-weight: 500; }
+    /* the board's own controls -- not the panel: these flip what the drawing shows (roofline/OneLight.dc.html) */
+    .try { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+    .try .cap { margin-right: 6px; }
+    .flip { font-size: 12.5px; padding: 5px 11px; border-radius: 999px; border: 1px dashed rgba(255,255,255,.22); color: var(--ink-2); cursor: pointer; white-space: nowrap; }
+    .flip.on { border-style: solid; border-color: rgba(var(--lamp-rgb),.7); color: var(--lamp); background: rgba(var(--lamp-rgb),.08); }
+  </style>
+</helmet>
+<!-- C, LATER -- joining two lights, or splitting one. The household's answer at setup is never final: the strip's own row on the light's pane
+     is where it is changed, and the act sits on the second strip's line, because the second strip is the one that came and can go. -->
+<div class="screen">
+
+  <!-- the sky at dusk, as Sky.vue draws it, and the hills the panel lays along the foot -->
+  <div class="abs" style="inset: 0; background: linear-gradient(rgb(26,30,44) 0%, rgb(39,40,60) 46%, rgb(86,60,56) 86%, rgb(60,43,42) 100%);"></div>
+  <div class="abs" style="left: -222px; top: -135px; width: 1855px; height: 1156px; background: radial-gradient(58% 54% at 30% 64%, rgba(72,63,135,.36), transparent 68%), radial-gradient(62% 52% at 54% 110%, rgba(55,51,100,.4), transparent 72%);"></div>
+  <svg class="abs" style="left: 0; top: 600px;" width="1440" height="300" viewBox="0 0 1440 300" preserveAspectRatio="none">
+    <path d="M0 110 C 220 60, 420 70, 640 104 S 1080 96, 1240 70 S 1400 66, 1440 72 V300 H0z" fill="rgb(30,31,30)"/>
+    <path d="M0 150 C 300 120, 600 150, 900 132 S 1300 118, 1440 130 V300 H0z" fill="rgb(22,23,23)"/>
+  </svg>
+  <div class="abs" style="inset: 0; background: rgba(6,7,9,0.62);"></div>
+  <div class="abs" style="left: 48px; top: 34px; right: 48px; display: flex; align-items: baseline; gap: 24px;">
+    <span class="cap" style="white-space: nowrap;">C, later &mdash; joining and splitting</span>
+    <span style="font-size: 13.5px; color: var(--muted); flex: 1;">What setup decided, changed from the strip&rsquo;s row: the second strip&rsquo;s line carries the one act.</span>
+    <div class="try"><span class="cap">The second strip is</span><sc-for list="{{flips}}" as="f"><span class="{{f.cls}}" onClick="{{f.go}}">{{f.label}}</span></sc-for></div>
+  </div>
+
+  <!-- WHICH IS WHICH: as the question did, the open line's strip glows a soft white and the other rests -->
+  <div class="note" style="left: 48px; top: 92px; width: 560px; padding: 14px 18px 12px;">
+    <span class="cap">At the controller, while a line is open</span>
+    <div style="display: grid; grid-template-columns: 300px 1fr; column-gap: 16px; row-gap: 6px; align-items: center; margin-top: 10px;">
+      <div style="opacity: .38;"><div class="px s" style="width: 300px;"><i style="width: 100%; --c: var(--lamp); --g: rgba(var(--lamp-rgb),.7);"></i></div></div>
+      <span style="font-size: 12.5px; white-space: nowrap;"><sc-if value="{{one}}">1 &mdash; about 3.0 m, resting</sc-if><sc-if value="{{own}}">1 &mdash; Under-cabinet, resting</sc-if></span>
+      <div><div class="px s" style="width: 120px;"><i style="width: 100%; --c: #f4efe6; --g: rgba(244,239,230,.55);"></i></div></div>
+      <span style="font-size: 12.5px; white-space: nowrap;"><sc-if value="{{one}}">2 &mdash; about 1.2 m, a soft white: this line</sc-if><sc-if value="{{own}}">2 &mdash; Toe-kick, a soft white: this light</sc-if></span>
+    </div>
+  </div>
+
+  <!-- THE PANE, at the shipped panel's geometry for 1440 x 900: .opened-panel 0,225; the words at 49,270, 560 wide; .pane-rig 643,298 -->
+  <div class="pane">
+    <span class="round glass" style="left: 1365px; top: 35px; width: 44px; height: 44px;"><svg class="i" width="18" height="18" viewBox="0 0 24 24" stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
+
+    <!-- the light's own words, a beat behind the sheet -->
+    <div class="abs" style="left: 49px; top: 45px; width: 560px; opacity: .5;">
+      <div style="font-size: 15px; color: var(--ink-4);">Kitchen</div>
+      <div class="dsp" style="font-size: 56px; line-height: 58px; margin-top: 4px;"><sc-if value="{{one}}">Under-cabinet lights</sc-if><sc-if value="{{own}}">Toe-kick</sc-if></div>
+      <div style="margin-top: 10px; font-size: 14px; color: var(--ink-3); text-decoration: underline; text-decoration-style: dashed; text-underline-offset: 4px;">Show this as</div>
+      <div style="display: flex; gap: 12px; margin-top: 24px;">
+        <span class="ctl" style="background: {{power.bg}}; color: {{power.ink}};"><svg class="i" width="22" height="22" viewBox="0 0 24 24" stroke-width="1.8"><path d="M12 3v9M18.4 6.6a9 9 0 1 1-12.8 0"/></svg></span>
+        <span class="ctl"><svg class="i" width="20" height="20" viewBox="0 0 24 24" stroke-width="1.8"><path d="M12 3l1.8 5.4L19 10l-5.2 1.6L12 17l-1.8-5.4L5 10l5.2-1.6z"/></svg></span>
+        <span class="ctl"><svg class="i" width="20" height="20" viewBox="0 0 24 24" stroke-width="1.8"><path d="M4 20l4-1 9.5-9.5a2.1 2.1 0 0 0-3-3L5 16z"/></svg></span>
+      </div>
+      <div class="dsp" style="margin-top: 30px; font-size: 76px; line-height: 76px; letter-spacing: -.04em;">{{level}}</div>
+    </div>
+
+    <!-- the instrument, behind the sheet; only its strip row -- the door this sheet came out of -- is at full strength -->
+    <div class="abs" style="left: 643px; top: 73px; width: 748px; height: 640px; border-radius: 32px; border: 1px solid var(--edge); background: rgba(255,255,255,.035); padding: 26px; display: flex; gap: 26px;">
+      <div style="width: 168px; flex: none; opacity: .4;">
+        <div style="position: relative; height: 514px; border-radius: 84px; background: rgba(255,255,255,.06); border: 1px solid var(--edge);"></div>
+      </div>
+      <div style="flex: 1; min-width: 0;">
+        <div style="display: flex; gap: 26px; opacity: .4;">
+          <div style="width: 292px; flex: none; padding-top: 21px;">
+            <div style="height: 66px; border-radius: 20px; background: var(--ink);"></div>
+            <div class="lbl" style="margin: 11px 0 12px;">Colors</div>
+            <div style="display: flex; flex-wrap: wrap; gap: 11px;"><span class="sw" style="background: #e45870;"></span><span class="sw" style="background: #ef884d;"></span><span class="sw" style="background: #f7d445;"></span><span class="sw" style="background: #91de5e;"></span><span class="sw" style="background: #62daa2;"></span><span class="sw" style="background: #5cb0e0;"></span><span class="sw" style="background: #8866d6;"></span><span class="sw" style="background: #de5eda;"></span></div>
+          </div>
+          <div style="flex: 1; padding-top: 21px;">
+            <div class="lbl" style="margin-bottom: 12px;">The three it is used at</div>
+            <div class="card" style="height: 84px; margin-bottom: 12px;"></div>
+            <div class="card" style="height: 84px; margin-bottom: 12px;"></div>
+            <div class="card" style="height: 84px;"></div>
+          </div>
+        </div>
+        <div class="lbl" style="margin: 24px 0 12px;">Because it is a strip</div>
+        <div class="card" style="height: 128px; border-color: rgba(var(--lamp-rgb),.6); background: rgba(var(--lamp-rgb),.1);">
+          <span class="ci"><svg class="i" width="18" height="18" viewBox="0 0 24 24" stroke-width="1.8"><path d="M12 21s-7-6.2-7-11a7 7 0 1 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></span>
+          <sc-if value="{{one}}"><span style="flex: 1; min-width: 0;"><b style="font-size: 17px;">Set up as two strips <em>about 3.0 m and 1.2 m</em></b>
+            <span style="display: flex; flex-direction: column; gap: 7px; margin-top: 12px;"><div class="px xs" style="width: 150px;"><i style="width: 100%; --c: var(--lamp); --g: rgba(var(--lamp-rgb),.7);"></i></div><div class="px xs" style="width: 60px;"><i style="width: 100%; --c: var(--lamp); --g: rgba(var(--lamp-rgb),.7);"></i></div></span></span></sc-if>
+          <sc-if value="{{own}}"><span style="flex: 1; min-width: 0;"><b style="font-size: 17px;">Set up as a strip <em>about 1.2 m</em></b><small>Shares a controller with Under-cabinet</small>
+            <span style="display: flex; flex-direction: column; gap: 7px; margin-top: 12px;"><div class="px xs" style="width: 60px;"><i style="width: 100%; --c: var(--lamp); --g: rgba(var(--lamp-rgb),.7);"></i></div></span></span></sc-if>
+          <span style="color: var(--ink-3);"><svg class="i" width="18" height="18" viewBox="0 0 24 24" stroke-width="1.8"><path d="M9 5l7 7-7 7"/></svg></span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="tag" style="left: 863px; top: 864px;">&uarr; The strip&rsquo;s row &mdash; the door this came out of</div>
+
+  <!-- WHAT IS BEHIND THE ROW: the sheet the strip was set up in, reopened (strip/Behind.dc.html), drawn above the row it opened from -->
+  <div class="sheet" style="left: 790px; top: 92px; width: 560px; background: rgb(22,24,30);">
+    <div style="padding: 24px 28px 4px;">
+      <span class="lbl"><sc-if value="{{one}}">Under-cabinet lights</sc-if><sc-if value="{{own}}">Toe-kick</sc-if></span>
+      <h2 class="dsp" style="margin: 8px 0 0; font-size: 30px; font-weight: 400; line-height: 1.1;"><sc-if value="{{one}}">Set up as two strips</sc-if><sc-if value="{{own}}">Set up as a strip</sc-if></h2>
+      <p style="margin: 8px 0 0; font-size: 15px; line-height: 1.5; color: var(--ink-2);"><sc-if value="{{one}}">Each was told its own colors and its own length. Open one and it lights; the other rests.</sc-if><sc-if value="{{own}}">It shares a controller with Under-cabinet. While this is open it lights; Under-cabinet rests.</sc-if></p>
+    </div>
+    <div style="padding: 16px 28px 24px; display: flex; flex-direction: column; gap: 12px;">
+
+      <sc-if value="{{one}}">
+      <!-- the first strip's line, closed: it is the light, so nothing on it changes what the light is -->
+      <div class="line">
+        <div class="line-head">
+          <span style="width: 64px; flex: none; opacity: .38;"><div class="px xs" style="width: 64px;"><i style="width: 100%; --c: var(--lamp); --g: rgba(var(--lamp-rgb),.7);"></i></div></span>
+          <span style="flex: 1;"><b>The first strip <em>about 3.0 m</em></b></span>
+          <span style="color: var(--ink-3);"><svg class="i" width="18" height="18" viewBox="0 0 24 24" stroke-width="1.8"><path d="M9 5l7 7-7 7"/></svg></span>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- the open line: its own two questions, as the single strip's door has them, and one act -->
+      <div class="line open">
+        <div class="line-head">
+          <span style="width: 64px; flex: none;"><div class="px xs" style="width: 26px;"><i style="width: 100%; --c: #f4efe6; --g: rgba(244,239,230,.55);"></i></div></span>
+          <span style="flex: 1;"><sc-if value="{{one}}"><b>The second strip <em>about 1.2 m</em></b></sc-if><sc-if value="{{own}}"><b>This strip <em>about 1.2 m</em></b></sc-if><small>Glowing a soft white, so you can tell which</small></span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 14px;">
+          <div class="q"><span class="qn">Colors</span><span class="qv"><span style="display: flex; gap: 4px;"><span class="chan" style="background: repeating-linear-gradient(90deg, #e2483e 0 4px, transparent 4px 7px);"></span><span class="chan" style="background: repeating-linear-gradient(90deg, #4ac46a 0 4px, transparent 4px 7px);"></span><span class="chan" style="background: repeating-linear-gradient(90deg, #4b86e8 0 4px, transparent 4px 7px);"></span></span>Its own</span><span class="btn ghost small">Ask again</span></div>
+          <div class="q"><span class="qn">Length</span><span class="qv">About 1.2 m</span><span class="btn ghost small">Ask again</span></div>
+        </div>
+        <div class="act">
+          <sc-if value="{{one}}"><span class="btn ghost wide" style="height: 52px;"><svg class="i" width="18" height="18" viewBox="0 0 24 24" stroke-width="1.8"><path d="M14 4h6v6M20 4l-8 8M10 20H4v-6"/></svg>Make it a light of its own</span>
+            <small>Asks which room. Its colors and length go with it.</small></sc-if>
+          <sc-if value="{{own}}"><span class="btn ghost wide" style="height: 52px;"><svg class="i" width="18" height="18" viewBox="0 0 24 24" stroke-width="1.8"><path d="M4 12h10M10 6l6 6-6 6M20 4v16"/></svg>Make it part of Under-cabinet</span>
+            <small>Asks nothing. Same room, name and switch; its own colors and length.</small></sc-if>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WHAT THE ACT DOES -- annotation, not panel -->
+  <sc-if value="{{one}}">
+  <div class="note" style="left: 48px; top: 640px; width: 560px;">
+    <span class="cap">Make it a light of its own asks one thing</span>
+    <div class="dsp" style="margin-top: 10px; font-size: 24px; color: var(--ink);">Which room is it in?</div>
+    <div style="display: flex; gap: 8px; margin-top: 12px; flex-wrap: nowrap;"><span class="room on">Kitchen</span><span class="room">Dining room</span><span class="room">Living room</span><span class="room">Hallway</span></div>
+    <p style="margin-top: 12px;">The room it is in now comes first, so the commonest answer is one tap. Then it is a light: its own tile and switch,
+      named for its room until <b>Show this as</b> says otherwise. Nothing else is asked &mdash; its colors and length were its own already.</p>
+  </div>
+  </sc-if>
+  <sc-if value="{{own}}">
+  <div class="note" style="left: 48px; top: 640px; width: 560px;">
+    <span class="cap">Make it part of Under-cabinet asks nothing</span>
+    <div style="position: relative; height: 84px; margin-top: 12px;">
+      <div class="tile lit" style="left: 0; top: 0; width: 150px; height: 84px; padding: 13px 16px;"><div class="tn" style="color: var(--lamp-ink); font-size: 15px;">Under-cabinet</div><div class="ts" style="left: 16px; bottom: 11px; font-size: 13.5px;"><div style="color: var(--lamp-ink);">On, 80%</div></div></div>
+      <div class="tile" style="left: 158px; top: 0; width: 150px; height: 84px; padding: 13px 16px; opacity: .5; border-style: dashed;"><div class="tn" style="font-size: 15px;">Toe-kick</div><div class="ts" style="left: 16px; bottom: 11px; font-size: 13.5px;">Off</div></div>
+      <span class="abs" style="left: 322px; top: 30px; color: var(--muted);"><svg class="i" width="20" height="20" viewBox="0 0 24 24" stroke-width="1.8"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+      <div class="tile lit" style="left: 356px; top: 0; width: 150px; height: 84px; padding: 13px 16px;"><div class="tn" style="color: var(--lamp-ink); font-size: 15px;">Under-cabinet</div><div class="ts" style="left: 16px; bottom: 11px; font-size: 13.5px;"><div style="color: var(--lamp-ink);">On, 80%</div></div></div>
+    </div>
+    <p style="margin-top: 12px;">It takes Under-cabinet&rsquo;s room, name and switch, keeps its own colors and length, and the pane closes onto the room.
+      Toe-kick&rsquo;s tile goes &mdash; that is the confirmation, the way a scene&rsquo;s row empties. The way back is the same row on Under-cabinet.</p>
+  </div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script data-dc-script data-props='{"light": {"editor": "enum", "options": ["Part of this light", "A light of its own"], "default": "Part of this light", "section": "The second strip"}}'>
+/* ONE BOARD, BOTH ANSWERS. Flip between the two things setup can have made of the second strip: part of
+   the first strip's light, or a light of its own. Each state draws the act that turns it into the other. */
+class Component extends DCLogic {
+  renderVals() {
+    const s = this.state.s || this.props.light || 'Part of this light'
+    const one = s === 'Part of this light'
+    return {
+      one, own: !one,
+      flips: ['Part of this light', 'A light of its own'].map(v => ({ label: v, cls: v === s ? 'flip on' : 'flip', go: () => this.setState({ s: v }) })),
+      level: one ? '80%' : 'Off',
+      power: one ? { bg: 'var(--lamp)', ink: 'var(--lamp-ink)' } : { bg: 'rgba(255,255,255,.08)', ink: 'var(--ink-4)' },
+    }
+  }
+}
+</script>
+</body>
+</html>
