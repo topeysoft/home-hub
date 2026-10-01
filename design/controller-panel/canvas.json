@@ -5,12 +5,24 @@
       "name": "Held dark, and why"
     },
     {
+      "id": "held-rejected",
+      "name": "Held dark, and why: not chosen"
+    },
+    {
       "id": "runs",
       "name": "The second run"
     },
     {
+      "id": "runs-rejected",
+      "name": "The second run: not chosen"
+    },
+    {
       "id": "wire",
       "name": "One wire or two"
+    },
+    {
+      "id": "wire-rejected",
+      "name": "One wire or two: not chosen"
     }
   ],
   "launch": {
@@ -24,7 +36,7 @@
       "y": 0,
       "w": 1440,
       "h": 900,
-      "title": "Today \u2014 the strip is dark, and the wall says it is on",
+      "title": "Today — the strip is dark, and the wall says it is on",
       "page": "held"
     },
     {
@@ -33,7 +45,7 @@
       "y": 0,
       "w": 1440,
       "h": 900,
-      "title": "A \u2014 in the room: the light says it where you reach for it",
+      "title": "A — in the room: the light says it where you reach for it",
       "page": "held"
     },
     {
@@ -42,17 +54,17 @@
       "y": 0,
       "w": 1440,
       "h": 900,
-      "title": "B \u2014 it is a job, so it goes on Needs a look",
+      "title": "B — it is a job, so it goes on Needs a look",
       "page": "held"
     },
     {
       "file": "AskedC.dc.html",
-      "x": 4680,
+      "x": 0,
       "y": 0,
       "w": 1440,
       "h": 900,
-      "title": "C \u2014 said only when something asks it to light",
-      "page": "held"
+      "title": "C — said only when something asks it to light",
+      "page": "held-rejected"
     },
     {
       "file": "HeldPane.dc.html",
@@ -60,7 +72,7 @@
       "y": 1800,
       "w": 1440,
       "h": 900,
-      "title": "What opens \u2014 the light\u2019s own pane, the same for all three",
+      "title": "What opens — the light’s own pane, the same for all three",
       "page": "held"
     },
     {
@@ -69,7 +81,7 @@
       "y": 1800,
       "w": 1440,
       "h": 900,
-      "title": "The words \u2014 four reasons it is dark, and two that are not faults",
+      "title": "The words — four reasons it is dark, and two that are not faults",
       "page": "held"
     },
     {
@@ -78,26 +90,26 @@
       "y": 0,
       "w": 1440,
       "h": 900,
-      "title": "Today \u2014 two sockets, and setup knows of one",
+      "title": "Today — two sockets, and setup knows of one",
       "page": "runs"
     },
     {
       "file": "TwoLightsA.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "A — two strips, two lights",
+      "page": "runs-rejected"
+    },
+    {
+      "file": "OneLightB.dc.html",
       "x": 1560,
       "y": 0,
       "w": 1440,
       "h": 900,
-      "title": "A \u2014 two strips, two lights",
-      "page": "runs"
-    },
-    {
-      "file": "OneLightB.dc.html",
-      "x": 3120,
-      "y": 0,
-      "w": 1440,
-      "h": 900,
-      "title": "B \u2014 two strips, one light",
-      "page": "runs"
+      "title": "B — two strips, one light",
+      "page": "runs-rejected"
     },
     {
       "file": "AskWhichC.dc.html",
@@ -105,7 +117,7 @@
       "y": 0,
       "w": 1440,
       "h": 900,
-      "title": "C \u2014 it asks which",
+      "title": "C — it asks which",
       "page": "runs"
     },
     {
@@ -114,7 +126,7 @@
       "y": 0,
       "w": 1440,
       "h": 900,
-      "title": "Today \u2014 a strip with a clock wire, dark from first to last",
+      "title": "Today — a strip with a clock wire, dark from first to last",
       "page": "wire"
     },
     {
@@ -123,17 +135,17 @@
       "y": 0,
       "w": 1440,
       "h": 900,
-      "title": "A \u2014 it tries the other way, and asks again",
+      "title": "A — it tries the other way, and asks again",
       "page": "wire"
     },
     {
       "file": "CountB.dc.html",
-      "x": 3120,
+      "x": 0,
       "y": 0,
       "w": 1440,
       "h": 900,
-      "title": "B \u2014 it asks how many wires",
-      "page": "wire"
+      "title": "B — it asks how many wires",
+      "page": "wire-rejected"
     },
     {
       "file": "MeasureC.dc.html",
@@ -141,7 +153,7 @@
       "y": 0,
       "w": 1440,
       "h": 900,
-      "title": "C \u2014 the controller finds out by itself",
+      "title": "C — the controller finds out by itself",
       "page": "wire"
     }
   ],
@@ -188,10 +200,10 @@
     },
     {
       "id": "c",
-      "x": 4680,
-      "y": 960,
+      "x": 0,
+      "y": 1000,
       "w": 700,
-      "page": "held",
+      "page": "held-rejected",
       "text": "C -- SAID ONLY WHEN SOMETHING ASKS IT TO LIGHT\n\nNothing is said until something tries to turn the strip on. Until then the tile reads Off, which is what the household wanted anyway. When a tap, a scene or a routine asks for light, the tile under the finger keeps its place, drained, and says Didn't come on, with why and a Why? -- the done map in store.ts, swept when the wall rests, not a new timer. A routine at sunset leaves the same words on the tile and a line in What happened.\n\nFOR: it says nothing when there is nothing to say. A strip held dark that nobody wants on is not yet a problem, and a wall that announces it is a wall that cries wolf. It meets the household at exactly the moment the fault matters to them.\n\nAGAINST: the tile reads Off when the truth is something else, and a tap is how you find out -- the same claim as Today, with a smaller error. And the first moment it matters is often the worst one: guests arriving, the scene tapped, and the strip is the thing that did not come on."
     },
     {
@@ -208,7 +220,7 @@
       "y": 2760,
       "w": 700,
       "page": "held",
-      "text": "THE WORDS -- ONE SENTENCE AND ONE NEXT STEP PER REASON\n\nThe same whichever direction wins, which is why they are a board of their own. Each card is the pane's left column for that reason, with the key the firmware reports it under, so nobody has to guess the mapping.\n\nThe top four keep a strip dark, and each ends in something a person can do. Two end in \"unplug the controller and plug it back in\", because trips and wiring hold until the board is next powered on. That is the controller's rule, not the wall's, and the sentence says it in the only words that matter.\n\nTHE BOTTOM TWO ARE NOT FAULTS. Running hot eases the ceiling from 4.75 A at 85 \u00b0C down to 1 A at 110 \u00b0C and never to dark: the pane says \"a little dimmer than that for now\" in its ordinary ink, and the tile does not change. The 5 A hold is quieter still -- the light reads 100% because it was asked for 100%, and one muted line says why it is just under at full white. Both are the household's light behaving, and the drawing gives them no ring, no icon and no color.\n\nSTARTING IS NEVER SAID: it is the second at power-up while the supply reads the same twice.\n\nUNITS. 12 V is what is printed on the brick and stays as written. A temperature, if one is ever shown, follows the house's own Fahrenheit or Celsius; none is shown here."
+      "text": "THE WORDS -- ONE SENTENCE AND ONE NEXT STEP PER REASON\n\nThe same whichever direction wins, which is why they are a board of their own. Each card is the pane's left column for that reason, with the key the firmware reports it under, so nobody has to guess the mapping.\n\nThe top four keep a strip dark, and each ends in something a person can do. Two end in \"unplug the controller and plug it back in\", because trips and wiring hold until the board is next powered on. That is the controller's rule, not the wall's, and the sentence says it in the only words that matter.\n\nTHE BOTTOM TWO ARE NOT FAULTS. Running hot eases the ceiling from 4.75 A at 85 °C down to 1 A at 110 °C and never to dark: the pane says \"a little dimmer than that for now\" in its ordinary ink, and the tile does not change. The 5 A hold is quieter still -- the light reads 100% because it was asked for 100%, and one muted line says why it is just under at full white. Both are the household's light behaving, and the drawing gives them no ring, no icon and no color.\n\nSTARTING IS NEVER SAID: it is the second at power-up while the supply reads the same twice.\n\nUNITS. 12 V is what is printed on the brick and stays as written. A temperature, if one is ever shown, follows the house's own Fahrenheit or Celsius; none is shown here."
     },
     {
       "id": "held-pick",
@@ -236,18 +248,18 @@
     },
     {
       "id": "runs-a",
-      "x": 1560,
-      "y": 960,
+      "x": 0,
+      "y": 1000,
       "w": 700,
-      "page": "runs",
+      "page": "runs-rejected",
       "text": "A -- TWO STRIPS, TWO LIGHTS\n\nEach socket is a light of its own. Once the first strip is in its room, the sheet says there is a second -- the one lit now -- and asks it everything the first was asked: Is this one red?, How far?, Where? It can be in another room, with its own tile, its own pane and its own strip row. The controller is one thing in What this house has, with two lights under it.\n\nFOR: no new idea. A second strip is a second light, which is what anybody would guess, and every screen after setup already knows how to draw it. Scenes can treat the two differently, which is the whole point of a toe-kick strip.\n\nAGAINST: three more beats every time, including a room question whose answer is nearly always the room just chosen. And the commonest two-strip install -- one roll cut to turn a corner, either side of a sink -- becomes two switches for what the whole house calls one light."
     },
     {
       "id": "runs-b",
-      "x": 3120,
-      "y": 960,
+      "x": 1560,
+      "y": 1000,
       "w": 700,
-      "page": "runs",
+      "page": "runs-rejected",
       "text": "B -- TWO STRIPS, ONE LIGHT\n\nThe second strip is part of the light the first one is. It is asked its own colors -- Is it red too?, shown with the first strip's answer applied, so the same make is one tap -- and its own length, and never a room. Afterwards there is one tile, one switch and one set of colors, and the pane's strip row knows there are two: Set up as two strips, about 3.0 m and 1.2 m, each strip's length and colors its own behind the door.\n\nFOR: it is what the firmware already does on the first day, made right, and it is what the hardware's own direction calls a roof -- several runs, one light on the wall. Two beats rather than three, and one thing to switch, which is what a cut-and-joined strip is.\n\nAGAINST: it decides for the household. Two strips meant to be two lights -- a shelf and a toe-kick, a front roofline and a side one -- become one, and splitting them needs a door that does not exist yet. A guess that is right most of the time is still a guess, on the one question only the household can answer."
     },
     {
@@ -292,10 +304,10 @@
     },
     {
       "id": "wire-b",
-      "x": 3120,
-      "y": 960,
+      "x": 0,
+      "y": 1000,
       "w": 700,
-      "page": "wire",
+      "page": "wire-rejected",
       "text": "B -- IT ASKS HOW MANY WIRES\n\nBefore the colors, one picture question: how many wires go into the strip, at the end where it joins its cable -- three, four, or I can't see the wires.\n\nFOR: counting is the one thing anyone can do without a chip's name. It is answered before anything has to light, and nothing is timed.\n\nAGAINST, AND IT IS DECISIVE: the count is a proxy, and it is wrong for a common strip. WS2815 -- a 12 V strip sold for exactly the installs this board is for -- carries a backup data wire, so it has four wires and takes its colors on one. Counted honestly it answers Four, is sent a clock it does not have, and is dark. And the sockets are sealed, with factory tails made to fit whatever plug a strip arrives with, so plenty of people will see a plug and not a wire. Drawn so the trap is visible, not proposed."
     },
     {
@@ -313,6 +325,30 @@
       "w": 600,
       "page": "wire",
       "text": "RECOMMENDATION -- C, WITH A AS ITS FALLBACK\n\nC where the reading is clear, which should be nearly every strip anybody owns: no question, and the first beats become true for a strip with a clock wire. A where it is not: Nothing at all tries the other way and asks once more, so the worst case is one extra look rather than a wrong failure.\n\nNot B. A question whose honest answer is wrong for a common 12 V strip is worse than no question.\n\nBEFORE C IS REAL: the probe on a bench, on one-wire and two-wire strips of a few lengths, to find the threshold and to see whether the flicker shows. If the bench says the monitor cannot tell a faint glow from dark on a short strip, A stands alone -- and is still better than today.\n\nAND \"SOMETHING ELSE -- I'LL DESCRIBE IT\" IS A REAL OPTION. One is already in sight: the tails are ours. A two-wire tail could land something the board can see, and the strip would say which it is by the cable it came with. That is a hardware change, and it belongs in home-hub-hardware first."
+    },
+    {
+      "id": "held-decided",
+      "page": "held",
+      "x": -620,
+      "y": -760,
+      "w": 560,
+      "text": "DECIDED 1 OCTOBER 2026\n\nA with B’s row. A strip held dark says so where people reach for it: its tile reads Staying off with the reason, the room gets a Why? chip, and a tap opens its pane (HeldPane), never a switch that cannot work. And because a roofline strip is in no room anybody opens, it also gets B’s row on Needs a look, carried to Home by the band. Running hot and being held under 5 A are ordinary light behavior and do not change the tile. Still open, not decided: the strip that is new as well, which needs firmware and its own argument."
+    },
+    {
+      "id": "runs-decided",
+      "page": "runs",
+      "x": -620,
+      "y": -760,
+      "w": 560,
+      "text": "DECIDED 1 OCTOBER 2026\n\nC. One question, with the strips themselves as the picture: Part of this light (first) or A light of its own. Either way the second strip gets its own color and length questions, starting from the first strip’s answer. Before it is built it needs a board for joining or splitting lights later."
+    },
+    {
+      "id": "wire-decided",
+      "page": "wire",
+      "x": -620,
+      "y": -760,
+      "w": 560,
+      "text": "DECIDED 1 OCTOBER 2026\n\nC, falling back to A. The controller finds out by itself at first power, lighting faintly each way and keeping the way that draws current; when the reading is unclear, setup asks A’s question (it tries the other way and asks again). Needs firmware and a bench check that a faint glow on a short strip is measurable. B, counting wires, is kept on its page so its WS2815 trap stays visible."
     }
   ],
   "reading": [
