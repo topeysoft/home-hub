@@ -19,6 +19,7 @@ import MachineTile from '../tiles/MachineTile.vue'
 import SortView from '../SortView.vue'
 import { machinesOf } from '../machines'
 import { isCarried, onATile, sensorName } from '../units'
+import { heldIn, heldOf } from '../controller'
 
 const props = defineProps<{ room: Room }>()
 defineEmits<{ back: []; open: [id: string] }>()
@@ -143,6 +144,9 @@ const tile = (c: string) => c === 'light' ? LightTile : c === 'media' ? MediaTil
 /* Who set this room, and how long a hand keeps routines away. Ticks so "1 h 20 min left" stays true. */
 const now = ref(Date.now())
 const setBy = computed(() => setByLine(props.room, now.value))
+/* A strip held dark gets the room's line too, first, with a Why? that opens its pane: the fault is in
+   the room and so is the fix (design/controller-panel/InRoomA.dc.html). */
+const heldHere = computed(() => heldIn(props.room))
 let tick: number | undefined
 onMounted(() => { tick = window.setInterval(() => (now.value = Date.now()), 30000) })
 onUnmounted(() => clearInterval(tick))
@@ -163,7 +167,10 @@ onUnmounted(() => clearInterval(tick))
              stacked bands with a scene bar above them: three rows where one
              does, and between them they spent 400 of the stage's 618px before
              the first device. -->
-        <div class="room-line" v-if="setBy || readings.length" aria-label="Readings">
+        <div class="room-line" v-if="heldHere || setBy || readings.length" aria-label="Readings">
+          <button class="why-line held-line" v-if="heldHere" @click="store.opened = heldHere" :title="`Why is ${heldHere.name} off?`">
+            <Icon name="shield" :size="15" /><span>{{ heldOf(heldHere)?.chip }}</span><span class="why-ask">Why?</span>
+          </button>
           <button class="why-line" v-if="setBy" @click="openWhy(room.id)" title="Why is this room like this?">
             <Icon :name="setBy.icon" :size="15" /><span>{{ setBy.text }}</span><span class="why-ask">Why?</span>
           </button>

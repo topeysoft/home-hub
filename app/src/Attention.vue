@@ -24,7 +24,9 @@
  * height and stop the row moving when something wants you.
  */
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { installUpdate, loadHealth, plainly, store } from './store'
+import { deviceById, installUpdate, loadHealth, notify, perform, plainly, store } from './store'
+import { stripSecondLater } from './api'
+import { controllerBand, type ControllerLine } from './controller'
 import Icon from './Icon.vue'
 import Say from './Say.vue'
 import Asks from './Asks.vue'
@@ -38,6 +40,13 @@ import { type BandLine, stripWaiting, waitingBand } from './adding'
 const tick = ref(Date.now())
 let t4: number | undefined
 const waiting = computed(() => waitingBand(store.found, store.strip, tick.value))
+const fromControllers = computed(() => controllerBand(store.strip, store.roofline, tick.value))
+async function openController(l: ControllerLine) {
+  try {
+    if (l.strip) { store.strip = await stripSecondLater(l.strip); store.stripAsked = true }
+    else if (l.roof) { const d = deviceById(l.roof); if (d) await perform(d, 'off', undefined, { state: 'off' }) }
+  } catch (e: any) { notify(e.message, 'error') }
+}
 /* Tapping a knock's own line is the asking that direction C is about: it opens the conversation,
    here, now. A folded line has stopped being about any one thing, so it opens Add and lets the row
    there be the choice -- which is what the found line has always done. */
@@ -120,6 +129,10 @@ defineExpose({ updateReady })
     <span class="nudge-icon"><Icon :name="w.id === 'knock' ? 'light' : 'sparkle'" :size="20" /></span>
     <span class="nudge-text"><span class="nudge-title">{{ w.title }}</span><span class="nudge-sub">{{ w.sub }}</span></span>
   </button>
+  <button class="nudge" v-for="l in fromControllers" :key="l.id" @click="openController(l)">
+    <span class="nudge-icon"><Icon name="light" :size="20" /></span>
+    <span class="nudge-text"><span class="nudge-title">{{ l.title }}</span><span class="nudge-sub">{{ l.sub }}</span></span>
+  </button>
   <!-- SOMEBODY IS TRYING A SIGNAL, and every wall says so -- not only the one they started it from --
        because "after dark" is set aside while they do, and a drive lighting up at lunch should not
        surprise whoever is in the kitchen. design/signal/Chosen.dc.html. -->
@@ -144,7 +157,7 @@ defineExpose({ updateReady })
        three faults was spending a third of Home on saying so. -->
   <button class="nudge" v-if="store.notes.length" @click="store.sheet = 'notes'">
     <span class="nudge-icon"><Icon name="switch" :size="20" /></span>
-    <span class="nudge-text"><span class="nudge-title">{{ store.notes.length === 1 ? 'Something needs a look' : `${store.notes.length} things need a look` }}</span><span class="nudge-sub">{{ store.notes[0].text }}</span></span>
+    <span class="nudge-text"><span class="nudge-title">{{ store.notes.length === 1 ? 'Something needs a look' : `${store.notes.length} things need a look` }}</span><span class="nudge-sub">{{ store.notes[0].band || store.notes[0].text }}</span></span>
   </button>
   </div>
   <div class="phone-card" v-if="phoneSteps">

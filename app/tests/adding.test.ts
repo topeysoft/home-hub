@@ -182,16 +182,17 @@ describe('asking a strip again, afterwards', () => {
      the template now rather than as far as the three levels -- the three come FIRST since 22
      September, and the strip's row sits under them (design/strip/OneDoor.dc.html). A boundary drawn
      from the old arrangement measured most of the file and said nothing. */
-  const stripPart = () => pane.slice(pane.indexOf('v-if="strip && !tuning"'), pane.lastIndexOf('</template>'))
+  const stripPart = () => pane.slice(pane.indexOf('v-else-if="strip && !tuning"'), pane.indexOf("<!-- BEHIND THE ROOFLINE'S ROW"))
   /* Without its comments, for the checks about what is OFFERED: the comment above the sheet says in
      as many words that there are no effects, segments or zones in it, and a test that reads prose
      fails on the sentence promising the thing it is looking for. */
   const stripMarkup = () => stripPart().replace(/<!--[\s\S]*?-->/g, '')
 
-  it('offers both of the questions a strip is asked at setup, and only those', () => {
-    expect(pane).toContain("askAgain('length')")
-    expect(pane).toContain("askAgain('colors')")
-    expect(pane.match(/askAgain\('/g) ?? []).toHaveLength(2)
+  it('offers both of the questions a strip is asked at setup, and only those -- of each strip', () => {
+    /* A controller's second strip is asked the same two, of itself (design/controller-panel/
+       ChangeLaterC.dc.html), so each question appears for each strip and nothing else is asked. */
+    const asked = new Set([...pane.matchAll(/askAgain\('([a-z]+)'/g)].map(m => m[1]))
+    expect([...asked].sort()).toEqual(['colors', 'length'])
   })
 
   it('says the length in metres, because that is how strips are bought', () => {
@@ -210,7 +211,7 @@ describe('asking a strip again, afterwards', () => {
   })
 
   it('shows nothing at all on a light that is not a strip', () => {
-    expect(pane).toContain('v-if="strip && !tuning"')
+    expect(pane).toContain('v-else-if="strip && !tuning"')
   })
 
   it('knows which strip it is by the house\'s own id and never by a model name', () => {
@@ -233,7 +234,9 @@ describe('asking a strip again, afterwards', () => {
        point; WHAT IS OFFERED is. So: every handler this region can call, by name. A row that grows
        a third question, or anything at all that is not length or color, fails here. */
     const calls = new Set([...stripPart().matchAll(/@(?:click|pointerdown|pointerup|pointerleave|pointercancel)="([a-zA-Z]+)/g)].map(m => m[1]))
-    expect([...calls].sort()).toEqual(['askAgain', 'closeDoor', 'closeTune', 'openDoor', 'startWalk', 'stopWalk'])
+    /* ...and, since 1 October, the second strip's one act: a light of its own (which asks only a room)
+       or part of the first (which asks nothing). design/controller-panel/ChangeLaterC.dc.html. */
+    expect([...calls].sort()).toEqual(['askAgain', 'closeDoor', 'closeTune', 'join', 'openFirst', 'openRow', 'split', 'splitting', 'startWalk', 'stopWalk'])
   })
 })
 

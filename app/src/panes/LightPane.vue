@@ -13,9 +13,10 @@
  */
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import type { Device } from '../api'
-import { keepColor, listStrips, revisitStrip, tuneStrip, tuneStripBy, tuneStripDone, type StripRow } from '../api'
+import { keepColor, listStrips, revisitStrip, tuneStrip, tuneStripBy, tuneStripDone, splitStrip, joinStrip, setEvenings, holdStill, yardBegin, type StripRow, type Evenings } from '../api'
+import { previewStripRow, roofCount, roofMeters } from '../controller'
 import { BEFORE, FIRST, gap, step } from '../walk'
-import { guessNow, isDead, notify, perform, roomOf, store } from '../store'
+import { deviceById, guessNow, isDead, loadRoofline, notify, perform, roomOf, store } from '../store'
 import { COLORS, WHITES, autoKelvin, dataFor, guessFor, handlesOf, hsRgb, same, swatchCss, wantedOf, wantedRgb, type Wanted } from '../color'
 import { rgb } from '../sky'
 import Icon from '../Icon.vue'
@@ -145,9 +146,94 @@ onMounted(async () => {
   // A hub too old to know what a strip is answers 404 and the rows simply never appear.
   try {
     const rows = (await listStrips()).strips
-    strip.value = rows.find(r => r.device && r.device === props.device.hw) ?? null
+    strip.value = previewStripRow(rows.find(r => r.light2 && r.light2 === props.device.id)
+      ?? rows.find(r => r.device && r.device === props.device.hw) ?? null, new URLSearchParams(location.search).get('strip2'))
   } catch { strip.value = null }
 })
+
+/* A CONTROLLER WITH TWO STRIPS (design/controller-panel/ChangeLaterC.dc.html, decided with C). The
+   strip's row says two strips when they are one light, or that this light shares a controller with
+   another; and behind it the second strip's line carries the one act -- Make it a light of its own,
+   which asks only a room, or Make it part of the first, which asks nothing. So the answer given at
+   setup is never final. `mine` is which strip THIS pane is: the second, when it is a light of its own. */
+const mine = computed<1 | 2>(() => (strip.value?.light2 && strip.value.light2 === props.device.id ? 2 : 1))
+const second = computed(() => strip.value?.run2 ?? null)
+const metresOf = (n?: number | null) => (n ? `about ${(n / 60).toFixed(1)} m` : '')
+const otherName = computed(() => {
+  const id = mine.value === 2 ? strip.value?.light : strip.value?.light2
+  return (id && deviceById(id)?.name) || (mine.value === 2 ? 'the first strip' : 'the second strip')
+})
+const rowName = computed(() => second.value && !second.value.own ? 'Set up as two strips'
+  : 'Set up as a strip')
+const rowMetres = computed(() => second.value && !second.value.own
+  ? `${metresOf(strip.value?.count)} and ${(second.value.count / 60).toFixed(1)} m`
+  : mine.value === 2 ? metresOf(second.value?.count) : metresOf(strip.value?.count))
+const rowSub = computed(() => second.value?.own ? `Shares a controller with ${otherName.value}` : 'How long it is, and how its colors come out.')
+const splitting = ref(false)
+/* Two strips, one light: each strip is a line behind the row, and opening one is what lights it --
+   the first rests closed until it is opened, which is when its end can be walked (ChangeLaterC). */
+const firstOpen = ref(false)
+/* The row opens the door; with one strip it lights it to be walked, as it always has. */
+function openRow() { if (mine.value === 2 || (second.value && !second.value.own)) door.value = true; else openDoor() }
+async function openFirst() { firstOpen.value = true; await openDoor() }
+const splitRooms = computed(() => {
+  const here = roomOf(props.device)
+  const rest = store.rooms.filter(r => r.id !== 'unassigned' && r.id !== here?.id)
+  return [...(here ? [here] : []), ...rest].map(r => ({ id: r.id, name: r.name }))
+})
+const changing = ref('')
+async function split(room: string) {
+  if (!strip.value || changing.value) return
+  changing.value = room
+  try { await splitStrip(strip.value.id, room); notify('It is a light of its own now.'); door.value = false; splitting.value = false; strip.value = { ...strip.value, run2: { ...strip.value.run2!, own: true } } }
+  catch (e: any) { notify(e.message, 'error') }
+  changing.value = ''
+}
+/* Joining asks nothing, and this light's tile goes: the tile leaving is the confirmation, the way a
+   scene's row empties (AGENTS.md §4's one exception). The pane closes onto the room. */
+async function join() {
+  if (!strip.value || changing.value) return
+  changing.value = 'join'
+  try { await joinStrip(strip.value.id); notify(`It is part of ${otherName.value} now.`); door.value = false; store.opened = null }
+  catch (e: any) { notify(e.message, 'error') }
+  changing.value = ''
+}
+
+/* THE ROOFLINE'S OWN ROW (design/roofline/, decided 1 October). One light on the wall, however many boxes
+   it is, so the pane is the one place the boxes appear -- named by where they are, and only to say
+   something: Fine, or why one part is dark. Behind the row: the boxes, the way round (asked in the yard,
+   and only once a chase is wanted), its evenings (B), and Hold it still, the one control over how an
+   occasion looks (A). */
+const roof = computed(() => store.roofline?.exists && store.roofline.light === props.device.id ? store.roofline : null)
+const roofDoor = ref(false)
+const roofSummary = computed(() => roof.value ? `${roofCount(roof.value)} · ${roofMeters(roof.value.lights)}` : '')
+const roofSub = computed(() => {
+  const r = roof.value; if (!r) return ''
+  const dark = r.boxes.find(b => b.state !== 'Fine')
+  if (dark) return `${dark.place}: ${dark.state.toLowerCase()}`
+  return r.words ? `${r.occasion_name}: ${r.words.toLowerCase()}` : 'Its everyday warm white'
+})
+const roofWay = computed(() => {
+  const r = roof.value; if (!r) return ''
+  if (!r.order) return r.ask_order ? `${r.occasion_name ?? 'A chase'} goes round the house. Show it which way round?` : 'Each run goes away from its own box'
+  return r.turned ? `Set · ${r.turned === 1 ? 'one run' : `${r.turned} runs`} turned round` : 'Set'
+})
+const EVENING_CHOICES: { id: Evenings; name: string }[] = [
+  { id: 'every', name: 'Every evening' }, { id: 'occasion', name: 'Only in an occasion' }, { id: 'never', name: 'Not by itself' },
+]
+const roofBusy = ref('')
+async function roofDo(id: string, fn: () => Promise<unknown>) {
+  if (roofBusy.value) return
+  roofBusy.value = id
+  try { await fn(); await loadRoofline() } catch (e: any) { notify(e.message, 'error') }
+  roofBusy.value = ''
+}
+const evenings = (m: Evenings) => roofDo(m, () => setEvenings(m))
+const still = (v: boolean) => roofDo(v ? 'still' : 'moving', () => holdStill(v))
+async function whichWay() {
+  await roofDo('yard', async () => { await yardBegin(); store.yard = true })
+  roofDoor.value = false
+}
 /* LEDs are sold by the metre and bought by the metre, so the length is said in metres even though
    what was measured is lights. Sixty to the metre is the common density and this says "about". */
 const metres = computed(() => {
@@ -170,10 +256,10 @@ const lit = computed(() => {
   return `${Math.max(6, Math.min(100, Math.round((n / REEL) * 100)))}%`
 })
 const asking = ref(false)
-async function askAgain(what: 'colors' | 'length') {
+async function askAgain(what: 'colors' | 'length', run: 1 | 2 = mine.value) {
   if (!strip.value || asking.value) return
   asking.value = true
-  try { store.strip = await revisitStrip(strip.value.id, what) }
+  try { store.strip = await revisitStrip(strip.value.id, what, run) }
   catch (e: any) { notify(e.message, 'error') }
   asking.value = false
 }
@@ -184,6 +270,7 @@ async function askAgain(what: 'colors' | 'length') {
  * row now, under the three, drawing the strip rather than wearing an icon -- and both questions
  * live behind it, on the sheet design/strip/Behind.dc.html draws. */
 const door = ref(false)
+watch(door, v => { if (!v) firstOpen.value = false })
 
 /* MOVING THE END, WITH THE STRIP IN FRONT OF YOU (design/strip/Nudge.dc.html).
  *
@@ -435,13 +522,24 @@ async function level(l: typeof LEVELS[number]) {
          width of the thing the pane is for. It draws the strip rather than wearing an icon, because
          a picture of the thing behind the television is what tells somebody what this row is.
          design/strip/OneDoor.dc.html, chosen 22 September. -->
-    <div class="rig-ask" v-if="strip && !tuning">
+    <div class="rig-ask" v-if="roof">
+      <span class="rig-lbl">Because it is the roofline</span>
+      <button class="rig-card sd-door" @click="roofDoor = true">
+        <span class="rig-card-icon"><Icon name="home" :size="18" /></span>
+        <span class="rig-card-text">
+          <span class="rig-card-name">{{ roofSummary }}</span>
+          <span class="rig-card-sub">{{ roofSub }}</span>
+        </span>
+        <Icon name="back" :size="18" class="sd-chev" />
+      </button>
+    </div>
+    <div class="rig-ask" v-else-if="strip && !tuning">
       <span class="rig-lbl">Because it is a strip</span>
-      <button class="rig-card sd-door" :disabled="dead || asking" @click="openDoor()">
+      <button class="rig-card sd-door" :disabled="dead || asking" @click="openRow">
         <span class="rig-card-icon"><Icon name="pin" :size="18" /></span>
         <span class="rig-card-text">
-          <span class="rig-card-name">Set up as a strip <em>{{ metres }}</em></span>
-          <span class="rig-card-sub">How long it is, and how its colors come out.</span>
+          <span class="rig-card-name">{{ rowName }} <em>{{ second ? rowMetres : metres }}</em></span>
+          <span class="rig-card-sub">{{ rowSub }}</span>
         </span>
         <span class="sd-strip" aria-hidden="true"><i :style="{ width: lit }"></i></span>
         <Icon name="back" :size="18" class="sd-chev" />
@@ -458,13 +556,52 @@ async function level(l: typeof LEVELS[number]) {
   <div class="sheet-back" v-if="door" @click.self="closeDoor()">
     <div class="sheet sd-sheet" role="dialog" aria-label="Set up as a strip">
       <div class="sheet-head">
-        <h2 class="display">Set up as a strip</h2>
+        <h2 class="display">{{ second && !second.own ? 'Set up as two strips' : 'Set up as a strip' }}</h2>
         <button class="round sheet-close" aria-label="Close" @click="closeDoor()"><Icon name="close" :size="20" /></button>
       </div>
       <div class="sheet-body">
-        <p class="sheet-lede">Two things this was told once, and both of them go stale. A strip gets cut down, joined onto, or replaced by one that is not the same make.</p>
+        <p class="sheet-lede" v-if="second && !second.own">Each was told its own colors and its own length. Open one and it lights; the other rests.</p>
+        <p class="sheet-lede" v-else-if="second">It shares a controller with {{ otherName }}. While this is open it lights; {{ otherName }} rests.</p>
+        <p class="sheet-lede" v-else>Two things this was told once, and both of them go stale. A strip gets cut down, joined onto, or replaced by one that is not the same make.</p>
 
-        <div class="sd-card" :class="{ on: moving }">
+        <!-- the first strip, closed until it is opened (ChangeLaterC) -->
+        <button class="sd-card sd-tap" v-if="second && !second.own && !firstOpen" :disabled="asking" @click="openFirst">
+          <span class="sd-card-head">
+            <span class="sd-strip" aria-hidden="true"><i :style="{ width: lit }"></i></span>
+            <span class="rig-card-text"><span class="rig-card-name">The first strip <em>{{ metresOf(strip?.count) }}</em></span></span>
+            <Icon name="back" :size="18" class="sd-chev" />
+          </span>
+        </button>
+        <!-- THE SECOND STRIP'S OWN LINE, with its own two questions and the one act (ChangeLaterC). -->
+        <div class="sd-card on" v-if="second && (mine === 2 || !second.own) && !firstOpen">
+          <div class="sd-card-head">
+            <span class="rig-card-icon"><Icon name="light" :size="18" /></span>
+            <span class="rig-card-text">
+              <span class="rig-card-name">{{ mine === 2 ? 'This strip' : 'The second strip' }} <em>{{ metresOf(second.count) }}</em></span>
+              <span class="rig-card-sub">Its colors and its length are its own.</span>
+            </span>
+          </div>
+          <div class="sd-line"><span class="sd-line-k">Colors</span><span class="sd-channels" aria-hidden="true"><i class="r"></i><i class="g"></i><i class="b"></i></span><span class="sd-line-v">Its own</span>
+            <button class="button small ghost" :disabled="asking" @click="askAgain('colors', 2)">Ask again</button></div>
+          <div class="sd-line"><span class="sd-line-k">Length</span><span class="sd-line-v">{{ metresOf(second.count).replace('about', 'About') }}</span>
+            <button class="button small ghost" :disabled="asking" @click="askAgain('length', 2)">Ask again</button></div>
+          <template v-if="mine === 2">
+            <button class="button wide sd-act" :class="{ busy: changing === 'join' }" @click="join">Make it part of {{ otherName }}</button>
+            <span class="rig-card-sub">Asks nothing. Same room, name and switch; its own colors and length.</span>
+          </template>
+          <template v-else-if="!splitting">
+            <button class="button wide sd-act" @click="splitting = true">Make it a light of its own</button>
+            <span class="rig-card-sub">Asks which room. Its colors and length go with it.</span>
+          </template>
+          <template v-else>
+            <span class="rig-card-name">Which room is it in?</span>
+            <div class="press-rooms">
+              <button class="chip-btn" v-for="r in splitRooms" :key="r.id" :class="{ on: changing === r.id }" @click="split(r.id)">{{ r.name }}</button>
+            </div>
+          </template>
+        </div>
+
+        <div class="sd-card" :class="{ on: moving }" v-if="mine === 1 && (!second || second.own || firstOpen)">
           <div class="sd-card-head">
             <span class="rig-card-icon"><Icon name="pin" :size="18" /></span>
             <span class="rig-card-text">
@@ -491,7 +628,7 @@ async function level(l: typeof LEVELS[number]) {
           </template>
         </div>
 
-        <button class="sd-card sd-tap" :disabled="asking || !strip?.online" @click="askAgain('colors')">
+        <button class="sd-card sd-tap" v-if="mine === 1 && (!second || second.own || firstOpen)" :disabled="asking || !strip?.online" @click="askAgain('colors', 1)">
           <span class="sd-card-head">
             <span class="rig-card-icon"><Icon name="light" :size="18" /></span>
             <span class="rig-card-text">
@@ -502,6 +639,53 @@ async function level(l: typeof LEVELS[number]) {
             <Icon name="back" :size="18" class="sd-chev" />
           </span>
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BEHIND THE ROOFLINE'S ROW (design/roofline/OneLight, EveningsB, OwnsA, TapA). -->
+  <div class="sheet-back" v-if="roof && roofDoor" @click.self="roofDoor = false">
+    <div class="sheet sd-sheet roof-sheet" role="dialog" aria-label="The roofline">
+      <div class="sheet-head">
+        <h2 class="display">The Roofline</h2>
+        <button class="round sheet-close" aria-label="Close" @click="roofDoor = false"><Icon name="close" :size="20" /></button>
+      </div>
+      <div class="sheet-body">
+        <p class="sheet-lede"><b class="roof-count">{{ roofSummary }}.</b> {{ roof.why }}</p>
+        <div class="roof-cols"><div>
+        <ul class="roof-boxes">
+          <li v-for="b in roof.boxes" :key="b.chip" :class="{ dark: b.state !== 'Fine' }">
+            <span class="roof-dot"></span>
+            <span class="rig-card-text">
+              <span class="rig-card-name">{{ b.place }} <em>{{ b.runs === 1 ? '1 run' : `${b.runs} runs` }}</em></span>
+              <span class="rig-card-sub" v-if="b.sub">{{ b.sub }}</span>
+            </span>
+            <span class="roof-state">{{ b.state }}</span>
+          </li>
+        </ul>
+        <button class="sd-card sd-tap" v-if="roof.runs > 1" :disabled="!!roofBusy" @click="whichWay">
+          <span class="sd-card-head">
+            <span class="rig-card-icon"><Icon name="turn" :size="18" /></span>
+            <span class="rig-card-text"><span class="rig-card-name">Which way round</span><span class="rig-card-sub">{{ roofWay }}</span></span>
+            <Icon name="back" :size="18" class="sd-chev" />
+          </span>
+        </button>
+        </div><div>
+        <div class="sd-card">
+          <span class="rig-card-name">Its evenings <em v-if="roof.evenings && roof.evenings !== 'never'">On at dusk, off at {{ roof.until_words }}</em></span>
+          <div class="press-rooms">
+            <button class="chip-btn" v-for="e in EVENING_CHOICES" :key="e.id" :class="{ on: roof.evenings === e.id, busy: roofBusy === e.id }"
+                    :aria-pressed="roof.evenings === e.id" @click="evenings(e.id)">{{ e.name }}</button>
+          </div>
+        </div>
+        <div class="sd-card" v-if="roof.occasion">
+          <span class="rig-card-name">{{ roof.occasion_name }} <em>{{ roof.words }}</em></span>
+          <div class="press-rooms">
+            <button class="chip-btn" :class="{ on: !roof.still }" :aria-pressed="!roof.still" @click="still(false)">Moving</button>
+            <button class="chip-btn" :class="{ on: roof.still }" :aria-pressed="roof.still" @click="still(true)">Hold it still</button>
+          </div>
+        </div>
+        </div></div>
       </div>
     </div>
   </div>
@@ -518,6 +702,24 @@ async function level(l: typeof LEVELS[number]) {
    shared vocabulary rather than ours; and any rule reaching in from a container (`.bento`,
    `.wall-stage`), which belongs to the arrangement rather than to this. */
 
+/* The roofline's boxes: one row each, named by where they are, saying only Fine or why it is dark. */
+.roof-boxes { list-style: none; margin: 0 0 14px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.roof-count { font-weight: 500; color: var(--ink); }
+/* Two columns on a wall, so the whole roof is one sheet with nothing to scroll: the boxes and the way
+   round on the left, when it comes on and how it looks on the right. One column on a phone. */
+.roof-sheet { width: min(100%, 900px); }
+.roof-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
+@media (max-width: 720px) { .roof-cols { grid-template-columns: 1fr; } }
+.roof-boxes li { display: flex; align-items: center; gap: 14px; padding: 9px 16px; border-radius: var(--r-md); border: 1px solid var(--edge); background: rgba(255, 255, 255, 0.04); }
+.roof-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--live); }
+.roof-boxes li.dark .roof-dot { background: var(--lamp); }
+.roof-boxes li.dark .rig-card-sub { color: var(--lamp); }
+.roof-state { margin-left: auto; font-size: 14px; color: var(--muted); }
+.sd-act { margin: 12px 0 6px; }
+/* one of the second strip's two questions: what it is, what it was told, and the way to ask again */
+.sd-line { display: flex; align-items: center; gap: 12px; margin-top: 8px; padding: 6px 6px 6px 16px; border-radius: var(--r-sm); border: 1px solid var(--edge); background: rgba(255, 255, 255, 0.03); }
+.sd-line-k { width: 70px; font-size: 15px; }
+.sd-line-v { flex: 1; font-size: 14px; color: var(--muted); }
 .rig-auto-dot {
   width: 40px;
   height: 40px;

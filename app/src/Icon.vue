@@ -63,6 +63,12 @@ const PATHS: Record<string, string> = {
   'wifi-low': 'M9.5 16.3a5 5 0 0 1 5 0M12 19.9h.01',
   alert: 'M12 20.5a8.5 8.5 0 1 0 0-17 8.5 8.5 0 0 0 0 17zM12 7.8v5M12 16.2h.01',
   share: 'M8.5 12a2.5 2.5 0 1 0-5 0 2.5 2.5 0 0 0 5 0zM20.5 6a2.5 2.5 0 1 0-5 0 2.5 2.5 0 0 0 5 0zM20.5 18a2.5 2.5 0 1 0-5 0 2.5 2.5 0 0 0 5 0zM8.3 10.8l7-3.5M8.3 13.2l7 3.5',
+  /* A strip the controller is keeping dark to protect it (design/controller-panel/InRoomA.dc.html):
+     being looked after rather than broken, so a shield and never a warning sign. */
+  shield: 'M12 3l7 3v5c0 4.4-3 8.3-7 10-4-1.7-7-5.6-7-10V6z',
+  /* Turned round: a run going the other way round the roof (design/roofline/TapA.dc.html). */
+  chevron: 'M9 5l7 7-7 7',
+  turn: 'M4 12a8 8 0 0 1 13.7-5.6L20 8.5M20 4v4.5h-4.5M20 12a8 8 0 0 1-13.7 5.6L4 15.5M4 20v-4.5h4.5',
 }
 const FILLED = new Set(['play', 'pause', 'next', 'prev'])
 defineProps<{ name: string; size?: number }>()
