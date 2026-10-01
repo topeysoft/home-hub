@@ -780,7 +780,7 @@ reports the default and the one after it should be right. Nobody has looked yet.
 for the rest, because they are fixed at a strip's first flash: rollback in the bootloader, and the maker's
 keys in the image.
 
-**8. Occasions and movement.** Drawn in `design/occasion/`, no code. Signals — a strip saying something, briefly — are a different thing and are built: item 50.
+**8. Occasions and movement.** Drawn in `design/occasion/`; the roofline's half is built (item 52), and the occasion chip for lights inside is not. Signals — a strip saying something, briefly — are a different thing and are built: item 50.
 
 **9. The hardware is a devkit.** The product board needs, at minimum: a level shifter (**not optional** — a
 fill writes every frame, so the bridge puck's write-on-change workaround does not survive here), power
@@ -796,6 +796,83 @@ real annual cost before a unit ships — and inserts the product into the most q
 the house, which is how these things get returned. The camera route avoids all of that and costs a camera
 pointed into a living room. **The cheap next step is neither: a capture stick and HyperHDR on a bench,
 to find out whether it feels like the screen extended or like a gimmick, before any of it is paid for.**
+
+**52. The wall says what the strip controller says, and the roofline is one light that keeps its evenings
+and does its holidays. Built from the boards chosen on 1 October; none of it has met a rev A board.** The
+household decided `design/controller-panel/` (held: A with B's row; runs: C; wire: C falling back to A)
+and `design/roofline/` (moves: A with C; evenings: B; one: C then A) on 1 October. Runs: C said it needed
+a board for changing it later before it was built, so that came first:
+`design/controller-panel/ChangeLaterC.dc.html` — the second strip's line behind the strip's row carries
+the one act, *Make it a light of its own* (asks only a room) or *Make it part of* the first (asks
+nothing), so the answer given at setup is never final.
+
+- **Why a strip is dark, where people reach for it.** The brain reads `power` (and `board`, `type`,
+  `wire`, and every `run2/` leaf) and turns it into words in `brain/hub/controller.py`, one sentence and
+  one next step per reason, Reasons.dc.html's words. They hang on the light as `attrs.strip`
+  (`Home.reports`, which a timer's `extras` cannot overwrite). The tile reads *Staying off* with the
+  reason under it and a shield; the room's line carries *The strip is staying off to protect itself ·
+  Why?* first; a tap opens the pane instead of toggling, and the pane's left column has the sentence,
+  *Set up on 12 V → Plugged into now 24 V*, and one card with the next step, the power button disabled
+  and the instrument at half strength. Needs a look carries a `held` row FIRST with *Show me*, and the
+  band says *The kitchen strip is staying off*. Its lede now says "the parts of it that need you". The
+  burn is only said the way it is true: a 24 V strip on 12 V is dark, not on fire. Running hot and the
+  5 A hold are one muted line on the pane and nothing on the tile. *The strip is new as well* was not
+  decided and is not built.
+- **A second strip.** After the first strip's length, if run 2 draws current (`PRESENT_A`, 0.05 A,
+  **unmeasured**), the sheet asks *There's a second strip.* with two pictures, *Part of this light*
+  first; then *Is it red too?* starting from the first strip's order (the second color question lights a
+  different byte when the first strip's red was byte 0 — `second_at()`), its own fill, and a second room
+  only for a light of its own. A light of its own is `run2/own/set 1`, which makes the controller
+  announce a second light (`strip_<chip>_2`); the brain finds it by unique id in the entity registry and
+  places it there. A strip plugged in later is a band line, *Something new is plugged into the kitchen
+  controller*, whose tap asks the same question. `/strip/split` and `/strip/join` are the afterwards half.
+- **One wire or two.** The controller probes at first power and says `wire` `{found: one|two|unclear}`.
+  Only *unclear* gives *Nothing at all* a job: the brain sends `type/set` the other way, asks *Is it lit
+  now?*, and *Still dark* is the real failure with the right sentence — and puts the wire back. A clear
+  reading, or a devkit that says nothing, leaves *Nothing at all* the failure it was.
+- **The roofline** (`brain/hub/roofline.py`). The first strip set up in a room whose name says outside
+  (*Outside*, *Porch*, *Back yard*, not *Front room*) becomes the Roofline and is asked its evenings once:
+  *Every evening*, *Only in an occasion*, *Not by itself*. The next outside strip is asked *Is this more of
+  the Roofline?*; more of it is folded into the first box's tile (`Home.folded`, by hardware id) and every
+  tap, scene or sentence on the tile reaches every box. Evenings come on at dusk (the sun four degrees
+  under, about twenty minutes after sunset — the boards drew 6:41 PM on Oct 24 in Holts Summit) and go
+  off at the household's end, 11:00 unless changed, by EDGES written down per date, so a roof switched off
+  at nine stays off and a brain restarted mid-evening neither relights it nor forgets eleven. An occasion
+  turns nothing on: with no evenings asked for, Christmas leaves the roof dark. Dates decide the occasion
+  (Christmas Dec 1–Jan 6, Halloween Oct 24–Nov 1, Easter Saturday to Monday by the computus, July 4th
+  Jul 3–5), and the occasion owns its motion in the boards' emitter colors; *Hold it still* is the one
+  control; strips inside are always still (`look_of(outside=False)` — no indoor light is given an
+  occasion yet, because design/occasion's chip is not built). The command box reads *Christmas: red and
+  white, twinkling quickly* by a fixed grammar (`read_look` in `hub/commands.py`: the LED color names, the
+  five words, slowly or quickly; *meteor* is answered with the five), plays it as a draft for five minutes,
+  and keeps it for that occasion only on *Keep it*. The way round is never asked until a chase is wanted
+  (`wants_order`); then the pane offers it and the yard sheet (phone-sized) starts from the order the boxes
+  were set up, every run its own color with a white head showing its way, tap twice to turn one round, one
+  white light round the whole roof to confirm. A new box puts the way round back to unknown.
+- **What the boxes are told** (all additive, never retained): `look/set` `{id, motion, colors, block, ms,
+  now, t0, runs: [{at, dir, rgb?}]}` with `p = at + dir·k` (a run going against the way round starts at
+  its far end, `at = start + n − 1`), and the clock rides in `now`, re-sent once a minute while anything
+  moves; the firmware keeps the least-late offset. The firmware half is `main/look.h` and `main/wire.h`.
+
+**Verified, 1 October:** brain 1382 tests (was 1299; `tests/test_controller.py` 38, `tests/test_roofline.py`
+45), `ruff check .` clean, coverage 84.8% (floor raised from 82 to 84); deliberate breakages — the fold
+removed from `Home.build`, the wire fallback taken without an unclear reading — each fail them. Panel: 570
+unit tests (`tests/controller.test.ts` 13 new; `tests/adding.test.ts`'s strip-row pins moved to the new
+board), `vue-tsc -p tsconfig.app.json` and `npm run build` clean, `lint:css` at its 21-warning cap,
+`e2e/controller.spec.ts` 12 arrangement tests (the held pane's instrument put back to full strength fails
+them), and the whole e2e suite 224 passed with two failures: `rest.spec.ts` "the house at rest takes a
+sheet…", which fails identically on `development` before any of this, and a timing flake in
+`strip.spec.ts` that passed on rerun. Every chosen screen was screenshotted at the board's size beside its
+board. Firmware: every native test on both profiles, five deliberate breakages, and both ESP-IDF builds.
+
+**Not proven, and most of it cannot be until a rev A board exists:** that `power` arrives as drawn; the
+0.05 A "a strip is there" line; the wire probe's thresholds and the instant of flicker it may cause; two
+boxes' clocks agreeing well enough that a chase has no seam on a real roof; the run-2 light appearing in
+Home Assistant beside the first; dusk and the evening edges over a real week; a box's place on the roof
+being renamed (`/roofline/place` exists, no screen asks it — boxes are "The first box", "The second
+box" until then); and anything on the board's Needs a look row beyond the four held reasons. The roof's
+tile still draws a lamp, not a roof — art.ts has no roofline drawing, and drawing one is an artboard
+first.
 
 **51. The strip controller's firmware is built, as a second board of this one, and nothing of it has
 touched a board.** 1 October. The product board is drawn and its schematic generated in `home-hub-hardware`
