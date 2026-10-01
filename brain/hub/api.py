@@ -39,6 +39,7 @@ from .lock import Lock, needs_code
 from .pairing import Pairing
 from .bridge import Bridges
 from .strip import Strips, StripError
+from .roofline import Roofline
 from .signals import Signals
 from . import things
 from .things import Things
@@ -128,6 +129,7 @@ class Hub:
         self.errand = None                 # the one errand a bridge is running for us, if any: hub/errand.py
         self.bridge = Bridges(self)        # a puck on the cable, and the ones the house has
         self.strip = Strips(self)          # a light strip knocking over Bluetooth: hub/strip.py
+        self.roofline = Roofline(self)     # several strip controllers as one light outside, its evenings and its holidays
         self.net = Network(self)           # how this hub is connected, and what it hands out: docs/network.md
         self.share = Share(self)           # what this house lets a Matter bridge publish: docs/matter.md
         self.share_status: dict = {}       # what the bridge last said about itself (pairing codes, who holds it)
@@ -159,6 +161,27 @@ class Hub:
         self._rebuild_task = None
         self._loop_task = None
         self._loop: asyncio.AbstractEventLoop | None = None   # the server's loop, for broadcasts from worker threads
+        self.roofline._fold()                          # the boxes folded into the roofline's one tile, before the first build
+
+    def rebuild_soon(self):
+        """Rebuild the house from the driver's registry, once, a moment from now -- the same debounce a
+        registry change gets. Nothing to do before the house has been built the first time."""
+        if self.driver != "ready": return
+        try: asyncio.get_running_loop()
+        except RuntimeError: return
+        if self._rebuild_task: self._rebuild_task.cancel()
+        self._rebuild_task = asyncio.create_task(self._rebuild())
+
+    async def _roofline_loop(self):
+        """Every half minute: the roofline's evenings, and each box's look and clock."""
+        while True:
+            await asyncio.sleep(30)
+            try:
+                if self.driver == "ready":
+                    await self.roofline.tick()
+                    self._broadcast(json.dumps({"type": "roofline", "roofline": self.roofline.status()}))
+            except Exception:
+                log.exception("roofline tick")
 
     # ---- where HA is and how to get in ----
     @property
@@ -486,6 +509,11 @@ class Hub:
         self.sounds.on_state(dev, old)
         self.nightlight.on_state(dev, old)
         if dev.capability in ("climate", "sensor.temperature"): asyncio.create_task(self.comfort.on_state(dev))
+        # The roofline coming on, by anybody: each box is told its look and its place now, not at the
+        # next half-minute, so a chase starts with the light rather than thirty seconds after it.
+        if old != dev.state and dev.capability == "light" and self.roofline.exists():
+            lead = self.roofline.lead()
+            if lead is not None and lead.id == dev.id: asyncio.create_task(self.roofline.send_looks(force=True))
 
     async def _comfort_loop(self):
         while True:
@@ -624,6 +652,11 @@ class Hub:
             if key not in SERVICE: raise ValueError(f"{dev.capability} cannot {action}")
             domain, service = SERVICE[key]
             await self.ha.call(domain, service, dev.id, **data)
+            # THE ROOFLINE IS ONE LIGHT ON THE WALL AND SEVERAL TO THE DRIVER (hub/roofline.py). A tap
+            # on its tile -- or a scene, a routine, a sentence -- reaches every box, so one Off is one Off.
+            for part in self.roofline.members(dev.id):
+                try: await self.ha.call(domain, service, part.id, **data)
+                except Exception as e: log.warning("roofline: %s did not take %s (%s)", part.id, action, e)
             self.log.add("action", dev.id, None, action, source=source, detail={**data, **({"said": said} if said else {})} or None)
         if dev.capability != "camera" and dev.room_id in self.home.rooms: self.hold(self.home.rooms[dev.room_id])
 
@@ -688,9 +721,10 @@ async def lifespan(app):
     hub._update_task = asyncio.create_task(hub.updates.run())
     hub._suggest_task = asyncio.create_task(hub.assistant.run())
     hub._prune_task = asyncio.create_task(hub.log.run())      # the diary, kept a diary: events.py
+    hub._roofline_task = asyncio.create_task(hub._roofline_loop())
     yield
     for t in (hub._loop_task, hub._tick_task, hub._signals_task, hub._drivers_task, hub._comfort_task, hub._update_task,
-              hub._suggest_task, hub._prune_task): t.cancel()
+              hub._suggest_task, hub._prune_task, hub._roofline_task): t.cancel()
     if hub.ha: await hub.ha.close()
 
 
@@ -1443,8 +1477,149 @@ async def strip_list(): return {"strips": await hub.strip.each()}
 @app.post("/strip/revisit")
 async def strip_revisit(body: dict):
     hub.ready()
-    try: return await hub.strip.revisit(str(body.get("id") or ""), str(body.get("what") or ""))
+    try: return await hub.strip.revisit(str(body.get("id") or ""), str(body.get("what") or ""), int(body.get("run") or 1))
     except StripError as e: raise HTTPException(409, str(e))
+
+
+# A CONTROLLER WITH TWO SOCKETS (design/controller-panel/, "runs": C). After the first strip is measured,
+# one question with the strips as the picture: part of this light, or a light of its own. A strip plugged
+# in months later is a line in the band, and the tap asks the same question. And afterwards, the second
+# strip's line behind the strip's row joins or splits them (ChangeLaterC.dc.html).
+@app.post("/strip/second")
+async def strip_second(body: dict):
+    hub.ready()
+    try: return await hub.strip.second(str(body.get("as") or ""))
+    except StripError as e: raise HTTPException(409, str(e))
+
+
+@app.post("/strip/second/later")
+async def strip_second_later(body: dict):
+    hub.ready()
+    try: return await hub.strip.second_later(str(body.get("id") or ""))
+    except StripError as e: raise HTTPException(409, str(e))
+
+
+@app.post("/strip/split")
+async def strip_split(body: dict):
+    hub.ready()
+    try: return await hub.strip.split(str(body.get("id") or ""), str(body.get("room") or ""))
+    except StripError as e: raise HTTPException(409, str(e))
+
+
+@app.post("/strip/join")
+async def strip_join(body: dict):
+    hub.ready()
+    try: return await hub.strip.join(str(body.get("id") or ""))
+    except StripError as e: raise HTTPException(409, str(e))
+
+
+# The last beats for a light that is outside (design/roofline/): more of the Roofline, or a light of its
+# own; and, for the roofline itself, its evenings, asked once.
+@app.post("/strip/roofline")
+async def strip_roofline(body: dict):
+    hub.ready()
+    try: return await hub.strip.more_of_the_roofline(bool(body.get("more")), str(body.get("place") or ""))
+    except StripError as e: raise HTTPException(409, str(e))
+
+
+@app.post("/strip/evenings")
+async def strip_evenings(body: dict):
+    hub.ready()
+    try: return await hub.strip.evenings(str(body.get("mode") or ""))
+    except StripError as e: raise HTTPException(409, str(e))
+
+
+# ---------- the roofline: one light outside, its evenings, its holidays and the way round ----------
+# hub/roofline.py. Reading is open like every other read; everything that lights the roof is a change.
+@app.get("/roofline")
+def roofline_status(): return hub.roofline.status()
+
+
+def _roofline(fn):
+    """Run one of the roofline's verbs, turning its plain-words refusals into a 409 the panel can show."""
+    hub.ready()
+    try: out = fn()
+    except ValueError as e: raise HTTPException(409, str(e))
+    hub._broadcast(json.dumps({"type": "roofline", "roofline": hub.roofline.status()}))
+    return out
+
+
+@app.post("/roofline/evenings")
+async def roofline_evenings(body: dict):
+    return _roofline(lambda: hub.roofline.set_evenings(str(body.get("mode") or ""), body.get("until")))
+
+
+@app.post("/roofline/still")
+async def roofline_still(body: dict):
+    out = _roofline(lambda: hub.roofline.hold_still(bool(body.get("still"))))
+    await hub.roofline.send_looks()
+    return out
+
+
+@app.post("/roofline/place")
+async def roofline_place(body: dict):
+    return _roofline(lambda: hub.roofline.rename(str(body.get("chip") or ""), str(body.get("place") or "")))
+
+
+async def _yard(coro):
+    """The yard flow's verbs light the roof as they go, so they are awaited, and refused in words."""
+    hub.ready()
+    try: out = await coro
+    except ValueError as e: raise HTTPException(409, str(e))
+    hub._broadcast(json.dumps({"type": "roofline", "roofline": hub.roofline.status()}))
+    return out
+
+
+@app.post("/roofline/yard")
+async def roofline_yard(): return await _yard(hub.roofline.yard_begin())
+
+
+@app.post("/roofline/yard/tap")
+async def roofline_yard_tap(body: dict):
+    return await _yard(hub.roofline.yard_tap(str(body.get("chip") or ""), int(body.get("run") or 1)))
+
+
+@app.post("/roofline/yard/again")
+async def roofline_yard_again(): return await _yard(hub.roofline.yard_again())
+
+
+@app.post("/roofline/yard/done")
+async def roofline_yard_done(): return await _yard(hub.roofline.yard_done())
+
+
+@app.post("/roofline/yard/keep")
+async def roofline_yard_keep():
+    out = _roofline(hub.roofline.yard_keep)
+    await hub.roofline.send_looks(force=True)
+    return out
+
+
+@app.post("/roofline/yard/leave")
+async def roofline_yard_leave():
+    out = _roofline(hub.roofline.yard_leave)
+    await hub.roofline.send_looks(force=True)
+    return out
+
+
+@app.post("/roofline/look/keep")
+async def roofline_look_keep():
+    out = _roofline(hub.roofline.keep_draft)
+    await hub.roofline.send_looks()
+    return out
+
+
+@app.post("/roofline/look/drop")
+async def roofline_look_drop():
+    out = _roofline(hub.roofline.drop_draft)
+    await hub.roofline.send_looks()
+    return out
+
+
+@app.post("/roofline/look/forget")
+async def roofline_look_forget(body: dict):
+    out = _roofline(lambda: hub.roofline.forget_look(str(body.get("occasion") or "")))
+    await hub.roofline.send_looks()
+    return out
 
 
 @app.delete("/strip/{strip_id}")
