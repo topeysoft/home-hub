@@ -296,6 +296,12 @@ bool tick(uint32_t now) {
     return again;
 }
 
+float read_amps(int i) {
+    if (!adc || i < 0 || i >= board::OUTPUTS || !runs[i].on) return -1;
+    const int mv = read_mv(imon[i], 16);
+    return mv < 0 ? -1 : imon_amps(mv);
+}
+
 bool report(char *out, size_t n, uint32_t now, bool force) {
     if (!adc && !force) return false;
     // The SHAPE is everything a person would want to hear about at once; the numbers drift and are
@@ -341,6 +347,7 @@ void begin(uint32_t) {}
 bool live(int) { return true; }
 uint16_t scale(int, const px::Pixels &) { return 256; }
 bool tick(uint32_t) { return false; }
+float read_amps(int) { return -1; }
 bool report(char *, size_t, uint32_t, bool) { return false; }
 }  // namespace guard
 

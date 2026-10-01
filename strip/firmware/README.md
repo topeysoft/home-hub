@@ -119,6 +119,16 @@ The first boot also says `run 1 is first lit on a 12 V supply`; a later boot on 
 says `run 1 was set up on a 12 V supply and this one is 24 V` and leaves it dark. (Those lines are what the
 code prints. No board has printed them yet.)
 
+**A run that has never been told its wire finds it** (`main/wire.h`), once, at the first boot it lights:
+faintly on one wire, then on two, reading the switch's current monitor after each, before the setup glow.
+A clear answer is kept where `type/set` keeps one; an unclear one drives one wire and is not asked again.
+The boot says which, with the three readings, and the hub hears it on `wire` (`run2/wire`):
+
+    I (470) strip: run 1 at first power: two wires (dark 0.021 A, one wire 0.022 A, two wires 0.064 A)
+
+The thresholds it decides by have not been measured; a bench with one-wire and two-wire strips of a few
+lengths sets them. A one-wire strip may flicker for an instant during it.
+
 **The button is GPIO 4**, sealed into the wall of the box, with the devkit's rules and one more: a press
 shorter than 30 ms is a contact bouncing, not a finger.
 
@@ -189,6 +199,8 @@ a strip that paired once and never again. (`main/press.h`, held to it by `test_p
     c++ -std=c++17 -O1 -o /tmp/press test_press_native.cpp && /tmp/press
     c++ -std=c++17 -O1 -o /tmp/uri test_hub_uri_native.cpp && /tmp/uri
     c++ -std=c++17 -O1 -o /tmp/versions test_versions_native.cpp && /tmp/versions
+    c++ -std=c++17 -O1 -o /tmp/wire test_wire_native.cpp && /tmp/wire
+    c++ -std=c++17 -O1 -o /tmp/look test_look_native.cpp && /tmp/look
 
 On a Mac whose newest SDK will not link, add `-isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk`.
 

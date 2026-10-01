@@ -60,10 +60,12 @@
 #include "guard.h"
 #include "hub_uri.h"
 #include "fwupdate.h"
+#include "look.h"
 #include "press.h"
 #include "release_keys.h"
 #include "pixels.h"
 #include "prov.h"
+#include "wire.h"
 
 using namespace esp_matter;
 using namespace esp_matter::attribute;
@@ -177,6 +179,27 @@ static volatile bool forget_asked = false;
 static bool want_on = false;
 static uint8_t want_r = 255, want_g = 180, want_b = 110, want_bri = 200;
 
+// THE SECOND RUN AS A LIGHT OF ITS OWN (rev A; design/controller-panel, page "runs", C). Until the
+// house says otherwise run 2 is part of the household's one light, on two runs of wire. `run2/own/set 1`
+// makes it a second light: its own on, brightness and color, announced to the house beside the first
+// and switched with `run2/light/set`. Remembered in NVS like the order, so a power cut does not fold
+// it back in. Always false on a devkit, which has no second run to make anything of.
+static bool own2 = false;
+static bool want_on2 = false;
+static uint8_t want_r2 = 255, want_g2 = 180, want_b2 = 110, want_bri2 = 200;
+
+// A LOOK ON THE ROOFLINE, IF THE HOUSE HAS ONE ON (look.h): the household's light, moving or still, in
+// the colors of the occasion. Drawn instead of the plain color while the light is on and at its
+// brightness; a signal plays over it and it comes back after. Not kept in NVS: it is the hub's for an
+// evening, and the hub says it again. `hub_clock` is the hub's time as this box knows it, which is
+// what lets several boxes draw one roof.
+static look::Look lk;
+static look::Clock hub_clock;
+static uint32_t look_drawn_at = 0;
+// About thirty frames a second for a moving look: the loop's 10 ms tick rounds this to 30. Smooth for
+// a chase, and a thousand-light run's frame is itself 30 ms on the wire.
+static constexpr uint32_t LOOK_FRAME_MS = 25;
+
 // THE LIGHT COMES BACK AS IT WAS LEFT. A power cut, a breaker, a strip unplugged to move it: a lamp
 // that came back on comes back on, in the color somebody chose, the way every bulb in the house
 // does -- and this one came back off, warm white, every time, because nothing was written down
@@ -191,6 +214,12 @@ static void keep_light() {
     nvs_set_u8(nvs, "lon", want_on);
     nvs_set_u8(nvs, "lbri", want_bri);
     nvs_set_u32(nvs, "lrgb", ((uint32_t)want_r << 16) | ((uint32_t)want_g << 8) | want_b);
+    // The second run's own light beside it, under the same names with a 2, only while it is one.
+    if (board::OUTPUTS > 1 && own2) {
+        nvs_set_u8(nvs, "lon2", want_on2);
+        nvs_set_u8(nvs, "lbri2", want_bri2);
+        nvs_set_u32(nvs, "lrgb2", ((uint32_t)want_r2 << 16) | ((uint32_t)want_g2 << 8) | want_b2);
+    }
     nvs_commit(nvs);
 }
 static void restore_light() {
@@ -204,6 +233,21 @@ static void restore_light() {
     want_r = (uint8_t)(rgb >> 16);
     want_g = (uint8_t)(rgb >> 8);
     want_b = (uint8_t)rgb;
+    if (board::OUTPUTS < 2) return;
+    uint8_t own = 0;
+    nvs_get_u8(nvs, "own2", &own);
+    own2 = own;
+    if (!own2) return;
+    on = 0; bri = want_bri2;
+    rgb = ((uint32_t)want_r2 << 16) | ((uint32_t)want_g2 << 8) | want_b2;
+    nvs_get_u8(nvs, "lon2", &on);
+    nvs_get_u8(nvs, "lbri2", &bri);
+    nvs_get_u32(nvs, "lrgb2", &rgb);
+    want_on2 = on;
+    want_bri2 = bri;
+    want_r2 = (uint8_t)(rgb >> 16);
+    want_g2 = (uint8_t)(rgb >> 8);
+    want_b2 = (uint8_t)rgb;
 }
 
 static esp_mqtt_client_handle_t mqtt = nullptr;
@@ -238,12 +282,15 @@ static void put_i32(const char *key, int v) { nvs_set_i32(nvs, key, v); nvs_comm
 // runs cost one frame's time rather than two (pixels.h). On rev A each one goes only to a run that
 // is switched on, dimmed if it would draw more than that run may (guard.h); on a devkit the guard
 // says yes to everything and the picture goes out exactly as it always did.
-static void show() {
+//
+// `only` narrows it to some outputs, one bit each, for a moving look: a run whose frame came out the
+// same as the last is not sent it again, because a WS2812 latches (AGENTS.md section 4).
+static void show(unsigned only = ~0u) {
     Hold h;
     const px::Pixels *ps[board::OUTPUTS];
     uint16_t scale[board::OUTPUTS];
     for (int i = 0; i < board::OUTPUTS; i++) {
-        ps[i] = guard::live(i) ? &outs[i] : nullptr;
+        ps[i] = (only & (1u << i)) && guard::live(i) ? &outs[i] : nullptr;
         scale[i] = ps[i] ? guard::scale(i, outs[i]) : 0;
     }
     px::show(ps, scale, board::OUTPUTS);
@@ -268,17 +315,41 @@ static void paint_tune() {
     show();
 }
 
+// WHICH LIGHT AN OUTPUT SHOWS: the household's, or the second run's own once it has been made one.
+static bool own_light(int i) { return i == 1 && own2; }
+static bool lamp_on(int i) { return own_light(i) ? want_on2 : want_on; }
+static uint8_t lamp_bri(int i) { return own_light(i) ? want_bri2 : want_bri; }
+
+// Whether output i draws the look. A run that is part of the household's light always does; a run that
+// is a light of its own only when the look names it (runs[i] in the message), so a look the hub drew
+// for the roof does not take over a second light it was not drawn for.
+static bool look_here(int i) {
+    return lk.on() && (!own_light(i) || (i < look::MOST_RUNS && lk.runs[i].given));
+}
+
+static int64_t local_ms64() { return esp_timer_get_time() / 1000; }
+
+// One output's light, drawn: dark, the look at shared time `t`, or the plain color -- at that light's
+// brightness, through that run's own color order. Returns whether a look's frame changed.
+static bool draw_lamp(int i, int64_t t) {
+    px::Pixels &o = outs[i];
+    if (!lamp_on(i)) { o.clear(); return false; }
+    if (look_here(i)) return look::draw(lk, i, t, lamp_bri(i), o);
+    const uint16_t k = lamp_bri(i) ? lamp_bri(i) : 1;
+    const uint8_t r = own_light(i) ? want_r2 : want_r, g = own_light(i) ? want_g2 : want_g,
+                  b = own_light(i) ? want_b2 : want_b;
+    o.solid((uint8_t)(r * k / 255), (uint8_t)(g * k / 255), (uint8_t)(b * k / 255));
+    return false;
+}
+
 static void paint() {
     Hold h;
     if (instrument) return;
     // The household's own light, drawn, is a signal over: a hand on the light -- the panel, their
     // Matter app -- wins over anything the house was saying with it, at once.
     sig.running = false;
-    if (!want_on) clear_all();
-    else {
-        const uint16_t k = want_bri ? want_bri : 1;
-        solid_all((uint8_t)(want_r * k / 255), (uint8_t)(want_g * k / 255), (uint8_t)(want_b * k / 255));
-    }
+    const int64_t t = hub_clock.now(local_ms64());
+    for (int i = 0; i < board::OUTPUTS; i++) draw_lamp(i, t);
     show();
 }
 
@@ -322,6 +393,12 @@ static void say_run(int run, const char *leaf, const char *payload, int retain =
 }
 static bool two_wire_possible(int run) { return board::RUNS[run].clock >= 0 && board::RUNS[run].spi; }
 
+#if defined(STRIP_BOARD_REVA)
+// This boot's answer from the probe that finds a run's wire (find_the_wire), as said on `wire`; empty
+// on every boot that did not probe.
+static char wire_said[board::OUTPUTS][96] = {};
+#endif
+
 // WHAT THE BOARD IS DOING TO KEEP ITSELF SAFE, on rev A (guard.h): the supply and its kind, each run's
 // current and how far it is being dimmed, and why a run is dark if one is. Retained, like `light`, so
 // the wall can say why without waiting. Never on a devkit, which measures none of it.
@@ -360,24 +437,43 @@ static void say_light() {
              want_on ? "ON" : "OFF", want_bri, want_r, want_g, want_b);
     say("light", body, 1);
 }
+// The second run's, while it is a light of its own, on `run2/light`.
+static void say_light2() {
+    char body[160];
+    snprintf(body, sizeof(body),
+             "{\"state\":\"%s\",\"brightness\":%d,\"color_mode\":\"rgb\","
+             "\"color\":{\"r\":%d,\"g\":%d,\"b\":%d}}",
+             want_on2 ? "ON" : "OFF", want_bri2, want_r2, want_g2, want_b2);
+    say_run(1, "light", body, 1);
+}
+
+// Where the house looks for each light: the first where it always was, the second with `_2` after it.
+static void config_topic(int run, char *topic, size_t n) {
+    snprintf(topic, n, "homeassistant/light/%s_%s%s/config", base, chipHex, run ? "_2" : "");
+}
 
 // SAID ONCE, WHEN WE ARRIVE, AND RETAINED. A house that reboots its broker finds the strip again
 // without the strip having to notice, and a strip that is unplugged goes unavailable rather than
 // stale -- availability follows the same `status` topic the last will already writes.
-static void announce_the_light() {
-    char topic[96], body[640];
-    snprintf(topic, sizeof(topic), "homeassistant/light/%s_%s/config", base, chipHex);
+//
+// The second run, when it is a light of its own, is announced the same way with its own name and
+// topics and THE SAME DEVICE, so the house sees one controller with two lights on it rather than two
+// controllers.
+static void announce_the_light(int run = 0) {
+    char topic[96], body[768];
+    config_topic(run, topic, sizeof(topic));
+    const char *n2 = run ? "_2" : "", *r2 = run ? "run2/" : "";
     snprintf(body, sizeof(body),
-             "{\"schema\":\"json\",\"name\":\"Light strip\",\"unique_id\":\"%s_%s\","
-             "\"command_topic\":\"%s/%s/light/set\",\"state_topic\":\"%s/%s/light\","
+             "{\"schema\":\"json\",\"name\":\"Light strip%s\",\"unique_id\":\"%s_%s%s\","
+             "\"command_topic\":\"%s/%s/%slight/set\",\"state_topic\":\"%s/%s/%slight\","
              "\"availability_topic\":\"%s/%s/status\","
              "\"payload_available\":\"online\",\"payload_not_available\":\"offline\","
              "\"brightness\":true,\"supported_color_modes\":[\"rgb\"],"
              "\"device\":{\"identifiers\":[\"%s_%s\"],\"name\":\"Light strip\","
              "\"manufacturer\":\"Elyir\",\"model\":\"Light strip\",\"sw_version\":\"" STRIP_FW "\"}}",
-             base, chipHex, base, chipHex, base, chipHex, base, chipHex, base, chipHex);
+             run ? " 2" : "", base, chipHex, n2, base, chipHex, r2, base, chipHex, r2, base, chipHex, base, chipHex);
     say_at(topic, body, 1);
-    ESP_LOGI(TAG, "announced as a light the house can switch on");
+    ESP_LOGI(TAG, "announced%s as a light the house can switch on", run ? " run 2" : "");
 }
 
 // The order a run's colors come out in, as the three letters the hub uses.
@@ -397,7 +493,15 @@ static void say_what_we_are() {
         say_run(i, "order", ord, 1);
         // One wire or two, said only by an output that can be either, so a devkit says what it said.
         if (two_wire_possible(i)) say_run(i, "type", px::wire(i) == px::Wire::TWO ? "two" : "one", 1);
+#if defined(STRIP_BOARD_REVA)
+        // What the probe at first power found, on the boot that found it (wire.h). Retained, so it is
+        // still on the broker on every boot after, when there is nothing new to say.
+        if (wire_said[i][0]) say_run(i, "wire", wire_said[i], 1);
+#endif
     }
+#if defined(STRIP_BOARD_REVA)
+    say_run(1, "own", own2 ? "1" : "0", 1);
+#endif
     say("status", "online", 1);
     say("fw", STRIP_FW, 1);         // what it runs, so the hub can count who has a fix
 #if defined(STRIP_BOARD_REVA)
@@ -439,6 +543,13 @@ static void forget_the_house(bool tidy_first) {
         }
 #if defined(STRIP_BOARD_REVA)
         for (const char *leaf : {"board", "power"}) say(leaf, "", 1);
+        // What the probe found, beside the type it found (wire.h); and the second run as a light of
+        // its own -- its announcement, its state and the word that made it one.
+        for (int i = 0; i < board::OUTPUTS; i++)
+            if (two_wire_possible(i)) say_run(i, "wire", "", 1);
+        config_topic(1, topic, sizeof(topic));
+        say_at(topic, "", 1);
+        for (const char *leaf : {"light", "own"}) say_run(1, leaf, "", 1);
 #endif
         vTaskDelay(pdMS_TO_TICKS(600));   // let them leave before the radio goes with everything else
     }
@@ -481,7 +592,9 @@ static void on_command(const std::string &full, const std::string &msg, bool ret
         run = 1;
         leaf = full.substr(5);
         bool per_run = false;
-        for (const char *k : {"show/set", "tune/set", "fill/stop", "count/set", "order/set", "white/set", "type/set"})
+        // ...and, for the second run alone, the two words that make it a light of its own and switch it.
+        for (const char *k : {"show/set", "tune/set", "fill/stop", "count/set", "order/set", "white/set", "type/set",
+                              "own/set", "light/set"})
             if (leaf == k) per_run = true;
         if (!per_run) return;
     }
@@ -531,7 +644,8 @@ static void on_command(const std::string &full, const std::string &msg, bool ret
     // ordinary message with no payload, which the same line below drops.
     const bool remembered = (leaf == "count/set" || leaf == "order/set"
                              || leaf == "room/set" || leaf == "white/set"
-                             || (leaf == "type/set" && two_wire_possible(run)));
+                             || (leaf == "type/set" && two_wire_possible(run))
+                             || (leaf == "own/set" && run == 1));
     if (remembered && (retained || msg.empty())) {
         if (retained) {
             ESP_LOGI(TAG, "a retained %s was waiting on the broker; retiring it, what is written down wins",
@@ -545,26 +659,164 @@ static void on_command(const std::string &full, const std::string &msg, bool ret
     // things Matter carries, arriving the other way for a strip that came through our own door and so
     // has no Matter fabric to carry them. paint() leaves an instrument alone: the fill and the color
     // question own the strip while they run, and the household's color goes back the moment they stop.
+    //
+    // `run2/light/set`, the same JSON, is the second run's own light, and means something only while
+    // run 2 is one (`run2/own/set 1`); while it is part of the household's light there is nothing for
+    // it to switch, and it is left alone.
     if (leaf == "light/set") {
+        if (run == 1 && !own2) return;
+        bool &on = run ? want_on2 : want_on;
+        uint8_t &bri = run ? want_bri2 : want_bri, &rr = run ? want_r2 : want_r, &gg = run ? want_g2 : want_g,
+                &bb = run ? want_b2 : want_b;
         cJSON *j = cJSON_Parse(msg.c_str());
         if (!j) return;
         const cJSON *st = cJSON_GetObjectItemCaseSensitive(j, "state");
-        if (cJSON_IsString(st) && st->valuestring) want_on = !strcasecmp(st->valuestring, "ON");
+        if (cJSON_IsString(st) && st->valuestring) on = !strcasecmp(st->valuestring, "ON");
         const cJSON *br = cJSON_GetObjectItemCaseSensitive(j, "brightness");
-        if (cJSON_IsNumber(br)) want_bri = (uint8_t)br->valueint;
+        if (cJSON_IsNumber(br)) bri = (uint8_t)br->valueint;
         const cJSON *c = cJSON_GetObjectItemCaseSensitive(j, "color");
         if (cJSON_IsObject(c)) {
             const cJSON *r = cJSON_GetObjectItemCaseSensitive(c, "r");
             const cJSON *g = cJSON_GetObjectItemCaseSensitive(c, "g");
             const cJSON *b = cJSON_GetObjectItemCaseSensitive(c, "b");
-            if (cJSON_IsNumber(r)) want_r = (uint8_t)r->valueint;
-            if (cJSON_IsNumber(g)) want_g = (uint8_t)g->valueint;
-            if (cJSON_IsNumber(b)) want_b = (uint8_t)b->valueint;
+            if (cJSON_IsNumber(r)) rr = (uint8_t)r->valueint;
+            if (cJSON_IsNumber(g)) gg = (uint8_t)g->valueint;
+            if (cJSON_IsNumber(b)) bb = (uint8_t)b->valueint;
         }
         cJSON_Delete(j);
         light_changed();
         paint();
-        say_light();
+        if (run) say_light2(); else say_light();
+        return;
+    }
+
+    // ONE LIGHT OR TWO (rev A): `run2/own/set 1` makes the second run a light of its own, `0` folds it
+    // back into the household's. Told once and kept, like the order, so never from a retained copy
+    // (above). It starts as it looked a moment ago -- the household's light, now its own to change --
+    // so nothing on the roof jumps when the house splits one light into two.
+    if (leaf == "own/set" && run == 1) {
+        const bool own = msg == "1";
+        if (!own && msg != "0") return;
+        if (own && !own2) {
+            want_on2 = want_on; want_bri2 = want_bri;
+            want_r2 = want_r; want_g2 = want_g; want_b2 = want_b;
+        }
+        own2 = own;
+        nvs_set_u8(nvs, Key(1, "own"), own ? 1 : 0);
+        nvs_commit(nvs);
+        if (own) light_changed();
+        paint();
+        say_run(1, "own", own ? "1" : "0", 1);
+        if (own) {
+            announce_the_light(1);
+            say_light2();
+        } else {
+            // A light the house no longer has: its announcement and its last state go, retained
+            // empties, so it does not come back the next time the broker restarts.
+            char topic[96];
+            config_topic(1, topic, sizeof(topic));
+            say_at(topic, "", 1);
+            say_run(1, "light", "", 1);
+        }
+        return;
+    }
+
+    // THE HUB'S TIME (look.h, Clock): its milliseconds since the epoch, as text. Each one is a sample
+    // of how far this box's uptime is from the hub's clock; never from a retained copy, which is a
+    // sample from whenever it was retained.
+    if (leaf == "clock/set") {
+        if (retained || msg.empty()) return;
+        const long long hub = strtoll(msg.c_str(), nullptr, 10);
+        if (hub > 0) hub_clock.heard(hub, local_ms64());
+        return;
+    }
+
+    // A LOOK ON THE ROOFLINE (look.h; design/roofline/, pages "moves" and "one"). One message, and this
+    // box draws every frame of it from the shared clock:
+    //
+    //   {"id": "christmas", "motion": "still|chase|drift|flicker|twinkle|head|off",
+    //    "colors": [[255,45,36],[20,216,96]], "block": 4, "ms": 2800,
+    //    "now": <hub ms since the epoch when sent>, "t0": <hub ms since the epoch the look began>,
+    //    "runs": [{"at": 0, "dir": 1}, {"at": 420, "dir": -1, "rgb": [255,0,0]}]}
+    //
+    // runs[i] is this box's output i; light k of it is at roof position at + dir*k. A run not listed is
+    // at 0, dir 1. "rgb" is a run's own color, for "head" only. No colors is the household's own color;
+    // no t0 is now. "off" hands the light back to the household's plain color.
+    //
+    // Answered on `look` with the id once it is taken -- it draws whenever the light is on -- or with
+    // "busy <id>" while a setup instrument owns the strip, which is a person measuring something and
+    // takes nothing (the same rule as a signal). A signal plays over a look and the look comes back
+    // after. Never from a retained copy: a look is the hub's for an evening, and an old one replayed
+    // at every reconnect would be Christmas in March.
+    if (leaf == "look/set") {
+        if (retained || msg.empty()) return;
+        cJSON *j = cJSON_Parse(msg.c_str());
+        if (!j) return;
+        const cJSON *v;
+        if (cJSON_IsNumber(v = cJSON_GetObjectItemCaseSensitive(j, "now")) && v->valuedouble > 0)
+            hub_clock.heard((int64_t)v->valuedouble, local_ms64());
+        const cJSON *id = cJSON_GetObjectItemCaseSensitive(j, "id");
+        const cJSON *mo = cJSON_GetObjectItemCaseSensitive(j, "motion");
+        const char *word = cJSON_IsString(mo) && mo->valuestring ? mo->valuestring : "off";
+        look::Look next;
+        next.motion = look::motion_of(word);
+        snprintf(next.id, sizeof(next.id), "%s", cJSON_IsString(id) && id->valuestring ? id->valuestring : "");
+        char said[64];
+        // A motion this firmware has no drawing for is not taken, rather than taken as "off": a newer
+        // hub's word should leave the roof as it was, not darken the occasion.
+        if (next.motion == look::OFF && strcmp(word, "off") != 0) { cJSON_Delete(j); return; }
+        if (instrument && next.motion != look::OFF) {
+            snprintf(said, sizeof(said), "busy %s", next.id);
+            cJSON_Delete(j);
+            say("look", said);
+            return;
+        }
+        const cJSON *cs = cJSON_GetObjectItemCaseSensitive(j, "colors");
+        if (cJSON_IsArray(cs)) {
+            const cJSON *c;
+            cJSON_ArrayForEach(c, cs) {
+                if (next.n >= look::MOST_COLORS) break;
+                if (!cJSON_IsArray(c) || cJSON_GetArraySize(c) != 3) continue;
+                look::Rgb &to = next.colors[next.n++];
+                to.r = (uint8_t)cJSON_GetArrayItem(c, 0)->valueint;
+                to.g = (uint8_t)cJSON_GetArrayItem(c, 1)->valueint;
+                to.b = (uint8_t)cJSON_GetArrayItem(c, 2)->valueint;
+            }
+        }
+        if (!next.n) { next.colors[0] = look::Rgb{want_r, want_g, want_b}; next.n = 1; }
+        if (cJSON_IsNumber(v = cJSON_GetObjectItemCaseSensitive(j, "block")))
+            next.block = (uint16_t)(v->valueint < 1 ? 1 : v->valueint > 64 ? 64 : v->valueint);
+        if (cJSON_IsNumber(v = cJSON_GetObjectItemCaseSensitive(j, "ms")))
+            next.ms = (uint32_t)(v->valueint < 0 ? 0 : v->valueint);
+        next.t0 = cJSON_IsNumber(v = cJSON_GetObjectItemCaseSensitive(j, "t0")) ? (int64_t)v->valuedouble
+                                                                                : hub_clock.now(local_ms64());
+        const cJSON *rs = cJSON_GetObjectItemCaseSensitive(j, "runs");
+        if (cJSON_IsArray(rs)) {
+            int i = 0;
+            const cJSON *r;
+            cJSON_ArrayForEach(r, rs) {
+                if (i >= look::MOST_RUNS) break;
+                look::Run &to = next.runs[i++];
+                if (!cJSON_IsObject(r)) continue;
+                to.given = true;
+                if (cJSON_IsNumber(v = cJSON_GetObjectItemCaseSensitive(r, "at"))) to.at = (int32_t)v->valueint;
+                if (cJSON_IsNumber(v = cJSON_GetObjectItemCaseSensitive(r, "dir"))) to.dir = v->valueint < 0 ? -1 : 1;
+                const cJSON *rgb = cJSON_GetObjectItemCaseSensitive(r, "rgb");
+                if (cJSON_IsArray(rgb) && cJSON_GetArraySize(rgb) == 3) {
+                    to.has_rgb = true;
+                    to.rgb.r = (uint8_t)cJSON_GetArrayItem(rgb, 0)->valueint;
+                    to.rgb.g = (uint8_t)cJSON_GetArrayItem(rgb, 1)->valueint;
+                    to.rgb.b = (uint8_t)cJSON_GetArrayItem(rgb, 2)->valueint;
+                }
+            }
+        }
+        cJSON_Delete(j);
+        next.tidy();
+        lk = next;
+        snprintf(said, sizeof(said), "%s", lk.id);
+        // A signal still playing keeps the strip; the look is what comes back when it is over.
+        if (!sig.running) paint();
+        say("look", said);
         return;
     }
 
@@ -764,6 +1016,7 @@ static void mqtt_event(void *arg, esp_event_base_t, int32_t id, void *data) {
             say_what_we_are();
             announce_the_light();
             say_light();
+            if (own2) { announce_the_light(1); say_light2(); }
             break;
         }
         case MQTT_EVENT_DISCONNECTED: broker_up = false; break;
@@ -1034,6 +1287,22 @@ static void housekeeping(void *) {
             }
         }
 
+        // A MOVING LOOK, about thirty frames a second, from the shared clock (look.h). Only a run whose
+        // frame came out different is sent it: a twinkle is mostly lights at rest, and a WS2812 latches
+        // (AGENTS.md section 4). A still look was painted once by paint() and is not drawn here at all.
+        // It waits for a signal or an instrument, either of which owns the strip while it runs.
+        if (lk.moving() && !instrument && !sig.running && now_ms() - look_drawn_at >= LOOK_FRAME_MS) {
+            Hold h;
+            look_drawn_at = now_ms();
+            if (lk.moving() && !instrument && !sig.running) {   // asked again under the lock
+                const int64_t t = hub_clock.now(local_ms64());
+                unsigned changed = 0;
+                for (int i = 0; i < board::OUTPUTS; i++)
+                    if (look_here(i) && lamp_on(i) && look::draw(lk, i, t, lamp_bri(i), outs[i])) changed |= 1u << i;
+                if (changed) show(changed);
+            }
+        }
+
         if (fill.running && now_ms() - fill_began > FILL_MOST_MS) end_fill("nobody stopped it");
         if (fill.running) {
             Hold h;
@@ -1104,6 +1373,59 @@ static void selftest() {
 }
 #endif
 
+#if defined(STRIP_BOARD_REVA)
+// ONE WIRE OR TWO, FOUND AT A RUN'S FIRST POWER-UP (wire.h; design/controller-panel, page "wire", C).
+//
+// Only a run that can be either (it has a clock line), that the guard has switched on, and that has
+// never been told or found its wire -- a type in NVS, from `type/set` or from here -- and never been
+// probed without an answer. So it runs once in a strip's life, at the boot where the run first lights,
+// and a hub's later `type/set` still wins because it writes the same key. Forgetting the house erases
+// both, and the next first power-up probes again. A run the guard switches on only later in the boot
+// is probed at the next one.
+//
+// The run is lit FAINTLY and BRIEFLY: the setup glow's amber at a sixteenth, about 40 ms a frame, four
+// frames, before anything else is drawn. A one-wire strip sent the clocked frame may flicker for an
+// instant -- it reads the two-wire bytes as bits of its own -- which is why the last frame is a dark
+// one on the wire the run keeps: whatever the other wire latched is gone before the glow comes on.
+static float probe_frame(int run, bool lit) {
+    px::Pixels &S = outs[run];
+    if (lit) S.solid(wire::PROBE_R, wire::PROBE_G, wire::PROBE_B);
+    else S.clear();
+    show(1u << run);
+    vTaskDelay(pdMS_TO_TICKS(wire::SETTLE_MS));
+    return guard::read_amps(run);
+}
+
+static void find_the_wire(int run) {
+    if (!two_wire_possible(run) || !guard::live(run)) return;
+    uint8_t v = 0;
+    if (nvs_get_u8(nvs, Key(run, "type"), &v) == ESP_OK) return;    // told, or found, already
+    if (nvs_get_u8(nvs, Key(run, "wprobe"), &v) == ESP_OK) return;  // probed once and it could not tell
+    Hold h;
+    const float idle = probe_frame(run, false);
+    const float one = probe_frame(run, true);
+    probe_frame(run, false);
+    float two = -1;
+    if (px::rewire(run, px::Wire::TWO)) {
+        two = probe_frame(run, true);
+        probe_frame(run, false);
+    }
+    const wire::Found found = wire::decide(idle, one, two, outs[run].count);
+    if (found != wire::TWO && px::wire(run) != px::Wire::ONE && !px::rewire(run, px::Wire::ONE))
+        ESP_LOGE(TAG, "run %d could not go back to one wire after the probe", run + 1);
+    probe_frame(run, false);
+    // A clear answer is kept exactly where `type/set` keeps one; an unclear one keeps nothing but the
+    // fact that it was asked, so the run is driven on one wire, as every strip was before, and setup
+    // asks once more instead (direction A).
+    if (found == wire::UNCLEAR) nvs_set_u8(nvs, Key(run, "wprobe"), 1);
+    else nvs_set_u8(nvs, Key(run, "type"), found == wire::TWO ? 2 : 1);
+    nvs_commit(nvs);
+    wire::report(wire_said[run], sizeof(wire_said[run]), found, idle, one, two);
+    ESP_LOGI(TAG, "run %d at first power: %s wire%s (dark %.3f A, one wire %.3f A, two wires %.3f A)", run + 1,
+             wire::word(found), found == wire::TWO ? "s" : "", idle, one, two);
+}
+#endif
+
 // Free internal DRAM, which is the one that runs out. Printed at the few moments that decide
 // whether a second BLE service fits: docs/strip.md item 12 exists because every heap figure
 // this project had written down came from the Arduino build and meant nothing here.
@@ -1148,6 +1470,11 @@ extern "C" void app_main() {
             ESP_LOGE(TAG, "run %d is a two-wire strip and SPI would not start for it", i + 1);
     }
     g_lit = lit;
+#if defined(STRIP_BOARD_REVA)
+    // Before anything is drawn, and so before the glow that says a new strip is asking to be set up:
+    // a run that has never been told its wire finds it now (find_the_wire).
+    for (int i = 0; i < board::OUTPUTS; i++) find_the_wire(i);
+#endif
     gpio_config_t btn = {};
     btn.pin_bit_mask = 1ULL << board::BUTTON;
     btn.mode = GPIO_MODE_INPUT;

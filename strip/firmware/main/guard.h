@@ -263,6 +263,12 @@ uint16_t scale(int i, const px::Pixels &p);
 // now has to be dimmer than it was sent.
 bool tick(uint32_t now);
 
+// What output `i`'s switch says its run draws right now, in amps, read fresh and averaged -- for the
+// probe that finds a run's wire at its first power-up (wire.h), which runs before the loop does and so
+// cannot wait for tick(). Negative when it cannot be read: a run that is off, or a devkit, which has
+// no monitor at all.
+float read_amps(int i);
+
 // `power`, as JSON, when there is something new to say or it has been a while; false when not. `now`
 // true says it regardless, for a broker that has just been reached.
 bool report(char *out, size_t n, uint32_t now_ms, bool now);
