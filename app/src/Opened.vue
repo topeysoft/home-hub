@@ -50,6 +50,7 @@ import { bulbColor } from './art'
 import { oklch } from './sky'
 import Icon from './Icon.vue'
 import LightPane from './panes/LightPane.vue'
+import { heldOf, quietOf } from './controller'
 import MediaPane from './panes/MediaPane.vue'
 import ClimatePane from './panes/ClimatePane.vue'
 import CoverPane from './panes/CoverPane.vue'
@@ -168,7 +169,16 @@ async function showAs(k: string) {
    and a dialogue over the top of the pane would be the "Are you sure?" health.py rules out. */
 const { armed, tap: armedTap, clear: disarm } = useArm()
 watch(() => dev.value?.id, () => disarm())
-const big = computed(() => armed.value || (dev.value ? reading(dev.value, store.tempUnit) : ''))
+/* A STRIP THE CONTROLLER IS KEEPING DARK says why HERE, in the left column, where the pane already
+   says what a light is doing (design/controller-panel/HeldPane.dc.html). The big state reads Staying off
+   where it would read Off or 75%; the sentence under it is the reason; the two supplies are as their
+   labels print them, because the label on the brick is the one thing anybody can check; and one card
+   says the next step, which is done at the controller, not here. The power button stays, disabled
+   rather than gone, and the instrument stays at half strength: a color chosen now is what the strip
+   comes back as, so nothing in it vanishes and nothing in it pretends to work. */
+const held = computed(() => heldOf(dev.value))
+const quiet = computed(() => quietOf(dev.value))
+const big = computed(() => held.value ? (held.value.state ?? 'Staying off') : armed.value || (dev.value ? reading(dev.value, store.tempUnit) : ''))
 const facts = computed(() => dev.value ? factsOf(dev.value, room.value, store.tempUnit, events.value) : [])
 const verbs = computed(() => dev.value ? verbsOf(dev.value) : [])
 const moments = computed(() => dev.value ? momentsOf(events.value, dev.value, 4, Date.now(), store.tempUnit) : [])
@@ -185,7 +195,7 @@ async function verb(id: string) {
     return
   }
   if (id === 'power') {
-    if (dead.value) return
+    if (dead.value || held.value) return
     const on = d.state === 'on' || d.state === 'playing' || (cap(d) === 'climate' && d.state !== 'off')
     armedTap(cap(d), on ? 'off' : 'on', async () => {
       try { await perform(d, on ? 'off' : 'on', undefined, { state: on ? 'off' : 'on' }) }
@@ -400,14 +410,27 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 
           <div class="opened-step s1 opened-acts">
             <button v-for="v in verbs" :key="v.id" class="ctl" :class="{ primary: v.primary, off: v.primary && !v.on, lit: !v.primary && v.on }"
-                    :disabled="dead && v.id === 'power'" :aria-label="v.label" :title="v.label" @click="verb(v.id)">
+                    :disabled="(dead || !!held) && v.id === 'power'" :aria-label="v.label" :title="v.label" @click="verb(v.id)">
               <Icon :name="v.icon" :size="v.primary ? 22 : 20" />
             </button>
           </div>
 
           <div class="opened-step s2">
-            <div class="opened-big display" :class="{ absent: dead }">{{ big }}</div>
-            <p class="pane-why" v-if="why">{{ why }}</p>
+            <div class="opened-big display" :class="{ absent: dead, held: !!held }">{{ big }}</div>
+            <template v-if="held">
+              <p class="held-text">{{ held.text }}</p>
+              <div class="held-supplies" v-if="held.set_up_on && held.now_on && held.held === 'supply'">
+                <span class="held-supply"><span class="held-supply-k">Set up on</span><span class="held-supply-v">{{ held.set_up_on }}</span></span>
+                <Icon name="chevron" :size="16" />
+                <span class="held-supply now"><span class="held-supply-k">Plugged into now</span><span class="held-supply-v">{{ held.now_on }}</span></span>
+              </div>
+              <div class="held-step">
+                <span class="held-step-icon"><Icon name="plug" :size="18" /></span>
+                <span><b>{{ held.next }}</b><small v-if="held.after">{{ held.after }}</small></span>
+              </div>
+            </template>
+            <p class="pane-why" v-else-if="why">{{ why }}<template v-if="quiet"> {{ quiet }}</template></p>
+            <p class="pane-why" v-else-if="quiet">{{ quiet }}</p>
           </div>
 
         </div>
@@ -422,7 +445,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         </div>
 
         <!-- the instrument: the control a tile is too small for -->
-        <div class="pane-rig" v-if="instrument">
+        <div class="pane-rig" :class="{ held: !!held }" v-if="instrument">
           <component :is="instrument" :device="dev" :events="events" :moments="moments" />
         </div>
       </div>

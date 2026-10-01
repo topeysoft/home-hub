@@ -1,0 +1,211 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      /* the panel's own tokens -- app/src/panel.css -- and the two pane inks it computes */
+      --bg: #0c0d10; --surface-rgb: 26,28,34; --surface: rgba(var(--surface-rgb),.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --ink-3: oklch(0.68 0.01 242); --ink-4: oklch(0.76 0.006 242);
+      --lamp-rgb: 233,184,114; --lamp: rgb(var(--lamp-rgb)); --lamp-ink: #2a1c07;
+      --live-rgb: 116,198,157; --live: rgb(var(--live-rgb));
+      --r-lg: 22px; --r-md: 16px; --r-sm: 12px;
+    }
+    .screen { position: relative; width: 1440px; height: 900px; overflow: hidden; background: var(--bg); color: var(--ink); font-size: 17px; line-height: 1.4; }
+    .abs { position: absolute; }
+    .dsp { font-weight: 400; letter-spacing: -.025em; }
+    svg.i { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+    /* the glass the bar and the round buttons are made of (.tabs, .back, .topbar-add) */
+    .glass { background-image: linear-gradient(112deg, transparent 26%, rgba(255,255,255,.11) 45%, rgba(255,255,255,.02) 56%, transparent 64%),
+                               linear-gradient(148deg, oklch(0.545 0.014 242 / .34), oklch(0.475 0.012 242 / .12) 46%, oklch(0.505 0.014 242 / .24));
+             box-shadow: inset 0 -46px 56px -48px rgba(22,43,68,.9), 0 23px 53px -26px rgba(17,35,60,.58), 0 2px 10px rgba(17,35,60,.37); }
+    .round { position: absolute; border-radius: 50%; display: grid; place-items: center; color: var(--ink-2); }
+    .tab { display: inline-flex; align-items: center; gap: 10px; height: 44px; padding: 0 22px; border-radius: 999px; font-size: 15.5px; color: var(--ink-2); }
+    .tab.on { background: rgba(255,255,255,.1); color: var(--ink); font-weight: 500; }
+    /* a card in a room, at night: the tile's glass (.tile-body is 17 18 15) */
+    .tile { position: absolute; border-radius: 24px; background: rgba(var(--surface-rgb),.62); border: 1px solid var(--edge);
+            box-shadow: 0 24px 50px -32px rgba(0,0,0,.85); padding: 17px 18px 15px; overflow: hidden; }
+    .tile .tn { display: flex; align-items: center; gap: 11px; font-size: 16px; font-weight: 500; letter-spacing: -.005em; }
+    .tile .tn svg { color: var(--ink-2); }
+    .tile .ts { position: absolute; left: 18px; right: 18px; bottom: 15px; font-size: 14.5px; color: var(--ink-2); }
+    .tile.lit { background: linear-gradient(165deg, rgba(246,226,192,.94), rgba(var(--lamp-rgb),.8) 75%); border-color: rgba(255,240,214,.5); box-shadow: 0 0 40px -10px rgba(var(--lamp-rgb),.35), 0 24px 50px -32px rgba(0,0,0,.85); }
+    .tile.lit .tn svg { color: var(--lamp-ink); }
+    .row { display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 12px; border-radius: 12px; font-size: 14.5px;
+           border: 1px solid var(--edge); background: rgba(255,255,255,.04); }
+    .row.on { background: rgba(var(--lamp-rgb),.9); color: var(--lamp-ink); border-color: transparent; font-weight: 500; }
+    .row .v { margin-left: auto; color: var(--muted); }
+    .row.on .v { color: var(--lamp-ink); }
+    .scene { height: 62px; border-radius: 16px; border: 1px solid var(--edge); background: rgba(255,255,255,.035); display: flex; align-items: center; gap: 14px; padding: 0 16px; }
+    .scene b { display: block; font-weight: 400; font-size: 16.5px; }
+    .scene small { display: block; font-size: 13px; color: var(--muted); }
+    /* the room's own line of chips (.why-line, .reading) */
+    .chipline { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px 0 12px; border-radius: 999px; font-size: 13.5px;
+                color: var(--ink-2); background: rgba(255,255,255,.08); border: 1px solid var(--edge); white-space: nowrap; }
+    .chipline .ask { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+    .reading { display: inline-flex; align-items: center; gap: 8px; height: 39px; padding: 0 14px 0 11px; border-radius: 999px; font-size: 14px; color: var(--ink-2);
+               background: rgba(var(--surface-rgb),.68); border: 1px solid var(--edge); white-space: nowrap; }
+    .reading b { color: var(--ink); font-weight: 500; }
+    /* the band (.nudge) */
+    .nudge { display: inline-flex; align-items: center; gap: 12px; height: 56px; padding: 8px 18px 8px 8px; border-radius: 26px;
+             background: linear-gradient(rgba(var(--lamp-rgb),.1), rgba(var(--lamp-rgb),.1)), rgba(var(--surface-rgb),.68); border: 1px solid rgba(var(--lamp-rgb),.3); }
+    .nudge .ni { width: 32px; height: 32px; border-radius: 10px; background: var(--lamp); color: var(--lamp-ink); display: grid; place-items: center; flex: none; }
+    .nudge b { display: block; font-size: 15px; font-weight: 500; line-height: 21px; }
+    .nudge small { display: block; font-size: 13px; line-height: 17px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    /* the setup sheet (.sheet.strip), at its shipped values */
+    .sheet { position: absolute; width: 560px; border-radius: 26px; background: rgba(22,24,30,.92); border: 1px solid var(--edge-hi);
+             box-shadow: 0 40px 100px -30px rgba(0,0,0,.9); }
+    .sheet-head { display: flex; align-items: flex-start; gap: 14px; padding: 26px 22px 6px 28px; }
+    .sheet h2 { margin: 0; flex: 1; font-size: 36px; font-weight: 400; letter-spacing: -.025em; line-height: 1.05; }
+    .sheet .over { display: block; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--lamp); margin-bottom: 8px; }
+    .x { width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,.14); display: grid; place-items: center; color: #fff; flex: none; }
+    .sheet-body { padding: 4px 28px 24px; }
+    .lede { margin: 6px 0 20px; font-size: 15px; line-height: 21px; color: var(--ink-2); }
+    .stage { position: relative; border-radius: 28px; border: 1px solid var(--edge); background: rgba(255,255,255,.03); padding: 20px 22px; margin-bottom: 18px; overflow: hidden; }
+    .caption { display: block; text-align: center; margin-top: 18px; font-size: 13px; color: var(--muted); }
+    .acts { display: flex; gap: 10px; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 49px; padding: 0 20px; border-radius: 999px;
+           background: var(--ink); color: var(--bg); font-weight: 500; font-size: 17px; white-space: nowrap; }
+    .btn.ghost { background: rgba(255,255,255,.08); color: var(--ink); border: 1px solid var(--edge); }
+    .btn.wide { display: flex; justify-content: flex-start; width: 100%; }
+    .btn.small { height: 40px; padding: 0 16px; font-size: 15px; }
+    .steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+    .steps li { display: flex; align-items: center; gap: 12px; font-size: 15px; color: var(--ink-2); }
+    .steps li.live { color: var(--ink); }
+    .tick { width: 24px; height: 24px; border-radius: 999px; border: 1px solid var(--edge-hi); display: grid; place-items: center; flex: none; }
+    .live .tick { border-color: var(--lamp); }
+    .live .tick::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--lamp); }
+    .done .tick { background: rgba(var(--live-rgb),.18); border-color: rgba(var(--live-rgb),.5); color: var(--live); }
+    /* a choice made by looking at the thing (.pick in the strip sheet) */
+    .pick { border-radius: 18px; border: 1px solid var(--edge); background: rgba(255,255,255,.03); padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+    .pick.on { border-color: rgba(var(--lamp-rgb),.6); background: rgba(var(--lamp-rgb),.1); }
+    .pick b { font-weight: 500; font-size: 15.5px; }
+    .pick small { font-size: 13px; color: var(--muted); margin-top: -6px; }
+    /* A STRIP, DRAWN THE WAY THE PANEL DRAWS ONE: 4px lights, 3px apart. --c is the light, --g its glow. */
+    .px { position: relative; height: 26px; border-radius: 4px; background: repeating-linear-gradient(90deg, rgba(255,255,255,.13) 0 4px, transparent 4px 7px); }
+    .px > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px;
+              background: repeating-linear-gradient(90deg, var(--c) 0 4px, transparent 4px 7px); filter: drop-shadow(0 0 9px var(--g)); }
+    .px.s { height: 18px; }
+    .px.xs { height: 12px; }
+    /* the pane (.opened-panel, .pane-rig, .rig-card), at the values the shipped panel computes at 1440 */
+    .pane { position: absolute; left: 0; top: 225px; width: 1440px; height: 675px; border-radius: 34px 34px 0 0; overflow: hidden;
+            background: linear-gradient(rgba(26,28,34,.8), rgba(16,17,21,.94)); box-shadow: inset 0 1.4px 0 rgba(255,255,255,.38), 0 -18px 40px -14px rgba(17,35,60,.53); }
+    .lbl { font-size: 12.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); }
+    .ctl { width: 56px; height: 56px; border-radius: 50%; background: rgba(255,255,255,.08); display: grid; place-items: center; color: var(--ink-4); }
+    .card { display: flex; align-items: center; gap: 16px; border-radius: 24px; border: 1px solid var(--edge); background: rgba(255,255,255,.05); padding: 0 22px; }
+    .card .ci { width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,.08); color: var(--lamp); display: grid; place-items: center; flex: none; }
+    .card b { display: block; font-weight: 400; font-size: 19px; line-height: 1.3; }
+    .card b em { font-style: normal; color: var(--ink-3); }
+    .card small { display: block; font-size: 14px; color: var(--ink-3); line-height: 1.4; margin-top: 2px; }
+    .sw { width: 46px; height: 46px; border-radius: 50%; box-shadow: inset 0 -2px 6px rgba(0,0,0,.24); }
+    /* ANNOTATION, NEVER PANEL: dashed, and in the board's own voice. Nothing inside one is a screen. */
+    .note { position: absolute; border: 1px dashed rgba(255,255,255,.24); border-radius: 18px; padding: 16px 18px; background: rgba(8,9,12,.8);
+            font-size: 13.5px; line-height: 1.5; color: var(--ink-2); }
+    .note b { color: var(--ink); font-weight: 500; }
+    .note .cap, .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .note p { margin: 8px 0 0; }
+    .tag { position: absolute; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .key { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11.5px; color: var(--muted); letter-spacing: 0; text-transform: none; }
+    .beats { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; }
+    .beat { height: 34px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--edge); background: rgba(255,255,255,.04); font-size: 13.5px;
+            color: var(--ink-2); display: inline-flex; align-items: center; white-space: nowrap; }
+    .beat.new { border-color: rgba(var(--lamp-rgb),.55); background: rgba(var(--lamp-rgb),.12); color: var(--ink); }
+    .beat.gone { border-style: dashed; color: var(--muted); background: none; }
+    .beats .sep { color: var(--muted); font-size: 13px; }
+    .finger { position: absolute; width: 58px; height: 58px; border-radius: 50%; background: rgba(255,255,255,.16); border: 2px solid rgba(255,255,255,.5);
+              box-shadow: 0 0 0 10px rgba(255,255,255,.06); }
+    .foot { position: absolute; border-radius: 20px; border: 1px solid var(--edge); background: rgba(255,255,255,.025); padding: 18px 22px;
+            font-size: 14.5px; line-height: 1.55; color: var(--ink-2); }
+    .foot strong { color: var(--ink); font-weight: 500; }
+  </style>
+</helmet>
+<!-- C -- IT ASKS WHICH: only the household knows whether two strips are one light, so it is asked once, with the strips as the picture. -->
+<div class="screen">
+
+  <!-- the sky at dusk, as Sky.vue draws it, and the hills the panel lays along the foot -->
+  <div class="abs" style="inset: 0; background: linear-gradient(rgb(26,30,44) 0%, rgb(39,40,60) 46%, rgb(86,60,56) 86%, rgb(60,43,42) 100%);"></div>
+  <div class="abs" style="left: -222px; top: -135px; width: 1855px; height: 1156px; background: radial-gradient(58% 54% at 30% 64%, rgba(72,63,135,.36), transparent 68%), radial-gradient(62% 52% at 54% 110%, rgba(55,51,100,.4), transparent 72%);"></div>
+  <svg class="abs" style="left: 0; top: 600px;" width="1440" height="300" viewBox="0 0 1440 300" preserveAspectRatio="none">
+    <path d="M0 110 C 220 60, 420 70, 640 104 S 1080 96, 1240 70 S 1400 66, 1440 72 V300 H0z" fill="rgb(30,31,30)"/>
+    <path d="M0 150 C 300 120, 600 150, 900 132 S 1300 118, 1440 130 V300 H0z" fill="rgb(22,23,23)"/>
+  </svg>
+  <div class="abs" style="inset: 0; background: rgba(6,7,9,0.62);"></div>
+  <div class="abs" style="left: 48px; top: 34px; right: 48px; display: flex; align-items: baseline; gap: 14px;">
+    <span class="cap" style="white-space: nowrap;">C &mdash; it asks which</span>
+    <span style="font-size: 13.5px; color: var(--muted); flex: 1;">Only the household knows whether two strips are one light. Asked once, after the first is measured, with the strips themselves as the picture.</span>
+  </div>
+  <div class="sheet" style="left: 64px; top: 96px; width: 560px;">
+    <div class="sheet-head"><h2>There&rsquo;s a second strip.</h2><span class="x"><svg class="i" width="20" height="20" viewBox="0 0 24 24" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></span></div>
+    <div class="sheet-body">
+      <p class="lede">It&rsquo;s on the same controller &mdash; the one glowing now. Is it part of the light you just set up?</p>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;"><div class="pick"><div style="display: flex; flex-direction: column; gap: 9px; padding: 8px 0 6px;"><div class="px s" style="width: 212px;"><i style="width: 100.0%; --c: var(--lamp); --g: rgba(var(--lamp-rgb),.7);"></i></div><div class="px s" style="width: 150px;"><i style="width: 100.0%; --c: var(--lamp); --g: rgba(var(--lamp-rgb),.7);"></i></div></div><b>Part of this light</b><small>On, off and colors together</small></div><div class="pick"><div style="display: flex; flex-direction: column; gap: 9px; padding: 8px 0 6px;"><div class="px s" style="width: 212px;"><i style="width: 100.0%; --c: var(--lamp); --g: rgba(var(--lamp-rgb),.7);"></i></div><div class="px s" style="width: 150px;"></div></div><b>A light of its own</b><small>Its own switch, in any room</small></div></div>
+      <p style="margin: 0; font-size: 13px; color: var(--muted);">Either way it&rsquo;s asked if it&rsquo;s red and how far it goes. This can be changed later, on the light.</p>
+    </div>
+  </div>
+
+  <div class="tag" style="left: 712px; top: 96px;">At the controller</div>
+<div class="abs" style="left: 712px; top: 124px; width: 640px; height: 230px;">
+    <svg class="abs" style="left: 0; top: 0;" width="640" height="230" viewBox="0 0 640 230">
+      <rect x="70" y="8" width="200" height="54" rx="16" fill="rgb(44,46,54)" stroke="rgba(255,255,255,.16)"/>
+      <rect x="70" y="8" width="200" height="54" rx="16" fill="url(#sheen712124)"/>
+      <defs><linearGradient id="sheen712124" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="rgba(255,255,255,.08)"/><stop offset="1" stop-color="rgba(0,0,0,.2)"/></linearGradient></defs>
+      <circle cx="246" cy="35" r="8" fill="rgb(30,31,36)"/>
+      <circle cx="246" cy="35" r="5" fill="rgb(70,72,80)"/>
+      <circle cx="104" cy="62" r="9" fill="rgb(24,25,29)" stroke="rgba(255,255,255,.22)"/>
+      <circle cx="160" cy="62" r="10" fill="rgb(24,25,29)" stroke="rgba(255,255,255,.22)"/>
+      <circle cx="212" cy="62" r="10" fill="rgb(24,25,29)" stroke="rgba(255,255,255,.22)"/>
+      <path d="M104 71 V150 Q104 166 88 166 H40" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="3"/>
+      <rect x="6" y="148" width="40" height="36" rx="7" fill="rgb(36,37,42)" stroke="rgba(255,255,255,.18)"/>
+      <path d="M160 72 V108 Q160 118 170 118 H300" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="3"/>
+      <path d="M212 72 V160 Q212 172 224 172 H300" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="3"/>
+    </svg>
+    <div class="abs" style="left: 6px; top: 190px; width: 60px; text-align: left; font-size: 12.5px; color: var(--ink-2);">12 V</div>
+    <div class="abs key" style="left: 50px; top: 76px;">power</div>
+    <div class="abs key" style="left: 168px; top: 78px; color: var(--ink-2);">1</div>
+    <div class="abs key" style="left: 220px; top: 78px; color: var(--ink-2);">2</div>
+    <div class="abs key" style="left: 282px; top: 27px;">the button</div>
+    <div class="abs" style="left: 300px; top: 105px; opacity: 0.38;"><div class="px s" style="width: 340px;"><i style="width: 100.0%; --c: var(--lamp); --g: rgba(var(--lamp-rgb),.7);"></i></div></div>
+    <div class="abs" style="left: 300px; top: 129px; font-size: 12.5px; color: var(--ink-2); white-space: nowrap;">1 &mdash; just measured, resting</div>
+    <div class="abs" style="left: 300px; top: 159px; opacity: 1;"><div class="px s" style="width: 250px;"><i style="width: 100.0%; --c: #f4efe6; --g: rgba(244,239,230,.55);"></i></div></div>
+    <div class="abs" style="left: 300px; top: 183px; font-size: 12.5px; color: var(--ink-2); white-space: nowrap;">2 &mdash; a soft white, so you can tell which</div>
+  </div>
+
+  <div class="tag" style="left: 712px; top: 420px;">Part of this light &rarr; B</div>
+  <div class="tag" style="left: 1052px; top: 420px;">A light of its own &rarr; A</div>
+  <div class="tile lit" style="left: 712px; top: 448px; width: 316px; height: 104px; ">
+    <div class="tn" style="color: var(--lamp-ink);"><svg class="i" width="18" height="18" viewBox="0 0 24 24" stroke-width="1.8"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/></svg>Under-cabinet lights</div>
+    <div class="ts"><div style="color: var(--lamp-ink);">On, 80%</div></div>
+  </div>
+  <div class="tile lit" style="left: 1052px; top: 448px; width: 154px; height: 104px; ">
+    <div class="tn" style="color: var(--lamp-ink);">Under-cabinet</div>
+    <div class="ts"><div style="color: var(--lamp-ink);">On, 80%</div></div>
+  </div>
+  <div class="tile" style="left: 1214px; top: 448px; width: 154px; height: 104px; ">
+    <div class="tn" style="">Toe-kick</div>
+    <div class="ts"><div style="">Off</div></div>
+  </div>
+
+  <div class="note" style="left: 64px; top: 504px; width: 560px;">
+    <span class="cap">And a strip plugged in months later</span>
+    <p style="margin-top: 8px;">A socket nobody set up starts drawing power the controller can measure. The band says so the way a knock
+    does &mdash; one line, <b>Something new is plugged into the kitchen controller</b> &mdash; and the tap opens this same question.</p>
+  </div>
+
+  <div class="tag" style="left: 64px; top: 752px;">The conversation</div>
+  <div class="abs beats" style="left: 64px; top: 776px;"><span class="beat ">Press it</span><span class="beat ">Wi&#8209;Fi</span><span class="beat ">Is it red?</span><span class="beat ">How far?</span><span class="sep">&middot;</span><span class="beat new">One light or two?</span><span class="beat new">Red?</span><span class="beat new">How far?</span><span class="beat new">Where?</span></div>
+
+</div>
+</x-dc>
+</body>
+</html>

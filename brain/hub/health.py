@@ -65,7 +65,12 @@ class Health:
         gone.sort(key=lambda d: since.get(d.id, float("inf")))
         faults = self.drivers(gone)
         claimed = {w["id"] for f in faults for w in f.get("with", ())}
-        return (faults + self.offline([d for d in gone if d.id not in claimed], since)
+        # A STRIP HELD DARK SORTS FIRST, because it is the one with a person's hands in the answer: the
+        # controller is protecting it, and only somebody at the controller can put it right
+        # (design/controller-panel/NeedsLookB.dc.html). It is answering, so it is never also "offline".
+        strip = getattr(self.hub, "strip", None)
+        held = strip.notes() if strip is not None and hasattr(strip, "notes") else []
+        return (held + faults + self.offline([d for d in gone if d.id not in claimed], since)
                 + self.bridges() + self.storage() + self.restarts() + (healed.notes() if healed else []) + self.update())
 
     def where(self, d) -> str:

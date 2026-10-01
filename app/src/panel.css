@@ -12102,3 +12102,184 @@ button.reading[data-held] {
   font-weight: 500;
   color: var(--ink);
 }
+
+/* ---------- a strip the controller is keeping dark (design/controller-panel/, "held": A) ----------
+   The tile stops claiming a state it cannot have. It keeps its glass and its size, and says Staying off
+   in the lamp color with the reason under it in the muted ink, a shield where the bulb was: the house's
+   attention color, never the danger one, because the strip is being looked after rather than broken.
+   The edge carries the same lamp at half, so a room with one of these reads at a glance which it is. */
+.tile.light.held {
+  border-color: rgba(var(--lamp-rgb), 0.5);
+  box-shadow:
+    0 0 0 1px rgba(var(--lamp-rgb), 0.18),
+    0 24px 50px -32px rgba(0, 0, 0, 0.85);
+}
+.tile.light.held .tile-icon {
+  background: rgba(var(--lamp-rgb), 0.12);
+  color: var(--lamp);
+}
+.held-state {
+  display: block;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--lamp);
+}
+.held-why {
+  display: block;
+  margin-top: 2px;
+  font-size: 13.5px;
+  color: var(--muted);
+}
+/* ...and the room's own line carries it first, the same chip as "Used by hand", washed in the lamp. */
+.why-line.held-line {
+  background: rgba(var(--lamp-rgb), 0.12);
+  border-color: rgba(var(--lamp-rgb), 0.42);
+  color: var(--ink);
+}
+
+/* The held light's pane, left column (design/controller-panel/HeldPane.dc.html, at its 1440 values): the
+   sentence under the big state, the two supplies as the bricks print them, and the one next step. */
+.held-text {
+  margin: 18px 0 0;
+  max-width: 500px;
+  font-size: 15.5px;
+  line-height: 1.5;
+  color: var(--ink-4, var(--ink-2));
+}
+.held-supplies {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 20px;
+  color: var(--muted);
+}
+.held-supply {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 44px;
+  padding: 0 16px;
+  border-radius: 14px;
+  border: 1px solid var(--edge);
+  background: rgba(255, 255, 255, 0.04);
+}
+.held-supply.now {
+  border-color: rgba(var(--lamp-rgb), 0.5);
+  background: rgba(var(--lamp-rgb), 0.1);
+}
+.held-supply-k {
+  font-size: 13px;
+  color: var(--ink-3, var(--muted));
+}
+.held-supply.now .held-supply-k {
+  color: var(--ink-2);
+}
+.held-supply-v {
+  font-size: 19px;
+  color: var(--ink);
+}
+.held-supply.now .held-supply-v {
+  color: var(--lamp);
+}
+.held-step {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 18px;
+  max-width: 500px;
+  min-height: 76px;
+  padding: 0 22px;
+  border-radius: 24px;
+  border: 1px solid var(--edge);
+  background: rgba(255, 255, 255, 0.05);
+}
+.held-step-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--lamp);
+}
+.held-step b {
+  display: block;
+  font-weight: 400;
+  font-size: 19px;
+  line-height: 1.3;
+}
+.held-step small {
+  display: block;
+  margin-top: 2px;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--ink-3, var(--muted));
+}
+/* the instrument, left in place at half strength: what is chosen now is what it comes back as */
+.pane-rig.held > * {
+  opacity: 0.5;
+}
+/* Needs a look's row for it wears the same lamp wash, and sorts first (the brain puts it there). */
+.notes li.note-held {
+  border-color: rgba(var(--lamp-rgb), 0.42);
+  background: rgba(var(--lamp-rgb), 0.08);
+}
+.notes li.note-held .recent-icon {
+  color: var(--lamp);
+}
+
+/* ---------- a look for the roofline, said (design/roofline/SaidC.dc.html) ----------
+   The draft card under the command box: the household's own words as chips, the motion in the lamp,
+   and the one line that says it is on the roof now and goes back if nobody keeps it. */
+.say-look {
+  margin-top: 14px;
+  padding: 20px 22px;
+  border-radius: var(--r-lg);
+  border: 1px solid rgba(var(--lamp-rgb), 0.32);
+  background: var(--surface);
+}
+.say-look-for {
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.say-look-words {
+  margin-top: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  font-size: 22px;
+  letter-spacing: -0.01em;
+}
+.say-look-word {
+  padding: 4px 12px;
+  border-radius: var(--r-sm);
+  border: 0;
+  font: inherit;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.08);
+}
+.say-look-word.on {
+  background: rgba(var(--lamp-rgb), 0.16);
+  box-shadow: inset 0 0 0 1px rgba(var(--lamp-rgb), 0.5);
+  color: var(--lamp);
+}
+.say-look-comma {
+  color: var(--muted);
+}
+.say-look-note {
+  margin: 12px 0 16px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+.say-look-live {
+  color: var(--live);
+}
+.say-look .draft-actions {
+  flex-direction: row;
+}
+

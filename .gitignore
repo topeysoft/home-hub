@@ -48,6 +48,7 @@ strip/firmware/build
 
 # Light strip controller: ESP-IDF build output and generated config
 strip/firmware/build/
+strip/firmware/build-*/
 strip/firmware/sdkconfig
 strip/firmware/sdkconfig.old
 strip/firmware/managed_components/

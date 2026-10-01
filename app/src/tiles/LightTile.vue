@@ -11,9 +11,17 @@ import DeviceArt from '../DeviceArt.vue'
 import { bulbColor, lightKind } from '../art'
 import { oklch } from '../sky'
 import { leadsFixture, partnerOf, seeing, speedWord } from '../units'
+import { heldLine, heldOf, roofTile } from '../controller'
 
 const props = defineProps<{ device: Device }>()
-const on = computed(() => props.device.state === 'on')
+/* A STRIP THE CONTROLLER IS KEEPING DARK (design/controller-panel/, "held": A, decided 1 October). The
+   tile stops claiming a state it cannot have: it says Staying off, and why, with a shield where the bulb
+   was -- in the lamp color, the house's attention color and not a danger color, because the strip is
+   being looked after rather than broken. And a tap cannot honor a light that cannot come on, so on this
+   one tile a tap opens WHY -- the light's own pane -- instead of doing nothing or flashing it on and off.
+   Nothing changes under the finger except that the answer appears (AGENTS.md §4). */
+const held = computed(() => heldOf(props.device))
+const on = computed(() => props.device.state === 'on' && !held.value)
 const dead = computed(() => isDead(props.device))
 const pending = computed(() => !!store.pending[props.device.id])
 const dimmable = computed(() => !!(props.device.attrs.supported_color_modes ?? []).some((m: string) => m !== 'onoff'))
@@ -95,8 +103,13 @@ function tapCarried() {
   const c = carried.value; if (!c || isDead(c)) return
   perform(c, c.state === 'on' ? 'off' : 'on', undefined, { state: c.state === 'on' ? 'off' : 'on' })
 }
+/* THE ROOFLINE IS ONE LIGHT, however many boxes it is (design/roofline/OneLight.dc.html): it says the
+   occasion it is showing, or which part of it is dark -- a dark garage end is not a dark house. */
+const roof = computed(() => store.roofline?.exists && store.roofline.light === props.device.id ? store.roofline : null)
 const label = computed(() => {
+  if (held.value) return held.value.state ?? 'Staying off'
   if (dead.value) return 'Not responding'
+  if (roof.value) return roofTile(props.device, roof.value)
   const base = !on.value ? 'Off' : !dimmable.value ? 'On' : `On, ${pct.value}%`
   return eye.value ? `${base} · Motion` : base
 })
@@ -104,10 +117,11 @@ const label = computed(() => {
 let startX = 0, dragging = false, el: HTMLElement | null = null
 function down(e: PointerEvent) {
   if (dead.value) return
+  if (held.value) { el = e.currentTarget as HTMLElement; dragging = false; return }
   el = e.currentTarget as HTMLElement; el.setPointerCapture(e.pointerId); startX = e.clientX; dragging = false
 }
 function move(e: PointerEvent) {
-  if (!el || !dimmable.value) return
+  if (!el || !dimmable.value || held.value) return
   if (!dragging && Math.abs(e.clientX - startX) > 8) dragging = true
   if (dragging) {
     const r = el.getBoundingClientRect()
@@ -126,6 +140,7 @@ async function up() {
   if (!el) return
   el = null
   const d = props.device
+  if (held.value) { store.opened = d; return }
   if (dragging && preview.value != null) {
     await perform(d, 'on', { brightness_pct: preview.value }, { state: 'on', attrs: { brightness: Math.round(preview.value * 2.55) } })
   } else {
@@ -136,15 +151,18 @@ async function up() {
 </script>
 
 <template>
-  <div class="tile light" :class="{ on, dead, dimmable, pending, seeing: eye }" :style="wash" role="button" :aria-label="`${name}, ${label}`" :aria-pressed="on"
-       tabindex="0" @pointerdown="down" @pointermove="move" @pointerup="up" @pointercancel="release" @lostpointercapture="release" @keydown.enter.space.prevent="perform(device, on ? 'off' : 'on', undefined, { state: on ? 'off' : 'on' })">
-    <div class="fill" :style="{ width: pct + '%' }"></div>
-    <DeviceArt :kind="kind" :state="{ on, brightness: pct / 100, color }" />
-    <span class="tile-maker" v-if="device.maker">{{ device.maker }}</span>
+  <div class="tile light" :class="{ on, dead, dimmable: dimmable && !held, pending, seeing: eye, held: !!held }" :style="wash" role="button"
+       :aria-label="held ? `${name}, ${label}. ${heldLine(held)}. Tap to see why` : `${name}, ${label}`" :aria-pressed="held ? undefined : on"
+       tabindex="0" @pointerdown="down" @pointermove="move" @pointerup="up" @pointercancel="release" @lostpointercapture="release"
+       @keydown.enter.space.prevent="held ? (store.opened = device) : perform(device, on ? 'off' : 'on', undefined, { state: on ? 'off' : 'on' })">
+    <div class="fill" v-if="!held" :style="{ width: pct + '%' }"></div>
+    <DeviceArt v-if="!held" :kind="kind" :state="{ on, brightness: pct / 100, color }" />
+    <span class="tile-maker" v-if="device.maker && !held">{{ device.maker }}</span>
     <div class="tile-body">
-      <span class="tile-icon"><Icon name="light" /></span>
+      <span class="tile-icon"><Icon :name="held ? 'shield' : 'light'" /></span>
       <span class="tile-name">{{ name }}</span>
-      <span class="tile-state">{{ label }}</span>
+      <span class="tile-state" v-if="held"><span class="held-state">{{ label }}</span><span class="held-why">{{ heldLine(held) }}</span></span>
+      <span class="tile-state" v-else>{{ label }}</span>
       <span class="machine-rows tile-carry" v-if="carried">
         <span class="machine-row" role="button" tabindex="0" :class="{ on: carried.state === 'on', dead: isDead(carried), pending: !!store.pending[carried.id] }"
               :aria-pressed="carried.state === 'on'" :title="`Hold to open ${carried.name}`"

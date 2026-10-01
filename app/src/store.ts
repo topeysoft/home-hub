@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Temitope Adeyeri
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { reactive, watch } from 'vue'
-import { doRestart, type Rung, getBridge, type Bridge, getStrip, stripLooking, type Strip, getHome, getEvents, getAmbient, getScenes, getStatus, getDiscovered, getRoutines, getAssistant, getPresence, getHealth, getSounds, connect, act, setIntent, setHomeIntent, type Room, type Device, type Home, type Event, type Ambient, type Rules, type Status, type Found, type Intent, type Routine, type Assistant, type Presence, type Note, type Sound, requestUpdate, getPhones, type Phone, type Ask, getAccounts, type Account, getShare, type Share, getHappened, type Happened, getChanges, type Changes, getSignals, type SignalsPage, type TryBrief } from './api'
+import { doRestart, type Rung, getBridge, type Bridge, getStrip, stripLooking, type Strip, getHome, getEvents, getAmbient, getScenes, getStatus, getDiscovered, getRoutines, getAssistant, getPresence, getHealth, getSounds, connect, act, setIntent, setHomeIntent, type Room, type Device, type Home, type Event, type Ambient, type Rules, type Status, type Found, type Intent, type Routine, type Assistant, type Presence, type Note, type Sound, requestUpdate, getPhones, type Phone, type Ask, getAccounts, type Account, getShare, type Share, getHappened, type Happened, getChanges, type Changes, getSignals, type SignalsPage, type TryBrief, getRoofline, type Roofline } from './api'
+import { previewHeld, previewHeldNote, previewRoofDevice, previewRoofline, previewStripBeat } from './controller'
 import { lock } from './code'
 import { isPage } from './pages'
 import { sunPosition, sunGuess, moonPhase } from './sun'
@@ -90,6 +91,8 @@ export const store = reactive({
      the same thing and is why this is not cleared to null -- see refreshBridge(). */
   bridge: null as Bridge | null,
   strip: null as Strip | null,   // a light strip being set up; hub/strip.py. One at a time, same as a bridge
+  roofline: null as Roofline | null,   // the light outside made of several boxes; hub/roofline.py. Null on a hub that predates it
+  yard: false,                         // the way round being shown on the roof, from a phone in the yard (design/roofline/TapA)
   /* SOMEBODY ASKED FOR THE STRIP SHEET -- tapped its line in the band, or its row on Add. A knock
      does not open a screen on its own any more (design/knock/, direction C with A): it is a line
      and a dot, and this is the tap that turns one into the conversation. Standing on Add counts as
@@ -560,6 +563,28 @@ export async function loadSounds() {
 export async function loadHealth() {
   if (store.status?.driver !== 'ready') return
   try { store.notes = (await getHealth()).notes } catch {}
+  /* ?held= draws a strip held dark without a controller in the room, and its row is the first one. */
+  const held = HELD_PARAM && previewHeldNote(HELD_PARAM)
+  if (held && !store.notes.some(n => n.subject === held.subject)) store.notes = [held, ...store.notes]
+}
+
+/* ---------- the strip controller and the roofline, previewed (AGENTS.md §4) ----------
+   ?held=supply|range|trips|wiring|hot|full puts the brain's words for that reason on the mock house's
+   Under-cabinet strip, and ?roofline=christmas|dark|ask|yard|done|halloween|still|none puts the boards'
+   three-box roofline in the Backyard. Both are the only way to hold these screens still beside the
+   boards they were drawn from: a real controller holds a strip dark for a reason nobody stages. */
+const HELD_PARAM = new URLSearchParams(location.search).get('held')
+const ROOF_PARAM = new URLSearchParams(location.search).get('roofline')
+function previewHouse() {
+  if (HELD_PARAM) previewHeld(store.rooms, HELD_PARAM)
+  if (ROOF_PARAM) {
+    const yard = store.rooms.find(r => r.id === 'backyard') ?? store.rooms.find(r => r.id !== 'unassigned')
+    if (yard && !yard.devices.some(d => d.id === 'roofline')) yard.devices.unshift({ ...previewRoofDevice(), room_id: yard.id })
+  }
+}
+export async function loadRoofline() {
+  if (ROOF_PARAM) { store.roofline = previewRoofline(ROOF_PARAM); store.yard ||= !!store.roofline.exists && !!store.roofline.yard; return }
+  try { store.roofline = await getRoofline() } catch { store.roofline = null }
 }
 export const routineById = (id: string) => store.routines.find(r => r.id === id)
 /** An update the hub should raise by itself, and nothing is already installing it. `offer` rather
@@ -759,7 +784,11 @@ export async function refreshStrip() {
   clearTimeout(stripTimer)
   /* ?strip= is asking to LOOK AT a beat, which is the asking (AGENTS.md §4). Without this the one
      documented way to hold a strip screen still would draw the band's line and nothing else. */
-  if (STRIP_PREVIEW) { store.strip = previewStrip(STRIP_PREVIEW); store.stripAsked = true; return }
+  if (STRIP_PREVIEW) {
+    const base = previewStrip(STRIP_PREVIEW)
+    store.strip = previewStripBeat(STRIP_PREVIEW, base) ?? base
+    store.stripAsked = true; return
+  }
   try { store.strip = await getStrip() } catch { store.strip = null }
   /* A tap belongs to the knock it answered. A strip that stops knocking while nobody is looking
      ends the job, and leaving this set would open the NEXT one by itself -- which is the whole of
@@ -803,7 +832,7 @@ export async function refreshFound() {
 function foundSoon() { clearTimeout(foundTimer); foundTimer = window.setTimeout(refreshFound, 2500) }
 
 /* ---------- lifecycle ---------- */
-function applyHome(h: Home) { store.rooms = h.rooms; store.entry = h.entry ?? []; store.homeName = h.name || ''; store.tempUnit = h.temp_unit || ''; store.loaded = true; store.error = ''; foundSoon(); if (store.homeName) document.title = store.homeName }
+function applyHome(h: Home) { store.rooms = h.rooms; previewHouse(); store.entry = h.entry ?? []; store.homeName = h.name || ''; store.tempUnit = h.temp_unit || ''; store.loaded = true; store.error = ''; foundSoon(); if (store.homeName) document.title = store.homeName }
 /** A room was set to a state by a rule or by another screen: keep the chip honest without a reload. */
 function applyIntent(i: Intent) {
   const r = store.rooms.find(r => r.id === i.room)
@@ -825,7 +854,7 @@ export async function load() {
   await refreshStatus()
   if (lock.unpaired) return                    // the join screen is up; the house answers once this phone is in
   try { applyHome(await getHome()) } catch { store.error = 'The hub is not answering.' }
-  loadAmbient(); loadRules(); loadRoutines(); loadAssistant(); loadPresence(); loadHealth(); loadSounds(); loadPhones(); loadAccounts(); loadShare()
+  loadAmbient(); loadRules(); loadRoutines(); loadAssistant(); loadPresence(); loadHealth(); loadSounds(); loadPhones(); loadAccounts(); loadShare(); loadRoofline()
 }
 let foundPoll: number | undefined
 /* The hub came back on a different build from the one this page was reading. Until it reloads, the
@@ -866,7 +895,7 @@ export async function start() {
   clearInterval(foundPoll); foundPoll = window.setInterval(refreshFound, 60000)
   refreshBridge()
   refreshStrip()
-  stop = connect({ device: applyDevice, home: applyHome, intent: applyIntent, drafts: d => { store.drafts = d; eventsSoon() }, presence: p => { store.presence = p; eventsSoon() }, phones: () => loadPhones(true), share: () => { store.shareTick++; loadShare() }, signals: t => { store.signalTry = t; if (store.signals) loadSignals() }, ambient: a => { store.ambient = a; updateSky() }, status: s => {
+  stop = connect({ device: applyDevice, home: applyHome, intent: applyIntent, drafts: d => { store.drafts = d; eventsSoon() }, presence: p => { store.presence = p; eventsSoon() }, phones: () => loadPhones(true), share: () => { store.shareTick++; loadShare() }, signals: t => { store.signalTry = t; if (store.signals) loadSignals() }, roofline: r => { if (!ROOF_PARAM) store.roofline = r }, ambient: a => { store.ambient = a; updateSky() }, status: s => {
     const was = store.status?.driver, version = store.status?.version
     store.status = s
     if (newBuild(version, s.version)) {

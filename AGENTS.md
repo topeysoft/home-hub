@@ -208,6 +208,21 @@ Do not reopen these, and do not propose around them.
 - **The Rooms tab is the ranked bento**, direction A, with quiet rooms as an index of rows and the
   bento (not the index) ending flush. `RoomGrid.vue` still serves the Stack home, Rail home and Wall
   view unchanged.
+- **A strip the controller holds dark says so where you reach for it** (1 October,
+  `design/controller-panel/`, held: A with B's row). Its tile reads Staying off with the reason, the room
+  gets a Why?, a tap opens the pane and never a switch that cannot work, and Needs a look carries its row
+  first. Running hot and the 5 A hold are the light behaving and never change the tile. A second strip is
+  asked once, with the strips as the picture, Part of this light first, and can be joined or split later
+  from its line; how many wires a strip has is the controller's to find out, and a person is asked only
+  when it says it could not tell. Pinned by `app/e2e/controller.spec.ts`; the words are
+  `brain/hub/controller.py`'s.
+- **The roofline is one light that keeps its own evenings; the occasion only decides how it looks**
+  (1 October, `design/roofline/`). Several boxes are one tile. Evenings are asked once at the end of an
+  outside light's setup, like a porch light, and an occasion still turns nothing on. The occasion owns
+  its motion and the only control is Hold it still -- there is no list of effects, and strips inside stay
+  still. A household changes a look by saying it in the command box (a fixed grammar, five words of
+  motion, no model), and it plays on the roof before it is kept. The way round is asked in the yard only
+  once a chase is wanted. `brain/hub/roofline.py`, pinned by `brain/tests/test_roofline.py`.
 
 ---
 

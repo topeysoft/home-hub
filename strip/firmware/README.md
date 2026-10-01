@@ -78,6 +78,60 @@ GPIO 5 is free on a bare devkit and is a camera pin on several of the S3 boards 
 To go back to the default, **unset** it rather than passing an empty one — `idf.py -UDATA_PIN build`. The
 value is a CMake cache entry and survives until it is removed.
 
+`-DCLOCK_PIN=6` gives the devkit a clock line too, so a two-wire strip (APA102, SK9822) can be tried on a
+bench before there is a product board to try it on. Without it the devkit has one wire, as it always had.
+
+## Rev A, the strip controller
+
+The product board (`home-hub-hardware`, `strip/strip-revA/`) is a different build of the same firmware,
+chosen when it is built, because a pin map is soldered and cannot be asked. Nothing given is the devkit,
+exactly as above; `STRIP_BOARD=reva` is the controller. Give it a build directory of its own:
+
+    idf.py -B build-reva -DSTRIP_BOARD=reva set-target esp32s3
+    idf.py -B build-reva -DSTRIP_BOARD=reva build
+    idf.py -B build-reva -p <port> flash monitor
+
+Its `sdkconfig` lives in `build-reva/`, not beside this file, so the devkit's settings and the board's never
+mix; `sdkconfig.defaults.reva` adds 16 MB of flash, `partitions-reva.csv` and the module's quad PSRAM on top
+of the usual defaults. The image is `build-reva/strip-reva.bin`, and the different name is not cosmetic: it
+is written into the image, and a strip refuses an update built for the other board. Every pin is in
+`main/board.h`, copied from the schematic's netlist; `DATA_PIN`, `CLOCK_PIN` and `BUTTON_PIN` mean nothing
+for this board and the build stops if one is set (`idf.py -UDATA_PIN`).
+
+**It has no USB socket.** It is programmed through the factory jig's pads: GND, 3.3 V, reset, BOOT, USB D−/D+
+(GPIO 19/20) and UART0 (43/44), powered through its supply socket. **Its first flash has to be by cable**,
+because `partitions-reva.csv` — like the 8 MB table every strip already in a house carries, which stays as it
+is — is the one thing an update can never change.
+
+**What it does before it lights anything** (`main/guard.h`): both runs are held off while the supply is
+measured; it is classed as a 5, 12 or 24 V supply, or out of range; and each run is switched on only if the
+supply is the kind it was first lit on. Then each frame is dimmed so a run stays under 4.75 A — less once the
+board is past 85 °C — and a run whose switch keeps tripping, or whose data line has more than 6 V on it, is
+held off until the board is next powered on. A healthy boot says, as well as the usual lines:
+
+    I (390) guard: supply 12.1 V, a 12 V supply
+    I (391) guard: run 1 on
+    I (391) guard: run 2 on
+    I (452) strip: 0.4.1  chip 2e4258  pin 11  300 lights, order grb
+    I (453) strip: board reva  run 2 on pin 13  300 lights, order grb
+
+The first boot also says `run 1 is first lit on a 12 V supply`; a later boot on a different kind of supply
+says `run 1 was set up on a 12 V supply and this one is 24 V` and leaves it dark. (Those lines are what the
+code prints. No board has printed them yet.)
+
+**A run that has never been told its wire finds it** (`main/wire.h`), once, at the first boot it lights:
+faintly on one wire, then on two, reading the switch's current monitor after each, before the setup glow.
+A clear answer is kept where `type/set` keeps one; an unclear one drives one wire and is not asked again.
+The boot says which, with the three readings, and the hub hears it on `wire` (`run2/wire`):
+
+    I (470) strip: run 1 at first power: two wires (dark 0.021 A, one wire 0.022 A, two wires 0.064 A)
+
+The thresholds it decides by have not been measured; a bench with one-wire and two-wire strips of a few
+lengths sets them. A one-wire strip may flicker for an instant during it.
+
+**The button is GPIO 4**, sealed into the wall of the box, with the devkit's rules and one more: a press
+shorter than 30 ms is a contact bouncing, not a finger.
+
 ## When a strip stays dark, run this first
 
     idf.py -p <port> -DSELFTEST=1 -DDATA_PIN=48 build flash monitor
@@ -135,7 +189,20 @@ seconds and it forgets its fabric and its settings and comes back new. Let go be
 
 A hold only counts once the button has been seen released since boot. Without that, a board whose BOOT pin is
 held or simply sits low factory-resets itself five seconds into every boot, for ever, which from the outside is
-a strip that paired once and never again.
+a strip that paired once and never again. (`main/press.h`, held to it by `test_press_native.cpp`.)
+
+## The tests that run on a Mac
+
+    c++ -std=c++17 -O1 -o /tmp/px test_pixels_native.cpp && /tmp/px
+    c++ -std=c++17 -O1 -DSTRIP_BOARD_REVA -o /tmp/px test_pixels_native.cpp && /tmp/px
+    c++ -std=c++17 -O1 -DSTRIP_BOARD_REVA -o /tmp/guard test_guard_native.cpp && /tmp/guard
+    c++ -std=c++17 -O1 -o /tmp/press test_press_native.cpp && /tmp/press
+    c++ -std=c++17 -O1 -o /tmp/uri test_hub_uri_native.cpp && /tmp/uri
+    c++ -std=c++17 -O1 -o /tmp/versions test_versions_native.cpp && /tmp/versions
+    c++ -std=c++17 -O1 -o /tmp/wire test_wire_native.cpp && /tmp/wire
+    c++ -std=c++17 -O1 -o /tmp/look test_look_native.cpp && /tmp/look
+
+On a Mac whose newest SDK will not link, add `-isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk`.
 
 ## On a Mac, the things that are not your fault
 

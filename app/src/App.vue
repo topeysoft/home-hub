@@ -18,6 +18,7 @@ import Viewer from './Viewer.vue'
 import WhySheet from './WhySheet.vue'
 import BridgeSheet from './BridgeSheet.vue'
 import StripSheet from './StripSheet.vue'
+import YardSheet from './YardSheet.vue'
 import { stripSheetOpen } from './adding'
 import HousePanel from './HousePanel.vue'
 import AskPane from './AskPane.vue'
@@ -334,6 +335,8 @@ onUnmounted(() => {
          and a dot on the + door, and this opens when somebody taps one of those or is already
          standing on Add. Once it IS a conversation, it keeps the screen the way it always did:
          stripSheetOpen() only gates the beats that are still asking. -->
+    <!-- the roofline's way round, shown on the roof while somebody stands in the yard (design/roofline/TapA) -->
+    <Transition name="sheet"><YardSheet v-if="store.yard && store.roofline?.exists && store.roofline.yard" /></Transition>
     <Transition name="sheet"><StripSheet v-if="store.strip && stripSheetOpen(store.strip.state, store.sheet, store.stripAsked, store.stripPutDown) && !(store.bridge && store.bridge.state !== 'none')" /></Transition>
     <Transition name="sheet"><CodePrompt v-if="lock.prompt" /></Transition>
 

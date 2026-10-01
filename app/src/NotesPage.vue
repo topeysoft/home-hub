@@ -36,11 +36,11 @@
  * it, the second does it. Nothing vanishes under one tap.
  */
 import { computed, ref } from 'vue'
-import { installUpdate, loadHealth, notify, openFlow, restartHub, store } from './store'
+import { deviceById, installUpdate, loadHealth, notify, openFlow, restartHub, store } from './store'
 import { checkDevice, downloadBackup, forgetBridge, forgetDevice, retryEntry, retryPart, type Act, type Note, type Rung } from './api'
 import Icon from './Icon.vue'
 
-const noteIcon = (k: string) => k === 'offline' || k === 'restart' ? 'refresh' : k === 'storage' || k === 'healed' ? 'home' : k === 'driver' ? 'switch' : k === 'bridge' ? 'wifi' : 'sparkle'
+const noteIcon = (k: string) => k === 'held' ? 'shield' : k === 'offline' || k === 'restart' ? 'refresh' : k === 'storage' || k === 'healed' ? 'home' : k === 'driver' ? 'switch' : k === 'bridge' ? 'wifi' : 'sparkle'
 
 /* A long list of quiet things folds, because five is enough to see the shape of it -- but the fold opens.
    The old list stopped at five in the BRAIN and ended with "And 3 more things are offline", a sentence
@@ -68,6 +68,9 @@ async function run(n: Note, a: Act, id: string) {
   if (a.ask && asking.value !== id) { asking.value = id; return }   // first tap asks, with the name in it
   asking.value = ''
   if (a.act === 'flow') return openFlow(a.to!)
+  /* A strip held dark: Show me opens the light's own pane, where the same sentence and the next step
+     are (design/controller-panel/NeedsLookB.dc.html). The row stays -- the strip is still dark. */
+  if (a.act === 'open') { const d = deviceById(a.to!); if (d) store.opened = d; return }
   if (a.act === 'update') return installUpdate()
   /* A restart takes this page away with it, so there is nothing to refresh afterwards and nothing to
      mark busy: the overlay is up before the tap has finished. The rung is the brain's -- this page
@@ -111,11 +114,11 @@ async function run(n: Note, a: Act, id: string) {
 <template>
   <div class="page">
     <p class="page-lede" v-if="store.notes.length">
-      The house is running. These are the parts of it that have stopped answering. Each one says what it
-      needs and what you can do about it from here.
+      The house is running. These are the parts of it that need you. Each one says what it needs and what
+      you can do about it from here.
     </p>
     <ul class="recent notes" v-if="store.notes.length">
-      <li v-for="(n, i) in shown" :key="key(n, i)" :class="{ fault: !!n.with?.length }">
+      <li v-for="(n, i) in shown" :key="key(n, i)" :class="{ fault: !!n.with?.length, 'note-held': n.kind === 'held' }">
         <span class="recent-icon"><Icon :name="noteIcon(n.kind)" :size="16" /></span>
         <span class="recent-text">
           {{ n.text }}

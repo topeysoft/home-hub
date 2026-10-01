@@ -780,13 +780,15 @@ reports the default and the one after it should be right. Nobody has looked yet.
 for the rest, because they are fixed at a strip's first flash: rollback in the bootloader, and the maker's
 keys in the image.
 
-**8. Occasions and movement.** Drawn in `design/occasion/`, no code. Signals — a strip saying something, briefly — are a different thing and are built: item 50.
+**8. Occasions and movement.** Drawn in `design/occasion/`; the roofline's half is built (item 52), and the occasion chip for lights inside is not. Signals — a strip saying something, briefly — are a different thing and are built: item 50.
 
 **9. The hardware is a devkit.** The product board needs, at minimum: a level shifter (**not optional** — a
 fill writes every frame, so the bridge puck's write-on-change workaround does not survive here), power
 injection and a real 5 V supply sized for the run, a button for recovery and factory reset, and an antenna that
 works taped behind a 65-inch television, which is a metal plane. `hardware/puck-revA/` has the shape of this
-conversation for the puck; none of it has been had for a strip.
+conversation for the puck; none of it has been had for a strip. **Since had:** the strip controller is drawn
+and its schematic generated in `home-hub-hardware` (`strip/strip-revA/`), and the firmware it needs is built
+and has never run on it, because it does not exist yet: item 51.
 
 **10. Following the television picture.** Not started, and deliberately a separate product line. The only
 universal method puts a box in the HDMI path, which needs an HDCP adopter agreement and HDMI Forum adoption —
@@ -794,6 +796,180 @@ real annual cost before a unit ships — and inserts the product into the most q
 the house, which is how these things get returned. The camera route avoids all of that and costs a camera
 pointed into a living room. **The cheap next step is neither: a capture stick and HyperHDR on a bench,
 to find out whether it feels like the screen extended or like a gimmick, before any of it is paid for.**
+
+**52. The wall says what the strip controller says, and the roofline is one light that keeps its evenings
+and does its holidays. Built from the boards chosen on 1 October; none of it has met a rev A board.** The
+household decided `design/controller-panel/` (held: A with B's row; runs: C; wire: C falling back to A)
+and `design/roofline/` (moves: A with C; evenings: B; one: C then A) on 1 October. Runs: C said it needed
+a board for changing it later before it was built, so that came first:
+`design/controller-panel/ChangeLaterC.dc.html` — the second strip's line behind the strip's row carries
+the one act, *Make it a light of its own* (asks only a room) or *Make it part of* the first (asks
+nothing), so the answer given at setup is never final.
+
+- **Why a strip is dark, where people reach for it.** The brain reads `power` (and `board`, `type`,
+  `wire`, and every `run2/` leaf) and turns it into words in `brain/hub/controller.py`, one sentence and
+  one next step per reason, Reasons.dc.html's words. They hang on the light as `attrs.strip`
+  (`Home.reports`, which a timer's `extras` cannot overwrite). The tile reads *Staying off* with the
+  reason under it and a shield; the room's line carries *The strip is staying off to protect itself ·
+  Why?* first; a tap opens the pane instead of toggling, and the pane's left column has the sentence,
+  *Set up on 12 V → Plugged into now 24 V*, and one card with the next step, the power button disabled
+  and the instrument at half strength. Needs a look carries a `held` row FIRST with *Show me*, and the
+  band says *The kitchen strip is staying off*. Its lede now says "the parts of it that need you". The
+  burn is only said the way it is true: a 24 V strip on 12 V is dark, not on fire. Running hot and the
+  5 A hold are one muted line on the pane and nothing on the tile. *The strip is new as well* was not
+  decided and is not built.
+- **A second strip.** After the first strip's length, if run 2 draws current (`PRESENT_A`, 0.05 A,
+  **unmeasured**), the sheet asks *There's a second strip.* with two pictures, *Part of this light*
+  first; then *Is it red too?* starting from the first strip's order (the second color question lights a
+  different byte when the first strip's red was byte 0 — `second_at()`), its own fill, and a second room
+  only for a light of its own. A light of its own is `run2/own/set 1`, which makes the controller
+  announce a second light (`strip_<chip>_2`); the brain finds it by unique id in the entity registry and
+  places it there. A strip plugged in later is a band line, *Something new is plugged into the kitchen
+  controller*, whose tap asks the same question. `/strip/split` and `/strip/join` are the afterwards half.
+- **One wire or two.** The controller probes at first power and says `wire` `{found: one|two|unclear}`.
+  Only *unclear* gives *Nothing at all* a job: the brain sends `type/set` the other way, asks *Is it lit
+  now?*, and *Still dark* is the real failure with the right sentence — and puts the wire back. A clear
+  reading, or a devkit that says nothing, leaves *Nothing at all* the failure it was.
+- **The roofline** (`brain/hub/roofline.py`). The first strip set up in a room whose name says outside
+  (*Outside*, *Porch*, *Back yard*, not *Front room*) becomes the Roofline and is asked its evenings once:
+  *Every evening*, *Only in an occasion*, *Not by itself*. The next outside strip is asked *Is this more of
+  the Roofline?*; more of it is folded into the first box's tile (`Home.folded`, by hardware id) and every
+  tap, scene or sentence on the tile reaches every box. Evenings come on at dusk (the sun four degrees
+  under, about twenty minutes after sunset — the boards drew 6:41 PM on Oct 24 in Holts Summit) and go
+  off at the household's end, 11:00 unless changed, by EDGES written down per date, so a roof switched off
+  at nine stays off and a brain restarted mid-evening neither relights it nor forgets eleven. An occasion
+  turns nothing on: with no evenings asked for, Christmas leaves the roof dark. Dates decide the occasion
+  (Christmas Dec 1–Jan 6, Halloween Oct 24–Nov 1, Easter Saturday to Monday by the computus, July 4th
+  Jul 3–5), and the occasion owns its motion in the boards' emitter colors; *Hold it still* is the one
+  control; strips inside are always still (`look_of(outside=False)` — no indoor light is given an
+  occasion yet, because design/occasion's chip is not built). The command box reads *Christmas: red and
+  white, twinkling quickly* by a fixed grammar (`read_look` in `hub/commands.py`: the LED color names, the
+  five words, slowly or quickly; *meteor* is answered with the five), plays it as a draft for five minutes,
+  and keeps it for that occasion only on *Keep it*. The way round is never asked until a chase is wanted
+  (`wants_order`); then the pane offers it and the yard sheet (phone-sized) starts from the order the boxes
+  were set up, every run its own color with a white head showing its way, tap twice to turn one round, one
+  white light round the whole roof to confirm. A new box puts the way round back to unknown.
+- **What the boxes are told** (all additive, never retained): `look/set` `{id, motion, colors, block, ms,
+  now, t0, runs: [{at, dir, rgb?}]}` with `p = at + dir·k` (a run going against the way round starts at
+  its far end, `at = start + n − 1`), and the clock rides in `now`, re-sent once a minute while anything
+  moves; the firmware keeps the least-late offset. The firmware half is `main/look.h` and `main/wire.h`.
+
+**Verified, 1 October:** brain 1382 tests (was 1299; `tests/test_controller.py` 38, `tests/test_roofline.py`
+45), `ruff check .` clean, coverage 84.8% (floor raised from 82 to 84); deliberate breakages — the fold
+removed from `Home.build`, the wire fallback taken without an unclear reading — each fail them. Panel: 570
+unit tests (`tests/controller.test.ts` 13 new; `tests/adding.test.ts`'s strip-row pins moved to the new
+board), `vue-tsc -p tsconfig.app.json` and `npm run build` clean, `lint:css` at its 21-warning cap,
+`e2e/controller.spec.ts` 12 arrangement tests (the held pane's instrument put back to full strength fails
+them), and the whole e2e suite 224 passed with two failures: `rest.spec.ts` "the house at rest takes a
+sheet…", which fails identically on `development` before any of this, and a timing flake in
+`strip.spec.ts` that passed on rerun. Every chosen screen was screenshotted at the board's size beside its
+board. Firmware: every native test on both profiles, five deliberate breakages, and both ESP-IDF builds.
+
+**Not proven, and most of it cannot be until a rev A board exists:** that `power` arrives as drawn; the
+0.05 A "a strip is there" line; the wire probe's thresholds and the instant of flicker it may cause; two
+boxes' clocks agreeing well enough that a chase has no seam on a real roof; the run-2 light appearing in
+Home Assistant beside the first; dusk and the evening edges over a real week; a box's place on the roof
+being renamed (`/roofline/place` exists, no screen asks it — boxes are "The first box", "The second
+box" until then); and anything on the board's Needs a look row beyond the four held reasons. The roof's
+tile still draws a lamp, not a roof — art.ts has no roofline drawing, and drawing one is an artboard
+first.
+
+**51. The strip controller's firmware is built, as a second board of this one, and nothing of it has
+touched a board.** 1 October. The product board is drawn and its schematic generated in `home-hub-hardware`
+(`strip/strip-revA/`, with `strip/parts.md` arguing every part), and its README listed what the firmware had
+to do before that board could run at all. It does those things now, behind a build option, and the devkit
+build is the same firmware it was.
+
+- **The board is chosen when it is built** (`idf.py -B build-reva -DSTRIP_BOARD=reva`; the firmware README,
+  *Rev A*). Every pin is in `main/board.h`, copied from the `PARTS` dict and the per-run loop in
+  `gen_sch.py` and checked module pin by module pin against the WROOM-1 pinout. Nothing given is the devkit:
+  the same `sdkconfig`, the same 8 MB table, the same `strip.bin`. Rev A keeps its `sdkconfig` in its own
+  build directory, so the two boards' settings never mix, and setting `DATA_PIN` or `BUTTON_PIN` for it
+  stops the build, because its pins are soldered.
+- **A 16 MB table, for rev A only** (`partitions-reva.csv`). Same names and purposes at the same small
+  offsets; the two app slots grow from 3.75 to 7.5 MB, `coredump` to 128 KB, and `storage` takes the rest.
+  `partitions-matter.csv` is untouched: every strip in a house carries it and it cannot change over the air.
+  Rev A's defaults add 16 MB of flash and the module's quad PSRAM.
+- **Two outputs**, sent together and waited for together. Run 1 keeps the devkit's own RMT channel; run 2
+  takes the one with DMA (transmit channel 3), and both fit in the S3's RMT memory. The picture is never
+  dimmed or framed in place: what goes out is a copy in internal, DMA-capable memory asked for by name, so
+  nothing on the wire is ever read from PSRAM. **A thousand lights an output** on rev A, from time rather
+  than memory: thirty microseconds a light is a 30 ms frame at a thousand, about where a run of light down
+  a drive stops reading as motion; the memory for both outputs at that length is about 18 KB against the
+  ~95 KB Matter leaves. The devkit stays at 600.
+- **Two-wire strips** (APA102, SK9822) go out on SPI2 and SPI3 at 2 MHz, as an APA102 frame with the
+  SK9822's extra latch, so one framing serves both. Which wire a run has is told to it like its order is
+  (below), and kept in NVS.
+- **The board keeps itself safe, with nobody asking** (`main/guard.h`). Both runs are held off at boot while
+  the supply is measured and classed as a **5, 12 or 24 V** supply, or out of range: below 4.3 V, above
+  30 V, or **between kinds** — a 9 V adapter or a 19 V laptop brick is not rounded to the nearest one. Each
+  run remembers the kind of supply it was **first lit on**, and on any later boot a different kind leaves
+  it dark and says why: a 12 V strip given a 24 V supply never lights. The very first time there is nothing
+  to compare with and the board says so: a new strip glows the moment it has power, because the glow is how
+  a household knows which thing is asking to be set up, so it is the first lighting that fixes what a run
+  expects; forgetting the house erases that with everything else and is the only way to move a run to a
+  different supply.
+  **Current** is predicted from every frame before it is sent — what the chips draw dark, plus each channel
+  in proportion to its byte, starting from a cautious 20 mA a channel — and the frame goes out dimmed if it
+  would draw more than **4.75 A**; the switch's current monitor then corrects the prediction, up at once and
+  down slowly, and a frame showing now that should be dimmer is sent again. Above **85 °C on the board** the
+  ceiling falls, to 1 A at 110 °C, and never to dark. The switch's own trip is under all of this and is
+  never what holds a bright picture down.
+  **Faults** are two different things and are said as two: the switch cutting its run (`switch`), and more
+  than 6 V on a run's data or clock line (`wiring`). Five trips in a minute, one that lasts five seconds, or
+  a miswired line for 100 ms holds that run off until the board is next powered on.
+- **The press is GPIO 4**, and the button logic is now `main/press.h`, held by `test_press_native.cpp` to
+  the three rules that make a sealed button outdoors harmless: nothing counts until it has been seen let go,
+  a press counts on the way up, and on rev A a press under 30 ms is a contact bouncing. A button held down by
+  ice forgets the house at most once, and the board that comes back ignores it.
+- **What the hub is told, all of it additive.** `strip/<chip>/power`, retained, JSON — the supply's volts
+  and kind, the board's temperature, and per run whether it is on, the kind it was set up on, its amps, its
+  ceiling, how far it is dimmed, its two fault lines, its trip count and the reason it is `held`, if it is
+  (`range`, `supply`, `trips`, `wiring`, `starting`). Said at once when any of that changes and every ten
+  seconds otherwise. `strip/<chip>/board` (`reva`), retained. The second run is **the same words with
+  `run2/` in front** — `run2/count/set`, `run2/order/set`, `run2/white/set`, `run2/show/set`,
+  `run2/tune/set`, `run2/fill/stop` — answered on `run2/count`, `run2/order`, `run2/fill`; until it is
+  told otherwise it shows the household's light exactly as the first run does. `type/set one|two` (and
+  `run2/type/set`) is answered on `type` — only by an output with a clock line, so a devkit says nothing it
+  did not say before. A hub that knows none of this sees a strip that behaves as it always did:
+  `brain/hub/strip.py` files a leaf it does not know and does nothing with it.
+- **An update built for the other board is refused** (`fwupdate.cpp`). The two images carry different
+  project names, and a strip checks the one it has just written before it will boot it. Trying it is not
+  harmless: a devkit image on rev A drives a current-monitor pin as its data line, never switches a run on,
+  and still reaches the hub and confirms itself.
+
+**Verified, 1 October:** the native tests — the existing six orderings, fill and signals, plus the copy
+on the wire (full scale is the picture byte for byte, dimming never brightens, the two-wire frame byte by
+byte, a white byte never reaches it), the guard (every supply window and the 9 and 19 V gaps, the divider,
+the current monitor at 1 and 5.45 A, the thermistor at 25 and 85 °C and open or shorted, the ceiling, the
+prediction dimming full white on 300 lights and leaving a glow alone, learning a hungrier strip at once,
+the trip and miswire holds) and the press — pass for the devkit and for rev A's limits, and each of four
+deliberate breakages (the supply check removed, learning up made slow, the button counted before it is let
+go, the wrong two-wire header) fails them. **Both boards build** on ESP-IDF 6.0.2 with no warnings from
+this firmware's own files: the devkit to a 1.64 MB `strip.bin` on its 8 MB table, from an `sdkconfig`
+identical to the one the unchanged tree generates (the image is 7.8 KB larger, internal RAM 2 KB more,
+`.bss` the same); rev A to a 1.68 MB `strip-reva.bin` whose header says 16 MB, whose project name is
+`strip-reva`, and whose table reads back as written, slots of 7680 KB at `0x20000` and `0x7a0000`.
+
+**Not proven, and none of it can be until a board exists.** Nothing here has run on rev A, because there is
+no rev A. So: whether the ADC reads the divider, the monitors and the thermistor as the arithmetic says
+(and whether the 6 dB calibration holds near 1.4 V); whether the switch's fault line behaves as read while
+it retries, and whether the data-line protector's asserts at power-up or under a long lead beside a strip
+at full white; whether 60 ms is long enough for a run to come up; whether 20 mA a channel is cautious
+enough for every strip people own, and whether the learned number settles rather than hunts; the RMT DMA
+channel with the bytes encoder, and two-wire strips at 2 MHz through the translator and the protector; and
+how much internal RAM Matter, BLE and Wi-Fi leave once PSRAM is on. The 16 MB table has never been
+flashed. **The devkit image compiles from the refactored code and has not been flashed either**, so the
+claim that it behaves as before rests on reading the change, not on a strip.
+
+**What the hub would need to show any of it**, none of which is built: read `power` and say one sentence
+per `held` reason on the strip's pane (`supply` is the one that matters — *this strip was set up on a 12 V
+supply and is now on a 24 V one*); ask the two setup questions of the second run with `run2/` in front,
+and ask which kind of wire a strip has; add `power`, `board`, `type` and the `run2/` leaves to the list
+`Strips.forget` clears for a strip that is unplugged; and, before rev A takes an update from a hub, keep one
+image per board and offer each strip the one its `board` names — today `StripKind`
+(`brain/hub/bridge_updates.py`) has one image, the devkit's, and the strip's own refusal is the only thing
+keeping it off a rev A. `tools/build-strip.sh` builds the devkit's image only.
 
 **50. Signals: the strip can say something now, and every one can be tried.** 24 September,
 `design/signal/`, direction A with C. Not an occasion and not an effect: one of four motions that each mean

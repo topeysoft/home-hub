@@ -41,6 +41,8 @@ is tested with a fake one, and nothing in here needs a strip on a desk to run.
 """
 import asyncio, contextlib, json, logging, time
 
+from . import controller, roofline as rooflines
+
 log = logging.getLogger("hub.strip")
 
 BASE = "strip"
@@ -96,6 +98,13 @@ MOST = 1200
 # the distance rather than anything the household did.
 FAINT = -60
 
+# EVERY RETAINED WORD ABOUT A STRIP, emptied when it is forgotten: a retained topic outlives the thing it
+# is about and would put a forgotten strip back in the house at the next broker restart. The first seven
+# are every strip's; the rest are a strip controller's (docs/strip.md item 51, "what the hub would need").
+FORGET = ("status", "count", "order", "light", "fill", "white", "room",
+          "power", "board", "type", "wire",
+          "run2/count", "run2/order", "run2/fill", "run2/type", "run2/wire", "run2/own", "run2/light")
+
 
 # ---------------------------------------------------------------- the order the colors come in
 
@@ -130,7 +139,7 @@ def narrow(seen: str, at: int, among=ORDERS) -> list[str]:
     return [o for o in among if o[at] == seen]
 
 
-def resolve(first: str, second: str | None = None) -> str | None:
+def resolve(first: str, second: str | None = None, assume: str = ASSUME) -> str | None:
     """The ordering, from one answer or two. None while it is still ambiguous.
 
     ONE TAP IS A PRIOR, NOT A PROOF, and this is the one place in the file where that is true.
@@ -139,13 +148,28 @@ def resolve(first: str, second: str | None = None) -> str | None:
     actually is. A household with the other one sees wrong colors and has a row on the light's own
     pane that asks the question again (design/strip/Later.dc.html). That row is not a nicety; it is
     the other half of this shortcut, and the shortcut is not honest without it."""
-    left = narrow(first, lit_index())
+    left = narrow(first, lit_index(assume))
     if len(left) == 1: return left[0]
-    if first == "r" and second is None: return ASSUME        # the common strip, taken on its odds
+    # The common strip, taken on its odds -- or, for a SECOND strip on the same controller, the first
+    # strip's own answer, because a second strip is so often the same make (design/controller-panel/,
+    # "runs": "its color question starts from the first strip's answer, so the same make is right in
+    # one tap"). Either way, the guess is the one that put red where it was seen.
+    if first == "r" and second is None: return assume
     if second is None: return None
-    # The second question makes red the FIRST byte, which splits whichever pair is left.
-    left = narrow(second, 0, among=left)
+    # The second question makes another byte loud, which splits whichever pair is left: the first
+    # byte, unless the first question already lit that one (a second strip whose first strip was rgb).
+    left = narrow(second, second_at(assume), among=left)
     return left[0] if len(left) == 1 else None
+
+
+def second_at(assume: str = ASSUME) -> int:
+    """Which byte the second color question makes loud. Any byte but the one the first question lit."""
+    return 0 if lit_index(assume) != 0 else 1
+
+
+def raw_at(i: int) -> str:
+    """`show/set` words for three bytes with only byte `i` loud."""
+    return "raw " + " ".join("255" if k == i else "0" for k in range(3))
 
 
 class StripError(RuntimeError):
@@ -458,20 +482,40 @@ class Strips:
         # Emptied as each one lands. See _place_later().
         self._owed: dict[str, str] = {}
         self._placer: asyncio.Task | None = None
+        # The house's id for a controller's SECOND light, where its second strip is a light of its own:
+        # strip id -> entity id, found by the unique id the controller announces it under.
+        self._run2_lights: dict[str, str] = {}
+        # What each light was last told about itself, so the wall hears only a change: entity id -> report.
+        self._reports: dict[str, dict] = {}
+        # A strip plugged into a controller's second socket after setup: strip id -> when it was noticed.
+        # The band carries one line for it, the way it carries a knock (design/controller-panel/AskWhichC).
+        self.plugged: dict[str, float] = {}
 
     # ---- what the panel sees ----
     def status(self) -> dict:
         base = {"strips": sum(1 for s in self.strips.values() if s.get("online"))}
-        if not self.job: return {**base, "state": "none"}
+        if not self.job:
+            later = self._plugged_lines()
+            return {**base, "state": "none", **({"plugged": later} if later else {})}
         j = self.job
         out = {**base, "state": j["state"], "name": j.get("label") or "A light strip"}
+        # WHICH STRIP THE QUESTION IS ABOUT, on a controller with two. The second strip is asked the same
+        # two questions as the first, and the wall says which one is lit rather than which socket it is
+        # in (design/controller-panel/AskWhichC.dc.html).
+        if j.get("run") == 2: out["run"] = 2
+        if j.get("second"): out["second"] = j["second"]
+        if j.get("placing_run") == 2: out["placing_run"] = 2
+        if j["state"] == "roofline": out["boxes"] = len(self._roofline().boxes())
+        if j["state"] == "evenings": out["evenings"] = list(rooflines.EVENINGS)
         # The panel says a different sentence for a question being asked again than for one being
         # asked the first time: somebody who came back already knows what the thing does.
         if j.get("revisit"): out["revisit"] = j["revisit"]
         if j["state"] == "working": out["step"] = j["step"]
         if j["state"] == "order":
-            # Which question is on screen: the first is a yes/no, the second is the three primaries.
-            out["asking"] = "red" if j.get("first") is None else "which"
+            # Which question is on screen: the first is a yes/no, the second is the three primaries,
+            # and a third -- only when the controller could not tell how many wires a strip has -- is
+            # "is it lit now?", asked after it has been sent its colors the other way.
+            out["asking"] = "lit" if j.get("trying") else ("red" if j.get("first") is None else "which")
         if j["state"] == "length": out["lit"] = j.get("lit", 0)
         # Four counts of one to six, read off the light itself. The panel draws four steppers and
         # sends back what somebody counted; nothing here is typed and nothing is printed on the
@@ -602,7 +646,40 @@ class Strips:
             # a reboot, a knock and a press all happen well inside that, so the hub can still believe
             # the old connection is alive while the household stands over the strip that replaced it.
             # A message ARRIVING is a fact with a time on it; "online" is only a guess about now.
-            if s["online"]: self._arrived.add(id_)
+            if s["online"]:
+                self._arrived.add(id_)
+                # A box that has just arrived has forgotten its look: it keeps one in memory only.
+                rl = getattr(self.hub, "roofline", None)
+                if rl and id_ in rl.chips(): rl.heard_online(id_)
+        # WHAT THE CONTROLLER SAYS ABOUT ITSELF (docs/strip.md item 51), all of it retained and all of
+        # it additive: a devkit says none of it. `power` is the one the wall reads -- why a run is dark,
+        # if it is -- and each change is carried to the light it belongs to (hub/controller.py).
+        elif leaf == "power":
+            s["power"] = controller.read(payload)
+            self._told(id_)
+        elif leaf == "board": s["board"] = str(payload or "").strip() or None
+        elif leaf in ("type", "run2/type"):
+            s.setdefault("types", {})[2 if leaf.startswith("run2/") else 1] = str(payload or "").strip() or None
+        elif leaf in ("wire", "run2/wire"):
+            # How many wires the controller found the strip to have, at its first power (design/
+            # controller-panel/, "wire", C): one, two, or unclear -- and only unclear asks anybody.
+            try: got = json.loads(str(payload or "")) if payload else None
+            except ValueError: got = None
+            s.setdefault("wire", {})[2 if leaf.startswith("run2/") else 1] = got if isinstance(got, dict) else None
+        elif leaf.startswith("run2/"):
+            r2 = s.setdefault("run2", {})
+            sub = leaf[5:]
+            if sub == "count":
+                try: r2["count"] = int(str(payload).strip())
+                except ValueError: pass
+            elif sub == "order": r2["order"] = str(payload or "").strip() or None
+            elif sub == "own":
+                r2["own"] = str(payload or "").strip() == "1"
+                self._told(id_)
+            if (self.job and self.job.get("id") == id_ and sub == "fill" and self.job.get("run") == 2
+                    and self.job.get("state") == "length"):
+                try: self._set("length", lit=int(str(payload).strip()))
+                except ValueError: pass
         elif leaf == "count":
             try: s["count"] = int(str(payload).strip())
             except ValueError: pass
@@ -626,7 +703,7 @@ class Strips:
         # waiting for a room, and you are back watching the fill. Reported from a real house on
         # 21 September, three times in a row, which is exactly how often a late message lands.
         if (self.job and self.job.get("id") == id_ and leaf == "fill"
-                and self.job.get("state") == "length"):
+                and self.job.get("state") == "length" and self.job.get("run", 1) == 1):
             try: self._set("length", lit=int(str(payload).strip()))
             except ValueError: pass
         if self._woke and not self._woke.is_set(): self._woke.set()
@@ -1065,14 +1142,31 @@ class Strips:
         return None
 
     # ---- the order the colors come in ----
+    def _leaf(self, leaf: str) -> str:
+        """A run's own word: the first strip's as it has always been, the second's with `run2/` in
+        front (docs/strip.md item 51)."""
+        return ("run2/" if (self.job or {}).get("run") == 2 else "") + leaf
+
+    def _assume(self) -> str:
+        """What the strip is guessed to be before anybody has looked: the common strip -- or, for the
+        second strip on a controller, whatever the first turned out to be."""
+        return (self.job or {}).get("assume") or ASSUME
+
     async def _show_red(self):
         j = self.job
-        r, g, b = probe()
+        r, g, b = probe(self._assume())
         # `raw`, not a color: these three bytes go out exactly as given. Putting them through the
         # strip's mapping would be applying the very guess the question exists to test, and the
         # firmware refuses to do it for that reason (strip/firmware/src/pixels.h, raw3).
-        await self._tell(j["id"], "show/set", f"raw {r} {g} {b}")
+        await self._tell(j["id"], self._leaf("show/set"), f"raw {r} {g} {b}")
         self._set("order", first=None)
+
+    def _unclear(self) -> bool:
+        """Did the controller say it could not tell how many wires this strip has? Only then is
+        "nothing at all" worth one more look (design/controller-panel/, "wire": C falling back to A)."""
+        j = self.job or {}
+        seen = ((self.strips.get(j.get("id") or "") or {}).get("wire") or {}).get(j.get("run", 1)) or {}
+        return seen.get("found") == "unclear"
 
     async def saw(self, what: str) -> dict:
         """What the household can see on the strip right now.
@@ -1081,31 +1175,58 @@ class Strips:
         board and answers a completely different question: a three-byte frame sent to a strip that
         carries a separate white channel misaligns by a byte a pixel and comes out as a candy-stripe
         rather than one color. Nobody has to be taught to give that answer, and it is not a fault.
-        'nothing' is a fault, and goes somewhere else."""
+
+        'nothing' is a fault -- unless the controller said it could not tell how many wires the strip
+        has. Then it is the fourth answer given a job: the strip is sent its colors the other way and
+        asked once more, 'lit' or 'dark' (design/controller-panel/TryAgainA.dc.html). Still dark is the
+        real failure, and the sentence after it is finally the right one."""
         if not self.job or self.job["state"] != "order":
             raise StripError("Nothing is asking about colors just now.")
         j = self.job
         what = (what or "").strip().lower()
+        if j.get("trying"):
+            if what == "lit":
+                # The other way was right. It is kept on the strip (`type/set` is written down there,
+                # like the order), and the color question starts again on the wire it has now.
+                j["trying"] = None
+                await self._show_red()
+                return self.status()
+            if what == "dark":
+                # Put it back the way the controller left it, so the failure is about power, which it is.
+                await self._tell(j["id"], self._leaf("type/set"), j.pop("trying"))
+                return self._fail("Nothing lit up either way, so no power is reaching it. Check the strip "
+                                  "is plugged in at both ends, and that its supply is on.")
+            raise StripError("Is it lit now, or still dark?")
         if what == "nothing":
+            if self._unclear() and not j.get("tried"):
+                was = ((self.strips.get(j["id"]) or {}).get("types") or {}).get(j.get("run", 1)) or "one"
+                other = "two" if was != "two" else "one"
+                j["tried"] = True
+                j["trying"] = was
+                await self._tell(j["id"], self._leaf("type/set"), other)
+                r, g, b = probe(self._assume())
+                await self._tell(j["id"], self._leaf("show/set"), f"raw {r} {g} {b}")
+                self._set("order", first=None)
+                return self.status()
             return self._fail("Nothing lit up. Check the strip is plugged in at both ends.")
         if what == "stripes":
             # Four channels per pixel. Say so, keep the order question open, and ask it again with
             # frames the strip's own width so the colors mean something.
             j["white"] = True
-            await self._tell(j["id"], "white/set", "1")
+            await self._tell(j["id"], self._leaf("white/set"), "1")
             await self._show_red()
             return self.status()
         seen = {"red": "r", "green": "g", "blue": "b"}.get(what)
         if not seen: raise StripError("That is not one of the colors it can be showing.")
         if j.get("first") is None:
-            order = resolve(seen)
+            order = resolve(seen, assume=self._assume())
             j["first"] = seen
             if order: return await self._settled(order)
-            # Still two possible. Make red the FIRST byte this time, which splits whichever pair it is.
-            await self._tell(j["id"], "show/set", "raw 255 0 0")
+            # Still two possible. Make another byte loud this time, which splits whichever pair it is.
+            await self._tell(j["id"], self._leaf("show/set"), raw_at(second_at(self._assume())))
             self._set("order")
             return self.status()
-        order = resolve(j["first"], seen)
+        order = resolve(j["first"], seen, assume=self._assume())
         if not order:
             return self._fail("That strip is not one this hub knows how to drive.")
         return await self._settled(order)
@@ -1113,17 +1234,19 @@ class Strips:
     async def _settled(self, order: str) -> dict:
         j = self.job
         j["order"] = order
+        if j.get("run") == 2: j["order2"] = order
+        else: j["order1"] = order
         # NOT RETAINED, and none of the three setup commands is (item 31, decided 22 September).
         # The strip writes each of these into its own NVS, so a retained copy on the broker is a
         # second source of truth that is replayed at every reconnect and silently wins when it is
         # stale. These are only ever said to a strip that is online and standing in front of
         # somebody, so there is nothing for a retain to rescue.
-        await self._tell(j["id"], "order/set", order)
+        await self._tell(j["id"], self._leaf("order/set"), order)
         # Somebody who came back to fix the colors did not ask to be walked through the length again.
         # And the probe is handed back: at first setup the fill that follows takes the strip over, but
         # here nothing follows, so without this the strip stays the red it was asked about.
         if j.get("revisit"):
-            await self._tell(j["id"], "show/set", "off")
+            await self._tell(j["id"], self._leaf("show/set"), "off")
             self._set("ready")
             return self.status()
         return await self._fill()
@@ -1131,7 +1254,7 @@ class Strips:
     # ---- how long it is ----
     async def _fill(self) -> dict:
         j = self.job
-        await self._tell(j["id"], "show/set", "fill")
+        await self._tell(j["id"], self._leaf("show/set"), "fill")
         self._set("length", lit=0)
         return self.status()
 
@@ -1145,17 +1268,86 @@ class Strips:
         if not self.job or self.job["state"] != "length":
             raise StripError("Nothing is being measured just now.")
         j = self.job
-        got = await self._ask(j["id"], "fill/stop", "1", want="count", timeout=ANSWER_WAIT)
+        got = await self._ask(j["id"], self._leaf("fill/stop"), "1", want=self._leaf("count"), timeout=ANSWER_WAIT)
         try: n = int(str(got).strip())
         except (TypeError, ValueError):
             return self._fail("The strip did not say how long it is. Try that again.")
         n = max(1, min(MOST, n))
-        j["count"] = n
+        if j.get("run") == 2:
+            j["count2"] = n
+            self.strips.setdefault(j["id"], {}).setdefault("run2", {})["count"] = n
+        else:
+            j["count"] = n
         # Not retained: the strip remembers its own length. See order/set above.
-        await self._tell(j["id"], "count/set", str(n))
+        await self._tell(j["id"], self._leaf("count/set"), str(n))
         # A strip that is already in a room keeps it. Asking again would be the panel forgetting
         # something the household told it once.
-        self._set("ready" if j.get("revisit") else "room")
+        if j.get("revisit"):
+            self._set("ready")
+            return self.status()
+        if j.get("run") == 2:
+            # The second strip has its answers. Part of the light: it is the light the first one is,
+            # and the room question that follows is that light's. A light of its own: the controller
+            # announces it as one, and it gets its own room after the first.
+            if j.get("second") == "own": await self._tell(j["id"], "run2/own/set", "1")
+            if j.get("later"):
+                return await self._after_second()
+            self._set("room")
+            return self.status()
+        # A SECOND STRIP ON THE SAME CONTROLLER (design/controller-panel/, "runs": C). Asked once,
+        # right after the first is measured, with the strips themselves as the picture: the first
+        # rests, the second glows a soft white so it can be told apart.
+        if self._second_strip_there(j["id"]):
+            await self._tell(j["id"], "show/set", "off")
+            await self._tell(j["id"], "run2/show/set", "raw 90 90 90")
+            self._set("second")
+            return self.status()
+        self._set("room")
+        return self.status()
+
+    def _second_strip_there(self, id_: str) -> bool:
+        """Is something plugged into this controller's second socket? Only rev A has one, and only its
+        `power` report can say: a run with a strip on it draws even when it is dark."""
+        runs = controller.runs((self.strips.get(id_) or {}).get("power"))
+        return any(r["run"] == 2 and r["strip"] for r in runs)
+
+    async def second(self, as_: str) -> dict:
+        """Part of this light, or a light of its own. Either way it is asked if it's red and how far it
+        goes, starting from the first strip's answer, so the same make is right in one tap."""
+        if not self.job or self.job["state"] != "second":
+            raise StripError("Nothing is asking about a second strip just now.")
+        if as_ not in ("part", "own"):
+            raise StripError("Part of this light, or a light of its own?")
+        j = self.job
+        first = j.get("order1") or (self.strips.get(j["id"]) or {}).get("order") or ASSUME
+        j.update(second=as_, run=2, assume=first, first=None)
+        await self._show_red()
+        return self.status()
+
+    async def second_later(self, id_: str) -> dict:
+        """The band's "Something new is plugged into the controller", tapped: the same question, months on."""
+        if self.job:
+            raise StripError("Something else is being set up just now. One at a time.")
+        known = self.strips.get(id_)
+        if not known or not known.get("online"):
+            raise StripError("That controller is not answering just now.")
+        self.job = {"state": "none", "id": id_, "label": self._label(known), "first": None, "later": True,
+                    "order1": known.get("order"), "count": known.get("count", ASSUMED)}
+        self.plugged.pop(id_, None)
+        await self._tell(id_, "run2/show/set", "raw 90 90 90")
+        self._set("second")
+        return self.status()
+
+    async def _after_second(self) -> dict:
+        """The second strip, set up months after the first: part of its light is done now; a light of
+        its own still needs a room."""
+        j = self.job
+        if j.get("second") == "own":
+            j["placing_run"] = 2
+            self._set("room")
+        else:
+            await self._tell(j["id"], "run2/show/set", "off")
+            self._set("ready")
         return self.status()
 
     async def again(self) -> dict:
@@ -1174,8 +1366,20 @@ class Strips:
         from a model string."""
         out = []
         for i, v in sorted(self.strips.items()):
-            out.append({"id": i, "online": bool(v.get("online")), "count": v.get("count"),
-                        "order": v.get("order"), "device": await self._device_for(i)})
+            row = {"id": i, "online": bool(v.get("online")), "count": v.get("count"),
+                   "order": v.get("order"), "device": await self._device_for(i)}
+            # A CONTROLLER WITH A SECOND STRIP (design/controller-panel/ChangeLaterC.dc.html): the pane's
+            # strip row says two strips, or that this light shares a controller with another, and the
+            # second strip's line carries the act that joins or splits them. `light` and `light2` are
+            # the house's ids for each strip's light, so a pane knows which strip it is drawing.
+            r2 = v.get("run2") or {}
+            if r2.get("count"):
+                own = bool(r2.get("own"))
+                row["run2"] = {"count": r2["count"], "order": r2.get("order"), "own": own}
+                row["light"] = self._light_of(i, 1)
+                if own: row["light2"] = await self._run2_light(i)
+            if v.get("board"): row["board"] = v["board"]
+            out.append(row)
         return out
 
     async def _device_for(self, id_: str) -> str | None:
@@ -1228,17 +1432,30 @@ class Strips:
         if heard:
             await self._tell(id_, "forget", "1")
             await asyncio.sleep(0.8)      # long enough for it to empty its own topics before we empty them
-        for leaf in ("status", "count", "order", "light", "fill", "white", "room"):
+        # And what a strip CONTROLLER retains as well (docs/strip.md item 51): how it is powered, which
+        # board it is, how many wires each strip has and how it found out, and its second strip's own
+        # words -- including the second light, if that strip was a light of its own.
+        for leaf in FORGET:
             try:
                 await self.hub.ha.call("mqtt", "publish", {},
                                        topic=f"{BASE}/{id_}/{leaf}", payload="", retain=True)
             except Exception as e:
                 log.info("strip %s: could not clear %s (%s)", id_, leaf, e)
-        try:
-            await self.hub.ha.call("mqtt", "publish", {},
-                                   topic=f"homeassistant/light/{BASE}_{id_}/config", payload="", retain=True)
-        except Exception as e:
-            log.info("strip %s: could not clear its light (%s)", id_, e)
+        for light in (f"{BASE}_{id_}", f"{BASE}_{id_}_2"):
+            try:
+                await self.hub.ha.call("mqtt", "publish", {},
+                                       topic=f"homeassistant/light/{light}/config", payload="", retain=True)
+            except Exception as e:
+                log.info("strip %s: could not clear its light (%s)", id_, e)
+        # Forgetting a box takes it out of the Roofline and nothing else.
+        rl = getattr(self.hub, "roofline", None)
+        if rl is not None: rl.leave(id_)
+        for lid in list(self._lights(id_)):
+            self._reports.pop(lid, None)
+            reports = getattr(getattr(self.hub, "home", None), "reports", None)
+            if reports is not None: reports.pop(lid, None)
+        self.plugged.pop(id_, None)
+        self._run2_lights.pop(id_, None)
         self.strips.pop(id_, None)
         self._devices.pop(id_, None)
         if id_ in (self.hub.settings.get("strip_fw") or {}):     # the updater's record goes with it
@@ -1301,7 +1518,7 @@ class Strips:
 
     REVISIT = ("colors", "length")
 
-    async def revisit(self, id_: str, what: str) -> dict:
+    async def revisit(self, id_: str, what: str, run: int = 1) -> dict:
         """Ask one of the setup questions again about a strip that is already in.
 
         BOTH ANSWERS GO STALE, and none of the ways are unusual. A strip gets cut down to fit a shelf.
@@ -1329,6 +1546,12 @@ class Strips:
             raise StripError("That light strip is not answering just now.")
         self.job = {"state": "none", "id": id_, "label": self._label(known),
                     "first": None, "revisit": what, "count": known.get("count", ASSUMED)}
+        # THE SECOND STRIP'S OWN QUESTIONS, from its own line behind the strip's row (ChangeLaterC): the
+        # same conversation, with run2/ in front of every word, starting from what it was last told.
+        if int(run or 1) == 2:
+            if not (known.get("run2") or {}).get("count"):
+                raise StripError("That controller has only one strip set up.")
+            self.job.update(run=2, assume=(known.get("run2") or {}).get("order") or known.get("order") or ASSUME)
         if what == "colors":
             await self._show_red()
         else:
@@ -1340,6 +1563,18 @@ class Strips:
         if not self.job or self.job["state"] != "room":
             raise StripError("There is no light strip waiting for a room.")
         j = self.job
+        if j.get("placing_run") == 2:
+            # The second strip's own room, for a light of its own. Its colors and length are its own
+            # already; this is the last thing it is asked.
+            j["room2"] = room_id
+            await self._tell(j["id"], "run2/show/set", "off")
+            if not await self._put_in_room(f"{j['id']}#2", room_id):
+                self._owed[f"{j['id']}#2"] = room_id
+                self._keep_placing()
+            if j.get("later"):
+                self._set("ready")
+                return self.status()
+            return await self._finish()
         j["room"] = room_id
         # Not retained: the strip remembers its own room. See order/set above.
         await self._tell(j["id"], "room/set", room_id)
@@ -1352,8 +1587,248 @@ class Strips:
                      j["id"], room_id)
             self._owed[j["id"]] = room_id
             self._keep_placing()
+        if j.get("second") == "own":
+            # "Only a light of its own adds a room question" (AskWhichC). It is asked second, and the
+            # second strip glows while it is, so it is clear which one the room is for.
+            j["placing_run"] = 2
+            await self._tell(j["id"], "run2/show/set", "raw 90 90 90")
+            self._set("room")
+            return self.status()
+        return await self._finish()
+
+    def _roofline(self):
+        rl = getattr(self.hub, "roofline", None)
+        if rl is None:
+            rl = self.hub.roofline = rooflines.Roofline(self.hub)
+        return rl
+
+    async def _finish(self) -> dict:
+        """The last beats, only for a light that is outside (design/roofline/).
+
+        A roofline already in the house: "Is this more of the Roofline, or a light of its own?" -- one
+        tap, and it is never a second tile (OneLight.dc.html). No roofline yet: this one is the
+        roofline, and it is asked its evenings, once, the way a porch light would be (EveningsB)."""
+        j = self.job
+        name = self._room_name(j.get("room") or "") if j.get("room") else ""
+        if not rooflines.is_outside(name):
+            self._set("ready")
+            return self.status()
+        rl = self._roofline()
+        if j["id"] in rl.chips():
+            self._set("ready")
+            return self.status()
+        if rl.exists():
+            self._set("roofline")
+            return self.status()
+        rl.begin(j["id"], await self._device_for(j["id"]))
+        self._set("evenings")
+        return self.status()
+
+    async def more_of_the_roofline(self, more: bool, place: str = "") -> dict:
+        """The answer to "Is this more of the Roofline, or a light of its own?"."""
+        if not self.job or self.job["state"] != "roofline":
+            raise StripError("Nothing is asking about the roofline just now.")
+        j = self.job
+        if more:
+            self._roofline().join(j["id"], await self._device_for(j["id"]), place)
         self._set("ready")
         return self.status()
+
+    async def evenings(self, mode: str) -> dict:
+        """The answer to "Most rooflines are on from dusk until bedtime. Shall this one?"."""
+        if not self.job or self.job["state"] != "evenings":
+            raise StripError("Nothing is asking about evenings just now.")
+        try: self._roofline().set_evenings(mode)
+        except ValueError as e: raise StripError(str(e))
+        self._set("ready")
+        return self.status()
+
+    # ---- the second strip, afterwards (design/controller-panel/ChangeLaterC.dc.html) ----
+    async def split(self, id_: str, room_id: str) -> dict:
+        """Make the second strip a light of its own. It asks only a room: its colors and length go with
+        it, because they were always its own."""
+        known = self._for_tuning(id_)
+        if not (known.get("run2") or {}).get("count"):
+            raise StripError("That controller has only one strip set up.")
+        await self._tell(id_, "run2/own/set", "1")
+        known.setdefault("run2", {})["own"] = True
+        if not await self._put_in_room(f"{id_}#2", room_id, tries_for=0):
+            self._owed[f"{id_}#2"] = room_id
+            self._keep_placing()
+        self.hub.log.add("strip", id_, "part", "own", source="user")
+        self._told(id_)
+        return {"id": id_, "own": True, "room": room_id}
+
+    async def join(self, id_: str) -> dict:
+        """Make the second strip part of the first strip's light. It asks nothing: it takes that light's
+        room, name and switch, keeps its own colors and length, and its tile goes -- the tile leaving is
+        the confirmation, the way a scene's row empties."""
+        known = self._for_tuning(id_)
+        await self._tell(id_, "run2/own/set", "0")
+        known.setdefault("run2", {})["own"] = False
+        self._run2_lights.pop(id_, None)
+        self.hub.log.add("strip", id_, "own", "part", source="user")
+        self._told(id_)
+        return {"id": id_, "own": False}
+
+    def _plugged_lines(self) -> list[dict]:
+        """One band line per controller with a strip in a socket nobody set up."""
+        out = []
+        for id_, at in sorted(self.plugged.items()):
+            known = self.strips.get(id_) or {}
+            if not known.get("online") or (known.get("run2") or {}).get("count"): continue
+            where = self._where_is(id_)
+            out.append({"id": id_, "since": at,
+                        "text": f"Something new is plugged into the {where.lower()} controller" if where
+                                else "Something new is plugged into a strip controller"})
+        return out
+
+    def _noticed(self, id_: str) -> None:
+        """A strip in the second socket that setup never asked about: drawing power, no length."""
+        known = self.strips.get(id_) or {}
+        if self.job and self.job.get("id") == id_: return
+        if not known.get("count") or (known.get("run2") or {}).get("count"): return
+        if self._second_strip_there(id_):
+            if id_ not in self.plugged: self.plugged[id_] = time.time()
+        else:
+            self.plugged.pop(id_, None)
+
+    # ---- what each light says about itself (design/controller-panel/, "held": A with B's row) ----
+    def _where_is(self, id_: str) -> str:
+        """The room a controller's first light is in, by name, or ''."""
+        lid = self._light_of(id_, 1)
+        home = getattr(self.hub, "home", None)
+        d = home.devices.get(lid) if (home is not None and lid) else None
+        room = home.rooms.get(d.room_id) if d is not None else None
+        return room.name if room is not None and room.id != "unassigned" else ""
+
+    def _light_of(self, id_: str, run: int) -> str | None:
+        """The house's id for the light a run belongs to. Run 2 is the first light unless it is its own."""
+        home = getattr(self.hub, "home", None)
+        if home is None or not hasattr(home, "devices"): return None
+        if run == 2 and ((self.strips.get(id_) or {}).get("run2") or {}).get("own"):
+            return self._run2_lights.get(id_)
+        hw = self._devices.get(id_)
+        if not hw: return None
+        own2 = self._run2_lights.get(id_)
+        for d in home.devices.values():
+            if d.hw == hw and d.capability == "light" and d.id != own2: return d.id
+        return None
+
+    def _lights(self, id_: str) -> dict[str, list[int]]:
+        """Each light this controller is part of, and which of its runs make it up."""
+        known = self.strips.get(id_) or {}
+        r2 = known.get("run2") or {}
+        out: dict[str, list[int]] = {}
+        first = self._light_of(id_, 1)
+        if first: out[first] = [1]
+        if r2.get("count"):
+            lid = self._light_of(id_, 2)
+            if lid: out.setdefault(lid, []).append(2)
+        return out
+
+    def report(self, id_: str) -> dict[str, dict]:
+        """What each of this controller's lights should say about itself, by entity id."""
+        power = (self.strips.get(id_) or {}).get("power")
+        home = getattr(self.hub, "home", None)
+        out = {}
+        for lid, runs in self._lights(id_).items():
+            d = home.devices.get(lid) if home is not None else None
+            said = controller.light(power, runs, d.name if d is not None else "")
+            out[lid] = said or {}
+        return out
+
+    def _told(self, id_: str) -> None:
+        """A controller said something about itself: carry it to its lights, if it changed anything.
+        Finding the lights may need the house's registry, so it is done off the message's own path."""
+        self._noticed(id_)
+        try: asyncio.get_running_loop().create_task(self._carry(id_))
+        except RuntimeError: pass
+
+    async def _carry(self, id_: str) -> None:
+        await self._device_for(id_)
+        if ((self.strips.get(id_) or {}).get("run2") or {}).get("own"): await self._run2_light(id_)
+        self.carry(id_)
+
+    def carry(self, id_: str) -> list[str]:
+        """Put each light's report where the panel reads it -- the device's own attrs, under `strip` --
+        and say so for every light whose report changed. Returns the ids that changed."""
+        home = getattr(self.hub, "home", None)
+        if home is None or not hasattr(home, "reports"): return []
+        changed = []
+        for lid, said in self.report(id_).items():
+            if self._reports.get(lid) == said: continue
+            self._reports[lid] = said
+            if said: home.reports[lid] = {"strip": said}
+            else: home.reports.pop(lid, None)
+            d = home.devices.get(lid)
+            if d is not None:
+                d.attrs = {k: v for k, v in d.attrs.items() if k != "strip"}
+                if said: d.attrs["strip"] = said
+                self.hub._broadcast(json.dumps({"type": "device", "device": d.__dict__}))
+            changed.append(lid)
+        return changed
+
+    def notes(self) -> list[dict]:
+        """Needs a look's rows: one for each light that is held dark, first, because it is the one with a
+        person's hands in the answer (design/controller-panel/NeedsLookB.dc.html). The row is the brain's
+        words, and its one act opens the light's own pane, where the same sentence and the next step are."""
+        home = getattr(self.hub, "home", None)
+        out = []
+        if home is None: return out
+        rl = getattr(self.hub, "roofline", None)
+        folded = set()
+        if rl is not None and rl.exists():
+            lead = rl.lead()
+            folded = {d.id for d in rl.members(lead.id)} if lead is not None else set()
+        for lid, said in sorted(self._reports.items()):
+            if not said or not said.get("held") or lid in folded: continue
+            d = home.devices.get(lid)
+            if d is None: continue
+            room = home.rooms.get(d.room_id)
+            where = " · ".join(x for x in ((room.name if room is not None and room.id != "unassigned" else None), "a light strip") if x)
+            out.append({"kind": "held", "subject": lid, "since": None, "where": where, "name": d.name,
+                        "text": said["row"], "band": self._band(d, room, said),
+                        "acts": [{"do": "Show me", "act": "open", "to": lid}]})
+        return out
+
+    @staticmethod
+    def _band(d, room, said: dict) -> str:
+        """The band's few words for it: "The kitchen strip is staying off"."""
+        verb = "is staying off" if said.get("state") == "Staying off" else "has switched off"
+        if room is not None and room.id != "unassigned": return f"The {room.name.lower()} strip {verb}"
+        return f"{d.name} {verb}"
+
+    def box_health(self, id_: str) -> dict:
+        """One box of a roofline, as its pane row says it: Fine, or Dark and why, in the words its guard
+        already reports. Never "unavailable" (design/roofline/OneLight.dc.html)."""
+        known = self.strips.get(id_) or {}
+        if not known.get("online"):
+            return {"state": "Not answering", "sub": "It may be unplugged, or out of reach of the Wi‑Fi."}
+        power = known.get("power")
+        dark = [r for r in controller.runs(power) if r["held"]]
+        if not dark: return {"state": "Fine", "sub": ""}
+        said = controller.held(dark[0]["held"], power, dark[0]["run"]) or {}
+        tile = said.get("tile") or ""
+        return {"state": "Dark", "held": dark[0]["held"],
+                "sub": f"{tile[0].upper() + tile[1:]}. {said.get('next', '')}." if tile else said.get("text", "")}
+
+    async def _run2_light(self, id_: str) -> str | None:
+        """The house's id for a controller's second light, found by the unique id it is announced under.
+        Cached once found and never when not, like `_device_for`."""
+        known = self._run2_lights.get(id_)
+        if known: return known
+        want = f"{BASE}_{id_}_2"
+        try:
+            rows = await self.hub.ha.send("config/entity_registry/list") or []
+        except Exception as e:
+            log.info("strip: could not read the house's lights (%s)", e)
+            return None
+        for e in rows:
+            if e.get("unique_id") == want and e.get("entity_id"):
+                self._run2_lights[id_] = e["entity_id"]
+                return e["entity_id"]
+        return None
 
     def _keep_placing(self) -> None:
         """One task, for as long as any room is still owed."""
@@ -1374,7 +1849,7 @@ class Strips:
                     self._owed.pop(id_, None)
                     # The wall is saying "it will be in X once the house notices it"; this is the
                     # moment that stops being true, so it is told rather than left to a poll.
-                    if self.job and self.job.get("id") == id_: self._set(self.job["state"])
+                    if self.job and self.job.get("id") == id_.split("#")[0]: self._set(self.job["state"])
         for id_, room_id in self._owed.items():
             log.warning("strip %s: gave up putting it in %s; it is in the house but unplaced",
                         id_, room_id)
@@ -1389,21 +1864,36 @@ class Strips:
 
         It is worth more than one try: the strip announces itself over MQTT discovery and Home
         Assistant makes the device a moment later, so the room can be chosen before there is anything
-        to put in it."""
+        to put in it.
+
+        `id_` ending in `#2` is a controller's second light, which shares the first's hardware and so
+        is moved on its own, as the one light and not the device."""
         # PLACE_WAIT is read here rather than taken as a default, because a default is bound when
         # this file is imported and the suite shrinks the constant to keep itself quick.
         end = time.monotonic() + (PLACE_WAIT if tries_for is None else tries_for)
+        chip, second = id_.split("#")[0], id_.endswith("#2")
         while True:
-            dev = await self._device_for(id_)
-            if dev:
-                try:
-                    await self.hub.ha.send("config/device_registry/update",
-                                           device_id=dev, area_id=room_id)
-                    log.info("strip %s: put in %s", id_, room_id)
-                    return True
-                except Exception as e:
-                    log.warning("strip %s: the house would not move it (%s)", id_, e)
-                    return False
+            if second:
+                lid = await self._run2_light(chip)
+                if lid:
+                    try:
+                        await self.hub.ha.send("config/entity_registry/update", entity_id=lid, area_id=room_id)
+                        log.info("strip %s: its second light put in %s", chip, room_id)
+                        return True
+                    except Exception as e:
+                        log.warning("strip %s: the house would not move its second light (%s)", chip, e)
+                        return False
+            else:
+                dev = await self._device_for(chip)
+                if dev:
+                    try:
+                        await self.hub.ha.send("config/device_registry/update",
+                                               device_id=dev, area_id=room_id)
+                        log.info("strip %s: put in %s", chip, room_id)
+                        return True
+                    except Exception as e:
+                        log.warning("strip %s: the house would not move it (%s)", chip, e)
+                        return False
             if time.monotonic() >= end: return False
             await asyncio.sleep(1.0)
 

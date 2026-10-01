@@ -197,6 +197,15 @@ class Home:
         self.leads: dict[str, str] = {}    # hardware id -> which part of a fixture is the tile ("fan" or "light"), where the owner has said; fan otherwise. Kept in settings with `kinds`
         self.hardware: dict[str, dict] = {}   # driver device id -> {"name", "manufacturer", "model"}: what the maker called the unit, for naming new things
         self.kinds: dict[str, str] = {}    # device id -> what the owner said it is. Kept here so a rebuild carries it; the hub loads and saves it with the rest of the settings
+        # What a device has said about ITSELF that HA does not carry -- a strip controller holding a strip
+        # dark, and why (hub/controller.py). Merged into its attrs like `extras`, but never replaced by a
+        # timer's: device id -> {"strip": {...}}. Written by hub/strip.py.
+        self.reports: dict[str, dict] = {}
+        # LIGHTS FOLDED INTO ANOTHER LIGHT'S TILE: a roofline of several boxes is ONE light on the wall
+        # (design/roofline/OneLight.dc.html). Hardware id of a box -> hardware id of the box whose light is
+        # the tile. A folded light stays a device -- rules, the log and a tap on the roofline still reach
+        # it -- and is only left out of its room's list. Written by hub/roofline.py.
+        self.folded: dict[str, str] = {}
 
     def attrs_for(self, eid, cap, a):
         """HA's attributes plus what the brain knows. While the brain runs a fan timer the fan is on whatever the
@@ -206,6 +215,7 @@ class Home:
         if cap == "camera" and eid in self.lamps: out["light"] = self.lamps[eid]
         if eid in self.eyes: out["motion"] = self.eyes[eid]
         out.update(self.fixtures.get(eid, {}))
+        out.update(self.reports.get(eid, {}))
         if extra.get("fan_until", 0) > time.time(): out["fan_mode"] = "on"
         if cap.split(".")[0] == "light" and eid in self.color_pinned: out["color_pinned"] = True
         return out
@@ -271,6 +281,7 @@ class Home:
             d.guess = guessed_kind(cap, s["attributes"].get("device_class") or e.get("original_device_class"), words)
             d.kind = self.shown_as(eid, cap, d.guess)
             self.devices[eid] = d
+            if cap == "light" and d.hw and d.hw in self.folded: continue   # part of another light's one tile
             self.rooms[room].devices.append(d)
         # A camera with a lamp built in: the viewer offers the lamp beside the picture, the way Ring's own app does.
         # The lamp stays a light of its own as well, so the room and its scenes can use it like any other.

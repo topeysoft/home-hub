@@ -1,0 +1,363 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08); --surface-press: rgba(255,255,255,.13);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp-rgb: 233,184,114; --lamp: rgb(var(--lamp-rgb)); --lamp-ink: #2a1c07;
+      --live-rgb: 116,198,157; --live: rgb(var(--live-rgb));
+      --danger-rgb: 224,138,138; --danger: rgb(var(--danger-rgb));
+      --r-lg: 22px; --r-md: 16px; --r-sm: 12px;
+    }
+    .board { position: relative; width: 1440px; height: 900px; overflow: hidden; background: var(--bg); color: var(--ink); font-size: 17px; line-height: 1.4; }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .t1 { font-size: 16px; font-weight: 500; }
+    .t2 { font-size: 13.5px; color: var(--muted); line-height: 1.45; }
+    p { margin: 0; }
+    b, strong { font-weight: 500; color: var(--ink); }
+
+    /* the glass every card on the wall is made of (.tile, computed from the shipped panel) */
+    .glass { border-radius: 26px; border: 1px solid var(--edge);
+      background: linear-gradient(112deg, transparent 26%, rgba(255,255,255,.15) 45%, rgba(255,255,255,.02) 56%, transparent 64%),
+                  linear-gradient(148deg, oklch(.36 .014 275 / .34), oklch(.29 .012 275 / .12) 46%, oklch(.32 .014 275 / .24));
+      box-shadow: inset 0 -46px 56px -48px rgba(14,16,22,.9), 0 28px 63px -26px rgba(10,11,18,.69), 0 2px 10px rgba(10,11,18,.3);
+      backdrop-filter: blur(26px) saturate(1.68) brightness(1.057); }
+    .plate { border-radius: 26px; background: rgba(255,255,255,.035); box-shadow: inset 0 0 0 1px rgba(255,255,255,.07); }
+
+    /* the scene card in the evening's rail, and the chips in it (.bento .scene-card) */
+    .scene-card { display: flex; flex-direction: column; padding: 20px 18px 18px; }
+    .scene-card-when { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); }
+    .scenes { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+    .scene { display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: 12px; padding: 12px 14px 12px 10px;
+             min-height: 74px; border-radius: 18px; background: rgba(255,255,255,.07); border: 1px solid transparent; cursor: pointer; }
+    .scene-icon { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; background: var(--surface-press); color: var(--ink); }
+    .scene.active { background: linear-gradient(rgba(var(--lamp-rgb),.14), rgba(var(--lamp-rgb),.14)), rgba(255,255,255,.07); border-color: rgba(var(--lamp-rgb),.4); }
+    .scene.active .scene-icon { background: var(--lamp); color: var(--lamp-ink); }
+    .scene-label { display: block; font-size: 16px; font-weight: 500; line-height: 1.2; }
+    .scene-hint { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-top: 2px; font-size: 12.5px; color: var(--ink-2); line-height: 1.25; }
+
+    /* a line in the band (.nudge, top-nav variant) */
+    .nudge { display: inline-grid; grid-template-columns: auto 1fr; align-items: center; gap: 12px; padding: 8px 18px 8px 8px; border-radius: 26px;
+             background: linear-gradient(rgba(var(--lamp-rgb),.1), rgba(var(--lamp-rgb),.1)), var(--surface); border: 1px solid rgba(var(--lamp-rgb),.3); }
+    .nudge.quiet { background: var(--surface); border-color: var(--edge); }
+    .nudge-icon { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; background: var(--lamp); color: var(--lamp-ink); }
+    .nudge.quiet .nudge-icon { background: var(--surface-hi); color: var(--ink-2); }
+    .nudge-title { display: block; font-size: 15px; font-weight: 500; }
+    .nudge-sub { display: block; font-size: 13px; color: var(--ink-2); }
+
+    /* buttons the way the panel draws them */
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 44px; padding: 0 20px; border-radius: 999px;
+           font-size: 15px; font-weight: 500; background: rgba(255,255,255,.08); color: var(--ink); border: 1px solid var(--edge); cursor: pointer; white-space: nowrap; }
+    .btn.go { background: #f1eee8; color: #16171b; border-color: transparent; }
+    .btn.lamp { background: var(--lamp); color: var(--lamp-ink); border-color: transparent; }
+    .lbl { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+    .row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 18px; background: rgba(255,255,255,.05); }
+    .ico { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; background: rgba(255,255,255,.08); color: var(--ink-2); }
+    .pick { display: flex; gap: 6px; padding: 4px; border-radius: 999px; background: rgba(255,255,255,.05); box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); }
+    .pick span { flex: 1; text-align: center; padding: 8px 12px; border-radius: 999px; font-size: 13.5px; color: var(--ink-2); cursor: pointer; white-space: nowrap; }
+    .pick span.on { background: rgba(255,255,255,.12); color: var(--ink); }
+
+    /* the argument, beside the drawing */
+    .arg { border-radius: var(--r-lg); border: 1px solid var(--edge); background: rgba(255,255,255,.03); padding: 18px 22px; }
+    .arg .cap { display: block; margin-bottom: 10px; }
+    .arg p { font-size: 14.5px; line-height: 1.55; color: var(--ink-2); }
+    .arg p + p { margin-top: 8px; }
+    .arg.for { border-color: rgba(var(--live-rgb),.28); background: linear-gradient(rgba(var(--live-rgb),.05), rgba(var(--live-rgb),.05)), rgba(255,255,255,.02); }
+    .arg.for .cap { color: var(--live); }
+    .arg.against { border-color: rgba(var(--danger-rgb),.3); background: linear-gradient(rgba(var(--danger-rgb),.05), rgba(var(--danger-rgb),.05)), rgba(255,255,255,.02); }
+    .arg.against .cap { color: var(--danger); }
+    .arg.key { border-color: rgba(var(--lamp-rgb),.3); background: linear-gradient(rgba(var(--lamp-rgb),.07), rgba(var(--lamp-rgb),.07)), rgba(255,255,255,.02); }
+    .arg.key p { color: var(--ink); }
+    .arg.not { border-style: dashed; border-color: rgba(var(--danger-rgb),.35); background: rgba(var(--danger-rgb),.035); }
+    .arg.not .cap { color: rgba(var(--danger-rgb),.85); }
+    .dead { color: rgba(255,255,255,.28); text-decoration: line-through; text-decoration-color: rgba(var(--danger-rgb),.5); }
+
+    /* the board's own controls -- not the panel: these flip what the drawing shows */
+    .try { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+    .try .cap { margin-right: 6px; }
+    .flip { font-size: 12.5px; padding: 5px 11px; border-radius: 999px; border: 1px dashed rgba(255,255,255,.22); color: var(--ink-2); cursor: pointer; white-space: nowrap; }
+    .flip.on { border-style: solid; border-color: rgba(var(--lamp-rgb),.7); color: var(--lamp); background: rgba(var(--lamp-rgb),.08); }
+
+    /* outside: the house at dusk, and its roofline */
+    .yard { position: absolute; overflow: hidden; border-radius: 26px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.07); }
+    .house { position: absolute; left: 0; top: 0; width: 900px; height: 340px; transform-origin: 0 0; }
+    .px { position: absolute; width: 5px; height: 5px; margin: -2.5px 0 0 -2.5px; border-radius: 50%; background: var(--c1); box-shadow: 0 0 6px 1px var(--c1); }
+    .px.off { background: rgba(255,255,255,.13); box-shadow: none; }
+    .px.dim { opacity: .45; }
+    .box { position: absolute; width: 20px; height: 9px; margin: -4.5px 0 0 -10px; border-radius: 3px; background: #2e313b; box-shadow: inset 0 0 0 1px rgba(255,255,255,.28); }
+    .box-tag { position: absolute; transform: translate(-50%, 0); font-size: 12px; color: var(--ink-2); white-space: nowrap; letter-spacing: .02em; }
+    .seam { position: absolute; width: 30px; height: 30px; margin: -15px 0 0 -15px; border-radius: 50%; border: 2px dashed rgba(var(--danger-rgb),.95); box-shadow: 0 0 0 4px rgba(var(--danger-rgb),.12); }
+    .yard-cap { position: absolute; left: 22px; top: 18px; right: 22px; display: flex; justify-content: space-between; align-items: baseline; gap: 16px; }
+    .yard-cap .when { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: rgba(255,255,255,.62); }
+    .yard-cap .what { font-size: 14px; color: var(--ink-2); text-align: right; }
+
+    /* the motions. Colors come in as --c1..--c3 per light; time is given by each light's delay */
+    @keyframes ch2 { 0%, 49.9% { background: var(--c1); box-shadow: 0 0 6px 1px var(--c1); } 50%, 100% { background: var(--c2); box-shadow: 0 0 6px 1px var(--c2); } }
+    @keyframes ch3 { 0%, 33.2% { background: var(--c1); box-shadow: 0 0 6px 1px var(--c1); } 33.3%, 66.5% { background: var(--c2); box-shadow: 0 0 6px 1px var(--c2); } 66.6%, 100% { background: var(--c3); box-shadow: 0 0 6px 1px var(--c3); } }
+    @keyframes dr { 0%, 100% { background: var(--c1); box-shadow: 0 0 6px 1px var(--c1); } 33% { background: var(--c2); box-shadow: 0 0 6px 1px var(--c2); } 66% { background: var(--c3); box-shadow: 0 0 6px 1px var(--c3); } }
+    @keyframes tw { 0%, 100% { opacity: .55; } 7% { opacity: 1; filter: brightness(1.7); } 16% { opacity: .55; } }
+    @keyframes fl { 0% { opacity: .92; } 12% { opacity: .5; } 20% { opacity: 1; } 34% { opacity: .66; } 49% { opacity: .95; } 63% { opacity: .45; } 78% { opacity: .88; } 100% { opacity: .92; } }
+    @keyframes hd { 0% { background: #fff; box-shadow: 0 0 10px 3px #fff; opacity: 1; } 9% { background: var(--c1); box-shadow: 0 0 6px 1px var(--c1); opacity: 1; } 30%, 100% { background: var(--c1); box-shadow: 0 0 4px var(--c1); opacity: .5; } }
+    @keyframes sweep { 0% { transform: translateX(-30px); } 100% { transform: translateX(30px); } }
+
+  </style>
+</helmet>
+
+<div class="board">
+  <div style="position: absolute; inset: 0; background: linear-gradient(rgb(29,33,46) 0%, rgb(41,42,63) 44%, rgb(72,55,58) 88%, rgb(52,40,42) 100%);"></div>
+  <div style="position: absolute; inset: 0; background: rgba(6,7,9,.6);"></div>
+
+  <div style="position: absolute; left: 48px; top: 34px; width: 1344px; display: flex; justify-content: space-between; align-items: flex-start; gap: 24px;">
+    <div style="min-width: 0;">
+      <span class="cap">B &mdash; the roofline has evenings of its own</span>
+      <h1 class="dsp" style="margin: 10px 0 0; font-size: 34px; white-space: nowrap;">When is the roof&rsquo;s. What it looks like is the season&rsquo;s.</h1>
+      <p style="margin-top: 6px; font-size: 16px; color: var(--ink-2); max-width: 820px;">Like a porch light, it keeps its own hours, set once. The occasion still turns nothing on.</p>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 8px; align-items: flex-end; width: 560px; flex: 0 0 auto; padding-top: 2px;"><div class="try"><span class="cap">Moment</span><sc-for list="{{moments}}" as="f"><span class="{{f.cls}}" onClick="{{f.go}}">{{f.label}}</span></sc-for></div><div class="try"><span class="cap">Its evenings</span><sc-for list="{{modes}}" as="f"><span class="{{f.cls}}" onClick="{{f.go}}">{{f.label}}</span></sc-for></div></div>
+  </div>
+  <div class="plate" style="position: absolute; left: 48px; top: 172px; width: 560px; height: 318px; padding: 20px 22px; display: flex; flex-direction: column; gap: 12px;">
+    <span class="lbl">On the Roofline&rsquo;s own pane &middot; because it is outside</span>
+    <div style="border-radius: 22px; background: rgba(255,255,255,.04); box-shadow: inset 0 0 0 1px rgba(255,255,255,.1); padding: 16px 18px; display: flex; flex-direction: column; gap: 12px;">
+      <div style="display: flex; align-items: center; gap: 14px;">
+        <span class="ico" style="width: 38px; height: 38px; border-radius: 50%; color: var(--lamp);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg></span>
+        <span><span style="display: block; font-size: 18px;">Its evenings</span><span style="display: block; font-size: 14px; color: var(--muted);">On at dusk, off at 11:00</span></span>
+        <span style="margin-left: auto; font-size: 13.5px; color: var(--lamp);">Change</span>
+      </div>
+      <div class="pick"><sc-for list="{{modes2}}" as="h"><span class="{{h.cls}}" onClick="{{h.go}}">{{h.label}}</span></sc-for></div>
+    </div>
+    <p style="font-size: 14px; color: var(--ink-2); line-height: 1.5;">Asked once, at the end of setting up a light that is outside: <i>&ldquo;Most rooflines are on from dusk until bedtime. Shall this one?&rdquo;</i> &mdash; and it can be said no to.</p>
+    <p style="font-size: 14px; color: var(--ink-2); line-height: 1.5;">Tonight it shows: <b>{{shows}}</b></p>
+  </div>
+  <div class="yard" style="left: 632px; top: 172px; width: 760px; height: 318px; background: {{sky}};">
+    
+      <svg width="760" height="318" style="position: absolute; left: 0; top: 0;">
+        <ellipse cx="-11" cy="248" rx="46" ry="78" fill="#0e1015"/>
+        <ellipse cx="767" cy="262" rx="38" ry="62" fill="#0f1116"/>
+        <rect x="0" y="306" width="760" height="12" fill="#0b0c10"/>
+      </svg>
+    <div style="position: absolute; left: 29px; top: 45px;">
+      <div style="position: absolute; left: 0; top: 0; width: 702px; height: 265px;">
+        <svg width="702" height="265" viewBox="0 0 900 340" style="position: absolute; left: 0; top: 0;">
+          <path d="M452 196 L500 128 L828 128 L878 196 Z" fill="#1a1c25"/>
+          <rect x="466" y="196" width="398" height="140" fill="#15171e"/>
+          <rect x="690" y="238" width="150" height="98" rx="3" fill="#1b1e27" stroke="#24272f"/>
+          <path d="M690 262h150M690 286h150M690 310h150" stroke="#22252e"/>
+          <rect x="520" y="228" width="120" height="50" rx="2" fill="{{win}}"/>
+          <path d="M30 202 L250 72 L470 202 Z" fill="#1d2029"/>
+          <rect x="56" y="196" width="388" height="140" fill="#17191f"/>
+          <rect x="226" y="132" width="48" height="40" rx="2" fill="{{win}}" opacity=".7"/>
+          <rect x="96" y="232" width="74" height="54" rx="2" fill="{{win}}"/>
+          <rect x="330" y="232" width="74" height="54" rx="2" fill="{{win}}"/>
+          <rect x="224" y="244" width="52" height="92" rx="2" fill="#1f2229" stroke="#2a2d36"/>
+          <circle cx="266" cy="292" r="2" fill="#5b5e66"/>
+          <polyline points="40,196 250,76 460,196 870,196" fill="none" stroke="#2b2e38" stroke-width="3" stroke-linejoin="round"/>
+          <rect x="0" y="334" width="900" height="6" fill="#0b0c10"/>
+        </svg>
+        <sc-for list="{{px}}" as="p"><span class="px {{p.cls}}" style="left: {{p.x}}px; top: {{p.y}}px; --c1: {{p.c1}}; --c2: {{p.c2}}; --c3: {{p.c3}}; animation: {{p.an}};"></span></sc-for>
+        <sc-for list="{{boxes}}" as="b"><span class="box" style="left: {{b.x}}px; top: {{b.y}}px;"></span><span class="box-tag" style="left: {{b.x}}px; top: {{b.ty}}px;">{{b.tag}}</span></sc-for>
+        
+        
+      </div>
+    </div>
+    <div class="yard-cap"><span class="when">{{when}}</span><span class="what">{{what}}</span></div>
+  </div>
+  <div style="position: absolute; left: 48px; top: 514px; width: 1344px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; align-items: start;">
+    
+    <div class="plate" style="padding: 20px 22px;">
+      <span class="cap">When the roof comes on by itself</span>
+      <div style="margin-top: 16px; font-size: 12.5px; color: var(--muted); display: flex; justify-content: space-between; width: 360px;"><span>Jan</span><span>Apr</span><span>Jul</span><span>Oct</span><span>Dec</span></div>
+      <div style="position: relative; margin-top: 6px; width: 360px; height: 8px; border-radius: 4px; background: rgba(255,255,255,.07);">
+        <sc-for list="{{occSpans}}" as="s"><span style="position: absolute; top: 0; height: 8px; border-radius: 2px; left: {{s.left}}px; width: {{s.width}}px; background: {{s.color}};"></span></sc-for>
+      </div>
+      <div style="margin-top: 4px; font-size: 12px; color: var(--muted);">Occasions</div>
+      <div style="position: relative; margin-top: 10px; width: 360px; height: 8px; border-radius: 4px; background: rgba(255,255,255,.07);">
+        <sc-for list="{{onSpans}}" as="s"><span style="position: absolute; top: 0; height: 8px; border-radius: 2px; left: {{s.left}}px; width: {{s.width}}px; background: {{s.color}}; opacity: {{s.op}};"></span></sc-for>
+      </div>
+      <div style="margin-top: 4px; font-size: 12px; color: var(--muted);">{{onLabel}}</div>
+
+      <div style="margin-top: 18px; font-size: 12.5px; color: var(--muted); display: flex; justify-content: space-between; width: 360px;"><span>4 PM</span><span>8 PM</span><span>midnight</span><span>3 AM</span></div>
+      <div style="position: relative; margin-top: 6px; width: 360px; height: 8px; border-radius: 4px; background: rgba(255,255,255,.07);">
+        <sc-for list="{{daySpans}}" as="s"><span style="position: absolute; top: 0; height: 8px; border-radius: 2px; left: {{s.left}}px; width: {{s.width}}px; background: {{s.color}}; opacity: {{s.op}};"></span></sc-for>
+        <span style="position: absolute; top: -5px; width: 2px; height: 18px; border-radius: 1px; background: #f1eee8; left: {{nowX}}px;"></span>
+      </div>
+      <div style="margin-top: 4px; font-size: 12px; color: var(--muted);">{{dayLabel}}</div>
+      <p style="margin-top: 14px; font-size: 14px; color: var(--ink-2); line-height: 1.5;"><b>{{momentLabel}}.</b> {{why}}</p>
+    </div>
+    <div class="arg for" style=""><span class="cap">For</span><p>The rule stays whole. An occasion still turns nothing on; the roof comes on because <b>the roof</b> was asked to keep evenings, in words, on its own pane, by the household, once. That is a porch light, and nobody distrusts a porch light at dusk.</p><p>And it separates two questions that A tied together: when (the light&rsquo;s, all year) and how it looks (the season&rsquo;s). Halloween in A is a new kind of thing; here it is the same chip as Christmas.</p></div>
+    <div class="arg against" style=""><span class="cap">Against</span><p>Two places to look when the roof does something: its pane for when, the bar for how. A household asking &ldquo;why is it on?&rdquo; needs the answer to name the right one.</p><p>And &ldquo;Only in an occasion&rdquo; quietly brings A back as a setting &mdash; which may be the honest answer for a roof nobody wants lit in March.</p></div>
+  </div>
+
+</div>
+</x-dc>
+<script data-dc-script data-props='{"moment": {"editor": "enum", "options": ["Oct 24, dusk", "Oct 24, 11:20 PM", "Jul 9, dusk", "Dec 20, 3 AM"], "default": "Oct 24, dusk", "section": "When"}, "evenings": {"editor": "enum", "options": ["Every evening", "Only in an occasion", "Not by itself"], "default": "Every evening", "section": "The Roofline"}}'>
+/* THE ROOF THESE BOARDS ARE ABOUT. One house, drawn once: a gable over the door and a long eave
+   to the garage. Three controllers, one where each run starts, as direction C in the hardware
+   repository has it: a box at the left foot of the gable with one run up it; a box at the right
+   foot with two runs, one up the same gable to meet the first at the peak and one along the eave;
+   and a box at the garage end with one run coming back along the eave to meet that. Four runs,
+   and two of them run AGAINST the way you would walk round the house -- which is the whole of
+   question three, and is true of nearly every real roof, because a run always leaves its box. */
+const ROOF = (() => {
+  const P0 = [40, 196], P1 = [250, 76], P2 = [460, 196], M = [665, 196], P3 = [870, 196]
+  const runs = [
+    { id: 'A1', box: 'A', from: P0, to: P1 },
+    { id: 'B1', box: 'B', from: P2, to: P1 },
+    { id: 'B2', box: 'B', from: P2, to: M },
+    { id: 'C1', box: 'C', from: P3, to: M },
+  ]
+  const SP = 8.6
+  for (const r of runs) {
+    const dx = r.to[0] - r.from[0], dy = r.to[1] - r.from[1], L = Math.hypot(dx, dy)
+    r.n = Math.floor(L / SP); r.pts = []
+    for (let j = 0; j < r.n; j++) { const f = (j + 0.5) / r.n; r.pts.push([r.from[0] + dx * f, r.from[1] + dy * f]) }
+  }
+  // the way round the house, left to right, and whether each run goes against it
+  const order = [['A1', false], ['B1', true], ['B2', false], ['C1', true]]
+  const boxes = { A: P0, B: P2, C: P3 }
+  return { runs, order, boxes, byId: Object.fromEntries(runs.map(r => [r.id, r])) }
+})()
+
+/* Emitter colors, not screen colors (AGENTS.md section 4): what the LED is asked for, saturated, with the
+   off-channels near zero. The panel's own pastels never reach the roof. */
+const LED = { red: '#ff2d24', green: '#14d860', orange: '#ff7410', purple: '#9a45ff', white: '#fff1dc', blue: '#2a63ff',
+              warm: '#ffc775', pink: '#ff7fc0', mint: '#5ff0b8', lilac: '#a98cff', gold: '#ffb21e' }
+
+const OCCASIONS = {
+  'Christmas': { colors: [LED.red, LED.green], motion: 'chase', block: 4, dur: 2.8, season: 'Dec 1 – Jan 6', day: 'Sat, Dec 19', bulbs: 'Reds and greens, one each, still',
+                 words: 'Red and green, chasing each other slowly', icon: 'M12 3L5 19h14zM12 19v2M9.5 11h5M8 15h8' },
+  'Halloween': { colors: [LED.orange, LED.orange, LED.purple], motion: 'flicker', block: 1, dur: 1.6, season: 'Oct 24 – Nov 1', day: 'Sat, Oct 31', bulbs: 'Orange, and one in three purple',
+                 words: 'Orange and purple, unsteady like embers', icon: 'M12 6c-4.5 0-7.5 3-7.5 7s3 7 7.5 7 7.5-3 7.5-7-3-7-7.5-7zM12 6V3.5M9 12l1.5 1.5M15 12l-1.5 1.5M9 16.5c2 1 4 1 6 0' },
+  'Easter':    { colors: [LED.pink, LED.mint, LED.lilac], motion: 'drift', block: 1, dur: 14, season: 'Easter weekend', day: 'Sun, Apr 4', bulbs: 'Pinks, mints and lilacs, still',
+                 words: 'Spring colors, drifting slowly', icon: 'M12 3c-3.6 0-6.5 5.4-6.5 10a6.5 6.5 0 0 0 13 0C18.5 8.4 15.6 3 12 3zM6 12.5l3-1.5 3 1.5 3-1.5 3 1.5' },
+  'July 4th':  { colors: [LED.red, LED.white, LED.blue], motion: 'twinkle', block: 5, dur: 2.4, season: 'Jul 3 – Jul 5', day: 'Sat, Jul 4', bulbs: 'Red, white and blue, one each',
+                 words: 'Red, white and blue, twinkling', icon: 'M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8' },
+}
+
+const SKY = {
+  dusk: 'linear-gradient(180deg, #1d2132 0%, #2b2b44 46%, #6a4642 86%, #3a2b2c 100%)',
+  night: 'linear-gradient(180deg, #0a0c13 0%, #10131d 55%, #191b25 100%)',
+  summer: 'linear-gradient(180deg, #1c2a46 0%, #3b4a72 46%, #a46a5a 88%, #4a3a3a 100%)',
+  late: 'linear-gradient(180deg, #06070b 0%, #0a0c12 60%, #101219 100%)',
+}
+const WIN = { lit: 'rgba(243,194,122,.5)', dim: 'rgba(243,194,122,.18)', dark: '#14161c' }
+
+/* a run drawn small, for a control: one 4px light and a 3px gap, the colors in their blocks */
+const miniRun = (cols, block) => { const s = []; let x = 0; const n = cols.length, b = block || 1
+  for (let i = 0; i < n * b; i++) { const c = cols[Math.floor(i / b) % n]; s.push(c + ' ' + x + 'px ' + (x + 4) + 'px', 'transparent ' + (x + 4) + 'px ' + (x + 7) + 'px'); x += 7 }
+  return 'repeating-linear-gradient(90deg, ' + s.join(', ') + ')' }
+
+const hash = (i) => { const s = Math.sin(i * 12.9898 + 4.1) * 43758.5453; return s - Math.floor(s) }
+
+/* Where each light sits, and its PHASE: how far along the motion it is. 'round' is the true order
+   round the house, so a chase travels the whole roofline as one light; 'run' counts from each
+   light's own box, which is what a roof does when nobody has told it the order. */
+function lights(mode, k, flips) {
+  const out = []
+  if (mode === 'run') {
+    for (const r of ROOF.runs) r.pts.forEach((pt, j) => out.push({ pt, p: j, run: r.id, j }))
+  } else {
+    let g = 0
+    for (const [id, against] of ROOF.order) {
+      const r = ROOF.byId[id]
+      const rev = flips && flips[id] !== undefined ? flips[id] : against
+      for (let i = 0; i < r.n; i++) { const j = rev ? r.n - 1 - i : i; out.push({ pt: r.pts[j], p: g++, run: id, j }) }
+    }
+  }
+  return out.map(l => ({ ...l, x: (l.pt[0] * k).toFixed(1), y: (l.pt[1] * k).toFixed(1) }))
+}
+
+/* A look painted onto those lights. Every motion here is a way for the given colors to BE: none
+   brings a color of its own, which is the line design/occasion/ drew and these boards keep. */
+function paint(ls, look) {
+  const cs = look.colors || [LED.warm]
+  const n = cs.length, b = look.block || 1, D = look.dur || 2.4
+  return ls.map(l => {
+    const p = l.p
+    const o = { x: l.x, y: l.y, c1: cs[0], c2: cs[1 % n], c3: cs[2 % n], an: 'none', cls: '' }
+    if (look.motion === 'off') { o.cls = 'off'; return o }
+    if (look.motion === 'still') { o.c1 = cs[Math.floor(p / b) % n]; return o }
+    if (look.motion === 'chase') {
+      const P = b * n, d = ((p % P) / P) * D - D
+      o.an = (n === 3 ? 'ch3 ' : 'ch2 ') + D + 's linear ' + d.toFixed(3) + 's infinite'; return o
+    }
+    if (look.motion === 'twinkle') { o.c1 = cs[Math.floor(p / b) % n]; o.an = 'tw ' + D + 's ease-in-out ' + (-hash(p) * D).toFixed(3) + 's infinite'; return o }
+    if (look.motion === 'flicker') { o.c1 = cs[Math.floor(hash(p + 11) * n)]; o.an = 'fl ' + (1.3 + hash(p) * 0.9).toFixed(2) + 's linear ' + (-hash(p + 3) * 2).toFixed(3) + 's infinite'; return o }
+    if (look.motion === 'drift') { const W = 46, d = ((p % W) / W) * D - D; o.an = 'dr ' + D + 's linear ' + d.toFixed(3) + 's infinite'; return o }
+    if (look.motion === 'head') { const H = look.dur || 2.6; o.c1 = look.runColors ? look.runColors[l.run] : cs[0]; o.an = 'hd ' + H + 's linear ' + (((l.p * 0.05) % H) - H).toFixed(3) + 's infinite'; return o }
+    return o
+  })
+}
+
+const boxesAt = (k, tags) => Object.entries(ROOF.boxes).map(([id, pt]) => ({ id, x: (pt[0] * k).toFixed(1), y: (pt[1] * k).toFixed(1), ty: (pt[1] * k + 12).toFixed(1), tag: tags ? tags[id] : '' }))
+const isOcc = (o) => ({ christmas: o === 'Christmas', halloween: o === 'Halloween', easter: o === 'Easter', july4th: o === 'July 4th' })
+const flipsOf = (list, cur, set) => list.map(v => ({ label: v, cls: v === cur ? 'flip on' : 'flip', go: set(v) }))
+
+
+const MOMENTS = {
+  'Oct 24, dusk':     { sky: 'dusk',   win: 'lit',  occ: 'Halloween', part: 'dusk',  label: 'Sat, Oct 24 · 6:41 PM', at: 2.68 },
+  'Oct 24, 11:20 PM': { sky: 'night',  win: 'dim',  occ: 'Halloween', part: 'late',  label: 'Sat, Oct 24 · 11:20 PM', at: 7.33 },
+  'Jul 9, dusk':      { sky: 'summer', win: 'lit',  occ: null,        part: 'dusk',  label: 'Thu, Jul 9 · 9:10 PM', at: 5.17 },
+  'Dec 20, 3 AM':     { sky: 'late',   win: 'dark', occ: 'Christmas', part: 'small', label: 'Sun, Dec 20 · 3:05 AM', at: 11.08 },
+}
+const MOMENT_NAMES = Object.keys(MOMENTS)
+
+/* the year as a bar 360 wide; spans are [first day, last day] of the year */
+const SPANS = { 'Easter': [[93, 95]], 'July 4th': [[184, 186]], 'Halloween': [[297, 305]], 'Christmas': [[335, 365], [0, 6]] }
+const yearSpans = (which) => {
+  const out = []
+  for (const [name, list] of Object.entries(SPANS)) for (const [a, b] of list)
+    out.push({ left: (a / 365 * 360).toFixed(1), width: Math.max(3, (b - a + 1) / 365 * 360).toFixed(1), color: which === 'occ' ? OCCASIONS[name].colors[0] : 'var(--lamp)' })
+  return out
+}
+/* an evening as a bar: 4 PM to 3 AM is 11 hours over 360 */
+const hourX = (h) => (h / 11 * 360).toFixed(1)
+const sel = (list, cur, set) => list.map(v => ({ label: v, cls: v === cur ? 'on' : '', go: set(v) }))
+
+const MODES = ['Every evening', 'Only in an occasion', 'Not by itself']
+class Component extends DCLogic {
+  renderVals() {
+    const mo = this.state.mo || this.props.moment || 'Oct 24, dusk'
+    const mode = this.state.mode || this.props.evenings || 'Every evening'
+    const m = MOMENTS[mo], k = 0.78
+    const keeps = mode === 'Every evening' || (mode === 'Only in an occasion' && !!m.occ)
+    const on = keeps && m.part === 'dusk'
+    const look = !on ? { motion: 'off' } : m.occ ? OCCASIONS[m.occ] : { colors: [LED.warm], motion: 'still' }
+    const why = mode === 'Not by itself' ? 'Its evenings are off, so it is a light like any other: on when somebody turns it on.'
+      : on ? (m.occ ? 'On at dusk because it keeps evenings. Halloween is on in the house, so that is how it looks.' : 'On at dusk because it keeps evenings, in its everyday warm white. No occasion, no colors.')
+      : m.part === 'dusk' ? 'No occasion tonight, and its evenings are only for occasions.'
+      : m.part === 'late' ? 'Off at 11:00, the end of its evenings.' : 'Off since 11:00. At 3 AM the house is dark.'
+    const setMode = (v) => () => this.setState({ mode: v })
+    const modes = flipsOf(MODES, mode, setMode)
+    const onSpans = mode === 'Every evening' ? [{ left: 0, width: 360, color: 'var(--lamp)', op: 1 }]
+      : mode === 'Only in an occasion' ? yearSpans('on').map(s => ({ ...s, op: 1 })) : []
+    return {
+      px: paint(lights('round', k), look), boxes: boxesAt(k), sky: SKY[m.sky], win: WIN[m.win],
+      when: m.label, what: on ? (m.occ ? 'On · its evening, Halloween’s colors' : 'On · its evening, warm white') : 'Off',
+      moments: flipsOf(MOMENT_NAMES, mo, (v) => () => this.setState({ mo: v })),
+      modes, modes2: modes.map(h => ({ ...h, cls: h.cls === 'flip on' ? 'on' : '' })),
+      shows: m.occ ? OCCASIONS[m.occ].words.toLowerCase() + ', because ' + m.occ + ' is on' : 'warm white, still — no occasion',
+      occSpans: yearSpans('occ'), onSpans,
+      onLabel: mode === 'Every evening' ? 'Comes on by itself: every evening, the roof’s own' : mode === 'Only in an occasion' ? 'Comes on by itself: evenings inside an occasion' : 'Comes on by itself: never',
+      daySpans: mode === 'Not by itself' ? [] : [{ left: hourX(m.sky === 'summer' ? 5.17 : 2.68), width: hourX(7) - hourX(m.sky === 'summer' ? 5.17 : 2.68), color: 'var(--lamp)', op: keeps ? 1 : 0.25 }],
+      dayLabel: mode === 'Not by itself' ? 'Never by itself' : 'Dusk to 11:00',
+      nowX: hourX(m.at), momentLabel: m.label, why,
+    }
+  }
+}
+</script>
+</body>
+</html>

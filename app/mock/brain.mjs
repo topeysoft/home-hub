@@ -622,6 +622,9 @@ const bridgeRows = process.env.BRIDGES === 'none' ? [] : [
      `count` is lights, not metres -- the panel divides by sixty to say it in metres, because a
      household buys strip by the metre and has never counted a light. Nothing here talks to a real
      strip: tuning just moves the number the way the brain would. */
+  /* the roofline (brain/hub/roofline.py): this house has none, which is what a hub that predates it says
+     too; ?roofline= previews one on the panel side */
+  if (p === '/roofline' && req.method === 'GET') return json(res, { exists: false })
   if (p === '/strip/list') return json(res, { strips: strips.map(({ was: _was, ...row }) => row) })
   if (p.startsWith('/strip/tune') && req.method === 'POST') { let raw = ''; req.on('data', c => (raw += c)); return req.on('end', () => {
     let b = {}; try { b = JSON.parse(raw) } catch {}
@@ -922,6 +925,13 @@ const bridgeRows = process.env.BRIDGES === 'none' ? [] : [
   }
   if (p === '/say' && req.method === 'POST') { let b = ''; req.on('data', c => (b += c)); return req.on('end', () => { let t = ''; try { t = JSON.parse(b).text || '' } catch {}
     if (/^(is|are|what|who|how)\b/i.test(t)) return json(res, { kind: 'answer', text: 'Front door is locked.', said: t })
+    /* a look for the roofline, said (design/roofline/SaidC.dc.html): the brain's grammar is fixed, and this
+       answers the shape it gives back so the draft card can be looked at */
+    const lk = t.match(/(still|drifting|flickering|chasing|twinkling)( slowly| quickly)?/i)
+    if (lk) { const ms = { still: 'still', drifting: 'drift', flickering: 'flicker', chasing: 'chase', twinkling: 'twinkle' }; const cols = (t.match(/red|green|white|blue|orange|purple|pink|gold/gi) || ['red', 'green']).map(c => c.toLowerCase())
+      const pace = (lk[2] || (lk[1] === 'still' ? '' : ' slowly')).trim(); const occ = /halloween/i.test(t) ? ['halloween', 'Halloween'] : ['christmas', 'Christmas']
+      const words = [...new Set(cols)]; const said = (words.length < 2 ? words[0] : words.slice(0, -1).join(', ') + ' and ' + words.at(-1)) + ', ' + lk[1].toLowerCase() + (pace ? ' ' + pace : '')
+      return json(res, { kind: 'look', occasion: occ[0], occasion_name: occ[1], colors: cols, motion: ms[lk[1].toLowerCase()], pace, words: said[0].toUpperCase() + said.slice(1), text: said, said: t }) }
     if (/cosy|cozy|nice/i.test(t)) return json(res, { kind: 'action', device: 'l2', device_name: 'Floor lamp', action: 'on', data: { brightness_pct: 30 }, name: 'Floor lamp on, low', said: t })
     if (/when|every|whenever/i.test(t)) return json(res, { kind: 'rule', id: 'x', name: t, room: 'living', when: { time: '21:00' }, then: { intent: 'movie' }, said: t })
     if (t.length < 4) { res.writeHead(422, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify({ detail: 'The house didn\'t catch that. Try "kitchen lights off", "movie in the den" or "is the front door locked?". Connect the assistant under Routines to ask in your own words.' })) }

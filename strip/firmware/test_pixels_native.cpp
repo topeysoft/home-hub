@@ -4,6 +4,7 @@
 // src/pixels.h on the Mac, against the arithmetic the brain does at the other end.
 //
 //     c++ -std=c++17 -O1 -o /tmp/px test_pixels_native.cpp && /tmp/px
+//     c++ -std=c++17 -O1 -DSTRIP_BOARD_REVA -o /tmp/px test_pixels_native.cpp && /tmp/px    (rev A's limits)
 //
 // This exists because a strip with its red and green swapped LOOKS LIKE IT IS WORKING. Everything
 // lights, everything dims, every tile is right, and the only symptom is that the household's idea of
@@ -243,7 +244,77 @@ static void a_fill_stops_at_its_level() {
     CHECK(lit == 50, "half a fill on a hundred lights is fifty, got %d", lit);
 }
 
+// ---- what goes down the wire (pixels.h, one_wire and two_wire) ----
+
+static void undimmed_is_the_picture_byte_for_byte() {
+    printf("a copy at full scale is the picture, byte for byte\n");
+    px::Pixels p; p.set_count(50); p.order.white = true;
+    for (size_t i = 0; i < p.bytes_used(); i++) p.buf[i] = (uint8_t)(i * 37 + 11);
+    static uint8_t wire[16384];
+    const size_t n = px::one_wire(p, 256, wire);
+    CHECK(n == p.bytes_used(), "one-wire copy is %zu bytes, want %zu", n, p.bytes_used());
+    CHECK(memcmp(wire, p.buf, n) == 0, "a full-scale copy changed the picture");
+}
+
+static void dimming_never_brightens_and_leaves_the_picture_alone() {
+    printf("dimming never brightens a byte, and the picture is untouched by it\n");
+    px::Pixels p; p.set_count(4);
+    p.solid(255, 128, 1);
+    uint8_t before[12]; memcpy(before, p.buf, 12);
+    static uint8_t wire[64];
+    px::one_wire(p, 128, wire);
+    CHECK(memcmp(before, p.buf, 12) == 0, "dimming wrote into the picture");
+    for (int i = 0; i < 12; i++) CHECK(wire[i] <= p.buf[i], "byte %d went from %d up to %d", i, p.buf[i], wire[i]);
+    CHECK(wire[p.order.at[0]] == 128, "255 at half is 128, got %d", wire[p.order.at[0]]);
+    px::one_wire(p, 0, wire);
+    for (int i = 0; i < 12; i++) CHECK(wire[i] == 0, "a scale of nothing should be dark");
+}
+
+static void two_wire_is_an_apa102_frame_an_sk9822_also_reads() {
+    printf("a two-wire frame is start, a header per light, the SK9822 latch, and the trailing clocks\n");
+    px::Pixels p; p.set_count(40);
+    CHECK(p.order.set("bgr"), "bgr");                  // APA102s are usually bgr: the same question decides it
+    p.solid(10, 20, 30);
+    static uint8_t wire[1024];
+    const size_t n = px::two_wire(p, 256, wire);
+    const size_t want = 4 + 40 * 4 + 4 + (40 + 15) / 16;
+    CHECK(n == want, "frame is %zu bytes, want %zu", n, want);
+    CHECK(n <= px::wire_most(40), "wire_most(40) = %zu is smaller than a frame of %zu", px::wire_most(40), n);
+    CHECK(!wire[0] && !wire[1] && !wire[2] && !wire[3], "a frame starts with four zero bytes");
+    for (int i = 0; i < 40; i++) {
+        const uint8_t *l = &wire[4 + i * 4];
+        CHECK(l[0] == 0xFF, "light %d header is %02x, want ff (full five-bit brightness)", i, l[0]);
+        CHECK(l[1] == 30 && l[2] == 20 && l[3] == 10, "light %d is %d,%d,%d, want bgr 30,20,10", i, l[1], l[2], l[3]);
+    }
+    for (size_t i = 4 + 40 * 4; i < n; i++) CHECK(wire[i] == 0, "the tail must be zeros, byte %zu is %02x", i, wire[i]);
+}
+
+static void two_wire_skips_a_white_it_cannot_carry() {
+    printf("a white byte never reaches a two-wire strip\n");
+    px::Pixels p; p.set_count(3); p.order.white = true;
+    p.solid(1, 2, 3, 200);
+    static uint8_t wire[64];
+    px::two_wire(p, 256, wire);
+    for (int i = 0; i < 3; i++)
+        CHECK(wire[4 + i * 4 + 1] != 200 && wire[4 + i * 4 + 2] != 200 && wire[4 + i * 4 + 3] != 200,
+              "light %d carried the white byte", i);
+    CHECK(px::load(p, px::Wire::TWO) == 3u * (1 + 2 + 3), "two-wire load counts colors only, got %u",
+          (unsigned)px::load(p, px::Wire::TWO));
+    CHECK(px::load(p, px::Wire::ONE) == 3u * (1 + 2 + 3 + 200), "one-wire load counts the white too");
+}
+
+static void the_largest_frame_fits_its_copy() {
+    printf("the most lights, on either wire, fit the copy pixels.cpp asks for\n");
+    px::Pixels p; p.set_count(PX_MOST); p.order.white = true;
+    CHECK(p.bytes_used() <= px::wire_most(PX_MOST), "one-wire at PX_MOST is larger than its copy");
+    p.order.white = false;
+    static uint8_t wire[4 + PX_MOST * 4 + 4 + (PX_MOST + 15) / 16];
+    CHECK(px::two_wire(p, 256, wire) <= px::wire_most(PX_MOST), "two-wire at PX_MOST is larger than its copy");
+}
+
 int main() {
+    printf("board %s, %d output%s, at most %d lights each\n", board::NAME, board::OUTPUTS,
+           board::OUTPUTS == 1 ? "" : "s", PX_MOST);
     the_mapping_matches_the_brains_convention();
     a_half_applied_ordering_is_never_left_behind();
     raw_goes_out_exactly_as_given();
@@ -255,6 +326,11 @@ int main() {
     a_frame_is_written_only_when_it_changes();
     the_end_is_the_end_it_was_asked_for();
     a_fill_stops_at_its_level();
+    undimmed_is_the_picture_byte_for_byte();
+    dimming_never_brightens_and_leaves_the_picture_alone();
+    two_wire_is_an_apa102_frame_an_sk9822_also_reads();
+    two_wire_skips_a_white_it_cannot_carry();
+    the_largest_frame_fits_its_copy();
     printf(failures ? "\n%d failed\n" : "\nall good\n", failures);
     return failures ? 1 : 0;
 }

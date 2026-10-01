@@ -1,0 +1,20 @@
+# The strip controller, rev A, on top of sdkconfig.defaults (CMakeLists.txt, STRIP_BOARD=reva).
+#
+# Its module is the ESP32-S3-WROOM-1-N16R2: 16 MB of flash and 2 MB of QUAD PSRAM. Quad, not octal: the
+# octal parts are rated to 65 C and take GPIO35-37, and this one is rated to 85 C and sits its PSRAM on
+# the module's own flash bus at no cost in pins (home-hub-hardware, strip/parts.md).
+
+# 16 MB, and the table that uses it -- the one thing an update can never change (partitions-reva.csv).
+# CONFIG_ESPTOOLPY_FLASHSIZE_8MB is not set
+CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions-reva.csv"
+
+# The PSRAM. Large allocations may land in it, which is what it is for -- effect buffers, streamed
+# frames -- and frames that go out on the wire are asked for in internal, DMA-capable memory by name
+# (main/pixels.cpp), so a DMA engine never reads from it. A board whose PSRAM cannot be found stops at
+# boot rather than running without it: every rev A has it, so one that does not is a fault for the
+# factory's jig to see, not a strip to ship.
+CONFIG_SPIRAM=y
+CONFIG_SPIRAM_MODE_QUAD=y
+CONFIG_SPIRAM_TYPE_AUTO=y
+CONFIG_SPIRAM_USE_MALLOC=y
