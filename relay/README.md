@@ -15,8 +15,9 @@ gives it and everything on the Wi‑Fi carries on exactly as before.
 
 **Applying it.** Two tokens, from the environment and never from a file. `CLOUDFLARE_API_TOKEN` is a
 *custom* token — not the "Edit zone DNS" template, which omits the zone read the lookup in `dns.tf`
-needs — carrying **Zone → Zone → Read** and **Zone → DNS → Edit**, and included on the **specific
-zone** rather than all of them. That token is the operator's and is the most dangerous secret here:
+needs — carrying **Zone → Zone → Read**, **Zone → DNS → Edit** and **Zone → SSL and Certificates → Edit**
+(the last turns Universal SSL off, see `dns.tf`), and included on the **specific zone** rather than
+all of them. That token is the operator's and is the most dangerous secret here:
 whoever holds it can repoint the wildcard and, through a DNS-01 challenge, obtain real certificates
 for house names. The CAA records narrow that; keeping the token off every hub and off the relay box
 is what closes it, and is the reason piece 3 proves certificates over TLS instead. `HCLOUD_TOKEN` is

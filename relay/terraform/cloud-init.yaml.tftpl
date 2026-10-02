@@ -7,6 +7,10 @@ package_update: true
 package_upgrade: true
 packages:
   - docker.io
+  # Debian's docker refuses to start a container when the kernel has AppArmor on and the parser is
+  # missing, and Hetzner's debian-12 image ships without it. Found 1 October 2026: the first box
+  # came up with frps restarting every five seconds and nothing on 443.
+  - apparmor
 
 write_files:
   # The whole configuration. Two ports and an auth token, and the token is what stops any frpc on
