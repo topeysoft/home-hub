@@ -60,7 +60,7 @@ onUnmounted(() => window.removeEventListener('keydown', key))
         <button class="button small" type="submit" :class="{ busy: asking }">{{ asking ? 'Thinking…' : 'Ask' }}</button>
       </form>
       <p class="why-answer" v-if="answer">{{ answer }}</p>
-      <p class="sheet-foot" v-if="store.routines.length || store.assistant?.configured">Routines decide these on their own. <button class="linkish" @click="store.sheet = 'routines'">See them all</button></p>
+      <p class="sheet-foot" v-if="store.routines.length || store.assistant?.configured">Routines decide these on their own. <button class="linkish" @click="store.sheet = 'routines'">See all routines</button></p>
       </div>
     </div>
   </div>

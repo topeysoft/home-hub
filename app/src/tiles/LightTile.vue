@@ -12,6 +12,7 @@ import { bulbColor, lightKind } from '../art'
 import { oklch } from '../sky'
 import { leadsFixture, partnerOf, seeing, speedWord } from '../units'
 import { heldLine, heldOf, roofTile } from '../controller'
+import { makerWord } from '../telling'
 
 const props = defineProps<{ device: Device }>()
 /* A STRIP THE CONTROLLER IS KEEPING DARK (design/controller-panel/, "held": A, decided 1 October). The
@@ -108,7 +109,7 @@ function tapCarried() {
 const roof = computed(() => store.roofline?.exists && store.roofline.light === props.device.id ? store.roofline : null)
 const label = computed(() => {
   if (held.value) return held.value.state ?? 'Staying off'
-  if (dead.value) return 'Not responding'
+  if (dead.value) return 'Not answering'
   if (roof.value) return roofTile(props.device, roof.value)
   const base = !on.value ? 'Off' : !dimmable.value ? 'On' : `On, ${pct.value}%`
   return eye.value ? `${base} · Motion` : base
@@ -157,7 +158,7 @@ async function up() {
        @keydown.enter.space.prevent="held ? (store.opened = device) : perform(device, on ? 'off' : 'on', undefined, { state: on ? 'off' : 'on' })">
     <div class="fill" v-if="!held" :style="{ width: pct + '%' }"></div>
     <DeviceArt v-if="!held" :kind="kind" :state="{ on, brightness: pct / 100, color }" />
-    <span class="tile-maker" v-if="device.maker && !held">{{ device.maker }}</span>
+    <span class="tile-maker" v-if="makerWord(device.maker) && !held">{{ makerWord(device.maker) }}</span>
     <div class="tile-body">
       <span class="tile-icon"><Icon :name="held ? 'shield' : 'light'" /></span>
       <span class="tile-name">{{ name }}</span>
@@ -167,7 +168,7 @@ async function up() {
         <span class="machine-row" role="button" tabindex="0" :class="{ on: carried.state === 'on', dead: isDead(carried), pending: !!store.pending[carried.id] }"
               :aria-pressed="carried.state === 'on'" :title="`Hold to open ${carried.name}`"
               @click.stop="tapCarried" @pointerdown.stop @pointermove.stop @pointerup.stop @keydown.enter.space.prevent.stop="tapCarried" v-hold="() => (store.opened = carried!)">
-          <Icon name="fan" :size="15" /><span class="machine-row-name">Fan</span><span class="machine-row-state">{{ isDead(carried) ? 'Not responding' : speedWord(carried) }}</span>
+          <Icon name="fan" :size="15" /><span class="machine-row-name">Fan</span><span class="machine-row-state">{{ isDead(carried) ? 'Not answering' : speedWord(carried) }}</span>
         </span>
       </span>
     </div>

@@ -22,7 +22,7 @@ import Icon from '../Icon.vue'
 
 defineProps<{ machine: Machine; room?: Room | null }>()
 const on = (d: Device) => d.state === 'on'
-const word = (d: Device) => isDead(d) ? 'Not responding' : on(d) ? 'On' : 'Off'
+const word = (d: Device) => isDead(d) ? 'Not answering' : on(d) ? 'On' : 'Off'
 function tap(d: Device) {
   if (isDead(d)) return
   perform(d, on(d) ? 'off' : 'on', undefined, { state: on(d) ? 'off' : 'on' })

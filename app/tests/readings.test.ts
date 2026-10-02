@@ -38,8 +38,8 @@ describe('what a sensor says', () => {
   })
 
   it('says so plainly when a sensor has stopped reporting', () => {
-    expect(readingLabel(dev('T', 'sensor.temperature', 'unavailable'))).toBe('Not responding')
-    expect(readingLabel(dev('T', 'sensor.temperature', 'unknown'))).toBe('Not responding')
+    expect(readingLabel(dev('T', 'sensor.temperature', 'unavailable'))).toBe('Not answering')
+    expect(readingLabel(dev('T', 'sensor.temperature', 'unknown'))).toBe('Not answering')
   })
 
   it('passes a reading through rather than printing NaN when it is not a number', () => {

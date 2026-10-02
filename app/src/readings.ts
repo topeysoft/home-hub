@@ -7,7 +7,7 @@ import { cap, isDead, shortName } from './store'
 export const isReading = (d: Device) => ['sensor', 'motion', 'contact'].includes(cap(d))
 /** The words for what a sensor says right now. */
 export function readingLabel(d: Device): string {
-  if (isDead(d)) return 'Not responding'
+  if (isDead(d)) return 'Not answering'
   const k = cap(d)
   if (k === 'sensor') {
     const cls = d.capability.split('.')[1]

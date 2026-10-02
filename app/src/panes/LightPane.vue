@@ -389,7 +389,7 @@ async function level(l: typeof LEVELS[number]) {
         <span class="rig-auto-dot" aria-hidden="true"></span>
         <span class="rig-auto-text">
           <span class="rig-auto-name">Automatic</span>
-          <span class="rig-auto-sub">Follows the light</span>
+          <span class="rig-auto-sub">Follows daylight</span>
         </span>
         <Icon v-if="chosen({ kind: 'auto' })" name="check" :size="18" class="rig-auto-tick" />
       </button>
@@ -470,7 +470,7 @@ async function level(l: typeof LEVELS[number]) {
 
 
     <div class="rig-levels" v-if="!tuning">
-      <span class="rig-lbl">The three it is used at</span>
+      <span class="rig-lbl">The usual three</span>
       <button v-for="l in LEVELS" :key="l.id" class="rig-card" :class="{ on: here === l.id }" :disabled="dead" @click="level(l)">
         <span class="rig-card-icon"><Icon :name="l.icon" :size="18" /></span>
         <span class="rig-card-text">
