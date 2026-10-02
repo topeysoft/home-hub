@@ -1810,7 +1810,7 @@ class Strips:
         if not dark: return {"state": "Fine", "sub": ""}
         said = controller.held(dark[0]["held"], power, dark[0]["run"]) or {}
         tile = said.get("tile") or ""
-        return {"state": "Dark", "held": dark[0]["held"],
+        return {"state": "Dark", "held": dark[0]["held"], "dark_runs": [r["run"] for r in dark],
                 "sub": f"{tile[0].upper() + tile[1:]}. {said.get('next', '')}." if tile else said.get("text", "")}
 
     async def _run2_light(self, id_: str) -> str | None:

@@ -63,6 +63,15 @@ class House:
 class TheOccasions(unittest.TestCase):
     """Dates decide which occasion is showing. They decide how it looks and nothing else."""
 
+    def test_the_dates_said_on_the_look_card(self):
+        """The look card says when its occasion runs (design/roofline/DrawnC.dc.html): "Dec 1 – Jan 6"."""
+        self.assertEqual(R.dates_of("christmas", 2026), "Dec 1 – Jan 6")
+        self.assertEqual(R.dates_of("halloween", 2026), "Oct 24 – Nov 1")
+        self.assertEqual(R.dates_of("july4", 2026), "Jul 3 – 5")
+        self.assertEqual(R.dates_of("easter", 2026), "Apr 4 – 6")     # Easter Sunday 2026 is April 5
+        self.assertEqual(R.dates_of("easter", 2027), "Mar 27 – 29")   # and 2027's is March 28
+        self.assertIsNone(R.dates_of(None, 2026))
+
     def test_the_dates(self):
         on = R.occasion_on
         self.assertEqual(on(date(2026, 10, 23)), None)
@@ -189,6 +198,24 @@ class OneLightOnTheWall(unittest.TestCase):
         self.assertEqual(boxes[1]["state"], "Dark")
         self.assertIn("Plug the 12 V supply back in", boxes[1]["sub"])
         self.assertNotIn("unavailable", json.dumps(boxes))
+
+    def test_a_dark_box_says_which_of_its_runs_are_dark(self):
+        """The pane draws a dark run dark where it is (design/roofline/DrawnC.dc.html), so a box with two
+        runs says which one the controller is holding."""
+        from tests.test_controller import power, run1
+        self.h.roofline.begin("a", "hwA", "Left corner")
+        self.h.roofline.join("b", "hwB", "Right of the door")
+        self.h.strip.strips["b"]["power"] = power(runs=[run1(), run1(on=False, held="supply")])
+        dark = self.h.roofline.status()["boxes"][1]
+        self.assertEqual((dark["state"], dark["dark_runs"]), ("Dark", [2]))
+        self.assertNotIn("dark_runs", self.h.roofline.status()["boxes"][0])
+
+    def test_the_pane_is_told_each_runs_length_in_the_order_they_were_set_up(self):
+        """Each run drawn as long as its lights: the same counts the boxes are sent their places from."""
+        self.h.roofline.begin("a", "hwA", "Left corner")
+        self.h.roofline.join("b", "hwB", "Right of the door")
+        self.assertEqual(self.h.roofline.status()["parts"],
+                         [{"chip": "a", "run": 1, "count": 150}, {"chip": "b", "run": 1, "count": 150}, {"chip": "b", "run": 2, "count": 40}])
 
 
 class TheWayRound(unittest.TestCase):
