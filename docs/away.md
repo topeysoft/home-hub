@@ -252,6 +252,14 @@ The first two steps need nothing from the maker and can land and be tested on a 
      brain. An unregistered name, and no name at all, got no handshake.
    - The relay restarted under the tunnel and `frpc` was back in two seconds.
 
+   **And then against the real thing, the same evening:** the relay on its Hetzner box (`relay/terraform`), the
+   real `elyir.app`, and Let's Encrypt itself, with this branch's `Caddyfile` and `frpc.toml` running on a mac as
+   `selftest.elyir.app` and a header echo standing in for the brain. Staging first, then production: the real
+   certificate was issued on the first attempt, and a client with nothing but its system trust store opened the
+   name and verified it. Everything the miniature showed held — same fingerprint at both ends, the client's
+   public address in `X-Forwarded-For`, a forged `lan` stamp arriving as `relay`, `Host: hub.local` reaching
+   nothing — and with the test stopped the name went back to `unrecognized_name`. Still not on a real house.
+
    **What the first tap from outside will find.** A phone paired at home holds its cookie for `hub.local`, and a
    browser keeps cookies per origin, so the same phone opening the public name is a stranger there: it gets
    *This house is not open from here*, and the join routes are closed from away by design. The relay, the
@@ -305,12 +313,22 @@ door under test was the `:9443` site as it is actually written.*
   when a hub dials in. Nothing in this document changes; step 4 gains entitlement state beside the public key, and the
   box in step 3 is sized for a few thousand houses rather than one. The reasoning, the tiers and what may never be
   sold are `docs/service.md`.
-- **The alias that covers home** — a private address in public DNS, or the hub answering for its own name on the LAN.
-- **How a phone carries its pairing to the public name.** Found 1 October 2026 while building step 3: cookies are
-  per origin, so pairing on `hub.local` gives a phone nothing under `elyir.app`, and joining is closed from away.
-  The smallest answer is a hand-off made at home — a phone already let out asks for a one-time link, opens the
-  public name with it, and is given a token there for the same phone — and it is tied to the alias question,
-  because whichever name the phone keeps on its home screen is the one it uses on the sofa as well.
+- ~~**The alias that covers home**~~ **Closed, 1 October 2026: the address in the name.** A small maker-run DNS server
+  answers names that spell the hub's LAN address -- `192-168-86-59.temi.home.elyir.app` is `192.168.86.59` -- the way
+  Plex's `plex.direct` does. Terraform delegates the one subzone to it once and **no house ever causes a DNS write**,
+  which is the rule the zone was built on. The hub's certificate for that name is proved over DNS-01, with the
+  challenge answered by the same server for the house that signed the request, so still no house holds a Cloudflare
+  credential. A home router that drops private addresses from DNS answers (rebind protection) leaves that house on
+  the relay at home, and *This hub* should say so. Not chosen: a record per house written by the registration service
+  (a per-house write from a zone-wide token, and the LAN address published in Cloudflare), and the hub as the house's
+  DNS server (a router setting, which is not out of the box).
+- ~~**How a phone carries its pairing to the public name.**~~ **Closed, 1 October 2026: every phone moves once, when
+  the house gets its name** (`design/away/`, direction C). Cookies are per origin, so pairing on `hub.local` gives a
+  phone nothing under `elyir.app`. Rather than a hand-off each time a phone is let out, the evening a house is given its
+  name every phone at home gets one line in the band and moves to it in three steps, and new phones join on it from the
+  start. Letting a phone out is then only the switch on *People*, and it works while the phone is already away. Not
+  chosen and kept on the canvas: a second outside icon (A), and moving each phone when it is let out (B). C makes **the
+  alias that covers home** mandatory rather than nice: a phone on the public name must reach the hub directly at home.
 - **Does the wall panel ever get `remote`?** Recommended no: it never leaves the house, so it never needs the door.
 
 ## What this replaces
