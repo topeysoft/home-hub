@@ -4,13 +4,15 @@
    Knobs: PORT, WX=rainy (a condition), FOUND=0 (nothing new nearby), ENGINE=down (the engine-starting screen),
    LOCKED=1 (a code is set), FRESH=1 (first run), ASK=1 (a phone is asking to join; needs LOCKED=1), ?join=1 (the join screen),
    UPDATE=ready (one waiting, with its sheet), UPDATE=running (one happening, walking the phases), UPDATE=away (the sheet a
-   phone outside the house gets). Nothing here talks to a real device; every POST or DELETE says ok. */
+   phone outside the house gets), ?printers= on the panel's address (a house with 3D printers: mock/printers.mjs).
+   Nothing here talks to a real device; every POST or DELETE says ok. */
 import http from 'node:http'
 import fs from 'node:fs'
 import path from 'node:path'
 import crypto from 'node:crypto'
 import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
+import { printerNotes, printersAsked, printersRoute } from './printers.mjs'
 
 const DIST = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'dist')
 const PORT = Number(process.env.PORT || 8399)
@@ -534,6 +536,7 @@ function sigTry(of, how) {
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://x')
   const p = url.pathname
+  if (printersRoute(req, res, p)) return    // 3D printers, only for a page that asked for them: mock/printers.mjs
   if (p === '/setup/status') return json(res, status)
   if (p === '/update/notes') return json(res, { notes: releaseNotes[0], history: releaseNotes })
   /* Install: on a hub the brain restarts and comes back as the next build, and the page follows it
@@ -606,7 +609,7 @@ const server = http.createServer((req, res) => {
     json(res, { detail: 'That is not one of the things the lights can tell you.' }, 404)
   }) }
   if (p === '/rules') return json(res, rules)
-  if (p === '/discovered') return json(res, discovered)
+  if (p === '/discovered') return json(res, printersAsked(req) ? [] : discovered)
 /* The bridges This hub lists, and what a household can change about one (docs/puck-light.md).
    BRIDGES=none empties the list, so the page can be seen without one. */
 const bridgeRows = process.env.BRIDGES === 'none' ? [] : [
@@ -649,7 +652,7 @@ const bridgeRows = process.env.BRIDGES === 'none' ? [] : [
     json(res, { bridges: bridgeRows })
   }) }
   if (p === '/bridge/forget') return json(res, { forgotten: 'The Hallway bridge' })
-  if (p === '/health') return json(res, { notes })
+  if (p === '/health') return json(res, { notes: [...printerNotes(req), ...notes] })
   /* What happened, and who changed what. The brain measures these off the event log (happened.py);
      here they are fixed, so the page can be drawn and argued about without a house that has actually
      been left alone all day. The wording is the brain's in production and copied here verbatim --
