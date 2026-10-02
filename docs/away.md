@@ -232,6 +232,40 @@ The first two steps need nothing from the maker and can land and be tested on a 
      what lets the relay tell a hub dialling in from a phone opening a house. Without it the two collide and the
      tunnel fails to establish. Note the nesting — that key is client-level, while
      `transport.proxyProtocolVersion` above belongs to the individual proxy.
+
+   **Built, 1 October 2026, with step 5's certificate in it; not yet on a real house.** `frpc` is a service in
+   `driver-layer/docker-compose.yml` behind the `away` profile, configured by `driver-layer/frp/frpc.toml` from
+   `.env` alone. The away door is now one of two files: `caddy/away/off.caddy` is the plain door steps 1 and 2
+   were built on, and every house stays on it; `caddy/away/on.caddy` is the house's public name with a certificate
+   proved over TLS-ALPN-01, chosen by `HUB_AWAY=on`. The PROXY header is read on `:9443` only and only from
+   loopback, in every mode, so the LAN doors are untouched. `.env.example` says how to turn it on. Checked end to
+   end in miniature — Pebble as the CA, `frps` with the relay's own `frps.toml`, the real `Caddyfile` and
+   `frpc.toml`, and a phone on the far side:
+
+   - The certificate was issued through the relay on Caddy's first retry, a minute after the tunnel came up (the
+     first attempt raced the tunnel and failed, which is expected and needs nothing).
+   - The phone verified the chain, and the certificate it was shown has the same fingerprint as the one in the
+     hub's storage. The relay holds no certificate or key file.
+   - The brain was told the phone's own address in `X-Forwarded-For`, not `127.0.0.1`, with `X-Hub-Via: relay`
+     and `X-Forwarded-Proto: https`. A forged `X-Hub-Via: lan` arrived as `relay`.
+   - The house's name in the handshake with `Host: hub.local` after it reached no site and nothing reached the
+     brain. An unregistered name, and no name at all, got no handshake.
+   - The relay restarted under the tunnel and `frpc` was back in two seconds.
+
+   **And then against the real thing, the same evening:** the relay on its Hetzner box (`relay/terraform`), the
+   real `elyir.app`, and Let's Encrypt itself, with this branch's `Caddyfile` and `frpc.toml` running on a mac as
+   `selftest.elyir.app` and a header echo standing in for the brain. Staging first, then production: the real
+   certificate was issued on the first attempt, and a client with nothing but its system trust store opened the
+   name and verified it. Everything the miniature showed held — same fingerprint at both ends, the client's
+   public address in `X-Forwarded-For`, a forged `lan` stamp arriving as `relay`, `Host: hub.local` reaching
+   nothing — and with the test stopped the name went back to `unrecognized_name`. Still not on a real house.
+
+   **What the first tap from outside will find.** A phone paired at home holds its cookie for `hub.local`, and a
+   browser keeps cookies per origin, so the same phone opening the public name is a stranger there: it gets
+   *This house is not open from here*, and the join routes are closed from away by design. The relay, the
+   certificate and the gate all work and a let-out phone still cannot get in until a phone can carry its pairing
+   from the house's LAN name to its public one. That is the next thing to decide, with the alias in *Open
+   decisions*, and the *People* switch lands with it.
 4. **The registration service and the switch in *This hub*.** Names, keys, more than one house.
 5. **The certificate:** TLS-ALPN-01 on the hub — which is why this now comes before the first tap in step 3 —
    then the alias that covers home.
@@ -279,7 +313,22 @@ door under test was the `:9443` site as it is actually written.*
   when a hub dials in. Nothing in this document changes; step 4 gains entitlement state beside the public key, and the
   box in step 3 is sized for a few thousand houses rather than one. The reasoning, the tiers and what may never be
   sold are `docs/service.md`.
-- **The alias that covers home** — a private address in public DNS, or the hub answering for its own name on the LAN.
+- ~~**The alias that covers home**~~ **Closed, 1 October 2026: the address in the name.** A small maker-run DNS server
+  answers names that spell the hub's LAN address -- `192-168-86-59.temi.home.elyir.app` is `192.168.86.59` -- the way
+  Plex's `plex.direct` does. Terraform delegates the one subzone to it once and **no house ever causes a DNS write**,
+  which is the rule the zone was built on. The hub's certificate for that name is proved over DNS-01, with the
+  challenge answered by the same server for the house that signed the request, so still no house holds a Cloudflare
+  credential. A home router that drops private addresses from DNS answers (rebind protection) leaves that house on
+  the relay at home, and *This hub* should say so. Not chosen: a record per house written by the registration service
+  (a per-house write from a zone-wide token, and the LAN address published in Cloudflare), and the hub as the house's
+  DNS server (a router setting, which is not out of the box).
+- ~~**How a phone carries its pairing to the public name.**~~ **Closed, 1 October 2026: every phone moves once, when
+  the house gets its name** (`design/away/`, direction C). Cookies are per origin, so pairing on `hub.local` gives a
+  phone nothing under `elyir.app`. Rather than a hand-off each time a phone is let out, the evening a house is given its
+  name every phone at home gets one line in the band and moves to it in three steps, and new phones join on it from the
+  start. Letting a phone out is then only the switch on *People*, and it works while the phone is already away. Not
+  chosen and kept on the canvas: a second outside icon (A), and moving each phone when it is let out (B). C makes **the
+  alias that covers home** mandatory rather than nice: a phone on the public name must reach the hub directly at home.
 - **Does the wall panel ever get `remote`?** Recommended no: it never leaves the house, so it never needs the door.
 
 ## What this replaces

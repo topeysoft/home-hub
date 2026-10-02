@@ -171,10 +171,37 @@ services:
       # The door the tunnel feeds, once there is a tunnel. On loopback deliberately: the relay's client
       # runs on this machine, and nothing on the Wi-Fi is meant to reach it. docs/away.md, piece 2.
       - HUB_RELAY_BIND=127.0.0.1
+      # Whether that door is the house's public name on a real certificate (on) or the plain one with
+      # nothing behind it (off, every house until it has a name). caddy/away/ has both.
+      - HUB_AWAY=${HUB_AWAY:-off}
+      - HUB_AWAY_NAME=${HUB_AWAY_NAME:-}
+      - HUB_ACME_CA=${HUB_ACME_CA:-https://acme-v02.api.letsencrypt.org/directory}
       - BRAIN_UPSTREAM=localhost:8300
     volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - ./caddy/data:/data
+
+  frpc:
+    # The house's end of the relay: one connection out on 443, held open, carrying phones away back to
+    # the away door on loopback. docs/away.md, piece 2. A profile, like the radios: COMPOSE_PROFILES
+    # with `away` in it, beside HUB_AWAY=on and the house's name, turns it on. Off is every house until
+    # it has a name, and with it off nothing leaves the house and nothing comes in.
+    #
+    # Pinned to the version the relay's pass-through was checked against. The relay is blind to what it
+    # carries because of what is NOT in frp/frpc.toml -- read the comment there before adding anything.
+    image: ${HUB_IMG_FRPC:-fatedier/frpc:v0.71.0}
+    container_name: frpc
+    restart: unless-stopped
+    profiles: [away]
+    network_mode: host      # the away door is on loopback, and only this container may reach it
+    depends_on: [caddy]
+    command: ["-c", "/etc/frp/frpc.toml"]
+    volumes:
+      - ./frp/frpc.toml:/etc/frp/frpc.toml:ro
+    environment:
+      - HUB_RELAY_ADDR=${HUB_RELAY_ADDR:-relay.elyir.app}
+      - HUB_RELAY_TOKEN=${HUB_RELAY_TOKEN:-}
+      - HUB_AWAY_NAME=${HUB_AWAY_NAME:-}
 
   ring-mqtt:
     # Ring Alarm and everything paired to its base station (Z-Wave locks, switches, plugs, contact and

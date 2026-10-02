@@ -5,6 +5,22 @@
 {
 	local_certs
 	auto_https disable_redirects
+
+	# The away door learns who is really asking. Every connection the relay carries arrives from
+	# `frpc` on loopback, so without this every phone away would be 127.0.0.1 and would share one
+	# bucket of wrong codes (hub/lock.py). `frpc` opens each connection with a PROXY header naming the
+	# phone, and this reads it -- only from loopback, the one place `frpc` runs, so nothing else can
+	# name an address. A connection from loopback without one is taken as it is. docs/away.md, *What
+	# was verified*.
+	servers {$HUB_RELAY_BIND:127.0.0.1}:9443 {
+		listener_wrappers {
+			proxy_protocol {
+				timeout 5s
+				allow 127.0.0.1/32 ::1/128
+			}
+			tls
+		}
+	}
 }
 
 {$HUB_HTTP:http://localhost:8080} {
@@ -23,19 +39,12 @@
 }
 
 # Away from home: the door the tunnel feeds, and nothing else. It is bound to loopback, so nothing on
-# the Wi-Fi can reach it; a request that arrives here came from outside the house whatever Host it
-# claims, which is the whole reason it is a door of its own rather than a share of the two above. The
-# stamp is what the brain reads (hub/phones.py, from_away); the two doors above delete any copy a
-# client brought, so it cannot be forged from either side. The relay never adds it: it does not
-# terminate TLS and could not. Plain http for now because there is nothing on the other end yet --
-# piece 3 makes this the house's public name with a real certificate on it. docs/away.md, piece 2.
-:9443 {
-	# No host on the address on purpose: this door answers whatever Host a request claims, because the
-	# claim is exactly what it must not be trusted on. `bind` is what keeps it off the Wi-Fi -- loopback
-	# on the hub, and on the mac the container binds wide and the published port keeps it local.
-	bind {$HUB_RELAY_BIND:127.0.0.1}
-	encode gzip
-	reverse_proxy {$BRAIN_UPSTREAM:localhost:8300} {
-		header_up X-Hub-Via relay
-	}
-}
+# the Wi-Fi can reach it; a request that arrives here came from outside the house, which is the whole
+# reason it is a door of its own rather than a share of the two above. The stamp is what the brain
+# reads (hub/phones.py, from_away); the two doors above delete any copy a client brought, so it cannot
+# be forged from either side. The relay never adds it: it does not terminate TLS and could not.
+#
+# Which door it is depends on whether the house has a name. HUB_AWAY=on, with HUB_AWAY_NAME, is the
+# public name on a real certificate (away/on.caddy); anything else is the plain door steps 1 and 2 were
+# built on (away/off.caddy). docs/away.md, pieces 2 and 3.
+import away/{$HUB_AWAY:off}.caddy

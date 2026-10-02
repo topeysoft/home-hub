@@ -1,0 +1,29 @@
+# The away door with a relay behind it: the house's public name, on a certificate a phone already
+# trusts. `frpc` (driver-layer/frp/frpc.toml) carries every handshake for that name from the relay to
+# here untouched, so this is where TLS ends and the house holds the only key. docs/away.md, pieces 2
+# and 3.
+#
+# The name is in the address and not only on the certificate. A request that names anything else
+# after its handshake reaches no site and gets nothing at all, which can only make this door
+# narrower; whatever it does name, everything that arrives here is away and is stamped so.
+{$HUB_AWAY_NAME}:9443 {
+	bind {$HUB_RELAY_BIND:127.0.0.1}
+
+	# Proved over TLS-ALPN-01, through the relay, on this very port: the validator opens a handshake to
+	# the name offering `acme-tls/1`, the relay routes it by SNI like any phone, and Caddy answers it
+	# here. No DNS record is written and no house holds a DNS credential. HTTP-01 is off because port 80
+	# never reaches a house through the relay. The CA is Let's Encrypt, the only one the zone's CAA
+	# record allows; HUB_ACME_CA points it at a staging or test CA instead.
+	tls {
+		issuer acme {
+			dir {$HUB_ACME_CA:https://acme-v02.api.letsencrypt.org/directory}
+			disable_http_challenge
+			alt_tlsalpn_port 9443
+		}
+	}
+
+	encode gzip
+	reverse_proxy {$BRAIN_UPSTREAM:localhost:8300} {
+		header_up X-Hub-Via relay
+	}
+}
