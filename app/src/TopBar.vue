@@ -11,6 +11,7 @@
  */
 import { computed } from 'vue'
 import { stripWaiting } from './adding'
+import { homeTab } from './layout'
 import { store, updateReady, weatherParts } from './store'
 import Icon from './Icon.vue'
 import WeatherArt from './WeatherArt.vue'
@@ -19,10 +20,7 @@ const props = defineProps<{ clock: string; day: string; now: Date; tab: 'home' |
 const emit = defineEmits<{ go: [tab: 'home' | 'rooms' | 'cameras'] }>()
 
 /* the first tab is named for the time of day, the way the greeting is */
-const yours = computed(() => {
-  const h = props.now.getHours()
-  return h < 5 ? 'Your night' : h < 12 ? 'Your morning' : h < 17 ? 'Your afternoon' : h < 21 ? 'Your evening' : 'Your night'
-})
+const yours = computed(() => homeTab(props.now.getHours()))
 /* The sky, in the bar, and only where a phone has taken it out of the stage --
    see the Wall's phone rules in panel.css, and design/phone/Main.dc.html. It is
    rendered always and hidden by CSS rather than switched here, because whether
@@ -31,9 +29,9 @@ const yours = computed(() => {
    words do not fit a 390px bar on the day the forecast says "Unusual weather". */
 const temp = computed(() => weatherParts().temp)
 
-/* Things waiting to be set up: found on the network, and a strip still knocking. One number,
+/* Things waiting to be set up: found on the network, 3D printers on the Wi-Fi, and a strip still knocking. One number,
    because to a household they are the same sentence -- something new, not set up yet. */
-const waiting = computed(() => store.found.length + (stripWaiting(store.strip?.state) ? 1 : 0))
+const waiting = computed(() => store.found.length + (store.printers?.found.length ?? 0) + (stripWaiting(store.strip?.state) ? 1 : 0))
 
 const tabs = computed(() => [
   { id: 'home' as const, label: yours.value, icon: 'home' },

@@ -1387,18 +1387,16 @@ async def bridge_wifi(body: dict):
     except ValueError as e: raise HTTPException(400, str(e))
 
 
-# ---------- a light strip, knocking over Bluetooth ----------
-# The state the panel draws and the answers a person gives. design/strip/Spine.dc.html is six beats
-# and these are them. Adopting is behind the code for the same reason a bridge is: until somebody
-# says yes the hub has only heard a thing advertising, and none of the house's keys have gone
-# anywhere. Saying it is NOT yours is open, because refusing gives nothing away.
+# ---------- 3D printers: found on the Wi-Fi, let in at the printer, and followed (docs/printers.md) ----------
 @app.get("/printers")
 def printers_status(): return hub.printers.status()
 
 
 @app.post("/printers/look")
 async def printers_look():
-    """Ask again which printers are on the Wi-Fi, now: the Add door is open."""
+    """Ask again which printers are on the Wi-Fi, now: the Add door is open. Opening it is also when last
+    time's answers are done with -- each was said in the row that asked, and the rows leave with the page."""
+    hub.printers.clear_answers()
     await hub.printers.look()
     return hub.printers.status()
 
@@ -1407,9 +1405,25 @@ async def printers_look():
 async def printers_add(pid: str):
     """Ask a printer to let the house in. The answer comes on the printer's screen, so this returns at once
     and the panel follows `asking` on the stream."""
-    if not any(f["id"] == pid for f in hub.printers.found): raise HTTPException(404, "That printer isn't on the Wi-Fi.")
-    asyncio.create_task(hub.printers.add(pid))
+    try: hub.printers.ask(pid)
+    except KeyError as e: raise HTTPException(404, str(e))
     return hub.printers.status()
+
+
+@app.delete("/printers/{pid}/add")
+async def printers_stop_asking(pid: str):
+    """Stop asking: somebody walked to the wrong printer."""
+    hub.printers.stop(pid)
+    return hub.printers.status()
+
+
+@app.post("/printers/{pid}/room")
+async def printers_room(pid: str, body: dict):
+    """Put a printer in a room, or in none (`room: null`). Chosen on its pane; never asked when it is added."""
+    room = body.get("room")
+    try: return hub.printers.set_room(pid, str(room) if room else None)
+    except KeyError as e: raise HTTPException(404, str(e))
+    except ValueError as e: raise HTTPException(400, str(e))
 
 
 @app.delete("/printers/{pid}")
@@ -1451,6 +1465,11 @@ def printers_camera(pid: str, still: bool = False):
     return _printer_stream(pid, "camera", "action=snapshot" if still else "action=stream")
 
 
+# ---------- a light strip, knocking over Bluetooth ----------
+# The state the panel draws and the answers a person gives. design/strip/Spine.dc.html is six beats
+# and these are them. Adopting is behind the code for the same reason a bridge is: until somebody
+# says yes the hub has only heard a thing advertising, and none of the house's keys have gone
+# anywhere. Saying it is NOT yours is open, because refusing gives nothing away.
 @app.get("/strip")
 def strip_status(): return hub.strip.status()
 

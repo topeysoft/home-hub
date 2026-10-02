@@ -14,6 +14,7 @@
  * the hub still picks between them. They stopped being the question on the way in.
  */
 import { reloadHome, store } from './store'
+import { names } from './printers'
 
 /** The doors of beat one. Four is the whole catalogue; a fifth means the taxonomy is wrong. */
 export type DoorId = 'wall' | 'thing' | 'brand' | 'house'
@@ -187,33 +188,50 @@ export type BandLine = {
   opens: 'strip' | 'add'
 }
 
-const foundLine = (found: { title: string }[]): BandLine => found.length === 1
+/*
+ * 3D PRINTERS FOUND ON THE WI-FI are things waiting like any other, and the line is word for word the
+ * one a Hue bridge gets (design/printers/FoundLine): the same count, the same fold, the same tap that
+ * opens Add. What it adds is what they are. A printer's name is whatever somebody called it -- R2D2,
+ * OBI1 -- and explains nothing to a person who did not set it up, so the line says "3D printers" once,
+ * after their names.
+ */
+const printerPhrase = (printers: { name: string }[]) => printers.length === 1
+  ? `${printers[0].name}, a 3D printer`
+  : `${names(printers.map(p => p.name))}, 3D printers`
+
+const foundLine = (found: { title: string }[], printers: { name: string }[] = []): BandLine => {
   /* The words for one thing found nearby are the panel's own and predate all of this, so a house
      with nothing knocking sees no change at all. */
-  ? { id: 'waiting', opens: 'add', title: `Found ${found[0].title}`, sub: 'Tap to add it to the house.' }
-  : { id: 'waiting', opens: 'add', title: `Found ${found.length} new things nearby`,
-      sub: found.slice(0, 3).map(f => f.title).join(', ') + (found.length > 3 ? '…' : '') }
+  if (found.length === 1 && !printers.length)
+    return { id: 'waiting', opens: 'add', title: `Found ${found[0].title}`, sub: 'Tap to add it to the house.' }
+  if (!found.length && printers.length === 1)
+    return { id: 'waiting', opens: 'add', title: `Found ${printers[0].name}`, sub: 'A 3D printer. Tap to add it to the house.' }
+  const parts = [...found.slice(0, 3).map(f => f.title), ...(printers.length ? [printerPhrase(printers)] : [])]
+  return { id: 'waiting', opens: 'add', title: `Found ${found.length + printers.length} new things nearby`,
+           sub: parts.join(', ') + (found.length > 3 ? '…' : '') }
+}
 
 export function waitingBand(
   found: { title: string }[], strip: { state?: string; since?: number } | null,
-  now = Date.now(),
+  now = Date.now(), printers: { name: string }[] = [],
 ): BandLine[] {
   const knocking = stripWaiting(strip?.state)
+  const any = found.length + printers.length > 0
   /* A hub too old to say when it started knocking has never said it, so the line would fold the
      instant it appeared. An unknown age is a new one: shout, and let the next hub be exact. */
   const fresh = knocking && (strip?.since == null || now - strip.since * 1000 < SHOUTS_FOR)
   if (fresh) return [
     { id: 'knock', opens: 'strip', title: 'A light strip is here',
       sub: 'Tap to set it up. It is lit, so you can see which one.' },
-    ...(found.length ? [foundLine(found)] : []),
+    ...(any ? [foundLine(found, printers)] : []),
   ]
-  if (!knocking) return found.length ? [foundLine(found)] : []
+  if (!knocking) return any ? [foundLine(found, printers)] : []
   /* Folded: the knock has stopped being about itself and is one of the things waiting. */
-  const n = found.length + 1
-  const names = [...found.slice(0, 3).map(f => f.title), 'a light strip']
+  const n = found.length + printers.length + 1
+  const listed = [...found.slice(0, 3).map(f => f.title), ...printers.map(p => p.name), 'a light strip']
   return [{
     id: 'waiting', opens: 'add',
     title: n === 1 ? '1 thing waiting to be set up' : `${n} things waiting to be set up`,
-    sub: names.join(', ') + (found.length > 3 ? '…' : ''),
+    sub: listed.join(', ') + (found.length > 3 ? '…' : ''),
   }]
 }
