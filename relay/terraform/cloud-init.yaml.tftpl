@@ -108,7 +108,7 @@ write_files:
             alt_tlsalpn_port 9443
           }
         }
-        @public path /alive /names/* /houses /houses/*
+        @public path /alive /offer /names/* /houses /houses/*
         handle @public {
           reverse_proxy 127.0.0.1:7100
         }
@@ -161,6 +161,8 @@ write_files:
         -v /var/lib/relay/service:/data \
         -e RELAY_ZONE=${zone} \
         -e RELAY_SELF_SECRET=${self_secret} \
+        -e RELAY_FRPS_TOKEN=${auth_token} \
+        -e RELAY_OFFER_OPEN=${offer_open} \
         relay-service:${service_ref}
       ExecStop=/usr/bin/docker stop relay-service
 

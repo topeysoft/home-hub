@@ -24,6 +24,7 @@ from .presence import Presence, WATCHED, word as presence_word
 from .assistant import Assistant, AssistantError
 from . import notes as notes_mod
 from .updates import Updates
+from .address import Address, Unreachable
 from .health import Health
 from .happened import Happened, Changes
 from .healed import Healed
@@ -147,6 +148,7 @@ class Hub:
         self.changes = Changes(self)                   # who changed what, behind the code
         self.backup = Backup(self)                     # the house as one file, and back
         self.restart = Restart(self)                   # turning it off and on again, at the smallest rung that could help
+        self.address = Address(self)                   # the house's own name outside, and the switch for it: hub/address.py
         self.sounds = Sounds(self)                     # noise and rain on a speaker, looped here, with a sleep timer
         self.commands = Commands(self)                 # plain words into moves, by a fixed grammar first and the assistant after
         self.voice = Voice(self)                       # the same answers, said out loud -- inert until a hub has an engine
@@ -2508,6 +2510,44 @@ def _who(request: Request) -> str:
     down at three in the morning and that nobody in the house asked it to."""
     p = request.state.phone or {}
     return p.get("name") or ("a phone" if p else "the wall")
+
+
+# ---------- the house's own address, for reaching it from outside ----------
+@app.get("/address")
+def address(): return hub.address.summary()
+
+
+@app.get("/address/names/{name}")
+def address_look(name: str):
+    """As somebody types the address: free, or why not and three that are."""
+    try: return hub.address.look(name)
+    except Unreachable as e: raise HTTPException(503, str(e))
+
+
+@app.post("/address")
+def address_claim(body: dict, request: Request):
+    """{"name": "temi"}: take that address for this house. For the screens that keep the house, like a restart."""
+    if not _may_restart(request): raise HTTPException(403, "The house's address is chosen at the wall, or on a phone that keeps the house.")
+    try: return hub.address.claim(str(body.get("name") or ""), _who(request))
+    except LookupError as e: raise HTTPException(409, e.args[0])
+    except ValueError as e: raise HTTPException(422, str(e))
+    except Unreachable as e: raise HTTPException(503, str(e))
+
+
+@app.post("/address/{want}")
+def address_turn(want: str, request: Request):
+    """on or off: whether the house can be reached from outside. The address is kept either way."""
+    if want not in ("on", "off"): raise HTTPException(404)
+    if not _may_restart(request): raise HTTPException(403, "Turning outside on or off is for the screens that keep the house.")
+    try: return hub.address.turn(want == "on", _who(request))
+    except ValueError as e: raise HTTPException(409, str(e))
+
+
+@app.delete("/address")
+def address_forget(request: Request):
+    """Give the address back. Anyone may have it after this."""
+    if not _may_restart(request): raise HTTPException(403, "Giving the address back is for the screens that keep the house.")
+    return hub.address.forget(_who(request))
 
 
 # ---------- the assistant: writes and explains, never runs ----------

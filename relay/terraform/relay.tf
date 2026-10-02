@@ -75,6 +75,7 @@ resource "hcloud_server" "relay" {
     zone          = var.zone_name
     repository    = var.relay_service_repository
     service_ref   = var.relay_service_ref
+    offer_open    = var.relay_offer_open ? "1" : "0"
     volume_device = one(hcloud_volume.data[*].linux_device)
     # The service's own name has a secret like any house's. Derived rather than chosen, so there is
     # nothing more to mint or keep: whoever has the relay token already holds the box.
@@ -122,5 +123,5 @@ resource "hcloud_volume_attachment" "data" {
 
   volume_id = one(hcloud_volume.data[*].id)
   server_id = one(hcloud_server.relay[*].id)
-  automount = false     # cloud-init mounts it at /var/lib/relay, where the units expect it
+  automount = false # cloud-init mounts it at /var/lib/relay, where the units expect it
 }

@@ -33,6 +33,18 @@ class Service(unittest.TestCase):
         self.assertEqual(seen.status_code, 200); self.assertEqual(seen.json()["address"], "temi.elyir.app")
         self.assertNotIn("secret", seen.json())
 
+    def test_a_claim_says_how_to_reach_the_relay_so_nobody_types_it(self):
+        c = TestClient(make(self.r, now=lambda: self.t, relay={"addr": "relay.elyir.app", "token": "shared"}))
+        made = c.post("/houses", json={"name": "temi"}).json()
+        self.assertEqual(made["relay"], {"addr": "relay.elyir.app", "token": "shared"})
+        seen = c.get("/houses/temi", headers={"Authorization": f"Bearer {made['secret']}"}).json()
+        self.assertEqual(seen["relay"]["addr"], "relay.elyir.app")
+
+    def test_the_offer_is_closed_until_somebody_opens_it(self):
+        self.assertEqual(self.c.get("/offer").json(), {"open": False, "price": None, "pay": None})
+        opened = TestClient(make(self.r, offer={"open": True, "price": "$3 a month", "pay": "https://pay.example/x"}))
+        self.assertTrue(opened.get("/offer").json()["open"])
+
     def test_a_taken_name_answers_with_somewhere_else_to_go(self):
         self.c.post("/houses", json={"name": "temi"})
         again = self.c.post("/houses", json={"name": "temi"})

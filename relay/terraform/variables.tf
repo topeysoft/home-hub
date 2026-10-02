@@ -116,3 +116,13 @@ variable "relay_service_ref" {
     error_message = "relay_service_ref becomes a docker tag: letters, numbers, dots, dashes and underscores only."
   }
 }
+
+variable "relay_offer_open" {
+  description = <<-EOT
+    Whether the panel may offer the relay to a household at all. False until a household can actually pay:
+    the panel never shows a promise the house cannot keep, and an address nobody can pay for is one. Houses
+    granted by hand (relay/README.md) are carried either way.
+  EOT
+  type        = bool
+  default     = false
+}

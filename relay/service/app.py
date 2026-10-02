@@ -23,9 +23,14 @@ from registry import Registry
 CLAIMS_PER_DAY = 5               # per address: enough for a household changing its mind, not for a script
 
 
-def make(registry: Registry, now=time.time) -> FastAPI:
+def make(registry: Registry, now=time.time, relay: dict | None = None, offer: dict | None = None) -> FastAPI:
+    """`relay` is how a carried house reaches frps -- its address and the shared token, which is not the gate
+    (the house's own secret is) but which frps wants, so the hub is handed it rather than anybody typing it.
+    `offer` is what a household is shown: whether the service is open to them, at what price, and where to pay."""
     app = FastAPI(title="home-hub relay registration", docs_url=None, redoc_url=None, openapi_url=None)
     claims: dict[str, list[float]] = {}
+    relay = relay or {"addr": f"relay.{registry.zone}", "token": ""}
+    offer = offer or {"open": False, "price": None, "pay": None}
 
     def owner(name: str, authorization: str | None):
         secret = (authorization or "").removeprefix("Bearer ").strip()
@@ -33,6 +38,12 @@ def make(registry: Registry, now=time.time) -> FastAPI:
 
     @app.get("/alive")
     def alive(): return {"ok": True}
+
+    @app.get("/offer")
+    def what_is_offered():
+        """Whether the panel may offer this at all. Closed until a household can actually pay: the panel never
+        shows a promise the house cannot keep, and an address nobody can pay for is one."""
+        return offer
 
     @app.get("/names/{name}")
     def look(name: str, also: list[str] = Query(default=[])):
@@ -51,12 +62,12 @@ def make(registry: Registry, now=time.time) -> FastAPI:
         except ValueError as e: raise HTTPException(422, str(e)) from None
         except LookupError: raise HTTPException(409, {"why": "taken", "suggestions": registry.suggest(body.name)}) from None
         claims[who] = recent + [now()]
-        return out
+        return out | {"relay": relay}
 
     @app.get("/houses/{name}")
     def status(name: str, authorization: str | None = Header(default=None)):
         owner(name, authorization)
-        return {"name": name, "address": f"{name}.{registry.zone}", **registry.status(name)}
+        return {"name": name, "address": f"{name}.{registry.zone}", **registry.status(name), "relay": relay}
 
     @app.delete("/houses/{name}", status_code=204)
     def release(name: str, authorization: str | None = Header(default=None)):
@@ -82,9 +93,12 @@ def main():
     registry = Registry(data / "houses.db", zone=os.environ.get("RELAY_ZONE", "elyir.app"))
     if os.environ.get("RELAY_SELF_SECRET"):
         registry.seed("api", os.environ["RELAY_SELF_SECRET"])
+    relay = {"addr": os.environ.get("RELAY_ADDR", f"relay.{registry.zone}"), "token": os.environ.get("RELAY_FRPS_TOKEN", "")}
+    # The price is words, not a number: what it costs and how often, as the panel will say it.
+    offer = {"open": os.environ.get("RELAY_OFFER_OPEN") == "1", "price": os.environ.get("RELAY_PRICE") or None, "pay": os.environ.get("RELAY_PAY_URL") or None}
     # proxy_headers from loopback only: Caddy is on this box and says who is really asking, so the
     # claims limit counts households rather than Caddy, and the plugin route can tell the two apart.
-    uvicorn.run(make(registry), host="127.0.0.1", port=int(os.environ.get("RELAY_PORT", "7100")),
+    uvicorn.run(make(registry, relay=relay, offer=offer), host="127.0.0.1", port=int(os.environ.get("RELAY_PORT", "7100")),
                 proxy_headers=True, forwarded_allow_ips="127.0.0.1")
 
 
