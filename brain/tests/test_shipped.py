@@ -76,3 +76,25 @@ class ShippedScenesTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FrontDoorFiles(unittest.TestCase):
+    """Every file the Caddyfile imports is mounted where Caddy looks for it.
+
+    The compose files mounted the Caddyfile alone, and when it began importing caddy/away/ the import
+    was not found and Caddy would not start -- hub.local went dark on a real hub on 2 October 2026,
+    with the brain healthy behind it. Nothing else checks this: the tests run Caddy against a folder
+    mounted by hand.
+    """
+    def test_what_the_caddyfile_imports_is_mounted_in_every_compose_file(self):
+        import re
+        from pathlib import Path
+        layer = Path(__file__).resolve().parents[2] / "driver-layer"
+        imports = re.findall(r"^\s*import\s+(\S+)", (layer / "caddy" / "Caddyfile").read_text(), re.M)
+        self.assertTrue(imports)
+        for compose in ("docker-compose.yml", "docker-compose.mac.yml"):
+            text = (layer / compose).read_text()
+            for imp in imports:
+                folder = imp.split("/")[0]
+                self.assertTrue(f"./caddy/{folder}:/etc/caddy/{folder}" in text, f"{compose} does not mount caddy/{folder}, which the Caddyfile imports")
+                self.assertTrue((layer / "caddy" / folder).is_dir())
