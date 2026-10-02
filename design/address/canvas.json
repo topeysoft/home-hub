@@ -1,0 +1,198 @@
+{
+  "pages": [
+    {
+      "id": "page-1",
+      "name": "Giving the house an address"
+    },
+    {
+      "id": "page-2",
+      "name": "Not chosen"
+    }
+  ],
+  "artboards": [
+    {
+      "file": "Today.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Today \u2014 This hub: the house has no address and no way to get one",
+      "page": "page-1"
+    },
+    {
+      "file": "HubA.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "A \u2014 on This hub, where you go to look",
+      "page": "page-2"
+    },
+    {
+      "file": "PeopleB.dc.html",
+      "x": 0,
+      "y": 1600,
+      "w": 1440,
+      "h": 900,
+      "title": "B \u2014 kept, for a house that said Not now",
+      "page": "page-1"
+    },
+    {
+      "file": "SetupC.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "C as first worded \u2014 included with the box, read as a warranty",
+      "page": "page-2"
+    },
+    {
+      "file": "Taken.dc.html",
+      "x": 0,
+      "y": 2700,
+      "w": 1440,
+      "h": 900,
+      "title": "All three \u2014 an address another house has",
+      "page": "page-1"
+    },
+    {
+      "file": "Named.dc.html",
+      "x": 1560,
+      "y": 2700,
+      "w": 1440,
+      "h": 900,
+      "title": "All three, after \u2014 where the address lives",
+      "page": "page-1"
+    },
+    {
+      "file": "OfferPlain.dc.html",
+      "x": 1560,
+      "y": 1600,
+      "w": 1440,
+      "h": 900,
+      "title": "C \u2014 in setup, the offer said plainly \u00b7 CHOSEN",
+      "page": "page-1"
+    },
+    {
+      "file": "OfferWays.dc.html",
+      "x": 3120,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "The offer, three ways \u2014 every answer on the screen, free first",
+      "page": "page-2"
+    },
+    {
+      "file": "OfferTrial.dc.html",
+      "x": 4680,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "The offer, as a try \u2014 a month free, nothing to cancel",
+      "page": "page-2"
+    },
+    {
+      "file": "OfferPhone.dc.html",
+      "x": 3120,
+      "y": 1600,
+      "w": 1440,
+      "h": 900,
+      "title": "After Continue on your phone \u2014 paying never happens on the wall",
+      "page": "page-1"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "why",
+      "x": -620,
+      "y": 0,
+      "w": 500,
+      "page": "page-1",
+      "text": "WHY THIS EXISTS\n\nAway was settled on 1 October (design/away/, C): every phone moves to the house's own address once, the evening the house gets it, and letting a phone out is then only a switch. Which leaves the evening itself undrawn -- the moment a household chooses temi or palace and the house becomes temi.elyir.app.\n\nWHAT THE ANSWER HAS TO CARRY, from docs/away.md and docs/service.md, and none of it is contested here:\n\n- THE HOUSEHOLD CHOOSES THE NAME, filled in from the name the house was given in setup (\"Temi's house\" suggests temi). A name another house has is refused with three that are free.\n- AN ADDRESS COSTS SOMETHING, because that is what keeps a thousand from being squatted. A box that was bought ships with it included; the line under the field says until when. The actual price and the years included are open decisions in service.md, so \"until October 2028\" is a placeholder.\n- THE CONSEQUENCE IS SAID BEFORE THE FIRST PAYMENT, NOT AFTER THE FIRST LAPSE: if it lapses or the service is down, the house works exactly as it does now. That sentence is in the conversation in every direction.\n- RUNNING YOUR OWN STAYS A REAL PATH. One quiet line, \"Have a server of your own? Use it instead\" -- never a worse version, never a footnote.\n- NO HOUSEHOLD VOCABULARY OF OURS LEAKS: no relay, no DNS, no certificate. The hub proving the name takes about a minute and is said as \"Getting the address ready\".\n\nWHAT IS CONTESTED IS WHERE THE QUESTION IS ASKED, and the three boards are three whole answers: where you go to look (A), where it is wanted (B), and at the start, before it is wanted at all (C).\n\nCHOSEN, 1 October 2026: C, with B for every house that said Not now. The wording of C's offer is the open question below it."
+    },
+    {
+      "id": "today",
+      "x": 1560,
+      "y": 0,
+      "w": 520,
+      "page": "page-1",
+      "text": "TODAY\n\nThis hub as it ships, traced at 1440x900 (?sheet=hub): software, what's new, the network, language, updates, the bridges, a backup. Nothing about outside, because the house has never had a way out.\n\nThe address will live here afterwards in every direction (All three, after): it is a fact about the hub, like its network, and This hub is where a household checks on facts about the hub. The directions differ only in where the question is first ASKED."
+    },
+    {
+      "id": "a",
+      "x": 0,
+      "y": -620,
+      "w": 600,
+      "page": "page-2",
+      "text": "A -- ON THIS HUB, WHERE YOU GO TO LOOK\n\nA row of its own, Outside, between Network and Language. Tap it and the conversation opens in the row. This is what docs/away.md wrote down on 12 September: one switch under This hub.\n\nFOR: it is honest about what it is -- a property of the hub, with a price, chosen deliberately by somebody who went looking. Nothing interrupts anybody, and it is where the address will live anyway, so there is one place for it from first to last.\n\nAGAINST: nobody goes looking. This hub is the page a household opens to check on an update; a feature that waits there is a feature most houses never meet. And until there is an address, the From outside switch on People cannot be shown at all -- it would promise something the house cannot do -- so the one place somebody would think to look for it is empty."
+    },
+    {
+      "id": "b",
+      "x": 0,
+      "y": 1000,
+      "w": 600,
+      "page": "page-1",
+      "text": "B -- WHERE IT IS WANTED  \u00b7  KEPT, FOR A HOUSE THAT SAID NOT NOW\n\nThe From outside switch is on every phone row on People from the start. The first time somebody turns one on, the address is asked for right under that row: \"First, the house needs an address. It is how Sam's iPhone will find the house from outside.\"\n\nFOR: the question arrives at the one moment its point is obvious, with a person's name in it. Discovery costs nothing, because the switch is where anybody would look for it. And it is the panel's own habit, already chosen once (design/knock/): answer where the question was asked.\n\nAGAINST: a switch that opens a paid conversation is a switch that does more than it says. And under Away's C it arrives late. Every phone in the house was paired on hub.local and now has to move -- the whole house is asked to do something on the evening one person wanted one thing. Sam, who is away, cannot move until home; the switch is on and Sam is still outside, which is the exact failure C was chosen to avoid."
+    },
+    {
+      "id": "c",
+      "x": 1560,
+      "y": 1000,
+      "w": 600,
+      "page": "page-1",
+      "text": "C -- IN SETUP, BEFORE IT IS WANTED\n\nOne more question at the end of setup, after What's in the house? and before the house is ready: \"From outside, too?\" -- the address already filled in from the name given two steps earlier, with Not now beside it. Setup goes from five asked steps to six.\n\nFOR: it is the only direction in which nobody ever moves. The house has its address before the first phone joins, so the code on the last screen of setup already points at it, every phone is on the right name from its first tap, and Away's move -- the band line, the three steps, the old icon -- simply never happens to this house. A box that was bought has the address included, so for most households this is a free yes in a moment that is already about setting things up. It is also the shape the panel already uses for an outside light's evenings: asked once, at the end of the setup it belongs to.\n\nAGAINST: setup is meant to be ten minutes, and this is a question about a future need, with a price in it, asked of somebody who has not used the house yet. Not now has to be a real answer with no sulk in it.\n\nCHOSEN, 1 October 2026, WITH B FOR A HOUSE THAT SAID NOT NOW: the switch on People still asks the first time it is turned on, and that house gets Away's move. This hub (All three, after) is where the address lives either way."
+    },
+    {
+      "id": "shared",
+      "x": 3120,
+      "y": 2700,
+      "w": 560,
+      "page": "page-1",
+      "text": "WHAT ALL THREE SHARE\n\nTHE CONVERSATION is the same box wherever it opens: the name before .elyir.app, checked as it is typed; a line saying it is free, or whose it is and three that are free (Taken); what it costs and what happens if it lapses, in one sentence; Give it this address, Not now, and the quiet way to use a server of your own.\n\nAN ADDRESS ANOTHER HOUSE HAS is a line in the color of the problem, never a red box and never a modal, and the suggestions are taps -- the house's surname, its town, the name with -house.\n\nAFTER (Named): a row on This hub that says the address, what it costs, and how many phones have moved to it. Turn off stops outside and keeps the name for the grace period service.md promises, which the confirmation says out loud.\n\nNOT DRAWN, BECAUSE THEY ARE ONE LINE EACH: \"Getting the address ready -- about a minute\" in place of the verdict while the hub proves the name, and for a box that was bought with relay included, the price line reads \"Included with your hub for the first year, then $3 a month\" and Continue on your phone becomes Give it this address."
+    },
+    {
+      "id": "offer-why",
+      "page": "page-1",
+      "x": -620,
+      "y": 1600,
+      "w": 500,
+      "text": "THE OFFER, REWORDED -- AFTER C WAS CHOSEN\n\nThe first drawing of C said \"Included with this hub until October 2028\". That is one of the three tiers in docs/service.md -- years of relay sold inside the price of a box -- and on its own it reads like a warranty: something you already own, running out. It does not say the thing that is actually true, which is that the software is free, the house is complete without this, and reaching it from outside is an optional service, paid for, that somebody runs.\n\nWHAT ALL THREE NOW SAY, whatever else differs:\n\n- OPTIONAL in the step label, not \"Step 6 of 6\". A numbered step reads as required.\n- THE HOUSE IS COMPLETE WITHOUT IT, said first, before any price.\n- WHAT IS BOUGHT IS A SERVICE WE RUN, SEPARATE FROM THE HOUSE -- not a feature, because nothing in the house is behind it (service.md, What is not sold).\n- THE PRICE IN THE OPEN, with \"stop any time\". $3 a month is a placeholder; the price is service.md's open decision.\n- WHAT STOPPING DOES, in one sentence, before anybody pays: only outside stops, the house carries on, the address is held for a while.\n- PAYING HAPPENS ON A PHONE (After Continue): the wall is shared and no place to type a card, and the payment provider's own page is the only thing that ever sees one.\n- A SERVER OF YOUR OWN stays one quiet line, and says free.\n\nA BOX THAT WAS BOUGHT changes one line in each, not the shape: \"Included with your hub for the first year, then $3 a month\".\n\nCHOSEN: PLAIN, 1 October 2026. Three ways, As a try and C's first wording are on Not chosen. The conversation on B, Taken and After now says the same as Plain."
+    },
+    {
+      "id": "offer-plain",
+      "page": "page-1",
+      "x": 3120,
+      "y": 1000,
+      "w": 600,
+      "text": "PLAIN -- ONE OFFER, PRICED IN THE OPEN  \u00b7  CHOSEN, 1 October 2026\n\nThe house is complete as it is; to open it on your phones away from home, we carry it there -- a service we run, separate from the house. The address, then $3 a month and stop any time, then what stopping does. Continue on your phone, or Not now.\n\nFOR: it is the shortest honest version. One decision, every fact needed to make it on the screen, and nothing to read twice in the middle of setup. Not now is the same size as Continue.\n\nAGAINST: a price in a first-run setup is a price in a first-run setup -- somebody ten minutes into a new house is asked for money, even politely, even optionally."
+    },
+    {
+      "id": "offer-ways",
+      "page": "page-2",
+      "x": 3120,
+      "y": -700,
+      "w": 600,
+      "text": "THREE WAYS -- EVERY ANSWER ON THE SCREEN\n\nAt home only, free. With us, $3 a month. On a server of your own, free. Choosing With us opens the address under it.\n\nFOR: it is the business model drawn as a screen. Nobody can come away thinking the house needs paying for, because two of the three answers are free and the first one is doing nothing at all. It is the most honest of the three about what this project is.\n\nAGAINST: it puts a technical path -- a server of your own -- as an equal answer on a screen made for somebody who has never seen the house. Section 5 is plain that the box is for a non-technical person. And three cards to read is the heaviest moment in setup, for the one question setup could skip."
+    },
+    {
+      "id": "offer-trial",
+      "page": "page-2",
+      "x": 4680,
+      "y": -700,
+      "w": 600,
+      "text": "AS A TRY -- A MONTH FREE, NOTHING TO CANCEL\n\nThe address now, free for a month, no card. Near the end the house asks once, on a phone; saying nothing is the same as Not now, and outside simply stops.\n\nFOR: setup never asks for money. Somebody decides about a service after using it from a cafe, not before they have turned on a light. And \"nothing to cancel\" removes the thing people actually fear about subscriptions.\n\nAGAINST: it is a business decision, not a wording -- a month of relay for every house that says yes, and names held for a month without payment, which service.md counted on payment to prevent (bounded here by the month). And it adds a second moment to design and get right: the ask near the end, which must be one quiet line and never a wall taken over."
+    },
+    {
+      "id": "c-first",
+      "page": "page-2",
+      "x": 1560,
+      "y": -420,
+      "w": 600,
+      "text": "C AS FIRST WORDED\n\nThe placement that was chosen, with the wording that was not: \"Included with this hub until October 2028\". It is one of service.md's three tiers -- years of relay inside the price of a box -- and on its own it reads like a warranty running out. It never says that the software is free, the house is complete without this, and outside is an optional service that somebody runs and is paid for. Replaced by Plain."
+    }
+  ],
+  "launch": {
+    "view": "canvas",
+    "page": "page-1"
+  }
+}
