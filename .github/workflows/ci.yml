@@ -32,8 +32,18 @@ on:
 # cancels the first — which is exactly what happened to v0.2.0: the brain image's verification was
 # killed three seconds in by the Pi image's, and the build refused to publish a release it could not
 # confirm. Right call by the guard, wrong reason.
+#
+# And the BRANCH, not github.ref, is what the group is keyed on. A push to a branch with a pull request
+# open fired both triggers, and github.ref differs between them (refs/heads/x for the push,
+# refs/pull/N/merge for the pull request), so they sat in two groups and every push ran the whole suite
+# twice -- noticed 2 October 2026, five pull requests in a row. head_ref is the branch on a pull request
+# and empty otherwise; ref_name is the branch (or the tag) on everything else. So both runs of one push
+# now share a group and the second to start cancels the first; it is usually the pull_request run that
+# survives, which is the one worth keeping, but GitHub does not promise the order. The repository is in
+# the group too, so a fork's pull request from a branch called main never cancels a push to ours. A tag
+# has no head_ref, so the release verifications above keep their own groups exactly as before.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.head.repo.full_name || github.repository }}-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 permissions:
@@ -185,7 +195,10 @@ jobs:
   # failed shard skips this job, and a skipped required check reads as passing.
   e2e:
     needs: e2e-shard
-    if: always()
+    # Not always(): a run the concurrency group cancelled (the duplicate of a push, above) would still
+    # run this, find its jobs cancelled, and report a failure that is not one. !cancelled() still runs
+    # it -- and still fails it -- when a job it waits on really failed.
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     steps:
       - run: test "${{ needs.e2e-shard.result }}" = success
@@ -295,7 +308,10 @@ jobs:
   # built. Change the matrix freely; leave this job's name alone.
   image:
     needs: image-build
-    if: always()
+    # Not always(): a run the concurrency group cancelled (see e2e above) would still
+    # run this, find its jobs cancelled, and report a failure that is not one. !cancelled() still runs
+    # it -- and still fails it -- when a job it waits on really failed.
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     steps:
       - name: both architectures built
