@@ -319,11 +319,14 @@ gets `unrecognized_name`, and the plugin route is 404 to anything but frps on th
 **Turning it on for the maker's own house, before payments.** A house set up before addresses existed
 never sees the setup step, so this is the way in:
 
-1. The hub follows `development` and has #53 and #54 (install the update from *This hub*). `sudo docker
+1. The hub follows `development` and has #53 and #54 (install the update from *This hub*; done on the
+   maker's hub on 2 October, when sharing with Apple Home, Google Home and Alexa started working there too). `sudo docker
    inspect brain` should list `HUB_SHARE_TOKEN`, `HUB_AWAY_OFFER` and `HUB_RELAY_API`.
 2. `HUB_AWAY_OFFER=on` in `/opt/home-hub/driver-layer/.env`, then `sudo docker compose up -d brain` from
-   `/opt/home-hub/driver-layer` so the brain is recreated with it. `curl -s localhost:8300/address` on the hub
-   then says `"open": true, "by_hand": true`.
+   `/opt/home-hub/driver-layer` so the brain is recreated with it (an update from *This hub* does the same).
+   `sudo docker inspect brain` then lists `HUB_AWAY_OFFER=on`. Do not check it with `curl localhost:8300/address`:
+   on a house with a passcode that route wants a paired phone and answers `{"detail":"phone"}` to curl --
+   the step in 3 opening is the check.
 3. On the wall, open `http://hub.local/?setup=1&page=address`. Choose the name -- the household's to choose,
    and taken for a day once claimed -- and *Give it this address*. The step waits to be turned on.
 4. On the relay: `ssh root@37.27.145.43 docker exec relay-service python cli.py grant <name> 2027-10-01 "by hand"`.
