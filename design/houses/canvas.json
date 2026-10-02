@@ -1,0 +1,140 @@
+{
+  "pages": [
+    {
+      "id": "page-1",
+      "name": "More than one house"
+    },
+    {
+      "id": "page-2",
+      "name": "Not chosen"
+    }
+  ],
+  "artboards": [
+    {
+      "file": "Today.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "Today \u2014 the phone panel, and nothing on it says which house",
+      "page": "page-1"
+    },
+    {
+      "file": "TodayIcons.dc.html",
+      "x": 520,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "Today, the Home Screen \u2014 two houses, two icons, both called Home",
+      "page": "page-1"
+    },
+    {
+      "file": "ListA.dc.html",
+      "x": 0,
+      "y": 1100,
+      "w": 390,
+      "h": 844,
+      "title": "A \u2014 the houses first",
+      "page": "page-2"
+    },
+    {
+      "file": "ListA-in.dc.html",
+      "x": 520,
+      "y": 1100,
+      "w": 390,
+      "h": 844,
+      "title": "A, inside \u2014 the lake house, opened from the list",
+      "page": "page-2"
+    },
+    {
+      "file": "HereB.dc.html",
+      "x": 1160,
+      "y": 1100,
+      "w": 390,
+      "h": 844,
+      "title": "B \u2014 where you are \u00b7 CHOSEN",
+      "page": "page-1"
+    },
+    {
+      "file": "HereB-sheet.dc.html",
+      "x": 1680,
+      "y": 1100,
+      "w": 390,
+      "h": 844,
+      "title": "B, the switch \u2014 a tap on the name",
+      "page": "page-1"
+    },
+    {
+      "file": "StripC.dc.html",
+      "x": 1160,
+      "y": 1100,
+      "w": 390,
+      "h": 844,
+      "title": "C \u2014 every house in view",
+      "page": "page-2"
+    },
+    {
+      "file": "StripC-lake.dc.html",
+      "x": 1680,
+      "y": 1100,
+      "w": 390,
+      "h": 844,
+      "title": "C, another house \u2014 one tap on Lake house",
+      "page": "page-2"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "why",
+      "page": "page-1",
+      "x": -620,
+      "y": 0,
+      "w": 500,
+      "text": "WHY THIS EXISTS\n\n\"I'd rather have a single app that I operate all the homes from.\" A vacation home, a rental, the house you live in: three hubs, and today three separate apps on the phone.\n\nThe printer app already settled the same question the other way round (astromech, printers.elyir.app): one app at one fixed address, the list of printers kept on the phone, each printer tried on the Wi-Fi first and over the internet after, and each printer's own screen opened inside the app. Nothing about that is a server-side account, which is why it fits here: no login, no vendor, the phone holds what it was given.\n\nTHE HOUSE CANNOT DO THIS FROM INSIDE THE PANEL. A Home Screen icon belongs to the web address it was added from, and every house has its own (hub.local at home, its own name on elyir.app once it has one). The phone's pass into a house lives under that address too (app/src/door.ts). So the second house is a second icon by construction, and no switcher drawn inside one house's panel can reach the other's.\n\nSo whatever is chosen, the app moves to one address of its own and keeps the houses as a list on the phone. That part is not what these boards are about. They are about the screen: how a phone that knows three houses says which one you are standing in, and how far away the others are."
+    },
+    {
+      "id": "today",
+      "page": "page-1",
+      "x": 0,
+      "y": -620,
+      "w": 900,
+      "text": "TODAY\n\nLeft: traced off the running panel at 390x844 on 2 October (?layout=wall&nav=top on the mock). Look for the house's name and there is none. Nothing ever needed one: there was only ever one house, so the sky, the cards and the people at the bottom were enough to say whose it is. The moment there are two, the first thing missing is the house saying which one it is.\n\nRight: the phone's own Home Screen after adding a second house. Both icons say Home, because the name comes from app/public/manifest.json and it is the same in every house. Nothing tells you which is the lake. Worse, a Home icon added on hub.local opens whichever hub answers hub.local on the Wi-Fi you are on, so at the lake house the icon you added at home opens the lake's hub, and that hub does not know this phone."
+    },
+    {
+      "id": "shared",
+      "page": "page-1",
+      "x": 1160,
+      "y": 0,
+      "w": 560,
+      "text": "WHAT ALL THREE SHARE\n\nWITH ONE HOUSE, EVERY DIRECTION DRAWS EXACTLY TODAY. Most households will only ever have one house, and they pay nothing for this: no list, no name, no row of houses. Everything on these boards appears only once a second house is added.\n\nTHE NAMES ARE THE PHONE'S. \"Home\" on my phone is \"Mom's\" on my sister's, so the name in the list belongs to the phone that added it, as a printer's name does in the printer app. It is suggested from the house when it is added and can be changed in the list. The house's own name on the internet is not shown.\n\nWHICH HOUSE YOU ARE IN IS FOUND, NOT ASKED. The app tries each house on the Wi-Fi first, as the printer app does; the one that answers there is the one you are in (green: You're here). Out of every house, it is the last one you opened.\n\nEACH HOUSE PAINTS ITS OWN SKY. Switching houses changes the field behind everything to that house's weather and hour. That is the strongest cue there is that you are looking at another place, and it costs nothing: tone.ts already paints from the house's own weather.\n\nADDING A HOUSE is joining it, the way a phone joins any house today: with its passcode, or by being added from a phone already in it. Nothing new to learn.\n\nWHAT IS STILL OPEN, AND NOT FOR THESE BOARDS. (1) A house with no name on the internet can only be in the list while you are on its Wi-Fi, because a secure page cannot reach plain hub.local. (2) Whether printers and houses become one app. (3) A new phone adds every house again: there is no account, on purpose."
+    },
+    {
+      "id": "a",
+      "page": "page-2",
+      "x": 0,
+      "y": 1980,
+      "w": 910,
+      "text": "A \u2014 THE HOUSES FIRST\n\nThe app opens on a page of houses. Each card is painted with that house's own sky and says what the house would say on its own screen: Something is on in 5 rooms, Everything is off, and anything that needs you, in lamp, inside the card. A tap goes in. Inside, the clock row gives way to the way back and the house's name.\n\nFOR: it is the only direction where every house is seen fully at once, which is the whole point for someone who owns a rental: open the app, and Elm Street's lock is right there. It is the printer app's shape, so if the two ever become one app, the pattern already matches.\n\nAGAINST: the house you are standing in, the common case by far, is always one tap further away than it is today. Coming home and turning the lights off becomes open, tap Home, tap. And the house's own screen loses its clock row to make room for the way back."
+    },
+    {
+      "id": "b",
+      "page": "page-1",
+      "x": 1160,
+      "y": 1980,
+      "w": 910,
+      "text": "B \u2014 WHERE YOU ARE  \u00b7  CHOSEN, 2 OCTOBER 2026\n\nThe app opens straight into the house whose Wi-Fi the phone is on, or the last one opened when it is on none. The house's name takes the place of Connected, and the name is the switch: a tap opens Houses, a sheet like every other sheet on the phone, with each house's weather and one line of how it is.\n\nFOR: it costs nothing. Not a pixel of the stage moves; the house you are in opens exactly as it does today, with its name now in view. Connected's work is kept by the dot (green when connected, gray while reconnecting), which was always the part anybody read.\n\nAGAINST: the other houses are out of sight. Elm Street's lock reaches you only as a notification or when you happen to open the sheet. A lamp dot on the name when another house wants you would close most of that gap, and is the obvious addition if B is chosen. It is not drawn, so the board argues B at its plainest.\n\nCHOSEN, 2 October 2026. Picked with a note that the phone's top is already crowded: the stack of amber lines under the tabs, and the bar sitting under the iPhone's own status bar when the house is opened from the Home Screen. Both are their own collection, design/band/, drawn on B's bar. A and C are on Not chosen with their cases intact."
+    },
+    {
+      "id": "c",
+      "page": "page-2",
+      "x": 1160,
+      "y": 1980,
+      "w": 910,
+      "text": "C \u2014 EVERY HOUSE IN VIEW\n\nThe clock row becomes a row of houses: the one you are looking at filled, the others glass, green where you are, lamp where one wants you. One tap on another name and the whole screen becomes that house, its sky included, with the row staying put.\n\nFOR: the other houses are in view on every screen without costing the stage anything. The row it takes was the cheapest 40 pixels on the phone: a phone already shows the time at the top of its own screen. Switching is one tap and never opens anything.\n\nAGAINST: the date goes with the clock, and it is not on the phone's own screen. Four houses do not fit, and the last one scrolls out of sight. And it is the loudest of the three: three names at the top of every screen, for a household whose second house is a cabin it visits twice a year."
+    }
+  ],
+  "launch": {
+    "view": "canvas",
+    "page": "page-1"
+  }
+}
