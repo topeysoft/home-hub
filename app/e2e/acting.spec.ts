@@ -59,10 +59,10 @@ test('a running thermostat paints its card, and says which way', async ({ page }
 })
 
 /* The case the whole change exists for, and the one a thermostat is in most of the day. */
-test('a thermostat holding at temperature wears nothing at all', async ({ page }) => {
+test('a thermostat with nothing to do wears nothing at all', async ({ page }) => {
   await acting(page, 'idle')
   const idle = await card(page)
-  expect(idle.says).toContain('holding')
+  expect(idle.says).toContain('nothing to do')   // the thermostat's idle, in the words design/words-rooms/ chose
   expect(idle.cls).not.toContain('act-')
   expect(idle.bg).not.toContain('oklch')        // the ordinary card, not a painted one
 
