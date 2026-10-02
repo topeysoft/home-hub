@@ -1,7 +1,14 @@
 #cloud-config
 # What the box runs, written once at first boot so the server is reproducible rather than
-# remembered. Nothing here is specific to a house: the relay learns names from the hubs that dial
-# in, and forgets them when they go.
+# remembered. Four things, each a container with a systemd unit:
+#
+#   frps            the relay itself, on 443: carries every house's bytes and reads none of them
+#   relay-service   the registration service: names, entitlements, and frps's yes or no (relay/service)
+#   relay-api-door  a Caddy holding api.elyir.app's certificate, so hubs can reach the service
+#   relay-api-frpc  how that Caddy is reached: through frps, exactly the way a house's door is
+#
+# The service's file and Caddy's certificate live on a Hetzner volume mounted at /var/lib/relay, so a
+# rebuilt box comes back knowing every house, without asking Let's Encrypt for api.elyir.app again.
 
 package_update: true
 package_upgrade: true
@@ -11,15 +18,16 @@ packages:
   # missing, and Hetzner's debian-12 image ships without it. Found 1 October 2026: the first box
   # came up with frps restarting every five seconds and nothing on 443.
   - apparmor
+  # The service is built on the box from this repository at a pinned ref (relay_service_ref), which
+  # needs git for docker to fetch it. No registry and no image to publish: the code that runs is the
+  # code at that commit, readable by anyone, which is the point of the service being AGPL.
+  - git
 
 write_files:
-  # The whole configuration. Two ports and an auth token, and the token is what stops any frpc on
-  # the internet registering a proxy here -- it is the interim answer until the registration service
-  # in docs/service.md checks an entitlement per house instead.
-  #
-  # NOT here, deliberately: any `plugin` line. frp ships an `https2http` plugin that terminates TLS,
-  # and the relay's whole claim -- that it carries bytes it cannot read -- is a property of not
-  # using one. docs/away.md, *What was verified*.
+  # The relay. NOT here, deliberately: any `plugin` line on a proxy. frp ships an `https2http` plugin
+  # that terminates TLS, and the relay's whole claim -- that it carries bytes it cannot read -- is a
+  # property of not using one. docs/away.md, *What was verified*. The httpPlugins block below is a
+  # different thing: frps asking the service whether to carry a house at all, before any byte moves.
   - path: /etc/frp/frps.toml
     permissions: '0600'
     owner: root:root
@@ -27,6 +35,8 @@ write_files:
       bindPort = 443
       vhostHTTPSPort = 443
 
+      # Not the gate -- every hub has it. The gate is the plugin below, which checks each house's own
+      # secret and entitlement (relay/service/registry.py, judge).
       auth.method = "token"
       auth.token = "${auth_token}"
 
@@ -36,6 +46,76 @@ write_files:
       # Names are not logged with the bytes: what this box can see is which house, when, and how
       # much, which is what docs/service.md promises out loud and nothing more.
       log.maxDays = 7
+
+      # Checked against frps 0.71.0 on 1 October 2026: a refused Login or NewProxy reaches the hub as
+      # the reason given, and with the service down frps refuses new logins rather than letting them
+      # through. Tunnels already open stay open, so a restart of the service is not an outage.
+      [[httpPlugins]]
+      name = "houses"
+      addr = "127.0.0.1:7100"
+      path = "/frps"
+      ops = ["Login", "NewProxy"]
+
+  # The service's own name, as frpc sees it: one more house on this relay, always carried, whose door
+  # is the Caddy below. Its secret is seeded into the service at start (RELAY_SELF_SECRET).
+  - path: /etc/frp/api-frpc.toml
+    permissions: '0600'
+    owner: root:root
+    content: |
+      serverAddr = "127.0.0.1"
+      serverPort = 443
+      loginFailExit = false
+      auth.method = "token"
+      auth.token = "${auth_token}"
+      user = "api"
+      metadatas.house = "api"
+      metadatas.secret = "${self_secret}"
+      transport.tls.disableCustomTLSFirstByte = false
+      log.to = "console"
+
+      [[proxies]]
+      name = "door"
+      type = "https"
+      customDomains = ["api.${zone}"]
+      localIP = "127.0.0.1"
+      localPort = 9443
+      transport.proxyProtocolVersion = "v2"
+
+  # api.elyir.app's door. The certificate is proved over TLS-ALPN-01 through frps, the same way every
+  # house proves its own, so no port opens for it and no DNS credential exists on this box. Only the
+  # hub-facing routes are passed on; the plugin route answers frps on loopback and nobody else.
+  - path: /etc/relay/Caddyfile
+    permissions: '0644'
+    owner: root:root
+    content: |
+      {
+        servers 127.0.0.1:9443 {
+          listener_wrappers {
+            proxy_protocol {
+              timeout 5s
+              allow 127.0.0.1/32
+            }
+            tls
+          }
+        }
+      }
+
+      api.${zone}:9443 {
+        bind 127.0.0.1
+        tls {
+          issuer acme {
+            disable_http_challenge
+            alt_tlsalpn_port 9443
+          }
+        }
+        @public path /alive /names/* /houses /houses/*
+        handle @public {
+          reverse_proxy 127.0.0.1:7100
+        }
+        handle {
+          respond 404
+        }
+      }
 
   - path: /etc/systemd/system/frps.service
     permissions: '0644'
@@ -60,11 +140,95 @@ write_files:
       [Install]
       WantedBy=multi-user.target
 
+  - path: /etc/systemd/system/relay-service.service
+    permissions: '0644'
+    owner: root:root
+    content: |
+      [Unit]
+      Description=the registration service
+      After=docker.service var-lib-relay.mount
+      Requires=docker.service
+      RequiresMountsFor=/var/lib/relay
+
+      [Service]
+      Restart=always
+      RestartSec=5
+      # Built once from the pinned ref; a rebuild is a new ref, which is a new box (relay.tf).
+      ExecStartPre=/bin/sh -c 'docker image inspect relay-service:${service_ref} >/dev/null 2>&1 || docker build -t relay-service:${service_ref} "https://github.com/${repository}.git#${service_ref}:relay/service"'
+      ExecStartPre=-/usr/bin/docker rm -f relay-service
+      ExecStart=/usr/bin/docker run --rm --name relay-service \
+        --network host \
+        -v /var/lib/relay/service:/data \
+        -e RELAY_ZONE=${zone} \
+        -e RELAY_SELF_SECRET=${self_secret} \
+        relay-service:${service_ref}
+      ExecStop=/usr/bin/docker stop relay-service
+
+      [Install]
+      WantedBy=multi-user.target
+
+  - path: /etc/systemd/system/relay-api-door.service
+    permissions: '0644'
+    owner: root:root
+    content: |
+      [Unit]
+      Description=api.${zone}'s door
+      After=docker.service var-lib-relay.mount
+      Requires=docker.service
+      RequiresMountsFor=/var/lib/relay
+
+      [Service]
+      Restart=always
+      RestartSec=5
+      ExecStartPre=-/usr/bin/docker rm -f relay-api-door
+      ExecStart=/usr/bin/docker run --rm --name relay-api-door \
+        --network host \
+        -v /etc/relay/Caddyfile:/etc/caddy/Caddyfile:ro \
+        -v /var/lib/relay/caddy:/data \
+        caddy:2
+      ExecStop=/usr/bin/docker stop relay-api-door
+
+      [Install]
+      WantedBy=multi-user.target
+
+  - path: /etc/systemd/system/relay-api-frpc.service
+    permissions: '0644'
+    owner: root:root
+    content: |
+      [Unit]
+      Description=api.${zone} through the relay
+      After=frps.service relay-service.service
+      Requires=docker.service
+
+      [Service]
+      Restart=always
+      RestartSec=5
+      ExecStartPre=-/usr/bin/docker rm -f relay-api-frpc
+      ExecStart=/usr/bin/docker run --rm --name relay-api-frpc \
+        --network host \
+        -v /etc/frp/api-frpc.toml:/etc/frp/frpc.toml:ro \
+        fatedier/frpc:v${frp_version} -c /etc/frp/frpc.toml
+      ExecStop=/usr/bin/docker stop relay-api-frpc
+
+      [Install]
+      WantedBy=multi-user.target
+
 runcmd:
   # Key-only, no root password, no sshd password prompt to brute force.
   - sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
   - sed -i 's/^#\?PermitRootLogin.*/PermitRootLogin prohibit-password/' /etc/ssh/sshd_config
   - systemctl restart ssh || systemctl restart sshd
-  - systemctl enable --now docker
+  # The volume is attached after the box exists, so it is waited for rather than assumed. It arrives
+  # formatted (relay.tf); fstab carries it across reboots, and nofail lets the box still boot -- and
+  # still carry every open tunnel -- if it ever does not.
+  - for i in $(seq 1 90); do [ -e ${volume_device} ] && break; sleep 2; done
+  - mkdir -p /var/lib/relay
+  - grep -q '${volume_device}' /etc/fstab || echo '${volume_device} /var/lib/relay ext4 defaults,nofail,discard 0 2' >> /etc/fstab
   - systemctl daemon-reload
+  - mount /var/lib/relay
+  - mkdir -p /var/lib/relay/service /var/lib/relay/caddy
+  - systemctl enable --now docker
+  - systemctl enable --now relay-service
   - systemctl enable --now frps
+  - systemctl enable --now relay-api-door
+  - systemctl enable --now relay-api-frpc

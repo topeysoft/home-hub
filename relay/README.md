@@ -25,12 +25,31 @@ a project token, read and write. They are the only things in this design minted 
 because they are what Terraform authenticates with. Then `terraform.tfvars` from the example beside
 it, and `terraform apply`. The wildcard and the CAA pair land at the same time as the box.
 
-Not here yet:
+- `service/` — the registration service, since 1 October 2026. It hands out a name per house and the
+  secret that proves it, holds each house's entitlement, and answers frps before it carries anyone:
+  frps's server plugin asks on every login and every proxy, and a house is carried only if its secret
+  matches, it is entitled, and it asks for nothing but its own name as raw https. It never touches
+  DNS -- every house is under the zone's one wildcard -- and it stores only the hash of each secret.
+  It runs on the relay box, built there from this repository at `relay_service_ref`, with its file on
+  a Hetzner volume that outlives the box. Hubs reach it at `https://api.elyir.app`, which is carried
+  through frps like a house and has its own certificate proved the same way, so nothing new is open.
 
-- **The registration service.** Hands out a name and holds the public key a hub signs with, and — since
-  19 September 2026 — the entitlement beside it, because the relay is offered as an optional paid
-  service and `frps` asks this service whether to carry a house at all. The check lives here and
-  never in the hub: a household that runs its own relay needs none of it, and every line of this
-  directory stays AGPL and self-hostable for exactly that reason. `docs/service.md`. It still does
-  not touch DNS: the zone below has one record in it and never changes at runtime, which is the
-  whole reason it fits in Terraform.
+**Carrying a house, by hand, until payments exist.** The relay is an optional paid service
+(`docs/service.md`) and the payment side is not built, so the operator grants entitlements:
+
+```sh
+# the house claims its name (the panel will do this; until then, from anywhere):
+curl -s https://api.elyir.app/houses -H 'content-type: application/json' -d '{"name":"temi"}'
+#   -> {"name":"temi","address":"temi.elyir.app","secret":"...", ...}   the secret is shown once
+ssh root@<relay> docker exec relay-service python cli.py grant temi 2027-10-01 "Temi, by hand"
+ssh root@<relay> docker exec relay-service python cli.py list
+```
+
+The hub then needs `HUB_AWAY_HOUSE=temi` and `HUB_RELAY_SECRET=<the secret>` in its `.env`
+(`driver-layer/.env.example`). A name claimed and not granted is let go after a day. `cli.py` also
+stops a house (it keeps its name), rotates a lost secret, and releases a name.
+
+**Moving the box to new service code** is a new `relay_service_ref` -- a commit, ideally -- and
+`terraform apply`, which replaces the server. The volume is detached and attached to the new one, so
+every house and the api certificate come across; open tunnels drop for the minute the box takes, and
+every hub's frpc dials back in on its own.

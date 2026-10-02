@@ -174,7 +174,8 @@ services:
       # Whether that door is the house's public name on a real certificate (on) or the plain one with
       # nothing behind it (off, every house until it has a name). caddy/away/ has both.
       - HUB_AWAY=${HUB_AWAY:-off}
-      - HUB_AWAY_NAME=${HUB_AWAY_NAME:-}
+      # The house's whole public name, made here from the one part .env holds, so the two can never disagree.
+      - HUB_AWAY_NAME=${HUB_AWAY_HOUSE:-}.${HUB_AWAY_ZONE:-elyir.app}
       - HUB_ACME_CA=${HUB_ACME_CA:-https://acme-v02.api.letsencrypt.org/directory}
       - BRAIN_UPSTREAM=localhost:8300
     volumes:
@@ -201,7 +202,9 @@ services:
     environment:
       - HUB_RELAY_ADDR=${HUB_RELAY_ADDR:-relay.elyir.app}
       - HUB_RELAY_TOKEN=${HUB_RELAY_TOKEN:-}
-      - HUB_AWAY_NAME=${HUB_AWAY_NAME:-}
+      - HUB_AWAY_HOUSE=${HUB_AWAY_HOUSE:-}
+      - HUB_AWAY_NAME=${HUB_AWAY_HOUSE:-}.${HUB_AWAY_ZONE:-elyir.app}
+      - HUB_RELAY_SECRET=${HUB_RELAY_SECRET:-}
 
   ring-mqtt:
     # Ring Alarm and everything paired to its base station (Z-Wave locks, switches, plugs, contact and
