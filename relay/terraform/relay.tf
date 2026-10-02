@@ -45,6 +45,25 @@ resource "hcloud_firewall" "relay" {
     description = "Every house dials in here, and every phone away arrives here."
   }
 
+  # The address in the name (relay/service/home.py): this box is the nameserver for home.elyir.app,
+  # answering each house's name at home with its LAN address. UDP for the questions, TCP for the
+  # answers that do not fit a datagram.
+  rule {
+    direction   = "in"
+    protocol    = "udp"
+    port        = "53"
+    source_ips  = ["0.0.0.0/0", "::/0"]
+    description = "home.elyir.app, answered here."
+  }
+
+  rule {
+    direction   = "in"
+    protocol    = "tcp"
+    port        = "53"
+    source_ips  = ["0.0.0.0/0", "::/0"]
+    description = "home.elyir.app over TCP."
+  }
+
   rule {
     direction   = "in"
     protocol    = "tcp"

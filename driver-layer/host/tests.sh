@@ -364,7 +364,12 @@ away() {
 #!/usr/bin/env bash
 echo "$*" >> "$FAKE/docker"
 D
-  chmod +x "$bin/docker"
+  # What `ip route get` says this host's address on the LAN is; $FAKE/lan changes it.
+  cat > "$bin/ip" <<'I'
+#!/usr/bin/env bash
+echo "1.1.1.1 via 192.168.86.1 dev eth0 src $(cat "$FAKE/lan" 2>/dev/null || echo 192.168.86.53) uid 0"
+I
+  chmod +x "$bin/docker" "$bin/ip"
   local secret token; secret="$(printf 's%.0s' $(seq 43))"; token="$(printf 'a%.0s' $(seq 64))"
   good() { printf 'HUB_AWAY_HOUSE=temi\nHUB_RELAY_SECRET=%s\nHUB_RELAY_TOKEN=%s\nHUB_RELAY_ADDR=relay.elyir.app\nHUB_AWAY_ZONE=elyir.app\n' "$secret" "$token" > "$data/away.env"; }
   run() { printf '{"at": 1, "want": "%s"}' "$1" > "$data/away.request"; rm -f "$fake/docker"
@@ -377,7 +382,8 @@ D
   is "...and its secret" "$(env_ HUB_RELAY_SECRET)" "$secret"
   is "...and turns the away door on" "$(env_ HUB_AWAY)" on
   is "...adding away beside the radios and the voice" "$(env_ COMPOSE_PROFILES)" "zigbee,voice,away"
-  is "...and brings caddy and frpc up" "$(cat "$fake/docker")" "compose up -d caddy frpc"
+  is "...and brings caddy, frpc and lan-cert up" "$(cat "$fake/docker")" "compose up -d caddy frpc lan-cert"
+  is "...naming the house at home from the address it really has" "$(env_ HUB_LAN_NAME)" "192-168-86-53.temi.home.elyir.app"
   [ -f "$data/away.request" ] && no "...and takes the request away" "it is still there" || ok "...and takes the request away"
   python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); print(d["on"], d["house"])' "$data/away.json" > "$fake/said" 2>&1
   is "...and says what it did" "$(cat "$fake/said")" "True temi"
@@ -389,11 +395,17 @@ D
   is "off turns the door off" "$(env_ HUB_AWAY)" off
   is "...takes away out and leaves the rest" "$(env_ COMPOSE_PROFILES)" "zigbee,voice"
   is "...keeps the name for when it comes back" "$(env_ HUB_AWAY_HOUSE)" temi
-  is "...and stops frpc" "$(head -1 "$fake/docker")" "compose --profile away rm -sf frpc"
+  is "...and stops frpc and lan-cert" "$(head -1 "$fake/docker")" "compose --profile away rm -sf frpc lan-cert"
 
   good; run on; : > "$data/away.env"; run forget
   is "forget takes the secret out of .env" "$(grep -c '^HUB_RELAY_SECRET=' "$dl/.env")" 0
   is "...and the name" "$(grep -c '^HUB_AWAY_HOUSE=' "$dl/.env")" 0
+  is "...and the name at home" "$(grep -c '^HUB_LAN_NAME=' "$dl/.env")" 0
+
+  printf 'TZ=UTC\n' > "$dl/.env"; echo 203.0.113.9 > "$fake/lan"; good; run on
+  is "a public address gets no name at home" "$(grep -c '^HUB_LAN_NAME=' "$dl/.env")" 0
+  is "...and outside still comes on" "$(env_ HUB_AWAY)" on
+  rm -f "$fake/lan"
 
   printf 'COMPOSE_PROFILES=away\n' > "$dl/.env"; good; run off
   is "the last profile going leaves none rather than nothing" "$(env_ COMPOSE_PROFILES)" none

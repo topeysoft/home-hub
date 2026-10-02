@@ -4,7 +4,7 @@ FROM python:3.13-slim
 WORKDIR /srv/relay
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
-COPY registry.py app.py cli.py ./
+COPY registry.py home.py app.py cli.py ./
 ENV RELAY_DATA=/data RELAY_PORT=7100 PYTHONUNBUFFERED=1
 VOLUME /data
 CMD ["python", "app.py"]

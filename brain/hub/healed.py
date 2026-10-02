@@ -41,7 +41,8 @@ PARTS = {"mosquitto": ("Messages", "mqtt"), "zigbee2mqtt": ("The Zigbee radio", 
          "matter-server": ("Matter", "matter"), "homeassistant": ("The hub's engine", "*"),
          "matter-bridge": ("Sharing with Apple Home, Google Home and Alexa", None),
          "wyoming-piper": ("The hub's voice", None), "caddy": ("The way in to the hub", None),
-         "frpc": ("The way in from outside the house", None)}
+         "frpc": ("The way in from outside the house", None),
+         "lan-cert": ("The house's name at home", None)}
 
 
 def stamp(docker_time: str) -> float | None:

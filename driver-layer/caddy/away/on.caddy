@@ -27,3 +27,34 @@
 		header_up X-Hub-Via relay
 	}
 }
+
+# The house's name at home -- 192-168-86-53.<house>.home.elyir.app, which the relay's DNS server answers
+# with this hub's LAN address -- so a phone on the house's public name reaches the hub directly on the
+# sofa instead of going out to the relay and back (docs/away.md, the alias that covers home). It is the
+# LAN door, not the away one: X-Hub-Via is deleted here exactly as on the two LAN sites in the Caddyfile.
+#
+# The certificate is lan-cert's (lan-cert/run.sh), fetched at each handshake from the loopback-only file
+# server below. Until lan-cert has one, a handshake for this one name fails and nothing else does -- a
+# missing file never stops Caddy starting, which is the lesson of 2 October. The default name keeps the
+# address valid before away.sh has written one.
+http://127.0.0.1:2020 {
+	bind 127.0.0.1
+	@bundle path /bundle.pem
+	handle @bundle {
+		root * /lan
+		file_server
+	}
+	handle {
+		respond 404
+	}
+}
+
+https://{$HUB_LAN_NAME:lan.invalid} {
+	tls {
+		get_certificate http http://127.0.0.1:2020/bundle.pem
+	}
+	encode gzip
+	reverse_proxy {$BRAIN_UPSTREAM:localhost:8300} {
+		header_up -X-Hub-Via
+	}
+}
