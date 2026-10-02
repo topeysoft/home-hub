@@ -44,7 +44,7 @@ const STEPS = {
         <span class="phone-os-name" v-if="!onPhone">{{ STEPS[k].name }}</span>
         <ol class="phone-steps"><li v-for="s in STEPS[k].steps" :key="s">{{ s }}</li></ol>
       </div>
-      <p class="phone-foot">The house becomes an app on the phone: its own icon, full screen, no address to type. Same Wi‑Fi as the hub.</p>
+      <p class="phone-foot">The house becomes an app on the phone, with its own icon. The phone needs to be on your home Wi‑Fi.</p>
     </div>
   </div>
 </template>
