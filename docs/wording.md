@@ -35,7 +35,8 @@ to clean it up.
 | --- | --- | --- |
 | People and phones | **Done, 2 October 2026.** C chosen: a phone is *Home only* or *Anywhere* | `design/words-people/` |
 | Setup (first run) | **Done, 2 October 2026.** B chosen: say less | `design/words-setup/` |
-| Rooms and devices | Not started | |
+| Rooms and devices: adding a thing | **Done, 2 October 2026.** A chosen: the verb is *add* | `design/words-adding/` |
+| Rooms and devices: rooms, panes, New devices | Not started | |
 | Settings (This hub, Accounts, Share, the passcode) | Not started | |
 | The band and its messages | Not started | |
 | The brain's sentences outside the areas above | Not started | |
@@ -62,7 +63,18 @@ to clean it up.
   ("Running", "Stick on USB").
 - **Name a place only by what it says on screen.** The command box is *Tell the house…*; there is no page
   called *Home*. A tip that names a place has to be checked against the panel when the panel changes.
-- **Never *the engine*, never *Home Assistant*.** The way to its own settings is *Advanced*.
+- **Never *the engine*, never *Home Assistant*.** The way to its own settings is *Advanced*. One exception: when a maker's own sign-in page will ask for "your Home Assistant
+  address", the panel may say so in brackets, because the person has to *match* the word on somebody
+  else's page (AGENTS.md §6's exception for words the house matches rather than writes).
+
+### What adding a thing settled
+
+- **The verb is *add*.** Adding it…, Added., It wasn't added., waiting to be added, Nothing is added until
+  you say so. Never *let in*, *join*, *it's in*. (*Join* stays for a phone joining with the passcode,
+  which is a person's act, and for a light joining the Wi‑Fi.)
+- **The house looks; it does not listen, hear, knock or go quiet.** "Looking for new devices", "3 more
+  nearby", "It's lit, so you can see which one".
+- **A button says what it does.** *Set up*, not *Have a look*.
 
 ## Known so far, outside the areas done
 
@@ -75,7 +87,6 @@ to clean it up.
 | `HousePanel.vue` and many sheets | "This hub" as a page name | The person bought a box; is *hub* their word? |
 | `HousePanel.vue` | "Lock the settings" beside "Change the passcode" | Two names for one thing |
 | `AccountsPage.vue` | "Sam's Nest is out." | *is out* for removed |
-| `Adding.vue` — the Add flow, also inside first run | "Listening for anything new … Leave the page and the hub goes quiet again." ; "Have a look" ; "A part of the house" | Ours: *goes quiet*, and a category that names nothing a person owns |
 | `HubPage.vue`, `AddPage.vue` | "Behind the scenes" | A heading that tells you not to read what is under it |
 
 Add to this table whenever a word stops you, rather than fixing it in passing. Each area's pass starts

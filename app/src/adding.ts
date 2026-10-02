@@ -26,7 +26,7 @@ const DOORS: Door[] = [
   { id: 'wall', icon: 'switch', title: 'A switch on the wall', sub: 'A switch or dimmer, new or already up', proof: 'blink' },
   { id: 'thing', icon: 'plug', title: 'A plug, bulb or sensor', sub: 'Something out of a box, in your hand', proof: 'press' },
   { id: 'brand', icon: 'plus', title: 'Something with its own app', sub: 'Hue, Sonos, Ring, a thermostat…', proof: 'signin' },
-  { id: 'house', icon: 'home', title: 'A part of the house', sub: 'Another panel, or a bridge for your switches', proof: 'house' },
+  { id: 'house', icon: 'home', title: 'Another screen, or a bridge', sub: 'A tablet for another room, or a bridge for your wall switches', proof: 'house' },
 ]
 
 /** Which radios of the hub's own are up. The panel asks this to know what it can honestly offer. */

@@ -28,21 +28,19 @@ const knocking = computed(() => store.bridge?.state === 'knocking')
 </script>
 
 <template>
-  <p class="flow-desc">These two let you in rather than the other way round: plug one in, or open the house on it, and it comes to you.</p>
-
-  <h3 class="label">A bridge for your switches</h3>
+  <p class="flow-desc">Both of these come to you: plug a bridge in, or open the house on a tablet, and the house asks you about it.</p>
+  <h3 class="label">A bridge for your wall switches</h3>
   <p class="flow-desc" v-if="knocking">One is blinking amber nearby already. The house is about to ask whether it is yours &mdash; nothing of yours is on it until you say so.</p>
-  <p class="flow-desc" v-else>Plug it into a socket between the hub and your switches. It blinks amber while it looks around, and the house asks you about it the moment it does.</p>
+  <p class="flow-desc" v-else>Plug it into a socket between the hub and your wall switches. It blinks amber while it starts up, and the house asks you about it.</p>
   <div class="bridge-row" style="margin-bottom: 10px">
     <span class="bridge-icon"><Icon name="lock" :size="18" /></span>
-    <span class="bridge-text"><span class="bridge-name">Nothing is let in until you say so</span><span class="bridge-sub">A bridge that is knocking is only knocking. It has nothing of yours on it.</span></span>
+    <span class="bridge-text"><span class="bridge-name">Nothing is added until you say so</span><span class="bridge-sub">A bridge that’s blinking has nothing of yours on it.</span></span>
   </div>
   <div class="bridge-row">
     <span class="bridge-icon"><Icon name="home" :size="18" /></span>
-    <span class="bridge-text"><span class="bridge-name">Then it wants a home of its own</span><span class="bridge-sub">A socket it can stay in, where it can hear your switches. The house says when it can.</span></span>
+    <span class="bridge-text"><span class="bridge-name">Then find it a spot</span><span class="bridge-sub">A socket where it can reach your switches. The house tells you when it’s in a good place.</span></span>
   </div>
-
-  <h3 class="label">Another panel</h3>
-  <p class="flow-desc">A panel is the house’s own address, opened on a phone or a tablet and kept there. Nothing to install from a shop.</p>
+  <h3 class="label">Another screen</h3>
+  <p class="flow-desc">Open the house on a tablet or phone and leave it there. Nothing to buy or install.</p>
   <PhoneSteps />
 </template>

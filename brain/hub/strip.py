@@ -900,7 +900,7 @@ class Strips:
         It does need the setup code, which an advertisement does not carry -- see Radio. Where a
         household's code comes from is docs/strip.md item 1a and is not decided."""
         if not self.job or self.job["state"] != "knocking":
-            raise StripError("There is no light strip waiting to be let in.")
+            raise StripError("There is no light strip waiting to be added.")
         # OUR DOOR ASKS ONE MORE THING, and it is the only thing it ever asks: press the button on
         # the thing. The session opens straight away and gets as far as the Wi-Fi question, where the
         # STRIP refuses it until somebody in the room has touched it -- so nothing of the house's has

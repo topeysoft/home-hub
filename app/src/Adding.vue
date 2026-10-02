@@ -64,9 +64,9 @@ watch(open, v => emit('busy', v), { immediate: true })
    does not make it vanish, it becomes the name of the screen it opened. */
 const heading = computed(() => {
   if (beat.value === 'prove' && said.value) return said.value
-  if (beat.value === 'in') return 'It’s in.'
-  if (beat.value === 'wrong') return 'It would not join.'
-  if (beat.value === 'working') return work.value?.text ?? 'Letting it in…'
+  if (beat.value === 'in') return 'Added.'
+  if (beat.value === 'wrong') return 'It wasn’t added.'
+  if (beat.value === 'working') return work.value?.text ?? 'Adding it…'
   return where.value || 'What are you adding?'
 })
 
@@ -187,27 +187,27 @@ if (props.resume) open_('signin', props.resume, store.resumeName || 'Sign in aga
       <div class="ears" v-if="store.looking">
         <div class="ears-head">
           <span class="pulse-dot"></span>
-          <span class="ears-what">Listening for anything new</span>
+          <span class="ears-what">Looking for new devices</span>
           <span class="ears-since">{{ listening }}</span>
         </div>
-        <p class="ears-sub">Keeping it up while this page is open. Leave the page and the hub goes quiet again.</p>
+        <p class="ears-sub">The hub looks while this page is open, and stops when you leave.</p>
       </div>
 
       <div class="add-block" v-if="store.found.length || (store.bridge?.waiting ?? 0) > 0 || waitingStrip">
-        <h3 class="label">Already waiting</h3>
+        <h3 class="label">Found nearby</h3>
         <ul class="found">
           <li v-for="f in store.found" :key="f.flow_id">
             <span class="found-icon"><Icon name="sparkle" :size="18" /></span>
             <span class="found-text"><span class="found-title">{{ f.title }}</span><span class="found-kind">{{ f.kind }}</span></span>
-            <button class="button small" @click="open_('signin', f.flow_id, f.title)">Have a look</button>
+            <button class="button small" @click="open_('signin', f.flow_id, f.title)">Set up</button>
           </li>
           <li v-if="(store.bridge?.waiting ?? 0) > 0">
             <span class="found-icon"><Icon name="switch" :size="18" /></span>
             <span class="found-text">
-              <span class="found-title">{{ store.bridge!.waiting === 1 ? 'A switch is asking to be let in' : `${store.bridge!.waiting} switches are asking to be let in` }}</span>
-              <span class="found-kind">Nearby, and not on your house yet</span>
+              <span class="found-title">{{ store.bridge!.waiting === 1 ? 'A switch is waiting to be added' : `${store.bridge!.waiting} switches are waiting to be added` }}</span>
+              <span class="found-kind">Nearby, and not added yet</span>
             </span>
-            <button class="button small" @click="open_('blink', null, 'A switch on the wall')">Have a look</button>
+            <button class="button small" @click="open_('blink', null, 'A switch on the wall')">Set up</button>
           </li>
           <!-- A KNOCKING STRIP, AND IT IS AN ORDINARY ROW NOW (design/knock/). It used to have no
                button on it: the strip's sheet covered the whole screen the moment one knocked, so
@@ -219,15 +219,15 @@ if (props.resume) open_('signin', props.resume, store.resumeName || 'Sign in aga
             <span class="found-icon"><Icon name="light" :size="18" /></span>
             <span class="found-text">
               <span class="found-title">A light strip is here</span>
-              <span class="found-kind">{{ heldUp ? 'It will ask as soon as the one on screen is done' : 'Knocking, and it is lit' }}</span>
+              <span class="found-kind">{{ heldUp ? 'It will ask as soon as the one on screen is done' : 'It’s lit, so you can see which one' }}</span>
             </span>
-            <button class="button small" v-if="!heldUp" @click="store.stripAsked = true">Have a look</button>
+            <button class="button small" v-if="!heldUp" @click="store.stripAsked = true">Set up</button>
           </li>
         </ul>
       </div>
 
       <div class="add-block">
-        <h3 class="label">{{ store.found.length ? 'Or start it yourself' : 'What are you adding?' }}</h3>
+        <h3 class="label">{{ store.found.length ? 'Or choose what you’re adding' : 'What are you adding?' }}</h3>
         <div class="ways">
           <button v-for="d in doors()" :key="d.id" class="way" @click="knock(d)">
             <span class="way-icon"><Icon :name="d.icon" :size="21" /></span>
@@ -273,10 +273,10 @@ if (props.resume) open_('signin', props.resume, store.resumeName || 'Sign in aga
           <h3 class="label">And what do you call it?</h3>
           <label class="field">
             <input class="input" v-model="name" autocapitalize="words" spellcheck="false" @keydown.enter="done" />
-            <span class="field-hint">Named from the room, so most of the time this needs no typing at all.</span>
+            <span class="field-hint">Named after the room, so you usually won’t need to type anything.</span>
           </label>
         </template>
-        <p class="flow-desc" v-else-if="got?.many">Its things come into the house over the next minute. Any that do not know their room wait under New devices.</p>
+        <p class="flow-desc" v-else-if="got?.many">Its devices are added over the next minute. Any that don’t know their room wait in New devices.</p>
       </template>
 
       <!-- it did not work: one reason, one thing to try, and the way out -->
