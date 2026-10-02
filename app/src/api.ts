@@ -425,15 +425,17 @@ export type Held = {
  * only how it looks (A), a look can be said (C), and the way round is asked in the yard when a chase is
  * first wanted (C then A). brain/hub/roofline.py. */
 export type Evenings = 'every' | 'occasion' | 'never'
-export type RoofBox = { chip: string; place: string; runs: number; online: boolean; state: 'Fine' | 'Dark' | 'Not answering'; sub: string; held?: string }
+export type RoofBox = { chip: string; place: string; runs: number; online: boolean; state: 'Fine' | 'Dark' | 'Not answering'; sub: string; held?: string
+  dark_runs?: number[] }                    // which of its runs are dark, when it is Dark; a hub from before says only the box
 export type YardRow = { chip: string; run: number; name: string; led: number[]; place: string; nth: number | null; turned: boolean }
 export type Yard = { step: 'tapping' | 'done'; rows: YardRow[]; all: boolean }
 export type Roofline = { exists: false } | {
   exists: true; light: string | null; boxes: RoofBox[]; runs: number; lights: number
+  parts?: { chip: string; run: number; count: number }[]   // each run's lights, which the pane draws its length from
   order: { chip: string; run: number; dir: number }[] | null; turned: number; ask_order: boolean; yard: Yard | null
   evenings: Evenings | null; evenings_words: string | null; until: string; until_words: string; dusk: string | null
-  still: boolean; occasion: string | null; occasion_name: string | null; words: string | null
-  look: { motion: string; colors?: number[][] }; kept: string[]
+  still: boolean; occasion: string | null; occasion_name: string | null; occasion_dates?: string | null; words: string | null
+  look: { motion: string; colors?: number[][]; block?: number; ms?: number }; kept: string[]
   draft: { occasion: string | null; words: string } | null
   why: string; came_on: { at: number; text: string } | null
 }

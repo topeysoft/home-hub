@@ -242,6 +242,13 @@ what the thing is *for* and why it exists, in plain words rather than API terms.
 the reason, not the mechanism. Write commit subjects as what the change does for the person using
 the hub.
 
+**Words on the screen are read by somebody who was not here.** Every label, heading and description
+in a change, boards included, has to make sense to a new household member glancing at a phone. Our
+own working names (*from outside*, door, let out, the band, the relay) are not product words, any
+more than Home Assistant's are. This binds every change from 1 October 2026 on. The existing wording
+is owed a full pass of its own; [`docs/wording.md`](docs/wording.md) holds the rule, the list so far,
+and how the pass is done. Add to that list when a word stops you, rather than fixing it in passing.
+
 **American spelling everywhere** — code, comments, tests, docs, design notes, commit messages,
 replies: color, behavior, center, recognize, gray, license, canceled, catalog, artifact, neighbor.
 Fix British spellings in lines you touch. Two exceptions stay as they are: words the house has to

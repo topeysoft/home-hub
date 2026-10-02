@@ -162,7 +162,7 @@
       "y": 1800,
       "w": 1440,
       "h": 900,
-      "title": "C, later — joining two lights, or splitting one, from the strip’s row",
+      "title": "C, later — joining two lights, or splitting one, from the strip’s row — approved 2 October",
       "page": "runs"
     }
   ],
@@ -366,6 +366,14 @@
       "y": 1800,
       "w": 600,
       "text": "C, LATER -- JOINING TWO LIGHTS, OR SPLITTING ONE\n\nWhat the household answers at setup is never final, and it is changed where the strip already lives on the wall: the light's own pane, its strip row, and the sheet behind that row which reopens the questions the strip was set up with. Nothing new is opened to do it -- no screen of lights, no list of controllers.\n\nBehind the row each strip is a line with its own two questions, Colors and Length, each with Ask again -- the second strip is so often a different make bought later. Opening a line lights that strip a soft white and rests the other, as the question at setup did: the strips are told apart by looking at them, never by a number.\n\nWHY THE ACT IS ON THE SECOND STRIP'S LINE. The second strip is the one that came, so it is the one that can go. The light keeps its name, room and switch with the first strip, and so splitting never has to ask what the light is called or where it is. One act on one line, worded as what happens -- Make it a light of its own -- rather than a mode, an edit screen, or a new place to find.\n\nSPLITTING ASKS ONE THING: which room, with the room it is in now first, so the commonest answer is one tap. Its colors and its length were its own already, so nothing is asked again. It arrives named for its room, and Show this as renames it like any light.\n\nJOINING ASKS NOTHING. On a light of its own that shares a controller, the same line carries Make it part of Under-cabinet. It takes that light's room, name and switch, and keeps its own colors and length. The pane closes onto the room and its tile goes -- the tile leaving is the confirmation, the way a scene empties its row, and the one place a thing may vanish under the finger. The way back is the row on Under-cabinet, which now reads Set up as two strips and carries Make it a light of its own on the second strip's line: each act is the other's undo.\n\nSo the choice at setup costs nothing to get wrong. What the brain needs is only what C needed already: a light made of more than one strip."
+    },
+    {
+      "id": "runs-later-approved",
+      "page": "runs",
+      "x": 6240,
+      "y": 1100,
+      "w": 560,
+      "text": "APPROVED 2 OCTOBER 2026\n\nThe household approved this board as drawn: a second strip's line on its light's pane carries the one act. \"Make it a light of its own\" asks only a room; \"Make it part of Under-cabinet\" asks nothing, and its tile leaving is the confirmation (the scene exception in AGENTS.md section 4, because the change is the thing the person asked for and the joined light is right there). The split-off light is named for its room until renamed. Built in #44 before this approval; this note makes the board the spec it already was."
     }
   ],
   "reading": [

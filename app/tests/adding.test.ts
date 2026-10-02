@@ -182,7 +182,7 @@ describe('asking a strip again, afterwards', () => {
      the template now rather than as far as the three levels -- the three come FIRST since 22
      September, and the strip's row sits under them (design/strip/OneDoor.dc.html). A boundary drawn
      from the old arrangement measured most of the file and said nothing. */
-  const stripPart = () => pane.slice(pane.indexOf('v-else-if="strip && !tuning"'), pane.indexOf("<!-- BEHIND THE ROOFLINE'S ROW"))
+  const stripPart = () => pane.slice(pane.indexOf('v-if="strip && !tuning"'), pane.lastIndexOf('</template>'))
   /* Without its comments, for the checks about what is OFFERED: the comment above the sheet says in
      as many words that there are no effects, segments or zones in it, and a test that reads prose
      fails on the sentence promising the thing it is looking for. */
@@ -211,7 +211,7 @@ describe('asking a strip again, afterwards', () => {
   })
 
   it('shows nothing at all on a light that is not a strip', () => {
-    expect(pane).toContain('v-else-if="strip && !tuning"')
+    expect(pane).toContain('v-if="strip && !tuning"')
   })
 
   it('knows which strip it is by the house\'s own id and never by a model name', () => {
