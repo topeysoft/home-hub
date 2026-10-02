@@ -30,16 +30,16 @@ async function go() {
   <main class="setup move">
     <section class="setup-page">
       <span class="setup-mark"><Icon name="globe" :size="30" /></span>
-      <h1 class="display">Move this phone.</h1>
-      <p class="setup-lede">The house has its own address now: <b>{{ address }}</b>. Move this phone to it once, and the one icon opens the house here, and anywhere you are ever let out.</p>
+      <h1 class="display">A new link for the house.</h1>
+      <p class="setup-lede">The house has its own web address now: <b>{{ address }}</b>. Switch this phone to it once, and the same icon works at home, and anywhere once this phone is set to Anywhere.</p>
       <ol class="move-steps">
-        <li><span class="move-n">1</span><span><b>Move this phone</b><span class="move-s">It opens the house at its address. Nothing to type.</span></span></li>
-        <li><span class="move-n">2</span><span><b>Add it to your home screen</b><span class="move-s">Share, then Add to Home Screen.</span></span></li>
-        <li><span class="move-n">3</span><span><b>Remove the old icon</b><span class="move-s">The new one works at home too.</span></span></li>
+        <li><span class="move-n">1</span><span><b>Switch this phone</b><span class="move-s">It opens the house at the new link. Nothing to type.</span></span></li>
+        <li><span class="move-n">2</span><span><b>Add it to your Home Screen</b><span class="move-s">Share, then Add to Home Screen.</span></span></li>
+        <li><span class="move-n">3</span><span><b>Delete the old icon</b><span class="move-s">The new one works at home too.</span></span></li>
       </ol>
       <p class="error" v-if="error">{{ error }}</p>
       <div class="setup-actions">
-        <button class="button big" :class="{ busy }" @click="go">Move this phone</button>
+        <button class="button big" :class="{ busy }" @click="go">Switch this phone</button>
         <button class="button ghost" @click="store.moving = false">Not now</button>
       </div>
     </section>

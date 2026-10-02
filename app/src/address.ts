@@ -48,12 +48,12 @@ const day = (ts: number) => new Date(ts * 1000).toLocaleDateString(undefined, { 
 export function outsideRow(a: AddressState | null | undefined): { value: string; sub: string; action: 'Turn off' | 'Turn on' } | null {
   if (!a?.house || !a.address) return null
   const off = a.want === 'off'
-  const value = off ? `${a.address} · off` : `${a.address} · reachable from outside`
+  const value = off ? `${a.address} · off` : `${a.address} · on`
   let sub: string
-  if (a.lost) sub = 'The address service no longer knows this house. Someone at the maker can put it back.'
-  else if (off) sub = 'The address is kept. Turn it on again whenever you like.'
-  else if (a.waiting || (!a.on && a.carried)) sub = 'Getting the address ready — about a minute.'
-  else if (!a.carried) sub = a.offer.by_hand ? 'Waiting to be turned on.' : 'Waiting for the payment to go through.'
-  else sub = a.entitled_until ? `${a.offer.by_hand ? 'Carried' : 'Paid up'} until ${day(a.entitled_until)}. If it ever stops, the house carries on as it is.` : 'Carried.'
+  if (a.lost) sub = 'Our service no longer recognizes this house. Get in touch and we will put it back.'
+  else if (off) sub = 'The web address is kept. Turn it on again whenever you like.'
+  else if (a.waiting || (!a.on && a.carried)) sub = 'Getting the web address ready — about a minute.'
+  else if (!a.carried) sub = a.offer.by_hand ? 'We are turning it on.' : 'Waiting for the payment to go through.'
+  else sub = a.entitled_until ? `${a.offer.by_hand ? 'Free' : 'Paid up'} until ${day(a.entitled_until)}. If it ever stops, everything at home carries on as it is.` : 'On.'
   return { value, sub, action: off ? 'Turn on' : 'Turn off' }
 }

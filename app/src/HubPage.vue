@@ -295,7 +295,7 @@ const when = (ts?: number | null) => ts ? new Date(ts * 1000).toLocaleString(loc
         <span class="hub-sub" v-else>Moving…</span>
       </li>
       <li v-if="outside">
-        <span class="hub-k">Outside</span>
+        <span class="hub-k">Web address</span>
         <span class="hub-v">{{ outside.value }}<span class="hub-sub line">{{ outside.sub }}</span></span>
         <button class="button small ghost" :class="{ busy: turning }" @click="turnOutside">{{ outside.action }}</button>
       </li>

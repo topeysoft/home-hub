@@ -71,13 +71,13 @@ onUnmounted(() => { clearTimeout(timer); clearInterval(poll) })
 <template>
   <section class="setup-page address-step" v-if="moment === 'ask'">
     <p class="setup-step">Optional</p>
-    <h1 class="display">From outside, too?</h1>
-    <p class="setup-lede">The house is complete as it is. To open it on your phones when you are away, we carry it there for you &mdash; a service we run, separate from the house.</p>
+    <h1 class="display">Use it anywhere?</h1>
+    <p class="setup-lede">The house already works fully at home. To use it on your phones when you are out, we connect it for you, through a service we run.</p>
     <div class="address-form">
-      <span class="field-label">The house&rsquo;s address</span>
+      <span class="field-label">The house&rsquo;s web address</span>
       <div class="address-row">
         <label class="address-name">
-          <input class="input" v-model="typed" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="40" aria-label="The house's address" @keydown.enter="take" />
+          <input class="input" v-model="typed" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="40" aria-label="The house's web address" @keydown.enter="take" />
           <span class="address-zone">.{{ ZONE }}</span>
         </label>
         <span class="address-said" :class="said.tone" role="status"><Icon v-if="said.tone === 'ok'" name="check" :size="16" />{{ said.text }}</span>
@@ -86,8 +86,8 @@ onUnmounted(() => { clearTimeout(timer); clearInterval(poll) })
         <button v-for="s in suggestions" :key="s" class="chip-btn" @click="pick(s)"><b>{{ s }}</b><span>.{{ ZONE }}</span></button>
       </div>
       <p class="address-cost" v-if="cost"><span class="address-amount display">{{ cost.amount }}</span> {{ cost.rest }} &middot; stop any time</p>
-      <p class="address-cost" v-else>Turned on by hand for now. There is nothing to pay.</p>
-      <p class="address-stop">If you stop, only reaching it from outside stops. The house carries on exactly as it is, and the address is kept for you for 60 days.</p>
+      <p class="address-cost" v-else>Free for now. We turn it on for you.</p>
+      <p class="address-stop">If you stop, phones go back to Home only. Everything at home carries on as it is, and we keep the web address for you for 60 days.</p>
       <p class="error" v-if="error">{{ error }}</p>
       <div class="setup-actions">
         <button class="button big" :class="{ busy }" :disabled="!free" @click="take">{{ takeWords(state.offer) }}</button>
@@ -113,8 +113,8 @@ onUnmounted(() => { clearTimeout(timer); clearInterval(poll) })
   <section class="setup-page address-step" v-else>
     <p class="setup-step">Optional</p>
     <h1 class="display">Nearly there.</h1>
-    <p class="setup-lede"><b>{{ house }}.{{ ZONE }}</b> is this house&rsquo;s now. It is waiting to be turned on; this screen moves on by itself when it is.</p>
-    <p class="setup-status"><span class="pulse-dot"></span> Waiting to be turned on&hellip;</p>
+    <p class="setup-lede"><b>{{ house }}.{{ ZONE }}</b> is this house&rsquo;s now. We are turning it on; this screen moves on by itself when it is done.</p>
+    <p class="setup-status"><span class="pulse-dot"></span> Turning it on&hellip;</p>
     <div class="setup-actions"><button class="button ghost" @click="emit('done')">Not now</button></div>
   </section>
 </template>

@@ -2440,7 +2440,7 @@ def _keys(request: Request):
     hub's oldest promise and it is not this function's to take back, so an unlocked house passes.
     """
     if hub.lock.locked and not holds_keys(request.state.phone):
-        raise HTTPException(403, "This phone can run the house, not decide who else does. Ask at the wall.")
+        raise HTTPException(403, "Adding phones, or changing what they can do, takes the passcode.")
 
 
 @app.post("/phones/asks/{ask_id}/allow")
@@ -2685,7 +2685,7 @@ def address_look(name: str):
 @app.post("/address")
 def address_claim(body: dict, request: Request):
     """{"name": "temi"}: take that address for this house. For the screens that keep the house, like a restart."""
-    if not _may_restart(request): raise HTTPException(403, "The house's address is chosen at the wall, or on a phone that keeps the house.")
+    if not _may_restart(request): raise HTTPException(403, "The house's web address is chosen on the wall screen, or on a phone that joined with the passcode.")
     try: return hub.address.claim(str(body.get("name") or ""), _who(request))
     except LookupError as e: raise HTTPException(409, e.args[0])
     except ValueError as e: raise HTTPException(422, str(e))

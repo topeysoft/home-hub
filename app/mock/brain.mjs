@@ -848,7 +848,7 @@ const bridgeRows = process.env.BRIDGES === 'none' ? [] : [
   }) }
   if ((p === '/address/on' || p === '/address/off') && req.method === 'POST') { mockAddress.want = p.endsWith('on') ? 'on' : 'off'; return json(res, { offer: { open: true, price: '$3 a month', pay: null }, guess: 'temi', house: mockAddress.house, address: `${mockAddress.house}.elyir.app`, want: mockAddress.want, carried: true, on: mockAddress.want === 'on', entitled_until: Date.UTC(2027, 9, 1) / 1000 }) }
   /* The house's own address and a phone that has not moved to it yet (design/away/, C). ADDRESS=1 gives the house
-     one; the phone reading /phones/me is then Temi's iPhone, so the band line and the From outside switch show. */
+     one; the phone reading /phones/me is then Temi's iPhone, so the band line and the Home only | Anywhere choice show. */
   if (p === '/phones/me') return json(res, process.env.ADDRESS
     ? { locked: !!process.env.LOCKED, paired: true, home: 'Main Palace', phone: { ...phones.phones[1], me: true, moved: !!process.env.MOVED }, away: false,
         lan: '192-168-86-53.main-palace.home.elyir.app', address: 'https://main-palace.elyir.app' }

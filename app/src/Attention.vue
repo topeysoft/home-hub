@@ -131,7 +131,7 @@ defineExpose({ updateReady })
        is waitingBand() in adding.ts, pinned by a test. -->
   <button class="nudge" v-if="moveTo" @click="store.moving = true">
     <span class="nudge-icon"><Icon name="globe" :size="20" /></span>
-    <span class="nudge-text"><span class="nudge-title">The house has its own address</span><span class="nudge-sub">Move this phone to {{ moveTo }}, once</span></span>
+    <span class="nudge-text"><span class="nudge-title">A new link for the house</span><span class="nudge-sub">Switch this phone to {{ moveTo }}</span></span>
   </button>
   <button class="nudge" v-for="w in waiting" :key="w.id" @click="openWaiting(w)">
     <span class="nudge-icon"><Icon :name="w.id === 'knock' ? 'light' : 'sparkle'" :size="20" /></span>

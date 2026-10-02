@@ -60,12 +60,12 @@ describe('the row on This hub', () => {
   it('says how it is, and offers the one thing to do', () => {
     const until = Date.UTC(2027, 9, 1) / 1000
     const carried = outsideRow(state({ house: 'temi', address: 'temi.elyir.app', want: 'on', on: true, carried: true, entitled_until: until }))!
-    expect(carried.value).toBe('temi.elyir.app · reachable from outside')
-    expect(carried.sub).toMatch(/^Paid up until October 1, 2027\. If it ever stops, the house carries on as it is\.$/)
+    expect(carried.value).toBe('temi.elyir.app · on')
+    expect(carried.sub).toMatch(/^Paid up until October 1, 2027\. If it ever stops, everything at home carries on as it is\.$/)
     expect(carried.action).toBe('Turn off')
-    expect(outsideRow(state({ house: 'temi', address: 'temi.elyir.app', want: 'on', waiting: true }))!.sub).toBe('Getting the address ready — about a minute.')
+    expect(outsideRow(state({ house: 'temi', address: 'temi.elyir.app', want: 'on', waiting: true }))!.sub).toBe('Getting the web address ready — about a minute.')
     expect(outsideRow(state({ house: 'temi', address: 'temi.elyir.app', want: 'on', carried: false }))!.sub).toBe('Waiting for the payment to go through.')
-    expect(outsideRow(state({ offer: byHand, house: 'temi', address: 'temi.elyir.app', want: 'on', carried: false }))!.sub).toBe('Waiting to be turned on.')
+    expect(outsideRow(state({ offer: byHand, house: 'temi', address: 'temi.elyir.app', want: 'on', carried: false }))!.sub).toBe('We are turning it on.')
     const off = outsideRow(state({ house: 'temi', address: 'temi.elyir.app', want: 'off' }))!
     expect(off.value).toBe('temi.elyir.app · off'); expect(off.action).toBe('Turn on')
   })
