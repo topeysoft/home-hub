@@ -83,7 +83,7 @@
       "y": 1800,
       "w": 1440,
       "h": 900,
-      "title": "What opens in A and B — the printer’s own pane",
+      "title": "What opens in A and B — the printer’s own pane, with its room line",
       "page": "where"
     },
     {
@@ -102,6 +102,33 @@
       "w": 1440,
       "h": 900,
       "title": "What opens in C — the camera viewer, with the print over its foot",
+      "page": "where"
+    },
+    {
+      "file": "RoomChoiceB.dc.html",
+      "x": 1560,
+      "y": 3600,
+      "w": 1440,
+      "h": 900,
+      "title": "B, a room if you want one — the pane’s own room picker, open",
+      "page": "where"
+    },
+    {
+      "file": "WorkshopB.dc.html",
+      "x": 3120,
+      "y": 3600,
+      "w": 1440,
+      "h": 900,
+      "title": "B, with a room chosen — the Workshop, with OBI1 printing and C3PO ready",
+      "page": "where"
+    },
+    {
+      "file": "RankedB.dc.html",
+      "x": 4680,
+      "y": 3600,
+      "w": 1440,
+      "h": 900,
+      "title": "B, with a room chosen, on Rooms — the Workshop ranked up while it prints",
       "page": "where"
     },
     {
@@ -172,7 +199,7 @@
       "y": 960,
       "w": 700,
       "page": "where",
-      "text": "B -- NOW: A PRINT LEADS YOUR AFTERNOON\n\nWhile there is a print, it is the first card in the row, the way a show that is playing leads it: the camera across the top, the part's picture and name, how far, and when it will be done. The rest of the house moves along one card. There are no buttons on it while it prints -- a sleeve against a kitchen wall must not pause a three-hour print -- and one tap opens the printer's pane.\n\nA CARD FOR EVERY PRINT, NOT FOR EVERY PRINTER. When OBI1 is Ready again the card goes, at a moment nobody is watching (the done map in store.ts, swept by App.vue). R2D2, stopped with nothing on its bed, is not a card: it is a job, so it is the band's line and a row on Needs a look, which the brain already sends.\n\nFOR: it puts the one thing in the house with an end time where the household already looks, and it costs no question when a printer is added -- the brain needs no room. It is the media card's argument, already won once.\n\nAGAINST: an idle printer has no place on the three tabs. C3PO, ready, is only under This house, Printers (drawn on the adding page). That is honest -- there is nothing a wall may do to an idle printer -- but somebody looking for it on Rooms will not find it."
+      "text": "B -- NOW: A PRINT LEADS YOUR AFTERNOON\n\nWhile there is a print, it is the first card in the row, the way a show that is playing leads it: the camera across the top, the part's picture and name, how far, and when it will be done. The rest of the house moves along one card. There are no buttons on it while it prints -- a sleeve against a kitchen wall must not pause a three-hour print -- and one tap opens the printer's pane.\n\nA CARD FOR EVERY PRINT, NOT FOR EVERY PRINTER. When OBI1 is Ready again the card goes, at a moment nobody is watching (the done map in store.ts, swept by App.vue). R2D2, stopped with nothing on its bed, is not a card: it is a job, so it is the band's line and a row on Needs a look, which the brain already sends.\n\nFOR: it puts the one thing in the house with an end time where the household already looks, and it costs no question when a printer is added -- the brain needs no room. It is the media card's argument, already won once.\n\nAGAINST: an idle printer has no place on the three tabs. C3PO, ready, is only under This house, Printers (drawn on the adding page). That is honest -- there is nothing a wall may do to an idle printer -- but somebody looking for it on Rooms will not find it.\n\nANSWERED 2 OCTOBER, BY AN OPTIONAL ROOM. A household that wants a printer on Rooms chooses a room for it on its pane, and it is A's tile there too (RoomChoiceB, WorkshopB, RankedB). THIS CARD IS UNCHANGED EITHER WAY: a print leads Your afternoon whether or not its printer has a room."
     },
     {
       "id": "c",
@@ -223,12 +250,44 @@
       "text": "WHAT OPENS, IN C -- THE CAMERA VIEWER\n\nThe viewer the doorbell opens today (80, 90, 1280 x 720), with the printer's progress, temperatures and two actions laid over its foot and a progress bar along its bottom edge. It is the best view of a print in any of the three, and it is a view: the words are smaller, and the temperatures are chips on a picture rather than readings you can find again in the same place."
     },
     {
+      "id": "decided",
+      "x": -620,
+      "y": -900,
+      "w": 560,
+      "page": "where",
+      "text": "CHOSEN 2 OCTOBER 2026 -- B, WITH AN OPTIONAL ROOM\n\nTemi picked B, and asked what happens when somebody wants their printers in a room -- an office, a workshop. The answer is B plus an optional room: A's tile, only where a room is chosen.\n\nA print leads Your afternoon, where people look, whether or not its printer has a room. The room is the household's choice and never a setup question: adding a printer never asks for one, and a new printer lives under This house, Printers. A room is chosen later from the printer's own pane, with the picker every light already uses (RoomChoiceB). A printer with a room is A's tile in that room (WorkshopB), and printing counts as on for the ranking (RankedB). A's In its room board and C's Watched board stay on this page as the record of why."
+    },
+    {
       "id": "pick",
       "x": 6240,
       "y": 1800,
       "w": 700,
       "page": "where",
-      "text": "RECOMMENDATION -- B, WITH THE PANE BUILT FIRST\n\nB, because a print is an event with an end, and the panel already knows how to show one: the show that is playing leads the row, and nobody had to file it in the living room to find it. B needs no new question when a printer is added, it puts \"done at 4:20 PM\" where the household already looks, and it keeps attention where section 5 put it -- the band and Needs a look for a printer with nothing printing, and the card itself for a print that needs somebody.\n\nTHE PANE FIRST, WHICHEVER IS CHOSEN. It is the same in A and B, and it is what the half-wired Open on Needs a look needs the day the brain ships.\n\nWHAT B GIVES UP is A's permanence: an idle printer lives under This house, Printers, not on a tab. If that proves wrong in use, A's tile can be added later without moving anything B draws -- it is a second place, not a different one. C's frame is the same kind of addition: if the household turns out to watch prints more than it waits for them, a printing printer's camera can join Cameras without taking the tab's name.\n\nOR SOMETHING ELSE -- I'LL DESCRIBE IT. A real option, as ever; the intended answer has been outside the candidate set before."
+      "text": "RECOMMENDATION -- B, WITH AN OPTIONAL ROOM (A'S TILE, ONLY WHERE A ROOM IS CHOSEN)\n\nB, because a print is an event with an end and the panel already knows how to show one: the show that is playing leads the row. \"Done at 4:20 PM\" sits where the household already looks, attention stays where section 5 put it -- the band and Needs a look for a printer with nothing printing, the card itself for a print that needs somebody -- and the card is the same whether or not the printer has a room.\n\nTHE ROOM IS THE HOUSEHOLD'S CHOICE, NEVER A SETUP QUESTION. Adding stays one tap at the printer; nothing asks \"Where is OBI1?\". A household that wants its printers in the workshop says so on the printer's pane, and from then on A's tile is there too, as a second place to find it, never instead of the first.\n\nTHE PANE FIRST. It is what the half-wired Open on Needs a look needs the day the brain ships, and it is where the room is chosen.\n\nThe first draft of this note recommended B alone, with A's tile as a possible later addition. Temi's question made it now.\n\nOR SOMETHING ELSE -- I'LL DESCRIBE IT. A real option, as ever."
+    },
+    {
+      "id": "room-choice",
+      "x": 1560,
+      "y": 4560,
+      "w": 700,
+      "page": "where",
+      "text": "B, A ROOM IF YOU WANT ONE -- THE PANE'S OWN PICKER\n\nThe pane's room line is where every pane has it, above the name. A printer starts with none, so it reads \"No room - Choose\", in the quiet dashed word the pane already uses for \"Show this as\". Choose does what the pane's Rename or move it does for a light (Opened.vue's edit head): the room line and the name become the room picker and a name field, with Done and Cancel. Drawn open, the list is the house's rooms -- Living Room, Kitchen, Bedroom, Nadine's room, Theater, Garage, Outside -- and A new room..., the sort page's way of making one.\n\nONE ADDITION to the picker: No room, at the top. A light always has a room; a printer is allowed not to, and has to be able to go back to having none. That is the only new thing here."
+    },
+    {
+      "id": "workshop",
+      "x": 3120,
+      "y": 4560,
+      "w": 700,
+      "page": "where",
+      "text": "B, WITH A ROOM CHOSEN -- THE WORKSHOP\n\nA room made with A new room, holding OBI1 printing and C3PO ready as A's tiles, among the room's own things: the bench light, the air filter, the door. The room's line says it the way it says a light (\"OBI1 printing - C3PO ready - Bench light on\"), and the head carries each printer as a chip. R2D2 has no room and lives only under This house, Printers; a stopped printer in a room would be A's fault tile there, and still Needs a look's row.\n\nAND YOUR AFTERNOON IS UNCHANGED. The print card leads it whether or not OBI1 has a room -- the room adds a second place to find the printer; it never moves the first."
+    },
+    {
+      "id": "ranked",
+      "x": 4680,
+      "y": 4560,
+      "w": 700,
+      "page": "where",
+      "text": "B, WITH A ROOM CHOSEN -- ON ROOMS\n\nThe house's rooms, ranked the way rooms.ts ranks them. Printing counts as on, so while OBI1 prints the Workshop ranks among the lit rooms -- second here, behind the room with the television on -- with the printer's camera behind its name the way a filming room shows its camera, and the time left and the bar on its foot. When the print is done and nothing else in the Workshop is on, it falls back to the quiet end with the other rooms. A printer that is ready, like C3PO, does not count as on."
     },
     {
       "id": "add-why",
@@ -260,7 +319,7 @@
       "y": 960,
       "w": 700,
       "page": "adding",
-      "text": "3 -- ASKED: THE ROW BECOMES THE INSTRUCTION\n\nThe row grows in place into what to do, named for the printer: \"Tap Allow on OBI1's screen\". Beside it is the printer's own screen as it looks at that moment, so the wall says where to look by showing it. Under it, the other way to say yes, and how long the ask has left (two minutes at the printer; ASK_FOR in printers.py waits a little longer). Stop asking is there because somebody who walked to the wrong printer should not have to wait out the clock.\n\nThe drawing of the printer's screen is the printer's prompt, not ours; its words belong to the printer."
+      "text": "3 -- ASKED: THE ROW BECOMES THE INSTRUCTION\n\nThe row grows in place into what to do, named for the printer: \"Tap Allow on OBI1's screen\". Beside it is the printer's own screen as it looks at that moment, so the wall says where to look by showing it. Under it, the other way to say yes, and how long the ask has left (two minutes at the printer; ASK_FOR in printers.py waits a little longer). Stop asking is there because somebody who walked to the wrong printer should not have to wait out the clock.\n\nTHE INSET IS THE PRINTER'S OWN CARD, COPIED, NOT WRITTEN. Astromech's AskCard.vue (origin/main), drawn at its 800 x 480 design size and scaled: \"Main Palace hub wants to connect\", \"A home hub on this Wi-Fi - asks for 1:42 more\", its paragraph, and Allow and Not now in its own order and colors. One thing to take back to that card: its paragraph says the asker \"could ... start prints when it's at home\", which is the phone's sentence; a hub never starts prints, so a hub's ask wants its own line there."
     },
     {
       "id": "answers",
@@ -272,6 +331,7 @@
     }
   ],
   "reading": [
+    "decided",
     "why",
     "today",
     "Today.dc.html",
@@ -293,6 +353,12 @@
     "viewer",
     "ViewerC.dc.html",
     "pick",
+    "room-choice",
+    "RoomChoiceB.dc.html",
+    "workshop",
+    "WorkshopB.dc.html",
+    "ranked",
+    "RankedB.dc.html",
     "add-why",
     "found",
     "FoundLine.dc.html",

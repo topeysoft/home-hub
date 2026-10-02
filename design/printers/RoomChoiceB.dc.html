@@ -107,8 +107,8 @@
     .leadv { position: absolute; border-left: 1px dashed rgba(255,255,255,.34); }
   </style>
 </helmet>
-<!-- ADDING, 1 -- printers on the Wi-Fi are a found line in the band and a dot on the + door, exactly as anything else found nearby (design/knock/, C with A). -->
-<div class="screen">
+<!-- B, A ROOM IF YOU WANT ONE -- the printer's pane in its edit head, the room picker open on the house's rooms. Nothing asks; this is where you go to say. -->
+<div class="screen"><div class="abs" style="inset: 0; opacity: .5;">
   <div class="abs" style="inset: 0; background: linear-gradient(rgb(25,47,73) 0%, rgb(31,57,85) 30%, rgb(46,70,92) 58%, rgb(52,62,74) 72%, rgb(44,46,42) 100%);"></div>
   <div class="abs" style="left: -144px; top: -90px; width: 1728px; height: 810px; background:
        radial-gradient(30% 22% at 22% 30%, rgba(170,190,210,.20), transparent 70%), radial-gradient(36% 20% at 70% 18%, rgba(160,180,205,.16), transparent 72%),
@@ -130,9 +130,9 @@
     <div class="abs glass" style="left: 523px; top: 15px; width: 394px; height: 54px; border-radius: 999px; padding: 4px 5px; display: flex; justify-content: space-between;"><span class="tab on"><svg class="i" width="16" height="16" viewBox="0 0 24 24" stroke-width="1.8"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>Your afternoon</span><span class="tab">Rooms</span><span class="tab">Cameras</span></div>
     <div class="abs" style="left: 1196px; top: 34px; display: flex; align-items: center; gap: 8px; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted);">
       <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--live);"></span>Connected</div>
-    <span class="round glass dot" style="left: 1306px; top: 22px; width: 40px; height: 40px;"><svg class="i" width="18" height="18" viewBox="0 0 24 24" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg></span>
+    <span class="round glass" style="left: 1306px; top: 22px; width: 40px; height: 40px;"><svg class="i" width="18" height="18" viewBox="0 0 24 24" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg></span>
     <span class="round glass" style="left: 1360px; top: 22px; width: 40px; height: 40px;"><svg class="i" width="18" height="18" viewBox="0 0 24 24" stroke-width="1.8"><path d="M5 7h14M5 12h14M5 17h9"/></svg></span>
-  </div><div class="nudges" style="left: 40px; top: 84px;"><div class="nudge new"><span class="ni"><svg class="i" width="18" height="18" viewBox="0 0 24 24" stroke-width="2"><path d="M12 3l1.8 5.4L19 10l-5.2 1.6L12 17l-1.8-5.4L5 10l5.2-1.6z"/><path d="M19 15l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/></svg></span><span><b>Found 3 new things nearby</b><small>OBI1, R2D2 and C3PO, 3D printers</small></span></div></div>
+  </div><div class="nudges" style="left: 40px; top: 84px;"><div class="nudge "><span class="ni"><svg class="i" width="18" height="18" viewBox="0 0 24 24" stroke-width="2"><rect x="6" y="3" width="12" height="18" rx="3"/><path d="M12 7v4"/></svg></span><span><b>Something needs a look</b><small>R2D2 stopped</small></span></div></div>
   <div class="abs" style="left: 72px; top: 186px; width: 220px; height: 160px;">
     <div class="abs" style="left: 138px; top: 2px; width: 82px; height: 82px; border-radius: 50%; background: rgb(138,140,128); opacity: .85;"></div>
     <div class="abs" style="left: 2px; top: 60px; width: 132px; height: 92px; border-radius: 60px; background: radial-gradient(circle at 40% 30%, #fff, #d9dde6 70%, #b9bfcc);"></div>
@@ -147,7 +147,70 @@
     <div style="font-size: 20px; font-weight: 500; margin-top: 12px;">Partly cloudy</div>
     <div style="font-size: 13.5px; color: var(--ink-2); margin-top: 10px; line-height: 22px;">Sunset 6:51 PM<br>Humidity 48%</div>
   </div>
-  <div class="card on glass" style="left: 504px; top: 216px; width: 275px; height: 453px; background-color: var(--surface);">
+  <div class="card on glass" style="left: 504px; top: 192px; width: 360px; height: 500px; background-color: var(--surface);">
+    <div class="abs" style="left: 0; top: 0;"><svg width="360" height="286" viewBox="0 0 640 360" preserveAspectRatio="xMidYMid slice" style="display: block;">
+      <defs>
+        <linearGradient id="c1g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a2e35"/><stop offset=".62" stop-color="#16181c"/><stop offset="1" stop-color="#0c0d10"/></linearGradient>
+        <linearGradient id="c1p" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6e5a3a"/><stop offset="1" stop-color="#3e3322"/></linearGradient>
+        <pattern id="c1d" width="6" height="6" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r=".9" fill="rgba(255,230,180,.16)"/></pattern>
+        <pattern id="c1l" width="8" height="3" patternUnits="userSpaceOnUse"><rect width="8" height="1" fill="rgba(0,0,0,.07)"/></pattern>
+        <clipPath id="c1k"><rect x="200" y="236.5" width="260" height="200"/></clipPath>
+        <radialGradient id="c1v" cx=".5" cy=".45" r=".75"><stop offset=".55" stop-color="rgba(0,0,0,0)"/><stop offset="1" stop-color="rgba(0,0,0,.6)"/></radialGradient>
+        <filter id="c1b"><feGaussianBlur stdDeviation="4"/></filter>
+      </defs>
+      <rect width="640" height="360" fill="url(#c1g)"/>
+      <ellipse cx="320" cy="-6" rx="320" ry="70" fill="rgba(255,244,226,.13)"/>
+      <g transform="translate(0 -14)">
+      <rect x="40" y="-60" width="20" height="330" fill="#121418"/><rect x="58" y="-60" width="2" height="330" fill="rgba(255,255,255,.07)"/>
+      <rect x="580" y="-60" width="20" height="330" fill="#121418"/><rect x="580" y="-60" width="2" height="330" fill="rgba(255,255,255,.07)"/>
+      <polygon points="76,246 564,246 660,420 -20,420" fill="url(#c1p)"/>
+      <polygon points="76,246 564,246 660,420 -20,420" fill="url(#c1d)"/>
+      <polygon points="76,246 564,246 566,250 74,250" fill="rgba(255,236,200,.22)"/>
+      <ellipse cx="330" cy="304" rx="96" ry="9" fill="rgba(0,0,0,.4)"/>
+      <g clip-path="url(#c1k)">
+        <polygon points="250,302 410,302 410,284 250,284" fill="#e9e5dc"/>
+        <polygon points="250,284 410,284 401,276 259,276" fill="#f7f4ee"/>
+        <polygon points="258,284 272,284 272,262 258,262" fill="#efebe3"/>
+        <polygon points="272,262 258,262 263,258 276,258" fill="#faf8f3"/>
+        <polygon points="352,284 380,284 398,150 372,150" fill="#ece8e0"/>
+        <polygon points="380,284 392,279 410,146 398,150" fill="#cfcac0"/>
+        <rect x="240" y="140" width="190" height="170" fill="url(#c1l)"/>
+      </g>
+      <rect x="30" y="168.5" width="580" height="15" rx="3" fill="#2c3037"/><rect x="30" y="168.5" width="580" height="2" fill="rgba(255,255,255,.14)"/>
+      <rect x="336" y="160.5" width="72" height="62" rx="7" fill="#1c1f25"/><rect x="336" y="160.5" width="72" height="2" fill="rgba(255,255,255,.12)"/>
+      <circle cx="372" cy="190.5" r="17" fill="#15171c" stroke="rgba(255,255,255,.09)" stroke-width="1.5"/>
+      <circle cx="372" cy="190.5" r="11" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="1.5"/>
+      <circle cx="372" cy="190.5" r="4.5" fill="#262a31"/>
+      <rect x="342" y="212.5" width="60" height="6" rx="3" fill="#121418"/>
+      <rect x="360" y="222.5" width="24" height="8" fill="#2a2d33"/>
+      <polygon points="366,230.5 378,230.5 374,234.5 370,234.5" fill="#c9a24a"/>
+      <circle cx="372" cy="235.48000000000002" r="9" fill="rgba(255,150,60,.55)" filter="url(#c1b)"/>
+      
+      </g>
+      
+      <rect width="640" height="360" fill="url(#c1v)"/>
+    </svg></div>
+    <span class="chip" style="position: absolute; left: 16px; top: 16px;"><i></i>Live</span>
+    <div class="abs" style="left: 14px; right: 14px; top: 256px; bottom: 14px; border-radius: 24px; border: 1px solid rgba(255,255,255,.14);
+         background: linear-gradient(rgba(52,56,66,.86), rgba(28,30,36,.92)); padding: 16px 18px;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span style="width: 44px; height: 44px; border-radius: 12px; background: rgba(255,255,255,.06); border: 1px solid var(--edge); display: grid; place-items: center; flex: none;"><svg width="34" height="34" viewBox="236 130 190 190" style="display: block;">
+      <defs><clipPath id="t2k"><rect x="200" y="146.0" width="260" height="200"/></clipPath></defs>
+      <g clip-path="url(#t2k)">
+        <polygon points="250,302 410,302 410,284 250,284" fill="#e9e5dc"/><polygon points="250,284 410,284 401,276 259,276" fill="#f7f4ee"/>
+        <polygon points="258,284 272,284 272,262 258,262" fill="#efebe3"/><polygon points="352,284 380,284 398,150 372,150" fill="#ece8e0"/>
+        <polygon points="380,284 392,279 410,146 398,150" fill="#cfcac0"/>
+      </g></svg></span>
+        <span style="min-width: 0;"><span style="display: block; font-size: 18px; font-weight: 500; line-height: 22px;">Phone stand</span><span style="display: block; font-size: 13.5px; color: var(--ink-2);">OBI1 &middot; White PLA</span></span></div>
+      
+        <div style="display: flex; align-items: baseline; justify-content: space-between; margin-top: 16px;">
+          <span class="dsp num" style="font-size: 56px; line-height: 56px; letter-spacing: -.04em;">42%</span>
+          <span style="text-align: right; font-size: 13.5px; color: var(--ink-2); line-height: 1.35;">Done at<br><b style="color: var(--ink); font-size: 19px; font-weight: 500;">4:20 PM</b></span></div>
+        <div class="bar lamp" style="margin-top: 14px;"><i style="width: 42%;"></i></div>
+        <div style="display: flex; justify-content: space-between; margin-top: 10px; font-size: 13px; color: var(--ink-3);"><span>Layer 118 of 280</span><span>1 h 33 min left</span></div>
+    </div>
+  </div>
+  <div class="card on glass" style="left: 888px; top: 216px; width: 275px; height: 453px; background-color: var(--surface);">
     <div class="abs" style="left: 0; top: 0; width: 275px; height: 154px; background: linear-gradient(170deg, rgb(120,52,40), rgb(82,40,34)); overflow: hidden;">
       <div class="abs" style="left: 40px; top: 92px; width: 275px; height: 120px; border-radius: 50%; background: rgba(40,22,20,.55);"></div></div>
     <span class="chip" style="position: absolute; left: 16px; top: 16px; height: 28px; font-size: 10px; background: rgba(30,20,20,.4); border: 1px solid rgba(255,255,255,.2);">TV</span>
@@ -159,13 +222,13 @@
       <div style="display: flex; align-items: center; gap: 10px; margin-top: 18px; color: var(--ink-2);"><svg class="i" width="14" height="14" viewBox="0 0 24 24" stroke-width="1.8"><rect x="6" y="3" width="12" height="18" rx="3"/><circle cx="12" cy="14" r="3"/><path d="M12 7.5h.01"/></svg><div class="bar" style="flex: 1; height: 3px;"><i style="width: 36%;"></i></div></div>
     </div>
   </div>
-  <div class="card dark" style="left: 796px; top: 170px; width: 253px; height: 264px; background: linear-gradient(170deg, rgb(30,36,46), rgb(16,18,22));">
+  <div class="card dark" style="left: 1181px; top: 170px; width: 253px; height: 264px; background: linear-gradient(170deg, rgb(30,36,46), rgb(16,18,22));">
     <div class="abs" style="left: 26px; top: 153px; width: 354px; height: 211px; border-radius: 50%; background: rgba(10,12,16,.45);"></div>
     <span class="chip" style="position: absolute; right: 14px; top: 14px; height: 24px; font-size: 10.5px;">15S AGO</span>
     <div class="abs" style="left: 16px; bottom: 16px; display: flex; align-items: center; gap: 10px; font-size: 17px;">
       <span style="width: 28px; height: 28px; border-radius: 8px; background: rgba(255,255,255,.12); display: grid; place-items: center;"><svg class="i" width="15" height="15" viewBox="0 0 24 24" stroke-width="1.8"><path d="M4 8h3l2-2.5h6L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg></span>Doorbell</div>
   </div>
-  <div class="card" style="left: 796px; top: 452px; width: 253px; height: 264px; background: linear-gradient(155deg, oklch(0.717 0.085 250), oklch(0.662 0.085 256)); border-color: transparent;">
+  <div class="card" style="left: 1181px; top: 452px; width: 253px; height: 264px; background: linear-gradient(155deg, oklch(0.717 0.085 250), oklch(0.662 0.085 256)); border-color: transparent;">
     <div class="abs" style="left: 60px; top: 30px; width: 132px; height: 132px; border-radius: 50%; background: radial-gradient(circle at 50% 40%, #3a3f48, #23262c); box-shadow: 0 0 0 7px rgba(80,90,100,.5);
          display: grid; place-items: center; font-size: 50px; font-weight: 300; letter-spacing: -.03em;">71<span style="font-size: 13px; position: absolute; left: 92px; top: 58px;">&deg;F</span></div>
     <span class="abs" style="left: 18px; top: 178px; width: 40px; height: 40px; border-radius: 50%; background: rgba(40,60,90,.25); display: grid; place-items: center; color: #1d2633;">&minus;</span>
@@ -181,26 +244,76 @@
       <span style="width: 32px; height: 32px; border-radius: 50%; background: #4f6f63; margin-left: -6px; display: grid; place-items: center; font-size: 12px; color: #fff; font-weight: 600;">A</span>
       <span style="width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,.1); margin-left: -6px; display: grid; place-items: center; color: var(--ink-2);">+</span>
     </span>
+  </div></div><div class="abs" style="inset: 0; background: rgba(6,7,9,.35);"></div>
+  <div class="pane">
+    <span class="round glass" style="left: 1365px; top: 35px; width: 44px; height: 44px;"><svg class="i" width="18" height="18" viewBox="0 0 24 24" stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
+    <div class="abs" style="left: 49px; top: 45px; width: 560px;">
+      <div style="position: relative;">
+        <div style="display: inline-flex; align-items: center; gap: 30px; height: 40px; min-width: 200px; padding: 0 12px; border-radius: 12px; background: var(--surface-hi); border: 1px solid var(--lamp); font-size: 15px; color: var(--ink-2);">No room<span style="margin-left: auto;"><svg width="16" height="16" fill="none" stroke="#b9b5ad" stroke-width="1.5"><path d="M4 6l4 4 4-4"/></svg></span></div>
+        
+    <div class="abs" style="left: 0; top: 48px; width: 300px; padding: 6px; border-radius: 16px; background: rgba(30,33,40,.98); border: 1px solid var(--edge-hi); box-shadow: 0 30px 70px -20px rgba(0,0,0,.9); z-index: 2;">
+      <div style="height: 40px; display: flex; align-items: center; gap: 10px; padding: 0 14px; border-radius: 10px; font-size: 15.5px; background: rgba(var(--lamp-rgb),.16);">No room<span style="margin-left: auto; color: var(--lamp);"><svg class="i" width="16" height="16" viewBox="0 0 24 24" stroke-width="2.2"><path d="M20 6L9 17l-5-5"/></svg></span></div>
+      <div style="height: 40px; display: flex; align-items: center; padding: 0 14px; border-radius: 10px; font-size: 15.5px;">Living Room</div><div style="height: 40px; display: flex; align-items: center; padding: 0 14px; border-radius: 10px; font-size: 15.5px;">Kitchen</div><div style="height: 40px; display: flex; align-items: center; padding: 0 14px; border-radius: 10px; font-size: 15.5px;">Bedroom</div><div style="height: 40px; display: flex; align-items: center; padding: 0 14px; border-radius: 10px; font-size: 15.5px;">Nadine&rsquo;s room</div><div style="height: 40px; display: flex; align-items: center; padding: 0 14px; border-radius: 10px; font-size: 15.5px;">Theater</div><div style="height: 40px; display: flex; align-items: center; padding: 0 14px; border-radius: 10px; font-size: 15.5px;">Garage</div><div style="height: 40px; display: flex; align-items: center; padding: 0 14px; border-radius: 10px; font-size: 15.5px;">Outside</div>
+      <div style="height: 1px; background: var(--edge); margin: 6px 8px;"></div>
+      <div style="height: 40px; display: flex; align-items: center; gap: 10px; padding: 0 14px; border-radius: 10px; font-size: 15.5px; color: var(--ink-2);">A new room&hellip;</div>
+    </div>
+      </div>
+      <div style="margin-top: 10px; width: 520px; padding: 6px 14px; border-radius: 14px; border: 1px solid var(--edge); background: var(--surface-hi); font-size: 36px; font-weight: 500; letter-spacing: -.01em;">OBI1</div>
+      <div style="display: flex; gap: 8px; margin-top: 10px;"><span class="btn small">Done</span><span class="btn small ghost">Cancel</span></div>
+      <div style="opacity: .22;">
+        <div style="display: flex; align-items: center; gap: 8px; margin-top: 22px; font-size: 15px; color: var(--ink-3);"><span style="width: 7px; height: 7px; border-radius: 50%; background: var(--live);"></span>Printing Phone stand</div>
+        <div style="display: flex; align-items: baseline; gap: 22px; margin-top: 18px;"><span class="dsp num" style="font-size: 84px; line-height: 80px; letter-spacing: -.045em;">42%</span>
+          <span style="font-size: 15px; color: var(--ink-3); line-height: 1.4;">Done at<br><b style="font-size: 24px; font-weight: 400; color: var(--ink);">4:20 PM</b></span></div>
+        <div class="bar lamp" style="width: 520px; margin-top: 22px; height: 8px; border-radius: 4px;"><i style="width: 42%;"></i></div>
+        <div style="margin-top: 26px;"><div style="display: flex; gap: 12px;"><div class="temp" style="width: 165px;"><small>Nozzle</small><b class="num">220&deg;<em>C</em></b></div><div class="temp" style="width: 165px;"><small>Bed</small><b class="num">60&deg;<em>C</em></b></div><div class="temp" style="width: 165px;"><small>Chamber</small><b class="num">38&deg;<em>C</em></b></div></div></div>
+      </div>
+    </div>
+    <div class="abs" style="left: 643px; top: 96px; width: 748px; height: 392px; border-radius: 30px; overflow: hidden; border: 1px solid var(--edge); opacity: .5;"><svg width="748" height="392" viewBox="0 0 640 360" preserveAspectRatio="xMidYMid slice" style="display: block;">
+      <defs>
+        <linearGradient id="c3g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a2e35"/><stop offset=".62" stop-color="#16181c"/><stop offset="1" stop-color="#0c0d10"/></linearGradient>
+        <linearGradient id="c3p" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6e5a3a"/><stop offset="1" stop-color="#3e3322"/></linearGradient>
+        <pattern id="c3d" width="6" height="6" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r=".9" fill="rgba(255,230,180,.16)"/></pattern>
+        <pattern id="c3l" width="8" height="3" patternUnits="userSpaceOnUse"><rect width="8" height="1" fill="rgba(0,0,0,.07)"/></pattern>
+        <clipPath id="c3k"><rect x="200" y="236.5" width="260" height="200"/></clipPath>
+        <radialGradient id="c3v" cx=".5" cy=".45" r=".75"><stop offset=".55" stop-color="rgba(0,0,0,0)"/><stop offset="1" stop-color="rgba(0,0,0,.6)"/></radialGradient>
+        <filter id="c3b"><feGaussianBlur stdDeviation="4"/></filter>
+      </defs>
+      <rect width="640" height="360" fill="url(#c3g)"/>
+      <ellipse cx="320" cy="-6" rx="320" ry="70" fill="rgba(255,244,226,.13)"/>
+      <g transform="translate(0 -10)">
+      <rect x="40" y="-60" width="20" height="330" fill="#121418"/><rect x="58" y="-60" width="2" height="330" fill="rgba(255,255,255,.07)"/>
+      <rect x="580" y="-60" width="20" height="330" fill="#121418"/><rect x="580" y="-60" width="2" height="330" fill="rgba(255,255,255,.07)"/>
+      <polygon points="76,246 564,246 660,420 -20,420" fill="url(#c3p)"/>
+      <polygon points="76,246 564,246 660,420 -20,420" fill="url(#c3d)"/>
+      <polygon points="76,246 564,246 566,250 74,250" fill="rgba(255,236,200,.22)"/>
+      <ellipse cx="330" cy="304" rx="96" ry="9" fill="rgba(0,0,0,.4)"/>
+      <g clip-path="url(#c3k)">
+        <polygon points="250,302 410,302 410,284 250,284" fill="#e9e5dc"/>
+        <polygon points="250,284 410,284 401,276 259,276" fill="#f7f4ee"/>
+        <polygon points="258,284 272,284 272,262 258,262" fill="#efebe3"/>
+        <polygon points="272,262 258,262 263,258 276,258" fill="#faf8f3"/>
+        <polygon points="352,284 380,284 398,150 372,150" fill="#ece8e0"/>
+        <polygon points="380,284 392,279 410,146 398,150" fill="#cfcac0"/>
+        <rect x="240" y="140" width="190" height="170" fill="url(#c3l)"/>
+      </g>
+      <rect x="30" y="168.5" width="580" height="15" rx="3" fill="#2c3037"/><rect x="30" y="168.5" width="580" height="2" fill="rgba(255,255,255,.14)"/>
+      <rect x="336" y="160.5" width="72" height="62" rx="7" fill="#1c1f25"/><rect x="336" y="160.5" width="72" height="2" fill="rgba(255,255,255,.12)"/>
+      <circle cx="372" cy="190.5" r="17" fill="#15171c" stroke="rgba(255,255,255,.09)" stroke-width="1.5"/>
+      <circle cx="372" cy="190.5" r="11" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="1.5"/>
+      <circle cx="372" cy="190.5" r="4.5" fill="#262a31"/>
+      <rect x="342" y="212.5" width="60" height="6" rx="3" fill="#121418"/>
+      <rect x="360" y="222.5" width="24" height="8" fill="#2a2d33"/>
+      <polygon points="366,230.5 378,230.5 374,234.5 370,234.5" fill="#c9a24a"/>
+      <circle cx="372" cy="235.48000000000002" r="9" fill="rgba(255,150,60,.55)" filter="url(#c3b)"/>
+      
+      </g>
+      
+      <rect width="640" height="360" fill="url(#c3v)"/>
+    </svg></div>
   </div>
-  <div class="lead" style="left: 346px; top: 113px; width: 30px;"></div>
-  <div class="note" style="left: 376px; top: 88px; width: 470px; padding: 12px 16px;">
-    <b>The line a Hue bridge already gets, word for word.</b> Found printers join the house&rsquo;s list of things waiting, so the count, the line and the tap that opens Add come with it. It folds after an hour like any other.
+  <div class="note" style="left: 643px; top: 740px; width: 748px; padding: 14px 18px;">
+    <b>The panel&rsquo;s own way of placing a thing, unchanged:</b> Choose (or the pane&rsquo;s Rename or move it) turns the room line and the name into the room picker and a name field, with Done and Cancel &mdash; Opened.vue&rsquo;s edit head. The list is the house&rsquo;s rooms and the sort page&rsquo;s <b>A new room&hellip;</b>. One addition: <b>No room</b> at the top, because a printer, unlike a light, is allowed to have none, and has to be able to go back to it.
   </div>
-  <div class="leadv" style="left: 1326px; top: 64px; height: 40px;"></div>
-  <div class="note" style="left: 1060px; top: 104px; width: 340px; padding: 12px 16px;">
-    <b>And the dot on the + door</b>, which stays for as long as they are on the Wi&#8209;Fi and not in the house. Nothing takes the screen.
-  </div>
-  <div class="note" style="left: 888px; top: 728px; width: 500px; padding: 12px 16px;">
-    <b>How they were found:</b> the hub asked which printers share the house&rsquo;s connection to the internet, and each one said it was a printer. Opening Add asks again, at once.
-  </div>
-  <div class="card glass" style="left: 1067px; top: 216px; width: 324px; height: 453px; background-color: rgb(196,120,170); border-color: rgba(226,72,184,.3);
-       background-image: linear-gradient(112deg, transparent 26%, rgba(255,255,255,.114) 45%, rgba(255,255,255,.02) 56%, transparent 64%), linear-gradient(155deg, rgb(214,150,196), rgb(186,112,162));">
-    <span class="abs" style="left: 18px; top: 22px; width: 38px; height: 38px; border-radius: 10px; background: rgb(214,52,170); display: grid; place-items: center; color: #fff;"><svg class="i" width="18" height="18" viewBox="0 0 24 24" stroke-width="1.8"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/></svg></span>
-    <span class="chip" style="position: absolute; right: 18px; top: 22px; height: 26px; font-size: 10.5px; background: rgba(255,255,255,.2); color: rgba(60,20,50,.7);">Philips Hue</span>
-    <svg class="abs" style="left: 112px; top: 250px;" width="140" height="190" viewBox="0 0 140 190"><path d="M30 34 Q70 0 110 34 Z" fill="rgba(240,236,228,.9)"/><path d="M34 36 L0 190 L140 190 L106 36 Z" fill="rgba(240,60,190,.32)"/><ellipse cx="70" cy="35" rx="40" ry="5" fill="rgb(240,90,200)"/></svg>
-    <div class="abs" style="left: 18px; bottom: 26px; color: #2a1630;"><div style="font-size: 19px; font-weight: 500;">Ceiling light</div><div style="font-size: 15px; color: rgba(150,30,120,.9);">On, 35%</div></div>
-    <div class="abs" style="left: 18px; right: 18px; bottom: 14px; height: 3px; border-radius: 2px; background: rgba(60,20,50,.15);"><div style="width: 25%; height: 3px; background: rgb(214,52,170);"></div></div>
-  </div><div class="card glass" style="left: 1409px; top: 192px; width: 322px; height: 502px; background-color: rgba(150,160,175,.55);"><div class="abs" style="left: 14px; top: 26px; font-size: 13px; color: rgba(20,24,30,.7);">TH</div></div>
 </div>
 </x-dc>
 </body>

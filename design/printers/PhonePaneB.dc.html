@@ -7,7 +7,7 @@
 <body>
 <x-dc>
 <helmet>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600&family=Instrument+Sans:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600&family=Instrument+Sans:wght@400;500;600&family=Figtree:wght@400;600;700&display=swap">
   <style>
     * { box-sizing: border-box; }
     body {
@@ -101,6 +101,8 @@
     .note p { margin: 8px 0 0; }
     .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
     .key { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11.5px; color: var(--muted); letter-spacing: 0; text-transform: none; }
+    /* the pane's quiet choice, as "Show this as" draws it: a word with a dashed underline */
+    .choose { color: var(--ink-3); text-decoration: underline; text-decoration-style: dashed; text-underline-offset: 4px; }
     .lead { position: absolute; border-top: 1px dashed rgba(255,255,255,.34); }
     .leadv { position: absolute; border-left: 1px dashed rgba(255,255,255,.34); }
   </style>
@@ -226,7 +228,7 @@
     <span class="chip" style="position: absolute; left: 16px; top: 16px;"><i></i>Live</span>
     <span class="abs" style="right: 14px; top: 12px; width: 40px; height: 40px; border-radius: 50%; background: rgba(12,13,16,.5); display: grid; place-items: center;"><svg class="i" width="17" height="17" viewBox="0 0 24 24" stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
     <div class="abs" style="left: 20px; right: 20px; top: 238px;">
-      <div style="font-size: 13.5px; color: var(--ink-4);">3D printer</div>
+      <div style="font-size: 13.5px; color: var(--ink-2);">No room &middot; <span class="choose">Choose</span></div>
       <div style="display: flex; align-items: baseline; justify-content: space-between;"><span class="dsp" style="font-size: 36px; line-height: 42px;">OBI1</span>
         <span style="display: flex; align-items: center; gap: 7px; font-size: 14px; color: var(--ink-3);"><span style="width: 7px; height: 7px; border-radius: 50%; background: var(--live);"></span>Printing</span></div>
       <div style="display: flex; align-items: baseline; justify-content: space-between; margin-top: 16px;">
