@@ -144,6 +144,26 @@ const scrollers = (page: Page) => page.evaluate(() => [...document.querySelector
   .filter(e => e.scrollHeight > e.clientHeight + 1 && ['auto', 'scroll'].includes(getComputedStyle(e).overflowY))
   .map(e => `${e.className} ${e.scrollHeight}/${e.clientHeight}`))
 
+/* A house sharing its lights with other apps, answered here rather than switched on in the mock, which
+   other tests share: the share state is held in the page, and a light kept home is kept here too. */
+async function shareLights(page: Page) {
+  let left: string[] = []
+  let last: Record<string, unknown> = {}
+  const shape = () => ({ ...last, on: true, ready: true, kinds: [...new Set([...((last.kinds as string[]) ?? []), 'light'])], left_out: left })
+  await page.route('**/share', async route => {
+    if (route.request().method() !== 'GET') return route.continue()
+    const r = await route.fetch()
+    last = await r.json()
+    await route.fulfill({ response: r, json: shape() })
+  })
+  await page.route(/\/devices\/[^/]+\/share$/, async route => {
+    const id = decodeURIComponent(new URL(route.request().url()).pathname.split('/')[2])
+    const wanted = !!route.request().postDataJSON()?.shared
+    left = wanted ? left.filter(x => x !== id) : [...new Set([...left, id])]
+    await route.fulfill({ json: shape() })
+  })
+}
+
 test.describe('the Roofline’s own pane: the roof, drawn (pane: C)', () => {
   test('the roof is drawn across the floor of the pane, under the bar and the two cards', async ({ page }) => {
     await openRoof(page, 'christmas')
@@ -254,25 +274,98 @@ test.describe('the Roofline’s own pane: the roof, drawn (pane: C)', () => {
     expect(await scrollers(page)).toEqual([])
   })
 
-  test('in a house sharing its lights with other apps, the roof keeps to the right and still nothing scrolls', async ({ page }) => {
-    /* The share row is one of the left column's quiet rows, and it makes that column taller than the
-       board's. Answered here rather than switched on in the mock, which other tests share. */
-    await page.route('**/share', async route => {
-      if (route.request().method() !== 'GET') return route.continue()
-      const r = await route.fetch()
-      const body = await r.json()
-      await route.fulfill({ response: r, json: { ...body, on: true, ready: true, kinds: [...new Set([...(body.kinds ?? []), 'light'])] } })
-    })
+  /* SHARING IS SAID BY THE ROOM (design/roofline/SaidB.dc.html, chosen 2 October 2026). In a house that
+     shares its lights with other apps the share row would make the left column taller than the board's,
+     so on this pane it folds to a chip on the room's line, and the pane is DrawnC to the pixel: the roof
+     is the same box, full width along the floor, shared or not. The chip opens the same choice as a small
+     card over the name, and the card stays where the finger left it until the pane is touched elsewhere. */
+  test('in a house sharing its lights with other apps, the roof keeps the width of the wall and sharing is a chip on the room’s line', async ({ page }) => {
     await openRoof(page, 'dark')
-    await expect(page.locator('.opened-share')).toBeVisible()
+    const unshared = await box(page, '.roof-plate'), plainName = await box(page, '.opened-name')
+    await expect(page.locator('.room-share')).toHaveCount(0)
+
+    await shareLights(page)
+    await openRoof(page, 'dark')
+    // no share row in the left column: the left column is the board's
+    await expect(page.locator('.pane-said .opened-kind')).toHaveCount(0)
+    // the roof is the same box it is in a house that does not share
+    const plate = await box(page, '.roof-plate'), bar = await box(page, '.roof-bar'), name = await box(page, '.opened-name')
+    for (const k of ['x', 'y', 'width', 'height'] as const) expect(Math.abs(plate[k] - unshared[k])).toBeLessThanOrEqual(2)
+    expect(Math.abs(name.y - plainName.y)).toBeLessThanOrEqual(1)
+    expect(Math.abs(plate.x + plate.width - (bar.x + bar.width))).toBeLessThanOrEqual(2)
+    await expect(page.locator('.roof-plate .roof-ring')).toHaveCount(1)
+
+    // the chip, on the room's line beside the room's name, with the light's own color as its dot
+    const chip = page.locator('.opened-room .room-share')
+    await expect(chip).toHaveText('Shared with other apps')
+    await expect(chip.locator('.room-share-dot')).toHaveCount(1)
+    await expect(chip).toHaveAttribute('aria-expanded', 'false')
+    const room = await box(page, '.opened-room'), c = await box(page, '.opened-room .room-share')
+    expect(Math.abs((c.y + c.height / 2) - (room.y + room.height / 2))).toBeLessThanOrEqual(2)
+    expect(c.y + c.height).toBeLessThan(name.y + 6)
+    expect(c.x + c.width).toBeLessThan(bar.x)
+    await expect(page.locator('.room-share-card')).toHaveCount(0)
+
+    // a tap opens the same choice over the name: Shared and Kept home, and what it means
+    await chip.click()
+    const card = page.locator('.room-share-card')
+    await expect(card).toBeVisible()
+    await expect(chip).toHaveAttribute('aria-expanded', 'true')
+    await expect(card.getByRole('button', { name: 'Shared' })).toHaveAttribute('aria-pressed', 'true')
+    await expect(card.getByRole('button', { name: 'Kept home' })).toHaveAttribute('aria-pressed', 'false')
+    await expect(card).toContainText('Apple Home, Google Home and Alexa can see this one')
+    const k = await box(page, '.room-share-card')
+    expect(k.y).toBeGreaterThan(room.y + room.height - 1)
+    expect(k.y).toBeLessThan(name.y + name.height)
+    expect(k.x + k.width).toBeLessThan(bar.x)
+    expect(await page.evaluate(() => {
+      const r = document.querySelector('.room-share-card')!.getBoundingClientRect()
+      const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height - 12)
+      return !!hit?.closest('.room-share-card')
+    })).toBe(true)
+
+    // choosing keeps the card where it is, and the chip says what the light now is: its own undo
+    await card.getByRole('button', { name: 'Kept home' }).click()
+    await expect(card.getByRole('button', { name: 'Kept home' })).toHaveAttribute('aria-pressed', 'true')
+    await expect(card).toBeVisible()
+    await expect(card).toContainText('this one stays in the house')
+    await expect(chip).toHaveText('Kept out of other apps')
+    await expect(chip.locator('.room-share-dot')).toHaveCount(0)
+    const still = await box(page, '.room-share-card')
+    expect(Math.abs(still.x - k.x)).toBeLessThanOrEqual(1)
+    expect(Math.abs(still.y - k.y)).toBeLessThanOrEqual(1)
+    const after = await box(page, '.roof-plate')
+    for (const key of ['x', 'y', 'width', 'height'] as const) expect(Math.abs(after[key] - unshared[key])).toBeLessThanOrEqual(2)
+    await card.getByRole('button', { name: 'Shared' }).click()
+    await expect(chip).toHaveText('Shared with other apps')
+    await expect(card).toBeVisible()
+
+    // it closes when the pane is touched anywhere else, or by the chip, and the chip stays
+    await page.locator('.opened-big').click()
+    await expect(card).toHaveCount(0)
+    await expect(chip).toBeVisible()
+    await chip.click()
+    await expect(card).toBeVisible()
+    await chip.click()
+    await expect(card).toHaveCount(0)
+    await expect(page.locator('.opened')).toHaveCount(1)
+
+    const n = await box(page, '.roof-plate .roof-said')
+    expect(n.y + n.height).toBeLessThanOrEqual(900)
+    expect(await scrollers(page)).toEqual([])
+  })
+
+  /* NOT DECIDED (pane-shared-decided): while the pane is being edited, Take it out of the house is a quiet
+     row in the left column, and the build's present answer stands for that case alone -- the roof keeps
+     to the right-hand column. Pinned so a change to it is a choice, not an accident. */
+  test('while it is being edited, the roof still keeps to the right of the quiet rows', async ({ page }) => {
+    await openRoof(page, 'christmas')
+    await page.getByRole('button', { name: 'Rename or move it' }).click()
+    await expect(page.locator('.pane-said .opened-end')).toBeVisible()
     const plate = await box(page, '.roof-plate'), look = await box(page, '.roof-look'), said = await box(page, '.pane-said')
     expect(plate.x).toBeGreaterThanOrEqual(look.x - 1)
     expect(plate.x).toBeGreaterThan(said.x + said.width - 1)
     expect(plate.y).toBeGreaterThan(look.y + look.height - 1)
-    await expect(page.locator('.roof-plate .roof-run')).toHaveCount(4)
-    await expect(page.locator('.roof-plate .roof-ring')).toHaveCount(1)
-    const n = await box(page, '.roof-plate .roof-said')
-    expect(n.y + n.height).toBeLessThanOrEqual(900)
     expect(await scrollers(page)).toEqual([])
   })
 
@@ -330,6 +423,35 @@ test.describe('the Roofline’s pane on a phone', () => {
     const places = await boxesOf(page, '.roof-plate .roof-box-label')
     for (let i = 1; i < places.length; i++) expect(places[i].x).toBeGreaterThanOrEqual(places[i - 1].x + places[i - 1].width - 1)
     await expect(page.locator('.roof-plate .roof-ring')).toHaveCount(1)
+  })
+
+  test('in a house that shares, the chip is on the room’s line and its card fits the phone', async ({ page }) => {
+    await shareLights(page)
+    await page.goto('/?room=backyard&at=18:52&roofline=dark', { waitUntil: 'networkidle' })
+    await hold(page, '.tile.light:has-text("Roofline")')
+    await expect(page.locator('.roof-plate')).toHaveCount(1)
+    await page.waitForTimeout(900)
+    await expect(page.locator('.pane-said .opened-kind')).toHaveCount(0)
+    const chip = page.locator('.opened-room .room-share')
+    await expect(chip).toHaveText('Shared with other apps')
+    const room = await box(page, '.opened-room'), c = await box(page, '.opened-room .room-share'), name = await box(page, '.opened-name')
+    expect(Math.abs((c.y + c.height / 2) - (room.y + room.height / 2))).toBeLessThanOrEqual(2)
+    expect(c.x + c.width).toBeLessThanOrEqual(390)
+    await chip.click()
+    const card = page.locator('.room-share-card')
+    await expect(card).toBeVisible()
+    const k = await box(page, '.room-share-card')
+    expect(k.x).toBeGreaterThanOrEqual(0)
+    expect(k.x + k.width).toBeLessThanOrEqual(390)
+    expect(k.y).toBeLessThan(name.y + name.height)
+    await card.getByRole('button', { name: 'Kept home' }).click()
+    await expect(chip).toHaveText('Kept out of other apps')
+    await expect(card).toBeVisible()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
+    // and the roof is still across the phone, under the cards
+    const eve = await box(page, '.roof-evenings'), plate = await box(page, '.roof-plate')
+    expect(plate.y).toBeGreaterThan(eve.y + eve.height - 1)
+    expect(plate.x + plate.width).toBeLessThanOrEqual(390)
   })
 })
 
