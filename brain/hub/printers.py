@@ -25,14 +25,57 @@ from .settings import DATA
 
 log = logging.getLogger("hub.printers")
 
-STATE = DATA / "printers.json"      # {"printers": {id: {"name", "away", "home", "token", "phone", "added"}}}, 0600
+STATE = DATA / "printers.json"      # {"printers": {id: {"name", "away", "home", "token", "phone", "added", "room"}}}, 0600
 NEARBY = "https://nearby.elyir.app/nearby"   # which printers share the house's public address (relay/README.md)
 ZONE = "elyir.app"
 LOOK_EVERY = 300                    # how often the hub asks which printers are on the Wi-Fi
 ASK_FOR = 130                       # an ask lasts 120 s at the printer; give up a little after
+ASK_AT_PRINTER = 120                # ...which is the clock the person standing at the printer is racing
 ACTIONS = {"pause", "resume", "cancel", "cool_down", "swap_slot", "dismiss_swap", "care_later", "help"}
 NAME = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,28}[a-z0-9])?$")
 PRIVATE = [ipaddress.ip_network(n) for n in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16")]
+
+
+# What each of the printer's six states is called in a line about a room or a chip: "OBI1 printing",
+# "C3PO ready". The printer's own headline is a sentence ("White PLA ran out.") and does not fit after
+# a name, so the house keeps this one short word per state, here, where the panel can carry it.
+WORDS = {"ready": "ready", "preparing": "getting ready", "printing": "printing", "needs_you": "needs you",
+         "finished": "done", "problem": "stopped"}
+# Colors as a household says them, for "White PLA". The printer names a spool's color the same way on its
+# own screen; the hub only ever has the file's hex, so it says it again rather than reaching into the printer.
+HUES = ((15, "Red"), (40, "Orange"), (70, "Yellow"), (165, "Green"), (195, "Teal"), (255, "Blue"), (315, "Purple"),
+        (345, "Pink"), (360, "Red"))
+
+
+def color_name(hex_color: str | None) -> str | None:
+    """'#f4f1ea' -> 'White'. None for anything that is not a color."""
+    m = re.match(r"^#?([0-9a-fA-F]{6})$", str(hex_color or ""))
+    if not m:
+        return None
+    r, g, b = (int(m.group(1)[i:i + 2], 16) / 255 for i in (0, 2, 4))
+    mx, mn = max(r, g, b), min(r, g, b)
+    if mx < 0.24:
+        return "Black"
+    if mx == 0 or (mx - mn) / mx < 0.15:
+        return "White" if mx > 0.86 else "Gray"
+    if mx == r:
+        hue = (60 * (g - b) / (mx - mn)) % 360
+    elif mx == g:
+        hue = 60 * (b - r) / (mx - mn) + 120
+    else:
+        hue = 60 * (r - g) / (mx - mn) + 240
+    if 15 <= hue < 40 and mx < 0.6:
+        return "Brown"
+    return next((name for limit, name in HUES if hue < limit), "Red")
+
+
+def filament(job: dict) -> str | None:
+    """What the print is made of, as the card says it under the part's name: "White PLA", "PLA", "White"."""
+    colors = job.get("colors") or []
+    first = colors[0] if colors else None
+    name = color_name(first.get("color") if isinstance(first, dict) else first)
+    words = " ".join(w for w in (name, job.get("material")) if w)
+    return words or None
 
 
 def lan_address(home: str | None) -> str | None:
@@ -92,7 +135,9 @@ class Printers:
             self.known = {}
         self.live: dict = {}         # id -> {"intent", "connected", "via", "since"}
         self.found: list = []        # [{"id", "name", "home", "away"}] on the Wi-Fi and not yet in
-        self.asking: dict = {}       # id -> "waiting" | "refused" | "expired" | "failed"
+        self.asking: dict = {}       # id -> "waiting" | "allowed" | "refused" | "expired" | "failed"
+        self.until: dict = {}        # id -> when the ask runs out at the printer, for the countdown on Add
+        self.tasks: dict = {}         # id -> the task asking it, so Stop asking can stop it
         self.links: dict = {}        # id -> the task following it
         self.sockets: dict = {}      # id -> the open websocket, for actions
         self._calls: dict = {}
@@ -109,24 +154,65 @@ class Printers:
         self.hub._broadcast(json.dumps({"type": "printers", "printers": self.status()}))
 
     # ---- what the panel sees ----
+    def room_of(self, pid: str) -> dict | None:
+        """The room a household put this printer in, as {id, name}, or None. A printer has no room until
+        somebody gives it one from its pane, and a room that has since been taken away is no room."""
+        rid = (self.known.get(pid) or {}).get("room")
+        home = getattr(self.hub, "home", None)
+        room = home.rooms.get(rid) if rid and home is not None else None
+        return {"id": room.id, "name": room.name} if room else None
+
     def view(self, pid: str) -> dict:
         p, live = self.known[pid], self.live.get(pid) or {}
         it = live.get("intent") or {}
         job, printer = it.get("job") or None, it.get("printer") or {}
+        state = it.get("state")
         out = {"id": pid, "name": p["name"], "connected": bool(live.get("connected")), "via": live.get("via"),
-               "state": it.get("state"), "headline": it.get("headline"), "detail": it.get("detail"),
+               "state": state, "headline": it.get("headline"), "detail": it.get("detail"),
+               # the state as a word that fits after the name, for a room's line and its chips
+               "word": WORDS.get(state, "not answering" if not live.get("connected") else ""),
+               # when it came to be in this state: "Finished 4:18 PM", "since 1:12 PM"
+               "since": live.get("since"),
+               "room": self.room_of(pid),
                "actions": [a for a in it.get("actions") or [] if a.get("id") in ACTIONS],
                "temps": {k: (printer.get(k) or {}).get("temperature") for k in ("nozzle", "bed", "chamber") if printer.get(k)},
                "camera": f"/printers/{pid}/camera", "job": None}
         if job:
-            out["job"] = {k: job.get(k) for k in ("name", "progress", "layer", "layers", "remaining_s", "eta_clock", "colors", "material")}
+            out["job"] = {k: job.get(k) for k in ("name", "progress", "layer", "layers", "remaining_s", "eta_clock", "colors",
+                                                  "material", "elapsed_s")}
+            out["job"]["filament"] = filament(job)
             out["job"]["thumbnail"] = f"/printers/{pid}/thumbnail" if job.get("thumbnail") else None
         return out
 
     def status(self) -> dict:
         return {"printers": [self.view(pid) for pid in sorted(self.known)],
-                "found": [f for f in self.found if f["id"] not in self.known],
-                "asking": dict(self.asking)}
+                "found": [{**f, "kind": "3D printer"} for f in self.found if f["id"] not in self.known],
+                "asking": dict(self.asking),
+                "asks": [self.ask_words(pid) for pid in self.asking]}
+
+    def ask_words(self, pid: str) -> dict:
+        """An ask, as the row on Add says it: what to do while it waits, and each of the four ways it ends.
+        Named for the printer, because the whole point is where to go and which one to tap."""
+        state = self.asking[pid]
+        f = next((f for f in self.found if f["id"] == pid), None)
+        name = (self.known.get(pid) or f or {}).get("name") or pid.upper()
+        title, detail = {
+            "waiting": (f"Tap Allow on {name}’s screen", f"Or on a phone that already has {name}, if it’s at home."),
+            "allowed": (f"{name} is in the house", ""),
+            "refused": (f"{name} said no", f"Somebody tapped Not now on {name}’s screen."),
+            "expired": (f"Nobody answered on {name}", f"An ask lasts two minutes. Ask again, then tap Allow on {name}’s screen."),
+            "failed": (f"Couldn’t reach {name}", "It’s on the Wi‑Fi but didn’t answer. Check it’s switched on, then ask again."),
+        }.get(state, (name, ""))
+        if state == "allowed" and pid in self.known:
+            v = self.view(pid)
+            job = v["job"] or {}
+            if v["state"] == "printing" and job.get("name"):
+                pct = round((job.get("progress") or 0) * 100)
+                detail = f"Printing {job['name']}, {pct}%."
+            elif v["word"]:
+                detail = f"{v['word'][:1].upper()}{v['word'][1:]}."
+        return {"id": pid, "name": name, "state": state, "title": title, "detail": detail,
+                "until": self.until.get(pid) if state == "waiting" else None}
 
     def notes(self) -> list:
         """A printer that needs somebody, for "Needs a look": its own words, never ours."""
@@ -134,10 +220,26 @@ class Printers:
         for pid in sorted(self.known):
             v = self.view(pid)
             if v["state"] in ("needs_you", "problem"):
+                where = " · ".join(x for x in ((v["room"] or {}).get("name"), "a 3D printer") if x)
                 out.append({"kind": "printer", "subject": pid, "since": self.live[pid].get("since"),
-                            "where": "printer", "name": v["name"], "text": v["headline"] or "", "detail": v["detail"],
-                            "acts": [{"do": "open", "act": "printer", "to": pid}]})
+                            "where": where, "name": v["name"], "text": v["headline"] or "", "more": v["detail"],
+                            "acts": [{"do": f"Open {v['name']}", "act": "printer", "to": pid}]})
         return out
+
+    # ---- where it lives ----
+    def set_room(self, pid: str, room: str | None) -> dict:
+        """Put a printer in a room, or back in none. The household's choice, from the printer's own pane and
+        never a question when it is added: a printer with no room lives under This house, Printers, and its
+        print leads Your afternoon either way (design/printers/RoomChoiceB)."""
+        if pid not in self.known:
+            raise KeyError("No printer by that name.")
+        home = getattr(self.hub, "home", None)
+        if room is not None and (home is None or room == "unassigned" or room not in home.rooms):
+            raise ValueError("There's no room by that name.")
+        self.known[pid]["room"] = room
+        self._save()
+        self._changed()
+        return self.view(pid)
 
     # ---- finding ----
     async def look(self) -> list:
@@ -167,6 +269,38 @@ class Printers:
         return found
 
     # ---- letting the hub in ----
+    def ask(self, pid: str):
+        """Start asking, and keep hold of the asking so it can be stopped. Returns at once: the answer
+        happens at the printer, and arrives on the stream."""
+        if not any(f["id"] == pid for f in self.found):
+            raise KeyError("That printer isn't on the Wi-Fi.")
+        t = self.tasks.get(pid)
+        if t and not t.done():
+            return t
+        self.tasks[pid] = asyncio.create_task(self.add(pid))
+        return self.tasks[pid]
+
+    def stop(self, pid: str):
+        """Stop asking. Somebody walked to the wrong printer, and should not have to wait out the clock. The
+        printer's own card runs out by itself; the hub just stops listening for its answer."""
+        t = self.tasks.pop(pid, None)
+        if t and not t.done():
+            t.cancel()
+        if self.asking.get(pid) == "waiting":
+            self.asking.pop(pid, None)
+            self.until.pop(pid, None)
+            self._changed()
+
+    def clear_answers(self):
+        """The Add door opening again: the answers from last time were said in their rows and are done with.
+        One still waiting stays, because somebody may be walking to the printer right now."""
+        gone = [pid for pid, st in self.asking.items() if st != "waiting"]
+        for pid in gone:
+            self.asking.pop(pid, None)
+            self.until.pop(pid, None)
+        if gone:
+            self._changed()
+
     async def add(self, pid: str) -> str:
         """Ask the printer to let the hub in. Somebody says yes on the printer's screen, or on a phone already
         paired with it; until then the panel shows it waiting."""
@@ -175,6 +309,7 @@ class Printers:
             raise KeyError("No printer by that name on the Wi-Fi.")
         hub_name = f"{self.hub.settings.get('home_name') or 'Home'} hub"
         self.asking[pid] = "waiting"
+        self.until[pid] = self.now() + ASK_AT_PRINTER
         self._changed()
         try:
             st, _, raw = await asyncio.to_thread(self.request, "POST", f"{f['home']}/door/ask", {"name": hub_name, "kind": "hub"})
@@ -191,7 +326,9 @@ class Printers:
                     self.known[pid] = {"name": f["name"], "home": addr.get("home") or f["home"], "away": addr.get("away") or f["away"],
                                        "token": got["token"], "phone": (got.get("phone") or {}).get("id"), "added": self.now()}
                     self._save()
-                    self.asking.pop(pid, None)
+                    # Kept, not dropped: the row that asked says it was let in until Add is next opened.
+                    self.asking[pid] = "allowed"
+                    self.until.pop(pid, None)
                     self.hub.log.add("printer", pid, None, "added", source="user", detail={"name": f["name"]})
                     self.follow(pid)
                     self._changed()
@@ -201,6 +338,8 @@ class Printers:
                     self._changed()
                     return self.asking[pid]
             self.asking[pid] = "expired"
+        except asyncio.CancelledError:
+            raise
         except Exception as e:
             log.info("printers: asking %s failed: %s", pid, e)
             self.asking[pid] = "failed"

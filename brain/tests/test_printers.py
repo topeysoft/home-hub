@@ -7,6 +7,8 @@ from pathlib import Path
 from hub import printers as P
 from hub.settings import Settings
 
+from tests.apptest import ApiTest
+
 HOME = "https://192-168-86-73.obi1.home.elyir.app"
 AWAY = "https://obi1.elyir.app"
 
@@ -17,11 +19,22 @@ class FakeLog:
         self.rows.append((kind, subject, new, detail))
 
 
+class FakeRoom:
+    def __init__(self, id, name): self.id, self.name = id, name
+
+
+class FakeHome:
+    def __init__(self):
+        self.rooms = {r.id: r for r in (FakeRoom("workshop", "Workshop"), FakeRoom("garage", "Garage"),
+                                        FakeRoom("unassigned", "New devices"))}
+
+
 class FakeHub:
     def __init__(self, tmp):
         self.settings = Settings(Path(tmp) / "settings.json")
         self.settings.set(home_name="Main Palace")
         self.log = FakeLog()
+        self.home = FakeHome()
         self.pushed = []
     def _broadcast(self, msg): self.pushed.append(json.loads(msg))
 
@@ -214,6 +227,147 @@ class Acting(Base):
         self.assertEqual((delete[1], delete[3]), (f"{HOME}/door/phones/ph1", {"Authorization": "Bearer TOK"}))
         self.assertEqual(json.loads(P.STATE.read_text())["printers"], {})
         self.assertEqual(self.p.status()["printers"], [])
+
+
+PRINTING = {"state": "printing", "headline": "Phone stand", "detail": "Done at about 4:20 pm",
+            "actions": [{"id": "pause", "label": "Pause"}, {"id": "cancel", "label": "Stop this print"}],
+            "job": {"name": "Phone stand", "progress": 0.42, "layer": 118, "layers": 280, "remaining_s": 5580,
+                    "eta_clock": "4:20 pm", "elapsed_s": 7440, "colors": ["#f4f1ea"], "material": "PLA"},
+            "printer": {"nozzle": {"temperature": 220}, "bed": {"temperature": 60}, "chamber": {"temperature": 38}}}
+
+
+class WhereItLives(Base):
+    """A room is the household's choice, from the printer's pane, and never a question when it is added
+    (design/printers/RoomChoiceB). The view carries it so the room can show the printer."""
+
+    async def test_a_new_printer_has_no_room(self):
+        await self.added()
+        self.assertIsNone(self.p.view("obi1")["room"])
+
+    async def test_a_room_is_kept_and_named_in_the_view(self):
+        await self.added()
+        v = self.p.set_room("obi1", "workshop")
+        self.assertEqual(v["room"], {"id": "workshop", "name": "Workshop"})
+        self.assertEqual(json.loads(P.STATE.read_text())["printers"]["obi1"]["room"], "workshop")
+        self.assertEqual(self.hub.pushed[-1]["printers"]["printers"][0]["room"]["name"], "Workshop")
+
+    async def test_and_it_can_go_back_to_none(self):
+        await self.added()
+        self.p.set_room("obi1", "workshop")
+        self.assertIsNone(self.p.set_room("obi1", None)["room"])
+
+    async def test_only_a_room_the_house_has(self):
+        await self.added()
+        for wrong in ("attic", "unassigned"):
+            with self.assertRaises(ValueError): self.p.set_room("obi1", wrong)
+        with self.assertRaises(KeyError): self.p.set_room("r2d2", "workshop")
+
+    async def test_a_room_taken_away_is_no_room(self):
+        await self.added()
+        self.p.set_room("obi1", "garage")
+        del self.hub.home.rooms["garage"]
+        self.assertIsNone(self.p.view("obi1")["room"])
+
+
+class TheWordsTheWallUses(Base):
+    async def test_a_print_says_what_it_is_made_of_and_how_long_it_has_run(self):
+        await self.added()
+        await self.sockets[-1].notify("notify_intent_update", PRINTING)
+        await turn()
+        v = self.p.view("obi1")
+        self.assertEqual((v["word"], v["job"]["filament"], v["job"]["elapsed_s"]), ("printing", "White PLA", 7440))
+        self.assertEqual(v["temps"], {"nozzle": 220, "bed": 60, "chamber": 38})
+        self.assertIsNotNone(v["since"])
+
+    def test_colors_said_the_way_a_household_says_them(self):
+        for hex_, name in (("#f4f1ea", "White"), ("#111111", "Black"), ("#808080", "Gray"), ("#d43a2f", "Red"),
+                           ("#2f6fd4", "Blue"), ("#3fae4f", "Green"), ("#7a4a1c", "Brown"), ("nope", None)):
+            self.assertEqual(P.color_name(hex_), name, hex_)
+        self.assertEqual(P.filament({"colors": [], "material": "PETG"}), "PETG")
+        self.assertIsNone(P.filament({}))
+
+    async def test_a_stopped_printer_is_a_job_on_needs_a_look_with_its_name_on_the_button(self):
+        await self.added()
+        self.p.set_room("obi1", "garage")
+        await self.sockets[-1].notify("notify_intent_update", {"state": "problem", "headline": "OBI1 stopped",
+                                                               "detail": "Check the cable to the head.", "actions": []})
+        await turn()
+        n = self.p.notes()[0]
+        self.assertEqual((n["text"], n["more"], n["where"]), ("OBI1 stopped", "Check the cable to the head.", "Garage · a 3D printer"))
+        self.assertEqual(n["acts"], [{"do": "Open OBI1", "act": "printer", "to": "obi1"}])
+        self.assertEqual(self.p.view("obi1")["word"], "stopped")
+
+    async def test_found_printers_say_they_are_printers(self):
+        await self.p.look()
+        self.assertEqual(self.p.status()["found"][0]["kind"], "3D printer")
+
+
+class TheRowThatAsked(Base):
+    """Add says, in the row that asked, where to tap and how long is left, and then each of the four ways
+    the wait ends (design/printers/AddAsking, AddAnswers)."""
+
+    async def test_while_waiting_it_names_the_printer_and_when_the_ask_runs_out(self):
+        await self.p.look()
+        self.p.now = lambda: 1000.0
+        self.door.polls = -10_000                       # the printer keeps saying "waiting"
+        task = self.p.ask("obi1")
+        await turn()
+        ask = self.p.status()["asks"][0]
+        self.assertEqual((ask["state"], ask["title"], ask["until"]), ("waiting", "Tap Allow on OBI1’s screen", 1120.0))
+        self.assertIn("phone that already has OBI1", ask["detail"])
+        self.p.stop("obi1")
+        await turn()
+        self.assertTrue(task.cancelled() or task.done())
+        self.assertEqual(self.p.status()["asking"], {}, "stopped asking is no answer at all")
+
+    async def test_allowed_stays_said_until_add_is_opened_again(self):
+        await self.added()
+        await self.sockets[-1].notify("notify_intent_update", PRINTING)
+        await turn()
+        ask = self.p.status()["asks"][0]
+        self.assertEqual((ask["state"], ask["title"], ask["detail"]), ("allowed", "OBI1 is in the house", "Printing Phone stand, 42%."))
+        self.p.clear_answers()
+        self.assertEqual(self.p.status()["asks"], [])
+
+    async def test_each_way_an_ask_ends_has_its_own_sentence(self):
+        await self.p.look()
+        for state, title in (("refused", "OBI1 said no"), ("expired", "Nobody answered on OBI1"), ("failed", "Couldn’t reach OBI1")):
+            self.p.asking["obi1"] = state
+            words = self.p.ask_words("obi1")
+            self.assertEqual(words["title"], title)
+            self.assertTrue(words["detail"])
+            self.assertIsNone(words["until"])
+
+    async def test_a_waiting_ask_survives_the_door_opening_again(self):
+        await self.p.look()
+        self.p.asking["obi1"] = "waiting"
+        self.p.clear_answers()
+        self.assertEqual(self.p.asking, {"obi1": "waiting"})
+
+    async def test_only_a_printer_on_the_wifi_can_be_asked(self):
+        with self.assertRaises(KeyError): self.p.ask("r2d2")
+
+
+class TheRoutes(ApiTest):
+    """The room and the Stop asking, as the panel reaches them."""
+
+    def setUp(self):
+        super().setUp()
+        self.hub.printers.known["obi1"] = {"name": "OBI1", "home": HOME, "away": AWAY, "token": "TOK", "phone": None, "added": 0}
+
+    def test_a_room_from_the_house_and_back_to_none(self):
+        r = self.client.post("/printers/obi1/room", json={"room": "kitchen"})
+        self.assertEqual((r.status_code, r.json()["room"]), (200, {"id": "kitchen", "name": "Kitchen"}))
+        self.assertEqual(self.client.get("/printers").json()["printers"][0]["room"]["id"], "kitchen")
+        self.assertIsNone(self.client.post("/printers/obi1/room", json={"room": None}).json()["room"])
+
+    def test_a_room_the_house_does_not_have_is_refused(self):
+        self.assertEqual(self.client.post("/printers/obi1/room", json={"room": "attic"}).status_code, 400)
+        self.assertEqual(self.client.post("/printers/r2d2/room", json={"room": "kitchen"}).status_code, 404)
+
+    def test_asking_a_printer_that_is_not_on_the_wifi_is_a_404_and_stopping_is_harmless(self):
+        self.assertEqual(self.client.post("/printers/r2d2/add").status_code, 404)
+        self.assertEqual(self.client.delete("/printers/r2d2/add").status_code, 200)
 
 
 class LanAddress(unittest.TestCase):
