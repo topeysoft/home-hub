@@ -274,6 +274,17 @@ class WhichSideOfTheDoorTests(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertTrue(open_to_strangers("GET", path))
 
+    def test_the_panels_own_top_level_files_load_too(self):
+        for path in ("/manifest.json", "/apple-touch-icon.png", "/icon.svg", "/favicon.svg", "/robots.txt"):
+            with self.subTest(path=path):
+                self.assertTrue(open_to_strangers("GET", path))
+
+    def test_an_api_path_that_ends_like_a_file_is_still_the_house(self):
+        # A device id is domain.name, so a device named `json` or `js` used to pass as one of the app's files.
+        for path in ("/devices/camera.json", "/devices/sensor.js", "/rooms/den/state.json", "/devices/camera.png/snapshot.png", "/openapi.json"):
+            with self.subTest(path=path):
+                self.assertFalse(open_to_strangers("GET", path))
+
     def test_the_house_itself_is_not_open_to_strangers(self):
         for path in ("/home", "/events", "/devices/light.kitchen/on", "/phones", "/setup/advanced", "/backup", "/suggestions"):
             with self.subTest(path=path):

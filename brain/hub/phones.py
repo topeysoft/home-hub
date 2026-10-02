@@ -201,6 +201,7 @@ class Phones:
 OPEN_PREFIXES = ("/phones/claim/", "/assets/", "/sounds/", "/icons/", "/bridge/firmware/")
 OPEN_PATHS = {"/", "/alive", "/phones/me", "/phones/ask", "/phones/code", "/qr.svg", "/phone", "/index.html", "/manifest.webmanifest", "/sw.js", "/favicon.ico", "/favicon.svg", "/robots.txt"}
 OPEN_SUFFIXES = (".js", ".css", ".svg", ".png", ".ico", ".woff2", ".webmanifest", ".json", ".html", ".txt", ".map")
+NOT_THE_APP = {"/openapi.json"}
 
 
 # ---- how a request reached the house ----
@@ -264,4 +265,9 @@ def open_to_strangers(method: str, path: str) -> bool:
     """What the panel needs before it is paired: the app itself, the join screen's own routes, and the sounds a speaker fetches."""
     if method.upper() in ("OPTIONS", "HEAD"): return True
     if path in OPEN_PATHS or path.startswith(OPEN_PREFIXES): return True
-    return "." in path.rsplit("/", 1)[-1] and path.endswith(OPEN_SUFFIXES)
+    # The panel's own files by their extension -- but only at the top, where the build puts the few that are
+    # not under /assets/ (manifest.json, the icons). Anywhere deeper it was a hole: an API path whose last
+    # part happened to end in .js or .json passed without a phone, and a device id is shaped domain.name,
+    # so one named `json` would have. FastAPI's schema is the house's too, not the app's (2 October 2026).
+    if path in NOT_THE_APP: return False
+    return path.count("/") == 1 and path.endswith(OPEN_SUFFIXES)
