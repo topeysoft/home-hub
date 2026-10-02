@@ -16,6 +16,7 @@ import base64, os, time
 from pathlib import Path
 
 from fastapi import FastAPI, Header, HTTPException, Query, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from home import Home, serve
@@ -24,7 +25,8 @@ from registry import Registry
 CLAIMS_PER_DAY = 5               # per address: enough for a household changing its mind, not for a script
 
 
-def make(registry: Registry, now=time.time, relay: dict | None = None, offer: dict | None = None, home: Home | None = None) -> FastAPI:
+def make(registry: Registry, now=time.time, relay: dict | None = None, offer: dict | None = None, home: Home | None = None,
+         nearby_origins: tuple = ()) -> FastAPI:
     """`relay` is how a carried house reaches frps -- its address and the shared token, which is not the gate
     (the house's own secret is) but which frps wants, so the hub is handed it rather than anybody typing it.
     `offer` is what a household is shown: whether the service is open to them, at what price, and where to pay."""
@@ -46,6 +48,17 @@ def make(registry: Registry, now=time.time, relay: dict | None = None, offer: di
         """Whether the panel may offer this at all. Closed until a household can actually pay: the panel never
         shows a promise the house cannot keep, and an address nobody can pay for is one."""
         return offer
+
+    @app.get("/nearby")
+    def nearby(request: Request, origin: str | None = Header(default=None)):
+        """Which names have their tunnel at the same public address as the asker: what a phone or laptop on a
+        house's Wi-Fi sees as "on this Wi-Fi". Served on nearby.<zone>, which has no IPv6 record, so the
+        browser comes in over IPv4 like the printers' tunnels do and the two addresses can match."""
+        who = request.client.host if request.client else ""
+        r = JSONResponse({"names": registry.nearby(who)}, headers={"Cache-Control": "no-store", "Vary": "Origin"})
+        if origin and origin in nearby_origins:
+            r.headers["Access-Control-Allow-Origin"] = origin
+        return r
 
     @app.get("/names/{name}")
     def look(name: str, also: list[str] = Query(default=[])):
@@ -124,6 +137,8 @@ def main():
     # The printer app's static files, served from this box like api is (cloud-init): always carried.
     if os.environ.get("RELAY_PRINTERS_SECRET"):
         registry.seed("printers", os.environ["RELAY_PRINTERS_SECRET"], note="the printer app")
+    if os.environ.get("RELAY_NEARBY_SECRET"):
+        registry.seed("nearby", os.environ["RELAY_NEARBY_SECRET"], note="on this Wi-Fi")
     relay = {"addr": os.environ.get("RELAY_ADDR", f"relay.{registry.zone}"), "token": os.environ.get("RELAY_FRPS_TOKEN", "")}
     # The price is words, not a number: what it costs and how often, as the panel will say it.
     offer = {"open": os.environ.get("RELAY_OFFER_OPEN") == "1", "price": os.environ.get("RELAY_PRICE") or None, "pay": os.environ.get("RELAY_PAY_URL") or None}
@@ -133,7 +148,9 @@ def main():
     # The address in the name (home.py): authoritative for home.<zone>, on 53 when RELAY_DNS_PORT says so.
     if os.environ.get("RELAY_DNS_PORT"):
         serve(home, ns=os.environ.get("RELAY_NS", f"ns1.{registry.zone}"), port=int(os.environ["RELAY_DNS_PORT"]))
-    uvicorn.run(make(registry, relay=relay, offer=offer, home=home), host="127.0.0.1", port=int(os.environ.get("RELAY_PORT", "7100")),
+    # Who may read /nearby from a page: the printer app, and its developer's own machine.
+    origins = tuple(o.strip() for o in os.environ.get("RELAY_NEARBY_ORIGINS", f"https://printers.{registry.zone},http://localhost:5173").split(",") if o.strip())
+    uvicorn.run(make(registry, relay=relay, offer=offer, home=home, nearby_origins=origins), host="127.0.0.1", port=int(os.environ.get("RELAY_PORT", "7100")),
                 proxy_headers=True, forwarded_allow_ips="127.0.0.1")
 
 

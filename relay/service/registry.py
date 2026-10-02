@@ -31,7 +31,7 @@ LABEL = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,28}[a-z0-9])?$")
 RESERVED = frozenset("""
     api relay www mail smtp imap pop ftp ns ns1 ns2 dns home lan local localhost admin root operator
     status help support billing pay account accounts login signin auth app apps elyir hub hubs test
-    selftest staging dev _acme-challenge printers
+    selftest staging dev _acme-challenge printers nearby
 """.split())
 
 SCHEMA = """
@@ -74,6 +74,11 @@ class Registry:
         self.db.row_factory = sqlite3.Row
         self.db.execute("pragma journal_mode=wal")
         self.db.execute(SCHEMA)
+        # Where each house's tunnel last came from, for /nearby. Added 2 October 2026 to a file that
+        # already had houses in it, so added rather than declared.
+        for col in ("last_ip text", "seen_at real"):
+            try: self.db.execute(f"alter table houses add column {col}")
+            except sqlite3.OperationalError: pass
 
     # ---- the names ----
     def _sweep(self):
@@ -156,6 +161,22 @@ class Registry:
             raise LookupError(label)
         return secret
 
+    # ---- who is in the same house as whom ----
+    def seen(self, label: str, address: str):
+        """Note the public address a house's tunnel came from, for /nearby. "1.2.3.4:5678" or "[::1]:5678"."""
+        host = address.rsplit(":", 1)[0].strip("[]") if address else ""
+        self.db.execute("update houses set last_ip = ?, seen_at = ? where name = ?", (host or None, self.now(), label))
+
+    def nearby(self, address: str) -> list[str]:
+        """The carried names whose tunnel comes from this public address: the printers (and hubs) behind the
+        same router as whoever is asking. Names only. Behind a shared address (carrier NAT, an office) a
+        neighbor's names show too, which is why a name is all this ever gives: connecting to any of them
+        still means asking from that house's own Wi-Fi."""
+        if not address: return []
+        rows = self.db.execute("select name from houses where last_ip = ? and entitled_until > ? order by name",
+                               (address, self.now())).fetchall()
+        return [r["name"] for r in rows if r["name"] not in RESERVED]
+
     def houses(self) -> list[dict]:
         self._sweep()
         return [dict(r) | {"secret_hash": None} for r in self.db.execute("select * from houses order by name")]
@@ -177,6 +198,7 @@ class Registry:
         if not self.status(house)["carried"]: return "this house is not carried by this relay"
         if op == "Login":
             if content.get("user") != house: return "user must be the house's name"
+            self.seen(house, str(content.get("client_address") or ""))
             return None
         if op == "NewProxy":
             if content.get("proxy_type") != "https": return "only https is carried"
