@@ -9856,10 +9856,90 @@ select.input {
     row-gap: 16px;
   }
 }
-/* A LEFT COLUMN WITH QUIET ROWS IN IT -- the house shares its lights with other apps, or the pane is
-   being edited -- is taller than the board's, and the roof would go under the foot of the wall. Then the
-   roof keeps to the right-hand column, under the controls, and the left column runs the full height
-   beside it: the same plate, the same order round, only shorter. Nothing scrolls either way. */
+/* SHARING IS SAID BY THE ROOM (design/roofline/SaidB.dc.html, chosen 2 October 2026). In a house that
+   shares its lights with other apps, the share row is not a row of the left column on this pane: it is a
+   chip on the room's line, so the column is the board's and the roof keeps the width of the wall. The
+   chip is the share row's own words at a smaller size, with the light's own color as its dot while it is
+   shared; it opens the same choice as a small card over the name, heavier than the pane so it reads as in
+   front of it. The room's line keeps its height with the chip on it, so nothing under it moves. */
+.opened-room.has-share {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 21px;
+  line-height: 21px;
+}
+.room-share {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 26px;
+  padding: 0 9px 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--edge);
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--muted);
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background 0.18s ease,
+    color 0.18s ease,
+    border-color 0.18s ease;
+}
+.room-share:hover,
+.room-share.open {
+  border-color: var(--edge-hi);
+  color: var(--ink-2);
+}
+.room-share.open {
+  background: rgba(255, 255, 255, 0.06);
+}
+.room-share-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--lamp);
+}
+.room-share-more {
+  transform: rotate(90deg);
+}
+.opened-step.s0:has(.room-share-card) {
+  position: relative;
+  z-index: 3;
+}
+.room-share-card {
+  position: absolute;
+  left: -8px;
+  top: calc(100% + 9px);
+  z-index: 6;
+  width: 452px;
+  max-width: calc(100vw - 32px);
+  padding: 18px 20px;
+  border-radius: 24px;
+  border: 1px solid var(--edge-hi);
+  background: #181a20;
+  box-shadow:
+    0 30px 80px -20px rgba(0, 0, 0, 0.9),
+    0 0 0 6px rgba(12, 13, 16, 0.35);
+  line-height: 1.4;
+  white-space: normal;
+}
+.room-share-card .opened-kind-row {
+  margin-top: 12px;
+}
+.room-share-card .opened-kind-why {
+  max-width: none;
+}
+/* A LEFT COLUMN WITH QUIET ROWS IN IT is taller than the board's, and the roof would go under the foot
+   of the wall. Then the roof keeps to the right-hand column, under the controls, and the left column runs
+   the full height beside it: the same plate, the same order round, only shorter. Sharing no longer comes
+   here (above). What still does is the pane being EDITED -- Take it out of the house, and what it says
+   after -- and that case is NOT decided (design/roofline/canvas.json, pane-shared-decided): until it is
+   drawn, this is the build's present answer for it, kept as it was. */
 @media (min-width: 861px) {
   .pane-body.pane-roof:has(.pane-said .opened-kind) .pane-said {
     grid-row: 1 / span 2;
