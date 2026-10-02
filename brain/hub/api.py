@@ -222,7 +222,7 @@ class Hub:
             try:
                 try: state = await asyncio.to_thread(ha_setup.driver_state, self.ha_url)
                 except Exception:
-                    self._set("down", "The hub's engine is not answering yet."); await self._nap(3); continue
+                    self._set("down", "The hub is still starting."); await self._nap(3); continue
                 if state == "fresh":
                     self._set("fresh"); await self._nap(10); continue
                 if not self.ha_token:
@@ -852,7 +852,7 @@ def setup_status(): return hub.status()
 async def setup_owner(body: dict):
     name, home = (body.get("name") or "").strip(), (body.get("home") or "").strip()
     if not name: raise HTTPException(400, "A name is needed.")
-    if hub.driver not in ("fresh", "ready", "connecting", "needs-login"): raise HTTPException(503, "The hub's engine is not ready yet.")
+    if hub.driver not in ("fresh", "ready", "connecting", "needs-login"): raise HTTPException(503, "The hub is still starting. Try again in a moment.")
     try: await hub.create_owner(name, home or "Home", (body.get("language") or "").strip())
     except ha_setup.SetupError as e: raise HTTPException(502, str(e))
     return hub.status()
@@ -1140,7 +1140,7 @@ async def check_device(device_id: str):
     fresh = hub.home.devices.get(device_id)
     answering = bool(fresh) and fresh.state != "unavailable"
     return {"ok": True, "answering": answering,
-            "text": f"{dev.name} is answering again." if answering else f"{dev.name} still is not answering."}
+            "text": f"{dev.name} is answering again." if answering else f"{dev.name} is still not answering."}
 
 
 @app.delete("/devices/{device_id}")
@@ -1288,7 +1288,7 @@ async def remove_account(entry_id: str):
         await asyncio.to_thread(hub.add._rest, "DELETE", f"/api/config/config_entries/entry/{entry_id}")
     except Exception as e:
         log.warning("could not remove account %s: %s", entry_id, e)
-        raise HTTPException(502, f"{name} would not come out. The engine said: {e}")
+        raise HTTPException(502, f"{name} could not be removed. Try again in a moment.")
     hub.log.add("home", entry_id, None, "account removed", source="user", detail={"name": name, "integration": row.get("domain")})
     return {"ok": True}
 

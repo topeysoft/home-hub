@@ -121,9 +121,9 @@ class Say(unittest.IsolatedAsyncioTestCase):
 
     async def test_a_device_that_refuses_is_named(self):
         out = await self.say("unlock the doors")
-        self.assertIn("Side door didn't respond", out["text"]); self.assertEqual(out["count"], 1)
+        self.assertIn("Side door didn't answer", out["text"]); self.assertEqual(out["count"], 1)
         with self.assertRaises(NotUnderstood) as c: await self.say("unlock the side door")
-        self.assertEqual(str(c.exception), "Side door didn't respond.")
+        self.assertEqual(str(c.exception), "Side door isn't answering.")
 
     async def test_media(self):
         await self.say("pause the den tv"); self.assertEqual(self.hub.acts[-1], ("media_player.den_tv", "pause", {}))

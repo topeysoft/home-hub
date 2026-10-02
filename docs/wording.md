@@ -38,6 +38,7 @@ to clean it up.
 | Rooms and devices: adding a thing | **Done, 2 October 2026.** A chosen: the verb is *add* | `design/words-adding/` |
 | Rooms and devices: rooms, panes, New devices | **Done, 2 October 2026.** C chosen: the device's words for controls, a person's for how it is | `design/words-rooms/` |
 | History (What happened, Who changed what, Needs a look) | **Done, 2 October 2026.** No new choice: the settled words applied, and five wrong facts fixed | `design/words-history/` |
+| The band and toasts | **Done, 2 October 2026.** A chosen: the hub's sentence, or a plain one | `design/words-band/` |
 | Rooms and devices: light strips and the roofline | Not started — its words were settled on boards on 1 October; reopen only with boards | |
 | Settings (The hub, Accounts, Share, the passcode, What this house has, Look, Routines, Signals) | **Done, 2 October 2026.** One name each; the restart says how deep, connections keep their standard names | `design/words-settings/` |
 | The band and its messages | Not started | |
@@ -112,6 +113,17 @@ to clean it up.
   A bridge is named by its room. A connection's own error is the one exception, kept after a full
   sentence because it is the only clue anybody has.
 - **"While you were out" only when somebody was**; otherwise "Since yesterday".
+
+### What the band and toasts settled
+
+- **A failure says the hub's sentence, or a plain one.** A reason the hub wrote for a person (a capital,
+  a full stop) is shown; anything else -- a developer's guard, a status line, the browser's own words --
+  becomes "That didn't work. Try again in a moment.", or "The hub isn't answering right now." A toast
+  that names what failed says it once: "Couldn't rename it. Try again in a moment." The rule lives in
+  one place, `plainError()` in `app/src/code.ts`, so a hub error written badly next year is still
+  caught; write the brain's errors as sentences when a person will read them.
+- **Cancelling is never a failure.** "That needs the passcode." is not toasted as an error anywhere.
+- **The band leads with its point**, because the wall shows one row of it.
 
 ## Known so far, outside the areas done
 

@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: 2026 Temitope Adeyeri
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { request } from './code'
+import { request, plainError } from './code'
 import { apiUrl, withToken, wsProtocols, wsUrl } from './door'
 /* `capability` is the driver's word for what this is and it picks the Home Assistant service; `kind` is
    the owner's, where they have given one. Read the two together through cap() in store.ts, never the raw
@@ -85,7 +85,8 @@ async function fail(r: Response): Promise<never> {
      docs/voice.md has the house say "I didn't catch that" out loud ALWAYS, because silence there
      reads as being ignored. Every other caller sees the Error it has always seen. */
   try { const body = await r.json(); detail = body?.detail ?? detail; speak = body?.speak ?? undefined } catch {}
-  throw Object.assign(new Error(detail), speak ? { speak } : {})
+  if (detail === 'code') detail = 'That passcode wasn’t right.'   // four wrong tries fall through to here
+  throw Object.assign(plainError(detail), speak ? { speak } : {})
 }
 
 async function post<T = any>(url: string, body?: unknown): Promise<T> {

@@ -102,7 +102,7 @@ async function run(n: Note, a: Act, id: string) {
        list the next time the brain starts. */
     else if (a.act === 'bridge') {
       const r = await forgetBridge(a.to!)
-      notify(`${r.forgotten} is removed.`)
+      notify(r.forgotten === 'The bridge' ? 'The bridge is removed.' : `The ${r.forgotten} bridge is removed.`)
       store.notes = store.notes.filter(x => x.subject !== a.to)
     }
     await loadHealth()

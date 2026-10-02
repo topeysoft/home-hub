@@ -38,7 +38,7 @@ const sure = ref(''), removing = ref('')
 async function remove(p: Phone) {
   if (sure.value !== p.id) { sure.value = p.id; return }         // one tap asks, the second does
   removing.value = p.id
-  try { await removePhone(p.id); notify(p.me ? 'This phone is removed. To use the house again, join from the wall screen.' : `${phoneName(p)} is removed.`) }
+  try { await removePhone(p.id); notify(p.me ? 'This phone is removed. To use the house again, ask to be added from the wall screen.' : `${phoneName(p)} is removed.`) }
   catch (e: any) { if (e.message !== 'That needs the passcode.') notify(e.message, 'error') }
   sure.value = ''; removing.value = ''
 }
@@ -54,7 +54,7 @@ const letting = ref('')
 async function pick(p: Phone, anywhere: boolean) {
   if (anywhere === p.remote || letting.value) return
   letting.value = p.id
-  try { await letOut(p.id, anywhere); await loadPhones(true); notify(anywhere ? `${p.name} works anywhere now.` : `${p.name} works at home only now.`) }
+  try { await letOut(p.id, anywhere); await loadPhones(true); notify(anywhere ? `${phoneName(p)} works anywhere now.` : `${phoneName(p)} works at home only now.`) }
   catch (e: any) { notify(e.message, 'error') }
   letting.value = ''
 }   // ?sheet=people&add=1 previews the steps

@@ -127,7 +127,7 @@ async function done() {
   if (g?.device_id && name.value.trim() && name.value.trim() !== g.name) {
     try { await renameDevice(g.device_id, name.value.trim()) } catch (e: any) { notify(e.message, 'error') }
   }
-  if (placed.value) notify(`${name.value.trim() || g?.name || 'It'} is in the ${rooms.value.find(r => r.id === placed.value)?.name} now.`)
+  if (placed.value) notify(`${name.value.trim() || g?.name || 'It'} is in the ${rooms.value.find(r => r.id === placed.value)?.name ?? 'room'} now.`)
   notNow()
 }
 /* An account that brought in six things at once has no one room to be put in. The house does not
