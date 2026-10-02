@@ -1,6 +1,7 @@
-# Every push and pull request. Six jobs, and a change has to get past all of them:
+# Every push and pull request. Seven jobs, and a change has to get past all of them:
 #
 #   brain   the hub's own tests, its linter, and the coverage floor
+#   relay   the registration service the maker runs beside the relay: its tests, its linter, its image
 #   panel   the screens: types, linter, unit tests, coverage floor, and that it builds
 #   e2e     the built panel driven in a real browser against the mock brain, in four shards
 #   shell   the scripts that run on the hub host
@@ -55,6 +56,25 @@ jobs:
         run: cd brain && python -m pytest tests -q --cov=hub --cov-report=xml --cov-report=term
       - name: coverage may not go down
         run: python .github/coverage-check.py brain brain/coverage.xml
+
+  # Not on any hub, but it decides whether every house is carried, and the relay box builds it from a
+  # pinned ref of this repository -- so a ref that does not build is a box that does not come up.
+  relay:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: relay/service/requirements-dev.txt
+      - run: pip install -r relay/service/requirements-dev.txt
+      - name: lint
+        run: cd relay/service && ruff check .
+      - name: tests
+        run: cd relay/service && python -m pytest -q
+      - name: the image the relay box builds
+        run: docker build -t relay-service:ci relay/service
 
   panel:
     runs-on: ubuntu-latest
@@ -189,6 +209,7 @@ jobs:
         driver-layer/host/restart.sh
         driver-layer/host/watchdog.sh
         driver-layer/host/network.sh
+        driver-layer/host/away.sh
         driver-layer/host/verify.sh
         driver-layer/host/channel.sh
         driver-layer/host/tests.sh

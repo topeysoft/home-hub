@@ -267,6 +267,21 @@ The first two steps need nothing from the maker and can land and be tested on a 
    from the house's LAN name to its public one. That is the next thing to decide, with the alias in *Open
    decisions*, and the *People* switch lands with it.
 4. **The registration service and the switch in *This hub*.** Names, keys, more than one house.
+
+   **The service is built, 1 October 2026, and so is the hub's half, minus payments.** `relay/service/` claims names (free or
+   taken, three suggestions, the reserved ones refused), hands each house a secret once and keeps its hash, and
+   answers frps's server plugin on Login and NewProxy -- checked against the real frps 0.71.0: a refused house is
+   told why, a house is carried only under its own name as raw https, and with the service down frps refuses new
+   logins rather than letting them through. A secret and not the signed calls imagined above, because frps hands
+   the plugin the metadata frpc read from its config at start, so nothing a hub sends at login can be fresh.
+   Entitlements are granted by hand (`relay/README.md`) until payments exist. On the box it is built from a
+   pinned ref, its file on a volume, and reached at `api.elyir.app` through frps itself. The hub's half landed the same night:
+   `brain/hub/address.py` looks, claims, keeps the secret and asks the host; `driver-layer/host/away.sh` checks
+   every value again before it writes `.env` and brings frpc and the away door up; and the panel asks once, as
+   the optional last step of setup (`AddressStep.vue`), with a row on *This hub* after. The panel offers it only
+   when the service's `/offer` is open -- closed until payments exist -- and `HUB_AWAY_OFFER=on` is the maker's
+   own hub, offered it by hand before then. Still to come: payments, the phones moving to the address and the
+   *From outside* switch on *People*, and the home alias.
 5. **The certificate:** TLS-ALPN-01 on the hub — which is why this now comes before the first tap in step 3 —
    then the alias that covers home.
 6. **Web push, then the microphone** — both waiting on 5 and neither on each other.

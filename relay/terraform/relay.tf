@@ -70,8 +70,16 @@ resource "hcloud_server" "relay" {
   }
 
   user_data = templatefile("${path.module}/cloud-init.yaml.tftpl", {
-    frp_version = var.frp_version
-    auth_token  = var.relay_auth_token
+    frp_version   = var.frp_version
+    auth_token    = var.relay_auth_token
+    zone          = var.zone_name
+    repository    = var.relay_service_repository
+    service_ref   = var.relay_service_ref
+    offer_open    = var.relay_offer_open ? "1" : "0"
+    volume_device = one(hcloud_volume.data[*].linux_device)
+    # The service's own name has a secret like any house's. Derived rather than chosen, so there is
+    # nothing more to mint or keep: whoever has the relay token already holds the box.
+    self_secret = sha256("api:${var.relay_auth_token}")
   })
 
   labels = {
@@ -88,4 +96,32 @@ resource "hcloud_server" "relay" {
       error_message = "relay_auth_token is required: without it any frpc on the internet could register a proxy on this relay. Generate one with `openssl rand -hex 32`."
     }
   }
+}
+
+# What the box must not forget when it is rebuilt: the registration service's file -- every house's
+# name, the hash of its secret, and its entitlement -- and the certificate for api.elyir.app. Changing
+# anything in cloud-init replaces the server; this outlives it and is attached to the next one.
+resource "hcloud_volume" "data" {
+  count = local.make_box ? 1 : 0
+
+  name     = "${var.relay_name}-data"
+  size     = 10
+  location = var.relay_location
+  format   = "ext4"
+
+  labels = {
+    role = "relay"
+  }
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+resource "hcloud_volume_attachment" "data" {
+  count = local.make_box ? 1 : 0
+
+  volume_id = one(hcloud_volume.data[*].id)
+  server_id = one(hcloud_server.relay[*].id)
+  automount = false # cloud-init mounts it at /var/lib/relay, where the units expect it
 }

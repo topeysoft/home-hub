@@ -10,6 +10,8 @@ import Restore from './Restore.vue'
 import AdvancedLink from './AdvancedLink.vue'
 import Drivers from './Drivers.vue'
 import NetworkSheet from './NetworkSheet.vue'
+import { getAddress, turnAddress, type AddressState } from './api'
+import { outsideRow } from './address'
 import BridgeCard from './BridgeCard.vue'
 import Icon from './Icon.vue'
 import { locale, languageName, LANGUAGES } from './lang'
@@ -120,6 +122,7 @@ const earlier = ref(false)
 const earlierReleases = computed(() => (notes.value?.history ?? []).filter(r => r.version !== notes.value?.notes?.version && r.what.length))
 onMounted(async () => {
   loadNet()     // not awaited: the Network row is a fact the hub already holds, and nothing below needs it
+  loadAddress()
   loadBridges()
   try { notes.value = await getUpdateNotes() } catch { /* an older hub, or no notes in this build */ }
   if (store.status?.update?.whats_new) { try { await markNotesRead() } catch { /* it will come back tomorrow */ } }
@@ -194,6 +197,19 @@ const netSub = computed(() => {
   if (!b.checked) return `${them} given ${b.ssid}. ${n.how === 'cable' ? 'The hub can’t check that one from a cable' : 'Nothing here can check that one'}, so it takes your word for it.`
   return `${them} given ${b.ssid}.`
 })
+/* The house's own address, once it has one (design/address/, All three after). A house without one
+   shows nothing here: it is asked once in setup, and where else it is offered is not this page. */
+const address = ref<AddressState | null>(null)
+const outside = computed(() => outsideRow(address.value))
+const turning = ref(false)
+async function loadAddress() { try { address.value = await getAddress() } catch { /* an older hub, or no service: the row stays away */ } }
+async function turnOutside() {
+  if (!address.value || turning.value) return
+  turning.value = true
+  try { address.value = await turnAddress(address.value.want === 'off') } catch (e: any) { notify(e.message, 'error') }
+  turning.value = false
+}
+
 async function loadNet() { try { net.value = await getNetwork() } catch { /* an older hub: the row stays away */ } }
 
 /*
@@ -277,6 +293,11 @@ const when = (ts?: number | null) => ts ? new Date(ts * 1000).toLocaleString(loc
         <span class="hub-v">{{ netLine }}<span class="hub-sub line">{{ netSub }}</span></span>
         <button class="button small" v-if="!net.moving" @click="netOpen = true">Change</button>
         <span class="hub-sub" v-else>Moving…</span>
+      </li>
+      <li v-if="outside">
+        <span class="hub-k">Outside</span>
+        <span class="hub-v">{{ outside.value }}<span class="hub-sub line">{{ outside.sub }}</span></span>
+        <button class="button small ghost" :class="{ busy: turning }" @click="turnOutside">{{ outside.action }}</button>
       </li>
       <li :class="{ asking: langOpen }">
         <span class="hub-k">Language</span>

@@ -350,10 +350,80 @@ C
   rm -rf "$root"
 }
 
+# ------------------------------------------------------------ outside, turned on and off from the panel
+# The values arrive from a service on the internet by way of the brain and land in a file docker compose
+# reads as root, so the one property worth proving is that nothing that does not look like a house's
+# value ever gets in -- and that the line everybody shares, COMPOSE_PROFILES, keeps the radios'.
+away() {
+  group "Outside, on and off, and nothing odd reaches .env"
+  local root; root="$(mktemp -d)"
+  local dir="$root/hub" bin="$root/bin" fake="$root/fake" data dl
+  dl="$dir/driver-layer"; data="$dl/brain-data"
+  mkdir -p "$bin" "$fake" "$data"
+  cat > "$bin/docker" <<'D'
+#!/usr/bin/env bash
+echo "$*" >> "$FAKE/docker"
+D
+  chmod +x "$bin/docker"
+  local secret token; secret="$(printf 's%.0s' $(seq 43))"; token="$(printf 'a%.0s' $(seq 64))"
+  good() { printf 'HUB_AWAY_HOUSE=temi\nHUB_RELAY_SECRET=%s\nHUB_RELAY_TOKEN=%s\nHUB_RELAY_ADDR=relay.elyir.app\nHUB_AWAY_ZONE=elyir.app\n' "$secret" "$token" > "$data/away.env"; }
+  run() { printf '{"at": 1, "want": "%s"}' "$1" > "$data/away.request"; rm -f "$fake/docker"
+          PATH="$bin:$PATH" FAKE="$fake" HOME_HUB_DIR="$dir" "$HERE/away.sh" >/dev/null 2>&1; }
+  env_() { grep -m1 "^$1=" "$dl/.env" | cut -d= -f2-; }
+
+  printf 'TZ=UTC\nCOMPOSE_PROFILES=zigbee,voice\n' > "$dl/.env"
+  good; run on
+  is "on writes the house's name" "$(env_ HUB_AWAY_HOUSE)" temi
+  is "...and its secret" "$(env_ HUB_RELAY_SECRET)" "$secret"
+  is "...and turns the away door on" "$(env_ HUB_AWAY)" on
+  is "...adding away beside the radios and the voice" "$(env_ COMPOSE_PROFILES)" "zigbee,voice,away"
+  is "...and brings caddy and frpc up" "$(cat "$fake/docker")" "compose up -d caddy frpc"
+  [ -f "$data/away.request" ] && no "...and takes the request away" "it is still there" || ok "...and takes the request away"
+  python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); print(d["on"], d["house"])' "$data/away.json" > "$fake/said" 2>&1
+  is "...and says what it did" "$(cat "$fake/said")" "True temi"
+
+  run on
+  is "on twice is still one away" "$(env_ COMPOSE_PROFILES)" "zigbee,voice,away"
+
+  run off
+  is "off turns the door off" "$(env_ HUB_AWAY)" off
+  is "...takes away out and leaves the rest" "$(env_ COMPOSE_PROFILES)" "zigbee,voice"
+  is "...keeps the name for when it comes back" "$(env_ HUB_AWAY_HOUSE)" temi
+  is "...and stops frpc" "$(head -1 "$fake/docker")" "compose --profile away rm -sf frpc"
+
+  good; run on; : > "$data/away.env"; run forget
+  is "forget takes the secret out of .env" "$(grep -c '^HUB_RELAY_SECRET=' "$dl/.env")" 0
+  is "...and the name" "$(grep -c '^HUB_AWAY_HOUSE=' "$dl/.env")" 0
+
+  printf 'COMPOSE_PROFILES=away\n' > "$dl/.env"; good; run off
+  is "the last profile going leaves none rather than nothing" "$(env_ COMPOSE_PROFILES)" none
+
+  local before
+  for bad in 'HUB_AWAY_HOUSE=temi|evil' 'HUB_AWAY_HOUSE=Temi' 'HUB_AWAY_HOUSE=-temi' "HUB_RELAY_SECRET=x" 'HUB_RELAY_SECRET=abc$(reboot)defghijklmnop' \
+             'HUB_RELAY_ADDR=relay.elyir.app;rm' 'HUB_AWAY_ZONE=elyir.app;HUB_IMG_BRAIN=evil/brain'; do
+    printf 'TZ=UTC\nCOMPOSE_PROFILES=none\n' > "$dl/.env"; before="$(cat "$dl/.env")"
+    good; key="${bad%%=*}"; grep -v "^$key=" "$data/away.env" > "$fake/v"; printf '%b\n' "$bad" >> "$fake/v"; mv "$fake/v" "$data/away.env"
+    run on
+    [ "$(cat "$dl/.env")" = "$before" ] && [ ! -f "$fake/docker" ] && ok "refused, .env untouched: $bad" || no "refused, .env untouched: $bad" "$(cat "$dl/.env")"
+  done
+
+  # A line away.sh does not ask for is never read: only its five keys are, each by its own pattern.
+  printf 'TZ=UTC\n' > "$dl/.env"; good; printf 'HUB_IMG_BRAIN=evil/brain\n' >> "$data/away.env"; run on
+  is "a key it does not ask for never reaches .env" "$(grep -c '^HUB_IMG_BRAIN=' "$dl/.env")" 0
+
+  printf 'TZ=UTC\n' > "$dl/.env"; before="$(cat "$dl/.env")"
+  run 'sideways'
+  is "a want it does not know does nothing" "$(cat "$dl/.env")" "$before"
+  printf '{"at": 1, "want": "on; reboot"}' > "$data/away.request"; good; rm -f "$fake/docker"
+  PATH="$bin:$PATH" FAKE="$fake" HOME_HUB_DIR="$dir" "$HERE/away.sh" >/dev/null 2>&1
+  is "a want with anything after it is not a want" "$(cat "$dl/.env")" "$before"
+  rm -rf "$root"
+}
+
 
 for need in git openssl curl python3; do
   command -v "$need" >/dev/null 2>&1 || { echo "these tests need $need"; exit 2; }
 done
-signatures; holds; undo; radios; watchdog
+signatures; holds; undo; radios; watchdog; away
 printf '\n%s passed, %s failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

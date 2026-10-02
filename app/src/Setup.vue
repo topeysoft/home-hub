@@ -4,7 +4,8 @@
 -->
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { setupOwner, setupLogin, setupDone, addRoom, setPin } from './api'
+import { setupOwner, setupLogin, setupDone, addRoom, setPin, getAddress, type AddressState } from './api'
+import { offersOutside } from './address'
 import { remember } from './code'
 import { store, load } from './store'
 import Icon from './Icon.vue'
@@ -13,12 +14,15 @@ import Adding from './Adding.vue'
 import Drivers from './Drivers.vue'
 import Restore from './Restore.vue'
 import PhoneSteps from './PhoneSteps.vue'
+import AddressStep from './AddressStep.vue'
 
 /* First run. One question per screen, in this order: who you are, where home is, which rooms,
    what to add. Every step after the first can be skipped and finished later from Home -- except the
-   code, which cannot, because a house that is still open to the whole Wi-Fi is not set up yet. */
-type Page = 'welcome' | 'login' | 'owner' | 'starting' | 'code' | 'location' | 'rooms' | 'devices' | 'done'
-const PAGES: Page[] = ['welcome', 'login', 'owner', 'starting', 'code', 'location', 'rooms', 'devices', 'done']
+   code, which cannot, because a house that is still open to the whole Wi-Fi is not set up yet.
+   And one more after what to add, only when the address service is offering it: whether the house
+   wants an address of its own for reaching it from outside (AddressStep.vue, design/address/). */
+type Page = 'welcome' | 'login' | 'owner' | 'starting' | 'code' | 'location' | 'rooms' | 'devices' | 'address' | 'done'
+const PAGES: Page[] = ['welcome', 'login', 'owner', 'starting', 'code', 'location', 'rooms', 'devices', 'address', 'done']
 const preview = new URLSearchParams(location.search).get('page') as Page | null   // ?setup=1&page=rooms previews one screen
 const page = ref<Page>(preview && PAGES.includes(preview) ? preview : 'welcome')
 const status = computed(() => store.status)
@@ -30,6 +34,10 @@ const busy = ref(false), error = ref(''), fromBackup = ref(false)
 const adding = ref(false)
 const name = ref(''), home = ref(''), username = ref(''), password = ref('')
 const advanced = `${location.protocol}//${location.hostname}:8123/`
+/* Asked for once, at the start: whether the last step is offered at all. A hub that cannot reach the
+   service, or a brain that predates it, simply never shows the step -- the house is complete without it. */
+const address = ref<AddressState | null>(null)
+getAddress().then(a => (address.value = a)).catch(() => {})
 
 function next(after: Page) {
   const s = status.value
@@ -44,7 +52,7 @@ function next(after: Page) {
   if (after === 'code') return (page.value = 'location')
   if (after === 'location') return (page.value = 'rooms')
   if (after === 'rooms') return (page.value = 'devices')
-  if (after === 'devices') return (page.value = 'done')
+  if (after === 'devices') return (page.value = offersOutside(address.value) ? 'address' : 'done')
 }
 watch(driver, d => { if (d === 'ready' && page.value === 'starting') next('starting') })
 watch(() => store.status?.owner, o => { if (o && !name.value) name.value = o })
@@ -244,6 +252,9 @@ async function saveCode() {
           <Drivers />
         </div>
       </section>
+
+      <!-- from outside, too: optional, and only when the address service is offering it -->
+      <AddressStep v-else-if="page === 'address' && address" :state="address" key="address" @done="page = 'done'" />
 
       <!-- done -->
       <section class="setup-page" v-else-if="page === 'done'" key="done">

@@ -15,6 +15,14 @@ loginFailExit = false
 auth.method = "token"
 auth.token = "{{ .Envs.HUB_RELAY_TOKEN }}"
 
+# Who this house is, to the relay. frps hands both to the registration service before it carries
+# anything (relay/service/registry.py, judge): the secret proves the name, and `user` must be the same
+# name because frps prefixes every proxy with it, which keeps one house's proxies apart from the next.
+# A relay of your own without that service ignores all three.
+user = "{{ .Envs.HUB_AWAY_HOUSE }}"
+metadatas.house = "{{ .Envs.HUB_AWAY_HOUSE }}"
+metadatas.secret = "{{ .Envs.HUB_RELAY_SECRET }}"
+
 # The relay takes houses dialing in and phones arriving on the same port, 443, the one that survives a
 # hotel. This first byte is how it tells the two apart; without it the tunnel never comes up.
 transport.tls.disableCustomTLSFirstByte = false
@@ -23,9 +31,8 @@ log.to = "console"
 log.level = "info"
 
 [[proxies]]
-# Named for the house, because the relay keeps one list of proxies for every house that dials in and
-# two called the same thing would refuse each other.
-name = "{{ .Envs.HUB_AWAY_NAME }}"
+# frps names it <house>.away, from `user` above, so every house can call its one proxy the same thing.
+name = "away"
 type = "https"
 customDomains = ["{{ .Envs.HUB_AWAY_NAME }}"]
 localIP = "127.0.0.1"

@@ -404,6 +404,7 @@ function shareState() {
     bridge: { running: share.on && !share.stopped, commissioned: !!share.holders.length, stale: !!share.stopped, error: null },
   }
 }
+const mockAddress = { house: null, claimedAt: 0, want: 'on' }
 const phones = { phones: [
   { id: 'w', name: 'This wall', kind: 'wall', joined: now - 86400 * 30, expires: null, remote: false, last_seen: now, how: 'setup', me: true },
   { id: 'p1', name: "Temi's iPhone", kind: 'phone', joined: now - 86400 * 20, expires: null, remote: false, last_seen: now - 3600, how: 'code', me: false },
@@ -826,6 +827,26 @@ const bridgeRows = process.env.BRIDGES === 'none' ? [] : [
     { id: 'u1', name: 'Color lamp', room: 'living', why: 'the same unit as the floor lamp', source: 'assistant' },
     { id: 'u2', name: 'Plug', room: '', why: 'a plainer name', source: 'house' }], assistant: true })
   if (p === '/phone') return json(res, { ip: '192.168.1.40' })
+  /* The house's own address (brain/hub/address.py). Offered unless OUTSIDE=closed; OUTSIDE=named starts the house
+     with one; `palace` is another house's, so the taken line and its three suggestions can be seen. */
+  if (p === '/address' && req.method === 'GET') {
+    if (process.env.OUTSIDE === 'named' && !mockAddress.house) Object.assign(mockAddress, { house: 'temi', claimedAt: Date.now() - 60000 })
+    const offer = process.env.OUTSIDE === 'closed' ? { open: false, price: null, pay: null } : process.env.OUTSIDE === 'hand' ? { open: true, price: null, pay: null, by_hand: true } : { open: true, price: '$3 a month', pay: 'https://pay.example/start' }
+    if (!mockAddress.house) return json(res, { offer, guess: 'temi', house: null })
+    const carried = Date.now() - mockAddress.claimedAt > 6000
+    return json(res, { offer, guess: 'temi', house: mockAddress.house, address: `${mockAddress.house}.elyir.app`, want: mockAddress.want, on: carried, waiting: false, carried, held_until: null, entitled_until: carried ? Date.UTC(2027, 9, 1) / 1000 : null })
+  }
+  if (p.startsWith('/address/names/')) {
+    const n = decodeURIComponent(p.slice('/address/names/'.length))
+    return json(res, n === 'palace' ? { name: n, free: false, why: 'taken', suggestions: ['palace-house', 'palace-holts', 'palace-adeyeri'] } : { name: n, free: true, address: `${n}.elyir.app` })
+  }
+  if (p === '/address' && req.method === 'POST') { let b = ''; req.on('data', c => (b += c)); return req.on('end', () => {
+    let name = ''; try { name = JSON.parse(b).name || '' } catch {}
+    if (name === 'palace') { res.writeHead(409, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify({ detail: { why: 'taken', suggestions: ['palace-house'] } })) }
+    Object.assign(mockAddress, { house: name, claimedAt: Date.now(), want: 'on' })
+    json(res, { offer: { open: true, price: '$3 a month', pay: 'https://pay.example/start' }, guess: 'temi', house: name, address: `${name}.elyir.app`, want: 'on', carried: false })
+  }) }
+  if ((p === '/address/on' || p === '/address/off') && req.method === 'POST') { mockAddress.want = p.endsWith('on') ? 'on' : 'off'; return json(res, { offer: { open: true, price: '$3 a month', pay: null }, guess: 'temi', house: mockAddress.house, address: `${mockAddress.house}.elyir.app`, want: mockAddress.want, carried: true, on: mockAddress.want === 'on', entitled_until: Date.UTC(2027, 9, 1) / 1000 }) }
   if (p === '/phones/me') return json(res, { locked: !!process.env.LOCKED, paired: true, home: 'Main Palace', phone: null })
   if (p === '/phones') return json(res, phones)
   /* What this house has: one door holding everything, grouped by what brought it. Derived from the
