@@ -285,7 +285,7 @@ function pairStatus() {
   if (pairing.state !== 'listening') return { ...pairing, at: undefined, joined: undefined }
   const on = (Date.now() - pairing.at) / 1000
   if (process.env.PAIR === 'none') {
-    if (on > 12) { pairing = { state: 'closed', text: 'Nothing joined. Put the device in pairing mode and try again.' }; return pairing }
+    if (on > 12) { pairing = { state: 'closed', text: 'Nothing was added. Put the device in pairing mode and try again.' }; return pairing }
     return { state: 'listening', text: 'Listening. Put the device in pairing mode.', seconds_left: Math.round(12 - on) }
   }
   if (process.env.PAIR === 'pin' && on > 4 && pairing.needs !== null) {
@@ -771,10 +771,10 @@ const bridgeRows = process.env.BRIDGES === 'none' ? [] : [
                               ...(st === 'unclaimed' ? { uuid: String(i).repeat(32).slice(0, 32) } : { net: 'ab'.repeat(8) }) })
     const waiting = Array.from({ length: free }, (_, i) => one(i, 'unclaimed'))
     const other = Array.from({ length: spoken }, (_, i) => one(free + i, 'other'))
-    const text = free === 1 ? 'One switch is waiting to be let in.'
-      : free > 1 ? `${free} switches are waiting to be let in.`
-      : other.length ? 'Nothing is asking to be let in, but there is a switch nearby that is on another network. That one has to be started over first.'
-      : 'Nothing nearby is asking to be let in.'
+    const text = free === 1 ? 'One switch is waiting to be added.'
+      : free > 1 ? `${free} switches are waiting to be added.`
+      : other.length ? 'Nothing is waiting to be added, but there is a switch nearby that is on another network. That one has to be started over first.'
+      : 'Nothing nearby is waiting to be added.'
     return json(res, { state: 'done', waiting, claimed_elsewhere: other, text })
   }
   /* Blinking one of them. BLINK=fail is a switch that cannot be reached, which matters because the

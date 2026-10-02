@@ -46,7 +46,7 @@ const TITLE: Record<string, string> = {
   'ready:colors': 'All set.',
   'ready:length': 'All set.',
   room: 'Where is it?',
-  ready: 'It’s in.',
+  ready: 'Added.',
   failed: 'That did not work.',
   wifi: 'One thing it needs.',
   /* A strip controller's beats. design/controller-panel/AskWhichC.dc.html: the second strip is pointed
@@ -93,7 +93,7 @@ const finished = computed(() =>
 /* ONE STEP, where a bridge has three. The hub does not hand over the Wi-Fi any more and never sees
    the password: commissioning carries it, encrypted, and does the letting-in at the same time. Two
    lines here would be a progress bar with nothing behind one of them. */
-const STEPS = { letting: 'Letting it into the house' } as const
+const STEPS = { letting: 'Adding it to the house' } as const
 const ORDER = ['letting'] as const
 const at = computed(() => ORDER.indexOf((b.value?.step ?? 'letting') as any))
 const steps = computed(() => ORDER.map((id, i) => ({ id, text: STEPS[id], done: i < at.value, live: i === at.value })))
@@ -234,7 +234,7 @@ onUnmounted(() => window.removeEventListener('keydown', key, true))
           </div>
           <div class="bridge-row">
             <span class="bridge-icon"><Icon name="lock" :size="18" /></span>
-            <span class="bridge-text"><span class="bridge-name">Nothing has been let in yet</span><span class="bridge-sub">Until you say yes it is only knocking. Nothing of yours is on it.</span></span>
+            <span class="bridge-text"><span class="bridge-name">Nothing is added yet</span><span class="bridge-sub">Until you say yes, nothing of yours is on it.</span></span>
           </div>
           <div class="flow-actions">
             <button class="button" :class="{ busy }" @click="adopt">That’s the one</button>
@@ -290,7 +290,7 @@ onUnmounted(() => window.removeEventListener('keydown', key, true))
 
         <!-- the hub is talking to it over Bluetooth. Nothing to do, so nothing to press. -->
         <template v-else-if="b.state === 'working'">
-          <p class="sheet-lede">It is being let in now, over Bluetooth, and it gets onto your Wi‑Fi as part of the same conversation. A moment. You can walk away; the wall will say when it is done.</p>
+          <p class="sheet-lede">It’s being added now, over Bluetooth, and it joins your Wi‑Fi along the way. A moment. You can walk away; the wall screen will say when it’s done.</p>
           <div class="stage"><StripArt show="lit" /></div>
           <ul class="bridge-steps">
             <li v-for="s in steps" :key="s.id" :class="{ done: s.done, live: s.live }">

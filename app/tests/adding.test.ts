@@ -14,7 +14,7 @@ describe('the doors of beat one', () => {
   beforeEach(() => { store.status = { drivers: [] } as any; store.bridge = null })
 
   it('offers nothing about wires, only things a person can be holding', () => {
-    expect(doors().map(d => d.title)).toEqual(['Something with its own app', 'A part of the house'])
+    expect(doors().map(d => d.title)).toEqual(['Something with its own app', 'Another screen, or a bridge'])
   })
 
   it('opens the wall door only when a bridge can reach the walls', () => {
@@ -63,7 +63,7 @@ describe('the word list', () => {
   /* Every word that can end up on a button: the shell's own, and the ones the pieces ask for. */
   const ALLOWED = new Set([
     // the seven
-    'Add', 'Have a look', 'That’s the one', 'Try again', 'Done', 'Add another', 'Not now',
+    'Add', 'Set up', 'That’s the one', 'Try again', 'Done', 'Add another', 'Not now',
     // questions only one beat can ask, in the same voice
     'Try the next one', 'No, none of them', 'Look again', 'I can reach the code',
     'It came with a QR code', 'No code on the back?', 'Continue', 'Add it',
@@ -72,6 +72,15 @@ describe('the word list', () => {
     // the bridge's own two answers, which are answers and not ways out
     'Not mine', 'Leave it on', 'No, dark', 'Leave it here',
   ])
+
+  /* The verb is ADD, from the button that opens the sheet to the word that ends it (design/words-adding/, A). "Let in" was the flow's word for it, and the same word People took off phones;
+     a screen that says both is a house speaking two languages. */
+  it('says add, never let in, join or knock', () => {
+    const strip = src('StripSheet.vue')
+    const said = [everything, strip].join('\n').split('\n').filter(l => !/^\s*(\/\/|\/\*|\*)/.test(l))
+      .flatMap(l => [...l.matchAll(/'([^']*)'|>([^<>{}]+)</g)].map(m => m[1] ?? m[2]))
+    for (const w of said.filter(w => !/^[a-z_-]+$/.test(w))) expect(w, `"${w}"`).not.toMatch(/\blet (it )?in\b|\bwould not join\b|\bknocking\b|\bIt’s in\./i)
+  })
 
   it('never offers a word outside the list', () => {
     const asked = [...everything.matchAll(/label: '([^']+)'/g)].map(m => m[1])
@@ -101,7 +110,7 @@ describe('the word list', () => {
    moment one knocks, so the page is visible with a strip waiting only when a bridge has outranked
    it -- and then the household should still be told the strip is there. design/strip/Both.dc.html
    and Knock.dc.html: a strip is never started, it is plugged in and it knocks, so it belongs under
-   "Already waiting" and never as a door somebody opens. */
+   "Found nearby" and never as a door somebody opens. */
 describe('a light strip waiting its turn', () => {
   it('counts only the beats where it is still asking', () => {
     expect(stripWaiting('knocking')).toBe(true)

@@ -35,7 +35,7 @@ let poll: number | undefined
 async function addTyped() {
   if (!typed.value.trim()) { error.value = 'The code on the device is needed.'; return }
   error.value = ''
-  emit('working', { text: 'Letting it in…', how_long: 'Up to a minute. It talks to the house over your Wi‑Fi.' })
+  emit('working', { text: 'Adding it…', how_long: 'Up to a minute. It talks to the house over your Wi‑Fi.' })
   try {
     const p = await startPair('matter', typed.value.trim())
     joining.value = true
@@ -46,7 +46,7 @@ async function addTyped() {
 function watchIt() { clearTimeout(poll); poll = window.setTimeout(async () => {
   let p; try { p = await getPair() } catch { return watchIt() }
   if (p.state === 'done') return void arrived()
-  if (p.state === 'failed' || p.state === 'closed') { joining.value = false; return emit('wrong', p.text ?? 'It did not join.', true) }
+  if (p.state === 'failed' || p.state === 'closed') { joining.value = false; return emit('wrong', p.text ?? 'It wasn’t added.', true) }
   watchIt()
 }, 1500) }
 async function arrived() { clearTimeout(poll); joining.value = false; emit('caught', await whatArrived(before)) }
@@ -98,7 +98,7 @@ function hunt() {
 }
 async function letIn(code: string) {
   stop()
-  emit('working', { text: 'Letting it in…', how_long: 'Around half a minute. You can put your phone down.' })
+  emit('working', { text: 'Adding it…', how_long: 'Around half a minute. You can put your phone down.' })
   try {
     const r = await addSwitch(code)
     if (r.state === 'failed') return emit('wrong', r.text ?? 'That code was not one this house could use.', true)
@@ -122,7 +122,7 @@ onUnmounted(() => { stop(); clearTimeout(poll); if (joining.value) stopPair().ca
 <template>
   <!-- Matter: the code is on the box, and it is short -->
   <template v-if="matter">
-    <p class="flow-desc">Matter things carry a code printed under their QR square, on the case or in the box. Type it here, with the thing powered on and nearby.</p>
+    <p class="flow-desc">It carries a code printed under its QR square, on the case or in the box. Type it here, with it powered on and nearby.</p>
     <label class="field">
       <span class="field-label">The code printed on it</span>
       <input class="input" v-model="typed" placeholder="e.g. 3497-011-2332 or MT:…" autocomplete="off" autocapitalize="characters" spellcheck="false" @keydown.enter="addTyped" />

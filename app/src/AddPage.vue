@@ -26,12 +26,12 @@ const busy = ref(false)
       <p class="page-lede" v-if="resume">The house remembers everything else about this one. This is the part only you can do.</p>
       <!-- "Then it turns up here" was a promise this page could not keep: nothing on it asked the
            hub to go and look, so it waited. It looks now, for as long as it is open. design/knock/. -->
-      <p class="page-lede" v-else>Plug the new thing in and put it on the Wi‑Fi with its own app if it needs that. If it is already on, this will find it.</p>
+      <p class="page-lede" v-else>Plug the new thing in, and put it on the Wi‑Fi with its own app if it needs that. If it is already on, this will find it.</p>
     </template>
     <Adding :resume="resume" @busy="busy = $event" />
     <p class="add-elsewhere" v-if="!busy && !resume">
       <Icon name="clock" :size="17" />
-      <span>Radios, the bridge and anything not working are under <b>Behind the scenes</b>, on the hub’s own page.</span>
+      <span>Radios, bridges and anything not working are listed on <b>The hub</b>.</span>
     </p>
   </div>
 </template>

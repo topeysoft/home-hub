@@ -51,13 +51,13 @@ async function refresh() {
   if (s === 'done') return void arrived()
   /* Something is part-way in. The screen stops asking for a press and starts reporting, because the
      press has already happened -- beat three begins the moment the house has hold of something. */
-  if (s === 'found' && !holding) { holding = true; emit('working', { text: 'Letting it in…', how_long: 'A few seconds while the house works out what it is.' }) }
+  if (s === 'found' && !holding) { holding = true; emit('working', { text: 'Adding it…', how_long: 'A few seconds while the house works out what it is.' }) }
   if (s === 'failed') return emit('wrong', pair.value.text ?? 'That did not work.', true)
   if (s === 'closed') {
     /* the window ran out on its own. With one radio that is the end of the conversation; with two it
        is simply the other one's turn, which is nothing a person needs told about. */
     if (radios.length > 1) return void openDoor(at.value + 1)
-    return emit('wrong', pair.value.text ?? 'Nothing joined. Put the device in pairing mode and try again.', true)
+    return emit('wrong', pair.value.text ?? 'Nothing was added. Put the device in pairing mode and try again.', true)
   }
   /* time for the other radio, if there is one and nothing is part-way through joining */
   if (s === 'listening' && radios.length > 1 && Date.now() - turned > SLICE) return void openDoor(at.value + 1)
@@ -68,7 +68,7 @@ async function refresh() {
    four needs the thing itself, so this waits for it rather than sending somebody off to find it. */
 async function arrived() {
   clearTimeout(poll)
-  if (!holding) emit('working', { text: 'Letting it in…', how_long: 'A few seconds while the house works out what it is.' })
+  if (!holding) emit('working', { text: 'Adding it…', how_long: 'A few seconds while the house works out what it is.' })
   const c = await whatArrived(before)
   emit('caught', c.device_id ? c : { ...c, name: pair.value.device?.name ?? undefined })
 }
@@ -89,10 +89,10 @@ onUnmounted(() => { clearTimeout(poll); if (live.value) stopPair().catch(() => {
 </script>
 
 <template>
-  <p class="flow-desc">Press its button now. Most of them want one long press, or switching off and on three times &mdash; the box will say.</p>
+  <p class="flow-desc">Press its button now. Most want one long press, or switching off and on three times &mdash; the box will say.</p>
 
   <div class="press-line" style="margin-bottom: 14px">
-    <span class="press-said"><span class="pulse-dot"></span>{{ pair.state === 'found' ? pair.text : 'The house is listening' }}</span>
+    <span class="press-said"><span class="pulse-dot"></span>{{ pair.state === 'found' ? pair.text : 'Looking for it…' }}</span>
   </div>
 
   <template v-if="pair.needs === 'pin'">
@@ -102,5 +102,5 @@ onUnmounted(() => { clearTimeout(poll); if (live.value) stopPair().catch(() => {
     </label>
     <p class="error" v-if="error">{{ error }}</p>
   </template>
-  <p class="sheet-status" v-else>It stops listening on its own after a few minutes.</p>
+  <p class="sheet-status" v-else>It stops looking after a few minutes.</p>
 </template>

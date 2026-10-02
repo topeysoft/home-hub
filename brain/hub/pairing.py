@@ -76,7 +76,7 @@ class Pairing:
         await asyncio.sleep(seconds)
         if self.session and self.session["state"] in ("listening", "found"):
             await self.stop()
-            self._set("closed", "Nothing joined. Put the device in pairing mode and try again; a factory reset usually does it.")
+            self._set("closed", "Nothing was added. Put the device in pairing mode and try again; a factory reset usually does it.")
 
     # ---- Zigbee, through Zigbee2MQTT over MQTT ----
     async def _start_zigbee(self):
@@ -135,7 +135,7 @@ class Pairing:
             self._set("pin", "This one is secured. Type the 5-digit code printed on it (the first five digits of its DSK, on a sticker or the box).", needs="pin", dsk=ev.get("dsk"))
         elif e == "node added":
             node = ev.get("node") or {}
-            self._set("found", "It's in. Asking what it is…" + (" It joined without security." if ev.get("low_security") else ""), device={"id": node.get("node_id"), "name": None})
+            self._set("found", "Found it. Asking what it is…" + (" It was added without security." if ev.get("low_security") else ""), device={"id": node.get("node_id"), "name": None})
         elif e == "interview stage completed":
             self._set("found", f"Getting to know it… ({ev.get('stage')})")
         elif e == "device registered":
