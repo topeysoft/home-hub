@@ -54,7 +54,7 @@ const ready = computed(updateReady)
 const locked = computed(() => !!store.status?.locked)
 const title = computed(() => ({
   house: 'This house', location: 'Where is home?', look: 'How the house looks', routines: 'Routines', signals: 'What the lights tell you', people: 'People', accounts: 'Accounts', things: 'What this house has', printers: 'Printers',
-  add: resume.value ? 'Sign in again' : 'Add to the house', share: 'Share this house', hub: 'This hub', code: locked.value ? 'Change the passcode' : 'Lock the settings',
+  add: resume.value ? 'Sign in again' : 'Add to the house', share: 'Share this house', hub: 'The hub', code: 'Passcode',
   notes: 'Needs a look', happened: 'What happened', changes: 'Who changed what',
 }[page.value]))
 
@@ -118,7 +118,7 @@ const share = computed(() => {
 })
 const version = computed(() => { const v = store.status?.version; return !v || v === 'dev' ? 'Development build' : v })
 const hub = computed(() => ready.value ? `${version.value} · an update is ready` : version.value)
-const code = computed(() => locked.value ? 'Changing the house needs it' : 'Open to anyone on the Wi‑Fi')
+const code = computed(() => locked.value ? 'Needed to change the house' : 'Not set: anyone on your Wi‑Fi can change the house')
 const notes = computed(() => store.notes.length === 1 ? store.notes[0].text : `${store.notes.length} things have stopped answering`)
 /* The brain writes this line too. It has to say what is actually inside, and "2 things still on"
    versus "2 things still unlocked" is a distinction the panel cannot make from a count. */
@@ -146,7 +146,7 @@ const doors = computed(() => [
   /* Always here, unlike Needs a look: this is a place somebody goes to look something up, not a
      fault that should appear only when there is one. */
   { id: 'happened' as const, icon: 'clock', name: 'What happened', hint: happened.value },
-  ...(store.status?.setup_done ? [{ id: 'code' as const, icon: 'lock', name: locked.value ? 'The passcode' : 'Lock the settings', hint: code.value }] : []),
+  ...(store.status?.setup_done ? [{ id: 'code' as const, icon: 'lock', name: 'Passcode', hint: code.value }] : []),
   /* only while there is something behind it. A door that is always there saying "nothing is wrong"
      teaches a person to stop reading it, which is the opposite of what a fault list is for. */
   ...(store.notes.length ? [{ id: 'notes' as const, icon: 'sparkle', name: 'Needs a look', hint: notes.value, attention: true }] : []),
@@ -196,11 +196,11 @@ onUnmounted(() => window.removeEventListener('keydown', key))
         <Transition name="view" mode="out-in">
           <div class="house-page" :key="page">
             <div class="page" v-if="page === 'house'">
-              <p class="page-lede">Everything about the house that is not a light, a scene or a door. Those never need the passcode; some of this does.</p>
+              <p class="page-lede">Everything about the house that is not a light, a scene or a lock. Those never need the passcode; some of this does.</p>
               <ul class="hub-rows">
                 <li><span class="hub-k">Home</span><span class="hub-v">{{ store.ambient.location?.name ?? 'No location yet' }}<span class="hub-sub" v-if="homeLine"> · {{ homeLine }}</span></span><button class="button small ghost" @click="go(store.ambient.location ? 'people' : 'location')">{{ store.ambient.location ? 'People' : 'Set it' }}</button></li>
                 <li><span class="hub-k">Software</span><span class="hub-v">{{ version }}<span class="hub-sub" v-if="ready"> · an update is ready</span></span><button class="button small" :class="{ ghost: !ready }" @click="go('hub')">{{ ready ? 'Update' : 'The hub' }}</button></li>
-                <li><span class="hub-k">Settings</span><span class="hub-v">{{ locked ? 'Locked. Changing the house needs the passcode.' : 'Open. Anyone on the Wi‑Fi can change the house.' }}</span><button class="button small" :class="{ ghost: locked }" v-if="store.status?.setup_done" @click="go('code')">{{ locked ? 'The passcode' : 'Lock' }}</button><span v-else></span></li>
+                <li><span class="hub-k">Passcode</span><span class="hub-v">{{ locked ? 'Set. Changing the house needs it.' : 'Not set. Anyone on your Wi‑Fi can change the house.' }}</span><button class="button small" :class="{ ghost: locked }" v-if="store.status?.setup_done" @click="go('code')">{{ locked ? 'Change it' : 'Set a passcode' }}</button><span v-else></span></li>
               </ul>
               <AdvancedLink />
             </div>

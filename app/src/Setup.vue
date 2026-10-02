@@ -154,16 +154,15 @@ async function saveCode() {
         <h1 class="display">Welcome home.</h1>
         <!-- No count in here, on purpose. It used to promise "one or two questions" and then ask
              five, and a sentence that has to be rewritten every time ASKED grows or shrinks is a
-             sentence that will quietly go out of date. What the number was really doing was
-             softening the ask; "you can change any of it later" does that instead, and stays true
-             at any length -- every answer in first run is editable afterwards. -->
-        <p class="setup-lede">This screen will run the house: lights, screens, doors, cameras, all in one calm place. Setting it up takes a few minutes, and you can change any of it later.</p>
+             sentence that will quietly go out of date. First run says as little as it can
+             (design/words-setup/, B): one sentence a screen, and nothing the screen already shows. -->
+        <p class="setup-lede">Run the whole house from this screen. Setting it up takes a few minutes.</p>
         <div class="setup-actions">
           <button class="button big" :disabled="!engineReady" @click="next('welcome')">Get started</button>
         </div>
-        <p class="setup-status" v-if="store.restoring"><span class="pulse-dot"></span> Restoring. The hub restarts and this screen comes back as your house.</p>
+        <p class="setup-status" v-if="store.restoring"><span class="pulse-dot"></span> Restoring your backup. The hub restarts, and this screen comes back with your house on it.</p>
         <p class="setup-status" v-else-if="!engineReady"><span class="pulse-dot"></span> Getting things ready. The first start takes a minute or two.</p>
-        <p class="setup-status" v-else-if="driver === 'needs-login'">The engine behind this hub was set up separately. You will sign in to it next.</p>
+        <p class="setup-status" v-else-if="driver === 'needs-login'">This hub was set up before. You’ll sign in with the name and password chosen then.</p>
         <p class="setup-foot">Moving from another hub? <button class="linkish" @click="fromBackup = !fromBackup">Bring its backup over</button></p>
         <Restore v-if="fromBackup" />
       </section>
@@ -171,12 +170,12 @@ async function saveCode() {
       <!-- sign in to an engine someone already set up -->
       <section class="setup-page" v-else-if="page === 'login'" key="login">
         <h1 class="display">Sign in.</h1>
-        <p class="setup-lede">Home Assistant is already running here. Use the name and password that were set for it and this panel will take it from there.</p>
+        <p class="setup-lede">Use the name and password this hub was set up with.</p>
         <label class="field"><span class="field-label">Name</span><input class="input" v-model="username" autocomplete="username" autocapitalize="off" spellcheck="false" @keydown.enter="signIn" /></label>
         <label class="field"><span class="field-label">Password</span><input class="input" type="password" v-model="password" autocomplete="current-password" @keydown.enter="signIn" /></label>
         <p class="error" v-if="error">{{ error }}</p>
         <div class="setup-actions"><button class="button big" :class="{ busy }" @click="signIn">Continue</button></div>
-        <p class="setup-foot">Stuck? <a :href="advanced" target="_blank" rel="noopener">Open Home Assistant</a> to reset the password.</p>
+        <p class="setup-foot">Forgotten it? <a :href="advanced" target="_blank" rel="noopener">Reset it in Advanced</a>.</p>
       </section>
 
       <!-- who you are -->
@@ -185,7 +184,7 @@ async function saveCode() {
         <h1 class="display">First, a couple of names.</h1>
         <p class="setup-lede">Yours, so the house can greet you, and one for the house itself.</p>
         <label class="field"><span class="field-label">Your name</span><input class="input" v-model="name" autocomplete="given-name" autocapitalize="words" placeholder="Nadine" @keydown.enter="saveOwner" /></label>
-        <label class="field"><span class="field-label">Call this home</span><input class="input" v-model="home" autocapitalize="words" :placeholder="name.trim() ? `${name.trim().split(' ')[0]}'s house` : 'Home'" @keydown.enter="saveOwner" /></label>
+        <label class="field"><span class="field-label">A name for the house</span><input class="input" v-model="home" autocapitalize="words" :placeholder="name.trim() ? `${name.trim().split(' ')[0]}'s house` : 'Home'" @keydown.enter="saveOwner" /></label>
         <p class="error" v-if="error">{{ error }}</p>
         <div class="setup-actions"><button class="button big" :class="{ busy }" @click="saveOwner">Continue</button></div>
       </section>
@@ -193,18 +192,18 @@ async function saveCode() {
       <!-- waiting for the engine after creating the owner -->
       <section class="setup-page centered" v-else-if="page === 'starting'" key="starting">
         <span class="setup-mark pulse"><Icon name="home" :size="30" /></span>
-        <h1 class="display">Building your home…</h1>
+        <h1 class="display">Setting up the house…</h1>
         <p class="setup-lede">{{ status?.reason || 'Just a moment.' }}</p>
       </section>
 
       <!-- the passcode -->
       <section class="setup-page" v-else-if="page === 'code'" key="code">
         <p class="setup-step">{{ step }}</p>
-        <h1 class="display">A passcode for changes.</h1>
-        <p class="setup-lede">Four to eight digits. Anyone in the house can still work the lights from the wall without it — the passcode is for <em>changing</em> the house: adding devices, renaming rooms, taking a copy away with you.</p>
-        <p class="setup-note"><Icon name="lock" :size="16" /><span>The one step that can't wait. Until it is set, anyone on your Wi‑Fi can change the house too.</span></p>
-        <label class="field"><span class="field-label">Passcode</span><input class="input code-input" v-model="pin" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off" @keydown.enter="saveCode" /></label>
-        <label class="field"><span class="field-label">Once more</span><input class="input code-input" v-model="again" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off" @keydown.enter="saveCode" /></label>
+        <h1 class="display">Choose a passcode.</h1>
+        <p class="setup-lede">You’ll need it to change the house: add phones or devices, rename rooms. Using the house doesn’t need it.</p>
+        <p class="setup-note"><Icon name="lock" :size="16" /><span>Until it’s set, anyone on your Wi‑Fi can change the house.</span></p>
+        <label class="field"><span class="field-label">Passcode, 4 to 8 digits</span><input class="input code-input" v-model="pin" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off" @keydown.enter="saveCode" /></label>
+        <label class="field"><span class="field-label">Type it again</span><input class="input code-input" v-model="again" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off" @keydown.enter="saveCode" /></label>
         <p class="error" v-if="error">{{ error }}</p>
         <div class="setup-actions">
           <button class="button big" :class="{ busy }" @click="saveCode">Continue</button>
@@ -215,7 +214,7 @@ async function saveCode() {
       <section class="setup-page" v-else-if="page === 'location'" key="location">
         <p class="setup-step">{{ step }}</p>
         <h1 class="display">Where is home?</h1>
-        <p class="setup-lede">The sky behind this screen, sunrise, sunset and the weather all follow it. It stays on the hub and is never shared.</p>
+        <p class="setup-lede">Sunrise, sunset and the weather follow it, and it never leaves the hub.</p>
         <LocationPicker @saved="next('location')" />
         <div class="setup-actions">
           <button v-if="status?.location" class="button big" @click="next('location')">Continue</button>
@@ -227,7 +226,7 @@ async function saveCode() {
       <section class="setup-page" v-else-if="page === 'rooms'" key="rooms">
         <p class="setup-step">{{ step }}</p>
         <h1 class="display">Which rooms do you have?</h1>
-        <p class="setup-lede">Tap the ones that apply. You can rename or add more any time.</p>
+        <p class="setup-lede">Tap the ones you have. You can change them any time.</p>
         <p class="setup-note plain" v-if="existing.length">The outlined ones are already in the house.</p>
         <div class="chips">
           <button v-for="r in existing" :key="'e' + r" class="chip-btn on fixed"><Icon name="check" :size="14" />{{ r }}</button>
@@ -244,31 +243,28 @@ async function saveCode() {
       <section class="setup-page" v-else-if="page === 'devices'" key="devices">
         <p class="setup-step">{{ step }}</p>
         <h1 class="display">What's in the house?</h1>
-        <p class="setup-lede">Things already on your Wi‑Fi show up here on their own. Add what you like now; the rest can wait.</p>
+        <p class="setup-lede">Things on your Wi‑Fi show up by themselves. Add some now, or later.</p>
         <Adding @busy="adding = $event" />
+        <!-- the machinery is on This hub; first run shows a row only when it needs the person, and before the way on
+             rather than under it, where a docked action row's ground would cover it (design/words-setup/, B) -->
+        <div class="add-block setup-behind" v-if="!adding"><Drivers needs-you /></div>
         <div class="setup-actions" v-if="!adding"><button class="button big" @click="next('devices')">{{ status?.devices ? 'Continue' : 'Skip for now' }}</button></div>
-        <div class="add-block setup-behind" v-if="!adding">
-          <h3 class="label">Behind the scenes</h3>
-          <Drivers />
-        </div>
       </section>
 
-      <!-- from outside, too: optional, and only when the address service is offering it -->
+      <!-- the house's web address: optional, and only when the address service is offering it -->
       <AddressStep v-else-if="page === 'address' && address" :state="address" key="address" @done="page = 'done'" />
 
       <!-- done -->
       <section class="setup-page" v-else-if="page === 'done'" key="done">
         <span class="setup-mark done"><Icon name="check" :size="30" /></span>
         <h1 class="display">{{ readyLine }}</h1>
-        <p class="setup-lede">Leave this screen on the wall. It rests to a clock after a few minutes and wakes with a touch.</p>
+        <p class="setup-lede">Leave this screen up. It dims after a few minutes; touch it to wake it.</p>
         <PhoneSteps compact />
         <ul class="tips">
-          <li><span class="tip-icon"><Icon name="sparkle" :size="18" /></span><span>Tell the house what you want in the box at the top of Home: <b>“{{ firstRoom }} lights off”</b>, <b>“is the front door locked?”</b>.</span></li>
-          <li><span class="tip-icon"><Icon name="sparkle" :size="18" /></span><span>New things you plug in appear under <b>Found nearby</b> on the Home screen.</span></li>
-          <li><span class="tip-icon"><Icon name="home" :size="18" /></span><span>Devices that don't know their room wait under <b>New devices</b> until you place them.</span></li>
+          <li><span class="tip-icon"><Icon name="sparkle" :size="18" /></span><span>Try it: type <b>“{{ firstRoom }} lights off”</b> into <b>Tell the house…</b> at the top of the screen.</span></li>
         </ul>
         <p class="error" v-if="error">{{ error }}</p>
-        <div class="setup-actions"><button class="button big" :class="{ busy }" @click="finish">Open Home</button></div>
+        <div class="setup-actions"><button class="button big" :class="{ busy }" @click="finish">Start using the house</button></div>
       </section>
     </Transition>
   </main>

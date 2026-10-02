@@ -123,7 +123,7 @@ class Phones:
 
     def from_setup(self, kind: str = "wall") -> tuple[dict, str]:
         """The screen that set the code during setup is paired without asking; it is the wall."""
-        return self._admit("This wall" if kind == "wall" else "The phone that set up the house", kind, "setup")
+        return self._admit("Wall screen" if kind == "wall" else "The phone that set up the house", kind, "setup")
 
     def ask(self, name: str, kind: str = "phone") -> dict:
         """A phone on the Wi‑Fi asks to join. Nothing is issued until a paired screen allows it."""
@@ -258,8 +258,8 @@ def from_away(headers) -> bool:
 
 # ---- and what may pass from outside it ----
 JOIN_AT_HOME = ("/phones/ask", "/phones/code", "/phones/claim/")
-HOME_ONLY = "This phone works at home. Someone at the wall can let it out."
-NOT_YOURS = "This house is not open from here."
+HOME_ONLY = "This phone works on your home Wi\u2011Fi. Someone with the passcode can set it to Anywhere, in People."
+NOT_YOURS = "This house isn\u2019t open to this phone."
 
 
 def open_from_away(method: str, path: str) -> bool:
@@ -291,7 +291,7 @@ def away_refusal(phone: dict | None, let_out: bool = False) -> dict:
     them. Anybody else is told nothing they could act on: from outside the house the join screen does not
     exist, so there is nothing to offer and no house to name.
     """
-    if let_out: return {"detail": "at-home", "message": "A phone joins the house from inside it."}
+    if let_out: return {"detail": "at-home", "message": "A phone can only join while it is at home, on the Wi\u2011Fi."}
     return {"detail": "remote", "message": HOME_ONLY} if phone else {"detail": "away", "message": NOT_YOURS}
 
 

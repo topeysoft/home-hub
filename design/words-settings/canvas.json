@@ -1,0 +1,96 @@
+{
+  "pages": [
+    {
+      "id": "page-1",
+      "name": "Settings, in plain words"
+    },
+    {
+      "id": "page-2",
+      "name": "Not chosen"
+    }
+  ],
+  "artboards": [
+    {
+      "file": "Today.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Today",
+      "page": "page-1"
+    },
+    {
+      "file": "PartsA.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "A — name the parts",
+      "page": "page-2"
+    },
+    {
+      "file": "DepthB.dc.html",
+      "x": 0,
+      "y": 1100,
+      "w": 1440,
+      "h": 900,
+      "title": "B — say how deep",
+      "page": "page-2"
+    },
+    {
+      "file": "Chosen.dc.html",
+      "x": 0,
+      "y": 1100,
+      "w": 1440,
+      "h": 900,
+      "title": "Chosen — B’s restart, A’s connections",
+      "page": "page-1"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "why",
+      "x": -620,
+      "y": 0,
+      "w": 500,
+      "text": "WHY THIS EXISTS\n\nThe fifth area of the wording pass (docs/wording.md): This house and its pages -- The hub, the passcode, Accounts, What this house has, Share this house, Where home is, How it looks, Routines, What the lights tell you, and the Network sheet. History (What happened, Who changed what, Needs a look) is its own area.\n\nMost of what is wrong here is one thing with several names, and that is fixed in every direction (the note below). Two things are a real choice, and they are what the two directions differ on:\n\n1. THE RESTART LADDER. Restart offers a deeper restart only once the first has stopped helping. Its three rungs are named \"the hub\", \"everything\" and \"the little computer\", and the first one's own line says \"turn the hub off and on again\" -- which is what the THIRD one does.\n\n2. THE CONNECTIONS. \"Behind the scenes\" lists Messages (the project's name for MQTT), Zigbee radio, Z-Wave radio, Matter, Ring. First run took them off its own screen (design/words-setup/, B); this is where they live, so what they are called here is what they are called.\n\nCHOSEN, 2 October 2026: B's restart ladder (Quick restart, Full restart, Power off and on) with A's connections (Connections, standard names, plain states). The Chosen sheet is the two together; A and B stay on Not chosen with their cases.",
+      "page": "page-1"
+    },
+    {
+      "id": "today",
+      "x": 1560,
+      "y": 0,
+      "w": 560,
+      "text": "TODAY\n\n1  The box has three names: the row says The hub, the page it opens is titled This hub, and the lede calls it the little computer.\n2  The passcode has five labels: Lock the settings (row and title when open), The passcode (row when set), Change the passcode (title when set), Lock / Change it / Remove the passcode (buttons), and \"Set a code first\" from the hub.\n3  The restart ladder (WHY, 1).\n4  Behind the scenes, Messages, Running, Stick on USB (WHY, 2).\n5  Share: \"The door is open for five minutes\" (and \"the door shuts on its own\") for a pairing code; a house \"held\" by apps; \"Nothing this bridge can carry yet\" -- bridge already means the wall-switch pucks on the same panel.\n6  Removing: Take it out (a thing), Forget (a bridge), Remove (an account), \"Ring is out\" (the toast).\n7  \"Restarting the house.\" while the button said Restart the hub; \"the wall switches still work but the app doesn't\" -- which app?\n8  \"the screens that keep it\", \"Someone at the wall\", \"the wall will say how it went\".\n9  \"Not on anything.\" \"Nothing else in the air here.\"\n\nNOT DRAWN, SAME AREA: \"the Advanced door\" (no such door is labeled); \"Carried until\" on the web address row (fixed in #64); \"How bright it rests at\" and \"On the house\" on a bridge; Nightfall's description copied word for word from Glass's; \"Which end of the strip is nearer the house?\" and \"so it ran away from the plug\"; the Language row's \"What your devices' makers are called, the place search, the dates and the voice\".",
+      "page": "page-1"
+    },
+    {
+      "id": "shared",
+      "x": -620,
+      "y": 2200,
+      "w": 500,
+      "text": "WHAT BOTH FIX -- NOT A CHOICE\n\n- The box is THE HUB: row, page title, front page and every sentence. \"The little computer\" goes.\n- The passcode is PASSCODE: row \"Passcode -- Needed to change the house\" / \"Not set: anyone on your Wi-Fi can change the house\", page title \"Passcode\", buttons \"Set a passcode\", \"Change it\", \"Remove the passcode\". The hub says passcode, never code. \"the Advanced door\" is \"Advanced\".\n- REMOVE, for a thing, a bridge and an account, as People and Rooms settled. \"Ring is removed, with everything that came with it.\"\n- Share: \"The code works for five minutes.\" / \"then it stops working on its own\"; \"Several apps can have the house at once\"; \"Nothing can be shared yet\"; bridge is only ever the wall-switch puck.\n- Updates: \"Restarting the hub.\"; \"For about a minute your light switches still work, but this screen and the app don't.\"\n- Who may restart: \"Restarting needs the passcode. Someone who joined with it can do it.\" (People settled Someone with the passcode.)\n- \"the wall screen will say how it went\"; \"Not connected to a network.\"; \"No other networks nearby.\"\n- A bridge: \"How bright it stays\", and Working rather than On the house.\n- Nightfall gets its own description; strips ask which end is nearer the door; Language says \"Dates, place names and device makers' names follow it.\"\n\nFOUND, NOT WORDS -- left for a follow-up because each changes a screen, not a sentence:\n- What the lights tell you sends a new house to \"Choose the rooms you come in through, in Routines\", but Routines only shows that picker once a house already has one.\n- It also says \"Ask for it in Routines, in your own words\", which Routines offers only once the assistant is connected.",
+      "page": "page-1"
+    },
+    {
+      "id": "a",
+      "x": 1560,
+      "y": 0,
+      "w": 560,
+      "text": "A -- NAME THE PARTS\n\nThe ladder says what restarts: \"Restart\" (the hub's software), then \"Restart the hub and everything it talks to\", then \"Turn the hub off and on\". The connections keep their standard names, as printed on the stick and the box: Device messages, Zigbee radio, Z-Wave radio, Matter, Ring -- under \"Connections\", each with a plain state (Working, Plugged in, Not plugged in, Needs you to sign in).\n\nFOR: true and checkable. The person who plugged a Zigbee stick in sees the word on the stick. The ladder's last rung says exactly what will happen.\n\nAGAINST: \"Restart the hub and everything it talks to\" is long for a button, and it still asks a person to know what the hub talks to. The standard names mean nothing to most of the household -- though this is the one page they need not read.",
+      "page": "page-2"
+    },
+    {
+      "id": "b",
+      "x": 1560,
+      "y": 1100,
+      "w": 560,
+      "text": "B -- SAY HOW DEEP\n\nThe ladder says how big a step it is: \"Quick restart\", then \"Full restart, a few minutes\", then \"Power off and on\". The connections say what each is FOR: \"How the hub reaches your devices\" -- \"Radio for bulbs and sensors (Zigbee)\", \"Radio for locks and switches (Z-Wave)\", \"Messages between devices\", \"Ring: sign in so the hub can reach your cameras\".\n\nFOR: a person choosing a deeper restart is choosing a bigger hammer, and this names the hammer. The connections teach the house to whoever reads them, and keep the standard name beside it for whoever needs it.\n\nAGAINST: the radio rows make claims (\"for locks and switches\") that are true of most devices on that radio but not all. First run rejected this voice for setup (design/words-setup/, C) as too long for that moment; this page has no such hurry.",
+      "page": "page-2"
+    }
+  ],
+  "launch": {
+    "view": "canvas",
+    "page": "page-1"
+  }
+}

@@ -44,9 +44,9 @@ function show(s: Step) {
   for (const k of Object.keys(values)) delete values[k]
   for (const f of s.fields ?? []) values[f.name] = f.kind === 'section' ? Object.fromEntries((f.fields ?? []).map(g => [g.name, blank(g)])) : blank(f)
   if (s.title) emit('head', s.title)
-  if (s.type === 'progress') { emit('working', { text: s.progress || 'Asking them for your things…' }); pollSoon() }
+  if (s.type === 'progress') { emit('working', { text: s.progress || 'Asking them for your devices…' }); pollSoon() }
   if (s.type === 'create_entry') emit('caught', { many: true, name: s.entry_title || s.kind, what: undefined })
-  if (s.type === 'abort') { emit('head', 'It would not join.'); emit('wrong', `${s.reason}${s.hint ? ' ' + s.hint : ''}`, !!s.retry) }
+  if (s.type === 'abort') { emit('head', 'It wasn’t added.'); emit('wrong', `${s.reason}${s.hint ? ' ' + s.hint : ''}`, !!s.retry) }
 }
 /* what goes back to the house: filled-in fields, numbers as numbers, a section as its own object */
 function answers(fields: Field[], vals: Record<string, any>): Record<string, unknown> {
@@ -198,7 +198,7 @@ onUnmounted(() => {
     </template>
 
     <template v-else-if="step.type === 'external'">
-      <p class="flow-desc">This one finishes on the maker’s own page: sign in there and allow it. If a page asks for your Home Assistant address, it is <b>{{ haUrl }}</b>. Come back here when it says it is done.</p>
+      <p class="flow-desc">This one finishes on the maker’s own page: sign in there and allow it. If their page asks for this hub’s address (it may call it a Home Assistant address), it is <b>{{ haUrl }}</b>. Come back here when it says it is done.</p>
     </template>
   </template>
 </template>

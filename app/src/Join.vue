@@ -52,7 +52,7 @@ async function withCode() {
       <span class="setup-mark"><Icon name="phone" :size="30" /></span>
       <h1 class="display">Join {{ home }}.</h1>
       <template v-if="!asked">
-        <p class="setup-lede">This {{ device }} is new here. Someone at the wall can let it in, or type the house's passcode.</p>
+        <p class="setup-lede">This {{ device }} is new here. Someone at the wall screen can allow it, or you can type the house's passcode.</p>
         <label class="field"><span class="field-label">Your name <span class="field-opt">· so the house knows whose this is</span></span>
           <input class="input" v-model="who" autocomplete="given-name" autocapitalize="words" placeholder="Sam" @keydown.enter="mode === 'code' ? withCode() : ask()" /></label>
         <label class="field" v-if="mode === 'code'"><span class="field-label">The passcode</span>
@@ -66,10 +66,10 @@ async function withCode() {
           <button class="button big" :class="{ busy }" :disabled="code.length < 4" @click="withCode">Join</button>
           <button class="button ghost" @click="mode = 'ask'; error = ''">Ask instead</button>
         </div>
-        <p class="setup-foot">Same Wi‑Fi as the hub. The house keeps a list of its phones under <i>This hub</i>; any of them can be removed there.</p>
+        <p class="setup-foot">Connect to your home Wi‑Fi first. You can see and remove phones any time in <i>People</i>.</p>
       </template>
       <template v-else>
-        <p class="setup-lede">Asked as <b>{{ name }}</b>. On the wall, or on a phone that is already in, tap <b>Allow</b>.</p>
+        <p class="setup-lede">Asked as <b>{{ name }}</b>. On the wall screen, or on a phone that already uses the house, tap <b>Allow</b>.</p>
         <p class="setup-status"><span class="pulse-dot"></span> Waiting for someone to answer…</p>
         <div class="setup-actions"><button class="button ghost" @click="cancel">Cancel</button></div>
       </template>

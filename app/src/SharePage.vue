@@ -116,7 +116,7 @@ async function addApp() {
   if (busy.value) return
   busy.value = 'window'
   qrBroken.value = false
-  try { store.share = await openShareWindow(); seconds.value = store.share.seconds_left; notify('The door is open for five minutes. Add the house in the other app now.') }
+  try { store.share = await openShareWindow(); seconds.value = store.share.seconds_left; notify('The code works for five minutes. Add the house in the other app now.') }
   catch (e: any) { notify(e.message, 'error') }
   busy.value = ''
 }
@@ -150,7 +150,7 @@ onUnmounted(() => clearInterval(poll))
           <Icon :name="ICON[t.kind] ?? 'switch'" :size="15" />{{ t.name }}
         </span>
         <span class="share-note" v-if="more">…and {{ more }} more</span>
-        <span class="share-note" v-else-if="!count">Nothing this bridge can carry yet</span>
+        <span class="share-note" v-else-if="!count">Nothing can be shared yet</span>
       </div>
 
       <div class="share-mid">
@@ -165,7 +165,7 @@ onUnmounted(() => clearInterval(poll))
           </svg>
         </span>
         <span class="share-word">Matter</span>
-        <span class="share-note">your hub, speaking their language</span>
+        <span class="share-note">your hub, shared through Matter</span>
         <span class="share-wire out"></span>
       </div>
 
@@ -198,9 +198,9 @@ onUnmounted(() => clearInterval(poll))
           <li>
             <span class="hub-k">Apps</span>
             <span class="hub-v">
-              <template v-if="held.length">{{ heldLine }}<span class="hub-sub line">A house can be held by several at once. Removing it is done in that app.</span></template>
+              <template v-if="held.length">{{ heldLine }}<span class="hub-sub line">Several apps can have the house at once. To remove it from one, do it in that app.</span></template>
               <template v-else-if="running">None yet.<span class="hub-sub line">Add the house in Apple Home, Google Home or Alexa, then scan the code.</span></template>
-              <template v-else>None yet.<span class="hub-sub line">Nothing can be added while the part below is stopped.</span></template>
+              <template v-else>None yet.<span class="hub-sub line">Nothing can be added while sharing has stopped.</span></template>
             </span>
             <button class="button small" :class="{ busy: busy === 'window' }" @click="addApp" v-if="!share.open && running">Add an app</button>
             <!-- The door is open. Where a window is running out there is a clock worth showing; where
@@ -219,7 +219,7 @@ onUnmounted(() => clearInterval(poll))
               <span class="share-words">
                 In the other app, choose to add a device or an accessory, then point it at this code.
                 <b class="share-code" v-if="share.code">{{ share.code }}</b>
-                <span class="hub-sub line">Type that number if the camera will not read the code. It works for five minutes, then the door shuts on its own.</span>
+                <span class="hub-sub line">Type that number if the camera will not read the code. It works for five minutes, then stops working on its own.</span>
               </span>
             </span>
             <span></span>

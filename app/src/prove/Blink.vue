@@ -38,7 +38,7 @@ async function look() {
   emit('acts', [])
   try {
     const r = await nearbySwitches()
-    if (r.state === 'failed') return emit('wrong', r.text ?? 'The house could not listen for switches.', true)
+    if (r.state === 'failed') return emit('wrong', r.text ?? 'The house couldn’t look for switches.', true)
     waiting.value = r.waiting ?? []
     spokenFor.value = r.claimed_elsewhere ?? []
     at.value = 0
@@ -58,16 +58,16 @@ async function offer() {
 
 function notThisOne() {
   if (more.value > 0) { at.value++; offer() }
-  else { step.value = 'none'; said.value = 'That was the last one it could hear.' }
+  else { step.value = 'none'; said.value = 'That was the last one nearby.' }
 }
 
 async function yesThatOne() {
   const who = here.value
   if (!who?.uuid) return
-  emit('working', { text: 'Letting it in…', how_long: 'Around half a minute. You can put your phone down.' })
+  emit('working', { text: 'Adding it…', how_long: 'Around half a minute. You can put your phone down.' })
   try {
     const r = await letSwitchIn(who.uuid)
-    if (r.state === 'failed') return emit('wrong', r.text ?? 'That switch would not join.', true)
+    if (r.state === 'failed') return emit('wrong', r.text ?? 'That switch wasn’t added.', true)
     emit('caught', { device_id: r.device_id, name: r.name, what: asThing(r.text) || 'a light that dims, and a motion sensor' })
   } catch (e: any) { emit('wrong', e.message, true) }
 }
@@ -88,11 +88,11 @@ onMounted(look)
 </script>
 
 <template>
-  <p class="flow-desc pulse" v-if="step === 'looking'">Listening for a switch that is asking to be let in…</p>
+  <p class="flow-desc pulse" v-if="step === 'looking'">Looking for a switch waiting to be added…</p>
 
   <!-- nothing claimable, which is two situations wanting opposite things said -->
   <template v-else-if="step === 'none'">
-    <p class="flow-desc">{{ said || 'Nothing nearby is asking to be let in.' }}</p>
+    <p class="flow-desc">{{ said || 'Nothing nearby is waiting to be added.' }}</p>
     <div class="bridge-row" v-if="spokenFor.length" style="margin-bottom: 18px">
       <span class="bridge-icon"><Icon name="switch" :size="18" /></span>
       <span class="bridge-text">
@@ -109,7 +109,7 @@ onMounted(look)
     <div class="press-line" style="margin-bottom: 18px">
       <span class="press-said"><span class="pulse-dot"></span>Is the blinking one the switch you just touched?</span>
     </div>
-    <p class="sheet-status" v-if="more > 0">{{ more }} more it can hear.</p>
-    <p class="sheet-status" v-else-if="waiting.length > 1">The last one it can hear.</p>
+    <p class="sheet-status" v-if="more > 0">{{ more }} more nearby.</p>
+    <p class="sheet-status" v-else-if="waiting.length > 1">The last one nearby.</p>
   </template>
 </template>

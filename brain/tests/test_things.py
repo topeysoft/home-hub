@@ -129,8 +129,8 @@ class TheDoor(ApiTest):
 
     def test_the_question_names_the_thing_before_the_one_act_with_no_undo(self):
         t = self.row("Ceiling light")
-        self.assertEqual(t["out"]["do"], "Take it out")
-        self.assertEqual(t["out"]["yes"], "Yes, take Ceiling light out")
+        self.assertEqual(t["out"]["do"], "Remove")
+        self.assertEqual(t["out"]["yes"], "Yes, remove Ceiling light")
         self.assertEqual(t["out"]["no"], "Keep it")
 
     def test_the_count_is_things_a_household_owns(self):

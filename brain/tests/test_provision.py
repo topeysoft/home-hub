@@ -126,7 +126,7 @@ class MessagesPasswordTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(add.canceled, [])
         self.assertEqual(hub.settings.get("mqtt_auth"), p._mqtt_fp())
         self.assertEqual(p.parts["mqtt"]["state"], "ready")
-        self.assertIn("Messages signed in", [a[3] for a, _ in hub.log.rows])
+        self.assertIn("Device messages signed in", [a[3] for a, _ in hub.log.rows])
 
     async def test_an_entry_that_already_knows_the_password_is_left_alone(self):
         add = FakeAdd([]); add.reconfigured = []

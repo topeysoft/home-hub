@@ -43,8 +43,8 @@ CAP = 900          # a gap longer than this was not a restart, so nothing is lea
 IN_FLIGHT = 300    # after this, a restart that never came back stops standing in the way of the next
 WEARY, HOUR = 3, 3600.0   # restarts in an hour past which the same rung has stopped being the answer
 
-TITLE = {"hub": "Restart the hub?", "everything": "Restart everything?", "machine": "Restart the little computer?"}
-DO = {"hub": "Restart the hub", "everything": "Restart everything", "machine": "Restart the little computer"}
+TITLE = {"hub": "Restart the hub?", "everything": "Full restart?", "machine": "Power the hub off and on?"}
+DO = {"hub": "Quick restart", "everything": "Full restart", "machine": "Power off and on"}   # how deep, not which part (design/words-settings/)
 # What is still true while it is away. This is the first line and it is the one people are actually
 # asking about: a Zigbee group bound coordinator-side keeps switching, a Brilliant pair migrated to
 # the house's own network talks switch-to-switch with the hub out of the path, and a wall switch is a

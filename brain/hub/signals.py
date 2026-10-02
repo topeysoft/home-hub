@@ -266,7 +266,7 @@ class Signals:
         is a guess because nobody has said which end is the house."""
         end = self.house_end(target["strip"])
         into = toward != "out"
-        if end is None: return 1, "Nobody has said which end is the house yet, so it ran away from the plug"
+        if end is None: return 1, "Nobody has said which end is nearer the door yet, so it ran from the plug end"
         runs_to_plug = (end == "plug") == into
         return (-1 if runs_to_plug else 1), None
 

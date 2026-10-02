@@ -47,12 +47,12 @@ describe('the one reading', () => {
     /* What shipped before: "locked", "recording", "docked" -- lower-case, straight out of the driver. */
     expect(reading(dev('k', 'Front door', 'lock', 'locked'))).toBe('Locked')
     expect(reading(dev('c', 'Cam', 'camera', 'recording'))).toBe('Recording')
-    expect(reading(dev('v', 'Mower', 'vacuum', 'docked'))).toBe('Docked')
+    expect(reading(dev('v', 'Mower', 'vacuum', 'docked'))).toBe('At its dock')
     expect(reading(dev('v', 'Mower', 'vacuum', 'cleaning'))).toBe('Out working')
   })
   it('reads a blind as how open it is', () => {
     expect(reading(dev('b', 'Blinds', 'cover', 'open', { current_position: 70 }))).toBe('70% open')
-    expect(reading(dev('g', 'Garage door', 'cover', 'closed'))).toBe('Shut')
+    expect(reading(dev('g', 'Garage door', 'cover', 'closed'))).toBe('Closed')
   })
   it('reads a thermostat as the room, in the house unit', () => {
     expect(reading(dev('t', 'Thermostat', 'climate', 'cool', { current_temperature: 73.6 }), '°F')).toBe('74°F')
@@ -89,18 +89,18 @@ describe('the facts, and only the ones the house holds', () => {
   it('leaves out what it does not know rather than printing a blank row', () => {
     expect(facts(dev('l', 'Lamp', 'light', 'on', { brightness: 90 }), room())).toEqual([])
     expect(facts(dev('l', 'Lamp', 'light', 'on', { color_temp_kelvin: 2700 }), room(), '°F')
-      .map(f => `${f.k}: ${f.v}`)).toEqual(['Warmth: 2700K'])
+      .map(f => `${f.k}: ${f.v}`)).toEqual(['Warmth: Warm white'])
   })
   it('carries the maker when the registry knew one', () => {
     expect(facts(dev('l', 'Lamp', 'light', 'on', {}, 'Philips Hue'), room())).toEqual([{ k: 'Made by', v: 'Philips Hue' }])
   })
   it('adds what the room as a whole is doing, which is why a lamp went off on its own', () => {
-    expect(facts(dev('l', 'Lamp', 'light', 'off'), room('movie'))).toEqual([{ k: 'The room is on', v: 'Movie' }])
+    expect(facts(dev('l', 'Lamp', 'light', 'off'), room('movie'))).toEqual([{ k: 'Room set to', v: 'Movie' }])
     expect(facts(dev('l', 'Lamp', 'light', 'off'), room('occupied'))).toEqual([])
   })
   it('tells a thermostat by its humidity, its target and where it is reading from', () => {
     const t = dev('t', 'Thermostat', 'climate', 'cool', { current_humidity: 48, temperature: 71, current_temperature: 74 })
-    expect(facts(t, room(), '°F').map(f => f.k)).toEqual(['Humidity', 'Asked for', 'Sensing'])
+    expect(facts(t, room(), '°F').map(f => f.k)).toEqual(['Humidity', 'Set to', 'Sensing'])
   })
   it('never shows more than four', () => {
     const m = dev('m', 'TV', 'media', 'playing', { media_position: 1421, media_duration: 3740, volume_level: 0.35, app_name: 'Disney+' }, 'Sony')
@@ -119,7 +119,7 @@ describe('what it did today', () => {
   })
   it('says what a thermostat was asked for, in the house unit', () => {
     const e = ev('action', 'set', at(18, 40), 'user', { temperature: 71 })
-    expect(moment(e, dev('t', 'T', 'climate', 'cool'), NOW, '°F')?.text).toBe('Asked for 71°F, by hand')
+    expect(moment(e, dev('t', 'T', 'climate', 'cool'), NOW, '°F')?.text).toBe('Set to 71°F, by hand')
   })
   it('claims no author for a state change, because the driver never says who', () => {
     expect(moment(ev('state', 'on', at(18, 12)), dev('l', 'Lamp', 'light', 'on'), NOW))
@@ -131,7 +131,7 @@ describe('what it did today', () => {
   })
   it('speaks each kind in its own words', () => {
     expect(moment(ev('state', 'on', at(19, 38)), dev('mo', 'Motion', 'motion', 'on'), NOW)?.text).toBe('Movement')
-    expect(moment(ev('state', 'off', at(16, 12)), dev('c', 'Back door', 'contact', 'off'), NOW)?.text).toBe('Shut')
+    expect(moment(ev('state', 'off', at(16, 12)), dev('c', 'Back door', 'contact', 'off'), NOW)?.text).toBe('Closed')
     expect(moment(ev('state', 'cleaning', at(14, 0)), dev('v', 'Mower', 'vacuum', 'docked'), NOW)?.text).toBe('Went out')
   })
   it('drops the rows that say nothing and keeps the newest few', () => {

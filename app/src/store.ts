@@ -371,7 +371,7 @@ export const HOUSE_SCENES: Scene[] = [
   { id: 'asleep', label: 'Bedtime', icon: 'moon', needs: [], hint: c => `${cap1(offList(c) || 'everything')} off in every room${c.has('lock') ? ', doors locked' : ''}` },
   { id: 'away', label: 'Everything off', icon: 'leave', needs: [], hint: c => `${cap1(offList(c, true) || 'everything')} off${c.has('lock') ? ', doors locked' : ''}` },
 ]
-const cap1 = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
+const cap1 = (s: string) => (s.charAt(0).toUpperCase() + s.slice(1)).replace(/_/g, ' ')
 export const capsOf = (devices: Device[]) => new Set(devices.map(cap))
 export function scenesFor(room: Room | null): Scene[] {
   if (!room) return store.rooms.some(r => r.devices.some(d => !PASSIVE.has(cap(d)))) ? HOUSE_SCENES : []
@@ -517,7 +517,7 @@ export function describe(ev: Event): { text: string; icon: string } | null {
   if (ev.kind !== 'state' || ev.old === ev.new) return null
   const d = deviceById(ev.subject); if (!d) return null
   const n = d.name, k = cap(d), s = ev.new ?? ''
-  if (s === 'unavailable') return { text: `${n} went offline`, icon: k }
+  if (s === 'unavailable') return { text: `${n} stopped answering`, icon: k }
   if (ev.old === 'unavailable') return { text: `${n} is back`, icon: k }
   let detail: any = null; try { detail = ev.detail ? JSON.parse(ev.detail) : null } catch {}
   if (k === 'light' || k === 'switch' || k === 'fan') return s === 'on' || s === 'off' ? { text: `${n} turned ${s}`, icon: k } : null

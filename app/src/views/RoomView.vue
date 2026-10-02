@@ -167,7 +167,7 @@ onUnmounted(() => clearInterval(tick))
   <SortView v-else-if="editing" :room="room" editing @back="editing = false" />
   <section class="room" v-else>
     <header class="stage-head room-head">
-      <button class="back" @click="$emit('back')" aria-label="Back to home"><Icon name="back" :size="22" /></button>
+      <button class="back" @click="$emit('back')" aria-label="Back"><Icon name="back" :size="22" /></button>
       <div>
         <h1 class="display">{{ room.name }}</h1>
         <p class="lede">{{ activity(room) }}</p>
@@ -198,13 +198,13 @@ onUnmounted(() => clearInterval(tick))
           </button>
         </div>
       </div>
-      <button class="back room-edit" @click="editing = true" aria-label="Edit this room" title="Rename or move things"><Icon name="edit" :size="20" /></button>
+      <button class="back room-edit" @click="editing = true" aria-label="Edit this room" title="Rename, move or remove things"><Icon name="edit" :size="20" /></button>
     </header>
 
     <div class="tiles" v-if="devices.length || machines.length || printers.length">
       <template v-for="c in plan" :key="c.key">
         <div v-if="c.key === 'scenes'" class="tile room-scenes" :data-size="c.size">
-          <span class="room-scenes-head">In the {{ room.name.toLowerCase() }}</span>
+          <span class="room-scenes-head">In the {{ /'s\b|’s\b/.test(room.name) ? room.name : room.name.toLowerCase() }}</span>
           <SceneBar :room="room" stacked />
         </div>
         <PrinterTile v-else-if="printerByKey.get(c.key)" :printer="printerByKey.get(c.key)!" :data-size="c.size" />
@@ -214,7 +214,7 @@ onUnmounted(() => clearInterval(tick))
     </div>
     <div v-else-if="!readings.length" class="empty-room">
       <p class="empty">Nothing in this room yet.</p>
-      <p class="empty-sub" v-if="waiting">{{ waiting === 1 ? 'One new device is' : `${waiting} new devices are` }} waiting to be placed. One of them may belong here.</p>
+      <p class="empty-sub" v-if="waiting">{{ waiting === 1 ? 'One new device is waiting to be placed. It may belong here.' : `${waiting} new devices are waiting to be placed. One of them may belong here.` }}</p>
       <p class="empty-sub" v-else>Add something and say it lives in the {{ room.name }}; it shows up here on its own.</p>
       <div class="empty-actions">
         <button class="button" v-if="waiting" @click="$emit('open', 'unassigned')"><Icon name="sparkle" :size="16" /> Place new devices</button>

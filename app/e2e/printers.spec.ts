@@ -149,7 +149,7 @@ test.describe('letting a printer in (FoundLine, AddList, AddAsking, AddAnswers)'
     const block = page.locator('.add-block', { hasText: 'Printers on this Wi‑Fi' })
     await expect(block.locator('.printer-title')).toHaveText(['OBI1', 'R2D2', 'C3PO'])
     await expect(block.locator('.printer-sub').first()).toHaveText('3D printer')
-    await expect(page.locator('.add-block .label').last()).toHaveText('Or start it yourself')
+    await expect(page.locator('.add-block .label').last()).toHaveText('Or choose what you’re adding')
   })
 
   test('the row that asked says where to tap, counts down, and then says it was let in, in the same place', async ({ page }) => {

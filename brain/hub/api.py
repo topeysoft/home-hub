@@ -1119,7 +1119,7 @@ async def identify_device(device_id: str):
     # the row it is written on is already wearing the name. The caveat is, though -- a companion
     # switch with no load wired to it blinks nothing at all, and being told that plainly beats
     # standing under the wrong lamp twice.
-    return {"ok": True, "text": "Blinked three times. If you saw nothing, it is in another room — or it has no lamp on it."}
+    return {"ok": True, "text": "Shown three times. If you saw nothing, it is in another room, or cannot show itself."}
 
 
 @app.post("/devices/{device_id}/check")
@@ -1198,8 +1198,8 @@ async def forget_device(device_id: str):
         raise                  # already in the house's own words, and not about an account
     except Exception as e:
         log.warning("could not forget %s: %s", device_id, e)
-        raise HTTPException(502, f"{name} cannot be forgotten on its own. "
-                                 f"It goes when {await _account_named(entries)} does, on the Accounts page.")
+        raise HTTPException(502, f"{name} cannot be removed on its own. "
+                                 f"It goes when {await _account_named(entries)} is removed, from What this house has.")
     hub.log.add("home", dev.id, dev.room_id, "forgotten", source="user", detail={"name": name})
     return {"ok": True}
 
@@ -2424,7 +2424,7 @@ def phones_list(request: Request): return hub.phones.list(request.state.phone)
 @app.post("/phones/ask")
 def phones_ask(body: dict, request: Request):
     """A phone asks to join. Someone at a paired screen answers; the phone polls /phones/claim meanwhile."""
-    if not hub.lock.locked: raise HTTPException(409, "The house has no code, so every phone on the Wi‑Fi is already in.")
+    if not hub.lock.locked: raise HTTPException(409, "The house has no passcode, so every phone on the Wi‑Fi can already use it.")
     return hub.phones.ask(str(body.get("name") or ""), _device_kind(request))
 
 
@@ -2438,7 +2438,7 @@ def phones_claim(ask_id: str, request: Request):
 @app.post("/phones/code")
 def phones_code(body: dict, request: Request):
     """The code, typed on the phone itself: the owner's way in. Wrong codes count against the address like anywhere else."""
-    if not hub.lock.locked: raise HTTPException(409, "The house has no code.")
+    if not hub.lock.locked: raise HTTPException(409, "The house has no passcode.")
     who = request.client.host if request.client else ""
     wait = hub.lock.waiting(who)
     if wait > 0: raise HTTPException(429, f"Too many tries. Wait {int(wait) + 1} seconds.")
@@ -2459,7 +2459,7 @@ def _keys(request: Request):
     hub's oldest promise and it is not this function's to take back, so an unlocked house passes.
     """
     if hub.lock.locked and not holds_keys(request.state.phone):
-        raise HTTPException(403, "This phone can run the house, not decide who else does. Ask at the wall.")
+        raise HTTPException(403, "Adding phones, or changing what they can do, takes the passcode.")
 
 
 @app.post("/phones/asks/{ask_id}/allow")
@@ -2575,7 +2575,7 @@ def backup():
     set up before it did, and the answer is a sentence naming the fix rather than a file.
     """
     if not hub.lock.locked:
-        raise HTTPException(403, "Set a code first. This file holds the keys to the house, and "
+        raise HTTPException(403, "Set a passcode first. This file holds the keys to the house, and "
                                  "without a code anyone on your Wi‑Fi could ask for it too.")
     path = hub.backup.make()
     return FileResponse(path, media_type="application/gzip", filename=path.name, background=BackgroundTask(shutil.rmtree, path.parent, True))
@@ -2662,7 +2662,7 @@ def restart_ask(request: Request, rung: str = "hub"):
 def restart_go(body: dict, request: Request):
     """Restart, at the rung the body names. Behind the settings code, and behind more than the code."""
     if not _may_restart(request):
-        raise HTTPException(403, "Restarting the house is for the screens that keep it. Someone at the wall can do it.")
+        raise HTTPException(403, "Restarting needs the passcode. Someone who joined with it can do it.")
     try:
         return hub.restart.go(str(body.get("rung") or "hub"), _who(request),
                               away=request.state.away, understood=bool(body.get("understood")))
@@ -2704,7 +2704,7 @@ def address_look(name: str):
 @app.post("/address")
 def address_claim(body: dict, request: Request):
     """{"name": "temi"}: take that address for this house. For the screens that keep the house, like a restart."""
-    if not _may_restart(request): raise HTTPException(403, "The house's address is chosen at the wall, or on a phone that keeps the house.")
+    if not _may_restart(request): raise HTTPException(403, "The house's web address is chosen on the wall screen, or on a phone that joined with the passcode.")
     try: return hub.address.claim(str(body.get("name") or ""), _who(request))
     except LookupError as e: raise HTTPException(409, e.args[0])
     except ValueError as e: raise HTTPException(422, str(e))
@@ -2715,7 +2715,7 @@ def address_claim(body: dict, request: Request):
 def address_turn(want: str, request: Request):
     """on or off: whether the house can be reached from outside. The address is kept either way."""
     if want not in ("on", "off"): raise HTTPException(404)
-    if not _may_restart(request): raise HTTPException(403, "Turning outside on or off is for the screens that keep the house.")
+    if not _may_restart(request): raise HTTPException(403, "Turning the web address on or off needs the passcode.")
     try: return hub.address.turn(want == "on", _who(request))
     except ValueError as e: raise HTTPException(409, str(e))
 
@@ -2723,7 +2723,7 @@ def address_turn(want: str, request: Request):
 @app.delete("/address")
 def address_forget(request: Request):
     """Give the address back. Anyone may have it after this."""
-    if not _may_restart(request): raise HTTPException(403, "Giving the address back is for the screens that keep the house.")
+    if not _may_restart(request): raise HTTPException(403, "Giving the web address back needs the passcode.")
     return hub.address.forget(_who(request))
 
 

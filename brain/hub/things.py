@@ -142,19 +142,19 @@ class Things:
                 "name": f"On the bridge in the {where.lower()}" if where and where != "A bridge"
                         else "On a bridge of this house",
                 "act": None if not chip else {
-                    "do": f"Forget the bridge, and {self._with_it(n)}",
+                    "do": f"Remove the bridge, and {self._with_it(n)}",
                     "act": "bridge", "to": chip,
-                    "ask": f"Forget {where.lower() if where else 'this bridge'}? Its switches stop "
+                    "ask": f"Remove {where.lower() if where else 'this bridge'}? Its switches stop "
                            f"working from here until a bridge is set up again.",
-                    "yes": "Yes, forget it", "no": "Keep it"}})
+                    "yes": "Yes, remove it", "no": "Keep it"}})
         engine = [p for p in (self.hub.provision.summary() if self.hub.provision else [])
                   if p.get("state") == "ready"]
         if engine:
             groups.append({
-                "id": "engine", "kind": "engine", "name": "The hub's own parts", "act": None,
+                "id": "engine", "kind": "engine", "name": "The hub's connections", "act": None,
                 "things": [{"id": "engine", "name": self._and(p["name"] for p in engine),
                             "sub": "", "where": "In the hub", "out": None,
-                            "why": "Part of the house"}]})
+                            "why": "Part of the hub"}]})
         return {"groups": groups, "count": sum(len(g["things"]) for g in groups if g["kind"] != "engine")}
 
     # ---- the words on the buttons, and the question before the one that cannot be taken back ----
@@ -167,17 +167,17 @@ class Things:
         asking first, with the name in the question rather than in a toast afterwards."""
         extra = (" The wall switch itself keeps working; it stops being something this house can "
                  "see or set." if what == "a wall switch" else
-                 " Its schedules go with it. Plug it back in one day and the house meets it as "
+                 " Its routines go with it. If you plug it in again one day, it is added as "
                  "something new.")
-        return {"do": "Take it out", "act": "forget", "to": id_,
-                "ask": f"Take {name} out of the house?{extra}",
-                "yes": f"Yes, take {name} out", "no": "Keep it"}
+        return {"do": "Remove", "act": "forget", "to": id_,
+                "ask": f"Remove {name} from the house?{extra}",
+                "yes": f"Yes, remove {name}", "no": "Keep it"}
 
     def _let_strip_go(self, strip_id: str, name: str) -> dict:
-        return {"do": "Take it out", "act": "strip", "to": strip_id,
-                "ask": f"Take {name} out of the house? It is told to forget the house too, so it "
+        return {"do": "Remove", "act": "strip", "to": strip_id,
+                "ask": f"Remove {name} from the house? It is told to forget the house too, so it "
                        f"can be set up again — here, or in somebody else's.",
-                "yes": f"Yes, take {name} out", "no": "Keep it"}
+                "yes": f"Yes, remove {name}", "no": "Keep it"}
 
     @staticmethod
     def _with_it(n: int) -> str:

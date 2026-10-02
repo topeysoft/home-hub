@@ -22,7 +22,7 @@ const groups = computed(() => {
   return [...by.keys()].sort((a, b) => rank(a) - rank(b))
     .map(id => ({ id, name: roomName(id), rules: by.get(id)! }))
 })
-const roomName = (id: string) => id === 'home' ? 'Whole house' : id === 'entry' ? 'Where you come in' : store.rooms.find(r => r.id === id)?.name ?? id
+const roomName = (id: string) => id === 'home' ? 'Whole house' : id === 'entry' ? 'The entrance' : store.rooms.find(r => r.id === id)?.name ?? id
 const roomNames = (r: Routine) => roomsOf(r).map(roomName).join(' · ')
 const hasEntryRules = computed(() => store.routines.some(r => roomsOf(r).includes('entry')))
 
@@ -152,7 +152,7 @@ onMounted(() => { loadRoutines(); loadAssistant() })
     </template>
 
     <template v-if="hasEntryRules || store.entry.length">
-      <h3 class="label routines-head">Where you come in</h3>
+      <h3 class="label routines-head">The entrance</h3>
       <p class="page-status entry-hint">Tap the rooms you come home through. Routines for coming home run in those.</p>
       <div class="chips">
         <button v-for="r in pickable" :key="r.id" class="chip-btn" :class="{ on: store.entry.includes(r.id) }" :aria-pressed="store.entry.includes(r.id)" @click="toggleEntry(r.id)">

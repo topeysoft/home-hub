@@ -1,0 +1,54 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200;300;400;500;600;700&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: "Plus Jakarta Sans", -apple-system, system-ui, sans-serif; -webkit-font-smoothing: antialiased;
+      /* the panel's own tokens, from app/src/panel.css */
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77; --lamp: #e9b872; --lamp-ink: #2a1c07; --live: #74c69d; --danger: #e08a8a; --bg: #0c0d10;
+      --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08); --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18); }
+    /* a comparison sheet: the room screen's own tiles and pane rows, one situation each, so four sheets can be flipped between */
+    .stage { position: relative; width: 1440px; height: 900px; overflow: hidden; color: var(--ink); background: linear-gradient(#21324a 0%, #2a3b55 45%, #1f2a3a 100%); padding: 40px 48px; }
+    .top { display: flex; align-items: baseline; gap: 18px; margin-bottom: 26px; }
+    .top h1 { margin: 0; font-size: 40px; font-weight: 400; letter-spacing: -.025em; }
+    .top span { font-size: 15px; color: var(--ink-2); }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+    .cell { height: 238px; display: flex; flex-direction: column; gap: 10px; }
+    .cap { font-size: 11.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+    .tile { position: relative; flex: 1; border-radius: 26px; padding: 18px 20px; background: linear-gradient(148deg, rgba(80,86,110,.42), rgba(50,54,70,.22) 46%, rgba(60,64,84,.34));
+            border: 1px solid rgba(255,255,255,.16); box-shadow: inset 0 -46px 56px -48px rgba(20,23,31,.9), 0 27px 61px -26px rgba(15,17,26,.67); display: flex; flex-direction: column; }
+    .tile.cool { background: linear-gradient(160deg, #7fa6d8, #5c86c4); border-color: rgba(255,255,255,.3); }
+    .tile.warm { background: linear-gradient(160deg, #cdb88f, #a8946c); }
+    .tile.dim { opacity: .62; }
+    .tn { font-size: 18px; display: flex; gap: 8px; align-items: center; }
+    .ts { margin-top: auto; font-size: 15px; color: rgba(255,255,255,.78); }
+    .big { font-size: 46px; font-weight: 300; line-height: 1; margin-top: auto; } .big small { font-size: 14px; color: rgba(255,255,255,.85); margin-left: 6px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .chip { padding: 6px 11px; border-radius: 999px; font-size: 13px; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.14); }
+    .chip.on { background: var(--ink); color: var(--bg); }
+    .chips.sm .chip { padding: 5px 9px; font-size: 12.5px; }
+    .pane { flex: 1; border-radius: 22px; padding: 16px 18px; background: rgba(18,19,26,.82); border: 1px solid var(--edge-hi); display: flex; flex-direction: column; gap: 8px; }
+    .row { display: flex; justify-content: space-between; font-size: 14px; color: var(--ink-2); } .row b { color: var(--ink); font-weight: 500; }
+    .say { font-size: 14px; color: var(--ink-2); line-height: 1.45; } .say b { color: var(--ink); font-weight: 500; }
+    .btn { display: inline-flex; padding: 9px 16px; border-radius: 999px; font-size: 14px; background: var(--ink); color: var(--bg); font-weight: 500; width: fit-content; }
+    .btn.warn { background: var(--danger); color: #2a0d0d; } .btn.g { background: var(--surface-hi); color: var(--ink); border: 1px solid var(--edge); font-weight: 400; }
+    .toast { align-self: center; padding: 10px 18px; border-radius: 999px; background: var(--ink); color: var(--bg); font-size: 14px; }
+    .list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 14.5px; }
+    .list span { color: var(--muted); font-size: 12.5px; margin-left: 6px; }
+    .mk { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; margin-left: 5px; border-radius: 999px; background: var(--lamp); color: var(--lamp-ink); font-size: 11px; font-weight: 600; font-style: normal; vertical-align: 2px; }
+    u.w { text-decoration: underline wavy rgba(233,184,114,.8); text-underline-offset: 4px; text-decoration-thickness: 1px; }
+  </style>
+</helmet>
+
+<!-- Today -- the words a room says, one situation a cell. -->
+<div class="stage"><div class="top"><h1>Today</h1><span>the words a room uses now, from the tiles, panes, Recently and New devices</span></div><div class="grid"><div class="cell"><span class="cap">A lamp that cannot be reached</span><div class="tile dim"><span class="tn">Monitor light</span><span class="ts"><u class="w">Not responding</u><span class="mk">1</span></span></div></div><div class="cell"><span class="cap">A camera that cannot be reached, and one that is not recording</span><div style="display:flex; gap: 10px; flex: 1;"><div class="tile dim" style="flex:1"><span class="tn">Doorbell</span><span class="ts"><u class="w">Offline</u><span class="mk">1</span></span></div><div class="tile" style="flex:1"><span class="tn">Garage View</span><span class="ts"><u class="w">Idle</u><span class="mk">2</span></span></div></div></div><div class="cell"><span class="cap">Recently, and the open lamp</span><div class="pane"><ul class="list"><li><u class="w">Monitor light went offline</u><span class="mk">1</span><span>12 min ago</span></li><li>Desk lamp turned on<span>1 h ago</span></li></ul><div class="row" style="margin-top:auto"><span>Monitor light</span><b><u class="w">Not answering</u><span class="mk">1</span></b></div><p class="say">Monitor light has not answered since 9:12 PM.</p></div></div><div class="cell"><span class="cap">The thermostat tile</span><div class="tile cool"><span class="tn">Thermostat</span><span class="big">71<small>°F · cooling from 74</small></span><div class="chips" style="margin-top: 12px;"><span class='chip'>Heat</span><span class='chip on'>Cool</span><span class='chip'>Auto</span><span class='chip'>Off</span><span class='chip'>Fan</span><span class='chip'>Dry</span></div></div></div><div class="cell"><span class="cap">The thermostat, opened</span><div class="pane"><div class="row"><span>In here now</span><b>71°</b></div><div class="row"><span><u class="w">Asked for</u><span class="mk">3</span></span><b>74°</b></div><div class="row"><span><u class="w">Let go to ask for it</u><span class="mk">3</span></span><span><u class="w">Holding</u><span class="mk">4</span></span></div><p class="cap" style="margin: 2px 0 0;">What it should do</p><div class="chips sm"><span class='chip'><u class="w">Warm it</u><span class="mk">3</span></span><span class='chip on'>Cool it</span><span class='chip'><u class="w">Either</u><span class="mk">3</span></span><span class='chip'>Off</span><span class='chip'>Fan only</span><span class='chip'>Dry</span></div></div></div><div class="cell"><span class="cap">Blinds, on the tile and opened</span><div style="display:flex; gap: 10px; flex: 1;"><div class="tile" style="flex:1"><span class="tn">Bedroom blinds</span><span class="ts"><u class="w">Closed</u><span class="mk">5</span></span></div><div class="pane" style="flex:1"><div class="row"><span>Bedroom blinds</span><b><u class="w">Shut</u><span class="mk">5</span></b></div><div class="chips" style="margin-top:auto"><span class='chip'>Right up</span><span class='chip'>Stop there</span><span class='chip'>Right down</span></div></div></div></div><div class="cell"><span class="cap">A speaker with nothing on, a mower at rest</span><div style="display:flex; gap: 10px; flex: 1;"><div class="tile" style="flex:1"><span class="tn">Kitchen speaker</span><span class="ts"><u class="w">Idle</u><span class="mk">2</span></span></div><div class="tile" style="flex:1"><span class="tn">Robot mower</span><span class="ts"><u class="w">Docked</u><span class="mk">2</span></span></div></div></div><div class="cell"><span class="cap">Taking a device away, from its pane</span><div class="pane"><span class="btn g"><u class="w">Take it out of the house</u><span class="mk">6</span></span><p class="say">It goes from the house and from <u class="w">whatever brought it</u><span class="mk">7</span>. Its <u class="w">schedules</u><span class="mk">7</span> go with it. Plug it back in one day and <u class="w">the house meets it as something new</u><span class="mk">7</span>.</p><div style="display:flex; gap: 8px;"><span class="btn warn"><u class="w">Forget Monitor light</u><span class="mk">6</span></span><span class="btn g">Keep it</span></div></div></div><div class="cell"><span class="cap">Taking a device away, from New devices</span><div class="pane"><div class="row"><span>Smart plug</span><span class="btn g" style="padding: 6px 12px;"><u class="w">Forget</u><span class="mk">6</span></span></div><p class="say">Smart plug goes from the house, and from <u class="w">whatever brought it</u><span class="mk">7</span>. Tap again to do it.</p><span class="toast" style="margin-top:auto"><u class="w">Smart plug is forgotten.</u><span class="mk">6</span></span></div></div></div></div>
+</x-dc>
+</body>
+</html>

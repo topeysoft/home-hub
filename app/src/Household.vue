@@ -39,7 +39,7 @@ const open = () => (store.sheet = 'people')
     <Say :room="room" />
     <div class="household" aria-label="Household">
       <span class="household-line" v-if="line">{{ line }}</span>
-      <span class="household-label">Family</span>
+      <span class="household-label">People</span>
       <div class="household-people">
         <button v-for="(p, i) in people" :key="p.name" class="person" :class="{ out: p.home === false, unknown: p.home === null }" :style="{ background: personTone(i) }"
                 :title="`${p.name}, ${p.home === true ? 'home' : p.home === false ? 'away' : 'not sure'}`"

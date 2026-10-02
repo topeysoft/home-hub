@@ -71,7 +71,7 @@ async function forget(r: UnitRow) {
   busy.value[r.key] = 'forget'
   try {
     await forgetDevice(r.lead.id)
-    notify(`${r.name} is forgotten.`)
+    notify(`${r.name} is removed.`)
     gone(r)
   } catch (e: any) { notify(e.message, 'error') }
   forgetting.value = ''
@@ -219,10 +219,10 @@ watch(() => props.room.devices.length, (n, was) => { if (n > (was ?? 0)) think()
 <template>
   <section class="room">
     <header class="stage-head room-head">
-      <button class="back" @click="$emit('back')" :aria-label="editing ? 'Done' : 'Back to home'"><Icon :name="editing ? 'check' : 'back'" :size="22" /></button>
+      <button class="back" @click="$emit('back')" :aria-label="editing ? 'Done' : 'Back'"><Icon :name="editing ? 'check' : 'back'" :size="22" /></button>
       <div>
         <h1 class="display">{{ editing ? room.name : 'New devices' }}</h1>
-        <p class="lede">{{ editing ? 'Rename anything, move it to another room, or forget it for good. Tap the tick when you are done.' : 'Check each name and say which room it lives in. It moves there on its own.' }}</p>
+        <p class="lede">{{ editing ? 'Rename anything, move it to another room, or remove it for good. Tap Done when you’re finished.' : 'Check each name and say which room it lives in. It moves there on its own.' }}</p>
       </div>
     </header>
 
@@ -237,7 +237,7 @@ watch(() => props.room.devices.length, (n, was) => { if (n > (was ?? 0)) think()
         <span class="press-icon"><Icon name="switch" :size="20" /></span>
         <span class="press-text">
           <span class="press-name">Go and press one</span>
-          <span class="press-sub">Either half of the rocker will do — the switch you press says so here. Nothing will switch on that was not going to. Or tap Blink it on a row and watch the room instead.</span>
+          <span class="press-sub">Either end of the switch will do, and pressing it won’t turn anything on. The switch you press says so here. Or tap the button on a row that makes it show itself, and watch the room instead.</span>
         </span>
       </div>
 
@@ -273,13 +273,13 @@ watch(() => props.room.devices.length, (n, was) => { if (n > (was ?? 0)) think()
             <option v-for="r in rooms" :key="r.id" :value="r.id">{{ r.name }}</option>
             <option value="__new">A new room…</option>
           </select>
-          <button v-if="editing && adding !== u.key" class="button small ghost sort-forget" :class="{ warn: forgetting === u.key }" @click="forget(u)">{{ forgetting === u.key ? 'Forget?' : 'Forget' }}</button>
+          <button v-if="editing && adding !== u.key" class="button small ghost sort-forget" :class="{ warn: forgetting === u.key }" @click="forget(u)">{{ forgetting === u.key ? 'Remove?' : 'Remove' }}</button>
           <!-- What came of a blink, across the row rather than under the name: in the name's own column
                the sentence wraps to three lines and drags the button that started it onto a fourth, so
                the chip a person's finger is still on moves out from under it. Here the chip does not
                move at all -- the answer appears under it, and rows below shift by the one line it is. -->
           <p class="sort-said" v-if="blinked && blinked.key === u.key"><span class="pulse-dot" v-if="busy[u.key] === 'blink'"></span>{{ blinked.text }}</p>
-          <p class="sort-forget-ask" v-if="forgetting === u.key"><b>{{ u.name }}</b>{{ isUnit(u) ? ', all of it,' : '' }} goes from the house, and from whatever brought it. Tap again to do it.</p>
+          <p class="sort-forget-ask" v-if="forgetting === u.key"><b>{{ u.name }}</b>{{ isUnit(u) ? ', all of it,' : '' }} will be removed from the house, and from the app or account it came from. Tap again to remove it.</p>
           <!-- the one that was just pressed: the rooms as chips, because the answer is one tap away
                and a dropdown would hide it behind two -->
           <div class="press-line" v-if="live === u.key && !editing">
@@ -308,7 +308,7 @@ watch(() => props.room.devices.length, (n, was) => { if (n > (was ?? 0)) think()
       </ul>
       <div v-else class="empty-room">
         <p class="empty">{{ editing ? 'Nothing left in this room.' : 'Everything has a room.' }}</p>
-        <p class="empty-sub">{{ editing ? 'Everything moved elsewhere. Tap the tick to go back.' : 'Anything you add later that does not know where it lives will wait here.' }}</p>
+        <p class="empty-sub">{{ editing ? 'Everything moved elsewhere. Tap Done to go back.' : 'Anything you add later that does not know where it lives will wait here.' }}</p>
       </div>
     </div>
   </section>

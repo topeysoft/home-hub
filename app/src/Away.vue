@@ -5,11 +5,11 @@
 <script setup lang="ts">
 /*
  * Reached from outside the house, and the house did not open. One sentence, and it is the brain's:
- * a phone this house knows is told that somebody at the wall can let it out, and anyone else is told
+ * a phone this house knows is told it is set to Home only and who can change that, and anyone else is told
  * nothing they could act on, because from out here the way in does not exist (docs/away.md, piece 2).
  *
  * For a phone the house knows it is also a wait, not a dead end (design/away/, NamedC-out): Sam at the
- * airport asks, Temi turns From outside on at the wall, and this screen opens by itself -- it asks again
+ * airport asks, Temi picks Anywhere for it on People, and this screen opens by itself -- it asks again
  * every few seconds, and the moment the answer is yes the house loads. Anyone else has nothing to wait for,
  * so nothing is asked again. There is nothing to tap either way.
  */
@@ -37,10 +37,10 @@ onUnmounted(() => clearInterval(poll))
   <main class="setup away">
     <section class="setup-page">
       <span class="setup-mark"><Icon name="home" :size="30" /></span>
-      <h1 class="display">{{ waits ? 'Not from here, yet.' : 'Not from here.' }}</h1>
+      <h1 class="display">{{ waits ? 'Set to Home only.' : 'Not open to this phone.' }}</h1>
       <p class="setup-lede">{{ lock.away }}</p>
-      <p class="setup-status" v-if="waits"><span class="pulse-dot"></span> It opens by itself when they do.</p>
-      <p class="setup-foot">On the house's own Wi‑Fi this phone opens it as it always does.</p>
+      <p class="setup-status" v-if="waits"><span class="pulse-dot"></span> This opens by itself as soon as they do.</p>
+      <p class="setup-foot">Back on your home Wi‑Fi, it works as it always does.</p>
     </section>
   </main>
 </template>

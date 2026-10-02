@@ -5,9 +5,9 @@ import { outcomesOf, roomsOf, type Event, type Room, type Routine } from './api'
 import { store, LABELS, deviceById, routineById, cap } from './store'
 import { locale } from './lang'
 
-const cap1 = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
+const cap1 = (s: string) => (s.charAt(0).toUpperCase() + s.slice(1)).replace(/_/g, ' ')
 const label = (s: string | null | undefined, home = false) => home && s === 'asleep' ? 'Bedtime' : LABELS[s ?? ''] ?? (s && s !== 'unknown' ? cap1(s) : 'Set')
-export const placeName = (id: string) => id === 'home' ? 'the whole house' : id === 'entry' ? 'where you come in' : `the ${store.rooms.find(r => r.id === id)?.name ?? id}`
+export const placeName = (id: string) => id === 'home' ? 'the whole house' : id === 'entry' ? 'the entrance' : `the ${store.rooms.find(r => r.id === id)?.name ?? id}`
 const devName = (id: string | undefined) => (id && deviceById(id)?.name) || 'something'
 
 /* ---------- time, said plainly ---------- */

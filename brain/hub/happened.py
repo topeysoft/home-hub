@@ -210,7 +210,7 @@ class Happened:
                 try: name = json.loads(r["detail"]).get("name") or name
                 except Exception: pass
             text = {"joined": f"{name} joined the house.", "removed": f"{name} was removed.",
-                    "left": f"ended {name}'s stay, which was only ever for a while.", "asked": f"{name} asked to join."}.get(r["new"])
+                    "left": f"ended {name}'s visit, as planned.", "asked": f"{name} asked to join."}.get(r["new"])
             if not text: continue
             out.append({"kind": "phone", "subject": r["subject"], "text": text,
                         "when": when(r["ts"], self.hub.tz, now), "ts": r["ts"], "acts": []})
@@ -308,10 +308,10 @@ class Changes:
             return {"joined": f"let {name} into the house{span or ', for good'}.",
                     "removed": f"removed {name} from the house.",
                     "asked": "asked to join the house.",
-                    "left": f"ended {name}'s stay, which was only ever for a while.",
-                    "home only": f"stopped {name} reaching the house from outside.",
+                    "left": f"ended {name}'s visit, as planned.",
+                    "home only": f"set {name} to Home only.",
                     "not now": f"turned down {name}'s request to join.",
-                    "can reach the house from outside": f"let {name} reach the house from outside.",
+                    "can reach the house from outside": f"set {name} to Anywhere.",
                     }.get(new) or self.fallback(r, detail)
         if kind == "draft":
             return {"approved": "approved a suggested routine.",

@@ -150,9 +150,9 @@ describe('a whole routine in one line', () => {
 })
 
 describe('naming a place', () => {
-  it('says the whole house, where you come in, or the room by name', () => {
+  it('says the whole house, the entrance, or the room by name', () => {
     expect(placeName('home')).toBe('the whole house')
-    expect(placeName('entry')).toBe('where you come in')
+    expect(placeName('entry')).toBe('the entrance')
     expect(placeName('kitchen')).toBe('the Kitchen')
   })
 

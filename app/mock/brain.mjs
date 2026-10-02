@@ -134,17 +134,17 @@ const home = { name: "Temi's house", temp_unit: '°F', rooms }
 /* The words on a row's way out, in the shape brain/hub/things.py writes them: the panel draws these
    and invents none of them, so the mock has to speak the same sentences or the page reads wrong here
    and right in a house. */
-const out = (t, act, tail) => ({ do: 'Take it out', act, to: t.id,
-  ask: `Take ${t.name} out of the house? ${tail}`, yes: `Yes, take ${t.name} out`, no: 'Keep it' })
+const out = (t, act, tail) => ({ do: 'Remove', act, to: t.id,
+  ask: `Remove ${t.name} from the house? ${tail}`, yes: `Yes, remove ${t.name}`, no: 'Keep it' })
 const status = { driver: process.env.ENGINE === 'down' ? 'down' : 'ready', reason: process.env.ENGINE === 'down' ? "The hub's engine is not answering yet." : '',
   version: 'v0.3.0',   // the build this mock is: the panel reloads itself when a status answers with another (store.ts, newBuild)
   setup_done: process.env.FRESH !== '1', owner: 'Temi', home: "Temi's house", location: true, rooms: 8, devices: 30, locked: process.env.LOCKED === '1',
   drivers: [
-    { id: 'mqtt', name: 'Messages', state: 'ready', text: 'Running', port: 1883 },
-    { id: 'zigbee', name: 'Zigbee radio', state: 'ready', text: 'Stick on USB', port: 8080 },
-    { id: 'zwave', name: 'Z-Wave radio', state: 'off', text: 'No stick found', port: 3000 },
-    { id: 'matter', name: 'Matter', state: 'ready', text: 'Running', port: 5580 },
-    { id: 'ring', name: 'Ring', state: 'sign-in', text: 'Needs a sign-in', port: 55123 },
+    { id: 'mqtt', name: 'Device messages', state: 'ready', text: 'Working', port: 1883 },
+    { id: 'zigbee', name: 'Zigbee radio', state: 'ready', text: 'Plugged in', port: 8080 },
+    { id: 'zwave', name: 'Z-Wave radio', state: 'off', text: 'Not plugged in. Plug a Z-Wave stick in and it starts on its own.', port: 3000 },
+    { id: 'matter', name: 'Matter', state: 'ready', text: 'Working', port: 5580 },
+    { id: 'ring', name: 'Ring', state: 'sign-in', text: 'Sign in once to bring in the alarm, cameras and sensors.', port: 55123 },
   ], problems: [] }
 /* What changed, in a house's words (docs/updates.md piece 4). Off unless asked for, so the panel's
    ordinary previews and the e2e run see the hub page exactly as they did before: WHATSNEW=1 puts the
@@ -287,7 +287,7 @@ function pairStatus() {
   if (pairing.state !== 'listening') return { ...pairing, at: undefined, joined: undefined }
   const on = (Date.now() - pairing.at) / 1000
   if (process.env.PAIR === 'none') {
-    if (on > 12) { pairing = { state: 'closed', text: 'Nothing joined. Put the device in pairing mode and try again.' }; return pairing }
+    if (on > 12) { pairing = { state: 'closed', text: 'Nothing was added. Put the device in pairing mode and try again.' }; return pairing }
     return { state: 'listening', text: 'Listening. Put the device in pairing mode.', seconds_left: Math.round(12 - on) }
   }
   if (process.env.PAIR === 'pin' && on > 4 && pairing.needs !== null) {
@@ -567,8 +567,8 @@ const server = http.createServer((req, res) => {
     const secs = { hub: 30, everything: 120, machine: 180 }[rung] ?? 30
     const weary = process.env.RESTART === 'weary'
     return json(res, {
-      rung, title: { hub: 'Restart the hub?', everything: 'Restart everything?', machine: 'Restart the little computer?' }[rung],
-      yes: { hub: 'Restart the hub', everything: 'Restart everything', machine: 'Restart the little computer' }[rung],
+      rung, title: { hub: 'Restart the hub?', everything: 'Full restart?', machine: 'Power the hub off and on?' }[rung],
+      yes: { hub: 'Quick restart', everything: 'Full restart', machine: 'Power off and on' }[rung],
       keeps: rung === 'hub' ? 'Lights and switches keep working.' : 'Switches on the wall keep working.',
       stops: rung === 'hub' ? ['Motion lights and schedules pause.'] : ['Everything the hub talks to goes quiet until it\u2019s back \u2014 lights, sensors and the radios.'],
       flight: [], seconds: secs, how_long: secs < 90 ? `about ${secs} seconds` : `about ${Math.round(secs / 60)} minutes`,
@@ -774,10 +774,10 @@ const bridgeRows = process.env.BRIDGES === 'none' ? [] : [
                               ...(st === 'unclaimed' ? { uuid: String(i).repeat(32).slice(0, 32) } : { net: 'ab'.repeat(8) }) })
     const waiting = Array.from({ length: free }, (_, i) => one(i, 'unclaimed'))
     const other = Array.from({ length: spoken }, (_, i) => one(free + i, 'other'))
-    const text = free === 1 ? 'One switch is waiting to be let in.'
-      : free > 1 ? `${free} switches are waiting to be let in.`
-      : other.length ? 'Nothing is asking to be let in, but there is a switch nearby that is on another network. That one has to be started over first.'
-      : 'Nothing nearby is asking to be let in.'
+    const text = free === 1 ? 'One switch is waiting to be added.'
+      : free > 1 ? `${free} switches are waiting to be added.`
+      : other.length ? 'Nothing is waiting to be added, but there is a switch nearby that is on another network. That one has to be started over first.'
+      : 'Nothing nearby is waiting to be added.'
     return json(res, { state: 'done', waiting, claimed_elsewhere: other, text })
   }
   /* Blinking one of them. BLINK=fail is a switch that cannot be reached, which matters because the
@@ -851,7 +851,7 @@ const bridgeRows = process.env.BRIDGES === 'none' ? [] : [
   }) }
   if ((p === '/address/on' || p === '/address/off') && req.method === 'POST') { mockAddress.want = p.endsWith('on') ? 'on' : 'off'; return json(res, { offer: { open: true, price: '$3 a month', pay: null }, guess: 'temi', house: mockAddress.house, address: `${mockAddress.house}.elyir.app`, want: mockAddress.want, carried: true, on: mockAddress.want === 'on', entitled_until: Date.UTC(2027, 9, 1) / 1000 }) }
   /* The house's own address and a phone that has not moved to it yet (design/away/, C). ADDRESS=1 gives the house
-     one; the phone reading /phones/me is then Temi's iPhone, so the band line and the From outside switch show. */
+     one; the phone reading /phones/me is then Temi's iPhone, so the band line and the Home only | Anywhere choice show. */
   if (p === '/phones/me') return json(res, process.env.ADDRESS
     ? { locked: !!process.env.LOCKED, paired: true, home: 'Main Palace', phone: { ...phones.phones[1], me: true, moved: !!process.env.MOVED }, away: false,
         lan: '192-168-86-53.main-palace.home.elyir.app', address: 'https://main-palace.elyir.app' }
@@ -901,9 +901,9 @@ const bridgeRows = process.env.BRIDGES === 'none' ? [] : [
                yes: `Yes, remove ${title[e]}`, no: 'Keep it' } })
     if (here.length) groups.push({ id: 'here', kind: 'here', name: 'Set up here', act: null, things: here.sort((a, b) => a.name.localeCompare(b.name)) })
     if (mesh.length) groups.push({ id: 'mesh', kind: 'bridge', name: 'On the bridge in the hallway', things: mesh,
-      act: { do: `Forget the bridge, and all ${mesh.length} with it`, act: 'bridge', to: 'c8ebba',
-             ask: 'Forget the hallway bridge? Its switches stop working from here until a bridge is set up again.',
-             yes: 'Yes, forget it', no: 'Keep it' } })
+      act: { do: `Remove the bridge, and all ${mesh.length} with it`, act: 'bridge', to: 'c8ebba',
+             ask: 'Remove the hallway bridge? Its switches stop working from here until a bridge is set up again.',
+             yes: 'Yes, remove it', no: 'Keep it' } })
     groups.push({ id: 'engine', kind: 'engine', name: "The hub's own parts", act: null,
       things: [{ id: 'engine', name: 'Messages, Z\u2011Wave radio and Matter', sub: '', where: 'In the hub', out: null, why: 'Part of the house' }] })
     return json(res, { groups, count: groups.filter(g => g.kind !== 'engine').reduce((n, g) => n + g.things.length, 0) })

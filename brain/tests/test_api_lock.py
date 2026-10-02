@@ -338,7 +338,7 @@ class AwayGateTests(ApiTest):
         r = self.client.post("/devices/light.kitchen/on", headers=self.AWAY)
         self.assertEqual(r.status_code, 403)
         self.assertEqual(r.json()["detail"], "remote")
-        self.assertIn("works at home", r.json()["message"])
+        self.assertIn("set it to Anywhere", r.json()["message"])
 
     def test_and_the_same_phone_at_home_still_does(self):
         """The gate is about the door, not the phone: nothing changes on the Wi-Fi."""
@@ -416,7 +416,7 @@ class TheBackupNeedsACodeToExist(ApiTest):
         self.assertFalse(self.hub.lock.locked)
         r = self.client.get("/backup")
         self.assertEqual(r.status_code, 403)
-        self.assertIn("Set a code first", r.json()["detail"])
+        self.assertIn("Set a passcode first", r.json()["detail"])
 
     def test_once_there_is_a_code_it_behaves_exactly_as_it_did(self):
         code = self.lock_the_house()

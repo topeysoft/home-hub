@@ -1,0 +1,104 @@
+{
+  "pages": [
+    {
+      "id": "page-1",
+      "name": "Rooms and devices, in plain words"
+    },
+    {
+      "id": "page-2",
+      "name": "Not chosen"
+    }
+  ],
+  "artboards": [
+    {
+      "file": "Today.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Today",
+      "page": "page-1"
+    },
+    {
+      "file": "BoxA.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "A — the words on the box",
+      "page": "page-2"
+    },
+    {
+      "file": "VoiceB.dc.html",
+      "x": 0,
+      "y": 1100,
+      "w": 1440,
+      "h": 900,
+      "title": "B — the house’s own voice",
+      "page": "page-2"
+    },
+    {
+      "file": "MixC.dc.html",
+      "x": 0,
+      "y": 1100,
+      "w": 1440,
+      "h": 900,
+      "title": "C — the box for controls, the voice for how it is",
+      "page": "page-1"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "why",
+      "x": -620,
+      "y": 0,
+      "w": 500,
+      "text": "WHY THIS EXISTS\n\nThe fourth area of the wording pass (docs/wording.md): rooms, the tiles in them, the pane a device opens into, and New devices. About four hundred strings, inventoried by file and line; most are fine.\n\nWHY THESE ARE SHEETS AND NOT ROOMS. Nothing about the room screen's composition changes: the words that need choosing recur on dozens of tiles and panes, so each board is one sheet of the SAME nine situations in that direction's words, drawn in the tile and pane they appear in. Flip between the four.\n\nTHE QUESTION: WHOSE WORDS DOES A ROOM SPEAK IN? Today it speaks in several at once -- a device that cannot be reached has six names (Not responding, Not answering, Offline, went offline, Stopped answering, Quiet), the thermostat says Heat on its tile and Warm it on its pane, a blind is Closed on its tile and Shut when opened, and taking a device away has four wordings.\n\nNOT IN THIS ROUND: the light strip and roofline words (controller, rests, box, run, occasion). They were settled on their own boards on 1 October (AGENTS.md section 5) and get a round of their own rather than being reopened in passing.\n\nCHOSEN: C, 2 October 2026.",
+      "page": "page-1"
+    },
+    {
+      "id": "today",
+      "x": 1560,
+      "y": 0,
+      "w": 560,
+      "text": "TODAY\n\n1  One state, six names: Not responding (tiles), Offline (camera tile, viewer), went offline (Recently), Not answering (pane, New devices), Stopped answering (pane history), Quiet (a dead camera's pane).\n2  Idle, Docked -- the device's state names, raw.\n3  The thermostat speaks two languages: Heat / Cool / Auto on the tile, Warm it / Cool it / Either on the pane; set to on the tile, Asked for and \"Let go to ask for it\" on the pane.\n4  Holding -- the thermostat's idle, in the same word as the press-and-hold gesture the panel uses everywhere (\"Hold to open\").\n5  A blind is Closed on its tile and Shut when opened.\n6  Taking a device away: Take it out of the house, Forget, is forgotten, is out of the house.\n7  \"whatever brought it\", \"schedules\" (the panel says routines), \"the house meets it as something new\".",
+      "page": "page-1"
+    },
+    {
+      "id": "shared",
+      "x": -620,
+      "y": 2200,
+      "w": 500,
+      "text": "WHAT ALL THREE FIX -- NOT A CHOICE\n\nREMOVE, as People settled it. \"Remove it from the house\" / \"Remove Monitor light\" / \"Keep it\"; \"It is removed from the house and from the app or account it came from, with its routines. If you plug it in again one day, it is added as something new.\" New devices: Remove, \"Smart plug is removed.\"\n\nA blind is Closed, tile and pane.\n\nWRONG FACTS, fixed:\n- A device that goes when its account goes: the refusal said \"on the Accounts page\" while the button under it opened What this house has. One place, named the same.\n- New devices said \"tap Blink it on a row\" where the button says Spin it or Flash it; after Spin it the house said \"Blinked three times... or it has no lamp on it.\"\n- Renaming a combined device said \"its motion sensor among them\" for a fridge.\n- The lock said \"A routine can lock it again at bedtime\" -- Bedtime is a scene, and the routine may not exist. Now \"Left unlocked.\" And \"until somebody carries this the whole way\" is \"until you slide it all the way\"; \"To open it\" is \"To unlock it\".\n- The edit button said \"Rename or move things\"; it also removes. \"Rename, move or remove things\".\n- \"Back to home\" on a room opened from Rooms goes back to Rooms. \"Back\".\n- The household bar said Family and opened People and phones. \"People\".\n- \"Tap the tick\" -- the button is Done.\n- \"One new device is waiting to be placed. One of them may belong here.\"\n- A room name lowercased into \"In the maya's room\".\n\nPLAIN WORDS, same in all:\n- Raw device states never reach the screen as \"Heat_cool\" or \"Fan_only\".\n- A maker shows as \"Philips Hue\", never \"Signify Netherlands B.V.\"\n- \"Lead with\" -> \"Show first\", and the card that leads is \"the card\", not the tile.\n- \"where you come in\" -> \"the entrance\"; \"Nobody about\" -> \"No motion\"; \"Follows the light\" -> \"Follows daylight\"; \"The three it is used at\" -> \"The usual three\" (one line in the 182px column, as the old label was); \"The room is on: Sleep\" -> \"Room set to: Sleep\"; \"See them all\" -> \"See all routines\"; \"Either half of the rocker will do... Nothing will switch on that was not going to\" -> \"Either end of the switch will do. Pressing it won't turn anything on.\"\n- Warmth reads \"Warm white\", \"Neutral white\" or \"Cool white\", not 2700K.",
+      "page": "page-1"
+    },
+    {
+      "id": "a",
+      "x": 1560,
+      "y": 0,
+      "w": 560,
+      "text": "A -- THE WORDS ON THE BOX\n\nSay what the device, its manual and every other app already say. Not responding, everywhere. Heat / Cool / Auto / Fan / Dry, tile and pane alike, as printed on the thermostat on the wall. Set to. Idle. Docked.\n\nFOR: the person reading the panel and the person reading the thermostat's own screen, or Google Home, see the same words. Nothing to translate, and \"Not responding\" is what every smart-home app says, so it reads as the familiar trouble it is.\n\nAGAINST: it is the voice the product is trying not to have. \"Idle\" and \"Docked\" are the device's states, not what a person would say about the speaker on the counter. The pane's \"Warm it / Cool it\" was written to sound like the house; this undoes it.",
+      "page": "page-2"
+    },
+    {
+      "id": "b",
+      "x": 1560,
+      "y": 1100,
+      "w": 560,
+      "text": "B -- THE HOUSE'S OWN VOICE\n\nSay it as a person standing in the room would. Not answering, everywhere. The thermostat is Warm it / Cool it / Either / Just the fan / Dry it on the tile as well as the pane; \"Want it at 74\", \"Nothing to do\". A speaker has \"Nothing playing\"; a mower is \"At its dock\"; a camera that is not recording says so.\n\nFOR: one voice for the whole house, the warmest of the three, and it matches what the panes already sound like. \"Not answering\" also matches the brain's sentence: \"has not answered since 9:12 PM\".\n\nAGAINST: the thermostat on the wall says HEAT, not Warm it, and a household that turns the dial and then looks at the panel has to translate. \"Just the fan\" and \"Dry it\" are longer than the tile has room for, so the tile's chips wrap to two lines on a 1440 wall.",
+      "page": "page-2"
+    },
+    {
+      "id": "c",
+      "x": 1560,
+      "y": 1100,
+      "w": 560,
+      "text": "C -- THE BOX FOR CONTROLS, THE VOICE FOR HOW IT IS\n\nA button says what the device says; a status says it like a person. The thermostat's controls are Heat / Cool / Auto / Fan / Dry, tile and pane, with \"Set to\"; but a device that cannot be reached is Not answering, a speaker has Nothing playing, a mower is At its dock, and an idle thermostat has Nothing to do.\n\nFOR: the controls match the hardware they control, so turning the dial and tapping the panel are the same act. The sentences stay the house's. Not answering matches the brain's own sentence about it.\n\nAGAINST: two rules instead of one, and a writer has to know which a word is. The pane's \"Warm it / Cool it\" goes.\n\nBUILT, 2 October: the tile's line reads \"cooling, 74 now\" -- the 74 was always the room as it is, which \"cooling from 74\" said and the first draft of this sheet misread as a target.\n\nBUILT, 2 October, two labels measured into place: the thermostat's sensor row is \"Sensor -- Its own / Living room\" (\"Temperature from\" pushed the room's chip onto a second line), and the lamp's presets are \"The usual three\" (\"The three you use most\" wrapped and moved the column 2px, which controller.spec pins).",
+      "page": "page-1"
+    }
+  ],
+  "launch": {
+    "view": "canvas",
+    "page": "page-1"
+  }
+}

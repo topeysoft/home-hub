@@ -106,7 +106,7 @@ const stripName = (id: string) => {
             <template v-else>
               <div class="sig-ends" v-for="sid in endsToAsk(store.signals, r.kind)" :key="sid">
                 <span class="routine-text">
-                  <span class="sig-step">Which end of {{ stripName(sid) }} is nearer the house?</span>
+                  <span class="sig-step">Which end of {{ stripName(sid) }} is nearer the door?</span>
                   <span class="routine-sub">{{ asking === sid ? 'One end is lit on the strip now.' : 'It lights one end so you can tell.' }}</span>
                 </span>
                 <span class="sig-again" v-if="asking === sid">

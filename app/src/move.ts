@@ -24,9 +24,9 @@ export function withoutCode(href: string): string {
   return u.pathname + (u.search === '?' ? '' : u.search) + u.hash
 }
 
-/** Whether a phone row on People gets the From outside switch: a phone, not the wall; a house with an address;
+/** Whether a phone row on People gets the Home only | Anywhere choice: a phone, not the wall; a house with an address;
     and only on a screen that keeps the house -- letting a phone out is the owner's to do. */
 export const switchFor = (p: Phone, hasAddress: boolean, keys: boolean) => hasAddress && keys && p.kind !== 'wall'
 
 /** The away screen waits, and opens by itself, only for a phone the house knows -- told so by the brain's own words. */
-export const waitsToBeLetOut = (said: string | null | undefined) => !!said && said.startsWith('This phone works at home')
+export const waitsToBeLetOut = (said: string | null | undefined) => !!said && said.startsWith('This phone works on your home')

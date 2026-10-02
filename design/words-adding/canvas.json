@@ -1,0 +1,212 @@
+{
+  "pages": [
+    {
+      "id": "page-1",
+      "name": "Adding a thing, in plain words"
+    },
+    {
+      "id": "page-2",
+      "name": "Not chosen"
+    }
+  ],
+  "artboards": [
+    {
+      "file": "Today.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Today — the Add page",
+      "page": "page-1"
+    },
+    {
+      "file": "Today-press.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "Today — pressing its button",
+      "page": "page-1"
+    },
+    {
+      "file": "Today-working.dc.html",
+      "x": 2070,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "Today — the wait",
+      "page": "page-1"
+    },
+    {
+      "file": "Today-landed.dc.html",
+      "x": 2580,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "Today — which room",
+      "page": "page-1"
+    },
+    {
+      "file": "AddA.dc.html",
+      "x": 0,
+      "y": 1100,
+      "w": 1440,
+      "h": 900,
+      "title": "A — add — the Add page",
+      "page": "page-1"
+    },
+    {
+      "file": "AddA-press.dc.html",
+      "x": 1560,
+      "y": 1100,
+      "w": 390,
+      "h": 844,
+      "title": "A — add — pressing its button",
+      "page": "page-1"
+    },
+    {
+      "file": "AddA-working.dc.html",
+      "x": 2070,
+      "y": 1100,
+      "w": 390,
+      "h": 844,
+      "title": "A — add — the wait",
+      "page": "page-1"
+    },
+    {
+      "file": "AddA-landed.dc.html",
+      "x": 2580,
+      "y": 1100,
+      "w": 390,
+      "h": 844,
+      "title": "A — add — which room",
+      "page": "page-1"
+    },
+    {
+      "file": "ConnectB.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "B — connect — the Add page",
+      "page": "page-2"
+    },
+    {
+      "file": "ConnectB-press.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "B — connect — pressing its button",
+      "page": "page-2"
+    },
+    {
+      "file": "ConnectB-working.dc.html",
+      "x": 2070,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "B — connect — the wait",
+      "page": "page-2"
+    },
+    {
+      "file": "ConnectB-landed.dc.html",
+      "x": 2580,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "B — connect — which room",
+      "page": "page-2"
+    },
+    {
+      "file": "PairC.dc.html",
+      "x": 0,
+      "y": 1100,
+      "w": 1440,
+      "h": 900,
+      "title": "C — pair — the Add page",
+      "page": "page-2"
+    },
+    {
+      "file": "PairC-press.dc.html",
+      "x": 1560,
+      "y": 1100,
+      "w": 390,
+      "h": 844,
+      "title": "C — pair — pressing its button",
+      "page": "page-2"
+    },
+    {
+      "file": "PairC-working.dc.html",
+      "x": 2070,
+      "y": 1100,
+      "w": 390,
+      "h": 844,
+      "title": "C — pair — the wait",
+      "page": "page-2"
+    },
+    {
+      "file": "PairC-landed.dc.html",
+      "x": 2580,
+      "y": 1100,
+      "w": 390,
+      "h": 844,
+      "title": "C — pair — which room",
+      "page": "page-2"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "why",
+      "x": -620,
+      "y": 0,
+      "w": 500,
+      "text": "WHY THIS EXISTS\n\nThe third area of the wording pass (docs/wording.md): adding a thing to the house, the first part of Rooms and devices. It is also inside first run (What's in the house), which left these words alone for this area to settle.\n\nWHAT THE BOARDS ARE ABOUT: WORDS ONLY. The Add page is the shipped one (design/adding/, design/knock/); the phone screens are the shell's own beats -- prove it is yours, the wait, which room.\n\nTHE QUESTION: WHAT IS THE VERB FOR A THING JOINING THE HOUSE? Today it is LET IN -- \"Letting it in...\", \"asking to be let in\", \"Nothing is let in until you say so\", \"It would not join.\" -- the same word People just took off phones. Each row is one verb carried through every sentence, so the pick settles the whole flow.\n\nTHE WORDS ALREADY SETTLED ARE NOT REOPENED (docs/wording.md): Home only / Anywhere, wall screen, Someone with the passcode, say less, the machinery stays on The hub.\n\nCHOSEN: A, 2 October 2026.",
+      "page": "page-1"
+    },
+    {
+      "id": "today",
+      "x": 3120,
+      "y": 0,
+      "w": 620,
+      "text": "TODAY\n\nWord for word from Adding.vue, AddPage.vue, adding.ts and the pieces in prove/.\n\n1  \"Listening for anything new\", \"The house is listening\", \"stops listening\" -- what a radio does. The person is waiting for a device to show up.\n2  \"the hub goes quiet again\" -- ours, from design/knock/.\n3  \"Already waiting\" -- waiting for what? Found, nearby.\n4  \"Have a look\" -- the button adds it. It reads as a peek.\n5  \"A part of the house\" -- names nothing a person owns. It means another screen, or a bridge.\n6  \"Behind the scenes, on the hub's own page\" -- the page is called The hub in the list beside it.\n7  \"Letting it in...\" -- THE QUESTION.\n8  \"It's in.\" -- the same verb's other end.\n\nNOT DRAWN, SAME AREA (word for word):\n- \"It would not join.\" / \"That switch would not join.\" / \"Nothing joined.\" -- the verb again.\n- \"A switch is asking to be let in\" / \"Nothing nearby is asking to be let in\" / \"Listening for a switch that is asking to be let in...\" -- the verb.\n- \"A light strip is here -- Knocking, and it is lit\" -- knocking is ours.\n- \"Nearby, and not on your house yet\"\n- \"{n} more it can hear.\" -- the radio again.\n- Another screen, or a bridge (prove/House.vue): \"These two let you in rather than the other way round: plug one in, or open the house on it, and it comes to you.\" ; \"Nothing is let in until you say so -- A bridge that is knocking is only knocking.\" ; \"Then it wants a home of its own\" ; \"A panel is the house's own address, opened on a phone or a tablet and kept there.\"\n- \"Matter things carry a code printed under their QR square\" -- Matter is a standard; the person chose \"It came with a QR code\".\n- Signing in on the maker's page: \"If a page asks for your Home Assistant address, it is ...\" -- see SHARED.\n- The Nest-style key file (\"Redirect address\", \"client secret\") is the maker's own developer setup; plain words cannot make it simple, and it is left as it is.",
+      "page": "page-1"
+    },
+    {
+      "id": "shared",
+      "x": -620,
+      "y": 2200,
+      "w": 500,
+      "text": "WHAT ALL THREE FIX -- NOT A CHOICE\n\n- \"Looking for new devices\" -- \"The hub looks while this page is open, and stops when you leave.\"  (1, 2)\n- \"Found nearby\", and its button is \"Set up\".  (3, 4)\n- \"Or choose what you're adding\" (unchanged: \"What are you adding?\" when nothing is found).\n- The third door: \"Another screen, or a bridge -- A tablet for another room, or a bridge for your wall switches\".  (5)\n- The foot: \"Radios, bridges and anything not working are listed on The hub.\"  (6)\n- Pressing a button: \"It stops looking after a few minutes.\"\n- Naming it: \"Named after the room, so you usually won't need to type anything.\"\n- A strip: \"A light strip is here -- It's lit, so you can see which one.\"\n- \"{n} more nearby.\"\n- Matter: \"It carries a code printed under its QR square, on the case or in the box.\"\n- Another screen, or a bridge (House.vue), rewritten in the verb chosen: \"Both of these come to you: plug a bridge in, or open the house on a tablet, and the house asks you about it.\" / \"Plug it into a socket between the hub and your wall switches. It blinks amber while it starts up, and the house asks you about it.\" / \"Nothing is [verb] until you say so -- A bridge that's blinking has nothing of yours on it.\" / \"Then find it a spot -- A socket where it can reach your switches. The house tells you when it's in a good place.\" / \"Another screen -- Open the house on a tablet or phone and leave it there. Nothing to buy or install.\"\n- The maker's page: \"If their page asks for this hub's address (it may call it a Home Assistant address), it is ...\" -- the one place the name stays, because the person has to MATCH it on somebody else's page, the way commands.py matches room words. AGENTS.md section 6's exception for words the house matches rather than writes.",
+      "page": "page-1"
+    },
+    {
+      "id": "a",
+      "x": 3120,
+      "y": 1100,
+      "w": 560,
+      "text": "A -- ADD\n\nEverything is adding. \"Adding it...\", \"Added.\", \"It wasn't added.\", \"A switch is waiting to be added\", \"Nothing is added until you say so.\"\n\nFOR: it is the word already on the page -- the sheet is Add to the house, the door is +, the last button is Add another -- so the flow finishes in the word it started in. Nothing new to learn.\n\nAGAINST: \"Adding it...\" while the house negotiates with a radio is a little flat: it does not say anything is happening between the house and the thing. And \"It wasn't added\" sounds like the house declined, when the thing did not answer.",
+      "page": "page-1"
+    },
+    {
+      "id": "b",
+      "x": 3120,
+      "y": 0,
+      "w": 560,
+      "text": "B -- CONNECT\n\n\"Connecting...\", \"Connected.\", \"It didn't connect.\", \"A switch is ready to connect\", \"Nothing connects until you say so.\"\n\nFOR: it says what is actually happening -- the house and the thing are reaching each other -- and every phone and laptop has taught it (Wi-Fi, Bluetooth). A failure reads as what it is: they did not reach each other.\n\nAGAINST: connect already means something else here. The status pill says CONNECTED about the panel and the hub, on every screen. A Connected. on a phone that just added a bulb sits under a CONNECTED that means something else.",
+      "page": "page-2"
+    },
+    {
+      "id": "c",
+      "x": 3120,
+      "y": 1100,
+      "w": 560,
+      "text": "C -- PAIR\n\n\"Pairing...\", \"Paired.\", \"It didn't pair.\", \"A switch is in pairing mode\", \"Put it in pairing mode now.\"\n\nFOR: it is the word printed on the boxes. Every bulb, plug and sensor manual says \"put it in pairing mode\", so the panel and the instructions in the person's hand say the same thing. Bluetooth headphones taught it to everybody.\n\nAGAINST: it fits a thing you hold and press, and fits badly elsewhere: \"signing in to Ring\" is not pairing, and the flow for an account would need its own verb. Paired. is also a little technical as the moment of success.",
+      "page": "page-2"
+    }
+  ],
+  "launch": {
+    "view": "canvas",
+    "page": "page-1"
+  }
+}

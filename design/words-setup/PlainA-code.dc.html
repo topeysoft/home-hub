@@ -1,0 +1,81 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200;300;400;500;600;700&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Plus Jakarta Sans", -apple-system, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      /* the panel's own tokens, from app/src/panel.css */
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77; --lamp: #e9b872; --lamp-ink: #2a1c07; --live: #74c69d; --bg: #0c0d10;
+      --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08); --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+    }
+    /* first run, measured off the running panel at 1440x900 (?setup=1&page=...): a 600px column at x 420, centered top to bottom */
+    .stage { position: relative; width: 1440px; height: 900px; overflow: hidden; color: var(--ink); font-size: 17px; line-height: 1.4;
+             background: linear-gradient(#1d3149 0%, #2b4258 38%, #34465a 62%, #2f3a2c 78%, #24271c 100%); }
+    .stage::before { content: ""; position: absolute; inset: 0; background: radial-gradient(40% 30% at 70% 12%, rgba(255,255,255,.10), transparent 70%), radial-gradient(30% 25% at 18% 30%, rgba(255,255,255,.07), transparent 70%); }
+    .hill { position: absolute; left: 0; bottom: 0; }
+    .col { position: absolute; left: 420px; top: 0; width: 600px; height: 900px; display: flex; flex-direction: column; justify-content: center; }
+    .col.top { justify-content: flex-start; padding-top: 54px; }
+    .col.end { justify-content: flex-end; padding-bottom: 46px; }
+    .setup-step { margin: 0 0 12px; min-height: 16px; font-size: 11.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+    .mark { width: 64px; height: 64px; border-radius: 28px; display: grid; place-items: center; background: var(--surface); border: 1px solid var(--edge-hi); color: var(--lamp); margin-bottom: 26px; }
+    .mark.done { background: var(--live); border-color: transparent; color: #0b2216; }
+    h1 { margin: 0; font-size: 54px; font-weight: 400; letter-spacing: -1.35px; line-height: 1.02; }
+    .lede { margin: 14px 0 26px; font-size: 18px; line-height: 1.4; color: var(--ink-2); }
+    .note { display: flex; gap: 10px; align-items: flex-start; margin: -12px 0 26px; padding: 12px 14px; border-radius: 14px; background: var(--surface);
+            border: 1px solid var(--edge); color: var(--ink-2); font-size: 14.5px; line-height: 1.45; max-width: 52ch; }
+    .note svg { flex: none; margin-top: 2px; color: var(--lamp); }
+    .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; width: 260px; }
+    .field-label { font-size: 13.5px; color: var(--ink-2); }
+    .input { height: 50px; border-radius: 14px; background: var(--surface-hi); border: 1px solid var(--edge); }
+    .btn { display: inline-flex; align-items: center; padding: 15px 28px; border-radius: 999px; background: var(--ink); color: var(--bg); font-size: 17px; font-weight: 500; width: fit-content; }
+    .btn.small { padding: 8px 14px; font-size: 14px; }
+    .btn.ghost { background: var(--surface-hi); color: var(--ink); border: 1px solid var(--edge); }
+    .actions { display: flex; gap: 12px; align-items: center; margin-top: 10px; }
+    .foot { margin-top: 22px; font-size: 13px; color: var(--muted); }
+    .foot u { color: var(--ink-2); text-decoration: none; border-bottom: 1px solid var(--edge-hi); }
+    .label { margin: 26px 0 10px; font-size: 11.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); font-weight: 400; }
+    .cards { display: flex; flex-direction: column; gap: 10px; }
+    .card { display: grid; grid-template-columns: auto 1fr auto; gap: 14px; align-items: center; padding: 14px 16px; border-radius: 16px; background: var(--surface); border: 1px solid var(--edge); }
+    .card .ic { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; background: var(--surface-hi); color: var(--ink-2); }
+    .card b { display: block; font-size: 18px; font-weight: 400; }
+    .card span.s { display: block; font-size: 14px; color: var(--muted); }
+    .drivers { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+    .drivers li { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 14px; background: var(--surface); border: 1px solid var(--edge); }
+    .drivers li.sign-in { background: linear-gradient(rgba(233,184,114,.1), rgba(233,184,114,.1)), var(--surface); border-color: rgba(233,184,114,.3); }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--edge-hi); }
+    .ready .dot { background: var(--live); }
+    .sign-in .dot { background: var(--lamp); box-shadow: 0 0 8px 2px rgba(233,184,114,.45); }
+    .dn { display: block; font-size: 15px; font-weight: 500; }
+    .off .dn { color: var(--ink-2); }
+    .ds { display: block; font-size: 13px; color: var(--muted); }
+    .phone { display: grid; grid-template-columns: 148px 1fr; gap: 18px; padding: 14px; border-radius: 16px; background: var(--surface); border: 1px solid var(--edge); font-size: 14.5px; color: var(--ink-2); margin-bottom: 20px; }
+    .qr { width: 148px; height: 148px; border-radius: 12px; background: #fff; display: grid; place-items: center; }
+    .qr i { width: 112px; height: 112px; background: repeating-linear-gradient(90deg, #111 0 8px, #fff 8px 14px), #111; -webkit-mask: repeating-linear-gradient(#000 0 9px, transparent 9px 15px); }
+    .phone b { color: var(--ink); font-weight: 500; }
+    .tips { list-style: none; margin: 0 0 18px; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+    .tips li { display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: center; padding: 14px 16px; border-radius: 16px; background: var(--surface); border: 1px solid var(--edge); color: var(--ink-2); font-size: 15px; }
+    .tips b { color: var(--ink); font-weight: 500; }
+    .tip-icon { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: var(--surface-hi); color: var(--lamp); }
+    /* a word under review, numbered to match the note beside the board */
+    .mk { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; margin: 0 2px 0 4px; border-radius: 999px; background: var(--lamp); color: var(--lamp-ink);
+          font-size: 11px; font-weight: 600; line-height: 1; vertical-align: 3px; letter-spacing: 0; text-transform: none; font-style: normal; }
+    h1 .mk { vertical-align: 18px; }
+    u.w { text-decoration: underline wavy rgba(233,184,114,.75); text-underline-offset: 4px; text-decoration-thickness: 1px; }
+  </style>
+</helmet>
+
+<!-- A — same sentences, plain words -- first run, code. -->
+<div class="stage"><svg class="hill" width="1440" height="260" viewBox="0 0 1440 260"><path d="M0 70 C200 30 420 90 700 60 S 1100 20 1440 50 V260 H0Z" fill="rgba(30,32,22,.55)"/></svg><div class="col"><p class="setup-step">Step 2 of 5</p><h1>A passcode for changes.</h1><p class="lede">Four to eight digits. Everyone can still use the lights and the rest from the wall screen without it. The passcode is for <em>changing</em> the house: adding phones and devices, renaming rooms, making a backup.</p><p class="note"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="10" rx="2.4"/><path d="M8.4 10.5V7.6a3.6 3.6 0 017.2 0v2.9"/></svg><span>The one step that can’t wait. Until it is set, anyone on your Wi‑Fi can change the house too.</span></p><label class="field"><span class="field-label">Passcode</span><span class="input"></span></label><label class="field"><span class="field-label">Type it again</span><span class="input"></span></label><div class="actions"><span class="btn">Continue</span></div></div></div>
+</x-dc>
+</body>
+</html>
