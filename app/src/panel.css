@@ -9820,6 +9820,63 @@ select.input {
   flex: 1 1 auto;
   min-width: 0;
 }
+/* THE ROOFLINE'S OWN PANE (design/roofline/DrawnC.dc.html, chosen 1 October 2026). The same two columns
+   as every pane, then the roof drawn across the floor under both of them, where a lamp's facts and its
+   day would be. The instrument loses its frame here because it is not one thing in a box any more: a bar
+   and two cards, each with its own edge, sitting straight on the pane as the board draws them. */
+.pane-body.pane-roof {
+  grid-template-rows: auto minmax(0, 1fr);
+  row-gap: 20px;
+}
+.pane-roof .pane-rig {
+  grid-row: 1;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  overflow: visible;
+}
+.pane-roof .roof-plate {
+  grid-column: 1 / -1;
+  grid-row: 2;
+}
+/* the left column's one sentence, at the board's measure so the roof starts where the board starts it;
+   in the danger color when it is saying what is wrong */
+.pane-roof .pane-why {
+  margin-top: 15px;
+  font-size: 16px;
+  line-height: 23px;
+}
+.pane-why.roof-wrong {
+  color: var(--danger);
+}
+@media (max-height: 860px) and (min-width: 861px) {
+  .pane-body.pane-roof {
+    row-gap: 16px;
+  }
+}
+/* A LEFT COLUMN WITH QUIET ROWS IN IT -- the house shares its lights with other apps, or the pane is
+   being edited -- is taller than the board's, and the roof would go under the foot of the wall. Then the
+   roof keeps to the right-hand column, under the controls, and the left column runs the full height
+   beside it: the same plate, the same order round, only shorter. Nothing scrolls either way. */
+@media (min-width: 861px) {
+  .pane-body.pane-roof:has(.pane-said .opened-kind) .pane-said {
+    grid-row: 1 / span 2;
+  }
+  .pane-body.pane-roof:has(.pane-said .opened-kind) .roof-plate {
+    grid-column: 2;
+  }
+}
+@media (max-width: 860px) {
+  .pane-roof .pane-rig {
+    grid-row: 2;
+  }
+  .pane-roof .roof-plate {
+    grid-row: 3;
+    margin-bottom: 24px;
+  }
+}
 
 /* ---------- Outside: the forecast, in the pane the lozenge opens ----------
    WeatherPane.vue says why the weather gets a pane at all. What is here is the

@@ -3,7 +3,7 @@
   SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 <script setup lang="ts">
-import { computed, nextTick, ref } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { store, notify, loadRoutines, loadRoofline, visibleRooms } from './store'
 import { say, act, keepLook, dropLook, type Proposal, type Said } from './api'
 import { canListen, listen, type Ear } from './ear'
@@ -115,6 +115,17 @@ async function keepIt() {
   keeping.value = false
 }
 async function notThis() { look.value = null; try { await dropLook(); loadRoofline() } catch {} }
+
+/* Opened from somewhere else with the start of a sentence already in it -- the Roofline's "Say another
+   look" -- so what is typed next finishes it. The last answer goes, as it does for any new sentence. */
+watch(() => store.sayStart, async (start) => {
+  if (start == null) return
+  store.sayStart = null
+  hush(); note.value = ''; answer.value = ''; proposal.value = null; look.value = null
+  text.value = start
+  await nextTick()
+  field.value?.focus()
+}, { immediate: true })
 
 async function go(spoken = false) {
   const said = text.value.trim()

@@ -156,19 +156,25 @@ export function previewRoofline(kind: string): Roofline {
       { chip: 'c', run: 1, name: 'Pink', led: LED.pink, place: 'Garage end', nth: kind === 'done' ? 3 : null, turned: kind === 'done' },
     ],
   } : null
+  /* The look as the brain gives it (roofline.py `look_of`): emitter colors, motion, block and pace. */
+  const look = occ[0] === 'halloween' ? { colors: [LED.orange, LED.orange, LED.purple], block: 1, ms: 1600 }
+    : occ[0] ? { colors: [LED.red, LED.green], block: 4, ms: 2800 } : { colors: [LED.warm], block: 1, ms: 0 }
+  /* The way round as the board draws it: two runs turned against it, each run its own length. */
+  const order = [{ chip: 'a', run: 1, dir: 1 }, { chip: 'b', run: 1, dir: -1 }, { chip: 'b', run: 2, dir: 1 }, { chip: 'c', run: 1, dir: -1 }]
   return {
-    exists: true, light: 'roofline', runs: 4, lights: 412, order: kind === 'ask' || yard ? null : [], turned: 2,
+    exists: true, light: 'roofline', runs: 4, lights: 412, order: kind === 'ask' || yard ? null : order, turned: 2,
+    parts: [{ chip: 'a', run: 1, count: 110 }, { chip: 'b', run: 1, count: 110 }, { chip: 'b', run: 2, count: 96 }, { chip: 'c', run: 1, count: 96 }],
     ask_order: kind === 'ask', yard,
     boxes: [
       { chip: 'a', place: 'Left corner', runs: 1, online: true, state: 'Fine', sub: '' },
       { chip: 'b', place: 'Right of the door', runs: 2, online: true, state: 'Fine', sub: '' },
-      dark ? { chip: 'c', place: 'Garage end', runs: 1, online: true, state: 'Dark', held: 'supply', sub: 'On a different power supply. Plug the 12 V supply back in.' }
+      dark ? { chip: 'c', place: 'Garage end', runs: 1, online: true, state: 'Dark', held: 'supply', dark_runs: [1], sub: 'On a different power supply. Plug the 12 V supply back in.' }
            : { chip: 'c', place: 'Garage end', runs: 1, online: true, state: 'Fine', sub: '' },
     ],
     evenings: 'every', evenings_words: 'Every evening', until: '23:00', until_words: '11:00', dusk: null,
     still: kind === 'still', occasion: occ[0], occasion_name: occ[1],
     words: kind === 'still' ? 'Red and green, held still' : occ[2],
-    look: { motion: kind === 'still' ? 'still' : (occ[3] as string) }, kept: [], draft: null,
+    look: kind === 'still' ? { motion: 'still', ...look, block: 4 } : { motion: occ[3] as string, ...look }, kept: [], draft: null,
     why: occ[1] ? `On at dusk because it keeps evenings. ${occ[1]} is on in the house, so that is how it looks.`
       : 'On at dusk because it keeps evenings, in its everyday warm white. No occasion, no colors.',
     came_on: null,

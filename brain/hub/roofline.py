@@ -103,6 +103,19 @@ def occasion_on(day: date) -> str | None:
     return None
 
 
+def dates_of(occasion: str | None, year: int) -> str | None:
+    """When an occasion runs, as the look card on the Roofline's pane says it (design/roofline/DrawnC):
+    "Dec 1 – Jan 6". The same dates `occasion_on` decides by, so the card cannot disagree with the roof."""
+    if occasion == "christmas": return "Dec 1 – Jan 6"
+    if occasion == "halloween": return "Oct 24 – Nov 1"
+    if occasion == "july4": return "Jul 3 – 5"
+    if occasion == "easter":
+        a, b = easter(year) - timedelta(days=1), easter(year) + timedelta(days=1)
+        end = f"{b:%b} {b.day}" if a.month != b.month else str(b.day)
+        return f"{a:%b} {a.day} – {end}"
+    return None
+
+
 def look_of(occasion: str | None, kept: dict | None = None, still: bool = False, outside: bool = True) -> dict:
     """The look a light is given: its colors as emitter bytes, its motion, its block and its pace.
 
@@ -623,11 +636,14 @@ class Roofline:
         return {
             "exists": True, "light": lead.id if lead else None, "boxes": boxes, "runs": len(parts), "lights": lights,
             "order": order, "turned": sum(1 for o in (order or []) if int(o.get("dir") or 1) < 0),
+            # each run's lights, which the pane draws its length from (design/roofline/DrawnC.dc.html)
+            "parts": [{"chip": p["chip"], "run": int(p["run"]), "count": int(p.get("count") or 0)} for p in parts],
             "ask_order": self.wants_order(), "yard": self.yard(),
             "evenings": d.get("evenings"), "evenings_words": EVENING_WORDS.get(d.get("evenings") or "", None),
             "until": d.get("until") or UNTIL, "until_words": said_time(_hhmm(d.get("until") or UNTIL)),
             "dusk": ev[0].isoformat(timespec="minutes") if ev else None,
             "still": bool(d.get("still")), "occasion": occ, "occasion_name": OCCASIONS.get(occ or "", {}).get("name"),
+            "occasion_dates": dates_of(occ, now.year),
             "look": look, "words": self.words(occ, look),
             "kept": sorted((d.get("looks") or {}).keys()),
             "draft": ({"occasion": self._draft.get("occasion"), "words": self._draft.get("words")}
