@@ -847,7 +847,20 @@ const bridgeRows = process.env.BRIDGES === 'none' ? [] : [
     json(res, { offer: { open: true, price: '$3 a month', pay: 'https://pay.example/start' }, guess: 'temi', house: name, address: `${name}.elyir.app`, want: 'on', carried: false })
   }) }
   if ((p === '/address/on' || p === '/address/off') && req.method === 'POST') { mockAddress.want = p.endsWith('on') ? 'on' : 'off'; return json(res, { offer: { open: true, price: '$3 a month', pay: null }, guess: 'temi', house: mockAddress.house, address: `${mockAddress.house}.elyir.app`, want: mockAddress.want, carried: true, on: mockAddress.want === 'on', entitled_until: Date.UTC(2027, 9, 1) / 1000 }) }
-  if (p === '/phones/me') return json(res, { locked: !!process.env.LOCKED, paired: true, home: 'Main Palace', phone: null })
+  /* The house's own address and a phone that has not moved to it yet (design/away/, C). ADDRESS=1 gives the house
+     one; the phone reading /phones/me is then Temi's iPhone, so the band line and the From outside switch show. */
+  if (p === '/phones/me') return json(res, process.env.ADDRESS
+    ? { locked: !!process.env.LOCKED, paired: true, home: 'Main Palace', phone: { ...phones.phones[1], me: true, moved: !!process.env.MOVED }, away: false,
+        lan: '192-168-86-53.main-palace.home.elyir.app', address: 'https://main-palace.elyir.app' }
+    : { locked: !!process.env.LOCKED, paired: true, home: 'Main Palace', phone: null })
+  if (p === '/phones/move' && req.method === 'POST') return json(res, { code: 'mockcode', url: 'https://main-palace.elyir.app/?move=mockcode', ttl: 600 })
+  if (p === '/phones/move/claim' && req.method === 'POST') return json(res, { token: 'mocktoken', phone: phones.phones[1], lan: '192-168-86-53.main-palace.home.elyir.app' })
+  const remote = p.match(/^\/phones\/([^/]+)\/remote$/)
+  if (remote && req.method === 'POST') { let b = ''; req.on('data', c => (b += c)); return req.on('end', () => {
+    const ph = phones.phones.find(x => x.id === remote[1]); let on = false; try { on = !!JSON.parse(b).remote } catch {}
+    if (ph) ph.remote = on
+    json(res, ph ?? {})
+  }) }
   if (p === '/phones') return json(res, phones)
   /* What this house has: one door holding everything, grouped by what brought it. Derived from the
      mock house rather than written out, so the page cannot drift from the rooms beside it -- and so

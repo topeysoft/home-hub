@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Temitope Adeyeri
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { request } from './code'
+import { apiUrl, withToken, wsProtocols, wsUrl } from './door'
 /* `capability` is the driver's word for what this is and it picks the Home Assistant service; `kind` is
    the owner's, where they have given one. Read the two together through cap() in store.ts, never the raw
    field: a lamp on a smart plug is a switch to the driver and a light to everybody who lives there. */
@@ -741,12 +742,15 @@ export async function setHomeIntent(state: string) {
 }
 export const imageUrl = (id: string) => `/devices/${encodeURIComponent(id)}/image?t=${Date.now()}`
 
+let live: WebSocket | null = null
+/** Drop the live link so it reconnects through whichever door is right now (door.ts): home, or the relay. */
+export function kickStream() { live?.close() }
+
 /** Live updates from the brain. Reconnects with backoff; reports link state. */
 export function connect(on: { device: (d: Device) => void; home: (h: Home) => void; ambient: (a: Ambient) => void; status: (s: Status) => void; intent: (i: Intent) => void; drafts: (d: Routine[]) => void; presence: (p: Presence) => void; phones: () => void; share: () => void; signals: (t: TryBrief | null) => void; roofline?: (r: Roofline) => void; link: (up: boolean) => void }) {
   let delay = 1000, ws: WebSocket | null = null, closed = false
   const open = () => {
-    const proto = location.protocol === 'https:' ? 'wss' : 'ws'
-    ws = new WebSocket(`${proto}://${location.host}/stream`)
+    ws = live = new WebSocket(wsUrl('/stream'), wsProtocols())   // the token rides as a subprotocol, never in the URL (door.ts)
     ws.onopen = () => { delay = 1000; on.link(true) }
     ws.onmessage = (e) => {
       const m = JSON.parse(e.data)
@@ -794,10 +798,17 @@ export const qrUrl = (text: string) => `/qr.svg?text=${encodeURIComponent(text)}
 
 /* The phones that belong to the house, once it has a code. A phone gets in by typing the code, or by asking and being
    allowed from a screen that is already in; the hub keeps a hash and the phone a cookie, so removing one is instant. */
-export type Phone = { id: string; name: string; kind: 'wall' | 'phone' | null; joined: number; expires: number | null; remote: boolean; last_seen: number | null; how: 'code' | 'wall' | 'setup'; me: boolean }
+export type Phone = { id: string; name: string; kind: 'wall' | 'phone' | null; joined: number; expires: number | null; remote: boolean; last_seen: number | null; how: 'code' | 'wall' | 'setup'; me: boolean; moved?: boolean }
 export type Ask = { id: string; name: string; kind: string | null; asked: number }
-export type Me = { locked: boolean; paired: boolean; home: string; phone: Phone | null }
-export async function getMe(): Promise<Me> { const r = await fetch('/phones/me'); if (!r.ok) await fail(r); return r.json() }
+export type Me = { locked: boolean; paired: boolean; home: string; phone: Phone | null; away?: boolean; lan?: string | null; address?: string | null }
+export async function getMe(): Promise<Me> { const r = await fetch(apiUrl('/phones/me'), { headers: withToken(new Headers()) }); if (!r.ok) await fail(r); return r.json() }
+/** Moving this phone to the house's own name (design/away/, C): a one-time code minted here, at home. */
+export const startMove = () => post<{ code: string; url: string; ttl: number }>('/phones/move')
+/** ...and picked up on the other side, where the page has nothing yet but the code. */
+export async function claimMove(code: string): Promise<{ token: string; phone: Phone; lan: string | null }> {
+  const r = await fetch('/phones/move/claim', { method: 'POST', headers: json, body: JSON.stringify({ code }) }); if (!r.ok) await fail(r); return r.json()
+}
+export const letOut = (id: string, remote: boolean) => post<Phone>(`/phones/${encodeURIComponent(id)}/remote`, { remote })
 export async function getPhones(): Promise<{ phones: Phone[]; asks: Ask[] }> { const r = await request('/phones'); if (!r.ok) await fail(r); return r.json() }
 export const askToJoin = (name: string) => post<Ask>('/phones/ask', { name })
 export async function claimJoin(id: string): Promise<{ state: 'waiting' | 'allowed' | 'gone'; phone?: Phone }> { const r = await fetch(`/phones/claim/${encodeURIComponent(id)}`); if (!r.ok) await fail(r); return r.json() }

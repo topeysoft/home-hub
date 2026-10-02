@@ -1,7 +1,9 @@
 // SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+import { learnLan, look, moved, watchDoor } from './door'
+import { moveCode, withoutCode } from './move'
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { reactive, watch } from 'vue'
-import { doRestart, type Rung, getBridge, type Bridge, getStrip, stripLooking, type Strip, getHome, getEvents, getAmbient, getScenes, getStatus, getDiscovered, getRoutines, getAssistant, getPresence, getHealth, getSounds, connect, act, setIntent, setHomeIntent, type Room, type Device, type Home, type Event, type Ambient, type Rules, type Status, type Found, type Intent, type Routine, type Assistant, type Presence, type Note, type Sound, requestUpdate, getPhones, type Phone, type Ask, getAccounts, type Account, getShare, type Share, getHappened, type Happened, getChanges, type Changes, getSignals, type SignalsPage, type TryBrief, getRoofline, type Roofline } from './api'
+import { getMe, claimMove, kickStream, type Me, doRestart, type Rung, getBridge, type Bridge, getStrip, stripLooking, type Strip, getHome, getEvents, getAmbient, getScenes, getStatus, getDiscovered, getRoutines, getAssistant, getPresence, getHealth, getSounds, connect, act, setIntent, setHomeIntent, type Room, type Device, type Home, type Event, type Ambient, type Rules, type Status, type Found, type Intent, type Routine, type Assistant, type Presence, type Note, type Sound, requestUpdate, getPhones, type Phone, type Ask, getAccounts, type Account, getShare, type Share, getHappened, type Happened, getChanges, type Changes, getSignals, type SignalsPage, type TryBrief, getRoofline, type Roofline } from './api'
 import { previewHeld, previewHeldNote, previewRoofDevice, previewRoofline, previewStripBeat } from './controller'
 import { lock } from './code'
 import { isPage } from './pages'
@@ -74,6 +76,8 @@ export const store = reactive({
   restarting: null as null | { rung: Rung; at: number; seconds: number; left: number; lost: boolean; from: Sheet },
   previewSetup: new URLSearchParams(location.search).get('setup') === '1',   // ?setup=1 previews first run; cleared by Open Home
   status: null as Status | null,            // where the hub is in its life: engine down, fresh, ready; and whether setup finished
+  me: null as Me | null,            // what the hub says about this phone: paired, moved, the house's address and name at home
+  moving: false,                      // the Move this phone page is up (MovePage.vue)
   phones: [] as Phone[], asks: [] as Ask[],  // the phones that belong to the house, and the ones asking to
   /* Sharing changed, or somebody scanned the code: a counter rather than the state itself, because
      only This hub draws it and a page that is not open should not be kept up to date. */
@@ -854,7 +858,28 @@ let stop: (() => void) | undefined, lostTimer: number | undefined, skyTimer: num
    it in gets to see it -- so it can ask which room while somebody is still standing next to it. */
 export async function reloadHome() { try { applyHome(await getHome()) } catch {} }
 
+/* A move arrives as <address>/?move=<code> (design/away/, C): pick up this phone's token on this name before
+   anything asks the hub for anything, then take the code out of the address so nothing carries a spent one. */
+async function landMove() {
+  const code = moveCode(location.search)
+  if (!code) return
+  history.replaceState(null, '', withoutCode(location.href))
+  try {
+    const got = await claimMove(code)
+    moved(got.token, got.lan)
+    notify('This phone has moved. Add it to your home screen, then remove the old icon.')
+  } catch (e: any) { notify(e.message, 'error') }
+}
+/* What the hub says about this phone, and where to reach it: the name at home it gave, looked for at once. */
+export async function loadMe() {
+  try { store.me = await getMe(); learnLan(store.me.lan) } catch { return }
+  await look()
+}
+let doorWatched = false
 export async function load() {
+  await landMove()
+  await loadMe()
+  if (!doorWatched) { doorWatched = true; watchDoor(kickStream) }
   await refreshStatus()
   if (lock.unpaired) return                    // the join screen is up; the house answers once this phone is in
   try { applyHome(await getHome()) } catch { store.error = 'The hub is not answering.' }

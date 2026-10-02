@@ -49,6 +49,7 @@ class Phones:
     def __init__(self, hub, path: Path | None = None):
         self.hub = hub
         self.path = path or DATA / "phones.json"
+        self.moves: dict[str, tuple[str, float]] = {}   # in memory: a one-time move code -> (phone id, good until)
         self.asks: dict[str, dict] = {}      # in memory: id -> {"id", "name", "asked", "token": str | None, "denied": bool, "expires"}
         try: self.data = json.loads(self.path.read_text()) if self.path.exists() else []
         except Exception: self.data = []
@@ -73,7 +74,8 @@ class Phones:
 
     @staticmethod
     def _public(p: dict, me: dict | None = None) -> dict:
-        return {k: p.get(k) for k in ("id", "name", "kind", "joined", "expires", "remote", "last_seen", "how")} | {"me": bool(me and me["id"] == p["id"])}
+        return {k: p.get(k) for k in ("id", "name", "kind", "joined", "expires", "remote", "last_seen", "how")} | {
+            "me": bool(me and me["id"] == p["id"]), "moved": bool((p.get("moved_to") or {}).get("at"))}
 
     def list(self, me: dict | None = None) -> dict:
         """What this phone may see. A phone that holds no keys sees itself and nothing else.
@@ -98,7 +100,7 @@ class Phones:
         if not token: return None
         self._sweep()
         h = _hash(token)
-        p = next((p for p in self.data if p.get("hash") == h), None)
+        p = next((p for p in self.data if p.get("hash") == h or h in (p.get("moved_to") or {}).get("hashes", [])), None)
         if not p: return None
         if time.time() - (p.get("last_seen") or 0) > SEEN_EVERY:
             p["last_seen"] = time.time(); self._save()
@@ -158,6 +160,38 @@ class Phones:
         return "allowed", self.get(a["phone"]), a["token"]
 
     # ---- leaving ----
+    # ---- moving to the house's own name (design/away/, C) ----
+    # A phone is remembered under the name it joined on, because a browser keeps its cookie per name. Moving it
+    # to <house>.elyir.app is a hand-off made at home: the phone, already the house's, asks for a code here,
+    # opens the house's own name with it, and is given a token there for the SAME phone -- same record, same
+    # name, same stay, same `remote`. Its old token keeps working until the household removes the old icon,
+    # so a move that is abandoned halfway costs nothing. The code is good once, for ten minutes, and is only
+    # ever minted for a phone that is already in, from inside the house.
+    MOVE_TTL = 10 * 60
+
+    def start_move(self, phone_id: str) -> str:
+        if not self.get(phone_id): raise KeyError(phone_id)
+        now = time.time()
+        self.moves = {c: m for c, m in self.moves.items() if m[1] > now}
+        code = secrets.token_urlsafe(16)
+        self.moves[code] = (phone_id, now + self.MOVE_TTL)
+        return code
+
+    def claim_move(self, code: str) -> tuple[dict, str] | None:
+        """The phone, and a new token for it, for a code minted at home in the last ten minutes. Once only."""
+        m = self.moves.pop(code or "", None)
+        if not m or m[1] < time.time(): return None
+        p = self.get(m[0])
+        if not p: return None
+        token = secrets.token_urlsafe(32)
+        moved = p.setdefault("moved_to", {"at": None, "hashes": []})
+        moved["hashes"] = (moved.get("hashes") or [])[-2:] + [_hash(token)]   # a phone moved three times keeps the last three
+        moved["at"] = time.time()
+        self._save()
+        self.hub.log.add("phone", p["id"], None, "moved", source="user", detail={"name": p["name"]})
+        self._changed()
+        return p, token
+
     def remove(self, phone_id: str) -> bool:
         p = self.get(phone_id)
         if not p: return False
@@ -199,7 +233,7 @@ class Phones:
 # carries no secret -- the shipped image is blank until the cable writes to it -- and the only name
 # that answers is the hash the hub is offering today (hub/bridge_updates.py).
 OPEN_PREFIXES = ("/phones/claim/", "/assets/", "/sounds/", "/icons/", "/bridge/firmware/")
-OPEN_PATHS = {"/", "/alive", "/phones/me", "/phones/ask", "/phones/code", "/qr.svg", "/phone", "/index.html", "/manifest.webmanifest", "/sw.js", "/favicon.ico", "/favicon.svg", "/robots.txt"}
+OPEN_PATHS = {"/", "/alive", "/phones/me", "/phones/ask", "/phones/code", "/phones/move/claim", "/qr.svg", "/phone", "/index.html", "/manifest.webmanifest", "/sw.js", "/favicon.ico", "/favicon.svg", "/robots.txt"}
 OPEN_SUFFIXES = (".js", ".css", ".svg", ".png", ".ico", ".woff2", ".webmanifest", ".json", ".html", ".txt", ".map")
 NOT_THE_APP = {"/openapi.json"}
 

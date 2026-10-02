@@ -3497,6 +3497,45 @@ input:focus-visible {
 .address-wait .setup-status {
   margin: 0;
 }
+/* Move this phone (MovePage.vue; design/away/, NamedC-move): three steps, only the first of which the page can
+   do, numbered in quiet circles the way the board draws them. `move-` throughout: the sheet is flat. */
+.move-steps {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: min(52ch, 100%);
+}
+.move-steps li {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 12px;
+  align-items: start;
+  font-size: 15.5px;
+  line-height: 1.35;
+}
+.move-steps b {
+  font-weight: 500;
+}
+.move-n {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  background: var(--surface-hi);
+  border: 1px solid var(--edge);
+  color: var(--ink-2);
+}
+.move-s {
+  display: block;
+  font-size: 13.5px;
+  color: var(--muted);
+  margin-top: 2px;
+}
 .pulse-dot {
   width: 8px;
   height: 8px;
@@ -5702,6 +5741,18 @@ select.input {
   border-radius: var(--r-md);
   background: var(--surface);
   border: 1px solid var(--edge);
+}
+/* A phone row with the From outside switch (PeoplePage.vue; design/away/, NamedC): the switch sits between the
+   name and Remove, so a row that has one gets a column for it and the rows without keep theirs. */
+.phones li:has(.phones-outside) {
+  grid-template-columns: auto 1fr auto auto;
+}
+.phones-outside {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--ink-2);
 }
 .phones-icon {
   width: 32px;

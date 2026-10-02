@@ -184,6 +184,25 @@ class Address:
         os.replace(tmp, VALUES)
         REQUEST.write_text(json.dumps({"at": self.now(), "want": want}))
 
+    def public_origin(self) -> str | None:
+        """https://<house>.<zone>, once the house has an address: the one origin allowed to call this hub across names."""
+        st = self._state()
+        return f"https://{st['house']}.{st['zone']}" if st.get("house") and st.get("zone") else None
+
+    def lan_name(self) -> str | None:
+        """The house's name at home, as host/away.sh last wrote it into .env -- read from the driver layer the brain
+        can see, because away.sh writes it after the brain started and the brain's own environment would be stale."""
+        if not self._state().get("house"): return None
+        env = os.path.join(os.environ.get("HUB_DRIVER") or "/driver", ".env")
+        try:
+            with open(env) as f:
+                for line in f:
+                    if line.startswith("HUB_LAN_NAME="):
+                        v = line.split("=", 1)[1].strip()
+                        return v if HOST.match(v) and ".home." in v else None
+        except OSError: return None
+        return None
+
     # ---- what the panel shows ----
     def summary(self) -> dict:
         s = self._state()

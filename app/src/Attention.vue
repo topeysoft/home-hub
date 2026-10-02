@@ -32,11 +32,15 @@ import Say from './Say.vue'
 import Asks from './Asks.vue'
 import PhoneSteps from './PhoneSteps.vue'
 import { type BandLine, stripWaiting, waitingBand } from './adding'
+import { offerMove } from './move'
 
 /* What the band says about things waiting to be set up, as one line: found on the network, still
    knocking over Bluetooth, or both. `tick` is here because the line folds with AGE and nothing else
    changes when it does -- without something moving, a knock would keep shouting until the next poll
    happened to land. Once a minute is as exact as an hour needs. */
+/* The house has its own address and this phone has not moved to it yet (design/away/, NamedC-home): one line,
+   once, on every phone of the house -- never the wall, which stays home. */
+const moveTo = computed(() => offerMove(store.me, location.origin) ? (store.me?.address ?? '').replace(/^https:\/\//, '') : '')
 const tick = ref(Date.now())
 let t4: number | undefined
 const waiting = computed(() => waitingBand(store.found, store.strip, tick.value))
@@ -125,6 +129,10 @@ defineExpose({ updateReady })
        is the same line: a knock shouts for an hour, then folds in with whatever else is waiting,
        because a line that will not go away is the interruption again, slower. Which of those it is
        is waitingBand() in adding.ts, pinned by a test. -->
+  <button class="nudge" v-if="moveTo" @click="store.moving = true">
+    <span class="nudge-icon"><Icon name="globe" :size="20" /></span>
+    <span class="nudge-text"><span class="nudge-title">The house has its own address</span><span class="nudge-sub">Move this phone to {{ moveTo }}, once</span></span>
+  </button>
   <button class="nudge" v-for="w in waiting" :key="w.id" @click="openWaiting(w)">
     <span class="nudge-icon"><Icon :name="w.id === 'knock' ? 'light' : 'sparkle'" :size="20" /></span>
     <span class="nudge-text"><span class="nudge-title">{{ w.title }}</span><span class="nudge-sub">{{ w.sub }}</span></span>

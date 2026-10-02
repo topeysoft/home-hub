@@ -8,6 +8,7 @@ import { store, start, halt, load, visibleRooms, activity, roomActive, houseLine
 import Setup from './Setup.vue'
 import Join from './Join.vue'
 import Away from './Away.vue'
+import MovePage from './MovePage.vue'
 import CodePrompt from './CodePrompt.vue'
 import { lock } from './code'
 import Sky from './Sky.vue'
@@ -54,7 +55,7 @@ watch(selected, () => nextTick(() => document.querySelector('.rail-item.active')
 const setup = computed(() => !!store.status && (store.previewSetup || needsSetup()))
 /* The house is not showing: either this phone is not in it yet, or it is being reached from outside and
    the house did not open. Both put a screen of their own up in place of everything. */
-const shut = computed(() => lock.unpaired || !!lock.away)
+const shut = computed(() => lock.unpaired || !!lock.away || store.moving)   // a page that is the whole screen: nothing of the house under it
 const panel = computed(() => isPage(store.sheet))   // This house is open, on one of its pages
 /* A phone at the door opens its own pane, and stays open until it is answered or put aside. It is
    not `store.opened` -- that is a device -- but it is the same surface and the room recedes behind
@@ -221,6 +222,7 @@ onUnmounted(() => {
     <div class="sky-veil"></div>
     <Away v-if="lock.away" />
     <Join v-else-if="lock.unpaired" @joined="rejoin" />
+    <MovePage v-else-if="store.moving" />
     <Setup v-else-if="setup" />
     <TopBar v-if="!setup && !shut && nav === 'top'" :clock="clock" :day="day" :now="shown" :tab="tab" :in-room="!!room" @go="go" />
     <aside class="rail" v-if="!setup && !shut && nav === 'side'">

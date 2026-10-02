@@ -744,7 +744,7 @@ async def settings_lock(request: Request, call_next):
     request.state.phone = None
     request.state.away = from_away(request.headers)   # off the Wi-Fi, or in through the relay: docs/away.md piece 2
     m, path = request.method, request.url.path
-    phone = hub.phones.identify(request.cookies.get(COOKIE)) if hub.lock.locked else None
+    phone = hub.phones.identify(_phone_token(request)) if hub.lock.locked else None
     # Who is asking, for anything this request writes down. Set before call_next so the copy the
     # endpoint's task starts with has it, and only ever read for source="user" (events.py). A house
     # with no code has no phones to tell apart, so it stays unset and the log says nothing rather
@@ -794,6 +794,39 @@ async def panel_caching(request: Request, call_next):
         return r
     r.headers["Cache-Control"] = PANEL_FOREVER if path.startswith("/assets/") else PANEL_FRESH
     return r
+
+
+@app.middleware("http")
+async def across_names(request: Request, call_next):
+    """The app on the house's own name (https://<house>.elyir.app) calling the hub's name at home directly
+    (https://192-168-…-….<house>.home.elyir.app): two origins, so the browser asks first. Answered for that
+    one origin only -- not a wildcard, and not for any other site a phone has open -- including Chrome's
+    private-network question, since a public page is reaching a private address. Registered last so it
+    wraps the door: a refusal from settings_lock reaches the app with these headers, readable as a refusal
+    rather than as a network error. design/away/, C; docs/away.md."""
+    origin = request.headers.get("origin")
+    ok = bool(origin) and origin == hub.address.public_origin()
+    if ok and request.method == "OPTIONS" and request.headers.get("access-control-request-method"):
+        headers = {"Access-Control-Allow-Origin": origin, "Vary": "Origin", "Access-Control-Max-Age": "600",
+                   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE",
+                   "Access-Control-Allow-Headers": "Authorization, Content-Type, X-Hub-Code"}
+        if request.headers.get("access-control-request-private-network") == "true":
+            headers["Access-Control-Allow-Private-Network"] = "true"
+        return Response(status_code=204, headers=headers)
+    response = await call_next(request)
+    if ok:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Vary"] = "Origin"
+    return response
+
+
+def _phone_token(request) -> str | None:
+    """Which phone is asking: its cookie, or the same token as `Authorization: Bearer`. The bearer form is how a
+    phone on the house's own name talks to the hub's name at home across origins (design/away/, C), where its
+    cookie -- kept per name by the browser -- is not sent. Same token, same phone, same rules."""
+    auth = request.headers.get("authorization") or ""
+    if auth[:7].lower() == "bearer ": return auth[7:].strip() or None
+    return request.cookies.get(COOKIE)
 
 
 def _with_cookie(body: dict, request: Request, phone: dict, token: str) -> JSONResponse:
@@ -2101,11 +2134,24 @@ def _ws_refused(ws: WebSocket, bridge_ok: bool = False) -> int | None:
     host and never comes in from away; then, once the house has a code, only its own phones.
     Returns the close code to refuse with, or None to let it in.
     """
-    phone = hub.phones.identify(ws.cookies.get(COOKIE)) if hub.lock.locked else None
+    phone = hub.phones.identify(_ws_token(ws)) if hub.lock.locked else None
     if from_away(ws.headers) and not (phone and phone.get("remote")): return 4403
     if bridge_ok and hub.share.is_bridge(ws.headers.get(SERVICE_HEADER)): return None
     if hub.lock.locked and not phone: return 4401
     return None
+
+
+def _ws_token(ws: WebSocket) -> str | None:
+    """A websocket's phone: its cookie, or the token as the second of two subprotocols, `hub, <token>`. A browser
+    cannot set a header on a websocket, and a token in the query string would be written into every access log."""
+    offered = [p.strip() for p in (ws.headers.get("sec-websocket-protocol") or "").split(",")]
+    if len(offered) == 2 and offered[0] == "hub": return offered[1] or None
+    return ws.cookies.get(COOKIE)
+
+
+def _ws_accept_kwargs(ws: WebSocket) -> dict:
+    """Answer with the subprotocol the token came in, or the browser drops the connection."""
+    return {"subprotocol": "hub"} if (ws.headers.get("sec-websocket-protocol") or "").startswith("hub") else {}
 
 
 @app.websocket("/devices/{device_id}/webrtc")
@@ -2113,7 +2159,7 @@ async def device_webrtc(ws: WebSocket, device_id: str):
     """WebRTC signaling for one viewer: see hub/camera.py for the messages. A camera is the house's to show."""
     refused = _ws_refused(ws)
     if refused: await ws.close(code=refused); return
-    await ws.accept()
+    await ws.accept(**_ws_accept_kwargs(ws))
     dev = hub.home.devices.get(device_id) if hub.driver == "ready" else None
     if not dev or dev.capability != "camera":
         await ws.send_text(json.dumps({"type": "error", "code": "unknown", "message": "not a camera"}))
@@ -2255,11 +2301,39 @@ def phones_me(request: Request):
     not showing the house. To anyone out there who is not a phone this house has let out it gives no name
     and no way in: from outside, the house presents as locked, which is exactly what it is to them.
     """
-    phone = hub.phones.identify(request.cookies.get(COOKIE)) if hub.lock.locked else None
+    phone = hub.phones.identify(_phone_token(request)) if hub.lock.locked else None
     if request.state.away and not (phone and phone.get("remote")):
         return {"locked": True, "paired": False, "home": "the house", "phone": None, "away": True}   # no name, no way in
-    return {"locked": hub.lock.locked, "paired": (not hub.lock.locked) or bool(phone), "home": hub.settings.get("home_name") or "Home",
-            "phone": hub.phones._public(phone) if phone else None, "away": request.state.away}
+    paired = (not hub.lock.locked) or bool(phone)
+    # The house's name at home, for the app to reach the hub directly on the Wi-Fi -- told to its own phones only.
+    return {"locked": hub.lock.locked, "paired": paired, "home": hub.settings.get("home_name") or "Home",
+            "phone": hub.phones._public(phone) if phone else None, "away": request.state.away,
+            "lan": hub.address.lan_name() if paired else None, "address": hub.address.public_origin() if paired else None}
+
+
+@app.post("/phones/move")
+def phones_move(request: Request):
+    """A one-time code that carries this phone to the house's own name (design/away/, C). From inside the house,
+    by a phone that is already in, once the house has an address; the phone then opens <address>/?move=<code>."""
+    phone = request.state.phone
+    if request.state.away: raise HTTPException(403, "A phone moves to the house's address from inside the house.")
+    if not phone: raise HTTPException(409, "Only a phone that belongs to the house can move to its address.")
+    origin = hub.address.public_origin()
+    if not origin: raise HTTPException(409, "The house has no address of its own yet.")
+    code = hub.phones.start_move(phone["id"])
+    return {"code": code, "url": f"{origin}/?move={code}", "ttl": hub.phones.MOVE_TTL}
+
+
+@app.post("/phones/move/claim")
+def phones_move_claim(body: dict, request: Request):
+    """{"code": "..."}: the phone, on the house's own name now, picks up its token there. Open, because it has
+    nothing else yet; the code is the proof -- good once, for ten minutes, minted inside the house for a phone
+    that was already in. The token comes back in the body as well as the cookie, because the app on the
+    house's own name has to send it to the hub's name at home, where its cookie is not sent."""
+    got = hub.phones.claim_move(str(body.get("code") or ""))
+    if not got: raise HTTPException(410, "That move has run out. Start it again on the phone, at home.")
+    phone, token = got
+    return _with_cookie({"token": token, "phone": hub.phones._public(phone, phone), "lan": hub.address.lan_name()}, request, phone, token)
 
 
 @app.get("/phones")
@@ -2707,7 +2781,7 @@ async def stream(ws: WebSocket):
     # it does on its own routes: it has no cookie because it is not a phone. docs/matter.md.
     refused = _ws_refused(ws, bridge_ok=True)
     if refused: await ws.close(code=refused); return    # 4401: the join screen is the way in; 4403: not from out there
-    await ws.accept(); hub.streams.add(ws)
+    await ws.accept(**_ws_accept_kwargs(ws)); hub.streams.add(ws)
     try:
         await ws.send_text(json.dumps({"type": "status", "status": hub.status()}))
         while True: await ws.receive_text()
