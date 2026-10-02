@@ -336,10 +336,21 @@ never sees the setup step, so this is the way in:
    `sudo docker ps` (frpc running), `brain-data/away.log`, and from a phone off the Wi-Fi,
    `https://<name>.elyir.app` -- the house's own certificate, through the relay.
 
+**The alias that covers home, built 2 October 2026.** The relay box is the nameserver for `home.elyir.app`
+(`relay/service/home.py`): `192-168-86-53.main-palace.home.elyir.app` answers `192.168.86.53` for a carried house,
+only for private addresses. `host/away.sh` writes `HUB_LAN_NAME` from the address the hub really has -- not
+`HUB_IP`, which a DHCP lease had left behind on the maker's hub -- and `lan-cert` (stock lego) proves that one
+name over DNS-01 through the service, so Caddy serves it on the LAN (`caddy/away/on.caddy`). Caddy fetches the
+certificate at each handshake from a loopback-only file server, so until there is one only that name fails and
+nothing on the front door waits for it. Checked in miniature with Pebble as the CA and the service's own DNS
+server answering the challenge; not yet on the real relay, which needs a new `relay_service_ref` and an apply.
+If the hub's LAN address changes, the name changes with it the next time outside is turned on; nothing re-runs
+`away.sh` on its own yet.
+
 **What does not work yet, said plainly.** A phone off the Wi-Fi reaching that name gets *This house is not open
 from here*, because no phone has moved to the address and the *From outside* switch on *People* is not built
-(design/away/, C). That, payments, and the home alias are what is left; until the first two, the address
-proves the pipe and nothing more.
+(design/away/, C). That and payments are what is left; until then the address proves the pipe and nothing
+more.
 
 ## What was verified
 

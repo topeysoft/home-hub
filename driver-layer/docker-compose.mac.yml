@@ -48,6 +48,7 @@ services:
       # The away door is one of two files the Caddyfile imports, and an import Caddy cannot find stops it
       # starting at all -- the whole front door, not only the away one. Found 2 October 2026 on a real hub.
       - ./caddy/away:/etc/caddy/away:ro
+      - ./lan-cert/data:/lan:ro
       - ./caddy/data:/data
 
   ring-mqtt:

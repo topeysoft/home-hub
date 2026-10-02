@@ -85,3 +85,38 @@ resource "cloudflare_universal_ssl_setting" "off" {
   zone_id = data.cloudflare_zone.this.zone_id
   enabled = false
 }
+
+# The address in the name, delegated once (docs/away.md, the alias that covers home). home.elyir.app
+# belongs to the nameserver on the relay box, which answers 192-168-86-53.<house>.home.elyir.app with
+# that LAN address for a carried house and nothing else. It is still one write, made here, forever:
+# no house ever causes a DNS write -- the names are worked out from the question, not stored.
+resource "cloudflare_dns_record" "ns1_v4" {
+  zone_id = data.cloudflare_zone.this.zone_id
+  name    = "ns1.${var.zone_name}"
+  type    = "A"
+  content = local.relay_ipv4
+  ttl     = 300
+  proxied = false
+  comment = "The relay box, as the nameserver for home.${var.zone_name}."
+}
+
+resource "cloudflare_dns_record" "ns1_v6" {
+  count = local.make_box || var.relay_ipv6 != "" ? 1 : 0
+
+  zone_id = data.cloudflare_zone.this.zone_id
+  name    = "ns1.${var.zone_name}"
+  type    = "AAAA"
+  content = local.relay_ipv6
+  ttl     = 300
+  proxied = false
+  comment = "The relay box over IPv6, as the nameserver for home.${var.zone_name}."
+}
+
+resource "cloudflare_dns_record" "home_delegation" {
+  zone_id = data.cloudflare_zone.this.zone_id
+  name    = "home.${var.zone_name}"
+  type    = "NS"
+  content = "ns1.${var.zone_name}"
+  ttl     = 3600
+  comment = "Every house's name at home is answered by the relay box (relay/service/home.py)."
+}

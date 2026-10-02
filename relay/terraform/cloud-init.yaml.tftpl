@@ -3,7 +3,8 @@
 # remembered. Four things, each a container with a systemd unit:
 #
 #   frps            the relay itself, on 443: carries every house's bytes and reads none of them
-#   relay-service   the registration service: names, entitlements, and frps's yes or no (relay/service)
+#   relay-service   the registration service: names, entitlements, frps's yes or no, and the nameserver
+#                   for home.elyir.app on 53 -- each house's name at home (relay/service)
 #   relay-api-door  a Caddy holding api.elyir.app's certificate, so hubs can reach the service
 #   relay-api-frpc  how that Caddy is reached: through frps, exactly the way a house's door is
 #
@@ -163,6 +164,8 @@ write_files:
         -e RELAY_SELF_SECRET=${self_secret} \
         -e RELAY_FRPS_TOKEN=${auth_token} \
         -e RELAY_OFFER_OPEN=${offer_open} \
+        -e RELAY_DNS_PORT=53 \
+        -e RELAY_NS=ns1.${zone} \
         relay-service:${service_ref}
       ExecStop=/usr/bin/docker stop relay-service
 

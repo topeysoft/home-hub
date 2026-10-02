@@ -14,9 +14,13 @@
 # is read by docker compose as root. Anything that does not match is dropped and said so in the log.
 # restart.sh and update.sh make the same point; keep the three shaped alike.
 #
-#   on       the house's values into .env, `away` into the profiles, caddy and frpc up
-#   off      HUB_AWAY=off, `away` out of the profiles, frpc gone, caddy back to the plain door
+#   on       the house's values into .env, `away` into the profiles, caddy, frpc and lan-cert up
+#   off      HUB_AWAY=off, `away` out of the profiles, frpc and lan-cert gone, caddy back to the plain door
 #   forget   off, and the house's name and secret taken out of .env as well
+#
+# On, it also writes HUB_LAN_NAME -- the house's name at home, 192-168-86-53.<house>.home.<zone> -- from
+# the address this host actually has on the LAN, not HUB_IP in .env, which install.sh writes once and a
+# DHCP lease can leave behind (found on the maker's hub on 2 October: .env said .42, the hub was .53).
 #
 # Safe to run by hand.
 set -uo pipefail
@@ -58,17 +62,26 @@ said() { printf '{"on": %s, "house": "%s", "at": %s, "said": "%s"}\n' "$1" "$2" 
       set_env HUB_AWAY on
       set_env HUB_AWAY_HOUSE "$HOUSE"; set_env HUB_RELAY_SECRET "$SECRET"; set_env HUB_RELAY_TOKEN "$TOKEN"
       set_env HUB_RELAY_ADDR "$ADDR"; set_env HUB_AWAY_ZONE "$ZONE"
+      # The name at home, only for an address inside a house: the relay's DNS server answers nothing
+      # else, so anything else here would be a name nobody could reach.
+      LAN="$(ip -4 route get 1.1.1.1 2>/dev/null | sed -n 's/.* src \([0-9.]*\).*/\1/p' | head -1)"
+      if echo "$LAN" | grep -Eqx '(10\.[0-9]{1,3}|192\.168|172\.(1[6-9]|2[0-9]|3[01]))\.[0-9]{1,3}\.[0-9]{1,3}' ; then
+        set_env HUB_LAN_NAME "$(echo "$LAN" | tr . -).$HOUSE.home.$ZONE"
+      else
+        echo "no private LAN address to name (got '${LAN:-nothing}'); the house has no name at home for now"
+        del_env HUB_LAN_NAME
+      fi
       profiles add
-      cd "$DL" && docker compose up -d caddy frpc
+      cd "$DL" && docker compose up -d caddy frpc lan-cert
       said true "$HOUSE" "Outside is on."
       ;;
     off|forget)
       set_env HUB_AWAY off
       if [ "$WANT" = forget ]; then
-        for k in HUB_AWAY_HOUSE HUB_RELAY_SECRET HUB_RELAY_TOKEN HUB_RELAY_ADDR HUB_AWAY_ZONE; do del_env "$k"; done
+        for k in HUB_AWAY_HOUSE HUB_RELAY_SECRET HUB_RELAY_TOKEN HUB_RELAY_ADDR HUB_AWAY_ZONE HUB_LAN_NAME; do del_env "$k"; done
       fi
       profiles remove
-      cd "$DL" && { docker compose --profile away rm -sf frpc; docker compose up -d caddy; }
+      cd "$DL" && { docker compose --profile away rm -sf frpc lan-cert; docker compose up -d caddy; }
       said false "" "Outside is off."
       ;;
     *)

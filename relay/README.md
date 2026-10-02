@@ -34,6 +34,14 @@ it, and `terraform apply`. The wildcard and the CAA pair land at the same time a
   a Hetzner volume that outlives the box. Hubs reach it at `https://api.elyir.app`, which is carried
   through frps like a house and has its own certificate proved the same way, so nothing new is open.
 
+- `service/home.py` — the address in the name, since 2 October 2026: the service is also the
+  nameserver for `home.elyir.app` (delegated once in `dns.tf`, port 53 opened in `relay.tf`). It
+  answers `192-168-86-53.<house>.home.elyir.app` with that LAN address for a carried house and
+  nothing else -- only private addresses, only houses the relay carries -- and serves the DNS-01
+  TXT record a house sets for its own name through `/acme/present`, shaped like lego's `httpreq`
+  provider so the hub uses a stock ACME client (`driver-layer/lan-cert/`). No house causes a DNS
+  write and there is still no wildcard certificate anywhere under the zone.
+
 **Carrying a house, by hand, until payments exist.** The relay is an optional paid service
 (`docs/service.md`) and the payment side is not built, so the operator grants entitlements:
 
