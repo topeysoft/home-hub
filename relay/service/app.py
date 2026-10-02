@@ -121,6 +121,9 @@ def main():
     registry = Registry(data / "houses.db", zone=os.environ.get("RELAY_ZONE", "elyir.app"))
     if os.environ.get("RELAY_SELF_SECRET"):
         registry.seed("api", os.environ["RELAY_SELF_SECRET"])
+    # The printer app's static files, served from this box like api is (cloud-init): always carried.
+    if os.environ.get("RELAY_PRINTERS_SECRET"):
+        registry.seed("printers", os.environ["RELAY_PRINTERS_SECRET"], note="the printer app")
     relay = {"addr": os.environ.get("RELAY_ADDR", f"relay.{registry.zone}"), "token": os.environ.get("RELAY_FRPS_TOKEN", "")}
     # The price is words, not a number: what it costs and how often, as the panel will say it.
     offer = {"open": os.environ.get("RELAY_OFFER_OPEN") == "1", "price": os.environ.get("RELAY_PRICE") or None, "pay": os.environ.get("RELAY_PAY_URL") or None}

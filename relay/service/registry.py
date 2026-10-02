@@ -31,7 +31,7 @@ LABEL = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,28}[a-z0-9])?$")
 RESERVED = frozenset("""
     api relay www mail smtp imap pop ftp ns ns1 ns2 dns home lan local localhost admin root operator
     status help support billing pay account accounts login signin auth app apps elyir hub hubs test
-    selftest staging dev _acme-challenge
+    selftest staging dev _acme-challenge printers
 """.split())
 
 SCHEMA = """
