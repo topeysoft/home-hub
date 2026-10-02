@@ -127,6 +127,16 @@ test.describe('with a room chosen (WorkshopB, RankedB)', () => {
     await expect(second).toContainText('OBI1 printing, 42%')
     await expect(second).toContainText('Printing')
     await expect(second).toHaveAttribute('data-size', 'half')
+    /* and the printing card takes an ordinary slot: once the arrival has settled the bento ends flush,
+       four columns on their own tracks and nothing past the stage's right edge, exactly as shipped */
+    await expect.poll(() => page.locator('.rooms-bento').evaluate(g => g.scrollWidth - g.clientWidth)).toBe(0)
+    await expect.poll(async () => {
+      const xs = await page.locator('.rooms-bento > .room-cell').evaluateAll(cs => cs.map(c => Math.round(c.getBoundingClientRect().x)))
+      return [...new Set(xs)].length
+    }).toBe(4)
+    const right = await page.locator('.rooms-bento').evaluate(g => g.getBoundingClientRect().right)
+    for (const r of await page.locator('.rooms-bento > .room-cell').evaluateAll(cs => cs.map(c => c.getBoundingClientRect().right)))
+      expect(r).toBeLessThanOrEqual(right + 0.5)
   })
 
   test('and Your afternoon is unchanged: the print still leads it', async ({ page }) => {
