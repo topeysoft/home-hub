@@ -57,6 +57,25 @@ The hub then needs `HUB_AWAY_HOUSE=temi` and `HUB_RELAY_SECRET=<the secret>` in 
 (`driver-layer/.env.example`). A name claimed and not granted is let go after a day. `cli.py` also
 stops a house (it keeps its name), rotates a lost secret, and releases a name.
 
+**The printer app** (`printers.elyir.app`, since 2 October 2026) is static files served by the same
+Caddy as `api`, carried through frps as one more always-carried name whose secret is derived from the
+relay token. It belongs to the printer project and is published from that repository, never edited on
+the box: each version is unpacked into `/var/lib/relay/printers/<version>/` on the volume and
+`current` is switched to it, so a rebuilt box keeps serving the last one. Every phone that opens it
+trusts that code with its printers' tokens, which is why the site sends a strict
+`Content-Security-Policy` (scripts from itself only; talking and framing only to names under the zone)
+and may not be framed itself.
+
+**Which printers are on this Wi-Fi** (`nearby.elyir.app`, since 2 October 2026): the service notes the public
+address each house's tunnel logs in from, and `GET https://nearby.elyir.app/nearby` answers with the carried
+names behind the asker's own address, so the printer app can list a house's printers without anybody typing
+a name. Names only; connecting still means asking from that house's own Wi-Fi. The name has an A record and
+no AAAA on purpose: tunnels arrive over IPv4, and a dual-stack phone asking over IPv6 would match nothing.
+Only the printer app's origin may read the answer from a page.
+
+The box's ssh host keys live on the volume as well, so a rebuild is the same host to every client that
+has connected before.
+
 **Moving the box to new service code** is a new `relay_service_ref` -- a commit, ideally -- and
 `terraform apply`, which replaces the server. The volume is detached and attached to the new one, so
 every house and the api certificate come across; open tunnels drop for the minute the box takes, and

@@ -15,7 +15,7 @@ from unittest import mock
 
 from fastapi.testclient import TestClient
 
-from hub import address as address_mod, api, backup as backup_mod, healed as healed_mod, phones as phones_mod, restart as restart_mod, rules as rules_mod, updates as updates_mod
+from hub import address as address_mod, api, printers as printers_mod, backup as backup_mod, healed as healed_mod, phones as phones_mod, restart as restart_mod, rules as rules_mod, updates as updates_mod
 from hub.events import EventLog
 from hub.settings import Settings
 
@@ -28,7 +28,8 @@ DATA_BOUND = [(phones_mod, "DATA", lambda d: d), (rules_mod, "RULES_PATH", lambd
               (restart_mod, "REQUEST", lambda d: d / "restart.request"), (restart_mod, "STATE", lambda d: d / "restart.json"),
               (healed_mod, "FILE", lambda d: d / "healed.jsonl"),
               (address_mod, "STATE", lambda d: d / "address.json"), (address_mod, "VALUES", lambda d: d / "away.env"),
-              (address_mod, "REQUEST", lambda d: d / "away.request"), (address_mod, "DONE", lambda d: d / "away.json")]
+              (address_mod, "REQUEST", lambda d: d / "away.request"), (address_mod, "DONE", lambda d: d / "away.json"),
+              (printers_mod, "STATE", lambda d: d / "printers.json")]
 
 
 def area(area_id, name):

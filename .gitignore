@@ -62,3 +62,4 @@ test.sh
 # them with tools/dev.sh design, and the link must never be committed.
 design/wall
 relay/terraform/.env
+relay/terraform/relay.plan

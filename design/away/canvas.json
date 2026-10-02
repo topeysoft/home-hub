@@ -167,6 +167,14 @@
       "w": 420,
       "text": "C -- EVERY PHONE MOVES ONCE, WHEN THE HOUSE GETS ITS NAME\n\nThe move is not tied to letting out at all. The evening the house is given its name, every phone at home gets one line in the band, and moves in three steps (C, the move). From then on there is one name for the house, at home and away, and new phones join on it from the start -- Show how's code points at it.\n\nSO THE SWITCH IS ONLY A SWITCH. Sam's phone moved weeks ago, so when Sam is at the airport and asks, Temi turns it on at the wall and Sam's screen opens by itself (C, out). Nothing to hand over and no waiting for anybody to come home. The words on that screen are the brain's HOME_ONLY, which ships today and has never had a door behind it.\n\nWHAT IT NEEDS: everything B needs -- the house answering its name at home -- and the moment of the move being asked of everyone, once, including people who will never leave the house with it. That is a real cost; it is paid by a band line nobody has to act on, because a phone that never moves keeps working on hub.local at home exactly as it does now.\n\nCHOSEN, 1 October 2026: one name for the house, one icon on the phone, and a switch that means what it says when you flip it. A and B are on Not chosen with their cases intact.",
       "page": "page-1"
+    },
+    {
+      "id": "seen",
+      "page": "page-1",
+      "x": 1560,
+      "y": 1950,
+      "w": 520,
+      "text": "SEEN, ADDED 2 OCTOBER 2026\n\nEach phone row says when the house last saw that phone -- seen just now, seen 2 min ago, seen 3 days ago -- between how it got in and anything after.\n\nWHY: on the maker's own hub the list had grown to eleven, five of them called Temi's screen. Every new browser, profile or address a person opens the house in is a new phone, and same-named rows are impossible to tell apart, so the one in use and the four left behind looked identical and Remove was a guess. When it was last seen is the one fact that tells them apart, and the house already keeps it."
     }
   ],
   "launch": {
