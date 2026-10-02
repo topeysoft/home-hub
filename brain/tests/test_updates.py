@@ -602,7 +602,7 @@ class ProgressTests(UpdateTest):
         self.phases({"phase": "restarting", "at": 10, "moving": ["brain", "homeassistant"]})
         p = self.make().progress()
         self.assertEqual(p["moving"], ["brain", "homeassistant"])
-        self.assertIn("For about a minute the wall switches still work but the app doesn’t.", p["notices"])
+        self.assertIn("For about a minute your light switches still work, but this screen and the app don’t.", p["notices"])
 
     def test_only_the_brain_moving_is_a_blink_and_earns_no_warning(self):
         self.asked()

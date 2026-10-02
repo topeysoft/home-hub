@@ -55,7 +55,7 @@ class Restarting(ApiTest):
 
     def test_a_deeper_rung_costs_more_and_says_so(self):
         s = self.client.get("/restart", params={"rung": "machine"}).json()
-        self.assertEqual(s["yes"], "Restart the little computer")
+        self.assertEqual(s["yes"], "Power off and on")
         self.assertIn("Everything the hub talks to goes quiet until it's back — lights, sensors and the radios.", s["stops"])
 
     # ---- the doing ----

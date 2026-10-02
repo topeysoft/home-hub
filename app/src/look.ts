@@ -61,7 +61,7 @@ export type Feel = {
 export const FEELS: Feel[] = [
   { id: 'calm', label: 'Calm', hint: 'Paper cards laid on the sky, following the light through the day.', face: 'paper', tone: 'follow' },
   { id: 'daylight', label: 'Daylight', hint: 'Light and open at every hour, the way a room is with the curtains back.', face: 'paper', tone: 'pastel' },
-  { id: 'nightfall', label: 'Nightfall', hint: 'The same house behind frosted panes, with the sky moving through them.', face: 'glass', tone: 'follow' },
+  { id: 'nightfall', label: 'Nightfall', hint: 'Dark and quiet, with the evening sky behind everything.', face: 'glass', tone: 'follow' },
 ]
 
 /*

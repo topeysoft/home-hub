@@ -416,7 +416,7 @@ class TheBackupNeedsACodeToExist(ApiTest):
         self.assertFalse(self.hub.lock.locked)
         r = self.client.get("/backup")
         self.assertEqual(r.status_code, 403)
-        self.assertIn("Set a code first", r.json()["detail"])
+        self.assertIn("Set a passcode first", r.json()["detail"])
 
     def test_once_there_is_a_code_it_behaves_exactly_as_it_did(self):
         code = self.lock_the_house()
