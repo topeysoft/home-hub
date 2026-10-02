@@ -13,10 +13,10 @@
  */
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import type { Device } from '../api'
-import { keepColor, listStrips, revisitStrip, tuneStrip, tuneStripBy, tuneStripDone, splitStrip, joinStrip, setEvenings, holdStill, yardBegin, type StripRow, type Evenings } from '../api'
-import { previewStripRow, roofCount, roofMeters } from '../controller'
+import { keepColor, listStrips, revisitStrip, tuneStrip, tuneStripBy, tuneStripDone, splitStrip, joinStrip, type StripRow } from '../api'
+import { previewStripRow } from '../controller'
 import { BEFORE, FIRST, gap, step } from '../walk'
-import { deviceById, guessNow, isDead, loadRoofline, notify, perform, roomOf, store } from '../store'
+import { deviceById, guessNow, isDead, notify, perform, roomOf, store } from '../store'
 import { COLORS, WHITES, autoKelvin, dataFor, guessFor, handlesOf, hsRgb, same, swatchCss, wantedOf, wantedRgb, type Wanted } from '../color'
 import { rgb } from '../sky'
 import Icon from '../Icon.vue'
@@ -199,41 +199,6 @@ async function join() {
   changing.value = ''
 }
 
-/* THE ROOFLINE'S OWN ROW (design/roofline/, decided 1 October). One light on the wall, however many boxes
-   it is, so the pane is the one place the boxes appear -- named by where they are, and only to say
-   something: Fine, or why one part is dark. Behind the row: the boxes, the way round (asked in the yard,
-   and only once a chase is wanted), its evenings (B), and Hold it still, the one control over how an
-   occasion looks (A). */
-const roof = computed(() => store.roofline?.exists && store.roofline.light === props.device.id ? store.roofline : null)
-const roofDoor = ref(false)
-const roofSummary = computed(() => roof.value ? `${roofCount(roof.value)} · ${roofMeters(roof.value.lights)}` : '')
-const roofSub = computed(() => {
-  const r = roof.value; if (!r) return ''
-  const dark = r.boxes.find(b => b.state !== 'Fine')
-  if (dark) return `${dark.place}: ${dark.state.toLowerCase()}`
-  return r.words ? `${r.occasion_name}: ${r.words.toLowerCase()}` : 'Its everyday warm white'
-})
-const roofWay = computed(() => {
-  const r = roof.value; if (!r) return ''
-  if (!r.order) return r.ask_order ? `${r.occasion_name ?? 'A chase'} goes round the house. Show it which way round?` : 'Each run goes away from its own box'
-  return r.turned ? `Set · ${r.turned === 1 ? 'one run' : `${r.turned} runs`} turned round` : 'Set'
-})
-const EVENING_CHOICES: { id: Evenings; name: string }[] = [
-  { id: 'every', name: 'Every evening' }, { id: 'occasion', name: 'Only in an occasion' }, { id: 'never', name: 'Not by itself' },
-]
-const roofBusy = ref('')
-async function roofDo(id: string, fn: () => Promise<unknown>) {
-  if (roofBusy.value) return
-  roofBusy.value = id
-  try { await fn(); await loadRoofline() } catch (e: any) { notify(e.message, 'error') }
-  roofBusy.value = ''
-}
-const evenings = (m: Evenings) => roofDo(m, () => setEvenings(m))
-const still = (v: boolean) => roofDo(v ? 'still' : 'moving', () => holdStill(v))
-async function whichWay() {
-  await roofDo('yard', async () => { await yardBegin(); store.yard = true })
-  roofDoor.value = false
-}
 /* LEDs are sold by the metre and bought by the metre, so the length is said in metres even though
    what was measured is lights. Sixty to the metre is the common density and this says "about". */
 const metres = computed(() => {
@@ -522,18 +487,7 @@ async function level(l: typeof LEVELS[number]) {
          width of the thing the pane is for. It draws the strip rather than wearing an icon, because
          a picture of the thing behind the television is what tells somebody what this row is.
          design/strip/OneDoor.dc.html, chosen 22 September. -->
-    <div class="rig-ask" v-if="roof">
-      <span class="rig-lbl">Because it is the roofline</span>
-      <button class="rig-card sd-door" @click="roofDoor = true">
-        <span class="rig-card-icon"><Icon name="home" :size="18" /></span>
-        <span class="rig-card-text">
-          <span class="rig-card-name">{{ roofSummary }}</span>
-          <span class="rig-card-sub">{{ roofSub }}</span>
-        </span>
-        <Icon name="back" :size="18" class="sd-chev" />
-      </button>
-    </div>
-    <div class="rig-ask" v-else-if="strip && !tuning">
+    <div class="rig-ask" v-if="strip && !tuning">
       <span class="rig-lbl">Because it is a strip</span>
       <button class="rig-card sd-door" :disabled="dead || asking" @click="openRow">
         <span class="rig-card-icon"><Icon name="pin" :size="18" /></span>
@@ -643,52 +597,6 @@ async function level(l: typeof LEVELS[number]) {
     </div>
   </div>
 
-  <!-- BEHIND THE ROOFLINE'S ROW (design/roofline/OneLight, EveningsB, OwnsA, TapA). -->
-  <div class="sheet-back" v-if="roof && roofDoor" @click.self="roofDoor = false">
-    <div class="sheet sd-sheet roof-sheet" role="dialog" aria-label="The roofline">
-      <div class="sheet-head">
-        <h2 class="display">The Roofline</h2>
-        <button class="round sheet-close" aria-label="Close" @click="roofDoor = false"><Icon name="close" :size="20" /></button>
-      </div>
-      <div class="sheet-body">
-        <p class="sheet-lede"><b class="roof-count">{{ roofSummary }}.</b> {{ roof.why }}</p>
-        <div class="roof-cols"><div>
-        <ul class="roof-boxes">
-          <li v-for="b in roof.boxes" :key="b.chip" :class="{ dark: b.state !== 'Fine' }">
-            <span class="roof-dot"></span>
-            <span class="rig-card-text">
-              <span class="rig-card-name">{{ b.place }} <em>{{ b.runs === 1 ? '1 run' : `${b.runs} runs` }}</em></span>
-              <span class="rig-card-sub" v-if="b.sub">{{ b.sub }}</span>
-            </span>
-            <span class="roof-state">{{ b.state }}</span>
-          </li>
-        </ul>
-        <button class="sd-card sd-tap" v-if="roof.runs > 1" :disabled="!!roofBusy" @click="whichWay">
-          <span class="sd-card-head">
-            <span class="rig-card-icon"><Icon name="turn" :size="18" /></span>
-            <span class="rig-card-text"><span class="rig-card-name">Which way round</span><span class="rig-card-sub">{{ roofWay }}</span></span>
-            <Icon name="back" :size="18" class="sd-chev" />
-          </span>
-        </button>
-        </div><div>
-        <div class="sd-card">
-          <span class="rig-card-name">Its evenings <em v-if="roof.evenings && roof.evenings !== 'never'">On at dusk, off at {{ roof.until_words }}</em></span>
-          <div class="press-rooms">
-            <button class="chip-btn" v-for="e in EVENING_CHOICES" :key="e.id" :class="{ on: roof.evenings === e.id, busy: roofBusy === e.id }"
-                    :aria-pressed="roof.evenings === e.id" @click="evenings(e.id)">{{ e.name }}</button>
-          </div>
-        </div>
-        <div class="sd-card" v-if="roof.occasion">
-          <span class="rig-card-name">{{ roof.occasion_name }} <em>{{ roof.words }}</em></span>
-          <div class="press-rooms">
-            <button class="chip-btn" :class="{ on: !roof.still }" :aria-pressed="!roof.still" @click="still(false)">Moving</button>
-            <button class="chip-btn" :class="{ on: roof.still }" :aria-pressed="roof.still" @click="still(true)">Hold it still</button>
-          </div>
-        </div>
-        </div></div>
-      </div>
-    </div>
-  </div>
 </template>
 
 <style scoped>
@@ -702,19 +610,6 @@ async function level(l: typeof LEVELS[number]) {
    shared vocabulary rather than ours; and any rule reaching in from a container (`.bento`,
    `.wall-stage`), which belongs to the arrangement rather than to this. */
 
-/* The roofline's boxes: one row each, named by where they are, saying only Fine or why it is dark. */
-.roof-boxes { list-style: none; margin: 0 0 14px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-.roof-count { font-weight: 500; color: var(--ink); }
-/* Two columns on a wall, so the whole roof is one sheet with nothing to scroll: the boxes and the way
-   round on the left, when it comes on and how it looks on the right. One column on a phone. */
-.roof-sheet { width: min(100%, 900px); }
-.roof-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
-@media (max-width: 720px) { .roof-cols { grid-template-columns: 1fr; } }
-.roof-boxes li { display: flex; align-items: center; gap: 14px; padding: 9px 16px; border-radius: var(--r-md); border: 1px solid var(--edge); background: rgba(255, 255, 255, 0.04); }
-.roof-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--live); }
-.roof-boxes li.dark .roof-dot { background: var(--lamp); }
-.roof-boxes li.dark .rig-card-sub { color: var(--lamp); }
-.roof-state { margin-left: auto; font-size: 14px; color: var(--muted); }
 .sd-act { margin: 12px 0 6px; }
 /* one of the second strip's two questions: what it is, what it was told, and the way to ask again */
 .sd-line { display: flex; align-items: center; gap: 12px; margin-top: 8px; padding: 6px 6px 6px 16px; border-radius: var(--r-sm); border: 1px solid var(--edge); background: rgba(255, 255, 255, 0.03); }

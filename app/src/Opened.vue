@@ -58,6 +58,9 @@ import LockPane from './panes/LockPane.vue'
 import CameraPane from './panes/CameraPane.vue'
 import SimplePane from './panes/SimplePane.vue'
 import SensePane from './panes/SensePane.vue'
+import RoofPane from './panes/RoofPane.vue'
+import RoofPlate from './RoofPlate.vue'
+import { roofSentence } from './roof'
 
 const dev = computed(() => store.opened)
 const kind = computed(() => dev.value ? cap(dev.value) : '')
@@ -96,7 +99,17 @@ const INSTRUMENTS: Record<string, any> = {
   light: LightPane, media: MediaPane, climate: ClimatePane, cover: CoverPane,
   lock: LockPane, camera: CameraPane, fan: SimplePane, switch: SimplePane, alarm: SimplePane, appliance: SimplePane, vacuum: SimplePane, sense: SensePane, machine: MachinePane,
 }
-const instrument = computed(() => dev.value ? INSTRUMENTS[paneKind(dev.value)] ?? SimplePane : null)
+/* THE ROOFLINE'S OWN PANE (design/roofline/DrawnC.dc.html, chosen 1 October 2026). One light on the wall
+   however many boxes it is, and the one light whose state has a place: so its pane draws the roof across
+   its floor (RoofPlate), and its instrument is brightness as a bar with the look and its evenings beside
+   each other (RoofPane) -- none of a lamp's colors or levels, which a season overrides and nobody reads
+   by. The left column is every light's, with one sentence that says what is wrong when something is. */
+const roof = computed(() => {
+  const r = store.roofline, d = dev.value
+  return r?.exists && d && r.light === d.id ? r : null
+})
+const roofSaid = computed(() => roof.value && dev.value ? roofSentence(dev.value, roof.value) : null)
+const instrument = computed(() => roof.value ? RoofPane : dev.value ? INSTRUMENTS[paneKind(dev.value)] ?? SimplePane : null)
 
 /* what this one thing has done, from the log the brain already keeps. Asked for once on the way in
    and again whenever the thing itself changes, which is the only time there is anything new. */
@@ -324,7 +337,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
     <div class="opened-panel" :data-cap="kind" :style="lampTint">
       <button class="back opened-close" @click="close" aria-label="Close"><Icon name="close" :size="18" /></button>
 
-      <div class="opened-body pane-body">
+      <div class="opened-body pane-body" :class="{ 'pane-roof': !!roof }">
         <div class="pane-said">
           <div class="opened-step s0">
             <template v-if="!editing">
@@ -429,6 +442,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
                 <span><b>{{ held.next }}</b><small v-if="held.after">{{ held.after }}</small></span>
               </div>
             </template>
+            <p class="pane-why" :class="{ 'roof-wrong': roofSaid.wrong }" v-else-if="roofSaid">{{ roofSaid.text }}</p>
             <p class="pane-why" v-else-if="why">{{ why }}<template v-if="quiet"> {{ quiet }}</template></p>
             <p class="pane-why" v-else-if="quiet">{{ quiet }}</p>
           </div>
@@ -437,7 +451,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 
         <!-- the facts sit under what was said on a wall, and under the INSTRUMENT on a phone, where
              the control has to be reachable without scrolling past four numbers to get to it -->
-        <div class="opened-step s3 opened-facts pane-facts" v-if="facts.length">
+        <div class="opened-step s3 opened-facts pane-facts" v-if="facts.length && !roof">
           <div v-for="f in facts" :key="f.k">
             <div class="opened-fact-v">{{ f.v }}</div>
             <div class="opened-fact-k">{{ f.k }}</div>
@@ -446,12 +460,15 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 
         <!-- the instrument: the control a tile is too small for -->
         <div class="pane-rig" :class="{ held: !!held }" v-if="instrument">
-          <component :is="instrument" :device="dev" :events="events" :moments="moments" />
+          <component :is="instrument" :device="dev" :events="events" :moments="moments" @close="close" />
         </div>
+
+        <!-- the roof, across the floor of the pane, where a lamp's facts and its day would be -->
+        <RoofPlate class="opened-step s3" v-if="roof" :roof="roof" :on="dev.state === 'on'" />
       </div>
 
       <!-- what this one thing did today -->
-      <div class="opened-step s3 pane-day" v-if="moments.length">
+      <div class="opened-step s3 pane-day" v-if="moments.length && !roof">
         <span class="opened-fact-k pane-day-head">Today</span>
         <div class="pane-day-row">
           <div v-for="(m, i) in moments" :key="i" class="pane-moment">
