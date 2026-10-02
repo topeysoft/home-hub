@@ -2088,9 +2088,31 @@ async def device_stream(device_id: str):
     return StreamingResponse(chunks, media_type=ctype, headers={"Cache-Control": "no-store"})
 
 
+def _ws_refused(ws: WebSocket, bridge_ok: bool = False) -> int | None:
+    """The door settings_lock keeps for every http request, kept for the websockets it never sees.
+
+    The http middleware does not run for websockets, so these two had their own check -- /stream asked for
+    a phone and never asked whether the request came in through the relay, and the camera's live view
+    asked for nothing at all. Once a house was reachable from outside, that was a camera anybody on the
+    internet could open by guessing its name (found 2 October 2026, outside turned off until this landed).
+
+    The same three rules as the middleware, in its order: from away, only a phone the house has let out --
+    and a house with no code has none, so nobody; then the Matter bridge, which is a container on this
+    host and never comes in from away; then, once the house has a code, only its own phones.
+    Returns the close code to refuse with, or None to let it in.
+    """
+    phone = hub.phones.identify(ws.cookies.get(COOKIE)) if hub.lock.locked else None
+    if from_away(ws.headers) and not (phone and phone.get("remote")): return 4403
+    if bridge_ok and hub.share.is_bridge(ws.headers.get(SERVICE_HEADER)): return None
+    if hub.lock.locked and not phone: return 4401
+    return None
+
+
 @app.websocket("/devices/{device_id}/webrtc")
 async def device_webrtc(ws: WebSocket, device_id: str):
-    """WebRTC signaling for one viewer: see hub/camera.py for the messages."""
+    """WebRTC signaling for one viewer: see hub/camera.py for the messages. A camera is the house's to show."""
+    refused = _ws_refused(ws)
+    if refused: await ws.close(code=refused); return
     await ws.accept()
     dev = hub.home.devices.get(device_id) if hub.driver == "ready" else None
     if not dev or dev.capability != "camera":
@@ -2683,9 +2705,8 @@ def dry_run(rule_id: str):
 async def stream(ws: WebSocket):
     # The Matter bridge watches the same broadcasts the panels do, and identifies itself the same way
     # it does on its own routes: it has no cookie because it is not a phone. docs/matter.md.
-    bridge = hub.share.is_bridge(ws.headers.get(SERVICE_HEADER))
-    if hub.lock.locked and not bridge and not hub.phones.identify(ws.cookies.get(COOKIE)):
-        await ws.close(code=4401); return        # not one of the house's phones: the join screen is the way in
+    refused = _ws_refused(ws, bridge_ok=True)
+    if refused: await ws.close(code=refused); return    # 4401: the join screen is the way in; 4403: not from out there
     await ws.accept(); hub.streams.add(ws)
     try:
         await ws.send_text(json.dumps({"type": "status", "status": hub.status()}))

@@ -6,6 +6,7 @@ health, updates, restore, and the stream every screen holds open.
 Run from brain/: .venv/bin/python -m unittest -v
 """
 import io, json, tarfile, time, unittest
+from unittest import mock
 
 from starlette.websockets import WebSocketDisconnect
 
@@ -163,6 +164,63 @@ class StreamTests(ApiTest):
         with self.client.websocket_connect("/stream") as ws:
             self.assertEqual(json.loads(ws.receive_text())["type"], "status")
 
+
+    def test_from_outside_only_a_phone_the_house_has_let_out(self):
+        self.lock_the_house("4821")
+        p, token = self.hub.phones.with_code("Temi's phone")
+        self.client.cookies.set(COOKIE, token)
+        with self.assertRaises(WebSocketDisconnect) as caught:
+            with self.client.websocket_connect("/stream", headers={"X-Hub-Via": "relay"}) as ws:
+                ws.receive_text()
+        self.assertEqual(caught.exception.code, 4403)
+        self.hub.phones.set_remote(p["id"], True)
+        with self.client.websocket_connect("/stream", headers={"X-Hub-Via": "relay"}) as ws:
+            self.assertEqual(json.loads(ws.receive_text())["type"], "status")
+
+    def test_a_house_with_no_code_lets_nobody_in_from_outside(self):
+        with self.assertRaises(WebSocketDisconnect) as caught:
+            with self.client.websocket_connect("/stream", headers={"X-Hub-Via": "relay"}) as ws:
+                ws.receive_text()
+        self.assertEqual(caught.exception.code, 4403)
+
+    def test_the_bridge_never_comes_in_from_outside(self):
+        with mock.patch.object(self.hub.share, "is_bridge", return_value=True):
+            with self.client.websocket_connect("/stream") as ws:
+                self.assertEqual(json.loads(ws.receive_text())["type"], "status")
+            with self.assertRaises(WebSocketDisconnect) as caught:
+                with self.client.websocket_connect("/stream", headers={"X-Hub-Via": "relay"}) as ws:
+                    ws.receive_text()
+            self.assertEqual(caught.exception.code, 4403)
+
+
+class CameraLiveViewTests(ApiTest):
+    """A camera's live view is the house's to show: it had no check at all, and with the relay up anyone
+    outside could open one by guessing its name (2 October 2026)."""
+    def connect(self, **headers):
+        with self.client.websocket_connect("/devices/light.ceiling/webrtc", headers=headers) as ws:
+            return json.loads(ws.receive_text())      # not a camera: but it was let in to be told so
+
+    def refused(self, **headers):
+        with self.assertRaises(WebSocketDisconnect) as caught:
+            self.connect(**headers)
+        return caught.exception.code
+
+    def test_a_stranger_on_the_wifi_of_a_locked_house_is_refused(self):
+        self.lock_the_house("4821")
+        self.assertEqual(self.refused(), 4401)
+
+    def test_nobody_outside_without_being_let_out(self):
+        self.assertEqual(self.refused(**{"X-Hub-Via": "relay"}), 4403)
+        self.lock_the_house("4821")
+        _, token = self.hub.phones.with_code("Temi's phone")
+        self.client.cookies.set(COOKIE, token)
+        self.assertEqual(self.refused(**{"X-Hub-Via": "relay"}), 4403)
+
+    def test_the_houses_own_phone_at_home_is_let_in(self):
+        self.lock_the_house("4821")
+        _, token = self.hub.phones.with_code("Temi's phone")
+        self.client.cookies.set(COOKIE, token)
+        self.assertEqual(self.connect()["code"], "unknown")
 
 class PresenceTests(ApiTest):
     def test_who_is_home_is_answerable_even_before_anyone_has_been_seen(self):

@@ -313,7 +313,13 @@ gets `unrecognized_name`, and the plugin route is 404 to anything but frps on th
   refusals in one hub's log). Not part of this work, found while looking at that hub. Fixed in #54.
 - *`HUB_AWAY_OFFER` and `HUB_RELAY_API` were never handed to the brain either*, so setting them in `.env`
   did nothing. Fixed in #54, with a test that every `HUB_*` setting the brain reads is handed to it by the
-  compose file, apart from four named developer-only ones. All three were the same mistake: a value in
+  compose file, apart from four named developer-only ones.
+- *A camera's live view could be opened from outside by anybody.* The http middleware that keeps the away
+  gate does not run for websockets, and the camera's WebRTC route (`/devices/{id}/webrtc`) checked nothing at
+  all -- not a phone, not the relay -- while `/stream` checked for a phone but never for the relay. Found on
+  2 October within hours of the maker's house being reachable; outside was turned off on that hub at once
+  and stays off until the fix is on it. Both now go through `_ws_refused`, the middleware's three rules in its
+  order, pinned by `CameraLiveViewTests` and `StreamTests` in `brain/tests/test_api_rest.py`. All three were the same mistake: a value in
   `.env` that the container reading it was never given, with a test that set the value itself.
 
 **Turning it on for the maker's own house, before payments.** A house set up before addresses existed
