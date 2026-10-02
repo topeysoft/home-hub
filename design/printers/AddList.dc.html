@@ -1,0 +1,236 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600&family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      /* The wall in the house is the Wall layout with the tabs across the top, which says Plus Jakarta on the
+         shell (panel.css: "Wall says Plus Jakarta on the shell"). These are the shipped panel's own tokens. */
+      font-family: "Plus Jakarta Sans", "Instrument Sans", -apple-system, system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      --bg: #0c0d10; --surface-rgb: 26,28,34; --surface: rgba(var(--surface-rgb),.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --ink-3: oklch(0.68 0.01 242); --ink-4: oklch(0.76 0.006 242);
+      --lamp-rgb: 233,184,114; --lamp: rgb(var(--lamp-rgb)); --lamp-ink-rgb: 42,28,7; --lamp-ink: rgb(var(--lamp-ink-rgb));
+      --live-rgb: 116,198,157; --live: rgb(var(--live-rgb));
+      --danger-rgb: 224,138,138; --danger: rgb(var(--danger-rgb));
+      --r-lg: 22px; --r-md: 16px; --r-sm: 12px;
+    }
+    .screen { position: relative; width: 1440px; height: 900px; overflow: hidden; background: var(--bg); color: var(--ink); font-size: 17px; line-height: 1.4; }
+    /* a phone gets the Stack home, which keeps Instrument Sans */
+    .phone { font-family: "Instrument Sans", -apple-system, system-ui, sans-serif; position: relative; width: 390px; height: 844px; overflow: hidden; background: var(--bg); color: var(--ink); font-size: 17px; line-height: 1.4; }
+    .abs { position: absolute; }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    svg.i { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+    .num { font-variant-numeric: tabular-nums; }
+    /* the glass the bar, the round buttons and every bento card are made of (.tabs, .topbar-add, .bento-card) */
+    .glass { background-image: linear-gradient(112deg, transparent 26%, rgba(255,255,255,.114) 45%, rgba(255,255,255,.02) 56%, transparent 64%),
+                               linear-gradient(148deg, oklch(0.532 0.014 243 / .34), oklch(0.462 0.012 243 / .12) 46%, oklch(0.492 0.014 243 / .24));
+             box-shadow: inset 0 -46px 56px -48px rgba(22,40,64,.9), 0 24px 53px -26px rgba(16,33,55,.59), 0 2px 10px rgba(16,33,55,.37); }
+    .round { position: absolute; border-radius: 50%; display: grid; place-items: center; color: var(--ink-2); }
+    .round.dot::after { content: ''; position: absolute; top: 1px; right: 1px; width: 8px; height: 8px; border-radius: 50%; background: var(--lamp);
+                        box-shadow: 0 0 8px 1px rgba(var(--lamp-rgb),.85); }
+    .tab { display: inline-flex; align-items: center; gap: 10px; height: 44px; padding: 0 22px; border-radius: 999px; font-size: 15.5px; color: var(--ink-2); white-space: nowrap; }
+    .tab.on { background: rgba(255,255,255,.1); color: var(--ink); font-weight: 500; }
+    /* a bento card (.bento-card, .room-cell): 28px on the big ones, 24px on a third */
+    .card { position: absolute; border-radius: 28px; border: 1px solid rgba(255,255,255,.07); overflow: hidden; }
+    .card.third { border-radius: 24px; }
+    .card.lit { border-color: rgba(var(--lamp-rgb),.5); }
+    .card.on { border-color: rgba(var(--lamp-rgb),.28); background-color: var(--surface);
+               background-image: linear-gradient(135deg, rgba(var(--lamp-rgb),.14), rgba(var(--lamp-rgb),0) 55%); }
+    .card.ask { border-color: rgba(var(--lamp-rgb),.7); box-shadow: 0 0 0 1px rgba(var(--lamp-rgb),.25), 0 0 46px -8px rgba(var(--lamp-rgb),.45), 0 24px 53px -26px rgba(16,33,55,.59); }
+    .card.fault { border-color: rgba(var(--danger-rgb),.55); background-color: rgba(var(--surface-rgb),.74);
+                  background-image: linear-gradient(150deg, rgba(var(--danger-rgb),.16), rgba(var(--danger-rgb),0) 60%); }
+    .card.drained { border-color: rgba(var(--live-rgb),.35); }
+    .card.dark { background: rgb(17,19,24); border-color: var(--edge); }
+    .card.waiting { border: 1.5px dashed rgba(var(--lamp-rgb),.5); }
+    .cname { font-size: 19px; font-weight: 500; letter-spacing: -.01em; }
+    .cline { font-size: 13.5px; color: var(--ink-2); }
+    .chip { display: inline-flex; align-items: center; gap: 7px; height: 28px; padding: 0 11px; border-radius: 999px; font-size: 11.5px;
+            letter-spacing: .1em; text-transform: uppercase; background: rgba(12,13,16,.55); color: var(--ink); white-space: nowrap; }
+    .chip i { width: 7px; height: 7px; border-radius: 50%; background: var(--live); display: block; }
+    .chip.rec i { background: var(--danger); }
+    /* the band (.nudge), at its shipped values */
+    .nudges { position: absolute; display: flex; gap: 10px; }
+    .nudge { display: inline-flex; align-items: center; gap: 12px; height: 57px; padding: 8px 20px 8px 8px; border-radius: 26px;
+             background: linear-gradient(rgba(var(--lamp-rgb),.1), rgba(var(--lamp-rgb),.1)), rgba(var(--surface-rgb),.68); border: 1px solid rgba(var(--lamp-rgb),.3); white-space: nowrap; }
+    .nudge .ni { width: 32px; height: 32px; border-radius: 10px; background: var(--lamp); color: var(--lamp-ink); display: grid; place-items: center; flex: none; margin-left: 1px; }
+    .nudge b { display: block; font-size: 15px; font-weight: 500; line-height: 21px; }
+    .nudge small { display: block; font-size: 13px; line-height: 17px; color: var(--ink-2); }
+    .nudge.fault .ni { background: var(--danger); color: #2a0e0e; }
+    .nudge.new { box-shadow: 0 0 0 4px rgba(var(--lamp-rgb),.12); }
+    /* words a printer said, quoted where the panel draws them */
+    .lbl { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); }
+    .bar { position: relative; height: 6px; border-radius: 3px; background: rgba(255,255,255,.16); overflow: hidden; }
+    .bar > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; background: var(--ink); display: block; }
+    .bar.lamp > i { background: var(--lamp); }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 49px; padding: 0 22px; border-radius: 999px;
+           background: var(--ink); color: var(--bg); font-weight: 500; font-size: 16px; white-space: nowrap; }
+    .btn.ghost { background: rgba(255,255,255,.08); color: var(--ink); border: 1px solid var(--edge); }
+    .btn.lampb { background: var(--lamp); color: var(--lamp-ink); }
+    .btn.small { height: 40px; padding: 0 16px; font-size: 14.5px; }
+    .btn.tiny { height: 34px; padding: 0 14px; font-size: 13.5px; }
+    .reading { display: inline-flex; align-items: center; gap: 8px; height: 39px; padding: 0 14px 0 12px; border-radius: 999px; font-size: 14px; color: var(--ink-2);
+               background: rgba(var(--surface-rgb),.68); border: 1px solid var(--edge); white-space: nowrap; }
+    .reading b { color: var(--ink); font-weight: 500; }
+    .temp { display: flex; flex-direction: column; gap: 2px; padding: 12px 16px; border-radius: 16px; border: 1px solid var(--edge); background: rgba(255,255,255,.04); }
+    .temp small { font-size: 12.5px; color: var(--ink-3); }
+    .temp b { font-size: 22px; font-weight: 400; letter-spacing: -.02em; }
+    .temp b em { font-style: normal; font-size: 14px; color: var(--ink-3); }
+    .pane { position: absolute; left: 0; top: 225px; width: 1440px; height: 675px; border-radius: 34px 34px 0 0; overflow: hidden;
+            background: linear-gradient(rgba(26,28,34,.8), rgba(16,17,21,.94)); box-shadow: inset 0 1.4px 0 rgba(255,255,255,.38), 0 -18px 40px -14px rgba(17,35,60,.53); }
+    .row { display: flex; align-items: center; gap: 14px; padding: 14px 14px 14px 14px; border-radius: 20px; border: 1px solid var(--edge); background: rgba(255,255,255,.05); }
+    .row .ri { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--lamp); color: var(--lamp-ink); flex: none; }
+    .row .ri.plain { background: rgba(255,255,255,.08); color: var(--ink-2); }
+    .row b { display: block; font-size: 16.5px; font-weight: 500; }
+    .row small { display: block; font-size: 13.5px; color: var(--ink-3); }
+    .row .go { margin-left: auto; }
+    /* ANNOTATION, NEVER PANEL: dashed, and in the board's own voice. Nothing inside one is a screen. */
+    .note { position: absolute; border: 1px dashed rgba(255,255,255,.26); border-radius: 18px; padding: 16px 18px; background: rgba(8,9,12,.93);
+            font-size: 13.5px; line-height: 1.5; color: var(--ink-2); }
+    .note b { color: var(--ink); font-weight: 500; }
+    .note p { margin: 8px 0 0; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .key { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11.5px; color: var(--muted); letter-spacing: 0; text-transform: none; }
+    .lead { position: absolute; border-top: 1px dashed rgba(255,255,255,.34); }
+    .leadv { position: absolute; border-left: 1px dashed rgba(255,255,255,.34); }
+  </style>
+</helmet>
+<!-- ADDING, 2 -- Add, open: the printers on this Wi-Fi as rows of their own, each with one button that asks it. -->
+<div class="screen"><div class="abs" style="inset: 0;">
+  <div class="abs" style="inset: 0; background: linear-gradient(rgb(25,47,73) 0%, rgb(31,57,85) 30%, rgb(46,70,92) 58%, rgb(52,62,74) 72%, rgb(44,46,42) 100%);"></div>
+  <div class="abs" style="left: -144px; top: -90px; width: 1728px; height: 810px; background:
+       radial-gradient(30% 22% at 22% 30%, rgba(170,190,210,.20), transparent 70%), radial-gradient(36% 20% at 70% 18%, rgba(160,180,205,.16), transparent 72%),
+       radial-gradient(26% 18% at 88% 44%, rgba(150,170,195,.14), transparent 70%), radial-gradient(40% 26% at 46% 52%, rgba(120,140,170,.14), transparent 70%);"></div>
+  <svg class="abs" style="left: 0; top: 630px;" width="1440" height="270" viewBox="0 0 1440 270" preserveAspectRatio="none">
+    <path d="M0 32 C 200 4, 420 18, 640 40 S 1060 30, 1240 8 S 1400 2, 1440 6 V270 H0z" fill="rgb(50,54,54)"/>
+    <path d="M0 70 C 300 46, 620 74, 900 58 S 1300 44, 1440 52 V270 H0z" fill="rgb(41,43,38)"/>
+    <g fill="rgb(30,32,30)"><path d="M18 34l8-14 8 14z"/><rect x="34" y="22" width="22" height="14" rx="7"/><rect x="62" y="24" width="12" height="12" rx="6"/>
+    <rect x="86" y="20" width="22" height="16" rx="8"/><rect x="168" y="20" width="26" height="18" rx="9"/><rect x="330" y="30" width="24" height="16" rx="8"/>
+    <path d="M756 50l9-18 9 18z"/><rect x="866" y="40" width="34" height="18" rx="9"/><path d="M1190 22l8-16 8 16z"/><rect x="1128" y="20" width="20" height="16" rx="8"/>
+    <rect x="1296" y="16" width="16" height="14" rx="7"/></g>
+  </svg>
+  <div class="abs" style="inset: 0; background: rgba(6,7,9,0.18);"></div>
+  <div class="abs" style="left: 0; top: 0; width: 1440px; height: 84px; opacity: 1.0;">
+    <div class="abs" style="left: 40px; top: 28px; display: flex; align-items: baseline; gap: 12px;">
+      <span class="num" style="font-size: 27px; font-weight: 400; letter-spacing: -.03em; line-height: 27px;">2:47 PM</span>
+      <span style="font-size: 13.5px; color: var(--muted);">Friday, October 2</span>
+    </div>
+    <div class="abs glass" style="left: 523px; top: 15px; width: 394px; height: 54px; border-radius: 999px; padding: 4px 5px; display: flex; justify-content: space-between;"><span class="tab on"><svg class="i" width="16" height="16" viewBox="0 0 24 24" stroke-width="1.8"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>Your afternoon</span><span class="tab">Rooms</span><span class="tab">Cameras</span></div>
+    <div class="abs" style="left: 1196px; top: 34px; display: flex; align-items: center; gap: 8px; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted);">
+      <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--live);"></span>Connected</div>
+    <span class="round glass" style="left: 1306px; top: 22px; width: 40px; height: 40px;"><svg class="i" width="18" height="18" viewBox="0 0 24 24" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg></span>
+    <span class="round glass" style="left: 1360px; top: 22px; width: 40px; height: 40px;"><svg class="i" width="18" height="18" viewBox="0 0 24 24" stroke-width="1.8"><path d="M5 7h14M5 12h14M5 17h9"/></svg></span>
+  </div><div class="nudges" style="left: 40px; top: 84px;"><div class="nudge "><span class="ni"><svg class="i" width="18" height="18" viewBox="0 0 24 24" stroke-width="2"><path d="M12 3l1.8 5.4L19 10l-5.2 1.6L12 17l-1.8-5.4L5 10l5.2-1.6z"/><path d="M19 15l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/></svg></span><span><b>Found 3 new things nearby</b><small>OBI1, R2D2 and C3PO, 3D printers</small></span></div></div>
+  <div class="abs" style="left: 72px; top: 186px; width: 220px; height: 160px;">
+    <div class="abs" style="left: 138px; top: 2px; width: 82px; height: 82px; border-radius: 50%; background: rgb(138,140,128); opacity: .85;"></div>
+    <div class="abs" style="left: 2px; top: 60px; width: 132px; height: 92px; border-radius: 60px; background: radial-gradient(circle at 40% 30%, #fff, #d9dde6 70%, #b9bfcc);"></div>
+    <div class="abs" style="left: 66px; top: 36px; width: 120px; height: 104px; border-radius: 60px; background: radial-gradient(circle at 40% 30%, #fff, #dfe3ec 70%, #c2c8d3);"></div>
+    <div class="abs" style="left: 112px; top: 82px; width: 104px; height: 72px; border-radius: 50px; background: radial-gradient(circle at 40% 30%, #fbfcfe, #d4d9e3 72%, #b7bdc9);"></div>
+    <div class="abs" style="left: 54px; top: 116px; width: 128px; height: 44px; border-radius: 30px; background: linear-gradient(#e8ebf0, #bfc5cf);"></div>
+  </div>
+  <div class="abs" style="left: 246px; top: 395px; width: 198px; height: 327px; border-radius: 99px; border: 1px solid rgba(255,255,255,.22);
+       background: linear-gradient(160deg, rgba(160,180,205,.30), rgba(80,100,130,.16) 50%, rgba(120,140,170,.22)); box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 24px 53px -26px rgba(16,33,55,.6);
+       display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
+    <div style="font-size: 76px; font-weight: 300; letter-spacing: -.04em; line-height: 1; margin-top: 30px;">78°</div>
+    <div style="font-size: 20px; font-weight: 500; margin-top: 12px;">Partly cloudy</div>
+    <div style="font-size: 13.5px; color: var(--ink-2); margin-top: 10px; line-height: 22px;">Sunset 6:51 PM<br>Humidity 48%</div>
+  </div>
+  <div class="card on glass" style="left: 888px; top: 216px; width: 275px; height: 453px; background-color: var(--surface);">
+    <div class="abs" style="left: 0; top: 0; width: 275px; height: 154px; background: linear-gradient(170deg, rgb(120,52,40), rgb(82,40,34)); overflow: hidden;">
+      <div class="abs" style="left: 40px; top: 92px; width: 275px; height: 120px; border-radius: 50%; background: rgba(40,22,20,.55);"></div></div>
+    <span class="chip" style="position: absolute; left: 16px; top: 16px; height: 28px; font-size: 10px; background: rgba(30,20,20,.4); border: 1px solid rgba(255,255,255,.2);">TV</span>
+    <div class="abs" style="left: 14px; top: 224px; width: 245px; height: 214px; border-radius: 28px; border: 1px solid rgba(255,255,255,.14); background: linear-gradient(rgba(60,64,74,.6), rgba(30,32,38,.7)); padding: 18px 20px;">
+      <div style="font-size: 19px; font-weight: 500;">The Bear</div>
+      <div style="font-size: 14px; color: var(--ink-2);">Season 3, Episode 4 &middot; Disney+</div>
+      <div class="bar" style="height: 3px; margin-top: 16px;"><i style="width: 38%;"></i></div>
+      <div style="display: grid; place-items: center; margin-top: 18px;"><span style="width: 56px; height: 56px; border-radius: 50%; background: #fff; color: #1a1c22; display: grid; place-items: center;"><svg class="i" width="20" height="20" viewBox="0 0 24 24" stroke-width="2.6"><path d="M9 5v14M15 5v14"/></svg></span></div>
+      <div style="display: flex; align-items: center; gap: 10px; margin-top: 18px; color: var(--ink-2);"><svg class="i" width="14" height="14" viewBox="0 0 24 24" stroke-width="1.8"><rect x="6" y="3" width="12" height="18" rx="3"/><circle cx="12" cy="14" r="3"/><path d="M12 7.5h.01"/></svg><div class="bar" style="flex: 1; height: 3px;"><i style="width: 36%;"></i></div></div>
+    </div>
+  </div>
+  <div class="card dark" style="left: 1181px; top: 170px; width: 253px; height: 264px; background: linear-gradient(170deg, rgb(30,36,46), rgb(16,18,22));">
+    <div class="abs" style="left: 26px; top: 153px; width: 354px; height: 211px; border-radius: 50%; background: rgba(10,12,16,.45);"></div>
+    <span class="chip" style="position: absolute; right: 14px; top: 14px; height: 24px; font-size: 10.5px;">15S AGO</span>
+    <div class="abs" style="left: 16px; bottom: 16px; display: flex; align-items: center; gap: 10px; font-size: 17px;">
+      <span style="width: 28px; height: 28px; border-radius: 8px; background: rgba(255,255,255,.12); display: grid; place-items: center;"><svg class="i" width="15" height="15" viewBox="0 0 24 24" stroke-width="1.8"><path d="M4 8h3l2-2.5h6L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg></span>Doorbell</div>
+  </div>
+  <div class="card" style="left: 1181px; top: 452px; width: 253px; height: 264px; background: linear-gradient(155deg, oklch(0.717 0.085 250), oklch(0.662 0.085 256)); border-color: transparent;">
+    <div class="abs" style="left: 60px; top: 30px; width: 132px; height: 132px; border-radius: 50%; background: radial-gradient(circle at 50% 40%, #3a3f48, #23262c); box-shadow: 0 0 0 7px rgba(80,90,100,.5);
+         display: grid; place-items: center; font-size: 50px; font-weight: 300; letter-spacing: -.03em;">71<span style="font-size: 13px; position: absolute; left: 92px; top: 58px;">&deg;F</span></div>
+    <span class="abs" style="left: 18px; top: 178px; width: 40px; height: 40px; border-radius: 50%; background: rgba(40,60,90,.25); display: grid; place-items: center; color: #1d2633;">&minus;</span>
+    <span class="abs" style="right: 18px; top: 178px; width: 40px; height: 40px; border-radius: 50%; background: rgba(40,60,90,.25); display: grid; place-items: center; color: #1d2633;">+</span>
+    <div class="abs" style="left: 18px; bottom: 14px; font-size: 13px; color: rgba(20,28,40,.8); white-space: nowrap;">Currently 74&deg;F &middot; Cooling &middot; 48% hum&hellip;</div>
+  </div>
+  <div class="abs" style="left: 40px; top: 815px; width: 56px; height: 56px; border-radius: 50%; background: radial-gradient(circle at 38% 34%, #a59be6, #4a3d98 50%, #120f24); box-shadow: 0 0 0 2px rgba(255,255,255,.14), 0 0 22px rgba(120,110,220,.35);"></div>
+  <div class="abs" style="left: 1058px; top: 828px; display: flex; align-items: center; gap: 16px; font-size: 14px; color: var(--muted);">
+    <span>Temi and Ade are home</span><span style="color: var(--ink-2); font-size: 15px;">Family</span>
+    <span style="display: flex;">
+      <span style="width: 32px; height: 32px; border-radius: 50%; background: #8a7258; display: grid; place-items: center; font-size: 12px; color: #fff; font-weight: 600;">T</span>
+      <span style="width: 32px; height: 32px; border-radius: 50%; background: #6d5a49; margin-left: -6px; display: grid; place-items: center; font-size: 12px; color: #ddd; font-weight: 600;">S</span>
+      <span style="width: 32px; height: 32px; border-radius: 50%; background: #4f6f63; margin-left: -6px; display: grid; place-items: center; font-size: 12px; color: #fff; font-weight: 600;">A</span>
+      <span style="width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,.1); margin-left: -6px; display: grid; place-items: center; color: var(--ink-2);">+</span>
+    </span>
+  </div></div>
+  <div class="abs" style="inset: 0; background: rgba(8,12,18,.45);"></div>
+  <div class="abs" style="left: 0; top: 100px; width: 1440px; height: 800px; border-radius: 34px 34px 0 0; overflow: hidden;
+       background: linear-gradient(rgba(34,42,54,.94), rgba(22,26,32,.97)); box-shadow: inset 0 1.4px 0 rgba(255,255,255,.3);">
+    <div class="abs" style="left: 0; top: 0; width: 320px; height: 800px; background: rgba(10,12,16,.25); border-right: 1px solid rgba(255,255,255,.07);"></div>
+  </div>
+  <div class="abs" style="left: 43px; top: 130px; font-size: 15px; color: var(--ink-2);">This house</div>
+  
+    <div class="abs" style="left: 31px; top: 166px; width: 271px; height: 62px; border-radius: 16px;"></div>
+    <span class="abs" style="left: 41px; top: 174px; width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: rgba(255,255,255,.08); color: var(--ink-2);"><svg class="i" width="17" height="17" viewBox="0 0 24 24" stroke-width="1.8"><path d="M12 21s-7-6.2-7-11a7 7 0 1 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></span>
+    <div class="abs" style="left: 89px; top: 172px; width: 205px;"><div style="font-size: 16px; white-space: nowrap;">Where home is</div><div style="font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Holts Summit, MO</div></div>
+    <div class="abs" style="left: 31px; top: 230px; width: 271px; height: 62px; border-radius: 16px;"></div>
+    <span class="abs" style="left: 41px; top: 238px; width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: rgba(255,255,255,.08); color: var(--ink-2);"><svg class="i" width="17" height="17" viewBox="0 0 24 24" stroke-width="1.8"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M4.3 4.3l1.6 1.6M18.1 18.1l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.3 19.7l1.6-1.6M18.1 5.9l1.6-1.6"/></svg></span>
+    <div class="abs" style="left: 89px; top: 236px; width: 205px;"><div style="font-size: 16px; white-space: nowrap;">How it looks</div><div style="font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Nightfall</div></div>
+    <div class="abs" style="left: 31px; top: 294px; width: 271px; height: 62px; border-radius: 16px;"></div>
+    <span class="abs" style="left: 41px; top: 302px; width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: rgba(255,255,255,.08); color: var(--ink-2);"><svg class="i" width="17" height="17" viewBox="0 0 24 24" stroke-width="1.8"><path d="M12 3l1.8 5.4L19 10l-5.2 1.6L12 17l-1.8-5.4L5 10l5.2-1.6z"/><path d="M19 15l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/></svg></span>
+    <div class="abs" style="left: 89px; top: 300px; width: 205px;"><div style="font-size: 16px; white-space: nowrap;">Routines</div><div style="font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">5 routines, 1 off</div></div>
+    <div class="abs" style="left: 31px; top: 358px; width: 271px; height: 62px; border-radius: 16px;"></div>
+    <span class="abs" style="left: 41px; top: 366px; width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: rgba(255,255,255,.08); color: var(--ink-2);"><svg class="i" width="17" height="17" viewBox="0 0 24 24" stroke-width="1.8"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/></svg></span>
+    <div class="abs" style="left: 89px; top: 364px; width: 205px;"><div style="font-size: 16px; white-space: nowrap;">What the lights tell you</div><div style="font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">2 of 4 on &middot; 1 of your own</div></div>
+    <div class="abs" style="left: 31px; top: 422px; width: 271px; height: 62px; border-radius: 16px;"></div>
+    <span class="abs" style="left: 41px; top: 430px; width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: rgba(255,255,255,.08); color: var(--ink-2);"><svg class="i" width="17" height="17" viewBox="0 0 24 24" stroke-width="1.8"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c.6-3.4 3-5.4 6-5.4s5.4 2 6 5.4M16 4.8a3.2 3.2 0 0 1 0 6.4M21 20c-.4-2.4-1.6-4-3.4-4.8"/></svg></span>
+    <div class="abs" style="left: 89px; top: 428px; width: 205px;"><div style="font-size: 16px; white-space: nowrap;">People and phones</div><div style="font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">3 people, 2 home</div></div>
+    <div class="abs" style="left: 31px; top: 486px; width: 271px; height: 62px; border-radius: 16px;"></div>
+    <span class="abs" style="left: 41px; top: 494px; width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: rgba(255,255,255,.08); color: var(--ink-2);"><svg class="i" width="17" height="17" viewBox="0 0 24 24" stroke-width="1.8"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
+    <div class="abs" style="left: 89px; top: 492px; width: 205px;"><div style="font-size: 16px; white-space: nowrap;">Accounts</div><div style="font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">All signed in</div></div>
+    <div class="abs" style="left: 31px; top: 550px; width: 271px; height: 62px; border-radius: 16px;"></div>
+    <span class="abs" style="left: 41px; top: 558px; width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: rgba(255,255,255,.08); color: var(--ink-2);"><svg class="i" width="17" height="17" viewBox="0 0 24 24" stroke-width="1.8"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg></span>
+    <div class="abs" style="left: 89px; top: 556px; width: 205px;"><div style="font-size: 16px; white-space: nowrap;">What this house has</div><div style="font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">36 things, and what brought each</div></div>
+    <div class="abs" style="left: 31px; top: 614px; width: 271px; height: 62px; border-radius: 16px; background: rgba(255,255,255,.08);"></div>
+    <span class="abs" style="left: 41px; top: 622px; width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: var(--lamp); color: var(--lamp-ink);"><svg class="i" width="17" height="17" viewBox="0 0 24 24" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg></span>
+    <div class="abs" style="left: 89px; top: 620px; width: 205px;"><div style="font-size: 16px; white-space: nowrap;">Add to the house</div><div style="font-size: 13px; color: var(--lamp); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">3 things found nearby</div></div>
+    <div class="abs" style="left: 31px; top: 678px; width: 271px; height: 62px; border-radius: 16px;"></div>
+    <span class="abs" style="left: 41px; top: 686px; width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: rgba(255,255,255,.08); color: var(--ink-2);"><svg class="i" width="17" height="17" viewBox="0 0 24 24" stroke-width="1.8"><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.2 10.8l7.6-3.6M8.2 13.2l7.6 3.6"/></svg></span>
+    <div class="abs" style="left: 89px; top: 684px; width: 205px;"><div style="font-size: 16px; white-space: nowrap;">Share this house</div><div style="font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Apple Home, Google Home, Alexa</div></div>
+    <div class="abs" style="left: 31px; top: 742px; width: 271px; height: 62px; border-radius: 16px;"></div>
+    <span class="abs" style="left: 41px; top: 750px; width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: rgba(255,255,255,.08); color: var(--ink-2);"><svg class="i" width="17" height="17" viewBox="0 0 24 24" stroke-width="1.8"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg></span>
+    <div class="abs" style="left: 89px; top: 748px; width: 205px;"><div style="font-size: 16px; white-space: nowrap;">The hub</div><div style="font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">v0.3.0</div></div>
+  <div class="abs" style="left: 43px; top: 860px; display: flex; align-items: center; gap: 8px; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted);"><span style="width: 6px; height: 6px; border-radius: 50%; background: var(--live);"></span>Connected</div>
+  <div class="abs dsp" style="left: 369px; top: 122px; font-size: 44px; line-height: 54px;">Add to the house</div>
+  <span class="round" style="left: 1365px; top: 126px; width: 44px; height: 44px; background: rgba(255,255,255,.14); color: #fff;"><svg class="i" width="18" height="18" viewBox="0 0 24 24" stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
+  <div class="abs" style="left: 320px; top: 186px; width: 1120px; border-top: 1px solid rgba(255,255,255,.08);"></div>
+  <div class="abs" style="left: 369px; top: 208px; width: 760px;"><p style="margin: 0; font-size: 16px; line-height: 1.45; color: var(--ink-2);">Plug the new thing in and put it on the Wi&#8209;Fi with its own app if it needs that. If it is already on, this will find it.</p><div style="margin-top: 22px; border-radius: 22px; border: 1px solid rgba(var(--lamp-rgb),.3); background: rgba(var(--lamp-rgb),.05); padding: 16px 18px;">
+      <div style="display: flex; align-items: center; gap: 10px;"><span style="width: 8px; height: 8px; border-radius: 50%; background: var(--lamp);"></span><b style="font-size: 15.5px; font-weight: 500;">Listening for anything new</b><span style="margin-left: auto; font-size: 13.5px; color: var(--muted);">3 seconds in</span></div>
+      <div style="margin-top: 6px; font-size: 13.5px; color: var(--ink-3);">Keeping it up while this page is open. Leave the page and the hub goes quiet again.</div></div><div class="lbl" style="margin: 26px 0 12px;">Printers on this Wi&#8209;Fi</div><div class="row" style="margin-top: 10px; "><span class="ri" style=""><svg class="i" width="19" height="19" viewBox="0 0 24 24" stroke-width="1.8"><path d="M4 21V4h16v17"/><path d="M2.5 21h19"/><path d="M4 7.5h16"/><path d="M10 7.5h4v3.2l-2 1.8-2-1.8z"/><path d="M8.5 17.5h7"/></svg></span>
+        <span style="min-width: 0;"><b>OBI1</b><small>3D printer</small></span><span class="btn small go ">Add</span></div><div class="row" style="margin-top: 10px; "><span class="ri" style=""><svg class="i" width="19" height="19" viewBox="0 0 24 24" stroke-width="1.8"><path d="M4 21V4h16v17"/><path d="M2.5 21h19"/><path d="M4 7.5h16"/><path d="M10 7.5h4v3.2l-2 1.8-2-1.8z"/><path d="M8.5 17.5h7"/></svg></span>
+        <span style="min-width: 0;"><b>R2D2</b><small>3D printer</small></span><span class="btn small go ">Add</span></div><div class="row" style="margin-top: 10px; "><span class="ri" style=""><svg class="i" width="19" height="19" viewBox="0 0 24 24" stroke-width="1.8"><path d="M4 21V4h16v17"/><path d="M2.5 21h19"/><path d="M4 7.5h16"/><path d="M10 7.5h4v3.2l-2 1.8-2-1.8z"/><path d="M8.5 17.5h7"/></svg></span>
+        <span style="min-width: 0;"><b>C3PO</b><small>3D printer</small></span><span class="btn small go ">Add</span></div><div class="lbl" style="margin: 26px 0 12px;">Or start it yourself</div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div class="row" style="padding: 20px 16px;"><span class="ri plain"><svg class="i" width="18" height="18" viewBox="0 0 24 24" stroke-width="1.8"><path d="M12 3v9M18.4 6.6a9 9 0 1 1-12.8 0"/></svg></span><span><b>A plug, bulb or sensor</b><small>Something out of a box, in your hand</small></span></div>
+        <div class="row" style="padding: 20px 16px;"><span class="ri plain"><svg class="i" width="18" height="18" viewBox="0 0 24 24" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg></span><span><b>Something with its own app</b><small>Hue, Sonos, Ring, a thermostat&hellip;</small></span></div></div></div>
+</div>
+</x-dc>
+</body>
+</html>
