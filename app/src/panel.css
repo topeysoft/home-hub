@@ -3401,6 +3401,102 @@ input:focus-visible {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+/* From outside, too? -- the optional last step of setup (AddressStep.vue; design/address/, OfferPlain).
+   The address, the price in the open and what stopping does, in one card. `address-` throughout:
+   this sheet is flat, and words like .form or .price already mean something somewhere else. */
+.address-form {
+  width: min(100%, 640px);
+  padding: 18px 20px 20px;
+  border-radius: var(--r-lg);
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid var(--edge-hi);
+}
+.address-row {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.address-name {
+  display: flex;
+  align-items: stretch;
+}
+.address-name .input {
+  width: 200px;
+  border-radius: 14px 0 0 14px;
+  border-right: 0;
+}
+.address-zone {
+  display: flex;
+  align-items: center;
+  height: 50px;
+  padding: 0 14px;
+  border-radius: 0 14px 14px 0;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--edge);
+  color: var(--ink-2);
+  font-size: 17px;
+}
+.address-said {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 14px;
+}
+.address-said.ok {
+  color: var(--live);
+}
+.address-said.no {
+  color: var(--danger);
+}
+.address-picks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.address-picks .chip-btn {
+  padding: 7px 14px;
+  font-size: 14px;
+  color: var(--ink);
+}
+.address-picks .chip-btn span {
+  color: var(--muted);
+  margin-left: -7px;
+}
+.address-cost {
+  margin: 18px 0 0;
+  font-size: 15px;
+  color: var(--ink-2);
+}
+.address-amount {
+  font-size: 30px;
+  color: var(--ink);
+  margin-right: 4px;
+}
+.address-stop {
+  margin: 6px 0 0;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.address-step .setup-actions {
+  margin-top: 18px;
+}
+.address-pay {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+.address-wait {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+}
+.address-wait .setup-status {
+  margin: 0;
+}
 .pulse-dot {
   width: 8px;
   height: 8px;

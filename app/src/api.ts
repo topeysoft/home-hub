@@ -835,3 +835,30 @@ export const setDeviceShared = (id: string, shared: boolean) => post<Share>(`/de
 /* Its own route, not qrUrl(): that one carries an http address and checks it is one, and a Matter
    payload is MT:… . The cache-buster is because the code changes every time the door opens again. */
 export const shareQrUrl = (n: number) => `/share/qr.svg?v=${n}`
+
+/* The house's own address, for reaching it from outside (brain/hub/address.py). `offer` is whether the
+   panel may offer one at all: closed until a household can actually pay, because an address nobody can
+   pay for is a promise the house cannot keep. `by_hand` is the maker's own hub, carried before then. */
+export type Offer = { open: boolean; price: string | null; pay: string | null; by_hand?: boolean }
+export type AddressState = {
+  offer: Offer; guess: string; house: string | null
+  address?: string; want?: 'on' | 'off'; on?: boolean; waiting?: boolean
+  carried?: boolean; held_until?: number | null; entitled_until?: number | null; lost?: boolean
+}
+export type NameLook = { name: string; free: boolean; address?: string; why?: string; suggestions?: string[] }
+export async function getAddress(): Promise<AddressState> { const r = await request('/address'); if (!r.ok) await fail(r); return r.json() }
+export async function lookAddress(name: string): Promise<NameLook> {
+  const r = await request(`/address/names/${encodeURIComponent(name)}`); if (!r.ok) await fail(r); return r.json()
+}
+/** A taken name throws with `suggestions` on the error, so the screen can offer three that are free. */
+export async function claimAddress(name: string): Promise<AddressState> {
+  const r = await request('/address', { method: 'POST', headers: json, body: JSON.stringify({ name }) })
+  if (r.status === 409) {
+    let suggestions: string[] = []
+    try { suggestions = (await r.json())?.detail?.suggestions ?? [] } catch {}
+    throw Object.assign(new Error('taken'), { suggestions })
+  }
+  if (!r.ok) await fail(r)
+  return r.json()
+}
+export const turnAddress = (on: boolean) => post<AddressState>(`/address/${on ? 'on' : 'off'}`)
