@@ -195,7 +195,10 @@ jobs:
   # failed shard skips this job, and a skipped required check reads as passing.
   e2e:
     needs: e2e-shard
-    if: always()
+    # Not always(): a run the concurrency group cancelled (the duplicate of a push, above) would still
+    # run this, find its jobs cancelled, and report a failure that is not one. !cancelled() still runs
+    # it -- and still fails it -- when a job it waits on really failed.
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     steps:
       - run: test "${{ needs.e2e-shard.result }}" = success
@@ -305,7 +308,10 @@ jobs:
   # built. Change the matrix freely; leave this job's name alone.
   image:
     needs: image-build
-    if: always()
+    # Not always(): a run the concurrency group cancelled (see e2e above) would still
+    # run this, find its jobs cancelled, and report a failure that is not one. !cancelled() still runs
+    # it -- and still fails it -- when a job it waits on really failed.
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     steps:
       - name: both architectures built
