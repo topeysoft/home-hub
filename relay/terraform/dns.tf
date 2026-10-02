@@ -90,6 +90,21 @@ resource "cloudflare_universal_ssl_setting" "off" {
 # belongs to the nameserver on the relay box, which answers 192-168-86-53.<house>.home.elyir.app with
 # that LAN address for a carried house and nothing else. It is still one write, made here, forever:
 # no house ever causes a DNS write -- the names are worked out from the question, not stored.
+# "Which printers are on this Wi-Fi": the relay matches the public address a page asks from with the one each
+# printer's tunnel comes from. Tunnels arrive over IPv4, and a dual-stack phone would ask over IPv6 and match
+# nothing, so this one name has an A record and no AAAA -- a specific name hides the wildcard for every type,
+# so asking it over IPv6 finds nothing to connect to and the browser uses IPv4. Checked 2 October 2026: this
+# house's Mac reaches the relay over IPv6 while obi1's tunnel is IPv4.
+resource "cloudflare_dns_record" "nearby_v4" {
+  zone_id = data.cloudflare_zone.this.zone_id
+  name    = "nearby.${var.zone_name}"
+  type    = "A"
+  content = local.relay_ipv4
+  ttl     = 300
+  proxied = false
+  comment = "Which printers are on this Wi-Fi. IPv4 only, on purpose: tunnels arrive over IPv4."
+}
+
 resource "cloudflare_dns_record" "ns1_v4" {
   zone_id = data.cloudflare_zone.this.zone_id
   name    = "ns1.${var.zone_name}"

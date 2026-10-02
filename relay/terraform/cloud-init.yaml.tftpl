@@ -108,6 +108,30 @@ write_files:
       localPort = 9443
       transport.proxyProtocolVersion = "v2"
 
+  # nearby.elyir.app: one more always-carried name, answering "which printers are on this Wi-Fi".
+  - path: /etc/frp/nearby-frpc.toml
+    permissions: '0600'
+    owner: root:root
+    content: |
+      serverAddr = "127.0.0.1"
+      serverPort = 443
+      loginFailExit = false
+      auth.method = "token"
+      auth.token = "${auth_token}"
+      user = "nearby"
+      metadatas.house = "nearby"
+      metadatas.secret = "${nearby_secret}"
+      transport.tls.disableCustomTLSFirstByte = false
+      log.to = "console"
+
+      [[proxies]]
+      name = "door"
+      type = "https"
+      customDomains = ["nearby.${zone}"]
+      localIP = "127.0.0.1"
+      localPort = 9443
+      transport.proxyProtocolVersion = "v2"
+
   # api.elyir.app's door. The certificate is proved over TLS-ALPN-01 through frps, the same way every
   # house proves its own, so no port opens for it and no DNS credential exists on this box. Only the
   # hub-facing routes are passed on; the plugin route answers frps on loopback and nobody else.
@@ -137,6 +161,23 @@ write_files:
         }
         @public path /alive /offer /names/* /houses /houses/* /acme/*
         handle @public {
+          reverse_proxy 127.0.0.1:7100
+        }
+        handle {
+          respond 404
+        }
+      }
+
+      # Which printers are on this Wi-Fi: the one route, and nothing else on this name.
+      nearby.${zone}:9443 {
+        bind 127.0.0.1
+        tls {
+          issuer acme {
+            disable_http_challenge
+            alt_tlsalpn_port 9443
+          }
+        }
+        handle /nearby {
           reverse_proxy 127.0.0.1:7100
         }
         handle {
@@ -217,6 +258,7 @@ write_files:
         -e RELAY_ZONE=${zone} \
         -e RELAY_SELF_SECRET=${self_secret} \
         -e RELAY_PRINTERS_SECRET=${printers_secret} \
+        -e RELAY_NEARBY_SECRET=${nearby_secret} \
         -e RELAY_FRPS_TOKEN=${auth_token} \
         -e RELAY_OFFER_OPEN=${offer_open} \
         -e RELAY_DNS_PORT=53 \
@@ -296,6 +338,28 @@ write_files:
       [Install]
       WantedBy=multi-user.target
 
+  - path: /etc/systemd/system/relay-nearby-frpc.service
+    permissions: '0644'
+    owner: root:root
+    content: |
+      [Unit]
+      Description=nearby.${zone} through the relay
+      After=frps.service relay-service.service
+      Requires=docker.service
+
+      [Service]
+      Restart=always
+      RestartSec=5
+      ExecStartPre=-/usr/bin/docker rm -f relay-nearby-frpc
+      ExecStart=/usr/bin/docker run --rm --name relay-nearby-frpc \
+        --network host \
+        -v /etc/frp/nearby-frpc.toml:/etc/frp/frpc.toml:ro \
+        fatedier/frpc:v${frp_version} -c /etc/frp/frpc.toml
+      ExecStop=/usr/bin/docker stop relay-nearby-frpc
+
+      [Install]
+      WantedBy=multi-user.target
+
 runcmd:
   # Key-only, no root password, no sshd password prompt to brute force.
   - sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
@@ -319,3 +383,4 @@ runcmd:
   - systemctl enable --now relay-api-door
   - systemctl enable --now relay-api-frpc
   - systemctl enable --now relay-printers-frpc
+  - systemctl enable --now relay-nearby-frpc
