@@ -5742,17 +5742,60 @@ select.input {
   background: var(--surface);
   border: 1px solid var(--edge);
 }
-/* A phone row with the From outside switch (PeoplePage.vue; design/away/, NamedC): the switch sits between the
-   name and Remove, so a row that has one gets a column for it and the rows without keep theirs. */
-.phones li:has(.phones-outside) {
+/* A phone row with its Home only | Anywhere choice (PeoplePage.vue; design/words-people/, AnywhereC): the choice
+   sits between the name and Remove, so a row that has one gets a column for it and the rows without keep theirs.
+   The wall gets the same column with the answer and no choice, because it never leaves. */
+.phones li:has(.phones-where) {
   grid-template-columns: auto 1fr auto auto;
 }
-.phones-outside {
+.phones-where {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+}
+.where-pick {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--surface-hi);
+  border: 1px solid var(--edge);
+}
+.where-pick button {
+  appearance: none;
+  border: 0;
+  background: none;
+  font: inherit;
   font-size: 13px;
+  padding: 6px 12px;
+  border-radius: 999px;
   color: var(--ink-2);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.where-pick button[aria-checked='true'] {
+  background: var(--ink);
+  color: var(--bg);
+  font-weight: 500;
+}
+.where-pick.busy {
+  opacity: .6;
+  pointer-events: none;
+}
+.where-fixed {
+  font-size: 13px;
+  color: var(--muted);
+  padding-right: 6px;
+}
+/* On a phone the two answers are wider than the room beside a name, so they take their own line under it
+   and Remove keeps its place at the end of the first (design/words-people/, AnywhereC-phone). */
+@media (max-width: 860px) {
+  .phones li:has(.where-pick) {
+    grid-template-columns: auto 1fr auto;
+  }
+  .phones-where:has(.where-pick) {
+    grid-column: 2 / -1;
+    grid-row: 2;
+    justify-self: start;
+  }
 }
 .phones-icon {
   width: 32px;

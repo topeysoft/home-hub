@@ -84,7 +84,7 @@ class Restarting(ApiTest):
         self.client.post("/restart", json={"rung": "hub"}, headers=self.head)
         e = self.hub.log.recent(limit=5, subject="restart")[0]
         self.assertEqual((e["old"], e["new"], e["source"]), ("hub", "asked", "user"))
-        self.assertEqual(json.loads(e["detail"])["who"], "This wall")   # the phone row names itself; "the wall" is only the fallback
+        self.assertEqual(json.loads(e["detail"])["who"], "Wall screen")   # the phone row names itself; "the wall" is only the fallback
 
     # ---- and what it must not become ----
     def test_it_will_not_happen_during_an_update(self):

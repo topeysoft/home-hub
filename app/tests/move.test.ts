@@ -34,7 +34,7 @@ describe('the code a move arrives with', () => {
   })
 })
 
-describe('From outside, on People', () => {
+describe('Home only or Anywhere, on People', () => {
   it('is for phones, once the house has an address, on a screen that keeps the house', () => {
     expect(switchFor(phone(), true, true)).toBe(true)
     expect(switchFor(phone({ kind: 'wall' }), true, true)).toBe(false)
@@ -45,8 +45,8 @@ describe('From outside, on People', () => {
 
 describe('the away screen', () => {
   it('waits, and opens by itself, only for a phone the house knows', () => {
-    expect(waitsToBeLetOut('This phone works at home. Someone at the wall can let it out.')).toBe(true)
-    expect(waitsToBeLetOut('This house is not open from here.')).toBe(false)
+    expect(waitsToBeLetOut('This phone works on your home Wi‑Fi. Someone with the passcode can set it to Anywhere, in People.')).toBe(true)
+    expect(waitsToBeLetOut('This house isn’t open to this phone.')).toBe(false)
     expect(waitsToBeLetOut(null)).toBe(false)
   })
 })

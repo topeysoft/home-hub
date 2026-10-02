@@ -29,17 +29,45 @@ to clean it up.
 - **The words come from the brain** where they already do (`docs/messages.md`), so a fix there is a
   fix on every screen.
 
-## Known so far
+## Areas
 
-| Where | Says | Problem | Status |
-| --- | --- | --- | --- |
-| `design/away/`, `design/address/` — the per-phone switch on People, and the tag where Connected is said | From outside | Reads as "the yard"; nobody new knows it means away from home | Not shipped yet — fix on the boards before it is built |
-| `app/src/PeoplePage.vue` — the Phones line | "none reaches it from outside yet" | Same word, already shipped | Pass |
-| `brain/hub/happened.py` — the log | "let Sam reach the house from outside" | Same | Pass |
+| Area | Status | Boards |
+| --- | --- | --- |
+| People and phones | **Done, 2 October 2026.** C chosen: a phone is *Home only* or *Anywhere* | `design/words-people/` |
+| Setup | Not started | |
+| Rooms and devices | Not started | |
+| Settings (This hub, Accounts, Share, the passcode) | Not started | |
+| The band and its messages | Not started | |
+| The brain's sentences outside the areas above | Not started | |
 
-Add to this table whenever a word stops you, rather than fixing it in passing. The pass starts from
-this list and then reads every screen and every sentence the brain says, since most of what it will
-change has not been noticed yet.
+### The words People and phones settled, for every area after it
+
+- A phone that works when you are not at home is set to **Anywhere**; the other answer is **Home only**.
+  Never *from outside*, *let out*, *reach the house*.
+- The screen on the wall is the **wall screen** when it is named to a person. Never bare *the wall*,
+  which also means plaster, and the switches in it.
+- **Someone with the passcode** is who can change phones. Never *keeps the house*, *holds the keys*.
+- A phone **can use the house**, is **added**, **allowed**, or **removed**. Never *belongs*, *let in*,
+  *is out*, *runs it*.
+- The house has a **web address**, or a **link**; a phone **switches** to it. Never bare *address*, never
+  *move this phone*.
+- The phone's own words for its own things: **Home Screen**, not *first screen*.
+
+## Known so far, outside the areas done
+
+| Where | Says | Problem |
+| --- | --- | --- |
+| `brain/hub/happened.py`, `app/src/ChangesPage.vue` — who did something | "Someone at the wall" | Bare *the wall* |
+| `app/src/HubPage.vue`, `brain/hub/api.py` — Restart | "for the screens that keep it. Someone at the wall can do it." | *keep it*, *the wall* |
+| `BridgeSheet.vue`, `StripSheet.vue`, `NetworkSheet.vue` | "You can walk away; the wall will say when it is done." | *the wall* as the thing that talks |
+| `StripSheet.vue` | "It is being let in now, over Bluetooth" | *let in* for a light being added |
+| `HousePanel.vue` and many sheets | "This hub" as a page name | The person bought a box; is *hub* their word? |
+| `HousePanel.vue` | "Lock the settings" beside "Change the passcode" | Two names for one thing |
+| `AccountsPage.vue` | "Sam's Nest is out." | *is out* for removed |
+
+Add to this table whenever a word stops you, rather than fixing it in passing. Each area's pass starts
+from this list and then reads every screen and every sentence the brain says in it, since most of what
+it will change has not been noticed yet.
 
 ## How the pass is done
 

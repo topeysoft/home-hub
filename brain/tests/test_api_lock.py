@@ -338,7 +338,7 @@ class AwayGateTests(ApiTest):
         r = self.client.post("/devices/light.kitchen/on", headers=self.AWAY)
         self.assertEqual(r.status_code, 403)
         self.assertEqual(r.json()["detail"], "remote")
-        self.assertIn("works at home", r.json()["message"])
+        self.assertIn("set it to Anywhere", r.json()["message"])
 
     def test_and_the_same_phone_at_home_still_does(self):
         """The gate is about the door, not the phone: nothing changes on the Wi-Fi."""
