@@ -120,7 +120,7 @@ async function fan(minutes: number) {
   if (dead.value || busy.value) return
   busy.value = true
   try { await setFan(props.device.id, minutes); notify(minutes ? `Fan on for ${minutes < 60 ? `${minutes} min` : `${minutes / 60} h`}.` : 'Fan off.') }
-  catch (e: any) { notify(`The fan didn't respond: ${e.message}`, 'error') }
+  catch (e: any) { notify(`The fan didn't answer: ${e.message}`, 'error') }
   busy.value = false
 }
 

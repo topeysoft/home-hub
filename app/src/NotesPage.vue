@@ -81,7 +81,7 @@ async function run(n: Note, a: Act, id: string) {
   if (a.act === 'backup') {
     if (busy.value) return
     busy.value = id
-    try { await downloadBackup(); notify('Your backup is on its way. Keep it somewhere safe; it holds the house’s keys.') }
+    try { await downloadBackup(); notify('Your backup is on its way. Keep it somewhere safe; it holds the house’s passwords and sign-ins.') }
     catch (e: any) { notify(e.message, 'error') }
     busy.value = ''
     return
@@ -94,7 +94,7 @@ async function run(n: Note, a: Act, id: string) {
     else if (a.act === 'check') { const r = await checkDevice(a.to!); notify(r.text, r.answering ? 'info' : 'error') }
     else if (a.act === 'forget') {
       await forgetDevice(a.to!)
-      notify(n.name ? `${n.name} is forgotten.` : 'It is forgotten.')
+      notify(n.name ? `${n.name} is removed.` : 'It is removed.')
       store.notes = store.notes.filter(x => x.subject !== a.to)   // it goes now; the next rebuild agrees
     }
     /* A bridge, not a device: it was never in the house's device list to remove from. What goes with
@@ -102,7 +102,7 @@ async function run(n: Note, a: Act, id: string) {
        list the next time the brain starts. */
     else if (a.act === 'bridge') {
       const r = await forgetBridge(a.to!)
-      notify(`${r.forgotten} is forgotten.`)
+      notify(`${r.forgotten} is removed.`)
       store.notes = store.notes.filter(x => x.subject !== a.to)
     }
     await loadHealth()
@@ -127,7 +127,7 @@ async function run(n: Note, a: Act, id: string) {
           <small class="note-where" v-if="n.more">{{ n.more }}</small>
           <!-- what went quiet behind this one fault; put the fault right and these come back together -->
           <small class="note-with" v-if="n.with?.length">
-            {{ n.with.length === 1 ? 'One thing went quiet with it:' : `${n.with.length} things went quiet with it:` }}
+            {{ n.with.length === 1 ? 'One thing stopped answering with it:' : `${n.with.length} things stopped answering with it:` }}
             <template v-if="spread[key(n, i)]">
               <span class="note-thing" v-for="w in n.with" :key="w.id">{{ w.name }}<span class="note-thing-where" v-if="w.where">{{ w.where }}</span></span>
             </template>
@@ -153,7 +153,7 @@ async function run(n: Note, a: Act, id: string) {
       </li>
     </ul>
     <button class="button small ghost more-quiet" v-if="more && !open" @click="open = true">
-      Show the other {{ more }} {{ more === 1 ? 'thing' : 'things' }} that are offline
+      Show the other {{ more }} {{ more === 1 ? 'thing' : 'things' }} that are not answering
     </button>
     <p class="empty" v-else-if="!store.notes.length">Nothing needs a look. Everything the house talks to is answering.</p>
   </div>

@@ -37,6 +37,7 @@ to clean it up.
 | Setup (first run) | **Done, 2 October 2026.** B chosen: say less | `design/words-setup/` |
 | Rooms and devices: adding a thing | **Done, 2 October 2026.** A chosen: the verb is *add* | `design/words-adding/` |
 | Rooms and devices: rooms, panes, New devices | **Done, 2 October 2026.** C chosen: the device's words for controls, a person's for how it is | `design/words-rooms/` |
+| History (What happened, Who changed what, Needs a look) | **Done, 2 October 2026.** No new choice: the settled words applied, and five wrong facts fixed | `design/words-history/` |
 | Rooms and devices: light strips and the roofline | Not started — its words were settled on boards on 1 October; reopen only with boards | |
 | Settings (The hub, Accounts, Share, the passcode, What this house has, Look, Routines, Signals) | **Done, 2 October 2026.** One name each; the restart says how deep, connections keep their standard names | `design/words-settings/` |
 | The band and its messages | Not started | |
@@ -103,6 +104,15 @@ to clean it up.
 - **Who may do something is said by the passcode**, as People settled: "Restarting needs the passcode."
   `app/tests/settingswords.test.ts` holds this area's names.
 
+### What history settled
+
+- **When the house cannot say who, it says *Someone*.** Never *Someone at the wall*; and the hub's own
+  watchdog is *The hub*.
+- **Nothing raw reaches these pages**: no chip id, no restart's internal name, no row value like "30,80".
+  A bridge is named by its room. A connection's own error is the one exception, kept after a full
+  sentence because it is the only clue anybody has.
+- **"While you were out" only when somebody was**; otherwise "Since yesterday".
+
 ## Known so far, outside the areas done
 
 | Where | Says | Problem |
@@ -115,6 +125,7 @@ to clean it up.
 | `SignalsPage.vue` / `brain/hub/signals.py` | "Choose the rooms you come in through, in Routines" | NOT WORDS: Routines only shows that picker once a house already has one -- a dead end for a new house |
 | `SignalsPage.vue` | "Ask for it in Routines, in your own words" | NOT WORDS: asking exists only once the assistant is connected |
 | `SharePage.vue`, `brain/hub/api.py` | "Running the installer again adds one" | Not something a household can do |
+| `brain/hub/health.py` | "Ring needs signing in again." | NOT WORDS: no button on Needs a look, while an account's sign-in has one |
 
 Add to this table whenever a word stops you, rather than fixing it in passing. Each area's pass starts
 from this list and then reads every screen and every sentence the brain says in it, since most of what
