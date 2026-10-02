@@ -99,6 +99,8 @@ resource "hcloud_server" "relay" {
     # The service's own name has a secret like any house's. Derived rather than chosen, so there is
     # nothing more to mint or keep: whoever has the relay token already holds the box.
     self_secret = sha256("api:${var.relay_auth_token}")
+    # The printer app's name, carried the same way and derived the same way.
+    printers_secret = sha256("printers:${var.relay_auth_token}")
   })
 
   labels = {
