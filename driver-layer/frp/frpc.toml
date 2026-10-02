@@ -1,0 +1,35 @@
+# The house's end of the tunnel: one connection out to the relay, held open, and every phone away
+# carried back down it to the away door on loopback. docs/away.md, piece 2.
+#
+# Nothing here is specific to a house; the values come from .env through frp's own templating, so
+# this file is the same in every house and install.sh never writes it.
+#
+# NOT here, deliberately: any `plugin` line. frp ships an `https2http` plugin that terminates TLS, and
+# the relay carrying bytes it cannot read is a property of not using one. The proxy below hands the
+# raw handshake to Caddy, which is where the house's only key is.
+
+serverAddr = "{{ .Envs.HUB_RELAY_ADDR }}"
+serverPort = 443
+loginFailExit = false
+
+auth.method = "token"
+auth.token = "{{ .Envs.HUB_RELAY_TOKEN }}"
+
+# The relay takes houses dialing in and phones arriving on the same port, 443, the one that survives a
+# hotel. This first byte is how it tells the two apart; without it the tunnel never comes up.
+transport.tls.disableCustomTLSFirstByte = false
+
+log.to = "console"
+log.level = "info"
+
+[[proxies]]
+# Named for the house, because the relay keeps one list of proxies for every house that dials in and
+# two called the same thing would refuse each other.
+name = "{{ .Envs.HUB_AWAY_NAME }}"
+type = "https"
+customDomains = ["{{ .Envs.HUB_AWAY_NAME }}"]
+localIP = "127.0.0.1"
+localPort = 9443
+# Who is really asking. Without it every phone away arrives from 127.0.0.1 and shares one bucket of
+# wrong codes; the away door reads this header and only from loopback (caddy/Caddyfile).
+transport.proxyProtocolVersion = "v2"

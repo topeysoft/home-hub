@@ -232,6 +232,32 @@ The first two steps need nothing from the maker and can land and be tested on a 
      what lets the relay tell a hub dialling in from a phone opening a house. Without it the two collide and the
      tunnel fails to establish. Note the nesting — that key is client-level, while
      `transport.proxyProtocolVersion` above belongs to the individual proxy.
+
+   **Built, 1 October 2026, with step 5's certificate in it; not yet on a real house.** `frpc` is a service in
+   `driver-layer/docker-compose.yml` behind the `away` profile, configured by `driver-layer/frp/frpc.toml` from
+   `.env` alone. The away door is now one of two files: `caddy/away/off.caddy` is the plain door steps 1 and 2
+   were built on, and every house stays on it; `caddy/away/on.caddy` is the house's public name with a certificate
+   proved over TLS-ALPN-01, chosen by `HUB_AWAY=on`. The PROXY header is read on `:9443` only and only from
+   loopback, in every mode, so the LAN doors are untouched. `.env.example` says how to turn it on. Checked end to
+   end in miniature — Pebble as the CA, `frps` with the relay's own `frps.toml`, the real `Caddyfile` and
+   `frpc.toml`, and a phone on the far side:
+
+   - The certificate was issued through the relay on Caddy's first retry, a minute after the tunnel came up (the
+     first attempt raced the tunnel and failed, which is expected and needs nothing).
+   - The phone verified the chain, and the certificate it was shown has the same fingerprint as the one in the
+     hub's storage. The relay holds no certificate or key file.
+   - The brain was told the phone's own address in `X-Forwarded-For`, not `127.0.0.1`, with `X-Hub-Via: relay`
+     and `X-Forwarded-Proto: https`. A forged `X-Hub-Via: lan` arrived as `relay`.
+   - The house's name in the handshake with `Host: hub.local` after it reached no site and nothing reached the
+     brain. An unregistered name, and no name at all, got no handshake.
+   - The relay restarted under the tunnel and `frpc` was back in two seconds.
+
+   **What the first tap from outside will find.** A phone paired at home holds its cookie for `hub.local`, and a
+   browser keeps cookies per origin, so the same phone opening the public name is a stranger there: it gets
+   *This house is not open from here*, and the join routes are closed from away by design. The relay, the
+   certificate and the gate all work and a let-out phone still cannot get in until a phone can carry its pairing
+   from the house's LAN name to its public one. That is the next thing to decide, with the alias in *Open
+   decisions*, and the *People* switch lands with it.
 4. **The registration service and the switch in *This hub*.** Names, keys, more than one house.
 5. **The certificate:** TLS-ALPN-01 on the hub — which is why this now comes before the first tap in step 3 —
    then the alias that covers home.
@@ -280,6 +306,11 @@ door under test was the `:9443` site as it is actually written.*
   box in step 3 is sized for a few thousand houses rather than one. The reasoning, the tiers and what may never be
   sold are `docs/service.md`.
 - **The alias that covers home** — a private address in public DNS, or the hub answering for its own name on the LAN.
+- **How a phone carries its pairing to the public name.** Found 1 October 2026 while building step 3: cookies are
+  per origin, so pairing on `hub.local` gives a phone nothing under `elyir.app`, and joining is closed from away.
+  The smallest answer is a hand-off made at home — a phone already let out asks for a one-time link, opens the
+  public name with it, and is given a token there for the same phone — and it is tied to the alias question,
+  because whichever name the phone keeps on its home screen is the one it uses on the sofa as well.
 - **Does the wall panel ever get `remote`?** Recommended no: it never leaves the house, so it never needs the door.
 
 ## What this replaces
