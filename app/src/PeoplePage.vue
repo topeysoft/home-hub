@@ -16,6 +16,7 @@ import { computed, ref } from 'vue'
 import { store, notify, holdsKeys, loadPhones } from './store'
 import { letOut, removePhone, type Phone } from './api'
 import { switchFor } from './move'
+import { seen } from './seen'
 import { initials, personTone } from './people'
 import Icon from './Icon.vue'
 import PhoneSteps from './PhoneSteps.vue'
@@ -28,7 +29,7 @@ const state = (home: boolean | null) => home === true ? 'Home' : home === false 
 const HOW: Record<string, string> = { code: 'typed the passcode', wall: 'let in from the wall', setup: 'set up the house' }
 const day = (ts: number) => new Date(ts * 1000).toLocaleDateString(locale(), { weekday: 'short', month: 'short', day: 'numeric' })
 function phoneLine(p: Phone) {
-  const bits = [`${HOW[p.how] ?? 'joined'} ${day(p.joined)}`]
+  const bits = [`${HOW[p.how] ?? 'joined'} ${day(p.joined)}`, seen(p.last_seen)]   // seen: what tells five rows of the same name apart
   if (p.expires) bits.push(`until ${day(p.expires)}`)
   return bits.join(' · ')
 }
