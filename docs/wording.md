@@ -34,7 +34,7 @@ to clean it up.
 | Area | Status | Boards |
 | --- | --- | --- |
 | People and phones | **Done, 2 October 2026.** C chosen: a phone is *Home only* or *Anywhere* | `design/words-people/` |
-| Setup | Not started | |
+| Setup (first run) | **Done, 2 October 2026.** B chosen: say less | `design/words-setup/` |
 | Rooms and devices | Not started | |
 | Settings (This hub, Accounts, Share, the passcode) | Not started | |
 | The band and its messages | Not started | |
@@ -53,6 +53,17 @@ to clean it up.
   *move this phone*.
 - The phone's own words for its own things: **Home Screen**, not *first screen*.
 
+### What first run settled
+
+- **Say less.** One sentence a lede, and nothing the screen already shows. A screen that has to explain
+  itself is a screen to redraw, not a sentence to add.
+- **The machinery stays on This hub.** Radios, Matter, the message bus: a row shows outside This hub only
+  when it needs the person, and then as a sentence ("Ring needs you to sign in"), never as a status
+  ("Running", "Stick on USB").
+- **Name a place only by what it says on screen.** The command box is *Tell the house…*; there is no page
+  called *Home*. A tip that names a place has to be checked against the panel when the panel changes.
+- **Never *the engine*, never *Home Assistant*.** The way to its own settings is *Advanced*.
+
 ## Known so far, outside the areas done
 
 | Where | Says | Problem |
@@ -64,6 +75,8 @@ to clean it up.
 | `HousePanel.vue` and many sheets | "This hub" as a page name | The person bought a box; is *hub* their word? |
 | `HousePanel.vue` | "Lock the settings" beside "Change the passcode" | Two names for one thing |
 | `AccountsPage.vue` | "Sam's Nest is out." | *is out* for removed |
+| `Adding.vue` — the Add flow, also inside first run | "Listening for anything new … Leave the page and the hub goes quiet again." ; "Have a look" ; "A part of the house" | Ours: *goes quiet*, and a category that names nothing a person owns |
+| `HubPage.vue`, `AddPage.vue` | "Behind the scenes" | A heading that tells you not to read what is under it |
 
 Add to this table whenever a word stops you, rather than fixing it in passing. Each area's pass starts
 from this list and then reads every screen and every sentence the brain says in it, since most of what
