@@ -41,6 +41,7 @@ from .pairing import Pairing
 from .bridge import Bridges
 from .strip import Strips, StripError
 from .roofline import Roofline
+from .printers import Printers
 from .signals import Signals
 from . import things
 from .things import Things
@@ -131,6 +132,7 @@ class Hub:
         self.bridge = Bridges(self)        # a puck on the cable, and the ones the house has
         self.strip = Strips(self)          # a light strip knocking over Bluetooth: hub/strip.py
         self.roofline = Roofline(self)     # several strip controllers as one light outside, its evenings and its holidays
+        self.printers = Printers(self)     # 3D printers on the Wi-Fi, let in at the printer and followed: hub/printers.py
         self.net = Network(self)           # how this hub is connected, and what it hands out: docs/network.md
         self.share = Share(self)           # what this house lets a Matter bridge publish: docs/matter.md
         self.share_status: dict = {}       # what the bridge last said about itself (pairing codes, who holds it)
@@ -724,9 +726,10 @@ async def lifespan(app):
     hub._suggest_task = asyncio.create_task(hub.assistant.run())
     hub._prune_task = asyncio.create_task(hub.log.run())      # the diary, kept a diary: events.py
     hub._roofline_task = asyncio.create_task(hub._roofline_loop())
+    hub._printers_task = asyncio.create_task(hub.printers.run())   # needs no engine: a printer is its own
     yield
     for t in (hub._loop_task, hub._tick_task, hub._signals_task, hub._drivers_task, hub._comfort_task, hub._update_task,
-              hub._suggest_task, hub._prune_task, hub._roofline_task): t.cancel()
+              hub._suggest_task, hub._prune_task, hub._roofline_task, hub._printers_task): t.cancel()
     if hub.ha: await hub.ha.close()
 
 
@@ -1382,6 +1385,84 @@ async def bridge_wifi(body: dict):
     hub.ready()
     try: return await hub.bridge.wifi(str(body.get("ssid") or ""), str(body.get("password") or ""))
     except ValueError as e: raise HTTPException(400, str(e))
+
+
+# ---------- 3D printers: found on the Wi-Fi, let in at the printer, and followed (docs/printers.md) ----------
+@app.get("/printers")
+def printers_status(): return hub.printers.status()
+
+
+@app.post("/printers/look")
+async def printers_look():
+    """Ask again which printers are on the Wi-Fi, now: the Add door is open. Opening it is also when last
+    time's answers are done with -- each was said in the row that asked, and the rows leave with the page."""
+    hub.printers.clear_answers()
+    await hub.printers.look()
+    return hub.printers.status()
+
+
+@app.post("/printers/{pid}/add")
+async def printers_add(pid: str):
+    """Ask a printer to let the house in. The answer comes on the printer's screen, so this returns at once
+    and the panel follows `asking` on the stream."""
+    try: hub.printers.ask(pid)
+    except KeyError as e: raise HTTPException(404, str(e))
+    return hub.printers.status()
+
+
+@app.delete("/printers/{pid}/add")
+async def printers_stop_asking(pid: str):
+    """Stop asking: somebody walked to the wrong printer."""
+    hub.printers.stop(pid)
+    return hub.printers.status()
+
+
+@app.post("/printers/{pid}/room")
+async def printers_room(pid: str, body: dict):
+    """Put a printer in a room, or in none (`room: null`). Chosen on its pane; never asked when it is added."""
+    room = body.get("room")
+    try: return hub.printers.set_room(pid, str(room) if room else None)
+    except KeyError as e: raise HTTPException(404, str(e))
+    except ValueError as e: raise HTTPException(400, str(e))
+
+
+@app.delete("/printers/{pid}")
+async def printers_forget(pid: str):
+    try: await hub.printers.forget(pid)
+    except KeyError as e: raise HTTPException(404, str(e))
+    return hub.printers.status()
+
+
+@app.post("/printers/{pid}/action")
+async def printers_action(pid: str, body: dict):
+    try: await hub.printers.act(pid, str(body.get("action") or ""), body.get("args") or {})
+    except KeyError as e: raise HTTPException(404, str(e))
+    except PermissionError as e: raise HTTPException(403, str(e))
+    except (ConnectionError, RuntimeError, TimeoutError) as e: raise HTTPException(503, str(e) or "The printer didn't answer.")
+    return hub.printers.view(pid)
+
+
+def _printer_stream(pid: str, what: str, query: str = ""):
+    """A printer's camera or thumbnail, passed through: the panel never holds a printer's token."""
+    try: status, headers, resp = hub.printers.fetch(pid, what, query)
+    except KeyError as e: raise HTTPException(404, str(e))
+    except OSError: raise HTTPException(503, "The printer isn't answering.")
+    if status != 200: resp.close(); raise HTTPException(502 if status >= 500 else 404, "The printer said no.")
+    def chunks():
+        try:
+            while (b := resp.read(64 * 1024)): yield b
+        finally: resp.close()
+    ctype = next((v for k, v in headers.items() if k.lower() == "content-type"), "application/octet-stream")
+    return StreamingResponse(chunks(), media_type=ctype, headers={"Cache-Control": "no-store"})
+
+
+@app.get("/printers/{pid}/thumbnail")
+def printers_thumbnail(pid: str): return _printer_stream(pid, "thumbnail")
+
+
+@app.get("/printers/{pid}/camera")
+def printers_camera(pid: str, still: bool = False):
+    return _printer_stream(pid, "camera", "action=snapshot" if still else "action=stream")
 
 
 # ---------- a light strip, knocking over Bluetooth ----------

@@ -40,7 +40,7 @@ import { deviceById, installUpdate, loadHealth, notify, openFlow, restartHub, st
 import { checkDevice, downloadBackup, forgetBridge, forgetDevice, retryEntry, retryPart, type Act, type Note, type Rung } from './api'
 import Icon from './Icon.vue'
 
-const noteIcon = (k: string) => k === 'held' ? 'shield' : k === 'offline' || k === 'restart' ? 'refresh' : k === 'storage' || k === 'healed' ? 'home' : k === 'driver' ? 'switch' : k === 'bridge' ? 'wifi' : 'sparkle'
+const noteIcon = (k: string) => k === 'printer' ? 'printer' : k === 'held' ? 'shield' : k === 'offline' || k === 'restart' ? 'refresh' : k === 'storage' || k === 'healed' ? 'home' : k === 'driver' ? 'switch' : k === 'bridge' ? 'wifi' : 'sparkle'
 
 /* A long list of quiet things folds, because five is enough to see the shape of it -- but the fold opens.
    The old list stopped at five in the BRAIN and ended with "And 3 more things are offline", a sentence
@@ -71,6 +71,10 @@ async function run(n: Note, a: Act, id: string) {
   /* A strip held dark: Show me opens the light's own pane, where the same sentence and the next step
      are (design/controller-panel/NeedsLookB.dc.html). The row stays -- the strip is still dark. */
   if (a.act === 'open') { const d = deviceById(a.to!); if (d) store.opened = d; return }
+  /* A printer that needs somebody: Open R2D2 is its own pane, where its words and its actions are. This
+     page steps aside for it, because a pane and This house share a layer and the later one would cover
+     it; the row stays, and is here again behind the door, while the printer still needs somebody. */
+  if (a.act === 'printer') { store.sheet = null; store.printer = a.to; return }
   if (a.act === 'update') return installUpdate()
   /* A restart takes this page away with it, so there is nothing to refresh afterwards and nothing to
      mark busy: the overlay is up before the tap has finished. The rung is the brain's -- this page
