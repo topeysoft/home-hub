@@ -15,6 +15,7 @@ import { homeTab } from './layout'
 import { store, updateReady, weatherParts } from './store'
 import Icon from './Icon.vue'
 import WeatherArt from './WeatherArt.vue'
+import { narrow, setupLeft, setupNow } from './band'
 
 const props = defineProps<{ clock: string; day: string; now: Date; tab: 'home' | 'rooms' | 'cameras'; inRoom: boolean }>()
 const emit = defineEmits<{ go: [tab: 'home' | 'rooms' | 'cameras'] }>()
@@ -28,6 +29,9 @@ const yours = computed(() => homeTab(props.now.getHours()))
    where the widths are. The number only: the drawing IS the condition, and the
    words do not fit a 390px bar on the day the forecast says "Unusual weather". */
 const temp = computed(() => weatherParts().temp)
+
+/* On a phone the setup suggestions are not in the band but in This house, so its door says so. */
+const unfinished = computed(() => narrow.value && setupLeft(setupNow()) > 0)
 
 /* Things waiting to be set up: found on the network, 3D printers on the Wi-Fi, and a strip still knocking. One number,
    because to a household they are the same sentence -- something new, not set up yet. */
@@ -53,18 +57,21 @@ const tabs = computed(() => [
       </button>
     </nav>
     <div class="topbar-right">
+      <!-- The house, then what it is like there (design/band/, NameThenSky): on a phone this is the top
+           row, and its left end is where a screen says what it is. With one house that is whether it is
+           connected; with several it will be the house's name (design/houses/, B). -->
+      <span class="link" :class="{ up: store.linkUp }">{{ store.linkUp ? 'Connected' : 'Reconnecting' }}</span>
       <span class="topbar-wx" v-if="temp" :aria-label="`Outside, ${temp}`">
         <WeatherArt class="topbar-cloud" />
         <span class="topbar-temp">{{ temp }}</span>
       </span>
-      <span class="link" :class="{ up: store.linkUp }">{{ store.linkUp ? 'Connected' : 'Reconnecting' }}</span>
       <!-- The dot is the quiet half of an arrival and it does not fold: a knock's line in the band
            stops shouting after an hour, and this stays for as long as the thing is knocking, so the
            house goes quiet without forgetting. design/knock/. -->
       <button class="topbar-add" :class="{ attention: waiting }" @click="store.sheet = 'add'" :aria-label="waiting ? `Add to the house, ${waiting} waiting` : 'Add to the house'">
         <Icon name="plus" :size="18" />
       </button>
-      <button class="topbar-add topbar-house" :class="{ attention: updateReady() }" @click="store.sheet = 'house'" :aria-label="updateReady() ? 'This house, an update is ready' : 'This house'">
+      <button class="topbar-add topbar-house" :class="{ attention: updateReady() || unfinished }" @click="store.sheet = 'house'" :aria-label="updateReady() ? 'This house, an update is ready' : unfinished ? 'This house, setup is not finished' : 'This house'">
         <Icon name="menu" :size="18" />
       </button>
     </div>

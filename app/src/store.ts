@@ -28,6 +28,7 @@ export const store = reactive({
      to do to it, and widening `opened` to hold it would put a null check on every line that
      reads a device out of it. See WeatherPane.vue. */
   outside: new URLSearchParams(location.search).get('outside') === '1',   // ?outside=1 previews it, the way ?sheet= and ?rest=1 preview the others
+  homeScreenDone: false,   // somebody said Done to Add to your Home Screen on this phone, this visit; band.ts keeps it past the visit
   ambient: { location: null, weather: null } as Ambient,
   ambientLoaded: false,
   rules: {} as Rules,                        // scene rules from the brain, to tell whether a room still matches its scene
