@@ -493,7 +493,7 @@ export async function perform(d: Device, action: string, data?: Record<string, u
   catch (e: any) {
     d.state = before.state; d.attrs = before.attrs; delete store.pending[d.id]
     if (wasDone) done[d.id] = wasDone; else delete done[d.id]
-    notify(`${shortName(d, roomOf(d))} didn't respond`, 'error'); return false
+    notify(`${shortName(d, roomOf(d))} isn’t answering`, 'error'); return false
   }
   window.setTimeout(() => delete store.pending[d.id], 5000)   // the stream normally clears it much sooner
   return true
@@ -505,8 +505,8 @@ export function describe(ev: Event): { text: string; icon: string } | null {
   if (ev.kind === 'phone') {
     let d: any = {}; try { d = ev.detail ? JSON.parse(ev.detail) : {} } catch {}
     const n = d.name || 'A phone'
-    return ev.new === 'joined' ? { text: `${n} joined the house`, icon: 'phone' } : ev.new === 'asked' ? { text: `${n} asked to join`, icon: 'phone' }
-      : ev.new === 'removed' ? { text: `${n} was removed`, icon: 'phone' } : ev.new === 'left' ? { text: `${n}'s stay ended`, icon: 'phone' } : null
+    return ev.new === 'joined' ? { text: `${n} was added`, icon: 'phone' } : ev.new === 'asked' ? { text: `${n} asked to be added`, icon: 'phone' }
+      : ev.new === 'removed' ? { text: `${n} was removed`, icon: 'phone' } : ev.new === 'left' ? { text: `${n}'s visit ended`, icon: 'phone' } : null
   }
   if (ev.kind === 'presence') return ev.new === 'nobody' ? { text: 'Everyone is out', icon: 'leave' } : ev.new === 'somebody' ? { text: 'Someone is home', icon: 'home' } : null
   if (ev.kind === 'intent') {
@@ -789,7 +789,7 @@ export async function loadPhones(tell = false) {
   try { const p = await getPhones(); store.phones = p.phones; store.asks = p.asks } catch { return }
   if (!tell) return
   eventsSoon()
-  for (const x of store.phones) if (!known.has(x.id) && !x.me && known.size) notify(`${x.name} joined the house.`)   // told on every screen that can see them; the newcomer already knows
+  for (const x of store.phones) if (!known.has(x.id) && !x.me && known.size) notify(`${x.name} was added.`)   // told on every screen that can see them; the newcomer already knows
 }
 /** May this screen decide who else gets in? The house's answer, in the row it keeps for this phone. */
 export const holdsKeys = () => !store.status?.locked || ['setup', 'code'].includes(store.phones.find(p => p.me)?.how ?? '')

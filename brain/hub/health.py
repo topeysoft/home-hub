@@ -52,6 +52,16 @@ def when(ts, tz, now=None) -> str:
     return d.strftime("%b %-d")
 
 
+
+def said(p: dict) -> str:
+    """A connection that is not working, as a sentence with its name in it. Its own line follows when
+    there is one -- "Not plugged in. Plug a stick in..." says what to do, and an error's words are the
+    only clue anybody has -- but never as a bare fragment after a colon."""
+    name, text = p["name"], (p.get("text") or "").strip()
+    if text.startswith("Not plugged in."): return f"{name} is not plugged in.{text[len('Not plugged in.'):]}"
+    if not text or text.lower().startswith(("not working", "not running")): return f"{name} is not working."
+    return f"{name} is not working. {text[0].upper()}{text[1:]}{'' if text[-1] in '.!?' else '.'}"
+
 class Health:
     def __init__(self, hub): self.hub = hub
 
@@ -95,10 +105,10 @@ class Health:
         for d in gone:
             ts = since.get(d.id)
             out.append({"kind": "offline", "subject": d.id, "since": ts, "where": self.where(d), "name": d.name,
-                        "text": f"{d.name} has been offline since {when(ts, self.hub.tz)}." if ts else f"{d.name} is offline.",
+                        "text": f"{d.name} has not answered since {when(ts, self.hub.tz)}." if ts else f"{d.name} is not answering.",
                         "acts": [{"do": "Check again", "act": "check", "to": d.id},
-                                 {"do": "It's gone, remove it", "act": "forget", "to": d.id, "yes": f"Yes, remove {d.name}",
-                                  "ask": f"Remove {d.name} from the house? It comes off the account that brought it."}]})
+                                 {"do": "It’s gone, remove it", "act": "forget", "to": d.id, "yes": f"Yes, remove {d.name}",
+                                  "ask": f"Remove {d.name} from the house? It comes off the app or account it came from too."}]})
         return out
 
     def bridges(self) -> list:
@@ -125,11 +135,11 @@ class Health:
             out.append({
                 "kind": "bridge", "subject": b["chip"], "since": b["since"], "where": b["room"],
                 "name": it,
-                "text": (f"{it} hasn’t been heard from{since}. Its switches still work on the wall — the hub "
+                "text": (f"{it} has not answered{since}. Its switches still work on the wall — the hub "
                          "just can’t see them. Plug it into the hub for a minute to set it right."),
                 "acts": [{"do": "It’s gone, remove it", "act": "bridge", "to": b["chip"],
                           "yes": "Yes, remove it", "no": "Keep it",
-                          "ask": f"Remove {it[0].lower() + it[1:]}? Its switches stop appearing on the panel; they keep working on the wall."}],
+                          "ask": f"Remove {it[0].lower() + it[1:]}? Its switches stop appearing here; they keep working on the wall."}],
             })
         return out
 
@@ -181,13 +191,13 @@ class Health:
                             "text": f"{p['name']} needs signing in again."})
             elif p.get("state") == "failed":
                 out.append({"kind": "driver", "subject": p["id"], "since": None, "with": mine,
-                            "text": f"{p['name']} is not running: {p.get('text') or 'it stopped'}",
+                            "text": said(p),
                             "acts": self.part_acts(p)})
             elif p.get("state") == "off" and mine:
                 # A part that is simply not there is only news when something was depending on it. A Zigbee
                 # stick nobody has plugged in is not a fault; a Zigbee stick six devices are waiting on is.
                 out.append({"kind": "driver", "subject": p["id"], "since": None, "with": mine,
-                            "text": p.get("text") or f"{p['name']} is not running.",
+                            "text": said(p),
                             "acts": self.part_acts(p)})
             else:
                 claimed.difference_update(w["id"] for w in mine)   # a part that is fine explains nothing
@@ -211,9 +221,9 @@ class Health:
         tried = self.hub.provision.retried_at.get(p["id"], 0)
         acts = [{"do": f"Restart {p['name']}", "act": "part", "to": p["id"]}]
         if time.time() - tried < RETRIED:
-            acts.append({"do": "Restart the hub", "act": "restart", "to": "hub",
+            acts.append({"do": "Quick restart", "act": "restart", "to": "hub",
                          "ask": f"{p['name']} did not come back. Restart the hub? Lights and switches keep working.",
-                         "yes": "Restart the hub", "no": "Not now"})
+                         "yes": "Quick restart", "no": "Not now"})
         return acts
 
     def restarts(self) -> list:
@@ -232,8 +242,8 @@ class Health:
             deeper = DEEPER.get(rung)
             out.append({"kind": "restart", "subject": None, "since": asked[-1]["ts"],
                         "text": f"The hub has restarted {len(asked)} times in the past hour. Something is wrong that restarting is not fixing.",
-                        "acts": ([{"do": f"Restart {'everything' if deeper == 'everything' else 'the little computer'}", "act": "restart", "to": deeper,
-                                   "ask": f"Restarting {rung} has not helped. Try the next one up?",
+                        "acts": ([{"do": "Full restart" if deeper == "everything" else "Power off and on", "act": "restart", "to": deeper,
+                                   "ask": f"{'A quick restart' if rung == 'hub' else 'A full restart'} has not helped. Try the next one up?",
                                    "yes": "Yes, try that", "no": "Not now"}] if deeper else [])})
         # One that came back on its own. `source` is the host's watchdog rather than a person, and the
         # line says the time because that is the fact a household can act on.
@@ -262,7 +272,7 @@ class Health:
         if state == "reverted":
             text = f"{what} did not start, so the hub put back the one it was on. Everything is working; you can try it again from here."
         elif state == "failed" and st.get("reverted") is False:
-            text = f"{what} did not start, and the hub could not put back the one it was on. Try it again; if this keeps saying the same thing, the hub needs a hand."
+            text = f"{what} did not start, and the hub could not put back the one it was on. Try it again; if this keeps happening, get in touch with us."
         elif state == "failed":
             text = "The last update did not finish. You can try it again from here."
         else:
