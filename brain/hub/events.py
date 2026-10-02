@@ -48,7 +48,7 @@ DAY = 86400
 KEEP = {"state": 30, "action": 30,
         "intent": 180, "held": 180, "shadowed": 180, "failed": 180,
         "presence": 180, "comfort": 180, "said": 180, "ask": 180,
-        "notify": 180, "proposal": 180}
+        "notify": 180, "proposal": 180, "printer": 180}
 A_YEAR = 365
 # The kinds something reads a clock from, and so the kinds whose newest row per value outlives its
 # keeping. `state` answers "offline since when" (health.py) and "when did this room last move"
