@@ -12,6 +12,7 @@ import DeviceArt from '../DeviceArt.vue'
 import { kindFor, type ArtState } from '../art'
 import { useArm } from '../twice'
 import { leadsFixture, partnerOf, seeing } from '../units'
+import { makerWord } from '../telling'
 
 const props = defineProps<{ device: Device }>()
 const kind = computed(() => cap(props.device))
@@ -37,14 +38,14 @@ const artState = computed<ArtState>(() => {
 
 const label = computed(() => {
   const d = props.device, k = kind.value
-  if (dead.value) return 'Not responding'
+  if (dead.value) return 'Not answering'
   if (passive.value) return readingLabel(d)
   if (armed.value) return armed.value
   if (k === 'lock') return d.state === 'locked' ? 'Locked' : d.state === 'unlocked' ? 'Unlocked' : d.state
   if (k === 'alarm') return d.state === 'on' ? 'Sounding' : 'Silent'
   if (k === 'cover') return d.attrs.current_position != null && d.state === 'open' ? `${d.attrs.current_position}% open` : d.state === 'open' ? 'Open' : 'Closed'
   if (k === 'fan') return d.state === 'on' ? (d.attrs.percentage ? `${d.attrs.percentage}%` : 'On') : 'Off'
-  if (k === 'vacuum') return d.state === 'cleaning' ? 'Cleaning' : d.state === 'docked' ? 'Docked' : d.state
+  if (k === 'vacuum') return d.state === 'cleaning' ? 'Cleaning' : d.state === 'docked' ? 'At its dock' : d.state
   const base = d.state === 'on' ? 'On' : 'Off'
   return eye.value ? `${base} · Motion` : base       // a switch with its own motion sensor (units.ts) says so on its one line
 })
@@ -78,7 +79,7 @@ function tap() {
     <DeviceArt v-if="shape" :kind="shape" :state="artState" />
     <!-- rung four: nothing drawn for this one, so the icon goes oversized and faint and becomes the art -->
     <span class="tile-art" v-else aria-hidden="true"><Icon :name="iconFor(device)" :size="150" /></span>
-    <span class="tile-maker" v-if="device.maker">{{ device.maker }}</span>
+    <span class="tile-maker" v-if="makerWord(device.maker)">{{ makerWord(device.maker) }}</span>
     <div class="tile-body">
       <span class="tile-icon"><Icon :name="iconFor(device)" /></span>
       <span class="tile-name">{{ name }}</span>
@@ -90,7 +91,7 @@ function tap() {
         <span class="machine-row" role="button" tabindex="0" :class="{ on: carried.state === 'on', dead: isDead(carried), pending: !!store.pending[carried.id] }"
               :aria-pressed="carried.state === 'on'" :title="`Hold to open ${carried.name}`"
               @click.stop="tapCarried" @pointerdown.stop @pointerup.stop @keydown.enter.space.prevent.stop="tapCarried" v-hold="() => (store.opened = carried!)">
-          <Icon name="light" :size="15" /><span class="machine-row-name">Light</span><span class="machine-row-state">{{ isDead(carried) ? 'Not responding' : carried.state === 'on' ? 'On' : 'Off' }}</span>
+          <Icon name="light" :size="15" /><span class="machine-row-name">Light</span><span class="machine-row-state">{{ isDead(carried) ? 'Not answering' : carried.state === 'on' ? 'On' : 'Off' }}</span>
         </span>
       </span>
     </div>

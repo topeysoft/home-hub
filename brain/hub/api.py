@@ -1119,7 +1119,7 @@ async def identify_device(device_id: str):
     # the row it is written on is already wearing the name. The caveat is, though -- a companion
     # switch with no load wired to it blinks nothing at all, and being told that plainly beats
     # standing under the wrong lamp twice.
-    return {"ok": True, "text": "Blinked three times. If you saw nothing, it is in another room — or it has no lamp on it."}
+    return {"ok": True, "text": "Shown three times. If you saw nothing, it is in another room, or cannot show itself."}
 
 
 @app.post("/devices/{device_id}/check")
@@ -1198,8 +1198,8 @@ async def forget_device(device_id: str):
         raise                  # already in the house's own words, and not about an account
     except Exception as e:
         log.warning("could not forget %s: %s", device_id, e)
-        raise HTTPException(502, f"{name} cannot be forgotten on its own. "
-                                 f"It goes when {await _account_named(entries)} does, on the Accounts page.")
+        raise HTTPException(502, f"{name} cannot be removed on its own. "
+                                 f"It goes when {await _account_named(entries)} is removed, from What this house has.")
     hub.log.add("home", dev.id, dev.room_id, "forgotten", source="user", detail={"name": name})
     return {"ok": True}
 

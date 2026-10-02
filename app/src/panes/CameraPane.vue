@@ -61,14 +61,14 @@ const age = computed(() => (src.value ? ageLabel(frame.value.at) : ''))
    something on this screen can actually move. HA calling a camera `streaming` is a fact about the
    camera, not about what you are looking at. */
 const tag = computed(() =>
-  dead.value ? 'Quiet'
+  dead.value ? 'Not answering'
   : playing.value ? (props.device.state === 'recording' ? 'Recording' : 'Live')
   /* The wait has to be in WORDS as well as in the bar `.connecting` draws, because the bar is taken
      away under reduced motion and a sheet that then said nothing at all would be back where it
      started. The age stays alongside it: what you are looking at while you wait is still a dated
      photograph, and the waiting does not make it fresher. */
   : trying.value ? (age.value ? `Connecting · ${age.value}` : 'Connecting')
-  : age.value || 'Idle')
+  : age.value || 'Not recording')
 
 function drop() {
   live?.stop(); live = null

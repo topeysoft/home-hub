@@ -36,7 +36,8 @@ to clean it up.
 | People and phones | **Done, 2 October 2026.** C chosen: a phone is *Home only* or *Anywhere* | `design/words-people/` |
 | Setup (first run) | **Done, 2 October 2026.** B chosen: say less | `design/words-setup/` |
 | Rooms and devices: adding a thing | **Done, 2 October 2026.** A chosen: the verb is *add* | `design/words-adding/` |
-| Rooms and devices: rooms, panes, New devices | Not started | |
+| Rooms and devices: rooms, panes, New devices | **Done, 2 October 2026.** C chosen: the device's words for controls, a person's for how it is | `design/words-rooms/` |
+| Rooms and devices: light strips and the roofline | Not started — its words were settled on boards on 1 October; reopen only with boards | |
 | Settings (This hub, Accounts, Share, the passcode) | Not started | |
 | The band and its messages | Not started | |
 | The brain's sentences outside the areas above | Not started | |
@@ -76,6 +77,19 @@ to clean it up.
   nearby", "It's lit, so you can see which one".
 - **A button says what it does.** *Set up*, not *Have a look*.
 
+### What rooms and devices settled
+
+- **A control says what the device says; a status says it like a person.** The thermostat's modes are
+  Heat, Cool, Auto, Off, Fan, Dry, on its tile and its pane, as printed on the thermostat; it is *set to*
+  a temperature. But a device that cannot be reached is **Not answering**, everywhere; a speaker has
+  *Nothing playing*; a mower is *At its dock*; a camera that is not recording says so.
+- **One name for one state.** Not *Not responding* on a tile and *Offline* on a camera; not *Closed* on a
+  tile and *Shut* in a pane. `app/tests/roomwords.test.ts` holds the list.
+- **A device is removed**, as a phone is. Never *forget*, *take it out of the house*, *is out*.
+- **Never *whatever brought it*.** It is *the app or account it came from*.
+- **A changed label is measured, not just read.** Two labels in this round wrapped and moved a column;
+  a pinned layout test caught one, a screenshot the other.
+
 ## Known so far, outside the areas done
 
 | Where | Says | Problem |
@@ -87,6 +101,7 @@ to clean it up.
 | `HousePanel.vue` and many sheets | "This hub" as a page name | The person bought a box; is *hub* their word? |
 | `HousePanel.vue` | "Lock the settings" beside "Change the passcode" | Two names for one thing |
 | `AccountsPage.vue` | "Sam's Nest is out." | *is out* for removed |
+| `ThingsPage.vue` (What this house has) | "Take Backyard cam out of the house?" | Rooms settled *remove* |
 | `HubPage.vue`, `AddPage.vue` | "Behind the scenes" | A heading that tells you not to read what is under it |
 
 Add to this table whenever a word stops you, rather than fixing it in passing. Each area's pass starts

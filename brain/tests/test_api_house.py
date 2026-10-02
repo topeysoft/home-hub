@@ -270,8 +270,8 @@ class ForgettingTests(ApiTest):
                                                   "title": "Ring"}]
         self.ha.fail["config/device_registry/remove_config_entry_from_device"] = RuntimeError("nope")
         detail = self.client.delete("/devices/light.ceiling").json()["detail"]
-        self.assertIn("It goes when Ring does", detail)
-        self.assertIn("Accounts", detail)
+        self.assertIn("It goes when Ring is removed", detail)
+        self.assertIn("What this house has", detail)   # the page the button under it opens
 
     def test_and_falls_back_to_the_words_it_used_before_when_the_engine_will_not_say(self):
         self.registry({"id": "hw-ceiling", "config_entries": ["entry-a", "entry-b"]})
@@ -521,7 +521,7 @@ class IdentifyTests(ApiTest):
     def test_a_light_blinks_three_times_all_the_way_up_so_it_can_be_seen_from_the_door(self):
         r = self.client.post("/devices/light.kitchen/identify")
         self.assertEqual(r.status_code, 200)
-        self.assertIn("Blinked three times", r.json()["text"])
+        self.assertIn("three times", r.json()["text"])
         # the line is drawn on the row itself, and a second line of it would shove every row below it down
         self.assertLess(len(r.json()["text"]), 100)
         self.assertNotIn("Kitchen lights", r.json()["text"])   # the row it lands on is already wearing the name

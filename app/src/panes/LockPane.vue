@@ -56,7 +56,7 @@ const doorCam = computed(() => store.rooms.find(r => r.id === props.device.room_
     </div>
 
     <div class="rig-lock-side">
-      <span class="rig-lbl">{{ locked ? 'To open it' : 'To lock it' }}</span>
+      <span class="rig-lbl">{{ locked ? 'To unlock it' : 'To lock it' }}</span>
       <div class="rig-track" :class="{ dead, busy }" role="slider" tabindex="0"
            :aria-label="locked ? `Slide to unlock ${device.name}` : `Slide to lock ${device.name}`"
            aria-valuemin="0" aria-valuemax="100" :aria-valuenow="at"
@@ -66,7 +66,7 @@ const doorCam = computed(() => store.rooms.find(r => r.id === props.device.room_
         <span class="rig-track-knob" :class="{ open: !locked }" :style="{ left: at + '%' }"><Icon :name="locked ? 'lock' : 'unlock'" :size="30" /></span>
         <span class="rig-track-words">{{ busy ? 'Just a moment…' : locked ? 'Slide to unlock' : 'Slide to lock' }}</span>
       </div>
-      <p class="rig-note">{{ locked ? 'It stays locked until somebody carries this the whole way.' : 'Left unlocked. A routine can lock it again at bedtime.' }}</p>
+      <p class="rig-note">{{ locked ? 'It stays locked until you slide it all the way.' : 'Left unlocked.' }}</p>
 
       <div class="rig-lock-acts" v-if="doorCam">
         <button class="rig-btn" @click="store.viewer = doorCam!; store.opened = null">

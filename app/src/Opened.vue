@@ -392,7 +392,7 @@ onUnmounted(() => {
                 <option v-for="r in rooms" :key="r.id" :value="r.id">{{ r.name }}</option>
               </select>
               <input class="opened-edit-name" v-model="newName" spellcheck="false" aria-label="Name" autofocus @keydown.escape="editing = false" />
-              <p class="opened-edit-note" v-if="asUnit">The whole unit takes this name: {{ partsOf(dev).length }} parts, its motion sensor among them.</p>
+              <p class="opened-edit-note" v-if="asUnit">Everything in it takes this name: all {{ partsOf(dev).length }} parts.</p>
               <div class="opened-edit-acts">
                 <button type="submit" class="button small" :disabled="saving || !newName.trim()">Done</button>
                 <button type="button" class="button small ghost" :disabled="saving" @click="editing = false">Cancel</button>
@@ -428,37 +428,37 @@ onUnmounted(() => {
             </div>
             <!-- the end of it, last of the quiet rows and only while the pane is being edited -->
             <div class="opened-kind opened-end" v-if="editing && !ended">
-              <button class="opened-kind-say end" :aria-expanded="ending" @click="ending = !ending">Take it out of the house</button>
+              <button class="opened-kind-say end" :aria-expanded="ending" @click="ending = !ending">Remove it from the house</button>
               <div class="opened-kind-pick" v-if="ending">
                 <div class="opened-kind-row">
-                  <button class="opened-kind-one danger" :class="{ busy: saving }" @click="takeItOut">Forget {{ dev.name }}</button>
+                  <button class="opened-kind-one danger" :class="{ busy: saving }" @click="takeItOut">Remove {{ dev.name }}</button>
                   <button class="opened-kind-one" @click="ending = false">Keep it</button>
                 </div>
-                <p class="opened-kind-why">It goes from the house and from whatever brought it. Its schedules go with it. Plug it back in one day and the house meets it as something new.</p>
+                <p class="opened-kind-why">It is removed from the house and from the app or account it came from, with its routines. If you plug it in again one day, it is added as something new.</p>
               </div>
             </div>
             <!-- taken out, and still here: the pane says what happened and the person closes it -->
             <div class="opened-kind opened-end" v-if="ended">
-              <span class="opened-kind-say still">{{ ended }} is out of the house</span>
-              <p class="opened-kind-why">It is gone from here and from whatever brought it. Nothing else changed.</p>
+              <span class="opened-kind-say still">{{ ended }} is removed</span>
+              <p class="opened-kind-why">It is gone from here and from the app or account it came from. Nothing else changed.</p>
             </div>
             <!-- ...or it would not go alone, and the brain named the account it goes with -->
             <div class="opened-kind opened-end" v-if="refused">
               <span class="opened-kind-say still">{{ refused }}</span>
               <div class="opened-kind-pick">
                 <div class="opened-kind-row"><button class="opened-kind-one" @click="toTheDoor">What this house has</button></div>
-                <p class="opened-kind-why">It is listed there under the account that brought it, with the way to be done with both.</p>
+                <p class="opened-kind-why">It is listed there under the account it came with.</p>
               </div>
             </div>
             <!-- a fan with a light in it: which of the two is the tile. The same quiet row as the kind. -->
             <div class="opened-kind opened-lead" v-if="partner">
-              <span class="opened-kind-say still">Lead with</span>
+              <span class="opened-kind-say still">Show first</span>
               <div class="opened-kind-pick">
                 <div class="opened-kind-row">
                   <button class="opened-kind-one" :class="{ on: leads === 'fan' }" :aria-pressed="leads === 'fan'" @click="leadWith('fan')">Fan</button>
                   <button class="opened-kind-one" :class="{ on: leads === 'light' }" :aria-pressed="leads === 'light'" @click="leadWith('light')">Light</button>
                 </div>
-                <p class="opened-kind-why">One tile for the fan and its light. The one leading is the tile; the other is a row on it.</p>
+                <p class="opened-kind-why">One card for the fan and its light. The card shows the one you pick; the other is a row on it.</p>
               </div>
             </div>
           </div>
