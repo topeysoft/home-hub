@@ -72,3 +72,16 @@ resource "cloudflare_dns_record" "caa_no_wildcard" {
     value = ";"
   }
 }
+
+# Without this the two records above say nothing. While Universal SSL is on, Cloudflare answers
+# CAA queries with its own CAs added to ours -- issue and issuewild for DigiCert, Google, SSL.com,
+# Comodo and Let's Encrypt -- so any of them could issue for a house's name, wildcards included.
+# They never appear in the records API, only in what the zone serves; seen with dig on 1 October
+# 2026. Universal SSL is the certificate Cloudflare shows for proxied records, and this zone has
+# none: every record here is gray cloud on purpose, so turning it off costs nothing.
+#
+# Needs Zone > SSL and Certificates > Edit on the operator's token, beside DNS > Edit.
+resource "cloudflare_universal_ssl_setting" "off" {
+  zone_id = data.cloudflare_zone.this.zone_id
+  enabled = false
+}
