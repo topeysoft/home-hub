@@ -4,7 +4,9 @@
 -->
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { store, cap, houseLine, whatsOn, justDone, describe, ago, refreshEvents, loadHealth } from '../store'
+import { store, cap, houseLine, whatsOn, justDone, describe, ago, refreshEvents, loadHealth, keptPrints } from '../store'
+import { cardLook, printCards } from '../printers'
+import PrintCard from '../tiles/PrintCard.vue'
 import { type Room } from '../api'
 import { upcomingLine } from '../upcoming'
 import Icon from '../Icon.vue'
@@ -28,6 +30,13 @@ const next = computed(() => upcomingLine(props.now))   // what the house will do
 const anyOn = computed(() => whatsOn().length > 0 || justDone().length > 0)
 const onLabel = computed(() => whatsOn().length ? 'On right now' : 'Just turned off')
 const cameras = computed(() => props.rooms.flatMap(r => r.devices.filter(d => cap(d) === 'camera')))
+/* A print, under the band and above what is on (design/printers/PhoneB): on a phone it is often the reason
+   the app was opened. A short block of its own, headed with what the prints are doing. */
+const prints = computed(() => printCards(store.printers?.printers ?? [], keptPrints()))
+const printLabel = computed(() => {
+  const looks = prints.value.map(cardLook)
+  return looks.includes('printing') ? 'Printing' : looks.includes('waiting') ? 'Waiting for you' : looks.includes('fault') ? 'Stopped' : 'Done'
+})
 
 const tick = ref(Date.now())   // its own clock, so "3 minutes ago" keeps up; not props.now, which is the hour the shell is showing
 const recent = computed(() => {
@@ -57,6 +66,13 @@ onUnmounted(() => { clearInterval(t1); clearInterval(t2); clearInterval(t3) })
     </header>
 
     <Attention :say="!topNav" />
+
+    <div class="block" v-if="prints.length">
+      <h2 class="label">{{ printLabel }}</h2>
+      <div class="print-list">
+        <PrintCard v-for="p in prints" :key="p.id" :printer="p" compact />
+      </div>
+    </div>
 
     <div class="block" v-if="anyOn">
       <h2 class="label">{{ onLabel }}</h2>

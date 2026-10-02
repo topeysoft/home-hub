@@ -337,4 +337,21 @@ describe('the line in the band', () => {
     expect(waitingBand([hue, { title: 'a Sonos speaker' }], null, now)[0].title)
       .toBe('Found 2 new things nearby')
   })
+
+  /* 3D PRINTERS ON THE WI-FI (design/printers/FoundLine): word for word the line a Hue bridge gets, and
+     it says they are printers, because a name like R2D2 explains nothing to somebody who did not set it up. */
+  const printers = [{ name: 'OBI1' }, { name: 'R2D2' }, { name: 'C3PO' }]
+  it('says found printers are 3D printers, after their names, in the same line', () => {
+    expect(waitingBand([], null, now, printers))
+      .toEqual([{ id: 'waiting', opens: 'add', title: 'Found 3 new things nearby', sub: 'OBI1, R2D2 and C3PO, 3D printers' }])
+    expect(waitingBand([], null, now, [{ name: 'OBI1' }]))
+      .toEqual([{ id: 'waiting', opens: 'add', title: 'Found OBI1', sub: 'A 3D printer. Tap to add it to the house.' }])
+  })
+
+  it('counts printers with everything else found, and folds them in with a knock like anything else', () => {
+    expect(waitingBand([hue], null, now, [{ name: 'OBI1' }])[0])
+      .toMatchObject({ title: 'Found 2 new things nearby', sub: 'a Hue bridge, OBI1, a 3D printer' })
+    expect(waitingBand([], knock(SHOUTS_FOR + 1), now, [{ name: 'OBI1' }])[0])
+      .toMatchObject({ title: '2 things waiting to be set up', sub: 'OBI1, a light strip' })
+  })
 })

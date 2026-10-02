@@ -5,7 +5,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { moveDevice, renameDevice } from './api'
-import { store, notify, refreshFound, loadHealth, keepLooking } from './store'
+import { store, notify, refreshFound, loadHealth, keepLooking, foundCount } from './store'
 import { doors, stripWaiting, type Act, type Caught, type Door, type Proof, type Working } from './adding'
 import Icon from './Icon.vue'
 import Blink from './prove/Blink.vue'
@@ -13,6 +13,7 @@ import Press from './prove/Press.vue'
 import Code from './prove/Code.vue'
 import SignIn from './prove/SignIn.vue'
 import House from './prove/House.vue'
+import AddPrinters from './AddPrinters.vue'
 
 /*
  * THE SHELL. It owns the four beats and every button on them, and it knows nothing about radios.
@@ -193,6 +194,9 @@ if (props.resume) open_('signin', props.resume, store.resumeName || 'Sign in aga
         <p class="ears-sub">Keeping it up while this page is open. Leave the page and the hub goes quiet again.</p>
       </div>
 
+      <!-- 3D printers ask at the printer, so they are a section of their own (design/printers/AddList) -->
+      <AddPrinters />
+
       <div class="add-block" v-if="store.found.length || (store.bridge?.waiting ?? 0) > 0 || waitingStrip">
         <h3 class="label">Already waiting</h3>
         <ul class="found">
@@ -227,7 +231,7 @@ if (props.resume) open_('signin', props.resume, store.resumeName || 'Sign in aga
       </div>
 
       <div class="add-block">
-        <h3 class="label">{{ store.found.length ? 'Or start it yourself' : 'What are you adding?' }}</h3>
+        <h3 class="label">{{ foundCount() ? 'Or start it yourself' : 'What are you adding?' }}</h3>
         <div class="ways">
           <button v-for="d in doors()" :key="d.id" class="way" @click="knock(d)">
             <span class="way-icon"><Icon :name="d.icon" :size="21" /></span>

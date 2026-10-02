@@ -17,7 +17,10 @@
  */
 import { computed, onMounted, ref } from 'vue'
 import { imageUrl, type Room } from './api'
-import { activityParts, cap, isDead, perform, restingLine, runScene, scenesFor, shortName, store } from './store'
+import { activityParts, bare, cap, clockNow, isDead, perform, printersIn, restingLine, runScene, scenesFor, shortName, store } from './store'
+import { doneAt, percent, printerChip, printerOn, printerPart, timeLeft } from './printers'
+import { apiUrl } from './door'
+import { locale } from './lang'
 import { leadLight, playingIn, temperature, type Size } from './rooms'
 import { kindFor } from './art'
 import { useStill } from './still'
@@ -28,14 +31,24 @@ const SLOW = 30000     // a room card is a glance across the house, not the came
 const props = defineProps<{ room: Room; size: Size }>()
 defineEmits<{ open: [id: string] }>()
 
-const empty = computed(() => !props.room.devices.length)
+const empty = computed(() => bare(props.room))
+/* A PRINT GOING IN THIS ROOM (design/printers/RankedB): printing counts as on, so the room ranks among
+   the lit ones, and the card wears the printer's camera behind its name the way a filming room wears its
+   own, with when it will be done and the bar along its foot. */
+const print = computed(() => printersIn(props.room).find(printerOn) ?? null)
+const printPct = computed(() => print.value ? percent(print.value) : null)
 const waiting = computed(() => props.room.id === 'unassigned')
 const media = computed(() => playingIn(props.room))
 const lamp = computed(() => leadLight(props.room))
 const temp = computed(() => temperature(props.room))
-const line = computed(() => props.size === 'full' && media.value
-  ? activityParts(props.room, false).join(' · ') || restingLine(props.room)   // the media has a row of its own below
-  : restingLine(props.room))
+const line = computed(() => {
+  if (props.size === 'full' && media.value) return activityParts(props.room, false).join(' · ') || restingLine(props.room)   // the media has a row of its own below
+  /* a card with no chips says how far the print is in its line: "OBI1 printing, 42% · C3PO ready" */
+  const ps = printersIn(props.room)
+  if (!ps.length) return restingLine(props.room)
+  const named = new Set(ps.map(printerPart))
+  return [...ps.map(printerChip), ...activityParts(props.room).filter(x => !named.has(x))].join(' · ')
+})
 /* the lamps worth naming on the card that has room to name them: the one doing
    the lighting, and at most one more. A third light is a number, not a row. */
 const lamps = computed(() =>
@@ -110,7 +123,8 @@ onMounted(() => { if (media.value?.attrs.entity_picture) art.value = imageUrl(me
     <!-- the whole card is the way in; the controls sit above it -->
     <button class="room-cell-open" @click="$emit('open', room.id)" :aria-label="`Open ${room.name}`"></button>
 
-    <img v-if="still" class="room-cell-still" :src="still" alt="" />
+    <div class="room-cell-print" v-if="print && size !== 'third'"><img :src="apiUrl(print.camera)" alt="" /></div>
+    <img v-else-if="still" class="room-cell-still" :src="still" alt="" />
     <img v-else-if="art" class="room-cell-art" :src="art" alt="" @error="art = ''" />
     <!-- the lamp bleeding off the corner: `.room-card.active` already draws it,
          and it is what says "on" without painting the room a different color -->
@@ -118,16 +132,17 @@ onMounted(() => { if (media.value?.attrs.entity_picture) art.value = imageUrl(me
     <span class="room-cell-veil" v-if="still || art" aria-hidden="true"></span>
 
     <!-- a half has the height to show the room lit rather than describe it -->
-    <DeviceArt v-if="size === 'half' && !still && !art && draw" class="room-cell-draw"
+    <DeviceArt v-if="size === 'half' && !print && !still && !art && draw" class="room-cell-draw"
       :kind="draw" :state="{ on: lit, brightness: lamp ? pct(lamp) / 100 : 1, playing: !!media, live: filming }" fit="slot" />
 
     <div class="room-cell-top">
-      <span class="room-cell-cap" v-if="size === 'full' && lit"><i class="room-cell-dot"></i>On now</span>
+      <span class="room-cell-chip live" v-if="print && size !== 'third'"><i class="room-cell-dot"></i>Printing</span>
+      <span class="room-cell-cap" v-else-if="size === 'full' && lit"><i class="room-cell-dot"></i>On now</span>
       <span class="room-cell-chip live" v-else-if="filming"><i class="room-cell-dot rec"></i>Recording</span>
       <Icon v-else-if="mark" class="room-cell-mark" :name="mark" :size="20" />
       <span class="room-cell-chip" v-if="temp && size !== 'third'"><Icon name="sensor" :size="14" />{{ temp }}</span>
       <!-- the same act as the pill below, at the size that has no room for words -->
-      <button class="room-cell-knob" v-if="size === 'half' && allOff && lit" @click.stop="turnOff"
+      <button class="room-cell-knob" v-if="size === 'half' && !print && allOff && lit" @click.stop="turnOff"
         :aria-label="`Turn off the ${room.name}`" :title="`Turn off the ${room.name}`"><Icon name="power" :size="17" /></button>
     </div>
 
@@ -154,6 +169,11 @@ onMounted(() => { if (media.value?.attrs.entity_picture) art.value = imageUrl(me
         </div>
       </template>
 
+      <!-- a print going says when it will be done, and how far, on the card's own bar -->
+      <template v-else-if="print && size === 'half'">
+        <span class="room-cell-due"><span>Done at {{ doneAt(print, clockNow(), locale()) }}</span><span>{{ timeLeft(print) }}</span></span>
+        <span class="room-cell-bar print"><i :style="{ width: (printPct ?? 0) + '%' }"></i></span>
+      </template>
       <!-- a half says what the lamp is doing with the room's own bar -->
       <span class="room-cell-bar" v-else-if="size === 'half' && lamp"><i :style="{ width: pct(lamp) + '%' }"></i></span>
 
