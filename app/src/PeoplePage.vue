@@ -13,8 +13,9 @@
  * little computer, so they moved here with the people they belong to.
  */
 import { computed, ref } from 'vue'
-import { store, notify, holdsKeys } from './store'
-import { removePhone, type Phone } from './api'
+import { store, notify, holdsKeys, loadPhones } from './store'
+import { letOut, removePhone, type Phone } from './api'
+import { switchFor } from './move'
 import { initials, personTone } from './people'
 import Icon from './Icon.vue'
 import PhoneSteps from './PhoneSteps.vue'
@@ -39,7 +40,20 @@ async function remove(p: Phone) {
   catch (e: any) { if (e.message !== 'That needs the passcode.') notify(e.message, 'error') }
   sure.value = ''; removing.value = ''
 }
-const adding = ref(new URLSearchParams(location.search).get('add') === '1')   // ?sheet=people&add=1 previews the steps
+const adding = ref(new URLSearchParams(location.search).get('add') === '1')
+
+/* From outside (design/away/, C): letting a phone reach the house from anywhere, per phone, off for all of them
+   until somebody who keeps the house turns one on. Only once the house has an address -- before that there is
+   no outside to let anybody into -- and never for the wall, which stays home. */
+const outside = (p: Phone) => switchFor(p, !!store.me?.address, keys.value)
+const address = computed(() => (store.me?.address ?? '').replace(/^https:\/\//, ''))
+const letting = ref('')
+async function flip(p: Phone) {
+  letting.value = p.id
+  try { await letOut(p.id, !p.remote); await loadPhones(true); notify(p.remote ? `${p.name} works at home only now.` : `${p.name} can open the house from anywhere.`) }
+  catch (e: any) { notify(e.message, 'error') }
+  letting.value = ''
+}   // ?sheet=people&add=1 previews the steps
 
 /* A phone that was let in at a wall is shown itself and nobody else -- the hub answers /phones with what
    this phone may see, not with the household. So the count below would be reading its own row back as
@@ -77,7 +91,7 @@ const keys = computed(() => holdsKeys())
       <li class="hub-wide" v-if="adding"><PhoneSteps /></li>
       <li v-if="store.status?.locked && keys">
         <span class="hub-k">Phones</span>
-        <span class="hub-v">{{ store.phones.length === 1 ? 'One phone belongs' : `${store.phones.length} phones belong` }} to the house.<span class="hub-sub line">Each runs it from the Wi‑Fi; none reaches it from outside yet. A phone that is removed is out at once.</span></span>
+        <span class="hub-v">{{ store.phones.length === 1 ? 'One phone belongs' : `${store.phones.length} phones belong` }} to the house<template v-if="address">, at <b>{{ address }}</b></template>.<span class="hub-sub line">{{ address ? 'Each runs it from the Wi‑Fi. One that is let out opens it from anywhere, from the moment you say so.' : 'Each runs it from the Wi‑Fi; none reaches it from outside yet.' }} A phone that is removed is out at once.</span></span>
         <span></span>
       </li>
       <li v-else-if="store.status?.locked">
@@ -89,7 +103,8 @@ const keys = computed(() => holdsKeys())
         <ul class="phones">
           <li v-for="p in store.phones" :key="p.id">
             <span class="phones-icon"><Icon :name="p.kind === 'wall' ? 'home' : 'phone'" :size="16" /></span>
-            <span class="phones-text"><span class="phones-name">{{ p.name }}<span class="phones-me" v-if="p.me"> · this one</span></span><span class="phones-sub">{{ phoneLine(p) }}</span></span>
+            <span class="phones-text"><span class="phones-name">{{ p.name }}<span class="phones-me" v-if="p.me"> · this one</span></span><span class="phones-sub">{{ phoneLine(p) }}<template v-if="address && p.kind === 'wall'"> · stays home</template></span></span>
+            <span class="phones-outside" v-if="outside(p)"><span>From outside</span><button class="toggle" :class="{ on: p.remote, busy: letting === p.id }" role="switch" :aria-checked="p.remote" :aria-label="`${p.name} from outside`" @click="flip(p)"><span class="knob"></span></button></span>
             <button class="button small ghost" :class="{ busy: removing === p.id, warn: sure === p.id }" @click="remove(p)">{{ sure === p.id ? (p.me ? 'Remove this one?' : 'Sure?') : 'Remove' }}</button>
           </li>
         </ul>

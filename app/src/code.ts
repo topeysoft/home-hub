@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Temitope Adeyeri
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { reactive } from 'vue'
+import { apiUrl, withToken } from './door'
 
 /* The code on the settings. Kept for this tab only; asked for the first time something needs it. */
 export const lock = reactive({
@@ -22,9 +23,9 @@ export function askCode(wrong = false, note = ''): Promise<boolean> {
 export async function request(url: string, init: RequestInit = {}): Promise<Response> {
   const go = () => {
     const code = saved()
-    const headers = new Headers(init.headers ?? {})
+    const headers = withToken(new Headers(init.headers ?? {}))
     if (code) headers.set('X-Hub-Code', code)
-    return fetch(url, { ...init, headers })
+    return fetch(apiUrl(url), { ...init, headers })   // the hub's name at home when it answers, else this page's own (door.ts)
   }
   let r = await go(), wrong = false
   for (let tries = 0; r.status === 401 && tries < 4; tries++) {

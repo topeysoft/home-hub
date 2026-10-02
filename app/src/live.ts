@@ -3,12 +3,13 @@
 /* A moving picture from a camera, best way first. WebRTC: the brain relays our offer to HA's go2rtc and
    the video comes straight from it. Motion JPEG: the brain passes HA's stream through an <img>. Each
    attempt reports once, playing or failed; the viewer decides what to try next. */
+import { wsProtocols, wsUrl } from './door'
+
 export type Live = { stop(): void }
 const WAIT = 12000   // ms before an attempt that has shown nothing is given up on
 
 export function webrtc(id: string, video: HTMLVideoElement, on: { playing(): void; failed(why: string): void; audio?(): void }): Live {
-  const proto = location.protocol === 'https:' ? 'wss' : 'ws'
-  const ws = new WebSocket(`${proto}://${location.host}/devices/${encodeURIComponent(id)}/webrtc`)
+  const ws = new WebSocket(wsUrl(`/devices/${encodeURIComponent(id)}/webrtc`), wsProtocols())
   const stream = new MediaStream()
   let pc: RTCPeerConnection | null = null, ended = false, played = false, remote = false
   const held: RTCIceCandidateInit[] = []     // HA's candidates that arrive before its answer

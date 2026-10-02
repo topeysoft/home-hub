@@ -76,7 +76,10 @@ def needs_code(method: str, path: str) -> bool:
     # it. The bridge's own routes are not here: they never reach this function, because the service
     # token answered for them before the gate. docs/matter.md.
     if path.startswith("/share") and m == "POST": return True   # turning it on, and letting one more app in
-    if path.startswith("/phones") and m != "GET": return path not in ("/phones/ask", "/phones/code")   # letting a phone in, or out, is a setting; asking is not
+    # Letting a phone in, or out, is a setting; asking is not. Nor is moving: the same phone, with the same stay
+    # and the same `remote`, carried to the house's own name (design/away/, C) -- nothing about who may do what
+    # changes, and the page on the new name has no code yet to send with the claim.
+    if path.startswith("/phones") and m != "GET": return path not in ("/phones/ask", "/phones/code", "/phones/move", "/phones/move/claim")
     return False
 
 

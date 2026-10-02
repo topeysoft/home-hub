@@ -355,10 +355,22 @@ If the hub's LAN address changes, the name changes with it the next time outside
 on the relay passes an explicit list of paths and `/acme/*` was not on it, while the miniature had pointed lego
 straight at the service. `relay/service/tests/test_door.py` now holds every route a hub calls to that list.
 
-**What does not work yet, said plainly.** A phone off the Wi-Fi reaching that name gets *This house is not open
-from here*, because no phone has moved to the address and the *From outside* switch on *People* is not built
-(design/away/, C). That and payments are what is left; until then the address proves the pipe and nothing
-more.
+**Moving a phone, built 2 October 2026 (design/away/, C).** A phone of the house that has not moved gets one band
+line on hub.local -- *The house has its own address* -- which opens *Move this phone*: a one-time code from the hub
+(`POST /phones/move`, at home only, good once for ten minutes) carries it to `https://<house>.elyir.app/?move=…`,
+where the page claims a token for the same phone (`/phones/move/claim`; same record, same stay, same `remote`, and
+the old icon keeps working until it is removed). From then on the app carries its token itself (`app/src/door.ts`):
+as `Authorization: Bearer`, and on a websocket as the subprotocol pair `hub, <token>` so it is never in a URL. On the
+Wi-Fi it reaches the hub's name at home directly, which the brain answers across origins for the house's own name
+only, including Chrome's private-network preflight (`across_names` in `api.py`); away, the home name fails in a
+second and a half and everything goes through the relay. Letting a phone out is the *From outside* switch on
+*People* (not on the wall's row, which stays home), and a known phone outside that has not been let out waits on
+*Not from here, yet* and opens by itself when somebody turns it on. Pinned by `brain/tests/test_move.py`,
+`app/tests/move.test.ts` and `app/e2e/move.spec.ts`.
+
+**What does not work yet, said plainly.** Payments. The page itself still loads through the relay on the sofa --
+there is no service worker yet, so only the house's data comes direct -- and camera stills (`<img>`) go the way the
+page came. And nothing re-runs `away.sh` when the hub's LAN address changes.
 
 ## What was verified
 
