@@ -64,6 +64,9 @@ test.describe('on the wall', () => {
     const rows = page.locator('.phones li').filter({ has: page.locator('.phones-icon') })
     await expect(rows).toHaveCount(3)
     await expect(rows.nth(0)).toContainText('stays home')
+    // When each was last seen, so rows of the same name can be told apart (the note beside NamedC).
+    await expect(rows.nth(0)).toContainText('seen just now · stays home')
+    await expect(rows.nth(1)).toContainText('seen 1 hour ago')
     await expect(rows.nth(0).locator('.phones-outside')).toHaveCount(0)
     for (const i of [1, 2]) {
       await expect(rows.nth(i).locator('.phones-outside')).toContainText('From outside')
