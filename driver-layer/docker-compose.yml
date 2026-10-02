@@ -125,6 +125,10 @@ services:
       - MQTT_USER=${MQTT_USER:-}
       - MQTT_PASSWORD=${MQTT_PASSWORD:-}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}   # the assistant's key, if it is not pasted into the panel instead
+      # The Matter bridge's way past the phone gate (hub/share.py, token). The bridge presents it and the
+      # brain checks it, so both have to be handed the same one. It was given to the bridge alone when
+      # sharing landed, and every request the bridge made was refused -- found 2 October 2026.
+      - HUB_SHARE_TOKEN=${HUB_SHARE_TOKEN:-}
       # Whether this house can answer out loud, and in whose voice. Empty is off and is every house
       # today: the panel then answers on the glass exactly as it does now. Set VOICE_TTS=piper with
       # COMPOSE_PROFILES=voice to turn the pair on together. docs/voice.md.

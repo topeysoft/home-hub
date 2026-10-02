@@ -98,3 +98,23 @@ class FrontDoorFiles(unittest.TestCase):
                 folder = imp.split("/")[0]
                 self.assertTrue(f"./caddy/{folder}:/etc/caddy/{folder}" in text, f"{compose} does not mount caddy/{folder}, which the Caddyfile imports")
                 self.assertTrue((layer / "caddy" / folder).is_dir())
+
+
+class SharedSecrets(unittest.TestCase):
+    """A secret one container presents and another checks is handed to both by the compose file.
+
+    HUB_SHARE_TOKEN was given to the Matter bridge and never to the brain, so the brain refused every
+    request the bridge made and nothing a household shared ever reached Apple Home, Google Home or
+    Alexa. test_share.py sets the variable itself, which is why it stayed green for weeks.
+    """
+    def service(self, name: str) -> str:
+        import re
+        from pathlib import Path
+        text = (Path(__file__).resolve().parents[2] / "driver-layer" / "docker-compose.yml").read_text()
+        m = re.search(rf"^  {name}:\n(.*?)(?=^  [a-z][\w-]*:\n|\Z)", text, re.M | re.S)
+        self.assertIsNotNone(m, name)
+        return m.group(1)
+
+    def test_the_share_token_reaches_the_brain_and_the_bridge(self):
+        for name in ("brain", "matter-bridge"):
+            self.assertTrue("- HUB_SHARE_TOKEN=${HUB_SHARE_TOKEN:-}" in self.service(name), f"{name} is not given HUB_SHARE_TOKEN")
