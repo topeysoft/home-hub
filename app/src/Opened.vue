@@ -58,6 +58,9 @@ import LockPane from './panes/LockPane.vue'
 import CameraPane from './panes/CameraPane.vue'
 import SimplePane from './panes/SimplePane.vue'
 import SensePane from './panes/SensePane.vue'
+import RoofPane from './panes/RoofPane.vue'
+import RoofPlate from './RoofPlate.vue'
+import { roofSentence } from './roof'
 
 const dev = computed(() => store.opened)
 const kind = computed(() => dev.value ? cap(dev.value) : '')
@@ -96,7 +99,17 @@ const INSTRUMENTS: Record<string, any> = {
   light: LightPane, media: MediaPane, climate: ClimatePane, cover: CoverPane,
   lock: LockPane, camera: CameraPane, fan: SimplePane, switch: SimplePane, alarm: SimplePane, appliance: SimplePane, vacuum: SimplePane, sense: SensePane, machine: MachinePane,
 }
-const instrument = computed(() => dev.value ? INSTRUMENTS[paneKind(dev.value)] ?? SimplePane : null)
+/* THE ROOFLINE'S OWN PANE (design/roofline/DrawnC.dc.html, chosen 1 October 2026). One light on the wall
+   however many boxes it is, and the one light whose state has a place: so its pane draws the roof across
+   its floor (RoofPlate), and its instrument is brightness as a bar with the look and its evenings beside
+   each other (RoofPane) -- none of a lamp's colors or levels, which a season overrides and nobody reads
+   by. The left column is every light's, with one sentence that says what is wrong when something is. */
+const roof = computed(() => {
+  const r = store.roofline, d = dev.value
+  return r?.exists && d && r.light === d.id ? r : null
+})
+const roofSaid = computed(() => roof.value && dev.value ? roofSentence(dev.value, roof.value) : null)
+const instrument = computed(() => roof.value ? RoofPane : dev.value ? INSTRUMENTS[paneKind(dev.value)] ?? SimplePane : null)
 
 /* what this one thing has done, from the log the brain already keeps. Asked for once on the way in
    and again whenever the thing itself changes, which is the only time there is anything new. */
@@ -141,6 +154,25 @@ async function shareIt(next: boolean) {
   catch (e: any) { notify(e.message, 'error') }
   sharing.value = false
 }
+/* SHARING IS SAID BY THE ROOM, on the Roofline's own pane (design/roofline/SaidB.dc.html, chosen
+   2 October 2026). There the row would make the left column taller than the board's and push the roof
+   off the width of the wall, so it folds to a chip on the room's line -- where the pane already says
+   facts about the light -- and the same choice opens from it as a small card over the name. The card
+   stays put while a choice is made in it, and the chip says what the light now is, so it is its own
+   undo; it goes when the pane is touched anywhere else, or the chip is tapped again. */
+const shareChip = computed(() => !!roof.value && shareable.value)
+const shareOpen = ref(false)
+const shareChipEl = ref<HTMLElement | null>(null), shareCardEl = ref<HTMLElement | null>(null)
+function shareAway(e: PointerEvent) {
+  const t = e.target as Node
+  if (shareChipEl.value?.contains(t) || shareCardEl.value?.contains(t)) return
+  shareOpen.value = false
+}
+watch(shareOpen, open => {
+  if (open) document.addEventListener('pointerdown', shareAway, true)
+  else document.removeEventListener('pointerdown', shareAway, true)
+})
+watch(() => dev.value?.id, () => (shareOpen.value = false))
 watch(() => dev.value?.id, async id => {
   kinds.value = null; picking.value = false
   if (!id || (dev.value && isMachine(dev.value))) return     // a machine is not a thing to re-type; its features are, each on its own page
@@ -303,7 +335,11 @@ async function saveEdit() {
 const closing = ref(false)
 function close() { shown.value = false; closing.value = true; setTimeout(() => (store.opened = null), 320) }
 
-function onKey(e: KeyboardEvent) { if (e.key === 'Escape') close() }
+function onKey(e: KeyboardEvent) {
+  if (e.key !== 'Escape') return
+  if (shareOpen.value) { shareOpen.value = false; return }     // the small card first, then the pane
+  close()
+}
 /* Two frames, not one. onMounted runs before the browser has painted anything,
    and a single requestAnimationFrame still lands inside the frame that paints
    the panel for the first time -- so `shown` was already on by that first paint
@@ -315,7 +351,10 @@ onMounted(() => {
   requestAnimationFrame(() => requestAnimationFrame(() => (shown.value = true)))
   window.addEventListener('keydown', onKey)
 })
-onUnmounted(() => window.removeEventListener('keydown', onKey))
+onUnmounted(() => {
+  window.removeEventListener('keydown', onKey)
+  document.removeEventListener('pointerdown', shareAway, true)
+})
 </script>
 
 <template>
@@ -324,11 +363,26 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
     <div class="opened-panel" :data-cap="kind" :style="lampTint">
       <button class="back opened-close" @click="close" aria-label="Close"><Icon name="close" :size="18" /></button>
 
-      <div class="opened-body pane-body">
+      <div class="opened-body pane-body" :class="{ 'pane-roof': !!roof }">
         <div class="pane-said">
           <div class="opened-step s0">
             <template v-if="!editing">
-              <div class="opened-room" v-if="room">{{ room.name }}</div>
+              <div class="opened-room" :class="{ 'has-share': shareChip }" v-if="room || shareChip">
+                {{ room?.name }}
+                <!-- the Roofline's share row, folded to one quiet word on the room's line (SaidB) -->
+                <button class="room-share" :class="{ open: shareOpen }" ref="shareChipEl" v-if="shareChip"
+                        :aria-expanded="shareOpen" @click="shareOpen = !shareOpen">
+                  <i class="room-share-dot" v-if="shared"></i>{{ shared ? 'Shared with other apps' : 'Kept out of other apps' }}<Icon class="room-share-more" name="chevron" :size="12" />
+                </button>
+                <div class="room-share-card" ref="shareCardEl" v-if="shareChip && shareOpen" role="group" aria-label="Other apps">
+                  <div class="opened-kind-say still">{{ shared ? 'Shared with other apps' : 'Kept out of other apps' }}</div>
+                  <div class="opened-kind-row">
+                    <button class="opened-kind-one" :class="{ on: shared, busy: sharing }" :aria-pressed="shared" @click="shareIt(true)">Shared</button>
+                    <button class="opened-kind-one" :class="{ on: !shared, busy: sharing }" :aria-pressed="!shared" @click="shareIt(false)">Kept home</button>
+                  </div>
+                  <p class="opened-kind-why">{{ shared ? 'Apple Home, Google Home and Alexa can see this one and ask their assistants for it.' : 'The rest of its kind still goes out; this one stays in the house.' }}</p>
+                </div>
+              </div>
               <h2 class="display opened-name">{{ dev.name }}</h2>
             </template>
             <!-- the same two lines, as things to change: the room, then the name -->
@@ -360,8 +414,9 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
               </div>
             </div>
             <!-- whether the other apps can see this one. Only where the house is sharing this kind at
-                 all: a switch that cannot mean anything is worse than no switch. docs/matter.md. -->
-            <div class="opened-kind opened-share" v-if="shareable">
+                 all: a switch that cannot mean anything is worse than no switch. docs/matter.md.
+                 Not on the Roofline's pane, where it is the chip on the room's line instead. -->
+            <div class="opened-kind opened-share" v-if="shareable && !roof">
               <span class="opened-kind-say still">{{ shared ? 'Shared with other apps' : 'Kept out of other apps' }}</span>
               <div class="opened-kind-pick">
                 <div class="opened-kind-row">
@@ -429,6 +484,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
                 <span><b>{{ held.next }}</b><small v-if="held.after">{{ held.after }}</small></span>
               </div>
             </template>
+            <p class="pane-why" :class="{ 'roof-wrong': roofSaid.wrong }" v-else-if="roofSaid">{{ roofSaid.text }}</p>
             <p class="pane-why" v-else-if="why">{{ why }}<template v-if="quiet"> {{ quiet }}</template></p>
             <p class="pane-why" v-else-if="quiet">{{ quiet }}</p>
           </div>
@@ -437,7 +493,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 
         <!-- the facts sit under what was said on a wall, and under the INSTRUMENT on a phone, where
              the control has to be reachable without scrolling past four numbers to get to it -->
-        <div class="opened-step s3 opened-facts pane-facts" v-if="facts.length">
+        <div class="opened-step s3 opened-facts pane-facts" v-if="facts.length && !roof">
           <div v-for="f in facts" :key="f.k">
             <div class="opened-fact-v">{{ f.v }}</div>
             <div class="opened-fact-k">{{ f.k }}</div>
@@ -446,12 +502,15 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 
         <!-- the instrument: the control a tile is too small for -->
         <div class="pane-rig" :class="{ held: !!held }" v-if="instrument">
-          <component :is="instrument" :device="dev" :events="events" :moments="moments" />
+          <component :is="instrument" :device="dev" :events="events" :moments="moments" @close="close" />
         </div>
+
+        <!-- the roof, across the floor of the pane, where a lamp's facts and its day would be -->
+        <RoofPlate class="opened-step s3" v-if="roof" :roof="roof" :on="dev.state === 'on'" />
       </div>
 
       <!-- what this one thing did today -->
-      <div class="opened-step s3 pane-day" v-if="moments.length">
+      <div class="opened-step s3 pane-day" v-if="moments.length && !roof">
         <span class="opened-fact-k pane-day-head">Today</span>
         <div class="pane-day-row">
           <div v-for="(m, i) in moments" :key="i" class="pane-moment">

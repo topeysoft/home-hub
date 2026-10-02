@@ -93,6 +93,10 @@ export const store = reactive({
   strip: null as Strip | null,   // a light strip being set up; hub/strip.py. One at a time, same as a bridge
   roofline: null as Roofline | null,   // the light outside made of several boxes; hub/roofline.py. Null on a hub that predates it
   yard: false,                         // the way round being shown on the roof, from a phone in the yard (design/roofline/TapA)
+  /* A sentence somebody started somewhere else, for the command box to open with: "Say another look" on
+     the Roofline's pane opens it with the occasion already said (design/roofline/DrawnC). Say.vue takes it
+     and puts it back to null. */
+  sayStart: null as string | null,
   /* SOMEBODY ASKED FOR THE STRIP SHEET -- tapped its line in the band, or its row on Add. A knock
      does not open a screen on its own any more (design/knock/, direction C with A): it is a line
      and a dot, and this is the tap that turns one into the conversation. Standing on Add counts as

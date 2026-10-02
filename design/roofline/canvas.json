@@ -116,6 +116,78 @@
       "h": 900,
       "title": "C — the order is never asked",
       "page": "one"
+    },
+    {
+      "file": "TodayPane.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Today — every light’s pane, and one row into a sheet",
+      "page": "pane"
+    },
+    {
+      "file": "RowA.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "A — as built: one row into a sheet",
+      "page": "pane-rejected"
+    },
+    {
+      "file": "GivesWayB.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "B — the roof’s own pane: what is generic gives way",
+      "page": "pane-rejected"
+    },
+    {
+      "file": "DrawnC.dc.html",
+      "x": 4680,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "C — the roof, drawn",
+      "page": "pane"
+    },
+    {
+      "file": "TodayShared.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Today — shared with other apps, the roof keeps to the right",
+      "page": "pane-shared"
+    },
+    {
+      "file": "RightA.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "A — the roof keeps to the right",
+      "page": "pane-shared-rejected"
+    },
+    {
+      "file": "SaidB.dc.html",
+      "x": 3120,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "B — sharing is said by the room",
+      "page": "pane-shared"
+    },
+    {
+      "file": "BarC.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "C — the bar makes room",
+      "page": "pane-shared-rejected"
     }
   ],
   "annotations": [
@@ -318,6 +390,118 @@
       "y": -760,
       "w": 560,
       "text": "DECIDED 1 OCTOBER 2026\n\nC, then A. Several boxes are one Roofline on the wall (OneLight). The order of the runs is never asked until a chase is first wanted, because only a chase shows the seams; then A asks it in the yard, each run lit its own color with a white light showing its way, pre-filled with B’s guess from the order the boxes went up. B on its own asks at the top of a ladder and fails a roof that is already up."
+    },
+    {
+      "id": "pane-q",
+      "page": "pane",
+      "x": -620,
+      "y": 0,
+      "w": 500,
+      "text": "THE QUESTION ON THIS PAGE\n\nThe One light page drew the Roofline's own pane with its boxes on it, by place, and the way round, its evenings and Hold it still beside them (OneLight). The build, merged 1 October 2026 as PR #44, put the roofline into every light's pane instead -- brightness, Automatic, the colors, Reading, Evening and Night -- with one row at its foot that opens a sheet holding the rest. The builder's reason was fit: the board's parts and a lamp's pane together would not go on the wall without scrolling.\n\nThat is true, and it makes this a question about what to take away rather than what to hide. Today is the build, drawn from the running mock; then three whole panes at 1440x900, each with the mock house's roof -- three boxes, four runs, two of them turned round, Christmas showing. Every board flips the garage end dark (the dashed chips at its top right), so each answers the same question: is the garage end working, and what do I do about it?"
+    },
+    {
+      "id": "pane-today",
+      "page": "pane",
+      "x": 0,
+      "y": 960,
+      "w": 1440,
+      "text": "TODAY -- EVERY LIGHT'S PANE, AND ONE ROW INTO A SHEET\n\nDrawn from app/src/panes/LightPane.vue and StripSheet.vue running against the mock at ?roofline=christmas, held open from the Backyard on a 1440x900 wall, in the values the panel computes there; flip to the sheet the row opens. Everything on the pane but its last row is what a table lamp has: Automatic, eight colors and More colors, and the three it is used at. The roofline is that last row -- \"Three boxes, four runs · 412 lights\", with the look under it.\n\nThe sheet holds what OneLight put on the pane: the boxes by place, Which way round, Its evenings, and Moving or Hold it still. Flip Garage end dark: the room's tile already says so (\"On · the garage end is dark\"), the row's second line becomes \"Garage end: dark\" in gray, and what to do about it -- plug the 12 V supply back in -- is in the sheet, in red.\n\nThe measure of it: of the 500 by 548 beside the brightness column, the roof's own facts get 112 at the foot; the rest goes to colors the season overrides and three levels nobody reads a roof by."
+    },
+    {
+      "id": "row-a",
+      "page": "pane-rejected",
+      "x": 0,
+      "y": 1000,
+      "w": 1440,
+      "text": "A -- AS BUILT: ONE ROW INTO A SHEET\n\nThe build, kept as it is, with the walk drawn on it. To answer \"is the garage end working?\" a household holds the Roofline's tile in the Backyard (1), taps the row at the foot of the pane (2), and reads the third line of the sheet (3). Flip the board between the pane and the sheet, and the garage end between Fine and Dark.\n\nFor it: the pane is every light's pane, so nothing about a light is learned twice, and on a night with nothing wrong the roof's own facts are one row nobody needs to open. The tile already says when part of the roof is dark, so the alarm is never a tap away -- only the reason is.\n\nAgainst it: what the roof needs is one tap deeper than what it does not. Hold it still, which the Movement page made the household's one control over a look, is in the sheet; the eight colors, which the season overrides, are on the pane. And the row says \"Garage end: dark\" in the same gray it says \"Christmas\" in, so the pane is the one place where a fault does not look like one."
+    },
+    {
+      "id": "givesway-b",
+      "page": "pane-rejected",
+      "x": 1560,
+      "y": 1000,
+      "w": 1440,
+      "text": "B -- THE ROOF'S OWN PANE: WHAT IS GENERIC GIVES WAY\n\nAsks of each part of a light's pane whether a roofline needs it. Brightness, yes: it stays the same column in the same place it has on every light. Automatic, the colors and More colors, no: the season decides a roof's colors, and a look of the household's own is said in the command box (the Movement page, A with C), so \"Say another look\" is its door. Reading, Evening and Night, no: nobody reads by a roof.\n\nWhat that frees is exactly enough. The right column holds What it is showing -- the look, drawn small in the roof's own emitter colors, with Moving or Hold it still -- When it comes on, and Which way round. The left column, which on every light carries the light's facts, carries the boxes by place, left to right as they go round, each saying Fine or Dark with its runs drawn lit; and the pane's sentence, which on a lamp says \"On at 35%, by hand\", says why the roof is on, or what is wrong and what to do. Nothing scrolls.\n\nFlip Garage end dark: the sentence leads in red with what to do, and the third box goes dark where it sits. The cost: past its first column a roofline's pane no longer looks like a lamp's, and a household that wants one fixed color on the roof has to say it rather than tap it."
+    },
+    {
+      "id": "drawn-c",
+      "page": "pane",
+      "x": 4680,
+      "y": 960,
+      "w": 1440,
+      "text": "C -- THE ROOF, DRAWN\n\nThe pane's floor becomes the roofline itself, as the house knows it: the lights in the order they go round, each run as long as it is, an arrow over each for the way it leaves its box, and the three boxes under it by place. It is not a picture of the gable -- nobody has told the house the shape of the roof, only the order, the lengths and which way each run goes -- but it is the same description each box is sent, drawn, so it cannot disagree with the roof.\n\nSo \"is the garage end working?\" is answered from across the room: flip Garage end dark and that stretch is dark where it is, ringed, with what to do under it. The way round is on the drawing instead of behind a row, and Which way round is the door to the yard (TapA). Brightness lies along the top of the controls -- the panel's own bar, the shape a narrow screen already uses -- so the look and the evenings sit side by side under it, and the roof gets the width of the wall.\n\nThe costs: brightness changes shape on this one light while every other pane keeps a column; the drawing is new work to build and to pin with a test; and until the way round is known (the One light page: it is not asked until a chase is first wanted) the line can only show each box's runs apart, unjoined, with Which way round as the ask."
+    },
+    {
+      "id": "pane-rec",
+      "page": "pane",
+      "x": 6240,
+      "y": 0,
+      "w": 500,
+      "text": "RECOMMENDED -- C, WITH B IF BRIGHTNESS MUST STAY A COLUMN\n\nNot A. The build's reason was true -- the board's parts and a lamp's pane do not fit on one wall together -- but the answer is to take away what a roof never uses, not to hide what it does. A keeps eight colors on the pane and Hold it still in a sheet, which is the Movement ruling upside down, and it shows a fault in the gray it shows Christmas in.\n\nC, because the roofline is the one light on the wall whose state has a place, and the pane is where a household should see that place: which part is lit, which way it runs, which part is dark and why, at a glance, with nothing opened. It draws only what the house knows, so it is honest on any roof, and it makes the way round something you can see is right rather than a setting that says \"Set\".\n\nB if the household would rather every light kept its brightness column where it is. It carries every fact C does, in words, and is the smaller step from the build: the rig keeps its shape and only what is in it changes.\n\nWhichever is picked, the arrangement is pinned with a test the way app/tests/rooms.test.ts pins the Rooms tab, and the others move to a Not chosen page with their cases.\n\nOpen: a roof of five or six boxes. C's line holds them, only denser; B's three tiles do not, and would become rows."
+    },
+    {
+      "id": "pane-decided",
+      "page": "pane",
+      "x": -620,
+      "y": -760,
+      "w": 560,
+      "text": "DECIDED 1 OCTOBER 2026\n\nC. The Roofline’s pane draws the roof as the house knows it: the runs in the order they go round, each to its length, an arrow for the way each leaves its box, the boxes by place underneath, and a dark run dark where it is, ringed, with its one next step under it. Brightness becomes a bar across the top, the shape the panel already uses on narrow screens, with the look (Moving / Hold it still / Say another look) and its evenings side by side beneath. The generic colors and Reading/Evening/Night do not appear on this light. Supersedes the build’s one row into a sheet (Today), which stays drawn as the record."
+    },
+    {
+      "id": "shared-q",
+      "page": "pane-shared",
+      "x": -620,
+      "y": 0,
+      "w": 500,
+      "text": "THE QUESTION ON THIS PAGE\n\nThe pane page decided C: the roof drawn across the floor of the Roofline's pane, under both columns (DrawnC). The board drew a house that does not share its lights with other apps. In one that does, every light's pane carries one more quiet row under its name -- Shared with other apps, Shared or Kept home, and a sentence saying what that means -- and that row makes the left column 127 taller than the board's. The roof, starting where the board starts it, would then run under the percentage.\n\nThe build (PR #46) answered it alone: in that case the roof keeps to the right-hand column and the left column runs the full height beside it. That is a composition nobody chose, so it is drawn here before anything is built on it. Today is the build with the house sharing; then three whole panes at 1440x900, each keeping DrawnC's idea intact -- the roof drawn as the house knows it, a dark run dark where it is. Every board flips the garage end dark (the dashed chips at its top right).\n\nA page of its own rather than the pane page, because that page's question is closed and carries its own Today, its own recommendation and the note saying what was decided; this is a second question about the same pane, and it should be read, and decided, apart from the first."
+    },
+    {
+      "id": "shared-today",
+      "page": "pane-shared",
+      "x": 0,
+      "y": 960,
+      "w": 1440,
+      "text": "TODAY -- SHARED WITH OTHER APPS, THE ROOF KEEPS TO THE RIGHT\n\nDrawn from the running mock at ?room=backyard&roofline=christmas with SHARED=held, held open on a 1440x900 wall, in the values the panel computes there (app/src/Opened.vue, app/src/RoofPlate.vue, panel.css's .pane-roof:has(.pane-said .opened-kind)). The share row sits under the name, from 363 to 480; the round buttons move from 379 down to 506, the percentage to 602, and the sentence ends at 716.\n\nSo the roof moves: the plate is 748 wide under the controls instead of 1,342 under both columns, its line drawn one dot to four lights rather than one to two, 28 to a run where the board drew 55. Everything it says is still there -- the order round, the arrows, the three boxes by place, a dark run ringed with its next step under it, and nothing scrolls. What it costs is the width, and the corner under the left column, which is empty from 716 to the foot of the wall.\n\nThe same rule fires for any quiet row in that column, not only this one: Show this as, Lead with, and Take it out of the house while the pane is being edited. The pinned test is app/e2e/controller.spec.ts, \"in a house sharing its lights with other apps, the roof keeps to the right and still nothing scrolls\"."
+    },
+    {
+      "id": "right-a",
+      "page": "pane-shared-rejected",
+      "x": 0,
+      "y": 1000,
+      "w": 1440,
+      "text": "A -- THE ROOF KEEPS TO THE RIGHT\n\nThe build's answer, drawn as a direction and marked with what it costs. The left column is every light's left column, share row and all, at its own height; the roof keeps to the right-hand column under the bar and the two cards. Flip Not shared: that is DrawnC, the same light on the same evening, and the roof is back across the wall.\n\nFor it: nothing new is drawn and nothing is folded. The share row looks and works exactly as it does on a lamp's pane, one tap to Kept home, with the sentence that says what sharing means. It is already built and tested, and it holds any quiet row the left column grows, not only this one.\n\nAgainst it: a setting about other apps decides how wide the roof is drawn. The line that was chosen because it reads from across the room is drawn at 748 instead of 1,342 (1), at half its density, its three places drawn closer together -- and under the left column the wall is empty (2), so the pane is lopsided: full on the right, short on the left. And the roof moves when the house starts or stops sharing, which nobody touching the Roofline did."
+    },
+    {
+      "id": "said-b",
+      "page": "pane-shared",
+      "x": 3120,
+      "y": 960,
+      "w": 1440,
+      "text": "B -- SHARING IS SAID BY THE ROOM\n\nThe share row folds to one quiet word on the room's line: Backyard, then Shared with other apps in a small chip with the light's own color as its dot, or Kept out of other apps with none. A light's other facts -- where it is, what it is called -- are said on those two lines already, and whether other apps can see it is one more fact of that kind. It takes no height, so the pane is DrawnC to the pixel whether the house shares or not, and the roof keeps the width of the wall.\n\nFlip Opened: tapping the chip opens the same row over the name -- Shared and Kept home, and the sentence saying Apple Home, Google Home and Alexa can see it -- as a small card that closes when the pane is touched anywhere else. After a choice the chip says what the light now is, so it is its own undo, and nothing under the finger goes anywhere.\n\nThe costs: changing it is two taps where it was one, and a card opened over the pane is new to the pane -- the nearest thing it has is Show this as, which opens in place. On this light the share row no longer looks like a lamp's; whether every pane should say it this way is a question for those panes, not answered here."
+    },
+    {
+      "id": "bar-c",
+      "page": "pane-shared-rejected",
+      "x": 1560,
+      "y": 1000,
+      "w": 1440,
+      "text": "C -- THE BAR MAKES ROOM\n\nAsks what in the right-hand column has width to spare, and the answer is the bar: 748 across for one number. It gives up 236, and sharing takes the end of the row as a pill the bar's height and shape, labeled the way the bar is labeled -- OTHER APPS over Shared and Kept home, still one tap. The left column is DrawnC's, the look and the evenings are DrawnC's, and the roof keeps the width of the wall. Flip Not shared and the bar is whole again; that is the only thing on the pane that moves.\n\nNot the evenings, which was the other place to look: folding them to one line would put Every evening, Only in an occasion and Not by itself behind a tap, and the pane page ruled that what a roof uses stays on the pane, not behind a row.\n\nThe costs: a setting changed once a year sits on the row with the control used every evening, at the same weight. The sentence saying what sharing means does not fit in a pill, so OTHER APPS has to carry it alone. And the bar's length now depends on a setting about other apps -- a smaller version of A's fault."
+    },
+    {
+      "id": "shared-rec",
+      "page": "pane-shared",
+      "x": 6240,
+      "y": 0,
+      "w": 500,
+      "text": "RECOMMENDED -- B\n\nNot A. It is honest, and it fits, but it lets a setting about other apps decide how much of the wall the roof gets, and it makes the pane change shape when nobody touched the Roofline. DrawnC was chosen for the drawing across the wall; A gives it up in exactly the houses that have done the most to set the hub up.\n\nB, because sharing is a fact about the light, set once and then read, and the room's line is where the pane says facts about the light. It keeps the chosen pane exactly as it was chosen, in every house, and still shows at a glance whether Alexa can ask for the roof. The second tap is a fair price for a setting nobody changes in December.\n\nC if the household would rather sharing stayed one tap. It also keeps the roof whole, at the cost of a shorter bar and the sentence that explains sharing.\n\nEither way the order is the one AGENTS.md asks for: the chosen board first, then the e2e test that pins the build's arrangement (\"the roof keeps to the right\") rewritten to the new one, then the code -- and A moves to a Not chosen page with its case.\n\nOpen: the other quiet rows. Show this as and Lead with should never appear on a roofline; Take it out of the house appears only while the pane is being edited, and B does not answer it. Editing is a moment the person chose, so the build's move to the right may be the right answer there -- worth a board of its own if it comes up."
+    },
+    {
+      "id": "pane-shared-decided",
+      "page": "pane-shared",
+      "x": -620,
+      "y": -760,
+      "w": 560,
+      "text": "DECIDED 1 OCTOBER 2026\n\nB. Sharing with other apps folds to a chip on the room line (“Backyard · Shared with other apps”), and a tap opens the same Shared / Kept home choice and its sentence as a small card; the pane stays DrawnC to the pixel in every house, the roof always full width. Still open and NOT decided here: the same left-column crowding while the pane is being edited (“Take it out of the house”); until it is drawn, the build keeps its present behavior for that case only."
     }
   ],
   "pages": [
@@ -344,6 +528,22 @@
     {
       "id": "one-rejected",
       "name": "One light — several boxes: not chosen"
+    },
+    {
+      "id": "pane",
+      "name": "The Roofline’s pane"
+    },
+    {
+      "id": "pane-rejected",
+      "name": "The Roofline’s pane: not chosen"
+    },
+    {
+      "id": "pane-shared",
+      "name": "The Roofline’s pane, shared"
+    },
+    {
+      "id": "pane-shared-rejected",
+      "name": "The Roofline’s pane, shared: not chosen"
     }
   ],
   "reading": [
@@ -381,6 +581,26 @@
     "MountB.dc.html",
     "none-c",
     "NoneC.dc.html",
-    "one-rec"
+    "one-rec",
+    "pane-q",
+    "pane-today",
+    "TodayPane.dc.html",
+    "row-a",
+    "RowA.dc.html",
+    "givesway-b",
+    "GivesWayB.dc.html",
+    "drawn-c",
+    "DrawnC.dc.html",
+    "pane-rec",
+    "shared-q",
+    "shared-today",
+    "TodayShared.dc.html",
+    "right-a",
+    "RightA.dc.html",
+    "said-b",
+    "SaidB.dc.html",
+    "bar-c",
+    "BarC.dc.html",
+    "shared-rec"
   ]
 }

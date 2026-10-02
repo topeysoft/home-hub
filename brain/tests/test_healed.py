@@ -7,6 +7,7 @@ happened and nothing anywhere else; the third time in a week, a job on Needs a l
 """
 import json, time
 from datetime import UTC, datetime
+from unittest import mock
 
 from hub.healed import stamp
 from tests.apptest import ApiTest
@@ -20,6 +21,14 @@ def docker(ts: float) -> str:
 class Healed(ApiTest):
     def setUp(self):
         super().setUp()
+        # Every outage here is a few minutes old, and how What happened words a span depends on the
+        # day it fell on: one that ended before midnight reads "yesterday", not "9:40 pm – 9:50 pm".
+        # So the whole class runs at noon, or a run in the first forty minutes of a day fails a test
+        # that has nothing wrong with it (it did, on CI at 00:20 UTC).
+        noon = datetime.now(self.hub.tz).replace(hour=12, minute=0, second=0, microsecond=0).timestamp()
+        clock = mock.patch("time.time", return_value=noon)
+        clock.start()
+        self.addCleanup(clock.stop)
         # The ceiling and kitchen lights are on Messages, the way a bridge's switches are.
         self.hub.provision.domains = {"entry-hw-ceiling": "mqtt", "entry-hw-kitchen": "mqtt"}
 
