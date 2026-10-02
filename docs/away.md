@@ -345,7 +345,9 @@ certificate at each handshake from a loopback-only file server, so until there i
 nothing on the front door waits for it. Checked in miniature with Pebble as the CA and the service's own DNS
 server answering the challenge; not yet on the real relay, which needs a new `relay_service_ref` and an apply.
 If the hub's LAN address changes, the name changes with it the next time outside is turned on; nothing re-runs
-`away.sh` on its own yet.
+`away.sh` on its own yet. The first real attempt, the same day, failed with a 404: `api.elyir.app`'s door
+on the relay passes an explicit list of paths and `/acme/*` was not on it, while the miniature had pointed lego
+straight at the service. `relay/service/tests/test_door.py` now holds every route a hub calls to that list.
 
 **What does not work yet, said plainly.** A phone off the Wi-Fi reaching that name gets *This house is not open
 from here*, because no phone has moved to the address and the *From outside* switch on *People* is not built

@@ -109,7 +109,7 @@ write_files:
             alt_tlsalpn_port 9443
           }
         }
-        @public path /alive /offer /names/* /houses /houses/*
+        @public path /alive /offer /names/* /houses /houses/* /acme/*
         handle @public {
           reverse_proxy 127.0.0.1:7100
         }
