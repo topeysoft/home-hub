@@ -132,17 +132,17 @@ const home = { name: "Temi's house", temp_unit: '°F', rooms }
 /* The words on a row's way out, in the shape brain/hub/things.py writes them: the panel draws these
    and invents none of them, so the mock has to speak the same sentences or the page reads wrong here
    and right in a house. */
-const out = (t, act, tail) => ({ do: 'Take it out', act, to: t.id,
-  ask: `Take ${t.name} out of the house? ${tail}`, yes: `Yes, take ${t.name} out`, no: 'Keep it' })
+const out = (t, act, tail) => ({ do: 'Remove', act, to: t.id,
+  ask: `Remove ${t.name} from the house? ${tail}`, yes: `Yes, remove ${t.name}`, no: 'Keep it' })
 const status = { driver: process.env.ENGINE === 'down' ? 'down' : 'ready', reason: process.env.ENGINE === 'down' ? "The hub's engine is not answering yet." : '',
   version: 'v0.3.0',   // the build this mock is: the panel reloads itself when a status answers with another (store.ts, newBuild)
   setup_done: process.env.FRESH !== '1', owner: 'Temi', home: "Temi's house", location: true, rooms: 8, devices: 30, locked: process.env.LOCKED === '1',
   drivers: [
-    { id: 'mqtt', name: 'Messages', state: 'ready', text: 'Running', port: 1883 },
-    { id: 'zigbee', name: 'Zigbee radio', state: 'ready', text: 'Stick on USB', port: 8080 },
-    { id: 'zwave', name: 'Z-Wave radio', state: 'off', text: 'No stick found', port: 3000 },
-    { id: 'matter', name: 'Matter', state: 'ready', text: 'Running', port: 5580 },
-    { id: 'ring', name: 'Ring', state: 'sign-in', text: 'Needs a sign-in', port: 55123 },
+    { id: 'mqtt', name: 'Device messages', state: 'ready', text: 'Working', port: 1883 },
+    { id: 'zigbee', name: 'Zigbee radio', state: 'ready', text: 'Plugged in', port: 8080 },
+    { id: 'zwave', name: 'Z-Wave radio', state: 'off', text: 'Not plugged in. Plug a Z-Wave stick in and it starts on its own.', port: 3000 },
+    { id: 'matter', name: 'Matter', state: 'ready', text: 'Working', port: 5580 },
+    { id: 'ring', name: 'Ring', state: 'sign-in', text: 'Sign in once to bring in the alarm, cameras and sensors.', port: 55123 },
   ], problems: [] }
 /* What changed, in a house's words (docs/updates.md piece 4). Off unless asked for, so the panel's
    ordinary previews and the e2e run see the hub page exactly as they did before: WHATSNEW=1 puts the
@@ -564,8 +564,8 @@ const server = http.createServer((req, res) => {
     const secs = { hub: 30, everything: 120, machine: 180 }[rung] ?? 30
     const weary = process.env.RESTART === 'weary'
     return json(res, {
-      rung, title: { hub: 'Restart the hub?', everything: 'Restart everything?', machine: 'Restart the little computer?' }[rung],
-      yes: { hub: 'Restart the hub', everything: 'Restart everything', machine: 'Restart the little computer' }[rung],
+      rung, title: { hub: 'Restart the hub?', everything: 'Full restart?', machine: 'Power the hub off and on?' }[rung],
+      yes: { hub: 'Quick restart', everything: 'Full restart', machine: 'Power off and on' }[rung],
       keeps: rung === 'hub' ? 'Lights and switches keep working.' : 'Switches on the wall keep working.',
       stops: rung === 'hub' ? ['Motion lights and schedules pause.'] : ['Everything the hub talks to goes quiet until it\u2019s back \u2014 lights, sensors and the radios.'],
       flight: [], seconds: secs, how_long: secs < 90 ? `about ${secs} seconds` : `about ${Math.round(secs / 60)} minutes`,
@@ -898,9 +898,9 @@ const bridgeRows = process.env.BRIDGES === 'none' ? [] : [
                yes: `Yes, remove ${title[e]}`, no: 'Keep it' } })
     if (here.length) groups.push({ id: 'here', kind: 'here', name: 'Set up here', act: null, things: here.sort((a, b) => a.name.localeCompare(b.name)) })
     if (mesh.length) groups.push({ id: 'mesh', kind: 'bridge', name: 'On the bridge in the hallway', things: mesh,
-      act: { do: `Forget the bridge, and all ${mesh.length} with it`, act: 'bridge', to: 'c8ebba',
-             ask: 'Forget the hallway bridge? Its switches stop working from here until a bridge is set up again.',
-             yes: 'Yes, forget it', no: 'Keep it' } })
+      act: { do: `Remove the bridge, and all ${mesh.length} with it`, act: 'bridge', to: 'c8ebba',
+             ask: 'Remove the hallway bridge? Its switches stop working from here until a bridge is set up again.',
+             yes: 'Yes, remove it', no: 'Keep it' } })
     groups.push({ id: 'engine', kind: 'engine', name: "The hub's own parts", act: null,
       things: [{ id: 'engine', name: 'Messages, Z\u2011Wave radio and Matter', sub: '', where: 'In the hub', out: null, why: 'Part of the house' }] })
     return json(res, { groups, count: groups.filter(g => g.kind !== 'engine').reduce((n, g) => n + g.things.length, 0) })

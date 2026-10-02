@@ -62,7 +62,7 @@ onMounted(refresh)
 
 const lede = computed(() => loading.value ? 'Reading what the house has…'
   : count.value === 1 ? 'One thing, and what brought it.'
-  : `${count.value} things, and what brought each of them. This is also where a thing goes when you are done with it.`)
+  : `${count.value} things, and what brought each of them. This is also where you remove one.`)
 
 const key = (a: Act) => `${a.act}:${a.to}`
 function arm(a: Act) { asking.value = asking.value === key(a) ? '' : key(a) }
@@ -120,9 +120,9 @@ const took = (a: Act | null) => !!a && !!gone.value[key(a)]
           <span class="things-where">{{ t.where }}</span>
           <span class="things-do">
             <button v-if="t.out && !took(t.out)" class="button small ghost" :class="{ warn: asking === key(t.out) }" @click="arm(t.out)">
-              {{ asking === key(t.out) ? 'Take it out?' : t.out.do }}
+              {{ asking === key(t.out) ? 'Remove it?' : t.out.do }}
             </button>
-            <span class="things-why" v-else-if="t.out">Taken out</span>
+            <span class="things-why" v-else-if="t.out">Removed</span>
             <span class="things-why" v-else>{{ t.why }}</span>
           </span>
           <!-- what goes, said before it goes, across the row rather than inside the button -->

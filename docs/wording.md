@@ -38,7 +38,7 @@ to clean it up.
 | Rooms and devices: adding a thing | **Done, 2 October 2026.** A chosen: the verb is *add* | `design/words-adding/` |
 | Rooms and devices: rooms, panes, New devices | **Done, 2 October 2026.** C chosen: the device's words for controls, a person's for how it is | `design/words-rooms/` |
 | Rooms and devices: light strips and the roofline | Not started — its words were settled on boards on 1 October; reopen only with boards | |
-| Settings (This hub, Accounts, Share, the passcode) | Not started | |
+| Settings (The hub, Accounts, Share, the passcode, What this house has, Look, Routines, Signals) | **Done, 2 October 2026.** One name each; the restart says how deep, connections keep their standard names | `design/words-settings/` |
 | The band and its messages | Not started | |
 | The brain's sentences outside the areas above | Not started | |
 
@@ -90,19 +90,31 @@ to clean it up.
 - **A changed label is measured, not just read.** Two labels in this round wrapped and moved a column;
   a pinned layout test caught one, a screenshot the other.
 
+### What settings settled
+
+- **One name for each thing, on its row and on its page.** The box is **The hub** (never *This hub*, *the
+  little computer*). The passcode is **Passcode** (never *Lock the settings*, never *code*): Set a passcode,
+  Change it, Remove the passcode.
+- **Restarting says how deep:** Quick restart, Full restart, Power off and on.
+- **Connections keep their standard names** (Device messages, Zigbee radio, Z-Wave radio, Matter, Ring),
+  each with a plain state: Working, Plugged in, Not plugged in, Needs you to sign in.
+- **A word means one thing.** *Bridge* is the wall-switch puck, never the sharing link. *Door* is a door;
+  a pairing window is "the code works for five minutes"; locks are locks. *The wall* is the wall screen.
+- **Who may do something is said by the passcode**, as People settled: "Restarting needs the passcode."
+  `app/tests/settingswords.test.ts` holds this area's names.
+
 ## Known so far, outside the areas done
 
 | Where | Says | Problem |
 | --- | --- | --- |
 | `brain/hub/happened.py`, `app/src/ChangesPage.vue` — who did something | "Someone at the wall" | Bare *the wall* |
 | `app/src/HubPage.vue`, `brain/hub/api.py` — Restart | "for the screens that keep it. Someone at the wall can do it." | *keep it*, *the wall* |
-| `BridgeSheet.vue`, `StripSheet.vue`, `NetworkSheet.vue` | "You can walk away; the wall will say when it is done." | *the wall* as the thing that talks |
+| `BridgeSheet.vue` | "You can walk away; the wall will say when it is done." | *the wall* as the thing that talks (Strip and Network done) |
 | `StripSheet.vue` | "It is being let in now, over Bluetooth" | *let in* for a light being added |
-| `HousePanel.vue` and many sheets | "This hub" as a page name | The person bought a box; is *hub* their word? |
-| `HousePanel.vue` | "Lock the settings" beside "Change the passcode" | Two names for one thing |
-| `AccountsPage.vue` | "Sam's Nest is out." | *is out* for removed |
-| `ThingsPage.vue` (What this house has) | "Take Backyard cam out of the house?" | Rooms settled *remove* |
-| `HubPage.vue`, `AddPage.vue` | "Behind the scenes" | A heading that tells you not to read what is under it |
+
+| `SignalsPage.vue` / `brain/hub/signals.py` | "Choose the rooms you come in through, in Routines" | NOT WORDS: Routines only shows that picker once a house already has one -- a dead end for a new house |
+| `SignalsPage.vue` | "Ask for it in Routines, in your own words" | NOT WORDS: asking exists only once the assistant is connected |
+| `SharePage.vue`, `brain/hub/api.py` | "Running the installer again adds one" | Not something a household can do |
 
 Add to this table whenever a word stops you, rather than fixing it in passing. Each area's pass starts
 from this list and then reads every screen and every sentence the brain says in it, since most of what

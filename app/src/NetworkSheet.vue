@@ -169,7 +169,7 @@ onUnmounted(() => window.removeEventListener('keydown', key))
               </li>
             </template>
             <li v-if="scanning" class="bridge-sub scan-note"><span class="pulse-dot"></span> Looking…</li>
-            <li v-else-if="!seen.length" class="bridge-sub scan-note">Nothing else in the air here.</li>
+            <li v-else-if="!seen.length" class="bridge-sub scan-note">No other networks nearby.</li>
           </ul>
 
           <template v-else>
@@ -213,7 +213,7 @@ onUnmounted(() => window.removeEventListener('keydown', key))
 
         <!-- ============ the move. By room, never by chip. ============ -->
         <template v-else-if="move.state === 'moving'">
-          <p class="sheet-lede">Each one takes the new Wi‑Fi, restarts, and comes back on it. A couple of minutes for all {{ move.total }}. You can walk away — the wall will say how it went.</p>
+          <p class="sheet-lede">Each one takes the new Wi‑Fi, restarts, and comes back on it. A couple of minutes for all {{ move.total }}. You can walk away — the wall screen will say how it went.</p>
           <div class="bridge-bar"><i :style="{ width: `${Math.round((move.followed.length / Math.max(1, move.total)) * 100)}%` }"></i></div>
           <p class="bridge-sub count">{{ move.followed.length }} of {{ move.total }} {{ move.followed.length === 1 ? 'is' : 'are' }} back</p>
           <ul class="movers">

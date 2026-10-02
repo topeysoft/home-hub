@@ -30,12 +30,12 @@ test('everything is under what brought it, and the group carries the bigger hamm
 test('a thing set up here goes on its own, and is asked about by name first', async ({ page }) => {
   await page.goto(DOOR, { waitUntil: 'networkidle' })
   const row = page_(page).locator('.things-rows li', { hasText: 'Backyard cam' }).first()
-  await expect(row.locator('.button')).toHaveText('Take it out')
+  await expect(row.locator('.button')).toHaveText('Remove')
   await expect(row.locator('.things-ask')).toHaveCount(0)   // nothing is armed until it is touched
   await row.locator('.button').click()
   const ask = row.locator('.things-ask')
-  await expect(ask).toContainText('Take Backyard cam out of the house?')
-  await expect(ask.locator('.button.warn')).toHaveText('Yes, take Backyard cam out')
+  await expect(ask).toContainText('Remove Backyard cam from the house?')
+  await expect(ask.locator('.button.warn')).toHaveText('Yes, remove Backyard cam')
   await expect(ask.locator('.button.ghost')).toHaveText('Keep it')
 })
 
