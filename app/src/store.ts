@@ -3,17 +3,18 @@ import { learnLan, look, moved, watchDoor } from './door'
 import { moveCode, withoutCode } from './move'
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { reactive, watch } from 'vue'
-import { getMe, claimMove, kickStream, type Me, doRestart, type Rung, getBridge, type Bridge, getStrip, stripLooking, type Strip, getHome, getEvents, getAmbient, getScenes, getStatus, getDiscovered, getRoutines, getAssistant, getPresence, getHealth, getSounds, connect, act, setIntent, setHomeIntent, type Room, type Device, type Home, type Event, type Ambient, type Rules, type Status, type Found, type Intent, type Routine, type Assistant, type Presence, type Note, type Sound, requestUpdate, getPhones, type Phone, type Ask, getAccounts, type Account, getShare, type Share, getHappened, type Happened, getChanges, type Changes, getSignals, type SignalsPage, type TryBrief, getRoofline, type Roofline } from './api'
+import { getMe, claimMove, kickStream, type Me, doRestart, type Rung, getBridge, type Bridge, getStrip, stripLooking, type Strip, getHome, getEvents, getAmbient, getScenes, getStatus, getDiscovered, getRoutines, getAssistant, getPresence, getHealth, getSounds, connect, act, setIntent, setHomeIntent, type Room, type Device, type Home, type Event, type Ambient, type Rules, type Status, type Found, type Intent, type Routine, type Assistant, type Presence, type Note, type Sound, requestUpdate, getPhones, type Phone, type Ask, getAccounts, type Account, getShare, type Share, getHappened, type Happened, getChanges, type Changes, getSignals, type SignalsPage, type TryBrief, getRoofline, type Roofline, getPrinters, type Printers, type Printer } from './api'
 import { previewHeld, previewHeldNote, previewRoofDevice, previewRoofline, previewStripBeat } from './controller'
 import { lock, CANCELED, failed } from './code'
 import { isPage } from './pages'
 import { sunPosition, sunGuess, moonPhase } from './sun'
 import { locale, setHouseLanguage } from './lang'
+import { hasCard, printerOn, printerPart, printersIn as inRoom } from './printers'
 
 /* The few soft sheets the panel has. Named rather than written out twice: the restart keeps the one
    it closed so it can come back to it, and `typeof store.sheet` there would make the store's own type
    circular -- which typescript answers by quietly making the whole store `any`. */
-export type Sheet = null | 'location' | 'add' | 'code' | 'why' | 'routines' | 'signals' | 'hub' | 'look' | 'house' | 'people' | 'accounts' | 'things' | 'share' | 'notes' | 'happened' | 'changes'
+export type Sheet = null | 'location' | 'add' | 'code' | 'why' | 'routines' | 'signals' | 'hub' | 'look' | 'house' | 'people' | 'accounts' | 'things' | 'printers' | 'share' | 'notes' | 'happened' | 'changes'
 
 export const store = reactive({
   rooms: [] as Room[], linkUp: false, linkLost: false, error: '', loaded: false,   // linkLost: down long enough to be worth mentioning
@@ -97,6 +98,14 @@ export const store = reactive({
   strip: null as Strip | null,   // a light strip being set up; hub/strip.py. One at a time, same as a bridge
   roofline: null as Roofline | null,   // the light outside made of several boxes; hub/roofline.py. Null on a hub that predates it
   yard: false,                         // the way round being shown on the roof, from a phone in the yard (design/roofline/TapA)
+  /* The house's 3D printers, as the brain follows them (brain/hub/printers.py): what each is doing, the
+     ones found on the Wi-Fi, and any ask waiting at a printer. Null on a hub that predates them. */
+  printers: null as Printers | null,
+  printer: null as string | null,      // the printer whose pane is open (PrinterPane.vue), by id
+  /* A print card the house no longer has a print for -- OBI1 Ready again -- keeps its place, drained,
+     until the panel looks away, exactly as a lamp just turned off does. This is the last thing each
+     card said; `done` (below) is what says it is still owed a place. printers.ts says why. */
+  printsKept: {} as Record<string, Printer>,
   /* A sentence somebody started somewhere else, for the command box to open with: "Say another look" on
      the Roofline's pane opens it with the occasion already said (design/roofline/DrawnC). Say.vue takes it
      and puts it back to null. */
@@ -135,6 +144,14 @@ const previewMonth = params.get('month')    // ?month=1 previews a season (1 Jan
 export const WEATHER_LABEL: Record<string, string> = {
   sunny: 'Clear', 'clear-night': 'Clear', partlycloudy: 'Partly cloudy', cloudy: 'Cloudy', fog: 'Fog', rainy: 'Rain', pouring: 'Heavy rain',
   hail: 'Hail', lightning: 'Storm', 'lightning-rainy': 'Thunderstorm', snowy: 'Snow', 'snowy-rainy': 'Sleet', windy: 'Windy', 'windy-variant': 'Windy', exceptional: 'Unusual weather',
+}
+/** Now, on the clock the panel is showing: ?at= moves it, so a print previewed at 2:47 PM is done at the
+    4:20 PM the board says rather than an hour and a half after whenever the preview was opened. */
+export function clockNow(): number {
+  if (!previewAt) return Date.now()
+  const d = new Date(), [h, m] = previewAt.split(':').map(Number)
+  d.setHours(h || 0, m || 0, 0, 0)
+  return d.getTime()
 }
 export function updateSky() {
   const now = new Date()
@@ -184,8 +201,12 @@ export const iconFor = (d: Device) => cap(d) === 'appliance' && /\bice\b|freez/i
 export const PASSIVE = new Set(['sensor', 'motion', 'contact', 'camera'])
 export const visibleRooms = () => {
   const rs = store.rooms.filter(r => r.id !== 'unassigned' || r.devices.length)
-  return [...rs.filter(r => r.devices.length), ...rs.filter(r => !r.devices.length)]   // rooms with something in them first
+  return [...rs.filter(r => !bare(r)), ...rs.filter(bare)]   // rooms with something in them first
 }
+/** The printers a household has put in this room (design/printers/WorkshopB). Most rooms have none. */
+export const printersIn = (r: Room) => inRoom(store.printers?.printers ?? [], r.id).sort((a, b) => Number(printerOn(b)) - Number(printerOn(a)))   // printing first: it is the news
+/** Nothing in the room at all: no devices, and no printer a household has put there. */
+export const bare = (r: Room) => !r.devices.length && !printersIn(r).length
 export const roomOf = (d: Device) => store.rooms.find(r => r.id === d.room_id)
 export const deviceById = (id: string) => { for (const r of store.rooms) { const d = r.devices.find(x => x.id === id); if (d) return d } }
 
@@ -227,6 +248,11 @@ export function activityParts(r: Room, withMedia = true): string[] {
   /* First, and on its own terms. Everything else in this line is what a room is doing;
      a siren is what a room is SHOUTING, and it does not queue behind the lamps. */
   if (r.devices.some(d => cap(d) === 'alarm' && d.state === 'on')) parts.push('Alarm sounding')
+  /* A printer a household put here is named whatever it is doing -- "OBI1 printing · C3PO ready · Bench
+     light on" (design/printers/WorkshopB). Ready is said too, unlike a lamp that is off: somebody looking
+     for C3PO in the workshop is looking for exactly that word. It does not make the room count as on;
+     only printing does (roomActive). */
+  for (const p of printersIn(r)) parts.push(printerPart(p))
   const lights = r.devices.filter(d => cap(d) === 'light' && d.state === 'on').length
   if (lights) parts.push(lights === 1 ? '1 light on' : `${lights} lights on`)
   if (withMedia) for (const d of r.devices.filter(d => cap(d) === 'media' && d.state === 'playing'))
@@ -296,7 +322,7 @@ function roomLine(r: Room, resting: boolean): string {
   const parts = activityParts(r)
   if (parts.length) return parts.join(' · ')
   if (r.id === 'unassigned') return r.devices.length === 1 ? '1 to place' : `${r.devices.length} to place`
-  if (!r.devices.length) return 'Nothing here yet'
+  if (bare(r)) return 'Nothing here yet'
   if (resting) {
     const rest = restingParts(r)
     if (rest.length) return rest.join(' · ')
@@ -306,7 +332,7 @@ function roomLine(r: Room, resting: boolean): string {
 }
 /* An appliance's feature being on is not the house doing anything: an ice maker is on all year, and a
    card for it in "on right now" would be a card that never leaves. It is on its own tile, and that is where. */
-export function roomActive(r: Room) { return r.devices.some(d => isActive(d) && cap(d) !== 'camera' && cap(d) !== 'appliance') }
+export function roomActive(r: Room) { return r.devices.some(d => isActive(d) && cap(d) !== 'camera' && cap(d) !== 'appliance') || printersIn(r).some(printerOn) }
 /** Everything that is on across the house, cameras and appliances excluded: the "on right now" strip. */
 export function whatsOn(): Device[] {
   return store.rooms.flatMap(r => r.devices.filter(d => isActive(d) && !PASSIVE.has(cap(d)) && cap(d) !== 'appliance'))
@@ -597,6 +623,36 @@ export async function loadRoofline() {
   if (ROOF_PARAM) { store.roofline = previewRoofline(ROOF_PARAM); store.yard ||= !!store.roofline.exists && !!store.roofline.yard; return }
   try { store.roofline = await getRoofline() } catch { store.roofline = null }
 }
+/* ---------- 3D printers ---------- */
+/*
+ * The printer status, from the boot read or the stream. Before it is put in place, any print card the
+ * house is about to stop having -- OBI1 Ready again, the part lifted off -- is kept: its last view in
+ * `printsKept`, and its place in `done`, which App.vue sweeps when nobody is looking. Nothing vanishes
+ * under the finger, and a print finishing is not a finger, but it IS somebody glancing at the wall to see
+ * whether it is done -- and the card they were looking for should still be where it was.
+ */
+export function applyPrinters(next: Printers) {
+  for (const was of store.printers?.printers ?? []) {
+    const now = next.printers.find(p => p.id === was.id)
+    if (hasCard(was) && (!now || !hasCard(now))) { store.printsKept[was.id] = was; keepDone(`printer:${was.id}`, 'Ready') }
+    if (now && hasCard(now)) { delete store.printsKept[now.id]; delete done[`printer:${now.id}`] }
+  }
+  store.printers = next
+}
+/** The kept cards that are still owed their place. */
+export const keptPrints = () => Object.values(store.printsKept).filter(p => done[`printer:${p.id}`])
+/** Things found nearby and not in the house yet: on the network, and 3D printers on the Wi-Fi. */
+export const foundCount = () => store.found.length + (store.printers?.found.length ?? 0)
+export const printerById = (id: string | null) => store.printers?.printers.find(p => p.id === id) ?? null
+let printersPoll: number | undefined
+export async function loadPrinters() {
+  try { applyPrinters(await getPrinters()) } catch { store.printers = null }
+  /* While an ask is waiting at a printer, read again every few seconds as well as listening. The answer
+     happens at the printer and arrives on the stream; if the stream blinked in those two minutes, the row
+     that asked would be counting down to nothing. */
+  clearTimeout(printersPoll)
+  if (Object.values(store.printers?.asking ?? {}).includes('waiting')) printersPoll = window.setTimeout(loadPrinters, 3000)
+}
 export const routineById = (id: string) => store.routines.find(r => r.id === id)
 /** An update the hub should raise by itself, and nothing is already installing it. `offer` rather
     than `available` so a version that was tried and rolled back is not pushed at anybody again; it
@@ -886,7 +942,7 @@ export async function load() {
   await refreshStatus()
   if (lock.unpaired) return                    // the join screen is up; the house answers once this phone is in
   try { applyHome(await getHome()) } catch { store.error = 'The hub is not answering.' }
-  loadAmbient(); loadRules(); loadRoutines(); loadAssistant(); loadPresence(); loadHealth(); loadSounds(); loadPhones(); loadAccounts(); loadShare(); loadRoofline()
+  loadAmbient(); loadRules(); loadRoutines(); loadAssistant(); loadPresence(); loadHealth(); loadSounds(); loadPhones(); loadAccounts(); loadShare(); loadRoofline(); loadPrinters()
 }
 let foundPoll: number | undefined
 /* The hub came back on a different build from the one this page was reading. Until it reloads, the
@@ -927,7 +983,7 @@ export async function start() {
   clearInterval(foundPoll); foundPoll = window.setInterval(refreshFound, 60000)
   refreshBridge()
   refreshStrip()
-  stop = connect({ device: applyDevice, home: applyHome, intent: applyIntent, drafts: d => { store.drafts = d; eventsSoon() }, presence: p => { store.presence = p; eventsSoon() }, phones: () => loadPhones(true), share: () => { store.shareTick++; loadShare() }, signals: t => { store.signalTry = t; if (store.signals) loadSignals() }, roofline: r => { if (!ROOF_PARAM) store.roofline = r }, ambient: a => { store.ambient = a; updateSky() }, status: s => {
+  stop = connect({ device: applyDevice, home: applyHome, intent: applyIntent, drafts: d => { store.drafts = d; eventsSoon() }, presence: p => { store.presence = p; eventsSoon() }, phones: () => loadPhones(true), share: () => { store.shareTick++; loadShare() }, signals: t => { store.signalTry = t; if (store.signals) loadSignals() }, roofline: r => { if (!ROOF_PARAM) store.roofline = r }, printers: applyPrinters, ambient: a => { store.ambient = a; updateSky() }, status: s => {
     const was = store.status?.driver, version = store.status?.version
     store.status = s
     if (newBuild(version, s.version)) {
@@ -955,4 +1011,4 @@ export async function start() {
     else lostTimer = window.setTimeout(() => (store.linkLost = true), 4000)   // a blink on startup is not worth a banner
   } })
 }
-export function halt() { stop?.(); clearInterval(skyTimer); clearInterval(foundPoll); clearTimeout(bridgeTimer); clearTimeout(stripTimer) }
+export function halt() { stop?.(); clearInterval(skyTimer); clearInterval(foundPoll); clearTimeout(bridgeTimer); clearTimeout(stripTimer); clearTimeout(printersPoll) }

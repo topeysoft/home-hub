@@ -27,6 +27,10 @@ const PATHS: Record<string, string> = {
   check: 'M5 12.5l4.5 4.5L19 7.5',
   play: 'M8 5.5l10 6.5-10 6.5z',
   pause: 'M7.5 5h3.5v14H7.5zM13 5h3.5v14H13z',
+  /* a 3D printer: its frame, the gantry, the nozzle, and the bed (design/printers/) */
+  printer: 'M4 21V4h16v17M2.5 21h19M4 7.5h16M10 7.5h4v3.2l-2 1.8-2-1.8zM8.5 17.5h7',
+  stop: 'M7.5 7.5h9v9h-9z',
+  swap: 'M4.5 8.5h14l-3.5-3.5M19.5 15.5h-14l3.5 3.5',
   next: 'M6 5.5l9 6.5-9 6.5zM17 5v14',
   prev: 'M18 5.5l-9 6.5 9 6.5zM7 5v14',
   power: 'M12 3.5v8.5M6.6 6.6a7.6 7.6 0 1 0 10.8 0',

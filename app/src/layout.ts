@@ -86,3 +86,9 @@ export const FACES: { id: FaceName; label: string; hint: string }[] = [
 export function isFace(v: unknown): v is FaceName {
   return v === 'paper' || v === 'glass'
 }
+
+/** The first tab's name, which is the time of day the way the greeting is: "Your afternoon". Said by the
+    tab itself, and by anything that needs to tell somebody where on the wall a thing now is. */
+export function homeTab(hour: number): string {
+  return hour < 5 ? 'Your night' : hour < 12 ? 'Your morning' : hour < 17 ? 'Your afternoon' : hour < 21 ? 'Your evening' : 'Your night'
+}

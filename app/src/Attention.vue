@@ -24,7 +24,8 @@
  * height and stop the row moving when something wants you.
  */
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { deviceById, installUpdate, loadHealth, notify, perform, plainly, store } from './store'
+import { deviceById, installUpdate, keptPrints, loadHealth, notify, perform, plainly, store } from './store'
+import { bandNotes, printCards } from './printers'
 import { stripSecondLater } from './api'
 import { controllerBand, type ControllerLine } from './controller'
 import Icon from './Icon.vue'
@@ -43,7 +44,11 @@ import { offerMove } from './move'
 const moveTo = computed(() => offerMove(store.me, location.origin) ? (store.me?.address ?? '').replace(/^https:\/\//, '') : '')
 const tick = ref(Date.now())
 let t4: number | undefined
-const waiting = computed(() => waitingBand(store.found, store.strip, tick.value))
+const waiting = computed(() => waitingBand(store.found, store.strip, tick.value, store.printers?.found ?? []))
+/* Needs a look, less what a card on this screen is already saying. The band sits over Home's row, and a
+   printer waiting for a spool is its card there -- with the question and the two answers -- so a line
+   above it saying the same thing is the sentence twice (design/printers/StatesB). printers.ts, bandNotes. */
+const notes = computed(() => bandNotes(store.notes, printCards(store.printers?.printers ?? [], keptPrints()).map(p => p.id)))
 const fromControllers = computed(() => controllerBand(store.strip, store.roofline, tick.value))
 async function openController(l: ControllerLine) {
   try {
@@ -163,9 +168,9 @@ defineExpose({ updateReady })
   <!-- What has stopped answering, as one line. The list it opens is a page of This house
        (NotesPage.vue), because it is not news, it is a job with a button on it, and a house with
        three faults was spending a third of Home on saying so. -->
-  <button class="nudge" v-if="store.notes.length" @click="store.sheet = 'notes'">
+  <button class="nudge" v-if="notes.length" @click="store.sheet = 'notes'">
     <span class="nudge-icon"><Icon name="switch" :size="20" /></span>
-    <span class="nudge-text"><span class="nudge-title">{{ store.notes.length === 1 ? 'Something needs a look' : `${store.notes.length} things need a look` }}</span><span class="nudge-sub">{{ store.notes[0].band || store.notes[0].text }}</span></span>
+    <span class="nudge-text"><span class="nudge-title">{{ notes.length === 1 ? 'Something needs a look' : `${notes.length} things need a look` }}</span><span class="nudge-sub">{{ notes[0].band || notes[0].text }}</span></span>
   </button>
   </div>
   <div class="phone-card" v-if="phoneSteps">

@@ -4,7 +4,7 @@
 -->
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { store, start, halt, load, visibleRooms, activity, roomActive, houseLine, weatherLine, needsSetup, dismissToast, updateReady, forgetDone, cap } from './store'
+import { store, start, halt, load, foundCount, visibleRooms, activity, roomActive, houseLine, weatherLine, needsSetup, dismissToast, updateReady, forgetDone, cap } from './store'
 import Setup from './Setup.vue'
 import Join from './Join.vue'
 import Away from './Away.vue'
@@ -25,6 +25,7 @@ import HousePanel from './HousePanel.vue'
 import AskPane from './AskPane.vue'
 import { isPage } from './pages'
 import Opened from './Opened.vue'
+import PrinterPane from './PrinterPane.vue'
 import WeatherPane from './WeatherPane.vue'
 import Icon from './Icon.vue'
 import { clockParts, restingFacts, restWeather } from './resting'
@@ -214,7 +215,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="shell" :data-ambient="ambient" :data-nav="nav" :data-face="face" :data-layout="layout" :data-flat="face === 'glass' && flat ? '' : null" :style="[tone, glass, openTint]" :class="{ resting: idle, 'in-setup': setup || shut, 'opened-shell': !!store.opened || store.outside || panel || asking }">
+  <div class="shell" :data-ambient="ambient" :data-nav="nav" :data-face="face" :data-layout="layout" :data-flat="face === 'glass' && flat ? '' : null" :style="[tone, glass, openTint]" :class="{ resting: idle, 'in-setup': setup || shut, 'opened-shell': !!store.opened || !!store.printer || store.outside || panel || asking }">
     <Sky :quiet="!idle && !setup" />
     <!-- glass lays its blooms on the sky the canvas just painted, under the veil -->
     <div class="sky-bloom" v-if="face === 'glass'"></div>
@@ -243,9 +244,9 @@ onUnmounted(() => {
         </button>
       </nav>
       <div class="rail-tail">
-        <button class="rail-item rail-add" :class="{ attention: store.found.length }" @click="store.sheet = 'add'">
+        <button class="rail-item rail-add" :class="{ attention: foundCount() }" @click="store.sheet = 'add'">
           <Icon name="plus" :size="16" /><span class="rail-name">Add to the house</span>
-          <span class="rail-sub" v-if="store.found.length">{{ store.found.length }} found nearby</span>
+          <span class="rail-sub" v-if="foundCount()">{{ foundCount() }} found nearby</span>
         </button>
         <button class="rail-item rail-house" :class="{ attention: updateReady() }" @click="store.sheet = 'house'">
           <Icon name="menu" :size="16" /><span class="rail-name">This house</span>
@@ -317,6 +318,7 @@ onUnmounted(() => {
 
     <Viewer />
     <Opened v-if="store.opened" />
+    <PrinterPane v-if="store.printer" />
     <WeatherPane v-if="store.outside" :now="shown" />
     <AskPane v-if="asking" />
     <!-- :duration because what moves is inside: Vue times a transition from the

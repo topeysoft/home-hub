@@ -12610,3 +12610,916 @@ button.reading[data-held] {
   flex-direction: row;
 }
 
+
+/* ---------- 3D printers: a print, leading Your afternoon ----------
+   design/printers/NowB and StatesB, chosen 2 October 2026 (B, with an optional room). The camera
+   across the top and one pane of glass over its foot -- the media card's grammar, because a print is
+   the media card's argument: an event with an end, leading the row while it lasts. On the wall it is
+   the scenes card's height and 0.717 of it wide, which is the board's 360 x 500 at this row. Every
+   color is a token: live while it prints, the lamp while it waits for somebody, live again drained
+   when it is done, danger when it stopped mid-print. tiles/PrintCard.vue. */
+.print-card {
+  display: block;
+  cursor: pointer;
+  background-color: var(--surface);
+  border-color: rgba(var(--lamp-rgb), 0.28);
+  background-image: linear-gradient(135deg, rgba(var(--lamp-rgb), 0.14), rgba(var(--lamp-rgb), 0) 55%);
+}
+.wall-stage .bento .print-card {
+  height: var(--tall-list);
+  align-self: center;
+  width: calc(var(--tall-list) * 0.717);
+}
+.bento .print-card {
+  grid-row: span 2;
+  height: calc(var(--row) * 2 - 18px);
+  align-self: center;
+  width: 340px;
+}
+/* On a phone the row is a column and so is this card: the camera, then the glass, at a height a thumb
+   can scroll past. A phone that keeps the Stack home gets the compact card instead (HomeView). */
+@media (max-width: 860px) {
+  .bento .print-card {
+    grid-row: auto;
+    width: 100%;
+    height: 420px;
+    align-self: auto;
+  }
+}
+.print-card.waiting {
+  border-color: rgba(var(--lamp-rgb), 0.7);
+  box-shadow:
+    0 0 0 1px rgba(var(--lamp-rgb), 0.25),
+    0 0 46px -8px rgba(var(--lamp-rgb), 0.45);
+}
+.print-card.done {
+  border-color: rgba(var(--live-rgb), 0.35);
+  background-image: none;
+}
+.print-card.fault {
+  border-color: rgba(var(--danger-rgb), 0.55);
+  background-image: linear-gradient(150deg, rgba(var(--danger-rgb), 0.16), rgba(var(--danger-rgb), 0) 60%);
+}
+.print-cam {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 57%;
+  overflow: hidden;
+  background: linear-gradient(170deg, rgb(30, 36, 46), rgb(16, 18, 22));
+}
+.print-cam img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.print-cam .print-cam-part {
+  object-fit: contain;
+  padding: 18% 24%;
+}
+.print-chip {
+  position: absolute;
+  left: 16px;
+  top: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 28px;
+  padding: 0 11px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--ink);
+  background: rgba(12, 13, 16, 0.55);
+}
+.print-chip i {
+  display: block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--live);
+}
+.print-chip.waiting i {
+  background: var(--lamp);
+}
+.print-chip.fault i {
+  background: var(--danger);
+}
+/* the glass over the camera's foot: it grows up from the bottom with what it has to say, so a printer's
+   question and its two answers push the picture back rather than being cut off by it */
+.print-sheet {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 14px;
+  min-height: calc(43% + 2px);
+  padding: 16px 18px;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: linear-gradient(rgba(52, 56, 66, 0.86), rgba(28, 30, 36, 0.92));
+  display: flex;
+  flex-direction: column;
+}
+.print-who {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.print-thumb {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--r-sm);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--edge);
+  color: var(--ink-2);
+  overflow: hidden;
+}
+.print-thumb img {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+}
+.print-names {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.print-part {
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 22px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.print-sub {
+  font-size: 13.5px;
+  color: var(--ink-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.print-how {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 14px;
+}
+.print-pct {
+  font-size: 56px;
+  line-height: 56px;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+.print-when {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: 13.5px;
+  line-height: 1.35;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.print-when b {
+  font-size: 19px;
+  font-weight: 500;
+  color: var(--ink);
+}
+.print-bar {
+  position: relative;
+  height: 6px;
+  margin-top: 14px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.16);
+}
+.print-bar i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  display: block;
+  border-radius: 3px;
+  background: var(--lamp);
+}
+.print-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--ink-3, var(--muted));
+  white-space: nowrap;
+}
+.print-says {
+  margin: 16px 0 0;
+  font-size: 28px;
+  font-weight: 400;
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+}
+.print-detail {
+  margin: 8px 0 0;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--ink-2);
+}
+.print-answers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+.print-answer {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--edge);
+  font: inherit;
+  font-size: 13.5px;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+}
+.print-answer.primary {
+  border-color: transparent;
+  font-weight: 500;
+  color: var(--lamp-ink);
+  background: var(--lamp);
+}
+.print-answer.busy {
+  opacity: 0.6;
+}
+.print-finished {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 16px 0 0;
+  font-size: 13.5px;
+  color: var(--ink-3, var(--muted));
+}
+.print-finished svg {
+  color: var(--live);
+}
+/* a phone's: the camera on the left, how far and when on the right (design/printers/PhoneB) */
+.print-card.compact {
+  display: flex;
+  gap: 18px;
+  min-height: 0;
+  padding: 10px;
+  border-radius: 28px;
+}
+.print-card.compact .print-cam {
+  position: relative;
+  inset: auto;
+  flex: none;
+  width: 138px;
+  height: 138px;
+  border-radius: 18px;
+}
+.print-card.compact .print-chip {
+  left: 8px;
+  top: 8px;
+  height: 22px;
+  padding: 0 9px;
+  font-size: 10px;
+}
+.print-card.compact .print-sheet {
+  position: static;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  padding: 8px 4px 4px 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+.print-card.compact .print-thumb {
+  display: none;
+}
+.print-card.compact .print-part {
+  font-size: 17px;
+}
+.print-card.compact .print-how {
+  margin-top: 6px;
+  padding-top: 0;
+}
+.print-card.compact .print-pct {
+  font-size: 40px;
+  line-height: 46px;
+}
+.print-card.compact .print-when {
+  display: none;
+}
+.print-card.compact .print-bar {
+  margin-top: 8px;
+}
+.print-card.compact .print-says {
+  margin-top: 8px;
+  font-size: 19px;
+}
+.print-due {
+  margin: 10px 0 0;
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+.print-due b {
+  font-weight: 500;
+  color: var(--ink);
+}
+
+/* ---------- a printer's own pane ----------
+   design/printers/Pane.dc.html, at the shipped pane geometry: the words in the 560 column at 49, the
+   camera across the right from 643, the job under it, and the hub's limit under that. PhonePaneB is
+   the same pane as a sheet, the camera across its top. PrinterPane.vue. */
+.print-room {
+  min-height: 21px;
+}
+/* the quiet dashed word the pane already uses for "Show this as" */
+.print-choose {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--ink-2);
+  cursor: pointer;
+  text-decoration: underline dashed;
+  text-decoration-color: var(--edge-hi);
+  text-underline-offset: 4px;
+}
+.print-choose:hover {
+  color: var(--ink);
+}
+.print-doing {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 10px 0 0;
+  font-size: 15px;
+  color: var(--ink-2);
+}
+.print-doing i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--live);
+}
+.print-doing.lamp i {
+  background: var(--lamp);
+}
+.print-doing.danger i {
+  background: var(--danger);
+}
+.print-pane-detail {
+  margin: 10px 0 0;
+  max-width: 30em;
+  font-size: 15.5px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+.print-pane-how {
+  display: flex;
+  align-items: flex-end;
+  gap: 24px;
+  margin-top: 26px;
+}
+.print-pane-pct {
+  font-size: 88px;
+  line-height: 0.92;
+  font-weight: 300;
+  letter-spacing: -0.045em;
+  font-variant-numeric: tabular-nums;
+}
+.print-pane-how .print-when {
+  align-items: flex-start;
+  font-size: 15px;
+  padding-bottom: 2px;
+}
+.print-pane-how .print-when b {
+  font-size: 24px;
+  font-weight: 400;
+}
+.print-pane .print-bar {
+  max-width: 520px;
+  margin-top: 56px;
+}
+.print-pane .print-foot {
+  max-width: 520px;
+  font-size: 14px;
+}
+.print-temps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 164px));
+  gap: 13px;
+  margin-top: 30px;
+}
+.print-temp {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 16px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--edge);
+  background: rgba(255, 255, 255, 0.04);
+}
+.print-temp small {
+  font-size: 12.5px;
+  color: var(--ink-3, var(--muted));
+}
+.print-temp b {
+  font-size: 22px;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+}
+/* the C written, small, so the exception from the house's Fahrenheit is visible rather than silent */
+.print-temp em {
+  font-style: normal;
+  font-size: 14px;
+  color: var(--ink-3, var(--muted));
+}
+.print-acts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 11px;
+  margin-top: 30px;
+}
+.print-act {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 49px;
+  padding: 0 22px;
+  border-radius: 999px;
+  border: 1px solid var(--edge);
+  font: inherit;
+  font-size: 16px;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+}
+.print-act.cancel {
+  color: var(--danger);
+}
+.print-act.primary {
+  border-color: transparent;
+  font-weight: 500;
+  color: var(--lamp-ink);
+  background: var(--lamp);
+}
+.print-act.busy {
+  opacity: 0.6;
+}
+.print-ask {
+  flex-basis: 100%;
+  margin: 0 0 4px;
+  font-size: 15px;
+  color: var(--ink);
+}
+.print-acts .button.danger {
+  background: var(--danger);
+  color: #2a0e0e;
+}
+.print-pane-look {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  min-width: 0;
+  margin-top: 52px;
+}
+.print-pane-cam {
+  position: relative;
+  aspect-ratio: 747 / 391;
+  max-height: calc(100vh - 225px - 270px);
+  border-radius: 30px;
+  overflow: hidden;
+  border: 1px solid var(--edge);
+  background: linear-gradient(170deg, rgb(30, 36, 46), rgb(16, 18, 22));
+}
+.print-pane-cam img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.print-pane-cam .print-cam-part {
+  object-fit: contain;
+  padding: 10% 30%;
+}
+.print-pane-nocam {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.print-job {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 19px;
+  padding: 12px 22px 12px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--edge);
+  background: rgba(255, 255, 255, 0.05);
+}
+.print-job .print-thumb {
+  width: 52px;
+  height: 52px;
+}
+.print-job .print-thumb img {
+  width: 42px;
+  height: 42px;
+}
+.print-job .print-names {
+  flex: 1;
+}
+.print-job .print-part {
+  font-size: 16.5px;
+}
+.print-swatch {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.18);
+}
+.print-limit {
+  margin: 14px 0 0;
+  font-size: 13.5px;
+  color: var(--ink-3, var(--muted));
+}
+.print-limit-narrow {
+  display: none;
+}
+@media (max-width: 860px) {
+  /* the pane as a sheet: nearly the whole phone, the camera across its top, the close over the camera */
+  .print-pane-shell .opened-panel {
+    top: 44px;
+  }
+  .print-pane {
+    gap: 0;
+    padding-top: 0;
+  }
+  .print-pane .pane-said,
+  .print-pane .print-pane-look {
+    display: contents;
+  }
+  .print-pane-cam {
+    order: -1;
+    margin: 0 -24px 24px;
+    aspect-ratio: 390 / 222;
+    max-height: none;
+    border: 0;
+    border-radius: 0;
+  }
+  .print-pane .print-chip {
+    left: 16px;
+    top: 16px;
+  }
+  .print-pane .s0 {
+    order: 1;
+  }
+  .print-pane .s1 {
+    order: 2;
+  }
+  .print-pane .print-temps {
+    order: 3;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 9px;
+    margin-top: 22px;
+  }
+  .print-job {
+    order: 4;
+    margin-top: 12px;
+  }
+  .print-pane .print-acts {
+    order: 5;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    margin-top: 16px;
+  }
+  .print-act {
+    justify-content: center;
+  }
+  .print-limit {
+    order: 6;
+    margin: 18px 0 28px;
+    text-align: center;
+  }
+  .print-limit-wide {
+    display: none;
+  }
+  .print-limit-narrow {
+    display: inline;
+  }
+  .print-pane-how {
+    margin-top: 16px;
+    justify-content: space-between;
+  }
+  .print-pane-pct {
+    font-size: 64px;
+  }
+  .print-pane-how .print-when {
+    align-items: flex-end;
+  }
+  .print-pane .print-bar {
+    margin-top: 20px;
+  }
+}
+.print-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ---------- printers on this Wi-Fi, on Add ----------
+   design/printers/AddList, AddAsking and AddAnswers: one row each and one button, and the row that
+   asked grows in place into the instruction, then says the answer. AddPrinters.vue. */
+.printer-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 760px;
+}
+.printer-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 72px;
+  padding: 14px;
+  border-radius: 20px;
+  border: 1px solid var(--edge);
+  background: rgba(255, 255, 255, 0.05);
+}
+.printer-row.allowed {
+  border-color: rgba(var(--live-rgb), 0.4);
+  background: linear-gradient(rgba(var(--live-rgb), 0.08), rgba(var(--live-rgb), 0.08)), rgba(255, 255, 255, 0.03);
+}
+.printer-row.waiting {
+  padding: 22px 22px 22px;
+  border-color: rgba(var(--lamp-rgb), 0.5);
+  background: linear-gradient(rgba(var(--lamp-rgb), 0.07), rgba(var(--lamp-rgb), 0.07)), rgba(255, 255, 255, 0.04);
+  box-shadow: 0 0 46px -14px rgba(var(--lamp-rgb), 0.35);
+}
+.printer-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-sm);
+  background: var(--lamp);
+  color: var(--lamp-ink);
+}
+.printer-icon.plain {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--ink-2);
+}
+.printer-row.allowed .printer-icon {
+  background: rgba(var(--live-rgb), 0.18);
+  color: var(--live);
+}
+.printer-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.printer-title {
+  font-size: 16.5px;
+  font-weight: 500;
+}
+.printer-sub {
+  font-size: 13.5px;
+  color: var(--ink-3, var(--muted));
+}
+.printer-asking {
+  flex: 1;
+  min-width: 0;
+}
+.printer-asking-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 15px;
+  color: var(--ink-2);
+}
+.printer-asking-title {
+  margin: 18px 0 0;
+  font-size: 34px;
+  font-weight: 400;
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+}
+.printer-asking-sub {
+  margin: 10px 0 0;
+  max-width: 34em;
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+.printer-asking-foot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+}
+.printer-ring circle {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.14);
+  stroke-width: 2.5;
+}
+.printer-ring circle.left {
+  stroke: var(--lamp);
+  stroke-linecap: round;
+  transform: rotate(-90deg);
+  transform-origin: center;
+  transition: stroke-dasharray 1s linear;
+}
+.printer-asking-left {
+  font-size: 15px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.printer-asking-left b {
+  font-weight: 400;
+  color: var(--ink);
+}
+.printer-row.forgotten {
+  opacity: 0.6;
+}
+.printer-ask {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  max-width: 420px;
+  font-size: 14px;
+  color: var(--ink-2);
+  text-align: right;
+}
+.printer-ask .button.warn {
+  background: var(--danger);
+  color: #2a0e0e;
+}
+
+/* ---------- a printer in its room ----------
+   design/printers/InRoomA, used by B wherever a household chose a room (WorkshopB). The same three
+   heights as every tile in a room: a print is a column, a stopped printer half of one, ready a third.
+   tiles/PrinterTile.vue. */
+.printer-tile {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  font: inherit;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+.printer-tile.ready,
+.printer-tile.fault {
+  padding: 22px 22px 20px;
+}
+.printer-tile.fault {
+  border-color: rgba(var(--danger-rgb), 0.55);
+  background-color: rgba(var(--surface-rgb), 0.74);
+  background-image: linear-gradient(150deg, rgba(var(--danger-rgb), 0.16), rgba(var(--danger-rgb), 0) 60%);
+}
+.printer-tile-cam {
+  position: relative;
+  flex: none;
+  height: 42%;
+  overflow: hidden;
+  background: linear-gradient(170deg, rgb(30, 36, 46), rgb(16, 18, 22));
+}
+.printer-tile-cam img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.printer-tile-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 22px 20px 20px;
+}
+.printer-tile-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink-2);
+}
+.printer-tile-name {
+  font-size: 19px;
+  font-weight: 500;
+  color: var(--ink);
+}
+.printer-tile-word {
+  margin-left: auto;
+  font-size: 13.5px;
+}
+.printer-tile-job {
+  margin-top: 6px;
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+.printer-tile-body .print-pct {
+  font-size: 60px;
+}
+.printer-tile-badge {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--r-sm);
+  background: var(--danger);
+  color: #2a0e0e;
+}
+.printer-tile-says {
+  margin: 28px 0 0;
+  font-size: 30px;
+  font-weight: 400;
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+}
+.printer-tile-since {
+  margin-top: auto;
+  align-self: flex-end;
+  font-size: 13px;
+  color: var(--muted);
+}
+.printer-tile-foot {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.printer-tile-state {
+  font-size: 17px;
+}
+.printer-tile-detail {
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+.printer-chip.fault {
+  border-color: rgba(var(--danger-rgb), 0.45);
+}
+/* a room with a print going, on Rooms (design/printers/RankedB): the printer's camera across the top of
+   the card, as a filming room carries its own, and the card's foot says when it will be done */
+.room-cell-print {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 66%;
+  overflow: hidden;
+  pointer-events: none;
+}
+.room-cell-print img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.room-cell-print::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(rgba(12, 13, 16, 0) 55%, rgba(var(--surface-rgb), 0.9));
+}
+.room-cell-due {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.room-cell-bar.print i {
+  background: var(--lamp);
+}
+.printer-tile-body .print-how {
+  margin-top: 0;
+  padding-top: 26px;
+}
+.printer-tile-body .print-foot {
+  margin-bottom: auto;
+}
