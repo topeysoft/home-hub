@@ -129,6 +129,12 @@ services:
       # brain checks it, so both have to be handed the same one. It was given to the bridge alone when
       # sharing landed, and every request the bridge made was refused -- found 2 October 2026.
       - HUB_SHARE_TOKEN=${HUB_SHARE_TOKEN:-}
+      # The house's own address outside (hub/address.py). HUB_AWAY_OFFER=on is the maker's own hub, offered
+      # an address by hand before payments exist; every other house leaves it unset and is offered one only
+      # when the service says it can be paid for. HUB_RELAY_API is the registration service, for a relay
+      # of your own. docs/away.md, step 4.
+      - HUB_AWAY_OFFER=${HUB_AWAY_OFFER:-}
+      - HUB_RELAY_API=${HUB_RELAY_API:-https://api.elyir.app}
       # Whether this house can answer out loud, and in whose voice. Empty is off and is every house
       # today: the panel then answers on the glass exactly as it does now. Set VOICE_TTS=piper with
       # COMPOSE_PROFILES=voice to turn the pair on together. docs/voice.md.

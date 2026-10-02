@@ -118,3 +118,21 @@ class SharedSecrets(unittest.TestCase):
     def test_the_share_token_reaches_the_brain_and_the_bridge(self):
         for name in ("brain", "matter-bridge"):
             self.assertTrue("- HUB_SHARE_TOKEN=${HUB_SHARE_TOKEN:-}" in self.service(name), f"{name} is not given HUB_SHARE_TOKEN")
+
+    # Read by the brain but never meant for a hub's .env: the Mac's driver layer on a bridge network, the
+    # developer's reloader, and the repository a fork's updates come from. Anything else the brain reads has
+    # to be handed to it, or setting it in .env does nothing -- which is how HUB_AWAY_OFFER and
+    # HUB_SHARE_TOKEN both went missing.
+    NOT_FOR_A_HUB = {"HUB_DRIVER_HOST", "HUB_PROBE_HOST", "HUB_RELOAD", "HUB_REPO"}
+
+    def test_every_setting_the_brain_reads_is_handed_to_it(self):
+        import re
+        from pathlib import Path
+        brain = Path(__file__).resolve().parents[1]
+        reads = set()
+        for f in [*brain.glob("hub/*.py"), brain / "main.py"]:
+            reads |= set(re.findall(r'os\.environ(?:\.get)?[\[(]"(HUB_[A-Z_]+)"', f.read_text()))
+        given = set(re.findall(r"^\s+- (HUB_[A-Z_]+)=", self.service("brain"), re.M))
+        baked = set(re.findall(r"(HUB_[A-Z_]+)=", (brain / "Dockerfile").read_text()))
+        missing = reads - given - baked - self.NOT_FOR_A_HUB
+        self.assertEqual(missing, set(), f"the brain reads these but docker-compose.yml never hands them to it: {sorted(missing)}")

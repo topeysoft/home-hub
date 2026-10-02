@@ -286,6 +286,58 @@ The first two steps need nothing from the maker and can land and be tested on a 
    then the alias that covers home.
 6. **Web push, then the microphone** — both waiting on 5 and neither on each other.
 
+## Where it stands, and turning it on for the maker's own house
+
+*Written 2 October 2026, after the first deploy to a real relay and a real hub. Read this before touching
+either: it is what is running, what broke on the way, and the steps that are still done by hand.*
+
+**What is running.** The relay box (`relay/terraform`, Hetzner `cx23` in Helsinki, 37.27.145.43) runs frps,
+the registration service, and `api.elyir.app` on its own Let's Encrypt certificate. The service is built on
+the box from the commit in `relay_service_ref`, which lives in `relay/terraform/terraform.tfvars` on the
+operator's machine -- gitignored, so it is not in this repository; moving to new service code is a new ref
+and `terraform apply`, which replaces the box while the volume carries every house across. `/offer` is
+closed (`relay_offer_open = false`): no household is offered an address until payments exist. No house is
+carried yet. Checked from outside: `/alive` answers on a certificate any phone trusts, an unregistered name
+gets `unrecognized_name`, and the plugin route is 404 to anything but frps on the box.
+
+**What broke on the way, so nobody walks into it again.**
+
+- *hub.local went dark after the update that added the away door.* The Caddyfile began importing
+  `caddy/away/off.caddy`, and the compose file mounted the Caddyfile alone, so Caddy could not find the
+  import and would not start -- the whole front door, with the brain healthy behind it on :8300. The live
+  test of piece 2 had mounted the folder by hand, which is how it got past. Fixed in #53; `test_shipped.py`
+  now checks every folder the Caddyfile imports is mounted. If a hub is ever in that state again, the brain
+  still answers on `http://hub.local:8300`.
+- *Sharing with Apple Home, Google Home and Alexa had never worked on a real hub.* `HUB_SHARE_TOKEN` was
+  handed to the Matter bridge and never to the brain, so the brain refused the bridge every time (28,851
+  refusals in one hub's log). Not part of this work, found while looking at that hub. Fixed in #54.
+- *`HUB_AWAY_OFFER` and `HUB_RELAY_API` were never handed to the brain either*, so setting them in `.env`
+  did nothing. Fixed in #54, with a test that every `HUB_*` setting the brain reads is handed to it by the
+  compose file, apart from four named developer-only ones. All three were the same mistake: a value in
+  `.env` that the container reading it was never given, with a test that set the value itself.
+
+**Turning it on for the maker's own house, before payments.** A house set up before addresses existed
+never sees the setup step, so this is the way in:
+
+1. The hub follows `development` and has #53 and #54 (install the update from *This hub*). `sudo docker
+   inspect brain` should list `HUB_SHARE_TOKEN`, `HUB_AWAY_OFFER` and `HUB_RELAY_API`.
+2. `HUB_AWAY_OFFER=on` in `/opt/home-hub/driver-layer/.env`, then `sudo docker compose up -d brain` from
+   `/opt/home-hub/driver-layer` so the brain is recreated with it. `curl -s localhost:8300/address` on the hub
+   then says `"open": true, "by_hand": true`.
+3. On the wall, open `http://hub.local/?setup=1&page=address`. Choose the name -- the household's to choose,
+   and taken for a day once claimed -- and *Give it this address*. The step waits to be turned on.
+4. On the relay: `ssh root@37.27.145.43 docker exec relay-service python cli.py grant <name> 2027-10-01 "by hand"`.
+   The step moves on by itself, and *This hub* shows the Outside row.
+5. The brain has already written `away.request`; the host's `home-hub-away.path` runs `away.sh`, which writes
+   the house's values into `.env`, adds `away` to the profiles and brings up `caddy` and `frpc`. Check with
+   `sudo docker ps` (frpc running), `brain-data/away.log`, and from a phone off the Wi-Fi,
+   `https://<name>.elyir.app` -- the house's own certificate, through the relay.
+
+**What does not work yet, said plainly.** A phone off the Wi-Fi reaching that name gets *This house is not open
+from here*, because no phone has moved to the address and the *From outside* switch on *People* is not built
+(design/away/, C). That, payments, and the home alias are what is left; until the first two, the address
+proves the pipe and nothing more.
+
 ## What was verified
 
 *12 September 2026, by standing the whole shape up in miniature rather than reading about it: a test CA, a leaf for
