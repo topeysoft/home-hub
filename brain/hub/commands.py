@@ -208,7 +208,7 @@ def aloud(text: str) -> str:
 POINTERS = {"explain": "There's an answer on the screen.",
             "action": "There's something to confirm on the screen.",
             "rule": "I've written that up; it's waiting under Routines.",
-            "look": "It's playing on the roof. Keep it from the screen."}
+            "look": "It's playing on the roof. Keep it on the screen."}
 
 
 # ---------------------------------------------------------------- a look, said (design/roofline/SaidC)

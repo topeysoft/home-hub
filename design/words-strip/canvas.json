@@ -1,0 +1,104 @@
+{
+  "pages": [
+    {
+      "id": "page-1",
+      "name": "Strips and the roofline, in plain words"
+    },
+    {
+      "id": "page-2",
+      "name": "Not chosen"
+    }
+  ],
+  "artboards": [
+    {
+      "file": "Today.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Today",
+      "page": "page-1"
+    },
+    {
+      "file": "ControllerA.dc.html",
+      "x": 0,
+      "y": 1100,
+      "w": 1440,
+      "h": 900,
+      "title": "A — controller, everywhere",
+      "page": "page-1"
+    },
+    {
+      "file": "BoxB.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "B — box, everywhere",
+      "page": "page-2"
+    },
+    {
+      "file": "BothC.dc.html",
+      "x": 0,
+      "y": 1100,
+      "w": 1440,
+      "h": 900,
+      "title": "C — controller indoors, box on the roof",
+      "page": "page-2"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "why",
+      "x": -620,
+      "y": 0,
+      "w": 500,
+      "text": "WHY THIS EXISTS\n\nThe last area of the wording pass (docs/wording.md): light strips and the roofline. Two decisions in AGENTS.md section 5 (1 October) cover them -- a strip the controller holds dark, and the roofline as one light that keeps its own evenings -- and their behavior is not reopened here. Staying off, Why?, Part of this light, the Roofline, evenings, occasion, Hold it still, the five words of motion and the way round stay as decided.\n\nTHE QUESTION: WHAT IS THE HARDWARE CALLED? One small box, between the strip and the wall plug, has two names. Indoors -- setup, a strip staying off, its pane, the band -- it is THE CONTROLLER. On the roof it is A BOX (\"several boxes are one tile\"). Each name is in one of the decisions; neither is ever introduced, so the first a household hears is \"The button is on the controller\". And the strip on it is a \"run\" on the roof drawing and a \"second strip\" everywhere else.\n\nWhichever is chosen, the first time it appears it is introduced as the small box the strip plugs into, and \"run\" becomes \"strip\".\n\nCHOSEN: A, 2 October 2026 -- controller everywhere. The roofline decision in AGENTS.md section 5 says controllers where it said boxes; nothing it decided about behavior changes.",
+      "page": "page-1"
+    },
+    {
+      "id": "today",
+      "x": 1560,
+      "y": 0,
+      "w": 560,
+      "text": "TODAY\n\n1  \"the controller\" -- never introduced.\n2  \"box\", \"run\" -- the same hardware and the same strip under the roof's names.\n3  Words for the house's own machinery: \"the other rests\", \"one socket\", \"Its box answered\", \"Set up as two strips\" as a row name.\n4  \"Ends here\", \"Measured once\", \"Asks the red question again.\"\n5  \"off at 11:00\" -- no AM or PM, while 1-4 AM do get one.",
+      "page": "page-1"
+    },
+    {
+      "id": "shared",
+      "x": -620,
+      "y": 1100,
+      "w": 500,
+      "text": "WHAT ALL THREE FIX -- NOT A CHOICE\n\n- \"the other stays dark while you do\" (not rests); \"Where it ends\" (not Ends here); \"About 1.2 m\" and never \"Measured once\"; \"Asks which color is red again.\"; \"Its two strips\" / \"Its length and colors\" as the row on a strip's pane.\n- \"off at 11 PM\" -- every time an evening ends, with its AM or PM.\n- \"asks a little more than the controller (or box) can give\" -- not \"one socket\".\n- The strip's errors in the settled words: no \"knocking\", \"letting us in\", \"engine\", \"drive\", \"the way ours do\".\n- Sentences that point at a button use its name: \"tap That's the one again\" (not \"say it is yours again\"); \"Until you tap That's the one\"; \"Keep it on the screen\" (not \"from the screen\").\n- \"Only for occasions\" -- one phrasing, on the setup card and the pane alike.\n- \"It was set up on another power supply\" when the first one is unknown -- not \"a another\".\n- A box's state \"Working\" when it came on, not \"answered\".\n\nVolts stay: \"12 V\" is what is printed on the supply in the person's hand, which is the word they have to match.",
+      "page": "page-1"
+    },
+    {
+      "id": "a",
+      "x": 1560,
+      "y": 1100,
+      "w": 560,
+      "text": "A -- CONTROLLER, EVERYWHERE\n\nIntroduced once, at the button: \"its controller -- the small box the strip plugs into\". Then controller on the roof as well: \"Three controllers, four strips\".\n\nFOR: one name for one thing, and the name the held decision and every word of controller.py already use. It is also the word printed in most strip boxes' instructions.\n\nAGAINST: the roofline decision says boxes, and \"the first controller is dark\" is heavier on a roof tile than \"the first box is dark\". Changing it means editing the roofline decision's wording in AGENTS.md.\n\nBUILT, 2 October. Measured on the Roofline pane: 'Three controllers, four strips' fits the plate's head line where 'Three boxes, four runs' did.",
+      "page": "page-1"
+    },
+    {
+      "id": "b",
+      "x": 1560,
+      "y": 0,
+      "w": 560,
+      "text": "B -- BOX, EVERYWHERE\n\n\"The strip's box -- the small box it plugs into.\" Indoors as well: \"its box is keeping it off\", \"Shares a box with Kitchen strip\".\n\nFOR: the plainest word there is, and the one the roofline decision already uses. Nobody has to learn anything.\n\nAGAINST: \"box\" is vague exactly where precision helps -- \"unplug the box and plug it back in\" next to a wall plug, a power supply brick and a strip. And it rewrites the held decision's words, which are controller.py's throughout.",
+      "page": "page-2"
+    },
+    {
+      "id": "c",
+      "x": 1560,
+      "y": 1100,
+      "w": 560,
+      "text": "C -- CONTROLLER INDOORS, BOX ON THE ROOF\n\nAs the two decisions have it: controller indoors, introduced at the button as the small box the strip plugs into; box on the roof. \"Run\" becomes \"strip\" in both.\n\nFOR: changes no decided word. Each place keeps the word its decision chose.\n\nAGAINST: the same hardware keeps two names. A household that set up a strip indoors and then a roofline meets \"controller\" and \"box\" for one object, and the house never says they are the same.",
+      "page": "page-2"
+    }
+  ],
+  "launch": {
+    "view": "canvas",
+    "page": "page-1"
+  }
+}

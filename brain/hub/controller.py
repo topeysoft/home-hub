@@ -82,8 +82,10 @@ def _supply_words(set_up: int | None, now: int | None, v) -> tuple[str, str, str
         why = f"A {a} strip would burn on {b}, so the controller is keeping it off."
     else:
         why = f"A {a} strip won’t light properly on {b}, so the controller is keeping it off."
-    text = f"It was set up on a {a} power supply, and it’s on a {b} one now. {why}"
-    row = (f"It was set up on a {a} power supply and it’s on a {b} one now, so the controller is "
+    if not set_up: why = f"A strip set up for another supply may not light properly on {b}, so the controller is keeping it off."
+    on = f"a {a}" if set_up else "another"   # never "a another power supply"
+    text = f"It was set up on {on} power supply, and it’s on a {b} one now. {why}"
+    row = (f"It was set up on {on} power supply and it’s on a {b} one now, so the controller is "
            f"keeping it off to protect it.")
     return text, row, a
 
@@ -161,7 +163,7 @@ def quiet(power: dict | None, run: int = 1) -> str | None:
     except (TypeError, ValueError): hot = False
     if hot:
         return "A little dimmer than that for now. The controller is warm, and it eases off until it cools. More air around it helps."
-    return "At full white this much strip asks a little more than one socket gives, so it holds just under. Nothing needs doing."
+    return "At full white this much strip asks a little more than the controller can give, so it holds just under. Nothing needs doing."
 
 
 def light(power: dict | None, of_runs: list[int], name: str = "") -> dict | None:

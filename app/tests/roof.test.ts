@@ -121,9 +121,9 @@ describe('what the pane says about it', () => {
   })
 
   it('when every box is well, the line under the roof says so', () => {
-    expect(roofNext(roof('christmas'))).toEqual({ text: 'All three are answering.', wrong: false })
+    expect(roofNext(roof('christmas'))).toEqual({ text: 'All three are working.', wrong: false })
     const came = { ...roof('christmas'), came_on: { at: new Date('2026-12-19T16:52:00-06:00').getTime() / 1000, text: 'The roofline came on at dusk' } }
-    expect(roofNext(came).text).toBe('All three answered when it came on, at 4:52 PM.')
+    expect(roofNext(came).text).toBe('All three were working when it came on, at 4:52 PM.')
   })
 
   it('the occasion’s dates, from the brain or from the occasion', () => {
@@ -133,8 +133,8 @@ describe('what the pane says about it', () => {
   })
 
   it('its evenings, as the card heads them', () => {
-    expect(evenOf(roof('christmas'))).toEqual({ name: 'On at dusk, off at 11:00', sub: 'Every evening, like a porch light' })
-    expect(evenOf({ ...roof('christmas'), evenings: 'occasion' }).sub).toBe('Only on the evenings of an occasion')
+    expect(evenOf(roof('christmas'))).toEqual({ name: 'On at dusk, off at 11 PM', sub: 'Every evening, like a porch light' })
+    expect(evenOf({ ...roof('christmas'), evenings: 'occasion' }).sub).toBe('Only for occasions')
     expect(evenOf({ ...roof('christmas'), evenings: 'never' })).toEqual({ name: 'Not by itself', sub: 'On when somebody turns it on' })
   })
 })

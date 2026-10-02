@@ -155,8 +155,8 @@ const second = (as: 'part' | 'own') => { picked.value = as; run(() => stripSecon
 const roofline = (more: boolean) => { picked.value = more ? 'more' : 'own'; run(() => stripRoofline(more)) }
 const evenings = (mode: Evenings) => { picked.value = mode; run(() => stripEvenings(mode)) }
 const EVENINGS: { id: Evenings; name: string; sub: string }[] = [
-  { id: 'every', name: 'Every evening', sub: 'On at dusk, off at 11:00, all year' },
-  { id: 'occasion', name: 'Only in an occasion', sub: 'Halloween, Christmas and the rest' },
+  { id: 'every', name: 'Every evening', sub: 'On at dusk, off at 11 PM, all year' },
+  { id: 'occasion', name: 'Only for occasions', sub: 'Halloween, Christmas and the rest' },
   { id: 'never', name: 'Not by itself', sub: 'A light like any other' },
 ]
 
@@ -234,7 +234,7 @@ onUnmounted(() => window.removeEventListener('keydown', key, true))
           </div>
           <div class="bridge-row">
             <span class="bridge-icon"><Icon name="lock" :size="18" /></span>
-            <span class="bridge-text"><span class="bridge-name">Nothing is added yet</span><span class="bridge-sub">Until you say yes, nothing of yours is on it.</span></span>
+            <span class="bridge-text"><span class="bridge-name">Nothing is added yet</span><span class="bridge-sub">Until you tap That’s the one, nothing of yours is on it.</span></span>
           </div>
           <div class="flow-actions">
             <button class="button" :class="{ busy }" @click="adopt">That’s the one</button>
@@ -246,7 +246,7 @@ onUnmounted(() => window.removeEventListener('keydown', key, true))
              on the controller of the thing just unpacked (design/strip/Press.dc.html). A strip that
              came through Matter's door never reaches this. -->
         <template v-else-if="b.state === 'press'">
-          <p class="sheet-lede">The button is on the controller, at the end it plugs in at. A short press, and it is yours — there is nothing to read, count or type.</p>
+          <p class="sheet-lede">The button is on its controller — the small box the strip plugs into. A short press, and it is yours — there is nothing to read, count or type.</p>
           <div class="stage">
             <StripArt show="lit" />
             <span class="caption">It is lit, steady, so you can see which one you have</span>
@@ -336,7 +336,7 @@ onUnmounted(() => window.removeEventListener('keydown', key, true))
         <!-- MORE OF THE ROOFLINE (design/roofline/OneLight.dc.html, decided C then A). A box's own setup
              is unchanged; only this last beat is new, and only when a roofline already exists. -->
         <template v-else-if="b.state === 'roofline'">
-          <p class="sheet-lede">Or a light of its own. The Roofline stays one light on the wall, however many boxes it is.</p>
+          <p class="sheet-lede">Or a light of its own. The Roofline stays one light on the wall, however many controllers it is.</p>
           <div class="two-picks">
             <button class="pick" :class="{ on: picked === 'more', busy }" :aria-pressed="picked === 'more'" @click="roofline(true)">
               <span class="two"><i class="lit long"></i><i class="lit short"></i></span>
@@ -353,7 +353,7 @@ onUnmounted(() => window.removeEventListener('keydown', key, true))
              the roof turns on because it was asked to keep evenings, by the household, once. An
              occasion decides only how it looks. -->
         <template v-else-if="b.state === 'evenings'">
-          <p class="sheet-lede">Shall this one? It can be changed any time on its own screen.</p>
+          <p class="sheet-lede">Shall this one? It can be changed any time from the Roofline.</p>
           <ul class="picks one">
             <li v-for="e in EVENINGS" :key="e.id">
               <button class="pick row" :class="{ on: picked === e.id, busy }" :aria-pressed="picked === e.id" @click="evenings(e.id)">
@@ -410,7 +410,7 @@ onUnmounted(() => window.removeEventListener('keydown', key, true))
                afterwards -- on the strip's own light pane, which is where the length was decided to
                live for ever after (design/strip/Nudge.dc.html). This line is only honest because
                that control exists; it went in with it. -->
-          <p class="after">A light or two out is fine. You can move the end afterwards, on the strip’s own screen.</p>
+          <p class="after">A light or two out is fine. You can change where it ends afterwards, from the light.</p>
         </template>
 
         <!-- the ordinary room chips every other new device gets. Nothing here is invented. -->

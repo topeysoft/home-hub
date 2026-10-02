@@ -43,7 +43,7 @@ const pitch = computed(() => width.value ? dotPitch(props.roof.lights, width.val
 const dots = computed(() => roofDots(d.value, props.roof, pitch.value, props.on))
 const next = computed(() => roofNext(props.roof))
 const ring = computed(() => d.value.rings[0] ?? null)
-const head = computed(() => d.value.joined ? 'Round the house, left to right' : 'Each run, from its own box')
+const head = computed(() => d.value.joined ? 'Round the house, left to right' : 'Each strip, from its own controller')
 const count = computed(() => `${roofCount(props.roof)} · ${roofMeters(props.roof.lights)}`)
 const at = (p: Pos) => calcOf(p, d.value.fixed)
 const span = (from: Pos, to: Pos) => ({ left: at(from), width: `calc(${at(to)} - ${at(from)})` })

@@ -178,12 +178,12 @@ export function roofNext(r: Roof): Said {
   if (dark) return { text: dark.sub, wrong: true }
   if (!r.order?.length && r.ask_order) return { text: `${r.occasion_name ?? 'A chase'} goes round the house. Show it which way round?`, wrong: false }
   const n = r.boxes.length
-  const who = n === 1 ? 'Its box' : n === 2 ? 'Both' : `All ${WORDS[n] ?? n}`
+  const who = n === 1 ? 'Its controller' : n === 2 ? 'Both' : `All ${WORDS[n] ?? n}`
   if (r.came_on) {
     const t = new Date(r.came_on.at * 1000).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-    return { text: `${who} answered when it came on, at ${t}.`, wrong: false }
+    return { text: `${who} ${n === 1 ? 'was' : 'were'} working when it came on, at ${t}.`, wrong: false }
   }
-  return { text: `${who} ${n === 1 ? 'is' : 'are'} answering.`, wrong: false }
+  return { text: `${who} ${n === 1 ? 'is' : 'are'} working.`, wrong: false }
 }
 
 /* Dates decide which occasion is showing (brain/hub/roofline.py `occasion_on`). Easter moves, so the
@@ -195,5 +195,5 @@ export const lookDates = (r: Roof) => r.occasion_dates ?? (r.occasion ? DATES[r.
 export function evenOf(r: Roof): { name: string; sub: string } {
   if (!r.evenings || r.evenings === 'never') return { name: 'Not by itself', sub: 'On when somebody turns it on' }
   return { name: `On at dusk, off at ${r.until_words}`,
-           sub: r.evenings === 'every' ? 'Every evening, like a porch light' : 'Only on the evenings of an occasion' }
+           sub: r.evenings === 'every' ? 'Every evening, like a porch light' : 'Only for occasions' }
 }

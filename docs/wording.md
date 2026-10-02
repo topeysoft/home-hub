@@ -39,7 +39,7 @@ to clean it up.
 | Rooms and devices: rooms, panes, New devices | **Done, 2 October 2026.** C chosen: the device's words for controls, a person's for how it is | `design/words-rooms/` |
 | History (What happened, Who changed what, Needs a look) | **Done, 2 October 2026.** No new choice: the settled words applied, and five wrong facts fixed | `design/words-history/` |
 | The band and toasts | **Done, 2 October 2026.** A chosen: the hub's sentence, or a plain one | `design/words-band/` |
-| Rooms and devices: light strips and the roofline | Not started — its words were settled on boards on 1 October; reopen only with boards | |
+| Light strips and the roofline | **Done, 2 October 2026.** A chosen: *controller*, everywhere | `design/words-strip/` |
 | Settings (The hub, Accounts, Share, the passcode, What this house has, Look, Routines, Signals) | **Done, 2 October 2026.** One name each; the restart says how deep, connections keep their standard names | `design/words-settings/` |
 | The band and its messages | Not started | |
 | The brain's sentences outside the areas above | Not started | |
@@ -124,6 +124,22 @@ to clean it up.
   caught; write the brain's errors as sentences when a person will read them.
 - **Cancelling is never a failure.** "That needs the passcode." is not toasted as an error anywhere.
 - **The band leads with its point**, because the wall shows one row of it.
+
+### What strips and the roofline settled
+
+- **The small box a strip plugs into is its *controller*, everywhere** -- indoors and on the roof --
+  introduced the first time it appears: "its controller -- the small box the strip plugs into". The
+  roofline decision in AGENTS.md section 5 says controllers where it said boxes. What a controller
+  drives is a *strip*, never a *run*.
+- **A time of day always has its AM or PM**: "off at 11 PM".
+- **"Only for occasions"**, one phrasing, wherever evenings are chosen.
+- **Volts stay** ("12 V"): it is what is printed on the supply in the person's hand.
+
+## The pass is done -- what is left
+
+Every area in the table above has been through the pass. What remains is the list below: things the
+pass found that are not words -- a missing button, a picker a new house never sees -- each needing a
+screen change, and so a board of its own, rather than a sentence.
 
 ## Known so far, outside the areas done
 

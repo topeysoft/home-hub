@@ -186,8 +186,8 @@ class StripGone(StripError):
     a strip gets a new Bluetooth address every time it restarts, so this is as often a strip that was
     unplugged and plugged back in as one that is out of reach -- and it is worth one more look before
     anybody is told anything (docs/strip.md item 49)."""
-    GONE = ("The strip stopped knocking before it could be set up. If it was unplugged, plug it "
-            "back in \u2014 it will knock again.")
+    GONE = ("The strip stopped asking to be added before it could be set up. If it was unplugged, plug it "
+            "back in \u2014 it will ask again.")
 
 
 # The service a commissionable Matter device advertises under, and how to read what it says.
@@ -242,7 +242,7 @@ def _no_matter(e: Exception) -> bool:
 # about a product they did not buy. Nor does it tell them to go and fix it: the hub drives its own
 # engine's setup elsewhere (api.py does it for the weather) and has simply never been taught this
 # one, which is ours to do and not theirs. docs/strip.md, the related note under item 2-mac.
-NO_MATTER = ("This hub cannot let that kind of light in yet \u2014 a part of it has never been set up. "
+NO_MATTER = ("This hub cannot add that kind of light yet \u2014 a part of it has never been set up. "
              "That is ours to fix rather than yours, and it is nothing you have done wrong.")
 
 
@@ -307,7 +307,7 @@ class Radio:
         keeping a tidier sentence that was not true."""
         ha = getattr(self.hub, "ha", None)
         if ha is None:
-            raise StripError("This hub is not talking to its engine just now.")
+            raise StripError("The hub is still starting. Try again in a moment.")
         try:
             await ha.send("matter/set_wifi_credentials", network_name=ssid, password=password)
         except Exception as e:
@@ -329,7 +329,7 @@ class Radio:
         # this hub could not do Matter. It could. A household would have believed the screen.
         ha = getattr(self.hub, "ha", None)
         if ha is None:
-            raise StripError("This hub is not talking to its engine just now.")
+            raise StripError("The hub is still starting. Try again in a moment.")
         try:
             return await ha.send("matter/commission", code=code) or {}
         except Exception as e:
@@ -382,14 +382,14 @@ class Radio:
             # A refused write is the strip saying no, exactly as an ATT error is on our own radio,
             # and the lines below already say that one correctly for both rungs.
             if not rhythm:
-                raise StripError("The strip would not finish letting us in. Unplug it and try again.")
+                raise StripError("The strip would not finish being added. Unplug it and try again.")
             raise StripError("Those were not the flashes it is showing. Count them again \u2014 "
                              "and note it shows a new set every time it is plugged in.")
         except strip_door.NotPressed:
             # NOT A RADIO FAILURE, and it must never be dressed as one. Somebody is standing in the
             # right room; they have simply not touched the thing yet.
             raise StripError("Nobody pressed the button on it. The button is on the controller, at "
-                             "the end it plugs in at \u2014 say it is yours again to start over.")
+                             "the end it plugs in at \u2014 tap That\u2019s the one again to start over.")
         except Exception as e:
             # THE TYPE AS WELL AS THE MESSAGE, and the type FIRST, because the most common failure
             # out here has no message at all. A BLE connect that times out on BlueZ arrives as a
@@ -418,7 +418,7 @@ class Radio:
                 raise StripError("The strip stopped answering part way through. "
                                  "Try again a little nearer the hub.")
             if not rhythm:
-                raise StripError("The strip would not finish letting us in. Unplug it and try again.")
+                raise StripError("The strip would not finish being added. Unplug it and try again.")
             raise StripError("Those were not the flashes it is showing. Count them again \u2014 "
                              "and note it shows a new set every time it is plugged in.")
 
@@ -431,7 +431,7 @@ def _through_a_bridge(e) -> str:          # e: hub.errand.ErrandFailed, imported
     if e.why in ("connect", "silent"):
         return "The bridge that can hear the strip could not reach it. Try again."
     if e.why == "nodoor":
-        return "That strip did not answer the way ours do. Unplug it and try again."
+        return "That strip did not answer the way it should. Unplug it and try again."
     return "The bridge that was reaching the strip lost it part way through. Try again."
 
 
@@ -606,7 +606,7 @@ class Strips:
         twenty-second scan, and the wall said "the strip did not take the code"."""
         if self._faint():
             text = ("That strip is a long way from the hub \u2014 it was only just audible when it "
-                    "knocked. Set it up in the same room as the hub, then put it where you want it.")
+                    "asked. Set it up in the same room as the hub, then put it where you want it.")
         self._set("failed", text=text)
         return self.status()
 
@@ -1228,7 +1228,7 @@ class Strips:
             return self.status()
         order = resolve(j["first"], seen, assume=self._assume())
         if not order:
-            return self._fail("That strip is not one this hub knows how to drive.")
+            return self._fail("That strip is not one this hub can work with yet.")
         return await self._settled(order)
 
     async def _settled(self, order: str) -> dict:
