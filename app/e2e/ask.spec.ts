@@ -119,13 +119,13 @@ test('answering it puts it away, and says so on the way out', async ({ page }) =
   await page.route('**/phones/asks/a1/allow', (route) => route.fulfill({ json: { id: 'p1', name: "Sam's iPhone" } }))
   await page.goto('/?face=glass&layout=wall&nav=top&at=19:40', { waitUntil: 'networkidle' })
   const pane = page.locator('.ask-pane')
-  await pane.getByRole('button', { name: 'Let it in' }).click()
+  await pane.getByRole('button', { name: 'Allow it' }).click()
   await pane.getByRole('button', { name: 'Keep' }).click()
   await expect(page.locator('.ask-pane'), 'the pane stood there after the phone was let in').toHaveCount(0)
   // and the knock is answered, not put aside: nothing is left in the band offering to open it again
   await expect(page.locator('.nudge.ask')).toHaveCount(0)
   // the word the pane was carrying survives it
-  await expect(page.getByText("Sam's iPhone is in.")).toBeVisible()
+  await expect(page.getByText("Sam's iPhone is allowed.")).toBeVisible()
 })
 
 test('saying not now puts it away too', async ({ page }) => {
@@ -146,7 +146,7 @@ test('the phone behind it rises on its own', async ({ page }) => {
   await page.goto('/?face=glass&layout=wall&nav=top&at=19:40', { waitUntil: 'networkidle' })
   const pane = page.locator('.ask-pane')
   await expect(pane.locator('.ask-more')).toContainText('One more phone is waiting')
-  await pane.getByRole('button', { name: 'Let it in' }).click()
+  await pane.getByRole('button', { name: 'Allow it' }).click()
   await pane.getByRole('button', { name: 'Keep' }).click()
   await expect(pane.locator('.opened-name')).toContainText("Ada's phone")
   await expect(pane.locator('.ask-more')).toHaveCount(0)
@@ -154,7 +154,7 @@ test('the phone behind it rises on its own', async ({ page }) => {
   await page.waitForTimeout(600)
   expect(await page.getAttribute('.ask-pane', 'class')).toContain('shown')
   // and it is back at the first question, not still holding the spans the last answer was picked from
-  await expect(pane.getByRole('button', { name: 'Let it in' })).toBeVisible()
+  await expect(pane.getByRole('button', { name: 'Allow it' })).toBeVisible()
 })
 
 test('letting one in asks for how long, and says so', async ({ page }) => {
@@ -162,10 +162,10 @@ test('letting one in asks for how long, and says so', async ({ page }) => {
   await page.goto('/?face=glass&layout=wall&nav=top&at=19:40', { waitUntil: 'networkidle' })
   // scoped to the pane: "Back" also lives inside "Open Backyard cam camera" out on the row
   const pane = page.locator('.ask-pane')
-  await pane.getByRole('button', { name: 'Let it in' }).click()
+  await pane.getByRole('button', { name: 'Allow it' }).click()
   for (const span of ['For today', 'For the weekend', 'Keep'])
     await expect(pane.getByRole('button', { name: span })).toBeVisible()
   // and there is a way back out of the question that is not an answer to it
   await pane.getByRole('button', { name: 'Back' }).click()
-  await expect(pane.getByRole('button', { name: 'Let it in' })).toBeVisible()
+  await expect(pane.getByRole('button', { name: 'Allow it' })).toBeVisible()
 })

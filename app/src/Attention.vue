@@ -122,7 +122,7 @@ defineExpose({ updateReady })
   </button>
   <div class="nudge quiet" v-else-if="updateBusy">
     <span class="nudge-icon pulse"><Icon name="refresh" :size="20" /></span>
-    <span class="nudge-text"><span class="nudge-title">Updating the hub</span><span class="nudge-sub">{{ phase?.says || 'Starting.' }} {{ phase?.dark ? 'This screen will blink and come back.' : 'Everything keeps working while it does.' }} {{ (phase?.notices ?? []).join(' ') }}</span></span>
+    <span class="nudge-text"><span class="nudge-title">Updating the hub</span><span class="nudge-sub">{{ phase?.says || 'Starting.' }} {{ phase?.dark ? 'This screen will blink and come back.' : 'Lights and switches keep working.' }} {{ (phase?.notices ?? []).join(' ') }}</span></span>
   </div>
   <button class="nudge" v-if="whatsNew" @click="store.sheet = 'hub'">
     <span class="nudge-icon"><Icon name="sparkle" :size="20" /></span>
@@ -155,7 +155,7 @@ defineExpose({ updateReady })
   </button>
   <button class="nudge" v-if="store.status?.setup_done && store.status.locked === false" @click="store.sheet = 'code'">
     <span class="nudge-icon"><Icon name="lock" :size="20" /></span>
-    <span class="nudge-text"><span class="nudge-title">Lock the settings</span><span class="nudge-sub">Anyone on the Wi‑Fi can change the house right now. A passcode keeps the controls open and the settings yours.</span></span>
+    <span class="nudge-text"><span class="nudge-title">Set a passcode</span><span class="nudge-sub">Anyone on your Wi‑Fi can change the house right now. A passcode keeps that to you; lights and scenes stay open to everyone.</span></span>
   </button>
   <button class="nudge" v-if="store.ambientLoaded && !store.ambient.location" @click="store.sheet = 'location'">
     <span class="nudge-icon"><Icon name="pin" :size="20" /></span>
@@ -163,7 +163,7 @@ defineExpose({ updateReady })
   </button>
   <button class="nudge" v-if="phoneNudge && !phoneSteps" @click="phoneSteps = true">
     <span class="nudge-icon"><Icon name="phone" :size="20" /></span>
-    <span class="nudge-text"><span class="nudge-title">Put the house on your home screen</span><span class="nudge-sub">One tap from your phone's first screen, full screen, no address to type.</span></span>
+    <span class="nudge-text"><span class="nudge-title">Put the house on your home screen</span><span class="nudge-sub">One tap from your phone's home screen, full screen, nothing to type.</span></span>
   </button>
   <!-- What has stopped answering, as one line. The list it opens is a page of This house
        (NotesPage.vue), because it is not news, it is a job with a button on it, and a house with

@@ -3,6 +3,7 @@
   SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 <script setup lang="ts">
+import { failed } from './code'
 import { computed, nextTick, ref, watch } from 'vue'
 import { store, notify, loadRoutines, loadRoofline, visibleRooms } from './store'
 import { say, act, keepLook, dropLook, type Proposal, type Said } from './api'
@@ -165,7 +166,7 @@ async function doIt() {
   const p = proposal.value; if (!p || doing.value) return
   doing.value = true
   try { await act(p.device, p.action, Object.keys(p.data).length ? p.data : undefined); notify(p.name); proposal.value = null; note.value = '' }
-  catch (e: any) { notify(`That didn't work: ${e.message}`, 'error') }
+  catch (e: any) { notify(failed('That didn’t work', e), 'error') }
   doing.value = false
 }
 </script>

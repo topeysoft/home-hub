@@ -3,6 +3,7 @@
   SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 <script setup lang="ts">
+import { failed } from '../code'
 /*
  * The dial, which is the one instrument in the house that is a number you SET rather than a level
  * you drag — so it is the one place a ring earns its keep: the white handle is what was asked for,
@@ -15,7 +16,7 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import type { Device } from '../api'
 import { setFan, setSense } from '../api'
-import { cap, isDead, notify, perform, shortName, store } from '../store'
+import { cap, isDead, notify, perform, shortName, store, fanFor } from '../store'
 import Icon from '../Icon.vue'
 
 const props = defineProps<{ device: Device }>()
@@ -119,8 +120,8 @@ const busy = ref(false)
 async function fan(minutes: number) {
   if (dead.value || busy.value) return
   busy.value = true
-  try { await setFan(props.device.id, minutes); notify(minutes ? `Fan on for ${minutes < 60 ? `${minutes} min` : `${minutes / 60} h`}.` : 'Fan off.') }
-  catch (e: any) { notify(`The fan didn't answer: ${e.message}`, 'error') }
+  try { await setFan(props.device.id, minutes); notify(minutes ? `Fan on for ${fanFor(minutes)}.` : 'Fan off.') }
+  catch (e: any) { notify(failed('The fan didn’t answer', e), 'error') }
   busy.value = false
 }
 
@@ -145,7 +146,7 @@ async function sense(id: string | null) {
   if (busy.value || (id ?? null) === (a.value.sense_from ?? null)) return
   busy.value = true
   try { await setSense(props.device.id, id); notify(id ? `Using ${sensors.value.find(s => s.id === id)?.label ?? 'that sensor'} for the temperature.` : 'Back to its own sensor.') }
-  catch (e: any) { notify(`Couldn't change the sensor: ${e.message}`, 'error') }
+  catch (e: any) { notify(failed('Couldn’t change the sensor', e), 'error') }
   busy.value = false
 }
 </script>

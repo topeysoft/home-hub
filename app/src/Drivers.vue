@@ -3,6 +3,7 @@
   SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 <script setup lang="ts">
+import { failed } from './code'
 import { computed, ref } from 'vue'
 import { store, notify } from './store'
 import { retryEntry } from './api'
@@ -25,7 +26,7 @@ const retrying = ref<string | null>(null)
 async function retry(id: string) {
   retrying.value = id
   try { store.status = await retryEntry(id); if (!store.status.problems?.some(p => p.entry_id === id)) notify('Connected.') }
-  catch (e: any) { notify(`Still not connecting: ${e.message}`, 'error') }
+  catch (e: any) { notify(failed('Still not connecting', e), 'error') }
   retrying.value = null
 }
 defineExpose({ attention })
