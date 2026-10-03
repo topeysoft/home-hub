@@ -1,0 +1,164 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200;300;400;500;600;700&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Plus Jakarta Sans", -apple-system, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      /* the panel's own tokens, from app/src/panel.css */
+      --ink: #f1eee8;
+      --ink-2: #b9b5ad;
+      --ink-3: #7f7d77;
+      --lamp: #e9b872;
+      --live: #74c69d;
+      --warn: #e08a8a;
+      --muted: oklch(0.594 0.01 269);
+      --surface: rgba(26,28,34,.68);
+      --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1);
+      --edge-hi: rgba(255,255,255,.18);
+      --lamp-ink: #2a1c07;
+      --glass: linear-gradient(148deg, oklch(0.397 .014 281 / .34), oklch(0.327 .012 281 / .12) 46%, oklch(0.357 .014 281 / .24));
+      --rim: linear-gradient(158deg, rgba(255,255,255,0.69), rgba(255,255,255,.08) 34%, rgba(14,14,22,0.04) 62%, rgba(255,255,255,0.40));
+      --inner: inset 0 -46px 56px -48px rgba(20,23,31,0.9);
+      --drop: 0 27px 61px -26px rgba(15,17,26,0.67), 0 2px 10px rgba(15,17,26,0.32);
+      --sweep: .12;
+    }
+    .gl {
+      position: relative;
+      background: var(--glass);
+      backdrop-filter: blur(26px) saturate(1.6) brightness(1.04);
+      -webkit-backdrop-filter: blur(26px) saturate(1.6) brightness(1.04);
+      box-shadow: var(--inner), var(--drop);
+    }
+    .gl::after {
+      content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+      padding: 1.2px; background: var(--rim);
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      mask-composite: exclude;
+    }
+    .gl::before {
+      content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+      background: linear-gradient(112deg, transparent 26%, rgba(255,255,255,var(--sweep)) 45%, rgba(255,255,255,.02) 56%, transparent 64%);
+    }
+    .gl > * { position: relative; z-index: 1; }
+    .dsp { font-family: inherit; font-weight: 400; letter-spacing: -.025em; }
+    .cap { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+    .ic { flex: 0 0 auto; }
+    /* a nudge, as the panel draws it on a phone: 358x57, radius 18 */
+    .nudge { position: absolute; left: 16px; width: 358px; height: 57px; border-radius: 18px;
+             display: grid; grid-template-columns: 32px 1fr; align-items: center; gap: 12px; padding: 0 16px 0 9px;
+             background: var(--surface); border: 1px solid rgba(233,184,114,.28); }
+    .nudge-ic { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; background: var(--lamp); color: var(--lamp-ink); }
+    .nudge-t { display: block; font-size: 15px; font-weight: 500; line-height: 21px; }
+    .nudge-s { display: block; font-size: 13px; color: var(--ink-2); line-height: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .round { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--live); display: inline-block; }
+    .avatar { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-size: 12.5px; font-weight: 600; color: rgba(255,255,255,.88); border: 2px solid rgba(12,13,16,.6); }
+    .tile { position: absolute; left: 16px; width: 358px; border-radius: 28px; overflow: hidden; background: var(--surface); border: 1px solid var(--edge); }
+    .chip { display: inline-grid; place-items: center; height: 25px; padding: 0 11px; border-radius: 999px; background: rgba(12,13,16,.55);
+            font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); }
+    .row { display: grid; grid-template-columns: 36px 1fr auto; align-items: center; gap: 14px; }
+    .row-ic { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; background: var(--surface-hi); color: var(--ink-2); }
+    .row-t { display: block; font-size: 16px; line-height: 22px; }
+    .row-s { display: block; font-size: 13px; line-height: 18px; color: var(--muted); }
+  </style>
+</helmet>
+
+<!-- A, INSIDE -- the lake house, opened from the list. The clock row becomes the way back and the name of the house; the sky is the lake's. -->
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; background: #0c0d10; color: var(--ink); font-size: 17px; line-height: 1.4;">
+  <!-- the field: the lake's sky at 5:54 pm, raining. Same minute, another house's weather -->
+  <div style="position: absolute; inset: 0; background: linear-gradient(rgb(52,58,68) 0%, rgb(46,52,62) 45%, rgb(38,42,50) 80%, rgb(30,33,38) 100%);"></div>
+  <div style="position: absolute; left: -60px; top: -40px; width: 520px; height: 940px; background: radial-gradient(70% 34% at 40% 8%, rgba(120,128,142,.32), transparent 70%), radial-gradient(60% 40% at 70% 60%, rgba(70,84,104,.22), transparent 72%);"></div>
+  <div style="position: absolute; inset: 0; opacity: .22; background: repeating-linear-gradient(104deg, transparent 0 14px, rgba(190,210,235,.35) 14px 15px, transparent 15px 38px);"></div>
+  <div style="position: absolute; inset: 0; background: linear-gradient(rgba(12,13,16,.2) 0%, rgba(12,13,16,.42) 45%, rgba(12,13,16,.74) 100%);"></div>
+  <div style="position: absolute; inset: 0; opacity: .5; background-image: url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.035'/%3E%3C/svg%3E&quot;);"></div>
+  <!-- the clock row gives way to the way back: the houses, and the name of this one -->
+  <div style="position: absolute; left: 16px; top: 8px; width: 358px; height: 40px; display: flex; align-items: center; gap: 12px;">
+    <div class="gl round"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 6l-6 6 6 6"/></svg></div>
+    <span class="dsp" style="font-size: 27px; line-height: 28px;">Lake house</span>
+    <span style="margin-left: auto; font-size: 15px; color: var(--ink-2);">5:54 PM</span>
+  </div>
+  <div style="position: absolute; left: 16px; top: 53px; width: 358px; height: 40px; display: flex; align-items: center; gap: 14px;">
+    <span style="display: inline-flex; align-items: center; gap: 7px;">
+      <svg width="30" height="22" viewBox="0 0 210 150" fill="none" style="flex: 0 0 auto;">
+        <ellipse cx="72" cy="70" rx="56" ry="34" fill="rgba(176,184,198,.92)"/>
+        <ellipse cx="120" cy="58" rx="46" ry="36" fill="rgba(160,168,184,.95)"/>
+        <ellipse cx="96" cy="84" rx="74" ry="24" fill="rgba(140,148,166,.9)"/>
+        <path d="M62 118l-8 22M98 118l-8 22M134 118l-8 22" stroke="rgba(150,190,236,.9)" stroke-width="9" stroke-linecap="round"/>
+      </svg>
+      <span style="font-size: 15px; font-weight: 500; font-variant-numeric: tabular-nums;">61&deg;</span>
+    </span>
+    <span class="cap" style="display: inline-flex; align-items: center; gap: 8px;"><span class="dot"></span>Connected</span>
+    <div class="gl round" style="margin-left: auto;"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink-2)" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+    <div class="gl round"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink-2)" stroke-width="1.7" stroke-linecap="round"><path d="M6 9h12M6 13h12M9 17h9"/></svg></div>
+  </div>
+  <div class="gl" style="position: absolute; left: 16px; top: 103px; width: 358px; height: 54px; border-radius: 999px;">
+    <div style="position: absolute; left: 5px; top: 5px; width: 148px; height: 44px; border-radius: 999px; background: rgba(255,255,255,.1); display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 17px; font-weight: 500;">
+      <svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M4 11l8-6 8 6v8a1 1 0 01-1 1H5a1 1 0 01-1-1z"/></svg>
+      Your evening
+    </div>
+    <div style="position: absolute; left: 157px; top: 5px; width: 80px; height: 44px; display: grid; place-items: center; font-size: 17px; color: var(--ink-2);">Rooms</div>
+    <div style="position: absolute; left: 241px; top: 5px; width: 94px; height: 44px; display: grid; place-items: center; font-size: 17px; color: var(--ink-2);">Cameras</div>
+  </div>
+  <div class="tile" style="top: 177px; height: 150px;">
+    <div style="position: absolute; left: 20px; top: 18px; right: 20px;">
+      <div style="font-size: 13px; color: var(--ink-2);">Thermostat &middot; Living room</div>
+      <div class="dsp" style="font-size: 44px; line-height: 50px; margin-top: 6px;">55&deg;</div>
+      <div style="font-size: 14px; color: var(--ink-2); margin-top: 2px;">Heat &middot; Set to 55&deg;</div>
+    </div>
+    <div style="position: absolute; right: 18px; bottom: 18px; display: flex; gap: 10px;">
+      <div class="round" style="width: 44px; height: 44px; background: rgba(255,255,255,.1); font-size: 22px; color: var(--ink-2);">&minus;</div>
+      <div class="round" style="width: 44px; height: 44px; background: rgba(255,255,255,.1); font-size: 22px; color: var(--ink-2);">+</div>
+    </div>
+  </div>
+  <div class="tile" style="top: 337px; height: 201px; background: rgb(17,19,24);">
+    <div style="position: absolute; inset: 0; background: linear-gradient(170deg, rgb(52,58,66) 0%, rgb(40,46,54) 60%, rgb(28,32,38) 100%);"></div>
+    <div style="position: absolute; inset: 0; background: radial-gradient(50% 60% at 30% 20%, rgba(140,170,210,.16), transparent 72%);"></div>
+    <span class="chip" style="position: absolute; right: 15px; top: 15px;">1h ago</span>
+    <span style="position: absolute; left: 17px; bottom: 15px; display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 500;">
+      <span style="width: 30px; height: 30px; border-radius: 9px; background: rgba(255,255,255,.12);"></span>Driveway
+    </span>
+  </div>
+  <div style="position: absolute; left: 16px; top: 548px; width: 174px; height: 112px; border-radius: 24px; background: var(--surface); border: 1px solid var(--edge); padding: 16px;">
+    <div style="font-size: 15px; font-weight: 500;">Front door</div>
+    <div style="font-size: 14px; color: var(--ink-2); margin-top: 2px;">Locked</div>
+    <div style="font-size: 12.5px; color: var(--muted); margin-top: 18px; line-height: 1.3;">Since Sunday, 4:12 PM</div>
+  </div>
+  <div style="position: absolute; left: 200px; top: 548px; width: 174px; height: 112px; border-radius: 24px; background: var(--surface); border: 1px solid var(--edge); padding: 16px;">
+    <div style="font-size: 15px; font-weight: 500;">Dock lights</div>
+    <div style="font-size: 14px; color: var(--ink-2); margin-top: 2px;">Off</div>
+    <div style="font-size: 12.5px; color: var(--muted); margin-top: 18px; line-height: 1.3;">On at dusk if someone is there</div>
+  </div>
+  <!-- the bottom bar: the command box 16,730 358x56 · the household 191,796 -->
+  <div style="position: absolute; left: 0; top: 720px; width: 390px; height: 124px; background: linear-gradient(rgba(12,13,16,.35), rgba(12,13,16,.7) 22%, rgba(12,13,16,.78));"></div>
+  <div class="gl" style="position: absolute; left: 16px; top: 730px; width: 358px; height: 56px; border-radius: 999px; display: flex; align-items: center; gap: 12px; padding: 0 9px 0 7px;">
+    <div style="width: 42px; height: 42px; border-radius: 50%; overflow: hidden; background: #17133d; position: relative;">
+      <div style="position: absolute; left: -20%; top: -20%; width: 140%; height: 140%; background: radial-gradient(closest-side at 40% 40%, rgba(150,130,230,.75), transparent 70%), radial-gradient(closest-side at 70% 70%, rgba(96,170,220,.45), transparent 68%); filter: blur(6px);"></div>
+    </div>
+    <span style="flex: 1 1 auto; font-size: 16px; color: var(--ink-3);">Tell the house&hellip;</span>
+    <div style="height: 36px; padding: 0 15px; border-radius: 999px; background: var(--ink); color: #0c0d10; display: grid; place-items: center; font-size: 14px; font-weight: 500;">Go</div>
+  </div>
+  <div style="position: absolute; left: 150px; top: 796px; width: 224px; height: 34px; display: flex; align-items: center; justify-content: flex-end; gap: 14px;">
+    <span style="font-size: 15px; color: var(--ink-2); white-space: nowrap;">Nobody there</span>
+    <div style="display: flex; opacity: .45;">
+      <div class="avatar" style="background: #6b5a46;">T</div>
+      <div class="avatar" style="background: #5a4636; margin-left: -6px; color: rgba(255,255,255,.55);">S</div>
+      <div class="avatar" style="background: #3f6f63; margin-left: -6px;">A</div>
+      <div class="avatar" style="background: rgba(255,255,255,.1); margin-left: -6px; color: var(--ink-3); font-size: 16px; font-weight: 400;">+</div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

@@ -1,0 +1,149 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200;300;400;500;600;700&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Plus Jakarta Sans", -apple-system, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      /* the panel's own tokens, from app/src/panel.css */
+      --ink: #f1eee8;
+      --ink-2: #b9b5ad;
+      --ink-3: #7f7d77;
+      --lamp: #e9b872;
+      --live: #74c69d;
+      --warn: #e08a8a;
+      --muted: oklch(0.594 0.01 269);
+      --surface: rgba(26,28,34,.68);
+      --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1);
+      --edge-hi: rgba(255,255,255,.18);
+      --lamp-ink: #2a1c07;
+      --glass: linear-gradient(148deg, oklch(0.397 .014 281 / .34), oklch(0.327 .012 281 / .12) 46%, oklch(0.357 .014 281 / .24));
+      --rim: linear-gradient(158deg, rgba(255,255,255,0.69), rgba(255,255,255,.08) 34%, rgba(14,14,22,0.04) 62%, rgba(255,255,255,0.40));
+      --inner: inset 0 -46px 56px -48px rgba(20,23,31,0.9);
+      --drop: 0 27px 61px -26px rgba(15,17,26,0.67), 0 2px 10px rgba(15,17,26,0.32);
+      --sweep: .12;
+    }
+    .gl {
+      position: relative;
+      background: var(--glass);
+      backdrop-filter: blur(26px) saturate(1.6) brightness(1.04);
+      -webkit-backdrop-filter: blur(26px) saturate(1.6) brightness(1.04);
+      box-shadow: var(--inner), var(--drop);
+    }
+    .gl::after {
+      content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+      padding: 1.2px; background: var(--rim);
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      mask-composite: exclude;
+    }
+    .gl::before {
+      content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+      background: linear-gradient(112deg, transparent 26%, rgba(255,255,255,var(--sweep)) 45%, rgba(255,255,255,.02) 56%, transparent 64%);
+    }
+    .gl > * { position: relative; z-index: 1; }
+    .dsp { font-family: inherit; font-weight: 400; letter-spacing: -.025em; }
+    .cap { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+    .ic { flex: 0 0 auto; }
+    /* a nudge, as the panel draws it on a phone: 358x57, radius 18 */
+    .nudge { position: absolute; left: 16px; width: 358px; height: 57px; border-radius: 18px;
+             display: grid; grid-template-columns: 32px 1fr; align-items: center; gap: 12px; padding: 0 16px 0 9px;
+             background: var(--surface); border: 1px solid rgba(233,184,114,.28); }
+    .nudge-ic { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; background: var(--lamp); color: var(--lamp-ink); }
+    .nudge-t { display: block; font-size: 15px; font-weight: 500; line-height: 21px; }
+    .nudge-s { display: block; font-size: 13px; color: var(--ink-2); line-height: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .round { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--live); display: inline-block; }
+    .avatar { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-size: 12.5px; font-weight: 600; color: rgba(255,255,255,.88); border: 2px solid rgba(12,13,16,.6); }
+    .tile { position: absolute; left: 16px; width: 358px; border-radius: 28px; overflow: hidden; background: var(--surface); border: 1px solid var(--edge); }
+    .chip { display: inline-grid; place-items: center; height: 25px; padding: 0 11px; border-radius: 999px; background: rgba(12,13,16,.55);
+            font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); }
+    .row { display: grid; grid-template-columns: 36px 1fr auto; align-items: center; gap: 14px; }
+    .row-ic { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; background: var(--surface-hi); color: var(--ink-2); }
+    .row-t { display: block; font-size: 16px; line-height: 22px; }
+    .row-s { display: block; font-size: 13px; line-height: 18px; color: var(--muted); }
+  </style>
+</helmet>
+
+<!-- TODAY, THE HOME SCREEN -- a second house is a second icon, and both say Home: the manifest's name is the same for every house -->
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; background: #0c0d10; color: var(--ink); font-size: 17px; line-height: 1.4;">
+  <!-- a phone's own Home Screen, nothing of ours but two icons -->
+  <div style="position: absolute; inset: 0; background: linear-gradient(160deg, #2c3b5c 0%, #3a3554 45%, #5a4252 75%, #6a4c48 100%);"></div>
+  <div style="position: absolute; inset: 0; background: radial-gradient(80% 50% at 20% 20%, rgba(120,150,210,.28), transparent 70%), radial-gradient(70% 40% at 80% 90%, rgba(220,150,110,.22), transparent 72%);"></div>
+  <div style="position: absolute; left: 32px; top: 16px; font-size: 16px; font-weight: 600;">5:54</div>
+  <div style="position: absolute; left: 27px; top: 74px; width: 64px; display: flex; flex-direction: column; align-items: center; gap: 6px;">
+    <div style="width: 62px; height: 62px; border-radius: 15px; overflow: hidden; background: #3e8f5a; display: grid; place-items: center; box-shadow: 0 2px 8px rgba(0,0,0,.25);"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.9)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16v10H9l-5 4z"/></svg></div>
+    <span style="font-size: 11.5px; color: rgba(255,255,255,.92); text-shadow: 0 1px 2px rgba(0,0,0,.35);">Messages</span>
+  </div>
+  <div style="position: absolute; left: 119px; top: 74px; width: 64px; display: flex; flex-direction: column; align-items: center; gap: 6px;">
+    <div style="width: 62px; height: 62px; border-radius: 15px; overflow: hidden; background: #c9c4ba; display: grid; place-items: center; box-shadow: 0 2px 8px rgba(0,0,0,.25);"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.9)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16"/></svg></div>
+    <span style="font-size: 11.5px; color: rgba(255,255,255,.92); text-shadow: 0 1px 2px rgba(0,0,0,.35);">Calendar</span>
+  </div>
+  <div style="position: absolute; left: 211px; top: 74px; width: 64px; display: flex; flex-direction: column; align-items: center; gap: 6px;">
+    <div style="width: 62px; height: 62px; border-radius: 15px; overflow: hidden; background: #8a6a9c; display: grid; place-items: center; box-shadow: 0 2px 8px rgba(0,0,0,.25);"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.9)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="6"/></svg></div>
+    <span style="font-size: 11.5px; color: rgba(255,255,255,.92); text-shadow: 0 1px 2px rgba(0,0,0,.35);">Photos</span>
+  </div>
+  <div style="position: absolute; left: 303px; top: 74px; width: 64px; display: flex; flex-direction: column; align-items: center; gap: 6px;">
+    <div style="width: 62px; height: 62px; border-radius: 15px; overflow: hidden; background: #0c0d10; display: grid; place-items: center; box-shadow: 0 2px 8px rgba(0,0,0,.25);"><svg width="62" height="62" viewBox="0 0 512 512"><defs><linearGradient id="ga" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1a1d24"/><stop offset="1" stop-color="#0c0d10"/></linearGradient><radialGradient id="wa" cx="0.5" cy="0.62" r="0.45"><stop offset="0" stop-color="#e9b872" stop-opacity=".55"/><stop offset="1" stop-color="#e9b872" stop-opacity="0"/></radialGradient></defs><rect width="512" height="512" fill="url(#ga)"/><rect width="512" height="512" fill="url(#wa)"/><path d="M112 248 256 120l144 128" fill="none" stroke="#f1eee8" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/><path d="M148 226v170h216V226" fill="none" stroke="#f1eee8" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/><circle cx="256" cy="306" r="30" fill="#e9b872"/></svg></div>
+    <span style="font-size: 11.5px; color: rgba(255,255,255,.92); text-shadow: 0 1px 2px rgba(0,0,0,.35);">Home</span>
+  </div>
+  <div style="position: absolute; left: 27px; top: 176px; width: 64px; display: flex; flex-direction: column; align-items: center; gap: 6px;">
+    <div style="width: 62px; height: 62px; border-radius: 15px; overflow: hidden; background: #4a4d55; display: grid; place-items: center; box-shadow: 0 2px 8px rgba(0,0,0,.25);"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.9)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><circle cx="12" cy="13.5" r="3.5"/></svg></div>
+    <span style="font-size: 11.5px; color: rgba(255,255,255,.92); text-shadow: 0 1px 2px rgba(0,0,0,.35);">Camera</span>
+  </div>
+  <div style="position: absolute; left: 119px; top: 176px; width: 64px; display: flex; flex-direction: column; align-items: center; gap: 6px;">
+    <div style="width: 62px; height: 62px; border-radius: 15px; overflow: hidden; background: #4f7f9c; display: grid; place-items: center; box-shadow: 0 2px 8px rgba(0,0,0,.25);"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.9)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7l5-2 6 2 5-2v12l-5 2-6-2-5 2z"/></svg></div>
+    <span style="font-size: 11.5px; color: rgba(255,255,255,.92); text-shadow: 0 1px 2px rgba(0,0,0,.35);">Maps</span>
+  </div>
+  <div style="position: absolute; left: 211px; top: 176px; width: 64px; display: flex; flex-direction: column; align-items: center; gap: 6px;">
+    <div style="width: 62px; height: 62px; border-radius: 15px; overflow: hidden; background: #3a6ea8; display: grid; place-items: center; box-shadow: 0 2px 8px rgba(0,0,0,.25);"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.9)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/></svg></div>
+    <span style="font-size: 11.5px; color: rgba(255,255,255,.92); text-shadow: 0 1px 2px rgba(0,0,0,.35);">Weather</span>
+  </div>
+  <div style="position: absolute; left: 303px; top: 176px; width: 64px; display: flex; flex-direction: column; align-items: center; gap: 6px;">
+    <div style="width: 62px; height: 62px; border-radius: 15px; overflow: hidden; background: #26272c; display: grid; place-items: center; box-shadow: 0 2px 8px rgba(0,0,0,.25);"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.9)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg></div>
+    <span style="font-size: 11.5px; color: rgba(255,255,255,.92); text-shadow: 0 1px 2px rgba(0,0,0,.35);">Clock</span>
+  </div>
+  <div style="position: absolute; left: 27px; top: 278px; width: 64px; display: flex; flex-direction: column; align-items: center; gap: 6px;">
+    <div style="width: 62px; height: 62px; border-radius: 15px; overflow: hidden; background: #b89a3e; display: grid; place-items: center; box-shadow: 0 2px 8px rgba(0,0,0,.25);"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.9)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h12v16H6zM9 9h6M9 13h6"/></svg></div>
+    <span style="font-size: 11.5px; color: rgba(255,255,255,.92); text-shadow: 0 1px 2px rgba(0,0,0,.35);">Notes</span>
+  </div>
+  <div style="position: absolute; left: 119px; top: 278px; width: 64px; display: flex; flex-direction: column; align-items: center; gap: 6px;">
+    <div style="width: 62px; height: 62px; border-radius: 15px; overflow: hidden; background: #0c0d10; display: grid; place-items: center; box-shadow: 0 2px 8px rgba(0,0,0,.25);"><svg width="62" height="62" viewBox="0 0 512 512"><defs><linearGradient id="gb" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1a1d24"/><stop offset="1" stop-color="#0c0d10"/></linearGradient><radialGradient id="wb" cx="0.5" cy="0.62" r="0.45"><stop offset="0" stop-color="#e9b872" stop-opacity=".55"/><stop offset="1" stop-color="#e9b872" stop-opacity="0"/></radialGradient></defs><rect width="512" height="512" fill="url(#gb)"/><rect width="512" height="512" fill="url(#wb)"/><path d="M112 248 256 120l144 128" fill="none" stroke="#f1eee8" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/><path d="M148 226v170h216V226" fill="none" stroke="#f1eee8" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/><circle cx="256" cy="306" r="30" fill="#e9b872"/></svg></div>
+    <span style="font-size: 11.5px; color: rgba(255,255,255,.92); text-shadow: 0 1px 2px rgba(0,0,0,.35);">Home</span>
+  </div>
+  <div style="position: absolute; left: 211px; top: 278px; width: 64px; display: flex; flex-direction: column; align-items: center; gap: 6px;">
+    <div style="width: 62px; height: 62px; border-radius: 15px; overflow: hidden; background: #3d78b8; display: grid; place-items: center; box-shadow: 0 2px 8px rgba(0,0,0,.25);"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.9)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 7l9 6 9-6"/></svg></div>
+    <span style="font-size: 11.5px; color: rgba(255,255,255,.92); text-shadow: 0 1px 2px rgba(0,0,0,.35);">Mail</span>
+  </div>
+  <div style="position: absolute; left: 303px; top: 278px; width: 64px; display: flex; flex-direction: column; align-items: center; gap: 6px;">
+    <div style="width: 62px; height: 62px; border-radius: 15px; overflow: hidden; background: #a8444f; display: grid; place-items: center; box-shadow: 0 2px 8px rgba(0,0,0,.25);"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.9)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V6l10-2v12"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="16" r="2"/></svg></div>
+    <span style="font-size: 11.5px; color: rgba(255,255,255,.92); text-shadow: 0 1px 2px rgba(0,0,0,.35);">Music</span>
+  </div>
+  <div style="position: absolute; left: 27px; top: 380px; width: 64px; display: flex; flex-direction: column; align-items: center; gap: 6px;">
+    <div style="width: 62px; height: 62px; border-radius: 15px; overflow: hidden; background: #5b5e66; display: grid; place-items: center; box-shadow: 0 2px 8px rgba(0,0,0,.25);"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.9)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="7"/></svg></div>
+    <span style="font-size: 11.5px; color: rgba(255,255,255,.92); text-shadow: 0 1px 2px rgba(0,0,0,.35);">Settings</span>
+  </div>
+  <div style="position: absolute; left: 119px; top: 380px; width: 64px; display: flex; flex-direction: column; align-items: center; gap: 6px;">
+    <div style="width: 62px; height: 62px; border-radius: 15px; overflow: hidden; background: #3b6aa6; display: grid; place-items: center; box-shadow: 0 2px 8px rgba(0,0,0,.25);"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.9)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h6l2 2h8v10H4z"/></svg></div>
+    <span style="font-size: 11.5px; color: rgba(255,255,255,.92); text-shadow: 0 1px 2px rgba(0,0,0,.35);">Files</span>
+  </div>
+  <div style="position: absolute; left: 14px; top: 736px; width: 362px; height: 92px; border-radius: 32px; background: rgba(255,255,255,.16); backdrop-filter: blur(20px);"></div>
+  <div style="position: absolute; left: 27px; top: 751px; width: 62px; height: 62px; border-radius: 15px; background: #3e8f5a; display: grid; place-items: center;"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.9)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4l3 1 1 4-2 1a11 11 0 006 6l1-2 4 1 1 3-3 2C10 20 4 14 4 7z"/></svg></div>
+  <div style="position: absolute; left: 119px; top: 751px; width: 62px; height: 62px; border-radius: 15px; background: #3d78b8; display: grid; place-items: center;"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.9)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M15 9l-2 4-4 2 2-4z"/></svg></div>
+  <div style="position: absolute; left: 211px; top: 751px; width: 62px; height: 62px; border-radius: 15px; background: #3e8f5a; display: grid; place-items: center;"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.9)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16v10H9l-5 4z"/></svg></div>
+  <div style="position: absolute; left: 303px; top: 751px; width: 62px; height: 62px; border-radius: 15px; background: #a8444f; display: grid; place-items: center;"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.9)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V6l10-2v12"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="16" r="2"/></svg></div>
+  <div style="position: absolute; left: 0; top: 708px; width: 390px; display: flex; justify-content: center; gap: 8px;"><i style="width: 7px; height: 7px; border-radius: 50%; background: #fff;"></i><i style="width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,.4);"></i></div>
+</div>
+</x-dc>
+</body>
+</html>

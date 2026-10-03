@@ -41,6 +41,22 @@ import ChangesPage from './ChangesPage.vue'
 import AdvancedLink from './AdvancedLink.vue'
 import { isPage, LIT, type PageId } from './pages'
 import { printerChip } from './printers'
+import PhoneSteps from './PhoneSteps.vue'
+import { dismissHomeScreen, narrow, setupLeft, setupNow, type SetupStep } from './band'
+
+/* FINISH SETTING UP, on a phone (design/band/, KindsB-house): the three things the house would like
+   finished, which on a wall are lines in the band and on a phone would be half of Home. Every step that
+   applies, done ones ticked, so it counts down; gone once nothing is left. The menu carries a dot while
+   anything is (TopBar.vue). The Home Screen step has no page of its own, so its steps open here. */
+const steps = computed(() => narrow.value ? setupNow() : [])
+const left = computed(() => setupLeft(steps.value))
+const phoneSteps = ref(false)
+function step(s: SetupStep) {
+  if (s.id === 'passcode') go('code')
+  else if (s.id === 'location') go('location')
+  else phoneSteps.value = !phoneSteps.value
+}
+function homeScreenDone() { phoneSteps.value = false; store.homeScreenDone = true; dismissHomeScreen() }
 
 const page = computed<PageId>(() => isPage(store.sheet) ? store.sheet : 'house')
 const PAGE: Record<Exclude<PageId, 'house'>, Component> = { location: LocationPage, look: LookPage, routines: RoutinesPage, signals: SignalsPage, people: PeoplePage, accounts: AccountsPage, things: ThingsPage, printers: PrintersPage, add: AddPage, share: SharePage, hub: HubPage, code: CodePage, notes: NotesPage, happened: HappenedPage, changes: ChangesPage }
@@ -177,6 +193,20 @@ onUnmounted(() => window.removeEventListener('keydown', key))
           <span class="house-doors-title display">This house</span>
           <button class="round house-close" @click="close" aria-label="Close"><Icon name="close" :size="20" /></button>
         </div>
+        <section class="finish" v-if="left" aria-label="Finish setting up">
+          <div class="finish-head"><span class="finish-title">Finish setting up</span><span class="finish-count">{{ steps.length - left }} of {{ steps.length }} done</span></div>
+          <div class="finish-bar"><i :style="{ width: `${100 * (steps.length - left) / steps.length}%` }"></i></div>
+          <template v-for="s in steps" :key="s.id">
+            <button v-if="!s.done" class="finish-step" @click="step(s)">
+              <Icon :name="s.id === 'passcode' ? 'lock' : s.id === 'location' ? 'pin' : 'phone'" :size="18" /><span>{{ s.title }}</span><Icon name="chevron" :size="16" />
+            </button>
+            <span v-else class="finish-step done"><Icon name="check" :size="18" /><span>{{ s.title }}</span></span>
+            <div class="finish-phone" v-if="s.id === 'home-screen' && phoneSteps">
+              <PhoneSteps />
+              <button class="button small ghost" @click="homeScreenDone">Done, don't show this again</button>
+            </div>
+          </template>
+        </section>
         <nav class="doors" aria-label="Pages">
           <button v-for="d in doors" :key="d.id" class="door" :class="{ on: lit === d.id, attention: d.attention }" @click="go(d.id)">
             <span class="door-icon"><Icon :name="d.icon" :size="18" /></span>

@@ -1,5 +1,6 @@
 /* ---------- tokens: a house at rest ---------- */
 :root {
+  --safe-top: env(safe-area-inset-top, 0px);   /* the iPhone's status bar, when opened from the Home Screen; see the phone's top, at the end */
   --bg: #0c0d10;
   --bg-2: #111318;
   --glow: rgba(
@@ -2056,7 +2057,7 @@ input:focus-visible {
     flex-direction: row;
     align-items: center;
     gap: 12px;
-    padding: 16px 16px 10px;
+    padding: calc(16px + var(--safe-top)) 16px 10px;
     border-right: 0;
     border-bottom: 1px solid var(--edge);
   }
@@ -4736,7 +4737,7 @@ select.input {
     grid-template-columns: 1fr;
   }
   .house-doors {
-    padding: 18px 16px calc(16px + env(safe-area-inset-bottom));
+    padding: calc(18px + var(--safe-top)) 16px calc(16px + env(safe-area-inset-bottom));
     border-right: 0;
   }
   .house-doors-head {
@@ -4764,7 +4765,7 @@ select.input {
     display: grid;
   }
   .house-head {
-    padding: 16px 12px 12px 16px;
+    padding: calc(16px + var(--safe-top)) 12px 12px 16px;
     gap: 10px;
   }
   .house-head h2 {
@@ -13522,4 +13523,139 @@ button.reading[data-held] {
 }
 .printer-tile-body .print-foot {
   margin-bottom: auto;
+}
+
+/* ---------- the phone's top (design/band/, chosen 2 October 2026) ----------
+   Opened from the Home Screen, an iPhone draws the page under its own status bar -- index.html
+   asks for that (viewport-fit=cover, black-translucent), so the sky runs to the top edge -- and
+   nothing here used to leave the status bar its room: the clock sat on the phone's clock and every
+   close button was in it. --safe-top is that room, 0 in a browser tab, 47 on this phone; one name
+   for it so a test can give it a value where the browser will not. */
+.nudge-news {
+  display: contents;
+}
+@media (max-width: 860px) {
+  /* No clock: the status bar is the clock, directly above. The row under it is the house, then
+     its sky, then the two doors at the far end (NameThenSky). The wall keeps its clock. */
+  .topbar {
+    padding-top: max(12px, calc(var(--safe-top) + 6px));
+  }
+  .topbar-clock {
+    display: none;
+  }
+  .topbar-right {
+    flex: 1 1 100%;
+    justify-content: flex-start;
+  }
+  .topbar-add:not(.topbar-house) {
+    margin-left: auto;
+  }
+  /* The news, as one row of quiet chips under whatever needs you (LineChipsBC): each still named,
+     never amber, the row one chip tall however many there are, sweeping sideways. */
+  .nudge-news {
+    display: flex;
+    order: 1;
+    flex: 0 0 auto;
+    width: 100%;
+    gap: 8px;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .nudge-news::-webkit-scrollbar {
+    display: none;
+  }
+  .shell .nudges > .nudge-news > .nudge {
+    flex: 0 0 auto;
+    width: auto;
+    max-width: none;
+    height: 40px;
+    padding: 0 15px 0 12px;
+    gap: 8px;
+    border-radius: 999px;
+    background: var(--surface);
+    border-color: var(--edge);
+  }
+  .nudge-news .nudge-icon {
+    width: auto;
+    height: auto;
+    background: none;
+    color: var(--ink-2);
+  }
+  .nudge-news .nudge-title {
+    font-size: 14.5px;
+    font-weight: 400;
+    white-space: nowrap;
+  }
+  .nudge-news .nudge-sub {
+    display: none;
+  }
+  /* Finish setting up, at the top of This house: the band's suggestions, counting down (KindsB-house) */
+  .finish {
+    margin: 0 0 14px;
+    padding: 14px 16px 8px;
+    border-radius: var(--r-lg);
+    background: rgba(var(--lamp-rgb), 0.08);
+    border: 1px solid rgba(var(--lamp-rgb), 0.28);
+  }
+  .finish-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .finish-title {
+    font-size: 16px;
+    font-weight: 500;
+  }
+  .finish-count {
+    font-size: 13px;
+    color: var(--lamp);
+  }
+  .finish-bar {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--edge);
+    margin: 10px 0 6px;
+    overflow: hidden;
+  }
+  .finish-bar i {
+    display: block;
+    height: 100%;
+    border-radius: 2px;
+    background: var(--lamp);
+  }
+  .finish-step {
+    display: grid;
+    grid-template-columns: 22px 1fr auto;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 40px;
+    font-size: 15px;
+    text-align: left;
+    color: var(--ink);
+  }
+  .finish-step > svg:first-child {
+    color: var(--lamp);
+  }
+  .finish-step > svg:last-child:not(:first-child) {
+    color: var(--ink-3);
+  }
+  .finish-step.done {
+    color: var(--muted);
+  }
+  .finish-step.done > svg:first-child {
+    color: var(--live);
+  }
+  .finish-step.done span {
+    text-decoration: line-through;
+  }
+  .finish-phone {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 4px 0 12px;
+  }
 }

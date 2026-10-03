@@ -31,9 +31,9 @@ import { controllerBand, type ControllerLine } from './controller'
 import Icon from './Icon.vue'
 import Say from './Say.vue'
 import Asks from './Asks.vue'
-import PhoneSteps from './PhoneSteps.vue'
 import { type BandLine, stripWaiting, waitingBand } from './adding'
 import { offerMove } from './move'
+import { narrow } from './band'
 
 /* What the band says about things waiting to be set up, as one line: found on the network, still
    knocking over Bluetooth, or both. `tick` is here because the line folds with AGE and nothing else
@@ -88,13 +88,16 @@ const howLong = computed(() => plainly(update.value?.seconds ?? 300))
    opening that page is what marks them read. */
 const whatsNew = computed(() => store.status?.update?.whats_new ?? null)
 
-/* on a phone that is still in a browser tab: offer the home-screen install once, with the steps for this phone */
-const onPhone = matchMedia('(max-width: 860px)').matches
-const standalone = matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true
-function remembered(k: string) { try { return localStorage.getItem(k) } catch { return null } }
-const phoneNudge = ref(onPhone && !standalone && remembered('phone-nudge') !== 'done')
-const phoneSteps = ref(false)
-function dismissPhone() { phoneNudge.value = false; phoneSteps.value = false; try { localStorage.setItem('phone-nudge', 'done') } catch {} }
+/* On a phone the band is sorted by kind (band.ts): what needs you keeps its line, news is one row of
+   chips, and setup has gone to Finish setting up in This house. On a wall nothing here changes. A chip
+   cannot carry "tap to install" and how long it takes, so on a phone the update opens The hub, where both
+   are said beside the button, rather than installing from a three-word chip. */
+const setupHere = computed(() => !narrow.value)
+function openUpdate() { if (narrow.value) store.sheet = 'hub'; else installUpdate() }
+const knock = computed(() => waiting.value.filter(w => w.id === 'knock'))
+const found = computed(() => waiting.value.filter(w => w.id !== 'knock'))
+/* rendered only with something in it, so an empty band still collapses (.nudges:not(:has(> *))) */
+const news = computed(() => updateReady.value || !!whatsNew.value || !!moveTo.value || found.value.length > 0)
 
 let t3: number | undefined
 onMounted(() => {
@@ -116,32 +119,42 @@ defineExpose({ updateReady })
        height and stop the row moving when something wants you. -->
   <div class="nudges">
   <Asks />
-  <button class="nudge" v-if="updateReady" @click="installUpdate">
-    <span class="nudge-icon"><Icon name="sparkle" :size="20" /></span>
-    <span class="nudge-text"><span class="nudge-title">An update is ready</span><span class="nudge-sub">{{ update?.latest?.title || 'New for the hub.' }} Tap to install: {{ howLong }}, and the lights keep working throughout.</span></span>
-  </button>
-  <div class="nudge quiet" v-else-if="updateBusy">
+  <div class="nudge quiet" v-if="!updateReady && updateBusy">
     <span class="nudge-icon pulse"><Icon name="refresh" :size="20" /></span>
     <span class="nudge-text"><span class="nudge-title">Updating the hub</span><span class="nudge-sub">{{ phase?.says || 'Starting.' }} {{ phase?.dark ? 'This screen will blink and come back.' : 'Lights and switches keep working.' }} {{ (phase?.notices ?? []).join(' ') }}</span></span>
   </div>
-  <button class="nudge" v-if="whatsNew" @click="store.sheet = 'hub'">
-    <span class="nudge-icon"><Icon name="sparkle" :size="20" /></span>
-    <span class="nudge-text"><span class="nudge-title">What's new</span><span class="nudge-sub">{{ whatsNew.what.join(' ') }}</span></span>
-  </button>
   <!-- SOMETHING NEW IS HERE, AND THIS IS THE ONLY WAY IT SAYS SO (design/knock/). A thing found on
        the network has always been one line here; a knock over Bluetooth used to take the whole
        screen instead, up to a hundred seconds after it was plugged in. It is this line now, and it
        is the same line: a knock shouts for an hour, then folds in with whatever else is waiting,
        because a line that will not go away is the interruption again, slower. Which of those it is
-       is waitingBand() in adding.ts, pinned by a test. -->
+       is waitingBand() in adding.ts, pinned by a test. A knock is a line on a phone too; what it
+       folds into is news, and goes in the row below. -->
+  <button class="nudge" v-for="w in knock" :key="w.id" @click="openWaiting(w)">
+    <span class="nudge-icon"><Icon name="light" :size="20" /></span>
+    <span class="nudge-text"><span class="nudge-title">{{ w.title }}</span><span class="nudge-sub">{{ w.sub }}</span></span>
+  </button>
+  <!-- THE NEWS. On a wall these are chips in the band like the rest (the box is display: contents);
+       on a phone they are one row of quiet chips under the lines that need you (design/band/,
+       LineChipsBC), each still named, the row as tall as one chip however many there are. -->
+  <div class="nudge-news" v-if="news">
+  <button class="nudge" v-if="updateReady" @click="openUpdate">
+    <span class="nudge-icon"><Icon name="sparkle" :size="20" /></span>
+    <span class="nudge-text"><span class="nudge-title">An update is ready</span><span class="nudge-sub">{{ update?.latest?.title || 'New for the hub.' }} Tap to install: {{ howLong }}, and the lights keep working throughout.</span></span>
+  </button>
+  <button class="nudge" v-if="whatsNew" @click="store.sheet = 'hub'">
+    <span class="nudge-icon"><Icon name="sparkle" :size="20" /></span>
+    <span class="nudge-text"><span class="nudge-title">What's new</span><span class="nudge-sub">{{ whatsNew.what.join(' ') }}</span></span>
+  </button>
   <button class="nudge" v-if="moveTo" @click="store.moving = true">
     <span class="nudge-icon"><Icon name="globe" :size="20" /></span>
     <span class="nudge-text"><span class="nudge-title">A new link for the house</span><span class="nudge-sub">Switch this phone to {{ moveTo }}</span></span>
   </button>
-  <button class="nudge" v-for="w in waiting" :key="w.id" @click="openWaiting(w)">
-    <span class="nudge-icon"><Icon :name="w.id === 'knock' ? 'light' : 'sparkle'" :size="20" /></span>
+  <button class="nudge" v-for="w in found" :key="w.id" @click="openWaiting(w)">
+    <span class="nudge-icon"><Icon name="sparkle" :size="20" /></span>
     <span class="nudge-text"><span class="nudge-title">{{ w.title }}</span><span class="nudge-sub">{{ w.sub }}</span></span>
   </button>
+  </div>
   <button class="nudge" v-for="l in fromControllers" :key="l.id" @click="openController(l)">
     <span class="nudge-icon"><Icon name="light" :size="20" /></span>
     <span class="nudge-text"><span class="nudge-title">{{ l.title }}</span><span class="nudge-sub">{{ l.sub }}</span></span>
@@ -153,17 +166,14 @@ defineExpose({ updateReady })
     <span class="nudge-icon pulse"><Icon name="light" :size="20" /></span>
     <span class="nudge-text"><span class="nudge-title">Trying “{{ store.signalTry.name }}”</span><span class="nudge-sub">The lights may show it in daylight for the next few minutes. Tap to see what the house has seen.</span></span>
   </button>
-  <button class="nudge" v-if="store.status?.setup_done && store.status.locked === false" @click="store.sheet = 'code'">
+  <!-- SETUP. On a phone these three are Finish setting up in This house instead (band.ts). -->
+  <button class="nudge" v-if="setupHere && store.status?.setup_done && store.status.locked === false" @click="store.sheet = 'code'">
     <span class="nudge-icon"><Icon name="lock" :size="20" /></span>
     <span class="nudge-text"><span class="nudge-title">Set a passcode</span><span class="nudge-sub">Anyone on your Wi‑Fi can change the house right now. A passcode keeps that to you; lights and scenes stay open to everyone.</span></span>
   </button>
-  <button class="nudge" v-if="store.ambientLoaded && !store.ambient.location" @click="store.sheet = 'location'">
+  <button class="nudge" v-if="setupHere && store.ambientLoaded && !store.ambient.location" @click="store.sheet = 'location'">
     <span class="nudge-icon"><Icon name="pin" :size="20" /></span>
     <span class="nudge-text"><span class="nudge-title">Where is home?</span><span class="nudge-sub">Set a location once and the sky, sunrise and weather will follow it.</span></span>
-  </button>
-  <button class="nudge" v-if="phoneNudge && !phoneSteps" @click="phoneSteps = true">
-    <span class="nudge-icon"><Icon name="phone" :size="20" /></span>
-    <span class="nudge-text"><span class="nudge-title">Put the house on your home screen</span><span class="nudge-sub">One tap from your phone's home screen, full screen, nothing to type.</span></span>
   </button>
   <!-- What has stopped answering, as one line. The list it opens is a page of This house
        (NotesPage.vue), because it is not news, it is a job with a button on it, and a house with
@@ -172,10 +182,6 @@ defineExpose({ updateReady })
     <span class="nudge-icon"><Icon name="switch" :size="20" /></span>
     <span class="nudge-text"><span class="nudge-title">{{ notes.length === 1 ? 'Something needs a look' : `${notes.length} things need a look` }}</span><span class="nudge-sub">{{ notes[0].band || notes[0].text }}</span></span>
   </button>
-  </div>
-  <div class="phone-card" v-if="phoneSteps">
-    <PhoneSteps />
-    <button class="button small ghost" @click="dismissPhone">Done, don't show this again</button>
   </div>
 
 </template>
