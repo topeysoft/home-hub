@@ -226,7 +226,7 @@ Do not reopen these, and do not propose around them.
   The household chooses the name. Pinned by `app/tests/address.test.ts` and `app/e2e/address.spec.ts`; the
   brain's half is `brain/hub/address.py`, the host's `driver-layer/host/away.sh`, the maker's `relay/service`.
 - **The roofline is one light that keeps its own evenings; the occasion only decides how it looks**
-  (1 October, `design/roofline/`). Several boxes are one tile. Evenings are asked once at the end of an
+  (1 October, `design/roofline/`). Several controllers are one tile. Evenings are asked once at the end of an
   outside light's setup, like a porch light, and an occasion still turns nothing on. The occasion owns
   its motion and the only control is Hold it still -- there is no list of effects, and strips inside stay
   still. A household changes a look by saying it in the command box (a fixed grammar, five words of

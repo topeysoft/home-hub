@@ -163,8 +163,8 @@ const otherName = computed(() => {
   const id = mine.value === 2 ? strip.value?.light : strip.value?.light2
   return (id && deviceById(id)?.name) || (mine.value === 2 ? 'the first strip' : 'the second strip')
 })
-const rowName = computed(() => second.value && !second.value.own ? 'Set up as two strips'
-  : 'Set up as a strip')
+const rowName = computed(() => second.value && !second.value.own ? 'Its two strips'
+  : 'Its length and colors')
 const rowMetres = computed(() => second.value && !second.value.own
   ? `${metresOf(strip.value?.count)} and ${(second.value.count / 60).toFixed(1)} m`
   : mine.value === 2 ? metresOf(second.value?.count) : metresOf(strip.value?.count))
@@ -206,7 +206,7 @@ const metres = computed(() => {
      it is the same fact the row already carries, and a control whose only feedback is two metres of
      wall behind a television is a control somebody presses twice. */
   const n = moving.value ? endsAt.value : strip.value?.count
-  return n ? `About ${(n / 60).toFixed(1)} m` : 'Measured once'
+  return n ? `About ${(n / 60).toFixed(1)} m` : 'Not measured yet'
 })
 /* THE PICTURE, AND WHAT ITS SCALE IS. The bar is a five-metre reel -- what these are sold on -- and
    the lit part is what the hub drives. So the dark end is real: it is the stretch of strip somebody
@@ -488,7 +488,7 @@ async function level(l: typeof LEVELS[number]) {
          a picture of the thing behind the television is what tells somebody what this row is.
          design/strip/OneDoor.dc.html, chosen 22 September. -->
     <div class="rig-ask" v-if="strip && !tuning">
-      <span class="rig-lbl">Because it is a strip</span>
+      <span class="rig-lbl">The strip</span>
       <button class="rig-card sd-door" :disabled="dead || asking" @click="openRow">
         <span class="rig-card-icon"><Icon name="pin" :size="18" /></span>
         <span class="rig-card-text">
@@ -508,15 +508,15 @@ async function level(l: typeof LEVELS[number]) {
        household who cut a metre off -- and the colors question hands over to the sheet it came
        from, which is the screen that asks it properly. -->
   <div class="sheet-back" v-if="door" @click.self="closeDoor()">
-    <div class="sheet sd-sheet" role="dialog" aria-label="Set up as a strip">
+    <div class="sheet sd-sheet" role="dialog" aria-label="The strip">
       <div class="sheet-head">
-        <h2 class="display">{{ second && !second.own ? 'Set up as two strips' : 'Set up as a strip' }}</h2>
+        <h2 class="display">{{ second && !second.own ? 'Its two strips' : 'Its length and colors' }}</h2>
         <button class="round sheet-close" aria-label="Close" @click="closeDoor()"><Icon name="close" :size="20" /></button>
       </div>
       <div class="sheet-body">
-        <p class="sheet-lede" v-if="second && !second.own">Each was told its own colors and its own length. Open one and it lights; the other rests.</p>
-        <p class="sheet-lede" v-else-if="second">It shares a controller with {{ otherName }}. While this is open it lights; {{ otherName }} rests.</p>
-        <p class="sheet-lede" v-else>Two things this was told once, and both of them go stale. A strip gets cut down, joined onto, or replaced by one that is not the same make.</p>
+        <p class="sheet-lede" v-if="second && !second.own">Each has its own colors and length. Open one and it lights; the other stays dark while you do.</p>
+        <p class="sheet-lede" v-else-if="second">It shares a controller with {{ otherName }}. While this is open it lights; {{ otherName }} stays dark.</p>
+        <p class="sheet-lede" v-else>Two things it was told when it was set up, and either can change later. A strip gets cut down, joined onto, or replaced by one that is not the same make.</p>
 
         <!-- the first strip, closed until it is opened (ChangeLaterC) -->
         <button class="sd-card sd-tap" v-if="second && !second.own && !firstOpen" :disabled="asking" @click="openFirst">
@@ -559,8 +559,8 @@ async function level(l: typeof LEVELS[number]) {
           <div class="sd-card-head">
             <span class="rig-card-icon"><Icon name="pin" :size="18" /></span>
             <span class="rig-card-text">
-              <span class="rig-card-name">Ends here <em>{{ metres }}</em></span>
-              <span class="rig-card-sub">{{ moving ? 'Move it until the light stops where the strip stops.' : 'The strip cannot be reached, so it cannot be walked just now.' }}</span>
+              <span class="rig-card-name">Where it ends <em>{{ metres }}</em></span>
+              <span class="rig-card-sub">{{ moving ? 'Move it until the light stops where the strip stops.' : 'The strip isn’t answering, so its end can’t be changed just now.' }}</span>
             </span>
           </div>
           <span class="sd-strip wide" aria-hidden="true"><i :style="{ width: lit }"></i></span>
@@ -587,7 +587,7 @@ async function level(l: typeof LEVELS[number]) {
             <span class="rig-card-icon"><Icon name="light" :size="18" /></span>
             <span class="rig-card-text">
               <span class="rig-card-name">The colors look wrong</span>
-              <span class="rig-card-sub">Asks the red question again.</span>
+              <span class="rig-card-sub">Asks which color is red again.</span>
             </span>
             <span class="sd-channels" aria-hidden="true"><i class="r"></i><i class="g"></i><i class="b"></i></span>
             <Icon name="back" :size="18" class="sd-chev" />

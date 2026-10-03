@@ -360,7 +360,7 @@ class TheRadioIsWiredUp(unittest.TestCase):
         with self.assertRaises(StripError) as e:
             run(Strips(self.hub).radio.commission("3497-011-2332"))
         said = str(e.exception)
-        self.assertIn("cannot let that kind of light in yet", said)
+        self.assertIn("cannot add that kind of light yet", said)
         self.assertNotIn("Check it", said)
         # AND IT NAMES NOTHING THE HOUSEHOLD DID NOT BUY. This sentence said "matter-server" and
         # "Home Assistant" for weeks, on a wall, to somebody who can do nothing with either.
@@ -377,7 +377,7 @@ class TheRadioIsWiredUp(unittest.TestCase):
         self.hub.ha = Engine()
         with self.assertRaises(StripError) as e:
             run(Strips(self.hub).radio.set_wifi("House", "hunter2"))
-        self.assertIn("cannot let that kind of light in yet", str(e.exception))
+        self.assertIn("cannot add that kind of light yet", str(e.exception))
 
     def test_but_a_refused_code_still_says_so(self):
         class Engine:
@@ -1195,7 +1195,7 @@ class ThreeFailuresThatAreNotTheSame(unittest.TestCase):
         The distance is still said when the knock itself was faint -- see AStripThatRestarted."""
         class BleakDeviceNotFoundError(Exception): pass
         said = self.said_for(BleakDeviceNotFoundError(), rhythm="")
-        self.assertIn("stopped knocking", said)
+        self.assertIn("stopped asking to be added", said)
         self.assertNotIn("nearer the hub", said)
 
     def test_a_strip_that_will_not_finish_a_press_session_is_not_told_to_recount(self):
@@ -1238,7 +1238,7 @@ class AStripThatRestartedSinceItKnocked(unittest.TestCase):
     def test_a_strip_that_is_really_gone_is_told_so_and_not_to_move_nearer(self):
         st = self.restart(comes_back=False)
         self.assertEqual(st["state"], "failed")
-        self.assertIn("stopped knocking", st["text"])
+        self.assertIn("stopped asking to be added", st["text"])
         self.assertNotIn("nearer the hub", st["text"])
 
     def test_a_hub_that_heard_it_only_through_a_bridge_finds_it_there_again(self):
