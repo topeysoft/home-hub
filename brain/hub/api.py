@@ -2447,7 +2447,7 @@ def phones_move_claim(body: dict, request: Request):
     house's own name has to send it to the hub's name at home, where its cookie is not sent."""
     wait = hub.phones.move_wait()
     if wait > 0: raise HTTPException(429, f"Too many codes that weren't right. Wait {int(wait / 60) + 1} minutes.")
-    got = hub.phones.claim_move(str(body.get("code") or ""))
+    got = hub.phones.claim_move(str(body.get("code") or ""), into_app=request.headers.get("origin") == hub.address.app_origin())
     if not got: raise HTTPException(410, "That code has run out or isn't right. Get a new one on the house's screen.")
     phone, token = got
     return _with_cookie({"token": token, "phone": hub.phones._public(phone, phone), "lan": hub.address.lan_name(),

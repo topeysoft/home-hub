@@ -6,22 +6,29 @@
    only for a phone the house knows, and a page only ever looks for the hub at home once it carries a token. */
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Me, Phone } from '../src/api'
-import { offerMove, moveCode, switchFor, waitsToBeLetOut, withoutCode } from '../src/move'
+import { appHost, offerMove, moveCode, switchFor, waitsToBeLetOut, withoutCode } from '../src/move'
 import { apiUrl, door, learnLan, look, looks, moved, withToken, wsProtocols, wsUrl } from '../src/door'
 
 const phone = (over: Partial<Phone> = {}): Phone => ({ id: 'p1', name: "Temi's iPhone", kind: 'phone', joined: 0, expires: null, remote: false, last_seen: null, how: 'code', me: true, ...over })
 const me = (over: Partial<Me> = {}): Me => ({ locked: true, paired: true, home: 'Main Palace', phone: phone(), address: 'https://main-palace.elyir.app', lan: '192-168-86-53.main-palace.home.elyir.app', ...over })
 
 describe('the band line', () => {
-  it('is for a phone of the house that has not moved, anywhere but the address itself', () => {
-    expect(offerMove(me(), 'http://hub.local')).toBe(true)
-    expect(offerMove(me(), 'https://main-palace.elyir.app')).toBe(false)
-    expect(offerMove(me({ phone: phone({ moved: true }) }), 'http://hub.local')).toBe(false)
+  it('is for a phone of the house that is not in the Houses app yet, anywhere but inside the app', () => {
+    expect(offerMove(me(), false)).toBe(true)
+    expect(offerMove(me(), true)).toBe(false)
+    expect(offerMove(me({ phone: phone({ in_app: true }) }), false)).toBe(false)
+  })
+  it('is offered once more to a phone that moved only to the house\'s own name, before 3 October', () => {
+    expect(offerMove(me({ phone: phone({ moved: true, in_app: false }) }), false)).toBe(true)
   })
   it('is never for the wall, which stays home, nor before the house has an address', () => {
-    expect(offerMove(me({ phone: phone({ kind: 'wall' }) }), 'http://hub.local')).toBe(false)
-    expect(offerMove(me({ address: null }), 'http://hub.local')).toBe(false)
-    expect(offerMove(me({ phone: null }), 'http://hub.local')).toBe(false)
+    expect(offerMove(me({ phone: phone({ kind: 'wall' }) }), false)).toBe(false)
+    expect(offerMove(me({ address: null }), false)).toBe(false)
+    expect(offerMove(me({ phone: null }), false)).toBe(false)
+  })
+  it('names the app in the house\'s own zone', () => {
+    expect(appHost('https://main-palace.elyir.app')).toBe('houses.elyir.app')
+    expect(appHost(null)).toBe('')
   })
 })
 

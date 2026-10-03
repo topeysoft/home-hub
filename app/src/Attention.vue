@@ -32,16 +32,18 @@ import Icon from './Icon.vue'
 import Say from './Say.vue'
 import Asks from './Asks.vue'
 import { type BandLine, stripWaiting, waitingBand } from './adding'
-import { offerMove } from './move'
+import { appHost, offerMove } from './move'
+import { inApp } from './inapp'
 import { narrow } from './band'
 
 /* What the band says about things waiting to be set up, as one line: found on the network, still
    knocking over Bluetooth, or both. `tick` is here because the line folds with AGE and nothing else
    changes when it does -- without something moving, a knock would keep shouting until the next poll
    happened to land. Once a minute is as exact as an hour needs. */
-/* The house has its own address and this phone has not moved to it yet (design/away/, NamedC-home): one line,
-   once, on every phone of the house -- never the wall, which stays home. */
-const moveTo = computed(() => offerMove(store.me, location.origin) ? (store.me?.address ?? '').replace(/^https:\/\//, '') : '')
+/* The house has its own address and this phone is not in the Houses app yet (design/houses/, MoveToApp; before
+   3 October, design/away/ NamedC-home): one line, on every phone of the house -- never the wall, which stays home,
+   and never inside the app itself. */
+const moveTo = computed(() => offerMove(store.me, inApp) ? appHost(store.me?.address) : '')
 const tick = ref(Date.now())
 let t4: number | undefined
 const waiting = computed(() => waitingBand(store.found, store.strip, tick.value, store.printers?.found ?? []))

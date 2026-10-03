@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Temitope Adeyeri
 // SPDX-License-Identifier: AGPL-3.0-or-later
-/* Moving a phone to the house's own name, pinned to design/away/ as chosen on 1 October (C): the band line on a
+/* Moving a phone, pinned to design/away/ as chosen on 1 October (C) and pointed into the Houses app on 3 October
+ * (design/houses/, MoveToApp): the band line on a
  * phone that has not moved (NamedC-home), the page it opens (NamedC-move), the Home only | Anywhere choice on
  * People (NamedC, in the words of design/words-people/ AnywhereC), and the away screen that waits and opens by itself (NamedC-out). They measure where things are and
  * what they say, so they fail on purpose if the arrangement drifts from the boards.
@@ -24,11 +25,11 @@ test.describe('on a phone', () => {
     await page.goto('/')
     const line = page.locator('.nudge', { hasText: 'A new link for the house' })
     await expect(line).toHaveCount(1)
-    await expect(line).toContainText('Switch this phone to main-palace.elyir.app')
+    await expect(line).toContainText('Switch this phone to houses.elyir.app')   // into the app since 3 October (design/houses/, MoveToApp)
     await line.click()
     const move = page.locator('main.move')
-    await expect(move.locator('h1')).toHaveText('A new link for the house.')
-    await expect(move.locator('.setup-lede')).toContainText('main-palace.elyir.app')
+    await expect(move.locator('h1')).toHaveText('One app for your houses.')
+    await expect(move.locator('.setup-lede')).toContainText('houses.elyir.app')
     await expect(move.locator('.move-steps li')).toHaveCount(3)
     await expect(move.locator('.move-steps li').nth(1)).toContainText('Add it to your Home Screen')
     // Nothing of the house shows under the page, and Not now is beside the button.
@@ -39,8 +40,8 @@ test.describe('on a phone', () => {
     await expect(page.locator('main.move')).toHaveCount(0)
   })
 
-  test('a phone that has moved, and the wall, get no line', async ({ page }) => {
-    await withAddress(page, { ...ME, phone: { ...ME.phone, moved: true } })
+  test('a phone that is in the app, and the wall, get no line', async ({ page }) => {
+    await withAddress(page, { ...ME, phone: { ...ME.phone, moved: true, in_app: true } })
     await page.goto('/')
     await expect(page.locator('.nudge').first()).toBeVisible()            // the band is up, so an absence means something
     await expect(page.locator('.nudge', { hasText: 'A new link for the house' })).toHaveCount(0)

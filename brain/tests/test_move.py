@@ -159,6 +159,14 @@ class AcrossNames(Base):
         self.assertNotIn("access-control-allow-origin", self.preflight(ORIGIN).headers)
         self.assertNotIn("access-control-allow-origin", self.preflight(APP).headers)
 
+    def test_a_phone_claimed_by_the_app_is_in_it_and_one_moved_only_to_the_name_is_not(self):
+        code = self.move().json()["code"]
+        self.client.post("/phones/move/claim", json={"code": code}, headers={"Origin": ORIGIN})
+        self.assertFalse(self.client.get("/phones/me").json()["phone"]["in_app"])
+        code = self.move().json()["code"]
+        self.client.post("/phones/move/claim", json={"code": code}, headers={"Origin": APP})
+        self.assertTrue(self.client.get("/phones/me").json()["phone"]["in_app"])
+
     def test_the_app_every_house_lives_in_may_call_it_too(self):
         r = self.preflight(APP)
         self.assertEqual(r.headers["access-control-allow-origin"], APP)

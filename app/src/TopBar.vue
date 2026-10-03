@@ -16,6 +16,7 @@ import { store, updateReady, weatherParts } from './store'
 import Icon from './Icon.vue'
 import WeatherArt from './WeatherArt.vue'
 import { narrow, setupLeft, setupNow } from './band'
+import { app, inApp, openHouses } from './inapp'
 
 const props = defineProps<{ clock: string; day: string; now: Date; tab: 'home' | 'rooms' | 'cameras'; inRoom: boolean }>()
 const emit = defineEmits<{ go: [tab: 'home' | 'rooms' | 'cameras'] }>()
@@ -60,7 +61,11 @@ const tabs = computed(() => [
       <!-- The house, then what it is like there (design/band/, NameThenSky): on a phone this is the top
            row, and its left end is where a screen says what it is. With one house that is whether it is
            connected; with several it will be the house's name (design/houses/, B). -->
-      <span class="link" :class="{ up: store.linkUp }">{{ store.linkUp ? 'Connected' : 'Reconnecting' }}</span>
+      <button v-if="inApp && app.name" class="house-switch" :class="{ up: store.linkUp, others: app.others }" @click="openHouses"
+              :aria-label="app.others ? `${app.name}. Another house needs you. Switch house` : `${app.name}. Switch house`">
+        <span class="house-switch-dot"></span><span class="house-switch-name">{{ app.name }}</span><Icon name="chevron" :size="14" class="house-switch-open" />
+      </button>
+      <span v-else class="link" :class="{ up: store.linkUp }">{{ store.linkUp ? 'Connected' : 'Reconnecting' }}</span>
       <span class="topbar-wx" v-if="temp" :aria-label="`Outside, ${temp}`">
         <WeatherArt class="topbar-cloud" />
         <span class="topbar-temp">{{ temp }}</span>

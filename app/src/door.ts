@@ -32,6 +32,12 @@ export function moved(token: string, lan: string | null) {
   learnLan(lan)
 }
 
+/** Inside the Houses app (inapp.ts): the pass the app handed over, kept in memory only -- the app keeps it. */
+export function carry(token: string, lan: string | null) {
+  door.token = token
+  door.lan = lan && /^[a-z0-9.-]+\.home\.[a-z0-9.-]+$/.test(lan) ? lan : ''
+}
+
 export function learnLan(lan: string | null | undefined) {
   const v = lan && /^[a-z0-9.-]+\.home\.[a-z0-9.-]+$/.test(lan) ? lan : ''
   if (v === door.lan) return

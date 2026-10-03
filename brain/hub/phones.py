@@ -75,7 +75,9 @@ class Phones:
     @staticmethod
     def _public(p: dict, me: dict | None = None) -> dict:
         return {k: p.get(k) for k in ("id", "name", "kind", "joined", "expires", "remote", "last_seen", "how")} | {
-            "me": bool(me and me["id"] == p["id"]), "moved": bool((p.get("moved_to") or {}).get("at"))}
+            "me": bool(me and me["id"] == p["id"]), "moved": bool((p.get("moved_to") or {}).get("at")),
+            # in the Houses app: the move since 3 October. A phone that moved only to the house's own name is offered it once more.
+            "in_app": bool((p.get("moved_to") or {}).get("app"))}
 
     def list(self, me: dict | None = None) -> dict:
         """What this phone may see. A phone that holds no keys sees itself and nothing else.
@@ -194,7 +196,7 @@ class Phones:
         self.move_misses = [t for t in getattr(self, "move_misses", []) if t > now - self.MOVE_WRONG_WINDOW]
         return (self.move_misses[0] + self.MOVE_WRONG_WINDOW - now) if len(self.move_misses) >= self.MOVE_WRONG else 0.0
 
-    def claim_move(self, code: str) -> tuple[dict, str] | None:
+    def claim_move(self, code: str, into_app: bool = False) -> tuple[dict, str] | None:
         """The phone, and a new token for it, for a code minted at home in the last ten minutes. Once only."""
         m = self.moves.pop(self.move_code(code), None)
         if not m: self.move_misses = getattr(self, "move_misses", []) + [time.time()]
@@ -205,6 +207,7 @@ class Phones:
         moved = p.setdefault("moved_to", {"at": None, "hashes": []})
         moved["hashes"] = (moved.get("hashes") or [])[-2:] + [_hash(token)]   # a phone moved three times keeps the last three
         moved["at"] = time.time()
+        if into_app: moved["app"] = True
         self._save()
         self.hub.log.add("phone", p["id"], None, "moved", source="user", detail={"name": p["name"]})
         self._changed()

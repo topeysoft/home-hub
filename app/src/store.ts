@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: 2026 Temitope Adeyeri
 import { learnLan, look, moved, watchDoor } from './door'
+import { carried, tell } from './inapp'
 import { moveCode, withoutCode } from './move'
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { reactive, watch } from 'vue'
@@ -937,6 +938,7 @@ export async function loadMe() {
 }
 let doorWatched = false
 export async function load() {
+  await carried()
   await landMove()
   await loadMe()
   if (!doorWatched) { doorWatched = true; watchDoor(kickStream) }
@@ -1000,6 +1002,7 @@ export async function start() {
     if (s.driver === 'ready' && was !== 'ready') { load() }   // the engine just came up: read the house
   }, link: v => {
     store.linkUp = v
+    tell('houses:status', { connected: v })   // the app keeps its own word for whether this house is answering
     clearTimeout(lostTimer)
     const back = restartLink(v)     // a restart this screen asked for, going or coming back
     updateLink(v)                   // ...and an update, which only ever needs to know it went
