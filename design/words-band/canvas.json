@@ -1,0 +1,87 @@
+{
+  "pages": [
+    {
+      "id": "page-1",
+      "name": "The band and toasts, in plain words"
+    },
+    {
+      "id": "page-2",
+      "name": "Not chosen"
+    }
+  ],
+  "artboards": [
+    {
+      "file": "Today.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Today",
+      "page": "page-1"
+    },
+    {
+      "file": "SentenceA.dc.html",
+      "x": 0,
+      "y": 1100,
+      "w": 1440,
+      "h": 900,
+      "title": "A — the hub’s sentence, or a plain one",
+      "page": "page-1"
+    },
+    {
+      "file": "OwnB.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "B — always the panel’s own words",
+      "page": "page-2"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "why",
+      "x": -620,
+      "y": 0,
+      "w": 500,
+      "text": "WHY THIS EXISTS\n\nThe seventh area of the wording pass (docs/wording.md): the band across the top of the home screen, and the toasts -- the two places the house speaks unasked.\n\nTHE QUESTION: WHAT DOES A FAILURE SAY? More than a hundred catches in the panel toast whatever came back from the hub, word for word. Sometimes that is a good sentence the hub wrote for a person. Often it is not: a developer's \"unknown room\", the server's \"Internal Server Error\", the browser's \"Failed to fetch\", or a doubled \"Couldn't rename: could not rename it: Timeout\". Cancelling the passcode question toasts \"That needs the passcode.\" as an error in all but three places.\n\nThe rest of the area is the settled vocabulary applied (the note under the sheets), and is the same in both directions.\n\nCHOSEN: A, 2 October 2026.",
+      "page": "page-1"
+    },
+    {
+      "id": "today",
+      "x": 1560,
+      "y": 0,
+      "w": 560,
+      "text": "TODAY\n\n1  A panel prefix around a hub prefix around the engine's error.\n2  Raw text from the server, the browser, or a developer's guard.\n3  Cancelling a question toasted as a failure.\n4  Lock the settings -- Passcode (Settings).\n5  \"wants to join the house\", \"let it in\" -- a phone is added and allowed (People).\n6  \"Everything keeps working while it does.\" beside \"this screen and the app don't\" -- the same line contradicts itself.",
+      "page": "page-1"
+    },
+    {
+      "id": "shared",
+      "x": -620,
+      "y": 1100,
+      "w": 500,
+      "text": "WHAT BOTH FIX -- NOT A CHOICE\n\n- The passcode nudge: \"Set a passcode -- Anyone on your Wi-Fi can change the house right now. A passcode keeps that to you; lights and scenes stay open to everyone.\" The toast after setting one: \"The passcode is set.\" (never \"The settings are locked\").\n- A phone asking: \"Nadine's phone wants to be added -- Tap to allow it, or to say not now.\"; \"Ada's iPad is allowed for today.\"; removed from a phone: \"join again from the wall screen\" becomes \"ask to be added again from the wall screen\".\n- The update line says \"Lights and switches keep working.\" and lets the hub's notice say what does not, instead of promising everything.\n- Restarting: \"Power off and on\", \"Full restart\", \"Quick restart\" -- not the little computer, not everything; \"The engine is starting\" becomes \"The hub is starting\".\n- Removing a bridge toasts \"The Hallway bridge is removed.\", not \"Hallway is removed.\"\n- One wording each: a device that does not answer \"isn't answering\" (never \"didn't respond\"); a fan is \"on for 1 hour\" on its tile and its pane; a phone allowed is said once.\n- \"is in the undefined now\" can no longer happen; an old house's \"This wall\" reads \"Wall screen\" in every toast.\n- Cancelling the passcode question is never a failure, anywhere.",
+      "page": "page-1"
+    },
+    {
+      "id": "a",
+      "x": 1560,
+      "y": 1100,
+      "w": 560,
+      "text": "A -- THE HUB'S SENTENCE, OR A PLAIN ONE\n\nAt the one place every request comes back (api.ts), a reason the hub wrote as a sentence -- a capital, a full stop -- is kept, and anything else becomes a plain fallback: \"Try again in a moment.\", and \"The hub isn't answering right now.\" when the network is gone. Each catch that names what failed keeps its name: \"Couldn't rename it. Try again in a moment.\"\n\nFOR: one change covers all hundred catches, including the ones written next year. The hub's good sentences -- most of the brain's errors were written for a person, \"Monitor light is not answering, so there would be nothing to see.\" -- still reach the person, and they are usually the useful part.\n\nAGAINST: the rule is a heuristic. A developer's message that happens to start with a capital and end with a period gets through; a raw exception the hub wraps in a sentence (\"Could not connect: [Errno 111]...\") is kept whole.\n\nBUILT, 2 October. In the band a line's sub is one row and ends in an ellipsis, as it always has; the sheet draws it whole so it can be read. What shows on the wall is its first sentence -- \"Anyone on your Wi-Fi can change the house right now.\" -- which is why each sub leads with its point.",
+      "page": "page-1"
+    },
+    {
+      "id": "b",
+      "x": 1560,
+      "y": 0,
+      "w": 560,
+      "text": "B -- ALWAYS THE PANEL'S OWN WORDS\n\nEvery catch says, in the panel's words, what did not happen -- \"Couldn't rename it. Try again.\", \"Couldn't reach the hub. Try again.\" -- and the hub's reason is never shown.\n\nFOR: completely predictable, and nothing technical can ever reach a toast, however a future hub phrases its errors.\n\nAGAINST: the hub's useful reasons are thrown away with the useless ones. \"Monitor light is not answering\" becomes \"Couldn't blink it\", and the person no longer learns why. It also means writing a sentence at every one of the hundred catches, and every new one, by hand.",
+      "page": "page-2"
+    }
+  ],
+  "launch": {
+    "view": "canvas",
+    "page": "page-1"
+  }
+}

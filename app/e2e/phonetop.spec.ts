@@ -55,7 +55,7 @@ test.describe('on a phone', () => {
     await expect(found).toBeVisible()
     expect((await found.boundingBox())!.height, 'a chip, not a line').toBeLessThanOrEqual(44)
     await expect(found.locator('.nudge-sub')).toBeHidden()
-    await expect(page.locator('.nudges .nudge', { hasText: 'Lock the settings' }), 'setup left the band').toHaveCount(0)
+    await expect(page.locator('.nudges .nudge', { hasText: 'Set a passcode' }), 'setup left the band').toHaveCount(0)
     await expect(page.locator('.topbar-house.attention'), 'the menu says something is left').toHaveCount(1)
 
     await page.locator('.topbar-house').click()
@@ -84,6 +84,6 @@ test('the wall keeps its clock, and its band as it was', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await page.goto('/?layout=wall&nav=top&at=19:40', { waitUntil: 'networkidle' })
   await expect(page.locator('.topbar-time')).toBeVisible()
-  await expect(page.locator('.nudges .nudge', { hasText: 'Lock the settings' })).toBeVisible()
+  await expect(page.locator('.nudges .nudge', { hasText: 'Set a passcode' })).toBeVisible()
   await expect(page.locator('.finish')).toHaveCount(0)
 })

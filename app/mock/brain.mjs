@@ -303,7 +303,7 @@ function pairStatus() {
     unassigned.devices.push(d)
     push({ type: 'device', device: d })
   }
-  pairing = { state: 'done', text: 'A plug joined the house.', device: { id: 'new-plug', name: 'Smart plug' } }
+  pairing = { state: 'done', text: 'A plug was added.', device: { id: 'new-plug', name: 'Smart plug' } }
   return pairing
 }
 
@@ -684,9 +684,9 @@ const bridgeRows = process.env.BRIDGES === 'none' ? [] : [
       ] },
       { id: 'people', label: 'People and phones', items: [
         { kind: 'phone', subject: 'p1', ts: Date.now() / 1000 - 3 * 86400, when: 'Tuesday',
-          text: "Ada's iPad joined the house.", acts: [] },
+          text: "Ada's iPad was added.", acts: [] },
         { kind: 'phone', subject: 'p2', ts: Date.now() / 1000 - 5 * 86400, when: 'Sunday',
-          text: "Sam's phone's stay ended on its own.", acts: [] },
+          text: "Sam's phone's visit ended, as planned.", acts: [] },
       ] },
     ],
   })
@@ -694,9 +694,9 @@ const bridgeRows = process.env.BRIDGES === 'none' ? [] : [
     coded_since: Date.now() / 1000 - 16 * 86400, coded_when: 'Sep 4', more: false,
     rows: [
       { who: "Temi's iPhone", named: true, kind: 'home', subject: 'hallway', when: '4:02pm', ts: 0, text: 'renamed Hallway to Landing.' },
-      { who: 'Someone at the wall', named: false, kind: 'draft', subject: 'r1', when: 'Wednesday', ts: 0, text: 'approved a suggested routine.' },
-      { who: 'Someone at the wall', named: false, kind: 'phone', subject: 'p1', when: 'Tuesday', ts: 0, text: "let Ada's iPad into the house, for good." },
-      { who: "Ada's iPad", named: true, kind: 'phone', subject: 'p3', when: 'Tuesday', ts: 0, text: 'asked to join the house.' },
+      { who: 'Someone', named: false, kind: 'draft', subject: 'r1', when: 'Wednesday', ts: 0, text: 'approved a suggested routine.' },
+      { who: 'Someone', named: false, kind: 'phone', subject: 'p1', when: 'Tuesday', ts: 0, text: "added Ada's iPad, for good." },
+      { who: "Ada's iPad", named: true, kind: 'phone', subject: 'p3', when: 'Tuesday', ts: 0, text: 'asked to be added to the house.' },
       { who: "Temi's iPhone", named: true, kind: 'home', subject: 'e1', when: 'Tuesday', ts: 0, text: 'removed the Nest. Everything it brought went with it.' },
       { who: "Temi's iPhone", named: true, kind: 'home', subject: 'l1', when: 'Tuesday', ts: 0, text: 'now treats Ceiling light as a light.' },
       { who: "Ada's iPad", named: true, kind: 'share', subject: 'device', when: 'Monday', ts: 0, text: 'shared Kitchen lights with other apps.' },

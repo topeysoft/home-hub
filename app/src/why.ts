@@ -134,7 +134,7 @@ export function explain(ev: Event): { icon: string; text: string; sub: string } 
   const want = label(ev.new, home)
   if (ev.kind === 'intent' && ev.source === 'rule') {
     const bits = [triggerWords(d.trigger, true), ...((d.checked ?? []) as any[][]).map(condWords)].filter(Boolean)
-    const failed = d.failed?.length ? ` · ${d.failed.length === 1 ? 'one thing' : `${d.failed.length} things`} didn't respond` : ''
+    const failed = d.failed?.length ? ` · ${d.failed.length === 1 ? 'one thing' : `${d.failed.length} things`} didn't answer` : ''
     return { icon: triggerIcon(d.trigger), text: cap1(name), sub: `${home ? 'The whole house' : 'The room'} went to ${want}${bits.length ? ' · ' + bits.join(' · ') : ''}${failed}` }
   }
   if (ev.kind === 'intent') {
@@ -148,6 +148,6 @@ export function explain(ev: Event): { icon: string; text: string; sub: string } 
     return { icon: 'lock', text: `A routine wanted ${want} but left the room alone`, sub: `${cap1(name)} · someone had used the room by hand${until}` }
   }
   if (ev.kind === 'shadowed') return { icon: 'sparkle', text: `A routine wanted ${want} but another got there first`, sub: cap1(name) }
-  if (ev.kind === 'failed') return { icon: 'refresh', text: "A routine tried but something didn't respond", sub: `${cap1(name)} · ${ev.new ?? ''}`.trim() }
+  if (ev.kind === 'failed') return { icon: 'refresh', text: "A routine tried but something didn't answer", sub: `${cap1(name)} · ${ev.new ?? ''}`.trim() }
   return { icon: 'sparkle', text: `${home ? 'The whole house' : 'The room'} changed`, sub: ev.kind }
 }

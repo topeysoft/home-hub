@@ -19,7 +19,7 @@ describe('one name each', () => {
   it('calls the passcode Passcode on its row and its page, and never a lock or a code', () => {
     expect(panel).toContain("code: 'Passcode'")
     expect(panel).toMatch(/id: 'code' as const[^}]*name: 'Passcode'/)
-    for (const f of ['src/HousePanel.vue', 'src/CodePage.vue']) expect(src(f)).not.toMatch(/Lock the settings|'Lock'/)
+    for (const f of ['src/HousePanel.vue', 'src/CodePage.vue', 'src/Attention.vue']) expect(src(f)).not.toMatch(/Lock the settings|'Lock'|settings are locked/)
     expect(src('../brain/hub/api.py')).not.toMatch(/HTTPException\([^)]*\bno code\b|Set a code first/)
   })
 })

@@ -228,9 +228,9 @@ test.describe('the Roofline’s own pane: the roof, drawn (pane: C)', () => {
     await expect(lookCard.getByRole('button', { name: 'Hold it still' })).toHaveAttribute('aria-pressed', 'false')
     await expect(lookCard.getByRole('button', { name: 'Say another look' })).toBeVisible()
     const eveCard = page.locator('.roof-evenings')
-    await expect(eveCard).toContainText('On at dusk, off at 11:00')
+    await expect(eveCard).toContainText('On at dusk, off at 11 PM')
     await expect(eveCard.getByRole('button', { name: 'Every evening' })).toHaveAttribute('aria-pressed', 'true')
-    await expect(eveCard.getByRole('button', { name: 'Only in an occasion' })).toBeVisible()
+    await expect(eveCard.getByRole('button', { name: 'Only for occasions' })).toBeVisible()
     await expect(eveCard.getByRole('button', { name: 'Not by itself' })).toBeVisible()
   })
 

@@ -3,6 +3,7 @@
   SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 <script setup lang="ts">
+import { failed } from '../code'
 /*
  * The kinds whose whole instrument is one control: a plug, a fan, a mower, an alarm.
  *
@@ -49,7 +50,7 @@ async function timer(minutes: number) {
     guessNow(props.device, { state: minutes ? 'on' : undefined, attrs: { off_at: r.off_at ?? undefined } })
     if (minutes) notify(`On for ${minutes < 60 ? `${minutes} minutes` : 'an hour'}.`)
     else notify('It will stay on until somebody switches it off.')
-  } catch (e: any) { notify(`Couldn't set the timer: ${e.message}`, 'error') }
+  } catch (e: any) { notify(failed('Couldn’t set the timer', e), 'error') }
   busy.value = false
 }
 

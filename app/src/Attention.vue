@@ -121,7 +121,7 @@ defineExpose({ updateReady })
   <Asks />
   <div class="nudge quiet" v-if="!updateReady && updateBusy">
     <span class="nudge-icon pulse"><Icon name="refresh" :size="20" /></span>
-    <span class="nudge-text"><span class="nudge-title">Updating the hub</span><span class="nudge-sub">{{ phase?.says || 'Starting.' }} {{ phase?.dark ? 'This screen will blink and come back.' : 'Everything keeps working while it does.' }} {{ (phase?.notices ?? []).join(' ') }}</span></span>
+    <span class="nudge-text"><span class="nudge-title">Updating the hub</span><span class="nudge-sub">{{ phase?.says || 'Starting.' }} {{ phase?.dark ? 'This screen will blink and come back.' : 'Lights and switches keep working.' }} {{ (phase?.notices ?? []).join(' ') }}</span></span>
   </div>
   <!-- SOMETHING NEW IS HERE, AND THIS IS THE ONLY WAY IT SAYS SO (design/knock/). A thing found on
        the network has always been one line here; a knock over Bluetooth used to take the whole
@@ -169,7 +169,7 @@ defineExpose({ updateReady })
   <!-- SETUP. On a phone these three are Finish setting up in This house instead (band.ts). -->
   <button class="nudge" v-if="setupHere && store.status?.setup_done && store.status.locked === false" @click="store.sheet = 'code'">
     <span class="nudge-icon"><Icon name="lock" :size="20" /></span>
-    <span class="nudge-text"><span class="nudge-title">Lock the settings</span><span class="nudge-sub">Anyone on the Wi‑Fi can change the house right now. A passcode keeps the controls open and the settings yours.</span></span>
+    <span class="nudge-text"><span class="nudge-title">Set a passcode</span><span class="nudge-sub">Anyone on your Wi‑Fi can change the house right now. A passcode keeps that to you; lights and scenes stay open to everyone.</span></span>
   </button>
   <button class="nudge" v-if="setupHere && store.ambientLoaded && !store.ambient.location" @click="store.sheet = 'location'">
     <span class="nudge-icon"><Icon name="pin" :size="20" /></span>

@@ -51,7 +51,7 @@ class Healed(ApiTest):
         self.knock()
         [row] = self.over()
         self.assertTrue(row["text"].startswith("The hub lost power at "), row["text"])
-        self.assertIn("When it came back, Messages did not, so Ceiling light and Kitchen lights were cut off "
+        self.assertIn("When it came back, Device messages did not, so Ceiling light and Kitchen lights were cut off "
                       "until the hub started it again itself.", row["text"])
         self.assertEqual(row["acts"], [])
         self.assertIn(" – ", row["when"])
@@ -65,7 +65,7 @@ class Healed(ApiTest):
     def test_a_part_that_stopped_while_the_hub_was_running_does_not_claim_a_power_cut(self):
         self.knock(power=False)
         [row] = self.over()
-        self.assertTrue(row["text"].startswith("Messages stopped at "), row["text"])
+        self.assertTrue(row["text"].startswith("Device messages stopped at "), row["text"])
         self.assertNotIn("power", row["text"])
 
     def test_the_third_time_in_a_week_it_is_a_job_with_a_backup_on_it(self):
@@ -73,7 +73,7 @@ class Healed(ApiTest):
             self.knock(minutes_ago=days * 1440 + 30)
         self.hub.healed.take()
         [n] = self.notes()
-        self.assertEqual(n["text"], "The hub has lost power 3 times this week, and each time Messages did not start again by itself.")
+        self.assertEqual(n["text"], "The hub has lost power 3 times this week, and each time Device messages did not start again by itself.")
         self.assertIn("memory card", n["more"])
         self.assertEqual(n["acts"], [{"do": "Back up", "act": "backup", "to": None}])
 
@@ -89,7 +89,7 @@ class Healed(ApiTest):
     def test_the_engine_takes_everything_with_it(self):
         self.knock(service="homeassistant")
         [row] = self.over()
-        self.assertIn("the hub's engine did not, so everything in the house was cut off", row["text"])
+        self.assertIn("the hub's main software did not, so everything in the house was cut off", row["text"])
 
     def test_a_half_written_file_does_not_take_the_page_down(self):
         (self.data / "healed.jsonl").write_text('{"at": 1, "parts": [{"serv')

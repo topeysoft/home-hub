@@ -23,7 +23,7 @@ async function save(clear = false) {
   try {
     store.status = await setPin(clear ? '' : pin.value)
     remember(clear ? '' : pin.value)
-    notify(clear ? 'The passcode is off. Anyone here can change the house.' : 'The settings are locked.')
+    notify(clear ? 'The passcode is removed. Anyone on your Wi‑Fi can change the house.' : 'The passcode is set.')
     close()
   } catch (e: any) { error.value = e.message }
   busy.value = false

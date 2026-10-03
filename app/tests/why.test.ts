@@ -193,7 +193,7 @@ describe('one line of the log, as a sentence', () => {
 
   it('owns up when a routine ran but something did not respond', () => {
     const e = explain(event({ detail: JSON.stringify({ rule: 'evening', trigger: { motion: 'on' }, failed: ['light.a'] }) }))
-    expect(e.sub).toContain("one thing didn't respond")
+    expect(e.sub).toContain("one thing didn't answer")
   })
 
   it('does not pretend to know a routine that has since been deleted', () => {

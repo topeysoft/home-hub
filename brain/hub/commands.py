@@ -208,7 +208,7 @@ def aloud(text: str) -> str:
 POINTERS = {"explain": "There's an answer on the screen.",
             "action": "There's something to confirm on the screen.",
             "rule": "I've written that up; it's waiting under Routines.",
-            "look": "It's playing on the roof. Keep it from the screen."}
+            "look": "It's playing on the roof. Keep it on the screen."}
 
 
 # ---------------------------------------------------------------- a look, said (design/roofline/SaidC)
@@ -539,8 +539,8 @@ class Commands:
             try: await self.hub.act(d, action, data, source="user", said=said)
             except Exception: failed.append(d.name)
         if failed and len(failed) == len(targets):
-            raise NotUnderstood(f"{failed[0]} didn't respond." if len(failed) == 1 else "None of them responded.")
-        if failed: text = f"{text[:-1]}; {', '.join(failed)} didn't respond."
+            raise NotUnderstood(f"{failed[0]} isn't answering." if len(failed) == 1 else "None of them are answering.")
+        if failed: text = f"{text[:-1]}; {', '.join(failed)} didn't answer."
         return {"kind": "done", "text": text, "devices": [d.id for d in targets], "action": action, "count": len(targets) - len(failed)}
 
     # ---- sounds on a speaker ----

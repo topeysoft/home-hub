@@ -135,7 +135,7 @@ const share = computed(() => {
 const version = computed(() => { const v = store.status?.version; return !v || v === 'dev' ? 'Development build' : v })
 const hub = computed(() => ready.value ? `${version.value} · an update is ready` : version.value)
 const code = computed(() => locked.value ? 'Needed to change the house' : 'Not set: anyone on your Wi‑Fi can change the house')
-const notes = computed(() => store.notes.length === 1 ? store.notes[0].text : `${store.notes.length} things have stopped answering`)
+const notes = computed(() => store.notes.length === 1 ? store.notes[0].text : `${store.notes.length} things need a look`)
 /* The brain writes this line too. It has to say what is actually inside, and "2 things still on"
    versus "2 things still unlocked" is a distinction the panel cannot make from a count. */
 const happened = computed(() => store.happened?.hint ?? 'What the house did while you were out')

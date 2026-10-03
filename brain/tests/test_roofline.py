@@ -342,7 +342,7 @@ class Evenings(unittest.TestCase):
         self.assertEqual(self.h.roofline.why(self.at(2026, 10, 24, 18, 50), True),
                          "On at dusk because it keeps evenings. Halloween is on in the house, so that is how it looks.")
         self.assertIn("everyday warm white", self.h.roofline.why(self.at(2026, 7, 9, 21, 15), True))
-        self.assertEqual(self.h.roofline.why(self.at(2026, 10, 24, 23, 20), False), "Off at 11:00, the end of its evenings.")
+        self.assertEqual(self.h.roofline.why(self.at(2026, 10, 24, 23, 20), False), "Off at 11 PM, the end of its evenings.")
         self.h.roofline.set_evenings("occasion")
         self.assertEqual(self.h.roofline.why(self.at(2026, 7, 9, 21, 15), False),
                          "No occasion tonight, and its evenings are only for occasions.")

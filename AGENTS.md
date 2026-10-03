@@ -216,17 +216,18 @@ Do not reopen these, and do not propose around them.
   from its line; how many wires a strip has is the controller's to find out, and a person is asked only
   when it says it could not tell. Pinned by `app/e2e/controller.spec.ts`; the words are
   `brain/hub/controller.py`'s.
-- **A house gets its own address once, at the end of setup, and the offer is said plainly** (1 October,
-  `design/address/`, C worded Plain; `design/away/`, C). "From outside, too?" is the optional last step:
-  the house is complete without it, reaching it from outside is a service we run, separate from the house,
-  with the price in the open, stop any time, and what stopping does -- and paying happens on a phone, never
-  on the shared wall. It is offered only when the service says it can be paid for (`/offer`); a house that
-  said Not now is asked on People the first time From outside is turned on, and the address then lives on
-  This hub. Every phone moves to the address once rather than being handed over each time it is let out.
+- **A house gets its own web address once, at the end of setup, and the offer is said plainly** (1 October,
+  `design/address/`, C worded Plain; `design/away/`, C; the words are `design/words-people/` and
+  `design/words-setup/`'s). "Use it anywhere?" is the optional last step: the house is complete without
+  it, using it away from home is a service we run, separate from the house, with the price in the open,
+  stop any time, and what stopping does -- and paying happens on a phone, never on the shared wall screen.
+  It is offered only when the service says it can be paid for (`/offer`); a house that said Not now is
+  asked on People the first time a phone is set to Anywhere, and the web address then lives on The hub.
+  Every phone switches to the web address once rather than being handed over each time it is set to Anywhere.
   The household chooses the name. Pinned by `app/tests/address.test.ts` and `app/e2e/address.spec.ts`; the
   brain's half is `brain/hub/address.py`, the host's `driver-layer/host/away.sh`, the maker's `relay/service`.
 - **The roofline is one light that keeps its own evenings; the occasion only decides how it looks**
-  (1 October, `design/roofline/`). Several boxes are one tile. Evenings are asked once at the end of an
+  (1 October, `design/roofline/`). Several controllers are one tile. Evenings are asked once at the end of an
   outside light's setup, like a porch light, and an occasion still turns nothing on. The occasion owns
   its motion and the only control is Hold it still -- there is no list of effects, and strips inside stay
   still. A household changes a look by saying it in the command box (a fixed grammar, five words of

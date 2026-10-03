@@ -14,7 +14,7 @@ that raised, and the household decided all three on 1 October:
               grammar with no model (hub/commands.py) -- and it plays on the roof before it is kept.
     evenings  B. The roofline keeps evenings of its own, like a porch light: asked once, at the end of
               setting up a light that is outside, "Most rooflines are on from dusk until bedtime. Shall
-              this one?" -- Every evening, Only in an occasion, Not by itself -- and changeable on its
+              this one?" -- Every evening, Only for occasions, Not by itself -- and changeable on its
               pane. An occasion decides only how it LOOKS; dates decide which occasion is showing; and
               an occasion still turns nothing on. The roof turns on because it was asked to keep
               evenings, by the household, once.
@@ -190,7 +190,7 @@ RUN_COLORS = (("Red", "red"), ("Blue", "blue"), ("Green", "green"), ("Pink", "pi
 # ---------------------------------------------------------------- evenings
 
 EVENINGS = ("every", "occasion", "never")
-EVENING_WORDS = {"every": "Every evening", "occasion": "Only in an occasion", "never": "Not by itself"}
+EVENING_WORDS = {"every": "Every evening", "occasion": "Only for occasions", "never": "Not by itself"}
 UNTIL = "23:00"
 # DUSK IS THE HOUSE'S OWN, a little after sunset, so the roof does not light in daylight: the sun four
 # degrees under the horizon, about twenty minutes after it sets. The boards drew 6:41 PM on Oct 24 in
@@ -217,10 +217,9 @@ def _hhmm(s: str) -> dtime:
 
 
 def said_time(t: dtime) -> str:
-    """11:00, the way the boards write it; 12:30 AM past midnight, where a bare number would be noon."""
-    if t.hour < 12 and t.hour >= 1 and t.hour < 5: return t.strftime("%-I:%M AM")
-    if t.hour == 0: return t.strftime("12:%M AM")
-    return t.strftime("%-I:%M")
+    """11 PM, 11:30 PM, 12:30 AM: always with its half of the day, which a bare 11:00 left a household to guess."""
+    h = t.hour % 12 or 12
+    return f"{h}{'' if t.minute == 0 else f':{t.minute:02d}'} {'AM' if t.hour < 12 else 'PM'}"
 
 
 class Roofline:
@@ -259,7 +258,7 @@ class Roofline:
     def begin(self, chip: str, hw: str | None, place: str = "") -> dict:
         """The first outside strip becomes the roofline."""
         if self.exists(): return self.join(chip, hw, place)
-        self._keep(boxes=[{"chip": chip, "hw": hw, "place": place or "The first box", "at": time.time()}],
+        self._keep(boxes=[{"chip": chip, "hw": hw, "place": place or "The first controller", "at": time.time()}],
                    order=None, evenings=None, until=UNTIL, still=False, looks={})
         self.hub.log.add("roofline", chip, None, "begun", source="user")
         self._fold()
@@ -275,7 +274,7 @@ class Roofline:
         if not boxes: return self.begin(chip, hw, place)
         n = len(boxes) + 1
         word = ("first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth")
-        boxes.append({"chip": chip, "hw": hw, "place": place or f"The {word[min(n, 8) - 1]} box", "at": time.time()})
+        boxes.append({"chip": chip, "hw": hw, "place": place or f"The {word[min(n, 8) - 1]} controller", "at": time.time()})
         self._keep(boxes=boxes, order=None)
         self.hub.log.add("roofline", chip, None, "joined", source="user", detail={"place": place})
         self._fold()
@@ -350,7 +349,7 @@ class Roofline:
 
     async def yard_begin(self) -> dict:
         parts = self.parts()
-        if len(parts) < 2: raise ValueError("A roofline of one run already goes the only way it can.")
+        if len(parts) < 2: raise ValueError("A roofline of one strip already goes the only way it can.")
         known = self.data.get("order")
         pre = known or guess(parts)
         self._yard = {"tapped": [dict(o) for o in pre], "step": "tapping"}
@@ -490,7 +489,7 @@ class Roofline:
 
     # ---- B: evenings ----
     def set_evenings(self, mode: str, until: str | None = None) -> dict:
-        if mode not in EVENINGS: raise ValueError("Every evening, only in an occasion, or not by itself.")
+        if mode not in EVENINGS: raise ValueError("Every evening, only for occasions, or not by itself.")
         self._keep(evenings=mode, **({"until": _hhmm(until).strftime("%H:%M")} if until else {}))
         self.hub.log.add("roofline", "evenings", None, mode, source="user")
         return self.status()
