@@ -799,6 +799,22 @@ async def panel_caching(request: Request, call_next):
     return r
 
 
+def across_origins() -> set[str]:
+    """The origins that may call this hub from another name, and frame it: the house's own name, and the app every
+    house lives in (design/houses/). Both follow from the house's address and nothing else, so no setting can talk
+    a house into trusting some other site; the app's dev server talks to the mock brain, not to a house."""
+    return {o for o in (hub.address.public_origin(), hub.address.app_origin()) if o}
+
+
+@app.middleware("http")
+async def framed_by(request: Request, call_next):
+    """Who may show the panel inside a page of their own: the house itself, and the app every house lives in.
+    Nobody else -- until 3 October nothing said so, and any site could frame the panel and lay its own buttons over it."""
+    response = await call_next(request)
+    response.headers["Content-Security-Policy"] = "frame-ancestors " + " ".join(["'self'", *sorted(across_origins())])
+    return response
+
+
 @app.middleware("http")
 async def across_names(request: Request, call_next):
     """The app on the house's own name (https://<house>.elyir.app) calling the hub's name at home directly
@@ -808,7 +824,7 @@ async def across_names(request: Request, call_next):
     wraps the door: a refusal from settings_lock reaches the app with these headers, readable as a refusal
     rather than as a network error. design/away/, C; docs/away.md."""
     origin = request.headers.get("origin")
-    ok = bool(origin) and origin == hub.address.public_origin()
+    ok = bool(origin) and origin in across_origins()
     if ok and request.method == "OPTIONS" and request.headers.get("access-control-request-method"):
         headers = {"Access-Control-Allow-Origin": origin, "Vary": "Origin", "Access-Control-Max-Age": "600",
                    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE",
@@ -2215,11 +2231,27 @@ def _ws_refused(ws: WebSocket, bridge_ok: bool = False) -> int | None:
     host and never comes in from away; then, once the house has a code, only its own phones.
     Returns the close code to refuse with, or None to let it in.
     """
+    if not _ws_origin_ok(ws): return 4403
     phone = hub.phones.identify(_ws_token(ws)) if hub.lock.locked else None
     if from_away(ws.headers) and not (phone and phone.get("remote")): return 4403
     if bridge_ok and hub.share.is_bridge(ws.headers.get(SERVICE_HEADER)): return None
     if hub.lock.locked and not phone: return 4401
     return None
+
+
+def _ws_origin_ok(ws: WebSocket) -> bool:
+    """A browser says which page opened a websocket, and nothing else checks it: http has CORS, a websocket has
+    only this. A page on some other site, open on a phone on the Wi-Fi of a house with no passcode, could otherwise
+    open the house's stream and drive it. So: no Origin (the bridge, anything that is not a browser); the page's own
+    host, however it was reached (hub.local, an address, the house's names); the origins across_names answers; and
+    this machine, which is the panel's dev server."""
+    origin = ws.headers.get("origin")
+    if not origin: return True
+    if origin in across_origins(): return True
+    try: host = urllib.parse.urlsplit(origin).hostname or ""
+    except ValueError: return False
+    if host in ("localhost", "127.0.0.1", "::1"): return True
+    return host == (ws.headers.get("host") or "").rsplit(":", 1)[0].strip("[]").lower()
 
 
 def _ws_token(ws: WebSocket) -> str | None:
@@ -2399,10 +2431,12 @@ def phones_move(request: Request):
     phone = request.state.phone
     if request.state.away: raise HTTPException(403, "A phone moves to the house's address from inside the house.")
     if not phone: raise HTTPException(409, "Only a phone that belongs to the house can move to its address.")
-    origin = hub.address.public_origin()
-    if not origin: raise HTTPException(409, "The house has no address of its own yet.")
+    app = hub.address.app_origin()
+    if not app: raise HTTPException(409, "The house has no address of its own yet.")
     code = hub.phones.start_move(phone["id"])
-    return {"code": code, "url": f"{origin}/?move={code}", "ttl": hub.phones.MOVE_TTL}
+    # Into the one app every house lives in (design/houses/, MoveToApp, decided 3 October): the house's label and
+    # the code ride in the fragment, which never leaves the phone -- not in a log, not in a Referer.
+    return {"code": code, "url": f"{app}/add#h={hub.address.house()}&c={code}", "ttl": hub.phones.MOVE_TTL}
 
 
 @app.post("/phones/move/claim")
@@ -2411,10 +2445,13 @@ def phones_move_claim(body: dict, request: Request):
     nothing else yet; the code is the proof -- good once, for ten minutes, minted inside the house for a phone
     that was already in. The token comes back in the body as well as the cookie, because the app on the
     house's own name has to send it to the hub's name at home, where its cookie is not sent."""
+    wait = hub.phones.move_wait()
+    if wait > 0: raise HTTPException(429, f"Too many codes that weren't right. Wait {int(wait / 60) + 1} minutes.")
     got = hub.phones.claim_move(str(body.get("code") or ""))
-    if not got: raise HTTPException(410, "That move has run out. Start it again on the phone, at home.")
+    if not got: raise HTTPException(410, "That code has run out or isn't right. Get a new one on the house's screen.")
     phone, token = got
-    return _with_cookie({"token": token, "phone": hub.phones._public(phone, phone), "lan": hub.address.lan_name()}, request, phone, token)
+    return _with_cookie({"token": token, "phone": hub.phones._public(phone, phone), "lan": hub.address.lan_name(),
+                         "address": hub.address.public_origin()}, request, phone, token)
 
 
 @app.get("/phones")

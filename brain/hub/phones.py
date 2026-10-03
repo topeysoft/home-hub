@@ -168,18 +168,36 @@ class Phones:
     # so a move that is abandoned halfway costs nothing. The code is good once, for ten minutes, and is only
     # ever minted for a phone that is already in, from inside the house.
     MOVE_TTL = 10 * 60
+    # The code is typed: on an iPhone the Home Screen app keeps its own storage, so a house is carried into the app
+    # by a person reading eight characters off one screen and typing them on the other (design/houses/, AppSafari).
+    # No 0/O, no 1/I/L. 31^8 is about 850 billion, and the claim is open from away, so wrong ones are counted --
+    # for the whole house, not per address: behind the house's own proxy and the relay every phone is one address.
+    MOVE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
+    MOVE_WRONG, MOVE_WRONG_WINDOW = 10, 10 * 60
 
     def start_move(self, phone_id: str) -> str:
         if not self.get(phone_id): raise KeyError(phone_id)
         now = time.time()
         self.moves = {c: m for c, m in self.moves.items() if m[1] > now}
-        code = secrets.token_urlsafe(16)
+        code = "".join(secrets.choice(self.MOVE_ALPHABET) for _ in range(8))
         self.moves[code] = (phone_id, now + self.MOVE_TTL)
         return code
 
+    @staticmethod
+    def move_code(typed: str) -> str:
+        """What a person typed, as the code: case, spaces and dashes are how it was read aloud, not part of it."""
+        return "".join(c for c in (typed or "").upper() if c.isalnum())
+
+    def move_wait(self) -> float:
+        """Seconds before another claim is listened to, once ten wrong codes have come in ten minutes."""
+        now = time.time()
+        self.move_misses = [t for t in getattr(self, "move_misses", []) if t > now - self.MOVE_WRONG_WINDOW]
+        return (self.move_misses[0] + self.MOVE_WRONG_WINDOW - now) if len(self.move_misses) >= self.MOVE_WRONG else 0.0
+
     def claim_move(self, code: str) -> tuple[dict, str] | None:
         """The phone, and a new token for it, for a code minted at home in the last ten minutes. Once only."""
-        m = self.moves.pop(code or "", None)
+        m = self.moves.pop(self.move_code(code), None)
+        if not m: self.move_misses = getattr(self, "move_misses", []) + [time.time()]
         if not m or m[1] < time.time(): return None
         p = self.get(m[0])
         if not p: return None
