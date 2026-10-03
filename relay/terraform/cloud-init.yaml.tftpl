@@ -9,6 +9,7 @@
 #   relay-api-frpc  how that Caddy is reached: through frps, exactly the way a house's door is
 #   relay-printers-frpc  the same for printers.elyir.app, the printer app's static files, which that
 #                   Caddy also serves (relay/README.md, *The printer app*)
+#   relay-houses-frpc    and for houses.elyir.app, the Houses app, served the same way (*The Houses app*)
 #
 # The service's file and Caddy's certificate live on a Hetzner volume mounted at /var/lib/relay, so a
 # rebuilt box comes back knowing every house, without asking Let's Encrypt for api.elyir.app again.
@@ -104,6 +105,30 @@ write_files:
       name = "door"
       type = "https"
       customDomains = ["printers.${zone}"]
+      localIP = "127.0.0.1"
+      localPort = 9443
+      transport.proxyProtocolVersion = "v2"
+
+  # houses.elyir.app, the same way again: the Houses app's static files, from the same Caddy.
+  - path: /etc/frp/houses-frpc.toml
+    permissions: '0600'
+    owner: root:root
+    content: |
+      serverAddr = "127.0.0.1"
+      serverPort = 443
+      loginFailExit = false
+      auth.method = "token"
+      auth.token = "${auth_token}"
+      user = "houses"
+      metadatas.house = "houses"
+      metadatas.secret = "${houses_secret}"
+      transport.tls.disableCustomTLSFirstByte = false
+      log.to = "console"
+
+      [[proxies]]
+      name = "door"
+      type = "https"
+      customDomains = ["houses.${zone}"]
       localIP = "127.0.0.1"
       localPort = 9443
       transport.proxyProtocolVersion = "v2"
@@ -214,6 +239,35 @@ write_files:
         file_server
       }
 
+      # The Houses app: the phone's one app for every house it has joined, static files published from
+      # this repository the way the printer app is published from its own. Each house's screen is
+      # framed inside it from that house's own name, so the page may talk to and frame names under this
+      # zone and nowhere else. It never uses the camera itself; a framed house is its own origin and
+      # asks for its own. Like the printer app, it may not be framed and runs no script it did not ship.
+      houses.${zone}:9443 {
+        bind 127.0.0.1
+        tls {
+          issuer acme {
+            disable_http_challenge
+            alt_tlsalpn_port 9443
+          }
+        }
+        root * /srv/houses/current
+        header {
+          Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.${zone}; connect-src 'self' https://*.${zone} wss://*.${zone}; frame-src https://*.${zone}; worker-src 'self'; manifest-src 'self'; font-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'"
+          X-Content-Type-Options nosniff
+          Referrer-Policy no-referrer
+          Permissions-Policy "camera=(), microphone=(), geolocation=()"
+          -Server
+        }
+        @hashed path /assets/*
+        header @hashed Cache-Control "public, max-age=31536000, immutable"
+        @fresh not path /assets/*
+        header @fresh Cache-Control "no-cache"
+        try_files {path} /index.html
+        file_server
+      }
+
   - path: /etc/systemd/system/frps.service
     permissions: '0644'
     owner: root:root
@@ -259,7 +313,9 @@ write_files:
         -e RELAY_ZONE=${zone} \
         -e RELAY_SELF_SECRET=${self_secret} \
         -e RELAY_PRINTERS_SECRET=${printers_secret} \
+        -e RELAY_HOUSES_SECRET=${houses_secret} \
         -e RELAY_NEARBY_SECRET=${nearby_secret} \
+        -e RELAY_NEARBY_ORIGINS=https://printers.${zone},https://houses.${zone} \
         -e RELAY_FRPS_TOKEN=${auth_token} \
         -e RELAY_OFFER_OPEN=${offer_open} \
         -e RELAY_DNS_PORT=53 \
@@ -289,6 +345,7 @@ write_files:
         -v /etc/relay/Caddyfile:/etc/caddy/Caddyfile:ro \
         -v /var/lib/relay/caddy:/data \
         -v /var/lib/relay/printers:/srv/printers:ro \
+        -v /var/lib/relay/houses:/srv/houses:ro \
         caddy:2
       ExecStop=/usr/bin/docker stop relay-api-door
 
@@ -339,6 +396,28 @@ write_files:
       [Install]
       WantedBy=multi-user.target
 
+  - path: /etc/systemd/system/relay-houses-frpc.service
+    permissions: '0644'
+    owner: root:root
+    content: |
+      [Unit]
+      Description=houses.${zone} through the relay
+      After=frps.service relay-service.service
+      Requires=docker.service
+
+      [Service]
+      Restart=always
+      RestartSec=5
+      ExecStartPre=-/usr/bin/docker rm -f relay-houses-frpc
+      ExecStart=/usr/bin/docker run --rm --name relay-houses-frpc \
+        --network host \
+        -v /etc/frp/houses-frpc.toml:/etc/frp/frpc.toml:ro \
+        fatedier/frpc:v${frp_version} -c /etc/frp/frpc.toml
+      ExecStop=/usr/bin/docker stop relay-houses-frpc
+
+      [Install]
+      WantedBy=multi-user.target
+
   - path: /etc/systemd/system/relay-nearby-frpc.service
     permissions: '0644'
     owner: root:root
@@ -374,7 +453,7 @@ runcmd:
   - grep -q '${volume_device}' /etc/fstab || echo '${volume_device} /var/lib/relay ext4 defaults,nofail,discard 0 2' >> /etc/fstab
   - systemctl daemon-reload
   - mount /var/lib/relay
-  - mkdir -p /var/lib/relay/service /var/lib/relay/caddy /var/lib/relay/printers
+  - mkdir -p /var/lib/relay/service /var/lib/relay/caddy /var/lib/relay/printers /var/lib/relay/houses
   # The box's ssh identity lives on the volume too, so a rebuilt box is the same host to everyone who
   # has connected before. Found 2 October 2026: every rebuild changed the host key and ssh refused it.
   - if [ -d /var/lib/relay/ssh ]; then cp -p /var/lib/relay/ssh/ssh_host_* /etc/ssh/ && (systemctl restart ssh || systemctl restart sshd); else mkdir -p -m 700 /var/lib/relay/ssh && cp -p /etc/ssh/ssh_host_* /var/lib/relay/ssh/; fi
@@ -384,4 +463,5 @@ runcmd:
   - systemctl enable --now relay-api-door
   - systemctl enable --now relay-api-frpc
   - systemctl enable --now relay-printers-frpc
+  - systemctl enable --now relay-houses-frpc
   - systemctl enable --now relay-nearby-frpc

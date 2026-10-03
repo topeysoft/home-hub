@@ -66,12 +66,23 @@ trusts that code with its printers' tokens, which is why the site sends a strict
 `Content-Security-Policy` (scripts from itself only; talking and framing only to names under the zone)
 and may not be framed itself.
 
+**The Houses app** (`houses.elyir.app`, since 3 October 2026) is the phone's one app for every house it
+has joined, and is set up on the box exactly as the printer app is: static files from the same Caddy,
+carried as one more always-carried name, its secret derived from the relay token, `houses` kept from any
+house. It belongs to this repository (`app/`, built with `npm run build:houses`) and is published with
+`tools/publish-houses.sh`, never edited on the box: the script builds a commit in a clean checkout,
+unpacks it into `/var/lib/relay/houses/<version>/` and switches `current` to it, keeping the last five so
+`ROLLBACK=<version> tools/publish-houses.sh` can switch back. Each house's screen is framed inside it from
+that house's own name, so its `Content-Security-Policy` is the printer app's -- talking and framing only to
+names under the zone, and never framed itself -- and it asks for no camera of its own. It may read
+`/nearby` from a page too.
+
 **Which printers are on this Wi-Fi** (`nearby.elyir.app`, since 2 October 2026): the service notes the public
 address each house's tunnel logs in from, and `GET https://nearby.elyir.app/nearby` answers with the carried
 names behind the asker's own address, so the printer app can list a house's printers without anybody typing
 a name. Names only; connecting still means asking from that house's own Wi-Fi. The name has an A record and
 no AAAA on purpose: tunnels arrive over IPv4, and a dual-stack phone asking over IPv6 would match nothing.
-Only the printer app's origin may read the answer from a page.
+Only the printer app's and the Houses app's origins may read the answer from a page.
 
 The box's ssh host keys live on the volume as well, so a rebuild is the same host to every client that
 has connected before.

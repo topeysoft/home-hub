@@ -6,7 +6,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from app import CLAIMS_PER_DAY, make
+from app import CLAIMS_PER_DAY, make, nearby_origins, seed_own_names
 from registry import DAY, Registry
 
 
@@ -123,3 +123,37 @@ class Nearby(unittest.TestCase):
         self.r.seen("obi1", "[2001:db8::5]:443")
         self.assertEqual(self.r.nearby("203.0.113.9"), [])
         self.assertEqual(self.r.nearby("2001:db8::5"), ["obi1"])
+
+
+class OwnNames(unittest.TestCase):
+    """The names the box carries for itself: each app is carried from the secret cloud-init hands it, and may
+    read /nearby from a page, while staying out of the list /nearby gives."""
+    def setUp(self):
+        self.dir = tempfile.TemporaryDirectory()
+        self.t = 1_790_000_000.0
+        self.r = Registry(Path(self.dir.name) / "houses.db", now=lambda: self.t)
+
+    def tearDown(self):
+        self.r.db.close(); self.dir.cleanup()
+
+    def test_every_app_on_this_box_is_always_carried(self):
+        env = {"RELAY_SELF_SECRET": "a", "RELAY_PRINTERS_SECRET": "p", "RELAY_HOUSES_SECRET": "h", "RELAY_NEARBY_SECRET": "n"}
+        seed_own_names(self.r, env)
+        for name, secret in (("api", "a"), ("printers", "p"), ("houses", "h"), ("nearby", "n")):
+            self.assertIsNone(self.r.judge("Login", {"user": name, "metas": {"house": name, "secret": secret},
+                                                     "client_address": "203.0.113.9:1"}), name)
+        self.t += 50 * 365 * DAY
+        self.assertIsNone(self.r.judge("Login", {"user": "houses", "metas": {"house": "houses", "secret": "h"}}))
+        self.assertEqual(self.r.nearby("203.0.113.9"), [], "the service's own names never show on /nearby")
+
+    def test_a_name_without_its_secret_is_not_seeded(self):
+        seed_own_names(self.r, {"RELAY_PRINTERS_SECRET": "p"})
+        self.assertIsNotNone(self.r.judge("Login", {"user": "houses", "metas": {"house": "houses", "secret": ""}}))
+
+    def test_both_apps_may_read_nearby_and_their_dev_servers_too(self):
+        self.assertEqual(nearby_origins("elyir.app", {}), ("https://printers.elyir.app", "https://houses.elyir.app",
+                                                           "http://localhost:5173", "http://localhost:5174"))
+        self.assertEqual(nearby_origins("elyir.app", {"RELAY_NEARBY_ORIGINS": " https://houses.elyir.app , "}), ("https://houses.elyir.app",))
+        app = make(self.r, nearby_origins=nearby_origins("elyir.app", {}))
+        r = TestClient(app, client=("203.0.113.9", 4000)).get("/nearby", headers={"Origin": "https://houses.elyir.app"})
+        self.assertEqual(r.headers["access-control-allow-origin"], "https://houses.elyir.app")

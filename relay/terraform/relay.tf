@@ -101,6 +101,8 @@ resource "hcloud_server" "relay" {
     self_secret = sha256("api:${var.relay_auth_token}")
     # The printer app's name, carried the same way and derived the same way.
     printers_secret = sha256("printers:${var.relay_auth_token}")
+    # The Houses app's name, the same way: one more set of static files on this box.
+    houses_secret = sha256("houses:${var.relay_auth_token}")
     # And the name that answers "which printers are on this Wi-Fi", the same way again.
     nearby_secret = sha256("nearby:${var.relay_auth_token}")
   })

@@ -127,18 +127,33 @@ def make(registry: Registry, now=time.time, relay: dict | None = None, offer: di
     return app
 
 
+# The names this box carries for itself, each with the secret cloud-init derived from the relay token.
+# The apps' static files are served from this box like api is (cloud-init), so they are always carried.
+SEEDED = (("api", "RELAY_SELF_SECRET", "the service itself"),
+          ("printers", "RELAY_PRINTERS_SECRET", "the printer app"),
+          ("houses", "RELAY_HOUSES_SECRET", "the Houses app"),
+          ("nearby", "RELAY_NEARBY_SECRET", "on this Wi-Fi"))
+
+
+def seed_own_names(registry: Registry, env=os.environ):
+    for label, var, note in SEEDED:
+        if env.get(var): registry.seed(label, env[var], note=note)
+
+
+def nearby_origins(zone: str, env=os.environ) -> tuple:
+    """Who may read /nearby from a page: the printer app and the Houses app, and each one's dev server on its
+    developer's own machine (5173 the printer app's, 5174 the Houses app's). The box sets the list itself
+    (cloud-init) without the localhost ones; this default is for running the service anywhere else."""
+    default = f"https://printers.{zone},https://houses.{zone},http://localhost:5173,http://localhost:5174"
+    return tuple(o.strip() for o in env.get("RELAY_NEARBY_ORIGINS", default).split(",") if o.strip())
+
+
 def main():
     import uvicorn
     data = Path(os.environ.get("RELAY_DATA", "/data"))
     data.mkdir(parents=True, exist_ok=True)
     registry = Registry(data / "houses.db", zone=os.environ.get("RELAY_ZONE", "elyir.app"))
-    if os.environ.get("RELAY_SELF_SECRET"):
-        registry.seed("api", os.environ["RELAY_SELF_SECRET"])
-    # The printer app's static files, served from this box like api is (cloud-init): always carried.
-    if os.environ.get("RELAY_PRINTERS_SECRET"):
-        registry.seed("printers", os.environ["RELAY_PRINTERS_SECRET"], note="the printer app")
-    if os.environ.get("RELAY_NEARBY_SECRET"):
-        registry.seed("nearby", os.environ["RELAY_NEARBY_SECRET"], note="on this Wi-Fi")
+    seed_own_names(registry)
     relay = {"addr": os.environ.get("RELAY_ADDR", f"relay.{registry.zone}"), "token": os.environ.get("RELAY_FRPS_TOKEN", "")}
     # The price is words, not a number: what it costs and how often, as the panel will say it.
     offer = {"open": os.environ.get("RELAY_OFFER_OPEN") == "1", "price": os.environ.get("RELAY_PRICE") or None, "pay": os.environ.get("RELAY_PAY_URL") or None}
@@ -148,9 +163,7 @@ def main():
     # The address in the name (home.py): authoritative for home.<zone>, on 53 when RELAY_DNS_PORT says so.
     if os.environ.get("RELAY_DNS_PORT"):
         serve(home, ns=os.environ.get("RELAY_NS", f"ns1.{registry.zone}"), port=int(os.environ["RELAY_DNS_PORT"]))
-    # Who may read /nearby from a page: the printer app, and its developer's own machine.
-    origins = tuple(o.strip() for o in os.environ.get("RELAY_NEARBY_ORIGINS", f"https://printers.{registry.zone},http://localhost:5173").split(",") if o.strip())
-    uvicorn.run(make(registry, relay=relay, offer=offer, home=home, nearby_origins=origins), host="127.0.0.1", port=int(os.environ.get("RELAY_PORT", "7100")),
+    uvicorn.run(make(registry, relay=relay, offer=offer, home=home, nearby_origins=nearby_origins(registry.zone)), host="127.0.0.1", port=int(os.environ.get("RELAY_PORT", "7100")),
                 proxy_headers=True, forwarded_allow_ips="127.0.0.1")
 
 
