@@ -82,14 +82,31 @@ export async function claim(origin: string, code: string): Promise<{ token: stri
   return { token: body.token, lan: body.lan ?? null, home }
 }
 
-/** Which named houses are on the same Wi-Fi as this phone, by the relay (nearby.elyir.app; AppFirst). */
+/** Which named houses are on the same Wi-Fi as this phone (AppFirst). The relay (nearby.elyir.app) knows only
+    which names log in from this phone's address, and a printer has a name there too, so each name is asked
+    whether it is a house: a hub answers /alive with its build, to this app, and a printer answers with its page
+    or not at all. Found 3 October, when the list on the maker's own Wi-Fi was one house and three printers.
+    A hub too old to answer this app is left out as well -- it could not be added from here anyway. */
 export async function nearby(here: { hostname: string }): Promise<string[]> {
   if (here.hostname === 'localhost') return []
   const zone = here.hostname.split('.').slice(1).join('.')
+  let names: string[]
   try {
     const r = await fetch(`https://nearby.${zone}/nearby`, { cache: 'no-store', signal: AbortSignal.timeout(4000) })
-    return ((await r.json()).names ?? []).filter((n: unknown) => typeof n === 'string')
+    names = ((await r.json()).names ?? []).filter((n: unknown) => typeof n === 'string')
   } catch { return [] }
+  const houses = await Promise.all(names.map(n => isHouse(`https://${n}.${zone}`)))
+  return names.filter((_, i) => houses[i])
+}
+
+/** Whether the name answers like a hub: /alive, from this app, as JSON with the build in it. */
+export async function isHouse(origin: string): Promise<boolean> {
+  try {
+    const r = await fetch(`${origin}/alive`, { cache: 'no-store', signal: AbortSignal.timeout(4000) })
+    if (!r.ok || !(r.headers.get('content-type') || '').includes('application/json')) return false
+    const body = await r.json()
+    return body?.ok === true && typeof body.version === 'string'
+  } catch { return false }
 }
 
 /** Where a house can be reached from here, and how it answers: its Wi-Fi name for a second and a half, then its own name. */
