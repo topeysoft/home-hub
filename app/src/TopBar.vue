@@ -11,18 +11,18 @@
  */
 import { computed } from 'vue'
 import { stripWaiting } from './adding'
+import { homeTab } from './layout'
 import { store, updateReady, weatherParts } from './store'
 import Icon from './Icon.vue'
 import WeatherArt from './WeatherArt.vue'
+import { narrow, setupLeft, setupNow } from './band'
+import { app, inApp, openHouses } from './inapp'
 
 const props = defineProps<{ clock: string; day: string; now: Date; tab: 'home' | 'rooms' | 'cameras'; inRoom: boolean }>()
 const emit = defineEmits<{ go: [tab: 'home' | 'rooms' | 'cameras'] }>()
 
 /* the first tab is named for the time of day, the way the greeting is */
-const yours = computed(() => {
-  const h = props.now.getHours()
-  return h < 5 ? 'Your night' : h < 12 ? 'Your morning' : h < 17 ? 'Your afternoon' : h < 21 ? 'Your evening' : 'Your night'
-})
+const yours = computed(() => homeTab(props.now.getHours()))
 /* The sky, in the bar, and only where a phone has taken it out of the stage --
    see the Wall's phone rules in panel.css, and design/phone/Main.dc.html. It is
    rendered always and hidden by CSS rather than switched here, because whether
@@ -31,9 +31,12 @@ const yours = computed(() => {
    words do not fit a 390px bar on the day the forecast says "Unusual weather". */
 const temp = computed(() => weatherParts().temp)
 
-/* Things waiting to be set up: found on the network, and a strip still knocking. One number,
+/* On a phone the setup suggestions are not in the band but in This house, so its door says so. */
+const unfinished = computed(() => narrow.value && setupLeft(setupNow()) > 0)
+
+/* Things waiting to be set up: found on the network, 3D printers on the Wi-Fi, and a strip still knocking. One number,
    because to a household they are the same sentence -- something new, not set up yet. */
-const waiting = computed(() => store.found.length + (stripWaiting(store.strip?.state) ? 1 : 0))
+const waiting = computed(() => store.found.length + (store.printers?.found.length ?? 0) + (stripWaiting(store.strip?.state) ? 1 : 0))
 
 const tabs = computed(() => [
   { id: 'home' as const, label: yours.value, icon: 'home' },
@@ -55,18 +58,25 @@ const tabs = computed(() => [
       </button>
     </nav>
     <div class="topbar-right">
+      <!-- The house, then what it is like there (design/band/, NameThenSky): on a phone this is the top
+           row, and its left end is where a screen says what it is. With one house that is whether it is
+           connected; with several it will be the house's name (design/houses/, B). -->
+      <button v-if="inApp && app.name" class="house-switch" :class="{ up: store.linkUp, others: app.others }" @click="openHouses"
+              :aria-label="app.others ? `${app.name}. Another house needs you. Switch house` : `${app.name}. Switch house`">
+        <span class="house-switch-dot"></span><span class="house-switch-name">{{ app.name }}</span><Icon name="chevron" :size="14" class="house-switch-open" />
+      </button>
+      <span v-else class="link" :class="{ up: store.linkUp }">{{ store.linkUp ? 'Connected' : 'Reconnecting' }}</span>
       <span class="topbar-wx" v-if="temp" :aria-label="`Outside, ${temp}`">
         <WeatherArt class="topbar-cloud" />
         <span class="topbar-temp">{{ temp }}</span>
       </span>
-      <span class="link" :class="{ up: store.linkUp }">{{ store.linkUp ? 'Connected' : 'Reconnecting' }}</span>
       <!-- The dot is the quiet half of an arrival and it does not fold: a knock's line in the band
            stops shouting after an hour, and this stays for as long as the thing is knocking, so the
            house goes quiet without forgetting. design/knock/. -->
       <button class="topbar-add" :class="{ attention: waiting }" @click="store.sheet = 'add'" :aria-label="waiting ? `Add to the house, ${waiting} waiting` : 'Add to the house'">
         <Icon name="plus" :size="18" />
       </button>
-      <button class="topbar-add topbar-house" :class="{ attention: updateReady() }" @click="store.sheet = 'house'" :aria-label="updateReady() ? 'This house, an update is ready' : 'This house'">
+      <button class="topbar-add topbar-house" :class="{ attention: updateReady() || unfinished }" @click="store.sheet = 'house'" :aria-label="updateReady() ? 'This house, an update is ready' : unfinished ? 'This house, setup is not finished' : 'This house'">
         <Icon name="menu" :size="18" />
       </button>
     </div>

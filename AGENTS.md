@@ -208,6 +208,31 @@ Do not reopen these, and do not propose around them.
 - **The Rooms tab is the ranked bento**, direction A, with quiet rooms as an index of rows and the
   bento (not the index) ending flush. `RoomGrid.vue` still serves the Stack home, Rail home and Wall
   view unchanged.
+- **A strip the controller holds dark says so where you reach for it** (1 October,
+  `design/controller-panel/`, held: A with B's row). Its tile reads Staying off with the reason, the room
+  gets a Why?, a tap opens the pane and never a switch that cannot work, and Needs a look carries its row
+  first. Running hot and the 5 A hold are the light behaving and never change the tile. A second strip is
+  asked once, with the strips as the picture, Part of this light first, and can be joined or split later
+  from its line; how many wires a strip has is the controller's to find out, and a person is asked only
+  when it says it could not tell. Pinned by `app/e2e/controller.spec.ts`; the words are
+  `brain/hub/controller.py`'s.
+- **A house gets its own web address once, at the end of setup, and the offer is said plainly** (1 October,
+  `design/address/`, C worded Plain; `design/away/`, C; the words are `design/words-people/` and
+  `design/words-setup/`'s). "Use it anywhere?" is the optional last step: the house is complete without
+  it, using it away from home is a service we run, separate from the house, with the price in the open,
+  stop any time, and what stopping does -- and paying happens on a phone, never on the shared wall screen.
+  It is offered only when the service says it can be paid for (`/offer`); a house that said Not now is
+  asked on People the first time a phone is set to Anywhere, and the web address then lives on The hub.
+  Every phone switches to the web address once rather than being handed over each time it is set to Anywhere.
+  The household chooses the name. Pinned by `app/tests/address.test.ts` and `app/e2e/address.spec.ts`; the
+  brain's half is `brain/hub/address.py`, the host's `driver-layer/host/away.sh`, the maker's `relay/service`.
+- **The roofline is one light that keeps its own evenings; the occasion only decides how it looks**
+  (1 October, `design/roofline/`). Several controllers are one tile. Evenings are asked once at the end of an
+  outside light's setup, like a porch light, and an occasion still turns nothing on. The occasion owns
+  its motion and the only control is Hold it still -- there is no list of effects, and strips inside stay
+  still. A household changes a look by saying it in the command box (a fixed grammar, five words of
+  motion, no model), and it plays on the roof before it is kept. The way round is asked in the yard only
+  once a chase is wanted. `brain/hub/roofline.py`, pinned by `brain/tests/test_roofline.py`.
 
 ---
 
@@ -217,6 +242,13 @@ Match the file you are editing. This codebase opens most files with a short pros
 what the thing is *for* and why it exists, in plain words rather than API terms. Comments explain
 the reason, not the mechanism. Write commit subjects as what the change does for the person using
 the hub.
+
+**Words on the screen are read by somebody who was not here.** Every label, heading and description
+in a change, boards included, has to make sense to a new household member glancing at a phone. Our
+own working names (*from outside*, door, let out, the band, the relay) are not product words, any
+more than Home Assistant's are. This binds every change from 1 October 2026 on. The existing wording
+is owed a full pass of its own; [`docs/wording.md`](docs/wording.md) holds the rule, the list so far,
+and how the pass is done. Add to that list when a word stops you, rather than fixing it in passing.
 
 **American spelling everywhere** — code, comments, tests, docs, design notes, commit messages,
 replies: color, behavior, center, recognize, gray, license, canceled, catalog, artifact, neighbor.

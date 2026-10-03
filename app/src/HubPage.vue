@@ -10,6 +10,8 @@ import Restore from './Restore.vue'
 import AdvancedLink from './AdvancedLink.vue'
 import Drivers from './Drivers.vue'
 import NetworkSheet from './NetworkSheet.vue'
+import { getAddress, turnAddress, type AddressState } from './api'
+import { outsideRow } from './address'
 import BridgeCard from './BridgeCard.vue'
 import Icon from './Icon.vue'
 import { locale, languageName, LANGUAGES } from './lang'
@@ -21,7 +23,7 @@ const busy = ref(false)
 async function backup() {
   if (busy.value) return
   busy.value = true
-  try { await downloadBackup(); notify('Your backup is on its way. Keep it somewhere safe; it holds the house’s keys.') }
+  try { await downloadBackup(); notify('Your backup is on its way. Keep it somewhere safe; it holds the house’s passwords and sign-ins.') }
   catch (e: any) { notify(e.message, 'error') }
   busy.value = false
 }
@@ -120,6 +122,7 @@ const earlier = ref(false)
 const earlierReleases = computed(() => (notes.value?.history ?? []).filter(r => r.version !== notes.value?.notes?.version && r.what.length))
 onMounted(async () => {
   loadNet()     // not awaited: the Network row is a fact the hub already holds, and nothing below needs it
+  loadAddress()
   loadBridges()
   try { notes.value = await getUpdateNotes() } catch { /* an older hub, or no notes in this build */ }
   if (store.status?.update?.whats_new) { try { await markNotesRead() } catch { /* it will come back tomorrow */ } }
@@ -174,7 +177,7 @@ const netLine = computed(() => {
   if (n.moving) return `Moving to ${n.moving.ssid}…`
   if (n.how === 'cable') return 'On a cable.'
   if (n.how === 'wifi') return `On ${n.ssid}.${n.signal === 'strong' ? ' Strong.' : n.signal === 'faint' ? ' Faint.' : ''}`
-  if (n.how === 'none') return 'Not on anything.'
+  if (n.how === 'none') return 'Not connected to a network.'
   return 'Looked after by the machine this runs on.'
 })
 const netSub = computed(() => {
@@ -194,6 +197,19 @@ const netSub = computed(() => {
   if (!b.checked) return `${them} given ${b.ssid}. ${n.how === 'cable' ? 'The hub can’t check that one from a cable' : 'Nothing here can check that one'}, so it takes your word for it.`
   return `${them} given ${b.ssid}.`
 })
+/* The house's own address, once it has one (design/address/, All three after). A house without one
+   shows nothing here: it is asked once in setup, and where else it is offered is not this page. */
+const address = ref<AddressState | null>(null)
+const outside = computed(() => outsideRow(address.value))
+const turning = ref(false)
+async function loadAddress() { try { address.value = await getAddress() } catch { /* an older hub, or no service: the row stays away */ } }
+async function turnOutside() {
+  if (!address.value || turning.value) return
+  turning.value = true
+  try { address.value = await turnAddress(address.value.want === 'off') } catch (e: any) { notify(e.message, 'error') }
+  turning.value = false
+}
+
 async function loadNet() { try { net.value = await getNetwork() } catch { /* an older hub: the row stays away */ } }
 
 /*
@@ -225,7 +241,7 @@ const when = (ts?: number | null) => ts ? new Date(ts * 1000).toLocaleString(loc
 
 <template>
   <div class="page">
-    <p class="page-lede">The little computer running the house. It looks after itself; this is where you check on it.</p>
+    <p class="page-lede">The small computer running the house. It looks after itself; this is where you check on it.</p>
 
     <ul class="hub-rows">
       <li :class="{ asking: !!uask }">
@@ -278,10 +294,15 @@ const when = (ts?: number | null) => ts ? new Date(ts * 1000).toLocaleString(loc
         <button class="button small" v-if="!net.moving" @click="netOpen = true">Change</button>
         <span class="hub-sub" v-else>Moving…</span>
       </li>
+      <li v-if="outside">
+        <span class="hub-k">Web address</span>
+        <span class="hub-v">{{ outside.value }}<span class="hub-sub line">{{ outside.sub }}</span></span>
+        <button class="button small ghost" :class="{ busy: turning }" @click="turnOutside">{{ outside.action }}</button>
+      </li>
       <li :class="{ asking: langOpen }">
         <span class="hub-k">Language</span>
         <span class="hub-v">{{ languageName(lang) }}
-          <span class="hub-sub line">What your devices&rsquo; makers are called, the place search, the dates and the voice. The house&rsquo;s own words are English for now.</span>
+          <span class="hub-sub line">Dates, place names and device makers&rsquo; names follow it. The panel&rsquo;s own words are English for now.</span>
           <span class="hub-langs" v-if="langOpen">
             <button v-for="l in LANGUAGES" :key="l.code" class="chip-btn" :class="{ on: l.code === lang }"
                     :disabled="langBusy" @click="pickLanguage(l.code)">
@@ -312,7 +333,7 @@ const when = (ts?: number | null) => ts ? new Date(ts * 1000).toLocaleString(loc
       </li>
       <li>
         <span class="hub-k">Backup</span>
-        <span class="hub-v">Everything the house knows, in one file.<span class="hub-sub line">Settings, rooms, routines, the engine's setup and the radios' keys. It holds the house's keys, so keep the file private.</span></span>
+        <span class="hub-v">Everything the house knows, in one file.<span class="hub-sub line">Settings, rooms, routines, connections and the radios' keys. It holds the house's keys, so keep the file private.</span></span>
         <button class="button small" :class="{ busy }" @click="backup">{{ busy ? 'Packing…' : 'Back up' }}</button>
       </li>
       <li>
@@ -323,7 +344,7 @@ const when = (ts?: number | null) => ts ? new Date(ts * 1000).toLocaleString(loc
       <li :class="{ asking: !!ask }">
         <span class="hub-k">Restart</span>
         <template v-if="!ask">
-          <span class="hub-v">If something's stuck, turn the hub off and on again.<span class="hub-sub line">Lights and switches keep working. It takes under a minute and this screen comes back on its own.</span></span>
+          <span class="hub-v">If something's stuck, restart the hub.<span class="hub-sub line">Lights and switches keep working. It takes under a minute and this screen comes back on its own.</span></span>
           <button class="button small" v-if="!store.restarting" @click="openRestart('hub')">Restart</button>
           <span class="hub-sub" v-else>Restarting…</span>
         </template>
@@ -338,13 +359,13 @@ const when = (ts?: number | null) => ts ? new Date(ts * 1000).toLocaleString(loc
             <span class="hub-sub line warn" v-if="ask.weary">{{ ask.weary }}</span>
             <span class="hub-sub line warn" v-if="ask.warn">{{ ask.warn }}</span>
             <span class="hub-sub line warn" v-if="ask.blocked">{{ ask.blocked }}</span>
-            <span class="hub-sub line warn" v-else-if="!ask.may">Restarting the house is for the screens that keep it. Someone at the wall can do it.</span>
+            <span class="hub-sub line warn" v-else-if="!ask.may">Restarting needs the passcode. Someone who joined with it can do it.</span>
           </span>
           <span class="note-ask">
             <button class="button small" v-if="ask.may && !ask.blocked" :class="{ busy: restartBusy }" @click="goRestart(!!ask.warn)">{{ ask.yes }}</button>
             <!-- The next rung up, and only once the hub says this one has stopped being the answer.
                  A ladder drawn as a menu is the diagnosis handed back to the household. -->
-            <button class="button small ghost" v-if="ask.harder" @click="openRestart(ask.harder)">Restart {{ ask.harder === 'machine' ? 'the little computer' : 'everything' }} instead</button>
+            <button class="button small ghost" v-if="ask.harder" @click="openRestart(ask.harder)">{{ ask.harder === 'machine' ? 'Power off and on' : 'Full restart' }}</button>
             <button class="button small ghost" @click="ask = null">Not now</button>
           </span>
         </template>
@@ -355,7 +376,7 @@ const when = (ts?: number | null) => ts ? new Date(ts * 1000).toLocaleString(loc
          the four doors, where it answered a question nobody adding a lamp had asked, and where it
          went on listing itself underneath a half-finished one. design/adding/Under.dc.html. -->
     <div class="add-block">
-      <h3 class="label">Behind the scenes</h3>
+      <h3 class="label">Connections</h3>
       <Drivers />
     </div>
 

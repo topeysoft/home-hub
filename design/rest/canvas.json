@@ -47,12 +47,12 @@
     },
     {
       "file": "LedgerB2.dc.html",
-      "x": 1560,
+      "x": 3120,
       "y": 0,
       "w": 1440,
       "h": 900,
-      "title": "B2 \u2014 the ledger at across-the-room size (chosen)",
-      "page": "page-1"
+      "title": "B2 \u2014 the ledger at across-the-room size (shipped, then revised)",
+      "page": "page-2"
     },
     {
       "file": "FiguresD.dc.html",
@@ -61,6 +61,33 @@
       "w": 1440,
       "h": 900,
       "title": "D \u2014 A's layout without the cards",
+      "page": "page-2"
+    },
+    {
+      "file": "BesideE.dc.html",
+      "x": 0,
+      "y": 4400,
+      "w": 1440,
+      "h": 900,
+      "title": "E \u2014 the drawing beside the clock",
+      "page": "page-2"
+    },
+    {
+      "file": "CornerF.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "F \u2014 the weather in the top right corner (chosen)",
+      "page": "page-1"
+    },
+    {
+      "file": "FirstG.dc.html",
+      "x": 3120,
+      "y": 4400,
+      "w": 1440,
+      "h": 900,
+      "title": "G \u2014 the weather leads the row",
       "page": "page-2"
     }
   ],
@@ -115,10 +142,10 @@
     },
     {
       "id": "ledger2",
-      "x": 1560,
+      "x": 3120,
       "y": 940,
       "w": 1100,
-      "page": "page-1",
+      "page": "page-2",
       "text": "B2 keeps B's centered clock with a 52px ledger under it. It is the calmest of the three, and everything sits in one block the eye finds at once. Four facts at this size fill the width, so a fifth (Next, a door) has to replace one rather than join them."
     },
     {
@@ -128,6 +155,38 @@
       "w": 1100,
       "page": "page-2",
       "text": "D sits between the two: A's layout with B's restraint. There are no cards. Each fact stands on the sky under a hairline rule, with a small label above, a 76px figure, and the where below. It has the largest status type of the three and the least chrome, and the rule over Lights turns lamp-colored while something is on. It relies on the sky being dark enough behind the bottom third, which the resting veil already ensures."
+    },
+    {
+      "id": "round3",
+      "x": 0,
+      "y": 4240,
+      "w": 2900,
+      "page": "page-2",
+      "text": "Round three, 28 September. Two notes on the shipped B2. First, the rest screen should draw the weather the way Home does, with WeatherArt's own sun, moon, cloud, rain and snow, not just a word on the date line. Second, a long routine name ran the row off both edges of the wall. On all three boards the line under a fact now wraps to two lines at most and then ends in an ellipsis, and each fact is capped at 330px wide, so the row always stays centered on the screen. The drawing is the real one, taken from the running panel."
+    },
+    {
+      "id": "beside",
+      "x": 0,
+      "y": 5340,
+      "w": 1100,
+      "page": "page-2",
+      "text": "E puts the drawing beside the clock as one lockup, like a complication on a watch face. Nothing else moves, and the temperature stays in words on the date line. It is the smallest change, but the clock is no longer centered on its own, and the drawing sits far from the row it is part of."
+    },
+    {
+      "id": "corner",
+      "x": 1560,
+      "y": 940,
+      "w": 1100,
+      "page": "page-1",
+      "text": "F gives the weather the top right corner at the same size Home gives it, with a large temperature, as in the reference photo. The clock and the row keep the center untouched. It reads the best from across the room, but it is the only thing on the wall that is not in the centered block. Chosen on 28 September, with one change: the clock keeps its AM or PM, as it did before B2, and the time of the next routine carries one too, so the two read the same way. The AM or PM is set at about a third of the digit size, on the same baseline. The digits are what people read from across the room, and the sky and the date already say which half of the day it is, so a full-size PM would nearly double the clock's width for the least useful word on the wall."
+    },
+    {
+      "id": "first",
+      "x": 3120,
+      "y": 5340,
+      "w": 1100,
+      "page": "page-2",
+      "text": "G makes the weather the first fact in the row, with the drawing where the others have an icon: 78\u00b0 large, and Partly cloudy under it. The whole screen stays one centered block, and the weather follows the same grammar as the other facts. That makes five facts, which only fits because the long lines now wrap. The drawing is the smallest of the three here."
     }
   ],
   "launch": {

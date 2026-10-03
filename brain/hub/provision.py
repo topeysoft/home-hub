@@ -17,18 +17,18 @@ DONE = {"already_configured", "reconfigure_successful"}   # an abort that means 
 # {host} is where HA reaches the other containers: localhost with host networking (the Pi), a
 # container name on a bridge network (the Mac). HUB_DRIVER_HOST in .env overrides it.
 PARTS = [
-    ("mqtt",   "Messages",     1883,  "mqtt",     {"broker": "{host}", "port": 1883, "other_settings": {"set_client_cert": False, "set_ca_cert": "off"}}),   # HA 2026.9 requires other_settings
+    ("mqtt",   "Device messages", 1883,  "mqtt",     {"broker": "{host}", "port": 1883, "other_settings": {"set_client_cert": False, "set_ca_cert": "off"}}),   # HA 2026.9 requires other_settings
     ("zwave",  "Z-Wave radio", 3000,  "zwave_js", {"url": "ws://{host}:3000"}),
     ("zigbee", "Zigbee radio", 8080,  None,       {}),
     ("matter", "Matter",       5580,  "matter",   {"url": "ws://{host}:5580/ws"}),
     ("ring",   "Ring",         55123, None,       {}),
 ]
 WORDS = {
-    ("mqtt", "off"): "Not running yet", ("matter", "off"): "Not running yet",
-    ("zwave", "off"): "No Z-Wave stick found. Plug one in and it starts on its own.",
-    ("zigbee", "off"): "No Zigbee stick found. Plug one in and it starts on its own.",
-    ("zigbee", "waiting"): "Running, waiting for Messages",
-    ("ring", "off"): "Not running",
+    ("mqtt", "off"): "Not working yet", ("matter", "off"): "Not working yet",
+    ("zwave", "off"): "Not plugged in. Plug a Z-Wave stick in and it starts on its own.", ("zwave", "ready"): "Plugged in",
+    ("zigbee", "off"): "Not plugged in. Plug a Zigbee stick in and it starts on its own.", ("zigbee", "ready"): "Plugged in",
+    ("zigbee", "waiting"): "Plugged in, waiting for device messages",
+    ("ring", "off"): "Not working",
     ("ring", "sign-in"): "Sign in once to bring in the alarm, cameras and sensors.",
     ("ring", "ready"): "Signed in",
 }
@@ -100,7 +100,7 @@ class Provision:
 
     def _set(self, pid, state, text=None):
         p = self.parts[pid]
-        text = text if text is not None else WORDS.get((pid, state), {"ready": "Running", "adding": "Connecting…"}.get(state, ""))
+        text = text if text is not None else WORDS.get((pid, state), {"ready": "Working", "adding": "Connecting…"}.get(state, ""))
         changed = (p["state"], p["text"]) != (state, text)
         p["state"], p["text"] = state, text
         return changed

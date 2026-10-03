@@ -6,6 +6,7 @@
 
 #include <atomic>
 
+#include "esp_app_desc.h"
 #include "esp_http_client.h"
 #include "esp_log.h"
 #include "esp_ota_ops.h"
@@ -136,6 +137,21 @@ static void fetch(void *) {
     psa_hash_abort(&hash);
     if (!why && esp_ota_end(ota) != ESP_OK) { ota = 0; why = "not an image"; }
     else if (why && ota) esp_ota_abort(ota);
+    // AN IMAGE FOR THE OTHER BOARD IS REFUSED, NOT TRIED. The devkit and rev A images are built under
+    // different project names (CMakeLists.txt, board.h) and a strip takes only its own. Trying the
+    // other one is not harmless: a devkit image on rev A drives a current-monitor pin as its data line
+    // and never switches a run on, and it would still reach the hub and confirm itself.
+    if (!why) {
+        esp_app_desc_t d = {};
+        if (esp_ota_get_partition_description(next, &d) != ESP_OK) why = "not an image";
+        else if (strncmp(d.project_name, esp_app_get_description()->project_name, sizeof(d.project_name))) {
+            ESP_LOGW(TAG, "%s is for %s, and this is %s", o.fw, d.project_name, esp_app_get_description()->project_name);
+            nv_put("wrong", o.sha);     // so the same offer is not fetched again at every reconnect
+            say("refused", o.fw, "another board");
+            g_busy = false;
+            vTaskDelete(nullptr);
+        }
+    }
     if (!why && esp_ota_set_boot_partition(next) != ESP_OK) why = "boot";
     if (why) {
         say("failed", o.fw, why);
@@ -168,6 +184,7 @@ void offer(const std::string &msg, const std::string &hub_host) {
     const std::string floor = nv_str("floor");
     if (!floor.empty() && version_cmp(fw, floor.c_str()) < 0) { say("refused", fw, "below the floor"); return; }
     if (g_trial) { say("refused", fw, "on trial"); return; }
+    if (!strcasecmp(nv_str("wrong").c_str(), sha)) { say("refused", fw, "another board"); return; }
     uint8_t badn = 0;
     if (nv_str("bad") == fw && nvs_get_u8(nv, "badn", &badn) == ESP_OK && badn >= GIVE_UP_AFTER) {
         say("refused", fw, "came back twice");

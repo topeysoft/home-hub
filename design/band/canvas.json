@@ -1,0 +1,226 @@
+{
+  "pages": [
+    {
+      "id": "page-1",
+      "name": "The phone's top"
+    },
+    {
+      "id": "page-2",
+      "name": "Not chosen"
+    }
+  ],
+  "artboards": [
+    {
+      "file": "Today.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "Today \u2014 from the Home Screen, under the status bar, four lines deep",
+      "page": "page-1"
+    },
+    {
+      "file": "OneA.dc.html",
+      "x": 0,
+      "y": 1100,
+      "w": 390,
+      "h": 844,
+      "title": "A \u2014 one line",
+      "page": "page-2"
+    },
+    {
+      "file": "OneA-sheet.dc.html",
+      "x": 520,
+      "y": 1100,
+      "w": 390,
+      "h": 844,
+      "title": "A, the rest \u2014 a tap on 3 more",
+      "page": "page-2"
+    },
+    {
+      "file": "KindsB.dc.html",
+      "x": 1160,
+      "y": 1100,
+      "w": 390,
+      "h": 844,
+      "title": "B \u2014 by kind",
+      "page": "page-2"
+    },
+    {
+      "file": "KindsB-house.dc.html",
+      "x": 1680,
+      "y": 1100,
+      "w": 390,
+      "h": 844,
+      "title": "B, where the suggestions went",
+      "page": "page-1"
+    },
+    {
+      "file": "ChipsC.dc.html",
+      "x": 2320,
+      "y": 1100,
+      "w": 390,
+      "h": 844,
+      "title": "C \u2014 a row of chips",
+      "page": "page-2"
+    },
+    {
+      "file": "LineChipsBC.dc.html",
+      "x": 0,
+      "y": 2560,
+      "w": 390,
+      "h": 844,
+      "title": "B with C \u2014 line and chips",
+      "page": "page-1"
+    },
+    {
+      "file": "OneRowBC.dc.html",
+      "x": 520,
+      "y": 2560,
+      "w": 390,
+      "h": 844,
+      "title": "B with C \u2014 one row",
+      "page": "page-2"
+    },
+    {
+      "file": "QuietBC.dc.html",
+      "x": 1040,
+      "y": 2560,
+      "w": 390,
+      "h": 844,
+      "title": "B with C \u2014 an ordinary day",
+      "page": "page-1"
+    },
+    {
+      "file": "NoClockBC.dc.html",
+      "x": 0,
+      "y": 3520,
+      "w": 390,
+      "h": 844,
+      "title": "Line and chips, no clock \u2014 the phone's status bar is the clock",
+      "page": "page-1"
+    },
+    {
+      "file": "NameCenterSky.dc.html",
+      "x": 0,
+      "y": 4480,
+      "w": 390,
+      "h": 844,
+      "title": "Name left, weather centered",
+      "page": "page-2"
+    },
+    {
+      "file": "NameCenterSky-long.dc.html",
+      "x": 520,
+      "y": 4480,
+      "w": 390,
+      "h": 844,
+      "title": "\u2026with a long name",
+      "page": "page-2"
+    },
+    {
+      "file": "NameThenSky.dc.html",
+      "x": 1040,
+      "y": 4480,
+      "w": 390,
+      "h": 844,
+      "title": "Name left, weather beside it \u00b7 CHOSEN",
+      "page": "page-1"
+    },
+    {
+      "file": "NameThenSky-long.dc.html",
+      "x": 1560,
+      "y": 4480,
+      "w": 390,
+      "h": 844,
+      "title": "\u2026with a long name",
+      "page": "page-1"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "why",
+      "page": "page-1",
+      "x": -620,
+      "y": 0,
+      "w": 500,
+      "text": "WHY THIS EXISTS\n\nTwo notes on the same 200 pixels, given together on 2 October while choosing the house switch (design/houses/, B):\n\n\"It might be time to start thinking about how crowded the screen can be, especially with all the amber cards, like Found two new things nearby and Lock the settings. Maybe those can be collapsed into one single action.\"\n\n\"From the Home Screen it opens full screen, which is expected. But the top bar seems to be under the notification bar of the phone itself.\"\n\nTHE SECOND ONE IS A BUG WITH ONE RIGHT ANSWER, so it is not one of the directions. index.html asks iOS to draw the page under the status bar (viewport-fit=cover, black-translucent) so the sky runs to the top edge, which is right, and then nothing in panel.css leaves the status bar its room: env(safe-area-inset-top) appears nowhere. The bottom bar already does it for the home bar (panel.css, .bottombar on a phone); the top bar, and every sheet's title and close button, never did. Every board below draws the fix: the sky still runs under the status bar, and the bar starts below it.\n\nTHE FIRST ONE IS THE QUESTION THESE BOARDS ASK: how much of the band a phone shows."
+    },
+    {
+      "id": "today",
+      "page": "page-1",
+      "x": 520,
+      "y": 0,
+      "w": 560,
+      "text": "TODAY\n\nThe shipped panel on an iPhone opened from the Home Screen: the phone's 5:54 lands on top of ours, and the close button of every sheet (top 18) sits in the status bar, where a tap mostly misses.\n\nThe band holds four things, which is an ordinary week rather than a bad one: something stopped answering, an update, two things found on the network, and the passcode suggestion that stays until somebody sets one. Each is a 57-pixel line with 10 between, so the first card starts at 451 on a stage that ends at 686. Half of what is left of the screen is amber, and three of the four lines are not urgent.\n\nAttention.vue can put eleven kinds of line here (a phone asking, an update, updating, what's new, the new link, things waiting to be added, a light strip held dark, a signal being tried, the passcode, where home is, the Home Screen, needs a look). Nothing limits how many show at once.\n\nWords: the board keeps \"Lock the settings\" because it is what ships; the directions use \"Set a passcode\", which the settings pass settled (docs/wording.md)."
+    },
+    {
+      "id": "shared",
+      "page": "page-1",
+      "x": 1160,
+      "y": 0,
+      "w": 560,
+      "text": "WHAT ALL THREE SHARE\n\nTHE STATUS BAR GETS ITS ROOM. The bar starts at env(safe-area-inset-top), 47 on this phone, and so does every sheet. The sky still runs underneath.\n\nTHE SAME FOUR THINGS on every board, so the boards compare.\n\nWHAT IS NOT REOPENED. A thing knocking keeps its own line for its first hour and its dot on the + after that (design/knock/); a phone asking still opens its own pane (AskPane.vue); Needs a look stays on Home, because it carries the only Sign in again there is (layout.ts). Folding changes how these are drawn, never whether Home carries them.\n\nTHE LAMP DOT ON THE HOUSE NAME is drawn on every board: the addition B's note proposed, there because Elm Street needs a look.\n\nSOMETHING ALL THREE MAKE VISIBLE: once the bar sits below the status bar, the phone's own clock sits directly above the house's. On the wall the house's clock is the clock; on a phone it is the second one. Not decided here. It would give back the row the clock is in."
+    },
+    {
+      "id": "a",
+      "page": "page-2",
+      "x": 0,
+      "y": 1980,
+      "w": 910,
+      "text": "A \u2014 ONE LINE\n\nThe band is never taller than one line. It says the most pressing thing in that thing's own words, and at its right end how many more are waiting: 3 more. A tap on the line does what the line says; a tap on 3 more opens For you, every waiting thing as one row, in rank order (things that need you, then news, then suggestions).\n\nFOR: the stage is the same height whether one thing is waiting or eleven; nothing below it ever moves because the house found a speaker. It is the most literal answer to \"collapse them into one\", and the ranking means the line is right more often than the stack was, because the stack is in the order Attention.vue happens to list them, not the order they matter.\n\nAGAINST: everything but the first is a tap away and unnamed. An update can sit behind 3 more for a week. And a rank has to be chosen and kept: every new kind of line has to be placed in it."
+    },
+    {
+      "id": "b",
+      "page": "page-1",
+      "x": 1160,
+      "y": 1980,
+      "w": 910,
+      "text": "B \u2014 BY KIND\n\nThree kinds, three treatments. WHAT NEEDS YOU (something stopped answering, a phone asking, a knock in its first hour) keeps a line of its own, in amber. NEWS (an update, what's new, things found nearby, the new link) folds into one quiet line that names what is in it and opens them. SUGGESTIONS (a passcode, where home is, the Home Screen) leave Home altogether: they are setup the house would like finished, so they become Finish setting up at the top of This house, counting down, and gone once it is done. The \u2261 keeps its dot while any are left.\n\nFOR: amber means something again: on this board one line is amber because one thing needs you. A house with nothing wrong shows one quiet line or none. The passcode suggestion, which never goes away on its own, stops costing Home a line for months.\n\nAGAINST: two lines rather than one, and three lines on a bad day. It needs every kind sorted, and a suggestion moved into This house is easier to ignore, which for the passcode is the point and for some future suggestion may not be."
+    },
+    {
+      "id": "c",
+      "page": "page-2",
+      "x": 2320,
+      "y": 1980,
+      "w": 910,
+      "text": "C \u2014 A ROW OF CHIPS\n\nEverything stays in view, but as chips in one row the height of a button, sweeping sideways, the way the Rail already draws the band. What needs you is a filled chip; the rest are outlined. Nothing folds and nothing is ranked away.\n\nFOR: the cheapest change, and the band stops being a column on a phone. 40 pixels instead of 268, every item still named, and the row is the same height with one thing or eleven.\n\nAGAINST: a chip has room for three words, so the reason goes (Ring needs you to sign in again becomes 2 need a look). Whatever is past the right edge is out of sight, which is A's problem without A's ranking. And four amber chips are still four amber things; it makes the band shorter, not quieter."
+    },
+    {
+      "id": "bc",
+      "page": "page-1",
+      "x": 1560,
+      "y": 2560,
+      "w": 600,
+      "text": "B WITH C\n\nAsked for on 2 October: \"How about a combination of B and C?\" B's sorting with C's chips. Two ways to put them together, because the request fits both.\n\nKEPT FROM B: three kinds, three treatments. Suggestions (a passcode, where home is, the Home Screen) leave Home for Finish setting up in This house, and the \u2261 carries a dot while any are left (KindsB-house, unchanged). Amber is only for what needs you.\n\nKEPT FROM C: news is a row of chips rather than a line per item or one folded line. Each item is still named, the row is 40 tall whether it holds one chip or six, and it sweeps sideways.\n\nLINE AND CHIPS: what needs you keeps a full line with its reason, Ring needs you to sign in again, so the one thing that matters is never cut down to three words. 107 pixels on this day.\n\nONE ROW: everything is chips, sorted. What needs you leads, filled amber and as long as its reason; news follows, quiet. 40 pixels on this day, the most stage of anything drawn. Against it: two things that need you push the news off the right edge, and a long reason is a wide chip.\n\nAN ORDINARY DAY is the same for both: nothing needs you, so Home has one quiet row and no amber at all. That is the case B and C each argued for separately and only the combination draws."
+    },
+    {
+      "id": "noclock",
+      "page": "page-1",
+      "x": 520,
+      "y": 3520,
+      "w": 600,
+      "text": "NO CLOCK ON A PHONE\n\nAsked on 2 October: \"The time and date seem irrelevant, and it's taking up an entire row. Do we really need this?\"\n\nOn a phone, no. The status bar shows the time directly above it, the date is a glance at the lock screen, and the first tab already says what part of the day it is (Your evening). The row was the wall's clock, carried down to a phone, where it is the second clock on the screen.\n\nTHE WALL KEEPS ITS CLOCK. It is read from across a room, it has no status bar, and resting it is mostly a clock. This is a phone-width rule only, at the same seam App.vue already uses to tell a phone from a wall.\n\nWHAT MOVES: the row with the weather, the house name and the two round buttons moves up to sit under the status bar. Nothing is lost from it. The stage gets 39px back: the first card now starts where the second line of the band used to be."
+    },
+    {
+      "id": "namerow",
+      "page": "page-1",
+      "x": 2080,
+      "y": 4480,
+      "w": 600,
+      "text": "THE NAME ON THE LEFT\n\nAsked on 2 October: \"The weather and temperature maybe can be in the middle, and Home can be on the far left.\"\n\nTHE NAME FAR LEFT is right, and both arrangements take it. On a phone the top-left is where a screen says what it is, and here what it is, is which house.\n\nTHE WEATHER CENTERED (first two): with Home it balances well, and the row reads as three things in three places. Two costs. The middle of the row is where iOS puts a screen's title, so the weather reads as the headline rather than the house. And it has to stay at the center whatever the name is, so the name's room is fixed at under half the row: Grandma's cabin runs into it, and a name that long would have to be cut short.\n\nTHE WEATHER BESIDE THE NAME (last two): the house, then what it is like there, read as one phrase. A long name pushes the weather along instead of into it, and nothing has to be cut until a name is very long indeed."
+    },
+    {
+      "id": "chosen",
+      "page": "page-1",
+      "x": -620,
+      "y": 1100,
+      "w": 500,
+      "text": "CHOSEN, 2 OCTOBER 2026\n\nOn a phone: the status bar gets its room, the clock row goes, and the top row is the house (its name, or Connected while there is only one), its weather right after it, then + and the menu. NameThenSky is the picture.\n\nThe band is B with C, line and chips (LineChipsBC): what needs you keeps a full amber line with its reason; news is one row of quiet chips; suggestions are Finish setting up at the top of This house (KindsB-house), with a dot on the menu while any are left. On an ordinary day that is one quiet row (QuietBC).\n\nA, B and C as drawn, One row, and the centered weather are on Not chosen with their cases intact. The wall keeps its clock and its band as they are."
+    }
+  ],
+  "launch": {
+    "view": "canvas",
+    "page": "page-1"
+  }
+}

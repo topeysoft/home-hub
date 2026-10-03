@@ -15,7 +15,7 @@ from unittest import mock
 
 from fastapi.testclient import TestClient
 
-from hub import api, backup as backup_mod, healed as healed_mod, phones as phones_mod, restart as restart_mod, rules as rules_mod, updates as updates_mod
+from hub import address as address_mod, api, printers as printers_mod, backup as backup_mod, healed as healed_mod, phones as phones_mod, restart as restart_mod, rules as rules_mod, updates as updates_mod
 from hub.events import EventLog
 from hub.settings import Settings
 
@@ -26,7 +26,10 @@ DATA_BOUND = [(phones_mod, "DATA", lambda d: d), (rules_mod, "RULES_PATH", lambd
               (backup_mod, "REQUEST", lambda d: d / "restore.request"), (backup_mod, "STATE", lambda d: d / "restore.json"),
               (backup_mod, "ARCHIVE", lambda d: d / "restore.tar.gz"), (backup_mod, "DATA", lambda d: d),
               (restart_mod, "REQUEST", lambda d: d / "restart.request"), (restart_mod, "STATE", lambda d: d / "restart.json"),
-              (healed_mod, "FILE", lambda d: d / "healed.jsonl")]
+              (healed_mod, "FILE", lambda d: d / "healed.jsonl"),
+              (address_mod, "STATE", lambda d: d / "address.json"), (address_mod, "VALUES", lambda d: d / "away.env"),
+              (address_mod, "REQUEST", lambda d: d / "away.request"), (address_mod, "DONE", lambda d: d / "away.json"),
+              (printers_mod, "STATE", lambda d: d / "printers.json")]
 
 
 def area(area_id, name):
@@ -131,6 +134,10 @@ class FakeHA:
                 and (service is None or c[1] == service) and (entity_id is None or c[2] == entity_id)]
 
 
+def _no_service(*_a, **_k):
+    raise address_mod.Unreachable("no service in tests")
+
+
 class ApiTest(unittest.TestCase):
     """Base for anything that makes a request. `self.client` talks to a hub that is ready, holds the
     house above, and answers for a driver layer that is not running."""
@@ -156,6 +163,8 @@ class ApiTest(unittest.TestCase):
         self.hub.ha = self.ha
         self.hub.home.build(*house())
         self.hub.location = {"name": "Home", "lat": 41.88, "lon": -87.63}
+        # The address service is on the internet; no test reaches it. One that wants it hands in its own fake.
+        self.hub.address.fetch = _no_service
         if self.ready: self.hub.driver = "ready"
         self.broadcasts = []
         self.hub._broadcast = self.broadcasts.append   # no websockets are open; keep what would have gone out

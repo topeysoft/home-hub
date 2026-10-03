@@ -5,7 +5,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { store, notify, refreshStrip } from './store'
-import { adoptStrip, stripCounted, dismissStrip, readStripOnce, stripAgain, stripDone, stripEnds, stripReach, stripRoom, stripSaw, stripWifi } from './api'
+import { adoptStrip, stripCounted, dismissStrip, readStripOnce, stripAgain, stripDone, stripEnds, stripEvenings, stripReach, stripRoofline, stripRoom, stripSaw, stripSecond, stripWifi, type Evenings } from './api'
 import Icon from './Icon.vue'
 import StripArt from './StripArt.vue'
 import { stripWaiting } from './adding'
@@ -46,13 +46,26 @@ const TITLE: Record<string, string> = {
   'ready:colors': 'All set.',
   'ready:length': 'All set.',
   room: 'Where is it?',
-  ready: 'It’s in.',
+  ready: 'Added.',
   failed: 'That did not work.',
   wifi: 'One thing it needs.',
+  /* A strip controller's beats. design/controller-panel/AskWhichC.dc.html: the second strip is pointed
+     out by lighting it, never by a socket number. design/roofline/: the two last beats for a light that
+     is outside -- whether it is more of the Roofline, and its evenings, asked once. */
+  second: 'There’s a second strip.',
+  'order:2': 'Is it red too?',
+  'length:2': 'How far does the second one go?',
+  'room:2': 'Where is the second one?',
+  lit: 'Is it lit now?',
+  roofline: 'Is this more of the Roofline?',
+  evenings: 'Most rooflines are on from dusk until bedtime.',
 }
 const title = computed(() =>
   b.value?.needs === 'wifi' ? TITLE.wifi
+  : b.value?.state === 'order' && b.value?.asking === 'lit' ? TITLE.lit
   : b.value?.state === 'order' && (other.value || b.value?.asking === 'which') ? 'Then what is it showing?'
+  : b.value?.state === 'room' && b.value?.placing_run === 2 ? TITLE['room:2']
+  : b.value?.run === 2 && TITLE[`${b.value.state}:2`] ? TITLE[`${b.value.state}:2`]
   : TITLE[`${b.value?.state}:${b.value?.revisit}`] ?? TITLE[b.value?.state ?? ''] ?? 'A light strip')
 
 /* Somebody who came back to fix something already knows what a light strip is and what this screen
@@ -80,7 +93,7 @@ const finished = computed(() =>
 /* ONE STEP, where a bridge has three. The hub does not hand over the Wi-Fi any more and never sees
    the password: commissioning carries it, encrypted, and does the letting-in at the same time. Two
    lines here would be a progress bar with nothing behind one of them. */
-const STEPS = { letting: 'Letting it into the house' } as const
+const STEPS = { letting: 'Adding it to the house' } as const
 const ORDER = ['letting'] as const
 const at = computed(() => ORDER.indexOf((b.value?.step ?? 'letting') as any))
 const steps = computed(() => ORDER.map((id, i) => ({ id, text: STEPS[id], done: i < at.value, live: i === at.value })))
@@ -132,6 +145,20 @@ const again = () => run(stripAgain)
    the finger that touched it (AGENTS.md §4). */
 const chose = ref('')
 const room = (id: string) => { chose.value = id; run(() => stripRoom(id)) }
+/* The second room is a second question, so the first one's tap is not left lit on it. */
+watch(() => b.value?.placing_run, () => { chose.value = '' })
+/* Part of this light, or a light of its own; more of the Roofline, or its own; and its evenings. The
+   answer tapped stays lit while the brain hears it, like the room chips (AGENTS.md §4). */
+const picked = ref('')
+watch(() => b.value?.state, () => { picked.value = '' })
+const second = (as: 'part' | 'own') => { picked.value = as; run(() => stripSecond(as)) }
+const roofline = (more: boolean) => { picked.value = more ? 'more' : 'own'; run(() => stripRoofline(more)) }
+const evenings = (mode: Evenings) => { picked.value = mode; run(() => stripEvenings(mode)) }
+const EVENINGS: { id: Evenings; name: string; sub: string }[] = [
+  { id: 'every', name: 'Every evening', sub: 'On at dusk, off at 11 PM, all year' },
+  { id: 'occasion', name: 'Only for occasions', sub: 'Halloween, Christmas and the rest' },
+  { id: 'never', name: 'Not by itself', sub: 'A light like any other' },
+]
 
 /* A PRESS, ON THE THING (design/door/PressIt.dc.html, design/strip/Press.dc.html). The one thing our
    own door asks, and there is nothing on this screen to do: the session is already open, the strip is
@@ -207,7 +234,7 @@ onUnmounted(() => window.removeEventListener('keydown', key, true))
           </div>
           <div class="bridge-row">
             <span class="bridge-icon"><Icon name="lock" :size="18" /></span>
-            <span class="bridge-text"><span class="bridge-name">Nothing has been let in yet</span><span class="bridge-sub">Until you say yes it is only knocking. Nothing of yours is on it.</span></span>
+            <span class="bridge-text"><span class="bridge-name">Nothing is added yet</span><span class="bridge-sub">Until you tap That’s the one, nothing of yours is on it.</span></span>
           </div>
           <div class="flow-actions">
             <button class="button" :class="{ busy }" @click="adopt">That’s the one</button>
@@ -219,7 +246,7 @@ onUnmounted(() => window.removeEventListener('keydown', key, true))
              on the controller of the thing just unpacked (design/strip/Press.dc.html). A strip that
              came through Matter's door never reaches this. -->
         <template v-else-if="b.state === 'press'">
-          <p class="sheet-lede">The button is on the controller, at the end it plugs in at. A short press, and it is yours — there is nothing to read, count or type.</p>
+          <p class="sheet-lede">The button is on its controller — the small box the strip plugs into. A short press, and it is yours — there is nothing to read, count or type.</p>
           <div class="stage">
             <StripArt show="lit" />
             <span class="caption">It is lit, steady, so you can see which one you have</span>
@@ -263,7 +290,7 @@ onUnmounted(() => window.removeEventListener('keydown', key, true))
 
         <!-- the hub is talking to it over Bluetooth. Nothing to do, so nothing to press. -->
         <template v-else-if="b.state === 'working'">
-          <p class="sheet-lede">It is being let in now, over Bluetooth, and it gets onto your Wi‑Fi as part of the same conversation. A moment. You can walk away; the wall will say when it is done.</p>
+          <p class="sheet-lede">It’s being added now, over Bluetooth, and it joins your Wi‑Fi along the way. A moment. You can walk away; the wall screen will say when it’s done.</p>
           <div class="stage"><StripArt show="lit" /></div>
           <ul class="bridge-steps">
             <li v-for="s in steps" :key="s.id" :class="{ done: s.done, live: s.live }">
@@ -273,10 +300,73 @@ onUnmounted(() => window.removeEventListener('keydown', key, true))
           </ul>
         </template>
 
+        <!-- A SECOND STRIP ON THE SAME CONTROLLER (design/controller-panel/AskWhichC.dc.html, decided C).
+             Asked once, with the strips themselves as the picture: both lit is what one light looks
+             like; one lit and one dark is two. Part of this light is first. -->
+        <template v-else-if="b.state === 'second'">
+          <p class="sheet-lede">It’s on the same controller — the one glowing now. Is it part of the light you just set up?</p>
+          <div class="two-picks">
+            <button class="pick" :class="{ on: picked === 'part', busy }" :aria-pressed="picked === 'part'" @click="second('part')">
+              <span class="two"><i class="lit long"></i><i class="lit short"></i></span>
+              <span class="bridge-name">Part of this light</span><span class="bridge-sub">On, off and colors together</span>
+            </button>
+            <button class="pick" :class="{ on: picked === 'own', busy }" :aria-pressed="picked === 'own'" @click="second('own')">
+              <span class="two"><i class="lit long"></i><i class="short"></i></span>
+              <span class="bridge-name">A light of its own</span><span class="bridge-sub">Its own switch, in any room</span>
+            </button>
+          </div>
+          <p class="after left">Either way it’s asked if it’s red and how far it goes. This can be changed later, on the light.</p>
+        </template>
+
+        <!-- IT TRIES THE OTHER WAY, AND ASKS AGAIN (design/controller-panel/TryAgainA.dc.html). Only
+             when the controller said it could not tell how many wires the strip has (MeasureC, the
+             decided C): "Nothing at all" is given a job, and still dark is the real failure. -->
+        <template v-else-if="b.state === 'order' && b.asking === 'lit'">
+          <p class="sheet-lede">Some strips take their colors a different way. It’s being sent that way now — look at it again.</p>
+          <div class="stage">
+            <StripArt show="red" />
+            <span class="caption">Lit, end to end, if that was it</span>
+          </div>
+          <div class="flow-actions">
+            <button class="button" :class="{ busy }" @click="saw('lit')">Yes, it’s lit</button>
+            <button class="button ghost" @click="saw('dark')">Still dark</button>
+          </div>
+        </template>
+
+        <!-- MORE OF THE ROOFLINE (design/roofline/OneLight.dc.html, decided C then A). A box's own setup
+             is unchanged; only this last beat is new, and only when a roofline already exists. -->
+        <template v-else-if="b.state === 'roofline'">
+          <p class="sheet-lede">Or a light of its own. The Roofline stays one light on the wall, however many controllers it is.</p>
+          <div class="two-picks">
+            <button class="pick" :class="{ on: picked === 'more', busy }" :aria-pressed="picked === 'more'" @click="roofline(true)">
+              <span class="two"><i class="lit long"></i><i class="lit short"></i></span>
+              <span class="bridge-name">More of the Roofline</span><span class="bridge-sub">One tile, one switch, one look</span>
+            </button>
+            <button class="pick" :class="{ on: picked === 'own', busy }" :aria-pressed="picked === 'own'" @click="roofline(false)">
+              <span class="two"><i class="lit long"></i><i class="short"></i></span>
+              <span class="bridge-name">A light of its own</span><span class="bridge-sub">Its own tile and switch</span>
+            </button>
+          </div>
+        </template>
+
+        <!-- ITS EVENINGS, ASKED ONCE (design/roofline/EveningsB.dc.html, decided B). Like a porch light:
+             the roof turns on because it was asked to keep evenings, by the household, once. An
+             occasion decides only how it looks. -->
+        <template v-else-if="b.state === 'evenings'">
+          <p class="sheet-lede">Shall this one? It can be changed any time from the Roofline.</p>
+          <ul class="picks one">
+            <li v-for="e in EVENINGS" :key="e.id">
+              <button class="pick row" :class="{ on: picked === e.id, busy }" :aria-pressed="picked === e.id" @click="evenings(e.id)">
+                <span class="bridge-name">{{ e.name }}</span><span class="bridge-sub">{{ e.sub }}</span>
+              </button>
+            </li>
+          </ul>
+        </template>
+
         <!-- WHICH COLOR COMES OUT FIRST. Strips do not agree and nothing can be read back off one, so
              it is lit and the household names what they see. design/strip/Order.dc.html -->
         <template v-else-if="b.state === 'order' && !other && b.asking === 'red'">
-          <p class="sheet-lede">{{ lede || 'Strips do not all put their colors in the same order, and there is no way to ask one. So: look at it.' }}</p>
+          <p class="sheet-lede">{{ lede || (b.run === 2 ? 'The second strip is showing red the way the first one takes it. If it is the same make, that is one tap.' : 'Strips do not all put their colors in the same order, and there is no way to ask one. So: look at it.') }}</p>
           <div class="stage">
             <StripArt show="red" />
             <span class="caption">All of it, one color</span>
@@ -320,12 +410,12 @@ onUnmounted(() => window.removeEventListener('keydown', key, true))
                afterwards -- on the strip's own light pane, which is where the length was decided to
                live for ever after (design/strip/Nudge.dc.html). This line is only honest because
                that control exists; it went in with it. -->
-          <p class="after">A light or two out is fine. You can move the end afterwards, on the strip’s own screen.</p>
+          <p class="after">A light or two out is fine. You can change where it ends afterwards, from the light.</p>
         </template>
 
         <!-- the ordinary room chips every other new device gets. Nothing here is invented. -->
         <template v-else-if="b.state === 'room'">
-          <p class="sheet-lede">That is the only thing left to say. It is lit, all of it, and it is yours.</p>
+          <p class="sheet-lede">{{ b.placing_run === 2 ? 'The second strip is a light of its own, so it has a room of its own. It is the one glowing now.' : 'That is the only thing left to say. It is lit, all of it, and it is yours.' }}</p>
           <div class="stage"><StripArt show="lit" /></div>
           <div class="press-rooms">
             <button class="chip-btn" v-for="r in b.rooms ?? []" :key="r.id" :class="{ on: chose === r.id }"
@@ -384,6 +474,23 @@ onUnmounted(() => window.removeEventListener('keydown', key, true))
    the house was a full-width row. In a house with twenty-three of them that is the whole sheet.
    AGENTS.md §4, and lint:css cannot see this one because the two blocks are not both in panel.css. */
 .button.wide { width: 100%; }
+/* Two answers drawn as the strips themselves (AskWhichC): both lit is one light; one lit, one dark is two. */
+.two-picks { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+.pick.on { border-color: rgba(var(--lamp-rgb), 0.6); background: rgba(var(--lamp-rgb), 0.1); }
+.two { display: flex; flex-direction: column; gap: 9px; padding: 8px 0 6px; }
+.two i {
+  display: block; height: 18px; border-radius: 4px;
+  background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.13) 0 4px, transparent 4px 7px);
+}
+.two i.long { width: 88%; }
+.two i.short { width: 62%; }
+.two i.lit {
+  background: repeating-linear-gradient(90deg, var(--lamp) 0 4px, transparent 4px 7px);
+  filter: drop-shadow(0 0 9px rgba(var(--lamp-rgb), 0.7));
+}
+.picks.one { grid-template-columns: 1fr; }
+.pick.row { gap: 2px; }
+.after.left { text-align: left; margin-top: 0; }
 /* a full-width primary with a small ghost beside it reads as an orphan, so they stack */
 .flow-actions.stack { flex-direction: column; align-items: stretch; }
 /* The line that says nothing is happening yet, and that nothing is meant to be. It sits between the

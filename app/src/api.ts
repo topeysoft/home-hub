@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Temitope Adeyeri
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { request } from './code'
+import { request, plainError } from './code'
+import { apiUrl, withToken, wsProtocols, wsUrl } from './door'
 /* `capability` is the driver's word for what this is and it picks the Home Assistant service; `kind` is
    the owner's, where they have given one. Read the two together through cap() in store.ts, never the raw
    field: a lamp on a smart plug is a switch to the driver and a light to everybody who lives there. */
@@ -41,12 +42,13 @@ export type Status = { driver: Driver; reason: string; setup_done: boolean; lock
    panel does not know what it is looking at, so it draws `acts` and invents nothing. `with` is what went
    quiet behind this one fault -- fix the fault and they all come back, which is why they are not lines of
    their own. See brain/hub/health.py. */
-export type Act = { do: string; act: 'flow' | 'entry' | 'part' | 'check' | 'forget' | 'update' | 'restart' | 'bridge' | 'account' | 'strip' | 'backup'; to: string | null
+export type Act = { do: string; act: 'flow' | 'entry' | 'part' | 'check' | 'forget' | 'update' | 'restart' | 'bridge' | 'account' | 'strip' | 'backup' | 'open' | 'printer'; to: string | null
   ask?: string        // a question to answer first, where the doing is worth a second's thought
   yes?: string        // the words that answer it, with the name in them
   no?: string }       // ...and the ones that decline, where "Keep it" is not what is being kept
 export type Quiet = { id: string; name: string; where: string }
-export type Note = { kind: 'offline' | 'storage' | 'driver' | 'update' | 'restart' | 'bridge' | 'healed'; text: string; since: number | null; subject: string | null
+export type Note = { kind: 'offline' | 'storage' | 'driver' | 'update' | 'restart' | 'bridge' | 'healed' | 'held' | 'printer'; text: string; since: number | null; subject: string | null
+  band?: string       // a strip held dark: the band's few words for it ("The kitchen strip is staying off")
   more?: string       // the second sentence, quieter: what a pattern means, under the line that names it
   where?: string      // an offline thing: which room, and what sort of thing it is -- enough to go and look at it
   name?: string       // an offline thing: what it is called, apart from the sentence it is in
@@ -83,7 +85,8 @@ async function fail(r: Response): Promise<never> {
      docs/voice.md has the house say "I didn't catch that" out loud ALWAYS, because silence there
      reads as being ignored. Every other caller sees the Error it has always seen. */
   try { const body = await r.json(); detail = body?.detail ?? detail; speak = body?.speak ?? undefined } catch {}
-  throw Object.assign(new Error(detail), speak ? { speak } : {})
+  if (detail === 'code') detail = 'That passcode wasn’t right.'   // four wrong tries fall through to here
+  throw Object.assign(plainError(detail), speak ? { speak } : {})
 }
 
 async function post<T = any>(url: string, body?: unknown): Promise<T> {
@@ -257,9 +260,22 @@ export const bridgeWifi = (ssid: string, password: string) => post<Bridge>('/bri
  * knows how fast it is actually going. */
 export type Strip = {
   state: 'none' | 'knocking' | 'press' | 'rhythm' | 'working' | 'order' | 'length' | 'room' | 'ready' | 'failed'
+    /* A strip CONTROLLER's beats (design/controller-panel/, design/roofline/): one question about a
+       second strip; and for a light that is outside, whether it is more of the Roofline, and its
+       evenings, asked once. */
+    | 'second' | 'roofline' | 'evenings'
   name?: string
+  /* Which strip on a controller with two the question is about, and what the second one is to be. */
+  run?: 2
+  second?: 'part' | 'own'
+  placing_run?: 2                           // the room question is the second light's own
+  boxes?: number                            // how many boxes the Roofline already has, at "more of the Roofline?"
+  /* A strip plugged into a controller's second socket after setup, one line each for the band. */
+  plugged?: { id: string; since: number; text: string }[]
   step?: 'letting'                         // one, where a bridge has three: commissioning does the Wi-Fi and the letting-in together
-  asking?: 'red' | 'which'
+  /* `lit`: the controller could not tell how many wires the strip has, so it was sent its colors the
+     other way and the household is asked once more (design/controller-panel/TryAgainA.dc.html). */
+  asking?: 'red' | 'which' | 'lit'
   /* Set when one of the two setup questions is being asked AGAIN about a strip that is already in --
      somebody cut it down, joined another on, or replaced it with a different make. The sheet says a
      different sentence for it, because somebody who came back already knows what the thing does. */
@@ -333,6 +349,18 @@ export async function forgetStrip(id: string): Promise<{ forgotten: string; hear
   const r = await request(`/strip/${encodeURIComponent(id)}`, { method: 'DELETE' }); if (!r.ok) await fail(r); return r.json()
 }
 export const stripDone = () => post<Strip>('/strip/done')
+/** Part of this light, or a light of its own (design/controller-panel/AskWhichC.dc.html). */
+export const stripSecond = (as: 'part' | 'own') => post<Strip>('/strip/second', { as })
+/** The band's "Something new is plugged into the controller", tapped: the same question, later. */
+export const stripSecondLater = (id: string) => post<Strip>('/strip/second/later', { id })
+/** More of the Roofline, or a light of its own (design/roofline/OneLight.dc.html). */
+export const stripRoofline = (more: boolean, place = '') => post<Strip>('/strip/roofline', { more, place })
+/** "Most rooflines are on from dusk until bedtime. Shall this one?" (design/roofline/EveningsB.dc.html) */
+export const stripEvenings = (mode: Evenings) => post<Strip>('/strip/evenings', { mode })
+/** The second strip, afterwards: a light of its own (asks only a room), or part of the first (asks nothing).
+ *  design/controller-panel/ChangeLaterC.dc.html. */
+export const splitStrip = (id: string, room: string) => post<{ id: string; own: boolean }>('/strip/split', { id, room })
+export const joinStrip = (id: string) => post<{ id: string; own: boolean }>('/strip/join', { id })
 /* ---------- what this house has ----------
  *
  * One door holding everything the hub knows, grouped by what brought it, because what brought a
@@ -353,6 +381,13 @@ export type StripRow = {
   /* The house's own id for the hardware, which is how a light pane knows the light it is drawing IS
      one of these. Null until Home Assistant has made the device, which is a moment behind the rest. */
   device?: string | null
+  /* A controller's second strip, where it has one: its length and colors are its own, and `own` says
+     whether it is a light of its own. `light`/`light2` are the house's ids for each strip's light, so a
+     pane knows which strip it is drawing (design/controller-panel/ChangeLaterC.dc.html). */
+  run2?: { count: number; order: string | null; own: boolean }
+  light?: string | null
+  light2?: string | null
+  board?: string
 }
 export async function listStrips(): Promise<{ strips: StripRow[] }> {
   const r = await request('/strip/list'); if (!r.ok) await fail(r); return r.json()
@@ -371,8 +406,88 @@ export const tuneStripBy = (id: string, by: number) => post<Tuning>('/strip/tune
 export const tuneStripDone = (id: string, keep = true) => post<Tuning>('/strip/tune/done', { id, keep })
 
 /** Ask a strip already in the house one of the two questions again. design/strip/Later.dc.html. */
-export const revisitStrip = (id: string, what: 'colors' | 'length') =>
-  post<Strip>('/strip/revisit', { id, what })
+export const revisitStrip = (id: string, what: 'colors' | 'length', run: 1 | 2 = 1) =>
+  post<Strip>('/strip/revisit', { id, what, ...(run === 2 ? { run } : {}) })
+
+/* ---------- what a strip controller says about a light (design/controller-panel/, "held") ----------
+ * In the device's own attrs, under `strip`, written by the brain from the controller's power report
+ * (brain/hub/controller.py). `held` is set only when the light is dark for a reason; `quiet` is the one
+ * muted line for running hot or holding under 5 A, which change nothing on the tile. */
+export type Held = {
+  held?: 'supply' | 'range' | 'trips' | 'wiring'
+  state?: 'Staying off' | 'Switched off'
+  tile?: string; text?: string; next?: string; after?: string; row?: string; chip?: string
+  set_up_on?: string | null; now_on?: string | null
+  quiet?: string
+  dark?: ({ run: number } & Held)[]
+}
+
+/* ---------- the roofline (design/roofline/) ----------
+ * One light outside, made of several boxes. Its evenings are its own (B), the occasion showing decides
+ * only how it looks (A), a look can be said (C), and the way round is asked in the yard when a chase is
+ * first wanted (C then A). brain/hub/roofline.py. */
+export type Evenings = 'every' | 'occasion' | 'never'
+export type RoofBox = { chip: string; place: string; runs: number; online: boolean; state: 'Fine' | 'Dark' | 'Not answering'; sub: string; held?: string
+  dark_runs?: number[] }                    // which of its runs are dark, when it is Dark; a hub from before says only the box
+export type YardRow = { chip: string; run: number; name: string; led: number[]; place: string; nth: number | null; turned: boolean }
+export type Yard = { step: 'tapping' | 'done'; rows: YardRow[]; all: boolean }
+export type Roofline = { exists: false } | {
+  exists: true; light: string | null; boxes: RoofBox[]; runs: number; lights: number
+  parts?: { chip: string; run: number; count: number }[]   // each run's lights, which the pane draws its length from
+  order: { chip: string; run: number; dir: number }[] | null; turned: number; ask_order: boolean; yard: Yard | null
+  evenings: Evenings | null; evenings_words: string | null; until: string; until_words: string; dusk: string | null
+  still: boolean; occasion: string | null; occasion_name: string | null; occasion_dates?: string | null; words: string | null
+  look: { motion: string; colors?: number[][]; block?: number; ms?: number }; kept: string[]
+  draft: { occasion: string | null; words: string } | null
+  why: string; came_on: { at: number; text: string } | null
+}
+export async function getRoofline(): Promise<Roofline> { const r = await request('/roofline'); if (!r.ok) await fail(r); return r.json() }
+export const setEvenings = (mode: Evenings, until?: string) => post<Roofline>('/roofline/evenings', { mode, ...(until ? { until } : {}) })
+export const holdStill = (still: boolean) => post<Roofline>('/roofline/still', { still })
+export const yardBegin = () => post<Yard>('/roofline/yard')
+export const yardTap = (chip: string, run: number) => post<Yard>('/roofline/yard/tap', { chip, run })
+export const yardAgain = () => post<Yard>('/roofline/yard/again')
+export const yardDone = () => post<Yard>('/roofline/yard/done')
+export const yardKeep = () => post<Roofline>('/roofline/yard/keep')
+export const yardLeave = () => post<Roofline>('/roofline/yard/leave')
+export const keepLook = () => post<Roofline>('/roofline/look/keep')
+export const dropLook = () => post<Roofline>('/roofline/look/drop')
+/*
+ * 3D PRINTERS, as the brain follows them (brain/hub/printers.py, docs/printers.md). Every sentence in a
+ * view is the printer's own -- the headline, the detail, the labels on its actions -- or the brain's
+ * (`word`, `filament`, the rows in `asks`), and the panel only chooses the frame: design/printers/.
+ * `state` is one of the printer's six: ready, preparing, printing, needs_you, finished, problem.
+ */
+export type PrinterAction = { id: string; label: string; primary?: boolean; style?: string; args?: Record<string, any> }
+export type PrintJob = { name: string | null; progress: number | null; layer: number | null; layers: number | null
+  remaining_s: number | null; eta_clock: string | null; elapsed_s?: number | null; colors: (string | { color: string })[]
+  material: string | null; filament?: string | null; thumbnail: string | null }
+export type Printer = { id: string; name: string; connected: boolean; via: 'home' | 'away' | null
+  state: 'ready' | 'preparing' | 'printing' | 'needs_you' | 'finished' | 'problem' | null
+  headline: string | null; detail: string | null
+  word?: string                         // the state as it fits after the name: "printing", "ready", "stopped"
+  since?: number | null                 // when it came to be in this state
+  room?: { id: string; name: string } | null
+  actions: PrinterAction[]; temps: { nozzle?: number | null; bed?: number | null; chamber?: number | null }
+  camera: string; job: PrintJob | null }
+export type FoundPrinter = { id: string; name: string; home: string; away: string; kind?: string }
+export type AskState = 'waiting' | 'allowed' | 'refused' | 'expired' | 'failed'
+/* An ask as its row on Add says it, in the brain's words; `until` is when the printer stops asking. */
+export type PrinterAsk = { id: string; name: string; state: AskState; title: string; detail: string; until: number | null }
+export type Printers = { printers: Printer[]; found: FoundPrinter[]; asking: Record<string, AskState>; asks?: PrinterAsk[] }
+export async function getPrinters(): Promise<Printers> { const r = await request('/printers'); if (!r.ok) await fail(r); return r.json() }
+export const lookForPrinters = () => post<Printers>('/printers/look')
+export const askPrinter = (id: string) => post<Printers>(`/printers/${encodeURIComponent(id)}/add`)
+export async function stopAsking(id: string): Promise<Printers> {
+  const r = await request(`/printers/${encodeURIComponent(id)}/add`, { method: 'DELETE' }); if (!r.ok) await fail(r); return r.json()
+}
+export async function forgetPrinter(id: string): Promise<Printers> {
+  const r = await request(`/printers/${encodeURIComponent(id)}`, { method: 'DELETE' }); if (!r.ok) await fail(r); return r.json()
+}
+export const printerAction = (id: string, action: string, args?: Record<string, any>) =>
+  post<Printer>(`/printers/${encodeURIComponent(id)}/action`, { action, args: args ?? {} })
+export const setPrinterRoom = (id: string, room: string | null) => post<Printer>(`/printers/${encodeURIComponent(id)}/room`, { room })
+
 /* Take a bridge off the house. Offered only from the *Needs a look* line about one that has not come
    back, because it is the answer to a question the house asked first -- never a thing to go and find. */
 /* ONE BRIDGE, as This hub lists it. Separate from `Bridge` above, which is the setting-up machine
@@ -664,12 +779,15 @@ export async function setHomeIntent(state: string) {
 }
 export const imageUrl = (id: string) => `/devices/${encodeURIComponent(id)}/image?t=${Date.now()}`
 
+let live: WebSocket | null = null
+/** Drop the live link so it reconnects through whichever door is right now (door.ts): home, or the relay. */
+export function kickStream() { live?.close() }
+
 /** Live updates from the brain. Reconnects with backoff; reports link state. */
-export function connect(on: { device: (d: Device) => void; home: (h: Home) => void; ambient: (a: Ambient) => void; status: (s: Status) => void; intent: (i: Intent) => void; drafts: (d: Routine[]) => void; presence: (p: Presence) => void; phones: () => void; share: () => void; signals: (t: TryBrief | null) => void; link: (up: boolean) => void }) {
+export function connect(on: { device: (d: Device) => void; home: (h: Home) => void; ambient: (a: Ambient) => void; status: (s: Status) => void; intent: (i: Intent) => void; drafts: (d: Routine[]) => void; presence: (p: Presence) => void; phones: () => void; share: () => void; signals: (t: TryBrief | null) => void; roofline?: (r: Roofline) => void; printers?: (p: Printers) => void; link: (up: boolean) => void }) {
   let delay = 1000, ws: WebSocket | null = null, closed = false
   const open = () => {
-    const proto = location.protocol === 'https:' ? 'wss' : 'ws'
-    ws = new WebSocket(`${proto}://${location.host}/stream`)
+    ws = live = new WebSocket(wsUrl('/stream'), wsProtocols())   // the token rides as a subprotocol, never in the URL (door.ts)
     ws.onopen = () => { delay = 1000; on.link(true) }
     ws.onmessage = (e) => {
       const m = JSON.parse(e.data)
@@ -683,6 +801,8 @@ export function connect(on: { device: (d: Device) => void; home: (h: Home) => vo
       else if (m.type === 'phones') on.phones()   // a nudge, not the roster: what this phone may see is /phones' answer to ask for
       else if (m.type === 'share') on.share()    // the same shape: what is shared, and who holds it, is /share's answer to give
       else if (m.type === 'signals') on.signals(m.trying ?? null)   // a try moved on, or a row was switched; the brief is for the band
+      else if (m.type === 'roofline') on.roofline?.(m.roofline)   // its evenings, its look, the way round, a box gone dark
+      else if (m.type === 'printers') on.printers?.(m.printers)   // the whole printer status: what each is doing, found, asking
     }
     ws.onclose = () => { on.link(false); if (!closed) setTimeout(open, delay = Math.min(delay * 2, 15000)) }
     ws.onerror = () => ws?.close()
@@ -693,7 +813,10 @@ export function connect(on: { device: (d: Device) => void; home: (h: Home) => vo
 /* The command box: one sentence in, one answer out. done and answer already happened (the grammar ran them, the way a tap
    does); action and rule are the assistant's proposals and have not. Driving the house never needs the code. */
 export type Said = ({ kind: 'done'; text: string; said: string; count?: number } | { kind: 'answer'; text: string; said: string }
-  | { kind: 'explain'; question: string; answer: string; said: string } | (Proposal & { said: string }) | (Routine & { kind: 'rule'; said: string })) & Answered
+  | { kind: 'explain'; question: string; answer: string; said: string } | (Proposal & { said: string })
+  /* A look for the roofline, said rather than chosen, and playing on the roof now as a draft: kept only
+     when told (design/roofline/SaidC.dc.html). */
+  | { kind: 'look'; occasion: string | null; occasion_name: string | null; colors: string[]; motion: string; pace: string; words: string; text: string; said: string } | (Routine & { kind: 'rule'; said: string })) & Answered
 /* What the house would say out loud, and the clip on the hub that says it. Present only when the sentence
    ARRIVED by microphone and the room is awake — the route decides, not the kind (docs/voice.md). `spoken`
    is the sentence either way, which is what makes it something a test can read without an engine running. */
@@ -713,10 +836,17 @@ export const qrUrl = (text: string) => `/qr.svg?text=${encodeURIComponent(text)}
 
 /* The phones that belong to the house, once it has a code. A phone gets in by typing the code, or by asking and being
    allowed from a screen that is already in; the hub keeps a hash and the phone a cookie, so removing one is instant. */
-export type Phone = { id: string; name: string; kind: 'wall' | 'phone' | null; joined: number; expires: number | null; remote: boolean; last_seen: number | null; how: 'code' | 'wall' | 'setup'; me: boolean }
+export type Phone = { id: string; name: string; kind: 'wall' | 'phone' | null; joined: number; expires: number | null; remote: boolean; last_seen: number | null; how: 'code' | 'wall' | 'setup'; me: boolean; moved?: boolean; in_app?: boolean }
 export type Ask = { id: string; name: string; kind: string | null; asked: number }
-export type Me = { locked: boolean; paired: boolean; home: string; phone: Phone | null }
-export async function getMe(): Promise<Me> { const r = await fetch('/phones/me'); if (!r.ok) await fail(r); return r.json() }
+export type Me = { locked: boolean; paired: boolean; home: string; phone: Phone | null; away?: boolean; lan?: string | null; address?: string | null }
+export async function getMe(): Promise<Me> { const r = await fetch(apiUrl('/phones/me'), { headers: withToken(new Headers()) }); if (!r.ok) await fail(r); return r.json() }
+/** Moving this phone to the house's own name (design/away/, C): a one-time code minted here, at home. */
+export const startMove = () => post<{ code: string; url: string; ttl: number }>('/phones/move')
+/** ...and picked up on the other side, where the page has nothing yet but the code. */
+export async function claimMove(code: string): Promise<{ token: string; phone: Phone; lan: string | null }> {
+  const r = await fetch('/phones/move/claim', { method: 'POST', headers: json, body: JSON.stringify({ code }) }); if (!r.ok) await fail(r); return r.json()
+}
+export const letOut = (id: string, remote: boolean) => post<Phone>(`/phones/${encodeURIComponent(id)}/remote`, { remote })
 export async function getPhones(): Promise<{ phones: Phone[]; asks: Ask[] }> { const r = await request('/phones'); if (!r.ok) await fail(r); return r.json() }
 export const askToJoin = (name: string) => post<Ask>('/phones/ask', { name })
 export async function claimJoin(id: string): Promise<{ state: 'waiting' | 'allowed' | 'gone'; phone?: Phone }> { const r = await fetch(`/phones/claim/${encodeURIComponent(id)}`); if (!r.ok) await fail(r); return r.json() }
@@ -756,3 +886,30 @@ export const setDeviceShared = (id: string, shared: boolean) => post<Share>(`/de
 /* Its own route, not qrUrl(): that one carries an http address and checks it is one, and a Matter
    payload is MT:… . The cache-buster is because the code changes every time the door opens again. */
 export const shareQrUrl = (n: number) => `/share/qr.svg?v=${n}`
+
+/* The house's own address, for reaching it from outside (brain/hub/address.py). `offer` is whether the
+   panel may offer one at all: closed until a household can actually pay, because an address nobody can
+   pay for is a promise the house cannot keep. `by_hand` is the maker's own hub, carried before then. */
+export type Offer = { open: boolean; price: string | null; pay: string | null; by_hand?: boolean }
+export type AddressState = {
+  offer: Offer; guess: string; house: string | null
+  address?: string; want?: 'on' | 'off'; on?: boolean; waiting?: boolean
+  carried?: boolean; held_until?: number | null; entitled_until?: number | null; lost?: boolean
+}
+export type NameLook = { name: string; free: boolean; address?: string; why?: string; suggestions?: string[] }
+export async function getAddress(): Promise<AddressState> { const r = await request('/address'); if (!r.ok) await fail(r); return r.json() }
+export async function lookAddress(name: string): Promise<NameLook> {
+  const r = await request(`/address/names/${encodeURIComponent(name)}`); if (!r.ok) await fail(r); return r.json()
+}
+/** A taken name throws with `suggestions` on the error, so the screen can offer three that are free. */
+export async function claimAddress(name: string): Promise<AddressState> {
+  const r = await request('/address', { method: 'POST', headers: json, body: JSON.stringify({ name }) })
+  if (r.status === 409) {
+    let suggestions: string[] = []
+    try { suggestions = (await r.json())?.detail?.suggestions ?? [] } catch {}
+    throw Object.assign(new Error('taken'), { suggestions })
+  }
+  if (!r.ok) await fail(r)
+  return r.json()
+}
+export const turnAddress = (on: boolean) => post<AddressState>(`/address/${on ? 'on' : 'off'}`)

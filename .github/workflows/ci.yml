@@ -1,6 +1,7 @@
-# Every push and pull request. Six jobs, and a change has to get past all of them:
+# Every push and pull request. Seven jobs, and a change has to get past all of them:
 #
 #   brain   the hub's own tests, its linter, and the coverage floor
+#   relay   the registration service the maker runs beside the relay: its tests, its linter, its image
 #   panel   the screens: types, linter, unit tests, coverage floor, and that it builds
 #   e2e     the built panel driven in a real browser against the mock brain, in four shards
 #   shell   the scripts that run on the hub host
@@ -31,8 +32,18 @@ on:
 # cancels the first — which is exactly what happened to v0.2.0: the brain image's verification was
 # killed three seconds in by the Pi image's, and the build refused to publish a release it could not
 # confirm. Right call by the guard, wrong reason.
+#
+# And the BRANCH, not github.ref, is what the group is keyed on. A push to a branch with a pull request
+# open fired both triggers, and github.ref differs between them (refs/heads/x for the push,
+# refs/pull/N/merge for the pull request), so they sat in two groups and every push ran the whole suite
+# twice -- noticed 2 October 2026, five pull requests in a row. head_ref is the branch on a pull request
+# and empty otherwise; ref_name is the branch (or the tag) on everything else. So both runs of one push
+# now share a group and the second to start cancels the first; it is usually the pull_request run that
+# survives, which is the one worth keeping, but GitHub does not promise the order. The repository is in
+# the group too, so a fork's pull request from a branch called main never cancels a push to ours. A tag
+# has no head_ref, so the release verifications above keep their own groups exactly as before.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.head.repo.full_name || github.repository }}-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 permissions:
@@ -55,6 +66,25 @@ jobs:
         run: cd brain && python -m pytest tests -q --cov=hub --cov-report=xml --cov-report=term
       - name: coverage may not go down
         run: python .github/coverage-check.py brain brain/coverage.xml
+
+  # Not on any hub, but it decides whether every house is carried, and the relay box builds it from a
+  # pinned ref of this repository -- so a ref that does not build is a box that does not come up.
+  relay:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: relay/service/requirements-dev.txt
+      - run: pip install -r relay/service/requirements-dev.txt
+      - name: lint
+        run: cd relay/service && ruff check .
+      - name: tests
+        run: cd relay/service && python -m pytest -q
+      - name: the image the relay box builds
+        run: docker build -t relay-service:ci relay/service
 
   panel:
     runs-on: ubuntu-latest
@@ -131,6 +161,7 @@ jobs:
       - run: cd app && npm ci --no-audit --no-fund
       # The mock brain serves ../dist, so the panel has to exist before a browser can be pointed at it.
       - run: cd app && npm run build
+      - run: cd app && npm run build:houses     # the Houses app, which e2e/houses.spec.ts serves itself
       # The browser is the same download every run until Playwright itself moves, so key it on the
       # version the lockfile pins. The system libraries it needs are not in the cache and are
       # installed either way.
@@ -165,7 +196,10 @@ jobs:
   # failed shard skips this job, and a skipped required check reads as passing.
   e2e:
     needs: e2e-shard
-    if: always()
+    # Not always(): a run the concurrency group cancelled (the duplicate of a push, above) would still
+    # run this, find its jobs cancelled, and report a failure that is not one. !cancelled() still runs
+    # it -- and still fails it -- when a job it waits on really failed.
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     steps:
       - run: test "${{ needs.e2e-shard.result }}" = success
@@ -189,6 +223,7 @@ jobs:
         driver-layer/host/restart.sh
         driver-layer/host/watchdog.sh
         driver-layer/host/network.sh
+        driver-layer/host/away.sh
         driver-layer/host/verify.sh
         driver-layer/host/channel.sh
         driver-layer/host/tests.sh
@@ -274,7 +309,10 @@ jobs:
   # built. Change the matrix freely; leave this job's name alone.
   image:
     needs: image-build
-    if: always()
+    # Not always(): a run the concurrency group cancelled (see e2e above) would still
+    # run this, find its jobs cancelled, and report a failure that is not one. !cancelled() still runs
+    # it -- and still fails it -- when a job it waits on really failed.
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     steps:
       - name: both architectures built

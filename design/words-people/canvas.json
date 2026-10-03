@@ -1,0 +1,185 @@
+{
+  "pages": [
+    {
+      "id": "page-1",
+      "name": "People and phones, in plain words"
+    },
+    {
+      "id": "page-2",
+      "name": "Not chosen"
+    }
+  ],
+  "artboards": [
+    {
+      "file": "Today.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Today — People on the wall, the shipped words",
+      "page": "page-1"
+    },
+    {
+      "file": "TodayOut.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "Today, away — Sam's phone, not allowed out yet",
+      "page": "page-1"
+    },
+    {
+      "file": "TodayMove.dc.html",
+      "x": 2070,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "Today — the house gets its own address",
+      "page": "page-1"
+    },
+    {
+      "file": "AwayA.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "A — Away from home — People on the wall",
+      "page": "page-2"
+    },
+    {
+      "file": "AwayA-away.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "A, away — Sam's phone, not allowed out yet",
+      "page": "page-2"
+    },
+    {
+      "file": "AwayA-link.dc.html",
+      "x": 2070,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "A — the house gets its own address",
+      "page": "page-2"
+    },
+    {
+      "file": "RemoteB.dc.html",
+      "x": 0,
+      "y": 1100,
+      "w": 1440,
+      "h": 900,
+      "title": "B — Remote access — People on the wall",
+      "page": "page-2"
+    },
+    {
+      "file": "RemoteB-away.dc.html",
+      "x": 1560,
+      "y": 1100,
+      "w": 390,
+      "h": 844,
+      "title": "B, away — Sam's phone, not allowed out yet",
+      "page": "page-2"
+    },
+    {
+      "file": "RemoteB-link.dc.html",
+      "x": 2070,
+      "y": 1100,
+      "w": 390,
+      "h": 844,
+      "title": "B — the house gets its own address",
+      "page": "page-2"
+    },
+    {
+      "file": "AnywhereC.dc.html",
+      "x": 0,
+      "y": 1100,
+      "w": 1440,
+      "h": 900,
+      "title": "C — Home only, or Anywhere — People on the wall",
+      "page": "page-1"
+    },
+    {
+      "file": "AnywhereC-away.dc.html",
+      "x": 1560,
+      "y": 1100,
+      "w": 390,
+      "h": 844,
+      "title": "C, away — Sam's phone, not allowed out yet",
+      "page": "page-1"
+    },
+    {
+      "file": "AnywhereC-link.dc.html",
+      "x": 2070,
+      "y": 1100,
+      "w": 390,
+      "h": 844,
+      "title": "C — the house gets its own address",
+      "page": "page-1"
+    },
+    {
+      "file": "AnywhereC-phone.dc.html",
+      "x": 2580,
+      "y": 1100,
+      "w": 390,
+      "h": 844,
+      "title": "C, on a phone — the two answers under the name",
+      "page": "page-1"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "why",
+      "x": -620,
+      "y": 0,
+      "w": 500,
+      "text": "WHY THIS EXISTS\n\nThe first area of the wording pass (docs/wording.md). On 1 October the away-from-home switch on People was read cold, by somebody who had not been in the room when it was named, and \"From outside\" meant nothing -- outside of what? The yard? The roofline is a light outside. Nobody new would guess it means using the house when you are not at home.\n\nThat one label is the visible end of a whole vocabulary this area was built in: let in, let out, belongs, is out, keeps the house, the wall, stays home, Move this phone. Every word was clear to the people who named it and not one was tested on anybody else.\n\nWHAT THE BOARDS ARE ABOUT: WORDS ONLY. Layout, color and order are the shipped screen's (traced from design/away/ NamedC, which shipped as PR #62). The one exception is C, whose answer needs a two-way choice where the switch is.\n\nThe three directions are three whole answers to ONE QUESTION: WHAT DO WE CALL A PHONE THAT WORKS WHEN YOU ARE NOT AT HOME? Everything else on the screen follows from that name, and the note beside each board lists every other sentence in the area as that direction would write it, so the pick settles the whole area, not one switch.\n\nTHE RULE BEING APPLIED (AGENTS.md section 6): read by a new household member glancing at a phone. None of our working names on screen.\n\nCHOSEN: C, 2 October 2026.",
+      "page": "page-1"
+    },
+    {
+      "id": "today",
+      "x": 2580,
+      "y": 0,
+      "w": 620,
+      "text": "TODAY\n\nTraced from the running code: app/src/PeoplePage.vue for the wall; Away.vue and the brain's sentence in phones.py for Sam's phone; MovePage.vue for the new address. Each number is a word that stops somebody who was not here.\n\n1  \"A person is a phone\" -- a riddle to open a page with. It means: no accounts, your phone is your way in.\n2  \"their first screen\" -- the phone calls it the Home Screen.\n3  \"belong to the house\" -- phones do not belong to houses. It means: these phones can use it.\n4  \"address\" -- in a house, an address is where you live. This is a web address, a link.\n5  \"runs it\" -- the house runs; people use it.\n6  \"let out\" -- our name for turning on away-from-home. To a stranger it sounds like a pet, or a prisoner.\n7  \"is out\" -- out of the house? Away? It means removed: it can no longer open the house.\n8  \"This wall\", \"the wall\" -- the screen on the wall. The house's name for itself; a newcomer hears plaster.\n9  \"stays home\" -- true, but it reads as an instruction, not as \"always works at home\".\n10 \"typed the passcode\" -- a record of a keystroke. It means: joined with the passcode.\n11 \"From outside\" -- the note that opened this. Outside of what?\n12 \"Not from here\" -- from where? It does not say what is wrong or what would fix it.\n13 \"they\" -- who? The sentence before says \"someone at the wall\".\n14 \"Move this phone\" -- nothing is moving. It means: switch this phone to the house's new link.\n\nALSO IN THIS AREA, NOT DRAWN (word for word today):\n- Join: \"This iPhone is new here. Someone at the wall can let it in, or type the house's passcode.\"\n- Join, foot: \"The house keeps a list of its phones under This hub\" -- WRONG, not just unclear: phones moved to People.\n- A phone let in at the wall: \"This phone was let in at the wall, so it runs the house but does not keep it.\"\n- After Remove: \"This phone is out. Join again from the wall.\" / \"Sam's iPhone is out.\"\n- The switch's own confirmation: \"Sam's iPhone can open the house from anywhere.\" / \"...works at home only now.\"\n- Setup's offer: \"From outside, too?\" ... \"we carry it there for you\" ... \"If you stop, only reaching it from outside stops.\" ... \"Turned on by hand for now.\"\n- What happened: \"let Sam's iPhone reach the house from outside.\" / \"stopped Sam's iPhone reaching the house from outside.\" / \"ended Sam's stay, which was only ever for a while.\"\n- A stranger, away: \"This house is not open from here.\" A known phone trying to join from away: \"A phone joins the house from inside it.\"",
+      "page": "page-1"
+    },
+    {
+      "id": "shared",
+      "x": -620,
+      "y": 1100,
+      "w": 500,
+      "text": "WHAT ALL THREE SHARE -- NOT A CHOICE, JUST PLAIN\n\nThese change in every direction, because the word was simply wrong for a newcomer:\n\n- Lede: \"Who lives here, and the phones that can use the house. No accounts or passwords: each person's phone is their way in.\"  (1, 5)\n- Add: \"Add someone's phone. They scan the code once, and the house opens like an app from their home screen.\"  (2)\n- \"3 phones can use the house.\"  (3)\n- \"Removing a phone locks it out straight away.\"  (7)\n- \"Wall screen\" for the wall, everywhere it is named to a person: \"Someone at the wall screen can allow it.\"  (8)\n- \"joined with the passcode\", \"allowed from the wall screen\", \"set up the house\"  (10)\n- \"web address\" or \"link\", never bare \"address\"  (4)\n- \"Someone with the passcode\" instead of \"they\" or \"someone at the wall\": it names who can actually help, since only a phone that joined with the passcode can change other phones.  (13)\n- The new link: \"Switch this phone\", not \"Move this phone\"; \"Delete the old icon\".  (14)\n- Join foot, fixed: \"Connect to your home Wi-Fi first. You can see and remove phones any time in People.\"\n- A phone allowed at the wall: \"This phone can use the house. Adding phones, or changing what they can do, takes the passcode.\"\n- After Remove: \"This phone is removed. To use the house again, join from the wall screen.\" / \"Sam's iPhone is removed.\"\n- Setup's offer, lede: \"The house already works fully at home. To use it on your phones when you are out, we connect it for you, through a service we run.\" Price line: \"Free for now. We turn it on for you.\" The wait: \"We are turning it on. This screen moves on by itself.\"\n- What happened: \"Sam's iPhone's time was up, as set.\" ; a stranger away: \"This house isn't open to this phone.\" ; joining from away: \"A phone can only join while it is at home, on the Wi-Fi.\"\n\nThe brain owns the last two kinds (phones.py, happened.py), so they change there and every screen follows.",
+      "page": "page-1"
+    },
+    {
+      "id": "a",
+      "x": 2580,
+      "y": 0,
+      "w": 560,
+      "text": "A -- AWAY FROM HOME\n\nName the switch for the moment it is about, in the words a person would use to ask for it: \"can my phone work when I'm away from home?\" The answer is a switch called Away from home.\n\nFOR: it is the situation, not a feature. Nobody has to know what the house does to make it work. It reads aloud naturally: \"turn on Away from home for Sam's phone.\"\n\nAGAINST: two words longer than today, and \"Away\" already means something on this same page -- Sam's row in the household list says Away when Sam is not in. A switch called Away from home beside a person marked Away could be read as \"this person is away\".\n\nEVERY OTHER SENTENCE, IN A:\n- The switch says, on change: \"Sam's iPhone works away from home now.\" / \"Sam's iPhone works at home only now.\"\n- Setup's offer: \"Use it away from home?\" ... \"If you stop, only Away from home stops. Everything at home carries on as it is, and we keep the web address for you for 60 days.\"\n- What happened: \"turned on Away from home for Sam's iPhone.\" / \"turned off Away from home for Sam's iPhone.\"\n- The brain, to a known phone away: \"This phone works on your home Wi-Fi. Someone with the passcode can turn on Away from home for it, in People.\"",
+      "page": "page-2"
+    },
+    {
+      "id": "b",
+      "x": 2580,
+      "y": 1100,
+      "w": 560,
+      "text": "B -- REMOTE ACCESS\n\nUse the term routers, cameras, doorbells and thermostats already taught everybody. Whoever has set up a Ring or a Nest has met it.\n\nFOR: nothing to explain, and it is short. It is what a person would type into a search box when they cannot work it out. It cannot be confused with Away in the household list.\n\nAGAINST: it is a product's word, not a person's. The out-of-the-box promise (AGENTS.md section 5) is for somebody non-technical, and \"remote access\" is exactly the kind of setting such a person skips because it sounds like something IT turns on. It is also the one direction where the switch names a feature rather than what you get.\n\nEVERY OTHER SENTENCE, IN B:\n- The switch says, on change: \"Remote access is on for Sam's iPhone.\" / \"...is off for Sam's iPhone.\"\n- Setup's offer: \"Turn on remote access?\" ... \"If you stop, only remote access stops...\"\n- What happened: \"turned on remote access for Sam's iPhone.\" / \"turned off remote access for Sam's iPhone.\"\n- The brain, to a known phone away: \"This phone only works on your home Wi-Fi. Someone with the passcode can turn on Remote access for it, in People.\"",
+      "page": "page-2"
+    },
+    {
+      "id": "c",
+      "x": 3090,
+      "y": 1100,
+      "w": 560,
+      "text": "C -- HOME ONLY, OR ANYWHERE\n\nDo not name the switch at all. Name the two answers, and show both: Home only | Anywhere. Each phone shows the one it has, with the other right beside it.\n\nFOR: there is no label to interpret, because the choice is its own explanation -- nobody needs to be told what a switch called Anywhere does. The same two words then carry everything else: the phone away says it is set to Home only, the history says Sam's iPhone was set to Anywhere, the setup offer asks \"Use it anywhere?\". The wall gets the same words without the choice -- Home only, and nothing to tap -- so the one thing that never leaves is visibly the same kind of answer. No clash with Away in the household list.\n\nAGAINST: it is not only words. A switch becomes a two-way choice, which panel.css does not have yet, so it adds a control and a test to the build. And the choice is wider than a switch: on a phone the row has less room, and the Remove button has to fit beside it.\n\nEVERY OTHER SENTENCE, IN C:\n- The choice says, on change: \"Sam's iPhone works anywhere now.\" / \"Sam's iPhone works at home only now.\"\n- Setup's offer: \"Use it anywhere?\" ... \"If you stop, phones go back to Home only. Everything at home carries on as it is, and we keep the web address for you for 60 days.\"\n- What happened: \"set Sam's iPhone to Anywhere.\" / \"set Sam's iPhone to Home only.\"\n- The brain, to a known phone away: \"This phone works on your home Wi-Fi. Someone with the passcode can set it to Anywhere, in People.\"\n\nON A PHONE (drawn 2 October, after building C showed the row squeezing the name to a word a line): the two answers take their own line under the name, and Remove keeps its place at the end of the first. The wall's row stays one line.",
+      "page": "page-1"
+    }
+  ],
+  "launch": {
+    "view": "canvas",
+    "page": "page-1"
+  }
+}

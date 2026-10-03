@@ -162,7 +162,7 @@ test('a thermostat can be set, told what to do, and pointed at another room\'s s
   expect(posts[0]).toMatch(/^\/devices\/t1\/set \{"temperature":\d+\}$/)
   posts.length = 0
 
-  await page.locator('.pane-rig').getByText('Warm it', { exact: true }).click()
+  await page.locator('.pane-rig').getByText('Heat', { exact: true }).click()
   await page.waitForTimeout(300)
   expect(posts).toEqual(['/devices/t1/mode {"hvac_mode":"heat"}'])
   posts.length = 0

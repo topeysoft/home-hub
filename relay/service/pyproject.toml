@@ -1,0 +1,20 @@
+# The same narrow ruff as the brain's (brain/pyproject.toml says why it is narrow), for the one other
+# piece of Python the maker runs.
+[project]
+name = "home-hub-relay-service"
+version = "0.1.0"
+requires-python = ">=3.13"
+
+[tool.ruff]
+line-length = 180
+target-version = "py313"
+exclude = [".venv", "__pycache__"]
+
+[tool.ruff.lint]
+select = ["F", "E9", "B", "UP", "S102", "S307", "S608"]
+ignore = ["E501", "B008", "B904"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]          # the tests import registry and app by name, as the container does
+filterwarnings = ["ignore::DeprecationWarning:starlette.*"]

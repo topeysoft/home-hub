@@ -5,9 +5,9 @@ import { outcomesOf, roomsOf, type Event, type Room, type Routine } from './api'
 import { store, LABELS, deviceById, routineById, cap } from './store'
 import { locale } from './lang'
 
-const cap1 = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
+const cap1 = (s: string) => (s.charAt(0).toUpperCase() + s.slice(1)).replace(/_/g, ' ')
 const label = (s: string | null | undefined, home = false) => home && s === 'asleep' ? 'Bedtime' : LABELS[s ?? ''] ?? (s && s !== 'unknown' ? cap1(s) : 'Set')
-export const placeName = (id: string) => id === 'home' ? 'the whole house' : id === 'entry' ? 'where you come in' : `the ${store.rooms.find(r => r.id === id)?.name ?? id}`
+export const placeName = (id: string) => id === 'home' ? 'the whole house' : id === 'entry' ? 'the entrance' : `the ${store.rooms.find(r => r.id === id)?.name ?? id}`
 const devName = (id: string | undefined) => (id && deviceById(id)?.name) || 'something'
 
 /* ---------- time, said plainly ---------- */
@@ -134,7 +134,7 @@ export function explain(ev: Event): { icon: string; text: string; sub: string } 
   const want = label(ev.new, home)
   if (ev.kind === 'intent' && ev.source === 'rule') {
     const bits = [triggerWords(d.trigger, true), ...((d.checked ?? []) as any[][]).map(condWords)].filter(Boolean)
-    const failed = d.failed?.length ? ` · ${d.failed.length === 1 ? 'one thing' : `${d.failed.length} things`} didn't respond` : ''
+    const failed = d.failed?.length ? ` · ${d.failed.length === 1 ? 'one thing' : `${d.failed.length} things`} didn't answer` : ''
     return { icon: triggerIcon(d.trigger), text: cap1(name), sub: `${home ? 'The whole house' : 'The room'} went to ${want}${bits.length ? ' · ' + bits.join(' · ') : ''}${failed}` }
   }
   if (ev.kind === 'intent') {
@@ -148,6 +148,6 @@ export function explain(ev: Event): { icon: string; text: string; sub: string } 
     return { icon: 'lock', text: `A routine wanted ${want} but left the room alone`, sub: `${cap1(name)} · someone had used the room by hand${until}` }
   }
   if (ev.kind === 'shadowed') return { icon: 'sparkle', text: `A routine wanted ${want} but another got there first`, sub: cap1(name) }
-  if (ev.kind === 'failed') return { icon: 'refresh', text: "A routine tried but something didn't respond", sub: `${cap1(name)} · ${ev.new ?? ''}`.trim() }
+  if (ev.kind === 'failed') return { icon: 'refresh', text: "A routine tried but something didn't answer", sub: `${cap1(name)} · ${ev.new ?? ''}`.trim() }
   return { icon: 'sparkle', text: `${home ? 'The whole house' : 'The room'} changed`, sub: ev.kind }
 }

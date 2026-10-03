@@ -95,3 +95,34 @@ variable "admin_cidrs" {
   type        = list(string)
   default     = ["0.0.0.0/0", "::/0"]
 }
+
+variable "relay_service_repository" {
+  description = "Where the box builds the registration service from. A fork running its own relay points this at itself."
+  type        = string
+  default     = "topeysoft/home-hub"
+}
+
+variable "relay_service_ref" {
+  description = <<-EOT
+    The commit, tag or branch of relay/service the box builds and runs. A commit is the honest pin: the
+    box builds it once and keeps it, so moving to new service code is a new ref, which replaces the
+    box (its volume carries every house across). Docker tags it with this, so no slashes.
+  EOT
+  type        = string
+  default     = "main"
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9_.-]+$", var.relay_service_ref))
+    error_message = "relay_service_ref becomes a docker tag: letters, numbers, dots, dashes and underscores only."
+  }
+}
+
+variable "relay_offer_open" {
+  description = <<-EOT
+    Whether the panel may offer the relay to a household at all. False until a household can actually pay:
+    the panel never shows a promise the house cannot keep, and an address nobody can pay for is one. Houses
+    granted by hand (relay/README.md) are carried either way.
+  EOT
+  type        = bool
+  default     = false
+}

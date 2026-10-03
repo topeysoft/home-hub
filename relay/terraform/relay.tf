@@ -45,6 +45,25 @@ resource "hcloud_firewall" "relay" {
     description = "Every house dials in here, and every phone away arrives here."
   }
 
+  # The address in the name (relay/service/home.py): this box is the nameserver for home.elyir.app,
+  # answering each house's name at home with its LAN address. UDP for the questions, TCP for the
+  # answers that do not fit a datagram.
+  rule {
+    direction   = "in"
+    protocol    = "udp"
+    port        = "53"
+    source_ips  = ["0.0.0.0/0", "::/0"]
+    description = "home.elyir.app, answered here."
+  }
+
+  rule {
+    direction   = "in"
+    protocol    = "tcp"
+    port        = "53"
+    source_ips  = ["0.0.0.0/0", "::/0"]
+    description = "home.elyir.app over TCP."
+  }
+
   rule {
     direction   = "in"
     protocol    = "tcp"
@@ -70,8 +89,22 @@ resource "hcloud_server" "relay" {
   }
 
   user_data = templatefile("${path.module}/cloud-init.yaml.tftpl", {
-    frp_version = var.frp_version
-    auth_token  = var.relay_auth_token
+    frp_version   = var.frp_version
+    auth_token    = var.relay_auth_token
+    zone          = var.zone_name
+    repository    = var.relay_service_repository
+    service_ref   = var.relay_service_ref
+    offer_open    = var.relay_offer_open ? "1" : "0"
+    volume_device = one(hcloud_volume.data[*].linux_device)
+    # The service's own name has a secret like any house's. Derived rather than chosen, so there is
+    # nothing more to mint or keep: whoever has the relay token already holds the box.
+    self_secret = sha256("api:${var.relay_auth_token}")
+    # The printer app's name, carried the same way and derived the same way.
+    printers_secret = sha256("printers:${var.relay_auth_token}")
+    # The Houses app's name, the same way: one more set of static files on this box.
+    houses_secret = sha256("houses:${var.relay_auth_token}")
+    # And the name that answers "which printers are on this Wi-Fi", the same way again.
+    nearby_secret = sha256("nearby:${var.relay_auth_token}")
   })
 
   labels = {
@@ -88,4 +121,32 @@ resource "hcloud_server" "relay" {
       error_message = "relay_auth_token is required: without it any frpc on the internet could register a proxy on this relay. Generate one with `openssl rand -hex 32`."
     }
   }
+}
+
+# What the box must not forget when it is rebuilt: the registration service's file -- every house's
+# name, the hash of its secret, and its entitlement -- and the certificate for api.elyir.app. Changing
+# anything in cloud-init replaces the server; this outlives it and is attached to the next one.
+resource "hcloud_volume" "data" {
+  count = local.make_box ? 1 : 0
+
+  name     = "${var.relay_name}-data"
+  size     = 10
+  location = var.relay_location
+  format   = "ext4"
+
+  labels = {
+    role = "relay"
+  }
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+resource "hcloud_volume_attachment" "data" {
+  count = local.make_box ? 1 : 0
+
+  volume_id = one(hcloud_volume.data[*].id)
+  server_id = one(hcloud_server.relay[*].id)
+  automount = false # cloud-init mounts it at /var/lib/relay, where the units expect it
 }

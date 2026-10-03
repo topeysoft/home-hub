@@ -58,7 +58,7 @@ const state = computed(() => {
 /* ...and the word above it. A puck on the broker that is bridging nothing is not "Working"; it is
    here, and that is all that can be said for it. */
 const word = computed(() =>
-  !b.value.online ? 'Quiet' : b.value.switches ? 'Working' : 'On the house')
+  !b.value.online ? 'Quiet' : b.value.switches ? 'Working' : 'Working, no switches yet')
 /* "Current" is a comparison, and a hub with no manifest beside its image has nothing to compare to:
    `behind` is then false for every puck in the house, including one three versions old. Saying
    "current" off the back of that is the same mistake as calling an unseen link strong. */
@@ -82,7 +82,7 @@ async function forget() {
   busy.value = 'forget'
   try {
     const r = await forgetBridge(b.value.chip)
-    notify(`${r.forgotten} is no longer part of the house.`)
+    notify(r.forgotten === 'The bridge' ? 'The bridge is removed.' : `The ${r.forgotten} bridge is removed.`)
     emit('close')
   } catch (e: any) { notify(e.message, 'error'); busy.value = '' }
 }
@@ -126,7 +126,7 @@ onUnmounted(() => window.removeEventListener('keydown', key))
             <template v-if="b.night">
               <li>
                 <span class="hub-k">Brightness</span>
-                <span class="hub-v">How bright it rests at.<span class="hub-sub line">Its own tile dims it finer, like any light in the house.</span></span>
+                <span class="hub-v">How bright it stays.<span class="hub-sub line">Its own tile dims it finer, like any light in the house.</span></span>
                 <span class="bridge-levels">
                   <button v-for="l in LEVELS" :key="l.id" class="button small" :class="{ ghost: nearest !== l.id, busy: busy === l.id }"
                           @click="change({ level: l.to }, l.id)">{{ l.label }}</button>
@@ -146,15 +146,15 @@ onUnmounted(() => window.removeEventListener('keydown', key))
             <span></span>
           </li>
           <li :class="{ asking }">
-            <span class="hub-k">Forget</span>
+            <span class="hub-k">Remove</span>
             <template v-if="!asking">
-              <span class="hub-v">Take this bridge out of the house.<span class="hub-sub line">The switches it brings in go with it. Plugging it in again sets it up from the start.</span></span>
-              <button class="button small" @click="asking = true">Forget</button>
+              <span class="hub-v">Remove this bridge from the house.<span class="hub-sub line">The switches it brings in go with it. Plugging it in again sets it up from the start.</span></span>
+              <button class="button small" @click="asking = true">Remove</button>
             </template>
             <template v-else>
-              <span class="hub-v">Forget {{ b.where.toLowerCase() }}?<span class="hub-sub line">Its switches stop working from here until a bridge is set up again.</span></span>
+              <span class="hub-v">Remove {{ b.where.toLowerCase() }}?<span class="hub-sub line">Its switches stop working from here until a bridge is set up again.</span></span>
               <span class="bridge-levels">
-                <button class="button small" :class="{ busy: busy === 'forget' }" @click="forget">Forget it</button>
+                <button class="button small" :class="{ busy: busy === 'forget' }" @click="forget">Remove it</button>
                 <button class="button small ghost" @click="asking = false">Keep it</button>
               </span>
             </template>

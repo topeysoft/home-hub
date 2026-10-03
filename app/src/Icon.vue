@@ -4,6 +4,7 @@
 -->
 <script setup lang="ts">
 const PATHS: Record<string, string> = {
+  globe: 'M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17zM3.5 12h17M12 3.5c2.4 2.4 3.6 5.2 3.6 8.5s-1.2 6.1-3.6 8.5c-2.4-2.4-3.6-5.2-3.6-8.5s1.2-6.1 3.6-8.5z',
   light: 'M9.5 18h5M10.5 21h3M12 3a6 6 0 0 0-3.7 10.7c.7.6 1.1 1.4 1.2 2.3h5c.1-.9.5-1.7 1.2-2.3A6 6 0 0 0 12 3z',
   media: 'M6.5 3.5h11a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1v-15a1 1 0 0 1 1-1zM12 17a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4zM12 8h.01',
   tv: 'M3.5 6h17a1 1 0 0 1 1 1v9.5a1 1 0 0 1-1 1h-17a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM8.5 21h7',
@@ -26,6 +27,10 @@ const PATHS: Record<string, string> = {
   check: 'M5 12.5l4.5 4.5L19 7.5',
   play: 'M8 5.5l10 6.5-10 6.5z',
   pause: 'M7.5 5h3.5v14H7.5zM13 5h3.5v14H13z',
+  /* a 3D printer: its frame, the gantry, the nozzle, and the bed (design/printers/) */
+  printer: 'M4 21V4h16v17M2.5 21h19M4 7.5h16M10 7.5h4v3.2l-2 1.8-2-1.8zM8.5 17.5h7',
+  stop: 'M7.5 7.5h9v9h-9z',
+  swap: 'M4.5 8.5h14l-3.5-3.5M19.5 15.5h-14l3.5 3.5',
   next: 'M6 5.5l9 6.5-9 6.5zM17 5v14',
   prev: 'M18 5.5l-9 6.5 9 6.5zM7 5v14',
   power: 'M12 3.5v8.5M6.6 6.6a7.6 7.6 0 1 0 10.8 0',
@@ -63,6 +68,12 @@ const PATHS: Record<string, string> = {
   'wifi-low': 'M9.5 16.3a5 5 0 0 1 5 0M12 19.9h.01',
   alert: 'M12 20.5a8.5 8.5 0 1 0 0-17 8.5 8.5 0 0 0 0 17zM12 7.8v5M12 16.2h.01',
   share: 'M8.5 12a2.5 2.5 0 1 0-5 0 2.5 2.5 0 0 0 5 0zM20.5 6a2.5 2.5 0 1 0-5 0 2.5 2.5 0 0 0 5 0zM20.5 18a2.5 2.5 0 1 0-5 0 2.5 2.5 0 0 0 5 0zM8.3 10.8l7-3.5M8.3 13.2l7 3.5',
+  /* A strip the controller is keeping dark to protect it (design/controller-panel/InRoomA.dc.html):
+     being looked after rather than broken, so a shield and never a warning sign. */
+  shield: 'M12 3l7 3v5c0 4.4-3 8.3-7 10-4-1.7-7-5.6-7-10V6z',
+  /* Turned round: a run going the other way round the roof (design/roofline/TapA.dc.html). */
+  chevron: 'M9 5l7 7-7 7',
+  turn: 'M4 12a8 8 0 0 1 13.7-5.6L20 8.5M20 4v4.5h-4.5M20 12a8 8 0 0 1-13.7 5.6L4 15.5M4 20v-4.5h4.5',
 }
 const FILLED = new Set(['play', 'pause', 'next', 'prev'])
 defineProps<{ name: string; size?: number }>()

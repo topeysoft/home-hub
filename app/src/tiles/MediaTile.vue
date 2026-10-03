@@ -18,7 +18,7 @@ const playing = computed(() => s.value === 'playing')
 const pending = computed(() => !!store.pending[props.device.id])
 const isTv = computed(() => /\b(tv|television|roku|apple tv|chromecast)\b/i.test(props.device.name))
 const name = computed(() => shortName(props.device, roomOf(props.device)))
-const title = computed(() => props.device.attrs.media_title || (playing.value ? 'Playing' : s.value === 'paused' ? 'Paused' : off.value ? 'Off' : dead.value ? 'Not responding' : 'Idle'))
+const title = computed(() => props.device.attrs.media_title || (playing.value ? 'Playing' : s.value === 'paused' ? 'Paused' : off.value ? 'Off' : dead.value ? 'Not answering' : 'Nothing playing'))
 const sub = computed(() => [props.device.attrs.media_artist, props.device.attrs.app_name].filter(Boolean).join(' · '))
 const volume = computed(() => Math.round((props.device.attrs.volume_level ?? 0) * 100))
 /* How far through it is, for the bar the board draws beside the play button on a
@@ -29,7 +29,7 @@ const progress = computed(() => {
   return Number.isFinite(pos) && Number.isFinite(dur) && dur > 0 ? Math.min(100, Math.max(0, (pos / dur) * 100)) : null
 })
 /* the one word beside the button on a small tile: what it is doing, not what is on it */
-const when = computed(() => dead.value ? 'Not responding' : playing.value ? 'Playing' : s.value === 'paused' ? 'Paused' : off.value ? 'Off' : 'Idle')
+const when = computed(() => dead.value ? 'Not answering' : playing.value ? 'Playing' : s.value === 'paused' ? 'Paused' : off.value ? 'Off' : 'Nothing playing')
 
 const art = ref('')
 watch(() => props.device.attrs.entity_picture, (p) => { art.value = p ? imageUrl(props.device.id) : '' }, { immediate: true })

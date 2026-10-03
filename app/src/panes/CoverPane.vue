@@ -45,7 +45,7 @@ const slide = useSlide({
         <span class="rig-scale-line"></span>
         <span class="rig-scale-top">Wide open</span>
         <span class="rig-scale-now" :style="{ bottom: open + '%' }"><i></i>{{ open }}%</span>
-        <span class="rig-scale-bottom">Shut</span>
+        <span class="rig-scale-bottom">Closed</span>
       </div>
     </template>
 

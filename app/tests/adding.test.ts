@@ -14,7 +14,7 @@ describe('the doors of beat one', () => {
   beforeEach(() => { store.status = { drivers: [] } as any; store.bridge = null })
 
   it('offers nothing about wires, only things a person can be holding', () => {
-    expect(doors().map(d => d.title)).toEqual(['Something with its own app', 'A part of the house'])
+    expect(doors().map(d => d.title)).toEqual(['Something with its own app', 'Another screen, or a bridge'])
   })
 
   it('opens the wall door only when a bridge can reach the walls', () => {
@@ -63,7 +63,7 @@ describe('the word list', () => {
   /* Every word that can end up on a button: the shell's own, and the ones the pieces ask for. */
   const ALLOWED = new Set([
     // the seven
-    'Add', 'Have a look', 'That’s the one', 'Try again', 'Done', 'Add another', 'Not now',
+    'Add', 'Set up', 'That’s the one', 'Try again', 'Done', 'Add another', 'Not now',
     // questions only one beat can ask, in the same voice
     'Try the next one', 'No, none of them', 'Look again', 'I can reach the code',
     'It came with a QR code', 'No code on the back?', 'Continue', 'Add it',
@@ -72,6 +72,15 @@ describe('the word list', () => {
     // the bridge's own two answers, which are answers and not ways out
     'Not mine', 'Leave it on', 'No, dark', 'Leave it here',
   ])
+
+  /* The verb is ADD, from the button that opens the sheet to the word that ends it (design/words-adding/, A). "Let in" was the flow's word for it, and the same word People took off phones;
+     a screen that says both is a house speaking two languages. */
+  it('says add, never let in, join or knock', () => {
+    const strip = src('StripSheet.vue')
+    const said = [everything, strip].join('\n').split('\n').filter(l => !/^\s*(\/\/|\/\*|\*)/.test(l))
+      .flatMap(l => [...l.matchAll(/'([^']*)'|>([^<>{}]+)</g)].map(m => m[1] ?? m[2]))
+    for (const w of said.filter(w => !/^[a-z_-]+$/.test(w))) expect(w, `"${w}"`).not.toMatch(/\blet (it )?in\b|\bwould not join\b|\bknocking\b|\bIt’s in\./i)
+  })
 
   it('never offers a word outside the list', () => {
     const asked = [...everything.matchAll(/label: '([^']+)'/g)].map(m => m[1])
@@ -101,7 +110,7 @@ describe('the word list', () => {
    moment one knocks, so the page is visible with a strip waiting only when a bridge has outranked
    it -- and then the household should still be told the strip is there. design/strip/Both.dc.html
    and Knock.dc.html: a strip is never started, it is plugged in and it knocks, so it belongs under
-   "Already waiting" and never as a door somebody opens. */
+   "Found nearby" and never as a door somebody opens. */
 describe('a light strip waiting its turn', () => {
   it('counts only the beats where it is still asking', () => {
     expect(stripWaiting('knocking')).toBe(true)
@@ -188,10 +197,11 @@ describe('asking a strip again, afterwards', () => {
      fails on the sentence promising the thing it is looking for. */
   const stripMarkup = () => stripPart().replace(/<!--[\s\S]*?-->/g, '')
 
-  it('offers both of the questions a strip is asked at setup, and only those', () => {
-    expect(pane).toContain("askAgain('length')")
-    expect(pane).toContain("askAgain('colors')")
-    expect(pane.match(/askAgain\('/g) ?? []).toHaveLength(2)
+  it('offers both of the questions a strip is asked at setup, and only those -- of each strip', () => {
+    /* A controller's second strip is asked the same two, of itself (design/controller-panel/
+       ChangeLaterC.dc.html), so each question appears for each strip and nothing else is asked. */
+    const asked = new Set([...pane.matchAll(/askAgain\('([a-z]+)'/g)].map(m => m[1]))
+    expect([...asked].sort()).toEqual(['colors', 'length'])
   })
 
   it('says the length in metres, because that is how strips are bought', () => {
@@ -202,10 +212,10 @@ describe('asking a strip again, afterwards', () => {
   it('puts both questions behind ONE row, because neither is used twice a year', () => {
     const rows = stripMarkup()
     expect(rows.match(/class="rig-card sd-door"/g) ?? []).toHaveLength(1)
-    expect(rows).toContain('Set up as a strip')
+    expect(rows).toContain('Its length and colors')
     // and what opens is the sheet, with the length walked in it and the colors handed to setup
     expect(rows).toContain('sd-sheet')
-    expect(rows).toContain('Ends here')
+    expect(rows).toContain('Where it ends')
     expect(rows).toContain('The colors look wrong')
   })
 
@@ -233,7 +243,9 @@ describe('asking a strip again, afterwards', () => {
        point; WHAT IS OFFERED is. So: every handler this region can call, by name. A row that grows
        a third question, or anything at all that is not length or color, fails here. */
     const calls = new Set([...stripPart().matchAll(/@(?:click|pointerdown|pointerup|pointerleave|pointercancel)="([a-zA-Z]+)/g)].map(m => m[1]))
-    expect([...calls].sort()).toEqual(['askAgain', 'closeDoor', 'closeTune', 'openDoor', 'startWalk', 'stopWalk'])
+    /* ...and, since 1 October, the second strip's one act: a light of its own (which asks only a room)
+       or part of the first (which asks nothing). design/controller-panel/ChangeLaterC.dc.html. */
+    expect([...calls].sort()).toEqual(['askAgain', 'closeDoor', 'closeTune', 'join', 'openFirst', 'openRow', 'split', 'splitting', 'startWalk', 'stopWalk'])
   })
 })
 
@@ -333,5 +345,22 @@ describe('the line in the band', () => {
       .toEqual([{ id: 'waiting', opens: 'add', title: 'Found a Sonos speaker', sub: 'Tap to add it to the house.' }])
     expect(waitingBand([hue, { title: 'a Sonos speaker' }], null, now)[0].title)
       .toBe('Found 2 new things nearby')
+  })
+
+  /* 3D PRINTERS ON THE WI-FI (design/printers/FoundLine): word for word the line a Hue bridge gets, and
+     it says they are printers, because a name like R2D2 explains nothing to somebody who did not set it up. */
+  const printers = [{ name: 'OBI1' }, { name: 'R2D2' }, { name: 'C3PO' }]
+  it('says found printers are 3D printers, after their names, in the same line', () => {
+    expect(waitingBand([], null, now, printers))
+      .toEqual([{ id: 'waiting', opens: 'add', title: 'Found 3 new things nearby', sub: 'OBI1, R2D2 and C3PO, 3D printers' }])
+    expect(waitingBand([], null, now, [{ name: 'OBI1' }]))
+      .toEqual([{ id: 'waiting', opens: 'add', title: 'Found OBI1', sub: 'A 3D printer. Tap to add it to the house.' }])
+  })
+
+  it('counts printers with everything else found, and folds them in with a knock like anything else', () => {
+    expect(waitingBand([hue], null, now, [{ name: 'OBI1' }])[0])
+      .toMatchObject({ title: 'Found 2 new things nearby', sub: 'a Hue bridge, OBI1, a 3D printer' })
+    expect(waitingBand([], knock(SHOUTS_FOR + 1), now, [{ name: 'OBI1' }])[0])
+      .toMatchObject({ title: '2 things waiting to be set up', sub: 'OBI1, a light strip' })
   })
 })

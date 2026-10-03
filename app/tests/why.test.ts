@@ -150,9 +150,9 @@ describe('a whole routine in one line', () => {
 })
 
 describe('naming a place', () => {
-  it('says the whole house, where you come in, or the room by name', () => {
+  it('says the whole house, the entrance, or the room by name', () => {
     expect(placeName('home')).toBe('the whole house')
-    expect(placeName('entry')).toBe('where you come in')
+    expect(placeName('entry')).toBe('the entrance')
     expect(placeName('kitchen')).toBe('the Kitchen')
   })
 
@@ -193,7 +193,7 @@ describe('one line of the log, as a sentence', () => {
 
   it('owns up when a routine ran but something did not respond', () => {
     const e = explain(event({ detail: JSON.stringify({ rule: 'evening', trigger: { motion: 'on' }, failed: ['light.a'] }) }))
-    expect(e.sub).toContain("one thing didn't respond")
+    expect(e.sub).toContain("one thing didn't answer")
   })
 
   it('does not pretend to know a routine that has since been deleted', () => {

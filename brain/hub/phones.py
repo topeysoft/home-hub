@@ -49,6 +49,7 @@ class Phones:
     def __init__(self, hub, path: Path | None = None):
         self.hub = hub
         self.path = path or DATA / "phones.json"
+        self.moves: dict[str, tuple[str, float]] = {}   # in memory: a one-time move code -> (phone id, good until)
         self.asks: dict[str, dict] = {}      # in memory: id -> {"id", "name", "asked", "token": str | None, "denied": bool, "expires"}
         try: self.data = json.loads(self.path.read_text()) if self.path.exists() else []
         except Exception: self.data = []
@@ -73,7 +74,10 @@ class Phones:
 
     @staticmethod
     def _public(p: dict, me: dict | None = None) -> dict:
-        return {k: p.get(k) for k in ("id", "name", "kind", "joined", "expires", "remote", "last_seen", "how")} | {"me": bool(me and me["id"] == p["id"])}
+        return {k: p.get(k) for k in ("id", "name", "kind", "joined", "expires", "remote", "last_seen", "how")} | {
+            "me": bool(me and me["id"] == p["id"]), "moved": bool((p.get("moved_to") or {}).get("at")),
+            # in the Houses app: the move since 3 October. A phone that moved only to the house's own name is offered it once more.
+            "in_app": bool((p.get("moved_to") or {}).get("app"))}
 
     def list(self, me: dict | None = None) -> dict:
         """What this phone may see. A phone that holds no keys sees itself and nothing else.
@@ -98,7 +102,7 @@ class Phones:
         if not token: return None
         self._sweep()
         h = _hash(token)
-        p = next((p for p in self.data if p.get("hash") == h), None)
+        p = next((p for p in self.data if p.get("hash") == h or h in (p.get("moved_to") or {}).get("hashes", [])), None)
         if not p: return None
         if time.time() - (p.get("last_seen") or 0) > SEEN_EVERY:
             p["last_seen"] = time.time(); self._save()
@@ -121,7 +125,7 @@ class Phones:
 
     def from_setup(self, kind: str = "wall") -> tuple[dict, str]:
         """The screen that set the code during setup is paired without asking; it is the wall."""
-        return self._admit("This wall" if kind == "wall" else "The phone that set up the house", kind, "setup")
+        return self._admit("Wall screen" if kind == "wall" else "The phone that set up the house", kind, "setup")
 
     def ask(self, name: str, kind: str = "phone") -> dict:
         """A phone on the Wi‑Fi asks to join. Nothing is issued until a paired screen allows it."""
@@ -158,6 +162,57 @@ class Phones:
         return "allowed", self.get(a["phone"]), a["token"]
 
     # ---- leaving ----
+    # ---- moving to the house's own name (design/away/, C) ----
+    # A phone is remembered under the name it joined on, because a browser keeps its cookie per name. Moving it
+    # to <house>.elyir.app is a hand-off made at home: the phone, already the house's, asks for a code here,
+    # opens the house's own name with it, and is given a token there for the SAME phone -- same record, same
+    # name, same stay, same `remote`. Its old token keeps working until the household removes the old icon,
+    # so a move that is abandoned halfway costs nothing. The code is good once, for ten minutes, and is only
+    # ever minted for a phone that is already in, from inside the house.
+    MOVE_TTL = 10 * 60
+    # The code is typed: on an iPhone the Home Screen app keeps its own storage, so a house is carried into the app
+    # by a person reading eight characters off one screen and typing them on the other (design/houses/, AppSafari).
+    # No 0/O, no 1/I/L. 31^8 is about 850 billion, and the claim is open from away, so wrong ones are counted --
+    # for the whole house, not per address: behind the house's own proxy and the relay every phone is one address.
+    MOVE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
+    MOVE_WRONG, MOVE_WRONG_WINDOW = 10, 10 * 60
+
+    def start_move(self, phone_id: str) -> str:
+        if not self.get(phone_id): raise KeyError(phone_id)
+        now = time.time()
+        self.moves = {c: m for c, m in self.moves.items() if m[1] > now}
+        code = "".join(secrets.choice(self.MOVE_ALPHABET) for _ in range(8))
+        self.moves[code] = (phone_id, now + self.MOVE_TTL)
+        return code
+
+    @staticmethod
+    def move_code(typed: str) -> str:
+        """What a person typed, as the code: case, spaces and dashes are how it was read aloud, not part of it."""
+        return "".join(c for c in (typed or "").upper() if c.isalnum())
+
+    def move_wait(self) -> float:
+        """Seconds before another claim is listened to, once ten wrong codes have come in ten minutes."""
+        now = time.time()
+        self.move_misses = [t for t in getattr(self, "move_misses", []) if t > now - self.MOVE_WRONG_WINDOW]
+        return (self.move_misses[0] + self.MOVE_WRONG_WINDOW - now) if len(self.move_misses) >= self.MOVE_WRONG else 0.0
+
+    def claim_move(self, code: str, into_app: bool = False) -> tuple[dict, str] | None:
+        """The phone, and a new token for it, for a code minted at home in the last ten minutes. Once only."""
+        m = self.moves.pop(self.move_code(code), None)
+        if not m: self.move_misses = getattr(self, "move_misses", []) + [time.time()]
+        if not m or m[1] < time.time(): return None
+        p = self.get(m[0])
+        if not p: return None
+        token = secrets.token_urlsafe(32)
+        moved = p.setdefault("moved_to", {"at": None, "hashes": []})
+        moved["hashes"] = (moved.get("hashes") or [])[-2:] + [_hash(token)]   # a phone moved three times keeps the last three
+        moved["at"] = time.time()
+        if into_app: moved["app"] = True
+        self._save()
+        self.hub.log.add("phone", p["id"], None, "moved", source="user", detail={"name": p["name"]})
+        self._changed()
+        return p, token
+
     def remove(self, phone_id: str) -> bool:
         p = self.get(phone_id)
         if not p: return False
@@ -199,8 +254,9 @@ class Phones:
 # carries no secret -- the shipped image is blank until the cable writes to it -- and the only name
 # that answers is the hash the hub is offering today (hub/bridge_updates.py).
 OPEN_PREFIXES = ("/phones/claim/", "/assets/", "/sounds/", "/icons/", "/bridge/firmware/")
-OPEN_PATHS = {"/", "/alive", "/phones/me", "/phones/ask", "/phones/code", "/qr.svg", "/phone", "/index.html", "/manifest.webmanifest", "/sw.js", "/favicon.ico", "/favicon.svg", "/robots.txt"}
+OPEN_PATHS = {"/", "/alive", "/phones/me", "/phones/ask", "/phones/code", "/phones/move/claim", "/qr.svg", "/phone", "/index.html", "/manifest.webmanifest", "/sw.js", "/favicon.ico", "/favicon.svg", "/robots.txt"}
 OPEN_SUFFIXES = (".js", ".css", ".svg", ".png", ".ico", ".woff2", ".webmanifest", ".json", ".html", ".txt", ".map")
+NOT_THE_APP = {"/openapi.json"}
 
 
 # ---- how a request reached the house ----
@@ -223,8 +279,8 @@ def from_away(headers) -> bool:
 
 # ---- and what may pass from outside it ----
 JOIN_AT_HOME = ("/phones/ask", "/phones/code", "/phones/claim/")
-HOME_ONLY = "This phone works at home. Someone at the wall can let it out."
-NOT_YOURS = "This house is not open from here."
+HOME_ONLY = "This phone works on your home Wi\u2011Fi. Someone with the passcode can set it to Anywhere, in People."
+NOT_YOURS = "This house isn\u2019t open to this phone."
 
 
 def open_from_away(method: str, path: str) -> bool:
@@ -256,7 +312,7 @@ def away_refusal(phone: dict | None, let_out: bool = False) -> dict:
     them. Anybody else is told nothing they could act on: from outside the house the join screen does not
     exist, so there is nothing to offer and no house to name.
     """
-    if let_out: return {"detail": "at-home", "message": "A phone joins the house from inside it."}
+    if let_out: return {"detail": "at-home", "message": "A phone can only join while it is at home, on the Wi\u2011Fi."}
     return {"detail": "remote", "message": HOME_ONLY} if phone else {"detail": "away", "message": NOT_YOURS}
 
 
@@ -264,4 +320,9 @@ def open_to_strangers(method: str, path: str) -> bool:
     """What the panel needs before it is paired: the app itself, the join screen's own routes, and the sounds a speaker fetches."""
     if method.upper() in ("OPTIONS", "HEAD"): return True
     if path in OPEN_PATHS or path.startswith(OPEN_PREFIXES): return True
-    return "." in path.rsplit("/", 1)[-1] and path.endswith(OPEN_SUFFIXES)
+    # The panel's own files by their extension -- but only at the top, where the build puts the few that are
+    # not under /assets/ (manifest.json, the icons). Anywhere deeper it was a hole: an API path whose last
+    # part happened to end in .js or .json passed without a phone, and a device id is shaped domain.name,
+    # so one named `json` would have. FastAPI's schema is the house's too, not the app's (2 October 2026).
+    if path in NOT_THE_APP: return False
+    return path.count("/") == 1 and path.endswith(OPEN_SUFFIXES)

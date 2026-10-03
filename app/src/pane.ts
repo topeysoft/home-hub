@@ -18,13 +18,14 @@ import type { Device, Event, Room } from './api'
 import { cap, isDead, shortName, deviceById, LABELS } from './store'
 import { partsOfMachine } from './machines'
 import { readingLabel } from './readings'
+import { makerWord } from './telling'
 import { whenText } from './why'
 
 export type Fact = { k: string; v: string }
 export type Verb = { id: 'power' | 'watch' | 'lamp' | 'fan' | 'why' | 'edit'; icon: string; label: string; primary?: boolean; on?: boolean }
 export type Moment = { when: string; text: string }
 
-const cap1 = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
+const cap1 = (s: string) => (s.charAt(0).toUpperCase() + s.slice(1)).replace(/_/g, ' ')   // a device's own state word, never with its underscore
 /** What a reading is measured in, for the rows that quote it back. */
 const sensorUnit = (d: Device, unit = '°') => {
   const cls = d.capability.split('.')[1]
@@ -58,15 +59,15 @@ export function reading(d: Device, unit = '°'): string {
       return !parts.length ? 'Nothing here' : !on ? 'Nothing on' : on === parts.length ? 'All on' : `${on} of ${parts.length} on`
     }
     case 'alarm': return s === 'on' ? 'Sounding' : 'Silent'
-    case 'media': return a.media_title || (s === 'playing' ? 'Playing' : s === 'paused' ? 'Paused' : s === 'off' || s === 'standby' ? 'Off' : 'Idle')
+    case 'media': return a.media_title || (s === 'playing' ? 'Playing' : s === 'paused' ? 'Paused' : s === 'off' || s === 'standby' ? 'Off' : 'Nothing playing')
     case 'climate': return a.current_temperature != null ? `${Math.round(a.current_temperature)}${u}` : s === 'off' ? 'Off' : cap1(s)
     case 'cover': return a.current_position != null && a.current_position > 0 && a.current_position < 100
       ? `${a.current_position}% open` : s === 'open' || a.current_position === 100 ? 'Open'
-      : s === 'opening' ? 'Opening' : s === 'closing' ? 'Closing' : 'Shut'
+      : s === 'opening' ? 'Opening' : s === 'closing' ? 'Closing' : 'Closed'
     case 'lock': return s === 'locked' ? 'Locked' : s === 'unlocked' ? 'Unlocked' : cap1(s)
-    case 'camera': return s === 'recording' ? 'Recording' : s === 'streaming' ? 'Live' : 'Quiet'
+    case 'camera': return s === 'recording' ? 'Recording' : s === 'streaming' ? 'Live' : 'Not recording'
     case 'fan': return s === 'on' ? (a.percentage != null ? pct(a.percentage) : 'On') : 'Off'
-    case 'vacuum': return s === 'cleaning' ? 'Out working' : s === 'returning' ? 'Heading back' : s === 'docked' ? 'Docked' : cap1(s)
+    case 'vacuum': return s === 'cleaning' ? 'Out working' : s === 'returning' ? 'Heading back' : s === 'docked' ? 'At its dock' : cap1(s)
     default: return readingLabel(d)          // a sensor says what the room strip says it says
   }
 }
@@ -103,7 +104,7 @@ export function facts(d: Device, room?: Room | null, unit = '°', events: Event[
   const k = cap(d), a = d.attrs, out: Fact[] = []
   const u = (unit || '°').replace(/[^°CF]/g, '') || '°'
   const add = (kk: string, v: string | number | null | undefined) => { if (v != null && v !== '') out.push({ k: kk, v: String(v) }) }
-  if (k === 'light') add('Warmth', a.color_temp_kelvin ? `${a.color_temp_kelvin}K` : null)
+  if (k === 'light') add('Warmth', a.color_temp_kelvin ? (a.color_temp_kelvin < 3300 ? 'Warm white' : a.color_temp_kelvin < 4800 ? 'Neutral white' : 'Cool white') : null)   // never kelvin
   if (k === 'media') {
     const pos = Number(a.media_position), dur = Number(a.media_duration)
     if (Number.isFinite(pos) && Number.isFinite(dur) && dur > pos) add('Left', `${Math.max(1, Math.round((dur - pos) / 60))} min`)
@@ -112,13 +113,13 @@ export function facts(d: Device, room?: Room | null, unit = '°', events: Event[
   }
   if (k === 'climate') {
     add('Humidity', a.current_humidity != null ? pct(a.current_humidity) : null)
-    add('Asked for', a.temperature != null ? `${Math.round(a.temperature)}${u}` : null)
+    add('Set to', a.temperature != null ? `${Math.round(a.temperature)}${u}` : null)
     add('Sensing', a.sense_from ? (a.sense_name || 'Another room') : 'Its own sensor')
   }
   if (k === 'fan') add('Speed', a.percentage != null ? pct(a.percentage) : null)
   if (k === 'cover') add('Open', a.current_position != null ? pct(a.current_position) : null)
   if (k === 'camera' && a.light) add('Floodlight', deviceById(String(a.light))?.state === 'on' ? 'On' : 'Off')
-  if (a.motion) add('Motion sensor', deviceById(String(a.motion))?.state === 'on' ? 'Seeing motion' : 'Nobody about')   // built into the unit (units.ts)
+  if (a.motion) add('Motion sensor', deviceById(String(a.motion))?.state === 'on' ? 'Seeing motion' : 'No motion')   // built into the unit (units.ts)
   /* a machine's features are its instrument, and the rows there already say On and Off: not again here */
   if (k === 'fan' && a.light) add('Its light', deviceById(String(a.light))?.state === 'on' ? 'On' : 'Off')
   if (k === 'light' && a.fan) { const f = deviceById(String(a.fan)); add('Its fan', f ? (f.state === 'on' ? (f.attrs.percentage ? `${f.attrs.percentage}%` : 'On') : 'Off') : null) }
@@ -154,10 +155,10 @@ export function facts(d: Device, room?: Room | null, unit = '°', events: Event[
       add('Seen today', seen ? `${seen} ${seen === 1 ? 'time' : 'times'}` : 'Nothing')
     }
   }
-  add('Made by', d.maker)
+  add('Made by', makerWord(d.maker) || null)
   /* What the room as a whole is doing: the one piece of context a device cannot carry itself, and
      the reason a lamp went off when nobody touched it. */
-  if (room && room.intent && room.intent !== 'occupied' && room.intent !== 'unknown') add('The room is on', LABELS[room.intent] ?? cap1(room.intent))
+  if (room && room.intent && room.intent !== 'occupied' && room.intent !== 'unknown') add('Room set to', LABELS[room.intent] ?? cap1(room.intent))
   return out.slice(0, 4)
 }
 
@@ -174,7 +175,7 @@ function forLong(on: { from: number; to: number }[], now = Date.now()): string {
    nothing is known; an action the hub itself took does know, and says so. */
 const BY: Record<string, string> = { user: 'by hand', timer: 'by its timer', assistant: 'by the assistant' }
 const ACTION_WORDS: Record<string, string> = {
-  on: 'Switched on', off: 'Switched off', lock: 'Locked', unlock: 'Unlocked', open: 'Opened', close: 'Shut',
+  on: 'Switched on', off: 'Switched off', lock: 'Locked', unlock: 'Unlocked', open: 'Opened', close: 'Closed',
   play: 'Played', pause: 'Paused', next: 'Skipped on', previous: 'Skipped back', volume: 'Volume changed',
   stop: 'Stopped', start: 'Sent out', return: 'Sent back', sound: 'Sound started', sound_off: 'Sound stopped',
   mode: 'Mode changed', preset: 'Preset changed',
@@ -187,7 +188,7 @@ function actionText(ev: Event, unit: string): string {
   if (word === 'fan off') return 'Fan off'
   if (word.startsWith('on for ')) return `On for ${word.slice(7)}`
   if (word === 'set') {
-    if (detail.temperature != null) return `Asked for ${Math.round(detail.temperature)}${unit}`
+    if (detail.temperature != null) return `Set to ${Math.round(detail.temperature)}${unit}`
     if (detail.position != null) return `Sent to ${detail.position}% open`
     if (detail.percentage != null) return `Set to ${detail.percentage}%`
     if (detail.brightness_pct != null) return `Dimmed to ${Math.round(detail.brightness_pct)}%`
@@ -198,15 +199,15 @@ function actionText(ev: Event, unit: string): string {
 function stateText(d: Device, to: string | null): string {
   const k = cap(d), s = String(to ?? '')
   if (k === 'motion') return s === 'on' ? 'Movement' : 'Went quiet'
-  if (k === 'contact') return s === 'on' ? 'Opened' : 'Shut'
+  if (k === 'contact') return s === 'on' ? 'Opened' : 'Closed'
   if (k === 'sensor') return readingLabel({ ...d, state: s })
   if (k === 'lock') return s === 'locked' ? 'Locked' : s === 'unlocked' ? 'Unlocked' : cap1(s)
-  if (k === 'cover') return s === 'open' ? 'Opened' : s === 'closed' ? 'Shut' : cap1(s)
+  if (k === 'cover') return s === 'open' ? 'Opened' : s === 'closed' ? 'Closed' : cap1(s)
   if (k === 'media') return s === 'playing' ? 'Started playing' : s === 'paused' ? 'Paused' : s === 'off' ? 'Off' : cap1(s)
   if (k === 'camera') return s === 'recording' ? 'Started recording' : s === 'streaming' ? 'Went live' : cap1(s)
   if (k === 'vacuum') return s === 'cleaning' ? 'Went out' : s === 'docked' ? 'Came back' : cap1(s)
-  if (k === 'climate') return s === 'off' ? 'Switched off' : s === 'cool' ? 'Set to cool the room' : s === 'heat' ? 'Set to warm the room'
-    : s === 'heat_cool' || s === 'auto' ? 'Set to either' : cap1(s)
+  if (k === 'climate') return s === 'off' ? 'Switched off' : s === 'cool' ? 'Set to Cool' : s === 'heat' ? 'Set to Heat'
+    : s === 'heat_cool' || s === 'auto' ? 'Set to Auto' : cap1(s)
   return s === 'on' ? 'On' : s === 'off' ? 'Off' : s === 'unavailable' ? 'Stopped answering' : cap1(s)
 }
 /** One log row as a line of the pane's foot, or null for the rows that say nothing to a person. */

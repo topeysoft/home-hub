@@ -1,0 +1,128 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200;300;400;500;600;700&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Plus Jakarta Sans", -apple-system, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      /* the panel's own tokens, from app/src/panel.css */
+      --ink: #f1eee8;
+      --ink-2: #b9b5ad;
+      --ink-3: #7f7d77;
+      --lamp: #e9b872;
+      --live: #74c69d;
+      --warn: #e08a8a;
+      --muted: oklch(0.594 0.01 269);
+      --surface: rgba(26,28,34,.68);
+      --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1);
+      --edge-hi: rgba(255,255,255,.18);
+      --lamp-ink: #2a1c07;
+      --glass: linear-gradient(148deg, oklch(0.397 .014 281 / .34), oklch(0.327 .012 281 / .12) 46%, oklch(0.357 .014 281 / .24));
+      --rim: linear-gradient(158deg, rgba(255,255,255,0.69), rgba(255,255,255,.08) 34%, rgba(14,14,22,0.04) 62%, rgba(255,255,255,0.40));
+      --inner: inset 0 -46px 56px -48px rgba(20,23,31,0.9);
+      --drop: 0 27px 61px -26px rgba(15,17,26,0.67), 0 2px 10px rgba(15,17,26,0.32);
+      --sweep: .12;
+    }
+    .gl {
+      position: relative;
+      background: var(--glass);
+      backdrop-filter: blur(26px) saturate(1.6) brightness(1.04);
+      -webkit-backdrop-filter: blur(26px) saturate(1.6) brightness(1.04);
+      box-shadow: var(--inner), var(--drop);
+    }
+    .gl::after {
+      content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+      padding: 1.2px; background: var(--rim);
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      mask-composite: exclude;
+    }
+    .gl::before {
+      content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+      background: linear-gradient(112deg, transparent 26%, rgba(255,255,255,var(--sweep)) 45%, rgba(255,255,255,.02) 56%, transparent 64%);
+    }
+    .gl > * { position: relative; z-index: 1; }
+    .dsp { font-family: inherit; font-weight: 400; letter-spacing: -.025em; }
+    .cap { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+    .ic { flex: 0 0 auto; }
+    /* a nudge, as the panel draws it on a phone: 358x57, radius 18 */
+    .nudge { position: absolute; left: 16px; width: 358px; height: 57px; border-radius: 18px;
+             display: grid; grid-template-columns: 32px 1fr; align-items: center; gap: 12px; padding: 0 16px 0 9px;
+             background: var(--surface); border: 1px solid rgba(233,184,114,.28); }
+    .nudge-ic { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; background: var(--lamp); color: var(--lamp-ink); }
+    .nudge-t { display: block; font-size: 15px; font-weight: 500; line-height: 21px; }
+    .nudge-s { display: block; font-size: 13px; color: var(--ink-2); line-height: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .round { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--live); display: inline-block; }
+    .avatar { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-size: 12.5px; font-weight: 600; color: rgba(255,255,255,.88); border: 2px solid rgba(12,13,16,.6); }
+    .tile { position: absolute; left: 16px; width: 358px; border-radius: 28px; overflow: hidden; background: var(--surface); border: 1px solid var(--edge); }
+    .chip { display: inline-grid; place-items: center; height: 25px; padding: 0 11px; border-radius: 999px; background: rgba(12,13,16,.55);
+            font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); }
+    .row { display: grid; grid-template-columns: 36px 1fr auto; align-items: center; gap: 14px; }
+    .row-ic { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; background: var(--surface-hi); color: var(--ink-2); }
+    .row-t { display: block; font-size: 16px; line-height: 22px; }
+    .row-s { display: block; font-size: 13px; line-height: 18px; color: var(--muted); }
+  </style>
+<style>
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 52px; padding: 0 26px; border-radius: 999px;
+         background: var(--ink); color: #0c0d10; font-size: 17px; font-weight: 500; }
+  .btn.ghost { background: rgba(255,255,255,.08); color: var(--ink); border: 1px solid var(--edge); }
+  .steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+  .steps li { display: grid; grid-template-columns: 28px 1fr; gap: 12px; align-items: start; font-size: 16px; line-height: 1.35; }
+  .steps .n { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; background: var(--surface-hi); border: 1px solid var(--edge); color: var(--ink-2); }
+  .steps b { font-weight: 500; }
+  .steps .s { display: block; font-size: 13.5px; color: var(--muted); margin-top: 2px; }
+  .mark { width: 64px; height: 64px; border-radius: 22px; display: grid; place-items: center; background: var(--surface); border: 1px solid var(--edge-hi); color: var(--lamp); }
+  .lede { margin: 12px 0 0; color: var(--ink-2); font-size: 17px; line-height: 1.4; }
+  .code { display: flex; gap: 6px; }
+  .code i { font-style: normal; width: 36px; height: 48px; border-radius: 12px; display: grid; place-items: center; font-size: 24px; font-weight: 500;
+            background: var(--surface); border: 1px solid var(--edge-hi); font-variant-numeric: tabular-nums; }
+  .code .gap { width: 8px; background: none; border: 0; }
+  .field { height: 54px; border-radius: 16px; background: var(--surface); border: 1px solid var(--edge-hi); display: flex; align-items: center; padding: 0 16px; font-size: 17px; }
+  .chipx { display: inline-flex; align-items: center; height: 36px; padding: 0 14px; border-radius: 999px; background: rgba(255,255,255,.08); border: 1px solid var(--edge); font-size: 15px; color: var(--ink-2); }
+</style>
+</helmet>
+
+<!-- THE MOVE, POINTED AT THE APP -- the line in the band and this page are the move every phone already makes once; only where it goes changes. -->
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; background: #0c0d10; color: var(--ink); font-size: 17px; line-height: 1.4;">
+  <!-- the field: no house's sky -- this screen is not in any one house. The setup screens' night -->
+  <div style="position: absolute; inset: 0; background: linear-gradient(#171a2a 0%, #13151f 55%, #0f1016 100%);"></div>
+  <div style="position: absolute; inset: 0; opacity: .5; background-image: url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.035'/%3E%3C/svg%3E&quot;);"></div>
+  <!-- the phone's own status bar: 47px the page does not own when it is opened from the Home Screen -->
+  <div style="position: absolute; left: 0; top: 0; width: 390px; height: 47px; z-index: 20; pointer-events: none;">
+    <div style="position: absolute; left: 114px; top: 0; width: 162px; height: 32px; border-radius: 0 0 20px 20px; background: #000;"></div>
+    <span style="position: absolute; left: 42px; top: 15px; font-size: 16px; font-weight: 600; letter-spacing: -.01em; color: #fff;">5:54</span>
+    <span style="position: absolute; right: 26px; top: 17px; display: flex; align-items: center; gap: 6px;">
+      <svg width="18" height="12" viewBox="0 0 18 12" fill="#fff"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg>
+      <svg width="16" height="12" viewBox="0 0 16 12" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"><path d="M1.5 4.5a9.5 9.5 0 0113 0M4 7.3a6 6 0 018 0"/><circle cx="8" cy="10.2" r="1.2" fill="#fff" stroke="none"/></svg>
+      <span style="width: 25px; height: 12px; border-radius: 4px; border: 1.2px solid rgba(255,255,255,.5); padding: 1.5px;"><i style="display: block; width: 70%; height: 100%; border-radius: 2px; background: #fff;"></i></span>
+    </span>
+  </div>
+  <div style="position: absolute; left: 128px; top: 831px; width: 134px; height: 5px; border-radius: 3px; background: rgba(255,255,255,.85); z-index: 20;"></div>
+  <div style="position: absolute; left: 20px; top: 165px; width: 350px;">
+    <div class="mark"><svg class="ic" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M4 11l8-6 8 6v8a1 1 0 01-1 1H5a1 1 0 01-1-1z"/></svg></div>
+    <div class="dsp" style="font-size: 40px; line-height: 1.05; margin-top: 24px;">One app for your houses.</div>
+    <p class="lede">Switch this phone to <b style="color: var(--ink); font-weight: 500;">houses.elyir.app</b> once. This house is in it, and any other house you join goes there too.</p>
+    <ol class="steps" style="margin-top: 26px;">
+      <li><span class="n">1</span><span><b>Switch this phone</b><span class="s">It opens Houses, with this house in it.</span></span></li>
+      <li><span class="n">2</span><span><b>Add it to your Home Screen</b><span class="s">Share, then Add to Home Screen.</span></span></li>
+      <li><span class="n">3</span><span><b>Delete the old icon</b><span class="s">Houses works at home too.</span></span></li>
+    </ol>
+  </div>
+  <div style="position: absolute; left: 20px; top: 700px; width: 350px; display: flex; gap: 10px;">
+    <span class="btn">Switch this phone</span><span class="btn ghost">Not now</span>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

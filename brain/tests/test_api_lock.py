@@ -274,6 +274,17 @@ class WhichSideOfTheDoorTests(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertTrue(open_to_strangers("GET", path))
 
+    def test_the_panels_own_top_level_files_load_too(self):
+        for path in ("/manifest.json", "/apple-touch-icon.png", "/icon.svg", "/favicon.svg", "/robots.txt"):
+            with self.subTest(path=path):
+                self.assertTrue(open_to_strangers("GET", path))
+
+    def test_an_api_path_that_ends_like_a_file_is_still_the_house(self):
+        # A device id is domain.name, so a device named `json` or `js` used to pass as one of the app's files.
+        for path in ("/devices/camera.json", "/devices/sensor.js", "/rooms/den/state.json", "/devices/camera.png/snapshot.png", "/openapi.json"):
+            with self.subTest(path=path):
+                self.assertFalse(open_to_strangers("GET", path))
+
     def test_the_house_itself_is_not_open_to_strangers(self):
         for path in ("/home", "/events", "/devices/light.kitchen/on", "/phones", "/setup/advanced", "/backup", "/suggestions"):
             with self.subTest(path=path):
@@ -327,7 +338,7 @@ class AwayGateTests(ApiTest):
         r = self.client.post("/devices/light.kitchen/on", headers=self.AWAY)
         self.assertEqual(r.status_code, 403)
         self.assertEqual(r.json()["detail"], "remote")
-        self.assertIn("works at home", r.json()["message"])
+        self.assertIn("set it to Anywhere", r.json()["message"])
 
     def test_and_the_same_phone_at_home_still_does(self):
         """The gate is about the door, not the phone: nothing changes on the Wi-Fi."""
@@ -405,7 +416,7 @@ class TheBackupNeedsACodeToExist(ApiTest):
         self.assertFalse(self.hub.lock.locked)
         r = self.client.get("/backup")
         self.assertEqual(r.status_code, 403)
-        self.assertIn("Set a code first", r.json()["detail"])
+        self.assertIn("Set a passcode first", r.json()["detail"])
 
     def test_once_there_is_a_code_it_behaves_exactly_as_it_did(self):
         code = self.lock_the_house()

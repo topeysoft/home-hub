@@ -3,10 +3,11 @@
   SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 <script setup lang="ts">
+import { failed } from '../code'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import type { Device } from '../api'
 import { setFan, setSense } from '../api'
-import { perform, shortName, roomOf, store, isDead, notify, cap } from '../store'
+import { perform, shortName, roomOf, store, isDead, notify, cap, fanFor } from '../store'
 import { actingOf } from '../tone'
 import Icon from '../Icon.vue'
 import DeviceArt from '../DeviceArt.vue'
@@ -25,7 +26,7 @@ const mode = computed(() => props.device.state)                       // heat, c
 const off = computed(() => mode.value === 'off')
 const range = computed(() => mode.value === 'heat_cool' && a.value.target_temp_low != null && a.value.target_temp_high != null)
 const fmt = (t: number | null | undefined) => t == null ? '–' : String(step.value === 1 ? Math.round(t) : Math.round(t * 2) / 2)
-const ACTION: Record<string, string> = { heating: 'Heating', cooling: 'Cooling', idle: 'Holding', fan: 'Fan running', drying: 'Drying', preheating: 'Warming up', defrosting: 'Defrosting' }
+const ACTION: Record<string, string> = { heating: 'Heating', cooling: 'Cooling', idle: 'Nothing to do', fan: 'Fan running', drying: 'Drying', preheating: 'Warming up', defrosting: 'Defrosting' }
 const MODES: Record<string, string> = { heat: 'Heat', cool: 'Cool', heat_cool: 'Auto', auto: 'Auto', off: 'Off', fan_only: 'Fan', dry: 'Dry' }
 const modes = computed(() => ((a.value.hvac_modes ?? []) as string[]).filter(m => m in MODES))
 /* sensing from another room: the big number is what that room should reach; the hub moves the thermostat */
@@ -52,12 +53,12 @@ const senseBusy = ref(false)
 async function sense(id: string | null) {
   if (senseBusy.value || (id ?? null) === (a.value.sense_from ?? null)) return
   senseBusy.value = true
-  try { await setSense(props.device.id, id); notify(id ? `Sensing from ${sensors.value.find(s => s.id === id)?.label ?? 'the sensor'}.` : 'Back to the thermostat\'s own sensor.') }
-  catch (e: any) { notify(`Couldn't change the sensor: ${e.message}`, 'error') }
+  try { await setSense(props.device.id, id); notify(id ? `Using ${sensors.value.find(s => s.id === id)?.label ?? 'that sensor'} for the temperature.` : 'Back to its own sensor.') }
+  catch (e: any) { notify(failed('Couldn’t change the sensor', e), 'error') }
   senseBusy.value = false
 }
 const doing = computed(() => {
-  if (dead.value) return 'Not responding'
+  if (dead.value) return 'Not answering'
   const parts = sensing.value
     ? [`${a.value.sense_name} ${fmt(a.value.sense_temp)}${unit.value}`, `thermostat ${fmt(a.value.current_temperature)}${unit.value}, set to ${fmt(a.value.temperature)}${unit.value}`]
     : [`Currently ${fmt(a.value.current_temperature)}${unit.value}`]
@@ -71,12 +72,12 @@ const doing = computed(() => {
    humidity" is a desk sentence; on a tile read from the far side of a room it
    was being ellipsized in the middle of the only part that mattered. */
 const short = computed(() => {
-  if (dead.value) return 'Not responding'
+  if (dead.value) return 'Not answering'
   if (off.value) return `${unit.value} · off`
   const act = (ACTION[a.value.hvac_action] ?? MODES[mode.value] ?? mode.value).toLowerCase()
   const cur = fmt(a.value.current_temperature)
   const moving = a.value.hvac_action === 'heating' || a.value.hvac_action === 'cooling'
-  return cur === '–' ? `${unit.value} · ${act}` : moving ? `${unit.value} · ${act} from ${cur}` : `${unit.value} · now ${cur}`
+  return cur === '–' ? `${unit.value} · ${act}` : moving ? `${unit.value} · ${act}, ${cur} now` : `${unit.value} · now ${cur}`
 })
 /* What the thermostat will take, in the house's unit. A thermostat that doesn't say gets the
    pane's fallback, not a bare 5 and 35: those are Celsius, and against a house reading in
@@ -130,8 +131,8 @@ const fanBusy = ref(false)
 async function fan(minutes: number) {
   if (dead.value || fanBusy.value) return
   fanBusy.value = true
-  try { await setFan(props.device.id, minutes); notify(minutes ? `Fan on for ${FAN.find(f => f.m === minutes)?.label ?? minutes + ' min'}.` : 'Fan off.') }
-  catch (e: any) { notify(`The fan didn't respond: ${e.message}`, 'error') }
+  try { await setFan(props.device.id, minutes); notify(minutes ? `Fan on for ${fanFor(minutes)}.` : 'Fan off.') }
+  catch (e: any) { notify(failed('The fan didn’t answer', e), 'error') }
   fanBusy.value = false
 }
 </script>
@@ -167,7 +168,7 @@ async function fan(minutes: number) {
           <button v-for="m in modes" :key="m" class="clim-chip" :class="{ on: m === mode }" @click="setMode(m)">{{ MODES[m] }}</button>
         </div>
         <div class="clim-row sense" v-if="sensors.length">
-          <span class="clim-fan-label"><Icon name="sensor" :size="18" />{{ range ? 'Auto uses the thermostat\'s own sensor' : 'Sensing from' }}</span>
+          <span class="clim-fan-label"><Icon name="sensor" :size="18" />{{ range ? 'Auto uses the thermostat\'s own sensor' : 'Sensor' }}</span>
           <template v-if="!range">
             <button class="clim-chip" :class="{ on: !a.sense_from }" :disabled="senseBusy" @click="sense(null)">Thermostat</button>
             <button v-for="s in sensors" :key="s.id" class="clim-chip" :class="{ on: a.sense_from === s.id }" :disabled="senseBusy" @click="sense(s.id)">{{ s.label }}</button>

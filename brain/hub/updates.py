@@ -63,7 +63,7 @@ SAYS = {"checking":     "Checking this update is really ours.",
         "fetching":     "Fetching the new version.",
         "downloading":  "Downloading it.",
         "building":     "Building it here. This one takes a while.",
-        "restarting":   "Restarting the house.",
+        "restarting":   "Restarting the hub.",
         "proving":      "Making sure it came back.",
         "putting_back": "That version didn\u2019t start. Putting the old one back."}
 ORDER = ("checking", "fetching", "downloading", "restarting", "proving")
@@ -72,7 +72,7 @@ STEP["building"] = STEP["downloading"]   # a hub that has to build is on the sam
 DARK = ("restarting", "putting_back")    # the brain is not there to be asked during these
 # Which container moving means what, for the one sentence this document has been promising since the
 # first draft. Only the services a household would notice; the rest recreate behind the scenes.
-NOTICES = {"homeassistant": "For about a minute the wall switches still work but the app doesn\u2019t.",
+NOTICES = {"homeassistant": "For about a minute your light switches still work, but this screen and the app don\u2019t.",
            "matter-bridge": "Apple Home, Google Home and Alexa say \u201cno response\u201d for a minute longer.",
            "zigbee2mqtt": "The Zigbee radio restarts too, so anything on it is quiet for a minute.",
            "zwave-js-ui": "The Z-Wave radio restarts too, so anything on it is quiet for a minute."}

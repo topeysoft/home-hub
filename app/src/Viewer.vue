@@ -42,7 +42,7 @@ watch(src, () => { if (src.value) loading.value = false })
 const dead = computed(() => dev.value?.state === 'unavailable')
 const label = computed(() => {
   if (!dev.value) return ''
-  if (dead.value) return 'Offline'
+  if (dead.value) return 'Not answering'
   if (playing.value) return 'Live'
   const age = src.value ? ageLabel(still.value.at) : 'Loading…'
   if (!trying.value) return age

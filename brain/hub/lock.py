@@ -31,6 +31,9 @@ def needs_code(method: str, path: str) -> bool:
     # setting on This hub sitting between two that are gated. Changing the house rather than driving
     # it, which is what this function is for.
     if path == "/language" and m == "POST": return True
+    # The house's address outside: taking one, turning it on or off, giving it back. It costs money and
+    # it opens a door, so it sits behind the code like every other change to what the house is.
+    if path.startswith("/address") and m in ("POST", "DELETE"): return True
     if path.startswith("/rules") and m in ("PUT", "POST", "DELETE"): return True
     # The one GET on this list. Reading what the house DID never needs the code -- that is the
     # household's own situation, and the catch-up is open like the network page. Reading who did it
@@ -73,7 +76,10 @@ def needs_code(method: str, path: str) -> bool:
     # it. The bridge's own routes are not here: they never reach this function, because the service
     # token answered for them before the gate. docs/matter.md.
     if path.startswith("/share") and m == "POST": return True   # turning it on, and letting one more app in
-    if path.startswith("/phones") and m != "GET": return path not in ("/phones/ask", "/phones/code")   # letting a phone in, or out, is a setting; asking is not
+    # Letting a phone in, or out, is a setting; asking is not. Nor is moving: the same phone, with the same stay
+    # and the same `remote`, carried to the house's own name (design/away/, C) -- nothing about who may do what
+    # changes, and the page on the new name has no code yet to send with the claim.
+    if path.startswith("/phones") and m != "GET": return path not in ("/phones/ask", "/phones/code", "/phones/move", "/phones/move/claim")
     return False
 
 

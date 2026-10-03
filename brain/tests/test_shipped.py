@@ -76,3 +76,63 @@ class ShippedScenesTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FrontDoorFiles(unittest.TestCase):
+    """Every file the Caddyfile imports is mounted where Caddy looks for it.
+
+    The compose files mounted the Caddyfile alone, and when it began importing caddy/away/ the import
+    was not found and Caddy would not start -- hub.local went dark on a real hub on 2 October 2026,
+    with the brain healthy behind it. Nothing else checks this: the tests run Caddy against a folder
+    mounted by hand.
+    """
+    def test_what_the_caddyfile_imports_is_mounted_in_every_compose_file(self):
+        import re
+        from pathlib import Path
+        layer = Path(__file__).resolve().parents[2] / "driver-layer"
+        imports = re.findall(r"^\s*import\s+(\S+)", (layer / "caddy" / "Caddyfile").read_text(), re.M)
+        self.assertTrue(imports)
+        for compose in ("docker-compose.yml", "docker-compose.mac.yml"):
+            text = (layer / compose).read_text()
+            for imp in imports:
+                folder = imp.split("/")[0]
+                self.assertTrue(f"./caddy/{folder}:/etc/caddy/{folder}" in text, f"{compose} does not mount caddy/{folder}, which the Caddyfile imports")
+                self.assertTrue((layer / "caddy" / folder).is_dir())
+
+
+class SharedSecrets(unittest.TestCase):
+    """A secret one container presents and another checks is handed to both by the compose file.
+
+    HUB_SHARE_TOKEN was given to the Matter bridge and never to the brain, so the brain refused every
+    request the bridge made and nothing a household shared ever reached Apple Home, Google Home or
+    Alexa. test_share.py sets the variable itself, which is why it stayed green for weeks.
+    """
+    def service(self, name: str) -> str:
+        import re
+        from pathlib import Path
+        text = (Path(__file__).resolve().parents[2] / "driver-layer" / "docker-compose.yml").read_text()
+        m = re.search(rf"^  {name}:\n(.*?)(?=^  [a-z][\w-]*:\n|\Z)", text, re.M | re.S)
+        self.assertIsNotNone(m, name)
+        return m.group(1)
+
+    def test_the_share_token_reaches_the_brain_and_the_bridge(self):
+        for name in ("brain", "matter-bridge"):
+            self.assertTrue("- HUB_SHARE_TOKEN=${HUB_SHARE_TOKEN:-}" in self.service(name), f"{name} is not given HUB_SHARE_TOKEN")
+
+    # Read by the brain but never meant for a hub's .env: the Mac's driver layer on a bridge network, the
+    # developer's reloader, and the repository a fork's updates come from. Anything else the brain reads has
+    # to be handed to it, or setting it in .env does nothing -- which is how HUB_AWAY_OFFER and
+    # HUB_SHARE_TOKEN both went missing.
+    NOT_FOR_A_HUB = {"HUB_DRIVER_HOST", "HUB_PROBE_HOST", "HUB_RELOAD", "HUB_REPO"}
+
+    def test_every_setting_the_brain_reads_is_handed_to_it(self):
+        import re
+        from pathlib import Path
+        brain = Path(__file__).resolve().parents[1]
+        reads = set()
+        for f in [*brain.glob("hub/*.py"), brain / "main.py"]:
+            reads |= set(re.findall(r'os\.environ(?:\.get)?[\[(]"(HUB_[A-Z_]+)"', f.read_text()))
+        given = set(re.findall(r"^\s+- (HUB_[A-Z_]+)=", self.service("brain"), re.M))
+        baked = set(re.findall(r"(HUB_[A-Z_]+)=", (brain / "Dockerfile").read_text()))
+        missing = reads - given - baked - self.NOT_FOR_A_HUB
+        self.assertEqual(missing, set(), f"the brain reads these but docker-compose.yml never hands them to it: {sorted(missing)}")

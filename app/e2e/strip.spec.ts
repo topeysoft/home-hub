@@ -38,7 +38,7 @@ const box = (page: Page, sel: string) => page.locator(sel).first().boundingBox()
 test('a strip adds one row, not two, and it is the only thing on the pane that says strip', async ({ page }) => {
   await openStrip(page)
   await expect(page.locator('.rig-ask .rig-card')).toHaveCount(1)
-  await expect(page.getByText('Set up as a strip', { exact: false }).first()).toBeVisible()
+  await expect(page.getByText('Its length and colors', { exact: false }).first()).toBeVisible()
   // the metres are on the row itself -- lights at sixty to the metre, said the way a strip is bought
   await expect(page.locator('.rig-ask')).toContainText(/About \d\.\d m/)
 })
@@ -69,13 +69,13 @@ test('both questions are behind the one door, and the end can be walked', async 
   await page.locator('.rig-ask .rig-card').click()
   const sheet = page.locator('.sd-sheet')
   await expect(sheet).toBeVisible()
-  await expect(sheet).toContainText('Ends here')
+  await expect(sheet).toContainText('Where it ends')
   await expect(sheet).toContainText('The colors look wrong')
 
   /* A tap is one light. Six of them is a tenth of a metre, and both the picture and the metres say
      so while the finger is still there -- the strip is two rooms of wall away behind a television,
      and a control whose only answer is over there is one somebody presses twice. */
-  const said = (await sheet.locator('.rig-card-name').first().innerText()).replace('Ends here ', '')
+  const said = (await sheet.locator('.rig-card-name').first().innerText()).replace('Where it ends ', '')
   const wide = sheet.locator('.sd-strip.wide i')
   const before = (await wide.boundingBox())!.width
   for (let i = 0; i < 6; i++) await sheet.getByText('Longer').click()

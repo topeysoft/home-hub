@@ -33,7 +33,7 @@ class HealthTests(unittest.TestCase):
         with mock.patch("hub.health.shutil.disk_usage", return_value=namedtuple("u", "total used free")(100 * 1024 ** 3, 10 * 1024 ** 3, 90 * 1024 ** 3)):
             notes = self.h.notes()
         self.assertEqual(len(notes), 1)
-        self.assertTrue(notes[0]["text"].startswith("Hall light has been offline since "))
+        self.assertTrue(notes[0]["text"].startswith("Hall light has not answered since "))
         self.assertNotIn("unavailable", notes[0]["text"])
 
     def test_every_offline_thing_gets_its_own_line(self):
@@ -64,7 +64,7 @@ class HealthTests(unittest.TestCase):
                 texts = [n["text"] for n in self.h.notes()]
             updates.STATE = keep
         # Causes first: a person opening this is looking for the thing to do, and a fault is that thing.
-        self.assertEqual(texts, ["Ring needs signing in again.", "Z-Wave radio is not running: the stick vanished",
+        self.assertEqual(texts, ["Ring needs signing in again.", "Z-Wave radio is not working. The stick vanished.",
                                  "Nest could not connect: the key expired", "The hub's storage is nearly full: 1.0 GB left.",
                                  "The last update did not finish. You can try it again from here."])
 
@@ -88,7 +88,7 @@ class HealthTests(unittest.TestCase):
             notes = self.h.update()
             updates.STATE = keep
         self.assertIn("could not put back", notes[0]["text"])
-        self.assertIn("needs a hand", notes[0]["text"])
+        self.assertIn("get in touch with us", notes[0]["text"])
 
     def test_a_release_that_could_not_be_checked_is_news_and_not_a_job(self):
         # No Try again: the same tap refuses the same release, and this one is not the household's to fix.
@@ -182,7 +182,7 @@ class GroupingTests(unittest.TestCase):
         with self.free_disk(): self.assertEqual(self.h.notes(), [])
         self.quiet(2, "e-zw")
         with self.free_disk(): notes = self.h.notes()
-        self.assertEqual([n["text"] for n in notes], ["No Z-Wave stick found."])
+        self.assertEqual([n["text"] for n in notes], ["Z-Wave radio is not working. No Z-Wave stick found."])
 
     def test_what_no_fault_explains_still_gets_its_own_line(self):
         self.quiet(2, "e-zw")

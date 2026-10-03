@@ -48,7 +48,7 @@ const sure = ref(''), busy = ref('')
 async function remove(a: Account) {
   if (sure.value !== a.id) { sure.value = a.id; return }     // one tap asks with what goes, the second does
   busy.value = a.id
-  try { await removeAccount(a.id); notify(`${a.name} is out. ${a.things ? 'What it brought goes with it.' : ''}`.trim()); await loadAccounts() }
+  try { await removeAccount(a.id); notify(`${a.name} is removed${a.things ? ', with everything that came with it' : ''}.`); await loadAccounts() }
   catch (e: any) { if (e.message !== 'That needs the passcode.') notify(e.message, 'error') }
   sure.value = ''; busy.value = ''
 }

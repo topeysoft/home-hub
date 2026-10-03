@@ -43,7 +43,7 @@ const TITLE: Record<string, string> = {
   knocking: 'A bridge is here.',
   working: 'Setting up the bridge.',
   placing: 'Now find it a home.',
-  ready: 'It’s in.',
+  ready: 'Added.',
   failed: 'That did not work.',
   wifi: 'One thing it needs.',
 }
@@ -150,7 +150,7 @@ onUnmounted(() => window.removeEventListener('keydown', key, true))
           </div>
           <div class="bridge-row">
             <span class="bridge-icon"><Icon name="lock" :size="18" /></span>
-            <span class="bridge-text"><span class="bridge-name">Nothing has been let in yet</span><span class="bridge-sub">Until you say yes it is only knocking. Nothing of yours is on it.</span></span>
+            <span class="bridge-text"><span class="bridge-name">Nothing is added yet</span><span class="bridge-sub">Until you say yes, nothing of yours is on it.</span></span>
           </div>
           <div class="flow-actions">
             <button class="button" :class="{ busy }" @click="adopt">That’s the one</button>

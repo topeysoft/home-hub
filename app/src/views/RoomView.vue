@@ -4,7 +4,9 @@
 -->
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { store, activity, cap, openWhy, isDead, scenesFor } from '../store'
+import { store, activity, cap, openWhy, isDead, scenesFor, printersIn } from '../store'
+import { hasCard, printerChip } from '../printers'
+import PrinterTile from '../tiles/PrinterTile.vue'
 import { setByLine } from '../why'
 import { readingLabel, readingName, isReading, readingOn } from '../readings'
 import type { Device, Room } from '../api'
@@ -19,6 +21,7 @@ import MachineTile from '../tiles/MachineTile.vue'
 import SortView from '../SortView.vue'
 import { machinesOf } from '../machines'
 import { isCarried, onATile, sensorName } from '../units'
+import { heldIn, heldOf } from '../controller'
 
 const props = defineProps<{ room: Room }>()
 defineEmits<{ back: []; open: [id: string] }>()
@@ -37,6 +40,11 @@ const grouped = computed(() => machinesOf(sorted.value.filter(d => !isReading(d)
 const devices = computed(() => grouped.value.rest)
 const machines = computed(() => grouped.value.machines)
 const machineByKey = computed(() => new Map(machines.value.map(m => [m.key, m])))
+/* The printers a household put in this room (design/printers/WorkshopB): A's tile, among the room's own
+   things, and a chip each on the room's line. A print is a whole column, a stopped printer half of one,
+   a ready printer a third -- the same three heights as everything else here. */
+const printers = computed(() => printersIn(props.room))
+const printerByKey = computed(() => new Map(printers.value.map(p => [`printer:${p.id}`, p])))
 
 /*
  * How much room a tile gets, and it is three heights and nothing else.
@@ -93,6 +101,9 @@ function arrange(): Cell[] {
   const ranked = [
     ...devices.value.map(d => ({ key: d.id, size: sizeOf(d), doing: doing(d), rank: order.indexOf(cap(d)) })),
     ...machines.value.map(m => ({ key: m.key, size: (m.devices.length > 3 ? 'half' : 'third') as Size, doing: false, rank: order.indexOf('appliance') })),
+    /* first among its size: a print going is the thing in this room with an end time */
+    ...printers.value.map(p => ({ key: `printer:${p.id}`, size: (hasCard(p) ? 'full' : p.state === 'problem' ? 'half' : 'third') as Size,
+                                  doing: hasCard(p) || p.state === 'problem', rank: -1 })),
   ]
   const ds: Cell[] = ranked
     .sort((a, b) => SIZES[b.size] - SIZES[a.size] || Number(b.doing) - Number(a.doing) || a.rank - b.rank)
@@ -134,7 +145,7 @@ function arrange(): Cell[] {
 const plan = ref<Cell[]>([])
 const byId = computed(() => new Map(props.room.devices.map(d => [d.id, d])))
 watch(
-  () => `${props.room.id}|${devices.value.map(d => d.id).join()}|${machines.value.map(m => m.key + m.devices.length).join()}`,
+  () => `${props.room.id}|${devices.value.map(d => d.id).join()}|${machines.value.map(m => m.key + m.devices.length).join()}|${printers.value.map(p => p.id).join()}`,
   () => (plan.value = arrange()),
   { immediate: true },
 )
@@ -143,6 +154,9 @@ const tile = (c: string) => c === 'light' ? LightTile : c === 'media' ? MediaTil
 /* Who set this room, and how long a hand keeps routines away. Ticks so "1 h 20 min left" stays true. */
 const now = ref(Date.now())
 const setBy = computed(() => setByLine(props.room, now.value))
+/* A strip held dark gets the room's line too, first, with a Why? that opens its pane: the fault is in
+   the room and so is the fix (design/controller-panel/InRoomA.dc.html). */
+const heldHere = computed(() => heldIn(props.room))
 let tick: number | undefined
 onMounted(() => { tick = window.setInterval(() => (now.value = Date.now()), 30000) })
 onUnmounted(() => clearInterval(tick))
@@ -153,7 +167,7 @@ onUnmounted(() => clearInterval(tick))
   <SortView v-else-if="editing" :room="room" editing @back="editing = false" />
   <section class="room" v-else>
     <header class="stage-head room-head">
-      <button class="back" @click="$emit('back')" aria-label="Back to home"><Icon name="back" :size="22" /></button>
+      <button class="back" @click="$emit('back')" aria-label="Back"><Icon name="back" :size="22" /></button>
       <div>
         <h1 class="display">{{ room.name }}</h1>
         <p class="lede">{{ activity(room) }}</p>
@@ -163,7 +177,15 @@ onUnmounted(() => clearInterval(tick))
              stacked bands with a scene bar above them: three rows where one
              does, and between them they spent 400 of the stage's 618px before
              the first device. -->
-        <div class="room-line" v-if="setBy || readings.length" aria-label="Readings">
+        <div class="room-line" v-if="heldHere || setBy || readings.length || printers.length" aria-label="Readings">
+          <!-- each printer in the room as a chip on its line: what it is doing, and a tap is its pane -->
+          <button v-for="p in printers" :key="p.id" class="reading printer-chip" :class="{ on: p.state === 'printing', fault: p.state === 'problem' }"
+                  @click="store.printer = p.id" :title="`Open ${p.name}`">
+            <Icon name="printer" :size="15" /><span class="reading-name">{{ p.name }}</span><span class="reading-value">{{ printerChip(p).slice(p.name.length).trim() }}</span>
+          </button>
+          <button class="why-line held-line" v-if="heldHere" @click="store.opened = heldHere" :title="`Why is ${heldHere.name} off?`">
+            <Icon name="shield" :size="15" /><span>{{ heldOf(heldHere)?.chip }}</span><span class="why-ask">Why?</span>
+          </button>
           <button class="why-line" v-if="setBy" @click="openWhy(room.id)" title="Why is this room like this?">
             <Icon :name="setBy.icon" :size="15" /><span>{{ setBy.text }}</span><span class="why-ask">Why?</span>
           </button>
@@ -176,22 +198,23 @@ onUnmounted(() => clearInterval(tick))
           </button>
         </div>
       </div>
-      <button class="back room-edit" @click="editing = true" aria-label="Edit this room" title="Rename or move things"><Icon name="edit" :size="20" /></button>
+      <button class="back room-edit" @click="editing = true" aria-label="Edit this room" title="Rename, move or remove things"><Icon name="edit" :size="20" /></button>
     </header>
 
-    <div class="tiles" v-if="devices.length || machines.length">
+    <div class="tiles" v-if="devices.length || machines.length || printers.length">
       <template v-for="c in plan" :key="c.key">
         <div v-if="c.key === 'scenes'" class="tile room-scenes" :data-size="c.size">
-          <span class="room-scenes-head">In the {{ room.name.toLowerCase() }}</span>
+          <span class="room-scenes-head">In the {{ /'s\b|’s\b/.test(room.name) ? room.name : room.name.toLowerCase() }}</span>
           <SceneBar :room="room" stacked />
         </div>
+        <PrinterTile v-else-if="printerByKey.get(c.key)" :printer="printerByKey.get(c.key)!" :data-size="c.size" />
         <MachineTile v-else-if="machineByKey.get(c.key)" :machine="machineByKey.get(c.key)!" :room="room" :data-size="c.size" />
         <component v-else-if="byId.get(c.key)" :is="tile(cap(byId.get(c.key)!))" :data-size="c.size" :device="byId.get(c.key)!" v-hold="() => (store.opened = byId.get(c.key)!)" />
       </template>
     </div>
     <div v-else-if="!readings.length" class="empty-room">
       <p class="empty">Nothing in this room yet.</p>
-      <p class="empty-sub" v-if="waiting">{{ waiting === 1 ? 'One new device is' : `${waiting} new devices are` }} waiting to be placed. One of them may belong here.</p>
+      <p class="empty-sub" v-if="waiting">{{ waiting === 1 ? 'One new device is waiting to be placed. It may belong here.' : `${waiting} new devices are waiting to be placed. One of them may belong here.` }}</p>
       <p class="empty-sub" v-else>Add something and say it lives in the {{ room.name }}; it shows up here on its own.</p>
       <div class="empty-actions">
         <button class="button" v-if="waiting" @click="$emit('open', 'unassigned')"><Icon name="sparkle" :size="16" /> Place new devices</button>

@@ -1,0 +1,136 @@
+/* SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+   SPDX-License-Identifier: AGPL-3.0-or-later
+
+   The Houses app's own sheet, small on purpose. The tokens are the panel's (app/src/panel.css), spelled the
+   same, so the app around a house and the house inside it are one thing to the eye. Every class here starts
+   hs-, so nothing in it can be mistaken for the panel's. */
+:root {
+  --bg: #0c0d10;
+  --ink: #f1eee8;
+  --ink-2: #b9b5ad;
+  --muted: #7f7d77;
+  --lamp-rgb: 233, 184, 114;
+  --lamp: rgb(var(--lamp-rgb));
+  --lamp-ink: rgb(42, 28, 7);
+  --live: rgb(116, 198, 157);
+  --danger: rgb(224, 138, 138);
+  --surface: rgba(26, 28, 34, 0.68);
+  --surface-hi: rgba(255, 255, 255, 0.08);
+  --edge: rgba(255, 255, 255, 0.1);
+  --edge-hi: rgba(255, 255, 255, 0.18);
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); }
+body {
+  font: 17px/1.4 "Plus Jakarta Sans Variable", -apple-system, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+}
+button, input { font: inherit; color: inherit; }
+button { background: none; border: 0; padding: 0; cursor: pointer; }
+
+/* the field behind every page of the app's own: no house's sky, the setup screens' night */
+.hs-field { position: fixed; inset: 0; background: linear-gradient(#171a2a 0%, #13151f 55%, #0f1016 100%); }
+
+.hs-page {
+  position: relative;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding: calc(var(--safe-top) + 40px) 20px calc(var(--safe-bottom) + 24px);
+  max-width: 520px;
+  margin: 0 auto;
+}
+.hs-mark {
+  width: 64px; height: 64px; border-radius: 22px; display: grid; place-items: center;
+  background: var(--surface); border: 1px solid var(--edge-hi); color: var(--lamp); margin-bottom: 22px;
+}
+.hs-mark.done { color: var(--live); }
+.hs-title { font-size: 36px; line-height: 1.08; font-weight: 400; letter-spacing: -0.025em; margin: 0; }
+.hs-lede { margin: 12px 0 0; color: var(--ink-2); font-size: 17px; }
+.hs-small { font-size: 13.5px; color: var(--muted); margin: 10px 0 0; }
+.hs-error { color: var(--danger); font-size: 14.5px; margin: 12px 0 0; }
+.hs-cap { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin: 32px 0 8px; }
+.hs-actions { margin-top: auto; padding-top: 28px; display: flex; gap: 10px; }
+
+.hs-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: 52px; padding: 0 26px; border-radius: 999px;
+  background: var(--ink); color: var(--bg); font-size: 17px; font-weight: 500;
+}
+.hs-btn.wide { flex: 1 1 auto; }
+.hs-btn.ghost { background: var(--surface-hi); color: var(--ink); border: 1px solid var(--edge); }
+.hs-btn:disabled { opacity: 0.5; }
+.hs-link { color: var(--lamp); font-size: 15px; margin-top: 22px; align-self: flex-start; }
+
+/* the code: eight boxes, read off one screen and typed on another (AppSafari, AppFirst) */
+.hs-code { position: relative; display: flex; gap: 6px; margin-top: 22px; }
+.hs-code i {
+  font-style: normal; width: 36px; height: 48px; border-radius: 12px; display: grid; place-items: center;
+  font-size: 24px; font-weight: 500; background: var(--surface); border: 1px solid var(--edge-hi);
+  font-variant-numeric: tabular-nums;
+}
+.hs-code i.gap { width: 8px; background: none; border: 0; }
+.hs-code input {
+  position: absolute; inset: 0; opacity: 0; width: 100%; text-transform: uppercase;
+}
+.hs-code:focus-within i.next { border-color: var(--lamp); }
+.hs-carry { margin-top: 22px; padding: 18px; border-radius: 22px; background: rgba(var(--lamp-rgb), 0.08); border: 1px solid rgba(var(--lamp-rgb), 0.3); }
+.hs-carry .hs-code { margin-top: 10px; }
+.hs-carry-say { font-size: 13px; color: var(--lamp); }
+
+.hs-steps { list-style: none; margin: 22px 0 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+.hs-steps li { display: grid; grid-template-columns: 28px 1fr; gap: 12px; align-items: start; font-size: 16px; line-height: 1.35; }
+.hs-steps .n { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; background: var(--surface-hi); border: 1px solid var(--edge); color: var(--ink-2); }
+.hs-steps b { font-weight: 500; }
+.hs-steps .s { display: block; font-size: 13.5px; color: var(--muted); margin-top: 2px; }
+
+.hs-field-input {
+  width: 100%; height: 54px; border-radius: 16px; background: var(--surface); border: 1px solid var(--edge-hi);
+  padding: 0 16px; font-size: 17px; outline: none;
+}
+.hs-field-input:focus { border-color: var(--lamp); }
+.hs-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.hs-chip { height: 36px; padding: 0 14px; border-radius: 999px; background: var(--surface-hi); border: 1px solid var(--edge); font-size: 15px; color: var(--ink-2); }
+
+.hs-near {
+  display: grid; grid-template-columns: 40px 1fr auto; align-items: center; gap: 14px;
+  padding: 14px; border-radius: 20px; background: var(--surface); border: 1px solid var(--edge);
+}
+.hs-icon { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--surface-hi); color: var(--ink-2); }
+.hs-near-t { display: block; font-size: 16px; }
+.hs-near-s { display: block; font-size: 13px; color: var(--muted); }
+.hs-pill { height: 36px; padding: 0 14px; border-radius: 999px; background: var(--surface-hi); border: 1px solid var(--edge); font-size: 15px; display: inline-grid; place-items: center; text-decoration: none; color: var(--ink); }
+
+/* a house, framed: the whole screen is that house's panel, which leaves the status bar its own room */
+.hs-house { position: fixed; inset: 0; background: var(--bg); }
+.hs-frame { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: var(--bg); }
+.hs-wait { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: 15px; pointer-events: none; }
+
+/* Houses (HereB-sheet): the whole screen on a phone, as This house is */
+.hs-sheet {
+  position: fixed; inset: 0; z-index: 10; overflow-y: auto;
+  background: linear-gradient(#1b2232 0%, #171b26 50%, #12141b 100%);
+  padding: calc(var(--safe-top) + 18px) 0 calc(var(--safe-bottom) + 24px);
+}
+.hs-sheet-head { display: flex; align-items: center; justify-content: space-between; padding: 0 16px 0 20px; }
+.hs-sheet-title { font-size: 30px; font-weight: 400; letter-spacing: -0.025em; margin: 0; }
+.hs-close { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: rgba(255, 255, 255, 0.1); }
+.hs-rows { list-style: none; margin: 18px 0 0; padding: 0 16px; }
+.hs-row {
+  width: 100%; display: grid; grid-template-columns: 36px 1fr auto; align-items: center; gap: 14px;
+  min-height: 64px; padding: 8px 10px; border-radius: 16px; text-align: left;
+}
+.hs-row:active { background: var(--surface-hi); }
+.hs-row .hs-icon { width: 36px; height: 36px; }
+.hs-row.here .hs-icon { background: rgba(116, 198, 157, 0.18); color: var(--live); }
+.hs-row.needs .hs-icon { background: var(--lamp); color: var(--lamp-ink); }
+.hs-row-t { display: flex; align-items: center; gap: 8px; font-size: 16px; }
+.hs-row-temp { margin-left: auto; color: var(--ink-2); font-size: 14px; }
+.hs-row-s { display: block; font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hs-row-s .here { color: var(--live); }
+.hs-row-s .needs { color: var(--lamp); }
+.hs-rule { height: 1px; background: var(--edge); margin: 10px 26px; }

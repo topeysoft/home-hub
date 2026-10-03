@@ -1,0 +1,58 @@
+{
+  "pages": [
+    {
+      "id": "page-1",
+      "name": "History, in the settled words"
+    }
+  ],
+  "artboards": [
+    {
+      "file": "Today.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Today",
+      "page": "page-1"
+    },
+    {
+      "file": "Settled.dc.html",
+      "x": 0,
+      "y": 1100,
+      "w": 1440,
+      "h": 900,
+      "title": "The settled words, applied",
+      "page": "page-1"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "why",
+      "x": -620,
+      "y": 0,
+      "w": 500,
+      "text": "WHY THIS EXISTS, AND WHY THERE IS ONE DIRECTION\n\nThe sixth area of the wording pass (docs/wording.md): What happened, Who changed what, Needs a look. Nearly every word on these pages is the hub's own, written by happened.py, health.py and healed.py, so this round is mostly brain.\n\nThere is no new question here. Every word these pages needed was already chosen in an earlier area -- a phone is added and set to Home only or Anywhere (People), a device is added and removed and is Not answering (Add, Rooms), the box is The hub and restarts say how deep they go (Settings). So the second sheet is not a proposal among others: it is those choices applied, plus the facts that were simply wrong. AGENTS.md section 1 asks for two or three directions where there is a question to answer; where the answers already exist, this is the record of applying them.",
+      "page": "page-1"
+    },
+    {
+      "id": "today",
+      "x": 1560,
+      "y": 0,
+      "w": 560,
+      "text": "TODAY (most of it the hub's)\n\n1  \"joined the house\", \"asked to join\" -- a phone is added (People).\n2  \"ended Sam's phone's stay, which was only ever for a while.\" -- on What happened there is no who in front of it, so the line began with a lowercase verb and no subject.\n3  \"the hub's engine\" -- never the engine (Setup).\n4  \"While you were out\" -- used even when nobody's presence is recorded, under a lede that says \"since yesterday\".\n5  \"Someone at the wall\" -- the house cannot say who, and it was not the wall.\n6  \"set the passcode on the settings\" -- the settings are not a thing; Lock the settings is gone (Settings).\n7  WRONG. \"the changes above that date\" -- the list is newest first, so they are below.\n8  WRONG. A bridge named by its chip id: \"set up the bridge a4cf12e8.\"\n9  WRONG. A restart the hub's watchdog did by itself credited to Someone at the wall, as \"changed Restart: back.\"\n10 WRONG. The catch-all printed the row's raw value: \"changed Kitchen: 30,80.\"\n11 \"offline\", \"went quiet\" -- Not answering (Rooms).\n12 \"Messages\" -- Device messages (Settings).\n13 \"is not running: Could not connect: ...\" -- a colon after a colon.\n14 \"Restart the hub\", \"Restart everything\" -- Quick restart, Full restart (Settings).\n15 WRONG. \"Restarting hub has not helped\" -- the restart's internal name, raw.\n16 \"the hub needs a hand\" -- says nothing anybody can do.",
+      "page": "page-1"
+    },
+    {
+      "id": "applied",
+      "x": 1560,
+      "y": 1100,
+      "w": 560,
+      "text": "APPLIED\n\nEvery line on the second sheet is a word an earlier area already chose. The facts fixed (7-10, 15) are fixed whatever the words.\n\nKEPT ON PURPOSE: a connection's own error, when it has one (\"Could not connect: Connection refused\"), stays after the sentence. It is ugly, and it is the only clue anybody has; the brain tests pin that it is never dropped.\n\nSEEN, NOT CHANGED: \"Ring needs signing in again.\" has no button on Needs a look while an account's does -- that is a missing control, not a word, and is listed in docs/wording.md.",
+      "page": "page-1"
+    }
+  ],
+  "launch": {
+    "view": "canvas",
+    "page": "page-1"
+  }
+}

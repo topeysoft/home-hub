@@ -1,5 +1,6 @@
 /* ---------- tokens: a house at rest ---------- */
 :root {
+  --safe-top: env(safe-area-inset-top, 0px);   /* the iPhone's status bar, when opened from the Home Screen; see the phone's top, at the end */
   --bg: #0c0d10;
   --bg-2: #111318;
   --glow: rgba(
@@ -2056,7 +2057,7 @@ input:focus-visible {
     flex-direction: row;
     align-items: center;
     gap: 12px;
-    padding: 16px 16px 10px;
+    padding: calc(16px + var(--safe-top)) 16px 10px;
     border-right: 0;
     border-bottom: 1px solid var(--edge);
   }
@@ -2745,13 +2746,25 @@ input:focus-visible {
   text-shadow: 0 2px 24px rgba(0, 0, 0, 0.55);
 }
 /* The resting wall is read from across the room, so the facts are the big type and the clock gives up a
-   little size to pay for it. design/rest/LedgerB2.dc.html, and resting.ts for what the facts say. */
+   little size to pay for it. design/rest/CornerF.dc.html, and resting.ts for what the facts say. */
 .idle-time {
   font-size: clamp(96px, 12.5vw, 180px);
   line-height: 1;
   letter-spacing: -0.04em;
   color: var(--ink);
   font-variant-numeric: tabular-nums;
+}
+/* AM and PM at about a third of the digits, on their baseline: the hour is what is read from across the room */
+.idle-period {
+  margin-left: 0.07em;
+  font-size: 0.31em;
+  font-weight: 300;
+  letter-spacing: 0;
+}
+.idle-fact-period {
+  margin-left: 6px;
+  font-size: 0.46em;
+  letter-spacing: 0;
 }
 .idle-day {
   margin-top: 4px;
@@ -2762,7 +2775,7 @@ input:focus-visible {
 }
 .idle-facts {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   margin-top: 64px;
   max-width: calc(100vw - 64px);
 }
@@ -2771,7 +2784,8 @@ input:focus-visible {
   flex-direction: column;
   align-items: center;
   min-width: 0;
-  padding: 0 clamp(20px, 3vw, 44px);
+  max-width: 330px;
+  padding: 0 clamp(20px, 3vw, 40px);
   color: var(--ink);
 }
 .idle-fact + .idle-fact {
@@ -2792,15 +2806,52 @@ input:focus-visible {
 .idle-fact-value svg {
   flex: none;
 }
+/* A long routine name wraps to two lines under its time and then ends in an ellipsis, rather than
+   pushing the row off both edges of the wall. The padding is room for the resting screen's text
+   shadow, which the clipped span inside would otherwise cut into a visible box. */
 .idle-fact-where {
   max-width: 100%;
-  margin-top: 12px;
+  margin-top: 4px;
+  padding: 8px 10px;
   font-size: 21px;
+  line-height: 1.3;
+  text-align: center;
   color: var(--ink);
   opacity: 0.85;
-  white-space: nowrap;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.5);
+}
+.idle-fact-where span {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
+}
+/* the weather, drawn as Home draws it, in the top right corner and as large as the facts */
+.idle-wx {
+  position: absolute;
+  top: 56px;
+  right: 64px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  color: var(--ink);
+}
+.idle-wx svg {
+  width: 170px;
+  height: auto;
+  overflow: visible;
+}
+.idle-wx-temp {
+  font-size: 84px;
+  font-weight: 300;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+.idle-wx-label {
+  margin-top: 6px;
+  font-size: 22px;
+  opacity: 0.85;
 }
 .idle-line {
   margin-top: 14px;
@@ -3350,6 +3401,141 @@ input:focus-visible {
   color: var(--ink-2);
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+/* From outside, too? -- the optional last step of setup (AddressStep.vue; design/address/, OfferPlain).
+   The address, the price in the open and what stopping does, in one card. `address-` throughout:
+   this sheet is flat, and words like .form or .price already mean something somewhere else. */
+.address-form {
+  width: min(100%, 640px);
+  padding: 18px 20px 20px;
+  border-radius: var(--r-lg);
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid var(--edge-hi);
+}
+.address-row {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.address-name {
+  display: flex;
+  align-items: stretch;
+}
+.address-name .input {
+  width: 200px;
+  border-radius: 14px 0 0 14px;
+  border-right: 0;
+}
+.address-zone {
+  display: flex;
+  align-items: center;
+  height: 50px;
+  padding: 0 14px;
+  border-radius: 0 14px 14px 0;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--edge);
+  color: var(--ink-2);
+  font-size: 17px;
+}
+.address-said {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 14px;
+}
+.address-said.ok {
+  color: var(--live);
+}
+.address-said.no {
+  color: var(--danger);
+}
+.address-picks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.address-picks .chip-btn {
+  padding: 7px 14px;
+  font-size: 14px;
+  color: var(--ink);
+}
+.address-picks .chip-btn span {
+  color: var(--muted);
+  margin-left: -7px;
+}
+.address-cost {
+  margin: 18px 0 0;
+  font-size: 15px;
+  color: var(--ink-2);
+}
+.address-amount {
+  font-size: 30px;
+  color: var(--ink);
+  margin-right: 4px;
+}
+.address-stop {
+  margin: 6px 0 0;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.address-step .setup-actions {
+  margin-top: 18px;
+}
+.address-pay {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+.address-wait {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+}
+.address-wait .setup-status {
+  margin: 0;
+}
+/* Move this phone (MovePage.vue; design/away/, NamedC-move): three steps, only the first of which the page can
+   do, numbered in quiet circles the way the board draws them. `move-` throughout: the sheet is flat. */
+.move-steps {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: min(52ch, 100%);
+}
+.move-steps li {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 12px;
+  align-items: start;
+  font-size: 15.5px;
+  line-height: 1.35;
+}
+.move-steps b {
+  font-weight: 500;
+}
+.move-n {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  background: var(--surface-hi);
+  border: 1px solid var(--edge);
+  color: var(--ink-2);
+}
+.move-s {
+  display: block;
+  font-size: 13.5px;
+  color: var(--muted);
+  margin-top: 2px;
 }
 .pulse-dot {
   width: 8px;
@@ -4551,7 +4737,7 @@ select.input {
     grid-template-columns: 1fr;
   }
   .house-doors {
-    padding: 18px 16px calc(16px + env(safe-area-inset-bottom));
+    padding: calc(18px + var(--safe-top)) 16px calc(16px + env(safe-area-inset-bottom));
     border-right: 0;
   }
   .house-doors-head {
@@ -4579,7 +4765,7 @@ select.input {
     display: grid;
   }
   .house-head {
-    padding: 16px 12px 12px 16px;
+    padding: calc(16px + var(--safe-top)) 12px 12px 16px;
     gap: 10px;
   }
   .house-head h2 {
@@ -5556,6 +5742,61 @@ select.input {
   border-radius: var(--r-md);
   background: var(--surface);
   border: 1px solid var(--edge);
+}
+/* A phone row with its Home only | Anywhere choice (PeoplePage.vue; design/words-people/, AnywhereC): the choice
+   sits between the name and Remove, so a row that has one gets a column for it and the rows without keep theirs.
+   The wall gets the same column with the answer and no choice, because it never leaves. */
+.phones li:has(.phones-where) {
+  grid-template-columns: auto 1fr auto auto;
+}
+.phones-where {
+  display: inline-flex;
+  align-items: center;
+}
+.where-pick {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--surface-hi);
+  border: 1px solid var(--edge);
+}
+.where-pick button {
+  appearance: none;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  color: var(--ink-2);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.where-pick button[aria-checked='true'] {
+  background: var(--ink);
+  color: var(--bg);
+  font-weight: 500;
+}
+.where-pick.busy {
+  opacity: .6;
+  pointer-events: none;
+}
+.where-fixed {
+  font-size: 13px;
+  color: var(--muted);
+  padding-right: 6px;
+}
+/* On a phone the two answers are wider than the room beside a name, so they take their own line under it
+   and Remove keeps its place at the end of the first (design/words-people/, AnywhereC-phone). */
+@media (max-width: 860px) {
+  .phones li:has(.where-pick) {
+    grid-template-columns: auto 1fr auto;
+  }
+  .phones-where:has(.where-pick) {
+    grid-column: 2 / -1;
+    grid-row: 2;
+    justify-self: start;
+  }
 }
 .phones-icon {
   width: 32px;
@@ -9770,6 +10011,143 @@ select.input {
   flex: 1 1 auto;
   min-width: 0;
 }
+/* THE ROOFLINE'S OWN PANE (design/roofline/DrawnC.dc.html, chosen 1 October 2026). The same two columns
+   as every pane, then the roof drawn across the floor under both of them, where a lamp's facts and its
+   day would be. The instrument loses its frame here because it is not one thing in a box any more: a bar
+   and two cards, each with its own edge, sitting straight on the pane as the board draws them. */
+.pane-body.pane-roof {
+  grid-template-rows: auto minmax(0, 1fr);
+  row-gap: 20px;
+}
+.pane-roof .pane-rig {
+  grid-row: 1;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  overflow: visible;
+}
+.pane-roof .roof-plate {
+  grid-column: 1 / -1;
+  grid-row: 2;
+}
+/* the left column's one sentence, at the board's measure so the roof starts where the board starts it;
+   in the danger color when it is saying what is wrong */
+.pane-roof .pane-why {
+  margin-top: 15px;
+  font-size: 16px;
+  line-height: 23px;
+}
+.pane-why.roof-wrong {
+  color: var(--danger);
+}
+@media (max-height: 860px) and (min-width: 861px) {
+  .pane-body.pane-roof {
+    row-gap: 16px;
+  }
+}
+/* SHARING IS SAID BY THE ROOM (design/roofline/SaidB.dc.html, chosen 2 October 2026). In a house that
+   shares its lights with other apps, the share row is not a row of the left column on this pane: it is a
+   chip on the room's line, so the column is the board's and the roof keeps the width of the wall. The
+   chip is the share row's own words at a smaller size, with the light's own color as its dot while it is
+   shared; it opens the same choice as a small card over the name, heavier than the pane so it reads as in
+   front of it. The room's line keeps its height with the chip on it, so nothing under it moves. */
+.opened-room.has-share {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 21px;
+  line-height: 21px;
+}
+.room-share {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 26px;
+  padding: 0 9px 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--edge);
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--muted);
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background 0.18s ease,
+    color 0.18s ease,
+    border-color 0.18s ease;
+}
+.room-share:hover,
+.room-share.open {
+  border-color: var(--edge-hi);
+  color: var(--ink-2);
+}
+.room-share.open {
+  background: rgba(255, 255, 255, 0.06);
+}
+.room-share-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--lamp);
+}
+.room-share-more {
+  transform: rotate(90deg);
+}
+.opened-step.s0:has(.room-share-card) {
+  position: relative;
+  z-index: 3;
+}
+.room-share-card {
+  position: absolute;
+  left: -8px;
+  top: calc(100% + 9px);
+  z-index: 6;
+  width: 452px;
+  max-width: calc(100vw - 32px);
+  padding: 18px 20px;
+  border-radius: 24px;
+  border: 1px solid var(--edge-hi);
+  background: #181a20;
+  box-shadow:
+    0 30px 80px -20px rgba(0, 0, 0, 0.9),
+    0 0 0 6px rgba(12, 13, 16, 0.35);
+  line-height: 1.4;
+  white-space: normal;
+}
+.room-share-card .opened-kind-row {
+  margin-top: 12px;
+}
+.room-share-card .opened-kind-why {
+  max-width: none;
+}
+/* A LEFT COLUMN WITH QUIET ROWS IN IT is taller than the board's, and the roof would go under the foot
+   of the wall. Then the roof keeps to the right-hand column, under the controls, and the left column runs
+   the full height beside it: the same plate, the same order round, only shorter. Sharing no longer comes
+   here (above). What still does is the pane being EDITED -- Take it out of the house, and what it says
+   after -- and that case is NOT decided (design/roofline/canvas.json, pane-shared-decided): until it is
+   drawn, this is the build's present answer for it, kept as it was. */
+@media (min-width: 861px) {
+  .pane-body.pane-roof:has(.pane-said .opened-kind) .pane-said {
+    grid-row: 1 / span 2;
+  }
+  .pane-body.pane-roof:has(.pane-said .opened-kind) .roof-plate {
+    grid-column: 2;
+  }
+}
+@media (max-width: 860px) {
+  .pane-roof .pane-rig {
+    grid-row: 2;
+  }
+  .pane-roof .roof-plate {
+    grid-row: 3;
+    margin-bottom: 24px;
+  }
+}
 
 /* ---------- Outside: the forecast, in the pane the lozenge opens ----------
    WeatherPane.vue says why the weather gets a pane at all. What is here is the
@@ -12051,4 +12429,1293 @@ button.reading[data-held] {
 .happened-note b {
   font-weight: 500;
   color: var(--ink);
+}
+
+/* ---------- a strip the controller is keeping dark (design/controller-panel/, "held": A) ----------
+   The tile stops claiming a state it cannot have. It keeps its glass and its size, and says Staying off
+   in the lamp color with the reason under it in the muted ink, a shield where the bulb was: the house's
+   attention color, never the danger one, because the strip is being looked after rather than broken.
+   The edge carries the same lamp at half, so a room with one of these reads at a glance which it is. */
+.tile.light.held {
+  border-color: rgba(var(--lamp-rgb), 0.5);
+  box-shadow:
+    0 0 0 1px rgba(var(--lamp-rgb), 0.18),
+    0 24px 50px -32px rgba(0, 0, 0, 0.85);
+}
+.tile.light.held .tile-icon {
+  background: rgba(var(--lamp-rgb), 0.12);
+  color: var(--lamp);
+}
+.held-state {
+  display: block;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--lamp);
+}
+.held-why {
+  display: block;
+  margin-top: 2px;
+  font-size: 13.5px;
+  color: var(--muted);
+}
+/* ...and the room's own line carries it first, the same chip as "Used by hand", washed in the lamp. */
+.why-line.held-line {
+  background: rgba(var(--lamp-rgb), 0.12);
+  border-color: rgba(var(--lamp-rgb), 0.42);
+  color: var(--ink);
+}
+
+/* The held light's pane, left column (design/controller-panel/HeldPane.dc.html, at its 1440 values): the
+   sentence under the big state, the two supplies as the bricks print them, and the one next step. */
+.held-text {
+  margin: 18px 0 0;
+  max-width: 500px;
+  font-size: 15.5px;
+  line-height: 1.5;
+  color: var(--ink-4, var(--ink-2));
+}
+.held-supplies {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 20px;
+  color: var(--muted);
+}
+.held-supply {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 44px;
+  padding: 0 16px;
+  border-radius: 14px;
+  border: 1px solid var(--edge);
+  background: rgba(255, 255, 255, 0.04);
+}
+.held-supply.now {
+  border-color: rgba(var(--lamp-rgb), 0.5);
+  background: rgba(var(--lamp-rgb), 0.1);
+}
+.held-supply-k {
+  font-size: 13px;
+  color: var(--ink-3, var(--muted));
+}
+.held-supply.now .held-supply-k {
+  color: var(--ink-2);
+}
+.held-supply-v {
+  font-size: 19px;
+  color: var(--ink);
+}
+.held-supply.now .held-supply-v {
+  color: var(--lamp);
+}
+.held-step {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 18px;
+  max-width: 500px;
+  min-height: 76px;
+  padding: 0 22px;
+  border-radius: 24px;
+  border: 1px solid var(--edge);
+  background: rgba(255, 255, 255, 0.05);
+}
+.held-step-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--lamp);
+}
+.held-step b {
+  display: block;
+  font-weight: 400;
+  font-size: 19px;
+  line-height: 1.3;
+}
+.held-step small {
+  display: block;
+  margin-top: 2px;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--ink-3, var(--muted));
+}
+/* the instrument, left in place at half strength: what is chosen now is what it comes back as */
+.pane-rig.held > * {
+  opacity: 0.5;
+}
+/* Needs a look's row for it wears the same lamp wash, and sorts first (the brain puts it there). */
+.notes li.note-held {
+  border-color: rgba(var(--lamp-rgb), 0.42);
+  background: rgba(var(--lamp-rgb), 0.08);
+}
+.notes li.note-held .recent-icon {
+  color: var(--lamp);
+}
+
+/* ---------- a look for the roofline, said (design/roofline/SaidC.dc.html) ----------
+   The draft card under the command box: the household's own words as chips, the motion in the lamp,
+   and the one line that says it is on the roof now and goes back if nobody keeps it. */
+.say-look {
+  margin-top: 14px;
+  padding: 20px 22px;
+  border-radius: var(--r-lg);
+  border: 1px solid rgba(var(--lamp-rgb), 0.32);
+  background: var(--surface);
+}
+.say-look-for {
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.say-look-words {
+  margin-top: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  font-size: 22px;
+  letter-spacing: -0.01em;
+}
+.say-look-word {
+  padding: 4px 12px;
+  border-radius: var(--r-sm);
+  border: 0;
+  font: inherit;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.08);
+}
+.say-look-word.on {
+  background: rgba(var(--lamp-rgb), 0.16);
+  box-shadow: inset 0 0 0 1px rgba(var(--lamp-rgb), 0.5);
+  color: var(--lamp);
+}
+.say-look-comma {
+  color: var(--muted);
+}
+.say-look-note {
+  margin: 12px 0 16px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+.say-look-live {
+  color: var(--live);
+}
+.say-look .draft-actions {
+  flex-direction: row;
+}
+
+
+/* ---------- 3D printers: a print, leading Your afternoon ----------
+   design/printers/NowB and StatesB, chosen 2 October 2026 (B, with an optional room). The camera
+   across the top and one pane of glass over its foot -- the media card's grammar, because a print is
+   the media card's argument: an event with an end, leading the row while it lasts. On the wall it is
+   the scenes card's height and 0.717 of it wide, which is the board's 360 x 500 at this row. Every
+   color is a token: live while it prints, the lamp while it waits for somebody, live again drained
+   when it is done, danger when it stopped mid-print. tiles/PrintCard.vue. */
+.print-card {
+  display: block;
+  cursor: pointer;
+  background-color: var(--surface);
+  border-color: rgba(var(--lamp-rgb), 0.28);
+  background-image: linear-gradient(135deg, rgba(var(--lamp-rgb), 0.14), rgba(var(--lamp-rgb), 0) 55%);
+}
+.wall-stage .bento .print-card {
+  height: var(--tall-list);
+  align-self: center;
+  width: calc(var(--tall-list) * 0.717);
+}
+.bento .print-card {
+  grid-row: span 2;
+  height: calc(var(--row) * 2 - 18px);
+  align-self: center;
+  width: 340px;
+}
+/* On a phone the row is a column and so is this card: the camera, then the glass, at a height a thumb
+   can scroll past. A phone that keeps the Stack home gets the compact card instead (HomeView). */
+@media (max-width: 860px) {
+  .bento .print-card {
+    grid-row: auto;
+    width: 100%;
+    height: 420px;
+    align-self: auto;
+  }
+}
+.print-card.waiting {
+  border-color: rgba(var(--lamp-rgb), 0.7);
+  box-shadow:
+    0 0 0 1px rgba(var(--lamp-rgb), 0.25),
+    0 0 46px -8px rgba(var(--lamp-rgb), 0.45);
+}
+.print-card.done {
+  border-color: rgba(var(--live-rgb), 0.35);
+  background-image: none;
+}
+.print-card.fault {
+  border-color: rgba(var(--danger-rgb), 0.55);
+  background-image: linear-gradient(150deg, rgba(var(--danger-rgb), 0.16), rgba(var(--danger-rgb), 0) 60%);
+}
+.print-cam {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 57%;
+  overflow: hidden;
+  background: linear-gradient(170deg, rgb(30, 36, 46), rgb(16, 18, 22));
+}
+.print-cam img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.print-cam .print-cam-part {
+  object-fit: contain;
+  padding: 18% 24%;
+}
+.print-chip {
+  position: absolute;
+  left: 16px;
+  top: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 28px;
+  padding: 0 11px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--ink);
+  background: rgba(12, 13, 16, 0.55);
+}
+.print-chip i {
+  display: block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--live);
+}
+.print-chip.waiting i {
+  background: var(--lamp);
+}
+.print-chip.fault i {
+  background: var(--danger);
+}
+/* the glass over the camera's foot: it grows up from the bottom with what it has to say, so a printer's
+   question and its two answers push the picture back rather than being cut off by it */
+.print-sheet {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 14px;
+  min-height: calc(43% + 2px);
+  padding: 16px 18px;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: linear-gradient(rgba(52, 56, 66, 0.86), rgba(28, 30, 36, 0.92));
+  display: flex;
+  flex-direction: column;
+}
+.print-who {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.print-thumb {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--r-sm);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--edge);
+  color: var(--ink-2);
+  overflow: hidden;
+}
+.print-thumb img {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+}
+.print-names {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.print-part {
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 22px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.print-sub {
+  font-size: 13.5px;
+  color: var(--ink-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.print-how {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 14px;
+}
+.print-pct {
+  font-size: 56px;
+  line-height: 56px;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+.print-when {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: 13.5px;
+  line-height: 1.35;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.print-when b {
+  font-size: 19px;
+  font-weight: 500;
+  color: var(--ink);
+}
+.print-bar {
+  position: relative;
+  height: 6px;
+  margin-top: 14px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.16);
+}
+.print-bar i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  display: block;
+  border-radius: 3px;
+  background: var(--lamp);
+}
+.print-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--ink-3, var(--muted));
+  white-space: nowrap;
+}
+.print-says {
+  margin: 16px 0 0;
+  font-size: 28px;
+  font-weight: 400;
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+}
+.print-detail {
+  margin: 8px 0 0;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--ink-2);
+}
+.print-answers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+.print-answer {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--edge);
+  font: inherit;
+  font-size: 13.5px;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+}
+.print-answer.primary {
+  border-color: transparent;
+  font-weight: 500;
+  color: var(--lamp-ink);
+  background: var(--lamp);
+}
+.print-answer.busy {
+  opacity: 0.6;
+}
+.print-finished {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 16px 0 0;
+  font-size: 13.5px;
+  color: var(--ink-3, var(--muted));
+}
+.print-finished svg {
+  color: var(--live);
+}
+/* a phone's: the camera on the left, how far and when on the right (design/printers/PhoneB) */
+.print-card.compact {
+  display: flex;
+  gap: 18px;
+  min-height: 0;
+  padding: 10px;
+  border-radius: 28px;
+}
+.print-card.compact .print-cam {
+  position: relative;
+  inset: auto;
+  flex: none;
+  width: 138px;
+  height: 138px;
+  border-radius: 18px;
+}
+.print-card.compact .print-chip {
+  left: 8px;
+  top: 8px;
+  height: 22px;
+  padding: 0 9px;
+  font-size: 10px;
+}
+.print-card.compact .print-sheet {
+  position: static;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  padding: 8px 4px 4px 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+.print-card.compact .print-thumb {
+  display: none;
+}
+.print-card.compact .print-part {
+  font-size: 17px;
+}
+.print-card.compact .print-how {
+  margin-top: 6px;
+  padding-top: 0;
+}
+.print-card.compact .print-pct {
+  font-size: 40px;
+  line-height: 46px;
+}
+.print-card.compact .print-when {
+  display: none;
+}
+.print-card.compact .print-bar {
+  margin-top: 8px;
+}
+.print-card.compact .print-says {
+  margin-top: 8px;
+  font-size: 19px;
+}
+.print-due {
+  margin: 10px 0 0;
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+.print-due b {
+  font-weight: 500;
+  color: var(--ink);
+}
+
+/* ---------- a printer's own pane ----------
+   design/printers/Pane.dc.html, at the shipped pane geometry: the words in the 560 column at 49, the
+   camera across the right from 643, the job under it, and the hub's limit under that. PhonePaneB is
+   the same pane as a sheet, the camera across its top. PrinterPane.vue. */
+.print-room {
+  min-height: 21px;
+}
+/* the quiet dashed word the pane already uses for "Show this as" */
+.print-choose {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--ink-2);
+  cursor: pointer;
+  text-decoration: underline dashed;
+  text-decoration-color: var(--edge-hi);
+  text-underline-offset: 4px;
+}
+.print-choose:hover {
+  color: var(--ink);
+}
+.print-doing {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 10px 0 0;
+  font-size: 15px;
+  color: var(--ink-2);
+}
+.print-doing i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--live);
+}
+.print-doing.lamp i {
+  background: var(--lamp);
+}
+.print-doing.danger i {
+  background: var(--danger);
+}
+.print-pane-detail {
+  margin: 10px 0 0;
+  max-width: 30em;
+  font-size: 15.5px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+.print-pane-how {
+  display: flex;
+  align-items: flex-end;
+  gap: 24px;
+  margin-top: 26px;
+}
+.print-pane-pct {
+  font-size: 88px;
+  line-height: 0.92;
+  font-weight: 300;
+  letter-spacing: -0.045em;
+  font-variant-numeric: tabular-nums;
+}
+.print-pane-how .print-when {
+  align-items: flex-start;
+  font-size: 15px;
+  padding-bottom: 2px;
+}
+.print-pane-how .print-when b {
+  font-size: 24px;
+  font-weight: 400;
+}
+.print-pane .print-bar {
+  max-width: 520px;
+  margin-top: 56px;
+}
+.print-pane .print-foot {
+  max-width: 520px;
+  font-size: 14px;
+}
+.print-temps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 164px));
+  gap: 13px;
+  margin-top: 30px;
+}
+.print-temp {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 16px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--edge);
+  background: rgba(255, 255, 255, 0.04);
+}
+.print-temp small {
+  font-size: 12.5px;
+  color: var(--ink-3, var(--muted));
+}
+.print-temp b {
+  font-size: 22px;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+}
+/* the C written, small, so the exception from the house's Fahrenheit is visible rather than silent */
+.print-temp em {
+  font-style: normal;
+  font-size: 14px;
+  color: var(--ink-3, var(--muted));
+}
+.print-acts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 11px;
+  margin-top: 30px;
+}
+.print-act {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 49px;
+  padding: 0 22px;
+  border-radius: 999px;
+  border: 1px solid var(--edge);
+  font: inherit;
+  font-size: 16px;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+}
+.print-act.cancel {
+  color: var(--danger);
+}
+.print-act.primary {
+  border-color: transparent;
+  font-weight: 500;
+  color: var(--lamp-ink);
+  background: var(--lamp);
+}
+.print-act.busy {
+  opacity: 0.6;
+}
+.print-ask {
+  flex-basis: 100%;
+  margin: 0 0 4px;
+  font-size: 15px;
+  color: var(--ink);
+}
+.print-acts .button.danger {
+  background: var(--danger);
+  color: #2a0e0e;
+}
+.print-pane-look {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  min-width: 0;
+  margin-top: 52px;
+}
+.print-pane-cam {
+  position: relative;
+  aspect-ratio: 747 / 391;
+  max-height: calc(100vh - 225px - 270px);
+  border-radius: 30px;
+  overflow: hidden;
+  border: 1px solid var(--edge);
+  background: linear-gradient(170deg, rgb(30, 36, 46), rgb(16, 18, 22));
+}
+.print-pane-cam img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.print-pane-cam .print-cam-part {
+  object-fit: contain;
+  padding: 10% 30%;
+}
+.print-pane-nocam {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.print-job {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 19px;
+  padding: 12px 22px 12px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--edge);
+  background: rgba(255, 255, 255, 0.05);
+}
+.print-job .print-thumb {
+  width: 52px;
+  height: 52px;
+}
+.print-job .print-thumb img {
+  width: 42px;
+  height: 42px;
+}
+.print-job .print-names {
+  flex: 1;
+}
+.print-job .print-part {
+  font-size: 16.5px;
+}
+.print-swatch {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.18);
+}
+.print-limit {
+  margin: 14px 0 0;
+  font-size: 13.5px;
+  color: var(--ink-3, var(--muted));
+}
+.print-limit-narrow {
+  display: none;
+}
+@media (max-width: 860px) {
+  /* the pane as a sheet: nearly the whole phone, the camera across its top, the close over the camera */
+  .print-pane-shell .opened-panel {
+    top: 44px;
+  }
+  .print-pane {
+    gap: 0;
+    padding-top: 0;
+  }
+  .print-pane .pane-said,
+  .print-pane .print-pane-look {
+    display: contents;
+  }
+  .print-pane-cam {
+    order: -1;
+    margin: 0 -24px 24px;
+    aspect-ratio: 390 / 222;
+    max-height: none;
+    border: 0;
+    border-radius: 0;
+  }
+  .print-pane .print-chip {
+    left: 16px;
+    top: 16px;
+  }
+  .print-pane .s0 {
+    order: 1;
+  }
+  .print-pane .s1 {
+    order: 2;
+  }
+  .print-pane .print-temps {
+    order: 3;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 9px;
+    margin-top: 22px;
+  }
+  .print-job {
+    order: 4;
+    margin-top: 12px;
+  }
+  .print-pane .print-acts {
+    order: 5;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    margin-top: 16px;
+  }
+  .print-act {
+    justify-content: center;
+  }
+  .print-limit {
+    order: 6;
+    margin: 18px 0 28px;
+    text-align: center;
+  }
+  .print-limit-wide {
+    display: none;
+  }
+  .print-limit-narrow {
+    display: inline;
+  }
+  .print-pane-how {
+    margin-top: 16px;
+    justify-content: space-between;
+  }
+  .print-pane-pct {
+    font-size: 64px;
+  }
+  .print-pane-how .print-when {
+    align-items: flex-end;
+  }
+  .print-pane .print-bar {
+    margin-top: 20px;
+  }
+}
+.print-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ---------- printers on this Wi-Fi, on Add ----------
+   design/printers/AddList, AddAsking and AddAnswers: one row each and one button, and the row that
+   asked grows in place into the instruction, then says the answer. AddPrinters.vue. */
+.printer-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 760px;
+}
+.printer-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 72px;
+  padding: 14px;
+  border-radius: 20px;
+  border: 1px solid var(--edge);
+  background: rgba(255, 255, 255, 0.05);
+}
+.printer-row.allowed {
+  border-color: rgba(var(--live-rgb), 0.4);
+  background: linear-gradient(rgba(var(--live-rgb), 0.08), rgba(var(--live-rgb), 0.08)), rgba(255, 255, 255, 0.03);
+}
+.printer-row.waiting {
+  padding: 22px 22px 22px;
+  border-color: rgba(var(--lamp-rgb), 0.5);
+  background: linear-gradient(rgba(var(--lamp-rgb), 0.07), rgba(var(--lamp-rgb), 0.07)), rgba(255, 255, 255, 0.04);
+  box-shadow: 0 0 46px -14px rgba(var(--lamp-rgb), 0.35);
+}
+.printer-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-sm);
+  background: var(--lamp);
+  color: var(--lamp-ink);
+}
+.printer-icon.plain {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--ink-2);
+}
+.printer-row.allowed .printer-icon {
+  background: rgba(var(--live-rgb), 0.18);
+  color: var(--live);
+}
+.printer-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.printer-title {
+  font-size: 16.5px;
+  font-weight: 500;
+}
+.printer-sub {
+  font-size: 13.5px;
+  color: var(--ink-3, var(--muted));
+}
+.printer-asking {
+  flex: 1;
+  min-width: 0;
+}
+.printer-asking-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 15px;
+  color: var(--ink-2);
+}
+.printer-asking-title {
+  margin: 18px 0 0;
+  font-size: 34px;
+  font-weight: 400;
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+}
+.printer-asking-sub {
+  margin: 10px 0 0;
+  max-width: 34em;
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+.printer-asking-foot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+}
+.printer-ring circle {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.14);
+  stroke-width: 2.5;
+}
+.printer-ring circle.left {
+  stroke: var(--lamp);
+  stroke-linecap: round;
+  transform: rotate(-90deg);
+  transform-origin: center;
+  transition: stroke-dasharray 1s linear;
+}
+.printer-asking-left {
+  font-size: 15px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.printer-asking-left b {
+  font-weight: 400;
+  color: var(--ink);
+}
+.printer-row.forgotten {
+  opacity: 0.6;
+}
+.printer-ask {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  max-width: 420px;
+  font-size: 14px;
+  color: var(--ink-2);
+  text-align: right;
+}
+.printer-ask .button.warn {
+  background: var(--danger);
+  color: #2a0e0e;
+}
+
+/* ---------- a printer in its room ----------
+   design/printers/InRoomA, used by B wherever a household chose a room (WorkshopB). The same three
+   heights as every tile in a room: a print is a column, a stopped printer half of one, ready a third.
+   tiles/PrinterTile.vue. */
+.printer-tile {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  font: inherit;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+.printer-tile.ready,
+.printer-tile.fault {
+  padding: 22px 22px 20px;
+}
+.printer-tile.fault {
+  border-color: rgba(var(--danger-rgb), 0.55);
+  background-color: rgba(var(--surface-rgb), 0.74);
+  background-image: linear-gradient(150deg, rgba(var(--danger-rgb), 0.16), rgba(var(--danger-rgb), 0) 60%);
+}
+.printer-tile-cam {
+  position: relative;
+  flex: none;
+  height: 42%;
+  overflow: hidden;
+  background: linear-gradient(170deg, rgb(30, 36, 46), rgb(16, 18, 22));
+}
+.printer-tile-cam img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.printer-tile-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 22px 20px 20px;
+}
+.printer-tile-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink-2);
+}
+.printer-tile-name {
+  font-size: 19px;
+  font-weight: 500;
+  color: var(--ink);
+}
+.printer-tile-word {
+  margin-left: auto;
+  font-size: 13.5px;
+}
+.printer-tile-job {
+  margin-top: 6px;
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+.printer-tile-body .print-pct {
+  font-size: 60px;
+}
+.printer-tile-badge {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--r-sm);
+  background: var(--danger);
+  color: #2a0e0e;
+}
+.printer-tile-says {
+  margin: 28px 0 0;
+  font-size: 30px;
+  font-weight: 400;
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+}
+.printer-tile-since {
+  margin-top: auto;
+  align-self: flex-end;
+  font-size: 13px;
+  color: var(--muted);
+}
+.printer-tile-foot {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.printer-tile-state {
+  font-size: 17px;
+}
+.printer-tile-detail {
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+.printer-chip.fault {
+  border-color: rgba(var(--danger-rgb), 0.45);
+}
+/* a room with a print going, on Rooms (design/printers/RankedB): the printer's camera across the top of
+   the card, as a filming room carries its own, and the card's foot says when it will be done */
+.room-cell-print {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 66%;
+  overflow: hidden;
+  pointer-events: none;
+}
+.room-cell-print img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.room-cell-print::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(rgba(12, 13, 16, 0) 55%, rgba(var(--surface-rgb), 0.9));
+}
+.room-cell-due {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.room-cell-bar.print i {
+  background: var(--lamp);
+}
+.printer-tile-body .print-how {
+  margin-top: 0;
+  padding-top: 26px;
+}
+.printer-tile-body .print-foot {
+  margin-bottom: auto;
+}
+
+/* ---------- the phone's top (design/band/, chosen 2 October 2026) ----------
+   Opened from the Home Screen, an iPhone draws the page under its own status bar -- index.html
+   asks for that (viewport-fit=cover, black-translucent), so the sky runs to the top edge -- and
+   nothing here used to leave the status bar its room: the clock sat on the phone's clock and every
+   close button was in it. --safe-top is that room, 0 in a browser tab, 47 on this phone; one name
+   for it so a test can give it a value where the browser will not. */
+.nudge-news {
+  display: contents;
+}
+@media (max-width: 860px) {
+  /* No clock: the status bar is the clock, directly above. The row under it is the house, then
+     its sky, then the two doors at the far end (NameThenSky). The wall keeps its clock. */
+  .topbar {
+    padding-top: max(12px, calc(var(--safe-top) + 6px));
+  }
+  .topbar-clock {
+    display: none;
+  }
+  .topbar-right {
+    flex: 1 1 100%;
+    justify-content: flex-start;
+  }
+  .topbar-add:not(.topbar-house) {
+    margin-left: auto;
+  }
+  /* The news, as one row of quiet chips under whatever needs you (LineChipsBC): each still named,
+     never amber, the row one chip tall however many there are, sweeping sideways. */
+  .nudge-news {
+    display: flex;
+    order: 1;
+    flex: 0 0 auto;
+    width: 100%;
+    gap: 8px;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .nudge-news::-webkit-scrollbar {
+    display: none;
+  }
+  .shell .nudges > .nudge-news > .nudge {
+    flex: 0 0 auto;
+    width: auto;
+    max-width: none;
+    height: 40px;
+    padding: 0 15px 0 12px;
+    gap: 8px;
+    border-radius: 999px;
+    background: var(--surface);
+    border-color: var(--edge);
+  }
+  .nudge-news .nudge-icon {
+    width: auto;
+    height: auto;
+    background: none;
+    color: var(--ink-2);
+  }
+  .nudge-news .nudge-title {
+    font-size: 14.5px;
+    font-weight: 400;
+    white-space: nowrap;
+  }
+  .nudge-news .nudge-sub {
+    display: none;
+  }
+  /* Finish setting up, at the top of This house: the band's suggestions, counting down (KindsB-house) */
+  .finish {
+    margin: 0 0 14px;
+    padding: 14px 16px 8px;
+    border-radius: var(--r-lg);
+    background: rgba(var(--lamp-rgb), 0.08);
+    border: 1px solid rgba(var(--lamp-rgb), 0.28);
+  }
+  .finish-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .finish-title {
+    font-size: 16px;
+    font-weight: 500;
+  }
+  .finish-count {
+    font-size: 13px;
+    color: var(--lamp);
+  }
+  .finish-bar {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--edge);
+    margin: 10px 0 6px;
+    overflow: hidden;
+  }
+  .finish-bar i {
+    display: block;
+    height: 100%;
+    border-radius: 2px;
+    background: var(--lamp);
+  }
+  .finish-step {
+    display: grid;
+    grid-template-columns: 22px 1fr auto;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 40px;
+    font-size: 15px;
+    text-align: left;
+    color: var(--ink);
+  }
+  .finish-step > svg:first-child {
+    color: var(--lamp);
+  }
+  .finish-step > svg:last-child:not(:first-child) {
+    color: var(--ink-3);
+  }
+  .finish-step.done {
+    color: var(--muted);
+  }
+  .finish-step.done > svg:first-child {
+    color: var(--live);
+  }
+  .finish-step.done span {
+    text-decoration: line-through;
+  }
+  .finish-phone {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 4px 0 12px;
+  }
+}
+
+/* ---------- the house's name, inside the Houses app (design/houses/, B) ----------
+   Where Connected is said on a phone that is not in the app: the dot keeps Connected's work, the name is
+   which house this is, and the whole thing is the way to the others. A dot of lamp when another one wants you. */
+.house-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 12px 0 13px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--edge);
+  backdrop-filter: var(--frost);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ink);
+  max-width: 60%;
+}
+.house-switch-dot {
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+.house-switch.up .house-switch-dot {
+  background: var(--live);
+}
+.house-switch-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.house-switch-open {
+  flex: 0 0 auto;
+  color: var(--ink-2);
+  transform: rotate(90deg);
+}
+.house-switch.others::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--lamp);
+  box-shadow: 0 0 8px 1px var(--lamp-glow);
+}
+
+/* This house's way into the Houses app: a door like the others, set apart from the list it sits above */
+.door.to-app {
+  width: 100%;
+  margin: 0 0 10px;
+  grid-template-columns: auto 1fr auto;
+  border: 1px solid var(--edge);
+  border-radius: var(--r-md);
 }

@@ -1330,10 +1330,10 @@ class Bridges:
 
     @staticmethod
     def _nearby_words(free: int, spoken: int) -> str:
-        if free == 1: return "One switch is waiting to be let in."
-        if free > 1: return f"{free} switches are waiting to be let in."
-        if spoken: return "Nothing is asking to be let in, but there is a switch nearby that is on another network. That one has to be started over first."
-        return "Nothing nearby is asking to be let in."
+        if free == 1: return "One switch is waiting to be added."
+        if free > 1: return f"{free} switches are waiting to be added."
+        if spoken: return "Nothing is waiting to be added, but there is a switch nearby that is on another network. That one has to be started over first."
+        return "Nothing nearby is waiting to be added."
 
     async def blink(self, uuid: str, seconds: int = 5) -> dict:
         """Make one of them announce itself, so a person can say which is which.
@@ -1366,7 +1366,7 @@ class Bridges:
         if body is None:
             return {"state": "failed", "text": "The bridge stopped answering while it was letting the switch in."}
         if not body.get("ok"):
-            return {"state": "failed", "text": body.get("why") or "That switch would not join."}
+            return {"state": "failed", "text": body.get("why") or "That switch wasn\u2019t added."}
         return {"state": "done", "unicast": body.get("unicast"), "devkey": body.get("devkey"),
                 "elements": body.get("elements", 1),
                 "text": "It is on the house now."}

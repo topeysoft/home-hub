@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 /* A bridge that went in has to be acknowledged, or it never goes away.
  *
- * What made this a spec: a puck was set up successfully, "It's in." was read and Done was pressed,
+ * What made this a spec: a puck was set up successfully, "It's in." (now "Added.") was read and Done was pressed,
  * and the sheet came back a minute later. Then again. Then again. Closing it only changed the
  * panel's own copy of the state; the brain still had the finished job and answered every poll with
  * it, so the sheet reopened for ever and Done did nothing the hub could hear.
@@ -17,7 +17,7 @@
  */
 import { expect, test } from '@playwright/test'
 
-const IN = /It.s in\./
+const IN = /^Added\./
 
 test('a finished bridge is acknowledged, so it does not come back', async ({ page }) => {
   let told = 0

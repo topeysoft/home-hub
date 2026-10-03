@@ -6,7 +6,8 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Device, Room, Routine } from '../src/api'
 import { store } from '../src/store'
-import { dayLine, restClock, restingFacts } from '../src/resting'
+import { clockParts, restingFacts, restWeather } from '../src/resting'
+import { locale } from '../src/lang'
 
 const dev = (id: string, name: string, capability: string, state: string, attrs: Record<string, any> = {}): Device =>
   ({ id, name, room_id: '', capability, state, attrs })
@@ -68,7 +69,8 @@ describe('the fourth place', () => {
     store.routines = [porch]
     expect(find('playing')).toBeUndefined()
     expect(find('next')?.where).toBe('Porch light off')
-    expect(find('next')?.value).not.toMatch(/AM|PM/)
+    const t = clockParts(new Date(2026, 8, 28, 23, 0))
+    expect(find('next')).toMatchObject({ value: t.time, period: t.period })
   })
 
   it('is left out when nothing plays and nothing is due', () => {
@@ -106,12 +108,22 @@ describe('what the house cannot give is left out, not blank', () => {
   })
 })
 
-describe('the clock and the date line', () => {
-  it('drops AM and PM', () => {
-    expect(restClock(at)).toMatch(/^7:41$|^19:41$/)
+describe('the weather in the corner', () => {
+  it('is left out when the house has no weather', () => {
+    expect(restWeather()).toBeNull()
   })
 
-  it('keeps the date alone when there is no weather', () => {
-    expect(dayLine('Monday, September 28')).toBe('Monday, September 28')
+  it('gives the temperature and the condition in words', () => {
+    store.ambient = { ...store.ambient, weather: { temperature: 78.4, unit: '°F', condition: 'partlycloudy' } } as typeof store.ambient
+    expect(restWeather()).toEqual({ temp: '78°', label: 'Partly cloudy' })
+  })
+})
+
+describe('the clock', () => {
+  it('keeps its AM or PM, apart from the digits so it can be set small', () => {
+    const { time, period } = clockParts(at)
+    const whole = at.toLocaleTimeString(locale(), { hour: 'numeric', minute: '2-digit' })
+    expect(time + period).toBe(whole.replace(/\s/g, ''))
+    expect(time).not.toContain(period || '#')
   })
 })

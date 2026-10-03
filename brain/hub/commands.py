@@ -207,7 +207,65 @@ def aloud(text: str) -> str:
 # than either -- so each gets a sentence saying WHERE the answer is, and never the answer.
 POINTERS = {"explain": "There's an answer on the screen.",
             "action": "There's something to confirm on the screen.",
-            "rule": "I've written that up; it's waiting under Routines."}
+            "rule": "I've written that up; it's waiting under Routines.",
+            "look": "It's playing on the roof. Keep it on the screen."}
+
+
+# ---------------------------------------------------------------- a look, said (design/roofline/SaidC)
+#
+# "Christmas: red and green, chasing." Colors, one of five words of motion, slowly or quickly -- read by
+# this grammar and nothing else, the way simple commands stay deterministic. The draft plays on the roof
+# while it is open and is kept only when told. The colors are hub/roofline.py's emitter colors by name,
+# and a word that is not one of them is not a color here.
+LOOK_COLORS = {"red": "red", "green": "green", "orange": "orange", "purple": "purple", "white": "white",
+               "blue": "blue", "pink": "pink", "mint": "mint", "lilac": "lilac", "gold": "gold",
+               "golden": "gold", "warm": "warm", "violet": "purple"}
+# Words that only carry the sentence: "make the roofline red and white, twinkling, for christmas".
+LOOK_FILLER = {"make", "set", "do", "have", "show", "put", "give", "turn", "the", "a", "roof", "roofline",
+               "rooflines", "outside", "on", "for", "it", "its", "be", "please", "and", "with", "in", "colors",
+               "colours", "then", "this", "year", "lights", "look", "looks", "like", "each", "other", "slow"}
+# Asked for one of these, the house answers with the five words it has rather than guessing -- so the
+# vocabulary cannot grow from the screen. Words people reach for, matched rather than written.
+LOOK_NOT = ("meteor", "meteors", "fire", "rainbow", "rainbows", "strobe", "strobing", "fading", "pulsing",
+            "breathing", "sparkling", "running", "wave", "waving", "flashing", "blinking")
+LOOK_PACE = {"slowly": False, "gently": False, "quickly": True, "fast": True, "quick": True}
+LOOK_MOTIONS = ("still", "drifting", "flickering", "chasing", "twinkling")
+
+
+def read_look(text: str):
+    """(occasion, colors, motion, quick) from a sentence that is a look, or None for one that is not.
+
+    Not a look unless it names a motion or an occasion, AND every word in it is a look's word: one room
+    name or device word left over means somebody meant something else, and the rest of the grammar
+    gets the sentence. Raises NotUnderstood for a motion the house does not have."""
+    from .roofline import MOTIONS, OCCASION_WORDS
+    t = f" {norm(text).replace('-', ' ')} "
+    occasion = None
+    for occ, words in OCCASION_WORDS.items():
+        for w in sorted(words, key=len, reverse=True):
+            if f" {w} " in t:
+                occasion, t = occ, t.replace(f" {w} ", " ", 1)
+                break
+        if occasion: break
+    t = t.replace(" warm white ", " warm ").replace(" warm whites ", " warm ")
+    colors, motion, quick, rest, refused = [], None, False, [], None
+    for w in t.split():
+        if w in LOOK_COLORS: colors.append(LOOK_COLORS[w])
+        elif w in MOTIONS:
+            if motion and MOTIONS[w] != motion: return None
+            motion = MOTIONS[w]
+        elif w in ("chase", "chasing", "chases"): motion = "chase"
+        elif w in ("twinkle", "twinkles"): motion = "twinkle"
+        elif w in LOOK_PACE: quick = LOOK_PACE[w]
+        elif w in LOOK_NOT: refused = w
+        elif w in LOOK_FILLER: continue
+        else: rest.append(w)
+    if rest: return None
+    if refused and colors:
+        raise NotUnderstood(f"“{refused[0].upper() + refused[1:]}” isn't one the roof knows. It can be still, "
+                            "drifting, flickering, chasing or twinkling — try “red and white, twinkling”.")
+    if not colors or not (motion or occasion): return None
+    return occasion, colors, motion, quick
 
 
 def spoken_line(out: dict) -> str:
@@ -250,7 +308,7 @@ class Commands:
         except Exception as e:
             self._log(said, here, {"understood": False, "reason": str(e), "spoken": spoken})
             raise
-        self._log(said, here, {"understood": out["kind"] in ("done", "answer", "explain"), "kind": out["kind"],
+        self._log(said, here, {"understood": out["kind"] in ("done", "answer", "explain", "look"), "kind": out["kind"],
                                "text": out.get("text") or out.get("name") or out.get("answer"), "spoken": spoken})
         return {**out, "said": said, "spoken": spoken_line(out)}
 
@@ -282,6 +340,9 @@ class Commands:
             return await self._all_locks("lock", said)
         if re.fullmatch(r"unlock (the |all the |all )?(doors?|locks?|house)", t):
             return await self._all_locks("unlock", said)
+        # a look for the roofline, said rather than chosen (design/roofline/SaidC.dc.html)
+        look = read_look(t)
+        if look: return await self._look(*look)
         # where: a named room, "everywhere", or the room the panel is showing
         everywhere = re.search(EVERYWHERE, t) is not None
         if everywhere: t = re.sub(r"\s+", " ", re.sub(EVERYWHERE, " ", t)).strip()
@@ -335,6 +396,24 @@ class Commands:
         await self.hub.set_intent(room, state, source="user", detail={"said": said})
         return {"kind": "done", "text": f"{room.name} · {LABEL[state.value]}", "spoken": f"{room.name}, {LABEL[state.value].lower()}.",
                 "room": room.id, "intent": state.value}
+
+    async def _look(self, occasion, colors, motion, quick):
+        """Play a said look on the roof, as a draft. Nothing is kept until somebody says Keep it."""
+        from .roofline import OCCASIONS, said_look
+        rl = getattr(self.hub, "roofline", None)
+        if rl is None or not rl.exists(): raise NotUnderstood("There's no roofline to show that on.")
+        # No occasion named: it is for the one showing now, and with none showing it can still be played
+        # and looked at -- keeping it is what needs an occasion to keep it for.
+        if not occasion: occasion = rl.showing()
+        if not motion: motion = OCCASIONS.get(occasion or "", {}).get("motion") or "still"
+        look = said_look(colors, motion, quick)
+        rl.draft(occasion, look)
+        await rl.send_looks()
+        name = OCCASIONS.get(occasion or "", {}).get("name")
+        return {"kind": "look", "occasion": occasion, "occasion_name": name, "colors": colors, "motion": motion,
+                "pace": "quickly" if quick else ("slowly" if motion != "still" else ""), "words": look["words"],
+                "text": f"{look['words']}, on the roofline" + (f" for {name}." if name else "."),
+                "spoken": "It's playing on the roof now."}
 
     async def _home(self, state, said):
         await self.hub.set_home_intent(state, source="user", detail={"said": said})
@@ -460,8 +539,8 @@ class Commands:
             try: await self.hub.act(d, action, data, source="user", said=said)
             except Exception: failed.append(d.name)
         if failed and len(failed) == len(targets):
-            raise NotUnderstood(f"{failed[0]} didn't respond." if len(failed) == 1 else "None of them responded.")
-        if failed: text = f"{text[:-1]}; {', '.join(failed)} didn't respond."
+            raise NotUnderstood(f"{failed[0]} isn't answering." if len(failed) == 1 else "None of them are answering.")
+        if failed: text = f"{text[:-1]}; {', '.join(failed)} didn't answer."
         return {"kind": "done", "text": text, "devices": [d.id for d in targets], "action": action, "count": len(targets) - len(failed)}
 
     # ---- sounds on a speaker ----

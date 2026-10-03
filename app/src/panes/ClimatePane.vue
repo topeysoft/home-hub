@@ -3,6 +3,7 @@
   SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 <script setup lang="ts">
+import { failed } from '../code'
 /*
  * The dial, which is the one instrument in the house that is a number you SET rather than a level
  * you drag — so it is the one place a ring earns its keep: the white handle is what was asked for,
@@ -15,7 +16,7 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import type { Device } from '../api'
 import { setFan, setSense } from '../api'
-import { cap, isDead, notify, perform, shortName, store } from '../store'
+import { cap, isDead, notify, perform, shortName, store, fanFor } from '../store'
 import Icon from '../Icon.vue'
 
 const props = defineProps<{ device: Device }>()
@@ -27,8 +28,8 @@ const mode = computed(() => props.device.state)
 const off = computed(() => mode.value === 'off')
 const fmt = (t: number | null | undefined) => t == null ? '–' : String(step.value === 1 ? Math.round(t) : Math.round(t * 2) / 2)
 
-const MODES: Record<string, string> = { heat: 'Warm it', cool: 'Cool it', heat_cool: 'Either', auto: 'Either', off: 'Off', fan_only: 'Fan only', dry: 'Dry' }
-const ACTION: Record<string, string> = { heating: 'Warming', cooling: 'Cooling', idle: 'Holding', fan: 'Fan running', drying: 'Drying', preheating: 'Warming up', defrosting: 'Defrosting' }
+const MODES: Record<string, string> = { heat: 'Heat', cool: 'Cool', heat_cool: 'Auto', auto: 'Auto', off: 'Off', fan_only: 'Fan', dry: 'Dry' }   // the thermostat's own words (design/words-rooms/, C)
+const ACTION: Record<string, string> = { heating: 'Heating', cooling: 'Cooling', idle: 'Nothing to do', fan: 'Fan running', drying: 'Drying', preheating: 'Warming up', defrosting: 'Defrosting' }
 const modes = computed(() => ((a.value.hvac_modes ?? []) as string[]).filter(m => m in MODES))
 const sensing = computed(() => !!a.value.sense_from)
 const target = computed(() => sensing.value ? a.value.wanted ?? a.value.temperature : a.value.temperature)
@@ -119,8 +120,8 @@ const busy = ref(false)
 async function fan(minutes: number) {
   if (dead.value || busy.value) return
   busy.value = true
-  try { await setFan(props.device.id, minutes); notify(minutes ? `Fan on for ${minutes < 60 ? `${minutes} min` : `${minutes / 60} h`}.` : 'Fan off.') }
-  catch (e: any) { notify(`The fan didn't respond: ${e.message}`, 'error') }
+  try { await setFan(props.device.id, minutes); notify(minutes ? `Fan on for ${fanFor(minutes)}.` : 'Fan off.') }
+  catch (e: any) { notify(failed('The fan didn’t answer', e), 'error') }
   busy.value = false
 }
 
@@ -144,8 +145,8 @@ const sensors = computed(() => {
 async function sense(id: string | null) {
   if (busy.value || (id ?? null) === (a.value.sense_from ?? null)) return
   busy.value = true
-  try { await setSense(props.device.id, id); notify(id ? `Going by ${sensors.value.find(s => s.id === id)?.label ?? 'that sensor'}.` : 'Back to its own sensor.') }
-  catch (e: any) { notify(`Couldn't change the sensor: ${e.message}`, 'error') }
+  try { await setSense(props.device.id, id); notify(id ? `Using ${sensors.value.find(s => s.id === id)?.label ?? 'that sensor'} for the temperature.` : 'Back to its own sensor.') }
+  catch (e: any) { notify(failed('Couldn’t change the sensor', e), 'error') }
   busy.value = false
 }
 </script>
@@ -153,7 +154,7 @@ async function sense(id: string | null) {
 <template>
   <div class="rig rig-climate">
     <div class="rig-dial" ref="dial" :class="{ turning: held != null, still: off || dead }"
-         role="slider" tabindex="0" :aria-label="`${device.name}, what to ask for`"
+         role="slider" tabindex="0" :aria-label="`${device.name}, what to set it to`"
          :aria-valuemin="LOW" :aria-valuemax="HIGH" :aria-valuenow="showing ?? current"
          @pointerdown="grab" @pointermove="turn" @pointerup="letGo" @pointercancel="letGo" @keydown="key">
       <svg viewBox="0 0 330 330" class="rig-ring" aria-hidden="true">
@@ -166,8 +167,8 @@ async function sense(id: string | null) {
       </svg>
       <div class="rig-dial-face">
         <span class="display rig-dial-n">{{ off ? fmt(current) : fmt(showing) }}<i>{{ unit }}</i></span>
-        <span class="rig-lbl">{{ off ? 'In here now' : 'Asked for' }}</span>
-        <span class="rig-dial-doing">{{ held != null ? 'Let go to ask for it' : doing }}</span>
+        <span class="rig-lbl">{{ off ? 'In here now' : 'Set to' }}</span>
+        <span class="rig-dial-doing">{{ held != null ? 'Let go to set it' : doing }}</span>
       </div>
       <button class="ctl rig-dial-btn low" :disabled="off || dead" @click="nudge(-1)" aria-label="Lower it"><Icon name="minus" :size="26" /></button>
       <button class="ctl rig-dial-btn high" :disabled="off || dead" @click="nudge(1)" aria-label="Raise it"><Icon name="plus" :size="26" /></button>
@@ -191,7 +192,7 @@ async function sense(id: string | null) {
       </div>
 
       <div class="rig-row" v-if="sensors.length">
-        <span class="rig-row-head"><Icon name="sensor" :size="19" />Going by</span>
+        <span class="rig-row-head"><Icon name="sensor" :size="19" />Sensor</span>
         <div class="rig-row-acts">
           <button class="clim-chip" :class="{ on: !a.sense_from }" :disabled="busy" @click="sense(null)">Its own</button>
           <button v-for="s in sensors" :key="s.id" class="clim-chip" :class="{ on: a.sense_from === s.id }" :disabled="busy" @click="sense(s.id)">{{ s.label }}</button>

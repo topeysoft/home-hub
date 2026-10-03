@@ -3,6 +3,7 @@
   SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 <script setup lang="ts">
+import { failed } from './code'
 import { computed, onMounted, ref } from 'vue'
 import { store, notify, loadRoutines, loadAssistant, visibleRooms } from './store'
 import { enableRoutine, draftRoutine, approveDraft, discardDraft, setAssistantKey, setEntry, act, roomsOf, type Routine, type Proposal } from './api'
@@ -22,7 +23,7 @@ const groups = computed(() => {
   return [...by.keys()].sort((a, b) => rank(a) - rank(b))
     .map(id => ({ id, name: roomName(id), rules: by.get(id)! }))
 })
-const roomName = (id: string) => id === 'home' ? 'Whole house' : id === 'entry' ? 'Where you come in' : store.rooms.find(r => r.id === id)?.name ?? id
+const roomName = (id: string) => id === 'home' ? 'Whole house' : id === 'entry' ? 'The entrance' : store.rooms.find(r => r.id === id)?.name ?? id
 const roomNames = (r: Routine) => roomsOf(r).map(roomName).join(' · ')
 const hasEntryRules = computed(() => store.routines.some(r => roomsOf(r).includes('entry')))
 
@@ -43,7 +44,7 @@ async function flip(r: Routine) {
   if (busy.value) return
   const want = !on(r)
   busy.value = r.id; r.enabled = want
-  try { await enableRoutine(r.id, want) } catch (e: any) { r.enabled = !want; notify(`That didn't stick: ${e.message}`, 'error') }
+  try { await enableRoutine(r.id, want) } catch (e: any) { r.enabled = !want; notify(failed('That didn’t stick', e), 'error') }
   busy.value = ''
 }
 
@@ -68,7 +69,7 @@ async function doIt() {
   const p = proposal.value; if (!p || doing.value) return
   doing.value = true
   try { await act(p.device, p.action, Object.keys(p.data).length ? p.data : undefined); notify(p.name); proposal.value = null; note.value = '' }
-  catch (e: any) { notify(`That didn't work: ${e.message}`, 'error') }
+  catch (e: any) { notify(failed('That didn’t work', e), 'error') }
   doing.value = false
 }
 async function approve(d: Routine) {
@@ -152,7 +153,7 @@ onMounted(() => { loadRoutines(); loadAssistant() })
     </template>
 
     <template v-if="hasEntryRules || store.entry.length">
-      <h3 class="label routines-head">Where you come in</h3>
+      <h3 class="label routines-head">The entrance</h3>
       <p class="page-status entry-hint">Tap the rooms you come home through. Routines for coming home run in those.</p>
       <div class="chips">
         <button v-for="r in pickable" :key="r.id" class="chip-btn" :class="{ on: store.entry.includes(r.id) }" :aria-pressed="store.entry.includes(r.id)" @click="toggleEntry(r.id)">

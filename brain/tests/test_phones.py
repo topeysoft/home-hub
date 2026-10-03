@@ -101,7 +101,7 @@ class PhonesTests(unittest.TestCase):
 
     def test_setup_pairs_the_wall_without_asking(self):
         p, token = self.phones.from_setup("wall")
-        self.assertEqual((p["name"], p["how"]), ("This wall", "setup"))
+        self.assertEqual((p["name"], p["how"]), ("Wall screen", "setup"))
         self.assertEqual(self.phones.identify(token)["id"], p["id"])
 
     def test_every_change_is_logged_and_told_to_the_panels(self):

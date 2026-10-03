@@ -266,7 +266,7 @@ class Signals:
         is a guess because nobody has said which end is the house."""
         end = self.house_end(target["strip"])
         into = toward != "out"
-        if end is None: return 1, "Nobody has said which end is the house yet, so it ran away from the plug"
+        if end is None: return 1, "Nobody has said which end is nearer the door yet, so it ran from the plug end"
         runs_to_plug = (end == "plug") == into
         return (-1 if runs_to_plug else 1), None
 
@@ -283,8 +283,8 @@ class Signals:
                 try:
                     await self.hub.ha.call("light", "turn_on", t["id"], flash="long")
                     return {**step, "state": "ok", "sub": "Blinked", "at": time.time()}
-                except Exception as e:
-                    return {**step, "state": "no", "sub": f"It did not blink: {e}"}
+                except Exception:
+                    return {**step, "state": "no", "sub": "It did not blink."}
             sid = t["strip"]; known = self.hub.strip.strips.get(sid) or {}
             if not known.get("online"):
                 d = self.hub.home.devices.get(t["id"])

@@ -1,0 +1,184 @@
+{
+  "pages": [
+    {
+      "id": "page-1",
+      "name": "Taking the house out"
+    },
+    {
+      "id": "page-2",
+      "name": "Not chosen"
+    }
+  ],
+  "artboards": [
+    {
+      "file": "Today.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Today \u2014 People on the wall: nothing lets a phone out",
+      "page": "page-1"
+    },
+    {
+      "file": "TodayOut.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "Today, out \u2014 a paired phone is a stranger at the house's name",
+      "page": "page-1"
+    },
+    {
+      "file": "DoorsA.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "A \u2014 two doors",
+      "page": "page-2"
+    },
+    {
+      "file": "DoorsA-home.dc.html",
+      "x": 0,
+      "y": 1020,
+      "w": 390,
+      "h": 844,
+      "title": "A, at home \u2014 the second door is handed over",
+      "page": "page-2"
+    },
+    {
+      "file": "DoorsA-out.dc.html",
+      "x": 520,
+      "y": 1020,
+      "w": 390,
+      "h": 844,
+      "title": "A, out \u2014 the first icon, out of habit",
+      "page": "page-2"
+    },
+    {
+      "file": "MovedB.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "B \u2014 moved when it is let out",
+      "page": "page-2"
+    },
+    {
+      "file": "MovedB-home.dc.html",
+      "x": 1560,
+      "y": 1020,
+      "w": 390,
+      "h": 844,
+      "title": "B, at home \u2014 one move, and the old icon goes",
+      "page": "page-2"
+    },
+    {
+      "file": "MovedB-out.dc.html",
+      "x": 2080,
+      "y": 1020,
+      "w": 390,
+      "h": 844,
+      "title": "B, out \u2014 the one icon, anywhere",
+      "page": "page-2"
+    },
+    {
+      "file": "NamedC.dc.html",
+      "x": 0,
+      "y": 1400,
+      "w": 1440,
+      "h": 900,
+      "title": "C \u2014 every phone moves once, when the house gets its name \u00b7 CHOSEN",
+      "page": "page-1"
+    },
+    {
+      "file": "NamedC-home.dc.html",
+      "x": 0,
+      "y": 2420,
+      "w": 390,
+      "h": 844,
+      "title": "C, at home \u2014 the evening the house got its name",
+      "page": "page-1"
+    },
+    {
+      "file": "NamedC-move.dc.html",
+      "x": 520,
+      "y": 2420,
+      "w": 390,
+      "h": 844,
+      "title": "C, the move \u2014 every phone, once",
+      "page": "page-1"
+    },
+    {
+      "file": "NamedC-out.dc.html",
+      "x": 1040,
+      "y": 2420,
+      "w": 390,
+      "h": 844,
+      "title": "C, out \u2014 asked from the airport, opened from the wall",
+      "page": "page-1"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "why",
+      "x": -620,
+      "y": 0,
+      "w": 500,
+      "text": "WHY THIS EXISTS\n\nThe relay works. On 1 October a certificate for a house's name was issued by Let's Encrypt through it, and a phone with nothing but its own trust store opened the name and the house answered (docs/away.md, step 3). Nothing about the pipe is left to decide.\n\nAND STILL NOBODY CAN GET IN FROM OUTSIDE. A phone joins the house on hub.local, and the house remembers it with a cookie. A browser keeps cookies per name, so the same phone opening temi.elyir.app arrives with nothing: to the house it is a stranger, and from outside a stranger is not even offered the way in. That is Today, out -- drawn from what ships, and it would be the screen every let-out phone sees.\n\nWHICH MAKES THIS A QUESTION ABOUT THE PHONE'S HOME SCREEN, NOT ABOUT THE RELAY. A home-screen icon belongs to the name it was added from, for good. So whatever is chosen, a phone that is going to reach the house from outside has to be handed something at least once -- a second icon, or a new one in place of the old. The three boards are three whole answers to WHICH NAME A PHONE KEEPS, AND WHEN IT IS HANDED OVER.\n\nTHE RULES THESE DO NOT REOPEN (docs/away.md, Rules that do not change): only the owner lets a phone out, and from inside the house; the relay is only in the path when a phone is away; nothing to install -- the browser and its icon are the app; and every phone is visible and removable on People.\n\nCHOSEN: C, 1 October 2026.",
+      "page": "page-1"
+    },
+    {
+      "id": "today",
+      "x": 0,
+      "y": -560,
+      "w": 600,
+      "text": "TODAY\n\nThe wall: traced off the running panel at 1440x900 (?sheet=people on a locked mock). The Phones line already says the thing this collection is about -- \"none reaches it from outside yet\" -- and there is no control anywhere that changes it. set_remote() and POST /phones/{id}/remote have existed since pairing; the switch was held back on purpose until the house could keep the promise (docs/away.md, step 2).\n\nThe phone, right: what Sam's iPhone, paired at home three weeks ago, sees at temi.elyir.app. The words are the brain's, from away_refusal() with no phone -- \"This house is not open from here\" -- because to the house it is nobody. Letting it out at the wall would change nothing on this screen. That is the bug every direction below has to fix.",
+      "page": "page-1"
+    },
+    {
+      "id": "shared",
+      "x": 1560,
+      "y": 1400,
+      "w": 520,
+      "text": "WHAT ALL THREE SHARE\n\nThe switch. One per phone on People, labeled From outside, off for every phone and off forever until somebody turns it on. Only a phone that holds the house's keys sees it (holds_keys(): the screen that set the house up, and phones whose owner typed the passcode), so a guest let in at the wall cannot let anyone out, themselves included.\n\nThe wall has none. It never leaves the house, so it never needs the door; its row says \"stays home\" instead (the open decision in docs/away.md, answered the way it recommends).\n\nThe Phones line stops saying \"none reaches it from outside yet\" and says what is true.\n\nWhere it was reached from is said where Connected is said, in lamp rather than live: From outside. The house looks the same out there; the one place it differs is honest about it.\n\nNOT DRAWN, BECAUSE NOTHING CHANGES: the join screen. A phone still joins from inside the house, where someone can see who is asking.",
+      "page": "page-1"
+    },
+    {
+      "id": "a",
+      "x": 1040,
+      "y": 1020,
+      "w": 420,
+      "text": "A -- TWO DOORS\n\nThe phone keeps hub.local for home. Letting it out gives it a second icon for outside, which it picks up the next time it is home.\n\nFOR: it needs nothing that does not exist. The relay, the certificate and the gate are built; this is a one-time link and a page. It could ship this week.\n\nAGAINST: it makes the household choose the icon by where they are standing. Get it wrong out of the house and the screen is not ours -- hub.local does not exist out there, so nothing of ours can load to explain (A, out). Get it wrong at home and every tap goes out to the relay and back, which breaks the rule that the relay is only in the path when a phone is away. Two icons that both say Home is a puzzle the product hands to the person least likely to want it.\n\nAND THE LET-OUT PHONE HAS TO BE HOME. Sam is Away on this very sheet: the switch is on and Sam still cannot get in until Sam walks through the door.",
+      "page": "page-2"
+    },
+    {
+      "id": "b",
+      "x": 2600,
+      "y": 1020,
+      "w": 420,
+      "text": "B -- MOVED WHEN IT IS LET OUT\n\nLetting a phone out moves it, once, to the house's own name. One icon, the new one, working everywhere.\n\nFOR: one icon and no choosing. Out of the house it is simply the house (B, out), and the only difference on screen is From outside where Connected was.\n\nWHAT IT NEEDS: the house answering its own name at home, directly. Otherwise a moved phone at home goes out to the relay and back, and with the internet down it loses the house while the wall keeps working. That is the alias in docs/away.md's open decisions, and B makes it mandatory rather than nice.\n\nAGAINST: the same wait as A. The move happens at home, so a phone let out while it is away gets nothing until it is back -- the switch is on and Sam is still outside. And the house ends up with phones on two names, which People has to explain forever.",
+      "page": "page-2"
+    },
+    {
+      "id": "c",
+      "x": 1560,
+      "y": 2420,
+      "w": 420,
+      "text": "C -- EVERY PHONE MOVES ONCE, WHEN THE HOUSE GETS ITS NAME\n\nThe move is not tied to letting out at all. The evening the house is given its name, every phone at home gets one line in the band, and moves in three steps (C, the move). From then on there is one name for the house, at home and away, and new phones join on it from the start -- Show how's code points at it.\n\nSO THE SWITCH IS ONLY A SWITCH. Sam's phone moved weeks ago, so when Sam is at the airport and asks, Temi turns it on at the wall and Sam's screen opens by itself (C, out). Nothing to hand over and no waiting for anybody to come home. The words on that screen are the brain's HOME_ONLY, which ships today and has never had a door behind it.\n\nWHAT IT NEEDS: everything B needs -- the house answering its name at home -- and the moment of the move being asked of everyone, once, including people who will never leave the house with it. That is a real cost; it is paid by a band line nobody has to act on, because a phone that never moves keeps working on hub.local at home exactly as it does now.\n\nCHOSEN, 1 October 2026: one name for the house, one icon on the phone, and a switch that means what it says when you flip it. A and B are on Not chosen with their cases intact.",
+      "page": "page-1"
+    },
+    {
+      "id": "seen",
+      "page": "page-1",
+      "x": 1560,
+      "y": 1950,
+      "w": 520,
+      "text": "SEEN, ADDED 2 OCTOBER 2026\n\nEach phone row says when the house last saw that phone -- seen just now, seen 2 min ago, seen 3 days ago -- between how it got in and anything after.\n\nWHY: on the maker's own hub the list had grown to eleven, five of them called Temi's screen. Every new browser, profile or address a person opens the house in is a new phone, and same-named rows are impossible to tell apart, so the one in use and the four left behind looked identical and Remove was a guess. When it was last seen is the one fact that tells them apart, and the house already keeps it."
+    }
+  ],
+  "launch": {
+    "view": "canvas",
+    "page": "page-1"
+  }
+}

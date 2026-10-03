@@ -32,7 +32,7 @@ const shape = computed(() => kindFor('camera', props.device.name) ?? 'camera')
     <DeviceArt v-if="!src" :kind="shape" :state="{ live }" />
     <div class="camera-veil"></div>
     <div class="camera-top">
-      <span class="chip" :class="{ live }">{{ dead ? 'Offline' : live ? 'Recording' : age || 'Loading' }}</span>
+      <span class="chip" :class="{ live }">{{ dead ? 'Not answering' : live ? 'Recording' : age || 'Loading' }}</span>
     </div>
     <div class="camera-bottom">
       <span class="tile-icon"><Icon name="camera" :size="18" /></span>

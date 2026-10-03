@@ -36,11 +36,11 @@
  * it, the second does it. Nothing vanishes under one tap.
  */
 import { computed, ref } from 'vue'
-import { installUpdate, loadHealth, notify, openFlow, restartHub, store } from './store'
+import { deviceById, installUpdate, loadHealth, notify, openFlow, restartHub, store } from './store'
 import { checkDevice, downloadBackup, forgetBridge, forgetDevice, retryEntry, retryPart, type Act, type Note, type Rung } from './api'
 import Icon from './Icon.vue'
 
-const noteIcon = (k: string) => k === 'offline' || k === 'restart' ? 'refresh' : k === 'storage' || k === 'healed' ? 'home' : k === 'driver' ? 'switch' : k === 'bridge' ? 'wifi' : 'sparkle'
+const noteIcon = (k: string) => k === 'printer' ? 'printer' : k === 'held' ? 'shield' : k === 'offline' || k === 'restart' ? 'refresh' : k === 'storage' || k === 'healed' ? 'home' : k === 'driver' ? 'switch' : k === 'bridge' ? 'wifi' : 'sparkle'
 
 /* A long list of quiet things folds, because five is enough to see the shape of it -- but the fold opens.
    The old list stopped at five in the BRAIN and ended with "And 3 more things are offline", a sentence
@@ -68,6 +68,13 @@ async function run(n: Note, a: Act, id: string) {
   if (a.ask && asking.value !== id) { asking.value = id; return }   // first tap asks, with the name in it
   asking.value = ''
   if (a.act === 'flow') return openFlow(a.to!)
+  /* A strip held dark: Show me opens the light's own pane, where the same sentence and the next step
+     are (design/controller-panel/NeedsLookB.dc.html). The row stays -- the strip is still dark. */
+  if (a.act === 'open') { const d = deviceById(a.to!); if (d) store.opened = d; return }
+  /* A printer that needs somebody: Open R2D2 is its own pane, where its words and its actions are. This
+     page steps aside for it, because a pane and This house share a layer and the later one would cover
+     it; the row stays, and is here again behind the door, while the printer still needs somebody. */
+  if (a.act === 'printer') { store.sheet = null; store.printer = a.to; return }
   if (a.act === 'update') return installUpdate()
   /* A restart takes this page away with it, so there is nothing to refresh afterwards and nothing to
      mark busy: the overlay is up before the tap has finished. The rung is the brain's -- this page
@@ -78,7 +85,7 @@ async function run(n: Note, a: Act, id: string) {
   if (a.act === 'backup') {
     if (busy.value) return
     busy.value = id
-    try { await downloadBackup(); notify('Your backup is on its way. Keep it somewhere safe; it holds the house’s keys.') }
+    try { await downloadBackup(); notify('Your backup is on its way. Keep it somewhere safe; it holds the house’s passwords and sign-ins.') }
     catch (e: any) { notify(e.message, 'error') }
     busy.value = ''
     return
@@ -91,7 +98,7 @@ async function run(n: Note, a: Act, id: string) {
     else if (a.act === 'check') { const r = await checkDevice(a.to!); notify(r.text, r.answering ? 'info' : 'error') }
     else if (a.act === 'forget') {
       await forgetDevice(a.to!)
-      notify(n.name ? `${n.name} is forgotten.` : 'It is forgotten.')
+      notify(n.name ? `${n.name} is removed.` : 'It is removed.')
       store.notes = store.notes.filter(x => x.subject !== a.to)   // it goes now; the next rebuild agrees
     }
     /* A bridge, not a device: it was never in the house's device list to remove from. What goes with
@@ -99,7 +106,7 @@ async function run(n: Note, a: Act, id: string) {
        list the next time the brain starts. */
     else if (a.act === 'bridge') {
       const r = await forgetBridge(a.to!)
-      notify(`${r.forgotten} is forgotten.`)
+      notify(r.forgotten === 'The bridge' ? 'The bridge is removed.' : `The ${r.forgotten} bridge is removed.`)
       store.notes = store.notes.filter(x => x.subject !== a.to)
     }
     await loadHealth()
@@ -111,11 +118,11 @@ async function run(n: Note, a: Act, id: string) {
 <template>
   <div class="page">
     <p class="page-lede" v-if="store.notes.length">
-      The house is running. These are the parts of it that have stopped answering. Each one says what it
-      needs and what you can do about it from here.
+      The house is running. These are the parts of it that need you. Each one says what it needs and what
+      you can do about it from here.
     </p>
     <ul class="recent notes" v-if="store.notes.length">
-      <li v-for="(n, i) in shown" :key="key(n, i)" :class="{ fault: !!n.with?.length }">
+      <li v-for="(n, i) in shown" :key="key(n, i)" :class="{ fault: !!n.with?.length, 'note-held': n.kind === 'held' }">
         <span class="recent-icon"><Icon :name="noteIcon(n.kind)" :size="16" /></span>
         <span class="recent-text">
           {{ n.text }}
@@ -124,7 +131,7 @@ async function run(n: Note, a: Act, id: string) {
           <small class="note-where" v-if="n.more">{{ n.more }}</small>
           <!-- what went quiet behind this one fault; put the fault right and these come back together -->
           <small class="note-with" v-if="n.with?.length">
-            {{ n.with.length === 1 ? 'One thing went quiet with it:' : `${n.with.length} things went quiet with it:` }}
+            {{ n.with.length === 1 ? 'One thing stopped answering with it:' : `${n.with.length} things stopped answering with it:` }}
             <template v-if="spread[key(n, i)]">
               <span class="note-thing" v-for="w in n.with" :key="w.id">{{ w.name }}<span class="note-thing-where" v-if="w.where">{{ w.where }}</span></span>
             </template>
@@ -150,7 +157,7 @@ async function run(n: Note, a: Act, id: string) {
       </li>
     </ul>
     <button class="button small ghost more-quiet" v-if="more && !open" @click="open = true">
-      Show the other {{ more }} {{ more === 1 ? 'thing' : 'things' }} that are offline
+      Show the other {{ more }} {{ more === 1 ? 'thing' : 'things' }} that are not answering
     </button>
     <p class="empty" v-else-if="!store.notes.length">Nothing needs a look. Everything the house talks to is answering.</p>
   </div>

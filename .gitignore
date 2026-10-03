@@ -48,6 +48,7 @@ strip/firmware/build
 
 # Light strip controller: ESP-IDF build output and generated config
 strip/firmware/build/
+strip/firmware/build-*/
 strip/firmware/sdkconfig
 strip/firmware/sdkconfig.old
 strip/firmware/managed_components/
@@ -60,3 +61,5 @@ test.sh
 # The wall panel's boards live in the hardware repository; a checkout may link them in here to view
 # them with tools/dev.sh design, and the link must never be committed.
 design/wall
+relay/terraform/.env
+relay/terraform/relay.plan

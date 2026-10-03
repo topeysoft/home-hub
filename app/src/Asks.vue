@@ -21,8 +21,8 @@ const name = () => store.asks[0]?.name ?? 'A phone'
   <button class="nudge ask attention" v-if="store.asks.length && store.askAside" @click="store.askAside = false">
     <span class="nudge-icon"><Icon name="phone" :size="20" /></span>
     <span class="nudge-text">
-      <span class="nudge-title">{{ store.asks.length > 1 ? `${store.asks.length} phones want to join` : `${name()} wants to join the house` }}</span>
-      <span class="nudge-sub">Waiting on you. Tap to let it in, or to say not now.</span>
+      <span class="nudge-title">{{ store.asks.length > 1 ? `${store.asks.length} phones want to be added` : `${name()} wants to be added` }}</span>
+      <span class="nudge-sub">Tap to allow it, or to say not now.</span>
     </span>
   </button>
 </template>

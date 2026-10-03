@@ -31,7 +31,7 @@ function tap(d: Device) {
               :disabled="isDead(d)" :aria-pressed="on(d)" @click="tap(d)">
         <Icon :name="iconFor(d)" :size="18" />
         <span class="machine-row-name">{{ featureName(d, device.name, room) }}</span>
-        <span class="machine-row-state">{{ isDead(d) ? 'Not responding' : on(d) ? 'On' : 'Off' }}</span>
+        <span class="machine-row-state">{{ isDead(d) ? 'Not answering' : on(d) ? 'On' : 'Off' }}</span>
       </button>
     </div>
   </div>

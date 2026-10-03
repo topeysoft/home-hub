@@ -125,6 +125,16 @@ services:
       - MQTT_USER=${MQTT_USER:-}
       - MQTT_PASSWORD=${MQTT_PASSWORD:-}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}   # the assistant's key, if it is not pasted into the panel instead
+      # The Matter bridge's way past the phone gate (hub/share.py, token). The bridge presents it and the
+      # brain checks it, so both have to be handed the same one. It was given to the bridge alone when
+      # sharing landed, and every request the bridge made was refused -- found 2 October 2026.
+      - HUB_SHARE_TOKEN=${HUB_SHARE_TOKEN:-}
+      # The house's own address outside (hub/address.py). HUB_AWAY_OFFER=on is the maker's own hub, offered
+      # an address by hand before payments exist; every other house leaves it unset and is offered one only
+      # when the service says it can be paid for. HUB_RELAY_API is the registration service, for a relay
+      # of your own. docs/away.md, step 4.
+      - HUB_AWAY_OFFER=${HUB_AWAY_OFFER:-}
+      - HUB_RELAY_API=${HUB_RELAY_API:-https://api.elyir.app}
       # Whether this house can answer out loud, and in whose voice. Empty is off and is every house
       # today: the panel then answers on the glass exactly as it does now. Set VOICE_TTS=piper with
       # COMPOSE_PROFILES=voice to turn the pair on together. docs/voice.md.
@@ -171,10 +181,67 @@ services:
       # The door the tunnel feeds, once there is a tunnel. On loopback deliberately: the relay's client
       # runs on this machine, and nothing on the Wi-Fi is meant to reach it. docs/away.md, piece 2.
       - HUB_RELAY_BIND=127.0.0.1
+      # Whether that door is the house's public name on a real certificate (on) or the plain one with
+      # nothing behind it (off, every house until it has a name). caddy/away/ has both.
+      - HUB_AWAY=${HUB_AWAY:-off}
+      # The house's whole public name, made here from the one part .env holds, so the two can never disagree.
+      - HUB_AWAY_NAME=${HUB_AWAY_HOUSE:-}.${HUB_AWAY_ZONE:-elyir.app}
+      - HUB_ACME_CA=${HUB_ACME_CA:-https://acme-v02.api.letsencrypt.org/directory}
+      # The house's name at home, 192-168-86-53.<house>.home.elyir.app, written by host/away.sh from the hub's
+      # real address. Only read while the away door is on (caddy/away/on.caddy).
+      - HUB_LAN_NAME=${HUB_LAN_NAME:-}
       - BRAIN_UPSTREAM=localhost:8300
     volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      # The away door is one of two files the Caddyfile imports, and an import Caddy cannot find stops it
+      # starting at all -- the whole front door, not only the away one. Found 2 October 2026 on a real hub.
+      - ./caddy/away:/etc/caddy/away:ro
+      # That name's certificate, kept by lan-cert below; read through a loopback-only file server.
+      - ./lan-cert/data:/lan:ro
       - ./caddy/data:/data
+
+  frpc:
+    # The house's end of the relay: one connection out on 443, held open, carrying phones away back to
+    # the away door on loopback. docs/away.md, piece 2. A profile, like the radios: COMPOSE_PROFILES
+    # with `away` in it, beside HUB_AWAY=on and the house's name, turns it on. Off is every house until
+    # it has a name, and with it off nothing leaves the house and nothing comes in.
+    #
+    # Pinned to the version the relay's pass-through was checked against. The relay is blind to what it
+    # carries because of what is NOT in frp/frpc.toml -- read the comment there before adding anything.
+    image: ${HUB_IMG_FRPC:-fatedier/frpc:v0.71.0}
+    container_name: frpc
+    restart: unless-stopped
+    profiles: [away]
+    network_mode: host      # the away door is on loopback, and only this container may reach it
+    depends_on: [caddy]
+    command: ["-c", "/etc/frp/frpc.toml"]
+    volumes:
+      - ./frp/frpc.toml:/etc/frp/frpc.toml:ro
+    environment:
+      - HUB_RELAY_ADDR=${HUB_RELAY_ADDR:-relay.elyir.app}
+      - HUB_RELAY_TOKEN=${HUB_RELAY_TOKEN:-}
+      - HUB_AWAY_HOUSE=${HUB_AWAY_HOUSE:-}
+      - HUB_AWAY_NAME=${HUB_AWAY_HOUSE:-}.${HUB_AWAY_ZONE:-elyir.app}
+      - HUB_RELAY_SECRET=${HUB_RELAY_SECRET:-}
+
+  lan-cert:
+    # The certificate for the house's name at home (lan-cert/run.sh): the stock lego image proving it over
+    # DNS-01 through the relay's own DNS server, renewed twice a day. Beside frpc, behind the same `away`
+    # profile, because it means nothing until the house has an address. docs/away.md.
+    image: ${HUB_IMG_LEGO:-goacme/lego:v4.26.0}
+    container_name: lan-cert
+    restart: unless-stopped
+    profiles: [away]
+    network_mode: host
+    entrypoint: ["/bin/sh", "/run.sh"]
+    volumes:
+      - ./lan-cert/run.sh:/run.sh:ro
+      - ./lan-cert/data:/lan
+    environment:
+      - HUB_LAN_NAME=${HUB_LAN_NAME:-}
+      - HUB_AWAY_HOUSE=${HUB_AWAY_HOUSE:-}
+      - HUB_RELAY_SECRET=${HUB_RELAY_SECRET:-}
+      - HUB_RELAY_API=${HUB_RELAY_API:-https://api.elyir.app}
 
   ring-mqtt:
     # Ring Alarm and everything paired to its base station (Z-Wave locks, switches, plugs, contact and

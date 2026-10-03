@@ -3,11 +3,14 @@
   SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 <script setup lang="ts">
+import { inApp } from './inapp'
+import { narrow } from './band'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { store, start, halt, load, visibleRooms, activity, roomActive, houseLine, weatherLine, needsSetup, dismissToast, updateReady, forgetDone, cap } from './store'
+import { store, start, halt, load, foundCount, visibleRooms, activity, roomActive, houseLine, weatherLine, needsSetup, dismissToast, updateReady, forgetDone, cap } from './store'
 import Setup from './Setup.vue'
 import Join from './Join.vue'
 import Away from './Away.vue'
+import MovePage from './MovePage.vue'
 import CodePrompt from './CodePrompt.vue'
 import { lock } from './code'
 import Sky from './Sky.vue'
@@ -18,14 +21,17 @@ import Viewer from './Viewer.vue'
 import WhySheet from './WhySheet.vue'
 import BridgeSheet from './BridgeSheet.vue'
 import StripSheet from './StripSheet.vue'
+import YardSheet from './YardSheet.vue'
 import { stripSheetOpen } from './adding'
 import HousePanel from './HousePanel.vue'
 import AskPane from './AskPane.vue'
 import { isPage } from './pages'
 import Opened from './Opened.vue'
+import PrinterPane from './PrinterPane.vue'
 import WeatherPane from './WeatherPane.vue'
 import Icon from './Icon.vue'
-import { dayLine, restClock, restingFacts } from './resting'
+import { clockParts, restingFacts, restWeather } from './resting'
+import WeatherArt from './WeatherArt.vue'
 import { glassVars, isTone, toneVars, type ToneName } from './tone'
 import { isFace, isLayout, isNav, type FaceName, type LayoutName, type NavName } from './layout'
 import { feelFrom, placeOf, TOUCHED_AT, READ_AT } from './look'
@@ -52,7 +58,7 @@ watch(selected, () => nextTick(() => document.querySelector('.rail-item.active')
 const setup = computed(() => !!store.status && (store.previewSetup || needsSetup()))
 /* The house is not showing: either this phone is not in it yet, or it is being reached from outside and
    the house did not open. Both put a screen of their own up in place of everything. */
-const shut = computed(() => lock.unpaired || !!lock.away)
+const shut = computed(() => lock.unpaired || !!lock.away || store.moving)   // a page that is the whole screen: nothing of the house under it
 const panel = computed(() => isPage(store.sheet))   // This house is open, on one of its pages
 /* A phone at the door opens its own pane, and stays open until it is answered or put aside. It is
    not `store.opened` -- that is a device -- but it is the same surface and the room recedes behind
@@ -113,7 +119,9 @@ const flat = params.get('flat') === '1'
   || !(CSS.supports('backdrop-filter', 'blur(1px)') || CSS.supports('-webkit-backdrop-filter', 'blur(1px)'))
 
 const navParam = params.get('nav')
-const nav = computed<NavName>(() => isNav(navParam) ? navParam : (isNav(store.ambient.look?.nav) ? store.ambient.look!.nav as NavName : place.value.nav))
+/* Inside the Houses app a phone takes the tabs, whatever the house chose: the house's name, which is the way to
+   the other houses, lives in the top bar's row (design/houses/, B), and a phone's side list has no room for it. */
+const nav = computed<NavName>(() => isNav(navParam) ? navParam : (inApp && narrow.value) ? 'top' : (isNav(store.ambient.look?.nav) ? store.ambient.look!.nav as NavName : place.value.nav))
 const tab = ref<'home' | 'rooms' | 'cameras'>('home')
 function go(t: 'home' | 'rooms' | 'cameras') { tab.value = t; open(null) }
 
@@ -133,6 +141,8 @@ const previewAt = new URLSearchParams(location.search).get('at')   // ?at=19:30 
 const shown = computed(() => { if (!previewAt) return now.value; const d = new Date(now.value); const [h, m] = previewAt.split(':').map(Number); d.setHours(h || 0, m || 0, 0, 0); return d })
 const clock = computed(() => shown.value.toLocaleTimeString(locale(), { hour: 'numeric', minute: '2-digit' }))
 const facts = computed(() => idle.value ? restingFacts(shown.value) : [])   // only worked out while the panel rests
+const restWx = computed(() => idle.value ? restWeather() : null)
+const restTime = computed(() => clockParts(shown.value))
 const day = computed(() => shown.value.toLocaleDateString(locale(), { weekday: 'long', month: 'long', day: 'numeric' }))
 
 /* The wall panel rests after a few minutes: a clock, the date, and a row of facts about the house big
@@ -209,7 +219,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="shell" :data-ambient="ambient" :data-nav="nav" :data-face="face" :data-layout="layout" :data-flat="face === 'glass' && flat ? '' : null" :style="[tone, glass, openTint]" :class="{ resting: idle, 'in-setup': setup || shut, 'opened-shell': !!store.opened || store.outside || panel || asking }">
+  <div class="shell" :data-ambient="ambient" :data-nav="nav" :data-face="face" :data-layout="layout" :data-flat="face === 'glass' && flat ? '' : null" :style="[tone, glass, openTint]" :class="{ resting: idle, 'in-setup': setup || shut, 'opened-shell': !!store.opened || !!store.printer || store.outside || panel || asking }">
     <Sky :quiet="!idle && !setup" />
     <!-- glass lays its blooms on the sky the canvas just painted, under the veil -->
     <div class="sky-bloom" v-if="face === 'glass'"></div>
@@ -217,6 +227,7 @@ onUnmounted(() => {
     <div class="sky-veil"></div>
     <Away v-if="lock.away" />
     <Join v-else-if="lock.unpaired" @joined="rejoin" />
+    <MovePage v-else-if="store.moving" />
     <Setup v-else-if="setup" />
     <TopBar v-if="!setup && !shut && nav === 'top'" :clock="clock" :day="day" :now="shown" :tab="tab" :in-room="!!room" @go="go" />
     <aside class="rail" v-if="!setup && !shut && nav === 'side'">
@@ -237,9 +248,9 @@ onUnmounted(() => {
         </button>
       </nav>
       <div class="rail-tail">
-        <button class="rail-item rail-add" :class="{ attention: store.found.length }" @click="store.sheet = 'add'">
+        <button class="rail-item rail-add" :class="{ attention: foundCount() }" @click="store.sheet = 'add'">
           <Icon name="plus" :size="16" /><span class="rail-name">Add to the house</span>
-          <span class="rail-sub" v-if="store.found.length">{{ store.found.length }} found nearby</span>
+          <span class="rail-sub" v-if="foundCount()">{{ foundCount() }} found nearby</span>
         </button>
         <button class="rail-item rail-house" :class="{ attention: updateReady() }" @click="store.sheet = 'house'">
           <Icon name="menu" :size="16" /><span class="rail-name">This house</span>
@@ -263,7 +274,7 @@ onUnmounted(() => {
              says "this may never end". The figure is the hub's own last restart at this rung. -->
         <template v-if="store.restarting">
           <span class="offline-icon pulse"><Icon name="refresh" :size="28" /></span>
-          <h1 class="display">{{ store.restarting.rung === 'machine' ? 'Restarting the little computer' : store.restarting.rung === 'everything' ? 'Restarting everything' : 'Restarting the hub' }}</h1>
+          <h1 class="display">{{ store.restarting.rung === 'machine' ? 'Powering the hub off and on' : store.restarting.rung === 'everything' ? 'Full restart' : 'Restarting the hub' }}</h1>
           <p>{{ store.restarting.left > 0 ? `Back in about ${store.restarting.left} seconds.` : 'Taking longer than usual. Still trying.' }}</p>
           <p class="keeps">{{ store.restarting.rung === 'hub' ? 'Lights and switches keep working.' : 'Switches on the wall keep working.' }}</p>
         </template>
@@ -280,7 +291,7 @@ onUnmounted(() => {
         </template>
         <template v-else-if="store.loaded && store.status && store.status.driver !== 'ready'">
           <span class="offline-icon pulse"><Icon name="home" :size="28" /></span>
-          <h1 class="display">{{ store.restoring ? 'Restoring your house' : store.status.driver === 'down' ? 'The engine is starting' : 'Reconnecting' }}</h1>
+          <h1 class="display">{{ store.restoring ? 'Restoring your house' : store.status.driver === 'down' ? 'The hub is starting' : 'Reconnecting' }}</h1>
           <p>{{ store.restoring ? 'A few minutes. The lights and switches keep working; this screen comes back on its own.' : store.status.reason || 'The house will be back in a moment. Nothing needs doing.' }}</p>
         </template>
         <template v-else-if="store.error">
@@ -311,6 +322,7 @@ onUnmounted(() => {
 
     <Viewer />
     <Opened v-if="store.opened" />
+    <PrinterPane v-if="store.printer" />
     <WeatherPane v-if="store.outside" :now="shown" />
     <AskPane v-if="asking" />
     <!-- :duration because what moves is inside: Vue times a transition from the
@@ -331,6 +343,8 @@ onUnmounted(() => {
          and a dot on the + door, and this opens when somebody taps one of those or is already
          standing on Add. Once it IS a conversation, it keeps the screen the way it always did:
          stripSheetOpen() only gates the beats that are still asking. -->
+    <!-- the roofline's way round, shown on the roof while somebody stands in the yard (design/roofline/TapA) -->
+    <Transition name="sheet"><YardSheet v-if="store.yard && store.roofline?.exists && store.roofline.yard" /></Transition>
     <Transition name="sheet"><StripSheet v-if="store.strip && stripSheetOpen(store.strip.state, store.sheet, store.stripAsked, store.stripPutDown) && !(store.bridge && store.bridge.state !== 'none')" /></Transition>
     <Transition name="sheet"><CodePrompt v-if="lock.prompt" /></Transition>
 
@@ -343,12 +357,16 @@ onUnmounted(() => {
 
     <Transition name="idle">
       <div class="idle" v-if="idle" aria-label="Tap to wake">
-        <div class="idle-time display">{{ restClock(shown) }}</div>
-        <div class="idle-day">{{ dayLine(day) }}</div>
+        <div class="idle-wx" v-if="restWx">
+          <WeatherArt />
+          <div><div class="idle-wx-temp display">{{ restWx.temp }}</div><div class="idle-wx-label">{{ restWx.label }}</div></div>
+        </div>
+        <div class="idle-time display">{{ restTime.time }}<span class="idle-period" v-if="restTime.period">{{ restTime.period }}</span></div>
+        <div class="idle-day">{{ day }}</div>
         <div class="idle-facts" v-if="facts.length">
           <div class="idle-fact" v-for="f in facts" :key="f.key" :class="{ live: f.live }">
-            <div class="idle-fact-value"><Icon :name="f.icon" :size="38" /><span>{{ f.value }}</span></div>
-            <div class="idle-fact-where">{{ f.where }}</div>
+            <div class="idle-fact-value"><Icon :name="f.icon" :size="38" /><span>{{ f.value }}<span class="idle-fact-period" v-if="f.period">{{ f.period }}</span></span></div>
+            <div class="idle-fact-where"><span>{{ f.where }}</span></div>
           </div>
         </div>
         <div class="idle-line" v-else>{{ houseLine() }}</div>

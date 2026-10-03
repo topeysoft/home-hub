@@ -23,7 +23,8 @@ Two rules carried in from elsewhere, both load-bearing:
 - **Nothing is claimed that cannot be known.** A house with no people set up has no idea when anybody
   left, so it does not guess a window -- it says what it has been doing since yesterday and means it.
 """
-import json, time
+import json
+import re, time
 from datetime import datetime
 
 from .health import when
@@ -209,8 +210,8 @@ class Happened:
             if r.get("detail"):
                 try: name = json.loads(r["detail"]).get("name") or name
                 except Exception: pass
-            text = {"joined": f"{name} joined the house.", "removed": f"{name} was removed.",
-                    "left": f"ended {name}'s stay, which was only ever for a while.", "asked": f"{name} asked to join."}.get(r["new"])
+            text = {"joined": f"{name} was added.", "removed": f"{name} was removed.",
+                    "left": f"{name}'s visit ended, as planned.", "asked": f"{name} asked to be added."}.get(r["new"])
             if not text: continue
             out.append({"kind": "phone", "subject": r["subject"], "text": text,
                         "when": when(r["ts"], self.hub.tz, now), "ts": r["ts"], "acts": []})
@@ -223,7 +224,7 @@ class Happened:
         still, over = self.findings(now)
         groups = []
         if still: groups.append({"id": "still", "label": self.heading(still), "items": still})
-        if over:  groups.append({"id": "over", "label": "While you were out", "items": over})
+        if over:  groups.append({"id": "over", "label": "While you were out" if self.away(now) else "Since yesterday", "items": over})
         people = self.people(now)
         if people: groups.append({"id": "people", "label": "People and phones", "items": people})
         return {"lede": lede, "since": since, "away": self.away(now), "groups": groups,
@@ -234,7 +235,7 @@ class Happened:
         reason the heading is: it has to say what is actually inside."""
         def n(items, thing): return f"1 {thing}" if len(items) == 1 else f"{len(items)} {thing}s"
         if still: return f"{n(still, 'thing')} still {still[0]['word']}"
-        if over: return f"{n(over, 'thing')} while you were out"
+        if over: return f"{n(over, 'thing')} while you were out" if self.away() else f"{n(over, 'thing')} since yesterday"
         return "Nothing to catch up on"
 
 
@@ -280,7 +281,8 @@ class Changes:
         would draw as a bare icon with nothing beside it, which is how this was noticed."""
         name = self.name_of(r["subject"], detail)
         new = (r["new"] or "").strip()
-        return f"changed {name}: {new}." if new else f"changed {name}."
+        # the row's value only when it is words: "changed Kitchen: 30,80." told nobody anything
+        return f"changed {name}: {new}." if re.fullmatch(r"[A-Za-z][A-Za-z ,'’-]*", new) else f"changed {name}."
 
     def name_of(self, subject: str, detail: dict) -> str:
         """What a subject is called, preferring what it is called NOW and falling back to what it was
@@ -305,36 +307,44 @@ class Changes:
         if kind == "phone":
             name = detail.get("name") or "a phone"
             span = {"day": " for the day", "weekend": " for the weekend"}.get(detail.get("span"), "")
-            return {"joined": f"let {name} into the house{span or ', for good'}.",
+            return {"joined": f"added {name}{span or ', for good'}.",
                     "removed": f"removed {name} from the house.",
-                    "asked": "asked to join the house.",
-                    "left": f"ended {name}'s stay, which was only ever for a while.",
-                    "home only": f"stopped {name} reaching the house from outside.",
-                    "not now": f"turned down {name}'s request to join.",
-                    "can reach the house from outside": f"let {name} reach the house from outside.",
+                    "asked": "asked to be added to the house.",
+                    "left": f"ended {name}'s visit, as planned.",
+                    "home only": f"set {name} to Home only.",
+                    "not now": f"turned down {name}'s request to be added.",
+                    "moved": f"switched {name} to the house's web address.",
+                    "can reach the house from outside": f"set {name} to Anywhere.",
                     }.get(new) or self.fallback(r, detail)
         if kind == "draft":
             return {"approved": "approved a suggested routine.",
                     "discarded": "turned down a suggested routine."}.get(new) or self.fallback(r, detail)
         if kind == "bridge":
-            return {"set up": f"set up the bridge {subject}.", "forgotten": f"took the bridge {subject} off the house.",
-                    "nightlight on": f"turned the bridge {subject}'s nightlight on.",
-                    "nightlight off": f"turned the bridge {subject}'s nightlight off.",
-                    "light changed": f"changed the bridge {subject}'s light.",
-                    "recognised": f"recognized the bridge {subject}.", "recognized": f"recognized the bridge {subject}.",
-                    "updated": f"updated the bridge {subject}.",
-                    "sent a test build": f"offered the bridge {subject} a test build.",
-                    "went back": f"saw the bridge {subject} go back to what it had, after an update did not work.",
-                    "refused an update": f"saw the bridge {subject} turn down an update that did not check out.",
+            # Named by the room it serves, as everywhere else; the subject is a chip id nobody has a word for.
+            if new == "switch forgotten": return "removed a wall switch from its bridge."
+            room = None
+            try: room = self.hub.bridge.room_of(subject)
+            except Exception: pass
+            it = f"the {room} bridge" if room else "a bridge"
+            return {"set up": f"set up {it}.", "forgotten": f"removed {it}.",
+                    "nightlight on": f"turned {it}'s nightlight on.",
+                    "nightlight off": f"turned {it}'s nightlight off.",
+                    "light changed": f"changed {it}'s light.",
+                    "recognised": f"recognized {it}.", "recognized": f"recognized {it}.",
+                    "updated": f"updated {it}.",
+                    "sent a test build": f"sent {it} a trial update.",
+                    "went back": f"saw {it} undo an update that did not work.",
+                    "refused an update": f"saw {it} refuse an update it could not check.",
                     }.get(new) or self.fallback(r, detail)
         if kind == "strip":
             # Named by where it is, because a strip has no other name a household would know it by.
             it = f"the light strip in the {detail['room']}" if detail.get("room") else "a light strip"
             return {"updated": f"updated {it}.",
-                    "went back": f"saw {it} go back to what it had, after an update did not work.",
-                    "refused an update": f"saw {it} turn down an update that did not check out.",
-                    "sent a test build": f"offered {it} a test build.",
-                    "forgotten": f"took {detail.get('name') or it} off the house.",
+                    "went back": f"saw {it} undo an update that did not work.",
+                    "refused an update": f"saw {it} refuse an update it could not check.",
+                    "sent a test build": f"sent {it} a trial update.",
+                    "forgotten": f"removed {detail.get('name') or it}.",
+                    "own": f"made {it} a light of its own.", "part": f"made {it} part of another light.",
                     }.get(new) or self.fallback(r, detail)
         if kind == "share":
             if subject == "settings": return f"turned sharing with other apps {new}."
@@ -343,16 +353,27 @@ class Changes:
             if subject == "device":
                 what = self.name_of(old or "", detail)
                 return f"shared {what} with other apps." if new == "shared" else f"stopped sharing {what}."
-            return "opened the window for another app to find the house."
+            return "showed the code that adds the house to another app."
         # kind == "home": the subject says which sort of change it was
         if subject == "room": return f"added the room {new}."
         if subject == "location": return f"set where home is to {new}."
-        if subject == "entry": return "changed which rooms the family comes in through."
+        if subject == "entry": return "changed which rooms are the entrance."
         if subject == "backup": return "took a backup of the house."
         if subject == "restore": return "asked to restore the house from a backup."
-        if subject == "restart": return "asked the house to restart." if new == "asked" else self.fallback(r, detail)
+        if subject == "restart":
+            rung = {"hub": "a quick restart", "everything": "a full restart", "machine": "a power off and on"}.get(old or "", "a restart")
+            if new == "asked": return f"asked for {rung}."
+            if new == "back": return f"came back from {rung}."
+            return self.fallback(r, detail)
+        if subject == "address":
+            return {"claimed": "took a web address for the house.", "on": "turned the web address on.",
+                    "off": "turned the web address off.", "released": "gave the web address back."}.get(new) or self.fallback(r, detail)
+        if subject == "network":
+            if new.startswith("joining "): return f"moved the hub to the Wi‑Fi {new[len('joining '):]}."
+            if new.startswith("bridges moving to "): return f"moved the bridges to the Wi‑Fi {new[len('bridges moving to '):]}."
+            return self.fallback(r, detail)
         if subject == "assistant": return "connected the assistant."
-        if subject == "credentials": return f"added a key for {new}."
+        if subject == "credentials": return f"added sign-in details for {plainly(new)}."
         if subject == "device": return f"added {new} to the house."
         if subject == "driver":
             # The row's `new` is already a phrase ("Messages signed in"), which read as "The hub
@@ -361,25 +382,26 @@ class Changes:
             if new.endswith(" connected"): return f"connected {new[:-len(' connected')]}."
             return self.fallback(r, detail)
         if subject == "setup":
-            return {"code set": "set the passcode on the settings.", "code removed": "took the passcode off the settings.",
+            return {"code set": "set the passcode.", "code removed": "removed the passcode.",
                     "owner created": "set the house up.", "finished": "finished setting the house up."
                     }.get(new) or self.fallback(r, detail)
         if subject == "update":
-            if new == "installed": return f"installed {old or 'an update'}."
+            if new == "installed": return f"installed version {old}." if old else "installed an update."
             if new and new.startswith("automatic"): return f"turned {new.split()[-1]} automatic updates."
-            return f"asked the house to update to {new}."
+            return f"asked the hub to update to version {new}."
         if new == "account removed":
-            return f"removed the {detail.get('name') or detail.get('integration') or 'account'}. Everything it brought went with it."
+            return f"removed {detail.get('name') or plainly(detail.get('integration') or '') or 'an account'}, with everything that came with it."
         # a device id, with the detail saying which sort of change
         name = self.name_of(subject, detail)
+        if detail.get("kept_color"): return f"kept a color for the {name}."
         if detail.get("moved"):
             room = self.hub.home.rooms.get(new)
-            return f"moved {name} to the {room.name}." if room else f"took {name} out of its room."
+            return f"moved {name} to the {room.name}." if room else f"moved {name} to New devices."
         if detail.get("renamed_unit") is not None or (old and new and not detail):
-            return f"renamed {old} to {new}." if old else f"named it {new}."
+            return f"renamed {old} to {new}." if old else f"gave {new} its name."
         if new == "forgotten": return f"removed {name} from the house."
-        if detail.get("shown_as"): return f"now treats {name} as {KIND_AS.get(new, new)}."
-        if detail.get("leads"): return f"made {name} the one that leads its room."
+        if detail.get("shown_as"): return f"set {name} to show as {KIND_AS.get(new) or plainly(new).lower()}."
+        if detail.get("leads"): return f"set {name} to show first on its card."
         if detail.get("paired"): return f"paired {new} over {detail['paired']}."
         return self.fallback(r, detail)
 
@@ -394,9 +416,9 @@ class Changes:
             try: name = json.loads(r["detail"])["name"] if r["detail"] else None
             except Exception: name = None
             if name: return name
-        if r["source"] in ("hub", "system"): return "The hub"
+        if r["source"] in ("hub", "system", "watchdog"): return "The hub"
         if r["source"] == "assistant": return "The assistant"
-        return "Someone at the wall"
+        return "Someone"   # before a passcode, or from a screen that carries no phone: the house cannot say who
 
     def coded_since(self) -> float | None:
         """When the code was set. Before it there were no phones to tell apart, so nothing before it

@@ -4,13 +4,15 @@
    Knobs: PORT, WX=rainy (a condition), FOUND=0 (nothing new nearby), ENGINE=down (the engine-starting screen),
    LOCKED=1 (a code is set), FRESH=1 (first run), ASK=1 (a phone is asking to join; needs LOCKED=1), ?join=1 (the join screen),
    UPDATE=ready (one waiting, with its sheet), UPDATE=running (one happening, walking the phases), UPDATE=away (the sheet a
-   phone outside the house gets). Nothing here talks to a real device; every POST or DELETE says ok. */
+   phone outside the house gets), ?printers= on the panel's address (a house with 3D printers: mock/printers.mjs).
+   Nothing here talks to a real device; every POST or DELETE says ok. */
 import http from 'node:http'
 import fs from 'node:fs'
 import path from 'node:path'
 import crypto from 'node:crypto'
 import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
+import { printerNotes, printersAsked, printersRoute } from './printers.mjs'
 
 const DIST = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'dist')
 const PORT = Number(process.env.PORT || 8399)
@@ -132,17 +134,17 @@ const home = { name: "Temi's house", temp_unit: '°F', rooms }
 /* The words on a row's way out, in the shape brain/hub/things.py writes them: the panel draws these
    and invents none of them, so the mock has to speak the same sentences or the page reads wrong here
    and right in a house. */
-const out = (t, act, tail) => ({ do: 'Take it out', act, to: t.id,
-  ask: `Take ${t.name} out of the house? ${tail}`, yes: `Yes, take ${t.name} out`, no: 'Keep it' })
+const out = (t, act, tail) => ({ do: 'Remove', act, to: t.id,
+  ask: `Remove ${t.name} from the house? ${tail}`, yes: `Yes, remove ${t.name}`, no: 'Keep it' })
 const status = { driver: process.env.ENGINE === 'down' ? 'down' : 'ready', reason: process.env.ENGINE === 'down' ? "The hub's engine is not answering yet." : '',
   version: 'v0.3.0',   // the build this mock is: the panel reloads itself when a status answers with another (store.ts, newBuild)
   setup_done: process.env.FRESH !== '1', owner: 'Temi', home: "Temi's house", location: true, rooms: 8, devices: 30, locked: process.env.LOCKED === '1',
   drivers: [
-    { id: 'mqtt', name: 'Messages', state: 'ready', text: 'Running', port: 1883 },
-    { id: 'zigbee', name: 'Zigbee radio', state: 'ready', text: 'Stick on USB', port: 8080 },
-    { id: 'zwave', name: 'Z-Wave radio', state: 'off', text: 'No stick found', port: 3000 },
-    { id: 'matter', name: 'Matter', state: 'ready', text: 'Running', port: 5580 },
-    { id: 'ring', name: 'Ring', state: 'sign-in', text: 'Needs a sign-in', port: 55123 },
+    { id: 'mqtt', name: 'Device messages', state: 'ready', text: 'Working', port: 1883 },
+    { id: 'zigbee', name: 'Zigbee radio', state: 'ready', text: 'Plugged in', port: 8080 },
+    { id: 'zwave', name: 'Z-Wave radio', state: 'off', text: 'Not plugged in. Plug a Z-Wave stick in and it starts on its own.', port: 3000 },
+    { id: 'matter', name: 'Matter', state: 'ready', text: 'Working', port: 5580 },
+    { id: 'ring', name: 'Ring', state: 'sign-in', text: 'Sign in once to bring in the alarm, cameras and sensors.', port: 55123 },
   ], problems: [] }
 /* What changed, in a house's words (docs/updates.md piece 4). Off unless asked for, so the panel's
    ordinary previews and the e2e run see the hub page exactly as they did before: WHATSNEW=1 puts the
@@ -285,7 +287,7 @@ function pairStatus() {
   if (pairing.state !== 'listening') return { ...pairing, at: undefined, joined: undefined }
   const on = (Date.now() - pairing.at) / 1000
   if (process.env.PAIR === 'none') {
-    if (on > 12) { pairing = { state: 'closed', text: 'Nothing joined. Put the device in pairing mode and try again.' }; return pairing }
+    if (on > 12) { pairing = { state: 'closed', text: 'Nothing was added. Put the device in pairing mode and try again.' }; return pairing }
     return { state: 'listening', text: 'Listening. Put the device in pairing mode.', seconds_left: Math.round(12 - on) }
   }
   if (process.env.PAIR === 'pin' && on > 4 && pairing.needs !== null) {
@@ -301,7 +303,7 @@ function pairStatus() {
     unassigned.devices.push(d)
     push({ type: 'device', device: d })
   }
-  pairing = { state: 'done', text: 'A plug joined the house.', device: { id: 'new-plug', name: 'Smart plug' } }
+  pairing = { state: 'done', text: 'A plug was added.', device: { id: 'new-plug', name: 'Smart plug' } }
   return pairing
 }
 
@@ -404,6 +406,7 @@ function shareState() {
     bridge: { running: share.on && !share.stopped, commissioned: !!share.holders.length, stale: !!share.stopped, error: null },
   }
 }
+const mockAddress = { house: null, claimedAt: 0, want: 'on' }
 const phones = { phones: [
   { id: 'w', name: 'This wall', kind: 'wall', joined: now - 86400 * 30, expires: null, remote: false, last_seen: now, how: 'setup', me: true },
   { id: 'p1', name: "Temi's iPhone", kind: 'phone', joined: now - 86400 * 20, expires: null, remote: false, last_seen: now - 3600, how: 'code', me: false },
@@ -533,6 +536,16 @@ function sigTry(of, how) {
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://x')
   const p = url.pathname
+  /* The Houses app's dev server (app/houses, on 5174) calls this mock across origins, the way the app calls a house
+     across names: answered for that one origin, as across_names answers houses.elyir.app. */
+  if (req.headers.origin === 'http://localhost:5174') {
+    res.setHeader('Access-Control-Allow-Origin', req.headers.origin); res.setHeader('Vary', 'Origin')
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204, { 'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE', 'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-Hub-Code', 'Access-Control-Max-Age': '600' })
+      return res.end()
+    }
+  }
+  if (printersRoute(req, res, p)) return    // 3D printers, only for a page that asked for them: mock/printers.mjs
   if (p === '/setup/status') return json(res, status)
   if (p === '/update/notes') return json(res, { notes: releaseNotes[0], history: releaseNotes })
   /* Install: on a hub the brain restarts and comes back as the next build, and the page follows it
@@ -563,8 +576,8 @@ const server = http.createServer((req, res) => {
     const secs = { hub: 30, everything: 120, machine: 180 }[rung] ?? 30
     const weary = process.env.RESTART === 'weary'
     return json(res, {
-      rung, title: { hub: 'Restart the hub?', everything: 'Restart everything?', machine: 'Restart the little computer?' }[rung],
-      yes: { hub: 'Restart the hub', everything: 'Restart everything', machine: 'Restart the little computer' }[rung],
+      rung, title: { hub: 'Restart the hub?', everything: 'Full restart?', machine: 'Power the hub off and on?' }[rung],
+      yes: { hub: 'Quick restart', everything: 'Full restart', machine: 'Power off and on' }[rung],
       keeps: rung === 'hub' ? 'Lights and switches keep working.' : 'Switches on the wall keep working.',
       stops: rung === 'hub' ? ['Motion lights and schedules pause.'] : ['Everything the hub talks to goes quiet until it\u2019s back \u2014 lights, sensors and the radios.'],
       flight: [], seconds: secs, how_long: secs < 90 ? `about ${secs} seconds` : `about ${Math.round(secs / 60)} minutes`,
@@ -605,7 +618,7 @@ const server = http.createServer((req, res) => {
     json(res, { detail: 'That is not one of the things the lights can tell you.' }, 404)
   }) }
   if (p === '/rules') return json(res, rules)
-  if (p === '/discovered') return json(res, discovered)
+  if (p === '/discovered') return json(res, printersAsked(req) ? [] : discovered)
 /* The bridges This hub lists, and what a household can change about one (docs/puck-light.md).
    BRIDGES=none empties the list, so the page can be seen without one. */
 const bridgeRows = process.env.BRIDGES === 'none' ? [] : [
@@ -622,6 +635,9 @@ const bridgeRows = process.env.BRIDGES === 'none' ? [] : [
      `count` is lights, not metres -- the panel divides by sixty to say it in metres, because a
      household buys strip by the metre and has never counted a light. Nothing here talks to a real
      strip: tuning just moves the number the way the brain would. */
+  /* the roofline (brain/hub/roofline.py): this house has none, which is what a hub that predates it says
+     too; ?roofline= previews one on the panel side */
+  if (p === '/roofline' && req.method === 'GET') return json(res, { exists: false })
   if (p === '/strip/list') return json(res, { strips: strips.map(({ was: _was, ...row }) => row) })
   if (p.startsWith('/strip/tune') && req.method === 'POST') { let raw = ''; req.on('data', c => (raw += c)); return req.on('end', () => {
     let b = {}; try { b = JSON.parse(raw) } catch {}
@@ -645,7 +661,7 @@ const bridgeRows = process.env.BRIDGES === 'none' ? [] : [
     json(res, { bridges: bridgeRows })
   }) }
   if (p === '/bridge/forget') return json(res, { forgotten: 'The Hallway bridge' })
-  if (p === '/health') return json(res, { notes })
+  if (p === '/health') return json(res, { notes: [...printerNotes(req), ...notes] })
   /* What happened, and who changed what. The brain measures these off the event log (happened.py);
      here they are fixed, so the page can be drawn and argued about without a house that has actually
      been left alone all day. The wording is the brain's in production and copied here verbatim --
@@ -677,9 +693,9 @@ const bridgeRows = process.env.BRIDGES === 'none' ? [] : [
       ] },
       { id: 'people', label: 'People and phones', items: [
         { kind: 'phone', subject: 'p1', ts: Date.now() / 1000 - 3 * 86400, when: 'Tuesday',
-          text: "Ada's iPad joined the house.", acts: [] },
+          text: "Ada's iPad was added.", acts: [] },
         { kind: 'phone', subject: 'p2', ts: Date.now() / 1000 - 5 * 86400, when: 'Sunday',
-          text: "Sam's phone's stay ended on its own.", acts: [] },
+          text: "Sam's phone's visit ended, as planned.", acts: [] },
       ] },
     ],
   })
@@ -687,9 +703,9 @@ const bridgeRows = process.env.BRIDGES === 'none' ? [] : [
     coded_since: Date.now() / 1000 - 16 * 86400, coded_when: 'Sep 4', more: false,
     rows: [
       { who: "Temi's iPhone", named: true, kind: 'home', subject: 'hallway', when: '4:02pm', ts: 0, text: 'renamed Hallway to Landing.' },
-      { who: 'Someone at the wall', named: false, kind: 'draft', subject: 'r1', when: 'Wednesday', ts: 0, text: 'approved a suggested routine.' },
-      { who: 'Someone at the wall', named: false, kind: 'phone', subject: 'p1', when: 'Tuesday', ts: 0, text: "let Ada's iPad into the house, for good." },
-      { who: "Ada's iPad", named: true, kind: 'phone', subject: 'p3', when: 'Tuesday', ts: 0, text: 'asked to join the house.' },
+      { who: 'Someone', named: false, kind: 'draft', subject: 'r1', when: 'Wednesday', ts: 0, text: 'approved a suggested routine.' },
+      { who: 'Someone', named: false, kind: 'phone', subject: 'p1', when: 'Tuesday', ts: 0, text: "added Ada's iPad, for good." },
+      { who: "Ada's iPad", named: true, kind: 'phone', subject: 'p3', when: 'Tuesday', ts: 0, text: 'asked to be added to the house.' },
       { who: "Temi's iPhone", named: true, kind: 'home', subject: 'e1', when: 'Tuesday', ts: 0, text: 'removed the Nest. Everything it brought went with it.' },
       { who: "Temi's iPhone", named: true, kind: 'home', subject: 'l1', when: 'Tuesday', ts: 0, text: 'now treats Ceiling light as a light.' },
       { who: "Ada's iPad", named: true, kind: 'share', subject: 'device', when: 'Monday', ts: 0, text: 'shared Kitchen lights with other apps.' },
@@ -767,10 +783,10 @@ const bridgeRows = process.env.BRIDGES === 'none' ? [] : [
                               ...(st === 'unclaimed' ? { uuid: String(i).repeat(32).slice(0, 32) } : { net: 'ab'.repeat(8) }) })
     const waiting = Array.from({ length: free }, (_, i) => one(i, 'unclaimed'))
     const other = Array.from({ length: spoken }, (_, i) => one(free + i, 'other'))
-    const text = free === 1 ? 'One switch is waiting to be let in.'
-      : free > 1 ? `${free} switches are waiting to be let in.`
-      : other.length ? 'Nothing is asking to be let in, but there is a switch nearby that is on another network. That one has to be started over first.'
-      : 'Nothing nearby is asking to be let in.'
+    const text = free === 1 ? 'One switch is waiting to be added.'
+      : free > 1 ? `${free} switches are waiting to be added.`
+      : other.length ? 'Nothing is waiting to be added, but there is a switch nearby that is on another network. That one has to be started over first.'
+      : 'Nothing nearby is waiting to be added.'
     return json(res, { state: 'done', waiting, claimed_elsewhere: other, text })
   }
   /* Blinking one of them. BLINK=fail is a switch that cannot be reached, which matters because the
@@ -823,7 +839,46 @@ const bridgeRows = process.env.BRIDGES === 'none' ? [] : [
     { id: 'u1', name: 'Color lamp', room: 'living', why: 'the same unit as the floor lamp', source: 'assistant' },
     { id: 'u2', name: 'Plug', room: '', why: 'a plainer name', source: 'house' }], assistant: true })
   if (p === '/phone') return json(res, { ip: '192.168.1.40' })
-  if (p === '/phones/me') return json(res, { locked: !!process.env.LOCKED, paired: true, home: 'Main Palace', phone: null })
+  /* The house's own address (brain/hub/address.py). Offered unless OUTSIDE=closed; OUTSIDE=named starts the house
+     with one; `palace` is another house's, so the taken line and its three suggestions can be seen. */
+  if (p === '/address' && req.method === 'GET') {
+    if (process.env.OUTSIDE === 'named' && !mockAddress.house) Object.assign(mockAddress, { house: 'temi', claimedAt: Date.now() - 60000 })
+    const offer = process.env.OUTSIDE === 'closed' ? { open: false, price: null, pay: null } : process.env.OUTSIDE === 'hand' ? { open: true, price: null, pay: null, by_hand: true } : { open: true, price: '$3 a month', pay: 'https://pay.example/start' }
+    if (!mockAddress.house) return json(res, { offer, guess: 'temi', house: null })
+    const carried = Date.now() - mockAddress.claimedAt > 6000
+    return json(res, { offer, guess: 'temi', house: mockAddress.house, address: `${mockAddress.house}.elyir.app`, want: mockAddress.want, on: carried, waiting: false, carried, held_until: null, entitled_until: carried ? Date.UTC(2027, 9, 1) / 1000 : null })
+  }
+  if (p.startsWith('/address/names/')) {
+    const n = decodeURIComponent(p.slice('/address/names/'.length))
+    return json(res, n === 'palace' ? { name: n, free: false, why: 'taken', suggestions: ['palace-house', 'palace-holts', 'palace-adeyeri'] } : { name: n, free: true, address: `${n}.elyir.app` })
+  }
+  if (p === '/address' && req.method === 'POST') { let b = ''; req.on('data', c => (b += c)); return req.on('end', () => {
+    let name = ''; try { name = JSON.parse(b).name || '' } catch {}
+    if (name === 'palace') { res.writeHead(409, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify({ detail: { why: 'taken', suggestions: ['palace-house'] } })) }
+    Object.assign(mockAddress, { house: name, claimedAt: Date.now(), want: 'on' })
+    json(res, { offer: { open: true, price: '$3 a month', pay: 'https://pay.example/start' }, guess: 'temi', house: name, address: `${name}.elyir.app`, want: 'on', carried: false })
+  }) }
+  if ((p === '/address/on' || p === '/address/off') && req.method === 'POST') { mockAddress.want = p.endsWith('on') ? 'on' : 'off'; return json(res, { offer: { open: true, price: '$3 a month', pay: null }, guess: 'temi', house: mockAddress.house, address: `${mockAddress.house}.elyir.app`, want: mockAddress.want, carried: true, on: mockAddress.want === 'on', entitled_until: Date.UTC(2027, 9, 1) / 1000 }) }
+  /* The house's own address and a phone that has not moved to it yet (design/away/, C). ADDRESS=1 gives the house
+     one; the phone reading /phones/me is then Temi's iPhone, so the band line and the Home only | Anywhere choice show. */
+  if (p === '/phones/me') return json(res, process.env.ADDRESS
+    ? { locked: !!process.env.LOCKED, paired: true, home: 'Main Palace', phone: { ...phones.phones[1], me: true, moved: !!process.env.MOVED }, away: false,
+        lan: '192-168-86-53.main-palace.home.elyir.app', address: 'https://main-palace.elyir.app' }
+    : { locked: !!process.env.LOCKED, paired: true, home: 'Main Palace', phone: null })
+  /* Into the Houses app since 3 October (design/houses/, MoveToApp). K7Q4MPWR is the code that works; any other is
+     the brain's 410, so the app's wrong-code line can be seen. */
+  if (p === '/phones/move' && req.method === 'POST') return json(res, { code: 'K7Q4MPWR', url: 'https://houses.elyir.app/add#h=main-palace&c=K7Q4MPWR', ttl: 600 })
+  if (p === '/phones/move/claim' && req.method === 'POST') { let b = ''; req.on('data', c => { b += c }); req.on('end', () => {
+    const code = String(JSON.parse(b || '{}').code || '').toUpperCase().replace(/[^A-Z0-9]/g, '')
+    if (code !== 'K7Q4MPWR') { res.writeHead(410, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify({ detail: "That code has run out or isn't right. Get a new one on the house's screen." })) }
+    json(res, { token: 'mocktoken', phone: { ...phones.phones[1], in_app: true }, lan: '192-168-86-53.main-palace.home.elyir.app', address: 'https://main-palace.elyir.app' })
+  }); return }
+  const remote = p.match(/^\/phones\/([^/]+)\/remote$/)
+  if (remote && req.method === 'POST') { let b = ''; req.on('data', c => (b += c)); return req.on('end', () => {
+    const ph = phones.phones.find(x => x.id === remote[1]); let on = false; try { on = !!JSON.parse(b).remote } catch {}
+    if (ph) ph.remote = on
+    json(res, ph ?? {})
+  }) }
   if (p === '/phones') return json(res, phones)
   /* What this house has: one door holding everything, grouped by what brought it. Derived from the
      mock house rather than written out, so the page cannot drift from the rooms beside it -- and so
@@ -861,9 +916,9 @@ const bridgeRows = process.env.BRIDGES === 'none' ? [] : [
                yes: `Yes, remove ${title[e]}`, no: 'Keep it' } })
     if (here.length) groups.push({ id: 'here', kind: 'here', name: 'Set up here', act: null, things: here.sort((a, b) => a.name.localeCompare(b.name)) })
     if (mesh.length) groups.push({ id: 'mesh', kind: 'bridge', name: 'On the bridge in the hallway', things: mesh,
-      act: { do: `Forget the bridge, and all ${mesh.length} with it`, act: 'bridge', to: 'c8ebba',
-             ask: 'Forget the hallway bridge? Its switches stop working from here until a bridge is set up again.',
-             yes: 'Yes, forget it', no: 'Keep it' } })
+      act: { do: `Remove the bridge, and all ${mesh.length} with it`, act: 'bridge', to: 'c8ebba',
+             ask: 'Remove the hallway bridge? Its switches stop working from here until a bridge is set up again.',
+             yes: 'Yes, remove it', no: 'Keep it' } })
     groups.push({ id: 'engine', kind: 'engine', name: "The hub's own parts", act: null,
       things: [{ id: 'engine', name: 'Messages, Z\u2011Wave radio and Matter', sub: '', where: 'In the hub', out: null, why: 'Part of the house' }] })
     return json(res, { groups, count: groups.filter(g => g.kind !== 'engine').reduce((n, g) => n + g.things.length, 0) })
@@ -922,6 +977,13 @@ const bridgeRows = process.env.BRIDGES === 'none' ? [] : [
   }
   if (p === '/say' && req.method === 'POST') { let b = ''; req.on('data', c => (b += c)); return req.on('end', () => { let t = ''; try { t = JSON.parse(b).text || '' } catch {}
     if (/^(is|are|what|who|how)\b/i.test(t)) return json(res, { kind: 'answer', text: 'Front door is locked.', said: t })
+    /* a look for the roofline, said (design/roofline/SaidC.dc.html): the brain's grammar is fixed, and this
+       answers the shape it gives back so the draft card can be looked at */
+    const lk = t.match(/(still|drifting|flickering|chasing|twinkling)( slowly| quickly)?/i)
+    if (lk) { const ms = { still: 'still', drifting: 'drift', flickering: 'flicker', chasing: 'chase', twinkling: 'twinkle' }; const cols = (t.match(/red|green|white|blue|orange|purple|pink|gold/gi) || ['red', 'green']).map(c => c.toLowerCase())
+      const pace = (lk[2] || (lk[1] === 'still' ? '' : ' slowly')).trim(); const occ = /halloween/i.test(t) ? ['halloween', 'Halloween'] : ['christmas', 'Christmas']
+      const words = [...new Set(cols)]; const said = (words.length < 2 ? words[0] : words.slice(0, -1).join(', ') + ' and ' + words.at(-1)) + ', ' + lk[1].toLowerCase() + (pace ? ' ' + pace : '')
+      return json(res, { kind: 'look', occasion: occ[0], occasion_name: occ[1], colors: cols, motion: ms[lk[1].toLowerCase()], pace, words: said[0].toUpperCase() + said.slice(1), text: said, said: t }) }
     if (/cosy|cozy|nice/i.test(t)) return json(res, { kind: 'action', device: 'l2', device_name: 'Floor lamp', action: 'on', data: { brightness_pct: 30 }, name: 'Floor lamp on, low', said: t })
     if (/when|every|whenever/i.test(t)) return json(res, { kind: 'rule', id: 'x', name: t, room: 'living', when: { time: '21:00' }, then: { intent: 'movie' }, said: t })
     if (t.length < 4) { res.writeHead(422, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify({ detail: 'The house didn\'t catch that. Try "kitchen lights off", "movie in the den" or "is the front door locked?". Connect the assistant under Routines to ask in your own words.' })) }
@@ -1011,7 +1073,10 @@ server.on('upgrade', (req, socket) => {
   if (/\/webrtc$/.test(req.url)) return socket.destroy()   // no WebRTC here either
   const key = req.headers['sec-websocket-key']
   const accept = crypto.createHash('sha1').update(key + '258EAFA5-E914-47DA-95CA-C5AB0DC85B11').digest('base64')
-  socket.write('HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ' + accept + '\r\n\r\n')
+  // A page that carries its pass as the subprotocol pair `hub, <token>` (the house's own name, the Houses app) must
+  // be answered with `hub`, as the brain does (_ws_accept_kwargs), or the browser drops the link.
+  const sub = String(req.headers['sec-websocket-protocol'] || '').startsWith('hub') ? 'Sec-WebSocket-Protocol: hub\r\n' : ''
+  socket.write('HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n' + sub + 'Sec-WebSocket-Accept: ' + accept + '\r\n\r\n')
   live.add(socket)
   socket.on('close', () => live.delete(socket))
   socket.on('error', () => { live.delete(socket); })

@@ -1,0 +1,58 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200;300;400;500;600;700&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: "Plus Jakarta Sans", -apple-system, system-ui, sans-serif; -webkit-font-smoothing: antialiased;
+      /* the panel's own tokens, from app/src/panel.css */
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77; --lamp: #e9b872; --lamp-ink: #2a1c07; --live: #74c69d; --danger: #e08a8a; --bg: #0c0d10;
+      --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08); --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18); }
+    .hk { font-size: 11.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); width: 90px; flex: none; }
+    .hrow { display: flex; gap: 12px; align-items: baseline; font-size: 14px; } .hrow b { font-weight: 500; } .hrow .sub { display: block; font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--live); flex: none; margin-top: 6px; } .dot.off { background: var(--edge-hi); } .dot.sign { background: var(--lamp); }
+    .drv { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; } .drv span { display: block; font-size: 12px; color: var(--muted); } .drv span.mk { display: inline-grid; font-size: 11px; color: var(--lamp-ink); }
+    /* a comparison sheet: the room screen's own tiles and pane rows, one situation each, so four sheets can be flipped between */
+    .stage { position: relative; width: 1440px; height: 900px; overflow: hidden; color: var(--ink); background: linear-gradient(#21324a 0%, #2a3b55 45%, #1f2a3a 100%); padding: 40px 48px; }
+    .top { display: flex; align-items: baseline; gap: 18px; margin-bottom: 26px; }
+    .top h1 { margin: 0; font-size: 40px; font-weight: 400; letter-spacing: -.025em; }
+    .top span { font-size: 15px; color: var(--ink-2); }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+    .cell { height: 238px; display: flex; flex-direction: column; gap: 10px; }
+    .cap { font-size: 11.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+    .tile { position: relative; flex: 1; border-radius: 26px; padding: 18px 20px; background: linear-gradient(148deg, rgba(80,86,110,.42), rgba(50,54,70,.22) 46%, rgba(60,64,84,.34));
+            border: 1px solid rgba(255,255,255,.16); box-shadow: inset 0 -46px 56px -48px rgba(20,23,31,.9), 0 27px 61px -26px rgba(15,17,26,.67); display: flex; flex-direction: column; }
+    .tile.cool { background: linear-gradient(160deg, #7fa6d8, #5c86c4); border-color: rgba(255,255,255,.3); }
+    .tile.warm { background: linear-gradient(160deg, #cdb88f, #a8946c); }
+    .tile.dim { opacity: .62; }
+    .tn { font-size: 18px; display: flex; gap: 8px; align-items: center; }
+    .ts { margin-top: auto; font-size: 15px; color: rgba(255,255,255,.78); }
+    .big { font-size: 46px; font-weight: 300; line-height: 1; margin-top: auto; } .big small { font-size: 14px; color: rgba(255,255,255,.85); margin-left: 6px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .chip { padding: 6px 11px; border-radius: 999px; font-size: 13px; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.14); }
+    .chip.on { background: var(--ink); color: var(--bg); }
+    .chips.sm .chip { padding: 5px 9px; font-size: 12.5px; }
+    .pane { flex: 1; border-radius: 22px; padding: 16px 18px; background: rgba(18,19,26,.82); border: 1px solid var(--edge-hi); display: flex; flex-direction: column; gap: 8px; }
+    .row { display: flex; justify-content: space-between; font-size: 14px; color: var(--ink-2); } .row b { color: var(--ink); font-weight: 500; }
+    .say { font-size: 14px; color: var(--ink-2); line-height: 1.45; } .say b { color: var(--ink); font-weight: 500; }
+    .btn { display: inline-flex; padding: 9px 16px; border-radius: 999px; font-size: 14px; background: var(--ink); color: var(--bg); font-weight: 500; width: fit-content; }
+    .btn.warn { background: var(--danger); color: #2a0d0d; } .btn.g { background: var(--surface-hi); color: var(--ink); border: 1px solid var(--edge); font-weight: 400; }
+    .toast { align-self: center; padding: 10px 18px; border-radius: 999px; background: var(--ink); color: var(--bg); font-size: 14px; }
+    .list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 14.5px; }
+    .list span { color: var(--muted); font-size: 12.5px; margin-left: 6px; }
+    .mk { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; margin-left: 5px; border-radius: 999px; background: var(--lamp); color: var(--lamp-ink); font-size: 11px; font-weight: 600; font-style: normal; vertical-align: 2px; }
+    u.w { text-decoration: underline wavy rgba(233,184,114,.8); text-underline-offset: 4px; text-decoration-thickness: 1px; }
+  </style>
+</helmet>
+
+<!-- Chosen &mdash; B&rsquo;s restart, A&rsquo;s connections -- the words the settings use, one situation a cell. -->
+<div class="stage"><div class="top"><h1>Chosen &mdash; B&rsquo;s restart, A&rsquo;s connections</h1><span>picked 2 October: the ladder says how deep; connections keep their standard names</span></div><div class="grid"><div class="cell"><span class="cap">The box: its row, its page, its button</span><div class="pane"><div class="hrow"><b>The hub</b><span style="color:var(--muted)">v0.3.0</span></div><div class="row"><span>page title</span><b>The hub</b></div><p class="say">The small computer running the house. It looks after itself; this is where you check on it.</p></div></div><div class="cell"><span class="cap">The passcode: its row, its page, its buttons</span><div class="pane"><div class="hrow"><b>Passcode</b><span class="sub">Not set: anyone on your Wi&#8209;Fi can change the house</span></div><div class="row"><span>page title</span><b>Passcode</b></div><div class="chips"><span class=chip>Set a passcode</span><span class=chip>Change it</span><span class=chip>Remove the passcode</span></div><p class="say">Set a passcode first. This file holds the keys to the house&hellip;</p></div></div><div class="cell"><span class="cap">Restart, and the deeper restarts it offers when that stops helping</span><div class="pane"><div class="hrow"><span class="hk">Restart</span><span>If something&rsquo;s stuck, restart the hub.<span class="sub">Lights and switches keep working. It takes under a minute.</span></span></div><div class="chips" style="margin-top:auto"><span class=chip>Quick restart</span><span class=chip>Full restart, a few minutes</span><span class=chip>Power off and on</span></div></div></div><div class="cell"><span class="cap">The connections the hub keeps</span><div class="pane"><span class="cap">Connections</span><div class="drv"><i class="dot "></i><div>Device messages<span>Working</span></div></div><div class="drv"><i class="dot "></i><div>Zigbee radio<span>Plugged in</span></div></div><div class="drv"><i class="dot off"></i><div>Z&#8209;Wave radio<span>Not plugged in</span></div></div><div class="drv"><i class="dot sign"></i><div>Ring<span>Needs you to sign in</span></div></div></div></div><div class="cell"><span class="cap">Sharing with Apple Home, Google Home, Alexa</span><div class="pane"><p class="say">The code works for five minutes. Add the house in the other app now.</p><p class="say">Several apps can have the house at once.</p><p class="say">Nothing can be shared yet</p></div></div><div class="cell"><span class="cap">Removing: a thing, a bridge, an account</span><div class="pane"><div class="row"><span>Porch light</span><span class="btn g" style="padding: 5px 11px;">Remove</span></div><div class="row"><span>Hallway bridge</span><span class="btn g" style="padding: 5px 11px;">Remove</span></div><p class="say">Ring is removed, with everything that came with it.</p></div></div><div class="cell"><span class="cap">While an update installs</span><div class="pane"><p class="say">Restarting the hub.</p><p class="say">For about a minute your light switches still work, but this screen and the app don&rsquo;t.</p></div></div><div class="cell"><span class="cap">A screen that may not restart</span><div class="pane"><p class="say" style="color: var(--danger)">Restarting needs the passcode. Someone who joined with it can do it.</p></div></div><div class="cell"><span class="cap">The network</span><div class="pane"><div class="row"><span>Network</span><b>Not connected to a network.</b></div><p class="say">No other networks nearby.</p><p class="say">You can walk away &mdash; the wall screen will say how it went.</p></div></div></div></div>
+</x-dc>
+</body>
+</html>
