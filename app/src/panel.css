@@ -13659,3 +13659,63 @@ button.reading[data-held] {
     padding: 4px 0 12px;
   }
 }
+
+/* ---------- the house's name, inside the Houses app (design/houses/, B) ----------
+   Where Connected is said on a phone that is not in the app: the dot keeps Connected's work, the name is
+   which house this is, and the whole thing is the way to the others. A dot of lamp when another one wants you. */
+.house-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 12px 0 13px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--edge);
+  backdrop-filter: var(--frost);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ink);
+  max-width: 60%;
+}
+.house-switch-dot {
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+.house-switch.up .house-switch-dot {
+  background: var(--live);
+}
+.house-switch-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.house-switch-open {
+  flex: 0 0 auto;
+  color: var(--ink-2);
+  transform: rotate(90deg);
+}
+.house-switch.others::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--lamp);
+  box-shadow: 0 0 8px 1px var(--lamp-glow);
+}
+
+/* This house's way into the Houses app: a door like the others, set apart from the list it sits above */
+.door.to-app {
+  width: 100%;
+  margin: 0 0 10px;
+  grid-template-columns: auto 1fr auto;
+  border: 1px solid var(--edge);
+  border-radius: var(--r-md);
+}

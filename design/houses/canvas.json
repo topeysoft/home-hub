@@ -5,6 +5,10 @@
       "name": "More than one house"
     },
     {
+      "id": "page-app",
+      "name": "The app"
+    },
+    {
       "id": "page-2",
       "name": "Not chosen"
     }
@@ -81,6 +85,42 @@
       "h": 844,
       "title": "C, another house \u2014 one tap on Lake house",
       "page": "page-2"
+    },
+    {
+      "file": "MoveToApp.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "The move, pointed at the app",
+      "page": "page-app"
+    },
+    {
+      "file": "AppSafari.dc.html",
+      "x": 520,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "In Safari, on iPhone \u2014 the code goes with you",
+      "page": "page-app"
+    },
+    {
+      "file": "AppFirst.dc.html",
+      "x": 1040,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "The app, first open \u2014 type the code",
+      "page": "page-app"
+    },
+    {
+      "file": "AppName.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "Added \u2014 the phone names it",
+      "page": "page-app"
     }
   ],
   "annotations": [
@@ -131,6 +171,30 @@
       "y": 1980,
       "w": 910,
       "text": "C \u2014 EVERY HOUSE IN VIEW\n\nThe clock row becomes a row of houses: the one you are looking at filled, the others glass, green where you are, lamp where one wants you. One tap on another name and the whole screen becomes that house, its sky included, with the row staying put.\n\nFOR: the other houses are in view on every screen without costing the stage anything. The row it takes was the cheapest 40 pixels on the phone: a phone already shows the time at the top of its own screen. Switching is one tap and never opens anything.\n\nAGAINST: the date goes with the clock, and it is not on the phone's own screen. Four houses do not fit, and the last one scrolls out of sight. And it is the loudest of the three: three names at the top of every screen, for a household whose second house is a cabin it visits twice a year."
+    },
+    {
+      "id": "app-why",
+      "page": "page-app",
+      "x": -620,
+      "y": 0,
+      "w": 500,
+      "text": "THE APP, 3 OCTOBER 2026\n\nDecided with the plan: the app lives at houses.elyir.app (home.elyir.app is the zone the houses' Wi-Fi names live in); the move every phone makes once now goes into the app rather than to the house's own address; printers and houses stay two apps for now.\n\nWHAT THE FLOW HAS TO GET AROUND. On iPhone, a Home Screen app keeps its own storage, apart from Safari's. A pass claimed in Safari never reaches the icon added afterwards; today's move already pays for this with a second join at home (docs/away.md, \"Twenty seconds, once\"). The app cannot join a house the way the panel does, so the pass has to be carried across by the person: a short code.\n\nSO: the house's screen gives a code (the move, MoveToApp); in Safari on an iPhone nothing is added, the code is shown to carry (AppSafari); the Home Screen app asks for it (AppFirst); and the house is in, named by the phone (AppName). Everywhere a link can carry the code straight into the app (Android, a desktop, the installed app opening its own link), these two middle screens are skipped."
+    },
+    {
+      "id": "app-code",
+      "page": "page-app",
+      "x": 0,
+      "y": 920,
+      "w": 900,
+      "text": "THE CODE\n\nEight characters from the printer app's alphabet (no 0/O, 1/I/L), shown as two groups of four, good for ten minutes and once. It replaces today's 22-character move code, which only ever travelled inside a link. Claiming it is open from away, so a wrong guess is limited per address the way the printer's pair codes are (5 in 10 minutes). It is still only minted at home, by a phone already in the house.\n\nCONSIDERED, NOT DRAWN: asking from the app (Add a house, then somebody taps Allow on the wall), which is how a printer joins. It needs the app to reach the house's Wi-Fi name before it holds a pass, and the house to say that name to strangers; the code needs neither, and the person adding it is standing at a screen of the house anyway."
+    },
+    {
+      "id": "app-nearby",
+      "page": "page-app",
+      "x": 1040,
+      "y": 920,
+      "w": 900,
+      "text": "ON THIS WI-FI\n\nThe relay already knows which named houses are on the same public address as the phone (nearby.elyir.app, built for printers). AppFirst lists them so a person with no code knows where to get one: Open goes to the house's own address in the browser, where the panel offers the move with its code. The list says the house's web address, because that is the only name a stranger is told; what a household calls it is the phone's to choose (AppName)."
     }
   ],
   "launch": {

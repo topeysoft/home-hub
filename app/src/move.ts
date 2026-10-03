@@ -9,10 +9,16 @@ import type { Me, Phone } from './api'
 
 /** The band line ("The house has its own address") is for a phone of the house that has not moved, opened
     anywhere but the address itself -- and never for the wall, which stays home and needs no door outside. */
-export function offerMove(me: Me | null | undefined, origin: string): boolean {
+export function offerMove(me: Me | null | undefined, inApp: boolean): boolean {
   const p = me?.phone
-  return !!me?.address && !!p && !p.moved && p.kind !== 'wall' && origin !== me.address
+  return !!me?.address && !!p && !p.in_app && p.kind !== 'wall' && !inApp
 }
+
+/** Since 3 October the move goes into the Houses app rather than to the house's own name (design/houses/,
+    MoveToApp): houses.<zone>, the zone being the house's own. A phone that moved to the name before then
+    has not moved into the app, so it is offered the move once more. */
+export const appHost = (address: string | null | undefined) =>
+  address ? `houses.${new URL(address).hostname.split('.').slice(1).join('.')}` : ''
 
 /** The one-time code a move arrives with: <address>/?move=<code>. */
 export const moveCode = (search: string) => new URLSearchParams(search).get('move')

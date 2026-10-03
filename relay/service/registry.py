@@ -28,10 +28,13 @@ LABEL = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,28}[a-z0-9])?$")
 # Names a house may never have. The service's own (api), the maker's (www, mail, status), the zone's
 # future (home is the subzone the address-in-the-name lives under, docs/away.md), and the ones a
 # phishing page would want. Short names are not reserved for being short; a two-letter house is fine.
+# The apps this box serves are on the list too (printers, houses), and so is nearby: a house that held
+# one of those names would be handed every phone that came looking for the app. Being here also keeps
+# them off /nearby, which is a list of houses and printers rather than of the service's own names.
 RESERVED = frozenset("""
     api relay www mail smtp imap pop ftp ns ns1 ns2 dns home lan local localhost admin root operator
     status help support billing pay account accounts login signin auth app apps elyir hub hubs test
-    selftest staging dev _acme-challenge printers nearby
+    selftest staging dev _acme-challenge printers nearby houses
 """.split())
 
 SCHEMA = """

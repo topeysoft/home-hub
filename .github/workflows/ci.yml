@@ -161,6 +161,7 @@ jobs:
       - run: cd app && npm ci --no-audit --no-fund
       # The mock brain serves ../dist, so the panel has to exist before a browser can be pointed at it.
       - run: cd app && npm run build
+      - run: cd app && npm run build:houses     # the Houses app, which e2e/houses.spec.ts serves itself
       # The browser is the same download every run until Playwright itself moves, so key it on the
       # version the lockfile pins. The system libraries it needs are not in the cache and are
       # installed either way.

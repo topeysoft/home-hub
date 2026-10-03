@@ -13,6 +13,7 @@ from tests.apptest import ApiTest
 
 AWAY = {"X-Hub-Via": "relay"}
 ORIGIN = "https://main-palace.elyir.app"
+APP = "https://houses.elyir.app"
 
 
 class Base(ApiTest):
@@ -28,10 +29,28 @@ class Base(ApiTest):
 
 
 class Moving(Base):
-    def test_a_phone_of_the_house_gets_a_code_at_home(self):
+    def test_a_phone_of_the_house_gets_a_code_at_home_and_is_sent_into_the_app(self):
         r = self.move()
         self.assertEqual(r.status_code, 200)
-        self.assertTrue(r.json()["url"].startswith(f"{ORIGIN}/?move="))
+        code = r.json()["code"]
+        # design/houses/, MoveToApp: into the one app, the house and the code in the fragment, never the query
+        self.assertEqual(r.json()["url"], f"{APP}/add#h=main-palace&c={code}")
+
+    def test_the_code_is_one_a_person_can_read_off_one_screen_and_type_on_another(self):
+        code = self.move().json()["code"]
+        self.assertEqual(len(code), 8)
+        self.assertTrue(set(code) <= set("ABCDEFGHJKMNPQRSTUVWXYZ23456789"), code)       # no 0/O, no 1/I/L
+        typed = f"{code[:4].lower()} - {code[4:].lower()}"
+        self.assertEqual(self.client.post("/phones/move/claim", json={"code": typed}).status_code, 200)
+
+    def test_ten_wrong_codes_stop_the_claims_for_a_while_from_anywhere(self):
+        code = self.move().json()["code"]
+        for _ in range(10):
+            self.assertEqual(self.client.post("/phones/move/claim", json={"code": "AAAAAAAA"}, headers=AWAY).status_code, 410)
+        self.assertEqual(self.client.post("/phones/move/claim", json={"code": code}).status_code, 429)   # even the right one, for now
+        with mock.patch("hub.phones.time.time", return_value=time.time() + 601):
+            code = self.move().json()["code"]
+            self.assertEqual(self.client.post("/phones/move/claim", json={"code": code}).status_code, 200)
 
     def test_never_from_outside_and_never_before_the_house_has_an_address(self):
         self.hub.phones.set_remote(self.phone["id"], True)
@@ -138,3 +157,50 @@ class AcrossNames(Base):
     def test_nothing_is_answered_across_names_before_the_house_has_an_address(self):
         (self.data / "address.json").unlink()
         self.assertNotIn("access-control-allow-origin", self.preflight(ORIGIN).headers)
+        self.assertNotIn("access-control-allow-origin", self.preflight(APP).headers)
+
+    def test_a_phone_claimed_by_the_app_is_in_it_and_one_moved_only_to_the_name_is_not(self):
+        code = self.move().json()["code"]
+        self.client.post("/phones/move/claim", json={"code": code}, headers={"Origin": ORIGIN})
+        self.assertFalse(self.client.get("/phones/me").json()["phone"]["in_app"])
+        code = self.move().json()["code"]
+        self.client.post("/phones/move/claim", json={"code": code}, headers={"Origin": APP})
+        self.assertTrue(self.client.get("/phones/me").json()["phone"]["in_app"])
+
+    def test_the_app_every_house_lives_in_may_call_it_too(self):
+        r = self.preflight(APP)
+        self.assertEqual(r.headers["access-control-allow-origin"], APP)
+        claim = self.client.options("/phones/move/claim", headers={"Origin": APP, "Access-Control-Request-Method": "POST",
+                                                                   "Access-Control-Request-Headers": "content-type"})
+        self.assertEqual(claim.status_code, 204)
+
+
+class Framing(Base):
+    """Who may show the panel inside a page of their own (found 3 October: until then, anybody)."""
+    def test_only_the_house_and_the_app_may_frame_the_panel(self):
+        csp = self.client.get("/alive").headers["content-security-policy"]
+        self.assertEqual(csp, f"frame-ancestors 'self' {APP} {ORIGIN}")
+
+    def test_a_house_with_no_address_frames_only_itself(self):
+        (self.data / "address.json").unlink()
+        self.assertEqual(self.client.get("/alive").headers["content-security-policy"], "frame-ancestors 'self'")
+
+
+class SocketOrigins(Base):
+    """A websocket's page is the one check it has: no CORS. Found 3 October, when nothing looked at it."""
+    def connect(self, origin=None):
+        headers = {"Origin": origin} if origin else {}
+        with self.client.websocket_connect("/stream", subprotocols=["hub", self.token], headers=headers) as ws:
+            return json.loads(ws.receive_text())["type"]
+
+    def test_the_page_itself_the_houses_names_and_the_app_are_let_in(self):
+        self.client.cookies.clear()
+        for origin in (None, "http://testserver", ORIGIN, APP, "http://localhost:5173"):
+            self.assertEqual(self.connect(origin), "status", origin)
+
+    def test_another_site_is_refused_even_holding_a_token(self):
+        self.client.cookies.clear()
+        for origin in ("https://evil.example", "https://other.elyir.app", "null"):
+            with self.assertRaises(WebSocketDisconnect) as caught:
+                self.connect(origin)
+            self.assertEqual(caught.exception.code, 4403, origin)

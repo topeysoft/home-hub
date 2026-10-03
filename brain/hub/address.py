@@ -189,6 +189,16 @@ class Address:
         st = self._state()
         return f"https://{st['house']}.{st['zone']}" if st.get("house") and st.get("zone") else None
 
+    def app_origin(self) -> str | None:
+        """https://houses.<zone>: the one app a phone keeps every house in (design/houses/, The app). Same zone as the
+        house's own name, so it exists exactly when the house has an address -- a house with none is never in it."""
+        st = self._state()
+        return f"https://houses.{st['zone']}" if st.get("house") and st.get("zone") else None
+
+    def house(self) -> str | None:
+        """The house's label in the zone (`temi` of temi.elyir.app): how the app names the house to claim from."""
+        return self._state().get("house") or None
+
     def lan_name(self) -> str | None:
         """The house's name at home, as host/away.sh last wrote it into .env -- read from the driver layer the brain
         can see, because away.sh writes it after the brain started and the brain's own environment would be stale."""

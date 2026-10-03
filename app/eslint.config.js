@@ -10,7 +10,7 @@ import ts from 'typescript-eslint'
 import vue from 'eslint-plugin-vue'
 
 export default ts.config(
-  { ignores: ['dist/**', 'node_modules/**', 'mock/shots/**'] },
+  { ignores: ['dist/**', 'dist-houses/**', 'node_modules/**', 'mock/shots/**'] },
   js.configs.recommended,
   ...ts.configs.recommended,
   ...vue.configs['flat/recommended'],
@@ -19,9 +19,14 @@ export default ts.config(
     languageOptions: { parserOptions: { parser: ts.parser } },
   },
   {
-    // The panel runs in a browser: window, localStorage, fetch and the DOM types are all there.
-    files: ['src/**/*.{ts,vue}'],
+    // The panel runs in a browser: window, localStorage, fetch and the DOM types are all there. So does
+    // the Houses app (houses/), and its worker runs in the browser's worker scope.
+    files: ['src/**/*.{ts,vue}', 'houses/**/*.{ts,vue}'],
     languageOptions: { globals: globals.browser },
+  },
+  {
+    files: ['houses/public/sw.js'],
+    languageOptions: { globals: globals.serviceworker },
   },
   {
     files: ['mock/**/*.mjs', 'e2e/**/*.ts', 'tests/**/*.ts', '*.config.ts'],

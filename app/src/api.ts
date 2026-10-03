@@ -836,7 +836,7 @@ export const qrUrl = (text: string) => `/qr.svg?text=${encodeURIComponent(text)}
 
 /* The phones that belong to the house, once it has a code. A phone gets in by typing the code, or by asking and being
    allowed from a screen that is already in; the hub keeps a hash and the phone a cookie, so removing one is instant. */
-export type Phone = { id: string; name: string; kind: 'wall' | 'phone' | null; joined: number; expires: number | null; remote: boolean; last_seen: number | null; how: 'code' | 'wall' | 'setup'; me: boolean; moved?: boolean }
+export type Phone = { id: string; name: string; kind: 'wall' | 'phone' | null; joined: number; expires: number | null; remote: boolean; last_seen: number | null; how: 'code' | 'wall' | 'setup'; me: boolean; moved?: boolean; in_app?: boolean }
 export type Ask = { id: string; name: string; kind: string | null; asked: number }
 export type Me = { locked: boolean; paired: boolean; home: string; phone: Phone | null; away?: boolean; lan?: string | null; address?: string | null }
 export async function getMe(): Promise<Me> { const r = await fetch(apiUrl('/phones/me'), { headers: withToken(new Headers()) }); if (!r.ok) await fail(r); return r.json() }
