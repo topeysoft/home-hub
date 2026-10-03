@@ -1,0 +1,6 @@
+{ "name": "Houses", "short_name": "Houses", "start_url": "/", "scope": "/", "display": "standalone", "orientation": "any",
+  "background_color": "#0c0d10", "theme_color": "#0c0d10",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" },
+    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+  ] }

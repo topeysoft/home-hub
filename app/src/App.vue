@@ -3,6 +3,8 @@
   SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 <script setup lang="ts">
+import { inApp } from './inapp'
+import { narrow } from './band'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { store, start, halt, load, foundCount, visibleRooms, activity, roomActive, houseLine, weatherLine, needsSetup, dismissToast, updateReady, forgetDone, cap } from './store'
 import Setup from './Setup.vue'
@@ -117,7 +119,9 @@ const flat = params.get('flat') === '1'
   || !(CSS.supports('backdrop-filter', 'blur(1px)') || CSS.supports('-webkit-backdrop-filter', 'blur(1px)'))
 
 const navParam = params.get('nav')
-const nav = computed<NavName>(() => isNav(navParam) ? navParam : (isNav(store.ambient.look?.nav) ? store.ambient.look!.nav as NavName : place.value.nav))
+/* Inside the Houses app a phone takes the tabs, whatever the house chose: the house's name, which is the way to
+   the other houses, lives in the top bar's row (design/houses/, B), and a phone's side list has no room for it. */
+const nav = computed<NavName>(() => isNav(navParam) ? navParam : (inApp && narrow.value) ? 'top' : (isNav(store.ambient.look?.nav) ? store.ambient.look!.nav as NavName : place.value.nav))
 const tab = ref<'home' | 'rooms' | 'cameras'>('home')
 function go(t: 'home' | 'rooms' | 'cameras') { tab.value = t; open(null) }
 

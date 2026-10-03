@@ -536,6 +536,15 @@ function sigTry(of, how) {
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://x')
   const p = url.pathname
+  /* The Houses app's dev server (app/houses, on 5174) calls this mock across origins, the way the app calls a house
+     across names: answered for that one origin, as across_names answers houses.elyir.app. */
+  if (req.headers.origin === 'http://localhost:5174') {
+    res.setHeader('Access-Control-Allow-Origin', req.headers.origin); res.setHeader('Vary', 'Origin')
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204, { 'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE', 'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-Hub-Code', 'Access-Control-Max-Age': '600' })
+      return res.end()
+    }
+  }
   if (printersRoute(req, res, p)) return    // 3D printers, only for a page that asked for them: mock/printers.mjs
   if (p === '/setup/status') return json(res, status)
   if (p === '/update/notes') return json(res, { notes: releaseNotes[0], history: releaseNotes })
@@ -856,8 +865,14 @@ const bridgeRows = process.env.BRIDGES === 'none' ? [] : [
     ? { locked: !!process.env.LOCKED, paired: true, home: 'Main Palace', phone: { ...phones.phones[1], me: true, moved: !!process.env.MOVED }, away: false,
         lan: '192-168-86-53.main-palace.home.elyir.app', address: 'https://main-palace.elyir.app' }
     : { locked: !!process.env.LOCKED, paired: true, home: 'Main Palace', phone: null })
-  if (p === '/phones/move' && req.method === 'POST') return json(res, { code: 'mockcode', url: 'https://main-palace.elyir.app/?move=mockcode', ttl: 600 })
-  if (p === '/phones/move/claim' && req.method === 'POST') return json(res, { token: 'mocktoken', phone: phones.phones[1], lan: '192-168-86-53.main-palace.home.elyir.app' })
+  /* Into the Houses app since 3 October (design/houses/, MoveToApp). K7Q4MPWR is the code that works; any other is
+     the brain's 410, so the app's wrong-code line can be seen. */
+  if (p === '/phones/move' && req.method === 'POST') return json(res, { code: 'K7Q4MPWR', url: 'https://houses.elyir.app/add#h=main-palace&c=K7Q4MPWR', ttl: 600 })
+  if (p === '/phones/move/claim' && req.method === 'POST') { let b = ''; req.on('data', c => { b += c }); req.on('end', () => {
+    const code = String(JSON.parse(b || '{}').code || '').toUpperCase().replace(/[^A-Z0-9]/g, '')
+    if (code !== 'K7Q4MPWR') { res.writeHead(410, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify({ detail: "That code has run out or isn't right. Get a new one on the house's screen." })) }
+    json(res, { token: 'mocktoken', phone: { ...phones.phones[1], in_app: true }, lan: '192-168-86-53.main-palace.home.elyir.app', address: 'https://main-palace.elyir.app' })
+  }); return }
   const remote = p.match(/^\/phones\/([^/]+)\/remote$/)
   if (remote && req.method === 'POST') { let b = ''; req.on('data', c => (b += c)); return req.on('end', () => {
     const ph = phones.phones.find(x => x.id === remote[1]); let on = false; try { on = !!JSON.parse(b).remote } catch {}
@@ -1058,7 +1073,10 @@ server.on('upgrade', (req, socket) => {
   if (/\/webrtc$/.test(req.url)) return socket.destroy()   // no WebRTC here either
   const key = req.headers['sec-websocket-key']
   const accept = crypto.createHash('sha1').update(key + '258EAFA5-E914-47DA-95CA-C5AB0DC85B11').digest('base64')
-  socket.write('HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ' + accept + '\r\n\r\n')
+  // A page that carries its pass as the subprotocol pair `hub, <token>` (the house's own name, the Houses app) must
+  // be answered with `hub`, as the brain does (_ws_accept_kwargs), or the browser drops the link.
+  const sub = String(req.headers['sec-websocket-protocol'] || '').startsWith('hub') ? 'Sec-WebSocket-Protocol: hub\r\n' : ''
+  socket.write('HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n' + sub + 'Sec-WebSocket-Accept: ' + accept + '\r\n\r\n')
   live.add(socket)
   socket.on('close', () => live.delete(socket))
   socket.on('error', () => { live.delete(socket); })

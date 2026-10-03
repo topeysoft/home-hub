@@ -79,7 +79,8 @@ class Apps(unittest.TestCase):
         houses = self.site("houses")
         self.assertIn("frame-ancestors 'none'", houses)
         self.assertIn("script-src 'self';", houses)
-        self.assertIn('Permissions-Policy "camera=(), microphone=(), geolocation=()"', houses)
+        # The app uses none of them itself; it passes them on only to a house it frames, under the zone.
+        self.assertIn('Permissions-Policy `camera=("https://*.${zone}"), microphone=("https://*.${zone}"), geolocation=("https://*.${zone}")`', houses)
 
     def test_both_apps_may_read_nearby_on_the_box(self):
         m = re.search(r"-e RELAY_NEARBY_ORIGINS=(\S+)", self.text)

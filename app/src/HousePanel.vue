@@ -43,6 +43,12 @@ import { isPage, LIT, type PageId } from './pages'
 import { printerChip } from './printers'
 import PhoneSteps from './PhoneSteps.vue'
 import { dismissHomeScreen, narrow, setupLeft, setupNow, type SetupStep } from './band'
+import { offerMove } from './move'
+import { inApp } from './inapp'
+
+/* The way into the Houses app from This house, for whoever closed the band line or was told to look here
+   (design/houses/, AppFirst: "open This house, then Add this phone to Houses"). It opens the same move. */
+const toApp = computed(() => offerMove(store.me, inApp))
 
 /* FINISH SETTING UP, on a phone (design/band/, KindsB-house): the three things the house would like
    finished, which on a wall are lines in the band and on a phone would be half of Home. Every step that
@@ -207,6 +213,11 @@ onUnmounted(() => window.removeEventListener('keydown', key))
             </div>
           </template>
         </section>
+        <button v-if="toApp" class="door to-app" @click="store.moving = true">
+          <span class="door-icon"><Icon name="home" :size="18" /></span>
+          <span class="door-text"><span class="door-name">Add this phone to Houses</span><span class="door-hint">One app for every house you join</span></span>
+          <Icon name="chevron" :size="16" />
+        </button>
         <nav class="doors" aria-label="Pages">
           <button v-for="d in doors" :key="d.id" class="door" :class="{ on: lit === d.id, attention: d.attention }" @click="go(d.id)">
             <span class="door-icon"><Icon :name="d.icon" :size="18" /></span>

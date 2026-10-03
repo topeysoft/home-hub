@@ -74,7 +74,7 @@ house. It belongs to this repository (`app/`, built with `npm run build:houses`)
 unpacks it into `/var/lib/relay/houses/<version>/` and switches `current` to it, keeping the last five so
 `ROLLBACK=<version> tools/publish-houses.sh` can switch back. Each house's screen is framed inside it from
 that house's own name, so its `Content-Security-Policy` is the printer app's -- talking and framing only to
-names under the zone, and never framed itself -- and it asks for no camera of its own. It may read
+names under the zone, and never framed itself -- and it uses no camera, microphone or location of its own, only passing them on to a house it frames. It may read
 `/nearby` from a page too.
 
 **Which printers are on this Wi-Fi** (`nearby.elyir.app`, since 2 October 2026): the service notes the public

@@ -13710,3 +13710,12 @@ button.reading[data-held] {
   background: var(--lamp);
   box-shadow: 0 0 8px 1px var(--lamp-glow);
 }
+
+/* This house's way into the Houses app: a door like the others, set apart from the list it sits above */
+.door.to-app {
+  width: 100%;
+  margin: 0 0 10px;
+  grid-template-columns: auto 1fr auto;
+  border: 1px solid var(--edge);
+  border-radius: var(--r-md);
+}

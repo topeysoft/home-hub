@@ -242,8 +242,8 @@ write_files:
       # The Houses app: the phone's one app for every house it has joined, static files published from
       # this repository the way the printer app is published from its own. Each house's screen is
       # framed inside it from that house's own name, so the page may talk to and frame names under this
-      # zone and nowhere else. It never uses the camera itself; a framed house is its own origin and
-      # asks for its own. Like the printer app, it may not be framed and runs no script it did not ship.
+      # zone and nowhere else. It never uses the camera, the microphone or the location itself; it
+      # only passes them on to the house it frames (voice, a camera, where home is), and to nothing else. Like the printer app, it may not be framed and runs no script it did not ship.
       houses.${zone}:9443 {
         bind 127.0.0.1
         tls {
@@ -257,7 +257,7 @@ write_files:
           Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.${zone}; connect-src 'self' https://*.${zone} wss://*.${zone}; frame-src https://*.${zone}; worker-src 'self'; manifest-src 'self'; font-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'"
           X-Content-Type-Options nosniff
           Referrer-Policy no-referrer
-          Permissions-Policy "camera=(), microphone=(), geolocation=()"
+          Permissions-Policy `camera=("https://*.${zone}"), microphone=("https://*.${zone}"), geolocation=("https://*.${zone}")`
           -Server
         }
         @hashed path /assets/*

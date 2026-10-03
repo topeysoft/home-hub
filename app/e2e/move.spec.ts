@@ -40,6 +40,15 @@ test.describe('on a phone', () => {
     await expect(page.locator('main.move')).toHaveCount(0)
   })
 
+  test('This house has the way into the app too, for a phone not in it yet', async ({ page }) => {
+    await withAddress(page)
+    await page.goto('/?sheet=house')
+    const door = page.getByRole('button', { name: /Add this phone to Houses/ })
+    await expect(door).toBeVisible()
+    await door.click()
+    await expect(page.locator('main.move h1')).toHaveText('One app for your houses.')
+  })
+
   test('a phone that is in the app, and the wall, get no line', async ({ page }) => {
     await withAddress(page, { ...ME, phone: { ...ME.phone, moved: true, in_app: true } })
     await page.goto('/')
