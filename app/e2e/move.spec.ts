@@ -78,6 +78,9 @@ test.describe('on the wall', () => {
     await expect(rows.nth(0)).toContainText('Wall screen')               // a house set up before the rename still reads plainly
     await expect(rows.nth(0).locator('.phones-where')).toHaveText('Home only')
     await expect(rows.nth(0).getByRole('radio')).toHaveCount(0)            // the wall never leaves, so there is nothing to pick
+    // When each was last seen, so rows of the same name can be told apart (the note beside NamedC).
+    await expect(rows.nth(0)).toContainText('seen just now')
+    await expect(rows.nth(1)).toContainText('seen 1 hour ago')
     for (const i of [1, 2]) {
       const pick = rows.nth(i).getByRole('radiogroup')
       await expect(pick.getByRole('radio')).toHaveText(['Home only', 'Anywhere'])

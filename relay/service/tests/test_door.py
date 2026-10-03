@@ -33,9 +33,18 @@ class Door(unittest.TestCase):
 
     def test_every_route_a_hub_calls_is_let_through(self):
         routes = {r.path for r in self.app.routes if getattr(r, "methods", None)}
-        for path in sorted(routes - {"/frps"}):
+        # /nearby is not a hub's: it has a name of its own, nearby.<zone>, with no IPv6 record (cloud-init, dns.tf).
+        for path in sorted(routes - {"/frps", "/nearby"}):
             example = re.sub(r"\{[^}]+\}", "x", path)
             self.assertTrue(let_through(example), f"api.elyir.app's door does not pass {path}")
 
     def test_the_relays_own_route_never_is(self):
         self.assertFalse(let_through("/frps"))
+
+    def test_nearby_has_its_own_name_and_only_its_one_route(self):
+        text = CLOUD_INIT.read_text()
+        site = re.search(r"nearby\.\$\{zone\}:9443 \{(.*?)\n      \}\n", text, re.S)
+        self.assertTrue(site, "nearby.<zone> has no site in cloud-init")
+        self.assertIn("handle /nearby {", site.group(1))
+        self.assertIn("respond 404", site.group(1))
+        self.assertNotIn("/frps", site.group(1))

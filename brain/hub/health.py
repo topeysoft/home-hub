@@ -80,7 +80,9 @@ class Health:
         # (design/controller-panel/NeedsLookB.dc.html). It is answering, so it is never also "offline".
         strip = getattr(self.hub, "strip", None)
         held = strip.notes() if strip is not None and hasattr(strip, "notes") else []
-        return (held + faults + self.offline([d for d in gone if d.id not in claimed], since)
+        printers = getattr(self.hub, "printers", None)
+        waiting = printers.notes() if printers is not None else []    # a printer that needs somebody, in its own words
+        return (held + waiting + faults + self.offline([d for d in gone if d.id not in claimed], since)
                 + self.bridges() + self.storage() + self.restarts() + (healed.notes() if healed else []) + self.update())
 
     def where(self, d) -> str:

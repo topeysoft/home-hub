@@ -19,7 +19,7 @@
  * They kept their code; only the frame changed.
  */
 import { computed, onMounted, onUnmounted, ref, watch, type Component } from 'vue'
-import { store, updateReady, loadSignals } from './store'
+import { foundCount, store, updateReady, loadSignals } from './store'
 import { adjusted, feelFrom } from './look'
 import Icon from './Icon.vue'
 import LocationPage from './LocationPage.vue'
@@ -30,6 +30,7 @@ import { doorHint } from './signals'
 import PeoplePage from './PeoplePage.vue'
 import AccountsPage from './AccountsPage.vue'
 import ThingsPage from './ThingsPage.vue'
+import PrintersPage from './PrintersPage.vue'
 import AddPage from './AddPage.vue'
 import SharePage from './SharePage.vue'
 import HubPage from './HubPage.vue'
@@ -39,9 +40,10 @@ import HappenedPage from './HappenedPage.vue'
 import ChangesPage from './ChangesPage.vue'
 import AdvancedLink from './AdvancedLink.vue'
 import { isPage, LIT, type PageId } from './pages'
+import { printerChip } from './printers'
 
 const page = computed<PageId>(() => isPage(store.sheet) ? store.sheet : 'house')
-const PAGE: Record<Exclude<PageId, 'house'>, Component> = { location: LocationPage, look: LookPage, routines: RoutinesPage, signals: SignalsPage, people: PeoplePage, accounts: AccountsPage, things: ThingsPage, add: AddPage, share: SharePage, hub: HubPage, code: CodePage, notes: NotesPage, happened: HappenedPage, changes: ChangesPage }
+const PAGE: Record<Exclude<PageId, 'house'>, Component> = { location: LocationPage, look: LookPage, routines: RoutinesPage, signals: SignalsPage, people: PeoplePage, accounts: AccountsPage, things: ThingsPage, printers: PrintersPage, add: AddPage, share: SharePage, hub: HubPage, code: CodePage, notes: NotesPage, happened: HappenedPage, changes: ChangesPage }
 
 /* a conversation the house already has open (signing an account in again) is
    handed to the Add page on the way in, once, so the page reads as that one job */
@@ -51,7 +53,7 @@ watch(page, p => { if (p === 'add') { resume.value = store.resume; store.resume 
 const ready = computed(updateReady)
 const locked = computed(() => !!store.status?.locked)
 const title = computed(() => ({
-  house: 'This house', location: 'Where is home?', look: 'How the house looks', routines: 'Routines', signals: 'What the lights tell you', people: 'People', accounts: 'Accounts', things: 'What this house has',
+  house: 'This house', location: 'Where is home?', look: 'How the house looks', routines: 'Routines', signals: 'What the lights tell you', people: 'People', accounts: 'Accounts', things: 'What this house has', printers: 'Printers',
   add: resume.value ? 'Sign in again' : 'Add to the house', share: 'Share this house', hub: 'The hub', code: 'Passcode',
   notes: 'Needs a look', happened: 'What happened', changes: 'Who changed what',
 }[page.value]))
@@ -93,7 +95,15 @@ const things = computed(() => {
   if (!hw.size) return 'Nothing in the house yet'
   return `${hw.size === 1 ? '1 thing' : `${hw.size} things`}, and what brought each of them`
 })
-const found = computed(() => store.found.length ? `${store.found.length === 1 ? '1 thing' : `${store.found.length} things`} found nearby` : 'Lights, plugs, cameras, locks')
+const found = computed(() => foundCount() ? `${foundCount() === 1 ? '1 thing' : `${foundCount()} things`} found nearby` : 'Lights, plugs, cameras, locks')
+/* "OBI1 printing, 42%" -- the printer doing the most, the way the board's door says it; then how many. */
+const printers = computed(() => store.printers?.printers ?? [])
+const printersHint = computed(() => {
+  const ps = printers.value
+  const lead = ps.find(p => p.state === 'needs_you' || p.state === 'problem') ?? ps.find(p => p.state === 'printing') ?? null
+  if (lead) return ps.length > 1 ? `${printerChip(lead)} · ${ps.length} printers` : printerChip(lead)
+  return ps.length === 1 ? `${ps[0].name}, ${ps[0].word || 'ready'}` : `${ps.length} printers, none printing`
+})
 /* The one door that says what it WORKS WITH rather than how it stands, until it is on. Nobody knows
    they can do this, so the hint is the advertisement: naming the apps is what makes somebody open it.
    Once it is shared the hint becomes the state, which is what every other door does. */
@@ -126,7 +136,11 @@ const doors = computed(() => [
      between Accounts and Add on purpose: those two are where things come from, and this is the
      other end of the same life. design/forget/ThingsDoor.dc.html. */
   { id: 'things' as const, icon: 'home', name: 'What this house has', hint: things.value },
-  { id: 'add' as const, icon: 'plus', name: 'Add to the house', hint: found.value, attention: store.found.length > 0 },
+  /* THE HOUSE'S 3D PRINTERS, beside Add because that is where they come from (design/printers/AddAnswers).
+     Only while there is one: it is where a printer with no print and no room lives, and where one is
+     forgotten. A printer that needs somebody lights it, the way an account that does lights Accounts. */
+  ...(printers.value.length ? [{ id: 'printers' as const, icon: 'printer', name: 'Printers', hint: printersHint.value, attention: printers.value.some(p => p.state === 'needs_you' || p.state === 'problem') }] : []),
+  { id: 'add' as const, icon: 'plus', name: 'Add to the house', hint: found.value, attention: foundCount() > 0 },
   { id: 'share' as const, icon: 'share', name: 'Share this house', hint: share.value },
   { id: 'hub' as const, icon: 'home', name: 'The hub', hint: hub.value, attention: ready.value },
   /* Always here, unlike Needs a look: this is a place somebody goes to look something up, not a

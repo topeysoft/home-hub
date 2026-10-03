@@ -16,7 +16,8 @@
  * RoomCard.vue for what each size is allowed to say.
  */
 import type { Device, Room } from './api'
-import { activityParts, cap, isActive, isDead, roomActive } from './store'
+import { activityParts, bare, cap, isActive, isDead, printersIn, roomActive } from './store'
+import { printerOn } from './printers'
 
 export type Size = 'full' | 'half' | 'third' | 'row'
 export type Cell = { id: string; size: Size }
@@ -40,7 +41,7 @@ export function temperature(r: Room): string {
    lamps: a kitchen at 100% is doing more to the house than an office at 70%,
    and the count cannot tell them apart. */
 const litness = (r: Room) => r.devices.filter(lit).reduce((n, d) => n + brightOf(d), 0)
-const doing = (r: Room) => r.devices.filter(d => isActive(d) && !isDead(d)).length
+const doing = (r: Room) => r.devices.filter(d => isActive(d) && !isDead(d)).length + printersIn(r).filter(printerOn).length
 
 /*
  * Four tiers, and they are about what a person is looking for. Rooms that are
@@ -54,9 +55,14 @@ const doing = (r: Room) => r.devices.filter(d => isActive(d) && !isDead(d)).leng
  */
 function tier(r: Room): number {
   if (r.id === 'unassigned') return 3
-  if (!r.devices.length) return 2
+  if (bare(r)) return 2
   return roomActive(r) || filming(r) ? 0 : 1
 }
+
+/* A print going is an event with an end, like a show that is playing, so a room with one ranks right
+   behind the room with the television on and ahead of the rooms that are merely lit
+   (design/printers/RankedB). When the print is done it is a room like any other again. */
+const printing = (r: Room) => printersIn(r).some(printerOn)
 
 /** The order the rooms are read in: down a column, then the next column right. */
 export function rankRooms(rooms: Room[]): Room[] {
@@ -65,6 +71,7 @@ export function rankRooms(rooms: Room[]): Room[] {
     .sort((a, b) =>
       tier(a.r) - tier(b.r) ||
       Number(!!playingIn(b.r)) - Number(!!playingIn(a.r)) ||
+      Number(printing(b.r)) - Number(printing(a.r)) ||
       litness(b.r) - litness(a.r) ||
       doing(b.r) - doing(a.r) ||
       a.i - b.i)

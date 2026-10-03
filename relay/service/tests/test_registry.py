@@ -42,7 +42,7 @@ class Names(Base):
         for bad in ("", "-temi", "temi-", "Temi", "temi house", "temi.app", "a" * 31, "café"): self.assertIsNotNone(problem(bad), bad)
 
     def test_the_services_own_names_are_kept(self):
-        for kept in ("api", "www", "home", "relay", "selftest"):
+        for kept in ("api", "www", "home", "relay", "selftest", "printers", "nearby"):
             self.assertEqual(problem(kept), "That one is kept for the service itself.")
 
     def test_what_somebody_typed_becomes_a_name(self):

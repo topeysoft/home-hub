@@ -86,3 +86,40 @@ class Service(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Nearby(unittest.TestCase):
+    """Which printers are on this Wi-Fi: names whose tunnel comes from the asker's public address."""
+    def setUp(self):
+        self.dir = tempfile.TemporaryDirectory()
+        self.t = 1_790_000_000.0
+        self.r = Registry(Path(self.dir.name) / "houses.db", now=lambda: self.t)
+        for name in ("obi1", "r2d2", "janes-voron"):
+            secret = self.r.claim(name)["secret"]
+            self.r.grant(name, self.t + 365 * DAY)
+            ip = "203.0.113.9" if name != "janes-voron" else "198.51.100.7"
+            self.assertIsNone(self.r.judge("Login", {"user": name, "metas": {"house": name, "secret": secret},
+                                                     "client_address": f"{ip}:51094"}))
+        self.r.seed("api", "operator"); self.r.judge("Login", {"user": "api", "metas": {"house": "api", "secret": "operator"},
+                                                               "client_address": "203.0.113.9:1"})
+        self.app = make(self.r, now=lambda: self.t, nearby_origins=("https://printers.elyir.app",))
+
+    def tearDown(self):
+        self.r.db.close(); self.dir.cleanup()
+
+    def test_a_page_sees_the_printers_behind_its_own_address_and_no_others(self):
+        home = TestClient(self.app, client=("203.0.113.9", 4000))
+        r = home.get("/nearby", headers={"Origin": "https://printers.elyir.app"})
+        self.assertEqual(r.json(), {"names": ["obi1", "r2d2"]}, "the service's own names never show")
+        self.assertEqual(r.headers["access-control-allow-origin"], "https://printers.elyir.app")
+        self.assertEqual(r.headers["cache-control"], "no-store")
+        elsewhere = TestClient(self.app, client=("192.0.2.1", 4000))
+        self.assertEqual(elsewhere.get("/nearby").json(), {"names": []})
+        self.assertNotIn("access-control-allow-origin", home.get("/nearby", headers={"Origin": "https://evil.example"}).headers)
+
+    def test_a_house_that_stops_being_carried_drops_off_and_a_move_follows_it(self):
+        self.r.grant("r2d2", self.t - 1)
+        self.assertEqual(self.r.nearby("203.0.113.9"), ["obi1"])
+        self.r.seen("obi1", "[2001:db8::5]:443")
+        self.assertEqual(self.r.nearby("203.0.113.9"), [])
+        self.assertEqual(self.r.nearby("2001:db8::5"), ["obi1"])

@@ -42,12 +42,12 @@ export type Status = { driver: Driver; reason: string; setup_done: boolean; lock
    panel does not know what it is looking at, so it draws `acts` and invents nothing. `with` is what went
    quiet behind this one fault -- fix the fault and they all come back, which is why they are not lines of
    their own. See brain/hub/health.py. */
-export type Act = { do: string; act: 'flow' | 'entry' | 'part' | 'check' | 'forget' | 'update' | 'restart' | 'bridge' | 'account' | 'strip' | 'backup' | 'open'; to: string | null
+export type Act = { do: string; act: 'flow' | 'entry' | 'part' | 'check' | 'forget' | 'update' | 'restart' | 'bridge' | 'account' | 'strip' | 'backup' | 'open' | 'printer'; to: string | null
   ask?: string        // a question to answer first, where the doing is worth a second's thought
   yes?: string        // the words that answer it, with the name in them
   no?: string }       // ...and the ones that decline, where "Keep it" is not what is being kept
 export type Quiet = { id: string; name: string; where: string }
-export type Note = { kind: 'offline' | 'storage' | 'driver' | 'update' | 'restart' | 'bridge' | 'healed' | 'held'; text: string; since: number | null; subject: string | null
+export type Note = { kind: 'offline' | 'storage' | 'driver' | 'update' | 'restart' | 'bridge' | 'healed' | 'held' | 'printer'; text: string; since: number | null; subject: string | null
   band?: string       // a strip held dark: the band's few words for it ("The kitchen strip is staying off")
   more?: string       // the second sentence, quieter: what a pattern means, under the line that names it
   where?: string      // an offline thing: which room, and what sort of thing it is -- enough to go and look at it
@@ -452,6 +452,42 @@ export const yardKeep = () => post<Roofline>('/roofline/yard/keep')
 export const yardLeave = () => post<Roofline>('/roofline/yard/leave')
 export const keepLook = () => post<Roofline>('/roofline/look/keep')
 export const dropLook = () => post<Roofline>('/roofline/look/drop')
+/*
+ * 3D PRINTERS, as the brain follows them (brain/hub/printers.py, docs/printers.md). Every sentence in a
+ * view is the printer's own -- the headline, the detail, the labels on its actions -- or the brain's
+ * (`word`, `filament`, the rows in `asks`), and the panel only chooses the frame: design/printers/.
+ * `state` is one of the printer's six: ready, preparing, printing, needs_you, finished, problem.
+ */
+export type PrinterAction = { id: string; label: string; primary?: boolean; style?: string; args?: Record<string, any> }
+export type PrintJob = { name: string | null; progress: number | null; layer: number | null; layers: number | null
+  remaining_s: number | null; eta_clock: string | null; elapsed_s?: number | null; colors: (string | { color: string })[]
+  material: string | null; filament?: string | null; thumbnail: string | null }
+export type Printer = { id: string; name: string; connected: boolean; via: 'home' | 'away' | null
+  state: 'ready' | 'preparing' | 'printing' | 'needs_you' | 'finished' | 'problem' | null
+  headline: string | null; detail: string | null
+  word?: string                         // the state as it fits after the name: "printing", "ready", "stopped"
+  since?: number | null                 // when it came to be in this state
+  room?: { id: string; name: string } | null
+  actions: PrinterAction[]; temps: { nozzle?: number | null; bed?: number | null; chamber?: number | null }
+  camera: string; job: PrintJob | null }
+export type FoundPrinter = { id: string; name: string; home: string; away: string; kind?: string }
+export type AskState = 'waiting' | 'allowed' | 'refused' | 'expired' | 'failed'
+/* An ask as its row on Add says it, in the brain's words; `until` is when the printer stops asking. */
+export type PrinterAsk = { id: string; name: string; state: AskState; title: string; detail: string; until: number | null }
+export type Printers = { printers: Printer[]; found: FoundPrinter[]; asking: Record<string, AskState>; asks?: PrinterAsk[] }
+export async function getPrinters(): Promise<Printers> { const r = await request('/printers'); if (!r.ok) await fail(r); return r.json() }
+export const lookForPrinters = () => post<Printers>('/printers/look')
+export const askPrinter = (id: string) => post<Printers>(`/printers/${encodeURIComponent(id)}/add`)
+export async function stopAsking(id: string): Promise<Printers> {
+  const r = await request(`/printers/${encodeURIComponent(id)}/add`, { method: 'DELETE' }); if (!r.ok) await fail(r); return r.json()
+}
+export async function forgetPrinter(id: string): Promise<Printers> {
+  const r = await request(`/printers/${encodeURIComponent(id)}`, { method: 'DELETE' }); if (!r.ok) await fail(r); return r.json()
+}
+export const printerAction = (id: string, action: string, args?: Record<string, any>) =>
+  post<Printer>(`/printers/${encodeURIComponent(id)}/action`, { action, args: args ?? {} })
+export const setPrinterRoom = (id: string, room: string | null) => post<Printer>(`/printers/${encodeURIComponent(id)}/room`, { room })
+
 /* Take a bridge off the house. Offered only from the *Needs a look* line about one that has not come
    back, because it is the answer to a question the house asked first -- never a thing to go and find. */
 /* ONE BRIDGE, as This hub lists it. Separate from `Bridge` above, which is the setting-up machine
@@ -748,7 +784,7 @@ let live: WebSocket | null = null
 export function kickStream() { live?.close() }
 
 /** Live updates from the brain. Reconnects with backoff; reports link state. */
-export function connect(on: { device: (d: Device) => void; home: (h: Home) => void; ambient: (a: Ambient) => void; status: (s: Status) => void; intent: (i: Intent) => void; drafts: (d: Routine[]) => void; presence: (p: Presence) => void; phones: () => void; share: () => void; signals: (t: TryBrief | null) => void; roofline?: (r: Roofline) => void; link: (up: boolean) => void }) {
+export function connect(on: { device: (d: Device) => void; home: (h: Home) => void; ambient: (a: Ambient) => void; status: (s: Status) => void; intent: (i: Intent) => void; drafts: (d: Routine[]) => void; presence: (p: Presence) => void; phones: () => void; share: () => void; signals: (t: TryBrief | null) => void; roofline?: (r: Roofline) => void; printers?: (p: Printers) => void; link: (up: boolean) => void }) {
   let delay = 1000, ws: WebSocket | null = null, closed = false
   const open = () => {
     ws = live = new WebSocket(wsUrl('/stream'), wsProtocols())   // the token rides as a subprotocol, never in the URL (door.ts)
@@ -766,6 +802,7 @@ export function connect(on: { device: (d: Device) => void; home: (h: Home) => vo
       else if (m.type === 'share') on.share()    // the same shape: what is shared, and who holds it, is /share's answer to give
       else if (m.type === 'signals') on.signals(m.trying ?? null)   // a try moved on, or a row was switched; the brief is for the band
       else if (m.type === 'roofline') on.roofline?.(m.roofline)   // its evenings, its look, the way round, a box gone dark
+      else if (m.type === 'printers') on.printers?.(m.printers)   // the whole printer status: what each is doing, found, asking
     }
     ws.onclose = () => { on.link(false); if (!closed) setTimeout(open, delay = Math.min(delay * 2, 15000)) }
     ws.onerror = () => ws?.close()
