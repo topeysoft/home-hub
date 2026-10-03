@@ -283,7 +283,7 @@ class Signals:
                 try:
                     await self.hub.ha.call("light", "turn_on", t["id"], flash="long")
                     return {**step, "state": "ok", "sub": "Blinked", "at": time.time()}
-                except Exception as e:
+                except Exception:
                     return {**step, "state": "no", "sub": "It did not blink."}
             sid = t["strip"]; known = self.hub.strip.strips.get(sid) or {}
             if not known.get("online"):
