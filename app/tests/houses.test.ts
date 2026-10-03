@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Temitope Adeyeri
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { describe, expect, it } from 'vitest'
-import { addLink, codeOf, houseToOpen, iphoneSafari, labelOf, originOf } from '../houses/src/houses'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { addLink, codeOf, houseToOpen, iphoneSafari, labelOf, nearby, originOf } from '../houses/src/houses'
 
 /* The Houses app's rules, pinned to design/houses/ (B, and The app). */
 
@@ -42,5 +42,26 @@ describe('Safari on an iPhone', () => {
     expect(iphoneSafari(ua, false)).toBe(true)
     expect(iphoneSafari(ua, true)).toBe(false)
     expect(iphoneSafari('Mozilla/5.0 (Linux; Android 15)', false)).toBe(false)
+  })
+})
+
+describe('the houses on this Wi-Fi', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  /* What the maker's own Wi-Fi said on 3 October: one house, three printers, all with names on the relay. */
+  const answers: Record<string, () => Response> = {
+    'https://nearby.elyir.app/nearby': () => Response.json({ names: ['c3po', 'main-palace', 'obi1', 'r2d2'] }),
+    'https://main-palace.elyir.app/alive': () => Response.json({ ok: true, version: 'main-1a2b3c4', commit: '1a2b3c4' }),
+    'https://obi1.elyir.app/alive': () => new Response('<!doctype html>', { headers: { 'content-type': 'text/html' } }),
+    'https://r2d2.elyir.app/alive': () => new Response('{"detail":"Not Found"}', { status: 404, headers: { 'content-type': 'application/json' } }),
+  }
+
+  it('are the names that answer like a hub, and never a printer', async () => {
+    vi.stubGlobal('fetch', async (url: string) => {
+      const a = answers[url]
+      if (!a) throw new TypeError('Failed to fetch')          // c3po: refused across origins, as a printer is
+      return a()
+    })
+    expect(await nearby({ hostname: 'houses.elyir.app' })).toEqual(['main-palace'])
   })
 })
