@@ -3,6 +3,7 @@
   SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 <script setup lang="ts">
+import { failed } from './code'
 import { computed, onMounted, ref } from 'vue'
 import { store, notify, loadRoutines, loadAssistant, visibleRooms } from './store'
 import { enableRoutine, draftRoutine, approveDraft, discardDraft, setAssistantKey, setEntry, act, roomsOf, type Routine, type Proposal } from './api'
@@ -43,7 +44,7 @@ async function flip(r: Routine) {
   if (busy.value) return
   const want = !on(r)
   busy.value = r.id; r.enabled = want
-  try { await enableRoutine(r.id, want) } catch (e: any) { r.enabled = !want; notify(`That didn't stick: ${e.message}`, 'error') }
+  try { await enableRoutine(r.id, want) } catch (e: any) { r.enabled = !want; notify(failed('That didn’t stick', e), 'error') }
   busy.value = ''
 }
 
@@ -68,7 +69,7 @@ async function doIt() {
   const p = proposal.value; if (!p || doing.value) return
   doing.value = true
   try { await act(p.device, p.action, Object.keys(p.data).length ? p.data : undefined); notify(p.name); proposal.value = null; note.value = '' }
-  catch (e: any) { notify(`That didn't work: ${e.message}`, 'error') }
+  catch (e: any) { notify(failed('That didn’t work', e), 'error') }
   doing.value = false
 }
 async function approve(d: Routine) {

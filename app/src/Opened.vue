@@ -3,6 +3,7 @@
   SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 <script setup lang="ts">
+import { failed } from './code'
 /*
  * One device, opened in place.
  *
@@ -322,7 +323,7 @@ async function saveEdit() {
     }
     if ((name && name !== was) || (room && room !== d.room_id)) notify(name !== was && room !== d.room_id ? `${name} is in the ${rooms.value.find(r => r.id === room)?.name ?? 'room'} now.` : name !== was ? `Renamed to ${name}.` : `${d.name} is in the ${rooms.value.find(r => r.id === room)?.name ?? 'room'} now.`)
     editing.value = false
-  } catch (e: any) { notify(`Couldn't change it: ${e.message}`, 'error') }
+  } catch (e: any) { notify(failed('Couldn’t change it', e), 'error') }
   saving.value = false
 }
 

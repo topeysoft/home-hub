@@ -3,6 +3,7 @@
   SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 <script setup lang="ts">
+import { failed } from './code'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { addRoom, moveDevice, renameDevice, forgetDevice, getAccounts, getSuggestions, identifyDevice, type Account, type Device, type Room, type Suggestion } from './api'
 import { store, cap, notify } from './store'
@@ -50,7 +51,7 @@ async function rename(r: UnitRow) {
   const n = (names.value[r.key] ?? r.name).trim()
   if (!n || n === r.name) return
   busy.value[r.key] = 'name'
-  try { await renameTo(r, n); notify(`Renamed to ${n}.`) } catch (e: any) { notify(`Couldn't rename: ${e.message}`, 'error') }
+  try { await renameTo(r, n); notify(`Renamed to ${n}.`) } catch (e: any) { notify(failed('Couldn’t rename it', e), 'error') }
   delete busy.value[r.key]
 }
 async function move(r: UnitRow, roomId: string) {
@@ -60,7 +61,7 @@ async function move(r: UnitRow, roomId: string) {
     await moveDevice(r.lead.id, roomId)
     notify(`${r.name} is in the ${roomName(roomId)} now.`)
     gone(r)
-  } catch (e: any) { notify(`Couldn't move it: ${e.message}`, 'error') }
+  } catch (e: any) { notify(failed('Couldn’t move it', e), 'error') }
   delete busy.value[r.key]
 }
 /* The end of a thing's life here. One tap asks with the name in it, so what disappears is said before it
@@ -81,7 +82,7 @@ async function createAndMove(r: UnitRow) {
   const n = newRoom.value.trim(); if (!n) { adding.value = null; return }
   busy.value[r.key] = 'room'
   try { const rm = await addRoom(n); store.rooms.push({ id: rm.id, name: rm.name, devices: [], intent: 'unknown' }); adding.value = null; await move(r, rm.id) }
-  catch (e: any) { notify(`Couldn't add the room: ${e.message}`, 'error'); delete busy.value[r.key] }
+  catch (e: any) { notify(failed('Couldn’t add the room', e), 'error'); delete busy.value[r.key] }
 }
 
 /* ---------- naming by touch ----------
@@ -202,7 +203,7 @@ async function use(r: UnitRow): Promise<boolean> {
     if (s.room) { await moveDevice(r.lead.id, s.room); gone(r); notify(`${s.name} is in the ${roomName(s.room)} now.`) }
     else notify(`Renamed to ${s.name}.`)
     delete suggestions.value[r.lead.id]
-  } catch (e: any) { notify(`Couldn't place it: ${e.message}`, 'error'); delete busy.value[r.key]; return false }
+  } catch (e: any) { notify(failed('Couldn’t place it', e), 'error'); delete busy.value[r.key]; return false }
   delete busy.value[r.key]
   return true
 }

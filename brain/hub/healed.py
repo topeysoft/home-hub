@@ -36,13 +36,13 @@ NAMED = 2                     # what was cut off, by name, before the rest becom
 
 # Compose's services, in the words the panel already uses for them (provision.PARTS), and the
 # integration whose things go quiet when each one stops. "*" is the engine: everything goes with it.
-PARTS = {"mosquitto": ("Messages", "mqtt"), "zigbee2mqtt": ("The Zigbee radio", "mqtt"),
+PARTS = {"mosquitto": ("Device messages", "mqtt"), "zigbee2mqtt": ("The Zigbee radio", "mqtt"),
          "ring-mqtt": ("Ring", "mqtt"), "zwave-js-ui": ("The Z-Wave radio", "zwave_js"),
-         "matter-server": ("Matter", "matter"), "homeassistant": ("The hub's engine", "*"),
+         "matter-server": ("Matter", "matter"), "homeassistant": ("The hub's main software", "*"),
          "matter-bridge": ("Sharing with Apple Home, Google Home and Alexa", None),
-         "wyoming-piper": ("The hub's voice", None), "caddy": ("The way in to the hub", None),
-         "frpc": ("The way in from outside the house", None),
-         "lan-cert": ("The house's name at home", None)}
+         "wyoming-piper": ("The hub's voice", None), "caddy": ("The connection to this screen", None),
+         "frpc": ("Using the house from anywhere", None),
+         "lan-cert": ("The secure connection at home", None)}
 
 
 def stamp(docker_time: str) -> float | None:

@@ -85,7 +85,7 @@ async function allow(span: 'day' | 'weekend' | 'keep') {
   busy.value = true
   try {
     await allowPhone(a.id, span)
-    notify(`${a.name} is in${span === 'day' ? ' for today' : span === 'weekend' ? ' for the weekend' : ''}.`)
+    notify(`${a.name} is allowed${span === 'day' ? ' for today' : span === 'weekend' ? ' for the weekend' : ''}.`)
     answered(a.id)
   } catch (e: any) {
     // the code was asked for and not given, or the hub said no: the question stands, so the pane does
@@ -111,7 +111,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 </script>
 
 <template>
-  <div class="opened ask-pane" :class="{ shown, closing }" v-if="ask" role="dialog" :aria-label="`${ask.name} wants to join the house`">
+  <div class="opened ask-pane" :class="{ shown, closing }" v-if="ask" role="dialog" :aria-label="`${ask.name} wants to be added`">
     <div class="opened-veil" @click="aside"></div>
     <div class="opened-panel">
       <button class="back opened-close" @click="aside" aria-label="Put this aside"><Icon name="close" :size="18" /></button>
@@ -121,18 +121,18 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
       <div class="opened-body">
         <div class="opened-step s0">
           <div class="opened-room">A phone on the Wi‑Fi</div>
-          <h2 class="display opened-name">{{ ask.name }} wants to join the house</h2>
+          <h2 class="display opened-name">{{ ask.name }} wants to be added</h2>
         </div>
 
         <div class="opened-step s1 ask-says">
-          <p v-if="!choosing">Let it in and it can run the house from the Wi‑Fi — the lights, the locks, everything this
-            screen can do. It starts home‑only. If you are not sure whose phone this is, say not now.</p>
-          <p v-else>For how long? A phone let in for today is out again tonight, and you can change any of this later
+          <p v-if="!choosing">Allow it and it can use the house from your Wi‑Fi — the lights, the locks, everything this
+            screen can do. It starts as Home only. If you are not sure whose phone this is, say not now.</p>
+          <p v-else>For how long? A phone allowed for today is removed again tonight, and you can change any of this later
             under People and phones.</p>
         </div>
 
         <div class="opened-step s2 ask-acts" v-if="!choosing">
-          <button class="button big" @click="choosing = true">Let it in</button>
+          <button class="button big" @click="choosing = true">Allow it</button>
           <button class="button big ghost" @click="deny">Not now</button>
         </div>
         <div class="opened-step s2 ask-acts" v-else>

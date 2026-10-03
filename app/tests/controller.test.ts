@@ -63,7 +63,7 @@ describe('the roofline', () => {
   })
 
   it('counts its boxes and runs in words, and its length in lights', () => {
-    expect(roofCount(r)).toBe('Three boxes, four runs')
+    expect(roofCount(r)).toBe('Three controllers, four strips')
     expect(roofMeters(412)).toBe('412 lights')
   })
 

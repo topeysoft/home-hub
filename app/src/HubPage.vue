@@ -23,7 +23,7 @@ const busy = ref(false)
 async function backup() {
   if (busy.value) return
   busy.value = true
-  try { await downloadBackup(); notify('Your backup is on its way. Keep it somewhere safe; it holds the house’s keys.') }
+  try { await downloadBackup(); notify('Your backup is on its way. Keep it somewhere safe; it holds the house’s passwords and sign-ins.') }
   catch (e: any) { notify(e.message, 'error') }
   busy.value = false
 }

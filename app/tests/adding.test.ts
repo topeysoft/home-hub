@@ -212,10 +212,10 @@ describe('asking a strip again, afterwards', () => {
   it('puts both questions behind ONE row, because neither is used twice a year', () => {
     const rows = stripMarkup()
     expect(rows.match(/class="rig-card sd-door"/g) ?? []).toHaveLength(1)
-    expect(rows).toContain('Set up as a strip')
+    expect(rows).toContain('Its length and colors')
     // and what opens is the sheet, with the length walked in it and the colors handed to setup
     expect(rows).toContain('sd-sheet')
-    expect(rows).toContain('Ends here')
+    expect(rows).toContain('Where it ends')
     expect(rows).toContain('The colors look wrong')
   })
 

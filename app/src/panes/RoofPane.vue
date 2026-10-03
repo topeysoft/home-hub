@@ -43,7 +43,7 @@ const guess = computed({
 const dim = useSlide({ vertical: false, live: v => (guess.value = v), settle: v => bright(v) })
 
 const EVENING_CHOICES: { id: Evenings; name: string }[] = [
-  { id: 'every', name: 'Every evening' }, { id: 'occasion', name: 'Only in an occasion' }, { id: 'never', name: 'Not by itself' },
+  { id: 'every', name: 'Every evening' }, { id: 'occasion', name: 'Only for occasions' }, { id: 'never', name: 'Not by itself' },
 ]
 const busy = ref('')
 async function act(id: string, fn: () => Promise<unknown>) {

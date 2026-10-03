@@ -48,7 +48,7 @@ const rows = computed(() => (y.value?.rows ?? []).map((r, i) => ({
 })))
 const turned = computed(() => rows.value.filter(r => r.turned).map(r => r.name))
 const foot = computed(() => done.value
-  ? `${turned.value.length ? `Turned round: ${turned.value.join(' and ')}. ` : ''}Change it any time from the Roofline’s pane.`
+  ? `${turned.value.length ? `Turned round: ${turned.value.join(' and ')}. ` : ''}Change it any time from the Roofline.`
   : 'Tap them in the order you’d walk past them. If a white light runs toward where you started, tap it twice to turn it round.')
 </script>
 
@@ -59,7 +59,7 @@ const foot = computed(() => done.value
       <h2 class="display yard-title">{{ done ? 'That’s the way round' : 'Which way round?' }}</h2>
       <p class="yard-lede">{{ done
         ? 'One white light is going round the whole roof now, the way you tapped it. Watch it once.'
-        : 'Stand where you can see the roof. Each run is lit in its own color, with a white light running the way it goes.' }}</p>
+        : 'Stand where you can see the roof. Each strip is lit in its own color, with a white light running the way it goes.' }}</p>
       <ul class="yard-rows">
         <li v-for="r in rows" :key="`${r.chip}:${r.run}`">
           <button class="yard-row" :class="{ tapped: r.nth != null }" :disabled="done || busy" @click="tap(r.chip, r.run)">

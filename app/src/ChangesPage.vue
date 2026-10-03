@@ -93,7 +93,7 @@ onMounted(loadChanges)
     <button class="happened-more" v-if="behind" @click="shown += PAGE">
       <span>
         Show older changes
-        <small>{{ behind === 1 ? '1 more' : `${behind} more` }}<template v-if="page?.coded_when">, back to {{ page.coded_when }}</template>. The house keeps them for a year.</small>
+        <small>{{ behind === 1 ? '1 more' : `${behind} more` }}. The house keeps them for a year.</small>
       </span>
       <Icon name="back" :size="16" class="flip happened-open" />
     </button>
@@ -104,7 +104,7 @@ onMounted(loadChanges)
 
     <div class="happened-note" v-if="page?.coded_when">
       Before the passcode was set on <b>{{ page.coded_when }}</b> the house could not tell its phones
-      apart, so the changes above that date say <b>Someone at the wall</b> and nothing more.
+      apart, so changes from before then say <b>Someone</b> and nothing more.
     </div>
   </div>
 </template>

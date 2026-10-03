@@ -270,7 +270,7 @@ onUnmounted(() => {
              says "this may never end". The figure is the hub's own last restart at this rung. -->
         <template v-if="store.restarting">
           <span class="offline-icon pulse"><Icon name="refresh" :size="28" /></span>
-          <h1 class="display">{{ store.restarting.rung === 'machine' ? 'Restarting the little computer' : store.restarting.rung === 'everything' ? 'Restarting everything' : 'Restarting the hub' }}</h1>
+          <h1 class="display">{{ store.restarting.rung === 'machine' ? 'Powering the hub off and on' : store.restarting.rung === 'everything' ? 'Full restart' : 'Restarting the hub' }}</h1>
           <p>{{ store.restarting.left > 0 ? `Back in about ${store.restarting.left} seconds.` : 'Taking longer than usual. Still trying.' }}</p>
           <p class="keeps">{{ store.restarting.rung === 'hub' ? 'Lights and switches keep working.' : 'Switches on the wall keep working.' }}</p>
         </template>
@@ -287,7 +287,7 @@ onUnmounted(() => {
         </template>
         <template v-else-if="store.loaded && store.status && store.status.driver !== 'ready'">
           <span class="offline-icon pulse"><Icon name="home" :size="28" /></span>
-          <h1 class="display">{{ store.restoring ? 'Restoring your house' : store.status.driver === 'down' ? 'The engine is starting' : 'Reconnecting' }}</h1>
+          <h1 class="display">{{ store.restoring ? 'Restoring your house' : store.status.driver === 'down' ? 'The hub is starting' : 'Reconnecting' }}</h1>
           <p>{{ store.restoring ? 'A few minutes. The lights and switches keep working; this screen comes back on its own.' : store.status.reason || 'The house will be back in a moment. Nothing needs doing.' }}</p>
         </template>
         <template v-else-if="store.error">

@@ -130,14 +130,14 @@ onMounted(loadHappened)
 
       <p class="page-lede happened-quiet" v-if="page.empty">
         Nothing worth catching up on. Nothing has been left on, no door has been left open, and
-        nobody new has joined the house.
+        nobody new has been added.
       </p>
 
       <!-- the two folds: the full log for the curious, and the audit behind the passcode -->
       <button class="happened-more" :class="{ busy: opening }" @click="openLog">
         <span>
           Everything that happened
-          <small>Every line the house wrote down, newest first. Kept for 30 days.</small>
+          <small>What the house wrote down, newest first. Kept for 30 days.</small>
         </span>
         <Icon name="back" :size="16" class="flip" :class="{ 'happened-open': !!all }" />
       </button>

@@ -5,7 +5,7 @@ import { moveCode, withoutCode } from './move'
 import { reactive, watch } from 'vue'
 import { getMe, claimMove, kickStream, type Me, doRestart, type Rung, getBridge, type Bridge, getStrip, stripLooking, type Strip, getHome, getEvents, getAmbient, getScenes, getStatus, getDiscovered, getRoutines, getAssistant, getPresence, getHealth, getSounds, connect, act, setIntent, setHomeIntent, type Room, type Device, type Home, type Event, type Ambient, type Rules, type Status, type Found, type Intent, type Routine, type Assistant, type Presence, type Note, type Sound, requestUpdate, getPhones, type Phone, type Ask, getAccounts, type Account, getShare, type Share, getHappened, type Happened, getChanges, type Changes, getSignals, type SignalsPage, type TryBrief, getRoofline, type Roofline, getPrinters, type Printers, type Printer } from './api'
 import { previewHeld, previewHeldNote, previewRoofDevice, previewRoofline, previewStripBeat } from './controller'
-import { lock } from './code'
+import { lock, CANCELED, failed } from './code'
 import { isPage } from './pages'
 import { sunPosition, sunGuess, moonPhase } from './sun'
 import { locale, setHouseLanguage } from './lang'
@@ -403,12 +403,15 @@ export async function runScene(room: Room | null, scene: Scene): Promise<boolean
     if (room) { await setIntent(room.id, scene.id); room.intent = scene.id; notify(`${room.name} · ${scene.label}`) }
     else { await setHomeIntent(scene.id); for (const r of store.rooms) if (r.devices.length) r.intent = scene.id; notify(scene.id === 'asleep' ? 'Good night. The house is off.' : 'Everything is off.') }
     return true
-  } catch (e: any) { notify(`That didn't work: ${e.message}`, 'error'); return false }
+  } catch (e: any) { notify(failed('That didn’t work', e), 'error'); return false }
 }
 
 /* ---------- actions with instant feedback ---------- */
 let toastId = 0, toastTimer: number | undefined
+/** How long a fan runs, said the same on its tile and its pane. */
+export const fanFor = (m: number) => m < 60 ? `${m} minutes` : m === 60 ? '1 hour' : `${m / 60} hours`
 export function notify(text: string, kind: 'info' | 'error' = 'info', action?: { label: string; run: () => void }) {
+  if (kind === 'error' && text === CANCELED) return   // cancelling the passcode question is not a failure (design/words-band/)
   store.toast = { id: ++toastId, text, kind, action }
   clearTimeout(toastTimer)
   toastTimer = window.setTimeout(() => (store.toast = null), kind === 'error' ? 5000 : action ? 6000 : 2800)   // long enough to reach for Undo
@@ -493,7 +496,7 @@ export async function perform(d: Device, action: string, data?: Record<string, u
   catch (e: any) {
     d.state = before.state; d.attrs = before.attrs; delete store.pending[d.id]
     if (wasDone) done[d.id] = wasDone; else delete done[d.id]
-    notify(`${shortName(d, roomOf(d))} didn't respond`, 'error'); return false
+    notify(`${shortName(d, roomOf(d))} isn’t answering`, 'error'); return false
   }
   window.setTimeout(() => delete store.pending[d.id], 5000)   // the stream normally clears it much sooner
   return true
@@ -505,8 +508,8 @@ export function describe(ev: Event): { text: string; icon: string } | null {
   if (ev.kind === 'phone') {
     let d: any = {}; try { d = ev.detail ? JSON.parse(ev.detail) : {} } catch {}
     const n = d.name || 'A phone'
-    return ev.new === 'joined' ? { text: `${n} joined the house`, icon: 'phone' } : ev.new === 'asked' ? { text: `${n} asked to join`, icon: 'phone' }
-      : ev.new === 'removed' ? { text: `${n} was removed`, icon: 'phone' } : ev.new === 'left' ? { text: `${n}'s stay ended`, icon: 'phone' } : null
+    return ev.new === 'joined' ? { text: `${n} was added`, icon: 'phone' } : ev.new === 'asked' ? { text: `${n} asked to be added`, icon: 'phone' }
+      : ev.new === 'removed' ? { text: `${n} was removed`, icon: 'phone' } : ev.new === 'left' ? { text: `${n}'s visit ended`, icon: 'phone' } : null
   }
   if (ev.kind === 'presence') return ev.new === 'nobody' ? { text: 'Everyone is out', icon: 'leave' } : ev.new === 'somebody' ? { text: 'Someone is home', icon: 'home' } : null
   if (ev.kind === 'intent') {
@@ -662,7 +665,7 @@ export async function installUpdate(): Promise<boolean> {
     const u = await requestUpdate()
     if (store.status) store.status.update = u
     beginUpdate(u.dark_seconds)
-    notify('Installing. Everything keeps working while it downloads.')
+    notify('Installing. Lights and switches keep working.')
     return true
   } catch (e: any) { notify(e.message, 'error'); return false }
 }
@@ -789,7 +792,7 @@ export async function loadPhones(tell = false) {
   try { const p = await getPhones(); store.phones = p.phones; store.asks = p.asks } catch { return }
   if (!tell) return
   eventsSoon()
-  for (const x of store.phones) if (!known.has(x.id) && !x.me && known.size) notify(`${x.name} joined the house.`)   // told on every screen that can see them; the newcomer already knows
+  for (const x of store.phones) if (!known.has(x.id) && !x.me && known.size) notify(`${x.kind === 'wall' && x.name === 'This wall' ? 'Wall screen' : x.name} was added.`)   // told on every screen that can see them; the newcomer already knows
 }
 /** May this screen decide who else gets in? The house's answer, in the row it keeps for this phone. */
 export const holdsKeys = () => !store.status?.locked || ['setup', 'code'].includes(store.phones.find(p => p.me)?.how ?? '')

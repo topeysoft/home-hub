@@ -70,7 +70,7 @@ export const HELD_PREVIEW: Record<string, Held> = {
     chip: 'The strip switched itself off to protect itself',
   },
   hot: { quiet: 'A little dimmer than that for now. The controller is warm, and it eases off until it cools. More air around it helps.' },
-  full: { quiet: 'At full white this much strip asks a little more than one socket gives, so it holds just under. Nothing needs doing.' },
+  full: { quiet: 'At full white this much strip asks a little more than the controller can give, so it holds just under. Nothing needs doing.' },
 }
 
 /** Put a preview report on the house's strip, as the brain would. The strip is the mock house's
@@ -134,7 +134,7 @@ export function roofTile(d: Device, r: Roofline | null): string {
 export function roofCount(r: Extract<Roofline, { exists: true }>): string {
   const w = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight']
   const n = (k: number, one: string, many: string) => `${w[k] ?? k} ${k === 1 ? one : many}`
-  const s = `${n(r.boxes.length, 'box', 'boxes')}, ${n(r.runs, 'run', 'runs')}`
+  const s = `${n(r.boxes.length, 'controller', 'controllers')}, ${n(r.runs, 'strip', 'strips')}`
   return s[0].toUpperCase() + s.slice(1)
 }
 
@@ -171,7 +171,7 @@ export function previewRoofline(kind: string): Roofline {
       dark ? { chip: 'c', place: 'Garage end', runs: 1, online: true, state: 'Dark', held: 'supply', dark_runs: [1], sub: 'On a different power supply. Plug the 12 V supply back in.' }
            : { chip: 'c', place: 'Garage end', runs: 1, online: true, state: 'Fine', sub: '' },
     ],
-    evenings: 'every', evenings_words: 'Every evening', until: '23:00', until_words: '11:00', dusk: null,
+    evenings: 'every', evenings_words: 'Every evening', until: '23:00', until_words: '11 PM', dusk: null,
     still: kind === 'still', occasion: occ[0], occasion_name: occ[1],
     words: kind === 'still' ? 'Red and green, held still' : occ[2],
     look: kind === 'still' ? { motion: 'still', ...look, block: 4 } : { motion: occ[3] as string, ...look }, kept: [], draft: null,

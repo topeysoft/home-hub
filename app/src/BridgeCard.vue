@@ -82,7 +82,7 @@ async function forget() {
   busy.value = 'forget'
   try {
     const r = await forgetBridge(b.value.chip)
-    notify(`${r.forgotten} is no longer part of the house.`)
+    notify(r.forgotten === 'The bridge' ? 'The bridge is removed.' : `The ${r.forgotten} bridge is removed.`)
     emit('close')
   } catch (e: any) { notify(e.message, 'error'); busy.value = '' }
 }

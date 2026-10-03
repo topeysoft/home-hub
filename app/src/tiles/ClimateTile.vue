@@ -3,10 +3,11 @@
   SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 <script setup lang="ts">
+import { failed } from '../code'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import type { Device } from '../api'
 import { setFan, setSense } from '../api'
-import { perform, shortName, roomOf, store, isDead, notify, cap } from '../store'
+import { perform, shortName, roomOf, store, isDead, notify, cap, fanFor } from '../store'
 import { actingOf } from '../tone'
 import Icon from '../Icon.vue'
 import DeviceArt from '../DeviceArt.vue'
@@ -53,7 +54,7 @@ async function sense(id: string | null) {
   if (senseBusy.value || (id ?? null) === (a.value.sense_from ?? null)) return
   senseBusy.value = true
   try { await setSense(props.device.id, id); notify(id ? `Using ${sensors.value.find(s => s.id === id)?.label ?? 'that sensor'} for the temperature.` : 'Back to its own sensor.') }
-  catch (e: any) { notify(`Couldn't change the sensor: ${e.message}`, 'error') }
+  catch (e: any) { notify(failed('Couldn’t change the sensor', e), 'error') }
   senseBusy.value = false
 }
 const doing = computed(() => {
@@ -130,8 +131,8 @@ const fanBusy = ref(false)
 async function fan(minutes: number) {
   if (dead.value || fanBusy.value) return
   fanBusy.value = true
-  try { await setFan(props.device.id, minutes); notify(minutes ? `Fan on for ${FAN.find(f => f.m === minutes)?.label ?? minutes + ' min'}.` : 'Fan off.') }
-  catch (e: any) { notify(`The fan didn't respond: ${e.message}`, 'error') }
+  try { await setFan(props.device.id, minutes); notify(minutes ? `Fan on for ${fanFor(minutes)}.` : 'Fan off.') }
+  catch (e: any) { notify(failed('The fan didn’t answer', e), 'error') }
   fanBusy.value = false
 }
 </script>

@@ -158,7 +158,7 @@ class ThePage(ApiTest):
         api.hub.log.db.commit()
         page = self.client.get("/happened").json()
         people = next(g for g in page["groups"] if g["id"] == "people")
-        self.assertEqual(people["items"][0]["text"], "Ada's iPad joined the house.")
+        self.assertEqual(people["items"][0]["text"], "Ada's iPad was added.")
 
 
 class WhoChangedWhat(ApiTest):
@@ -179,14 +179,14 @@ class WhoChangedWhat(ApiTest):
         api = __import__("hub.api", fromlist=["api"])
         api.hub.log.add("home", "update", "0.8.1", "installed", source="hub")
         rows = self.client.get("/happened/changes").json()["rows"]
-        self.assertEqual((rows[0]["who"], rows[0]["text"]), ("The hub", "installed 0.8.1."))
+        self.assertEqual((rows[0]["who"], rows[0]["text"]), ("The hub", "installed version 0.8.1."))
         self.assertFalse(rows[0]["named"])
 
-    def test_a_change_with_no_phone_behind_it_is_someone_at_the_wall(self):
+    def test_a_change_with_no_phone_behind_it_is_someone(self):
         api = __import__("hub.api", fromlist=["api"])
         api.hub.log.add("home", "room", None, "Landing", source="user")
         rows = self.client.get("/happened/changes").json()["rows"]
-        self.assertEqual((rows[0]["who"], rows[0]["text"]), ("Someone at the wall", "added the room Landing."))
+        self.assertEqual((rows[0]["who"], rows[0]["text"]), ("Someone", "added the room Landing."))
 
     def test_turning_a_light_on_is_not_a_change_to_the_house(self):
         api = __import__("hub.api", fromlist=["api"])
@@ -199,7 +199,7 @@ class WhoChangedWhat(ApiTest):
         api.hub.log.add("phone", "p2", None, "joined", source="user", who="The wall",
                         detail={"name": "Sam's phone", "how": "wall", "span": "weekend"})
         rows = self.client.get("/happened/changes").json()["rows"]
-        self.assertEqual(rows[0]["text"], "let Sam's phone into the house for the weekend.")
+        self.assertEqual(rows[0]["text"], "added Sam's phone for the weekend.")
 
     def test_before_the_code_nothing_can_be_named_and_the_page_says_so(self):
         self.client.post("/setup/pin", json={"pin": "4321"})
@@ -234,7 +234,7 @@ class TheDoorsHint(ApiTest):
         api.hub.home.devices["light.ceiling"].state = "off"      # the house ships with it on
         self.aged("state", "lock.front", "unlocked", 14, old="locked")
         self.aged("state", "lock.front", "locked", 7, old="unlocked")
-        self.assertEqual(self.client.get("/happened").json()["hint"], "1 thing while you were out")
+        self.assertEqual(self.client.get("/happened").json()["hint"], "1 thing since yesterday")   # nobody was recorded as out
 
     def test_a_quiet_house_says_so_rather_than_nothing(self):
         api = __import__("hub.api", fromlist=["api"])
@@ -339,7 +339,7 @@ class NothingIsDroppedQuietly(ApiTest):
         self.add("home", "switch.holts_summit_alarm_siren", "alarm", detail={"shown_as": True})
         for t in self.texts():
             self.assertNotRegex(t, r"\b[a-z_]+\.[a-z0-9_]+\b", t)
-        self.assertIn("now treats Holts summit alarm siren as an alarm.", self.texts())
+        self.assertIn("set Holts summit alarm siren to show as an alarm.", self.texts())
 
     def test_a_shared_device_is_named_from_where_its_id_actually_is(self):
         """The row is ("share", "device", <id>, "shared"): the id is in `old`. Reading it off
@@ -358,7 +358,7 @@ class NothingIsDroppedQuietly(ApiTest):
         the wall asked to join the house" describes the wrong person entirely."""
         self.add("phone", "p9", "asked", detail={"name": "Ada's iPad"})
         rows = self.client.get("/happened/changes").json()["rows"]
-        self.assertEqual((rows[0]["who"], rows[0]["text"]), ("Ada's iPad", "asked to join the house."))
+        self.assertEqual((rows[0]["who"], rows[0]["text"]), ("Ada's iPad", "asked to be added to the house."))
 
     def test_a_stay_running_out_is_the_hubs_doing_and_says_the_name_once(self):
         self.add("phone", "p9", "left", source="hub", detail={"name": "Sam's phone", "why": "its stay was over"})
