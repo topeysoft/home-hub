@@ -9,6 +9,13 @@ On the relay box it runs inside the service's own container, against the same fi
     ssh root@<relay> docker exec relay-service python cli.py stop temi
     ssh root@<relay> docker exec relay-service python cli.py rotate temi     # a house that lost its key
     ssh root@<relay> docker exec relay-service python cli.py release temi    # the name goes back
+    ssh root@<relay> docker exec relay-service python cli.py invite 2027-10-05 "a tester, by hand"
+    ssh root@<relay> docker exec relay-service python cli.py invites
+    ssh root@<relay> docker exec relay-service python cli.py uninvite 9HTF   # an unused code, by its last four
+
+An invite is a grant made before anybody claims: the house that brings the code -- when it claims its
+name, or any time after -- is carried until the date, without anybody running grant. Each works once
+and is no good after 30 days. The code is shown once; the relay keeps only its hash.
 
 Granting is the only one with a consequence a household would notice the same minute: a house that
 was refused at login is carried the next time its frpc retries, which it does on its own.
@@ -19,7 +26,8 @@ from pathlib import Path
 
 from registry import Registry
 
-USAGE = "usage: cli.py list | grant <name> <YYYY-MM-DD> [note] | stop <name> | rotate <name> | release <name>"
+USAGE = ("usage: cli.py list | grant <name> <YYYY-MM-DD> [note] | stop <name> | rotate <name> | release <name>\n"
+         "       | invite <YYYY-MM-DD> [note] | invites | uninvite <last four>")
 
 
 def when(ts):
@@ -47,6 +55,24 @@ def run(argv: list[str], registry: Registry, out=print) -> int:
             return 0
         if cmd == "rotate" and len(args) == 1:
             out(registry.rotate(args[0]))
+            return 0
+        if cmd == "invite" and len(args) >= 1:
+            until = datetime.strptime(args[0], "%Y-%m-%d").replace(tzinfo=UTC).timestamp()
+            if until <= time.time(): out("That date has passed."); return 2
+            code = registry.invite(until, " ".join(args[1:]))
+            out(code)
+            out(f"Carries whoever brings it until {args[0]}. Works once, for 30 days; this is the only time it is shown.")
+            return 0
+        if cmd == "invites":
+            for i in registry.invites():
+                state = (f"used by {i['used_by']} {when(i['used_at'])}" if i["used_by"]
+                         else "ran out " + when(i["use_by"]) if i["use_by"] < time.time() else "unused, good until " + when(i["use_by"]))
+                out(f"…{i['hint']}  carries until {when(i['until'])}  {state:<34} {i['note']}")
+            return 0
+        if cmd == "uninvite" and len(args) == 1:
+            try: registry.uninvite(args[0])
+            except LookupError: out(f"No unused code ends in {args[0]}."); return 1
+            out(f"The code ending in {args[0].upper()} carries nobody now.")
             return 0
         if cmd == "release" and len(args) == 1:
             registry.release(args[0])

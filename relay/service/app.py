@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """The registration service: names for houses, and the relay's yes or no.
 
-Two audiences on one port. Hubs, from anywhere, at https://api.elyir.app: is this name free, take it,
-how is it doing, let it go. And frps, on this same box, asking before it carries a house (docs/service.md,
+Two audiences on one port. Hubs, from anywhere, at https://api.elyir.app: is this name free, take it
+(with an invite code, if somebody was handed one), how is it doing, bring an invite to it later, let it go. And frps, on this same box, asking before it carries a house (docs/service.md,
 Where the check goes) -- which must never be reachable from outside, because whoever could answer it
 could open the relay to anybody. The api name reaches this service the way a house reaches its own
 door, through frps and a local Caddy (relay/terraform), so every request from outside arrives with
@@ -23,6 +23,7 @@ from home import Home, serve
 from registry import Registry
 
 CLAIMS_PER_DAY = 5               # per address: enough for a household changing its mind, not for a script
+WRONG_INVITES_PER_DAY = 10       # per house: typos, not guessing
 
 
 def make(registry: Registry, now=time.time, relay: dict | None = None, offer: dict | None = None, home: Home | None = None,
@@ -32,6 +33,7 @@ def make(registry: Registry, now=time.time, relay: dict | None = None, offer: di
     `offer` is what a household is shown: whether the service is open to them, at what price, and where to pay."""
     app = FastAPI(title="home-hub relay registration", docs_url=None, redoc_url=None, openapi_url=None)
     claims: dict[str, list[float]] = {}
+    wrong: dict[str, list[float]] = {}
     relay = relay or {"addr": f"relay.{registry.zone}", "token": ""}
     offer = offer or {"open": False, "price": None, "pay": None}
     home = home or Home(registry, now=now)
@@ -67,17 +69,37 @@ def make(registry: Registry, now=time.time, relay: dict | None = None, offer: di
 
     class Claim(BaseModel):
         name: str
+        invite: str | None = None
 
     @app.post("/houses", status_code=201)
     def claim(body: Claim, request: Request):
         who = request.client.host if request.client else ""
         recent = [t for t in claims.get(who, []) if now() - t < 24 * 3600]
         if len(recent) >= CLAIMS_PER_DAY: raise HTTPException(429, "Too many names from here today. Try again tomorrow.")
-        try: out = registry.claim(body.name)
+        try: out = registry.claim(body.name, body.invite or None)
         except ValueError as e: raise HTTPException(422, str(e)) from None
         except LookupError: raise HTTPException(409, {"why": "taken", "suggestions": registry.suggest(body.name)}) from None
+        except PermissionError as e:
+            # a code that is no good counts against the day like a claim does: guessing is slower than typing
+            claims[who] = recent + [now()]
+            raise HTTPException(403, {"why": "invite", "message": str(e)}) from None
         claims[who] = recent + [now()]
         return out | {"relay": relay}
+
+    class Invite(BaseModel):
+        code: str
+
+    @app.post("/houses/{name}/invite")
+    def bring_invite(name: str, body: Invite, authorization: str | None = Header(default=None)):
+        """An invite for a name the house already holds: set up first, handed a code after."""
+        owner(name, authorization)
+        recent = [t for t in wrong.get(name, []) if now() - t < 24 * 3600]
+        if len(recent) >= WRONG_INVITES_PER_DAY: raise HTTPException(429, "Too many codes that didn't work today. Try again tomorrow.")
+        try: registry.redeem(name, body.code)
+        except PermissionError as e:
+            wrong[name] = recent + [now()]
+            raise HTTPException(403, {"why": "invite", "message": str(e)}) from None
+        return {"name": name, "address": f"{name}.{registry.zone}", **registry.status(name), "relay": relay}
 
     @app.get("/houses/{name}")
     def status(name: str, authorization: str | None = Header(default=None)):

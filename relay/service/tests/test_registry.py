@@ -153,3 +153,63 @@ class Judging(Base):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Invites(Base):
+    """A grant made ahead of time: whoever brings the code is carried, at the claim or any time after."""
+    def until(self, days=365): return self.clock.t + days * DAY
+
+    def test_a_claim_that_brings_an_invite_is_carried_at_once(self):
+        code = self.r.invite(self.until(), "a tester")
+        self.assertRegex(code, r"^[2-9A-Z]{4}-[2-9A-Z]{4}-[2-9A-Z]{4}$")
+        made = self.r.claim("desk", invite=code.lower().replace("-", " "))   # typed off a phone
+        self.assertTrue(made["carried"]); self.assertIsNone(made["held_until"])
+        self.assertEqual(self.r.status("desk")["entitled_until"], self.until())
+        used = self.r.invites()[0]
+        self.assertEqual(used["used_by"], "desk"); self.assertIsNone(used["code_hash"])
+        self.assertIn("a tester", self.r.houses()[0]["note"])
+
+    def test_a_house_that_set_up_without_one_brings_it_later(self):
+        self.r.claim("desk")
+        self.assertFalse(self.r.status("desk")["carried"])
+        self.r.redeem("desk", self.r.invite(self.until()))
+        self.assertTrue(self.r.status("desk")["carried"])
+        self.clock.t += 2 * DAY                                  # past the day an unpaid claim is held
+        self.assertTrue(self.r.status("desk")["carried"])
+
+    def test_a_code_that_is_no_good_refuses_the_whole_claim(self):
+        with self.assertRaisesRegex(PermissionError, "isn't one of ours"): self.r.claim("desk", invite="AAAA-BBBB-CCCC")
+        self.assertFalse(self.r.taken("desk"))                   # nothing held: the house can ask again
+        code = self.r.invite(self.until())
+        self.r.claim("desk", invite=code)
+        with self.assertRaisesRegex(PermissionError, "used already"): self.r.claim("shop", invite=code)
+        self.assertFalse(self.r.taken("shop"))
+
+    def test_a_taken_name_keeps_the_code_for_the_next_try(self):
+        self.r.claim("desk")
+        code = self.r.invite(self.until())
+        with self.assertRaises(LookupError): self.r.claim("desk", invite=code)
+        self.assertIsNone(self.r.invite_problem(code))
+        self.assertTrue(self.r.claim("desk-1a2b", invite=code)["carried"])
+
+    def test_a_code_runs_out_after_thirty_days(self):
+        code = self.r.invite(self.until())
+        self.clock.t += 31 * DAY
+        self.assertEqual(self.r.invite_problem(code), "That invite code ran out. Ask for a new one.")
+
+    def test_a_house_carried_longer_already_leaves_the_code_unused(self):
+        self.r.claim("desk"); self.r.grant("desk", self.until(1000))
+        code = self.r.invite(self.until())
+        with self.assertRaisesRegex(PermissionError, "carried that long already"): self.r.redeem("desk", code)
+        self.assertIsNone(self.r.invite_problem(code))
+        self.assertEqual(self.r.status("desk")["entitled_until"], self.until(1000))
+
+    def test_the_operator_takes_back_an_unused_code(self):
+        code = self.r.invite(self.until())
+        self.r.uninvite(code[-4:].lower())
+        self.assertIsNotNone(self.r.invite_problem(code))
+        with self.assertRaises(LookupError): self.r.uninvite(code[-4:])
+
+    def test_an_invited_house_is_let_through_by_frps(self):
+        made = self.r.claim("desk", invite=self.r.invite(self.until()))
+        self.assertIsNone(self.r.judge("Login", login("desk", made["secret"])))

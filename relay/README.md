@@ -60,6 +60,20 @@ The hub then needs `HUB_AWAY_HOUSE=temi` and `HUB_RELAY_SECRET=<the secret>` in 
 (`driver-layer/.env.example`). A name claimed and not granted is let go after a day. `cli.py` also
 stops a house (it keeps its name), rotates a lost secret, and releases a name.
 
+**Or an invite, so nobody waits on the operator.** A code minted ahead of time carries whichever house
+brings it, until the date it was made with. It works when the name is claimed (`"invite"` in the
+claim) and any time after on a name the house already holds (`POST /houses/<name>/invite {"code"}`
+with the house's secret): somebody who set up first and was handed a code later needs nothing from
+the operator. A code that is no good refuses the claim outright, so a typo holds no name. Each code
+works once and is no good after 30 days; the relay keeps only its hash.
+
+```sh
+ssh root@<relay> docker exec relay-service python cli.py invite 2027-10-05 "a printer tester"
+#   -> K7QX-M2PD-9HTF   shown once
+ssh root@<relay> docker exec relay-service python cli.py invites          # used by whom, or still good until
+ssh root@<relay> docker exec relay-service python cli.py uninvite 9HTF    # an unused code, by its last four
+```
+
 **The printer app** (`printers.elyir.app`, since 2 October 2026) is static files served by the same
 Caddy as `api`, carried through frps as one more always-carried name whose secret is derived from the
 relay token. It belongs to the printer project and is published from that repository, never edited on

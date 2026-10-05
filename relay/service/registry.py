@@ -16,14 +16,24 @@ Being carried needs an entitlement: the relay is an optional paid service (docs/
 costs something, which is also what keeps a thousand of them from being squatted. Until payments exist,
 the operator grants entitlements by hand (cli.py), and a name claimed without one is held for a day and
 then let go. Nothing here touches DNS: every house is already covered by the zone's one wildcard.
+
+An invite is a grant made ahead of time: the operator mints a code (cli.py invite), hands it to somebody,
+and the house that brings it is carried the moment it does -- with its claim, or any time after on a name
+it already holds. It is the flash-time token docs/service.md keeps for boxes that were bought, minted by
+hand for testers until then. One use each, kept only as a hash like the secrets.
 """
-import hashlib, hmac, re, secrets, sqlite3, time
+import hashlib, hmac, re, secrets, sqlite3, threading, time
+from contextlib import contextmanager
 from pathlib import Path
 
 DAY = 24 * 3600
 HOLD = DAY                       # a claim nobody pays for is let go after this
 ALWAYS = 4102444800.0            # 2100: "always", as a number JSON can carry
 LABEL = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,28}[a-z0-9])?$")
+INVITE_KEEP = 30 * DAY           # an invite nobody used by then is no good
+# Crockford's letters without the ones a person misreads (0 O 1 I L U): twelve of them is ~59 bits, read
+# aloud or typed off a phone, and nobody guesses one at five claims a day.
+INVITE_LETTERS = "23456789ABCDEFGHJKMNPQRSTVWXYZ"
 
 # Names a house may never have. The service's own (api), the maker's (www, mail, status), the zone's
 # future (home is the subzone the address-in-the-name lives under, docs/away.md), and the ones a
@@ -45,6 +55,16 @@ create table if not exists houses (
     held_until      real,             -- unpaid claims are let go after this; null once entitled
     entitled_until  real,             -- carried while this is in the future
     note            text not null default ''
+);
+create table if not exists invites (
+    code_hash       text primary key,
+    hint            text not null,    -- its last four letters, so the operator can tell codes apart
+    made            real not null,
+    use_by          real not null,    -- no good after this
+    until           real not null,    -- the house that brings it is carried until then
+    note            text not null default '',
+    used_by         text,
+    used_at         real
 )"""
 
 
@@ -52,6 +72,11 @@ def _hash(secret: str) -> str:
     # The secret is 32 random bytes, not something a person chose, so a fast hash is the right one:
     # there is nothing to guess and nothing a slow hash would protect.
     return hashlib.sha256(secret.encode()).hexdigest()
+
+
+def invite_code(raw: str) -> str:
+    """What somebody typed, as the code it means: k7qx m2pd-9htf -> K7QXM2PD9HTF."""
+    return re.sub(r"[^A-Z0-9]", "", (raw or "").upper())
 
 
 def problem(label: str) -> str | None:
@@ -75,8 +100,9 @@ class Registry:
         self.zone, self.now = zone, now
         self.db = sqlite3.connect(str(path), check_same_thread=False, isolation_level=None)
         self.db.row_factory = sqlite3.Row
+        self.lock = threading.RLock()    # one connection, many request threads: one transaction at a time
         self.db.execute("pragma journal_mode=wal")
-        self.db.execute(SCHEMA)
+        self.db.executescript(SCHEMA)
         # Where each house's tunnel last came from, for /nearby. Added 2 October 2026 to a file that
         # already had houses in it, so added rather than declared.
         for col in ("last_ip text", "seen_at real"):
@@ -112,18 +138,35 @@ class Registry:
         if self.taken(label): return {"name": label, "free": False, "why": "taken", "suggestions": self.suggest(label, hints)}
         return {"name": label, "free": True, "address": f"{label}.{self.zone}"}
 
-    def claim(self, label: str) -> dict:
-        """Take a name for a house. The secret is in this answer and nowhere else, ever."""
+    @contextmanager
+    def _together(self):
+        """One transaction: a claim that brings an invite is both or neither."""
+        with self.lock:
+            self.db.execute("begin immediate")
+            try: yield
+            except BaseException:
+                self.db.execute("rollback"); raise
+            self.db.execute("commit")
+
+    def claim(self, label: str, invite: str | None = None) -> dict:
+        """Take a name for a house. The secret is in this answer and nowhere else, ever. With an invite the
+        house is carried at once; a code that is no good refuses the whole claim (PermissionError), so a
+        mistyped one costs nothing and the house can ask again with or without it."""
         label = label.strip().lower()
         why = problem(label)
         if why: raise ValueError(why)
         self._sweep()
         secret = secrets.token_urlsafe(32)
-        try:
-            self.db.execute("insert into houses (name, secret_hash, claimed, held_until) values (?, ?, ?, ?)",
-                            (label, _hash(secret), self.now(), self.now() + HOLD))
-        except sqlite3.IntegrityError:
-            raise LookupError("taken") from None
+        with self._together():
+            if invite is not None:
+                bad = self.invite_problem(invite)
+                if bad: raise PermissionError(bad)
+            try:
+                self.db.execute("insert into houses (name, secret_hash, claimed, held_until) values (?, ?, ?, ?)",
+                                (label, _hash(secret), self.now(), self.now() + HOLD))
+            except sqlite3.IntegrityError:
+                raise LookupError("taken") from None
+            if invite is not None: self._redeem(label, invite)
         return {"name": label, "address": f"{label}.{self.zone}", "secret": secret, **self.status(label)}
 
     def _row(self, label: str):
@@ -163,6 +206,51 @@ class Registry:
         if not self.db.execute("update houses set secret_hash = ? where name = ?", (_hash(secret), label)).rowcount:
             raise LookupError(label)
         return secret
+
+    # ---- invites: a grant made ahead of time ----
+    def invite(self, until: float, note: str = "", keep: float = INVITE_KEEP) -> str:
+        """A code that carries whichever house brings it until `until`. Shown once, here; only its hash is kept."""
+        code = "".join(secrets.choice(INVITE_LETTERS) for _ in range(12))
+        self.db.execute("insert into invites (code_hash, hint, made, use_by, until, note) values (?, ?, ?, ?, ?, ?)",
+                        (_hash(code), code[-4:], self.now(), self.now() + keep, until, note))
+        return "-".join(code[i:i + 4] for i in (0, 4, 8))
+
+    def _invite_row(self, code: str):
+        return self.db.execute("select * from invites where code_hash = ?", (_hash(invite_code(code)),)).fetchone()
+
+    def invite_problem(self, code: str) -> str | None:
+        """Why this code carries nobody, in words the printer or hub can show -- or None if it would."""
+        r = self._invite_row(code)
+        if not r: return "That invite code isn't one of ours. Check it for a typo."
+        if r["used_by"]: return "That invite code was used already."
+        if r["use_by"] < self.now(): return "That invite code ran out. Ask for a new one."
+        return None
+
+    def _redeem(self, label: str, code: str):
+        r = self._invite_row(code)
+        house = self._row(label)
+        if not house: raise LookupError(label)
+        if (house["entitled_until"] or 0) >= r["until"]:
+            raise PermissionError("This name is carried that long already, so the code was kept for somebody else.")
+        if not self.db.execute("update invites set used_by = ?, used_at = ? where code_hash = ? and used_by is null",
+                               (label, self.now(), r["code_hash"])).rowcount:
+            raise PermissionError("That invite code was used already.")
+        self.grant(label, r["until"], f"invite {r['hint']}: {r['note']}".rstrip(": "))
+
+    def redeem(self, label: str, code: str):
+        """Bring an invite to a name the house already holds: the tester who set up first and got a code after."""
+        with self._together():
+            bad = self.invite_problem(code)
+            if bad: raise PermissionError(bad)
+            self._redeem(label, code)
+
+    def invites(self) -> list[dict]:
+        return [dict(r) | {"code_hash": None} for r in self.db.execute("select * from invites order by made")]
+
+    def uninvite(self, hint: str):
+        """Take back an unused code, by the four letters the list shows."""
+        if not self.db.execute("delete from invites where hint = ? and used_by is null", (invite_code(hint),)).rowcount:
+            raise LookupError(hint)
 
     # ---- who is in the same house as whom ----
     def seen(self, label: str, address: str):

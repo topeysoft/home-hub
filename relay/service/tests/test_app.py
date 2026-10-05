@@ -6,7 +6,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from app import CLAIMS_PER_DAY, make, nearby_origins, seed_own_names
+from app import CLAIMS_PER_DAY, WRONG_INVITES_PER_DAY, make, nearby_origins, seed_own_names
 from registry import DAY, Registry
 
 
@@ -82,6 +82,35 @@ class Service(unittest.TestCase):
         ask = {"op": "Login", "content": {}}
         self.assertEqual(self.c.post("/frps", json=ask).status_code, 404)                       # not from this box
         self.assertEqual(self.local.post("/frps", json=ask, headers={"X-Forwarded-For": "203.0.113.9"}).status_code, 404)   # came through Caddy
+
+    def test_an_invite_at_the_claim_or_after_it(self):
+        made = self.c.post("/houses", json={"name": "desk", "invite": self.r.invite(self.t + 365 * DAY)})
+        self.assertEqual(made.status_code, 201); self.assertTrue(made.json()["carried"])
+        later = self.c.post("/houses", json={"name": "shop"}).json()
+        self.assertFalse(later["carried"])
+        key = {"Authorization": f"Bearer {later['secret']}"}
+        got = self.c.post("/houses/shop/invite", json={"code": self.r.invite(self.t + 365 * DAY)}, headers=key)
+        self.assertEqual(got.status_code, 200); self.assertTrue(got.json()["carried"])
+        self.assertTrue(self.c.get("/houses/shop", headers=key).json()["carried"])
+
+    def test_a_bad_code_says_why_and_takes_no_name(self):
+        bad = self.c.post("/houses", json={"name": "desk", "invite": "AAAA-BBBB-CCCC"})
+        self.assertEqual(bad.status_code, 403)
+        self.assertEqual(bad.json()["detail"]["why"], "invite"); self.assertIn("typo", bad.json()["detail"]["message"])
+        self.assertTrue(self.c.get("/names/desk").json()["free"])
+
+    def test_only_the_holder_brings_an_invite_and_guessing_stops(self):
+        secret = self.c.post("/houses", json={"name": "desk"}).json()["secret"]
+        code = self.r.invite(self.t + 365 * DAY)
+        self.assertEqual(self.c.post("/houses/desk/invite", json={"code": code}, headers={"Authorization": "Bearer nope"}).status_code, 404)
+        self.assertIsNone(self.r.invite_problem(code))
+        key = {"Authorization": f"Bearer {secret}"}
+        for _ in range(WRONG_INVITES_PER_DAY):
+            self.assertEqual(self.c.post("/houses/desk/invite", json={"code": "AAAA-BBBB-CCCC"}, headers=key).status_code, 403)
+        self.assertEqual(self.c.post("/houses/desk/invite", json={"code": code}, headers=key).status_code, 429)
+        self.t += DAY + 1
+        self.assertEqual(self.c.post("/houses/desk/invite", json={"code": code}, headers=key).status_code, 404)   # its day was up: let go
+        self.assertIsNone(self.r.invite_problem(code))
 
 
 if __name__ == "__main__":

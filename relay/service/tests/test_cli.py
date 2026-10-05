@@ -49,3 +49,15 @@ class Operator(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+    def test_invite_list_and_take_back(self):
+        code, said = self.say("invite", "2099-10-01", "a", "tester")
+        self.assertEqual(code, 0)
+        made = said.splitlines()[0]
+        self.assertIn("only time it is shown", said)
+        self.assertIn("unused, good until", self.say("invites")[1])
+        self.r.claim("desk", invite=made)
+        listed = self.say("invites")[1]
+        self.assertIn("used by desk", listed); self.assertIn("a tester", listed)
+        self.assertEqual(self.say("uninvite", made[-4:])[0], 1)          # used: nothing to take back
+        self.assertEqual(self.say("invite", "2001-01-01"), (2, "That date has passed."))
