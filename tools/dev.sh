@@ -170,7 +170,7 @@ first_time() {
   echo "  ${D}eight rooms, lights at half, a film on the TV, three cameras. No hub, no Pi, no Home${R}"
   echo "  ${D}Assistant, no accounts, and every change to app/src/ is on the screen as you save it.${R}"
   echo
-  echo "  ${D}Then: README.md#layout for what each directory does, CONTRIBUTING.md for what CI"
+  echo "  ${D}Then: docs/developing.md#layout for what each directory does, CONTRIBUTING.md for what CI"
   echo "  checks and how commits are written, and tools/dev.sh check to run that here.${R}"
 }
 

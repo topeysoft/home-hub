@@ -1,4 +1,4 @@
-# Contributing to home-hub
+# Contributing to Elyir Home Hub
 
 home-hub is a smart home hub built on one principle: **own the experience and the intelligence, rent
 the drivers.** The product is the panel and the brain. Home Assistant, Zigbee2MQTT and Z-Wave JS are
@@ -13,7 +13,7 @@ missing, or a bug you hit in your own house.
   project AGPL for the people running it and keeps commercial licensing possible for the maintainer.
 - **Open an issue first for anything large.** A refactor or a new subsystem is worth agreeing on
   before you spend a weekend on it.
-- **Read [`README.md`](README.md#layout)'s Layout section.** It explains which directory does what,
+- **Read the Layout section of [`docs/developing.md`](docs/developing.md#layout).** It explains which directory does what,
   and it will save you guessing.
 - **Read [`AGENTS.md`](AGENTS.md) if you are working with a coding agent** — or are one. It carries
   the things this file does not: that a screen is drawn as an artboard before it is built, which
@@ -45,7 +45,7 @@ tools/dev.sh up       # installs both halves, then the panel on a mock house at 
 ```
 
 The mock house has eight rooms, lights at half, a film on the TV and three cameras, and every change
-to `app/src/` is on the screen as you save it. [`README.md`](README.md#starting-and-starting-again)
+to `app/src/` is on the screen as you save it. [`docs/developing.md`](docs/developing.md#starting-and-starting-again)
 has the rest, including how to point the panel at a real brain.
 
 ## What CI will check
