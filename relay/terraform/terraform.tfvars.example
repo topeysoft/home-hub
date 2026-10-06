@@ -20,3 +20,11 @@ admin_ssh_public_key = ""
 
 # Bring your own box instead of renting one here: set this and nothing is created.
 # relay_ipv4 = ""
+
+# Mail on the zone (email.tf). Each key is the part before the @; each value, the mailboxes it forwards
+# to. Every new mailbox is sent a link by Cloudflare and gets nothing until somebody clicks it.
+# email_forwards = {
+#   security = ["you@example.com"]
+# }
+# Anything sent to an address not listed above. Empty drops it.
+# email_catch_all = []

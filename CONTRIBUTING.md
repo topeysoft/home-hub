@@ -131,5 +131,6 @@ vocabulary in `brain/hub/suggest.py`, the room aliases in `brain/hub/commands.py
 
 ## Reporting a security problem
 
-Do not open a public issue. See [`SECURITY.md`](SECURITY.md) if it exists, or email the maintainer
-directly. This software runs on boxes inside people's homes; give it the discretion that deserves.
+Do not open a public issue. Email **security@elyir.app**; [`SECURITY.md`](SECURITY.md) says what to
+include and what happens next. This software runs on boxes inside people's homes; give it the discretion
+that deserves.
